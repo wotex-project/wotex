@@ -10,9 +10,11 @@ defmodule Wotex.Lab.Runner.Budgets do
   is a separate coordinate the runner never mixes with them.
 
   `defaults/0` and `ceilings/0` expose the contract as inert maps, while `new/1`
-  merges and validates consumer overrides. This module allocates no resource;
-  the runner applies each admitted limit at the process, queue, payload, or
-  cleanup boundary it governs.
+  merges and validates consumer overrides. This module allocates no resource.
+  The runner applies the wall, step, child, ingress, observer-delivery and
+  cleanup limits at the boundaries it governs; it has no connection of its own,
+  so `reconnect_attempts` reaches components through their step context for
+  the adapters that reconnect.
   """
 
   alias Wotex.Lab.Error

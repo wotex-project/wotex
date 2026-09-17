@@ -194,6 +194,45 @@ defmodule Wotex.Lab.RunnerTest do
     assert File.ls!(context.tmp_dir) == []
   end
 
+  test "observer deliveries stop at the queued-delivery budget and end the attempt", context do
+    observer = spawn(fn -> Process.sleep(:infinity) end)
+    on_exit(fn -> Process.exit(observer, :kill) end)
+
+    {:ok, host} =
+      host(context, observer: observer, budgets: %{queued_deliveries: 3, wall_ms: 2_000})
+
+    {:ok, definition} =
+      definition([
+        step("one", "room.util", "echo", 1),
+        step("two", "room.util", "echo", 2, ["one"]),
+        step("three", "room.util", "echo", 3, ["two"])
+      ])
+
+    {:ok, scenario} = scenario(definition)
+    assert {:ok, run} = Runner.start(scenario, definition, host)
+    assert {:ok, status} = Runner.await(run, 2_000)
+
+    assert status.outcome == :error
+    assert status.reason == %{code: :delivery_budget_exhausted}
+    assert status.cleanup == :ok
+    assert {:messages, messages} = Process.info(observer, :messages)
+    assert length(messages) == 3
+
+    assert Enum.map(messages, fn {:wotex_lab_run, _, event} -> event end) == [
+             {:phase, :admitted},
+             {:phase, :starting},
+             {:phase, :running}
+           ]
+
+    assert role_children(context.lab, :things) == []
+    assert File.ls!(context.tmp_dir) == []
+
+    {:ok, drained_host} = host(context, observer: self(), budgets: %{queued_deliveries: 16})
+    assert {:ok, drained_run} = Runner.start(scenario, definition, drained_host)
+    assert {:ok, %{outcome: :pass}} = Runner.await(drained_run, 2_000)
+    assert_receive {:wotex_lab_run, _, {:terminal, :pass}}
+  end
+
   test "step, ingress and result limits become explicit failures", context do
     steps = [
       step("first", "room.util", "echo", 1),

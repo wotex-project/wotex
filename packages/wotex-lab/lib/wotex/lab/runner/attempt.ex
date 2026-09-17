@@ -106,31 +106,19 @@ defmodule Wotex.Lab.Runner.Attempt do
       waiters: [],
       work_dir: Path.join(host.work_root, attempt_id),
       observer_monitor: if(host.observer, do: Process.monitor(host.observer)),
+      delivery_overflow: false,
       cleanup: nil
     }
 
     Process.flag(:trap_exit, true)
-    notify(state, {:phase, :admitted})
-    {:ok, state, {:continue, :start}}
+    {:ok, notify(state, {:phase, :admitted}), {:continue, :start}}
   end
 
   @impl GenServer
   def handle_continue(:start, state) do
-    state = phase(state, :starting)
-
-    case start_children(state) do
-      {:ok, state} ->
-        case File.mkdir_p(state.work_dir) do
-          :ok ->
-            state = phase(%{state | pending: Definition.order(state.definition)}, :running)
-            {:noreply, next_step(state)}
-
-          {:error, _} ->
-            {:noreply, finish(state, :error, %{code: :work_directory_unavailable})}
-        end
-
-      {:error, state, error} ->
-        {:noreply, finish(state, :error, %{code: error.code, phase: :starting})}
+    case phase(state, :starting) do
+      %{delivery_overflow: true} = state -> {:noreply, finish(state, :error, nil)}
+      state -> {:noreply, start(state)}
     end
   end
 
@@ -196,6 +184,25 @@ defmodule Wotex.Lab.Runner.Attempt do
   def terminate(_, state) do
     _ = cleanup(state)
     :ok
+  end
+
+  defp start(state) do
+    case start_children(state) do
+      {:ok, state} ->
+        case File.mkdir_p(state.work_dir) do
+          :ok ->
+            state
+            |> Map.put(:pending, Definition.order(state.definition))
+            |> phase(:running)
+            |> next_step()
+
+          {:error, _} ->
+            finish(state, :error, %{code: :work_directory_unavailable})
+        end
+
+      {:error, state, error} ->
+        finish(state, :error, %{code: error.code, phase: :starting})
+    end
   end
 
   defp start_children(state) do
@@ -285,6 +292,8 @@ defmodule Wotex.Lab.Runner.Attempt do
     :exit, _ ->
       {:error, Error.new(:supervisor_unavailable, :starting, "component supervisor is unavailable")}
   end
+
+  defp next_step(%{delivery_overflow: true} = state), do: finish(state, :error, nil)
 
   defp next_step(%{pending: []} = state), do: finish(state, assess(state), nil)
 
@@ -398,7 +407,7 @@ defmodule Wotex.Lab.Runner.Attempt do
         digest: digest(value)
       }
 
-      notify(state, {:step, step_id, :ok})
+      state = notify(state, {:step, step_id, :ok})
 
       %{
         state
@@ -417,7 +426,7 @@ defmodule Wotex.Lab.Runner.Attempt do
       digest: digest(error.code)
     }
 
-    notify(state, {:step, step_id, :error})
+    state = notify(state, {:step, step_id, :error})
 
     %{
       state
@@ -483,17 +492,20 @@ defmodule Wotex.Lab.Runner.Attempt do
     state = phase(state, :stopping)
     state = kill_worker(state)
     cleanup_result = cleanup(state)
-    outcome = if cleanup_result == :ok, do: outcome, else: :error
-
-    reason =
-      if cleanup_result == :ok, do: reason, else: %{code: :cleanup_failed, details: cleanup_result}
-
+    {outcome, reason} = settle(state, cleanup_result, outcome, reason)
     state = %{state | outcome: outcome, reason: reason, cleanup: cleanup_result, children: %{}}
-    state = phase(state, :terminal)
-    notify(state, {:terminal, outcome})
+    state = state |> phase(:terminal) |> notify({:terminal, outcome})
     Enum.each(state.waiters, &send(&1, {:wotex_lab_run_done, self(), status_map(state)}))
     %{state | waiters: []}
   end
+
+  defp settle(_, cleanup_result, _, _) when cleanup_result != :ok,
+    do: {:error, %{code: :cleanup_failed, details: cleanup_result}}
+
+  defp settle(%{delivery_overflow: true}, _, _, _),
+    do: {:error, %{code: :delivery_budget_exhausted}}
+
+  defp settle(_, _, outcome, reason), do: {outcome, reason}
 
   defp kill_worker(%{worker: {ref, _, pid}} = state) do
     Process.demonitor(ref, [:flush])
@@ -545,14 +557,27 @@ defmodule Wotex.Lab.Runner.Attempt do
   defp cleanup_result(failures), do: %{children: failures}
 
   defp phase(state, phase) when phase in @phases do
-    notify(state, {:phase, phase})
-    %{state | phase: phase}
+    %{notify(state, {:phase, phase}) | phase: phase}
   end
 
-  defp notify(%{host: %{observer: pid}, attempt_id: id}, event) when is_pid(pid),
-    do: send(pid, {:wotex_lab_run, id, event})
+  # A delivery is sent only while the observer's queue is below the
+  # queued-delivery budget; a refused delivery marks the attempt so it ends
+  # with `delivery_budget_exhausted` instead of silently dropping events.
+  defp notify(%{host: %{observer: pid}, attempt_id: id} = state, event) when is_pid(pid) do
+    case Process.info(pid, :message_queue_len) do
+      {:message_queue_len, length} when length < state.host.budgets.queued_deliveries ->
+        send(pid, {:wotex_lab_run, id, event})
+        state
 
-  defp notify(_, _), do: :ok
+      {:message_queue_len, _} ->
+        %{state | delivery_overflow: true}
+
+      nil ->
+        state
+    end
+  end
+
+  defp notify(state, _), do: state
 
   defp status_map(state) do
     %{
