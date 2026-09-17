@@ -441,6 +441,24 @@ WTH-B-F11–F13 process-flow cases (native callback bursts while the connection,
 stream owner or receiver is suspended), the P07 network fixture and C09 stress
 remain unexecuted.
 
+A report queued without credit keeps its encoder until credit returns. The first
+State stream encoder captured the snapshot, flags and identity by reference, so a
+drained report read storage released after its iteration. The encoder now owns
+copies. `streams_test.cpp` queues a report, acknowledges credit and requires the
+drained report to keep its own role, flags and newly assigned sequence; with the
+reference capture restored the Apple clang sanitizer build aborted on a corrupted
+value (exit 134), and with the copy it passes. The fixed native tests passed 6/6
+under ASan/UBSan/LeakSanitizer in all four Linux lanes of the following run
+(results `687d6c76a7cc3986f956b4b8eda3062595f6710297afb9fd6fbaf6e34df6519f`,
+`e6382087cf75e52d6899874935efa20cd1ab85c56fffe736b3b0839da2fd26d5`,
+`5300ba2e3ed4a5cf86758e0fc9a5df38a9da1fd92569768223c79d11d1395cd3` and
+`ce08179b1d8d2beb57b331cf54f0648fec8ca3c7a66c1ce9f0a6736b49f68608`); the
+arm64 Elixir 1.20.2 run failed three ExUnit cases, recorded with its correction
+below. Fixed `priv/openthread/streams.hpp` SHA-256 is
+`3c8d4d1287b0ebb8d625dc619979466264bd4a151c03f0f6919b95dcf64ed0cf` and
+`test/native/streams_test.cpp` is
+`a13f63b238e269dda39ce71bc542fa50410cda241bde6d6335ba3e8f9d5847b0`.
+
 ## Contract corpus binding, 2026-09-17
 
 `test/wotex/thread/contract_fixture_test.exs` runs in the default gate. It

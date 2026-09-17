@@ -101,6 +101,25 @@ int main() {
     check(harness.reports.back().at("subscription_id") == "other" && harness.reports.back().at("value").at("role") == "router");
   }
   {
+    // Queued reports own their snapshot: after acknowledgement they drain with the
+    // value and flags of their own iteration and a newly assigned sequence.
+    Harness harness;
+    const auto generation = harness.streams.open("queued", 2);
+    harness.streams.initial("queued", generation, state("detached"));
+    for (const char *role : {"child", "router"}) {
+      harness.streams.changed(role[0] == 'c' ? 4 : 8);
+      const std::string value(role);
+      harness.streams.flush([value] { return state(value.c_str()); });
+    }
+    check(harness.reports.size() == 2 && harness.flow.snapshot().queued == 1);
+    std::string scratch(4096, 'x');
+    const auto first_bytes = static_cast<std::uint64_t>(harness.reports[0].dump().size() + 1);
+    check(harness.flow.acknowledge(kSession, 1, first_bytes));
+    check(harness.reports.size() == 3 && harness.reports[2].at("value").at("role") == "router");
+    check(harness.reports[2].at("report_sequence") == 3 && harness.reports[2].at("metadata").at("changed_flags") == 8);
+    check(!harness.streams.failed());
+  }
+  {
     // A blocked control reservation during retirement fails the generation.
     Harness harness;
     const auto generation = harness.streams.open("s1", 64);

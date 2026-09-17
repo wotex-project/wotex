@@ -73,7 +73,8 @@ class StateStreams final {
 
   void submit(const Key &key, const Json &value, std::uint32_t flags) {
     const std::string session = flow_.session();
-    const auto result = flow_.submit(key.first, key.second, [&](std::uint64_t sequence) {
+    // A queued report re-encodes later with its assigned sequence, so the encoder owns its values.
+    const auto result = flow_.submit(key.first, key.second, [session, key, value, flags](std::uint64_t sequence) {
       return Json{{"version", 1}, {"event", "state"}, {"session_generation", session},
                   {"subscription_id", key.first}, {"generation", key.second},
                   {"report_sequence", sequence}, {"value", value},
