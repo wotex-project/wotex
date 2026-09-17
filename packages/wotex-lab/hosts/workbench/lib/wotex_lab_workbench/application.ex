@@ -14,8 +14,8 @@ defmodule WotexLabWorkbench.Application do
   history is also active.
   `metrics_scrape` separately admits a credential-protected loopback listener;
   it also requires explicit PromEx activation and never joins browser routing.
-  `metrics_durable_query` lets operator inspection scopes read a local
-  GreptimeDB receiver through `WotexLabWorkbench.Observability.DurableReader`;
+  `metrics_durable_query` lets operator inspection scopes read a local or
+  hosted GreptimeDB receiver through `WotexLabWorkbench.Observability.DurableReader`;
   it also requires explicit PromEx activation.
   `metrics_query` adds a separate loopback operator query listener; it needs
   local history or durable reads and a credential different from the scrape

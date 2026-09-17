@@ -53,18 +53,39 @@ metrics_durable =
 
 config :wotex_lab_workbench, metrics_durable: metrics_durable
 
-# Durable reads are separately selected. The receiver URL is an exact loopback
-# base; the database is the one the exporter writes, never a request value.
+# Durable reads are separately selected. The local receiver URL is an exact
+# loopback base; the hosted profile names an exact HTTPS origin and a query
+# credential that is checked here and read again per request, never stored.
+# The database is the one the exporter writes, never a request value.
 if url = System.get_env("WOTEX_LAB_GREPTIME_QUERY_URL") do
-  case WotexLabWorkbench.Observability.DurableReader.configure(
-         url,
-         System.get_env("WOTEX_LAB_GREPTIME_DATABASE")
-       ) do
+  reader = WotexLabWorkbench.Observability.DurableReader
+  database = System.get_env("WOTEX_LAB_GREPTIME_DATABASE")
+
+  configured =
+    case System.get_env("WOTEX_LAB_GREPTIME_QUERY_PROFILE") do
+      profile when profile in [nil, "local"] ->
+        reader.configure(url, database)
+
+      "hosted" ->
+        with {:ok, _} <- reader.lookup_credential() do
+          reader.configure_hosted(
+            url,
+            database,
+            System.get_env("WOTEX_LAB_GREPTIME_QUERY_CA_CERTFILE")
+          )
+        end
+
+      _ ->
+        :error
+    end
+
+  case configured do
     {:ok, options} ->
       config :wotex_lab_workbench, metrics_durable_query: options
 
-    {:error, _} ->
-      raise "durable reads require WOTEX_LAB_GREPTIME_QUERY_URL=http://127.0.0.1:<port>"
+    _ ->
+      raise "durable reads require a loopback WOTEX_LAB_GREPTIME_QUERY_URL, or the hosted profile " <>
+              "with an HTTPS origin and a distinct WOTEX_LAB_GREPTIME_QUERY_TOKEN"
   end
 end
 

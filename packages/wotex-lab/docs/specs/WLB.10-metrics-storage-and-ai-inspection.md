@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.25.0. Contract: accepted. Source status: the metric
+Specification version: 0.26.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -22,11 +22,11 @@ can instead use a mutual-TLS remote transport with peer ranges. The base
 library exports Lab spans and exception logs over OTLP, and the Workbench can
 activate that exporter for a local receiver. `Wotex.Lab.Metrics.DurableQuery`
 supplies fixed durable read templates, and the operator listener answers them
-from a local receiver through the Workbench durable reader. Hosted database
-provisioning, isolated hosted-tenant BeamLens, public or tenant HTTP query
-bindings and hosted durable reads remain planned; the MCP `query_metrics` tool
-binds the local gateway. Hosted
-exporter source is not deployment or durable-row evidence. A template export
+from a local or explicitly selected hosted receiver through the Workbench
+durable reader. Hosted database provisioning, isolated hosted-tenant BeamLens
+and public or tenant HTTP query bindings remain planned; the MCP
+`query_metrics` tool binds the local gateway. Hosted exporter and reader
+source is not deployment or durable-row evidence. A template export
 alone is not proof of a Grafana import or query execution; the separate
 Grafana lane below supplies that evidence for one pinned server cohort.
 
@@ -345,10 +345,10 @@ Default durable metric TTL is seven days; a profile may explicitly override it.
 Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
 redacted from stats and errors. The base library's fixed durable read templates
-and the Workbench's local durable reader are described with the query contract
-below. Hosted durable reads and hosted database provisioning remain planned
-host work; hosted exporter TLS and egress policy and the mutual-TLS operator
-listener transport are implemented.
+and the Workbench's durable reader are described with the query contract
+below. Hosted database provisioning remains planned host work; hosted exporter
+and reader TLS and egress policy and the mutual-TLS operator listener transport
+are implemented.
 
 `Wotex.Lab.Metrics.Retention` implements local TTL provisioning without
 transport. `plan/1` admits a lowercase database identifier other than
@@ -457,9 +457,8 @@ admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits, and the MCP `query_metrics` tool
 opens one gateway per call from a host-bound history and scope. The operator
 HTTP query binding below opens one inspection scope per request, for local
-history or the local durable receiver. Public or tenant HTTP query bindings,
-hosted durable reads and non-local or multi-tenant BeamLens callers remain
-planned.
+history or the configured durable receiver. Public or tenant HTTP query
+bindings and non-local or multi-tenant BeamLens callers remain planned.
 
 `Wotex.Lab.Metrics.DurableQuery` answers the same admitted descriptor from a
 PromQL-compatible durable receiver through fixed read templates and a host
@@ -504,7 +503,8 @@ only the four-parameter range template and posts it as a form body to
 `/v1/prometheus/api/v1/query_range?db=<database>`; on GreptimeDB 1.1.4 that
 query parameter overrides the `x-greptime-db-name` header and a `db` form
 field is ignored. It has a one-second connect deadline, a two-second receive
-deadline, no redirect, retry or credential and a one MiB response ceiling.
+deadline, no redirect or retry and a one MiB response ceiling; the local
+profile sends no credential.
 Status 200, 400 and 422 bodies are decoded for the template to admit or
 refuse; any other status, an oversized or undecodable body or a transport
 failure makes the store unavailable. That server answers a query against a
@@ -512,9 +512,27 @@ missing database with an empty success, so an empty answer from a selected
 database is followed by the fixed read
 `SELECT schema_name FROM information_schema.schemata WHERE schema_name = '<database>'`
 and a missing database is reported as unavailable, not as no data.
-`metrics_durable_reader_test.exs` covers receiver and database admission,
-the exact request, refused, oversized, malformed and unreachable answers,
-the database check, the listener binding and activation. With
+
+`WOTEX_LAB_GREPTIME_QUERY_PROFILE=hosted` instead admits an exact HTTPS
+origin, without path, query, fragment or userinfo, and an optional
+`WOTEX_LAB_GREPTIME_QUERY_CA_CERTFILE`. Hosted exchanges go through
+`Metrics.ReqSink`'s hosted destination policy with that origin as audience:
+each exchange re-resolves the host, refuses private, link-local, metadata,
+multicast and mixed answers, pins one public peer and verifies the original
+hostname through TLS. The Bearer credential comes from
+`WOTEX_LAB_GREPTIME_QUERY_TOKEN`, which boot checks and each executor call
+reads again without storing it. It must be a 43–128 character URL-safe token
+that differs from the export credential and from both operator listener
+credentials, so query and export credentials keep separate scopes; a missing,
+malformed or reused credential makes the store unavailable. The response is
+cut at the same one MiB ceiling, so an oversized hosted answer fails JSON
+decoding and is also unavailable.
+`metrics_durable_reader_test.exs` covers local and hosted receiver and
+database admission, the exact request, refused, oversized, malformed and
+unreachable answers, the database check, credential format and separation,
+refusal of a hosted origin that resolves to loopback before any connection,
+the listener binding and activation. Hosted success against a public receiver
+is not exercised. With
 `WOTEX_LAB_GREPTIME=1`, the Workbench's `greptime_durable_read_test.exs`
 provisions a database on the pinned server and runs the host supervisor
 with volatile history, the exporter writing to that database and the

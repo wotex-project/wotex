@@ -10,7 +10,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   exporter; when history is also active that exporter is its sole writer, so
   no capture is duplicated. `:durable_query` admits
   `WotexLabWorkbench.Observability.DurableReader` options, so inspection scopes
-  can also read the local durable receiver. `:query` adds the loopback operator
+  can also read the configured durable receiver. `:query` adds the loopback operator
   query listener after the history cohort; it needs history or durable reads
   and a credential distinct from `:scrape`.
   """

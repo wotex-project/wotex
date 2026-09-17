@@ -12,6 +12,7 @@ defmodule WotexLabWorkbench.MetricsDurableReaderTest do
   @token "local-only-query-token-sentinel-with-32-bytes-min"
   @digest :crypto.hash(:sha256, @token)
   @path "/v1/prometheus/api/v1/query_range"
+  @reader_token "hosted-durable-reader-token-sentinel-with-43-chars"
   @empty ~s({"status":"success","data":{"resultType":"matrix","result":[]}})
 
   test "configuration admits an exact loopback receiver and a non-reserved database" do
@@ -127,6 +128,84 @@ defmodule WotexLabWorkbench.MetricsDurableReaderTest do
 
     {:ok, closed} = DurableReader.configure("http://127.0.0.1:#{unused_port()}", "lab")
     assert {:error, :unavailable} = DurableReader.executor(closed).(template)
+  end
+
+  test "hosted reads need an exact HTTPS origin and a separate just-in-time credential" do
+    assert {:ok, opts} = DurableReader.configure_hosted("https://metrics.example", "lab")
+
+    assert opts == [
+             url: "https://metrics.example",
+             database: "lab",
+             profile: :hosted,
+             tls_ca_certfile: nil
+           ]
+
+    assert :ok = DurableReader.validate(opts)
+
+    assert {:ok, _} =
+             DurableReader.configure_hosted("https://metrics.example:8443", nil, "/etc/ca.pem")
+
+    for {origin, database, ca} <- [
+          {"http://metrics.example", nil, nil},
+          {"https://metrics.example/", nil, nil},
+          {"https://metrics.example/v1/prometheus", nil, nil},
+          {"https://metrics.example?db=other", nil, nil},
+          {"https://metrics.example#fragment", nil, nil},
+          {"https://reader@metrics.example", nil, nil},
+          {"https://metrics.example", "public", nil},
+          {"https://metrics.example", nil, ""},
+          {nil, nil, nil}
+        ] do
+      assert {:error, %Error{code: :invalid_durable_reads}} =
+               DurableReader.configure_hosted(origin, database, ca)
+    end
+
+    for opts <- [
+          [url: "http://127.0.0.1:4000", database: nil, tls_ca_certfile: "/etc/ca.pem"],
+          [url: "http://127.0.0.1:4000", database: nil, profile: :hosted],
+          [url: "https://metrics.example", database: nil, profile: :local],
+          [url: "https://metrics.example", database: nil, profile: :remote]
+        ] do
+      assert {:error, %Error{code: :invalid_durable_reads}} = DurableReader.validate(opts)
+    end
+
+    names = ~w(WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_METRICS_TOKEN
+               WOTEX_LAB_METRICS_QUERY_TOKEN)
+
+    saved = Map.new(names, &{&1, System.get_env(&1)})
+    Enum.each(names, &System.delete_env/1)
+
+    try do
+      {:ok, listen} = :gen_tcp.listen(0, [:binary, ip: {127, 0, 0, 1}, active: false])
+      {:ok, port} = :inet.port(listen)
+      {:ok, local} = DurableReader.configure_hosted("https://localhost:#{port}", "lab")
+      {:ok, template} = DurableQuery.template(descriptor())
+      executor = DurableReader.executor(local)
+      refute inspect(executor) =~ @reader_token
+
+      assert :error = DurableReader.lookup_credential()
+      assert {:error, :unavailable} = executor.(template)
+      System.put_env("WOTEX_LAB_GREPTIME_QUERY_TOKEN", "short")
+      assert :error = DurableReader.lookup_credential()
+      System.put_env("WOTEX_LAB_GREPTIME_QUERY_TOKEN", @reader_token)
+      assert {:ok, {:bearer, @reader_token}} = DurableReader.lookup_credential()
+
+      for other <- tl(names) do
+        System.put_env(other, @reader_token)
+        assert :error = DurableReader.lookup_credential()
+        System.delete_env(other)
+      end
+
+      # localhost resolves to loopback, so the hosted policy refuses it before connecting.
+      assert {:error, :unavailable} = executor.(template)
+      assert {:error, :timeout} = :gen_tcp.accept(listen, 200)
+      :ok = :gen_tcp.close(listen)
+    after
+      Enum.each(saved, fn
+        {name, nil} -> System.delete_env(name)
+        {name, value} -> System.put_env(name, value)
+      end)
+    end
   end
 
   test "the operator listener answers durable descriptors from the server-bound scope" do

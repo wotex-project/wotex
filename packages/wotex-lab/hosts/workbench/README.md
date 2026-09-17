@@ -355,7 +355,18 @@ from fixed PromQL templates, so `avg` over gauges and steps that are not
 whole seconds are refused, and `start_at` must be a whole multiple of
 `step_ms` in Unix time. A receiver that refuses the template or answers
 outside it gives 502; an unreachable receiver or a missing database gives
-503. The reader sends no credential and is limited to the local receiver.
+503. The local reader sends no credential.
+
+For an operator-provisioned hosted receiver, set
+`WOTEX_LAB_GREPTIME_QUERY_PROFILE=hosted`, set
+`WOTEX_LAB_GREPTIME_QUERY_URL` to its exact HTTPS origin, such as
+`https://metrics.example`, and provide `WOTEX_LAB_GREPTIME_QUERY_TOKEN`.
+`WOTEX_LAB_GREPTIME_QUERY_CA_CERTFILE` may name a private CA. The query token
+follows the same 43–128 character URL-safe rule and must differ from
+`WOTEX_LAB_GREPTIME_TOKEN`, `WOTEX_LAB_METRICS_TOKEN` and
+`WOTEX_LAB_METRICS_QUERY_TOKEN`; startup is refused otherwise. Each read
+re-resolves the host, refuses private or mixed DNS answers, pins one public
+address and verifies the hostname through TLS.
 
 ### Remote operator transport
 
