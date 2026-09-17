@@ -220,8 +220,9 @@ No-stream modes return a structured unsupported error without creating a process
 ## WCO-I06 — Acceptance through public packages
 
 The concrete [integration corpus](fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
+synthetic TD, selected route/command and public payload projection. Its seven
+cases execute: F01 in `test/wotex/coap/profile_test.exs` against a real UDP peer
+and F02-F07 in `test/wotex/coap/runtime_error_test.exs`. JSON validity or an identifier
 in a fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,

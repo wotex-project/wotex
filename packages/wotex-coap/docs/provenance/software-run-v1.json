@@ -17,15 +17,15 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "5fc94a53deb7f20719c7ba96b36ba5a25c47a4e5aeef61842162c91a21dacf76",
-    "peer_executable_sha256": "85f23cc4ecd84b90b0fa28459235ad96b7c7a3a640f182e63a1940977ff055d8",
+    "native_helper_sha256": "9ae51a5899ad7215c57e6d178f75635e7e7cf08e5dd505a9fcf088fec631c240",
+    "peer_executable_sha256": "f6a460689e8e53bd35dbf470b36d1a37f28376de4c8b5c8028a8a6d63884df28",
     "version": "4.3.5"
   },
   "source_identity": {
-    "aggregate_sha256": "f738a2520e00538395904d7895ba95d932aabfd2ed252fdedb9fd6732421717a",
+    "aggregate_sha256": "b954708997ec06253946e10eff7b098a6923587f16f1b40bf00b38b79ca8df33",
     "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
     "selected_files": {
-      "docs/specs/fixtures/native-v1.json": "673350d49d68038d0d052edb7edb4a36c320d97a6311ad234e7b4120f31c488c",
+      "docs/specs/fixtures/native-v1.json": "d2d7b3b0de52f93aca94d5f745ee4d3e332964383da7ec034f4fc31305d70436",
       "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
       "lib/wotex/coap/software/run.ex": "64be6f2a03921a43f288dbfe904fb4fe53731d9c396ee78de7b754e08f3c35c8",
       "mix.exs": "bf8e1cab6c097fde6f57bba0c0ee05b713910528b024cd04b10a752a3478f41b",
@@ -48,10 +48,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "2837c42b739306c36746a9d582e9e9e91edd9025e59b8751c53dfd881f726b0f",
-    "nested_native_manifest_sha256": "4566df681d3cbaea299a05c1758426de6f5906bec32f8ec3e78d9eac89f7c6cf"
+    "manifest_sha256": "d4ff5fd4438138485c7bb0d93fd06a25964743e7042f91f3895d71ebf2047b9e",
+    "nested_native_manifest_sha256": "448fb5cefbc0a26528194234b36162eae27148d91c5982ed83fca51bc06b0280"
   },
-  "result_sha256": "aa8773a4831dba3b7576b72e1551e2a22aff1d9437f002c7c2ad8a912f33d931",
+  "result_sha256": "49eacd8f708fc116a13bab81dab2a9c67a43fc34449650ddc80fd76bdd1d02cd",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -82,7 +82,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 55375,
+    "elapsed_ms": 49649,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -94,8 +94,8 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "85f23cc4ecd84b90b0fa28459235ad96b7c7a3a640f182e63a1940977ff055d8",
-      "wotex-coap-oscore": "5fc94a53deb7f20719c7ba96b36ba5a25c47a4e5aeef61842162c91a21dacf76"
+      "coap-server": "f6a460689e8e53bd35dbf470b36d1a37f28376de4c8b5c8028a8a6d63884df28",
+      "wotex-coap-oscore": "9ae51a5899ad7215c57e6d178f75635e7e7cf08e5dd505a9fcf088fec631c240"
     },
     "scenario_ids": [
       "WCO-C03",
@@ -121,12 +121,12 @@
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "f738a2520e00538395904d7895ba95d932aabfd2ed252fdedb9fd6732421717a",
+    "source_sha256": "b954708997ec06253946e10eff7b098a6923587f16f1b40bf00b38b79ca8df33",
     "status": "passed",
     "test_log": {
-      "bytes": 4183,
+      "bytes": 4206,
       "path": "tests.log",
-      "sha256": "4bf4574a9a7f84d9926fa8daff620fa8efeb46425e455aa874b420f7831c814c"
+      "sha256": "258619dd756e6e23b1a6a51d76ae6826ce9b4e33e7d836e90f06369ca6c29875"
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
@@ -146,26 +146,26 @@
   "resource_trends": {
     "udp": {
       "beam_total_bytes": [
-        78004809,
-        78540025
+        78989555,
+        79491619
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        78197057,
-        78623217
+        78716411,
+        79339587
       ]
     },
     "dtls_pki": {
       "beam_total_bytes": [
-        80388521,
-        80886713
+        80846155,
+        81406979
       ]
     },
     "oscore": {
       "beam_total_bytes": [
-        80738289,
-        80773385
+        81138155,
+        81216259
       ],
       "helper_rss_kib": [
         1936,

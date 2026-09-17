@@ -1,7 +1,7 @@
 {
   "format": "wotex.protocol.integration",
   "version": "1.0.0",
-  "status": "specified_unexecuted",
+  "status": "executed",
   "requirements": [
     "WCO-I02",
     "WCO-I03",
