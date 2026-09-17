@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.30
+  version: 1.1.31
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -84,12 +84,16 @@ The public native client projects a complete page of local child NodeIds. An
 oversized page closes the Session; child-list compatibility now follows bounded
 continuations on that same Session.
 The C owner now also admits an internal `allow_continuation: true` Browse shape:
-it retains one server continuation in C memory, gives it a fresh local token,
+it retains up to 64 server continuations in C memory, each chain with its own
+cumulative bounds and a fresh local token per page,
 and sends service-level BrowseNext or release on that Session. A secure
 same-stack C peer forces one reference per page and exercises both wire calls.
 The BEAM owner exposes a generation-bound public handle with the original
-browse deadline and cumulative bounds. Independent BrowseNext peer evidence,
-multiple live continuations and release counters remain open. Output buffering, other operations, cancellation,
+browse deadline and cumulative bounds, releases an unconsumed continuation with a
+bounded control when that deadline passes and ends the generation when that
+release fails. A duplicate live token from the native process ends the
+generation. Independent BrowseNext peer evidence and server release counters
+remain open. Output buffering, other operations, cancellation,
 and the secure policy/token matrix remain required. The owner now samples the
 SDK's client-local namespace table when the Session is ready and projects every
 decoded NodeId, ExpandedNodeId without a URI, encoded ExtensionObject type

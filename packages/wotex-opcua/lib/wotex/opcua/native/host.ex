@@ -41,6 +41,7 @@ defmodule Wotex.OPCUA.Native.Host do
   alias Wotex.OPCUA.Native.{Executable, Frame, HostOptions, Ready}
 
   @capacity 64
+  @continuations 64
   @closed_handles 1024
   @control_ms 1000
   @maximum_line 131_072
@@ -242,7 +243,7 @@ defmodule Wotex.OPCUA.Native.Host do
              input: <<>>,
              next_id: 1,
              continuations: %{},
-             chain: false,
+             expired: {:queue.new(), MapSet.new()},
              closing: false,
              credit_sequence: 0,
              claim_timer: :erlang.start_timer(remaining(deadline), self(), :claim_expired),
@@ -303,10 +304,10 @@ defmodule Wotex.OPCUA.Native.Host do
         {owner, _} = from,
         %{owner: owner, claimed: true, closing: false} = state
       ) do
-    if map_size(state.continuations) == 0 and not state.chain and
-         outstanding(state) < @capacity and valid_browse_limits?(limits) do
+    if chains(state) < @continuations and outstanding(state) < @capacity and
+         valid_browse_limits?(limits) do
       admit(
-        %{state | chain: true},
+        state,
         from,
         "browse",
         Map.put(parameters, "allow_continuation", true),
@@ -322,38 +323,21 @@ defmodule Wotex.OPCUA.Native.Host do
   def handle_call(
         {__MODULE__, :browse_continue, %Continuation{} = handle, timeout, operation},
         {owner, _} = from,
-        %{owner: owner, claimed: true, closing: false, chain: false} = state
+        %{owner: owner, claimed: true, closing: false} = state
       ) do
+    owned = handle.pid == self() and handle.generation == state.generation
+
     case Map.fetch(state.continuations, handle.reference) do
+      :error when owned ->
+        {:reply, expired_continuation(state, handle, operation), state}
+
       {:ok, _} when map_size(state.pending) >= @capacity ->
         {:reply, {:error, %{Error.new(:busy) | details: %{phase: :admission}}}, state}
 
-      {:ok, cursor}
-      when handle.pid == self() and handle.generation == state.generation and
-             operation in [:next, :release] ->
-        now = System.monotonic_time(:millisecond)
-        continuations = Map.delete(state.continuations, handle.reference)
-        state = %{state | continuations: continuations, chain: true}
-
-        if operation == :next and now >= cursor.deadline do
-          # An expired browse still releases its live server continuation.
-          release_after(state, from, cursor, Error.new(:deadline_exceeded))
-        else
-          {name, budget, deadline} =
-            if operation == :release,
-              do: {"browse_release", min(timeout, @control_ms), now + min(timeout, @control_ms)},
-              else: {"browse_next", min(timeout, cursor.deadline - now), cursor.deadline}
-
-          admit(
-            state,
-            from,
-            name,
-            %{"continuation" => cursor.token},
-            budget,
-            deadline,
-            Map.put(cursor, :kind, operation)
-          )
-        end
+      {:ok, cursor} when owned ->
+        cancel_timer(cursor.timer)
+        state = %{state | continuations: Map.delete(state.continuations, handle.reference)}
+        continue_cursor(state, from, cursor, timeout, operation)
 
       _ ->
         {:reply, {:error, Error.new(:invalid_continuation)}, state}
@@ -441,7 +425,7 @@ defmodule Wotex.OPCUA.Native.Host do
            }}
 
         {:error, %Error{} = error, state} ->
-          fail(%{state | chain: state.chain and not browse_cursor?(cursor)}, error, from)
+          fail(state, error, from)
       end
     end
   end
@@ -582,6 +566,35 @@ defmodule Wotex.OPCUA.Native.Host do
   def handle_info({:timeout, _, {:control, id}}, %{controls: controls} = state)
       when is_map_key(controls, id),
       do: terminate_generation(state, Error.new(:cleanup_failed))
+
+  # The original browse deadline releases a continuation nobody consumed.
+  def handle_info(
+        {:timeout, timer, {:continuation, reference}},
+        %{continuations: continuations} = state
+      )
+      when is_map_key(continuations, reference) do
+    case Map.pop!(continuations, reference) do
+      {%{timer: ^timer} = cursor, continuations} ->
+        state = %{state | continuations: continuations, expired: expire(state.expired, reference)}
+        deadline = System.monotonic_time(:millisecond) + @control_ms
+
+        case emit(state, "browse_release", %{"continuation" => cursor.token}, @control_ms, deadline) do
+          {:ok, id, state} ->
+            control = %{
+              kind: :browse_release,
+              timer: :erlang.start_timer(@control_ms, self(), {:control, id})
+            }
+
+            {:noreply, %{state | controls: Map.put(state.controls, id, control)}}
+
+          {:error, error, state} ->
+            terminate_generation(state, error)
+        end
+
+      _ ->
+        {:noreply, state}
+    end
+  end
 
   def handle_info({port, {:exit_status, status}}, %{port: port} = state) do
     terminate_generation(
@@ -791,7 +804,7 @@ defmodule Wotex.OPCUA.Native.Host do
       decoded ->
         if entry.replied do
           after_native(state, line, fn state ->
-            orphaned(native_error_chain(state, entry), entry, decoded)
+            orphaned(state, entry, decoded)
           end)
         else
           Process.demonitor(entry.monitor, [:flush])
@@ -810,6 +823,9 @@ defmodule Wotex.OPCUA.Native.Host do
     case {control.kind,
           Frame.response(line, state.generation, id, Atom.to_string(control.kind), nil)} do
       {:cancel, {:ok, %{"target_id" => target}}} when target == control.target ->
+        after_native(state, line, fn state -> {:ok, state} end)
+
+      {:browse_release, {:ok, nil}} ->
         after_native(state, line, fn state -> {:ok, state} end)
 
       {:close, {:ok, nil}} ->
@@ -895,7 +911,7 @@ defmodule Wotex.OPCUA.Native.Host do
 
   defp deliver(state, entry, {:native_error, error}, _) do
     GenServer.reply(entry.from, {:error, error})
-    {:ok, native_error_chain(state, entry)}
+    {:ok, state}
   end
 
   defp deliver(state, %{cursor: nil} = entry, {:ok, %{"continuation" => token}}, _)
@@ -911,12 +927,12 @@ defmodule Wotex.OPCUA.Native.Host do
 
   defp deliver(state, %{cursor: %{kind: :release_after} = cursor}, {:ok, nil}, _) do
     GenServer.reply(cursor.from, {:error, cursor.error})
-    {:ok, %{state | chain: false}}
+    {:ok, state}
   end
 
   defp deliver(state, %{cursor: %{kind: :release}} = entry, {:ok, nil}, _) do
     GenServer.reply(entry.from, {:ok, nil})
-    {:ok, %{state | chain: false}}
+    {:ok, state}
   end
 
   defp deliver(
@@ -931,6 +947,10 @@ defmodule Wotex.OPCUA.Native.Host do
     bytes = old.bytes + byte_size(line)
 
     cond do
+      is_binary(token) and Enum.any?(state.continuations, fn {_, live} -> live.token == token end) ->
+        GenServer.reply(entry.from, {:error, Error.new(:invalid_native_frame)})
+        {:stop, Error.new(:invalid_native_frame), state}
+
       pages > old.limits.max_pages or count > old.limits.max_references or bytes > 1_048_576 or
           (is_binary(token) and pages == old.limits.max_pages) ->
         limited(state, entry, token)
@@ -939,8 +959,11 @@ defmodule Wotex.OPCUA.Native.Host do
         reference = make_ref()
         handle = %Continuation{pid: self(), reference: reference, generation: state.generation}
 
+        delay = max(entry.deadline - System.monotonic_time(:millisecond), 0)
+
         cursor = %{
           token: token,
+          timer: :erlang.start_timer(delay, self(), {:continuation, reference}),
           deadline: entry.deadline,
           pages: pages,
           references: count,
@@ -950,26 +973,73 @@ defmodule Wotex.OPCUA.Native.Host do
 
         GenServer.reply(entry.from, {:ok, %{result | "continuation" => handle}})
 
-        {:ok,
-         %{state | chain: false, continuations: Map.put(state.continuations, reference, cursor)}}
+        {:ok, %{state | continuations: Map.put(state.continuations, reference, cursor)}}
 
       true ->
         GenServer.reply(entry.from, {:ok, result})
-        {:ok, %{state | chain: false}}
+        {:ok, state}
     end
   end
 
   # Excess results release the newest live server continuation on this Session.
   defp limited(state, entry, nil) do
     GenServer.reply(entry.from, {:error, Error.new(:response_limit)})
-    {:ok, %{state | chain: false}}
+    {:ok, state}
   end
 
   defp limited(state, entry, token),
     do: emit_release(state, entry.from, token, Error.new(:response_limit))
 
-  defp native_error_chain(state, %{cursor: cursor}) do
-    if browse_cursor?(cursor), do: %{state | chain: false}, else: state
+  # A deadline-released handle reports its deadline; releasing it again is done.
+  defp expired_continuation(%{expired: {_, expired}}, handle, operation) do
+    cond do
+      not MapSet.member?(expired, handle.reference) -> {:error, Error.new(:invalid_continuation)}
+      operation == :next -> {:error, Error.new(:deadline_exceeded)}
+      true -> {:ok, nil}
+    end
+  end
+
+  defp continue_cursor(state, from, cursor, timeout, operation) do
+    now = System.monotonic_time(:millisecond)
+
+    if operation == :next and now >= cursor.deadline do
+      # An expired browse still releases its live server continuation.
+      release_after(state, from, cursor, Error.new(:deadline_exceeded))
+    else
+      {name, budget, deadline} =
+        if operation == :release,
+          do: {"browse_release", min(timeout, @control_ms), now + min(timeout, @control_ms)},
+          else: {"browse_next", min(timeout, cursor.deadline - now), cursor.deadline}
+
+      admit(
+        state,
+        from,
+        name,
+        %{"continuation" => cursor.token},
+        budget,
+        deadline,
+        Map.put(cursor, :kind, operation)
+      )
+    end
+  end
+
+  defp expire({queue, members}, reference) do
+    queue = :queue.in(reference, queue)
+    members = MapSet.put(members, reference)
+
+    if :queue.len(queue) > @continuations do
+      {{:value, oldest}, queue} = :queue.out(queue)
+      {queue, MapSet.delete(members, oldest)}
+    else
+      {queue, members}
+    end
+  end
+
+  # Live continuations, deadline releases and unfinished Browse work.
+  defp chains(state) do
+    map_size(state.continuations) +
+      Enum.count(state.pending, fn {_, entry} -> browse_cursor?(entry.cursor) end) +
+      Enum.count(state.controls, fn {_, control} -> control.kind == :browse_release end)
   end
 
   defp browse_cursor?(%{kind: kind}) when kind in [:browse_page, :next, :release, :release_after],
@@ -1007,8 +1077,7 @@ defmodule Wotex.OPCUA.Native.Host do
         {:ok,
          %{
            state
-           | chain: true,
-             pending: Map.put(state.pending, id, entry),
+           | pending: Map.put(state.pending, id, entry),
              monitors: Map.put(state.monitors, entry.monitor, id)
          }}
 

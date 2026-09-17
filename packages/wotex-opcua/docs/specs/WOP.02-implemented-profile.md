@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.9
+  version: 2.0.10
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -138,9 +138,11 @@ validates strict finite filters before service I/O and rejects unknown local
 namespace indices. A server page larger than requested closes the Session.
 Persistent typed Browse can return a generation-bound handle; `next/2`,
 `release/2` and `all/3` preserve the original deadline, server order and
-cumulative page/reference/byte ceilings. The C owner currently retains only
-one live server continuation per Session, and a second Browse while it is live
-returns `:busy`. The older child-list compatibility call now collects pages
+cumulative page/reference/byte ceilings. The C owner retains up to 64 live
+server continuations per Session, each with its own token and cumulative bounds;
+a further Browse returns `:busy`. A continuation that is not consumed by its
+original browse deadline is released automatically, and a failed release closes
+the Session. The older child-list compatibility call now collects pages
 through the same persistent or temporary one-shot Session, retains duplicates
 and caps the complete result at 256 local children. It releases a cursor after
 a later invalid identity or Uncertain page. Native responses wait in the

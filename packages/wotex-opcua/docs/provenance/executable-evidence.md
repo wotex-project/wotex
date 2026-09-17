@@ -20,6 +20,59 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Multiple live Browse continuations and deadline release, 2026-09-17
+
+`session_open.c` replaces the single continuation with 64 continuation chains.
+Each chain holds one live server continuation or one unfinished Browse,
+BrowseNext or release, with its own page size and cumulative page, reference
+and byte bounds, and each captured page gets a fresh `c<serial>` token. An
+exposed Browse reserves a free chain or fails `busy` before an SDK request is
+built. `browse_check.c` checks two live chains with distinct tokens, per-chain
+admission and busy state, rejection of foreign and repeated tokens,
+restoration after retiring queued work, a completed release freeing its chain,
+the per-chain page ceiling, reservation of all 64 chains through the production
+prepare path with a 65th `busy`, orphaning when sent work is retired, and
+clearing on close.
+
+`Native.Host` drops the single-chain flag. A Browse is admitted while fewer
+than 64 continuations, deadline releases and Browse operations are live. A
+stored continuation starts a timer at its original browse deadline. When that
+timer fires, the host sends one bounded `browse_release` control and records the
+reference in a bounded 64-entry expired set, so `next/2` returns
+`deadline_exceeded` and `release/2` returns `:ok`. A failed or unanswered
+release ends the generation. A token that duplicates a live continuation ends
+the generation with `invalid_native_frame`. In `open62541_test.exs`, probe modes
+return 64 live continuations and then `busy` (a release admits one more), a
+duplicate token closes the owner, automatic release completes before `next/2`
+reports the deadline, and a failed automatic release closes the owner. In
+`native_paged_test.exs`, against the secure same-stack open62541 peer, two
+continuations are live at once, one is released while the other advances,
+another is released automatically after 100 ms, and complete collection
+still succeeds on the same Session.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+RelWithDebInfo native CTest passes 204/204. macOS ASan/UBSan CTest passes 204 of
+213, with the nine LeakSanitizer custody cases unavailable on macOS.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 352 passed (10 doctests,
+4 properties, 338 tests), 54 optional tests excluded and 95.3% coverage. The optional
+secure suite with the lifecycle file passes 54/54 against both builds. WOP-F14
+through F16 are not bound: their exact continuation bytes and lost-response
+events need an injectable SDK service trace. Independent-peer BrowseNext is not
+possible because asyncua 2.0.1 raises `NotImplementedError` for it.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/session_open.c` | `15ccee51ee2583d01b409a342d77fe9dc4d65fc729aa9d887ad6931c06c1638c` |
+| `priv/native/session_open.h` | `e03bbc445fe1e397dd08d31e2978a2e7f011766c6c306fef4011f09416ec0999` |
+| `priv/native/browse_check.c` | `05ef633979d931a79a4eda105b23ab9e031ecd2f9c06eba98392fb3af85113da` |
+| `lib/wotex/opcua/native/host.ex` | `493fe79ab52587a9687149614601d78bed76d2ef671416637ae4bb8630108772` |
+| `test/native/host_probe.c` | `3cf38634af740a5155a79ef0b929e0ab8e4267cd3f62a1fca549bdd06207e154` |
+| `test/wotex/opcua/open62541_test.exs` | `e0e06d3a8adb094c027bb729ce0106c004256ff086443bf0686b580b2521dbca` |
+| `test/interop/native_paged_test.exs` | `ab5e371aea7a673efbe91df006d7b79485c0ba8768cd16f07f0150f3639c4e63` |
+| RelWithDebInfo `wotex_opcua_native` | `2e1927678d034acb6b4e47723a3efd0bef274e3270c9f1e6b19655157a98df1a` |
+| ASan/UBSan `wotex_opcua_native` | `433fc7ffafff9d4ee2bf0e92ca607b77c395ad9c08bb0b3a180e7f7355c8c1f8` |
+| native CTest log | `1b1d65df5cb2301100fe4f2dd6c177615952c617c8b14481f16c1e22f7aacdd2` |
+
 ## Runtime Property observation relay, 2026-09-17
 
 `Wotex.OPCUA.Transport` now implements the Runtime `observeproperty`

@@ -484,8 +484,6 @@ defmodule Wotex.OPCUA.Open62541Test do
     assert {:error, %Error{code: :invalid_continuation}} =
              Browse.next(session, %{first | reference: make_ref()})
 
-    assert {:error, %Error{code: :busy}} = Browse.references(session, "ns=0;i=85")
-
     assert {:ok, %Browse.Page{references: [reference], continuation: second}} =
              Browse.next(session, first)
 
@@ -501,6 +499,41 @@ defmodule Wotex.OPCUA.Open62541Test do
 
     assert left == right
     assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-N03 64 live continuations share one Session and a further Browse is busy",
+       context do
+    options = fixture(context, "many-continuations", "session_many_continuations")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+
+    handles =
+      for _ <- 1..64 do
+        assert {:ok, %Browse.Page{continuation: %Browse.Continuation{} = handle}} =
+                 Browse.references(session, "ns=0;i=85", page_size: 1)
+
+        handle
+      end
+
+    assert length(Enum.uniq_by(handles, & &1.reference)) == 64
+    assert {:error, %Error{code: :busy}} = Browse.references(session, "ns=0;i=85")
+    assert :ok = Browse.release(session, Enum.at(handles, 10))
+
+    assert {:ok, %Browse.Page{continuation: %Browse.Continuation{}}} =
+             Browse.references(session, "ns=0;i=85", page_size: 1)
+
+    assert {:error, %Error{code: :busy}} = Browse.references(session, "ns=0;i=85")
+    assert :ok = Wotex.OPCUA.disconnect(session)
+
+    duplicate = fixture(context, "duplicate-continuation", "session_duplicate_continuation")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(duplicate, :client, Open62541))
+    monitor = Process.monitor(session.handle.host)
+    assert {:ok, %Browse.Page{continuation: first}} = Browse.references(session, "ns=0;i=85")
+
+    assert {:error, %Error{code: :invalid_native_frame}} =
+             Browse.references(session, "ns=0;i=85")
+
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    assert :ok = Browse.release(session, first)
   end
 
   test "WOP-N04 page, reference and original deadline limits release on the live Session",
@@ -530,9 +563,11 @@ defmodule Wotex.OPCUA.Open62541Test do
           assert {:ok, %Browse.Page{continuation: first}} =
                    Browse.references(session, "ns=0;i=85", opts)
 
-          Process.sleep(150)
+          host = session.handle.host
+          assert eventually(fn -> map_size(:sys.get_state(host).continuations) == 0 end)
+          assert eventually(fn -> map_size(:sys.get_state(host).controls) == 0 end)
           assert {:error, %Error{code: :deadline_exceeded}} = Browse.next(session, first)
-          assert {:error, %Error{code: :invalid_continuation}} = Browse.release(session, first)
+          assert :ok = Browse.release(session, first)
       end
 
       refute_receive {:DOWN, ^monitor, :process, _, _}, 50
@@ -540,6 +575,18 @@ defmodule Wotex.OPCUA.Open62541Test do
       assert :ok = Wotex.OPCUA.disconnect(session)
       assert_receive {:DOWN, ^monitor, :process, _, _}, 1000
     end
+  end
+
+  test "WOP-N04 a failed deadline release closes the owner", context do
+    options = fixture(context, "failed-deadline-release", "session_release_failure")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+    monitor = Process.monitor(session.handle.host)
+
+    assert {:ok, %Browse.Page{continuation: handle}} =
+             Browse.references(session, "ns=0;i=85", timeout_ms: 50)
+
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    assert :ok = Browse.release(session, handle)
   end
 
   test "WOP-N04 release failure closes the owner", context do
@@ -854,6 +901,14 @@ defmodule Wotex.OPCUA.Open62541Test do
       guardian_digest: digest(Path.join(context.directory, "guardian")),
       timeout: 2000
     )
+  end
+
+  defp eventually(check, attempts \\ 200) do
+    cond do
+      check.() -> true
+      attempts == 0 -> false
+      true -> Process.sleep(5) && eventually(check, attempts - 1)
+    end
   end
 
   defp digest(path),

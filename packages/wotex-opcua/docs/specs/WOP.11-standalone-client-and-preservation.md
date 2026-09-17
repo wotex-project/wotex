@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.12
+  version: 1.1.13
   owner: wotex-opcua
   updated: 2026-09-17
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.12**. Implementation status: **partial**.
+Specification version: **1.1.13**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -19,7 +19,7 @@ capabilities. None of the planned pure-codec, persistent-session or pagination
 requirements below is accepted merely by specifying it. The first native
 service-level Browse slice, bounded child-NodeId projection and persistent
 single-page typed `Browse.references/3` result now have independent-peer
-evidence. The C process has a single-live-token BrowseNext/release path.
+evidence. The C process owns up to 64 live continuation chains per Session.
 Persistent typed Browse now maps that token to a generation-bound handle,
 retains the original deadline and cumulative bounds, and offers `next/2`,
 `release/2` and `all/3` against deterministic response fixtures and a secure
@@ -27,8 +27,13 @@ same-stack C peer that forces one reference per wire page. That peer confirms
 BrowseNext, release and child-list collection in persistent and one-shot mode.
 Excess results and an expired original browse deadline now release the live
 server continuation on the same Session and keep it usable; a failed release
-still closes the Session. Multiple live continuations and independent-peer
-BrowseNext/release remain open;
+still closes the Session. An unconsumed continuation is released when its
+original browse deadline passes, without a caller action; a later `next/2` on
+that handle returns `deadline_exceeded` and `release/2` returns `:ok`. A failed
+automatic release closes the Session. A same-stack peer exercises two live
+continuations, BrowseNext and automatic release. Independent-peer BrowseNext and
+release remain open because the pinned asyncua 2.0.1 peer does not implement
+BrowseNext;
 N03/N04 are not accepted. The native one-shot client now
 projects successful Read, Write and Call results into the recorded
 success shapes; error and full lifecycle compatibility remain open.

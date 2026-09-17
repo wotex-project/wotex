@@ -74,6 +74,30 @@ defmodule Wotex.OPCUA.NativePagedInteropTest do
              children
 
     assert Address.to_string(first.node_id.node_id) in children
+
+    assert {:ok, %Browse.Page{references: [_], continuation: left}} =
+             Browse.references(session, object, page_size: 1)
+
+    assert {:ok, %Browse.Page{references: [_], continuation: right}} =
+             Browse.references(session, object, page_size: 1)
+
+    assert %Browse.Continuation{} = left
+    assert %Browse.Continuation{} = right
+    assert :ok = Browse.release(session, left)
+
+    assert {:ok, %Browse.Page{references: [_], continuation: after_right}} =
+             Browse.next(session, right)
+
+    assert :ok = Browse.release(session, after_right)
+
+    assert {:ok, %Browse.Page{references: [_], continuation: expiring}} =
+             Browse.references(session, object, page_size: 1, timeout_ms: 100)
+
+    host = session.handle.host
+    assert eventually(fn -> map_size(:sys.get_state(host).continuations) == 0 end)
+    assert eventually(fn -> map_size(:sys.get_state(host).controls) == 0 end)
+    assert {:error, %Error{code: :deadline_exceeded}} = Browse.next(session, expiring)
+    assert {:ok, %{references: [_, _, _]}} = Browse.all(session, object, page_size: 1)
     assert {:ok, listed} = Wotex.OPCUA.send(session, %{type: :browse, node_id: object})
     assert Enum.sort(listed) == children
     assert :ok = Wotex.OPCUA.disconnect(session)
@@ -84,6 +108,14 @@ defmodule Wotex.OPCUA.NativePagedInteropTest do
     assert {:ok, listed} = Open62541.request(oneshot, %{type: :browse, node_id: object}, 5000)
     assert Enum.sort(listed) == children
     assert :ok = Open62541.disconnect(oneshot)
+  end
+
+  defp eventually(check, attempts \\ 200) do
+    cond do
+      check.() -> true
+      attempts == 0 -> false
+      true -> Process.sleep(10) && eventually(check, attempts - 1)
+    end
   end
 
   defp await_ready(port, deadline) do

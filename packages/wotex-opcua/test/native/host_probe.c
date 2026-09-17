@@ -296,6 +296,25 @@ static int session_faults(int fault) {
         if(report(generation, "s9")) return 90;
         return wait_eof();
     }
+    if(fault == 14 || fault == 15) {
+        /* Each Browse returns a fresh live token (or, for 15, always c1). */
+        for(unsigned long long next = 1;;) {
+            if(next_request(frame, sizeof(frame), &generation, id)) return 95;
+            char body[128];
+            if(strstr(frame, "\"operation\":\"browse\"")) {
+                snprintf(body, sizeof(body), "{\"status\":0,\"continuation\":\"c%llu\",\"references\":[]}",
+                         fault == 15 ? 1ULL : next);
+                next += 2;
+            } else if(strstr(frame, "\"operation\":\"browse_release\"") ||
+                      strstr(frame, "\"operation\":\"close\"")) {
+                snprintf(body, sizeof(body), "null");
+            } else {
+                return 96;
+            }
+            if(respond(generation, id, body)) return 97;
+            if(strstr(frame, "\"operation\":\"close\"")) return wait_eof();
+        }
+    }
     if(fault == 13) {
         /* Credited output and one terminal control precede an immediate exit. */
         if(next_request(frame, sizeof(frame), &generation, id) ||
@@ -503,6 +522,8 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_subscription_race")) return session_faults(11);
     if (!strcmp(mode, "session_unknown_report")) return session_faults(12);
     if (!strcmp(mode, "session_terminal_exit")) return session_faults(13);
+    if (!strcmp(mode, "session_many_continuations")) return session_faults(14);
+    if (!strcmp(mode, "session_duplicate_continuation")) return session_faults(15);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

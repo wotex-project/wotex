@@ -540,13 +540,26 @@ static bool chain_operation(const WopSessionOperation *operation) {
            operation->kind == WOP_OPERATION_BROWSE_RELEASE;
 }
 
+static WopBrowseChain *operation_chain(WopSessionOperation *operation) {
+    return chain_operation(operation) && operation->chain < WOP_SESSION_CONTINUATIONS ?
+           &operation->session->browse_chains[operation->chain] : NULL;
+}
+
+/* Ends one chain operation; a chain without a live continuation is free. */
+static void chain_idle(WopSessionOperation *operation) {
+    WopBrowseChain *chain = operation_chain(operation);
+    if(!chain) return;
+    chain->busy = false;
+    if(!chain->active) chain->used = false;
+}
+
 static void capture_page(WopSessionOperation *operation, const UA_BrowseResult *result) {
-    WopSession *session = operation->session;
+    WopBrowseChain *chain = operation_chain(operation);
     operation->status = result->statusCode;
     size_t size = UA_calcSizeBinary(result, &UA_TYPES[UA_TYPES_BROWSERESULT], NULL);
-    UA_UInt32 pages = chain_operation(operation) ? session->browse_pages : 0;
-    UA_UInt32 references = chain_operation(operation) ? session->browse_references : 0;
-    size_t bytes = chain_operation(operation) ? session->browse_bytes : 0;
+    UA_UInt32 pages = chain ? chain->pages : 0;
+    UA_UInt32 references = chain ? chain->references : 0;
+    size_t bytes = chain ? chain->bytes : 0;
     if(result->referencesSize > operation->page_size ||
        result->continuationPoint.length > 4096 || size > 1048576 || pages >= 64 ||
        result->referencesSize > 4096 - references || size > 1048576 - bytes) {
@@ -555,10 +568,10 @@ static void capture_page(WopSessionOperation *operation, const UA_BrowseResult *
     }
     if(size == 0 || UA_BrowseResult_copy(result, &operation->browse_result) != UA_STATUSCODE_GOOD)
         return;
-    if(chain_operation(operation)) {
-        session->browse_pages++;
-        session->browse_references += (UA_UInt32)result->referencesSize;
-        session->browse_bytes += size;
+    if(chain) {
+        chain->pages++;
+        chain->references += (UA_UInt32)result->referencesSize;
+        chain->bytes += size;
     }
     operation->valid = true;
 }
@@ -690,7 +703,14 @@ static bool prepare_browse(WopSession *session, WopSessionOperation *operation,
     else if(strcmp(name, "inverse") == 0) sdk_direction = UA_BROWSEDIRECTION_INVERSE;
     else if(strcmp(name, "both") == 0) sdk_direction = UA_BROWSEDIRECTION_BOTH;
     else return false;
-    if(expose && (session->browse_active || session->browse_chain_busy)) {
+    size_t free_chain = WOP_SESSION_CONTINUATIONS;
+    for(size_t i = 0; expose && i < WOP_SESSION_CONTINUATIONS; i++) {
+        if(!session->browse_chains[i].used) {
+            free_chain = i;
+            break;
+        }
+    }
+    if(expose && free_chain == WOP_SESSION_CONTINUATIONS) {
         fail_with(failure, "busy", "admission", false);
         return false;
     }
@@ -715,55 +735,66 @@ static bool prepare_browse(WopSession *session, WopSessionOperation *operation,
     operation->page_size = (UA_UInt32)page_size;
     operation->expose = expose != NULL;
     if(operation->expose) {
-        session->browse_chain_busy = true;
-        session->browse_page_size = operation->page_size;
-        session->browse_pages = 0;
-        session->browse_references = 0;
-        session->browse_bytes = 0;
+        WopBrowseChain *chain = &session->browse_chains[free_chain];
+        UA_ByteString_clear(&chain->point);
+        memset(chain, 0, sizeof(*chain));
+        chain->used = chain->busy = true;
+        chain->page_size = operation->page_size;
+        operation->chain = free_chain;
     }
     return true;
 }
 
-bool wop_session_browse_token(const WopSession *session, char token[32]) {
-    if(!session || !session->browse_active || !token) return false;
-    int length = snprintf(token, 32, "c%" PRIu64, (uint64_t)session->browse_serial);
+bool wop_session_browse_token(const WopSession *session, size_t chain, char token[32]) {
+    if(!session || chain >= WOP_SESSION_CONTINUATIONS || !session->browse_chains[chain].active ||
+       !token) return false;
+    int length = snprintf(token, 32, "c%" PRIu64, (uint64_t)session->browse_chains[chain].serial);
     return length > 1 && length < 32;
 }
 
 bool wop_session_browse_capture(WopSession *session, WopSessionOperation *operation) {
     if(!session || !operation || !operation->valid) return false;
-    UA_ByteString_clear(&session->browse_point);
-    session->browse_active = false;
+    operation->session = session;
+    WopBrowseChain *chain = operation_chain(operation);
+    if(chain) {
+        UA_ByteString_clear(&chain->point);
+        chain->active = false;
+    }
     if(!operation->browse_result.continuationPoint.length) return true;
-    if(!chain_operation(operation) || session->browse_serial == UINT64_MAX ||
-       session->browse_pages >= 64 || session->browse_references >= 4096 ||
-       session->browse_bytes >= 1048576 ||
+    if(!chain || session->browse_serial == UINT64_MAX || chain->pages >= 64 ||
+       chain->references >= 4096 || chain->bytes >= 1048576 ||
        operation->browse_result.continuationPoint.length > 4096 ||
        UA_ByteString_copy(&operation->browse_result.continuationPoint,
-                          &session->browse_point) != UA_STATUSCODE_GOOD) return false;
-    session->browse_serial++;
-    session->browse_active = true;
+                          &chain->point) != UA_STATUSCODE_GOOD) return false;
+    chain->serial = ++session->browse_serial;
+    chain->active = true;
     return true;
 }
 
 bool wop_session_browse_admit(WopSession *session, WopSessionOperation *operation,
                               yyjson_val *parameters, bool release) {
-    if(!session || !operation || !session->browse_active || session->browse_chain_busy ||
-       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 1) return false;
-    yyjson_val *token_value = yyjson_obj_get(parameters, "continuation");
-    char expected[32] = {0};
-    if(!yyjson_is_str(token_value) || !wop_session_browse_token(session, expected) ||
-       yyjson_get_len(token_value) != strlen(expected) ||
-       memcmp(yyjson_get_str(token_value), expected, strlen(expected)) != 0)
+    if(!session || !operation || !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 1)
         return false;
-    operation->browse_point = session->browse_point;
-    session->browse_point = UA_BYTESTRING_NULL;
-    session->browse_active = false;
-    session->browse_chain_busy = true;
-    operation->kind = release ? WOP_OPERATION_BROWSE_RELEASE : WOP_OPERATION_BROWSE_NEXT;
-    operation->releasing = release;
-    operation->page_size = release ? 0 : session->browse_page_size;
-    return true;
+    yyjson_val *token_value = yyjson_obj_get(parameters, "continuation");
+    if(!yyjson_is_str(token_value)) return false;
+    for(size_t i = 0; i < WOP_SESSION_CONTINUATIONS; i++) {
+        WopBrowseChain *chain = &session->browse_chains[i];
+        char expected[32] = {0};
+        if(chain->busy || !wop_session_browse_token(session, i, expected) ||
+           yyjson_get_len(token_value) != strlen(expected) ||
+           memcmp(yyjson_get_str(token_value), expected, strlen(expected)) != 0)
+            continue;
+        operation->browse_point = chain->point;
+        chain->point = UA_BYTESTRING_NULL;
+        chain->active = false;
+        chain->busy = true;
+        operation->chain = i;
+        operation->kind = release ? WOP_OPERATION_BROWSE_RELEASE : WOP_OPERATION_BROWSE_NEXT;
+        operation->releasing = release;
+        operation->page_size = release ? 0 : chain->page_size;
+        return true;
+    }
+    return false;
 }
 
 static void clear_operation(WopSessionOperation *operation) {
@@ -910,7 +941,7 @@ static bool session_dispatch(void *context, const WopOperation *owner_operation,
     if(status == UA_STATUSCODE_GOOD) return true;
     operation->pending = false;
     if(chain_operation(operation)) {
-        session->browse_chain_busy = false;
+        chain_idle(operation);
         /* The server may still hold a continuation that can no longer be released. */
         if(owner_operation->kind != WOP_OPERATION_BROWSE) session->browse_orphaned = true;
     }
@@ -996,7 +1027,7 @@ static WopCompletion browse_result(WopSession *session, WopSessionOperation *ope
                                    WopFailure *failure) {
     bool next = operation->kind == WOP_OPERATION_BROWSE_NEXT;
     if(operation->releasing) {
-        session->browse_chain_busy = false;
+        chain_idle(operation);
         if(!operation->release_valid) {
             fail_with(failure, "cleanup_failed", "cleanup", false);
             return WOP_COMPLETION_TERMINAL;
@@ -1004,7 +1035,7 @@ static WopCompletion browse_result(WopSession *session, WopSessionOperation *ope
         *result = yyjson_mut_null(document);
         return *result ? WOP_COMPLETION_SUCCESS : WOP_COMPLETION_TERMINAL;
     }
-    if(chain_operation(operation)) session->browse_chain_busy = false;
+    if(chain_operation(operation)) operation_chain(operation)->busy = false;
     if(operation->limit) {
         fail_with(failure, "response_limit", "decode", false);
         return WOP_COMPLETION_TERMINAL;
@@ -1028,18 +1059,19 @@ static WopCompletion browse_result(WopSession *session, WopSessionOperation *ope
         fail_with(failure, "response_limit", "decode", false);
         return WOP_COMPLETION_TERMINAL;
     }
+    bool live = operation_chain(operation) && operation_chain(operation)->active;
     if(!wop_session_publish(session, &UA_TYPES[UA_TYPES_REFERENCEDESCRIPTION],
                             operation->browse_result.references,
                             operation->browse_result.referencesSize)) {
         /* A live continuation cannot be handed to the owner with this page. */
         fail_with(failure, "invalid_response", "decode", false);
-        return session->browse_active ? WOP_COMPLETION_TERMINAL : WOP_COMPLETION_FAILURE;
+        return live ? WOP_COMPLETION_TERMINAL : WOP_COMPLETION_FAILURE;
     }
     char token[32] = {0};
-    const char *continuation = session->browse_active ? token : NULL;
+    const char *continuation = live ? token : NULL;
     yyjson_mut_val *object = yyjson_mut_obj(document);
     yyjson_mut_val *references = NULL;
-    if(!object || (continuation && !wop_session_browse_token(session, token)) ||
+    if(!object || (continuation && !wop_session_browse_token(session, operation->chain, token)) ||
        wop_value_write_references(operation->browse_result.references,
                                   operation->browse_result.referencesSize, document,
                                   &references) != WOP_VALUE_OK || !references ||
@@ -1067,13 +1099,13 @@ static WopCompletion session_complete(void *context, const WopOperation *owner_o
     bool unknown = owner_operation->kind == WOP_OPERATION_WRITE ||
                    owner_operation->kind == WOP_OPERATION_CALL;
     if(operation->transport_error) {
-        if(chain_operation(operation)) session->browse_chain_busy = false;
+        chain_idle(operation);
         fail_status(failure, "connection_failed", "exchange", unknown, operation->status);
         return WOP_COMPLETION_TERMINAL;
     }
     if(operation->timed_out) {
         if(chain_operation(operation)) {
-            session->browse_chain_busy = false;
+            chain_idle(operation);
             session->browse_orphaned = true;
         }
         fail_with(failure, "deadline_exceeded", "exchange", unknown);
@@ -1143,18 +1175,19 @@ static void session_retire(void *context, const WopOperation *owner_operation) {
     WopSession *session = context;
     WopSessionOperation *operation = slot(session, owner_operation);
     if(!operation) return;
-    if(chain_operation(operation)) {
+    WopBrowseChain *chain = operation_chain(operation);
+    if(chain) {
         if(owner_operation->state == WOP_SLOT_QUEUED && !session->browse_orphaned &&
-           operation->browse_point.length && !session->browse_active) {
+           operation->browse_point.length && !chain->active) {
             /* A queued BrowseNext or release never reached the server; its
-             * live continuation returns to the session unchanged. */
-            session->browse_point = operation->browse_point;
+             * live continuation returns to its chain unchanged. */
+            chain->point = operation->browse_point;
             operation->browse_point = UA_BYTESTRING_NULL;
-            session->browse_active = true;
+            chain->active = true;
         }
         /* Retiring sent chain work leaves possible server state unowned. */
         if(operation->pending) session->browse_orphaned = true;
-        session->browse_chain_busy = false;
+        chain_idle(operation);
     }
     if(operation->kind == WOP_OPERATION_SUBSCRIBE || operation->kind == WOP_OPERATION_UNSUBSCRIBE)
         wop_subscription_retire(session, operation);
@@ -1238,15 +1271,16 @@ bool wop_session_close(WopSession *session) {
         session->operations[i].session = session;
         clear_operation(&session->operations[i]);
     }
-    UA_ByteString_clear(&session->browse_point);
+    for(size_t i = 0; i < WOP_SESSION_CONTINUATIONS; i++) {
+        UA_ByteString_clear(&session->browse_chains[i].point);
+        memset(&session->browse_chains[i], 0, sizeof(session->browse_chains[i]));
+    }
     wop_security_clear(&session->security);
     session->revised_timeout_ms = 0;
     session->requested_timeout_ms = 0;
     session->namespace_requested = session->namespace_received = false;
     session->namespace_valid = session->ready = false;
     session->browse_serial = 0;
-    session->browse_page_size = session->browse_pages = session->browse_references = 0;
-    session->browse_bytes = 0;
-    session->browse_active = session->browse_chain_busy = session->browse_orphaned = false;
+    session->browse_orphaned = false;
     return closed;
 }
