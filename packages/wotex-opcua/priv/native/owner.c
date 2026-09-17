@@ -443,8 +443,7 @@ static void open_tick(WopOwner *owner, int slice_ms, int64_t now) {
     }
     WopFailure failure = {"invalid_response", "opening", false, false, 0};
     if (!owner->service.step(owner->service.context, slice_ms, &failure)) {
-        WopFailure opening = {"invalid_response", "opening", false, false, 0};
-        terminal(owner, &opening);
+        terminal(owner, &failure);
         return;
     }
     yyjson_mut_doc *document = yyjson_mut_doc_new(NULL);

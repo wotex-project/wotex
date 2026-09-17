@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.25
+  version: 1.1.26
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -51,6 +51,12 @@ secure peer with server Session/channel counters shows that close deletes the
 server Session before its timeout and that owner death at measured fractions of
 one activation releases the guardian, SDK process and channel within 1,000 ms,
 with any created Session removed by cooperative close or server timeout.
+Opening failures now carry the SDK connection status: user access, identity
+token and user signature rejections map to `authentication_failed`; certificate,
+security-check, policy and mode rejections map to `certificate_invalid`; other
+statuses are `connection_failed`. The independent asyncua peer executes the
+nine policy/token Session cells with Read, Write/readback, Call, Browse and close,
+and the X-F39..F47 rejection cells, without subscription or cancellation cells.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split

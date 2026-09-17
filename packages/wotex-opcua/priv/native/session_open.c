@@ -144,6 +144,40 @@ static bool sdk_namespaces_ready(WopSession *session) {
     return true;
 }
 
+/* Finite projection of SDK connection statuses. Authentication, certificate
+ * and security rejections keep their numeric status for diagnosis. */
+static void connection_failure(WopFailure *failure, UA_StatusCode status, bool opening) {
+    const char *code = "connection_failed";
+    switch(status) {
+    case UA_STATUSCODE_BADUSERACCESSDENIED:
+    case UA_STATUSCODE_BADIDENTITYTOKENINVALID:
+    case UA_STATUSCODE_BADIDENTITYTOKENREJECTED:
+    case UA_STATUSCODE_BADUSERSIGNATUREINVALID:
+        code = "authentication_failed";
+        break;
+    case UA_STATUSCODE_BADCERTIFICATEINVALID:
+    case UA_STATUSCODE_BADCERTIFICATETIMEINVALID:
+    case UA_STATUSCODE_BADCERTIFICATEISSUERTIMEINVALID:
+    case UA_STATUSCODE_BADCERTIFICATEHOSTNAMEINVALID:
+    case UA_STATUSCODE_BADCERTIFICATEURIINVALID:
+    case UA_STATUSCODE_BADCERTIFICATEUSENOTALLOWED:
+    case UA_STATUSCODE_BADCERTIFICATEISSUERUSENOTALLOWED:
+    case UA_STATUSCODE_BADCERTIFICATEUNTRUSTED:
+    case UA_STATUSCODE_BADCERTIFICATEREVOCATIONUNKNOWN:
+    case UA_STATUSCODE_BADCERTIFICATEISSUERREVOCATIONUNKNOWN:
+    case UA_STATUSCODE_BADCERTIFICATEREVOKED:
+    case UA_STATUSCODE_BADCERTIFICATEISSUERREVOKED:
+    case UA_STATUSCODE_BADSECURITYCHECKSFAILED:
+    case UA_STATUSCODE_BADSECURITYPOLICYREJECTED:
+    case UA_STATUSCODE_BADSECURITYMODEREJECTED:
+        code = "certificate_invalid";
+        break;
+    default:
+        break;
+    }
+    fail_status(failure, code, opening ? "opening" : "exchange", false, status);
+}
+
 static bool session_step(void *context, int slice_ms, WopFailure *failure) {
     WopSession *session = context;
     if(!session->client) return true;
@@ -158,7 +192,9 @@ static bool session_step(void *context, int slice_ms, WopFailure *failure) {
     UA_Client_getState(session->client, NULL, &state, &connection);
     if(status != UA_STATUSCODE_GOOD || connection != UA_STATUSCODE_GOOD ||
        (session->namespace_requested && state != UA_SESSIONSTATE_ACTIVATED)) {
-        fail_with(failure, "connection_failed", "exchange", false);
+        UA_StatusCode cause = connection != UA_STATUSCODE_GOOD ? connection : status;
+        if(cause == UA_STATUSCODE_GOOD) cause = UA_STATUSCODE_BADCONNECTIONCLOSED;
+        connection_failure(failure, cause, !session->ready);
         return false;
     }
     if(session->browse_orphaned) {

@@ -20,6 +20,55 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Secure policy, user-token and rejection matrix, 2026-09-17
+
+The test-only asyncua 2.0.1 peer now offers Basic256Sha256,
+Aes128_Sha256_RsaOaep and Aes256_Sha256_RsaPss SignAndEncrypt endpoints with
+anonymous, username and X509 user-token policies. Its fixture user manager
+admits anonymous users, one username/password and one generated user
+certificate. The generator also writes an unregistered client-authentication
+user certificate, an expired CRL, an unrelated key and an untrusted CA. Named
+variants reuse those credentials to present an expired or wrong-host server
+leaf, offer only Security None, or offer only anonymous tokens.
+
+Opening failures now retain the SDK connection status. User access, identity
+token and user signature rejections are `authentication_failed`; certificate,
+security-check, policy and mode rejections are `certificate_invalid`; other
+statuses are `connection_failed`. The owner no longer replaces a Session-step
+failure during opening with `invalid_response`.
+
+`security_fault_test.exs` runs each WOP-X-F30 through F38 policy/token cell
+through the public persistent client: Read, Write, readback, Method Call,
+child Browse, restore and close, with the host reaped. Subscribe and cancel are
+not executed, so those corpus cells remain unbound. A wrong password, an unknown
+user and an unregistered user certificate fail activation with
+`authentication_failed` and status `0x801F0000`, without anonymous fallback.
+WOP-X-F39 through F47 fail with effect none and no Session. Expired and
+wrong-host leaves, a wrong server application URI, an untrusted CA, a revoked
+leaf, an expired CRL and a mismatched private key are rejected by credential
+preflight before network access (`certificate_invalid`). An anonymous-only peer
+rejects a username token with `authentication_failed` and status `0x80210000`.
+A Security None-only peer and a peer presenting an unpinned leaf neither answer
+nor close the OpenSecureChannel request, so both end at the 2,000 ms open
+deadline with `deadline_exceeded` and no Session.
+
+The optional secure suite passes 38/38 with the RelWithDebInfo and macOS
+ASan/UBSan executables, and native CTest passes 195/195. The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 325 passed (10 doctests, 4 properties, 311 tests),
+38 optional tests excluded and 95.5% coverage. This evidence does not accept
+subscription or cancellation cells, tampered or replayed secure traffic,
+server-side cleanup counters for the independent peer, token-policy
+encryption algorithm assertions or the Linux cohort.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/session_open.c` | `d9833e18f30985fb6d2cc06b09924e20600a6c9746b3113b91291f16a0fc9f65` |
+| `priv/native/owner.c` | `30455c937d6460b3b8e1db7c95ab2e584d6fbc5055c2c7324fa0c250942ff0b7` |
+| `test/interop/secure_peer.py` | `aaad6b3a7881957c69133a2a40080704011ef50cf70585b7e4ffb90940215d89` |
+| `test/interop/security_fault_test.exs` | `a2c123520c81da4b1d363cffecdfa7ed28baad11fca81bdc7e3f4fc91c3c8579` |
+| `docs/specs/fixtures/native-contract-v1.json` | `bb1767c1bf514a282392e909a521fc8d7884c45c4539cf05a1a869dc63dbe4ff` |
+
 ## Multi-process public client and Session lifecycle counters, 2026-09-17
 
 `Open62541.request/3` now admits Read, Write and Call from any process through a

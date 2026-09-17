@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.5
+  version: 2.0.6
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -152,7 +152,12 @@ Call inputs. QualifiedName indexes pass unchanged because the pinned SDK does
 not remap them. A namespace URI matching the SDK table is normalized by the SDK
 to its index. Server indexes from 65536 minus the SDK table size to 65535 are
 indistinguishable after pinned SDK decoding and are not a supported identity.
-Subscriptions, remaining public multi-caller use and other policy/token interoperability remain open P02/P03 work.
+The public persistent client opens Sessions with each of the three
+SignAndEncrypt policies and anonymous, username and certificate user tokens
+against the independent peer. Rejected user credentials and unsupported token
+policies fail activation as `authentication_failed` with the numeric status;
+certificate and security rejections are `certificate_invalid`.
+Subscriptions and other policy/token interoperability remain open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.
