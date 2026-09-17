@@ -2064,6 +2064,8 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     """
     #!/usr/bin/env elixir
     :logger.remove_handler(:default)
+    # Like the custody helper, exit at once on SIGTERM instead of a graceful VM stop.
+    {:ok, _} = System.trap_signal(:sigterm, fn -> System.halt(0) end)
     revision = "#{@revision}"
     ["--custody", directory] = System.argv()
     File.write!(Path.join(directory, "arguments"), Enum.join(System.argv(), "\\n"))
