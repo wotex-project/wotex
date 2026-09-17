@@ -18,7 +18,8 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
     executable
   end
 
-  @spec start_link({Path.t(), :psk | :pki, String.t()}) :: GenServer.on_start()
+  @spec start_link({Path.t(), :psk | :pki, String.t()} | {Path.t(), :oscore, map()}) ::
+          GenServer.on_start()
   def start_link(options), do: GenServer.start_link(__MODULE__, options)
 
   @spec endpoint(pid()) :: :inet.port_number()
@@ -26,6 +27,9 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
 
   @spec plain_endpoint(pid()) :: :inet.port_number()
   def plain_endpoint(pid), do: GenServer.call(pid, :plain_endpoint, 15_500)
+
+  @spec subscriptions(pid()) :: %{created: non_neg_integer(), removed: non_neg_integer()}
+  def subscriptions(pid), do: GenServer.call(pid, :subscriptions, 3000)
 
   @spec close(pid()) :: :ok
   def close(pid), do: GenServer.call(pid, :close, 3000)
@@ -81,7 +85,7 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
         "-V",
         "0",
         "-d",
-        "4",
+        if(mode == :oscore, do: "64", else: "4"),
         "-e",
         "-L",
         "1"
@@ -108,6 +112,8 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
        ready: false,
        waiter: nil,
        output: "",
+       mode: mode,
+       subscriptions: %{created: 0, removed: 0},
        timer: Process.send_after(self(), :ready_timeout, 15_000)
      }}
   end
@@ -125,28 +131,46 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
       else: {:noreply, %{state | waiter: {from, :plain}}}
   end
 
+  def handle_call(:subscriptions, _, state), do: {:reply, state.subscriptions, state}
+
   def handle_call(:close, _, state) do
     cleanup(state)
     {:stop, :normal, :ok, %{state | native: nil, workspace: nil}}
   end
 
   @impl GenServer
+  def handle_info({native, {:data, bytes}}, %{native: native, mode: :oscore} = state) do
+    # Debug logs include protected block payloads, so this peer retains only
+    # a bounded partial line and the lifecycle markers asserted by tests.
+    [partial | lines] = String.split(state.output <> bytes, "\n") |> Enum.reverse()
+
+    partial =
+      binary_part(partial, max(byte_size(partial) - 65_536, 0), min(byte_size(partial), 65_536))
+
+    ready = state.ready or Enum.any?(lines, &String.contains?(&1, "created UDP  endpoint"))
+
+    subscriptions =
+      Enum.reduce(lines, state.subscriptions, fn line, counts ->
+        cond do
+          String.contains?(line, "create new subscription") ->
+            Map.update!(counts, :created, &(&1 + 1))
+
+          String.contains?(line, "removed subscription") ->
+            Map.update!(counts, :removed, &(&1 + 1))
+
+          true ->
+            counts
+        end
+      end)
+
+    {:noreply, ready(%{state | output: partial, subscriptions: subscriptions}, ready)}
+  end
+
   def handle_info({native, {:data, bytes}}, %{native: native} = state) do
     output = state.output <> bytes
     assert byte_size(output) <= 1_048_576
     ready = state.ready or String.contains?(output, "created DTLS endpoint")
-
-    if ready and not state.ready do
-      Process.cancel_timer(state.timer)
-
-      case state.waiter do
-        {from, :plain} -> GenServer.reply(from, state.port)
-        from when is_tuple(from) -> GenServer.reply(from, state.port + 1)
-        nil -> :ok
-      end
-    end
-
-    {:noreply, %{state | ready: ready, output: output}}
+    {:noreply, ready(%{state | output: output}, ready)}
   end
 
   def handle_info({native, {:exit_status, status}}, %{native: native} = state),
@@ -157,6 +181,20 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
 
   @impl GenServer
   def terminate(_, state), do: cleanup(state)
+
+  defp ready(state, ready) do
+    if ready and not state.ready do
+      Process.cancel_timer(state.timer)
+
+      case state.waiter do
+        {from, :plain} -> GenServer.reply(from, state.port)
+        from when is_tuple(from) -> GenServer.reply(from, state.port + 1)
+        nil -> :ok
+      end
+    end
+
+    %{state | ready: ready}
+  end
 
   defp cleanup(%{workspace: nil}), do: :ok
 
@@ -199,6 +237,29 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
     path = Path.join(workspace, "identities.csv")
     File.write!(path, "fixture,client,#{@key}\n")
     ["-h", "fixture", "-k", "unmatched-identity-key", "-i", path]
+  end
+
+  defp credentials(:oscore, context, workspace) do
+    path = Path.join(workspace, "oscore.conf")
+
+    recipients =
+      Enum.map_join(context.recipient_ids, fn id ->
+        ~s(recipient_id,hex,"#{Base.encode16(id, case: :lower)}"\n)
+      end)
+
+    File.write!(
+      path,
+      [
+        ~s(master_secret,hex,"#{Base.encode16(context.master_secret, case: :lower)}"\n),
+        ~s(master_salt,hex,"#{Base.encode16(context.master_salt, case: :lower)}"\n),
+        ~s(sender_id,hex,"#{Base.encode16(context.sender_id, case: :lower)}"\n),
+        recipients,
+        "replay_window,integer,32\naead_alg,integer,10\nhkdf_alg,integer,-10\n",
+        "rfc8613_b_1_2,bool,false\nrfc8613_b_2,bool,false\nssn_freq,integer,32\n"
+      ]
+    )
+
+    ["-E", path]
   end
 
   defp credentials(:pki, certificate, workspace) do

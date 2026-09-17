@@ -20,8 +20,8 @@ one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup, token-matched cancellation and
 best-effort established-observation cancellation on owner EOF. The remaining
 protected fault matrix, Port-mailbox measurement and full matrix remain planned
-contracts. The native build, software build and current independent UDP/DTLS
-software-run cohort execute;
+contracts. The native build, software build, current independent UDP/DTLS
+software-run cohort and same-stack OSCORE software-run cohort execute;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -213,8 +213,9 @@ interoperability and the final Mix-built helper remain unaccepted. Another
 protected run closes the public custody owner's input after establishment. The
 worker sends one original-route/token cancellation during exit cleanup, the peer
 removes its observer, and custody reaps the worker with exact owner-loss status
-within C03. Owner loss during pending registration, renewal or cancellation and
-receiver death through the production BEAM owner remain unaccepted. A saturated
+within C03. Receiver death through the production BEAM owner executes in the
+same-stack software run described in N05. Owner loss during pending
+registration, renewal or cancellation remains unaccepted. A saturated
 variant fills the actual owner output pipe to `EAGAIN`, stops owner reads and
 dispatches fourteen protected 16 KiB notifications across two credit intervals.
 Their base64 payload bytes exceed custody's 262,144-byte output capacity. Network
@@ -580,9 +581,16 @@ is 15 seconds, suite timeout 300 seconds, combined log bound 16 MiB and total
 harness cleanup five seconds. These harness limits do not extend C03 library
 deadlines. EOF, owner death and test failure stop only manifest-owned processes.
 The implemented cohort runs `test/interop/libcoap_test.exs`,
-`test/interop/dtls_test.exs` and `test/interop/dtls_pki_test.exs` with seed zero.
-Those 15 tests cover independent libcoap UDP, PSK and PKI unary, Block1/Block2,
-Observe, Runtime and certificate/record-fault paths. The run retains its result
+`test/interop/dtls_test.exs`, `test/interop/dtls_pki_test.exs` and
+`test/interop/oscore_test.exs` with seed zero. Fifteen tests cover independent
+libcoap UDP, PSK and PKI unary, Block1/Block2, Observe, Runtime and
+certificate/record-fault paths. Seven same-stack tests drive the manifest-bound
+helper through the public native owner against the software-build `coap-server`
+configured with a matching OSCORE context: protected methods, negative status,
+bodies above the inline threshold, discovery, a 1 MiB Block1 upload and Block2
+download, an authentication failure, Observe changes from a second UDP client,
+receiver and owner death, context consumption after close and a real
+ConsumedThing read. The run retains its result
 directory on success or failure, so another run requires a fresh disposable
 software-build workspace.
 
@@ -610,7 +618,8 @@ Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
-15-test UDP/PSK/PKI cohort. The remaining OSCORE, fault, stress, Linux sanitizer,
+15-test independent UDP/PSK/PKI cohort and 7-test same-stack OSCORE cohort. The
+remaining OSCORE independence, fault, stress, Linux sanitizer,
 second-toolchain and clean-package matrix retains planned status until those
 assertions execute. Earlier Python-run results validate their historical cohort
 only. Hardware and publication are separate.

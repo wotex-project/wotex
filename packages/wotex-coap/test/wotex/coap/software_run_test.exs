@@ -105,6 +105,17 @@ defmodule Wotex.CoAP.SoftwareRunTest do
     assert {"MIX_ENV", "test"} in options[:env]
     assert {"WOTEX_COAP_LIBCOAP_SERVER", Path.join(root, "bin/coap-server")} in options[:env]
 
+    assert {"WOTEX_COAP_NATIVE_WORKER", Path.join(root, "native/bin/wotex-coap-oscore")} in options[
+             :env
+           ]
+
+    assert {"WOTEX_COAP_NATIVE_MANIFEST", Path.join(root, "native/native-manifest.json")} in options[
+             :env
+           ]
+
+    assert "test/interop/oscore_test.exs" in arguments
+    assert "WCO-S06" in evidence["scenario_ids"] and "WCO-V13" in evidence["scenario_ids"]
+
     decoded = Jason.decode!(File.read!(path))
     assert decoded == evidence
     refute String.contains?(Enum.join(decoded["command"], " "), root)

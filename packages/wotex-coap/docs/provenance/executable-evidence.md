@@ -602,9 +602,29 @@ probes, runtime manifest verification and read-only reuse all pass. The
 fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
-arm64 run: 15 independent libcoap UDP, PSK and PKI tests pass on Elixir 1.20.2 /
-OTP 29.0.4, with owned peers and zero retained processes, ports or library-state
-resources. The Linux sanitizer lane, independent OSCORE interoperability,
+arm64 run: 15 independent libcoap UDP, PSK and PKI tests and 7 same-stack OSCORE
+tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned peers and zero retained
+processes, ports or library-state resources.
+
+`test/interop/oscore_test.exs` is same-stack evidence: the peer is the
+software-build `coap-server` with a matching OSCORE configuration, and the client
+is the manifest-verified Mix-built helper behind the public native owner. Each
+case uses a fresh context store and a distinct sender ID. Protected
+GET/PUT/POST/DELETE, a 4.04 as `details.code`, a 43,500-byte echoed body and
+discovery precede a graceful close; the helper process is gone and reopening the
+same context returns `fresh_context_required`. A mismatched master secret returns
+`security_handshake_failed` with effect `none` and terminates the generation
+within 1,100 ms. A 1 MiB Block1 upload and Block2 download complete inside one
+60,000 ms deadline. Observe delivers inline and 42,000-byte streamed changes made
+by a second UDP client, rejects ordinary requests while active and cancels
+idempotently; peer debug records show exactly one created and one removed
+subscription. Receiver death and owner death during a pending request each end
+the native owner within 1,100 ms and reap the helper. A real ConsumedThing
+`readproperty` call selects `:coap_oscore` and decodes the protected JSON value.
+Pending-operation owner loss, duplicate/stale and replay injection, independent
+OSCORE interoperability and the stress matrix are outside this cohort.
+
+The Linux sanitizer lane, independent OSCORE interoperability,
 remaining fault/stress scenarios, second required toolchain and complete package
 matrix are not yet accepted. The historical Python result retains only its own
 recorded cohort.

@@ -1,8 +1,8 @@
 {
   "schema": "wotex.coap.software-run-evidence@1",
   "specification": "WCO.13@1.7.0",
-  "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability with ExUnit-owned peers and bounded cleanup",
-  "command": "WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace \"$ABSOLUTE_COMPLETED_SOFTWARE_WORKSPACE\"",
+  "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability plus same-stack OSCORE sessions through the Mix-built native helper, with ExUnit-owned peers and bounded cleanup",
+  "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=\"$SAME_ROOT_AS_BUILD\" mix wotex.software.run --workspace \"$ABSOLUTE_COMPLETED_SOFTWARE_WORKSPACE\"",
   "platform": {
     "os_version": [
       25,
@@ -16,33 +16,35 @@
   },
   "upstream": {
     "backend": "libcoap",
-    "version": "4.3.5",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "peer_executable_sha256": "d7366ce29e9f8efb2789863998258bd633679610ec64eb539e876fe0c346604e"
+    "native_helper_sha256": "f4fec87089ab82fd557b9efcd149854d4a521f26d31e5385db45007725f4ac6a",
+    "peer_executable_sha256": "e7ea08080237c8b958fb5693c27e1f94bf31eb78204bfd5f9014c5d1aaa3b615",
+    "version": "4.3.5"
   },
   "source_identity": {
+    "aggregate_sha256": "789b87aeaf61b7c1d816fb5c58484aaede54872603b6d3dc3e28d678e51f7d6c",
     "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
-    "aggregate_sha256": "311a5ff0623ce623de4279a4b764b05162863da5e01949fedc8a0a293748e1c7",
     "selected_files": {
       "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
-      "lib/wotex/coap/software/run.ex": "329886ed20b85a2bbfcae17c65bf32ff58ee8d5aa5416d359569ff0b8d8aaef6",
+      "lib/wotex/coap/software/run.ex": "ed73ef148a79ddd76d2f74b1b2cca3b3de0bee399460d8675cdcdf12421abd14",
       "mix.exs": "bf8e1cab6c097fde6f57bba0c0ee05b713910528b024cd04b10a752a3478f41b",
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5",
       "test/fixtures/dtls_pki/manifest.json": "55efbe5822d3bf3de81fe16fb7e224b84ff3bebb7f9075fd9a65422f133fd08d",
       "test/interop/dtls_pki_test.exs": "904dc82410941ed7e29a67f7518c13db09005bc49a7a9c1b587f935021dc8b24",
       "test/interop/dtls_test.exs": "01a4fe710e24cb98868c266659d3e9c817e2c8e36a4e2a63eb39c6fb7f3ac184",
       "test/interop/libcoap_test.exs": "dec95bf3e905bf57526836e0db40ab6955559494b26541ef4cf28f9a84f17d49",
-      "test/support/libcoap_peer.ex": "2c994c39ebc109073e46371f3ed0f795be9ba5fb404096ea28c18152fdc40b39",
+      "test/interop/oscore_test.exs": "ca7a7d717819d1aee59d834f7709a1a131668810d877da8dd693b2459880cc73",
+      "test/support/libcoap_peer.ex": "76e8ccb79334b7892388978018310284fb589d6f224ac1b02aa95d7d5f0f8363",
       "test/test_helper.exs": "575578ae4f12e6e41336ad856bccd8db4bcf9e741764bbc1d6f2bf9ac110f1d1",
-      "test/wotex/coap/software_run_test.exs": "393a37b6130dbf3b6c3c30c279470bf7957a437862c8d9508b8b0f30387213fd"
+      "test/wotex/coap/software_run_test.exs": "8118cdc9d2d971b790f5318de947a4bf061afa068d9bab990fb4c60e20f0ee05"
     }
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "398dffbcb17426845375dc2e060cac5dfd841da93724800e8979934e85d9640d",
-    "nested_native_manifest_sha256": "cf9196cfb20052e053ded2d565989a55047d2ebb4922096c67efa0873ec80f99"
+    "manifest_sha256": "07312c2d5ff111b5a235fc6d63bd23f337a85002f1576cee0b9da5eb44de7fa4",
+    "nested_native_manifest_sha256": "66b2f9466fbd55490cb0ae602a032200452278215fc245a240b643dc5683af57"
   },
-  "result_sha256": "2c1536089044ac77d241a18ca70d33c6cb67566d398197ac6bd93580f42fa04d",
+  "result_sha256": "57ef59d3c9cc305fcac6e86797d3edf92effb62ca05c1840262b71da051993e5",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -57,6 +59,7 @@
       "test/interop/libcoap_test.exs",
       "test/interop/dtls_test.exs",
       "test/interop/dtls_pki_test.exs",
+      "test/interop/oscore_test.exs",
       "--include",
       "interop",
       "--include",
@@ -69,7 +72,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 5984,
+    "elapsed_ms": 8132,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -81,45 +84,64 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "d7366ce29e9f8efb2789863998258bd633679610ec64eb539e876fe0c346604e",
-      "wotex-coap-oscore": "88496bc9ffa850c60056804c4c07f76d1336d01a38745b6bbce3e0c98ab452ef"
+      "coap-server": "e7ea08080237c8b958fb5693c27e1f94bf31eb78204bfd5f9014c5d1aaa3b615",
+      "wotex-coap-oscore": "f4fec87089ab82fd557b9efcd149854d4a521f26d31e5385db45007725f4ac6a"
     },
     "scenario_ids": [
+      "WCO-C03",
+      "WCO-I02",
       "WCO-I03",
       "WCO-I04",
       "WCO-I05",
       "WCO-S02",
       "WCO-S03",
       "WCO-S05",
+      "WCO-S06",
+      "WCO-V09",
       "WCO-V12",
+      "WCO-V13",
       "WCO-V15"
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "311a5ff0623ce623de4279a4b764b05162863da5e01949fedc8a0a293748e1c7",
+    "source_sha256": "789b87aeaf61b7c1d816fb5c58484aaede54872603b6d3dc3e28d678e51f7d6c",
     "status": "passed",
     "test_log": {
-      "bytes": 536,
+      "bytes": 680,
       "path": "tests.log",
-      "sha256": "656a148e4809789f5dc861736e967da81ebe0455dbc39acaeb3b9cb4a8cdbd5b"
+      "sha256": "2196d20ea165b7a65215842979f958e3dab4d725ca4f13f283bffa50544c6781"
     },
-    "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
-      "passed": 15,
-      "failed": 0
-    }
+      "failed": 0,
+      "passed": 22
+    },
+    "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n"
+  },
+  "stack_labels": {
+    "test/interop/dtls_pki_test.exs": "independent libcoap PKI DTLS peer",
+    "test/interop/dtls_test.exs": "independent libcoap PSK DTLS peer",
+    "test/interop/libcoap_test.exs": "independent libcoap UDP peer",
+    "test/interop/oscore_test.exs": "same-stack libcoap OSCORE peer and Mix-built native helper"
   },
   "assertions": [
     "The task verifies an existing completed software-build manifest and never builds a missing workspace",
     "The checked-in native guardian bounds the exact tagged ExUnit command to 300 seconds, 16 MiB of output and five seconds of process-group cleanup",
-    "Each UDP, PSK and PKI test owns and closes its independent libcoap peer, selected adjacent ports and credential workspace",
-    "Fifteen unary, Block1/Block2, Observe, Runtime, authentication, certificate and DTLS-record cases pass with seed zero",
-    "The retained result binds source, lockfile, PKI fixtures, native executables, toolchain, command, scenarios and test log",
+    "Each UDP, PSK, PKI and OSCORE test owns and closes its libcoap peer, selected adjacent ports and credential workspace",
+    "Fifteen independent unary, Block1/Block2, Observe, Runtime, authentication, certificate and DTLS-record cases pass with seed zero",
+    "Seven same-stack OSCORE cases pass through the manifest-verified Mix-built helper and the public native owner",
+    "Protected GET/PUT/POST/DELETE, a negative status as details.code, a 43,500-byte echoed body and discovery succeed before a graceful close that releases the helper and makes the context identity require fresh keying",
+    "A mismatched master secret returns security_handshake_failed with effect none, terminates the generation within 1100 ms and never yields an application value",
+    "A 1 MiB protected Block1 upload and Block2 download complete inside one 60000 ms interaction deadline",
+    "Protected Observe delivers inline and 42,000-byte streamed changes made by a second UDP client, rejects ordinary requests while active and cancels idempotently; the peer records exactly one created and one removed subscription",
+    "Receiver death terminates the native owner within 1100 ms, reaps the helper and removes the peer observer",
+    "Owner death while a protected request is pending terminates the native owner within 1100 ms, reaps the helper and returns effect none to the caller",
+    "A real ConsumedThing readproperty call selects the coap_oscore profile, dispatches through the production helper and decodes the protected JSON value",
     "The passing result records zero retained command groups, peer processes, UDP ports and session/context/subscription/store locks",
     "The tracked first-party source and packaged test harness contain no Python"
   ],
   "unaccepted": [
     "Independent-stack OSCORE interoperability",
+    "Owner loss during pending Observe registration, renewal or cancellation, and authenticated duplicate/stale or replay injection through the software run",
     "The complete native-v1 fault corpus and WCO-N05 1000-operation, lifecycle, concurrency and overload stress matrix",
     "A Linux AddressSanitizer and UndefinedBehaviorSanitizer software-run lane",
     "The Elixir 1.18.4 / OTP 27.3.4.15 lane and complete committed-source/package matrix",
