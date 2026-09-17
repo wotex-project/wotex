@@ -68,6 +68,7 @@ defmodule Wotex.OPCUA.Error do
       :invalid_value,
       :invalid_message,
       :invalid_options,
+      :invalid_native_configuration,
       :invalid_timeout,
       :invalid_transport_context,
       :transport_required,

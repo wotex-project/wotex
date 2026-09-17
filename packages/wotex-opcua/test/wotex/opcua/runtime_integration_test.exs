@@ -3,7 +3,16 @@ defmodule Wotex.OPCUA.RuntimeIntegrationTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.OPCUA.{Error, TestFailureTransport, TestNosecCredentials, Transport}
+  alias Wotex.OPCUA.{
+    Address,
+    Error,
+    TestFailureTransport,
+    TestNosecCredentials,
+    TestRecordingTransport,
+    TestScriptedClient,
+    Transport
+  }
+
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, ExecutionContext, Request, Retry}
 
   @corpus "docs/specs/fixtures/wotex-integration-v1.json"
@@ -22,6 +31,186 @@ defmodule Wotex.OPCUA.RuntimeIntegrationTest do
   @effects %{"none" => :none, "unknown" => :unknown}
   @operations %{"readproperty" => :readproperty, "writeproperty" => :writeproperty}
   @href "opc.tcp://127.0.0.1:4840/server?id=ns%3D2%3Bi%3D42"
+
+  @tag case: "WOP-I-F01", corpus_sha256: @corpus_sha256
+  test "WOP-I02 WOP-I03 WOP-I06 WOP-I-F01 one-shot Runtime read through the public packages" do
+    %{"input" => input, "expectation" => %{"value" => expected}} = Map.fetch!(@cases, "WOP-I-F01")
+    assert {:ok, td} = Wotex.ThingDescription.from_map(input["thing_description"])
+    assert "oneshot" == input["profile_mode"]
+    profile = Wotex.OPCUA.profile()
+    origin = System.monotonic_time(:millisecond)
+    clock = input["clock"]
+    options = input["transport_options"]
+    assert %{"kind" => "client_return", "value" => reply} = input["peer_reply"]
+    assert "scripted_client" == options["client"]
+
+    transport = [
+      client: TestScriptedClient,
+      target: options["target"],
+      timeout: options["timeout"],
+      reply: reply,
+      test: self()
+    ]
+
+    assert {:ok, consumed} =
+             ConsumedThing.new(td,
+               profiles: [profile],
+               transports: %{BindingProfile.id(profile) => {TestRecordingTransport, transport}},
+               credentials: {TestNosecCredentials, nil}
+             )
+
+    assert {:ok, context} =
+             Context.new(
+               request_id: input["request_id"],
+               deadline: origin + clock["deadline"] - clock["start"]
+             )
+
+    assert {:ok, result} = ConsumedThing.read_property(consumed, input["affordance"], context)
+    assert_received {:runtime_request, request}
+    messages = scripted_messages([])
+
+    observed = %{
+      "profile_id" => Atom.to_string(BindingProfile.id(profile)),
+      "resolved_href" => request.resolved_href,
+      "command" =>
+        Enum.find_value(messages, fn
+          {:request, %{type: type, node_id: node}} ->
+            %{"type" => Atom.to_string(type), "node_id" => Address.to_string(node)}
+
+          _ ->
+            nil
+        end),
+      "result" => %{
+        "request_id" => result.request_id,
+        "operation" => Atom.to_string(result.operation),
+        "status" => Atom.to_string(result.status),
+        "payload" => result.payload,
+        "metadata" => Map.new(result.metadata, fn {key, value} -> {Atom.to_string(key), value} end)
+      },
+      "extension" => Wotex.Form.to_map(request.form)["example:extension"],
+      "request_count" => Enum.count(messages, &match?({:request, _}, &1)),
+      "owned_resources_after" =>
+        Enum.count(messages, &(&1 == :connect)) - Enum.count(messages, &(&1 == :disconnect))
+    }
+
+    assert observed == expected
+  end
+
+  test "WOP-I02 profiles are static and a supplied contentType acquires nothing" do
+    oneshot = Wotex.OPCUA.profile()
+    assert {:ok, session} = Wotex.OPCUA.profile(:session)
+    assert %BindingProfile{id: :opcua} = oneshot
+    assert %BindingProfile{id: :opcua_session} = session
+
+    for {profile, operations} <- [
+          {oneshot, [:readproperty, :writeproperty]},
+          {session, [:observeproperty, :readproperty, :unobserveproperty, :writeproperty]}
+        ] do
+      assert Enum.sort(profile.operations) == operations
+      assert Enum.to_list(profile.schemes) == ["opc.tcp"]
+      assert Enum.empty?(profile.media_types)
+    end
+
+    for mode <- [:oneshot_json, "session", nil] do
+      assert {:error, %Error{code: :unsupported_profile}} = Wotex.OPCUA.profile(mode)
+    end
+
+    form = %{"href" => @href, "op" => ["readproperty"], "contentType" => "application/json"}
+
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "title" => "Media",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{"reading" => %{"forms" => [form]}}
+      })
+
+    transport = [
+      client: TestScriptedClient,
+      target: "opc.tcp://127.0.0.1:4840/server",
+      reply: %{"type" => "Boolean", "value" => true, "status" => 0},
+      test: self()
+    ]
+
+    {:ok, consumed} =
+      ConsumedThing.new(td,
+        profiles: [Wotex.OPCUA.profile()],
+        transports: %{opcua: {TestRecordingTransport, transport}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    {:ok, context} = Context.new(request_id: "media")
+
+    assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :unsupported_content_type}}}} =
+             ConsumedThing.read_property(consumed, "reading", context)
+
+    assert scripted_messages([]) == []
+  end
+
+  test "WOP-I02 session profile projects persistent Read and Write results" do
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "title" => "Session",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{
+          "reading" => %{
+            "forms" => [
+              %{
+                "href" => @href,
+                "op" => ["readproperty", "writeproperty"],
+                "wotex:variantType" => "Double"
+              }
+            ]
+          }
+        }
+      })
+
+    {:ok, profile} = Wotex.OPCUA.profile(:session)
+    {:ok, context} = Context.new(request_id: "session")
+
+    for {reply, operation, expected} <- [
+          {%{
+             "has_value" => true,
+             "status" => 0,
+             "value" => %{"type" => "Double", "array" => false, "value" => 2.5},
+             "source_timestamp" => 7
+           }, :read, {:ok, 2.5, %{opcua_type: "Double", status: 0, source_timestamp: 7}}},
+          {%{"status" => 0x4000_0000}, :write, {:ok, nil, %{status: 0x4000_0000}}},
+          {%{"has_value" => true, "status" => 0x8034_0000}, :read, :bad_status}
+        ] do
+      transport = [
+        client: TestScriptedClient,
+        target: "opc.tcp://127.0.0.1:4840/server",
+        reply: reply,
+        test: self()
+      ]
+
+      {:ok, consumed} =
+        ConsumedThing.new(td,
+          profiles: [profile],
+          transports: %{opcua_session: {TestRecordingTransport, transport}},
+          credentials: {TestNosecCredentials, nil}
+        )
+
+      result =
+        if operation == :read,
+          do: ConsumedThing.read_property(consumed, "reading", context),
+          else: ConsumedThing.write_property(consumed, "reading", 1.5, context)
+
+      case expected do
+        {:ok, payload, metadata} ->
+          assert {:ok, %Wotex.Runtime.Result{payload: ^payload, metadata: ^metadata}} = result
+
+        code ->
+          assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: ^code}}}} = result
+      end
+
+      assert [:connect, {:request, _}, :disconnect] = scripted_messages([])
+    end
+  end
 
   for number <- 2..7 do
     id = "WOP-I-F0#{number}"
@@ -114,6 +303,15 @@ defmodule Wotex.OPCUA.RuntimeIntegrationTest do
 
     assert {:error, %Error{code: :deadline_exceeded, class: :timeout}} =
              Transport.decode_frame({:error, Error.new(:deadline_exceeded)}, request, [])
+  end
+
+  defp scripted_messages(messages) do
+    receive do
+      {:scripted, message} -> scripted_messages([message | messages])
+      {:runtime_request, _} -> scripted_messages(messages)
+    after
+      0 -> Enum.reverse(messages)
+    end
   end
 
   defp case_input(code, effect, operation, options),

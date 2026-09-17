@@ -3,7 +3,7 @@ defmodule Wotex.OPCUA.NativeRuntimeStreamInteropTest do
   use ExUnit.Case, async: false
 
   alias Wotex.OPCUA.{Open62541, TestNosecCredentials, Transport}
-  alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Subscription}
+  alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result, Subscription}
   @moduletag :interop
 
   setup do
@@ -147,6 +147,78 @@ defmodule Wotex.OPCUA.NativeRuntimeStreamInteropTest do
     assert_receive {:wotex_runtime, :lost, {:status, :session_lost}}, 1000
     assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, :session_lost}}, 1000
     assert eventually(fn -> resources(observer, peer) == {0, 0} end, 1000)
+    assert :ok = Wotex.OPCUA.disconnect(observer)
+  end
+
+  test "WOP-I02 production profiles read, write and observe through ConsumedThing", context do
+    %{peer: peer, observer: observer} = context
+    href = peer["endpoint"] <> "?id=" <> URI.encode_www_form(peer["node_id"])
+
+    form = %{
+      "href" => href,
+      "op" => ["readproperty", "writeproperty", "observeproperty", "unobserveproperty"],
+      "wotex:variantType" => "Double"
+    }
+
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "title" => "Profiles",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{
+          "reading" => %{"type" => "number", "observable" => true, "forms" => [form]}
+        }
+      })
+
+    {:ok, session_profile} = Wotex.OPCUA.profile(:session)
+    oneshot_profile = Wotex.OPCUA.profile()
+
+    {:ok, session} =
+      ConsumedThing.new(td,
+        profiles: [session_profile],
+        transports: %{opcua_session: {Transport, context.config}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    {:ok, oneshot} =
+      ConsumedThing.new(td,
+        profiles: [oneshot_profile],
+        transports: %{opcua: {Transport, Keyword.put(context.config, :lifecycle, :oneshot)}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    original = context.original
+
+    assert {:ok, %Result{payload: ^original, metadata: %{opcua_type: "Double", status: 0}}} =
+             ConsumedThing.read_property(session, "reading", context.context)
+
+    assert {:ok, %Result{payload: nil, metadata: %{status: 0}}} =
+             ConsumedThing.write_property(session, "reading", 44.5, context.context)
+
+    assert {:ok, %Result{payload: 44.5}} =
+             ConsumedThing.read_property(oneshot, "reading", context.context)
+
+    assert {:ok, %Result{payload: "written"}} =
+             ConsumedThing.write_property(oneshot, "reading", 45.5, context.context)
+
+    assert {:ok, spec} =
+             ConsumedThing.observation_child_spec(session, "reading", context.context,
+               id: :profiled,
+               receiver: self(),
+               restart: :temporary
+             )
+
+    assert {:error, _} =
+             ConsumedThing.observation_child_spec(oneshot, "reading", context.context,
+               id: :oneshot_observation,
+               receiver: self()
+             )
+
+    owner = start_supervised!(spec, id: :profiled)
+    assert_receive {:wotex_runtime, :profiled, {:ok, 45.5, %{opcua_type: "Double"}}}, 5000
+    assert :ok = Subscription.stop(owner)
+    assert {0, 0} = resources(observer, peer)
     assert :ok = Wotex.OPCUA.disconnect(observer)
   end
 

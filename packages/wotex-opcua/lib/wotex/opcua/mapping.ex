@@ -13,8 +13,9 @@ defmodule Wotex.OPCUA.Mapping do
 
   Mapping is pure and opens no secure channel. It rejects malformed endpoints,
   user information, fragments, invalid NodeIds, missing type information, and
-  unsupported operations. Explicit media selectors currently remain preserved
-  data; the stricter rejection required by the target profile is not implemented.
+  unsupported operations. A Form that supplies `contentType` returns
+  `unsupported_content_type`: the binding profiles declare no media type and the
+  native protocol values are not a serialized content format.
   Success does not authorize service access, prove that
   the node exists, or establish canonical Property state.
   """
@@ -35,7 +36,8 @@ defmodule Wotex.OPCUA.Mapping do
   def command(%Form{} = form, operation, input, href) do
     affordance = if operation == :invokeaction, do: :action, else: :property
 
-    with {:ok, type} <- Map.fetch(@operations, operation),
+    with :ok <- media(Form.to_map(form)),
+         {:ok, type} <- Map.fetch(@operations, operation),
          true <- Atom.to_string(operation) in Form.operations(form, for: affordance),
          {:ok, uri} <- uri(href || Form.href(form)),
          {:ok, mapping} <- target(uri, type, input),
@@ -50,6 +52,9 @@ defmodule Wotex.OPCUA.Mapping do
   end
 
   def command(_, _, _, _), do: {:error, Error.new(:invalid_form)}
+
+  defp media(%{"contentType" => _}), do: {:error, Error.new(:unsupported_content_type)}
+  defp media(_), do: :ok
 
   defp uri(href) when is_binary(href) and byte_size(href) <= 4096 do
     case URI.parse(href) do

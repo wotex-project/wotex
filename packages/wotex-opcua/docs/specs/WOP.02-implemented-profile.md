@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.11
+  version: 2.0.12
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -245,7 +245,13 @@ in `Wotex.OPCUA.Value.native_result/1`. Terminal loss sends an error frame and a
 `session_lost` or `transport_down` status. `subscribeevent`, input and
 non-nil credentials fail before a process starts. Transport errors carry the
 Runtime `class` from `Wotex.OPCUA.Error.classify/1`; an unknown mutation effect
-is always `:permanent`. The profile factory is not implemented.
+is always `:permanent`. `Wotex.OPCUA.profile/0` returns the one-shot `:opcua`
+profile (readproperty, writeproperty) and `profile/1` also returns
+`:opcua_session` (adding observeproperty and unobserveproperty); both declare no
+media type, and a Form that supplies `contentType` fails
+`unsupported_content_type` before I/O. Through the session profile a persistent
+native Read returns the projected value and metadata and a Write returns a nil
+payload with its status metadata.
 `health_check/2` takes exactly `%{node_id: node}` and returns `:ok` only after a
 successful Read of that node through the selected client; `health_check/1`
 still returns `probe_required`.

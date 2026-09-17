@@ -20,6 +20,56 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Runtime binding profiles and the integration corpus, 2026-09-17
+
+`Wotex.OPCUA.profile/0` returns the static one-shot `:opcua` profile (`opc.tcp`,
+readproperty and writeproperty, no media types). `profile/1` returns it for
+`:oneshot`, returns `:opcua_session` (adding observeproperty and
+unobserveproperty) for `:session`, and returns `unsupported_profile` otherwise.
+`Mapping` rejects a Form that supplies `contentType` with
+`unsupported_content_type`. `Transport` projects a persistent native Read
+through `Value.native_result/1` and a persistent Write as a nil payload with
+status metadata, and removes the observation-only options before opening a
+request Session. `invalid_native_configuration` is now classified `:permanent`.
+
+`runtime_integration_test.exs` binds WOP-I-F01. It builds the input Thing
+Description, `Wotex.OPCUA.profile()` and a ConsumedThing whose Transport is the
+production Transport behind a recording wrapper. A scripted client returns only
+the input peer reply. The runner projects the profile id, the resolved href
+Runtime selected, the command the client received, the Result fields, the
+unchanged Form extension, the number of client requests and the balance of
+connect and disconnect calls; the projection equals the expectation. Further
+tests check the static profile contents and rejected modes, a `contentType`
+Form failing with no client call, and session-profile Read, Write and Bad-status
+projection with one connect, request and disconnect each. The corpus status is
+now `executed`, with bindings for F01 through F07.
+
+In `native_runtime_stream_test.exs`, against the independent asyncua 2.0.1 peer,
+a session-profile ConsumedThing reads the Double Variable and writes 44.5
+(nil payload, status 0). A one-shot-profile ConsumedThing reads 44.5 and writes
+45.5 (`written`). Only the session profile builds an observation child, which
+delivers 45.5, and after stop the peer subscription counts are zero.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 363 passed (10 doctests,
+4 properties, 349 tests), 55 optional tests excluded and 95.3% coverage. The
+optional secure suite with the lifecycle file passes 55/55 against the
+RelWithDebInfo and macOS ASan/UBSan builds (native executable digests unchanged).
+The archive consumer, the minimum Elixir/OTP matrix and I06 package-archive
+runs are not executed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua.ex` | `5752af2ffa5930fdc0b5af8d92bee8f113770bda548f5c880fb926611e4de9fd` |
+| `lib/wotex/opcua/transport.ex` | `ff8bd47bb8a5fdec57ac97863ebee927a81c9d2753428ee2d1c4548708c82f5a` |
+| `lib/wotex/opcua/mapping.ex` | `e0e47cf05b4f0c55cac3729ab2250c6253ba8bcaa1b4fb7a8b64213d56063e2a` |
+| `lib/wotex/opcua/error.ex` | `0c2496c27b9ae5a82381b59b3bb70d80405851b04c724d5e653328808bcc7100` |
+| `test/support/scripted_client.ex` | `356f828e37bd97fadcfccc11cf368f6c1fb054ed49ca705ed95fa2bc6448194d` |
+| `test/support/recording_transport.ex` | `cb819b2a89da0262925be57e89a666ae0ac6b583ef1702d7baf0b7e7f3dbde1d` |
+| `test/wotex/opcua/runtime_integration_test.exs` | `de12fe961021f667538196c540537a21fe372688fcbb1940f06b82834128cda0` |
+| `test/interop/native_runtime_stream_test.exs` | `159e6f9f63e139baeac9b08970d821015ebf2bd7d73af2b01f584e4ad5a7a89c` |
+| `docs/specs/fixtures/wotex-integration-v1.json` | `ea833add56b940314aaac56f5ea6abeaf0d7308996d3ba160a9f2e36dea51634` |
+
 ## Runtime error classes and retry decisions, 2026-09-17
 
 `Wotex.OPCUA.Error` gains the additive `class` field. `Error.classify/1` maps an

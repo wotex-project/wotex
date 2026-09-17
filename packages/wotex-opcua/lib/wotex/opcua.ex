@@ -15,8 +15,9 @@ defmodule Wotex.OPCUA do
   The consumer selects a `Wotex.OPCUA.Client` and owns endpoint policy,
   credentials, certificates, trust configuration, authorization, and
   supervision. Loading this module opens no channel or Python process.
-  The explicitly selected native client can own a persistent Session;
-  subscriptions remain unsupported and are not simulated.
+  The explicitly selected native client can own a persistent Session with
+  Value data-change subscriptions. `profile/0` and `profile/1` return the
+  static Runtime binding profiles; they check no module, backend or peer.
   A successful service result is protocol evidence only; it does not establish
   canonical Property state, authorization, or a physical Action effect.
   """
@@ -32,6 +33,47 @@ defmodule Wotex.OPCUA do
     :invalid_native_configuration,
     :request_too_large
   ]
+
+  @doc """
+  Returns the baseline one-shot Runtime binding profile.
+
+  The profile id is `:opcua`, the scheme is `opc.tcp`, the operations are
+  `readproperty` and `writeproperty`, and the media-type list is empty.
+  """
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile do
+    {:ok, profile} = profile(:oneshot)
+    profile
+  end
+
+  @doc """
+  Returns the static Runtime binding profile for `:oneshot` or `:session`.
+
+  `:session` has id `:opcua_session` and adds `observeproperty` and
+  `unobserveproperty` for Value-attribute monitored items. Any other mode returns
+  `unsupported_profile`. Both use an empty media-type list, so a Form that
+  supplies `contentType` is rejected by the Transport before I/O.
+  """
+  @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(:oneshot),
+    do:
+      Wotex.Runtime.BindingProfile.new(
+        id: :opcua,
+        schemes: ["opc.tcp"],
+        operations: [:readproperty, :writeproperty],
+        media_types: []
+      )
+
+  def profile(:session),
+    do:
+      Wotex.Runtime.BindingProfile.new(
+        id: :opcua_session,
+        schemes: ["opc.tcp"],
+        operations: [:readproperty, :writeproperty, :observeproperty, :unobserveproperty],
+        media_types: []
+      )
+
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
 
   @doc "Reports the operations implemented by this library's validated client boundary."
   @spec capabilities() :: %{

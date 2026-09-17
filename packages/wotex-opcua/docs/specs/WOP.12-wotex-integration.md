@@ -3,7 +3,7 @@ spec:
   id: WOP.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.5
+  version: 1.1.6
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -30,8 +30,13 @@ error/retry, subscription or final-owner requirements.
 and every Transport error returned to Runtime is classified. The I04 table,
 including WOP-I-F02 through F07, unclassified, default-mutation and admission
 budget cases, passes through a Runtime Transport failure return, ConsumedThing
-and `Runtime.Retry`; Runtime's cause keeps no native effect. The profile factory
-and I-F01 remain open.
+and `Runtime.Retry`; Runtime's cause keeps no native effect. `profile/0` and
+`profile/1` return the static `:opcua` and `:opcua_session` profiles, a Form
+with `contentType` fails `unsupported_content_type` before I/O, and the session
+profile projects persistent Read and Write results. WOP-I-F01 runs through the
+real ConsumedThing with a scripted client, and both production profiles read,
+write and observe against the independent peer. The archive consumer, the
+minimum runtime matrix and the remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 

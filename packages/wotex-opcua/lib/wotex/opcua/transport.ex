@@ -5,7 +5,9 @@ defmodule Wotex.OPCUA.Transport do
   The transport validates the Runtime request and execution context, maps the
   selected Form through `Wotex.OPCUA.Mapping`, opens the configured client,
   performs one read or write, normalizes the result, and closes the exact
-  session.
+  session. A persistent native Read returns the value and metadata from
+  `Wotex.OPCUA.Value.native_result/1`; a persistent Write returns a nil payload
+  with its non-Bad `status` metadata.
 
   `subscribe/4` accepts only `observeproperty` with nil input and a nil
   credential. After the Form target matches `:target`, it starts one
@@ -72,7 +74,7 @@ defmodule Wotex.OPCUA.Transport do
 
       options =
         config
-        |> Keyword.delete(:target)
+        |> Keyword.drop([:target, :subscription, :max_queue_length])
         |> Keyword.put(:timeout, timeout)
 
       OPCUA.with_connection(options, fn session ->
@@ -184,11 +186,21 @@ defmodule Wotex.OPCUA.Transport do
   defp execute(session, message, request, remaining) when remaining > 0 do
     with {:ok, message} <- native_message(session, message),
          {:ok, value} <- OPCUA.send(%{session | timeout: remaining}, message),
-         {:ok, payload, metadata} <- Value.result(value),
+         {:ok, payload, metadata} <- project(value),
          do: Result.new(request.request_id, request.operation, payload, metadata: metadata)
   end
 
   defp execute(_, _, _, _), do: {:error, Error.new(:deadline_exceeded)}
+
+  # Persistent native results are typed DataValues or individual Write statuses;
+  # one-shot results keep their versioned compatibility shapes.
+  defp project(%{"has_value" => _} = data_value), do: Value.native_result(data_value)
+
+  defp project(%{"status" => status} = result)
+       when map_size(result) == 1 and is_integer(status) and status in 0..0x7FFFFFFF,
+       do: {:ok, nil, %{status: status}}
+
+  defp project(value), do: Value.result(value)
 
   defp native_message(
          %OPCUA.Session{client: Wotex.OPCUA.Open62541},
