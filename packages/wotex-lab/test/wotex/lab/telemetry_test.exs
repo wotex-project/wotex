@@ -211,8 +211,11 @@ defmodule Wotex.Lab.TelemetryTest do
   end
 
   @doc false
-  def handle_event(event, measurements, metadata, test),
-    do: send(test, {:span, event, measurements, metadata})
+  def handle_event(event, measurements, metadata, test) do
+    # Other async modules emit the same global events; forward only this test's.
+    related = [self() | Process.get(:"$callers", [])] ++ Process.get(:"$ancestors", [])
+    if test in related, do: send(test, {:span, event, measurements, metadata})
+  end
 
   @doc false
   def raise_event(_, _, _, _), do: raise("exporter down")
