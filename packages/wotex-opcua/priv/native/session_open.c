@@ -190,6 +190,10 @@ static bool session_step(void *context, int slice_ms, WopFailure *failure) {
         fail_with(failure, "invalid_response", "opening", false);
         return false;
     }
+    if(!wop_session_sample_namespaces(session)) {
+        fail_with(failure, "invalid_response", "opening", false);
+        return false;
+    }
     session->revised_timeout_ms = value;
     session->ready = true;
     return true;
@@ -211,6 +215,146 @@ static WopCompletion session_opened(void *context, yyjson_mut_doc *document,
     if(valid) return WOP_COMPLETION_SUCCESS;
     fail_with(failure, "invalid_response", "opening", false);
     return WOP_COMPLETION_TERMINAL;
+}
+
+bool wop_session_sample_namespaces(WopSession *session) {
+    if(!session || !session->client) return false;
+    size_t count = 0;
+    for(; count <= UA_UINT16_MAX; count++) {
+        UA_String uri = UA_STRING_NULL;
+        UA_StatusCode status = UA_Client_getNamespaceUri(session->client, (UA_UInt16)count, &uri);
+        UA_String_clear(&uri);
+        if(status != UA_STATUSCODE_GOOD) break;
+    }
+    session->sdk_namespace_count = count;
+    return count >= 2 && count <= UA_UINT16_MAX;
+}
+
+/* local2Remote/remote2Local in the pinned SDK encode an index beyond the
+ * mapping table as 65535 - index; this reverses that rule. */
+static bool publish_index(WopSession *session, UA_UInt16 *index) {
+    UA_UInt16 local = *index;
+    if(local < session->sdk_namespace_count) {
+        UA_String uri = UA_STRING_NULL;
+        if(UA_Client_getNamespaceUri(session->client, local, &uri) != UA_STATUSCODE_GOOD)
+            return false;
+        bool found = false;
+        for(size_t i = 0; i < session->namespace_count && !found; i++) {
+            if(UA_String_equal(&uri, &session->namespace_array[i])) {
+                *index = (UA_UInt16)i;
+                found = true;
+            }
+        }
+        UA_String_clear(&uri);
+        return found;
+    }
+    UA_UInt16 server = (UA_UInt16)(UA_UINT16_MAX - local);
+    if(server < session->namespace_count) return false;
+    *index = server;
+    return true;
+}
+
+static bool localize_index(WopSession *session, UA_UInt16 *index) {
+    UA_UInt16 server = *index;
+    if(server < session->namespace_count) {
+        UA_UInt16 local = 0;
+        UA_String reversed = UA_STRING_NULL;
+        bool mapped = UA_Client_getNamespaceIndex(session->client,
+                          session->namespace_array[server], &local) == UA_STATUSCODE_GOOD &&
+                      UA_Client_getNamespaceUri(session->client, local, &reversed) ==
+                          UA_STATUSCODE_GOOD &&
+                      UA_String_equal(&reversed, &session->namespace_array[server]);
+        UA_String_clear(&reversed);
+        if(mapped) *index = local;
+        return mapped;
+    }
+    UA_UInt16 local = (UA_UInt16)(UA_UINT16_MAX - server);
+    size_t table = session->sdk_namespace_count > session->namespace_count ?
+                   session->sdk_namespace_count : session->namespace_count;
+    if(local < table) return false;
+    *index = local;
+    return true;
+}
+
+static bool translate_one(WopSession *session, const UA_DataType *type, void *data,
+                          bool publish) {
+    bool (*map)(WopSession *, UA_UInt16 *) = publish ? publish_index : localize_index;
+    if(type == &UA_TYPES[UA_TYPES_NODEID])
+        return map(session, &((UA_NodeId *)data)->namespaceIndex);
+    if(type == &UA_TYPES[UA_TYPES_EXPANDEDNODEID]) {
+        UA_ExpandedNodeId *expanded = data;
+        /* A URI identity keeps namespace zero on the wire. */
+        if(expanded->namespaceUri.length) return expanded->nodeId.namespaceIndex == 0;
+        return map(session, &expanded->nodeId.namespaceIndex);
+    }
+    if(type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]) {
+        UA_ExtensionObject *extension = data;
+        if(extension->encoding > UA_EXTENSIONOBJECT_ENCODED_XML) return false;
+        return map(session, &extension->content.encoded.typeId.namespaceIndex);
+    }
+    if(type == &UA_TYPES[UA_TYPES_VARIANT]) {
+        UA_Variant *variant = data;
+        if(!variant->type || !variant->data) return true;
+        size_t count = UA_Variant_isScalar(variant) ? 1 : variant->arrayLength;
+        if(count && (uintptr_t)variant->data <= (uintptr_t)UA_EMPTY_ARRAY_SENTINEL)
+            return true;
+        if(variant->type == &UA_TYPES[UA_TYPES_NODEID] ||
+           variant->type == &UA_TYPES[UA_TYPES_EXPANDEDNODEID] ||
+           variant->type == &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]) {
+            for(size_t i = 0; i < count; i++) {
+                if(!translate_one(session, variant->type,
+                                  (unsigned char *)variant->data + i * variant->type->memSize,
+                                  publish))
+                    return false;
+            }
+        }
+        return variant->type != &UA_TYPES[UA_TYPES_VARIANT] &&
+               variant->type != &UA_TYPES[UA_TYPES_DATAVALUE];
+    }
+    if(type == &UA_TYPES[UA_TYPES_DATAVALUE]) {
+        UA_DataValue *value = data;
+        return !value->hasValue || translate_one(session, &UA_TYPES[UA_TYPES_VARIANT],
+                                                 &value->value, publish);
+    }
+    if(type == &UA_TYPES[UA_TYPES_CALLMETHODRESULT]) {
+        UA_CallMethodResult *result = data;
+        for(size_t i = 0; i < result->outputArgumentsSize; i++) {
+            if(!translate_one(session, &UA_TYPES[UA_TYPES_VARIANT],
+                              &result->outputArguments[i], publish))
+                return false;
+        }
+        return true;
+    }
+    if(type == &UA_TYPES[UA_TYPES_REFERENCEDESCRIPTION]) {
+        UA_ReferenceDescription *reference = data;
+        return map(session, &reference->referenceTypeId.namespaceIndex) &&
+               translate_one(session, &UA_TYPES[UA_TYPES_EXPANDEDNODEID],
+                             &reference->nodeId, publish) &&
+               translate_one(session, &UA_TYPES[UA_TYPES_EXPANDEDNODEID],
+                             &reference->typeDefinition, publish);
+    }
+    return false;
+}
+
+static bool translate_values(WopSession *session, const UA_DataType *type, void *data,
+                             size_t count, bool publish) {
+    if(!session || !session->client || !type || (count && !data) ||
+       session->sdk_namespace_count < 2) return false;
+    for(size_t i = 0; i < count; i++) {
+        if(!translate_one(session, type, (unsigned char *)data + i * type->memSize, publish))
+            return false;
+    }
+    return true;
+}
+
+bool wop_session_publish(WopSession *session, const UA_DataType *type, void *data,
+                         size_t count) {
+    return translate_values(session, type, data, count, true);
+}
+
+bool wop_session_localize(WopSession *session, const UA_DataType *type, void *data,
+                          size_t count) {
+    return translate_values(session, type, data, count, false);
 }
 
 static bool translate_node(WopSession *session, yyjson_val *node_input,
@@ -237,8 +381,9 @@ static bool supported_value_type(const UA_DataType *type) {
         UA_TYPES_BOOLEAN, UA_TYPES_SBYTE, UA_TYPES_BYTE, UA_TYPES_INT16,
         UA_TYPES_UINT16, UA_TYPES_INT32, UA_TYPES_UINT32, UA_TYPES_INT64,
         UA_TYPES_UINT64, UA_TYPES_FLOAT, UA_TYPES_DOUBLE, UA_TYPES_STRING,
-        UA_TYPES_DATETIME, UA_TYPES_GUID, UA_TYPES_BYTESTRING,
-        UA_TYPES_STATUSCODE, UA_TYPES_LOCALIZEDTEXT
+        UA_TYPES_DATETIME, UA_TYPES_GUID, UA_TYPES_BYTESTRING, UA_TYPES_NODEID,
+        UA_TYPES_EXPANDEDNODEID, UA_TYPES_STATUSCODE, UA_TYPES_QUALIFIEDNAME,
+        UA_TYPES_LOCALIZEDTEXT, UA_TYPES_EXTENSIONOBJECT
     };
     for(size_t i = 0; i < sizeof(admitted) / sizeof(admitted[0]); i++)
         if(type == &UA_TYPES[admitted[i]]) return true;
@@ -411,7 +556,9 @@ static bool prepare_write(WopSession *session, WopSessionOperation *operation,
         supported_value_type(value.type);
     if(valid) {
         valid = UA_NodeId_copy(&sdk_id, &operation->write_value.nodeId) == UA_STATUSCODE_GOOD &&
-            UA_Variant_copy(&value, &operation->write_value.value.value) == UA_STATUSCODE_GOOD;
+            UA_Variant_copy(&value, &operation->write_value.value.value) == UA_STATUSCODE_GOOD &&
+            wop_session_localize(session, &UA_TYPES[UA_TYPES_VARIANT],
+                                 &operation->write_value.value.value, 1);
         operation->write_value.attributeId = UA_ATTRIBUTEID_VALUE;
         operation->write_value.value.hasValue = true;
     }
@@ -445,7 +592,9 @@ static bool prepare_call(WopSession *session, WopSessionOperation *operation,
             UA_Variant input = {0};
             valid = wop_value_read_variant(yyjson_arr_get(arguments, i), &arena, &input) == WOP_VALUE_OK &&
                 supported_value_type(input.type) &&
-                UA_Variant_copy(&input, &operation->call_method.inputArguments[i]) == UA_STATUSCODE_GOOD;
+                UA_Variant_copy(&input, &operation->call_method.inputArguments[i]) == UA_STATUSCODE_GOOD &&
+                wop_session_localize(session, &UA_TYPES[UA_TYPES_VARIANT],
+                                     &operation->call_method.inputArguments[i], 1);
         }
     }
     wop_value_arena_reset(&arena);
@@ -693,8 +842,17 @@ static bool session_dispatch(void *context, const WopOperation *owner_operation,
     return false;
 }
 
-static WopCompletion data_value_result(WopSessionOperation *operation, yyjson_mut_doc *document,
-                                       yyjson_mut_val **result, WopFailure *failure) {
+static WopCompletion written(WopValueStatus status, bool unknown, WopFailure *failure) {
+    if(status == WOP_VALUE_OK) return WOP_COMPLETION_SUCCESS;
+    fail_with(failure, status == WOP_VALUE_UNSUPPORTED ? "unsupported_type" :
+              status == WOP_VALUE_INVALID ? "invalid_response" : "response_limit",
+              "decode", unknown);
+    return WOP_COMPLETION_FAILURE;
+}
+
+static WopCompletion data_value_result(WopSession *session, WopSessionOperation *operation,
+                                       yyjson_mut_doc *document, yyjson_mut_val **result,
+                                       WopFailure *failure) {
     if(!operation->valid) {
         fail_with(failure, "invalid_response", "decode", false);
         return WOP_COMPLETION_FAILURE;
@@ -707,16 +865,17 @@ static WopCompletion data_value_result(WopSessionOperation *operation, yyjson_mu
         fail_with(failure, "unsupported_type", "decode", false);
         return WOP_COMPLETION_FAILURE;
     }
-    if(wop_value_write_data_value(&operation->read_value, document, result) != WOP_VALUE_OK ||
-       !*result) {
-        fail_with(failure, "response_limit", "decode", false);
+    if(!wop_session_publish(session, &UA_TYPES[UA_TYPES_DATAVALUE], &operation->read_value, 1)) {
+        fail_with(failure, "invalid_response", "decode", false);
         return WOP_COMPLETION_FAILURE;
     }
-    return WOP_COMPLETION_SUCCESS;
+    return written(wop_value_write_data_value(&operation->read_value, document, result),
+                   false, failure);
 }
 
-static WopCompletion call_result(WopSessionOperation *operation, yyjson_mut_doc *document,
-                                 yyjson_mut_val **result, WopFailure *failure) {
+static WopCompletion call_result(WopSession *session, WopSessionOperation *operation,
+                                 yyjson_mut_doc *document, yyjson_mut_val **result,
+                                 WopFailure *failure) {
     if(!operation->valid) {
         fail_with(failure, "invalid_response", "decode", true);
         return WOP_COMPLETION_FAILURE;
@@ -725,12 +884,16 @@ static WopCompletion call_result(WopSessionOperation *operation, yyjson_mut_doc 
         fail_status(failure, "remote_error", "exchange", true, operation->status);
         return WOP_COMPLETION_FAILURE;
     }
-    const UA_CallMethodResult *call = &operation->call_result;
+    UA_CallMethodResult *call = &operation->call_result;
     for(size_t i = 0; i < call->outputArgumentsSize; i++) {
         if(!supported_value_type(call->outputArguments[i].type)) {
             fail_with(failure, "unsupported_type", "decode", true);
             return WOP_COMPLETION_FAILURE;
         }
+    }
+    if(!wop_session_publish(session, &UA_TYPES[UA_TYPES_CALLMETHODRESULT], call, 1)) {
+        fail_with(failure, "invalid_response", "decode", true);
+        return WOP_COMPLETION_FAILURE;
     }
     yyjson_mut_val *object = yyjson_mut_obj(document);
     yyjson_mut_val *statuses = yyjson_mut_arr(document);
@@ -741,15 +904,14 @@ static WopCompletion call_result(WopSessionOperation *operation, yyjson_mut_doc 
         yyjson_mut_obj_add_val(document, object, "outputs", outputs);
     for(size_t i = 0; valid && i < call->inputArgumentResultsSize; i++)
         valid = yyjson_mut_arr_add_uint(document, statuses, call->inputArgumentResults[i]);
-    for(size_t i = 0; valid && i < call->outputArgumentsSize; i++) {
+    WopValueStatus status = valid ? WOP_VALUE_OK : WOP_VALUE_LIMIT;
+    for(size_t i = 0; status == WOP_VALUE_OK && i < call->outputArgumentsSize; i++) {
         yyjson_mut_val *value = NULL;
-        valid = wop_value_write_variant(&call->outputArguments[i], document, &value) ==
-                    WOP_VALUE_OK && value && yyjson_mut_arr_append(outputs, value);
+        status = wop_value_write_variant(&call->outputArguments[i], document, &value);
+        if(status == WOP_VALUE_OK && (!value || !yyjson_mut_arr_append(outputs, value)))
+            status = WOP_VALUE_LIMIT;
     }
-    if(!valid) {
-        fail_with(failure, "response_limit", "decode", true);
-        return WOP_COMPLETION_FAILURE;
-    }
+    if(status != WOP_VALUE_OK) return written(status, true, failure);
     *result = object;
     return WOP_COMPLETION_SUCCESS;
 }
@@ -790,6 +952,13 @@ static WopCompletion browse_result(WopSession *session, WopSessionOperation *ope
     if(!wop_session_browse_capture(session, operation)) {
         fail_with(failure, "response_limit", "decode", false);
         return WOP_COMPLETION_TERMINAL;
+    }
+    if(!wop_session_publish(session, &UA_TYPES[UA_TYPES_REFERENCEDESCRIPTION],
+                            operation->browse_result.references,
+                            operation->browse_result.referencesSize)) {
+        /* A live continuation cannot be handed to the owner with this page. */
+        fail_with(failure, "invalid_response", "decode", false);
+        return session->browse_active ? WOP_COMPLETION_TERMINAL : WOP_COMPLETION_FAILURE;
     }
     char token[32] = {0};
     const char *continuation = session->browse_active ? token : NULL;
@@ -842,7 +1011,7 @@ static WopCompletion session_complete(void *context, const WopOperation *owner_o
             fail_status(failure, "remote_error", "exchange", false, operation->status);
             return WOP_COMPLETION_FAILURE;
         }
-        return data_value_result(operation, document, result, failure);
+        return data_value_result(session, operation, document, result, failure);
     case WOP_OPERATION_WRITE:
         if(operation->remote_error || (operation->valid && (operation->status & 0x80000000U))) {
             fail_status(failure, "remote_error", "exchange", true, operation->status);
@@ -863,7 +1032,7 @@ static WopCompletion session_complete(void *context, const WopOperation *owner_o
             fail_status(failure, "remote_error", "exchange", true, operation->status);
             return WOP_COMPLETION_FAILURE;
         }
-        return call_result(operation, document, result, failure);
+        return call_result(session, operation, document, result, failure);
     case WOP_OPERATION_BROWSE:
     case WOP_OPERATION_BROWSE_NEXT:
     case WOP_OPERATION_BROWSE_RELEASE:

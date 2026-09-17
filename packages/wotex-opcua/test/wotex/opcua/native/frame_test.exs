@@ -74,6 +74,65 @@ defmodule Wotex.OPCUA.Native.FrameTest do
              )
   end
 
+  test "WOP-S01 identity-bearing native Variants validate exact envelopes" do
+    for {type, value} <- [
+          {"NodeId", "ns=1;s=target"},
+          {"ExpandedNodeId",
+           %{"node_id" => "ns=0;i=1", "namespace_uri" => "urn:x", "server_index" => 3}},
+          {"QualifiedName", %{"namespace" => 1, "name" => nil}},
+          {"ExtensionObject", %{"encoding_id" => "ns=1;i=2", "encoding" => "none", "body" => nil}},
+          {"ExtensionObject",
+           %{
+             "encoding_id" => "ns=1;i=2",
+             "encoding" => "binary",
+             "body" => %{"type" => "bytes", "base64" => "AQ=="}
+           }}
+        ] do
+      for array <- [false, true] do
+        payload = if array, do: [value, value], else: value
+        result = %{"has_value" => true, "status" => 0, "value" => variant(type, array, payload)}
+        assert {:ok, ^result} = Frame.response(response(result), 7, "r", "read", nil)
+      end
+    end
+
+    for {type, value} <- [
+          {"NodeId", "not a node"},
+          {"ExpandedNodeId",
+           %{"node_id" => "ns=1;i=1", "namespace_uri" => "urn:x", "server_index" => 0}},
+          {"ExpandedNodeId", %{"node_id" => "ns=0;i=1"}},
+          {"QualifiedName", %{"namespace" => 70_000, "name" => "x"}},
+          {"QualifiedName", %{"namespace" => 1}},
+          {"ExtensionObject",
+           %{
+             "encoding_id" => "ns=1;i=2",
+             "encoding" => "none",
+             "body" => %{"type" => "bytes", "base64" => "AQ=="}
+           }},
+          {"ExtensionObject",
+           %{"encoding_id" => "ns=1;i=2", "encoding" => "binary", "body" => nil}},
+          {"ExtensionObject",
+           %{"encoding_id" => "ns=1;i=2", "encoding" => "binary", "body" => "AQ=="}},
+          {"ExtensionObject", "opaque"}
+        ] do
+      result = %{"has_value" => true, "status" => 0, "value" => variant(type, false, value)}
+
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(response(result), 7, "r", "read", nil)
+    end
+  end
+
+  defp variant(type, array, value), do: %{"type" => type, "array" => array, "value" => value}
+
+  defp response(result),
+    do:
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "r",
+        "ok" => true,
+        "result" => result
+      }) <> "\n"
+
   test "WOP-X03 request contains only exact integer fields and one LF" do
     assert {:ok, frame} =
              Frame.request(

@@ -250,6 +250,68 @@ defmodule Wotex.OPCUA.Open62541Test do
     assert :ok = Open62541.disconnect(handle)
   end
 
+  test "WOP-S01 persistent identity-bearing values use exact native envelopes", context do
+    options = fixture(context, "identity", "session_identity_values")
+    assert {:ok, handle} = Open62541.connect(options)
+
+    for value <- [
+          %{type: "NodeId", value: "ns=1;s=target"},
+          %{
+            type: "ExpandedNodeId",
+            value: %{node_id: "ns=1;s=target", namespace_uri: nil, server_index: 0}
+          },
+          %{type: "QualifiedName", value: %{namespace: 1, name: "Name"}},
+          %{
+            type: "ExtensionObject",
+            value: %{encoding_id: "ns=1;i=5001", encoding: "binary", body: <<1, 2>>}
+          }
+        ] do
+      assert {:ok, %{"status" => 0}} =
+               Open62541.request(handle, %{type: :write, node_id: "ns=1;s=v", value: value}, 1000)
+    end
+
+    assert {:ok,
+            %{
+              "value" => %{
+                "type" => "QualifiedName",
+                "array" => true,
+                "value" => [
+                  %{"namespace" => 1, "name" => "Name"},
+                  %{"namespace" => 0, "name" => nil}
+                ]
+              }
+            }} = Open62541.request(handle, %{type: :read, node_id: "ns=1;s=v"}, 1000)
+
+    assert {:ok, %{"outputs" => [node, expanded, extension]}} =
+             Open62541.request(
+               handle,
+               %{type: :call, node_id: "ns=1;s=m", value: %{object_id: "ns=0;i=85", arguments: []}},
+               1000
+             )
+
+    assert node == %{"type" => "NodeId", "array" => false, "value" => "ns=1;s=target"}
+    assert expanded["value"]["namespace_uri"] == "urn:remote"
+
+    assert extension["value"] == %{
+             "encoding_id" => "ns=1;i=5001",
+             "encoding" => "none",
+             "body" => nil
+           }
+
+    assert {:error, %Error{code: :invalid_value}} =
+             Open62541.request(
+               handle,
+               %{
+                 type: :write,
+                 node_id: "ns=1;s=v",
+                 value: %{type: "QualifiedName", value: %{"namespace" => 1, "name" => "Name"}}
+               },
+               1000
+             )
+
+    assert :ok = Open62541.disconnect(handle)
+  end
+
   test "WOP-N03 a complete native Browse page retains typed references and strict options",
        context do
     options = fixture(context, "typed-browse")

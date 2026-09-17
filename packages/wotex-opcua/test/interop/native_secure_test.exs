@@ -218,6 +218,58 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
   end
 
+  test "identity-bearing Variants keep server namespace identities through secure Sessions" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    peer = Jason.decode!(File.read!(config))
+
+    options = [
+      executable: System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE"),
+      guardian: System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    ]
+
+    session = public_session(options, peer, config)
+    %Wotex.OPCUA.Session{handle: %{namespace_array: namespaces}} = session
+    namespace = Enum.find_index(namespaces, &(&1 == "urn:wotex:fixture"))
+    assert "ns=#{namespace};s=value" == peer["node_id"]
+
+    assert {:ok, %{"value" => %{"type" => "NodeId", "array" => false, "value" => node}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: peer["node_value_id"]})
+
+    assert node == peer["node_id"]
+
+    assert {:ok, %{"value" => %{"type" => "QualifiedName", "value" => name}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: peer["name_value_id"]})
+
+    assert name == %{"namespace" => namespace, "name" => "Name"}
+
+    for {id, value, restore} <- [
+          {peer["node_value_id"], %{type: "NodeId", value: "ns=0;i=85"},
+           %{type: "NodeId", value: node}},
+          {peer["name_value_id"],
+           %{type: "QualifiedName", value: %{namespace: namespace, name: "Changed"}},
+           %{type: "QualifiedName", value: %{namespace: namespace, name: "Name"}}}
+        ] do
+      assert {:ok, %{"status" => 0}} =
+               Wotex.OPCUA.send(session, %{type: :write, node_id: id, value: value})
+
+      assert {:ok, %{"value" => %{"value" => read}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: id})
+
+      expected =
+        case value.value do
+          %{namespace: ns, name: text} -> %{"namespace" => ns, "name" => text}
+          text -> text
+        end
+
+      assert read == expected
+
+      assert {:ok, %{"status" => 0}} =
+               Wotex.OPCUA.send(session, %{type: :write, node_id: id, value: restore})
+    end
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
   test "a secure typed native Write is read back without retry" do
     config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
@@ -693,6 +745,33 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
              )
 
     assert :ok = Wotex.OPCUA.Open62541.disconnect(oneshot)
+  end
+
+  defp public_session(options, peer, peer_path) do
+    directory = Path.dirname(peer_path)
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, session} =
+             Wotex.OPCUA.connect(
+               client: Wotex.OPCUA.Open62541,
+               executable: options[:executable],
+               executable_digest: digest.(options[:executable]),
+               guardian: options[:guardian],
+               guardian_digest: digest.(options[:guardian]),
+               endpoint: peer["endpoint"],
+               security_policy: :basic256sha256,
+               security_mode: :sign_and_encrypt,
+               client_uri: peer["client_uri"],
+               server_uri: peer["server_uri"],
+               certificate: peer["certificate"],
+               private_key: Path.join(directory, "client.key.der"),
+               server_certificate: peer["server_certificate"],
+               trust_certificate: Path.join(directory, "ca.der"),
+               crl: peer["crl"],
+               authentication: %{type: :anonymous}
+             )
+
+    session
   end
 
   defp line(port, buffered) do

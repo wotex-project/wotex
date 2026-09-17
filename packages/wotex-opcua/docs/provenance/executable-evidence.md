@@ -20,6 +20,57 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native namespace projection for identity values, 2026-09-17
+
+The pinned SDK decodes every NodeId namespace index, including the NodeId inside
+an ExpandedNodeId and an encoded ExtensionObject type identity, from the server
+table into its client-local table, and maps it back on encode. It does not remap
+QualifiedName indexes, and it resolves an ExpandedNodeId URI found in its table
+to that local index. The Session now samples the SDK table when it becomes ready
+and projects decoded Read DataValues, Call outputs and Browse
+ReferenceDescriptions back to server NamespaceArray indexes through exact URI
+equality; Write values and Call inputs are localized the same way. Indexes
+outside the server table use the SDK's reversible `65535 - index` rule and fail
+when that would collide with a local entry. Server indexes from 65536 minus the
+SDK table size to 65535 are indistinguishable after SDK decoding; this is a
+recorded SDK boundary, not a supported identity. Projection failure is a
+request-scoped `invalid_response`, or terminal when a live Browse continuation
+would be lost. NodeId, ExpandedNodeId, QualifiedName and opaque ExtensionObject
+Variants are now admitted for native Read, Write and Call, validated by
+`Native.Frame` and projected to exact native envelopes by the public client.
+
+`wotex_opcua_namespace_check` builds an unconnected SDK client whose local table
+orders two URIs opposite to the server table and asserts both directions for a
+NodeId, out-of-table and colliding indexes, a NodeId array inside a DataValue,
+URI identities, encoded and decoded ExtensionObjects, ReferenceDescription fields,
+unchanged QualifiedName, rejected nested Variants and a URI missing from the
+server table. It passes in the RelWithDebInfo suite (195/195) and under macOS
+ASan/UBSan (186/186 non-custody). ExUnit adds exact native request envelopes and
+result validation for all four types through a deterministic probe, plus
+malformed-envelope rejection in `frame_test.exs`. The independent asyncua 2.0.1
+peer now exposes writable NodeId and QualifiedName variables; through a secure
+public persistent client the test reads the NodeId `ns=2;s=value` and the
+QualifiedName in namespace 2, writes new values, reads them back and restores
+them. The optional secure suite passes 14/14 with the normal and sanitizer
+executables. Both servers keep identical server and SDK namespace order, so
+reordering itself is proven only by the native check. The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 325 passed (10 doctests, 4 properties, 311 tests),
+14 optional tests excluded and 95.6% coverage. One-shot legacy result shapes
+still reject structured identity values.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/session_open.c` | `7360ccd5a215aa486d1a4fb19648e2ccf5e161419eb8dd702ba068cb36a7ee56` |
+| `priv/native/session_open.h` | `d29bc9ca10228f976b8c690abef8953ef7b81b48b77bc23b2f4ac7d2b595e0fd` |
+| `priv/native/namespace_check.c` | `f429e043947934a9563e731defdb15d800c4af9e263b5457d391fa10ec3aceb6` |
+| `lib/wotex/opcua/native/frame.ex` | `1f107e77c516ee60b032f1fb5d2037a25602a73eaf7997f83fb0c3675f1229ca` |
+| `lib/wotex/opcua/open62541.ex` | `01e4986a65c3d5535ad66330177c860a1fcb14b0a8afe2605c9eb9a40de67cd1` |
+| `test/interop/secure_peer.py` | `883045d467c60c4490cfa006ba90f172e4729ed7f007d6bd46850da298c9fe7d` |
+| `test/interop/native_secure_test.exs` | `27b804f74cb2f62bc25b942a0824db71881de29d8399cd58506b0b95c312382a` |
+| `test/native/host_probe.c` | `757d582eed003695647ef4eac9d142ed2e5902310e477276a59c21e7e0e9cd8c` |
+| `native CTest log` | `52612573bbf6655ac12b86eb4a0dca43fc571481af5a569643ce312b6952b438` |
+
 ## Concurrent native host admission, 2026-09-17
 
 `Native.Host` now admits at most 64 outstanding requests. Read, health, Write

@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.3
+  version: 2.0.4
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -114,8 +114,8 @@ server NamespaceArray, checks the server-revised timeout and emits a correlated,
 credit-spending success. A one-at-a-time asynchronous `read` accepts a concrete
 NodeId and null index range, resolves its server namespace URI to the SDK-local
 index and returns a typed DataValue. Bad StatusCodes retain the numeric status
-in a structured error. NodeId-bearing result values remain unsupported until
-inverse namespace translation exists. `close` cooperatively deletes the Session
+in a structured error. NodeId, ExpandedNodeId, QualifiedName and opaque
+ExtensionObject values are admitted with server namespace identities. `close` cooperatively deletes the Session
 and acknowledges cleanup; EOF also releases it. A one-at-a-time `write` validates
 one typed Variant, retains copied SDK-owned memory through its asynchronous
 request and returns one numeric result status. A rejected or timed-out transmitted
@@ -124,8 +124,8 @@ Write retains unknown effect and is never retried. A one-at-a-time asynchronous
 SDK-local namespace map, copies up to 64 typed input Variants into SDK-owned
 memory and returns the method status, ordered input argument statuses and typed
 outputs. Bad method status and uncertain post-submission failures retain unknown
-effect without retry. NodeId-bearing arguments and outputs remain unsupported
-until full namespace translation exists. The internal BEAM owner validates
+effect without retry. Identity-bearing arguments and outputs use the same
+namespace projection. The internal BEAM owner validates
 these responses and replenishes consumed credit. One service-level forward
 HierarchicalReferences Browse page now returns complete typed references in
 server order through the internal native owner. The explicitly selected public
@@ -144,8 +144,14 @@ through the same persistent or temporary one-shot Session, retains duplicates
 and caps the complete result at 256 local children. It releases a cursor after
 a later invalid identity or Uncertain page. Native responses wait in the
 bounded 64-envelope/1 MiB output queue and spend credit only when written.
-Subscriptions, concurrent services, cancellation, full namespace translation
-and other policy/token interoperability remain open P02/P03 work.
+The native owner projects SDK-local namespace indexes in decoded NodeIds,
+ExpandedNodeIds, encoded ExtensionObject type identities and Browse references
+back to server NamespaceArray indexes, and localizes identity-bearing Write and
+Call inputs. QualifiedName indexes pass unchanged because the pinned SDK does
+not remap them. A namespace URI matching the SDK table is normalized by the SDK
+to its index. Server indexes from 65536 minus the SDK table size to 65535 are
+indistinguishable after pinned SDK decoding and are not a supported identity.
+Subscriptions, remaining public multi-caller use and other policy/token interoperability remain open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.

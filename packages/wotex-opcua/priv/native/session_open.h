@@ -42,6 +42,8 @@ struct WopSession {
     WopSecurity security;
     UA_String *namespace_array;
     size_t namespace_count;
+    /* Client-local SDK namespace table size, sampled when the Session is ready. */
+    size_t sdk_namespace_count;
     UA_Double revised_timeout_ms;
     uint64_t requested_timeout_ms;
     bool namespace_requested, namespace_received, namespace_valid, ready;
@@ -70,6 +72,23 @@ bool wop_session_browse_capture(WopSession *session, WopSessionOperation *operat
 /* Admits BrowseNext or release only for the exact live local token. */
 bool wop_session_browse_admit(WopSession *session, WopSessionOperation *operation,
                               yyjson_val *parameters, bool release);
+
+/* WOP-X04 namespace projection for SDK values. The pinned SDK maps each decoded
+ * NodeId namespace index, including ExpandedNodeId and encoded ExtensionObject
+ * type identities, from the server table into its client-local table and back
+ * on encode; QualifiedName indexes are not mapped. `publish` converts a
+ * decoded value to server indexes and `localize` converts a public value to
+ * SDK-local indexes. Indexes outside the server NamespaceArray use the SDK's
+ * reversible out-of-table encoding and fail when it would collide with a
+ * local table entry. Only NodeId, ExpandedNodeId, ExtensionObject, Variant,
+ * DataValue, CallMethodResult and ReferenceDescription values are admitted.
+ * The SDK namespace count must be sampled first. false leaves a partially
+ * translated value that the caller must discard. */
+bool wop_session_sample_namespaces(WopSession *session);
+bool wop_session_publish(WopSession *session, const UA_DataType *type, void *data,
+                         size_t count);
+bool wop_session_localize(WopSession *session, const UA_DataType *type, void *data,
+                          size_t count);
 
 /* True only when the CloseSession/channel teardown completed cooperatively. */
 bool wop_session_close(WopSession *session);

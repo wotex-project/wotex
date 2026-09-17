@@ -419,13 +419,40 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   defp native_variant(_, true), do: :error
 
-  defp native_payload("ByteString", true, values) when is_list(values) do
-    values
-    |> native_list("ByteString")
+  defp native_payload(type, true, values)
+       when type in ~w(ByteString LocalizedText ExpandedNodeId QualifiedName ExtensionObject) and
+              is_list(values),
+       do: native_list(values, type)
+
+  defp native_payload(
+         "ExpandedNodeId",
+         false,
+         %{"node_id" => node, "namespace_uri" => uri, "server_index" => server} = value
+       )
+       when map_size(value) == 3,
+       do: {:ok, %{node_id: node, namespace_uri: uri, server_index: server}}
+
+  defp native_payload("QualifiedName", false, %{"namespace" => namespace, "name" => name} = value)
+       when map_size(value) == 2,
+       do: {:ok, %{namespace: namespace, name: name}}
+
+  defp native_payload(
+         "ExtensionObject",
+         false,
+         %{"encoding_id" => id, "encoding" => encoding, "body" => body} = value
+       )
+       when map_size(value) == 3 do
+    with {:ok, bytes} <- native_payload("ByteString", false, body),
+         true <- is_nil(bytes) == (encoding == "none") do
+      {:ok, %{encoding_id: id, encoding: encoding, body: bytes}}
+    else
+      _ -> :error
+    end
   end
 
-  defp native_payload("LocalizedText", true, values) when is_list(values),
-    do: native_list(values, "LocalizedText")
+  defp native_payload(type, false, _)
+       when type in ~w(ExpandedNodeId QualifiedName ExtensionObject),
+       do: :error
 
   defp native_payload("LocalizedText", false, %{"locale" => locale, "text" => text} = value)
        when map_size(value) == 2,

@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.23
+  version: 1.1.24
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -54,8 +54,8 @@ request. It binds the process generation; requests without it and later credit
 before consumption fail. Open/read/write/call/browse/close responses spend credit; the BEAM owner
 replenishes validated consumption. The read path translates one concrete input
 NodeId through the server URI and SDK-local namespace map and returns a typed
-DataValue, retaining a Bad result's numeric StatusCode. NodeId-bearing result
-values are rejected until inverse translation is complete. The Write path
+DataValue, retaining a Bad result's numeric StatusCode. Decoded identity values
+are projected back to server namespace indexes (below). The Write path
 validates one typed Variant, holds an SDK-owned copy through the callback and
 returns one numeric result status. A transmitted Write failure retains unknown
 effect without retry. The Call path translates concrete object/method NodeIds,
@@ -73,10 +73,19 @@ and sends service-level BrowseNext or release on that Session. A secure
 same-stack C peer forces one reference per page and exercises both wire calls.
 The BEAM owner exposes a generation-bound public handle with the original
 browse deadline and cumulative bounds. Independent BrowseNext peer evidence,
-multiple live continuations and release counters remain open. NodeId-bearing
-arguments and outputs remain unsupported until full namespace translation
-exists. Output buffering, other operations, cancellation,
-full namespace translation and the secure policy/token matrix remain required.
+multiple live continuations and release counters remain open. Output buffering, other operations, cancellation,
+and the secure policy/token matrix remain required. The owner now samples the
+SDK's client-local namespace table when the Session is ready and projects every
+decoded NodeId, ExpandedNodeId without a URI, encoded ExtensionObject type
+identity and Browse ReferenceDescription identity from that table to the server
+NamespaceArray through exact URI equality; identity-bearing Write and Call
+inputs are localized the same way. Indexes outside the server table use the
+SDK's reversible out-of-table rule and fail when they would collide with a local
+table entry. QualifiedName is not remapped by the pinned SDK codec and passes
+unchanged. A URI identity the SDK resolves locally arrives normalized to its
+index, and server indexes from 65536 minus the SDK table size to 65535 cannot
+be distinguished after SDK decoding. A projection failure is `invalid_response`;
+it ends the Session only when a live Browse continuation would otherwise be lost.
 The BEAM response frame validates only canonical local `c` plus uint64 tokens
 for Browse/BrowseNext and an exact null Browse release. Its host now binds one
 live token to a generation-bound reference for persistent typed Browse,

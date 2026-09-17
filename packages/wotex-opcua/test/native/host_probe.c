@@ -87,7 +87,11 @@ static int session_services(int remote_browse) {
             result = "{\"session_timeout_ms\":60000.0,\"session_generation\":%llu,"
                      "\"namespace_array\":[\"http://opcfoundation.org/UA/\",\"urn:fixture\"]}";
         else if(strstr(frame, "\"operation\":\"read\""))
-            result = remote_browse == 5 ?
+            result = remote_browse == 18 ?
+                "{\"has_value\":true,\"value\":{\"type\":\"QualifiedName\",\"array\":true,"
+                "\"value\":[{\"namespace\":1,\"name\":\"Name\"},{\"namespace\":0,\"name\":null}]},"
+                "\"status\":0}" :
+                remote_browse == 5 ?
                 "{\"has_value\":true,\"value\":{\"type\":\"ByteString\","
                 "\"array\":true,\"value\":[{\"type\":\"bytes\",\"base64\":\"AP8=\"},"
                 "{\"type\":\"bytes\",\"base64\":\"AQ==\"}]},\"status\":0}" :
@@ -106,9 +110,22 @@ static int session_services(int remote_browse) {
                 (!strstr(frame, "\"array\":true") ||
                  !strstr(frame, "\"base64\":\"AP8=\"") ||
                  !strstr(frame, "\"base64\":\"\"")) ?
+                NULL : remote_browse == 18 &&
+                (!strstr(frame, "\"type\":\"NodeId\",\"value\":\"ns=1;s=target\"") &&
+                 !strstr(frame, "{\"namespace_uri\":null,\"node_id\":\"ns=1;s=target\",\"server_index\":0}") &&
+                 !strstr(frame, "{\"name\":\"Name\",\"namespace\":1}") &&
+                 !strstr(frame, "{\"body\":{\"base64\":\"AQI=\",\"type\":\"bytes\"},"
+                                "\"encoding\":\"binary\",\"encoding_id\":\"ns=1;i=5001\"}")) ?
                 NULL : "{\"status\":0}";
         else if(strstr(frame, "\"operation\":\"call\""))
-            result = remote_browse == 3 ?
+            result = remote_browse == 18 ?
+                "{\"status\":0,\"input_argument_statuses\":[],\"outputs\":["
+                "{\"type\":\"NodeId\",\"array\":false,\"value\":\"ns=1;s=target\"},"
+                "{\"type\":\"ExpandedNodeId\",\"array\":false,\"value\":{\"node_id\":\"ns=0;s=remote\","
+                "\"namespace_uri\":\"urn:remote\",\"server_index\":2}},"
+                "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=1;i=5001\","
+                "\"encoding\":\"none\",\"body\":null}}]}" :
+                remote_browse == 3 ?
                 "{\"status\":0,\"input_argument_statuses\":[],\"outputs\":[]}" :
                 remote_browse == 4 ?
                 "{\"status\":0,\"input_argument_statuses\":[],"
@@ -419,6 +436,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_release_failure")) return session_services(15);
     if (!strcmp(mode, "session_uncertain_browse")) return session_services(16);
     if (!strcmp(mode, "session_invalid_next_reference")) return session_services(17);
+    if (!strcmp(mode, "session_identity_values")) return session_services(18);
     if (!strcmp(mode, "session_terminal_pending")) return session_faults(1);
     if (!strcmp(mode, "session_terminal_foreign")) return session_faults(2);
     if (!strcmp(mode, "session_response_foreign")) return session_faults(3);

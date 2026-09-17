@@ -81,6 +81,14 @@ async def main(directory):
                                                          "ByteValue", b"seed",
                                                          ua.VariantType.ByteString)
     await byte_value.set_writable()
+    node_value = await server.nodes.objects.add_variable(ua.NodeId("node_value", namespace),
+                                                         "NodeValue", ua.NodeId("value", namespace),
+                                                         ua.VariantType.NodeId)
+    await node_value.set_writable()
+    name_value = await server.nodes.objects.add_variable(ua.NodeId("name_value", namespace),
+                                                         "NameValue", ua.QualifiedName("Name", namespace),
+                                                         ua.VariantType.QualifiedName)
+    await name_value.set_writable()
 
     @uamethod
     def add_values(parent, left, right):
@@ -97,6 +105,8 @@ async def main(directory):
               "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string(),
               "byte_array_node_id": byte_values.nodeid.to_string(),
               "byte_node_id": byte_value.nodeid.to_string(),
+              "node_value_id": node_value.nodeid.to_string(),
+              "name_value_id": name_value.nodeid.to_string(),
               "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string()}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

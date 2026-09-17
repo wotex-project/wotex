@@ -38,16 +38,17 @@ The executable rejects malformed or expired input with one terminal frame,
 admits secure `open`, one-at-a-time `read`/`write`/`call`/`browse`, and `close`, and rejects other
 service requests as `unsupported_protocol`. A read accepts a concrete NodeId and null
 index range, resolves the server URI to the SDK-local namespace index, and
-serializes a bounded DataValue. NodeId-bearing result values remain unsupported
-until inverse namespace translation is implemented. Bad StatusCodes return a
+serializes a bounded DataValue. `wop_session_publish` projects decoded NodeId,
+ExpandedNodeId, ExtensionObject type and reference identities from the SDK-local
+namespace table to server indexes; `wop_session_localize` performs the inverse
+for Write and Call inputs. `namespace_check.c` exercises a reordered SDK table. Bad StatusCodes return a
 finite `remote_error` with the numeric status. A Write validates a typed Variant,
 copies it into SDK-owned memory for its asynchronous request and reports one
 numeric result status. Bad Write status and a transmitted Write timeout retain
 unknown effect; there is no retry. A Call translates concrete object and method
 NodeIds, copies up to 64 typed input Variants and serializes method status,
 ordered input argument statuses and typed outputs. Bad method status and
-post-submission failure retain unknown effect without retry. NodeId-bearing
-arguments and outputs remain unsupported pending full namespace translation.
+post-submission failure retain unknown effect without retry.
 Browse sends one service-level request with an explicit 1..256 page size and
 returns all seven reference fields in server order. Existing public callers
 close the Session if a result exceeds the requested size or has a continuation.

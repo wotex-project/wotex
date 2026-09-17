@@ -19,7 +19,7 @@ defmodule Wotex.OPCUA.Open62541 do
   alias Wotex.OPCUA.{Address, Binary, Error}
   alias Wotex.OPCUA.Native.{Config, Host}
 
-  @types ~w(Boolean SByte Byte Int16 UInt16 Int32 UInt32 Int64 UInt64 Float Double String DateTime Guid ByteString StatusCode LocalizedText)
+  @types ~w(Boolean SByte Byte Int16 UInt16 Int32 UInt32 Int64 UInt64 Float Double String DateTime Guid ByteString NodeId ExpandedNodeId StatusCode QualifiedName LocalizedText ExtensionObject)
 
   @impl Wotex.OPCUA.Client
   @doc "Validates native options and opens a caller-owned persistent Session when requested."
@@ -325,19 +325,46 @@ defmodule Wotex.OPCUA.Open62541 do
 
   defp variant(_), do: invalid_request()
 
-  defp native_bytes(%{"type" => "ByteString", "value" => bytes} = value) when is_binary(bytes),
-    do: %{value | "value" => %{"type" => "bytes", "base64" => Base.encode64(bytes)}}
-
-  defp native_bytes(%{"type" => "ByteString", "array" => true, "value" => values} = value)
+  # Projects a Binary-validated Variant payload onto the closed native JSON shape.
+  defp native_bytes(%{"array" => true, "value" => values, "type" => type} = value)
        when is_list(values),
-       do: %{value | "value" => Enum.map(values, &byte_element/1)}
+       do: %{value | "value" => Enum.map(values, &native_element(type, &1))}
+
+  defp native_bytes(%{"array" => false, "type" => type, "value" => element} = value),
+    do: %{value | "value" => native_element(type, element)}
 
   defp native_bytes(value), do: value
 
-  defp byte_element(bytes) when is_binary(bytes),
+  defp native_element(_, nil), do: nil
+
+  defp native_element("ByteString", bytes),
     do: %{"type" => "bytes", "base64" => Base.encode64(bytes)}
 
-  defp byte_element(nil), do: nil
+  defp native_element("NodeId", node), do: canonical_node(node)
+
+  defp native_element("ExpandedNodeId", %{node_id: node} = value),
+    do: %{
+      "node_id" => canonical_node(node),
+      "namespace_uri" => value.namespace_uri,
+      "server_index" => value.server_index
+    }
+
+  defp native_element("QualifiedName", %{namespace: namespace, name: name}),
+    do: %{"namespace" => namespace, "name" => name}
+
+  defp native_element("ExtensionObject", %{encoding_id: id, encoding: encoding, body: body}),
+    do: %{
+      "encoding_id" => canonical_node(id),
+      "encoding" => encoding,
+      "body" => native_element("ByteString", body)
+    }
+
+  defp native_element(_, element), do: element
+
+  defp canonical_node(node) do
+    {:ok, address} = Address.new(node)
+    Address.to_string(address)
+  end
 
   defp project_result("browse", %{"references" => references, "continuation" => nil}, namespaces)
        when is_list(references) and is_list(namespaces) do
