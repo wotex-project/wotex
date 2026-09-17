@@ -212,10 +212,14 @@ defmodule Wotex.Thread.NativeHostProcessTest do
       [radio | _] = descendants(worker)
       pids = [host.os_pid, worker, radio]
 
-      System.cmd("/bin/kill", [
-        "-KILL",
-        Integer.to_string(if(target == :worker, do: worker, else: radio))
-      ])
+      System.cmd(
+        "/bin/kill",
+        [
+          "-KILL",
+          Integer.to_string(if(target == :worker, do: worker, else: radio))
+        ],
+        env: command_env()
+      )
 
       assert finish(host) != 0
       eventually(fn -> Enum.all?(pids, &(not alive?(&1))) end)
@@ -239,7 +243,7 @@ defmodule Wotex.Thread.NativeHostProcessTest do
           Port.close(host.port)
 
         :term ->
-          System.cmd("/bin/kill", ["-TERM", Integer.to_string(host.os_pid)])
+          System.cmd("/bin/kill", ["-TERM", Integer.to_string(host.os_pid)], env: command_env())
           assert_receive {port, {:exit_status, _}} when port == host.port, 2_000
       end
 
@@ -282,6 +286,9 @@ defmodule Wotex.Thread.NativeHostProcessTest do
 
     assert interfaces() == original
   end
+
+  defp command_env,
+    do: Enum.map(System.get_env(), fn {key, value} -> {key, if(key == "PATH", do: value)} end)
 
   defp start(context, options \\ []) do
     port =
@@ -395,15 +402,19 @@ defmodule Wotex.Thread.NativeHostProcessTest do
       source = Path.expand("../fixtures/stubborn_radio.c", __DIR__)
 
       assert {_, 0} =
-               System.cmd("/usr/bin/cc", [
-                 "-std=c11",
-                 "-Wall",
-                 "-Wextra",
-                 "-Werror",
-                 source,
-                 "-o",
-                 path
-               ])
+               System.cmd(
+                 "/usr/bin/cc",
+                 [
+                   "-std=c11",
+                   "-Wall",
+                   "-Wextra",
+                   "-Werror",
+                   source,
+                   "-o",
+                   path
+                 ],
+                 env: command_env()
+               )
     end
 
     path
@@ -434,7 +445,7 @@ defmodule Wotex.Thread.NativeHostProcessTest do
 
   defp children(pid) do
     case File.read("/proc/#{pid}/task/#{pid}/children") do
-      {:ok, text} -> text |> String.split() |> Enum.map(&String.to_integer/1)
+      {:ok, text} -> Enum.map(String.split(text), &String.to_integer/1)
       {:error, _} -> []
     end
   end

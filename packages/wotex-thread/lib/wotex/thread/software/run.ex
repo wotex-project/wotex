@@ -50,9 +50,7 @@ defmodule Wotex.Thread.Software.Run do
   def run(workspace) when is_binary(workspace) do
     with :ok <- platform(),
          {:ok, ^workspace} <- arguments(["--workspace", workspace]),
-         true <-
-           File.regular?(Path.join(workspace, "software-manifest.json")) ||
-             {:error, :software_workspace_not_built},
+         :ok <- built(workspace),
          {:ok, %{reused: true, manifest: manifest}} <- Build.run(workspace),
          {:ok, inventory} <- inventory(),
          {:ok, mix} <- executable("mix"),
@@ -69,6 +67,12 @@ defmodule Wotex.Thread.Software.Run do
 
   def run(_), do: {:error, :invalid_software_run_arguments}
 
+  defp built(workspace) do
+    if File.regular?(Path.join(workspace, "software-manifest.json")),
+      do: :ok,
+      else: {:error, :software_workspace_not_built}
+  end
+
   @doc """
   Compares recorded ExUnit case lines with one lane inventory.
 
@@ -78,7 +82,7 @@ defmodule Wotex.Thread.Software.Run do
   """
   @spec evaluate([map()], binary()) :: evaluation()
   def evaluate(required, lines) when is_list(required) and is_binary(lines) do
-    decoded = lines |> String.split("\n", trim: true) |> Enum.map(&case_line/1)
+    decoded = Enum.map(String.split(lines, "\n", trim: true), &case_line/1)
     malformed = Enum.count(decoded, &(&1 == :error))
     cases = Enum.reject(decoded, &(&1 == :error))
     keys = Enum.map(required, &{&1["module"], &1["name"]})
@@ -312,11 +316,16 @@ defmodule Wotex.Thread.Software.Run do
 
     Enum.each(
       survivors,
-      &System.cmd("/bin/kill", ["-KILL", Integer.to_string(&1)], stderr_to_stdout: true)
+      &System.cmd("/bin/kill", ["-KILL", Integer.to_string(&1)],
+        stderr_to_stdout: true,
+        env: cleared_environment()
+      )
     )
 
     %{"survivors" => length(survivors)}
   end
+
+  defp cleared_environment, do: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
 
   defp source_identity do
     trees =
@@ -334,7 +343,7 @@ defmodule Wotex.Thread.Software.Run do
 
     %{
       "elixir" => System.version(),
-      "otp" => otp_file |> File.read!() |> String.trim(),
+      "otp" => String.trim(File.read!(otp_file)),
       "architecture" => to_string(:erlang.system_info(:system_architecture))
     }
   end

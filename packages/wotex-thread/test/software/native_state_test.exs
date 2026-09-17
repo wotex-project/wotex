@@ -92,10 +92,10 @@ defmodule Wotex.Thread.NativeStateTest do
     receive do
       {:wotex_thread, ^reference, {:ok, %State{role: role}, %{changed_flags: flags}}} ->
         assert is_integer(flags) and flags > 0
-        roles = roles ++ [role]
+        roles = [role | roles]
 
         if role == target and Bitwise.band(flags, @role_flag) != 0,
-          do: roles,
+          do: Enum.reverse(roles),
           else: collect(reference, target, roles)
     after
       30_000 -> flunk("no #{target} State report; observed #{inspect(roles)}")

@@ -128,7 +128,8 @@ defmodule Wotex.Thread.OpenThread.Frame do
         } = frame
       )
       when map_size(frame) == 8 and map_size(metadata) == 1 and is_integer(sequence) and
-             sequence in 1..@maximum_sequence and is_integer(flags) and flags in 0..@maximum_flags do
+             sequence in 1..@maximum_sequence and is_integer(flags) and
+             flags in 0..@maximum_flags do
     with true <- stream_identity?(session, id, generation),
          {:ok, state} <- value(value, "inspect") do
       {:report, session, id, generation, sequence, state, flags}

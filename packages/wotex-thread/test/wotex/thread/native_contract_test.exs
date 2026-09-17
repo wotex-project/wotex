@@ -93,7 +93,7 @@ defmodule Wotex.Thread.NativeContractTest do
     for item <- selected do
       path = input!(context, item["id"], Jason.encode!(item["input"]) <> "\n")
       assert {0, output} = run!(context.driver, ["flow_trace", path])
-      [result | frames] = output |> String.split("\n", trim: true) |> Enum.reverse()
+      [result | frames] = Enum.reverse(String.split(output, "\n", trim: true))
       frames = Enum.reverse(frames)
       observed = Jason.decode!(result)
       assert length(frames) == observed["transmitted"]
@@ -163,6 +163,9 @@ defmodule Wotex.Thread.NativeContractTest do
     end
   end
 
+  defp command_env,
+    do: Enum.map(System.get_env(), fn {key, value} -> {key, if(key == "PATH", do: value)} end)
+
   defp trace(%{"event" => "transmit", "stream" => stream, "bytes" => bytes} = event, state) do
     key = {stream, 1}
 
@@ -177,7 +180,7 @@ defmodule Wotex.Thread.NativeContractTest do
     exchange(%{state | ledger: ledger, sizes: Map.put(state.sizes, stream, bytes)}, event)
   end
 
-  defp trace(%{"event" => "retire"} = event, state), do: state |> exchange(event) |> acknowledge()
+  defp trace(%{"event" => "retire"} = event, state), do: acknowledge(exchange(state, event))
 
   defp trace(%{"event" => "consume", "stream" => stream, "report_sequence" => sequence}, state) do
     token = Map.fetch!(state.tokens, sequence)
@@ -270,7 +273,7 @@ defmodule Wotex.Thread.NativeContractTest do
 
   defp children(pid) do
     case File.read("/proc/#{pid}/task/#{pid}/children") do
-      {:ok, text} -> text |> String.split() |> Enum.map(&String.to_integer/1)
+      {:ok, text} -> Enum.map(String.split(text), &String.to_integer/1)
       {:error, _} -> []
     end
   end
@@ -281,7 +284,7 @@ defmodule Wotex.Thread.NativeContractTest do
         entry =~ ~r/\A\d+\z/,
         {:ok, stat} <- [File.read("/proc/#{entry}/stat")],
         [_, fields] <- [String.split(stat, ") ", parts: 2)],
-        [_state, _ppid, group | _] = String.split(fields),
+        [_, _, group | _] = String.split(fields),
         String.to_integer(group) in groups,
         do: String.to_integer(entry)
   end
@@ -292,7 +295,10 @@ defmodule Wotex.Thread.NativeContractTest do
   defp exited?(_, 0), do: false
 
   defp exited?(os_pid, attempts) do
-    case System.cmd("/bin/kill", ["-0", Integer.to_string(os_pid)], stderr_to_stdout: true) do
+    case System.cmd("/bin/kill", ["-0", Integer.to_string(os_pid)],
+           stderr_to_stdout: true,
+           env: command_env()
+         ) do
       {_, 0} ->
         Process.sleep(10)
         exited?(os_pid, attempts - 1)
@@ -311,7 +317,7 @@ defmodule Wotex.Thread.NativeContractTest do
   defp expectation!(%{"expectation" => %{"operator" => "exact", "value" => value}}), do: value
 
   defp cases(operation) do
-    fixture = @fixture |> File.read!() |> Jason.decode!()
+    fixture = Jason.decode!(File.read!(@fixture))
     assert fixture["format"] == "wotex.native-contract"
     assert fixture["version"] == "1.0.0"
     assert fixture["package"] == "wotex_thread"

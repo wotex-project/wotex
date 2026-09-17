@@ -30,7 +30,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
   }
 
   test "WTH-N04 the concrete corpus has an exact format, operations and expectations" do
-    corpus = @corpus |> File.read!() |> Jason.decode!()
+    corpus = Jason.decode!(File.read!(@corpus))
 
     assert Map.keys(corpus) |> Enum.sort() ==
              ~w(cases format_version normalization_spec package status)
@@ -55,7 +55,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
   end
 
   test "WTH-N04 every case is bound to its executing test or explicitly unexecuted" do
-    corpus = @corpus |> File.read!() |> Jason.decode!()
+    corpus = Jason.decode!(File.read!(@corpus))
     assert Map.keys(@bindings) |> Enum.sort() == Enum.map(corpus["cases"], & &1["id"])
 
     for {id, {:executed, path}} <- @bindings do

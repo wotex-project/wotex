@@ -515,19 +515,8 @@ defmodule Wotex.Thread.OpenThread.Connection do
       when code in [:timeout, :connection_closed, :invalid_response] ->
         close(state, error)
 
-      {:ok, %{subscription_id: ^id, generation: generation}} when operation == "subscribe_state" ->
-        if Map.has_key?(state.streams, {id, generation}),
-          do: close(state, Error.new(:invalid_response)),
-          else: advance(open_subscription(state, id, generation, pending))
-
-      {:ok, _} when operation == "subscribe_state" ->
-        close(state, Error.new(:invalid_response))
-
-      {:ok, nil} when operation == "unsubscribe" ->
-        unsubscribed(state, id)
-
-      {:error, %Error{code: :subscription_not_found}} when operation == "unsubscribe" ->
-        unsubscribed(state, id)
+      result when operation in ["subscribe_state", "unsubscribe"] ->
+        stream_reply(state, id, pending, result)
 
       {:ok, value} = result ->
         if Request.matches_result?(pending.operation, pending.parameters, value),
@@ -553,6 +542,30 @@ defmodule Wotex.Thread.OpenThread.Connection do
   end
 
   defp frame(_, state), do: close(state, Error.new(:invalid_response))
+
+  defp stream_reply(state, id, %{operation: "subscribe_state"} = pending, {:ok, result}) do
+    case result do
+      %{subscription_id: ^id, generation: generation}
+      when not is_map_key(state.streams, {id, generation}) ->
+        advance(open_subscription(state, id, generation, pending))
+
+      _ ->
+        close(state, Error.new(:invalid_response))
+    end
+  end
+
+  defp stream_reply(state, id, %{operation: "unsubscribe"}, {:ok, nil}), do: unsubscribed(state, id)
+
+  defp stream_reply(
+         state,
+         id,
+         %{operation: "unsubscribe"},
+         {:error, %Error{code: :subscription_not_found}}
+       ),
+       do: unsubscribed(state, id)
+
+  defp stream_reply(state, _, _, {:ok, _}), do: close(state, Error.new(:invalid_response))
+  defp stream_reply(state, id, _, {:error, _} = result), do: advance(complete(state, id, result))
 
   defp timed_response(message, id, operation, deadline) do
     if now() < deadline,
@@ -757,7 +770,11 @@ defmodule Wotex.Thread.OpenThread.Connection do
          {:ok, reference} <- Map.fetch(state.streams, {id, generation}) do
       # Reports the host sent before its error keep their order ahead of the terminal
       # delivery; the host then retires the stream and a cancellation joins that barrier.
-      state = state |> drain_reports(reference) |> terminal(reference, Error.new(code))
+      state =
+        state
+        |> drain_reports(reference)
+        |> terminal(reference, Error.new(code))
+
       put_in(state.subscriptions[reference].status, :closing)
     else
       _ -> close(state, Error.new(:invalid_response))

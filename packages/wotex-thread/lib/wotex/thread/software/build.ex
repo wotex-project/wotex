@@ -27,6 +27,8 @@ defmodule Wotex.Thread.Software.Build do
   @pure_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
     wotex-thread-streams-test wotex-thread-flow-test wotex-thread-contract-driver)
   @sdk_tests ~w(wotex-thread-dataset-seed wotex-thread-spinel-test)
+  @native_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
+    wotex-thread-streams-test wotex-thread-flow-test wotex-thread-spinel-test)
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx rcp_configure
     rcp_compile tests_configure tests_compile flow_configure flow_compile)
   @build_modules [__MODULE__, Mix.Tasks.Wotex.Thread.Software.Build]
@@ -56,11 +58,7 @@ defmodule Wotex.Thread.Software.Build do
       contract_driver: Path.join(bin, "wotex-thread-contract-driver"),
       dataset_seed: Path.join(bin, "wotex-thread-dataset-seed"),
       flow_host: Path.join(bin, "wotex-thread-flow-host"),
-      native_tests:
-        Enum.map(
-          (@pure_tests -- ["wotex-thread-contract-driver"]) ++ ["wotex-thread-spinel-test"],
-          &Path.join(bin, &1)
-        )
+      native_tests: Enum.map(@native_tests, &Path.join(bin, &1))
     }
   end
 
@@ -243,7 +241,7 @@ defmodule Wotex.Thread.Software.Build do
              workspace,
              :tests_compile,
              tools["cmake"].path,
-             ["--build", build, "--target" | @pure_tests ++ @sdk_tests] ++ ["-j4"],
+             ["--build", build, "-j4", "--target" | @pure_tests ++ @sdk_tests],
              1_800_000
            ) do
       Enum.reduce_while(@pure_tests ++ @sdk_tests, :ok, fn name, :ok ->
@@ -345,23 +343,24 @@ defmodule Wotex.Thread.Software.Build do
   end
 
   defp binaries(workspace) do
-    ["ot-rcp", "wotex-thread-flow-host" | @pure_tests ++ @sdk_tests]
-    |> Enum.reduce_while({:ok, []}, fn name, {:ok, found} ->
-      path = "fixtures/bin/#{name}"
+    names = ["ot-rcp", "wotex-thread-flow-host" | @pure_tests ++ @sdk_tests]
 
-      case Source.digest(Path.join(workspace, path)) do
-        {:ok, hash} -> {:cont, {:ok, [%{"path" => path, "sha256" => hash} | found]}}
-        _ -> {:halt, {:error, :invalid_software_artifact}}
-      end
-    end)
-    |> case do
-      {:ok, found} -> {:ok, Enum.reverse(found)}
-      error -> error
-    end
+    result =
+      Enum.reduce_while(names, {:ok, []}, fn name, {:ok, found} ->
+        path = "fixtures/bin/#{name}"
+
+        case Source.digest(Path.join(workspace, path)) do
+          {:ok, hash} -> {:cont, {:ok, [%{"path" => path, "sha256" => hash} | found]}}
+          _ -> {:halt, {:error, :invalid_software_artifact}}
+        end
+      end)
+
+    with {:ok, found} <- result, do: {:ok, Enum.reverse(found)}
   end
 
   defp command(guardian, workspace, id, executable, args, timeout_ms) do
-    path = [Path.dirname(executable), "/usr/bin", "/bin"] |> Enum.uniq() |> Enum.join(":")
+    directories = Enum.uniq([Path.dirname(executable), "/usr/bin", "/bin"])
+    path = Enum.join(directories, ":")
 
     step = %{
       id: id,

@@ -5,7 +5,7 @@ defmodule Wotex.Thread.SoftwareCases do
   use GenServer
 
   @impl GenServer
-  def init(_options) do
+  def init(_) do
     path = System.fetch_env!("WOTEX_THREAD_CASE_RESULTS")
     {:ok, file} = File.open(path, [:write, :exclusive, :utf8])
     {:ok, file}

@@ -218,13 +218,13 @@ defmodule Wotex.Thread.StateSubscriptionTest do
     end
   end
 
-  defp flow(context), do: context.directory |> Path.join("flow") |> File.read!() |> String.split()
+  defp flow(context), do: String.split(File.read!(Path.join(context.directory, "flow")))
 
   defp requests(context), do: lines(context, "requests")
 
   defp lines(context, name) do
     case File.read(Path.join(context.directory, name)) do
-      {:ok, bytes} -> bytes |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+      {:ok, bytes} -> Enum.map(String.split(bytes, "\n", trim: true), &Jason.decode!/1)
       {:error, :enoent} -> []
     end
   end

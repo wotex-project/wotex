@@ -113,7 +113,7 @@ defmodule Wotex.Thread.ProcessFlowTest do
     # Reports reached the suspended connection's mailbox before it resumed.
     if input["suspend"] == "connection", do: assert(observed.observed_values > 0)
 
-    native = result |> File.read!() |> Jason.decode!()
+    native = Jason.decode!(File.read!(result))
     assert native["callbacks"] == input["callback_count"]
     assert native["iterations"] == div(input["callback_count"], input["callbacks_per_iteration"])
     assert native["reports_assigned"] > 0
@@ -336,7 +336,7 @@ defmodule Wotex.Thread.ProcessFlowTest do
                 {"port_replies", "port_reply_bytes"}
             end
 
-          counts = counts |> increment(frames, 1) |> increment(bytes, byte_size(line) + 1)
+          counts = increment(increment(counts, frames, 1), bytes, byte_size(line) + 1)
 
           if frames == "port_reports" do
             assert [_, value] = Regex.run(~r/"value":(\{[^}]*\})/, line)
@@ -420,7 +420,7 @@ defmodule Wotex.Thread.ProcessFlowTest do
   defp descendants(pid) do
     case File.read("/proc/#{pid}/task/#{pid}/children") do
       {:ok, text} ->
-        children = text |> String.split() |> Enum.map(&String.to_integer/1)
+        children = Enum.map(String.split(text), &String.to_integer/1)
         children ++ Enum.flat_map(children, &descendants/1)
 
       {:error, _} ->

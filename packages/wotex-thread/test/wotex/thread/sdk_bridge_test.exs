@@ -87,7 +87,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
         assert {:ok, handle} = OpenThread.connect(context.options)
 
         assert [generation] =
-                 context.directory |> Path.join("flow") |> File.read!() |> String.split()
+                 String.split(File.read!(Path.join(context.directory, "flow")))
 
         assert generation =~ ~r/\A[0-9a-f]{32}\z/
         refute inspect(:sys.get_status(handle.pid)) =~ generation
@@ -219,7 +219,8 @@ defmodule Wotex.Thread.SdkBridgeTest do
                  "/usr/bin/cc",
                  ["-std=c11", "-Wall", "-Wextra", "-Werror"] ++
                    defines ++ [source, "-o", executable],
-                 stderr_to_stdout: true
+                 stderr_to_stdout: true,
+                 env: command_env()
                )
 
       options = Keyword.merge(context.options, executable: executable, timeout: 100)
@@ -733,6 +734,9 @@ defmodule Wotex.Thread.SdkBridgeTest do
     assert Enum.map(requests(context), & &1["operation"]) == ["open"]
     assert :ok = Wotex.Thread.disconnect(session)
   end
+
+  defp command_env,
+    do: Enum.map(System.get_env(), fn {key, value} -> {key, if(key == "PATH", do: value)} end)
 
   defp requests(context) do
     case File.read(Path.join(context.directory, "requests")) do

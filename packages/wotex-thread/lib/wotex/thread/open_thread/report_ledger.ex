@@ -57,8 +57,8 @@ defmodule Wotex.Thread.OpenThread.ReportLedger do
   @doc "Opens a live stream with its validated native queue limit."
   @spec open(t(), stream(), 1..10_000) :: {:ok, t()} | :error
   def open(%__MODULE__{streams: streams} = ledger, {id, generation} = stream, queue_limit)
-      when is_binary(id) and byte_size(id) in 1..64 and is_integer(generation) and generation > 0 and
-             is_integer(queue_limit) and queue_limit in 1..10_000 do
+      when is_binary(id) and byte_size(id) in 1..64 and is_integer(generation) and
+             generation > 0 and is_integer(queue_limit) and queue_limit in 1..10_000 do
     if map_size(streams) < @live_streams and not Map.has_key?(streams, stream) do
       record = %{last: 0, outstanding: 0, limit: min(@stream_frames, queue_limit)}
       {:ok, %{ledger | streams: Map.put(streams, stream, record)}}

@@ -19,8 +19,9 @@ defmodule Wotex.Thread.Subscription do
   @doc "Validates the exact field types of a handle without contacting its owner."
   @spec validate(term()) :: :ok | {:error, Wotex.Thread.Error.t()}
   def validate(%__MODULE__{pid: pid, reference: reference, generation: generation} = handle)
-      when map_size(handle) == 4 and is_pid(pid) and node(pid) == node() and is_reference(reference) and
-             is_integer(generation) and generation in 1..0xFFFFFFFFFFFFFFFE,
+      when map_size(handle) == 4 and is_pid(pid) and node(pid) == node() and
+             is_reference(reference) and is_integer(generation) and
+             generation in 1..0xFFFFFFFFFFFFFFFE,
       do: :ok
 
   def validate(_), do: {:error, Wotex.Thread.Error.new(:invalid_subscription)}
