@@ -1,7 +1,7 @@
 defmodule Wotex.Lab.Check.TypeScriptClient do
   @moduledoc false
 
-  @operations ~w(listScenarios readScenario readEvidence readMetricsCatalogue readRun startRun cancelRun approveDecision)
+  @operations ~w(listScenarios readScenario readEvidence readMetricsCatalogue queryMetrics readRun startRun cancelRun approveDecision)
   @max_response_bytes 1_048_576
   @max_request_bytes 4_096
 
@@ -39,6 +39,10 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       "EvidenceRecord" =>
         ~w(assertions cleanup dependencies lock_digest outcomes source_tree_digest scenario_id schema_version revision attempt),
       "MetricsCatalogue" => ~w(metrics schema_version),
+      "MetricQueryRequest" =>
+        ~w(aggregation end_at filters metric quantile schema_version start_at step_ms),
+      "MetricQueryAnswer" =>
+        ~w(aggregation digest evidence freshness instance interval loss markers metric name points series_matched source unit),
       "Error" => ~w(code message path phase),
       "Run" =>
         ~w(assertions attempt decision duration_ms effect error experiment id record_digest started_at status),
@@ -76,7 +80,7 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     get_in(openapi, ["components", "parameters", "IdempotencyKey", "name"]) == "Idempotency-Key" ||
       raise "idempotency header drift"
 
-    Enum.each(~w(StartRunRequest CancelRunRequest ApprovalRequest), fn name ->
+    Enum.each(~w(StartRunRequest CancelRunRequest ApprovalRequest MetricQueryRequest), fn name ->
       get_in(schemas, [name, "additionalProperties"]) == false || raise "#{name} is not closed"
     end)
   end
@@ -163,6 +167,33 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       error: { code: string; phase: string; message: string } | null;
     }
     export interface StartRunRequest { experimentId: string; parameters?: Record<string, string>; }
+    export type MetricAggregation = "last" | "sum" | "min" | "max" | "avg" | "increase" | "rate" | "histogram_quantile";
+    export interface MetricQuery {
+      metric: string;
+      aggregation: MetricAggregation;
+      startAt: string;
+      endAt: string;
+      stepMs: number;
+      filters?: Record<string, string>;
+      quantile?: number;
+    }
+    export interface MetricPoint { t: number; value: number; }
+    export interface MetricQueryAnswer {
+      source: "ets_history";
+      instance: string;
+      metric: string;
+      name?: string;
+      unit: string;
+      aggregation: MetricAggregation;
+      interval: { start_ms: number; end_ms: number; step_ms: number };
+      freshness: Record<string, number> | null;
+      points: MetricPoint[];
+      markers: Array<{ kind: string; t?: number } & Record<string, unknown>>;
+      loss?: Record<string, number>;
+      series_matched?: number;
+      digest: `sha256:${string}`;
+      evidence?: unknown[];
+    }
     export interface ApiErrorBody { code: string; phase: string; path?: string | null; message: string; }
     export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
     export interface ClientOptions { baseUrl: string; sessionToken?: string; deadlineMs?: number; fetch?: FetchLike; maxResponseBytes?: number; }
@@ -181,6 +212,7 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       readScenario(id: string, options?: RequestOptions): Promise<Scenario>;
       readEvidence(recordId: `sha256:${string}`, options?: RequestOptions): Promise<EvidenceRecord>;
       readMetricsCatalogue(options?: RequestOptions): Promise<MetricsCatalogue>;
+      queryMetrics(query: MetricQuery, options?: RequestOptions): Promise<MetricQueryAnswer>;
       readRun(runId: string, options?: RequestOptions): Promise<Run>;
       startRun(request: StartRunRequest, options: MutationOptions): Promise<Run>;
       cancelRun(runId: string, options: MutationOptions): Promise<Run>;
@@ -233,6 +265,26 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       readMetricsCatalogue(options = {}) { return this.#request("/metrics/catalogue", options, false); }
       readRun(runId, options = {}) { return this.#request(`/runs/${segment(runId, "run id")}`, options, true); }
 
+      async queryMetrics(query, options = {}) {
+        if (!query || typeof query !== "object") throw new TypeError("query is required");
+        const body = {
+          schema_version: "1.0.0",
+          metric: text(query.metric, "metric"),
+          aggregation: text(query.aggregation, "aggregation"),
+          start_at: text(query.startAt, "startAt"),
+          end_at: text(query.endAt, "endAt"),
+          step_ms: integerBetween(query.stepMs, 5_000, Number.MAX_SAFE_INTEGER, "stepMs")
+        };
+        if (query.filters !== undefined) body.filters = filters(query.filters);
+        if (query.quantile !== undefined) {
+          if (typeof query.quantile !== "number" || !(query.quantile > 0 && query.quantile < 1)) throw new TypeError("quantile must lie between 0 and 1");
+          body.quantile = query.quantile;
+        }
+        const encoded = JSON.stringify(body);
+        if (new TextEncoder().encode(encoded).byteLength > MAX_REQUEST_BYTES) throw new RangeError("request body exceeds 4096 bytes");
+        return this.#request("/metrics/query", options, true, { body: encoded });
+      }
+
       async startRun(request, options) {
         if (!request || typeof request.experimentId !== "string") throw new TypeError("experimentId is required");
         const body = { experiment_id: request.experimentId };
@@ -280,7 +332,7 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
           init.method = "POST";
           init.body = mutation.body;
           headers["content-type"] = "application/json";
-          headers["idempotency-key"] = mutation.idempotencyKey;
+          if (mutation.idempotencyKey !== undefined) headers["idempotency-key"] = mutation.idempotencyKey;
         }
         const response = await this.#fetch(this.#baseUrl + path, init);
         const contentType = response.headers.get("content-type") ?? "";
@@ -306,6 +358,20 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       const entries = Object.entries(value);
       if (entries.length > 16 || !entries.every(([, item]) => typeof item === "string" && item.length <= 32)) {
         throw new TypeError("parameters must be an object of strings");
+      }
+      return Object.fromEntries(entries);
+    }
+
+    function text(value, name) {
+      if (typeof value !== "string" || value.length === 0 || value.length > 128) throw new TypeError(`${name} is malformed`);
+      return value;
+    }
+
+    function filters(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("filters must be an object of strings");
+      const entries = Object.entries(value);
+      if (entries.length > 16 || !entries.every(([key, item]) => key.length <= 128 && typeof item === "string" && item.length <= 128)) {
+        throw new TypeError("filters must be an object of strings");
       }
       return Object.fromEntries(entries);
     }
@@ -357,7 +423,11 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       EvidenceDependency,
       EvidenceRecord,
       FetchLike,
+      MetricAggregation,
       MetricDefinition,
+      MetricPoint,
+      MetricQuery,
+      MetricQueryAnswer,
       MetricsCatalogue,
       MutationOptions,
       RequestOptions,
@@ -376,9 +446,10 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     # @wotex/lab-client
 
     Generated client for the WoTEx Lab Workbench control API (#{version}).
-    It implements the eight operations in the checked OpenAPI 3.2 projection and
-    has no runtime dependencies. Evidence and run reads require an existing session
-    token. `startRun`, `cancelRun` and `approveDecision` also require a Workbench
+    It implements the nine operations in the checked OpenAPI 3.2 projection and
+    has no runtime dependencies. Evidence and run reads and `queryMetrics`, which
+    reads the session room's attributed metric history, require an existing
+    session token. `startRun`, `cancelRun` and `approveDecision` also require a Workbench
     host that opted into control mutations and a caller-chosen `idempotencyKey`;
     retry a request with the same key to learn its outcome without repeating it.
     The client cannot create sessions, write Properties or invoke an Action other

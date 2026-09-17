@@ -181,6 +181,7 @@ defmodule Wotex.Lab.GraphTest do
     assert Map.keys(decoded["paths"]) |> Enum.sort() == [
              "/evidence/{record_id}",
              "/metrics/catalogue",
+             "/metrics/query",
              "/runs",
              "/runs/{run_id}",
              "/runs/{run_id}/approval",
@@ -190,7 +191,9 @@ defmodule Wotex.Lab.GraphTest do
            ]
 
     mutations =
-      for {_, %{"post" => operation}} <- decoded["paths"], do: operation
+      for {_, %{"post" => operation}} <- decoded["paths"],
+          Map.has_key?(operation, "x-wotex-opt-in"),
+          do: operation
 
     assert Enum.map(mutations, & &1["operationId"]) |> Enum.sort() ==
              ["approveDecision", "cancelRun", "startRun"]
@@ -205,6 +208,23 @@ defmodule Wotex.Lab.GraphTest do
       assert decoded["components"]["schemas"][name]["additionalProperties"] == false
       assert "deadline_ms" in decoded["components"]["schemas"][name]["required"]
     end
+
+    query = decoded["paths"]["/metrics/query"]["post"]
+
+    assert query["operationId"] == "queryMetrics" and
+             query["security"] == [%{"sessionBearer" => []}]
+
+    refute Map.has_key?(query, "x-wotex-opt-in") or Map.has_key?(query, "parameters")
+    request = decoded["components"]["schemas"]["MetricQueryRequest"]
+    assert request["additionalProperties"] == false
+
+    assert request["properties"] |> Map.keys() |> Enum.sort() ==
+             Enum.sort(
+               ~w(schema_version metric aggregation filters quantile start_at end_at step_ms)
+             )
+
+    assert request["properties"]["aggregation"]["enum"] ==
+             Enum.map(Wotex.Lab.Metrics.Query.aggregations(), &Atom.to_string/1)
 
     metrics_status =
       Enum.find(graph["specifications"], &(&1["id"] == "WLB.10"))["implementation_status"]

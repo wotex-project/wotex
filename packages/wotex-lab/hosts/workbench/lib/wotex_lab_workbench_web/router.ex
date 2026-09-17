@@ -62,6 +62,7 @@ defmodule WotexLabWorkbenchWeb.Router do
     get "/scenarios/:id", ControlController, :scenario
     get "/evidence/:record_id", ControlController, :evidence
     get "/metrics/catalogue", ControlController, :metrics_catalogue
+    post "/metrics/query", ControlController, :query_metrics
     get "/runs/:run_id", ControlController, :run
     post "/runs", ControlController, :start_run
     post "/runs/:run_id/cancel", ControlController, :cancel_run

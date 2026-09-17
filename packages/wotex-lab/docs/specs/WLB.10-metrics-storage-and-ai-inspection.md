@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.28.0. Contract: accepted. Source status: the metric
+Specification version: 0.29.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -23,9 +23,10 @@ library exports Lab spans and exception logs over OTLP, and the Workbench can
 activate that exporter for a local or an authenticated hosted receiver.
 `Wotex.Lab.Metrics.DurableQuery` supplies fixed durable read templates, and the
 operator listener answers them from a local or explicitly selected hosted
-receiver through the Workbench durable reader. Isolated hosted-tenant BeamLens
-and public or tenant HTTP query bindings remain planned; the MCP
-`query_metrics` tool binds the local gateway. Hosted exporter, reader and
+receiver through the Workbench durable reader. The Workbench control API's
+`queryMetrics` operation binds the descriptor over HTTP to a browser session's
+room history. Isolated hosted-tenant BeamLens and public HTTP query bindings
+remain planned; the MCP `query_metrics` tool binds the local gateway. Hosted exporter, reader and
 provisioning source is not deployment, retention or durable-row evidence. A template export
 alone is not proof of a Grafana import or query execution; the separate
 Grafana lane below supplies that evidence for one pinned server cohort.
@@ -496,8 +497,11 @@ admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits, and the MCP `query_metrics` tool
 opens one gateway per call from a host-bound history and scope. The operator
 HTTP query binding below opens one inspection scope per request, for local
-history or the configured durable receiver. Public or tenant HTTP query
-bindings and non-local or multi-tenant BeamLens callers remain planned.
+history or the configured durable receiver. The WLB.07 `queryMetrics` control
+operation opens one gateway per request over the bearer session's attributed
+room history, a session-scoped binding rather than a hosted tenant boundary.
+Public HTTP query bindings and non-local or multi-tenant BeamLens callers remain
+planned.
 
 `Wotex.Lab.Metrics.DurableQuery` answers the same admitted descriptor from a
 PromQL-compatible durable receiver through fixed read templates and a host
@@ -669,8 +673,9 @@ outside it, 503 when the selected source is unavailable or not activated and
 dependencies, credential separation, framing refusals, server-bound scope,
 unsupported and invalid descriptors, scope capacity, unavailable history, the
 deadline with a blocked history and a real loopback socket. The listener also
-accepts the mutual-TLS remote transport described with the scrape listener;
-tenant-scoped query bindings are not claimed.
+accepts the mutual-TLS remote transport described with the scrape listener.
+Neither transport is a tenant endpoint; session-scoped HTTP reads use the
+WLB.07 `queryMetrics` control operation instead.
 
 Snapshots and query structs are revalidated at the execution boundary. Query
 samples must match the catalogue's type, finite labels and exact histogram

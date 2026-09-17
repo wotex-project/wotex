@@ -19,15 +19,32 @@ defmodule WotexLabWorkbench.Control do
   executes it at most once per key. This module opens no session and starts no
   room; the controller verifies the session and admits rate and concurrency
   limits first.
+
+  `query_metrics/2` answers the `queryMetrics` operation from the caller's room.
+  The body is the closed field set of `Wotex.Lab.Metrics.Request`; the room's
+  attributed history binding supplies the instance and session scope. One
+  disposable `Wotex.Lab.Metrics.Gateway`, owned by the calling process, admits
+  a single call under reduced limits (one-hour range, 5-second minimum step,
+  2,000 points, 256 KiB output, a one-second deadline and one worker). The
+  caller waits at most 1.25 seconds, cancels late work and revokes the gateway
+  before answering. The answer is JSON-compatible data with string keys.
   """
 
   alias Wotex.Lab.Error
   alias Wotex.Lab.Evidence.Record
-  alias Wotex.Lab.Metrics.Catalogue
+  alias Wotex.Lab.Metrics.{Catalogue, Gateway}
   alias Wotex.Lab.Scenario
   alias WotexLabWorkbench.{Experiments, Room, Run, Runs}
 
   @max_deadline_ms 30_000
+  @query_limits %{
+    range_ms: 3_600_000,
+    min_step_ms: 5_000,
+    points: 2_000,
+    output_bytes: 262_144,
+    deadline_ms: 1_000,
+    concurrent: 1
+  }
   @max_parameters 16
   @max_parameter_bytes 32
   @idempotency_key ~r/\A[\x21-\x7E]{1,128}\z/
@@ -296,6 +313,79 @@ defmodule WotexLabWorkbench.Control do
 
   defp invalid_body(path, message), do: Error.new(:invalid_body, :control_api, message, path: path)
   defp unknown_run, do: error(:unknown_run, "run is not retained")
+
+  @doc "Answers one closed metric query descriptor from the room's attributed history."
+  @spec query_metrics(pid(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def query_metrics(room, request) when is_pid(room) do
+    with {:ok, binding} <- room_history(room),
+         {:ok, gateway} <- gateway(binding) do
+      monitor = Process.monitor(gateway)
+
+      try do
+        case await(gateway, monitor, Gateway.query(gateway, request)) do
+          {:ok, answer} -> {:ok, json(answer)}
+          {:error, %Error{}} = error -> error
+        end
+      after
+        _ = Gateway.revoke(gateway)
+        Process.demonitor(monitor, [:flush])
+        flush(gateway)
+      end
+    end
+  end
+
+  defp room_history(room) do
+    {:ok, %{history: history, scope: scope}} = Room.history(room)
+    {:ok, %{history: history, scope: scope}}
+  catch
+    :exit, _ -> {:error, error(:room_unavailable, "room is unavailable")}
+  end
+
+  defp gateway(binding) do
+    case Gateway.start_link(
+           history: binding.history,
+           scope: binding.scope,
+           owner: self(),
+           ttl_ms: 2_000,
+           max_calls: 1,
+           query_limits: @query_limits
+         ) do
+      {:ok, gateway} -> {:ok, gateway}
+      _ -> {:error, error(:history_unavailable, "room history is unavailable")}
+    end
+  end
+
+  defp await(_, _, {:error, %Error{}} = error), do: error
+
+  defp await(gateway, monitor, {:ok, reference}) do
+    receive do
+      {:metric_query, ^gateway, ^reference, result} ->
+        result
+
+      {:DOWN, ^monitor, :process, ^gateway, _} ->
+        {:error, error(:history_unavailable, "room history is unavailable")}
+    after
+      @query_limits.deadline_ms + 250 ->
+        _ = Gateway.cancel(gateway, reference)
+        {:error, error(:deadline_exceeded, "query deadline passed")}
+    end
+  end
+
+  defp flush(gateway) do
+    receive do
+      {:metric_query, ^gateway, _, _} -> flush(gateway)
+    after
+      0 -> :ok
+    end
+  end
+
+  defp json(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp json(value) when is_map(value), do: Map.new(value, fn {k, v} -> {to_string(k), json(v)} end)
+  defp json(value) when is_list(value), do: Enum.map(value, &json/1)
+  defp json(value) when is_tuple(value), do: value |> Tuple.to_list() |> json()
+  defp json(value) when is_boolean(value) or is_nil(value), do: value
+  defp json(value) when is_atom(value), do: Atom.to_string(value)
+  defp json(value), do: value
 
   @doc "Returns the complete versioned metric catalogue as JSON-compatible data."
   @spec metrics_catalogue() :: map()

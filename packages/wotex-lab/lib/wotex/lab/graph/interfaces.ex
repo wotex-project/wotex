@@ -4,7 +4,8 @@ defmodule Wotex.Lab.Graph.Interfaces do
 
   The OpenAPI document describes the Lab HTTP control API implemented by the
   optional Workbench host: public scenario and metric catalogue reads,
-  session-bound evidence and run reads, and the host-opted-in run mutations
+  session-bound evidence and run reads, the session-bound `queryMetrics` read of
+  the session room's attributed metric history, and the host-opted-in run mutations
   `startRun`, `cancelRun` and `approveDecision` with their `Idempotency-Key`
   header, closed request bodies and refusal statuses. The AsyncAPI document is an accepted fixture
   interface, not a running deployment. Neither replaces a Thing Description,
@@ -41,8 +42,8 @@ defmodule Wotex.Lab.Graph.Interfaces do
         "summary" => "Accepted control surface of an explicit Lab instance",
         "description" =>
           "Describes the Lab HTTP control API served by the optional Workbench host under " <>
-            "/api/v1. Catalogue reads are public; evidence and run reads need a session " <>
-            "bearer. Run mutations also need host opt-in, an Idempotency-Key and a deadline, " <>
+            "/api/v1. Catalogue reads are public; evidence, run and metric history reads need " <>
+            "a session bearer. Run mutations also need host opt-in, an Idempotency-Key and a deadline, " <>
             "and reach only the session room's simulated Things. The base library starts " <>
             "no endpoint.",
         "license" => %{"name" => "Apache-2.0", "identifier" => "Apache-2.0"}
@@ -143,6 +144,36 @@ defmodule Wotex.Lab.Graph.Interfaces do
             ],
             "requestBody" => json_request("#/components/schemas/ApprovalRequest"),
             "responses" => mutation_responses("200", "The dispatched run"),
+            "security" => [%{"sessionBearer" => []}]
+          }
+        },
+        "/metrics/query" => %{
+          "post" => %{
+            "operationId" => "queryMetrics",
+            "summary" => "Query the session room's attributed metric history",
+            "description" =>
+              "The body is the closed WLB.10 query descriptor. The server binds instance and " <>
+                "session scope from the bearer's room and answers from that room's volatile " <>
+                "history under a one-hour range, 5-second minimum step, 2,000 points, " <>
+                "256 KiB and a one-second deadline. It is a read, not a mutation, and " <>
+                "reads no host-wide or durable history.",
+            "x-wotex-status" => status(graph, "WLB.10"),
+            "requestBody" => json_request("#/components/schemas/MetricQueryRequest"),
+            "responses" => %{
+              "200" => json_response("A history answer", "#/components/schemas/MetricQueryAnswer"),
+              "400" => json_response("Descriptor or framing refused", "#/components/schemas/Error"),
+              "401" => json_response("Bearer token required", "#/components/schemas/Error"),
+              "403" => json_response("Session denied", "#/components/schemas/Error"),
+              "404" => json_response("No room history", "#/components/schemas/Error"),
+              "409" => json_response("Clock rollback in range", "#/components/schemas/Error"),
+              "413" => json_response("Body too large", "#/components/schemas/Error"),
+              "415" => json_response("JSON required", "#/components/schemas/Error"),
+              "422" =>
+                json_response("Unsupported or oversized query", "#/components/schemas/Error"),
+              "429" => json_response("Query capacity exhausted", "#/components/schemas/Error"),
+              "503" => json_response("History unavailable", "#/components/schemas/Error"),
+              "504" => json_response("Deadline passed", "#/components/schemas/Error")
+            },
             "security" => [%{"sessionBearer" => []}]
           }
         },
@@ -423,6 +454,91 @@ defmodule Wotex.Lab.Graph.Interfaces do
               "state_revision" => %{"type" => "integer"},
               "expires_at" => %{"type" => "integer"},
               "deadline_ms" => %{"$ref" => "#/components/schemas/DeadlineMs"}
+            }
+          },
+          "MetricQueryRequest" => %{
+            "type" => "object",
+            "additionalProperties" => false,
+            "required" => [
+              "schema_version",
+              "metric",
+              "aggregation",
+              "start_at",
+              "end_at",
+              "step_ms"
+            ],
+            "properties" => %{
+              "schema_version" => %{"type" => "string", "const" => "1.0.0"},
+              "metric" => %{
+                "type" => "string",
+                "pattern" => "^[a-z][a-z0-9_]*$",
+                "maxLength" => 128
+              },
+              "aggregation" => %{
+                "type" => "string",
+                "enum" => ~w(last sum min max avg increase rate histogram_quantile)
+              },
+              "filters" => %{
+                "type" => "object",
+                "additionalProperties" => %{"type" => "string", "maxLength" => 128}
+              },
+              "quantile" => %{"type" => "number", "exclusiveMinimum" => 0, "exclusiveMaximum" => 1},
+              "start_at" => %{"type" => "string", "format" => "date-time"},
+              "end_at" => %{"type" => "string", "format" => "date-time"},
+              "step_ms" => %{"type" => "integer", "minimum" => 5_000}
+            }
+          },
+          "MetricQueryAnswer" => %{
+            "type" => "object",
+            "required" => [
+              "source",
+              "instance",
+              "metric",
+              "unit",
+              "aggregation",
+              "interval",
+              "freshness",
+              "points",
+              "markers",
+              "digest"
+            ],
+            "properties" => %{
+              "source" => %{"type" => "string", "const" => "ets_history"},
+              "instance" => %{"type" => "string"},
+              "metric" => %{"type" => "string"},
+              "name" => %{"type" => "string"},
+              "unit" => %{"type" => "string"},
+              "aggregation" => %{"type" => "string"},
+              "interval" => %{
+                "type" => "object",
+                "required" => ["start_ms", "end_ms", "step_ms"],
+                "properties" => %{
+                  "start_ms" => %{"type" => "integer"},
+                  "end_ms" => %{"type" => "integer"},
+                  "step_ms" => %{"type" => "integer"}
+                }
+              },
+              "freshness" => %{"type" => ["object", "null"]},
+              "points" => %{
+                "type" => "array",
+                "maxItems" => 2_000,
+                "items" => %{
+                  "type" => "object",
+                  "required" => ["t", "value"],
+                  "properties" => %{
+                    "t" => %{"type" => "integer"},
+                    "value" => %{"type" => "number"}
+                  }
+                }
+              },
+              "markers" => %{
+                "type" => "array",
+                "items" => %{"type" => "object", "required" => ["kind"]}
+              },
+              "loss" => %{"type" => "object"},
+              "series_matched" => %{"type" => "integer", "minimum" => 0},
+              "digest" => %{"$ref" => "#/components/schemas/Digest"},
+              "evidence" => %{"type" => "array"}
             }
           },
           "DeadlineMs" => %{"type" => "integer", "minimum" => 1, "maximum" => 30_000},

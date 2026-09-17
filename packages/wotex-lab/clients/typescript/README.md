@@ -1,9 +1,10 @@
 # @wotex/lab-client
 
 Generated client for the WoTEx Lab Workbench control API (0.1.0).
-It implements the eight operations in the checked OpenAPI 3.2 projection and
-has no runtime dependencies. Evidence and run reads require an existing session
-token. `startRun`, `cancelRun` and `approveDecision` also require a Workbench
+It implements the nine operations in the checked OpenAPI 3.2 projection and
+has no runtime dependencies. Evidence and run reads and `queryMetrics`, which
+reads the session room's attributed metric history, require an existing
+session token. `startRun`, `cancelRun` and `approveDecision` also require a Workbench
 host that opted into control mutations and a caller-chosen `idempotencyKey`;
 retry a request with the same key to learn its outcome without repeating it.
 The client cannot create sessions, write Properties or invoke an Action other

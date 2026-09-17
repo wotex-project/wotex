@@ -40,6 +40,26 @@ export class WotexLabClient {
   readMetricsCatalogue(options = {}) { return this.#request("/metrics/catalogue", options, false); }
   readRun(runId, options = {}) { return this.#request(`/runs/${segment(runId, "run id")}`, options, true); }
 
+  async queryMetrics(query, options = {}) {
+    if (!query || typeof query !== "object") throw new TypeError("query is required");
+    const body = {
+      schema_version: "1.0.0",
+      metric: text(query.metric, "metric"),
+      aggregation: text(query.aggregation, "aggregation"),
+      start_at: text(query.startAt, "startAt"),
+      end_at: text(query.endAt, "endAt"),
+      step_ms: integerBetween(query.stepMs, 5_000, Number.MAX_SAFE_INTEGER, "stepMs")
+    };
+    if (query.filters !== undefined) body.filters = filters(query.filters);
+    if (query.quantile !== undefined) {
+      if (typeof query.quantile !== "number" || !(query.quantile > 0 && query.quantile < 1)) throw new TypeError("quantile must lie between 0 and 1");
+      body.quantile = query.quantile;
+    }
+    const encoded = JSON.stringify(body);
+    if (new TextEncoder().encode(encoded).byteLength > MAX_REQUEST_BYTES) throw new RangeError("request body exceeds 4096 bytes");
+    return this.#request("/metrics/query", options, true, { body: encoded });
+  }
+
   async startRun(request, options) {
     if (!request || typeof request.experimentId !== "string") throw new TypeError("experimentId is required");
     const body = { experiment_id: request.experimentId };
@@ -87,7 +107,7 @@ export class WotexLabClient {
       init.method = "POST";
       init.body = mutation.body;
       headers["content-type"] = "application/json";
-      headers["idempotency-key"] = mutation.idempotencyKey;
+      if (mutation.idempotencyKey !== undefined) headers["idempotency-key"] = mutation.idempotencyKey;
     }
     const response = await this.#fetch(this.#baseUrl + path, init);
     const contentType = response.headers.get("content-type") ?? "";
@@ -113,6 +133,20 @@ function parameters(value) {
   const entries = Object.entries(value);
   if (entries.length > 16 || !entries.every(([, item]) => typeof item === "string" && item.length <= 32)) {
     throw new TypeError("parameters must be an object of strings");
+  }
+  return Object.fromEntries(entries);
+}
+
+function text(value, name) {
+  if (typeof value !== "string" || value.length === 0 || value.length > 128) throw new TypeError(`${name} is malformed`);
+  return value;
+}
+
+function filters(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("filters must be an object of strings");
+  const entries = Object.entries(value);
+  if (entries.length > 16 || !entries.every(([key, item]) => key.length <= 128 && typeof item === "string" && item.length <= 128)) {
+    throw new TypeError("filters must be an object of strings");
   }
   return Object.fromEntries(entries);
 }

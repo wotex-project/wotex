@@ -11,7 +11,10 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   delegates key and body admission to `WotexLabWorkbench.Control`, verifies the
   session, takes a `WotexLabWorkbench.Control.Limits` slot and lets the session
   room execute the command at most once per `Idempotency-Key`. A replayed
-  answer carries `Idempotent-Replayed: true`. Responses are never cached and
+  answer carries `Idempotent-Replayed: true`. `queryMetrics` is read-only and
+  needs no opt-in: it takes the same JSON media type, query-string and body
+  bounds, checks the bearer and asks `WotexLabWorkbench.Control` to answer the
+  closed query descriptor from that session room's attributed history. Responses are never cached and
   errors retain the family's stable code/phase/path/message shape.
   """
 
@@ -26,6 +29,19 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   @mutations [:start_run, :cancel_run, :approve_decision]
   @statuses %{
     invalid_request: 400,
+    invalid_query: 400,
+    invalid_filter: 400,
+    invalid_aggregation: 400,
+    invalid_range: 400,
+    invalid_step: 400,
+    invalid_quantile: 400,
+    unknown_history: 404,
+    clock_rollback: 409,
+    unsupported_query: 422,
+    query_too_large: 422,
+    output_too_large: 422,
+    too_many_queries: 429,
+    history_unavailable: 503,
     invalid_body: 400,
     invalid_idempotency_key: 400,
     missing_bearer: 401,
@@ -46,6 +62,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   }
 
   plug :mutation_guard when action in @mutations
+  plug :query_guard when action == :query_metrics
 
   @doc "Lists the admitted scenario descriptors."
   @spec scenarios(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -89,6 +106,20 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   @doc "Reads the versioned metric catalogue."
   @spec metrics_catalogue(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def metrics_catalogue(conn, _params), do: reply(conn, 200, Control.metrics_catalogue())
+
+  @doc "Answers one closed metric query descriptor from the caller's session room history."
+  @spec query_metrics(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def query_metrics(conn, _) do
+    with {:ok, token} <- bearer(conn),
+         {:ok, %{room: room}} when is_pid(room) <- Sessions.verify(token),
+         {:ok, answer} <- Control.query_metrics(room, conn.body_params) do
+      reply(conn, 200, answer)
+    else
+      {:ok, _} -> error(conn, 404, api_error(:unknown_history, "the session has no room history"))
+      {:error, :missing_bearer} -> error(conn, 401, missing_bearer())
+      {:error, %Error{} = reason} -> failure(conn, reason)
+    end
+  end
 
   @doc "Reads one run projection from the caller's existing session room."
   @spec run(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -162,6 +193,16 @@ defmodule WotexLabWorkbenchWeb.ControlController do
     end
   end
 
+  defp query_guard(conn, _) do
+    with :ok <- media_type(conn),
+         :ok <- no_query(conn),
+         :ok <- body_size(conn) do
+      conn
+    else
+      {:error, %Error{} = reason} -> conn |> failure(reason) |> halt()
+    end
+  end
+
   defp enabled do
     if is_list(Application.get_env(:wotex_lab_workbench, :control_mutations, false)) and
          is_pid(GenServer.whereis(Limits)),
@@ -190,14 +231,14 @@ defmodule WotexLabWorkbenchWeb.ControlController do
       :ok
     else
       _ ->
-        {:error, api_error(:unsupported_media_type, "mutations accept application/json only")}
+        {:error, api_error(:unsupported_media_type, "this operation accepts application/json only")}
     end
   end
 
   defp no_query(%{query_string: ""}), do: :ok
 
   defp no_query(_),
-    do: {:error, api_error(:invalid_request, "mutations accept no query parameters")}
+    do: {:error, api_error(:invalid_request, "this operation accepts no query parameters")}
 
   defp body_size(conn) do
     if BodyReader.bytes(conn) <= @max_mutation_body_bytes,

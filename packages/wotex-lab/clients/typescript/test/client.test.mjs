@@ -198,3 +198,59 @@ test("mutation admission fails before fetch", async () => {
   await assert.rejects(anonymous.readRun("run-1"), /sessionToken is required/);
   await assert.rejects(anonymous.cancelRun("run-1", { idempotencyKey: "k" }), /sessionToken is required/);
 });
+
+test("metric history queries post the closed descriptor with the session bearer", async () => {
+  let request;
+  const answer = { source: "ets_history", instance: "room-1", points: [{ t: 1, value: 2 }] };
+  const client = new WotexLabClient({
+    baseUrl: "http://127.0.0.1:4000/api/v1",
+    sessionToken: "0123456789abcdef",
+    fetch: async (url, init) => {
+      request = { url, init };
+      return json(answer);
+    }
+  });
+
+  const query = {
+    metric: "nx_duration_seconds",
+    aggregation: "histogram_quantile",
+    startAt: "2026-01-01T00:00:00Z",
+    endAt: "2026-01-01T00:05:00Z",
+    stepMs: 5_000,
+    filters: { profile: "thermal" },
+    quantile: 0.95
+  };
+
+  assert.deepEqual(await client.queryMetrics(query), answer);
+  assert.equal(request.url, "http://127.0.0.1:4000/api/v1/metrics/query");
+  assert.equal(request.init.method, "POST");
+  assert.equal(request.init.headers.authorization, "Bearer 0123456789abcdef");
+  assert.equal(request.init.headers["content-type"], "application/json");
+  assert.equal(request.init.headers["idempotency-key"], undefined);
+  assert.deepEqual(JSON.parse(request.init.body), {
+    schema_version: "1.0.0",
+    metric: "nx_duration_seconds",
+    aggregation: "histogram_quantile",
+    start_at: "2026-01-01T00:00:00Z",
+    end_at: "2026-01-01T00:05:00Z",
+    step_ms: 5_000,
+    filters: { profile: "thermal" },
+    quantile: 0.95
+  });
+
+  await assert.rejects(client.queryMetrics({ ...query, stepMs: 1_000 }), /stepMs is outside/);
+  await assert.rejects(client.queryMetrics({ ...query, quantile: 1 }), /quantile must lie/);
+  await assert.rejects(client.queryMetrics({ ...query, filters: ["profile"] }), /filters must be/);
+  await assert.rejects(client.queryMetrics({ ...query, metric: "" }), /metric is malformed/);
+  await assert.rejects(client.queryMetrics(null), /query is required/);
+  await assert.rejects(
+    client.queryMetrics({ ...query, filters: Object.fromEntries([...Array(16)].map((_, i) => [`${"k".repeat(125)}${i}`, "v".repeat(128)])) }),
+    /request body exceeds 4096 bytes/
+  );
+
+  const anonymous = new WotexLabClient({
+    baseUrl: "http://127.0.0.1:4000/api/v1",
+    fetch: async () => assert.fail("missing bearer must fail before fetch")
+  });
+  await assert.rejects(anonymous.queryMetrics(query), /sessionToken is required/);
+});

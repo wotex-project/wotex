@@ -440,7 +440,10 @@ address and verifies the hostname through TLS.
 ## Control API mutations
 
 The `/api/v1` control API always serves the catalogue reads and the
-bearer-bound `readEvidence` and `readRun` operations. `startRun`, `cancelRun`
+bearer-bound `readEvidence`, `readRun` and `queryMetrics` operations.
+`queryMetrics` (`POST /api/v1/metrics/query`) takes the same JSON query
+descriptor as the operator query listener and answers from the session room's
+own history, with a one-hour range, 2,000 points and a one-second deadline. `startRun`, `cancelRun`
 and `approveDecision` answer 403 `mutations_disabled` until the operator sets
 `WOTEX_LAB_CONTROL_MUTATIONS=1`, which starts the host's rate and concurrency
 limiter with 30 admissions per session per minute, one mutation in flight per

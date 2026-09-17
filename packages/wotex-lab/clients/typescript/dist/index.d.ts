@@ -58,6 +58,33 @@ export interface Run {
   error: { code: string; phase: string; message: string } | null;
 }
 export interface StartRunRequest { experimentId: string; parameters?: Record<string, string>; }
+export type MetricAggregation = "last" | "sum" | "min" | "max" | "avg" | "increase" | "rate" | "histogram_quantile";
+export interface MetricQuery {
+  metric: string;
+  aggregation: MetricAggregation;
+  startAt: string;
+  endAt: string;
+  stepMs: number;
+  filters?: Record<string, string>;
+  quantile?: number;
+}
+export interface MetricPoint { t: number; value: number; }
+export interface MetricQueryAnswer {
+  source: "ets_history";
+  instance: string;
+  metric: string;
+  name?: string;
+  unit: string;
+  aggregation: MetricAggregation;
+  interval: { start_ms: number; end_ms: number; step_ms: number };
+  freshness: Record<string, number> | null;
+  points: MetricPoint[];
+  markers: Array<{ kind: string; t?: number } & Record<string, unknown>>;
+  loss?: Record<string, number>;
+  series_matched?: number;
+  digest: `sha256:${string}`;
+  evidence?: unknown[];
+}
 export interface ApiErrorBody { code: string; phase: string; path?: string | null; message: string; }
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 export interface ClientOptions { baseUrl: string; sessionToken?: string; deadlineMs?: number; fetch?: FetchLike; maxResponseBytes?: number; }
@@ -76,6 +103,7 @@ export declare class WotexLabClient {
   readScenario(id: string, options?: RequestOptions): Promise<Scenario>;
   readEvidence(recordId: `sha256:${string}`, options?: RequestOptions): Promise<EvidenceRecord>;
   readMetricsCatalogue(options?: RequestOptions): Promise<MetricsCatalogue>;
+  queryMetrics(query: MetricQuery, options?: RequestOptions): Promise<MetricQueryAnswer>;
   readRun(runId: string, options?: RequestOptions): Promise<Run>;
   startRun(request: StartRunRequest, options: MutationOptions): Promise<Run>;
   cancelRun(runId: string, options: MutationOptions): Promise<Run>;

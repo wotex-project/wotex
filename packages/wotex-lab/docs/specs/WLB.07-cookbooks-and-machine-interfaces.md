@@ -1,14 +1,14 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.8.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.9.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
 `bin/check_graph.exs` gate, and the MCP server core with stdio and Streamable
-HTTP transports are implemented. The optional Workbench serves the eight
+HTTP transports are implemented. The optional Workbench serves the nine
 operations in the generated OpenAPI document at `/api/v1`; static catalogue
-reads are inert, evidence and run lookups are bearer-bound to the caller's
-existing room, and the three run mutations described in
+reads are inert, evidence, run and metric history reads are bearer-bound to the
+caller's existing room, and the three run mutations described in
 [HTTP control mutations](#http-control-mutations) additionally require host
 opt-in. Fifteen notebooks have executable workspace source evidence,
 including Axon/EXLA training and formal-control vectors; `nerves-and-mcp`
@@ -121,7 +121,8 @@ it MUST NOT become another WoT semantics implementation.
 operation IDs, base path and admitted schema fields before regenerating the ESM
 runtime and declarations. The client bounds deadlines and JSON response bytes,
 escapes path segments, rejects URL credentials and sends a bearer only to the
-evidence and run operations. Each mutation also sends the caller's
+evidence, run and metric query operations. `queryMetrics` sends the closed query
+descriptor as a body of at most 4,096 bytes without an idempotency key. Each mutation also sends the caller's
 `idempotencyKey`, a `deadline_ms` of at most 30,000 and a body of at most
 4,096 bytes, and refuses a malformed key or oversized body before any fetch.
 Its injected Fetch seam is testability, not an alternate transport contract.
@@ -289,6 +290,32 @@ window reset, slot release on caller exit and ledger replay, reuse and
 capacity. TLS termination, deployment behind other origins
 and hosted tenancy remain host deployment evidence and are not claimed by
 these source tests.
+
+### Session metric queries
+
+`queryMetrics` (`POST /metrics/query`) is a read and needs no host opt-in. It
+answers 415 `unsupported_media_type` without a JSON media type, 400
+`invalid_request` for a query string and 413 `body_too_large` above 4,096
+counted body bytes, then 401 `missing_bearer`, 403 for an unknown or expired
+session and 404 `unknown_history` when the session has no room. The body is
+the closed field set of `Wotex.Lab.Metrics.Request`; scope and limits in the
+body are refused as `invalid_request`. The room's attributed history binding
+supplies the instance and session scope, so a session reads only events from
+its own room's process tree (WLB.10, WLB.11). `WotexLabWorkbench.Control`
+starts one `Wotex.Lab.Metrics.Gateway` owned by the request process with a
+two-second lifetime, one call and reduced limits: a one-hour range, a
+5-second minimum step, 2,000 points, 256 KiB of output, a one-second
+deadline and one worker. The request waits at most 1.25 seconds, cancels late
+work and revokes the gateway before answering. Descriptor refusals are 400,
+`clock_rollback` 409, `unsupported_query`, `query_too_large` and
+`output_too_large` 422, `too_many_queries` 429 when the room's query leases
+are taken, `history_unavailable` or an unavailable room 503 and
+`deadline_exceeded` 504. `control_query_test.exs` covers the answer shape,
+server-bound scope, isolation between two session rooms, a session without a
+room, missing and unknown bearers, scope and limit substitution, unknown
+metrics, range and aggregation refusals, media type, query string and body
+ceiling, and a blocked history reaching the deadline without leaving a query
+lease.
 
 ## Public adoption surface
 
