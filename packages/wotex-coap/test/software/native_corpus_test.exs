@@ -1,8 +1,12 @@
+Code.require_file("../support/oscore.ex", __DIR__)
+Code.require_file("../support/oscore_peer.ex", __DIR__)
+
 defmodule Wotex.CoAP.NativeCorpusTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
   alias Wotex.CoAP.NativeBackend
+  alias Wotex.CoAP.Test.OSCOREPeer
 
   @moduletag :interop
   @moduletag :software
@@ -110,6 +114,141 @@ defmodule Wotex.CoAP.NativeCorpusTest do
     refute_receive {:udp, ^peer, _, _, _}, 200
     assert expected["generation_2_network_datagrams"] == 0
   end
+
+  test "WCO-S03 WCO-N02 WCO-N-F21 WCO-N-F22 protected establishment and cancellation follow the corpus",
+       context do
+    [establish, cancel] = Enum.map(~w(WCO-N-F21 WCO-N-F22), &fixture/1)
+    assert establish["operation"] == "observe_establishment_trace"
+    assert cancel["operation"] == "observe_cancel_trace"
+    peer = OSCOREPeer.open(context.secret, <<1>>, <<0>>)
+    on_exit(fn -> OSCOREPeer.close(peer) end)
+    port = open_worker(Map.put(context, :peer_port, peer.port), "trace", 1)
+    state = %{port: port, peer: peer, requests: %{}, buffer: <<>>}
+
+    {state, emitted} = run_trace(establish["input"]["steps"], state)
+    expected = resolve(establish["expected"], state)
+    assert Enum.concat(emitted) == expected["stdout"]
+    # The credit reply precedes the report, so no report was written before credit.
+    assert [[], [_], [_, _]] = emitted
+    assert expected["reports_before_credit"] == 0
+
+    {state, emitted} = run_trace(cancel["input"]["steps"], state)
+    expected = resolve(cancel["expected"], state)
+    assert Enum.concat(emitted) == expected["stdout"]
+    # The intervening notification writes nothing; the confirmation completes the
+    # cancel and the later notification writes nothing.
+    assert [[], [], [_], []] = emitted
+    assert expected["intervening_observe_successes"] == 0
+    assert expected["reports_after_cancel"] == 0
+
+    command(port, "20", "cancel", %{"subscription_id" => "17", "generation" => 1})
+    assert [failure("20", "invalid_request")] == elem(collect(state), 1)
+    assert {:error, :timeout} = :gen_udp.recv(peer.socket, 0, 200)
+    assert expected["subscriptions_after"] == 0
+    Port.close(port)
+  end
+
+  test "WCO-S03 WCO-N02 WCO-N-F23 a registration answered without Observe establishes nothing",
+       context do
+    corpus = fixture("WCO-N-F23")
+    assert corpus["operation"] == "observe_establishment_failure_trace"
+    peer = OSCOREPeer.open(context.secret, <<1>>, <<0>>)
+    on_exit(fn -> OSCOREPeer.close(peer) end)
+    port = open_worker(Map.put(context, :peer_port, peer.port), "failure", 1)
+    state = %{port: port, peer: peer, requests: %{}, buffer: <<>>}
+
+    {state, emitted} = run_trace(corpus["input"]["steps"], state)
+    expected = resolve(corpus["expected"], state)
+    assert Enum.concat(emitted) == expected["stdout"]
+    assert expected["establishments"] == 0 and expected["reports"] == 0
+
+    # The helper closes the generation after the failed registration.
+    assert {<<>>, 0} = await_exit(port)
+    assert expected["subscriptions_after"] == 0
+  end
+
+  defp run_trace(steps, state) do
+    Enum.map_reduce(steps, state, fn step, state ->
+      state = step(step, state)
+      {state, lines} = collect(state)
+      {lines, state}
+    end)
+    |> then(fn {emitted, state} -> {state, emitted} end)
+  end
+
+  defp step(%{"command" => command}, state) do
+    assert Port.command(state.port, Jason.encode!(command) <> "\n")
+
+    if command["operation"] in ~w(observe cancel) do
+      assert {:ok, request} = OSCOREPeer.receive_request(state.peer)
+      put_in(state, [:requests, command["id"]], request)
+    else
+      state
+    end
+  end
+
+  defp step(%{"authenticated_response" => response}, state) do
+    request = Map.fetch!(state.requests, response["answers"])
+    assert resolve(response["token"], state) == bytes(request.outer.token)
+
+    {observe, options} =
+      Enum.split_with(response["options"], &(&1["number"] == 6))
+
+    fields =
+      [
+        type: String.to_existing_atom(response["type"]),
+        code: response["code"],
+        message_id: resolve(response["message_id"], state),
+        options: Enum.map(options, &{&1["number"], decode(&1["value"])}),
+        payload: decode(response["payload"])
+      ] ++
+        case observe do
+          [%{"value" => value}] ->
+            [observe: true, partial_iv: :binary.decode_unsigned(decode(value))]
+
+          [] ->
+            []
+        end
+
+    %{state | peer: OSCOREPeer.respond(state.peer, request, fields)}
+  end
+
+  defp resolve(%{"request" => id, "field" => "message_id"}, state),
+    do: state.requests[id].outer.message_id
+
+  defp resolve(%{"request" => id, "field" => "token"}, state),
+    do: bytes(state.requests[id].outer.token)
+
+  defp resolve(%{"fresh_message_id" => index}, state) do
+    used = Enum.map(state.requests, fn {_, request} -> request.outer.message_id end)
+
+    Stream.iterate(rem(Enum.max(used) + 1_000 * index, 65_536), &rem(&1 + 1, 65_536))
+    |> Enum.find(&(&1 not in used))
+  end
+
+  defp resolve(value, state) when is_map(value),
+    do: Map.new(value, fn {k, v} -> {k, resolve(v, state)} end)
+
+  defp resolve(values, state) when is_list(values), do: Enum.map(values, &resolve(&1, state))
+  defp resolve(value, _), do: value
+
+  defp collect(state, lines \\ []) do
+    case :binary.split(state.buffer, "\n") do
+      [line, rest] ->
+        collect(%{state | buffer: rest}, [Jason.decode!(line) | lines])
+
+      [_] ->
+        port = state.port
+
+        receive do
+          {^port, {:data, bytes}} -> collect(%{state | buffer: state.buffer <> bytes}, lines)
+        after
+          250 -> {state, Enum.reverse(lines)}
+        end
+    end
+  end
+
+  defp decode(%{"type" => "bytes", "base64" => value}), do: Base.decode64!(value)
 
   defp fixture(id) do
     @fixture_path

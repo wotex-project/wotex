@@ -617,7 +617,7 @@ fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
 arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 12 same-stack OSCORE
-tests, 8 lifecycle stress tests and 7 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
+tests, 8 lifecycle stress tests and 9 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
 peers and zero retained processes, ports or library-state resources.
 
 `test/software/lifecycle_stress_test.exs` executes the WCO-C09 matrix once per
@@ -780,8 +780,29 @@ closes and reopens one context store: the reopen returns `fresh_context_required
 the registry bytes stay unchanged and a following request closes the generation
 without a datagram. A helper whose decoder admits any `renew` value fails all
 five command cases. The runner compares with the corpus `expected` values and
-passes no expected value to the helper. F05, F07, F09, F21-F24 and the helper half
-of F15 remain unexecuted.
+passes no expected value to the helper.
+
+`test/support/oscore.ex` implements RFC 8613 context derivation, nonce, external
+AAD, plaintext, OSCORE option and AES-CCM-16-64-128 protection in ExUnit support;
+`test/wotex/coap/test_oscore_vectors_test.exs` reproduces the Appendix C.1, C.2,
+C.4, C.5, C.7 and C.8 vectors byte for byte. `test/support/oscore_peer.ex` uses it
+as a scriptable protected UDP endpoint independent of libcoap. The corpus runner
+drives F21-F23 against it. The corpus originally fixed token `AQ==` and Message
+IDs 71 and 72, which the helper cannot produce since its tokens are random, and
+its intervening response was an ACK whose Message ID libcoap would never
+correlate. Each authenticated response now names the helper request it answers
+and substitutes that request's wire Message ID and token. In F21 the registration
+is answered with Partial IV 9: the helper replies with the subscription, the
+credit reply precedes report 1, and the report carries Observe 9 and the corpus
+metadata. In F22 a notification protected for the registration arrives after the
+cancellation and writes nothing, the confirmation returns `result: null`, a later
+notification writes nothing, and a second cancel returns `invalid_request` without
+a datagram. In F23 a registration answered without Observe returns
+`invalid_observation_response` and the helper exits 0. A helper restoring the
+earlier rule that OSCORE failures end a pending request returns
+`security_handshake_failed` for F22. F05, F07, F09, F24 and the helper half of F15
+remain unexecuted; F05 and F24 name `session_lost`, a Runtime transport status
+rather than a native terminal code.
 
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own

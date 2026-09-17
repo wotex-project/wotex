@@ -1,7 +1,7 @@
 {
   "schema": "wotex.coap.native-contract@1",
-  "status": "specified_unexecuted",
-  "runner_contract": "Inputs drive a real native IPC decoder/helper; expected values remain ExUnit-owned. Traces name test-controlled events, not helper answers. Native durable-state cases require the compiled helper and local store.",
+  "status": "partially_executed",
+  "runner_contract": "Inputs drive a real native IPC decoder/helper; expected values remain ExUnit-owned. Traces name test-controlled events, not helper answers. Native durable-state cases require the compiled helper and local store. An authenticated_response is protected by the runner's RFC 8613 peer for the helper request named by answers, whose kid and Partial IV form the AAD; an Observe option value is sent as the response Partial IV with an empty Inner Observe option. {request, field} substitutes the message_id or token that request carried on the wire, and {fresh_message_id} selects a Message ID the trace has not used. The helper's tokens are random, so a trace cannot fix a token value.",
   "cases": [
     {
       "id": "WCO-N-F01",
@@ -520,12 +520,16 @@
           },
           {
             "authenticated_response": {
+              "answers": "17",
               "type": "ack",
               "code": 69,
-              "message_id": 71,
+              "message_id": {
+                "request": "17",
+                "field": "message_id"
+              },
               "token": {
-                "type": "bytes",
-                "base64": "AQ=="
+                "request": "17",
+                "field": "token"
               },
               "options": [
                 {
@@ -582,10 +586,13 @@
             "value": {
               "type": "ack",
               "code": 69,
-              "message_id": 71,
+              "message_id": {
+                "request": "17",
+                "field": "message_id"
+              },
               "token": {
-                "type": "bytes",
-                "base64": "AQ=="
+                "request": "17",
+                "field": "token"
               },
               "options": [
                 {
@@ -633,19 +640,22 @@
           },
           {
             "authenticated_response": {
-              "type": "ack",
+              "answers": "17",
+              "type": "non",
               "code": 69,
-              "message_id": 71,
+              "message_id": {
+                "fresh_message_id": 1
+              },
               "token": {
-                "type": "bytes",
-                "base64": "AQ=="
+                "request": "17",
+                "field": "token"
               },
               "options": [
                 {
                   "number": 6,
                   "value": {
                     "type": "bytes",
-                    "base64": "CQ=="
+                    "base64": "Cg=="
                   }
                 }
               ],
@@ -657,12 +667,16 @@
           },
           {
             "authenticated_response": {
+              "answers": "19",
               "type": "ack",
               "code": 69,
-              "message_id": 72,
+              "message_id": {
+                "request": "19",
+                "field": "message_id"
+              },
               "token": {
-                "type": "bytes",
-                "base64": "AQ=="
+                "request": "19",
+                "field": "token"
               },
               "options": [],
               "payload": {
@@ -673,19 +687,22 @@
           },
           {
             "authenticated_response": {
-              "type": "ack",
+              "answers": "17",
+              "type": "non",
               "code": 69,
-              "message_id": 71,
+              "message_id": {
+                "fresh_message_id": 2
+              },
               "token": {
-                "type": "bytes",
-                "base64": "AQ=="
+                "request": "17",
+                "field": "token"
               },
               "options": [
                 {
                   "number": 6,
                   "value": {
                     "type": "bytes",
-                    "base64": "CQ=="
+                    "base64": "Cw=="
                   }
                 }
               ],
@@ -733,12 +750,16 @@
           },
           {
             "authenticated_response": {
+              "answers": "17",
               "type": "ack",
               "code": 69,
-              "message_id": 72,
+              "message_id": {
+                "request": "17",
+                "field": "message_id"
+              },
               "token": {
-                "type": "bytes",
-                "base64": "AQ=="
+                "request": "17",
+                "field": "token"
               },
               "options": [],
               "payload": {
