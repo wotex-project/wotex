@@ -49,9 +49,11 @@ do not silently skip, simulate or weaken the requirement.
 
 The bounded source download, archive admission, exact SDK fixes and content-bound
 workspace now feed `mix wotex.native.build`. A Debian 12 arm64 SDK host build and
-ready-frame smoke passed without Python. The required x86_64 lane, software
-build/run tasks, fixture assertions and native contract remain open, so P00 is
-unaccepted.
+ready-frame smoke passed without Python. The shared native report-flow owner,
+its BEAM ledger and the parser/flow corpus cases WTH-B-F01–F05, F07–F10, F14 and
+F15 execute through a native contract driver. Host flow integration, F06 and
+F11–F13, the required x86_64 lane and the software build/run tasks remain open,
+so P00 is unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 

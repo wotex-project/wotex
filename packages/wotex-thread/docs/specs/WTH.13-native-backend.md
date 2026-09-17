@@ -17,8 +17,10 @@ The explicit Mix native build now owns finite HTTPS downloads, regular-file
 archive admission, exact before/after SDK fixes, a C process guardian, empty
 workspace admission and content-bound manifest reuse. It replaces the generic
 Python build utility. A Debian 12 arm64 build emitted the expected native ready
-frame; the required x86_64 lane, software tasks and remaining native acceptance
-cases still need evidence, so B01 is not accepted.
+frame. The shared report-flow owner and BEAM ledger execute the parser and
+flow_trace corpus cases through a contract driver; host flow integration,
+process-flow and ready cases, the required x86_64 lane and software tasks still
+need evidence, so B01–B03 are not accepted.
 
 ## WTH-B01 — Production and build boundary
 
