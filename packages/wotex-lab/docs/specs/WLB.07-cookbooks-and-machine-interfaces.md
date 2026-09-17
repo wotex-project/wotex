@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.4.5. Contract: accepted. Source status: the sixteen
+Specification version: 0.5.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -134,8 +134,15 @@ descriptors of WLB.02 and the simulated Things of the session's explicit
 instance. Tools are `parse_td`, `parse_tm`,
 `explain_error`, `list_things`, `read_property`, `conformance_observe`,
 `explain_seam` and `verify_control_model`; every call is bounded by per-call
-limits and per-session call and output quotas. Benchmark jobs and the shared
-metrics query descriptor remain planned.
+limits and per-session call and output quotas. `query_metrics` is listed only
+when the host builds the session with `metrics: %{history: pid, scope: map}`
+from its authenticated context. It sends the WLB.10 request fields through one
+disposable owner-bound `Metrics.Gateway` per call with a six-hour range, 2,000
+points, 256 KiB output, a two-second deadline and one worker, then revokes it.
+Scope, limits and unknown fields cannot come from tool arguments.
+`test/wotex/lab/mcp_metrics_test.exs` covers listing, answers, refused fields,
+a foreign scope, a dead history and gateway release. Benchmark jobs remain
+planned.
 
 Writes/Actions require explicit instance opt-in and per-request authorization.
 `invoke_action` is listed only when the host built the session with

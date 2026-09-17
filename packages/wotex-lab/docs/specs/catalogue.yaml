@@ -222,7 +222,7 @@ specifications:
       - "priv/conformance/native/tests/lifecycle.rs"
     compatibility_classification: Kernel containment profile 1.0.0 adds an additive OCI namespace and cgroup profile that closes hostile whole-tree isolation for its trusted runtime, kernel and pinned image. Reviewed-local profile 2.0.2 mounts a minimal /dev and selects C.UTF-8 for Linux Bubblewrap targets, and a pinned Linux lane executes that path. The target process now reads and writes protocol bytes independently of the host locale. Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling. The main repository gate now executes its locked unit and feature-gated lifecycle tests in a private cleaned target; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
-    version: "0.4.5"
+    version: "0.5.0"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
     implementation_status: partial
     evidence_status: partial
@@ -260,10 +260,11 @@ specifications:
       - "test/wotex/lab/graph_test.exs"
       - "bin/check_graph.exs"
       - "test/wotex/lab/mcp_test.exs"
+      - "test/wotex/lab/mcp_metrics_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/control_controller_test.exs"
       - "bin/generate_typescript_client.exs"
       - "clients/typescript/test/client.test.mjs"
-    compatibility_classification: MCP resources now include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. The Nerves/MCP notebook identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
+    compatibility_classification: The additive MCP `query_metrics` tool exposes the WLB.10 query descriptor only for a host-bound history and scope. MCP resources now include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. The Nerves/MCP notebook identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
     version: "0.9.4"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
@@ -343,7 +344,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.13.0"
+    version: "0.14.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: partial
     evidence_status: partial
@@ -416,6 +417,7 @@ specifications:
       - "test/wotex/lab/metrics_dataset_test.exs"
       - "test/wotex/lab/metrics_query_test.exs"
       - "test/wotex/lab/metrics_gateway_test.exs"
+      - "test/wotex/lab/mcp_metrics_test.exs"
       - "test/wotex/lab/metrics_exposition_test.exs"
       - "test/wotex/lab/metrics_remote_write_test.exs"
       - "test/wotex/lab/metrics_bridge_test.exs"
@@ -434,7 +436,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/beamlens_integration_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
-    compatibility_classification: Optional host contract; bridge captures require strictly advancing wall timestamps and revalidated snapshots. The Workbench can explicitly compose the bridge with an exact loopback endpoint or a separately selected authenticated HTTPS endpoint whose audience, DNS answers, peer and TLS identity are checked on every write; remote receiver operation remains independent evidence. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Atomic diagnostic export creates an inert content-addressed, masked, unsplit dataset at an exact history watermark; storage-only history remains available. The checked-in Workbench is the inspectable reference source, while artifact adoption remains a separate axis. Its trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
+    compatibility_classification: Optional host contract; the MCP query_metrics tool now binds one disposable local gateway per call; bridge captures require strictly advancing wall timestamps and revalidated snapshots. The Workbench can explicitly compose the bridge with an exact loopback endpoint or a separately selected authenticated HTTPS endpoint whose audience, DNS answers, peer and TLS identity are checked on every write; remote receiver operation remains independent evidence. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Atomic diagnostic export creates an inert content-addressed, masked, unsplit dataset at an exact history watermark; storage-only history remains available. The checked-in Workbench is the inspectable reference source, while artifact adoption remains a separate axis. Its trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
     version: "0.5.5"
     path: docs/specs/WLB.11-workbench-and-design-system.md

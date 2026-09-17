@@ -10,7 +10,11 @@ defmodule Wotex.Lab.MCP.Tools do
   `conformance_observe` derives one conformance observation with the Lab
   target; `explain_seam` answers an ownership question from the seam table;
   `verify_control_model` runs the optional formal profile when the host
-  configured one and otherwise reports `unsupported`. `invoke_action` exists
+  configured one and otherwise reports `unsupported`. `query_metrics` exists only
+  when the host bound a metrics history and scope: each call opens one disposable
+  `Wotex.Lab.Metrics.Gateway` owned by the session process, admits the closed
+  request fields with the tool's reduced limits, waits at most two seconds and
+  revokes the gateway. `invoke_action` exists
   only when the host opted into writes: it needs the host's write token, an
   idempotency key that is never accepted twice in a session, and a deadline,
   and it dispatches through the runtime against a simulated Thing of this
@@ -21,11 +25,21 @@ defmodule Wotex.Lab.MCP.Tools do
   alias Wotex.Lab.Conformance.Target
   alias Wotex.Lab.Formal.{Abstraction, Model, Profile, Result, Serializer}
   alias Wotex.Lab.MCP.{Resources, Seams}
+  alias Wotex.Lab.Metrics.{Gateway, Query}
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
   alias Wotex.{ThingDescription, ThingModel}
 
-  @tool_names ~w(parse_td parse_tm explain_error list_things read_property conformance_observe explain_seam verify_control_model invoke_action)
+  @tool_names ~w(parse_td parse_tm explain_error list_things read_property conformance_observe explain_seam verify_control_model query_metrics invoke_action)
+  @metric_fields ~w(metric aggregation filters quantile start_at end_at step_ms)
+  @metric_limits %{
+    range_ms: 6 * 60 * 60 * 1_000,
+    min_step_ms: 5_000,
+    points: 2_000,
+    output_bytes: 262_144,
+    deadline_ms: 2_000,
+    concurrent: 1
+  }
   @max_document_bytes 1_048_576
   @max_deadline_ms 30_000
   @phases %{
@@ -118,6 +132,24 @@ defmodule Wotex.Lab.MCP.Tools do
       )
     ]
 
+    metrics = [
+      tool(
+        "query_metrics",
+        "Query the host-bound metrics history with a closed catalogue descriptor.",
+        %{
+          "metric" => %{"type" => "string"},
+          "aggregation" => %{"type" => "string"},
+          "filters" => %{"type" => "object"},
+          "quantile" => %{"type" => "number"},
+          "start_at" => %{"type" => "string"},
+          "end_at" => %{"type" => "string"},
+          "step_ms" => %{"type" => "integer"}
+        },
+        ["metric", "aggregation", "start_at", "end_at", "step_ms"]
+      )
+    ]
+
+    read = if Map.get(state, :metrics), do: read ++ metrics, else: read
     if state.writes, do: read ++ write, else: read
   end
 
@@ -270,6 +302,19 @@ defmodule Wotex.Lab.MCP.Tools do
       invoke(state, thing_id, action, Map.get(args, "input"), args)
     end
   end
+
+  def call(%{metrics: %{history: history, scope: scope}} = state, "query_metrics", args)
+      when is_map(args) do
+    if Enum.all?(Map.keys(args), &(&1 in @metric_fields)) do
+      request = Map.put(args, "schema_version", Query.schema_version())
+      query_metrics(state, history, scope, request)
+    else
+      {:error, -32_602, "invalid arguments for query_metrics"}
+    end
+  end
+
+  def call(%{metrics: nil}, "query_metrics", _),
+    do: {:error, -32_601, "metrics are not bound to this session"}
 
   def call(%{writes: false}, "invoke_action", _),
     do: {:error, -32_601, "writes are not enabled for this session"}
@@ -435,6 +480,73 @@ defmodule Wotex.Lab.MCP.Tools do
       :error -> {:error, -32_602, "#{field} must be one of #{Enum.join(Map.keys(table), ", ")}"}
     end
   end
+
+  defp query_metrics(state, history, scope, request) do
+    case Gateway.start_link(
+           history: history,
+           scope: scope,
+           owner: self(),
+           ttl_ms: 2_500,
+           max_calls: 1,
+           query_limits: @metric_limits
+         ) do
+      {:ok, gateway} ->
+        Process.unlink(gateway)
+        monitor = Process.monitor(gateway)
+
+        try do
+          case Gateway.query(gateway, request) do
+            {:ok, reference} -> await_metrics(state, gateway, monitor, reference)
+            {:error, error} -> metrics_failure(state, error.code)
+          end
+        after
+          _ = Gateway.revoke(gateway)
+          Process.demonitor(monitor, [:flush])
+          flush_metrics(gateway)
+        end
+
+      {:error, error} ->
+        metrics_failure(state, error.code)
+    end
+  end
+
+  defp await_metrics(state, gateway, monitor, reference) do
+    receive do
+      {:metric_query, ^gateway, ^reference, {:ok, answer}} -> text(state, json_value(answer))
+      {:metric_query, ^gateway, ^reference, {:error, error}} -> metrics_failure(state, error.code)
+      {:DOWN, ^monitor, :process, ^gateway, _} -> metrics_failure(state, :scope_unavailable)
+    after
+      @metric_limits.deadline_ms + 250 ->
+        _ = Gateway.cancel(gateway, reference)
+        metrics_failure(state, :deadline_exceeded)
+    end
+  end
+
+  defp flush_metrics(gateway) do
+    receive do
+      {:metric_query, ^gateway, _, _} -> flush_metrics(gateway)
+    after
+      0 -> :ok
+    end
+  end
+
+  defp metrics_failure(state, code),
+    do: text(state, %{"available" => false, "error" => Atom.to_string(code)}, true)
+
+  defp json_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
+
+  defp json_value(value) when is_map(value),
+    do: Map.new(value, fn {key, item} -> {json_key(key), json_value(item)} end)
+
+  defp json_value(value) when is_list(value), do: Enum.map(value, &json_value/1)
+  defp json_value(value) when is_boolean(value) or is_nil(value), do: value
+  defp json_value(value) when is_atom(value), do: Atom.to_string(value)
+  defp json_value(value) when is_tuple(value), do: value |> Tuple.to_list() |> json_value()
+  defp json_value(value), do: value
+
+  defp json_key(key) when is_atom(key), do: Atom.to_string(key)
+  defp json_key(key) when is_binary(key), do: key
+  defp json_key(key), do: inspect(key)
 
   defp text(state, payload, error? \\ false) do
     case Wotex.JSON.encode(payload) do

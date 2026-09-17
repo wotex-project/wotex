@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.13.0. Contract: accepted. Source status: the metric
+Specification version: 0.14.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -16,7 +16,8 @@ owner-bound no-queue broker, an active-scope capability-protected loopback
 provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
 Remote/TLS scraping, TTL provisioning, OTLP signal export, isolated
-hosted-tenant BeamLens and the MCP query gateway remain planned. Hosted
+hosted-tenant BeamLens and the HTTP query binding remain planned; the MCP
+`query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 is not proof of a Grafana import or query execution.
 
@@ -319,8 +320,9 @@ history queries return unsupported; ETS does not pretend to implement PromQL.
 answers gauges, counters with reset awareness and histogram quantiles from ETS
 or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway`
 admit local inspection callers of this descriptor; the trusted-local BeamLens
-skill uses that gateway with tighter limits. Public HTTP/MCP query bindings,
-durable query templates and non-local/multi-tenant BeamLens callers remain planned.
+skill uses that gateway with tighter limits, and the MCP `query_metrics` tool
+opens one gateway per call from a host-bound history and scope. Public HTTP
+query bindings, durable query templates and non-local/multi-tenant BeamLens callers remain planned.
 
 History query admission binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`

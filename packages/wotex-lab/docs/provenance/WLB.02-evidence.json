@@ -53,7 +53,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 4,
+  "attempt": 5,
   "budgets": {
     "children_per_role": 128,
     "cleanup_ms": 5000,
@@ -123,11 +123,11 @@
     "test_count": 30,
     "workbench_test_count": 2
   },
-  "revision": "89d28f905a9b7410fc8438180640a4411e82a675",
+  "revision": "a79aba963709f6513c4e5be4a66231699aa7f704",
   "scenario_id": "WLB.02-scenarios-and-reference-components",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:01b10b8d460e28f36e0e38b27a86e68cbbe72d92619997aae4e5a3b0104d2b4f",
+  "source_tree_digest": "sha256:cf3a2245b814cbb50cc7de018ea5b5c6a26031b8d33da6b63ab6ac2ae54db1bb",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

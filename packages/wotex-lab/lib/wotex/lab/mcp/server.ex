@@ -37,7 +37,8 @@ defmodule Wotex.Lab.MCP.Server do
           max_calls: pos_integer(),
           max_output_bytes: pos_integer(),
           idempotency: MapSet.t(String.t()),
-          formal: keyword() | nil
+          formal: keyword() | nil,
+          metrics: %{history: pid(), scope: map()} | nil
         }
 
   @doc "The pinned protocol version this server speaks."
@@ -47,12 +48,15 @@ defmodule Wotex.Lab.MCP.Server do
   @doc """
   Builds a session. Options: `:instance` (a live `Wotex.Lab` pid), `:writes`
   (false), `:write_token` (required when writes are on), `:max_calls`,
-  `:max_output_bytes`, `:formal` (keyword options for the formal profile, or nil).
+  `:max_output_bytes`, `:formal` (keyword options for the formal profile, or nil)
+  and `:metrics` (`%{history: pid, scope: map}` bound from the host's authenticated
+  context, or nil). The metrics scope never comes from a tool argument.
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Wotex.Lab.Error.t()}
   def new(opts \\ []) when is_list(opts) do
     writes = Keyword.get(opts, :writes, false)
     token = Keyword.get(opts, :write_token)
+    metrics = Keyword.get(opts, :metrics)
 
     cond do
       not is_boolean(writes) ->
@@ -65,6 +69,10 @@ defmodule Wotex.Lab.MCP.Server do
            :construction,
            "writes need an explicit token of at least 16 bytes"
          )}
+
+      not metrics_binding?(metrics) ->
+        {:error,
+         Error.new(:invalid_options, :construction, "metrics must bind a history pid and a scope")}
 
       true ->
         {:ok,
@@ -79,10 +87,18 @@ defmodule Wotex.Lab.MCP.Server do
            max_calls: Keyword.get(opts, :max_calls, @default_max_calls),
            max_output_bytes: Keyword.get(opts, :max_output_bytes, @default_max_output_bytes),
            idempotency: MapSet.new(),
-           formal: Keyword.get(opts, :formal)
+           formal: Keyword.get(opts, :formal),
+           metrics: metrics
          }}
     end
   end
+
+  defp metrics_binding?(nil), do: true
+
+  defp metrics_binding?(%{history: history, scope: scope} = binding),
+    do: map_size(binding) == 2 and is_pid(history) and is_map(scope)
+
+  defp metrics_binding?(_), do: false
 
   @doc "Handles one decoded JSON-RPC message; notifications yield a nil reply."
   @spec handle(t(), map()) :: {map() | nil, t()}

@@ -69,7 +69,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 29,
+  "attempt": 30,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -169,7 +169,7 @@
     }
   ],
   "durations": {
-    "run_ms": 53800
+    "run_ms": 50800
   },
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154",
@@ -181,7 +181,7 @@
     "containment:darwin-sandbox-exec+linux-bubblewrap+profile-2.0.2+contained-exec-2.0.0",
     "kernel-containment:oci-linux-namespaces-cgroup-v2+profile-1.0.0",
     "command:elixir bin/check_linux_containment.exs",
-    "linux-lane:image=sha256:1a4fb97601b87bbfa7c79ddb96b41bb4ee4ce4ebe8da07b43e172a33eb3707ce;log=sha256:bf9388e73930d41a18214d43df4e0deb4195703f226db80396cd31b739dd6b27",
+    "linux-lane:image=sha256:00b0d00d6a828d24eca7dad7d4b60418955797e1f51b13355936565a7c206470;log=sha256:094f36fe155e0b6ed45d2c7d42dfee3731f506a2da074669a3c4c6de38f73e10",
     "linux-lane-security:seccomp-unconfined+systempaths-unconfined+calling-user",
     "cargo-lock:sha256:de17a723dc3ce87ad3360a2fde43c0ddfb8ce056dae95c4cd1f35329274b1ee5",
     "fault-schedule:1.0.0",
@@ -200,11 +200,11 @@
     "thing_description_vectors": 16,
     "thing_model_vectors": 8
   },
-  "revision": "89d28f905a9b7410fc8438180640a4411e82a675",
+  "revision": "a79aba963709f6513c4e5be4a66231699aa7f704",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:120634add8f57a098e2e34035f5a70625cf3b81ad9621e307d76b2e92ef5de3a",
+  "source_tree_digest": "sha256:835eeecfeafa0304beadc683109b3ce5bc0a2de2a8263384719c3ac07a9febed",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",
