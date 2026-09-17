@@ -46,6 +46,15 @@ Relative links inside a package's documentation stay valid because
 A specification identifier is unique across the family; the prefix names its
 owning package.
 
+## Catalogue paths
+
+Inside `packages/<name>/specs/catalogue.yaml`, a path starting with `docs/`
+(for example `docs/specs/WTX.01-thing-description.md`) is relative to that
+package's documentation tree, `docs/packages/<name>/`. Any other path (for
+example `priv/fixtures/contract-v1.json`) is relative to the package
+directory, `packages/<name>/`. Tooling that reads a catalogue resolves the
+two roots this way.
+
 ## Family documents
 
 - [Package graph and boundaries](architecture/package-graph.md)
