@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.26
+  version: 1.1.27
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -562,6 +562,14 @@ process. Runtime's final supplied subscription-owner pid owns partial startup,
 not the temporary callback worker. Successful handoff survives worker exit;
 final-owner death during open cannot leave an admitted native request behind.
 Public tests cover both native consumers and real Runtime supervision.
+
+`publish_sequence.c` implements the per-subscription sequence state used by
+this owner: 1..2^32-1 with wrap to one, a 1,024-entry sequence/digest cache,
+duplicate acknowledgement without delivery, conflicting duplicates, ordered
+Republish recovery of at most 100 missing messages and terminal larger gaps,
+unavailable or mismatched Republish results and unverifiable older sequences.
+WOP-X-F24 through F26 execute through that state; raw SDK subscription
+services, Publish acknowledgements and report delivery are not yet connected.
 
 ## WOP-X06 — Executable acceptance and evidence
 

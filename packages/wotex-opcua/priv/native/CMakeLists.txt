@@ -24,7 +24,7 @@ target_compile_options(wotex_opcua_native PRIVATE -Wall -Wextra -Werror)
 target_include_directories(wotex_opcua_native PRIVATE "${OPENSSL_INCLUDE_DIR}")
 target_link_libraries(wotex_opcua_native PRIVATE wotex_opcua_security)
 
-add_library(wotex_opcua_security STATIC security.c session_config.c session_open.c ipc.c output.c owner.c)
+add_library(wotex_opcua_security STATIC security.c session_config.c session_open.c ipc.c output.c owner.c publish_sequence.c)
 target_compile_features(wotex_opcua_security PRIVATE c_std_11)
 target_compile_definitions(wotex_opcua_security PRIVATE _POSIX_C_SOURCE=200809L)
 target_compile_options(wotex_opcua_security PRIVATE -Wall -Wextra -Werror)
@@ -76,6 +76,10 @@ target_compile_features(wotex_opcua_output_check PRIVATE c_std_11)
 target_compile_definitions(wotex_opcua_output_check PRIVATE _POSIX_C_SOURCE=200809L)
 target_compile_options(wotex_opcua_output_check PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(wotex_opcua_output_check PRIVATE wotex_opcua_json)
+add_executable(wotex_opcua_publish_sequence_check publish_sequence_check.c publish_sequence.c)
+target_compile_features(wotex_opcua_publish_sequence_check PRIVATE c_std_11)
+target_compile_options(wotex_opcua_publish_sequence_check PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_publish_sequence_check PRIVATE wotex_opcua_json)
 add_executable(wotex_opcua_owner_check owner_check.c owner.c output.c ipc.c)
 target_compile_features(wotex_opcua_owner_check PRIVATE c_std_11)
 target_compile_definitions(wotex_opcua_owner_check PRIVATE _POSIX_C_SOURCE=200809L)
@@ -111,7 +115,7 @@ option(WOTEX_SANITIZERS "Instrument the native host with ASan and UBSan" OFF)
 if(WOTEX_SANITIZERS)
   target_sources(wotex_opcua_native PRIVATE sanitizer_options.c)
   foreach(target wotex_opcua_native wotex_opcua_custody wotex_opcua_custody_check
-      wotex_opcua_json wotex_opcua_json_check wotex_opcua_ipc_check wotex_opcua_output_check wotex_opcua_owner_check wotex_opcua_values wotex_opcua_value_check
+      wotex_opcua_json wotex_opcua_json_check wotex_opcua_ipc_check wotex_opcua_output_check wotex_opcua_owner_check wotex_opcua_publish_sequence_check wotex_opcua_values wotex_opcua_value_check
       wotex_opcua_value_fault_check wotex_opcua_native_contract_check
       wotex_opcua_security wotex_opcua_security_check wotex_opcua_session_probe
       wotex_opcua_browse_check wotex_opcua_namespace_check wotex_opcua_paged_peer
@@ -154,6 +158,15 @@ foreach(number 17 18 19 20 49 50 52 53 54 55)
   set_tests_properties(native_contract_WOP-X-F${number} PROPERTIES TIMEOUT 20
     PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 endforeach()
+foreach(number 24 25 26)
+  add_test(NAME native_contract_WOP-X-F${number} COMMAND wotex_opcua_publish_sequence_check
+    "${WOTEX_NATIVE_CONTRACT}" WOP-X-F${number})
+  set_tests_properties(native_contract_WOP-X-F${number} PROPERTIES TIMEOUT 10
+    PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
+endforeach()
+add_test(NAME native_publish_sequence_matrix COMMAND wotex_opcua_publish_sequence_check --matrix)
+set_tests_properties(native_publish_sequence_matrix PROPERTIES
+  TIMEOUT 10 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 add_test(NAME native_owner_matrix COMMAND wotex_opcua_owner_check --matrix)
 set_tests_properties(native_owner_matrix PROPERTIES
   TIMEOUT 60 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")

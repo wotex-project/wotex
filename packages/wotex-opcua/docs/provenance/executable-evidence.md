@@ -20,6 +20,39 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native Publish sequence state, 2026-09-17
+
+`publish_sequence.c` holds one subscription's notification sequence state. It
+accepts 1..2^32-1 with wrap from 4294967295 to one, starts a new subscription at
+one, keeps a 1,024-entry sequence/SHA-256 digest cache, acknowledges an
+identical duplicate without delivery and rejects a duplicate with a different
+digest. A gap of at most 100 missing messages starts ordered Republish recovery
+for one held notification; each result must be available and carry exactly the
+requested sequence before it is recorded, and the held notification is recorded
+after the last one. Gaps above 100, unavailable or mismatched Republish results
+and sequences older than the cache are terminal.
+
+`wotex_opcua_publish_sequence_check` binds WOP-X-F24 through F26: a duplicate and
+recovered gap deliver 1, 2 and 3 with one Republish for 2; an unavailable
+Republish delivers 1 and ends with `sequence_gap`; and 4294967295 followed by 1
+delivers both without Republish. The runner supplies Republish outcomes from
+the corpus and never expected sequences. Its matrix covers zero, conflicting
+duplicates, the 100/101 gap boundary, cache eviction after 1,024 entries,
+stale sequences, out-of-order Republish and a wrapped gap. It passes under macOS
+ASan/UBSan and in the RelWithDebInfo suite (199/199). The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 325 passed (10 doctests, 4 properties, 311 tests),
+38 optional tests excluded and 95.5% coverage. No SDK subscription service,
+Publish request, acknowledgement or report delivery uses this state yet.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/publish_sequence.c` | `9e08e3b1b56d68492681a59ce6f4001d416519ba8b404dbc00ea0d17604214f4` |
+| `priv/native/publish_sequence.h` | `10b7ed714b9f8ee801270edc6b3fa83da2f70a35125622a8dde5dce8be32aa30` |
+| `priv/native/publish_sequence_check.c` | `e682bd38e25ae4b3bf6900ae86874668663737ce6319c7c45784daf35b1299aa` |
+| `priv/native/CMakeLists.txt` | `4a5ca1988e917682804838eec5adedb956c88e94c25e6c065a77ff050653addb` |
+| `native CTest log` | `5ac6e600e39ef8aef24113dacf6b5f5c5265af179657a98f26d3d20e5967a030` |
+
 ## Secure policy, user-token and rejection matrix, 2026-09-17
 
 The test-only asyncua 2.0.1 peer now offers Basic256Sha256,
