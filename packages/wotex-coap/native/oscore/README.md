@@ -86,6 +86,13 @@ same bounded owner-loss cleanup while report output is backpressured. Actual
 BEAM Port-mailbox sampling and dual-channel reserved-control delivery remain
 separate work.
 
+The [network-wait receipt](../../docs/provenance/native-worker-network-wait-v1.json)
+binds readiness-driven exchange progress. The worker waits on libcoap's epoll
+descriptor and next timer, or passes its owner pipes to
+`coap_io_process_with_fds` on builds without epoll, and then collects exact owner
+descriptor events with a zero-timeout poll. Thirty-two sequential protected GET
+exchanges complete in less than one second.
+
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
 cached reservation only after callback success. Repeated failures therefore

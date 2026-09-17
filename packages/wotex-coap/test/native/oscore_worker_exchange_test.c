@@ -1214,6 +1214,27 @@ int main(int argc, char **argv) {
     assert(!strstr(output, "AQIDBAUGBwgJCgsMDQ4PEA=="));
     assert(get_count == 1);
 
+    {
+        int64_t started = now_ms();
+        for (unsigned index = 0; index < 32; index++) {
+            char expected[64];
+            assert(snprintf(command, sizeof(command),
+                "{\"version\":1,\"id\":\"latency-%u\",\"operation\":\"request\","
+                "\"parameters\":{\"method\":\"GET\",\"path\":\"/value?x=1\","
+                "\"confirmable\":true},\"timeout_ms\":5000}\n", index) > 0);
+            assert(snprintf(expected, sizeof(expected),
+                            "\"id\":\"latency-%u\",\"ok\":true", index) > 0);
+            write_all(input[1], command);
+            stage = "sequential latency";
+            line(context, result[0], output, sizeof(output));
+            assert(strstr(output, expected) && strstr(output, "\"code\":69"));
+        }
+        /* Network readiness, rather than a fixed owner-poll interval, drives
+         * each protected exchange. */
+        assert(now_ms() - started < 1000);
+        assert(get_count == 33);
+    }
+
     write_all(input[1],
         "{\"version\":1,\"id\":\"3\",\"operation\":\"request\",\"parameters\":{"
         "\"method\":\"GET\",\"path\":\"/large\",\"confirmable\":true},"

@@ -1302,6 +1302,10 @@ static int run(struct worker *worker) {
             timeout = (int)(worker->output.frames[0].deadline - now);
         if (worker->request.active && worker->request.deadline - now < timeout)
             timeout = (int)(worker->request.deadline - now);
+        if (!worker->closing && worker->exchange &&
+            wco_exchange_wait(worker->exchange, descriptors[0].fd,
+                              descriptors[1].fd, timeout))
+            timeout = 0;
         if (poll(descriptors, 2, timeout) < 0) {
             if (errno == EINTR) continue;
             return 70;

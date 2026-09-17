@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.7.0
   owner: wotex-coap
-  updated: 2026-09-16
+  updated: 2026-09-17
 ---
 
 # WCO.13 Native OSCORE owner, builds and software evidence
@@ -220,7 +220,10 @@ dispatches fourteen protected 16 KiB notifications across two credit intervals.
 Their base64 payload bytes exceed custody's 262,144-byte output capacity. Network
 progress and the same cancellation/cleanup bound hold under that backpressure.
 Actual BEAM Port-mailbox sampling and reserved-control delivery with both
-channels saturated remain unaccepted.
+channels saturated remain unaccepted. The event loop waits on libcoap network
+readiness and its next timer together with the owner pipes, so no fixed owner
+poll interval paces a protected exchange; the harness bounds 32 sequential
+protected GET exchanges below one second.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

@@ -10,10 +10,13 @@
 #ifdef WCO_WITH_LIBCOAP
 #include <coap3/coap.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <openssl/crypto.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 
 #define WCO_LIBCOAP_VERSION "libcoap 4.3.5"
 #define WCO_MESSAGE_WIRE_MAX 1152u
@@ -575,6 +578,44 @@ int wco_exchange_io(struct wco_exchange *exchange) {
     return !exchange->failed;
 }
 
+int wco_exchange_wait(struct wco_exchange *exchange, int read_fd, int write_fd,
+                      int timeout_ms) {
+    int coap_fd;
+    if (!exchange || exchange->failed || timeout_ms <= 0) return 0;
+    coap_fd = coap_context_get_coap_fd(exchange->context);
+    if (coap_fd >= 0) {
+        /* epoll builds ignore caller descriptors in coap_io_process_with_fds. */
+        struct pollfd descriptors[3] = {
+            {read_fd, POLLIN, 0}, {write_fd, POLLOUT, 0}, {coap_fd, POLLIN, 0}};
+        coap_tick_t now;
+        unsigned int next;
+        coap_ticks(&now);
+        next = coap_io_prepare_epoll(exchange->context, now);
+        if (next > 0 && next < (unsigned int)timeout_ms) timeout_ms = (int)next;
+        if (poll(descriptors, 3, timeout_ms) < 0 && errno != EINTR) return 0;
+        return 1;
+    } else {
+        fd_set readable, writable;
+        int count = 0;
+        FD_ZERO(&readable);
+        FD_ZERO(&writable);
+        if (read_fd >= 0) {
+            FD_SET(read_fd, &readable);
+            count = read_fd + 1;
+        }
+        if (write_fd >= 0) {
+            FD_SET(write_fd, &writable);
+            if (write_fd >= count) count = write_fd + 1;
+        }
+        if (coap_io_process_with_fds(exchange->context, (uint32_t)timeout_ms,
+                                     count, &readable, &writable, NULL) < 0) {
+            if (exchange->active) fail(exchange, "connection_closed");
+            return 0;
+        }
+        return 1;
+    }
+}
+
 int wco_exchange_active(const struct wco_exchange *exchange) {
     return exchange && (exchange->active || exchange->observing);
 }
@@ -629,6 +670,11 @@ const char *wco_exchange_cancel(struct wco_exchange *exchange,
     return "native_unavailable";
 }
 int wco_exchange_io(struct wco_exchange *exchange) { (void)exchange; return 1; }
+int wco_exchange_wait(struct wco_exchange *exchange, int read_fd, int write_fd,
+                      int timeout_ms) {
+    (void)exchange; (void)read_fd; (void)write_fd; (void)timeout_ms;
+    return 0;
+}
 int wco_exchange_active(const struct wco_exchange *exchange) { (void)exchange; return 0; }
 void wco_exchange_close(struct wco_exchange *exchange) { (void)exchange; }
 

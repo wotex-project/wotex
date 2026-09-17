@@ -74,6 +74,13 @@ const char *wco_exchange_cancel(struct wco_exchange *exchange,
                                 const char *path, int accept_present,
                                 uint16_t accept);
 int wco_exchange_io(struct wco_exchange *exchange);
+/* Blocks for at most timeout_ms until libcoap has network work or a timer
+ * expires, or until an owner descriptor (-1 when unused) is ready. Returns
+ * zero without waiting when the exchange cannot wait; the caller then polls
+ * its descriptors itself. A nonzero result consumes the wait interval, so the
+ * caller collects exact descriptor events with a zero-timeout poll. */
+int wco_exchange_wait(struct wco_exchange *exchange, int read_fd, int write_fd,
+                      int timeout_ms);
 int wco_exchange_active(const struct wco_exchange *exchange);
 void wco_exchange_close(struct wco_exchange *exchange);
 

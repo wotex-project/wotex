@@ -242,6 +242,21 @@ lanes execute the same trace. Actual BEAM Port-mailbox sampling, reserved-contro
 delivery with both channels saturated, pending-operation owner loss, replay,
 independent interoperability and Mix orchestration remain unaccepted.
 
+The [native worker network-wait receipt](native-worker-network-wait-v1.json)
+binds the next production source cohort. The preceding worker polled only its
+owner pipes with a 50 ms interval and serviced libcoap without waiting on its
+socket, so every protected round trip waited for that interval; a 20,000-byte
+Block1 upload took 4,047 ms. The worker now waits on libcoap readiness and its
+next timer together with the owner pipes. An epoll build polls libcoap's
+descriptor and bounds the wait with `coap_io_prepare_epoll`; other builds pass
+the owner descriptors to `coap_io_process_with_fds`. A zero-timeout poll then
+reports exact owner descriptor events, so pipe failure, EOF and closing behavior
+are unchanged. The production harness completes 32 sequential protected GET
+exchanges in less than 1,000 ms; the preceding worker failed that assertion
+after 3,532 ms. The complete harness, including every earlier protected trace,
+passes on macOS through `mix wotex.software.build` and on Linux with ASan/UBSan
+and leak detection.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

@@ -1,0 +1,97 @@
+{
+  "schema": "wotex.coap.native-worker-network-wait-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Readiness-driven protected exchanges: the production worker waits on libcoap network readiness and timers together with its owner pipes",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/worker.c": "235410b847dde8338e81c76ecf272c6c3415900a0431bb832db6bc3627859503",
+      "native/oscore/exchange.c": "e5f4f89f4b84c82424f23f0abc449db23d4f0397ccf2ced424bd24f16a6a32ed",
+      "native/oscore/exchange.h": "2434126629d53949f900007803a45544ace8beb700931d2cf3cab987f93ca72e",
+      "test/native/oscore_worker_exchange_test.c": "cbfef0f791b8313f6b268f261d53743939f83b039d2306429fb0f76d5948725e",
+      "test/native/Dockerfile": "6e63cf37fff755fa2fde403c1cff60eb9ce322772aea700e66834c32d2f60038"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 7,
+    "event_loop_api": [
+      "coap_context_get_coap_fd",
+      "coap_io_prepare_epoll",
+      "coap_io_process_with_fds",
+      "coap_io_process"
+    ]
+  },
+  "requirements": [
+    "WCO-C03",
+    "WCO-S02",
+    "WCO-S06",
+    "WCO-N02",
+    "WCO-N03"
+  ],
+  "defect": {
+    "observed": "The worker polled only its owner stdin and stdout with a 50 ms interval and serviced libcoap without waiting on its socket, so every protected round trip waited for that interval",
+    "negative_control": "The new 32-request assertion failed against the preceding worker after 3532 ms on macOS arm64",
+    "consequence": "A protected 20,000-byte Block1 upload took 4047 ms, so a 1 MiB whole body could not complete inside the 60000 ms maximum interaction deadline"
+  },
+  "assertions": [
+    "On epoll builds the worker polls the libcoap descriptor with its owner pipes and bounds the wait by the next libcoap timer",
+    "Without epoll the worker passes its owner descriptors to coap_io_process_with_fds, which waits on libcoap sockets and timers",
+    "A following zero-timeout poll reports exact owner descriptor events, preserving pipe-error, EOF and closing behavior",
+    "Thirty-two sequential protected GET exchanges through public custody complete in less than 1000 ms with exact correlated responses",
+    "Every earlier unary, streamed-body, Observe, renewal, observation-fault, freshness, wraparound, renewal-cancel, owner-EOF and saturated-output trace in the same harness still passes"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"",
+      "fault_executable": "oscore-worker-exchange",
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "elapsed_ms": 23379,
+      "worker_sha256": "865914d7f337238bbb964941d60492c24a95c7dcc98abdf1129a6fb5c9886913",
+      "harness_sha256": "e5cc9dc518b693b2e2ecdb968c7515f82d61a2c5ee71a403781ecacfc34a9e49",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:wait CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "image": "sha256:b5e08d1dc869c3df9db35fd9419988200804246fc773a4a93b701e234b94f31b",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "e0e05ca09537e855749eab5fad7527386a009a209476be8cd53a0cf79ada89ab",
+      "harness_sha256": "36a084a5fb8bb1a20fcedb9329b17c4be4ac904dcb1790c97ab7da11b7f014f4",
+      "static_library_sha256": "82932fb3fcde7bae297c093bb7878a20ea81676319b092a4bd8f43ace6eb0d72",
+      "build_log_sha256": "5b8cdbd6d22f516b4024c7223fc0d6b3aa2acabe575b86fbf1b0e375e9e6e7b3",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "cmake_package": "3.25.1-1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined",
+        "leak"
+      ],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Actual BEAM Port-mailbox saturation and mailbox-size sampling",
+    "Reserved control-slot delivery while both the Port mailbox and operating-system pipe are saturated",
+    "Abrupt owner loss while Observe registration, renewal or explicit cancellation is still pending",
+    "Successful cancellation confirmation while renewal is in flight",
+    "Authenticated duplicate/stale notification injection through the complete protected worker",
+    "Live OSCORE replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "1000-operation stress and native-v1 corpus completion"
+  ]
+}
