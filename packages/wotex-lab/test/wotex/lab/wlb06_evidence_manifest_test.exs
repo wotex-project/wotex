@@ -10,7 +10,8 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
 
   @record_keys ~w(cpu_seconds deadline_ms max_output_bytes memory_bytes processes samples
                   run_ms excluded_count test_count thing_description_vectors thing_model_vectors
-                  container_test_count linux_test_count)a
+                  container_test_count linux_test_count container_corpora_td_ms
+                  container_corpora_tm_ms container_isolation_ms container_concurrent_ms)a
 
   @source_files [
     "mix.exs",
@@ -75,6 +76,13 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     assert record.outcomes.container_test_count > 0
     assert record.outcomes.linux_test_count > 0
     assert record.durations.run_ms > 0
+
+    # Observed container wall times, kept so a slow lane reads as machine load
+    # rather than as a reason to change the profile's hostile-target budget.
+    for key <- ~w(container_corpora_td_ms container_corpora_tm_ms container_isolation_ms
+                  container_concurrent_ms)a do
+      assert record.durations[key] > 0
+    end
 
     assert Enum.map(Enum.filter(record.assertions, &(&1.status == :not_run)), & &1.id) ==
              ["WCF-C05:discovery-corpus"]

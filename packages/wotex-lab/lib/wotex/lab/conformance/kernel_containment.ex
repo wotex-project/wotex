@@ -17,7 +17,11 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
   process exits, the kernel terminates every remaining process in the
   namespace, including detached or daemonized descendants. The inner deadline
   is three seconds shorter than the runner deadline, leaving room for container
-  start, teardown and exit-status delivery. Images are never pulled.
+  start, teardown and exit-status delivery. The default 15-second runner
+  deadline is a fixed budget for stopping a hostile target, not a measured
+  upper bound on honest work: container start and teardown dominate it on a
+  loaded host, and the WLB.06 lane records the observed wall times instead of
+  tightening it. Images are never pulled.
 
   `external_map/6` builds the runner configuration, a path-free evidence
   descriptor and a random container label. It validates files and digests and

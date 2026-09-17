@@ -35,7 +35,8 @@ image is never pulled. Every run uses:
 - hard cgroup memory (swap disabled) and process-count limits, a CPU quota and
   CPU-time, open-file, file-size and core resource limits;
 - `/usr/bin/timeout --signal=KILL` as PID 1, with an inner deadline three
-  seconds before the runner deadline.
+  seconds before the runner deadline. Both deadlines are fixed hostile-target
+  budgets; measured wall times belong in the WLB.06 record, not in the limits.
 
 When PID 1 exits, the kernel kills every remaining process in the PID
 namespace, so detached descendants cannot outlive the run. Each target map

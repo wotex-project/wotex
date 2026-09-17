@@ -1,6 +1,6 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.6.0. Contract: accepted. Source status: implemented.
+Specification version: 1.6.1. Contract: accepted. Source status: implemented.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
@@ -177,7 +177,13 @@ an effective UID of 65534 with no effective capabilities and `NoNewPrivs`, a
 kernel OOM kill at the memory ceiling, process creation stopped by the cgroup
 limit, a `setsid` descendant that does not outlive its container, a hung target
 killed at its inner deadline, concurrent targets with separate output and zero
-labelled containers after release. The runtime daemon, its kernel and the image
+labelled containers after release. The 15-second runner deadline is the
+profile's fixed hostile-target budget, not a measured performance bound: the
+inner `timeout` kill and the deadline case prove it bounds a hung target,
+while normal cases finish far below it. The lane prints the wall time of each
+contained case and the WLB.06 record keeps those observed values under
+`durations`, so a slow run on a loaded machine is read as load rather than as
+a reason to change a limit. The runtime daemon, its kernel and the image
 are trusted; kernel or runtime escape and shared-kernel denial of service are
 outside this profile, and hosted admission remains a WLB.08 deployment
 obligation.

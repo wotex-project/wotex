@@ -3,6 +3,12 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
 
   # Runs only with WOTEX_LAB_CONTAINER=1, an OCI runtime command on PATH and the
   # pinned image already present locally; the profile never pulls an image.
+  #
+  # The runner deadline is the profile's fixed 15-second budget, not a measured
+  # bound: it exists to stop a hostile target, and container start dominates it
+  # on a loaded machine. `timed/2` prints the wall time of each contained case
+  # as `kernel-lane <name>_ms=<value>`; the WLB.06 record keeps the observed
+  # values so a slow lane is read as machine load, never as a new limit.
 
   use ExUnit.Case, async: false
 
@@ -95,7 +101,9 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
         Corpus.load(Application.app_dir(:wotex_conformance, "priv/vectors/" <> corpus_dir))
 
       assert {:ok, %Report{} = report} =
-               Runner.run(corpus, subject, target, generated_at: @generated_at, environment: %{})
+               timed("corpora_" <> corpus_dir, fn ->
+                 Runner.run(corpus, subject, target, generated_at: @generated_at, environment: %{})
+               end)
 
       assert Enum.reject(report.results, &(&1.status == :pass)) == []
       assert report.summary["pass"] == expected
@@ -125,7 +133,8 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
     halt(0).
     """
 
-    assert {0, output, label} = probe(context, code, [canary, mount], [])
+    assert {0, output, label} =
+             timed("isolation", fn -> probe(context, code, [canary, mount], []) end)
 
     assert {:ok, tokens, _} = output |> String.to_charlist() |> :erl_scan.string()
     assert {:ok, {nets, connect, read, etc, host, tmp, status}} = :erl_parse.parse_term(tokens)
@@ -207,13 +216,26 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
 
     tasks =
       for token <- ["alpha", "beta", "gamma"] do
-        Task.async(fn -> {token, probe(context, code, [token], [])} end)
+        Task.async(fn ->
+          {token, timed("concurrent_" <> token, fn -> probe(context, code, [token], []) end)}
+        end)
       end
 
-    for {token, {0, output, label}} <- Task.await_many(tasks, 60_000) do
+    results = timed("concurrent_total", fn -> Task.await_many(tasks, 60_000) end)
+
+    for {token, {0, output, label}} <- results do
       assert output == token <> "\n"
       assert :ok = release(context, label)
     end
+  end
+
+  # A contained case records its wall time instead of tightening the profile
+  # budget; the deadline that bounds a hostile target is separate evidence.
+  defp timed(name, fun) do
+    started = System.monotonic_time(:millisecond)
+    result = fun.()
+    IO.puts("kernel-lane #{name}_ms=#{System.monotonic_time(:millisecond) - started}")
+    result
   end
 
   defp probe(context, code, extra, opts) do
