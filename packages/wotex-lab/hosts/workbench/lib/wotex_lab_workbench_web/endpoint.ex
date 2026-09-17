@@ -1,7 +1,7 @@
 defmodule WotexLabWorkbenchWeb.Endpoint do
   @moduledoc """
   The host endpoint: local static assets only, bounded request bodies and
-  frames, a signed cookie session with strict same-site and secure flags in
+  frames counted by `WotexLabWorkbenchWeb.Plugs.BodyReader`, a signed cookie session with strict same-site and secure flags in
   production, and the LiveView socket. No CDN, no long polling.
   """
 
@@ -47,6 +47,7 @@ defmodule WotexLabWorkbenchWeb.Endpoint do
     parsers: [:urlencoded, :json],
     pass: ["*/*"],
     length: 65_536,
+    body_reader: {WotexLabWorkbenchWeb.Plugs.BodyReader, :read_body, []},
     json_decoder: Jason
 
   plug Plug.MethodOverride

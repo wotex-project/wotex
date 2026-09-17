@@ -101,3 +101,100 @@ test("constructor admission rejects credentials and unbounded options", () => {
     /maxResponseBytes is outside/
   );
 });
+
+test("run reads and mutations are bearer-bound and carry the idempotency identity", async () => {
+  const requests = [];
+  const run = { id: "run-1", status: "awaiting_approval" };
+  const client = new WotexLabClient({
+    baseUrl: "http://127.0.0.1:4000/api/v1",
+    sessionToken: "0123456789abcdef",
+    deadlineMs: 45_000,
+    fetch: async (url, init) => {
+      requests.push({ url, init });
+      return json(run, { status: init.method === "POST" && url.endsWith("/runs") ? 201 : 200 });
+    }
+  });
+
+  assert.deepEqual(await client.readRun("run-1"), run);
+  await client.startRun(
+    { experimentId: "smart_room", parameters: { meter: "on" } },
+    { idempotencyKey: "start-1" }
+  );
+  await client.cancelRun("run/1", { idempotencyKey: "cancel-1" });
+
+  const decision = {
+    id: "decision-1",
+    status: "granted",
+    thing_id: "urn:wotex:lab:actuator",
+    action_name: "setTarget",
+    input: 20.5,
+    proposal_digest: `sha256:${"b".repeat(64)}`,
+    state_revision: 1,
+    expires_at: 120_000
+  };
+  await client.approveDecision("run-1", decision, { idempotencyKey: "approve-1" });
+
+  const [read, start, cancel, approve] = requests;
+  assert.equal(read.init.method, "GET");
+  assert.equal(read.url, "http://127.0.0.1:4000/api/v1/runs/run-1");
+  assert.equal(read.init.headers.authorization, "Bearer 0123456789abcdef");
+
+  assert.equal(start.init.method, "POST");
+  assert.equal(start.init.headers["content-type"], "application/json");
+  assert.equal(start.init.headers["idempotency-key"], "start-1");
+  assert.deepEqual(JSON.parse(start.init.body), {
+    experiment_id: "smart_room",
+    parameters: { meter: "on" },
+    deadline_ms: 30_000
+  });
+
+  assert.equal(cancel.url, "http://127.0.0.1:4000/api/v1/runs/run%2F1/cancel");
+  assert.deepEqual(JSON.parse(cancel.init.body), { deadline_ms: 30_000 });
+
+  assert.equal(approve.url, "http://127.0.0.1:4000/api/v1/runs/run-1/approval");
+  assert.deepEqual(JSON.parse(approve.init.body), {
+    decision_id: "decision-1",
+    thing_id: "urn:wotex:lab:actuator",
+    action_name: "setTarget",
+    input: 20.5,
+    proposal_digest: `sha256:${"b".repeat(64)}`,
+    state_revision: 1,
+    expires_at: 120_000,
+    deadline_ms: 30_000
+  });
+});
+
+test("mutation admission fails before fetch", async () => {
+  const client = new WotexLabClient({
+    baseUrl: "https://lab.example/api/v1",
+    sessionToken: "0123456789abcdef",
+    fetch: async () => assert.fail("refused mutations must not reach fetch")
+  });
+
+  await assert.rejects(client.startRun({ experimentId: "thermal" }, {}), /idempotencyKey is malformed/);
+  await assert.rejects(
+    client.startRun({ experimentId: "thermal" }, { idempotencyKey: "has space" }),
+    /idempotencyKey is malformed/
+  );
+  await assert.rejects(client.startRun({}, { idempotencyKey: "k" }), /experimentId is required/);
+  await assert.rejects(
+    client.startRun({ experimentId: "thermal", parameters: { seed: 1 } }, { idempotencyKey: "k" }),
+    /parameters must be an object of strings/
+  );
+  await assert.rejects(
+    client.startRun({ experimentId: "thermal", parameters: { seed: "1".repeat(4_100) } }, { idempotencyKey: "k" }),
+    /parameters must be an object of strings/
+  );
+  await assert.rejects(
+    client.approveDecision("run-1", { id: "d", thing_id: "t".repeat(4_100) }, { idempotencyKey: "k" }),
+    /request body exceeds 4096 bytes/
+  );
+  await assert.rejects(client.approveDecision("run-1", null, { idempotencyKey: "k" }), /decision is required/);
+
+  const anonymous = new WotexLabClient({
+    baseUrl: "https://lab.example/api/v1",
+    fetch: async () => assert.fail("missing bearer must fail before fetch")
+  });
+  await assert.rejects(anonymous.readRun("run-1"), /sessionToken is required/);
+  await assert.rejects(anonymous.cancelRun("run-1", { idempotencyKey: "k" }), /sessionToken is required/);
+});

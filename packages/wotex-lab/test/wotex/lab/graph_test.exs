@@ -181,9 +181,30 @@ defmodule Wotex.Lab.GraphTest do
     assert Map.keys(decoded["paths"]) |> Enum.sort() == [
              "/evidence/{record_id}",
              "/metrics/catalogue",
+             "/runs",
+             "/runs/{run_id}",
+             "/runs/{run_id}/approval",
+             "/runs/{run_id}/cancel",
              "/scenarios",
              "/scenarios/{id}"
            ]
+
+    mutations =
+      for {_, %{"post" => operation}} <- decoded["paths"], do: operation
+
+    assert Enum.map(mutations, & &1["operationId"]) |> Enum.sort() ==
+             ["approveDecision", "cancelRun", "startRun"]
+
+    for operation <- mutations do
+      assert operation["x-wotex-opt-in"] == "control_mutations"
+      assert operation["security"] == [%{"sessionBearer" => []}]
+      assert %{"$ref" => "#/components/parameters/IdempotencyKey"} in operation["parameters"]
+      assert operation["responses"]["429"]["headers"]["Retry-After"]
+      [schema] = Map.values(operation["requestBody"]["content"])
+      name = schema["schema"]["$ref"] |> String.split("/") |> List.last()
+      assert decoded["components"]["schemas"][name]["additionalProperties"] == false
+      assert "deadline_ms" in decoded["components"]["schemas"][name]["required"]
+    end
 
     metrics_status =
       Enum.find(graph["specifications"], &(&1["id"] == "WLB.10"))["implementation_status"]

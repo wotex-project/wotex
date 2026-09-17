@@ -1,6 +1,8 @@
 // Generated from Wotex.Lab.Graph.Interfaces. Do not edit by hand.
 const DEFAULT_DEADLINE_MS = 10_000;
 const DEFAULT_MAX_RESPONSE_BYTES = 1048576;
+const MAX_REQUEST_BYTES = 4096;
+const MAX_BODY_DEADLINE_MS = 30_000;
 
 export class ControlApiError extends Error {
   constructor(status, body) {
@@ -36,8 +38,43 @@ export class WotexLabClient {
   readScenario(id, options = {}) { return this.#request(`/scenarios/${segment(id, "scenario id")}`, options, false); }
   readEvidence(recordId, options = {}) { return this.#request(`/evidence/${segment(recordId, "record id")}`, options, true); }
   readMetricsCatalogue(options = {}) { return this.#request("/metrics/catalogue", options, false); }
+  readRun(runId, options = {}) { return this.#request(`/runs/${segment(runId, "run id")}`, options, true); }
 
-  async #request(path, options, protectedRoute) {
+  async startRun(request, options) {
+    if (!request || typeof request.experimentId !== "string") throw new TypeError("experimentId is required");
+    const body = { experiment_id: request.experimentId };
+    if (request.parameters !== undefined) body.parameters = parameters(request.parameters);
+    return this.#mutate("/runs", body, options);
+  }
+
+  async cancelRun(runId, options) {
+    return this.#mutate(`/runs/${segment(runId, "run id")}/cancel`, {}, options);
+  }
+
+  async approveDecision(runId, decision, options) {
+    if (!decision || typeof decision !== "object") throw new TypeError("decision is required");
+    const body = {
+      decision_id: decision.id,
+      thing_id: decision.thing_id,
+      action_name: decision.action_name,
+      input: decision.input,
+      proposal_digest: decision.proposal_digest,
+      state_revision: decision.state_revision,
+      expires_at: decision.expires_at
+    };
+    return this.#mutate(`/runs/${segment(runId, "run id")}/approval`, body, options);
+  }
+
+  #mutate(path, body, options) {
+    if (!options || typeof options.idempotencyKey !== "string" || !/^[\x21-\x7e]{1,128}$/.test(options.idempotencyKey)) {
+      throw new TypeError("idempotencyKey is malformed");
+    }
+    const encoded = JSON.stringify({ ...body, deadline_ms: Math.min(this.#deadlineMs, MAX_BODY_DEADLINE_MS) });
+    if (new TextEncoder().encode(encoded).byteLength > MAX_REQUEST_BYTES) throw new RangeError("request body exceeds 4096 bytes");
+    return this.#request(path, options, true, { body: encoded, idempotencyKey: options.idempotencyKey });
+  }
+
+  async #request(path, options, protectedRoute, mutation) {
     const supplied = token(options.sessionToken, false);
     const capability = supplied ?? this.#sessionToken;
     if (protectedRoute && capability === undefined) throw new TypeError("sessionToken is required");
@@ -45,7 +82,14 @@ export class WotexLabClient {
     const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
     const headers = { accept: "application/json" };
     if (protectedRoute) headers.authorization = `Bearer ${capability}`;
-    const response = await this.#fetch(this.#baseUrl + path, { method: "GET", headers, signal });
+    const init = { method: "GET", headers, signal };
+    if (mutation) {
+      init.method = "POST";
+      init.body = mutation.body;
+      headers["content-type"] = "application/json";
+      headers["idempotency-key"] = mutation.idempotencyKey;
+    }
+    const response = await this.#fetch(this.#baseUrl + path, init);
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.toLowerCase().startsWith("application/json")) throw new ControlApiError(response.status, null);
     const body = await boundedJson(response, this.#maxResponseBytes);
@@ -62,6 +106,15 @@ function integerBetween(value, minimum, maximum, name) {
 function segment(value, name) {
   if (typeof value !== "string" || value.length === 0 || value.length > 128) throw new TypeError(`${name} is malformed`);
   return encodeURIComponent(value);
+}
+
+function parameters(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("parameters must be an object of strings");
+  const entries = Object.entries(value);
+  if (entries.length > 16 || !entries.every(([, item]) => typeof item === "string" && item.length <= 32)) {
+    throw new TypeError("parameters must be an object of strings");
+  }
+  return Object.fromEntries(entries);
 }
 
 function token(value, required) {

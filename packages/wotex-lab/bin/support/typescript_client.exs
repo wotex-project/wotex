@@ -1,8 +1,9 @@
 defmodule Wotex.Lab.Check.TypeScriptClient do
   @moduledoc false
 
-  @operations ~w(listScenarios readScenario readEvidence readMetricsCatalogue)
+  @operations ~w(listScenarios readScenario readEvidence readMetricsCatalogue readRun startRun cancelRun approveDecision)
   @max_response_bytes 1_048_576
+  @max_request_bytes 4_096
 
   def render(openapi, license) when is_map(openapi) and is_binary(license) do
     validate!(openapi)
@@ -38,7 +39,15 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       "EvidenceRecord" =>
         ~w(assertions cleanup dependencies lock_digest outcomes source_tree_digest scenario_id schema_version revision attempt),
       "MetricsCatalogue" => ~w(metrics schema_version),
-      "Error" => ~w(code message path phase)
+      "Error" => ~w(code message path phase),
+      "Run" =>
+        ~w(assertions attempt decision duration_ms effect error experiment id record_digest started_at status),
+      "Decision" =>
+        ~w(action_name expires_at id input proposal_digest state_revision status thing_id),
+      "StartRunRequest" => ~w(deadline_ms experiment_id parameters),
+      "CancelRunRequest" => ~w(deadline_ms),
+      "ApprovalRequest" =>
+        ~w(action_name deadline_ms decision_id expires_at input proposal_digest state_revision thing_id)
     }
 
     Enum.each(expected, fn {name, fields} ->
@@ -58,6 +67,18 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       ])
 
     kinds == ~w(counter gauge histogram) || raise "metric kind drift"
+
+    get_in(schemas, ["Run", "properties", "status", "enum"]) ==
+      ~w(completed failed awaiting_approval dispatched cancelled) || raise "run status drift"
+
+    get_in(schemas, ["DeadlineMs", "maximum"]) == 30_000 || raise "deadline bound drift"
+
+    get_in(openapi, ["components", "parameters", "IdempotencyKey", "name"]) == "Idempotency-Key" ||
+      raise "idempotency header drift"
+
+    Enum.each(~w(StartRunRequest CancelRunRequest ApprovalRequest), fn name ->
+      get_in(schemas, [name, "additionalProperties"]) == false || raise "#{name} is not closed"
+    end)
   end
 
   defp package(version) do
@@ -65,7 +86,7 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       %{
         "name" => "@wotex/lab-client",
         "version" => version,
-        "description" => "Generated read-only client for the WoTEx Lab control API",
+        "description" => "Generated client for the WoTEx Lab control API",
         "type" => "module",
         "license" => "Apache-2.0",
         "sideEffects" => false,
@@ -116,10 +137,37 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       dimensions?: string[];
     }
     export interface MetricsCatalogue { schema_version: string; metrics: MetricDefinition[]; }
+    export type RunStatus = "completed" | "failed" | "awaiting_approval" | "dispatched" | "cancelled";
+    export interface RunAssertion { id: string; status: "pass" | "fail" | "not_run"; note: string; }
+    export interface Decision {
+      id: string;
+      status: string;
+      thing_id: string;
+      action_name: string;
+      input: number;
+      proposal_digest: `sha256:${string}`;
+      state_revision: number;
+      expires_at: number;
+    }
+    export interface Run {
+      id: string;
+      experiment: string;
+      attempt: number;
+      status: RunStatus;
+      started_at: string;
+      duration_ms: number;
+      record_digest: `sha256:${string}` | null;
+      assertions: RunAssertion[];
+      decision: Decision | null;
+      effect: unknown;
+      error: { code: string; phase: string; message: string } | null;
+    }
+    export interface StartRunRequest { experimentId: string; parameters?: Record<string, string>; }
     export interface ApiErrorBody { code: string; phase: string; path?: string | null; message: string; }
     export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
     export interface ClientOptions { baseUrl: string; sessionToken?: string; deadlineMs?: number; fetch?: FetchLike; maxResponseBytes?: number; }
     export interface RequestOptions { signal?: AbortSignal; sessionToken?: string; }
+    export interface MutationOptions extends RequestOptions { idempotencyKey: string; }
 
     export declare class ControlApiError extends Error {
       readonly status: number;
@@ -133,6 +181,10 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       readScenario(id: string, options?: RequestOptions): Promise<Scenario>;
       readEvidence(recordId: `sha256:${string}`, options?: RequestOptions): Promise<EvidenceRecord>;
       readMetricsCatalogue(options?: RequestOptions): Promise<MetricsCatalogue>;
+      readRun(runId: string, options?: RequestOptions): Promise<Run>;
+      startRun(request: StartRunRequest, options: MutationOptions): Promise<Run>;
+      cancelRun(runId: string, options: MutationOptions): Promise<Run>;
+      approveDecision(runId: string, decision: Decision, options: MutationOptions): Promise<Run>;
     }
     """
   end
@@ -142,6 +194,8 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     // Generated from Wotex.Lab.Graph.Interfaces. Do not edit by hand.
     const DEFAULT_DEADLINE_MS = 10_000;
     const DEFAULT_MAX_RESPONSE_BYTES = #{@max_response_bytes};
+    const MAX_REQUEST_BYTES = #{@max_request_bytes};
+    const MAX_BODY_DEADLINE_MS = 30_000;
 
     export class ControlApiError extends Error {
       constructor(status, body) {
@@ -177,8 +231,43 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
       readScenario(id, options = {}) { return this.#request(`/scenarios/${segment(id, "scenario id")}`, options, false); }
       readEvidence(recordId, options = {}) { return this.#request(`/evidence/${segment(recordId, "record id")}`, options, true); }
       readMetricsCatalogue(options = {}) { return this.#request("/metrics/catalogue", options, false); }
+      readRun(runId, options = {}) { return this.#request(`/runs/${segment(runId, "run id")}`, options, true); }
 
-      async #request(path, options, protectedRoute) {
+      async startRun(request, options) {
+        if (!request || typeof request.experimentId !== "string") throw new TypeError("experimentId is required");
+        const body = { experiment_id: request.experimentId };
+        if (request.parameters !== undefined) body.parameters = parameters(request.parameters);
+        return this.#mutate("/runs", body, options);
+      }
+
+      async cancelRun(runId, options) {
+        return this.#mutate(`/runs/${segment(runId, "run id")}/cancel`, {}, options);
+      }
+
+      async approveDecision(runId, decision, options) {
+        if (!decision || typeof decision !== "object") throw new TypeError("decision is required");
+        const body = {
+          decision_id: decision.id,
+          thing_id: decision.thing_id,
+          action_name: decision.action_name,
+          input: decision.input,
+          proposal_digest: decision.proposal_digest,
+          state_revision: decision.state_revision,
+          expires_at: decision.expires_at
+        };
+        return this.#mutate(`/runs/${segment(runId, "run id")}/approval`, body, options);
+      }
+
+      #mutate(path, body, options) {
+        if (!options || typeof options.idempotencyKey !== "string" || !/^[\\x21-\\x7e]{1,128}$/.test(options.idempotencyKey)) {
+          throw new TypeError("idempotencyKey is malformed");
+        }
+        const encoded = JSON.stringify({ ...body, deadline_ms: Math.min(this.#deadlineMs, MAX_BODY_DEADLINE_MS) });
+        if (new TextEncoder().encode(encoded).byteLength > MAX_REQUEST_BYTES) throw new RangeError("request body exceeds 4096 bytes");
+        return this.#request(path, options, true, { body: encoded, idempotencyKey: options.idempotencyKey });
+      }
+
+      async #request(path, options, protectedRoute, mutation) {
         const supplied = token(options.sessionToken, false);
         const capability = supplied ?? this.#sessionToken;
         if (protectedRoute && capability === undefined) throw new TypeError("sessionToken is required");
@@ -186,7 +275,14 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
         const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
         const headers = { accept: "application/json" };
         if (protectedRoute) headers.authorization = `Bearer ${capability}`;
-        const response = await this.#fetch(this.#baseUrl + path, { method: "GET", headers, signal });
+        const init = { method: "GET", headers, signal };
+        if (mutation) {
+          init.method = "POST";
+          init.body = mutation.body;
+          headers["content-type"] = "application/json";
+          headers["idempotency-key"] = mutation.idempotencyKey;
+        }
+        const response = await this.#fetch(this.#baseUrl + path, init);
         const contentType = response.headers.get("content-type") ?? "";
         if (!contentType.toLowerCase().startsWith("application/json")) throw new ControlApiError(response.status, null);
         const body = await boundedJson(response, this.#maxResponseBytes);
@@ -203,6 +299,15 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     function segment(value, name) {
       if (typeof value !== "string" || value.length === 0 || value.length > 128) throw new TypeError(`${name} is malformed`);
       return encodeURIComponent(value);
+    }
+
+    function parameters(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("parameters must be an object of strings");
+      const entries = Object.entries(value);
+      if (entries.length > 16 || !entries.every(([, item]) => typeof item === "string" && item.length <= 32)) {
+        throw new TypeError("parameters must be an object of strings");
+      }
+      return Object.fromEntries(entries);
     }
 
     function token(value, required) {
@@ -247,15 +352,21 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     export type {
       ApiErrorBody,
       ClientOptions,
+      Decision,
       EvidenceAssertion,
       EvidenceDependency,
       EvidenceRecord,
       FetchLike,
       MetricDefinition,
       MetricsCatalogue,
+      MutationOptions,
       RequestOptions,
+      Run,
+      RunAssertion,
+      RunStatus,
       Scenario,
-      ScenarioList
+      ScenarioList,
+      StartRunRequest
     } from "../dist/index.js";
     """
   end
@@ -264,10 +375,14 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     """
     # @wotex/lab-client
 
-    Generated read-only client for the WoTEx Lab Workbench control API (#{version}).
-    It implements the four operations in the checked OpenAPI 3.2 projection and
-    has no runtime dependencies. Evidence reads require an existing session token;
-    the client cannot create sessions, run experiments, write Properties or invoke Actions.
+    Generated client for the WoTEx Lab Workbench control API (#{version}).
+    It implements the eight operations in the checked OpenAPI 3.2 projection and
+    has no runtime dependencies. Evidence and run reads require an existing session
+    token. `startRun`, `cancelRun` and `approveDecision` also require a Workbench
+    host that opted into control mutations and a caller-chosen `idempotencyKey`;
+    retry a request with the same key to learn its outcome without repeating it.
+    The client cannot create sessions, write Properties or invoke an Action other
+    than a decision the session room granted.
 
     ```js
     import { WotexLabClient } from "@wotex/lab-client";

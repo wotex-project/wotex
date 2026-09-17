@@ -29,7 +29,8 @@ config :wotex_lab_workbench,
   beamlens_ollama_model: "qwen3.5:4b-q4_K_M",
   beamlens_ollama_timeout_ms: 18_000,
   beamlens_ollama_max_tokens: 320,
-  formal_engine: nil
+  formal_engine: nil,
+  control_mutations: false
 
 config :phoenix, :json_library, Jason
 

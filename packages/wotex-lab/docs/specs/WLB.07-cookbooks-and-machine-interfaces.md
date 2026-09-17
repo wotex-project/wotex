@@ -1,22 +1,24 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.6.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.7.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
 `bin/check_graph.exs` gate, and the MCP server core with stdio and Streamable
-HTTP transports are implemented. The optional Workbench serves the four
-read-only operations in the generated OpenAPI document at `/api/v1`; static
-catalogue reads are inert and evidence lookup is bearer-bound to the caller's
-existing room. Fifteen notebooks have executable workspace source evidence,
+HTTP transports are implemented. The optional Workbench serves the eight
+operations in the generated OpenAPI document at `/api/v1`; static catalogue
+reads are inert, evidence and run lookups are bearer-bound to the caller's
+existing room, and the three run mutations described in
+[HTTP control mutations](#http-control-mutations) additionally require host
+opt-in. Fifteen notebooks have executable workspace source evidence,
 including Axon/EXLA training and formal-control vectors; `nerves-and-mcp`
 retains partial evidence because its checked-in rpi4 host has no released
 firmware or on-device record. This does not promote notebook installation to
 artifact acceptance. The zero-runtime-dependency `@wotex/lab-client` source,
 declarations, schema-drift gate, Node tests and npm archive-content check are
 implemented under `clients/typescript/`; publication and installed-artifact
-adoption remain separate. Mutation control operations remain planned. WLB.12
-owns the generated ecosystem documentation and public static site.
+adoption remain separate. WLB.12 owns the generated ecosystem documentation
+and public static site.
 
 ## Cookbook catalogue
 
@@ -100,8 +102,10 @@ it MUST NOT become another WoT semantics implementation.
 operation IDs, base path and admitted schema fields before regenerating the ESM
 runtime and declarations. The client bounds deadlines and JSON response bytes,
 escapes path segments, rejects URL credentials and sends a bearer only to the
-evidence operation. Its injected Fetch seam is testability, not an alternate
-transport contract.
+evidence and run operations. Each mutation also sends the caller's
+`idempotencyKey`, a `deadline_ms` of at most 30,000 and a body of at most
+4,096 bytes, and refuses a malformed key or oversized body before any fetch.
+Its injected Fetch seam is testability, not an alternate transport contract.
 
 Retrieval evaluations MUST ask who owns redirects, reconnect, supervision,
 remote contexts, Directory storage, Nx effects, Continuum intent and formal
@@ -172,6 +176,100 @@ targets, arbitrary URL fetch, arbitrary filesystem path, model download or
 raw Maude code. MCP cannot retrieve raw credentials. TLS, DNS/IP/redirect
 egress controls, tenant isolation and session expiry are host responsibilities
 with negative tests. A selected checkbox is not an Action authorization.
+
+## HTTP control mutations
+
+The optional Workbench host adds four run operations to the `/api/v1`
+control API. Each one acts only on the room of the session named by the
+bearer token, and each mutation reuses the room command that the LiveView
+form sends.
+
+| Operation | Request | Room command | Success |
+| --- | --- | --- | --- |
+| `readRun` | `GET /runs/{run_id}` | none (read) | 200 run projection |
+| `startRun` | `POST /runs` | `run` | 201 run projection |
+| `cancelRun` | `POST /runs/{run_id}/cancel` | `cancel` | 200 run projection |
+| `approveDecision` | `POST /runs/{run_id}/approval` | `approve` | 200 run projection |
+
+The three `POST` operations require host opt-in. The `control_mutations`
+application value is `false` by default. `WOTEX_LAB_CONTROL_MUTATIONS=1`
+replaces it at boot with bounded limits and starts
+`WotexLabWorkbench.Control.Limits`. While the value is `false`, every
+mutation answers 403 `mutations_disabled` before any session or room is
+read. `readRun` has the same bearer rule as `readEvidence` and needs no
+opt-in.
+
+A mutation passes these checks in order. The first failure answers, and no
+check before the tenth touches a room.
+
+1. Host opt-in, otherwise 403 `mutations_disabled`.
+2. An `Origin` header, when present, equals the endpoint origin or an origin
+   listed in the host limits, otherwise 403 `origin_refused`.
+3. `Content-Type` is `application/json` (415 `unsupported_media_type`), the
+   request has no query string (400 `invalid_request`) and the counted
+   request body is at most 4,096 bytes (413 `body_too_large`).
+4. `Authorization: Bearer` carries 16 to 128 bytes (401 `missing_bearer`).
+5. `Idempotency-Key` holds 1 to 128 visible ASCII bytes
+   (400 `invalid_idempotency_key`).
+6. The body is a closed object with an integer `deadline_ms` from 1 to
+   30,000 and only the operation's fields (400 `invalid_body`). No field
+   accepts a URL, filesystem path, Thing Description, model or Maude text.
+7. `startRun` resolves `experiment_id` and string `parameters` through
+   `WotexLabWorkbench.Experiments`, the admission used by the LiveView form.
+   Undeclared parameter names are refused (422 `unknown_experiment`,
+   `unknown_parameter` or `invalid_parameter`).
+8. The session is live (403 with the session code).
+9. The session has fewer than `session_concurrency` mutations in flight,
+   the host fewer than `host_concurrency`, and the session has used fewer
+   than `max_requests` admissions in the current fixed `window_ms` window
+   (429 `concurrency_limited`, or `rate_limited` with `Retry-After`).
+   Defaults are 1, 8, 30 and 60,000 ms.
+10. `startRun` may start the session room; `cancelRun` and
+    `approveDecision` need an existing room (404 `unknown_run`).
+
+The room processes a mutation in its own mailbox order with the LiveView
+commands. It retains at most 64 idempotency identities. An identity binds
+the key to a SHA-256 fingerprint of the operation, run identifier and body
+without `deadline_ms`. When the room dequeues a mutation:
+
+| Room state | Result |
+| --- | --- |
+| Same key and fingerprint retained | No execution. The original status with the run's current projection or the original error, and `Idempotent-Replayed: true`. |
+| Same key, different fingerprint | 422 `idempotency_key_reused`; no execution. |
+| New key after the deadline | 504 `deadline_exceeded`; no execution; key not retained. |
+| New key with 64 identities retained | 409 `idempotency_capacity`; no execution. |
+| New key before the deadline | The room command runs once and its outcome, success or refusal, is retained under the key. |
+
+The HTTP process waits at most `deadline_ms` and then answers 504
+`deadline_exceeded`. A command that the room dequeued before its deadline
+still completes; a retry with the same key and body reports that outcome.
+Room refusals keep their codes: `unknown_run` is 404; `not_cancellable`,
+`not_approvable`, `pending_decision`, `run_limit`, `approval_mismatch` and
+policy refusals such as `expired`, `stale_state` or `already_dispatched`
+are 409; an unavailable room is 503.
+
+`approveDecision` names `decision_id`, `thing_id`, `action_name`, `input`,
+`proposal_digest`, `state_revision` and `expires_at`. Every field must equal
+the granted decision, numbers compared by value, before
+`WotexLabWorkbench.Runs.SmartRoom.dispatch/3` rechecks the policy grant,
+expiry, observation watermark and state revision and dispatches at most
+once. Otherwise the room answers 409 `approval_mismatch` and dispatches
+nothing. A retained key replays the first answer and never repeats the
+Action. The run projection carries identity, status, timing, assertions,
+evidence digest, the named decision, the read-back effect and a run error;
+it omits tensors, timeseries and parameters.
+
+The API opens no session, fetches nothing and reaches only the session
+room's simulated loopback Things. `control_mutation_test.exs` covers opt-in,
+origin, media type, body ceiling, bearer, key and body refusals, closed
+admission, cross-session isolation, unknown and revoked sessions, replay
+and key reuse, identity capacity, dequeue after the deadline, rate and
+concurrency limits, exact approval with single dispatch, cancellation and an
+unavailable room. `control_limits_test.exs` covers limit configuration,
+window reset, slot release on caller exit and ledger replay, reuse and
+capacity. TLS termination, deployment behind other origins
+and hosted tenancy remain host deployment evidence and are not claimed by
+these source tests.
 
 ## Public adoption surface
 

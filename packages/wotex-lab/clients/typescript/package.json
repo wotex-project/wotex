@@ -1,5 +1,5 @@
 {
-  "description": "Generated read-only client for the WoTEx Lab control API",
+  "description": "Generated client for the WoTEx Lab control API",
   "engines": {
     "node": ">=20"
   },

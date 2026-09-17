@@ -10,6 +10,13 @@ config :wotex_lab_workbench,
   session_ttl_ms: 60 * 1_000,
   session_sweep_ms: 50,
   max_sessions: 16,
-  metrics_capacity: 64
+  metrics_capacity: 64,
+  control_mutations: [
+    max_requests: 12,
+    window_ms: 60_000,
+    session_concurrency: 1,
+    host_concurrency: 4,
+    origins: ["https://client.example"]
+  ]
 
 config :logger, level: :warning

@@ -28,6 +28,7 @@ defmodule WotexLabWorkbench.Room do
   alias Wotex.Runtime.{BindingProfile, ConsumedThing}
   alias Wotex.ThingDescription
   alias WotexLabWorkbench.{Evidence, Experiments, Formal, Metrics, Provenance, Run, Runs}
+  alias WotexLabWorkbench.Control.Ledger
   alias WotexLabWorkbench.Runs.{SmartRoom, Thermal, WindowAnomaly}
 
   @max_runs 16
@@ -84,6 +85,31 @@ defmodule WotexLabWorkbench.Room do
   @doc "Cancels a run: a granted decision is revoked and the run is marked cancelled."
   @spec cancel_run(pid(), term()) :: {:ok, Run.t()} | {:error, Error.t()}
   def cancel_run(room, id), do: GenServer.call(room, {:cancel, id})
+
+  @typedoc "An HTTP control command admitted by `WotexLabWorkbench.Control`."
+  @type control_command ::
+          {:run, String.t(), keyword()}
+          | {:cancel, String.t()}
+          | {:approve, String.t(), map(), map()}
+
+  @typedoc "One idempotent HTTP control mutation."
+  @type mutation :: %{key: String.t(), fingerprint: binary(), command: control_command()}
+
+  @doc """
+  Executes one HTTP control mutation at most once for its idempotency key.
+
+  The room consults its `WotexLabWorkbench.Control.Ledger` when it dequeues the
+  mutation: a retained identity replays its outcome with the run's current state,
+  a reused key or a full ledger is refused, and a new key is refused without
+  execution once the monotonic `deadline_at` millisecond has passed. Otherwise
+  the same room command as the LiveView event runs once and its outcome is
+  retained. An approval also has to name the granted decision's Thing, Action and
+  input. The caller waits at most `timeout_ms`.
+  """
+  @spec control(pid(), mutation(), integer(), timeout()) ::
+          {:executed | :replayed, {:ok, Run.t()} | {:error, Error.t()}} | {:error, Error.t()}
+  def control(room, %{key: _, fingerprint: _, command: _} = mutation, deadline_at, timeout_ms),
+    do: GenServer.call(room, {:control, mutation, deadline_at}, timeout_ms)
 
   @doc "Approves a granted decision; the policy dispatches it at most once."
   @spec approve(pid(), term(), map()) :: {:ok, Run.t()} | {:error, Error.t()}
@@ -178,6 +204,7 @@ defmodule WotexLabWorkbench.Room do
          datasets: [],
          formal: [],
          extra_tds: [],
+         control: Ledger.new(),
          owned_lab: take_owned(:room_owned_lab),
          owned_local: take_owned(:room_owned_local)
        }}
@@ -209,6 +236,36 @@ defmodule WotexLabWorkbench.Room do
       {:reply, {:ok, run}, state}
     else
       {:error, error} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call(
+        {:control, %{key: key, fingerprint: fingerprint, command: command}, deadline_at},
+        from,
+        state
+      ) do
+    case Ledger.check(state.control, key, fingerprint) do
+      {:replay, {:ok, run_id}} ->
+        {:reply, {:replayed, fetch_run_state(state, run_id)}, state}
+
+      {:replay, {:error, error}} ->
+        {:reply, {:replayed, {:error, error}}, state}
+
+      {:error, error} ->
+        {:reply, {:error, error}, state}
+
+      :new ->
+        if System.monotonic_time(:millisecond) >= deadline_at do
+          {:reply,
+           {:error,
+            Error.new(:deadline_exceeded, :control_api, "deadline passed before the command ran")},
+           state}
+        else
+          {:reply, reply, state} = control_command(command, from, state)
+          {reply, outcome} = control_outcome(reply)
+          control = Ledger.retain(state.control, key, fingerprint, outcome)
+          {:reply, {:executed, reply}, %{state | control: control}}
+        end
     end
   end
 
@@ -449,6 +506,41 @@ defmodule WotexLabWorkbench.Room do
     cleanup(state.lab, state.owned_local, state.owned_lab)
     :ok
   end
+
+  defp control_command({:run, experiment_id, params}, from, state),
+    do: handle_call({:run, experiment_id, params}, from, state)
+
+  defp control_command({:cancel, run_id}, from, state),
+    do: handle_call({:cancel, run_id}, from, state)
+
+  defp control_command({:approve, run_id, named, approval}, from, state) do
+    case fetch_run_state(state, run_id) do
+      {:ok, %Run{status: :awaiting_approval, decision: %{} = decision}} ->
+        if names_decision?(decision, named) do
+          handle_call({:approve, run_id, approval}, from, state)
+        else
+          {:reply,
+           {:error,
+            Error.new(:approval_mismatch, :dispatch, "approval does not name the granted decision")},
+           state}
+        end
+
+      _ ->
+        handle_call({:approve, run_id, approval}, from, state)
+    end
+  end
+
+  defp control_outcome({:ok, %Run{id: id}} = reply), do: {reply, {:ok, id}}
+  defp control_outcome({:error, %Error{} = error} = reply), do: {reply, {:error, error}}
+
+  defp names_decision?(decision, named) do
+    decision["thing_id"] == named["thing_id"] and
+      decision["action_name"] == named["action_name"] and
+      same_value?(decision["input"], named["input"])
+  end
+
+  defp same_value?(left, right) when is_number(left) and is_number(right), do: left == right
+  defp same_value?(left, right), do: left === right
 
   defp execute(%{id: "thermal"}, params, _state), do: Thermal.run(params)
   defp execute(%{id: "window_anomaly"}, params, _state), do: WindowAnomaly.run(params)

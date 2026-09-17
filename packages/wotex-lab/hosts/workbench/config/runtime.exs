@@ -102,6 +102,19 @@ if config_env() == :prod do
     server: true
 end
 
+# HTTP control mutations stay refused unless the operator opts in. The limits
+# below are the documented defaults; nothing else is read for this surface.
+if System.get_env("WOTEX_LAB_CONTROL_MUTATIONS") == "1" do
+  config :wotex_lab_workbench,
+    control_mutations: [
+      max_requests: 30,
+      window_ms: 60_000,
+      session_concurrency: 1,
+      host_concurrency: 8,
+      origins: []
+    ]
+end
+
 if maude = System.get_env("WOTEX_LAB_MAUDE") do
   config :wotex_lab_workbench, formal_engine: maude
 end

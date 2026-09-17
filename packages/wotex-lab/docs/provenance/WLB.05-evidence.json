@@ -41,7 +41,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 14,
+  "attempt": 15,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -147,11 +147,11 @@
     "excluded_count": 0,
     "test_count": 66
   },
-  "revision": "6451b02d2bceac7e9f9e09b5e27393328bff5890",
+  "revision": "ed16fd16328fdda0381f08dd41b0a94baf9e0494",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:cecf674606456fb0813e2e0ce31aaedbb49547ba4a759e7af9137d86cfba0e00",
+  "source_tree_digest": "sha256:aee7b7fa64eacf340d6dd654e28b70973a1258fabc2559ffe1f069563368d9bb",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

@@ -1,16 +1,51 @@
 defmodule WotexLabWorkbenchWeb.ControlController do
   @moduledoc """
-  The bounded JSON implementation of the generated read-only control schema.
+  The bounded JSON implementation of the generated control schema.
 
-  Static catalogue operations are public and inert. Evidence is available only
-  with an exact bearer token for the room that retained it. Responses are never
-  cached and errors retain the family's stable code/phase/path/message shape.
+  Static catalogue operations are public and inert. Evidence and run reads are
+  available only with an exact bearer token for the room that retained them.
+  The `startRun`, `cancelRun` and `approveDecision` mutations also require the
+  host's `control_mutations` opt-in. Before any session is read, a mutation
+  must carry an admitted `Origin` (or none), a JSON media type, no query string
+  and a counted body of at most 4,096 bytes. The action then checks the bearer,
+  delegates key and body admission to `WotexLabWorkbench.Control`, verifies the
+  session, takes a `WotexLabWorkbench.Control.Limits` slot and lets the session
+  room execute the command at most once per `Idempotency-Key`. A replayed
+  answer carries `Idempotent-Replayed: true`. Responses are never cached and
+  errors retain the family's stable code/phase/path/message shape.
   """
 
   use WotexLabWorkbenchWeb, :controller
 
   alias Wotex.Lab.Error
   alias WotexLabWorkbench.{Control, Sessions}
+  alias WotexLabWorkbench.Control.Limits
+  alias WotexLabWorkbenchWeb.Plugs.BodyReader
+
+  @max_mutation_body_bytes 4_096
+  @mutations [:start_run, :cancel_run, :approve_decision]
+  @statuses %{
+    invalid_request: 400,
+    invalid_body: 400,
+    invalid_idempotency_key: 400,
+    missing_bearer: 401,
+    mutations_disabled: 403,
+    origin_refused: 403,
+    unknown_run: 404,
+    idempotency_capacity: 409,
+    body_too_large: 413,
+    unsupported_media_type: 415,
+    unknown_experiment: 422,
+    unknown_parameter: 422,
+    invalid_parameter: 422,
+    idempotency_key_reused: 422,
+    concurrency_limited: 429,
+    rate_limited: 429,
+    room_unavailable: 503,
+    deadline_exceeded: 504
+  }
+
+  plug :mutation_guard when action in @mutations
 
   @doc "Lists the admitted scenario descriptors."
   @spec scenarios(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -47,7 +82,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
         error(conn, 403, reason)
 
       {:error, :missing_bearer} ->
-        error(conn, 401, api_error(:missing_bearer, "bearer token is required"))
+        error(conn, 401, missing_bearer())
     end
   end
 
@@ -55,10 +90,151 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   @spec metrics_catalogue(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def metrics_catalogue(conn, _params), do: reply(conn, 200, Control.metrics_catalogue())
 
+  @doc "Reads one run projection from the caller's existing session room."
+  @spec run(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def run(conn, %{"run_id" => run_id}) do
+    with {:ok, token} <- bearer(conn),
+         {:ok, %{room: room}} when is_pid(room) <- Sessions.verify(token),
+         {:ok, run} <- Control.fetch_run(room, run_id) do
+      reply(conn, 200, run)
+    else
+      {:ok, _} -> error(conn, 404, api_error(:unknown_run, "run is not retained"))
+      {:error, :missing_bearer} -> error(conn, 401, missing_bearer())
+      {:error, %Error{} = reason} -> failure(conn, reason)
+    end
+  end
+
+  @doc "Starts an admitted experiment run in the caller's session room."
+  @spec start_run(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def start_run(conn, _), do: mutate(conn, :start_run, nil, 201)
+
+  @doc "Cancels the pending decision of a run in the caller's session room."
+  @spec cancel_run(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def cancel_run(conn, %{"run_id" => run_id}), do: mutate(conn, :cancel_run, run_id, 200)
+
+  @doc "Approves the exactly named granted decision of a run in the caller's session room."
+  @spec approve_decision(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def approve_decision(conn, %{"run_id" => run_id}),
+    do: mutate(conn, :approve_decision, run_id, 200)
+
+  defp mutate(conn, operation, run_id, success) do
+    with {:ok, token} <- bearer(conn),
+         {:ok, admitted} <-
+           Control.admit_mutation(operation, run_id, idempotency_key(conn), conn.body_params),
+         {:ok, session} <- Sessions.verify(token),
+         {:ok, slot} <- Limits.acquire(session.id) do
+      try do
+        execute(conn, token, admitted, success)
+      after
+        Limits.release(slot)
+      end
+    else
+      {:error, :missing_bearer} -> error(conn, 401, missing_bearer())
+      {:error, %Error{} = reason} -> failure(conn, reason)
+    end
+  end
+
+  defp execute(conn, token, admitted, success) do
+    with {:ok, %{room: room}} <- Sessions.admit(token, admitted.command),
+         {:ok, mode, run} <- Control.mutate(room, admitted) do
+      conn |> put_replayed(mode) |> reply(success, run)
+    else
+      {:error, mode, %Error{} = reason} ->
+        conn |> put_replayed(mode) |> failure(reason)
+
+      {:error, %Error{code: :no_room}} ->
+        error(conn, 404, api_error(:unknown_run, "run is not retained"))
+
+      {:error, %Error{} = reason} ->
+        failure(conn, reason)
+    end
+  end
+
+  defp mutation_guard(conn, _) do
+    with :ok <- enabled(),
+         :ok <- origin(conn),
+         :ok <- media_type(conn),
+         :ok <- no_query(conn),
+         :ok <- body_size(conn) do
+      conn
+    else
+      {:error, %Error{} = reason} -> conn |> failure(reason) |> halt()
+    end
+  end
+
+  defp enabled do
+    if is_list(Application.get_env(:wotex_lab_workbench, :control_mutations, false)) and
+         is_pid(GenServer.whereis(Limits)),
+       do: :ok,
+       else: {:error, api_error(:mutations_disabled, "control mutations are not enabled")}
+  end
+
+  defp origin(conn) do
+    case get_req_header(conn, "origin") do
+      [] ->
+        :ok
+
+      [origin] ->
+        if origin == WotexLabWorkbenchWeb.Endpoint.url() or origin in Limits.origins(),
+          do: :ok,
+          else: origin_refused()
+
+      _ ->
+        origin_refused()
+    end
+  end
+
+  defp media_type(conn) do
+    with [content_type] <- get_req_header(conn, "content-type"),
+         {:ok, "application", "json", _} <- Plug.Conn.Utils.media_type(content_type) do
+      :ok
+    else
+      _ ->
+        {:error, api_error(:unsupported_media_type, "mutations accept application/json only")}
+    end
+  end
+
+  defp no_query(%{query_string: ""}), do: :ok
+
+  defp no_query(_),
+    do: {:error, api_error(:invalid_request, "mutations accept no query parameters")}
+
+  defp body_size(conn) do
+    if BodyReader.bytes(conn) <= @max_mutation_body_bytes,
+      do: :ok,
+      else: {:error, api_error(:body_too_large, "body exceeds #{@max_mutation_body_bytes} bytes")}
+  end
+
+  defp idempotency_key(conn) do
+    case get_req_header(conn, "idempotency-key") do
+      [key] -> key
+      _ -> nil
+    end
+  end
+
   defp bearer(conn) do
     case get_req_header(conn, "authorization") do
       ["Bearer " <> token] when byte_size(token) in 16..128 -> {:ok, token}
       _missing_or_ambiguous -> {:error, :missing_bearer}
+    end
+  end
+
+  defp put_replayed(conn, :replayed), do: put_resp_header(conn, "idempotent-replayed", "true")
+  defp put_replayed(conn, _), do: conn
+
+  defp failure(conn, %Error{code: :rate_limited, details: %{retry_after_ms: ms}} = reason) do
+    conn
+    |> put_resp_header("retry-after", Integer.to_string(div(ms + 999, 1_000)))
+    |> error(429, reason)
+  end
+
+  defp failure(conn, %Error{} = reason), do: error(conn, status(reason), reason)
+
+  defp status(%Error{code: code, phase: phase}) do
+    case Map.fetch(@statuses, code) do
+      {:ok, status} -> status
+      :error when phase == :session -> 403
+      :error -> 409
     end
   end
 
@@ -78,5 +254,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
     })
   end
 
+  defp origin_refused, do: {:error, api_error(:origin_refused, "origin is not admitted")}
+  defp missing_bearer, do: api_error(:missing_bearer, "bearer token is required")
   defp api_error(code, message), do: Error.new(code, :control_api, message)
 end

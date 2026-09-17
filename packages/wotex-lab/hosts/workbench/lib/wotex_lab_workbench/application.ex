@@ -16,6 +16,9 @@ defmodule WotexLabWorkbench.Application do
   it also requires explicit PromEx activation and never joins browser routing.
   BeamLens additionally requires explicit activation plus local history, and
   starts only its bounded trusted-operator skill/provider bridge processes.
+  A `control_mutations` limit list, instead of the default `false`, adds
+  `WotexLabWorkbench.Control.Limits` before the endpoint so the HTTP control
+  API admits its opted-in mutations; invalid limits refuse application start.
   """
 
   use Application
@@ -40,12 +43,12 @@ defmodule WotexLabWorkbench.Application do
        lab: lab,
        ttl_ms: Keyword.fetch!(env, :session_ttl_ms),
        sweep_ms: Keyword.fetch!(env, :session_sweep_ms),
-       max_sessions: Keyword.fetch!(env, :max_sessions)},
-      WotexLabWorkbenchWeb.Endpoint
+       max_sessions: Keyword.fetch!(env, :max_sessions)}
     ]
 
-    with {:ok, observability} <- observability(env) do
-      Supervisor.start_link(observability ++ children,
+    with {:ok, observability} <- observability(env),
+         {:ok, control} <- control(Keyword.get(env, :control_mutations, false)) do
+      Supervisor.start_link(observability ++ children ++ control ++ [WotexLabWorkbenchWeb.Endpoint],
         strategy: :one_for_one,
         name: WotexLabWorkbench.Supervisor
       )
@@ -90,6 +93,13 @@ defmodule WotexLabWorkbench.Application do
     do: {:error, :metrics_durable_requires_promex}
 
   defp observability_requirements(_promex, _history, _scrape, _durable, _beamlens), do: :ok
+
+  defp control(false), do: {:ok, []}
+
+  defp control(limits) do
+    with {:ok, options} <- WotexLabWorkbench.Control.Limits.configure(limits),
+         do: {:ok, [{WotexLabWorkbench.Control.Limits, options}]}
+  end
 
   defp beamlens_options(false), do: {:ok, false}
   defp beamlens_options(true), do: InvestigationConfig.client_registry()

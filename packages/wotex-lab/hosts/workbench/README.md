@@ -278,6 +278,25 @@ as unsupported, never as successful evidence.
 The separately requested operator listener also uses `WOTEX_LAB_METRICS_PORT`
 and `WOTEX_LAB_METRICS_TOKEN`; invalid or incomplete options refuse startup.
 
+## Control API mutations
+
+The `/api/v1` control API always serves the catalogue reads and the
+bearer-bound `readEvidence` and `readRun` operations. `startRun`, `cancelRun`
+and `approveDecision` answer 403 `mutations_disabled` until the operator sets
+`WOTEX_LAB_CONTROL_MUTATIONS=1`, which starts the host's rate and concurrency
+limiter with 30 admissions per session per minute, one mutation in flight per
+session and eight across the host.
+
+Each mutation needs the session bearer, an `Idempotency-Key`, a JSON body of
+at most 4,096 bytes with `deadline_ms` from 1 to 30,000, and either no `Origin`
+header or the endpoint's own origin. The session room executes a key once and
+replays the retained outcome for an identical retry with
+`Idempotent-Replayed: true`. An approval must repeat the granted decision's
+identifier, Thing, Action, input, proposal digest, state revision and expiry;
+the room policy then rechecks freshness and dispatches the simulated Action at
+most once. The full contract is in
+[WLB.07](../../docs/specs/WLB.07-cookbooks-and-machine-interfaces.md#http-control-mutations).
+
 ## OCI release source
 
 `Dockerfile` builds the released Workbench dependency cohort from Hex and then
