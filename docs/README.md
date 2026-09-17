@@ -1,0 +1,52 @@
+# WoTEx documentation
+
+Everything a person reads about the WoTEx package family lives here. Code
+never reads from this tree; fixtures, schemas, vectors and machine-read
+provenance live in each package's `priv/`.
+
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| `packages/<name>/specs/` | Normative specifications of one package and its `catalogue.yaml`, the owner of each specification's `implementation_status`. |
+| `packages/<name>/plans/` | The package's versioned completion contract. |
+| `packages/<name>/decisions/` | Package-level decision records. |
+| `packages/<name>/provenance/` | Standards provenance, pinned sources and recorded evidence of the package. |
+| `packages/<name>/security.md` | Package security posture (where present). |
+| `architecture/` | Family-level architecture: the package graph, the repository layout, the import record. |
+| `decisions/` | Family-level decision records. |
+| `guides/` | Cross-package guides (consumers, transport authors, releases). |
+| `tasks/local/<name>/` | Ignored. Machine-local execution state only; never tracked or published. |
+
+Relative links inside a package's documentation stay valid because
+`specs/`, `plans/`, `decisions/` and `provenance/` remain siblings under
+`packages/<name>/`.
+
+## Packages and specification prefixes
+
+| Package | Specification prefixes | Documentation |
+| --- | --- | --- |
+| `wotex` | `WTX` | [packages/wotex](packages/wotex) |
+| `wotex-runtime` | `WRT`, `RT-C` | [packages/wotex-runtime](packages/wotex-runtime) |
+| `wotex-directory` | `WTD` | [packages/wotex-directory](packages/wotex-directory) |
+| `wotex-nx` | `WNX` | [packages/wotex-nx](packages/wotex-nx) |
+| `wotex-continuum` | `WCT`, `WCT-C` | [packages/wotex-continuum](packages/wotex-continuum) |
+| `wotex-conformance` | `WCF` | [packages/wotex-conformance](packages/wotex-conformance) |
+| `wotex-binding-http` | `WBH` | [packages/wotex-binding-http](packages/wotex-binding-http) |
+| `wotex-binding-mqtt` | `WBM` | [packages/wotex-binding-mqtt](packages/wotex-binding-mqtt) |
+| `wotex-bacnet` | `WBA` | [packages/wotex-bacnet](packages/wotex-bacnet) |
+| `wotex-ble` | `WBL` | [packages/wotex-ble](packages/wotex-ble) |
+| `wotex-coap` | `WCO` | [packages/wotex-coap](packages/wotex-coap) |
+| `wotex-matter` | `WMA` | [packages/wotex-matter](packages/wotex-matter) |
+| `wotex-modbus` | `WMB` | [packages/wotex-modbus](packages/wotex-modbus) |
+| `wotex-opcua` | `WOP` | [packages/wotex-opcua](packages/wotex-opcua) |
+| `wotex-thread` | `WTH` | [packages/wotex-thread](packages/wotex-thread) |
+| `wotex-lab` | `WLB` | [packages/wotex-lab](packages/wotex-lab) |
+
+A specification identifier is unique across the family; the prefix names its
+owning package.
+
+## Family documents
+
+- [Package graph and boundaries](architecture/package-graph.md)
+- [Monorepo import record](architecture/monorepo-import.md)
