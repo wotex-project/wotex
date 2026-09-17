@@ -63,6 +63,67 @@ defmodule Wotex.BLE.RuntimeIntegrationTest do
     assert actual == @vector["expectation"]["value"]
   end
 
+  test "WBL-I06 every integration corpus case has an executing owner that compares it" do
+    corpus = Jason.decode!(File.read!(@corpus))
+
+    assert Map.take(corpus, ["format", "version"]) ==
+             %{"format" => "wotex.protocol.integration", "version" => "1.0.0"}
+
+    ids = Enum.map(corpus["cases"], & &1["id"])
+    assert ids == Enum.uniq(ids)
+
+    owners = %{
+      "runtime_read" => "test/wotex/ble/runtime_integration_test.exs",
+      "error_retry_projection" => "test/wotex/ble/runtime_error_test.exs"
+    }
+
+    for fixture <- corpus["cases"] do
+      assert owner = owners[fixture["operation"]], "#{fixture["id"]} has an unknown operation"
+      assert fixture["expectation"]["operator"] == "exact"
+      source = File.read!(Path.expand("../../../" <> owner, __DIR__))
+
+      assert String.contains?(source, fixture["operation"]) or
+               String.contains?(source, fixture["id"])
+
+      assert String.contains?(source, ~s(["expectation"]["value"]))
+    end
+  end
+
+  test "WBL-I02 WBL-I06 two explicit profiles select by Form order and then profile order" do
+    oneshot = BLE.profile()
+    assert {:ok, gatt} = BLE.profile(:gatt)
+    config = [client: RuntimeClient, test_pid: self(), target: "peer", peer_reply: <<42>>]
+    {:ok, td} = ThingDescription.from_map(td())
+
+    consumed = fn profiles ->
+      ConsumedThing.new(td,
+        profiles: profiles,
+        transports: %{
+          ble: {RuntimeRecordingTransport, config},
+          ble_gatt: {RuntimeRecordingTransport, config}
+        },
+        credentials: {RuntimeErrorPort, nil}
+      )
+    end
+
+    assert {:ok, first} = consumed.([oneshot, gatt])
+    assert {:ok, %Result{payload: <<42>>, status: :ok}} = read(first)
+    assert_receive {:selected_request, %{profile: ^oneshot, resolved_href: "ble://peer/180f/2a19"}}
+    assert_receive {:runtime_client, :open, _}
+    assert_receive {:runtime_client, :request, _, _}
+    assert_receive {:runtime_client, :close}
+
+    # The GATT profile admits the same Form first when supplied first; it then
+    # requires the persistent backend and fails before any client acquisition.
+    assert {:ok, reversed} = consumed.([gatt, oneshot])
+
+    assert {:error, %{details: %{cause: %{code: :unsupported_profile, module: Error}}}} =
+             read(reversed)
+
+    assert_receive {:selected_request, %{profile: ^gatt, resolved_href: "ble://peer/180f/2a19"}}
+    refute_received {:runtime_client, :open, _}
+  end
+
   test "WBL-I02 baseline profiles are inert and selection preserves omitted media and defaults" do
     assert {:ok, profile} = BLE.profile(:oneshot)
     assert profile == BLE.profile()
@@ -155,9 +216,13 @@ defmodule Wotex.BLE.RuntimeIntegrationTest do
       refute_received {:runtime_client, :open, _}
     end
 
-    for config <- [[target: "other"], [security_mode: :authenticated], [timeout: 0]] do
+    for {config, code} <- [
+          {[target: "other"], :target_mismatch},
+          {[security_mode: :authenticated], :unsupported_security},
+          {[timeout: 0], :invalid_timeout}
+        ] do
       {:ok, consumed} = consumer(td(), config)
-      assert {:error, _} = read(consumed)
+      assert {:error, %{details: %{cause: %{code: ^code}}}} = read(consumed)
       refute_received {:runtime_client, :open, _}
     end
 
