@@ -59,8 +59,11 @@ BEAM lanes, including real-host process ownership cases. Native State
 subscriptions provide the report source, and F11–F13 execute on all four
 lanes. `test/software/lifecycle_stress_test.exs` executes the C09 operation,
 open/close, receiver-death, concurrent-caller, forced-deadline, peer-loss and
-malformed-reply cycles on all four lanes. Dependency audit and clean archive
-validation remain open, so P00 is unaccepted.
+malformed-reply cycles on all four lanes. `bin/check_native_advisories.exs`
+requires a checked-in review for every advisory reported against the native
+source pins; it currently fails on the unreviewed OpenThread advisory
+CVE-2025-36939, whose fix is not identified. That maintainer review and clean
+archive validation remain open, so P00 is unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 

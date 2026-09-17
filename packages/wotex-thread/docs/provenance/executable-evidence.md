@@ -648,6 +648,61 @@ production observation.
 
 Dependency audit and clean archive validation remain open for P00.
 
+## Native source advisory review, 2026-09-17
+
+`bin/check_native_advisories.exs` is a live release check for the exact native
+sources in `priv/openthread/dependencies.json`: OpenThread
+`5c8c318627954c99cd1a957a290bbd4b1027d04b`, Mbed TLS
+`068ff080b369adfac81509f9b57b2afabaf82dc5` (tag `v3.6.7`), its framework
+`dde0c4a0e448a0552f18817dcea633bb851fd288` and nlohmann/json
+`9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` (tag `v3.11.3`, the pinned header's
+release). It submits one OSV commit batch, then NVD CPE queries for Mbed TLS
+3.6.7 (`arm` and `trustedfirmware` vendors), nlohmann/json 3.11.3 and every
+OpenThread version, and an NVD `OpenThread` keyword query because the pinned
+commit has no CPE version. Every reported advisory needs a checked-in
+[review](native-advisories.json). A `fixed_in_pin` review is accepted only when
+the GitHub compare API reports each named fix commit as an ancestor of the pin.
+`test/wotex/thread/native_advisories_test.exs` keeps the review file bound to
+the build pins in the default gate; it does not query any service.
+
+OSV commit queries alone are insufficient here: a control query for Mbed TLS
+3.6.0 (`2ca6c285a0dd3f33982dd57299012dacab1ff206`) returned no OSV result,
+while NVD CPE queries for 3.6.0 returned 11 (`arm`) and 15
+(`trustedfirmware`) CVEs. A second control that dropped the CVE-2025-66442
+review and named the current OpenThread `main` head
+`b8f0b95a8d7507542b95db343c2ef6ba4734f67e` as the CVE-2026-8369 fix exited 1,
+reporting both.
+
+The recorded run at 2026-09-17T12:11:58Z (`WOTEX_PATH_DEPS=1 mix run --no-start
+bin/check_native_advisories.exs`, log SHA-256
+`53e9e9c154721f1b6a5ca241f493ce42ce30b2cd728577b82bbf40d7b7b6855c`) exited 1.
+OSV returned no advisory for the four commits, and neither nlohmann/json CPE nor
+the OpenThread CPE matched a CVE. NVD reported 13 advisories. Three are fixed in
+the pin by verified ancestry: CVE-2019-20791 (`b8c3161`, `c3a3a0c`),
+CVE-2023-2626 (`3d5cb36`) and CVE-2026-8369 (`26a882d`, 555 commits before the
+pin). Six are not applicable: wpantund (CVE-2020-8916, CVE-2021-33889), Silicon
+Labs SDK, gateway or RCP components (CVE-2023-41095, CVE-2024-3017,
+CVE-2025-2329) and the Mbed TLS Clang select-optimize timing channel
+CVE-2025-66442, which the GCC 12.2.0 build with `MBEDTLS_HAVE_ASM` and without
+RSA, CBC or cipher padding in its generated configuration does not meet. Three
+keyword matches are unrelated products.
+
+CVE-2025-36939 remains unreviewed. NVD and the GitHub advisory
+GHSA-x6v7-jjvq-5rr9 describe MLE assertion failures and a stack-based buffer
+overflow reachable by an authenticated attacker on the same Thread network,
+referenced by the August 2026 Nest security bulletin. Neither source names an
+affected range, fixed version or fix commit, so the review cannot establish
+that pinned commit `5c8c318` (committed 2026-08-31) contains the fix. The check
+therefore fails, and the native dependency audit does not pass until the
+maintainer identifies the upstream fix or changes the pin.
+
+| Source | SHA-256 |
+| --- | --- |
+| `bin/check_native_advisories.exs` | `11e955afd934ced8c385e0c6a4ded2cdec69fcb300509636290d0e17fed1fdb9` |
+| `docs/provenance/native-advisories.json` | `49e8f3ff8d8397a578b170b2893a0616c669344daaff386b78c47e65251776a0` |
+| `test/wotex/thread/native_advisories_test.exs` | `b98b73ff98d17553482469a03723ca5ce52b1f6293e017d4fccc4f0c7aff886b` |
+| `priv/openthread/dependencies.json` | `a05a44006bafbf57e165f3f7cab4ef88b398cb512e136f7b08375a128842bf17` |
+
 ## Contract corpus binding, 2026-09-17
 
 `test/wotex/thread/contract_fixture_test.exs` runs in the default gate. It

@@ -1,0 +1,116 @@
+{
+  "format": "wotex.native-advisories",
+  "version": 1,
+  "reviewed": "2026-09-17",
+  "sources": [
+    {
+      "component": "openthread",
+      "repository": "openthread/openthread",
+      "commit": "5c8c318627954c99cd1a957a290bbd4b1027d04b",
+      "nvd": [{"keyword": "OpenThread"}, {"cpe": "cpe:2.3:a:openthread:openthread:*:*:*:*:*:*:*:*"}]
+    },
+    {
+      "component": "mbedtls",
+      "repository": "Mbed-TLS/mbedtls",
+      "commit": "068ff080b369adfac81509f9b57b2afabaf82dc5",
+      "tag": "v3.6.7",
+      "nvd": [
+        {"cpe": "cpe:2.3:a:arm:mbed_tls:3.6.7:*:*:*:*:*:*:*"},
+        {"cpe": "cpe:2.3:a:trustedfirmware:mbed_tls:3.6.7:*:*:*:*:*:*:*"}
+      ]
+    },
+    {
+      "component": "mbedtls-framework",
+      "repository": "Mbed-TLS/mbedtls-framework",
+      "commit": "dde0c4a0e448a0552f18817dcea633bb851fd288",
+      "nvd": []
+    },
+    {
+      "component": "json",
+      "repository": "nlohmann/json",
+      "commit": "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03",
+      "tag": "v3.11.3",
+      "nvd": [
+        {"cpe": "cpe:2.3:a:nlohmann:json:3.11.3:*:*:*:*:*:*:*"},
+        {"cpe": "cpe:2.3:a:json-for-modern-cpp_project:json-for-modern-cpp:3.11.3:*:*:*:*:*:*:*"}
+      ]
+    }
+  ],
+  "reviews": [
+    {
+      "id": "CVE-2019-20791",
+      "component": "openthread",
+      "decision": "fixed_in_pin",
+      "fix_commits": ["b8c3161281f8e15873f8decabd8eac461717aefe", "c3a3a0c424322009fec3ab735fb20ce8f6e19e70"],
+      "reason": "The Commissioner PSKc stack overflow fixes referenced by NVD are ancestors of the pinned commit."
+    },
+    {
+      "id": "CVE-2023-2626",
+      "component": "openthread",
+      "decision": "fixed_in_pin",
+      "fix_commits": ["3d5cb364f22f0881d5eb528aea01b8db40cc6dd2"],
+      "reason": "GHSA-vr3r-363g-72j9 names this Key ID Mode validation fix; it is an ancestor of the pinned commit."
+    },
+    {
+      "id": "CVE-2026-8369",
+      "component": "openthread",
+      "decision": "fixed_in_pin",
+      "fix_commits": ["26a882dabc3d7d14ff759b960431ae6d366bc68a"],
+      "reason": "NVD names NAT64 fix commit 26a882d (pull request 12818); it is an ancestor of the pinned commit."
+    },
+    {
+      "id": "CVE-2020-8916",
+      "component": "openthread",
+      "decision": "not_applicable",
+      "reason": "The advisory affects wpantund, which this package neither builds nor runs."
+    },
+    {
+      "id": "CVE-2021-33889",
+      "component": "openthread",
+      "decision": "not_applicable",
+      "reason": "The advisory affects wpantund, which this package neither builds nor runs."
+    },
+    {
+      "id": "CVE-2023-41095",
+      "component": "openthread",
+      "decision": "not_applicable",
+      "reason": "The advisory affects the Silicon Labs OpenThread SDK SecureVault modules, not the upstream POSIX host built here."
+    },
+    {
+      "id": "CVE-2024-3017",
+      "component": "openthread",
+      "decision": "not_applicable",
+      "reason": "The advisory affects the Silicon Labs multi-protocol gateway and radio co-processor, not the upstream POSIX host built here."
+    },
+    {
+      "id": "CVE-2025-2329",
+      "component": "openthread",
+      "decision": "not_applicable",
+      "reason": "The advisory affects the Silicon Labs OpenThread RCP SPI transport, not the upstream POSIX host or simulation RCP built here."
+    },
+    {
+      "id": "CVE-2006-1994",
+      "component": "openthread",
+      "decision": "unrelated",
+      "reason": "The NVD keyword match is a PHP forum application, not OpenThread."
+    },
+    {
+      "id": "CVE-2007-2110",
+      "component": "openthread",
+      "decision": "unrelated",
+      "reason": "The NVD keyword match is an Oracle Database component, not OpenThread."
+    },
+    {
+      "id": "CVE-2026-45313",
+      "component": "openthread",
+      "decision": "unrelated",
+      "reason": "The NVD keyword match is Sandboxie-Plus, not OpenThread."
+    },
+    {
+      "id": "CVE-2025-66442",
+      "component": "mbedtls",
+      "decision": "not_applicable",
+      "reason": "Mbed TLS advisory 2026-03 reports a Clang select-optimize timing channel in RSA PKCS#1 v1.5 and one-and-zeros unpadding; the production host uses GCC 12.2.0, and the generated OpenThread Mbed TLS configuration used by that build defines MBEDTLS_HAVE_ASM and omits MBEDTLS_RSA_C, MBEDTLS_CIPHER_MODE_CBC and every cipher padding option. No upstream fix exists."
+    }
+  ]
+}

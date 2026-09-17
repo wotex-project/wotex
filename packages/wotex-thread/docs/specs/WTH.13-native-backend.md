@@ -24,8 +24,9 @@ host ready case executes. The software build and run tasks pass for both BEAM
 lanes on Linux arm64 and on the required Debian 12 GCC 12.2.0 x86_64 toolchain
 under emulation. Native State subscriptions are the report source, and the
 process-flow cases execute with a test-only callback source. The C09 lifecycle
-stress cases pass on all four lanes. Dependency audit and clean archive
-validation still need evidence, so B01–B03 are not accepted.
+stress cases pass on all four lanes. The live native advisory check reports one
+unreviewed OpenThread advisory, CVE-2025-36939, and clean archive validation
+still needs evidence, so B01–B03 are not accepted.
 
 ## WTH-B01 — Production and build boundary
 

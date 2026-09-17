@@ -35,3 +35,15 @@ This regression is not a general Decimal safety or whole-VM memory guarantee.
 All current and future advisories remain active. Any dependency or advisory
 change requires review; a reported advisory, failed regression or changed lock
 blocks `mix check`. Never disable parsing limits for untrusted input.
+
+## Native source advisories
+
+The native host builds exact OpenThread, Mbed TLS, Mbed TLS framework and
+nlohmann/json sources. [Native advisory reviews](docs/provenance/native-advisories.json)
+record a decision and reason for each advisory reported against those pins.
+`WOTEX_PATH_DEPS=1 mix run --no-start bin/check_native_advisories.exs` is a live
+release check. It queries OSV by commit and NVD by CPE or keyword, requires a
+review for every reported advisory and confirms that each `fixed_in_pin` fix
+commit is an ancestor of the pinned commit. An unreviewed advisory or failed
+ancestry check exits nonzero. The reviews contain no risk-acceptance decision;
+a result is valid only when the check ran.
