@@ -589,7 +589,12 @@ and then signals `Connected=false`. Link loss during that owned cleanup no
 longer turns the completed close into `cleanup_timeout`; the case failed its
 close-result assertion before the fix and all 35 private-bus tests pass after
 it on Linux arm64. The failure first appeared when BlueZ dropped a virtual link
-after a rejected pairing decision. Independent NameHasOwner queries check
+after a rejected pairing decision. A third regression rejects the Agent prompt
+while `Pair` is still pending, which closes the owned sender by design. The
+host must still report readiness of its own input descriptor so a following
+`close` is read. The private-bus poll previously returned without polling the
+caller's descriptors once its connection was closed or failed; the case failed
+before the fix, and the bus component assertion now requires that readiness. Independent NameHasOwner queries check
 client-sender release and service-sender isolation after process exit. The fixture
 owns and reaps this direct, non-forking SDK child; runtime guardian process-group
 custody has its separate fault corpus. This evidence does not establish native

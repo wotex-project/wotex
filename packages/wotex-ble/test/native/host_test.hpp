@@ -170,6 +170,34 @@ inline void invariants(const std::string &address) {
   }
 
   {
+    // Rejecting while Pair is pending closes the owned sender. The host must
+    // still observe its own input so a following close can be read.
+    Fixture f(address); f.open(); Message pair; std::string agent;
+    f.peer.on_other = [&](DBusMessage *request) {
+      const std::string method = dbus_message_get_member(request);
+      if (method == "RegisterAgent") {
+        const char *path = nullptr, *capability = nullptr;
+        HOST_CHECK(dbus_message_get_args(request, nullptr, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &capability, DBUS_TYPE_INVALID));
+        agent = path;
+      } else if (method == "Pair") { pair.reset(dbus_message_ref(request)); return; }
+      f.peer.empty_reply(request);
+    };
+    f.request("1", "pair", {{"capability", "DisplayYesNo"}}); f.until([&] { return bool(pair); });
+    pairing_test::AgentCall prompt(f.peer, f.sender, agent, "RequestAuthorization", "o");
+    f.until([&] { return f.frames.back().value("event", "") == "agent_challenge"; });
+    const auto challenge = f.frames.back().at("challenge").at("id");
+    f.request("agent-2", "agent_reply", {{"challenge_id", challenge}, {"decision", {{"action", "reject"}}}});
+    f.until([&] { return f.response("1") != nullptr; });
+    HOST_CHECK(f.response("1")->at("ok") == false && !f.host.finished());
+    std::array<int, 2> input{-1, -1}; HOST_CHECK(::pipe(input.data()) == 0 && ::write(input[1], "x", 1) == 1);
+    std::vector<pollfd> descriptors{{input[0], POLLIN, 0}};
+    f.host.poll(descriptors, 5);
+    HOST_CHECK(descriptors[0].revents & POLLIN);
+    ::close(input[0]); ::close(input[1]);
+    f.request("close", "close"); f.until([&] { return f.host.finished(); }); f.flush();
+    HOST_CHECK(f.response("close") && f.response("close")->at("ok") == true);
+  }
+  {
     // BlueZ drops the link after a rejected Pair. Link loss while an explicit
     // close owns cleanup cannot turn that completed close into a failure.
     Fixture f(address); f.open(); Message pair, unregister;

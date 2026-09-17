@@ -623,7 +623,8 @@ static void invariants(const std::string &address) {
   std::vector<pollfd> extra{{read_end.value, POLLIN, 0}};
   second.poll(extra, 10); check(extra[0].revents & POLLIN);
   second.close();
-  second.poll(extra, 10); check(extra[0].revents == 0);
+  // A closed sender still reports the caller's own descriptor readiness.
+  second.poll(extra, 10); check(extra[0].revents & POLLIN);
   check(write(write_end.value, "x", 1) == 1);
   check(second.pending_count() == 0 && second.watch_count() == 0 && second.timeout_count() == 0);
   Bus callback_owner(address); hello(callback_owner);

@@ -453,12 +453,19 @@ public:
 
   // Extra descriptors belong to the caller (typically native stdin/stdout).
   // Their readiness is returned without transferring their ownership to libdbus.
+  static void poll_extra(std::vector<pollfd> &extra, int wait_ms) {
+    if (extra.empty()) return;
+    if (::poll(extra.data(), extra.size(), std::clamp(wait_ms, 0, 1000)) < 0 && errno != EINTR)
+      for (auto &descriptor : extra) descriptor.revents = POLLERR;
+  }
   void poll(std::vector<pollfd> &extra, int wait_ms) {
     for (auto &descriptor : extra) descriptor.revents = 0;
-    if (!connection_) return;
+    // A closed or failed sender still owes its caller's descriptors a bounded
+    // wait: the enclosing host must keep observing input and output.
+    if (!connection_ || failure_) { poll_extra(extra, wait_ms); return; }
     dispatch();
     send_method_reply();
-    if (!connection_ || failure_) return;
+    if (!connection_ || failure_) { poll_extra(extra, 0); return; }
     std::vector<std::shared_ptr<Watch>> selected;
     std::vector<pollfd> descriptors = extra;
     for (const auto &[unused, watch] : watches_) {
