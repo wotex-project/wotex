@@ -1,0 +1,27 @@
+# Build output and tool caches of every package.
+_build/
+cover/
+deps/
+doc/
+priv/plts/
+.elixir_ls/
+.lexical/
+.fetch
+*.plt
+*.beam
+*.ez
+*.tar
+*.tar.gz
+erl_crash.dump
+*.dump
+mix.lock.bak
+__pycache__/
+.archive-check.*/
+.graph-check.*/
+.wotex-thread-*/
+_site/
+tmp/
+
+# Local execution state; never published.
+/docs/tasks/inbox.md
+/docs/tasks/local/
