@@ -24,7 +24,7 @@ target_compile_options(wotex_opcua_native PRIVATE -Wall -Wextra -Werror)
 target_include_directories(wotex_opcua_native PRIVATE "${OPENSSL_INCLUDE_DIR}")
 target_link_libraries(wotex_opcua_native PRIVATE wotex_opcua_security)
 
-add_library(wotex_opcua_security STATIC security.c session_config.c session_open.c ipc.c output.c owner.c publish_sequence.c)
+add_library(wotex_opcua_security STATIC security.c session_config.c session_open.c session_subscription.c ipc.c output.c owner.c publish_sequence.c subscription_rules.c)
 target_compile_features(wotex_opcua_security PRIVATE c_std_11)
 target_compile_definitions(wotex_opcua_security PRIVATE _POSIX_C_SOURCE=200809L)
 target_compile_options(wotex_opcua_security PRIVATE -Wall -Wextra -Werror)
@@ -39,6 +39,10 @@ target_compile_features(wotex_opcua_session_probe PRIVATE c_std_11)
 target_compile_definitions(wotex_opcua_session_probe PRIVATE _POSIX_C_SOURCE=200809L)
 target_compile_options(wotex_opcua_session_probe PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(wotex_opcua_session_probe PRIVATE wotex_opcua_security)
+add_executable(wotex_opcua_subscription_check subscription_check.c)
+target_compile_features(wotex_opcua_subscription_check PRIVATE c_std_11)
+target_compile_options(wotex_opcua_subscription_check PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_subscription_check PRIVATE wotex_opcua_security)
 add_executable(wotex_opcua_namespace_check namespace_check.c)
 target_compile_features(wotex_opcua_namespace_check PRIVATE c_std_11)
 target_compile_options(wotex_opcua_namespace_check PRIVATE -Wall -Wextra -Werror)
@@ -118,7 +122,7 @@ if(WOTEX_SANITIZERS)
       wotex_opcua_json wotex_opcua_json_check wotex_opcua_ipc_check wotex_opcua_output_check wotex_opcua_owner_check wotex_opcua_publish_sequence_check wotex_opcua_values wotex_opcua_value_check
       wotex_opcua_value_fault_check wotex_opcua_native_contract_check
       wotex_opcua_security wotex_opcua_security_check wotex_opcua_session_probe
-      wotex_opcua_browse_check wotex_opcua_namespace_check wotex_opcua_paged_peer
+      wotex_opcua_browse_check wotex_opcua_namespace_check wotex_opcua_subscription_check wotex_opcua_paged_peer
       wotex_opcua_sdk_revision_check)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
@@ -152,7 +156,7 @@ foreach(number 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16)
   set_tests_properties(native_contract_WOP-X-F${number} PROPERTIES TIMEOUT 10
     PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 endforeach()
-foreach(number 17 18 19 20 49 50 52 53 54 55)
+foreach(number 17 18 19 20 21 29 49 50 52 53 54 55)
   add_test(NAME native_contract_WOP-X-F${number} COMMAND wotex_opcua_owner_check
     "${WOTEX_NATIVE_CONTRACT}" WOP-X-F${number})
   set_tests_properties(native_contract_WOP-X-F${number} PROPERTIES TIMEOUT 20
@@ -184,6 +188,15 @@ set_tests_properties(native_security_preflight PROPERTIES
   TIMEOUT 30 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 add_test(NAME native_sdk_session_revision COMMAND wotex_opcua_sdk_revision_check)
 add_test(NAME native_browse_token_state COMMAND wotex_opcua_browse_check)
+foreach(number 27 28)
+  add_test(NAME native_contract_WOP-X-F${number} COMMAND wotex_opcua_subscription_check
+    "${WOTEX_NATIVE_CONTRACT}" WOP-X-F${number})
+  set_tests_properties(native_contract_WOP-X-F${number} PROPERTIES TIMEOUT 10
+    PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
+endforeach()
+add_test(NAME native_subscription_matrix COMMAND wotex_opcua_subscription_check --matrix)
+set_tests_properties(native_subscription_matrix PROPERTIES
+  TIMEOUT 20 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 add_test(NAME native_namespace_projection COMMAND wotex_opcua_namespace_check)
 set_tests_properties(native_namespace_projection PROPERTIES
   TIMEOUT 10 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")

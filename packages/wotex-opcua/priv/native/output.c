@@ -85,6 +85,7 @@ WopOutputStatus wop_output_normal(WopOutput *output, const char *bytes, size_t s
     frame->bytes = copy;
     frame->size = size;
     output->count++;
+    if (output->count > output->peak_count) output->peak_count = output->count;
     output->pending_bytes += size;
     return WOP_OUTPUT_OK;
 }

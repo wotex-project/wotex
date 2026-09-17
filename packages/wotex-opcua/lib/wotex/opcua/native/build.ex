@@ -33,6 +33,8 @@ defmodule Wotex.OPCUA.Native.Build do
     json_codec.c json_codec.h json_check.c json-codec.md ipc.c ipc.h ipc_check.c
     output.c output.h output_check.c owner.c owner.h owner_check.c sanitizer_options.c
     publish_sequence.c publish_sequence.h publish_sequence_check.c
+    session_subscription.c session_internal.h subscription_rules.c subscription_rules.h
+    subscription_check.c
     security.c security.h security_check.c session_config.c session_config.h
     session_probe.c session_open.c session_open.h browse_check.c namespace_check.c paged_peer.c
     security.md patch-sdk.cmake sdk_revision_check.c

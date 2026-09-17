@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "session_open.h"
+#include "session_internal.h"
 #include "value_codec.h"
 
 #include <open62541/client_highlevel_async.h>
@@ -178,6 +178,8 @@ static void connection_failure(WopFailure *failure, UA_StatusCode status, bool o
     fail_status(failure, code, opening ? "opening" : "exchange", false, status);
 }
 
+static bool ready_step(WopSession *session, WopFailure *failure);
+
 static bool session_step(void *context, int slice_ms, WopFailure *failure) {
     WopSession *session = context;
     if(!session->client) return true;
@@ -201,7 +203,8 @@ static bool session_step(void *context, int slice_ms, WopFailure *failure) {
         fail_with(failure, "cleanup_failed", "cleanup", false);
         return false;
     }
-    if(state != UA_SESSIONSTATE_ACTIVATED || session->ready) return true;
+    if(session->ready) return ready_step(session, failure);
+    if(state != UA_SESSIONSTATE_ACTIVATED) return true;
     if(!session->namespace_requested) {
         session->namespace_requested = true;
         if(UA_Client_readValueAttribute_async(session->client,
@@ -233,6 +236,10 @@ static bool session_step(void *context, int slice_ms, WopFailure *failure) {
     session->revised_timeout_ms = value;
     session->ready = true;
     return true;
+}
+
+static bool ready_step(WopSession *session, WopFailure *failure) {
+    return !session->ready || wop_subscription_step(session, failure);
 }
 
 static WopCompletion session_opened(void *context, yyjson_mut_doc *document,
@@ -393,6 +400,17 @@ bool wop_session_localize(WopSession *session, const UA_DataType *type, void *da
     return translate_values(session, type, data, count, false);
 }
 
+void wop_fail(WopFailure *failure, const char *code, const char *phase, bool unknown_effect) {
+    fail_with(failure, code, phase, unknown_effect);
+}
+
+void wop_fail_status(WopFailure *failure, const char *code, const char *phase,
+                     bool unknown_effect, UA_StatusCode status) {
+    fail_status(failure, code, phase, unknown_effect, status);
+}
+
+int64_t wop_session_clock(void) { return monotonic_ms(); }
+
 static bool translate_node(WopSession *session, yyjson_val *node_input,
                            WopValueArena *arena, UA_NodeId *sdk_id) {
     UA_NodeId public_id = UA_NODEID_NULL;
@@ -436,6 +454,13 @@ static bool transport_status(UA_StatusCode status) {
            status == UA_STATUSCODE_BADCOMMUNICATIONERROR || status == UA_STATUSCODE_BADDISCONNECT;
 }
 
+bool wop_session_translate(WopSession *session, yyjson_val *node_input, WopValueArena *arena,
+                           UA_NodeId *sdk_id) {
+    return translate_node(session, node_input, arena, sdk_id);
+}
+
+bool wop_session_supported(const UA_DataType *type) { return supported_value_type(type); }
+
 static WopSessionOperation *slot(WopSession *session, const WopOperation *operation) {
     return operation->index < WOP_OWNER_OPERATIONS ? &session->operations[operation->index] : NULL;
 }
@@ -456,6 +481,11 @@ static bool accept_response(WopSessionOperation *operation, UA_UInt32 request_id
     else if(result == UA_STATUSCODE_BADTIMEOUT) operation->timed_out = true;
     else operation->remote_error = true;
     return false;
+}
+
+bool wop_session_accept(WopSessionOperation *operation, UA_UInt32 request_id,
+                        const UA_ResponseHeader *header) {
+    return accept_response(operation, request_id, header);
 }
 
 static void receive_read(UA_Client *client, void *userdata, UA_UInt32 request_id,
@@ -787,6 +817,10 @@ static bool session_prepare(void *context, const WopOperation *owner_operation,
         prepared = wop_session_browse_admit(session, operation, parameters,
                                             owner_operation->kind == WOP_OPERATION_BROWSE_RELEASE);
         break;
+    case WOP_OPERATION_SUBSCRIBE:
+    case WOP_OPERATION_UNSUBSCRIBE:
+        prepared = wop_subscription_prepare(session, operation, parameters, failure);
+        break;
     }
     if(!prepared) clear_operation(operation);
     return prepared;
@@ -867,6 +901,11 @@ static bool session_dispatch(void *context, const WopOperation *owner_operation,
             receive_browse_next, operation, &operation->request_id);
         break;
     }
+    case WOP_OPERATION_SUBSCRIBE:
+    case WOP_OPERATION_UNSUBSCRIBE:
+        status = wop_subscription_dispatch(session, operation, &header) ?
+                 UA_STATUSCODE_GOOD : UA_STATUSCODE_BADCOMMUNICATIONERROR;
+        break;
     }
     if(status == UA_STATUSCODE_GOOD) return true;
     operation->pending = false;
@@ -1073,6 +1112,9 @@ static WopCompletion session_complete(void *context, const WopOperation *owner_o
     case WOP_OPERATION_BROWSE_NEXT:
     case WOP_OPERATION_BROWSE_RELEASE:
         return browse_result(session, operation, document, result, failure);
+    case WOP_OPERATION_SUBSCRIBE:
+    case WOP_OPERATION_UNSUBSCRIBE:
+        return wop_subscription_complete(session, operation, document, result, failure);
     }
     fail_with(failure, "invalid_response", "decode", unknown);
     return WOP_COMPLETION_TERMINAL;
@@ -1114,6 +1156,8 @@ static void session_retire(void *context, const WopOperation *owner_operation) {
         if(operation->pending) session->browse_orphaned = true;
         session->browse_chain_busy = false;
     }
+    if(operation->kind == WOP_OPERATION_SUBSCRIBE || operation->kind == WOP_OPERATION_UNSUBSCRIBE)
+        wop_subscription_retire(session, operation);
     operation->abandoned = operation->pending;
     clear_operation(operation);
 }
@@ -1126,6 +1170,16 @@ static bool session_released(void *context, const WopOperation *owner_operation)
 
 static bool session_close_service(void *context) {
     return wop_session_close(context);
+}
+
+static bool session_report(void *context, yyjson_mut_doc *document, yyjson_mut_val *envelope,
+                           bool *produced, WopFailure *failure) {
+    return wop_subscription_report(context, document, envelope, produced, failure);
+}
+
+static void session_pressure(void *context, size_t frames, size_t bytes) {
+    (void)bytes;
+    ((WopSession *)context)->queued_frames = frames;
 }
 
 void wop_session_service(WopSession *session, WopService *service) {
@@ -1141,6 +1195,8 @@ void wop_session_service(WopSession *session, WopService *service) {
     service->released = session_released;
     service->step = session_step;
     service->close = session_close_service;
+    service->report = session_report;
+    service->pressure = session_pressure;
 }
 
 bool wop_session_close(WopSession *session) {
@@ -1170,6 +1226,7 @@ bool wop_session_close(WopSession *session) {
         UA_Client_delete(session->client);
         session->client = NULL;
     }
+    wop_subscription_clear(session);
     if(session->namespace_array)
         UA_Array_delete(session->namespace_array, session->namespace_count,
                         &UA_TYPES[UA_TYPES_STRING]);

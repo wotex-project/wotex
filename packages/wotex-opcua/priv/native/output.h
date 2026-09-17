@@ -48,6 +48,8 @@ typedef struct {
     uint64_t used_bytes;
     uint64_t emitted_messages;
     uint64_t emitted_bytes;
+    /* Largest number of unstarted normal envelopes ever queued. */
+    size_t peak_count;
 } WopOutput;
 
 void wop_output_init(WopOutput *output);

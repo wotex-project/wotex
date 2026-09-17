@@ -20,6 +20,10 @@ typedef enum { FAKE_PENDING, FAKE_SUCCESS, FAKE_REMOTE_BAD } FakeOutcome;
 typedef struct {
     int64_t now;
     bool ready;
+    uint64_t report_bytes;
+    uint64_t reports_left;
+    uint64_t reports_produced;
+    bool unsubscribe_fails;
     bool step_fails;
     bool close_ok;
     unsigned opens, closes, network_requests, write_requests, cancels;
@@ -81,6 +85,13 @@ static WopCompletion fake_complete(void *context, const WopOperation *operation,
                                    yyjson_mut_doc *document, yyjson_mut_val **result,
                                    WopFailure *failure) {
     Fake *fake = context;
+    if(operation->kind == WOP_OPERATION_UNSUBSCRIBE && fake->unsubscribe_fails &&
+       fake->outcome[operation->index] != FAKE_PENDING) {
+        fake->sdk_pending[operation->index] = false;
+        failure->code = "cleanup_failed";
+        failure->phase = "cleanup";
+        return WOP_COMPLETION_TERMINAL;
+    }
     switch(fake->outcome[operation->index]) {
     case FAKE_PENDING:
         return WOP_COMPLETION_PENDING;
@@ -98,6 +109,40 @@ static WopCompletion fake_complete(void *context, const WopOperation *operation,
                    ? WOP_COMPLETION_SUCCESS : WOP_COMPLETION_TERMINAL;
     }
     return WOP_COMPLETION_TERMINAL;
+}
+
+/* Produces fixed-size reports while any remain; each line is exactly
+ * report_bytes long including its newline. */
+static bool fake_report(void *context, yyjson_mut_doc *document, yyjson_mut_val *envelope,
+                        bool *produced, WopFailure *failure) {
+    (void)failure;
+    Fake *fake = context;
+    *produced = false;
+    if(!fake->reports_left) return true;
+    yyjson_mut_val *metadata = yyjson_mut_obj(document);
+    yyjson_mut_val *value = yyjson_mut_strcpy(document, "");
+    if(!metadata || !value || !yyjson_mut_obj_add_str(document, envelope, "subscription_id", "s1") ||
+       !yyjson_mut_obj_add_str(document, envelope, "event", "data") ||
+       !yyjson_mut_obj_add_val(document, envelope, "value", value) ||
+       !yyjson_mut_obj_add_val(document, envelope, "metadata", metadata))
+        return false;
+    size_t length = 0;
+    char *encoded = yyjson_mut_write(document, 0, &length);
+    free(encoded);
+    if(!encoded || length + 1 > fake->report_bytes) return false;
+    size_t padding = fake->report_bytes - 1 - length;
+    char *text = malloc(padding + 1);
+    if(!text) return false;
+    memset(text, 'x', padding);
+    text[padding] = '\0';
+    yyjson_mut_val *padded = yyjson_mut_strncpy(document, text, padding);
+    free(text);
+    if(!padded || !yyjson_mut_obj_put(envelope, yyjson_mut_str(document, "value"), padded))
+        return false;
+    fake->reports_left--;
+    fake->reports_produced++;
+    *produced = true;
+    return true;
 }
 
 static void fake_cancel(void *context, const WopOperation *operation) {
@@ -142,14 +187,16 @@ static bool trace_start(Trace *trace) {
     trace->fake.close_ok = true;
     WopService service = {
         &trace->fake, fake_open, fake_opened, fake_prepare, fake_dispatch, fake_complete,
-        fake_cancel, fake_retire, fake_released, fake_step, fake_close
+        fake_cancel, fake_retire, fake_released, fake_step, fake_close, fake_report, NULL
     };
     if(pipe(trace->pipe_fds) != 0) return false;
     for(int i = 0; i < 2; i++) {
         int flags = fcntl(trace->pipe_fds[i], F_GETFL);
         if(flags < 0 || fcntl(trace->pipe_fds[i], F_SETFL, flags | O_NONBLOCK) != 0) return false;
     }
-    return wop_owner_init(&trace->owner, &service, fake_clock, &trace->fake);
+    if(!wop_owner_init(&trace->owner, &service, fake_clock, &trace->fake)) return false;
+    trace->owner.output_descriptor = trace->pipe_fds[1];
+    return true;
 }
 
 static void trace_stop(Trace *trace) {
@@ -540,8 +587,8 @@ static int matrix_request_failures(void) {
     trace = calloc(1, sizeof(*trace));
     CHECK(trace && trace_start(trace));
     CHECK(open_session(trace) == 0);
-    feed(trace, request("sub", "subscribe", "{}", 1000, INT64_MAX));
-    CHECK(error_line(next_line(trace), "sub", "unsupported_protocol", "validation", "none"));
+    feed(trace, request("sub", "subscribe", "{\"invalid\":true}", 1000, INT64_MAX));
+    CHECK(error_line(next_line(trace), "sub", "invalid_value", "validation", "none"));
     feed(trace, request("bad", "read", "{\"invalid\":true}", 1000, INT64_MAX));
     CHECK(error_line(next_line(trace), "bad", "invalid_value", "validation", "none"));
     /* A remote Bad status is request-scoped and keeps the Session usable. */
@@ -667,6 +714,100 @@ static int matrix_receiver_overflow(void) {
     return 0;
 }
 
+/* WOP-X-F21: a suspended owner stops granting credit while reports continue. */
+static int credit_overflow(yyjson_val *fixture) {
+    Trace *trace = calloc(1, sizeof(*trace));
+    CHECK(trace && trace_start(trace));
+    yyjson_val *credits = fixture_input(fixture, "credits");
+    CHECK(yyjson_get_bool(fixture_input(fixture, "owner_suspended")));
+    CHECK(yyjson_get_uint(fixture_input(fixture, "native_buffer_messages")) == WOP_OUTPUT_FRAMES);
+    CHECK(yyjson_get_uint(fixture_input(fixture, "native_buffer_bytes")) == WOP_OUTPUT_BYTES);
+    CHECK(wop_owner_ready(&trace->owner, "fixture-revision", 0));
+    pump(trace);
+    yyjson_doc_free(next_line(trace));
+    char line[256];
+    (void)snprintf(line, sizeof(line),
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":1,"
+        "\"messages\":%" PRIu64 ",\"bytes\":%" PRIu64 "}\n",
+        yyjson_get_uint(yyjson_obj_get(credits, "messages")),
+        yyjson_get_uint(yyjson_obj_get(credits, "bytes")));
+    feed(trace, line);
+    feed(trace, request("open-1", "open", open_parameters, 60000, INT64_MAX));
+    trace->fake.ready = true;
+    tick(trace);
+    yyjson_val *result = NULL;
+    yyjson_doc *keep = NULL;
+    CHECK(success_line(next_line(trace), "open-1", &result, &keep));
+    yyjson_doc_free(keep);
+    /* Return the open reply's credit so the report stream starts at the full grant. */
+    (void)snprintf(line, sizeof(line),
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":2,"
+        "\"messages\":%" PRIu64 ",\"bytes\":%" PRIu64 "}\n",
+        trace->owner.output.used_messages, trace->owner.output.used_bytes);
+    feed(trace, line);
+    CHECK(!trace->owner.finished && trace->owner.output.credit_messages ==
+          yyjson_get_uint(yyjson_obj_get(credits, "messages")));
+    trace->fake.report_bytes = yyjson_get_uint(fixture_input(fixture, "report_bytes"));
+    trace->fake.reports_left = yyjson_get_uint(fixture_input(fixture, "reports"));
+    uint64_t emitted_before = trace->owner.output.emitted_messages;
+    uint64_t bytes_before = trace->owner.output.emitted_bytes;
+    for(int i = 0; i < 1000 && !trace->owner.finished; i++) tick(trace);
+    size_t max_buffered = trace->owner.output.peak_count;
+
+    yyjson_val *expected = yyjson_obj_get(yyjson_obj_get(fixture, "expectation"), "value");
+    CHECK(trace->owner.output.emitted_messages - emitted_before ==
+          yyjson_get_uint(yyjson_obj_get(expected, "normal_messages_emitted")));
+    CHECK(trace->owner.output.emitted_bytes - bytes_before ==
+          yyjson_get_uint(yyjson_obj_get(expected, "normal_bytes_emitted")));
+    CHECK(max_buffered == yyjson_get_uint(yyjson_obj_get(expected, "max_buffered_messages")));
+    size_t reports = 0;
+    yyjson_doc *document;
+    while((document = next_line(trace))) {
+        yyjson_val *root = yyjson_doc_get_root(document);
+        if(yyjson_obj_get(root, "event") && text_is(yyjson_obj_get(root, "event"), "data")) {
+            reports++;
+            yyjson_doc_free(document);
+        } else {
+            CHECK(error_line(document, NULL,
+                             yyjson_get_str(yyjson_obj_get(expected, "terminal")), "exchange", "none"));
+        }
+    }
+    CHECK(reports == 16 && trace->owner.finished && trace->owner.status == 70);
+    wop_owner_shutdown(&trace->owner);
+    CHECK(trace->owner.occupied ==
+          yyjson_get_uint(yyjson_obj_get(expected, "active_native_resources_after_grace")));
+    trace_stop(trace);
+    free(trace);
+    return 0;
+}
+
+/* WOP-X-F29: failed server deletion ends the generation and releases local state. */
+static int subscription_delete(yyjson_val *fixture) {
+    Trace *trace = calloc(1, sizeof(*trace));
+    CHECK(trace && trace_start(trace));
+    CHECK(!yyjson_get_bool(fixture_input(fixture, "delete_ack")));
+    CHECK(!yyjson_get_bool(fixture_input(fixture, "session_close_ack")));
+    CHECK(open_session(trace) == 0);
+    trace->fake.unsubscribe_fails = true;
+    trace->fake.close_ok = false;
+    feed(trace, request("u1", "unsubscribe", "{\"subscription\":\"s1\"}", 1000, INT64_MAX));
+    tick(trace);
+    trace->fake.outcome[0] = FAKE_SUCCESS;
+    tick(trace);
+    yyjson_val *expected = yyjson_obj_get(yyjson_obj_get(fixture, "expectation"), "value");
+    CHECK(error_line(next_line(trace), NULL, yyjson_get_str(yyjson_obj_get(expected, "error")),
+                     "cleanup", yyjson_get_str(yyjson_obj_get(expected, "effect"))));
+    CHECK(trace->owner.finished && trace->owner.status == 70);
+    wop_owner_shutdown(&trace->owner);
+    CHECK(trace->fake.closes == 1);
+    CHECK(trace->owner.occupied ==
+          yyjson_get_uint(yyjson_obj_get(expected, "local_resources_after_grace")));
+    CHECK(text_is(yyjson_obj_get(expected, "remote_deletion"), "requires_session_expiry_evidence"));
+    trace_stop(trace);
+    free(trace);
+    return 0;
+}
+
 static int run_case(yyjson_val *fixture) {
     yyjson_val *operation = yyjson_obj_get(fixture, "operation");
     if(text_is(operation, "native_deadline")) return native_deadline(fixture);
@@ -676,6 +817,8 @@ static int run_case(yyjson_val *fixture) {
     if(text_is(operation, "credit_sequence") || text_is(operation, "credit_capacity"))
         return credit_trace(fixture);
     if(text_is(operation, "invalid_deadline")) return invalid_deadline(fixture);
+    if(text_is(operation, "credit_trace")) return credit_overflow(fixture);
+    if(text_is(operation, "subscription_delete")) return subscription_delete(fixture);
     return -1;
 }
 

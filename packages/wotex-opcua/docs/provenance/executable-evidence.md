@@ -20,6 +20,61 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native raw-service subscriptions, 2026-09-17
+
+The native owner now admits `subscribe` and `unsubscribe` and emits subscription
+reports after operation replies in each tick. `session_subscription.c`
+implements them over raw CreateSubscription, CreateMonitoredItems, Publish,
+Republish, DeleteMonitoredItems and DeleteSubscriptions services; the SDK's
+high-level subscription manager is not used. The contract is recorded in
+WOP.13 X05. The owner flushes each emitted envelope to its descriptor before
+producing the next, so credited reports leave the bounded queue.
+
+`wotex_opcua_owner_check` binds WOP-X-F21 with an injected report producer:
+after a 16-message/262,144-byte grant and a suspended owner, exactly 16 reports
+of 1,024 bytes are emitted, the queue peaks at 64 envelopes, the next report ends
+the generation with `receiver_overflow` and no operation slot remains after
+shutdown. It binds WOP-X-F29 with an injected deletion failure and failed Session
+close: the generation ends with `cleanup_failed`, effect none, zero local
+operations and a Session close attempt; remote deletion is not claimed.
+`wotex_opcua_subscription_check` places Publish responses in a Session inbox
+with an unconnected SDK client and runs production processing. It binds
+WOP-X-F27 (Uncertain Boolean DataValue with both timestamps and a source
+picosecond fraction projected exactly, with the 100 ns resolution metadata) and
+WOP-X-F28 (the fixed noninteger revision accepted without rounding). Its matrix
+covers subscribe parameter bounds, revision rejection, identical and conflicting
+duplicates, a foreign client handle, a StatusChangeNotification, lifetime loss,
+keepalive activity, a Bad acknowledgement status and a gap whose Republish cannot
+be sent. Both checks pass in the RelWithDebInfo suite (204/204) and under macOS
+ASan/UBSan (195/195 non-custody).
+
+A manual exploratory run with the macOS ASan/UBSan executable against the
+independent asyncua 2.0.1 peer opened a Basic256Sha256 Session, subscribed to the
+Double variable (revised sampling 100 ms), received the initial report at
+sequence 1, wrote 7.5 through the same Session, received it at sequence 2,
+unsubscribed and closed. This was not an asserting test and is not acceptance
+evidence. The optional secure suite still passes 38/38 and the complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 325 passed (10 doctests, 4 properties, 311 tests),
+38 optional tests excluded and 95.5% coverage. The BEAM host does not route
+reports yet, so no public subscription API, receiver bound, independent-peer
+subscription assertion or live Republish evidence is accepted.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/session_subscription.c` | `21c23efa3fff8fb60ea5f100ee3481555b39f3cbeacc21d23a5fe5fe75ecae53` |
+| `priv/native/session_internal.h` | `39bcf048977437ac47d80d77d4b40f55eb4dbca6499d85e19887e48f6c8941c4` |
+| `priv/native/session_open.c` | `10dd5d93c01a10c0eff73b7818fd4a89f2649a1a0467e4d20bb1dabdbdfbd13c` |
+| `priv/native/session_open.h` | `4a1f2106389eb7d24ce7baa2030bc4a4b2facf6c9d93a1e705d75c5fc95e72db` |
+| `priv/native/subscription_rules.c` | `765285cda84939ab3e0e1c76f393074fe21cbb57384a4a914cc12d8857aebc42` |
+| `priv/native/subscription_check.c` | `484587b106b50373c5a726bf7f43ea340a23104fda2c29b5946b9674795a16bf` |
+| `priv/native/owner.c` | `f74f7cd637b0304cc2becb04b227f22ac7569416d390720954731795df3d8201` |
+| `priv/native/owner.h` | `1ff18efdf569170d3eda4998671ad59966bd44fc2e6da3f70970d33fec973598` |
+| `priv/native/owner_check.c` | `8900c38ae0456bd3b83c474111fee9dd9318720dccf60d57e67bac4cfd49421c` |
+| `priv/native/output.c` | `7dc5b553601de7aad06c773a0d9d9320e241964bf4102ad6a6cb05549c871a8c` |
+| `priv/native/main.c` | `ed8cafa05c939736c377aeeb131368cde1418eafe765abf145d768c0052150b6` |
+| `native CTest log` | `8271b36fe77fe387091a99395980f54fe62cf67efd74f23fee95c32852982f69` |
+
 ## Native Publish sequence state, 2026-09-17
 
 `publish_sequence.c` holds one subscription's notification sequence state. It

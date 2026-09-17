@@ -18,7 +18,9 @@ typedef enum {
     WOP_OPERATION_CALL,
     WOP_OPERATION_BROWSE,
     WOP_OPERATION_BROWSE_NEXT,
-    WOP_OPERATION_BROWSE_RELEASE
+    WOP_OPERATION_BROWSE_RELEASE,
+    WOP_OPERATION_SUBSCRIBE,
+    WOP_OPERATION_UNSUBSCRIBE
 } WopOperationKind;
 
 typedef enum {
@@ -87,6 +89,14 @@ typedef struct {
     bool (*step)(void *context, int slice_ms, WopFailure *failure);
     /* Cooperative Session cleanup; true only when it completed. */
     bool (*close)(void *context);
+    /* Optional. Produces at most one stream report per call by adding
+     * subscription_id, event, value and metadata to envelope. false is terminal;
+     * *produced reports whether an envelope was filled. */
+    bool (*report)(void *context, yyjson_mut_doc *document, yyjson_mut_val *envelope,
+                   bool *produced, WopFailure *failure);
+    /* Optional. Receives normal output occupancy before each step so a report
+     * producer can stop requesting notifications under backpressure. */
+    void (*pressure)(void *context, size_t queued_frames, size_t queued_bytes);
 } WopService;
 
 typedef enum {
@@ -108,6 +118,8 @@ typedef struct {
     uint64_t next_sequence;
     uint32_t next_handle;
     WopOwnerSession session;
+    /* Nonblocking descriptor flushed after each emitted envelope, or -1. */
+    int output_descriptor;
     char open_id[65];
     int64_t open_deadline_ms;
     bool finished;

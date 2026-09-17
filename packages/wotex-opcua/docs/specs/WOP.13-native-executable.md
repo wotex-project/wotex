@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.27
+  version: 1.1.28
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -568,8 +568,42 @@ this owner: 1..2^32-1 with wrap to one, a 1,024-entry sequence/digest cache,
 duplicate acknowledgement without delivery, conflicting duplicates, ordered
 Republish recovery of at most 100 missing messages and terminal larger gaps,
 unavailable or mismatched Republish results and unverifiable older sequences.
-WOP-X-F24 through F26 execute through that state; raw SDK subscription
-services, Publish acknowledgements and report delivery are not yet connected.
+WOP-X-F24 through F26 execute through that state.
+
+`session_subscription.c` connects that state to raw SDK services. `subscribe`
+validates the closed S04 map, reserves a never-reused serial that is also the
+MonitoredItem client handle, sends CreateSubscription with at most 64
+notifications per Publish and then CreateMonitoredItems for the Value attribute
+with both timestamps. Only a Good item status and a revision inside the S04
+ranges (lifetime at least three keepalives) returns the local token `s<serial>`,
+the server subscription and item IDs, the client handle, all revised values and
+the item status; otherwise the server subscription is deleted. While
+subscriptions exist, the Session sends at most one outstanding Publish per
+active subscription and four in total, and only when both its ready-report queue
+and the owner's output queue are empty. Each Publish carries acknowledgements
+for notifications already validated and queued. Publish acknowledgement statuses
+other than Good, BadSequenceNumberUnknown and BadSubscriptionIdInvalid are a
+Session-wide `invalid_response`. Keepalives refresh activity without consuming
+a sequence. Notifications must be decoded DataChangeNotifications for the
+subscription's client handle; a StatusChangeNotification is `subscription_lost`
+with its status. The digest is SHA-256 over the binary notification payloads.
+Gaps are recovered with one Republish at a time, holding at most four later
+messages. A subscription whose activity exceeds its revised publishing interval
+times lifetime count is `subscription_lost`. Each accepted MonitoredItem value
+becomes one `data` report with the projected DataValue and metadata `sequence`,
+`publish_time`, `client_handle`, `overflow` (DataValue info bits),
+`datetime_resolution_ns: 100` and `raw_datetime_ticks_available: true`.
+A terminal subscription failure emits exactly one `error` report with a finite
+code, drops that subscription's unemitted reports and sends best-effort
+deletion. `unsubscribe` marks the subscription closing so no later report is
+delivered, sends DeleteMonitoredItems then DeleteSubscriptions and returns null
+only when both results are Good; any other result ends the generation with
+`cleanup_failed`. A retired CreateSubscription or delete whose result was not
+confirmed also ends the generation because server state could be unowned.
+The owner emits reports after operation replies in each tick and flushes each
+credited envelope before producing the next, so a suspended owner receives its
+credited reports plus at most 64 queued envelopes before `receiver_overflow`.
+The BEAM host does not yet route subscription reports.
 
 ## WOP-X06 — Executable acceptance and evidence
 

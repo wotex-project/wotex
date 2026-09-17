@@ -200,13 +200,14 @@ int main(void) {
     WopService service = {
         NULL, fixture_open, fixture_opened, fixture_prepare, fixture_dispatch,
         fixture_complete, fixture_cancel, fixture_retire, fixture_released, fixture_step,
-        fixture_close
+        fixture_close, NULL, NULL
     };
     static WopOwner owner;
     if(!wop_owner_init(&owner, &service, fixture_clock, NULL) ||
        !wop_owner_ready(&owner, "d1173ccc31560ffc60c29e24ce8adb19f8c3c686", monotonic_ms()) ||
        wop_output_flush(&owner.output, STDOUT_FILENO) != WOP_OUTPUT_OK)
         return 70;
+    owner.output_descriptor = STDOUT_FILENO;
     int status = 70;
     for(;;) {
         wop_owner_tick(&owner, 0);

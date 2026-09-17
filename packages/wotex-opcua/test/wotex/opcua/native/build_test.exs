@@ -92,13 +92,14 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     native_contract_hash = :crypto.hash(:sha256, native_contract) |> Base.encode16(case: :lower)
     assert receipt["identity"]["native_contract_sha256"] == native_contract_hash
 
-    for number <- Enum.concat([1..20, 24..26, 49..50, 52..55]) do
+    for number <- Enum.concat([1..21, 24..29, 49..50, 52..55]) do
       id = String.pad_leading(Integer.to_string(number), 2, "0")
       assert native_tests =~ "native_contract_WOP-X-F#{id}"
     end
 
     assert native_tests =~ "native_owner_matrix"
     assert native_tests =~ "native_publish_sequence_matrix"
+    assert native_tests =~ "native_subscription_matrix"
 
     corpus_path = Application.app_dir(:wotex_opcua, "priv/native/fixtures/value-v1.json")
     corpus_bytes = File.read!(corpus_path)
@@ -138,7 +139,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:ok, subscribe} =
              Frame.request(7, "s1", "subscribe", %{}, 1000, 9_223_372_036_854_775_807)
 
-    assert_native_failure(native, [subscribe], 7, "s1", "unsupported_protocol", "validation")
+    assert_native_failure(native, [subscribe], 7, "s1", "invalid_request", "validation")
 
     invalid = String.replace(request, "\"timeout_ms\":1000", "\"timeout_ms\":1.5")
     assert_native_terminal(native, [invalid], 7, "invalid_request", "validation")

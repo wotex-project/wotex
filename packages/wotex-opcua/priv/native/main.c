@@ -92,6 +92,7 @@ static int bootstrap(void) {
         return 70;
     }
     int status = 70;
+    owner->output_descriptor = STDOUT_FILENO;
     if(!wop_owner_ready(owner, WOTEX_SDK_REVISION, monotonic_ms()) ||
        wop_output_flush(&owner->output, STDOUT_FILENO) != WOP_OUTPUT_OK)
         goto done;

@@ -10,7 +10,8 @@
 #define WOP_OWNER_MAXIMUM_HANDLE 99999U
 
 static const char *const operation_names[] = {
-    "read", "health", "write", "call", "browse", "browse_next", "browse_release"
+    "read", "health", "write", "call", "browse", "browse_next", "browse_release",
+    "subscribe", "unsubscribe"
 };
 
 static void secure_zero(void *bytes, size_t length) {
@@ -38,6 +39,7 @@ bool wop_owner_init(WopOwner *owner, const WopService *service,
     owner->clock = clock;
     owner->clock_context = clock_context;
     owner->next_handle = 1;
+    owner->output_descriptor = -1;
     for (size_t i = 0; i < WOP_OWNER_OPERATIONS; i++) owner->operations[i].index = i;
     return true;
 }
@@ -109,6 +111,10 @@ static EmitStatus emit(WopOwner *owner, yyjson_mut_doc *document) {
     line[size] = '\n';
     WopOutputStatus status = wop_output_normal(&owner->output, line, size + 1);
     free(line);
+    /* Credited envelopes leave the bounded queue before the next is produced. */
+    if (status == WOP_OUTPUT_OK && owner->output_descriptor >= 0 &&
+        wop_output_flush(&owner->output, owner->output_descriptor) == WOP_OUTPUT_CLOSED)
+        status = WOP_OUTPUT_INVALID;
     return status == WOP_OUTPUT_OK ? EMIT_OK : EMIT_FAILED;
 }
 
@@ -534,6 +540,37 @@ static void complete_dispatched(WopOwner *owner, int64_t now) {
     }
 }
 
+/* Emits every report the service has ready; each spends normal output capacity. */
+static void emit_reports(WopOwner *owner) {
+    if (!owner->service.report) return;
+    for (;;) {
+        yyjson_mut_doc *document = yyjson_mut_doc_new(NULL);
+        yyjson_mut_val *root = document ? yyjson_mut_obj(document) : NULL;
+        if (!root || !yyjson_mut_obj_add_uint(document, root, "version", 1) ||
+            !yyjson_mut_obj_add_uint(document, root, "generation", owner->output.generation)) {
+            yyjson_mut_doc_free(document);
+            terminal_code(owner, "receiver_overflow", "exchange");
+            return;
+        }
+        yyjson_mut_doc_set_root(document, root);
+        bool produced = false;
+        WopFailure failure = {"invalid_response", "exchange", false, false, 0};
+        bool valid = owner->service.report(owner->service.context, document, root, &produced,
+                                           &failure);
+        EmitStatus status = valid && produced ? emit(owner, document) : EMIT_OK;
+        yyjson_mut_doc_free(document);
+        if (!valid) {
+            terminal(owner, &failure);
+            return;
+        }
+        if (!produced) return;
+        if (status != EMIT_OK) {
+            terminal_code(owner, "receiver_overflow", "exchange");
+            return;
+        }
+    }
+}
+
 void wop_owner_tick(WopOwner *owner, int slice_ms) {
     if (!owner || owner->finished) return;
     int64_t now = owner->clock(owner->clock_context);
@@ -548,6 +585,9 @@ void wop_owner_tick(WopOwner *owner, int slice_ms) {
     if (owner->session != WOP_OWNER_OPEN) return;
     dispatch_queued(owner, now);
     if (owner->finished) return;
+    if (owner->service.pressure)
+        owner->service.pressure(owner->service.context, owner->output.count,
+                                owner->output.pending_bytes);
     WopFailure failure = {"connection_failed", "exchange", false, false, 0};
     if (!owner->service.step(owner->service.context, slice_ms, &failure)) {
         terminal(owner, &failure);
@@ -559,6 +599,7 @@ void wop_owner_tick(WopOwner *owner, int slice_ms) {
         return;
     }
     complete_dispatched(owner, now);
+    if (!owner->finished) emit_reports(owner);
 }
 
 void wop_owner_shutdown(WopOwner *owner) {
