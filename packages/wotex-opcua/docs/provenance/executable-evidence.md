@@ -20,6 +20,35 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Pipe-independent X-F21 owner trace, 2026-09-17
+
+A Linux arm64 run (Docker container from the local `hexpm/elixir` image
+`sha256:290e52da1c5d5cbf62344d384387e8bdfa7d8a64784302bb7770e76ad13c88a5`,
+Debian 12, Elixir 1.20.2 / OTP 29, GCC 12.2.0, CMake 3.25.1, curl 8.14.1 from
+bookworm-backports) built the pinned SDK and passed 203 of 204 native CTest
+cases. `native_contract_WOP-X-F21` emitted only 8 credited reports before
+`receiver_overflow`, not 16. Instrumentation showed 8 reports and 8192 bytes
+emitted with a queue peak of 64. In that container a new pipe has 8192 bytes
+(`F_GETPIPE_SZ`), because the shared kernel's `pipe-user-pages-soft` limit
+(16384 pages) is exceeded, so the trace pipe filled before the 16-message
+credit ran out. The production owner still respects credit as an upper bound;
+the trace harness wrongly depended on pipe capacity.
+
+`owner_check.c` now replaces the X-F21 trace pipe with a nonblocking `AF_UNIX`
+socket pair whose send and receive buffers request 262,144 bytes. With that
+source copied into the container build, Linux arm64 CTest passes 204/204.
+macOS RelWithDebInfo CTest passes 204/204 and macOS ASan/UBSan CTest passes
+204 of 213 (the nine LeakSanitizer custody cases are unavailable on macOS).
+A complete Linux cohort run of the committed tree is recorded separately.
+
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 364 passed (10 doctests,
+4 properties, 350 tests), 62 optional tests excluded and 95.3% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/owner_check.c` | `6f015c62ad795dbd7d757a33fb449578fc3ef6f4aa5df2f7846296fb44acad87` |
+| macOS native CTest log | `dcf3c137246e6d6b5703f87964864fee7a850201d6bdfd3b3ed056def1e67f65` |
+
 ## Tampered and replayed secure responses, 2026-09-17
 
 `test/interop/tampered_traffic_test.exs` places an Elixir TCP proxy between the

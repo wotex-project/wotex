@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #define CHECK(condition) do { if(!(condition)) return __LINE__; } while(0)
@@ -196,6 +197,31 @@ static bool trace_start(Trace *trace) {
     }
     if(!wop_owner_init(&trace->owner, &service, fake_clock, &trace->fake)) return false;
     trace->owner.output_descriptor = trace->pipe_fds[1];
+    return true;
+}
+
+/* Replaces the trace pipe with a socket pair whose buffers hold the credited
+ * output. A shared kernel can shrink new pipes to 8192 bytes (for example when
+ * a user's pipe-user-pages-soft limit is exceeded), which would stop credited
+ * writes before the credit itself is exhausted. */
+static bool trace_socket(Trace *trace, int buffer_bytes) {
+    int fds[2];
+    if(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) != 0) return false;
+    for(int i = 0; i < 2; i++) {
+        int flags = fcntl(fds[i], F_GETFL);
+        if(flags < 0 || fcntl(fds[i], F_SETFL, flags | O_NONBLOCK) != 0 ||
+           setsockopt(fds[i], SOL_SOCKET, SO_SNDBUF, &buffer_bytes, sizeof(buffer_bytes)) != 0 ||
+           setsockopt(fds[i], SOL_SOCKET, SO_RCVBUF, &buffer_bytes, sizeof(buffer_bytes)) != 0) {
+            close(fds[0]);
+            close(fds[1]);
+            return false;
+        }
+    }
+    close(trace->pipe_fds[0]);
+    close(trace->pipe_fds[1]);
+    trace->pipe_fds[0] = fds[0];
+    trace->pipe_fds[1] = fds[1];
+    trace->owner.output_descriptor = fds[1];
     return true;
 }
 
@@ -717,7 +743,7 @@ static int matrix_receiver_overflow(void) {
 /* WOP-X-F21: a suspended owner stops granting credit while reports continue. */
 static int credit_overflow(yyjson_val *fixture) {
     Trace *trace = calloc(1, sizeof(*trace));
-    CHECK(trace && trace_start(trace));
+    CHECK(trace && trace_start(trace) && trace_socket(trace, 1 << 18));
     yyjson_val *credits = fixture_input(fixture, "credits");
     CHECK(yyjson_get_bool(fixture_input(fixture, "owner_suspended")));
     CHECK(yyjson_get_uint(fixture_input(fixture, "native_buffer_messages")) == WOP_OUTPUT_FRAMES);
