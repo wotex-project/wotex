@@ -122,5 +122,38 @@ defmodule Wotex.Thread.NativeWorkspaceTest do
     assert File.read!(Path.join(workspace, "build.log")) == "failure"
   end
 
+  test "WTH-B01 software fixture workspaces use their own manifest family", %{root: root} do
+    workspace = Path.join(root, "software")
+    identity = %{"source" => "software"}
+
+    build = fn ->
+      File.write!(Path.join(workspace, "fixture"), "binary")
+      {:ok, %{"binaries" => [%{"path" => "fixture", "sha256" => sha256("binary")}]}}
+    end
+
+    assert {:ok, %{reused: false, manifest: manifest}} =
+             Workspace.run(workspace, identity, ["fixture"], build, :software)
+
+    assert manifest["schema"] == "wotex.software-build"
+    assert manifest["binaries"] == [%{"path" => "fixture", "sha256" => sha256("binary")}]
+    assert File.regular?(Path.join(workspace, "software-manifest.json"))
+    refute File.exists?(Path.join(workspace, "native-manifest.json"))
+
+    assert {:ok, %{reused: true}} =
+             Workspace.run(workspace, identity, ["fixture"], build, :software)
+
+    # A software workspace is never a native workspace, and neither manifest is an artifact.
+    assert {:error, :unrecognized_build_workspace} =
+             Workspace.run(workspace, identity, ["fixture"], build)
+
+    for manifest_name <- ["native-manifest.json", "software-manifest.json"] do
+      assert {:error, :invalid_build_workspace} =
+               Workspace.run(Path.join(root, "other"), identity, [manifest_name], build, :software)
+    end
+
+    assert {:error, :invalid_build_workspace} =
+             Workspace.run(workspace, identity, ["fixture"], build, :unknown)
+  end
+
   defp sha256(bytes), do: Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
 end

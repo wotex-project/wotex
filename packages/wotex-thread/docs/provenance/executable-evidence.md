@@ -230,6 +230,67 @@ The production host still has no report source: no stream report or
 `stream_retired` barrier crosses its Port. F11–F13, the Mix software tasks, the
 x86_64 lane and C09 stress remain unexecuted.
 
+## Mix software build and run, 2026-09-17
+
+`mix wotex.software.build --workspace ABS` (`Wotex.Thread.Software.Build`)
+requires Linux, the repository `test/native` sources and exactly one absolute
+workspace. It compiles its command guardian, runs `Wotex.Thread.Native.Build` for
+a normal host in `native/` and a sanitizer host in `native-sanitized/`, builds
+the pinned simulation `ot-rcp` from the manifest-bound patched SDK tree, and
+builds the sanitizer protocol, storage, output, flow and Spinel tests, contract
+driver and Dataset seed. Every step runs through the guardian with separate
+arguments, a cleared environment and finite deadlines. `software-manifest.json`
+(schema `wotex.software-build`) binds both native manifests, all fixture
+executables, build logs, source files, build module digests, tool digests and
+configure arguments. `Wotex.Thread.Native.Workspace` now selects native or
+software manifests explicitly; a workspace of one family is never reused as the
+other. Sanitizer builds add `-fno-sanitize-recover=all`, so an UndefinedBehavior
+report terminates the instrumented process instead of continuing unseen.
+
+`mix wotex.software.run --workspace ABS` (`Wotex.Thread.Software.Run`) never
+builds. It requires the completed software manifest, verifies it and both native
+manifests, and creates a terminal `software-run/` directory. It executes the five
+sanitizer native test executables, then two guarded ExUnit lanes with
+`WOTEX_REQUIRE_SOFTWARE=1`: the full suite with the normal host
+(`mix test --include interop --include software --exclude hardware --seed 0`),
+and `test/software` plus the native contract tests with the sanitizer host. The
+test helper fails when any fixture variable is missing under that setting and
+installs a formatter that records every executed case. `test/software/acceptance.json`
+names the 12 required cases per lane; a lane passes only when its command exits
+zero, each required case passed exactly once and no recorded case failed, skipped
+or was invalid. The runner then kills and counts surviving processes whose
+executable lies inside the workspace, compares source identity before and after,
+and writes `result.json` (schema `wotex.thread.software-run`).
+
+| Lane | Result |
+| --- | --- |
+| Linux arm64, image `sha256:95ca03c1f4714893eb0f33791ecb05eb8a234816fe96aa9a7168c1c3c9012b68`, Elixir 1.18.4 / OTP 27.3.4.15 | Build 89 s; run passed in 92973 ms: 5/5 native tests, normal lane 142/142 cases, sanitizer lane 12/12, 0 survivors, source unchanged. Software manifest `81dacbd4ead22e9a3839ebde8e58ec0ba1a3e85d6b0473e570e94942341d8a3c`, result `06a68b3b7b7229e51a5735bb511c70458ee22bf387d62168d1ef19e6214fd90d`, normal host `07e230d6a853a8f159d4a30ffa799b64f36b4123ed7097aca7624f1472049ed4`, sanitizer host `520bcf9a6c34e05940fb062af7d2a9c2415e0fa5bc10b7ac483de55b9b11c2aa`, RCP `e864dadc7b14fc73879cca1b983b69a79d37d7534b78ff98e43c84c05d64822f` |
+| Linux arm64, image `sha256:cd12556442e9d686112fc225e1b2ce62db1eb9f7e1fff22b9d9bf24591728535`, Elixir 1.20.2 / OTP 29.0.4 | Build 98 s; run passed in 94307 ms: 5/5 native tests, 142/142 and 12/12 cases, 0 survivors, source unchanged. Software manifest `7322b13eed52817c07fdf94e411941a27d021c52e9846b2b42fa303971fc47ab`, result `2793b736208f102d6c3a5c856bab47afe3f2ac0a460e833e6ffa6046175aee5e`, normal host `30599f9678d992568ec70a25e79d6ed15551f778695db3dedcec0f7f6845967d`, sanitizer host `2f4c88b3ac07a89b627b31f4f45e23fe3b85fa08b43888104accdca221ea4645` |
+
+Both lanes ran in privileged containers for the SDK's TUN interface, with
+`WOTEX_PATH_DEPS=1` and a fresh copy of the source tree. A second
+`mix wotex.software.build` on the first workspace verified it without rebuilding.
+Negative controls on Linux arm64: a copy of the completed workspace with one
+appended byte in `ot-rcp` failed with `build_manifest_mismatch` before creating a
+run directory; an empty workspace failed with `software_workspace_not_built`; a
+second run of a completed workspace failed with `software_run_exists`.
+`software_build_test.exs`, `software_run_test.exs` and the workspace tests run in
+the default gate; the lane evaluation cases cover missing, failed, skipped,
+invalid, duplicated, zero-case and malformed results.
+
+| Source | SHA-256 |
+| --- | --- |
+| `lib/wotex/thread/software/build.ex` | `323879eb289a1d3196d50efb1720a68fd7d94c249ca49289b01c3b84af7f2811` |
+| `lib/wotex/thread/software/run.ex` | `f8ab98c909223e6c3a83e442d5906a4b3f199e04a1f89c29377e79f8e8beeb55` |
+| `lib/wotex/thread/native/workspace.ex` | `82934a3f17323ec834a33fa66cf2afba2f97fd37dfeafe61cbc4ae5f87079823` |
+| `test/software/acceptance.json` | `7c3af5bfb6c2c3ea8a39f1c7d2c92720e52572593ac1f9ae9bf87ea289f67c66` |
+| `test/support/software_cases.ex` | `c8b1f46994d68a50935dc04b1c51d918e689cbe3b71c6d7c47d0af1b8032d746` |
+| `test/test_helper.exs` | `0f16e2ce1f2ad072d01bb7504517eca0c64528953bc8af1c8faef1991d6f2b2b` |
+| `priv/openthread/CMakeLists.txt` | `38ea90b899c395aa56fc229d0d6bb7779fa03d76c31ad24b8f8caf29c44e2ae6` |
+
+The x86_64 reference lane, process-flow cases, report sources, the P07 network
+fixture and C09 stress are not part of this run.
+
 ## Acceptance boundary
 
 [WTH.13](../specs/WTH.13-native-backend.md) defines the required native binary,

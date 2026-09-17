@@ -53,8 +53,9 @@ ready-frame smoke passed without Python. The shared native report-flow owner,
 its BEAM ledger and the parser/flow corpus cases WTH-B-F01–F05, F07–F10, F14 and
 F15 execute through a native contract driver. The host accepts `flow_open` and
 `report_ack` under separate reply, control and report output reservations, and
-WTH-B-F06 executes against the real host. Report sources, F11–F13, the required
-x86_64 lane and the software build/run tasks remain open, so P00 is unaccepted.
+WTH-B-F06 executes against the real host. `mix wotex.software.build` and
+`mix wotex.software.run` execute on both Linux arm64 BEAM lanes. Report sources,
+F11–F13 and the required x86_64 lane remain open, so P00 is unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
@@ -172,7 +173,8 @@ facilities, missing responses, failed assertions or cleanup failure. Do not
 convert a failed setup to an ExUnit skip. Existing hardware tests require separate
 explicit target configuration and are never selected by this runner.
 
-Use this command contract once the runner is implemented:
+The build and run tasks are implemented for Linux; the recorded arm64 lanes are
+identified in executable evidence. Use this command contract:
 
 ```sh
 mix wotex.software.build --workspace /absolute/disposable/fixture-workspace

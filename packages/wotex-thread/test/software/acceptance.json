@@ -1,0 +1,40 @@
+{
+  "format": "wotex.thread.software-acceptance",
+  "version": 1,
+  "lanes": {
+    "normal": {
+      "paths": [],
+      "required": [
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F01 through F05 execute the shared production request validator"},
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F06 captures the actual host ready frame and reaps its owned processes"},
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F07 through F10 observe production report credit accounting"},
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F14 and F15 couple native retirement to the production BEAM ledger"},
+        {"module": "Wotex.Thread.NativeOwnerTest", "name": "test WTH-S03 WTH-V04 real SDK reads preserve settings across owned close and reopen"},
+        {"module": "Wotex.Thread.NativeOwnerTest", "name": "test WTH-C03 WTH-V04 repeated acquisitions leave no interface or radio descendants"},
+        {"module": "Wotex.Thread.NativeOwnerTest", "name": "test WTH-C03 WTH-V04 platform conflicts and BEAM death unwind only owned resources"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test WTH-S01 WTH-V02 public native validation uses the SDK and leaves state unchanged"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test WTH-S01 WTH-V02 explicit export reads credentials written by the real SDK fixture"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test explicit formation waits for a real SDK leader and refuses to overwrite its Dataset"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test real management callbacks separate acceptance, rejection and pending effectiveness"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test owned commissioner activates and admits only exact finite joiner records"}
+      ]
+    },
+    "sanitized": {
+      "paths": ["test/software", "test/wotex/thread/native_contract_test.exs"],
+      "required": [
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F01 through F05 execute the shared production request validator"},
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F06 captures the actual host ready frame and reaps its owned processes"},
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F07 through F10 observe production report credit accounting"},
+        {"module": "Wotex.Thread.NativeContractTest", "name": "test WTH-B-F14 and F15 couple native retirement to the production BEAM ledger"},
+        {"module": "Wotex.Thread.NativeOwnerTest", "name": "test WTH-S03 WTH-V04 real SDK reads preserve settings across owned close and reopen"},
+        {"module": "Wotex.Thread.NativeOwnerTest", "name": "test WTH-C03 WTH-V04 repeated acquisitions leave no interface or radio descendants"},
+        {"module": "Wotex.Thread.NativeOwnerTest", "name": "test WTH-C03 WTH-V04 platform conflicts and BEAM death unwind only owned resources"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test WTH-S01 WTH-V02 public native validation uses the SDK and leaves state unchanged"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test WTH-S01 WTH-V02 explicit export reads credentials written by the real SDK fixture"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test explicit formation waits for a real SDK leader and refuses to overwrite its Dataset"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test real management callbacks separate acceptance, rejection and pending effectiveness"},
+        {"module": "Wotex.Thread.NativeDatasetTest", "name": "test owned commissioner activates and admits only exact finite joiner records"}
+      ]
+    }
+  }
+}

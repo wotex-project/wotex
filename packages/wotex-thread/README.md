@@ -48,9 +48,11 @@ native build is a Mix task. Active software tests use ExUnit. Dormant Python
 protocol/process drivers have been retired; their unexecuted cells remain open.
 
 [WTH.13](docs/specs/WTH.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. `mix wotex.native.build --workspace ABS` now
-builds the pinned Linux host; `mix wotex.software.build` and
-`mix wotex.software.run` remain specified work. Generic orchestration and
+flow control and native ownership. On Linux, `mix wotex.native.build --workspace ABS`
+builds the pinned host, `mix wotex.software.build --workspace ABS` adds a
+sanitizer host, the simulation RCP and native test executables, and
+`mix wotex.software.run --workspace ABS` executes the native tests and the
+required ExUnit software lanes against that manifest. Generic orchestration and
 assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
 
 ## Implemented profile

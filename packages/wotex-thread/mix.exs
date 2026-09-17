@@ -95,6 +95,8 @@ defmodule WotexThread.MixProject do
       setup: ["deps.get", "deps.compile"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "wotex.native.build": "wotex.thread.native.build",
+      "wotex.software.build": "wotex.thread.software.build",
+      "wotex.software.run": "wotex.thread.software.run",
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
