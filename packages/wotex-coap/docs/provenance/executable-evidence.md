@@ -600,7 +600,13 @@ Mix builds/runs, native manifests, bounded Port framing and durable context
 rules. The [native build receipt](native-build-v1.json) records the implemented
 `mix wotex.native.build` path on macOS arm64: bounded pinned download, ordered
 patch verification, static libcoap compilation, exact version/OSCORE and worker
-probes, runtime manifest verification and read-only reuse all pass. The
+probes, runtime manifest verification and read-only reuse all pass. On Elixir
+1.18.4 / OTP 27.3.4.15 the first Linux software build failed with
+`extraction_failed`: that `erl_tar` rejects libcoap's
+`examples/contiki/coap_config.h -> ../../coap_config.h.contiki` link as
+`unsafe_symlink`. Extraction now passes only validated files and directories to
+`erl_tar`, creates the two digest-bound links explicitly and verifies them; the
+same Linux build then passes on both runtimes. The
 [software build receipt](software-build-v1.json) records the macOS arm64
 `mix wotex.software.build` path: the upstream peer and 12 manifest-bound native
 fault/vector executables compile and execute under bounded guardians, all 63

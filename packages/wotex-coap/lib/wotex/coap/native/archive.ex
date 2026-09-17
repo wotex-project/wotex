@@ -6,7 +6,10 @@ defmodule Wotex.CoAP.Native.Archive do
   validates every tar entry before creating output. Ordinary files and
   directories must remain below the declared archive root. The pinned libcoap
   archive's two reviewed internal symbolic links are admitted only with its
-  exact archive digest and are verified after extraction. Other links,
+  exact archive digest. The tar reader extracts only validated files and
+  directories; this module creates the reviewed links itself, because OTP 27
+  refuses a relative link target containing `..` that OTP 29 accepts, and then
+  verifies every link. Other links,
   duplicate paths, traversal, special files, privileged modes and excessive
   expansion fail without extraction. A failed unpack removes only the
   destination this call created.
@@ -49,7 +52,7 @@ defmodule Wotex.CoAP.Native.Archive do
          {:ok, entries} <- table(bytes),
          :ok <- validate_entries(entries, root, sha256),
          :ok <- create_destination(destination) do
-      unpack(bytes, destination, root, sha256)
+      unpack(bytes, destination, root, sha256, entries)
     end
   end
 
@@ -187,19 +190,35 @@ defmodule Wotex.CoAP.Native.Archive do
     end
   end
 
-  defp unpack(bytes, destination, root, sha256) do
-    options = [:compressed, {:cwd, String.to_charlist(destination)}]
+  @doc false
+  @spec unpack(binary(), Path.t(), String.t(), String.t(), list()) :: :ok | {:error, failure()}
+  def unpack(bytes, destination, root, sha256, entries) do
+    members = for {name, kind, _, _, _, _, _} <- entries, kind in [:regular, :directory], do: name
+    links = for {name, :symlink, _, _, _, _, _} <- entries, do: List.to_string(name)
+    options = [:compressed, {:cwd, String.to_charlist(destination)}, {:files, members}]
 
-    case :erl_tar.extract({:binary, bytes}, options) do
-      :ok ->
-        verify_links(destination, root, sha256)
-
-      {:error, _} ->
+    with :ok <- :erl_tar.extract({:binary, bytes}, options),
+         :ok <- create_links(destination, root, links) do
+      verify_links(destination, root, sha256)
+    else
+      _ ->
         case File.rm_rf(destination) do
           {:ok, _} -> {:error, :extraction_failed}
           {:error, _, _} -> {:error, :cleanup_failed}
         end
     end
+  end
+
+  # Entry validation admits only the pinned archive's reviewed link names.
+  defp create_links(destination, root, links) do
+    Enum.reduce_while(links, :ok, fn name, :ok ->
+      target = Map.fetch!(@libcoap_links, String.replace_prefix(name, root <> "/", ""))
+
+      case File.ln_s(target, Path.join(destination, name)) do
+        :ok -> {:cont, :ok}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
   end
 
   defp do_verify_links(destination, root, true) do

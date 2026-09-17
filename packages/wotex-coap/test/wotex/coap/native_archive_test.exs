@@ -175,6 +175,49 @@ defmodule Wotex.CoAP.Native.ArchiveTest do
              )
   end
 
+  test "WCO-N01 validated members extract before the reviewed links are created", %{root: root} do
+    archive_root = "libcoap-#{@revision}"
+    name = &String.to_charlist("#{archive_root}/#{&1}")
+
+    files = [
+      {name.("README.md"), "readme"},
+      {name.("coap_config.h.contiki"), "config"},
+      {name.("examples/contiki/Makefile"), "make"}
+    ]
+
+    archive = Path.join(root, "linked.tar.gz")
+    :ok = :erl_tar.create(String.to_charlist(archive), files, [:compressed])
+    bytes = File.read!(archive)
+
+    regular =
+      Enum.map(files, fn {path, content} ->
+        {path, :regular, byte_size(content), 0, 0o644, 0, 0}
+      end)
+
+    links = [
+      {name.("README"), :symlink, 0, 0, 0o777, 0, 0},
+      {name.("examples/contiki/coap_config.h"), :symlink, 0, 0, 0o777, 0, 0}
+    ]
+
+    destination = Path.join(root, "linked")
+    File.mkdir!(destination)
+    assert :ok = Archive.unpack(bytes, destination, archive_root, @source_sha256, regular ++ links)
+    extracted = Path.join(destination, archive_root)
+    assert File.read_link(Path.join(extracted, "README")) == {:ok, "README.md"}
+    assert File.read!(Path.join(extracted, "examples/contiki/coap_config.h")) == "config"
+
+    # Without extracted members the link parent is absent: creation fails and
+    # only the destination created for this extraction is removed.
+    orphan = Path.join(root, "orphan")
+    File.mkdir!(orphan)
+
+    assert {:error, :extraction_failed} =
+             Archive.unpack(bytes, orphan, archive_root, @source_sha256, links)
+
+    refute File.exists?(orphan)
+    assert File.regular?(archive)
+  end
+
   test "WCO-N01 the digest-bound upstream links remain inside the reviewed root", %{root: root} do
     archive_root = "libcoap-#{@revision}"
 

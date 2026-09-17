@@ -94,7 +94,10 @@ runtime downloads and system-wide installation are forbidden.
 
 Both tasks accept exactly one `--workspace` absolute path, rejecting other,
 duplicate or positional arguments. The directory is empty or has a verified
-matching manifest. Reject symlink roots, unrelated contents, archive traversal
+matching manifest. The OTP tar reader extracts only validated regular files and
+directories; the task creates the pinned archive's two reviewed relative links
+itself and verifies them, because OTP 27 rejects a `..` link target that OTP 29
+accepts. Reject symlink roots, unrelated contents, archive traversal
 and links escaping the workspace. Download limit is 4 MiB/30 seconds. Each
 native build has a ten-minute deadline. Commands use separate argv entries.
 CMake options include `ENABLE_OSCORE=ON`, `ENABLE_DTLS=ON`,
