@@ -81,6 +81,40 @@ if beamlens_enabled do
         "http://127.0.0.1:#{port}/api/internal/beamlens/v1"
 end
 
+# Operator listeners bind loopback over plain HTTP unless the operator selects
+# the mutual-TLS remote transport with its bind address, files and peer ranges.
+metrics_transport =
+  case System.get_env("WOTEX_LAB_METRICS_TRANSPORT") do
+    nil ->
+      :local
+
+    "local" ->
+      :local
+
+    "remote" ->
+      case WotexLabWorkbench.Observability.OperatorTransport.configure_remote(
+             System.get_env("WOTEX_LAB_METRICS_BIND"),
+             System.get_env("WOTEX_LAB_METRICS_TLS_CERTFILE"),
+             System.get_env("WOTEX_LAB_METRICS_TLS_KEYFILE"),
+             System.get_env("WOTEX_LAB_METRICS_TLS_CLIENT_CACERTFILE"),
+             System.get_env("WOTEX_LAB_METRICS_ALLOW")
+           ) do
+        {:ok, transport} ->
+          transport
+
+        {:error, _} ->
+          raise "remote metrics transport needs a bind address, TLS files and peer ranges"
+      end
+
+    _ ->
+      raise "WOTEX_LAB_METRICS_TRANSPORT must be local or remote"
+  end
+
+with_transport = fn
+  options, :local -> options
+  options, transport -> Keyword.put(options, :transport, transport)
+end
+
 # No credential is read unless the listener is explicitly requested. Retain
 # only its digest; never put the supplied Bearer token in application options.
 if port = System.get_env("WOTEX_LAB_METRICS_PORT") do
@@ -89,14 +123,14 @@ if port = System.get_env("WOTEX_LAB_METRICS_PORT") do
          System.get_env("WOTEX_LAB_METRICS_TOKEN")
        ) do
     {:ok, options} ->
-      config :wotex_lab_workbench, metrics_scrape: options
+      config :wotex_lab_workbench, metrics_scrape: with_transport.(options, metrics_transport)
 
     {:error, _invalid} ->
       raise "metrics listener requires an admitted port and URL-safe token (43–128 characters)"
   end
 end
 
-# The operator query listener is also opt-in, loopback-only and keeps only the
+# The operator query listener is also opt-in, uses the same transport and keeps only the
 # digest of its own credential, which must differ from the scrape credential.
 if port = System.get_env("WOTEX_LAB_METRICS_QUERY_PORT") do
   case WotexLabWorkbench.Observability.QueryListener.configure(
@@ -104,7 +138,7 @@ if port = System.get_env("WOTEX_LAB_METRICS_QUERY_PORT") do
          System.get_env("WOTEX_LAB_METRICS_QUERY_TOKEN")
        ) do
     {:ok, options} ->
-      config :wotex_lab_workbench, metrics_query: options
+      config :wotex_lab_workbench, metrics_query: with_transport.(options, metrics_transport)
 
     {:error, _} ->
       raise "metric query listener requires an admitted port and URL-safe token (43–128 characters)"

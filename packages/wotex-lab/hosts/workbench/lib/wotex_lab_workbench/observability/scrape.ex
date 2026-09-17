@@ -2,15 +2,18 @@ defmodule WotexLabWorkbench.Observability.Scrape do
   @moduledoc """
   Explicit operator-only HTTP/1 scrape listener, separate from the browser host.
 
-  The address is fixed to IPv4 loopback. Only `GET /metrics` without query or
-  body is admitted, using one bounded Bearer credential. Only its SHA-256 is
+  The default `:local` transport fixes the address to IPv4 loopback; the
+  `:transport` option may instead carry the mutual-TLS remote profile admitted
+  by `WotexLabWorkbench.Observability.OperatorTransport`, with its bind address
+  and peer ranges. Only `GET /metrics` without query or body is admitted, using
+  one bounded Bearer credential. Only its SHA-256 is
   retained in configuration. Cookies, URLs, forwarding headers and browser
   sessions cannot authorize access. No CORS, HTTP/2, WebSocket or keepalive is
   enabled. Eight connections, bounded headers and two-second socket waits bound
   the listener; public PromEx collection also has its own two-second timeout.
 
-  This is a trusted-local-operator profile, not a TLS/remote deployment or a
-  tenant endpoint. It does not start PromEx, discover credentials or download
+  The local transport is a trusted-local-operator profile; neither transport is
+  a tenant endpoint. It does not start PromEx, discover credentials or download
   anything. The explicit host supervisor composes it with the collector.
   """
 
@@ -19,6 +22,7 @@ defmodule WotexLabWorkbench.Observability.Scrape do
   import Plug.Conn
 
   alias Wotex.Lab.{Error, Options}
+  alias WotexLabWorkbench.Observability.OperatorTransport
   alias Wotex.Lab.Metrics.Exposition
 
   @promex WotexLabWorkbench.Observability.PromEx
@@ -41,7 +45,8 @@ defmodule WotexLabWorkbench.Observability.Scrape do
   @doc "Validates closed listener options without opening a socket."
   @spec validate(keyword()) :: :ok | {:error, Error.t()}
   def validate(opts) do
-    with :ok <- Options.validate(opts, [:port, :token_digest]),
+    with :ok <- Options.validate(opts, [:port, :token_digest, :transport]),
+         :ok <- OperatorTransport.validate(Keyword.get(opts, :transport, :local)),
          true <- port?(Keyword.get(opts, :port)),
          digest when is_binary(digest) and byte_size(digest) == 32 <-
            Keyword.get(opts, :token_digest) do
@@ -56,49 +61,69 @@ defmodule WotexLabWorkbench.Observability.Scrape do
   def child_spec(opts),
     do: %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, type: :supervisor}
 
-  @doc "Starts the bounded loopback listener; port 0 explicitly requests an ephemeral port."
+  @doc "Starts the bounded listener for its transport; port 0 explicitly requests an ephemeral port."
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
   def start_link(opts) do
     with :ok <- validate(opts) do
+      transport = Keyword.get(opts, :transport, :local)
+
+      {socket, bandit} =
+        transport
+        |> OperatorTransport.bandit_options(
+          backlog: 8,
+          send_timeout: 2_000,
+          send_timeout_close: true
+        )
+        |> Keyword.pop!(:transport_options)
+
       Bandit.start_link(
-        plug: {__MODULE__, Keyword.fetch!(opts, :token_digest)},
-        scheme: :http,
-        ip: {127, 0, 0, 1},
-        port: Keyword.fetch!(opts, :port),
-        startup_log: false,
-        thousand_island_options: [
-          supervisor_options: [name: __MODULE__],
-          num_acceptors: 1,
-          num_connections: 8,
-          max_connections_retry_count: 0,
-          read_timeout: 2_000,
-          shutdown_timeout: 2_000,
-          transport_options: [backlog: 8, send_timeout: 2_000, send_timeout_close: true]
-        ],
-        http_options: [
-          compress: false,
-          log_exceptions_with_status_codes: [],
-          log_protocol_errors: false,
-          log_client_closures: false
-        ],
-        http_1_options: [
-          max_requests: 1,
-          max_request_line_length: 1_024,
-          max_header_length: 2_048,
-          max_header_count: 16
-        ],
-        http_2_options: [enabled: false],
-        websocket_options: [enabled: false]
+        bandit ++
+          [
+            plug: {__MODULE__, {Keyword.fetch!(opts, :token_digest), transport}},
+            port: Keyword.fetch!(opts, :port),
+            startup_log: false,
+            thousand_island_options: [
+              supervisor_options: [name: __MODULE__],
+              num_acceptors: 1,
+              num_connections: 8,
+              max_connections_retry_count: 0,
+              read_timeout: 2_000,
+              shutdown_timeout: 2_000,
+              transport_options: socket
+            ],
+            http_options: [
+              compress: false,
+              log_exceptions_with_status_codes: [],
+              log_protocol_errors: false,
+              log_client_closures: false
+            ],
+            http_1_options: [
+              max_requests: 1,
+              max_request_line_length: 1_024,
+              max_header_length: 2_048,
+              max_header_count: 16
+            ],
+            http_2_options: [enabled: false],
+            websocket_options: [enabled: false]
+          ]
       )
     end
   end
 
   @impl Plug
-  def init(digest) when is_binary(digest) and byte_size(digest) == 32, do: digest
-  def init(_invalid), do: raise(ArgumentError, "invalid scrape credential digest")
+  def init(digest) when is_binary(digest) and byte_size(digest) == 32, do: {digest, :local}
+
+  def init({digest, transport} = config) when is_binary(digest) and byte_size(digest) == 32 do
+    case OperatorTransport.validate(transport) do
+      :ok -> config
+      {:error, _} -> raise(ArgumentError, "invalid scrape credential digest")
+    end
+  end
+
+  def init(_), do: raise(ArgumentError, "invalid scrape credential digest")
 
   @impl Plug
-  def call(conn, digest) do
+  def call(conn, {digest, transport}) do
     conn =
       conn
       |> put_resp_header("cache-control", "no-store")
@@ -106,7 +131,7 @@ defmodule WotexLabWorkbench.Observability.Scrape do
       |> put_resp_header("connection", "close")
 
     cond do
-      conn.remote_ip != {127, 0, 0, 1} ->
+      not OperatorTransport.admitted_peer?(transport, conn.remote_ip) ->
         reply(conn, 403, "Forbidden\n")
 
       not authenticated?(conn, digest) ->

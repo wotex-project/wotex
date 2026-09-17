@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.16.0. Contract: accepted. Source status: the metric
+Specification version: 0.17.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -17,9 +17,10 @@ provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
 A separately activated loopback operator listener binds the query descriptor
 to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
-provision a durable database TTL on a local receiver. Remote/TLS scraping,
-hosted database provisioning, OTLP signal export, isolated hosted-tenant
-BeamLens and public or tenant HTTP query bindings remain planned; the MCP `query_metrics` tool binds the local gateway. Hosted
+provision a durable database TTL on a local receiver. Both operator listeners
+can instead use a mutual-TLS remote transport with peer ranges. Hosted
+database provisioning, OTLP signal export, isolated hosted-tenant BeamLens and
+public or tenant HTTP query bindings remain planned; the MCP `query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 is not proof of a Grafana import or query execution.
 
@@ -191,9 +192,10 @@ connection, a 1,024-byte request line, at most 16 admitted headers of 2,048
 bytes each and one MiB of response text. Request bodies, query strings and
 Origin headers are refused. HTTP/2, WebSockets, CORS, compression and keepalive
 are disabled. Read/write inactivity waits are two seconds; they are not a
-whole-header deadline against slow clients. This is a trusted local operator
-surface, not a remote/TLS or untrusted-hosted profile. Do not promote it through
-port forwarding or a proxy without that separately admitted deployment.
+whole-header deadline against slow clients. The default transport is a trusted
+local operator surface, not an untrusted-hosted profile. Do not promote it
+through port forwarding or a proxy; use the separately admitted remote
+transport below instead.
 Responses are non-cacheable. Collector failure is 503, never invented zeros.
 Protocol and exception logging are disabled for this listener to avoid
 credential reflection; client statuses remain visible. No public route reads
@@ -201,6 +203,29 @@ history, and no listener credential authorizes any numerical run or Action.
 The host's `metrics_scrape_test.exs` covers pure admission and real sockets:
 auth/URL/cookie/forwarding substitution, absence/failure, connection capacity,
 unread oversized body refusal without draining, shutdown and token sentinels.
+
+`Observability.OperatorTransport` is that separately admitted remote transport
+for both the scrape and query listeners. `WOTEX_LAB_METRICS_TRANSPORT=remote`
+selects it and requires `WOTEX_LAB_METRICS_BIND` (an IP literal),
+`WOTEX_LAB_METRICS_TLS_CERTFILE`, `WOTEX_LAB_METRICS_TLS_KEYFILE`,
+`WOTEX_LAB_METRICS_TLS_CLIENT_CACERTFILE` and `WOTEX_LAB_METRICS_ALLOW`, a list of
+1 to 16 comma-separated CIDR ranges; any missing or malformed value refuses
+startup. The listener then serves HTTPS with TLS 1.3 only and the strong Plug
+suite, requires a client certificate that chains to the configured CA within
+depth two, issues no session tickets and answers 403 unless the socket peer
+address lies inside a range. An IPv4 range does not admit an IPv4-mapped IPv6
+peer, and forwarding headers never change the peer. The Bearer credential,
+request framing, connection and response bounds are unchanged. Configuration
+checks only that the certificate and key paths are regular files.
+`metrics_operator_transport_test.exs` covers remote admission and refusals,
+exact IPv4 and IPv6 prefix matching, and real TLS sockets for both listeners
+with certificates generated at test time: a trusted client succeeds with the
+listener's own credential, the other listener's credential gets 401, a client
+without a certificate or with a certificate from another CA fails the
+handshake, plaintext HTTP gets no HTTP response and a trusted client outside the
+ranges gets 403. Certificate issuance, rotation, revocation and the network
+path to the listener remain operator responsibilities; this is not a tenant
+endpoint.
 
 For the zero-service profile, the Workbench's `Observability.Capture.sample/0`
 calls public `PromEx.get_metrics/1`, parses the bounded exposition and pairs it
@@ -298,7 +323,7 @@ Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
 redacted from stats and errors. The durable query gateway and hosted database
 provisioning remain planned host work; hosted exporter TLS and egress policy
-are implemented, while remote scrape ingress is not.
+and the mutual-TLS operator listener transport are implemented.
 
 `Wotex.Lab.Metrics.Retention` implements local TTL provisioning without
 transport. `plan/1` admits a lowercase database identifier other than
@@ -444,9 +469,9 @@ exhausted, 503 when history is unavailable and 504 at the deadline.
 `metrics_query_listener_test.exs` covers configuration, activation
 dependencies, credential separation, framing refusals, server-bound scope,
 unsupported and invalid descriptors, scope capacity, unavailable history, the
-deadline with a blocked history and a real loopback socket. This is a
-trusted-local operator profile; TLS, remote ingress and tenant-scoped query
-bindings are not claimed.
+deadline with a blocked history and a real loopback socket. The listener also
+accepts the mutual-TLS remote transport described with the scrape listener;
+tenant-scoped query bindings are not claimed.
 
 Snapshots and query structs are revalidated at the execution boundary. Query
 samples must match the catalogue's type, finite labels and exact histogram

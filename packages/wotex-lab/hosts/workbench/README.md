@@ -246,9 +246,8 @@ through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser
 session is required; no room or collector starts. Importing the JSON and
 choosing a Prometheus-compatible source are operator actions. The export
 preserves label sets, uses five-minute counter rates and bucket-derived p95,
-and never fills missing data with zero. Grafana import compatibility and
-remote/TLS scraping remain separate acceptance work, not claims made by this
-source export. Saved arrangements are session-only and cannot activate either
+and never fills missing data with zero. Grafana import compatibility remains
+separate acceptance work, not a claim made by this source export. Saved arrangements are session-only and cannot activate either
 the collector or the separately configured durable exporter.
 
 ### Protected local scrape
@@ -301,8 +300,28 @@ curl -sS -X POST http://127.0.0.1:9465/query \
 The server chooses the instance and session scope. Each request gets one
 short-lived inspection scope limited to a six-hour range, 2,000 points,
 256 KiB of output and a two-second deadline. Refusals are JSON objects with a
-stable `code`. Like the scrape listener, this profile is loopback-only and is
-not a TLS, remote or tenant endpoint.
+stable `code`. Like the scrape listener, this profile is loopback-only unless the remote
+transport below is selected, and it is not a tenant endpoint.
+
+### Remote operator transport
+
+To scrape or query from another host, set `WOTEX_LAB_METRICS_TRANSPORT=remote`
+for both listeners and provide:
+
+- `WOTEX_LAB_METRICS_BIND`, the IP address to bind, such as `10.0.4.12`;
+- `WOTEX_LAB_METRICS_TLS_CERTFILE` and `WOTEX_LAB_METRICS_TLS_KEYFILE`, the
+  server certificate and key;
+- `WOTEX_LAB_METRICS_TLS_CLIENT_CACERTFILE`, the CA that issues client
+  certificates for your scrapers and operators;
+- `WOTEX_LAB_METRICS_ALLOW`, up to 16 comma-separated CIDR ranges such as
+  `10.0.4.0/24,2001:db8:4::/48`.
+
+The listeners then accept only TLS 1.3 connections that present a client
+certificate from that CA and originate inside a listed range, and still require
+their Bearer tokens. Use SHA-256 or stronger certificate signatures; TLS 1.3
+refuses SHA-1 chains. Forwarding headers are ignored, so place the listener
+where the scraper connects to it directly. Issuing, rotating and revoking
+certificates is operator work.
 
 ## Runtime configuration
 
