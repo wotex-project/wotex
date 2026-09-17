@@ -31,4 +31,12 @@ defmodule Wotex.CoAP.Native.BuildOperations do
   @doc false
   @spec digest(String.t()) :: {:ok, String.t()} | {:error, term()}
   def digest(path), do: Workspace.digest(path)
+
+  @doc false
+  @spec runtime(String.t()) :: {:ok, %{path: String.t(), sha256: String.t()}} | {:error, term()}
+  def runtime(name) do
+    with {:ok, path} <- Toolchain.executable(name),
+         {:ok, digest} <- Workspace.digest(path),
+         do: {:ok, %{path: path, sha256: digest}}
+  end
 end

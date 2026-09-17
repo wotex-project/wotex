@@ -2,10 +2,13 @@ defmodule Wotex.CoAP.Software.Run do
   @moduledoc """
   Verifies a completed software workspace and runs the owned interop suite.
 
-  The tagged ExUnit files own their libcoap peers, ports and credential
-  workspaces. UDP and DTLS peers are independent stacks; the OSCORE peer shares
-  the pinned libcoap stack with the manifest-bound native helper, so its cases
-  are same-stack evidence. The lifecycle stress file repeats those transports
+  The tagged ExUnit files own their peers, ports and credential workspaces. UDP
+  and DTLS peers are independent stacks; the libcoap OSCORE peer shares the
+  pinned libcoap stack with the manifest-bound native helper, so its cases are
+  same-stack evidence. The independent OSCORE file instead drives the pinned
+  Eclipse Californium plugtest server, whose CoAP engine, OSCORE implementation
+  and observation model are upstream of this repository, so its cases are
+  cross-stack evidence. The lifecycle stress file repeats those transports
   under the WCO-C09 load, lifecycle and forced-failure matrix. The native corpus
   file drives native-v1 cases through the manifest-bound helper, and the
   saturation file samples a suspended native owner's Port mailbox. This runner
@@ -20,12 +23,13 @@ defmodule Wotex.CoAP.Software.Run do
   @project_root Path.expand("../../../..", __DIR__)
   @cases ~w(test/interop/libcoap_test.exs test/interop/dtls_test.exs
     test/interop/dtls_pki_test.exs test/interop/oscore_test.exs
-    test/software/lifecycle_stress_test.exs test/software/native_corpus_test.exs
-    test/software/native_saturation_test.exs)
+    test/software/independent_oscore_test.exs test/software/lifecycle_stress_test.exs
+    test/software/native_corpus_test.exs test/software/native_saturation_test.exs)
   @arguments ["test" | @cases] ++
                ~w(--include interop --include software --exclude hardware --seed 0)
   @scenario_ids ~w(WCO-C03 WCO-C05 WCO-C07 WCO-C09 WCO-I02 WCO-I03 WCO-I04 WCO-I05 WCO-N03 WCO-N04
-    WCO-S01 WCO-S02 WCO-S03 WCO-S05 WCO-S06 WCO-V02 WCO-V09 WCO-V12 WCO-V13 WCO-V15)
+    WCO-S01 WCO-S02 WCO-S03 WCO-S05 WCO-S06 WCO-V02 WCO-V04 WCO-V05 WCO-V09 WCO-V12 WCO-V13
+    WCO-V15)
   @source_files [
                   __ENV__.file,
                   Path.join(@project_root, "lib/mix/tasks/wotex.coap.software.run.ex"),
@@ -75,7 +79,12 @@ defmodule Wotex.CoAP.Software.Run do
          "schema" => "wotex.coap.native@1",
          "software_build" => %{
            "profile" => "software",
-           "peer" => %{"features" => %{"dtls" => true, "oscore" => true, "version" => true}}
+           "peer" => %{"features" => %{"dtls" => true, "oscore" => true, "version" => true}},
+           "independent_peer" => %{
+             "path" => "bin/cf-plugtest-server.jar",
+             "sha256" => independent_hash,
+             "runtime" => %{"path" => runtime}
+           }
          },
          "executables" => %{
            "coap-server" => %{"sha256" => peer_hash},
@@ -84,9 +93,10 @@ defmodule Wotex.CoAP.Software.Run do
          "workspace" => %{"artifacts" => artifacts}
        })
        when is_map(artifacts) do
-    if digest?(peer_hash) and digest?(native_hash),
-      do: :ok,
-      else: {:error, :invalid_software_manifest}
+    if digest?(peer_hash) and digest?(native_hash) and digest?(independent_hash) and
+         is_binary(runtime) and Path.type(runtime) == :absolute,
+       do: :ok,
+       else: {:error, :invalid_software_manifest}
   end
 
   defp validate_manifest(_), do: {:error, :invalid_software_manifest}
@@ -128,7 +138,7 @@ defmodule Wotex.CoAP.Software.Run do
         timeout: @timeout,
         output: @output_limit,
         cleanup: 5_000,
-        env: environment(tools, workspace)
+        env: environment(tools, workspace, manifest)
       )
 
     {status, failure, details} = command_result(command)
@@ -148,6 +158,7 @@ defmodule Wotex.CoAP.Software.Run do
         "coap-server" => manifest["executables"]["coap-server"]["sha256"],
         "wotex-coap-oscore" => manifest["executables"]["wotex-coap-oscore"]["sha256"]
       },
+      "independent_peer" => manifest["software_build"]["independent_peer"],
       "native_features" => manifest["software_build"]["peer"]["features"],
       "command" => ["mix" | @arguments],
       "seed" => 0,
@@ -209,7 +220,7 @@ defmodule Wotex.CoAP.Software.Run do
     end
   end
 
-  defp environment(tools, workspace) do
+  defp environment(tools, workspace, manifest) do
     path =
       [tools.mix, tools.elixir, tools.erl]
       |> Enum.map(&Path.dirname/1)
@@ -222,6 +233,8 @@ defmodule Wotex.CoAP.Software.Run do
       "LC_ALL" => "C",
       "MIX_ENV" => "test",
       "PATH" => path,
+      "WOTEX_COAP_INDEPENDENT_PEER" => Path.join(workspace, "bin/cf-plugtest-server.jar"),
+      "WOTEX_COAP_JAVA" => manifest["software_build"]["independent_peer"]["runtime"]["path"],
       "WOTEX_COAP_LIBCOAP_SERVER" => Path.join(workspace, "bin/coap-server"),
       "WOTEX_COAP_NATIVE_MANIFEST" => Path.join(workspace, "native/native-manifest.json"),
       "WOTEX_COAP_NATIVE_WORKER" => Path.join(workspace, "native/bin/wotex-coap-oscore")

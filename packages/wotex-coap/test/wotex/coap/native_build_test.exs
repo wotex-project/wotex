@@ -30,6 +30,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     @revision "7cf7465b784baded4de183290c547d582becfd28"
 
+    @independent_peer_sha256 "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"
     @patched %{
       "src/coap_oscore.c" => "59089f1d3cd06a31b47c0fb76f5b03342405855552d2c2a03e89e4e8894c621b",
       "src/oscore/oscore_cbor.c" =>
@@ -89,6 +90,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
         :worker_probe -> worker(mode)
         :peer_probe -> peer(mode)
         :fault_probe -> fault(mode)
+        :runtime_probe -> success("")
         :download -> download(arguments, mode)
         :build -> build(arguments)
         :compile -> compile(arguments)
@@ -113,6 +115,13 @@ defmodule Wotex.CoAP.NativeBuildTest do
       end
     end
 
+    @spec runtime(String.t()) :: {:ok, map()} | {:error, term()}
+    def runtime(_) do
+      if Process.get({__MODULE__, :failure}) == :runtime,
+        do: {:error, :fixture_runtime_unavailable},
+        else: {:ok, %{path: "/fixture/bin/java", sha256: String.duplicate("b", 64)}}
+    end
+
     @spec digest(String.t()) :: {:ok, String.t()} | {:error, term()}
     def digest(path) do
       suffix =
@@ -121,6 +130,11 @@ defmodule Wotex.CoAP.NativeBuildTest do
         end)
 
       cond do
+        String.ends_with?(path, "/bin/cf-plugtest-server.jar") ->
+          if Process.get({__MODULE__, :failure}) == :independent_peer,
+            do: {:ok, String.duplicate("c", 64)},
+            else: {:ok, @independent_peer_sha256}
+
         Process.get({__MODULE__, :failure}) == :software_digest and
             String.ends_with?(path, "/lib/wotex/coap/software/build.ex") ->
           {:error, :fixture_digest_failed}
@@ -164,6 +178,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
     defp dynamic?(_), do: false
 
     defp command_kind(_, ["--version"], :version), do: :version_failure
+    defp command_kind(_, ["-version"], :runtime_probe), do: :runtime_probe
 
     defp command_kind(executable, arguments, _) do
       cond do

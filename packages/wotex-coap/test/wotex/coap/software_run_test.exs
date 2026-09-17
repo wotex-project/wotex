@@ -246,6 +246,11 @@ defmodule Wotex.CoAP.SoftwareRunTest do
         "profile" => "software",
         "peer" => %{
           "features" => %{"dtls" => true, "oscore" => true, "version" => true}
+        },
+        "independent_peer" => %{
+          "path" => "bin/cf-plugtest-server.jar",
+          "sha256" => @hash,
+          "runtime" => %{"path" => "/usr/bin/java"}
         }
       },
       "executables" => %{

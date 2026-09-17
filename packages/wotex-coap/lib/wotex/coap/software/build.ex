@@ -1,17 +1,30 @@
 defmodule Wotex.CoAP.Software.Build do
   @moduledoc """
-  Builds the pinned native helper, upstream libcoap peer and native vectors.
+  Builds the pinned native helper, upstream peers and native vectors.
 
   The root workspace contains a complete nested native build, a separately
-  compiled `coap-server` and the first-party fault/vector executables. All
-  components use one resolved toolchain and the same verified source archive.
-  The outer manifest binds every nested artifact and is published only after
-  the peer and every vector execute successfully.
+  compiled `coap-server`, the pinned independent OSCORE peer archive and the
+  first-party fault/vector executables. All compiled components use one resolved
+  toolchain and the same verified source archive. The independent peer is an
+  exact published Java archive admitted by SHA-256 and executed by a
+  caller-selected runtime, never a compiled artifact of this repository. The
+  outer manifest binds every nested artifact and is published only after the
+  peers and every vector execute successfully.
   """
 
   alias Wotex.CoAP.Native.{Build, BuildOperations, Workspace}
 
   @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @independent_peer %{
+    stack: "Eclipse Californium",
+    name: "cf-plugtest-server",
+    version: "3.14.0",
+    artifact: "bin/cf-plugtest-server.jar",
+    url:
+      "https://repo1.maven.org/maven2/org/eclipse/californium/cf-plugtest-server/3.14.0/" <>
+        "cf-plugtest-server-3.14.0.jar",
+    sha256: "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"
+  }
   @archive_root "libcoap-#{@revision}"
   @project_root Path.expand("../../../..", __DIR__)
   @native_root Path.join(@project_root, "native/oscore")
@@ -140,7 +153,8 @@ defmodule Wotex.CoAP.Software.Build do
     "CMAKE_BUILD_TYPE=Release"
   ]
   @peer_artifacts ~w(bin/coap-server logs/peer-configure.log logs/peer-build.log
-    logs/peer-probe.log)
+    logs/peer-probe.log bin/cf-plugtest-server.jar logs/independent-peer-download.log
+    logs/independent-peer-probe.log)
   @fault_artifacts Enum.flat_map(@faults, fn fault ->
                      [
                        "bin/faults/#{fault.name}",
@@ -241,6 +255,7 @@ defmodule Wotex.CoAP.Software.Build do
       target: tools.target,
       os_version: :os.version(),
       peer_cmake_options: @cmake_options,
+      independent_peer: Map.delete(@independent_peer, :url),
       artifacts: artifacts,
       faults: Enum.map(@faults, &Map.take(&1, [:definitions, :id, :libcoap, :name, :openssl]))
     })
@@ -293,6 +308,33 @@ defmodule Wotex.CoAP.Software.Build do
              operations
            ),
          {:ok, features} <- features(output),
+         {:ok, runtime} <- java_runtime(operations),
+         {:ok, download, _} <-
+           step(
+             guardian,
+             workspace,
+             "independent-peer-download",
+             tools.paths.curl,
+             independent_arguments(workspace),
+             environment,
+             deadline,
+             60_000,
+             operations
+           ),
+         {:ok, independent_hash} <- independent_digest(workspace, operations),
+         {:ok, runtime_probe, runtime_output} <-
+           step(
+             guardian,
+             workspace,
+             "independent-peer-probe",
+             runtime.path,
+             ["-version"],
+             environment,
+             deadline,
+             60_000,
+             operations
+           ),
+         {:ok, runtime_version} <- runtime_version(runtime_output),
          {:ok, fault_executables} <-
            build_faults(guardian, workspace, tools, environment, deadline, operations),
          {:ok, peer_hash} <- operations.digest(Path.join(workspace, "bin/coap-server")),
@@ -316,6 +358,19 @@ defmodule Wotex.CoAP.Software.Build do
            "version" => "4.3.5",
            "revision" => @revision,
            "features" => features
+         },
+         "independent_peer" => %{
+           "name" => @independent_peer.name,
+           "stack" => @independent_peer.stack,
+           "version" => @independent_peer.version,
+           "path" => @independent_peer.artifact,
+           "sha256" => independent_hash,
+           "runtime" => %{
+             "path" => runtime.path,
+             "sha256" => runtime.sha256,
+             "version" => runtime_version
+           },
+           "steps" => [download, runtime_probe]
          },
          "cmake_options" => @cmake_options,
          "steps" => [configure, compile, probe],
@@ -373,6 +428,62 @@ defmodule Wotex.CoAP.Software.Build do
     else
       _ -> {:error, :missing_software_peer}
     end
+  end
+
+  defp independent_arguments(workspace) do
+    [
+      "--disable",
+      "--silent",
+      "--show-error",
+      "--fail",
+      "--proto",
+      "=https",
+      "--proto-redir",
+      "=https",
+      "--location",
+      "--max-redirs",
+      "3",
+      "--max-time",
+      "120",
+      "--max-filesize",
+      "16777216",
+      "--output",
+      Path.join(workspace, @independent_peer.artifact),
+      @independent_peer.url
+    ]
+  end
+
+  defp independent_digest(workspace, operations) do
+    with {:ok, digest} <- operations.digest(Path.join(workspace, @independent_peer.artifact)) do
+      if digest == @independent_peer.sha256,
+        do: {:ok, digest},
+        else: {:error, :independent_peer_mismatch}
+    end
+  end
+
+  # The independent peer is executed, never compiled here, so its runtime is a
+  # caller-selected Java launcher recorded by path, content digest and version.
+  defp java_runtime(operations) do
+    case operations.runtime(System.get_env("WOTEX_COAP_JAVA") || "java") do
+      {:ok, %{path: path, sha256: digest}} when is_binary(path) and is_binary(digest) ->
+        {:ok, %{path: path, sha256: digest}}
+
+      _ ->
+        {:error, :missing_independent_peer_runtime}
+    end
+  end
+
+  defp runtime_version(output) when is_binary(output) do
+    version =
+      output
+      |> String.split("\n")
+      |> List.first()
+      |> to_string()
+      |> String.trim()
+
+    if String.valid?(version) and version != "" and byte_size(version) <= 200,
+      do: {:ok, version},
+      else: {:error, :independent_peer_runtime_probe_failed}
   end
 
   defp features(output) when is_binary(output) do

@@ -69,6 +69,16 @@ defmodule Wotex.CoAP.Native.Toolchain do
   def target({:unix, :linux}, architecture), do: {:linux, cpu(architecture)}
   def target(_, _), do: {:unsupported, :unsupported}
 
+  @doc """
+  Resolves one caller-selected executable name or path to an ordinary file.
+
+  Symbolic links resolve to their target, so the returned path can be hashed as
+  content. Relative names resolve on the caller's PATH.
+  """
+  @spec executable(term()) :: {:ok, String.t()} | {:error, term()}
+  def executable(name) when is_binary(name) and name != "", do: locate(name)
+  def executable(_), do: {:error, :invalid_native_tool}
+
   @doc "Returns the bounded version probes recorded by the native manifest."
   @spec version_commands(t()) :: [{atom(), String.t(), [String.t()]}]
   def version_commands(%{paths: paths}) do

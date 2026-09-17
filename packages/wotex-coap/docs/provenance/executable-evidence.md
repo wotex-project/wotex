@@ -870,6 +870,26 @@ sends a plaintext response with an unused token and requires no delivery and no
 protection event; it fails against the nine-patch SDK. The fifteen correlated
 plaintext variants still report exactly one protection failure each.
 
+The independent upstream-stack OSCORE cohort in
+`test/software/independent_oscore_test.exs` drives the manifest-bound helper
+against `org.eclipse.californium:cf-plugtest-server` 3.14.0, admitted by exact
+archive SHA-256
+`0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5` during the
+software build and executed by a Java runtime recorded by path, digest and
+version. Its five cases pass on macOS arm64 with OpenJDK 21.0.12.1: protected
+GET/POST/PUT/DELETE with the exact Location-Path of the protected POST,
+protected discovery containing `</oscore>;osc`, a 1,280-byte Block2 body and an
+exactly recovered Block1 upload, three ordered notifications with distinct
+Observe values and Max-Age 5 whose delivery stops after cancellation, a relayed
+duplicate protected response that yields one result and no client
+retransmission, and a relayed one-bit ciphertext change in a notification that is
+discarded while the observation continues. Because the peer admits one client
+sender identity and keeps a replay window for its lifetime, each case owns one
+peer instance and one fresh client context. Renewing the full software-run
+receipt with this cohort and running it in the Linux lanes remain open; the Java
+peer is a test peer only and is neither a runtime nor an orchestration
+dependency of the package.
+
 The [clean-source receipt](clean-source-v1.json) runs `mix check` from `git clone
 --no-local` copies of the committed wotex, wotex-runtime and wotex-coap HEADs in
 Linux arm64 containers, once on Elixir 1.18.4 / OTP 27 and once on Elixir 1.20.2 /

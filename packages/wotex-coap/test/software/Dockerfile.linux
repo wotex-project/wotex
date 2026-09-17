@@ -4,5 +4,5 @@
 #   minimum: hexpm/elixir@sha256:473f77ee88977dc8cc5d05fb91080a308be86be3fc27d50aef9a837d07c8268b
 ARG BASE=hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da
 FROM ${BASE}
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake pkg-config libssl-dev openssl patch curl ca-certificates git procps rsync && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake pkg-config libssl-dev openssl patch curl ca-certificates git procps rsync openjdk-17-jre-headless && rm -rf /var/lib/apt/lists/*
 RUN mix local.hex --force && mix local.rebar --force

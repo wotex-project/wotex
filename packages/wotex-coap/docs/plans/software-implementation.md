@@ -158,7 +158,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Acceptance scenarios: WCO-V01, WCO-V02, WCO-V03, WCO-V04, WCO-V05, WCO-V06, WCO-V07, WCO-V08, WCO-V09, WCO-V10, WCO-V11, WCO-V12, WCO-V13, WCO-V14, WCO-V15.
 - Change surface: libcoap software fixtures and stress runner.
 - Test destinations: `test/interop/libcoap_test.exs`, `test/software/lifecycle_stress_test.exs`.
-- Done when: Plain UDP/Observe/blockwise, DTLS and explicitly labelled same-stack OSCORE lanes run; all required stress/matrix/archive checks pass; all .11 cases and remaining scenario expansions execute, with pure/injected/independent lanes labelled separately.
+- Done when: Plain UDP/Observe/blockwise, DTLS, explicitly labelled same-stack OSCORE and independent upstream-stack OSCORE lanes run; all required stress/matrix/archive checks pass; all .11 cases and remaining scenario expansions execute, with pure/injected/independent lanes labelled separately.
 - Suggested local commit: `test: prove all coap software transport profiles`.
 
 ## Reproducible software fixture contract
@@ -174,14 +174,20 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 ```
 
 The build and run commands and their task tests pass on macOS arm64. The current
-run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer,
-includes `test/software/lifecycle_stress_test.exs` and
+run owns independent libcoap UDP, PSK and PKI peers, a same-stack OSCORE peer and
+the pinned independent upstream-stack Californium OSCORE peer, includes
+`test/software/independent_oscore_test.exs` and
+`test/software/lifecycle_stress_test.exs` and
 `test/software/native_corpus_test.exs` and
-`test/software/native_saturation_test.exs` and records 50 passing tests;
+`test/software/native_saturation_test.exs`; its last renewed receipt records 50
+passing tests without the independent cohort;
 the run must use the same `OPENSSL_ROOT_DIR` selection as its build. The same two
 commands run inside the `test/software/Dockerfile.linux` environment on both
-required runtimes. Independent upstream-stack OSCORE remains an independent
-software obligation; the clean committed-source gate passes on both runtimes. The historical Python-run receipt
+required runtimes. The independent upstream-stack OSCORE cohort executes its five
+cases on macOS arm64 against the pinned Eclipse Californium 3.14.0 plugtest
+archive, admitted by exact digest and run by a recorded Java runtime as a test
+peer only; renewing the full-run receipt with that cohort and running it in the
+Linux lanes remain open. The clean committed-source gate passes on both runtimes. The historical Python-run receipt
 retains its original source and command identity only. No build or peer starts
 implicitly. A run is terminal for its disposable workspace because retained
 `software-run` evidence prevents an accidental overwrite; use a fresh build for

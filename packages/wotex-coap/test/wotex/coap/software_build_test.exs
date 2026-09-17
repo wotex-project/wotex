@@ -57,8 +57,8 @@ defmodule Wotex.CoAP.SoftwareBuildTest do
     assert {:error, {:software_build_setup, "invalid software toolchain"}} =
              Build.run("/absolute/workspace", InvalidOperations, NativeBuild)
 
-    assert length(Build.artifacts(NativeBuild)) == 66
-    assert length(Enum.uniq(Build.artifacts(NativeBuild))) == 66
+    assert length(Build.artifacts(NativeBuild)) == 69
+    assert length(Enum.uniq(Build.artifacts(NativeBuild))) == 69
 
     assert_raise Mix.Error, ~r/usage:/, fn -> BuildTask.run(["--workspace", "relative"]) end
 
@@ -123,6 +123,35 @@ defmodule Wotex.CoAP.SoftwareBuildTest do
       refute File.exists?(Path.join(workspace, "native-manifest.json"))
       Operations.reset()
     end
+  end
+
+  test "WCO-N01 admits the independent peer only by exact archive and runtime", %{root: root} do
+    failures = [
+      runtime: :missing_independent_peer_runtime,
+      runtime_probe: :independent_peer_runtime_probe_failed,
+      independent_peer: :independent_peer_mismatch
+    ]
+
+    for {mode, reason} <- failures do
+      workspace = Path.join(root, Atom.to_string(mode))
+      Operations.fail(mode)
+      assert {:error, ^reason} = Build.run(workspace, Operations, NativeBuild)
+      refute File.exists?(Path.join(workspace, "native-manifest.json"))
+      Operations.reset()
+    end
+
+    assert {:ok, %{manifest: manifest}} =
+             Build.run(Path.join(root, "admitted"), Operations, NativeBuild)
+
+    peer = manifest["software_build"]["independent_peer"]
+
+    assert peer["path"] == "bin/cf-plugtest-server.jar"
+    assert peer["stack"] == "Eclipse Californium"
+    assert peer["version"] == "3.14.0"
+    assert peer["sha256"] == "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"
+    assert peer["runtime"]["path"] == "/fixture/bin/java"
+    assert peer["runtime"]["version"] == "fixture tool version"
+    assert length(peer["steps"]) == 2
   end
 
   test "WCO-N01 rejects unreadable build inputs before workspace publication", %{root: root} do

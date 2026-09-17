@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.7.0
+  version: 1.8.0
   owner: wotex-coap
   updated: 2026-09-17
 ---
@@ -13,7 +13,11 @@ spec:
 UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
-Python is not a runtime or target orchestration dependency. The native worker
+Python is not a runtime or target orchestration dependency. Cross-stack OSCORE
+evidence runs one pinned published Java archive as a test peer only; that peer
+is neither a runtime dependency, a build input of any shipped artifact, nor an
+orchestration dependency, and nothing in the package or its build requires a
+Java runtime. The native worker
 implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
@@ -651,7 +655,30 @@ IDs, exit codes, outcomes, log hashes and final process/socket/session/context/
 subscription/store-lock counts. Failure evidence is retained; secrets and
 machine-specific source paths are excluded from publishable records.
 UDP and DTLS peers are independent-stack; OSCORE libcoap peers are same-stack;
+the Eclipse Californium plugtest peer is independent upstream-stack for OSCORE;
 fault peers and contract injections are labelled separately.
+
+The independent OSCORE peer is `org.eclipse.californium:cf-plugtest-server`
+3.14.0, admitted by exact SHA-256
+`0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5` after an
+explicit build-time download, and executed by a caller-selected Java runtime
+recorded by path, content digest and version. Its CoAP engine, OSCORE
+implementation, replay window and observation model are upstream of this
+repository, so its results are cross-stack evidence rather than same-stack
+evidence. Its fixed server context is AES-CCM-16-64-128 with HKDF-SHA-256,
+master secret `0102030405060708090a0b0c0d0e0f10`, master salt
+`9e7ca92223786340`, server sender ID `02`, recipient ID `01` and ID Context
+`37cbf3210017a2d3`, so the client uses sender ID `01` and recipient ID `02` with
+that ID Context. The peer admits one client sender identity and keeps a replay
+window across its lifetime, so each case owns one peer instance, one loopback
+port pair and one fresh client context. `test/software/independent_oscore_test.exs`
+asserts protected GET/POST/PUT/DELETE codes, the exact Location-Path of the
+protected POST, protected discovery containing `</oscore>;osc`, a 1,280-byte
+Block2 body and a Block1 upload read back exactly, three ordered notifications
+with distinct Observe values and Max-Age 5 whose delivery stops after
+cancellation, a relayed duplicate protected response that yields one result and
+no client retransmission, and a relayed one-bit ciphertext change in a
+notification that is discarded while the observation continues.
 
 Required executable vectors include RFC 8613 Appendix C KDF/protected-message
 answers; changed ciphertext/AAD/KID; replay/duplicate; 40-bit exhaustion;
@@ -676,8 +703,10 @@ inside Linux arm64 containers on both required runtimes, whose builds compile th
 native vectors with ASan/UBSan. From fresh clones of committed sources, `mix check`
 passes on both required runtimes as an unprivileged user, including the Hex archive
 and out-of-tree compilation gate, and both runtimes produce the byte-identical
-archive. Upstream-stack OSCORE independence retains planned status until its
-assertions execute. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
+archive. The independent upstream-stack OSCORE cohort executes its five cases
+against Californium 3.14.0 on macOS arm64 through the manifest-bound helper;
+its renewed full-run receipt and its Linux lanes remain open, and Group OSCORE,
+context re-derivation and a second independent stack remain unaccepted. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute

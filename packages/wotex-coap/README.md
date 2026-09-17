@@ -183,8 +183,9 @@ the implemented `mix wotex.native.build --workspace ABS` and
 `mix wotex.software.build --workspace ABS` interfaces plus the implemented
 `mix wotex.software.run --workspace ABS` interface. The run task verifies an
 existing build and executes the current independent libcoap UDP, PSK and PKI
-interop suite plus same-stack OSCORE sessions through the Mix-built helper, with
-ExUnit-owned peers and bounded cleanup. Protocol execution uses
+interop suite, same-stack OSCORE sessions through the Mix-built helper and an
+independent upstream-stack OSCORE cohort against a pinned Eclipse Californium
+peer, with ExUnit-owned peers and bounded cleanup. Protocol execution uses
 BEAM UDP, OTP DTLS and an explicit libcoap OSCORE Port.
 `Wotex.CoAP.NativeBackend.verify/1` can validate the content identity of an
 explicit native executable and manifest without starting it.
@@ -232,5 +233,8 @@ saturation tests and 13 native-v1 corpus tests through the Mix-built helper. The
 Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15 with sanitizer-built
 native vectors. `mix check`, including the Hex archive and out-of-tree compilation
 gate, passes from fresh clones of committed sources in Linux containers on both
-runtimes. Independent upstream-stack OSCORE interoperability remains open
-acceptance work.
+runtimes. The independent upstream-stack OSCORE cohort executes its five cases
+against Eclipse Californium 3.14.0 on macOS arm64; that archive is admitted by
+exact digest and run by a recorded Java runtime as a test peer only. Its renewed
+run receipt, its Linux lanes, Group OSCORE, context re-derivation and a second
+independent stack remain open acceptance work.
