@@ -44,6 +44,8 @@ defmodule Wotex.OPCUA.PortTest do
     assert {:error, _} = OPCUA.send(conn, %{})
     assert {:error, _} = OPCUA.receive(conn, 100)
     assert {:error, _} = OPCUA.health_check(conn)
+    assert {:error, %Error{code: :invalid_probe}} = OPCUA.health_check(conn, %{})
+    assert {:error, %Error{code: :invalid_probe}} = OPCUA.health_check(:session, @read)
     assert :not_supported = OPCUA.subscribe(conn, "value")
     assert :not_supported = OPCUA.unsubscribe(conn, :ref)
     assert OPCUA.capabilities().transport == :explicit_client
@@ -97,6 +99,21 @@ defmodule Wotex.OPCUA.PortTest do
     end
 
     assert {:error, %Error{code: :invalid_subscription}} = OPCUA.unsubscribe(conn, :ref)
+  end
+
+  test "WOP-S05 health requires a successful concrete Read probe" do
+    probe = %{node_id: "ns=2;s=Temperature"}
+    {:ok, conn} = OPCUA.connect(client: TestClient)
+    assert :ok = OPCUA.health_check(conn, probe)
+    assert {:error, %Error{}} = OPCUA.health_check(conn, %{node_id: "invalid"})
+    assert {:error, %Error{code: :invalid_probe}} = OPCUA.health_check(conn, Map.put(probe, :x, 1))
+    OPCUA.disconnect(conn)
+
+    for mode <- [:typed, :error, :invalid, :raise] do
+      {:ok, conn} = OPCUA.connect(client: TestClient, mode: mode)
+      assert {:error, %Error{effect: :none}} = OPCUA.health_check(conn, probe)
+      OPCUA.disconnect(conn)
+    end
   end
 
   test "failed writes have unknown effect and invalid addresses never reach the port" do

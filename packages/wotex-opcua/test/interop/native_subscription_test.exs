@@ -233,6 +233,18 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
     assert :ok = Wotex.OPCUA.disconnect(session)
   end
 
+  test "WOP-S05 health uses a concrete Read and reports a missing node", context do
+    %{session: session, peer: peer} = context
+    assert :ok = Wotex.OPCUA.health_check(session, %{node_id: peer["node_id"]})
+
+    assert {:error, %Error{code: :remote_error, details: %{status: status}}} =
+             Wotex.OPCUA.health_check(session, %{node_id: "ns=2;s=missing"})
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+    assert :ok = Wotex.OPCUA.health_check(session, %{node_id: peer["node_id"]})
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
   test "WOP-S04 invalid requests and one-shot handles acquire no subscription", context do
     %{session: session, peer: peer} = context
 

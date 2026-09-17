@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.7
+  version: 2.0.8
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -234,6 +234,9 @@ selected native client supports one Value MonitoredItem per handle on a
 persistent Session only and delivers native DataValue maps and metadata to the
 receiver as described in WOP.13 X05. One-shot handles return
 `:persistent_session_required`. Runtime observation remains unimplemented.
+`health_check/2` takes exactly `%{node_id: node}` and returns `:ok` only after a
+successful Read of that node through the selected client; `health_check/1`
+still returns `probe_required`.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

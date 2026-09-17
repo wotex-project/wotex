@@ -137,6 +137,23 @@ defmodule Wotex.OPCUA do
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
   @doc """
+  Probes service health with one concrete Read of `probe.node_id`.
+
+  The probe map contains exactly `node_id`. The result is `:ok` only after the
+  selected client returns a successful Read; an open connection alone is not a
+  healthy OPC UA service. Failures keep the client's structured Error.
+  """
+  @spec health_check(term(), term()) :: :ok | {:error, Error.t()}
+  def health_check(%Session{} = session, %{node_id: node} = probe) when map_size(probe) == 1 do
+    case send(session, %{type: :read, node_id: node}) do
+      {:ok, _} -> :ok
+      {:error, _} = error -> error
+    end
+  end
+
+  def health_check(_, _), do: {:error, Error.new(:invalid_probe)}
+
+  @doc """
   Establishes one monitored data-change subscription through the selected client.
 
   The request map requires `node_id` and accepts `receiver` (default caller),

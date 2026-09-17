@@ -20,6 +20,31 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Concrete Read health probe, 2026-09-17
+
+`Wotex.OPCUA.health_check/2` accepts exactly `%{node_id: node}`. It sends one
+validated Read through the selected client and returns `:ok` only when that Read
+succeeds; any other probe shape returns `invalid_probe` before client I/O, and
+`health_check/1` still returns `probe_required`. `port_test.exs` covers success,
+an invalid NodeId, an extra key, and typed, untyped, invalid and raising client
+results, each without effect. In `native_subscription_test.exs` a persistent
+Basic256Sha256 Session against the independent asyncua 2.0.1 peer returns `:ok`
+for the Double Variable, `remote_error` with a Bad status for a missing node, and
+`:ok` again on the same Session.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 339 passed (10 doctests,
+4 properties, 325 tests), 51 optional tests excluded and 95.5% coverage. The optional secure suite
+with the lifecycle file passes 51/51 against the RelWithDebInfo and macOS
+ASan/UBSan builds, whose executable digests are unchanged from the previous
+section.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua.ex` | `b95cb0816f653441a9c2dd83558b956254fb26395fd4bca287022959a01ef59d` |
+| `test/wotex/opcua/port_test.exs` | `784c27910694482f3252054754d9678759359464aaf7a4f67b3f747ee30ba9d4` |
+| `test/interop/native_subscription_test.exs` | `c9687b66d8e01b9b6043d6c7fd7fb7c120779f1bbcc83f926c411af516a259be` |
+
 ## Subscription loss, owner death and a suspended overproducer, 2026-09-17
 
 `Native.Host` no longer lets a failed credit write to an exited native process
