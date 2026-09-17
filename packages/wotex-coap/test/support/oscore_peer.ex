@@ -11,6 +11,9 @@ defmodule Wotex.CoAP.Test.OSCOREPeer do
 
   @oscore 9
   @observe 6
+  @etag 4
+  @block2 23
+  @block_size 1024
 
   defstruct [:socket, :port, :context, sequence: 0]
 
@@ -93,11 +96,61 @@ defmodule Wotex.CoAP.Test.OSCOREPeer do
     peer
   end
 
+  @doc """
+  Sends `payload` to `request` in 1,024-byte Block2 blocks with one ETag and serves
+  each protected follow-up block request until the last block is sent.
+  """
+  @spec respond_blockwise(t(), request(), binary(), keyword()) :: t()
+  def respond_blockwise(%__MODULE__{} = peer, request, payload, fields) do
+    etag = Keyword.get(fields, :etag, "e1")
+    fields = Keyword.drop(fields, [:etag, :options, :payload])
+
+    peer
+    |> respond(
+      request,
+      [options: block_options(etag, 0, payload), payload: block(payload, 0)] ++ fields
+    )
+    |> serve_blocks(payload, etag, 1)
+  end
+
   @doc "Sends an empty acknowledgment for a confirmable request."
   @spec acknowledge(t(), request()) :: :ok
   def acknowledge(%__MODULE__{} = peer, request) do
     message = %Message{type: :ack, code: 0, message_id: request.outer.message_id}
     send_message(peer, request, message)
+  end
+
+  defp serve_blocks(peer, payload, _, number) when number * @block_size >= byte_size(payload),
+    do: peer
+
+  defp serve_blocks(peer, payload, etag, _) do
+    {:ok, request} = receive_request(peer)
+    [value] = Codec.option(request.inner, @block2)
+    number = Bitwise.bsr(:binary.decode_unsigned(value), 4)
+    type = if request.outer.type == :con, do: :ack, else: :non
+
+    message_id =
+      if type == :ack, do: request.outer.message_id, else: rem(request.outer.message_id + 1, 65_536)
+
+    peer
+    |> respond(request,
+      type: type,
+      message_id: message_id,
+      code: 69,
+      options: block_options(etag, number, payload),
+      payload: block(payload, number)
+    )
+    |> serve_blocks(payload, etag, number + 1)
+  end
+
+  defp block_options(etag, number, payload) do
+    more = if (number + 1) * @block_size < byte_size(payload), do: 8, else: 0
+    [{@etag, etag}, {@block2, Codec.uint(Bitwise.bor(Bitwise.bsl(number, 4), more + 6))}]
+  end
+
+  defp block(payload, number) do
+    offset = number * @block_size
+    binary_part(payload, offset, min(@block_size, byte_size(payload) - offset))
   end
 
   defp unprotect(peer, ip, port, outer, value) do

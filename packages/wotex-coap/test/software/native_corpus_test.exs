@@ -221,6 +221,42 @@ defmodule Wotex.CoAP.NativeCorpusTest do
     Port.close(state.port)
   end
 
+  test "WCO-C05 WCO-N02 WCO-N-F15 an inline threshold report and a streamed report use exact credit",
+       context do
+    corpus = fixture("WCO-N-F15")
+    assert corpus["operation"] == "report_payload_credit_trace"
+    expected = corpus["expected"]
+    steps = corpus["input"]["steps"]
+    [first | _] = for %{"produce_report_payload" => payload} <- steps, do: expand(payload)
+    state = establish(context, "payload", "property", first)
+
+    {state, emitted} = run_trace(steps, state)
+    lines = Enum.concat(emitted)
+    assert Enum.all?(credit_replies(lines), &(&1["ok"] == true))
+    frames = Enum.filter(lines, &Map.has_key?(&1, "report_seq"))
+    sequences = Enum.map(frames, & &1["report_seq"])
+    assert sequences == Enum.to_list(1..expected["highest_assigned_seq"])
+    assert state.acknowledged == expected["acknowledged_seq"]
+    assert state.acknowledged + 8 - List.last(sequences) == expected["unused_report_credit"]
+
+    [inline | streamed] = frames
+    assert inline["event"] == "report" and length([inline]) == expected["inline_report_frames"]
+    assert Base.decode64!(inline["value"]["payload"]["base64"]) == first
+    assert length(streamed) == expected["streamed_report_frames"]
+    assert Enum.map(streamed, & &1["event"]) == ~w(body_begin body_chunk body_chunk body_end report)
+
+    # The streamed body completes and verifies before its single report frame.
+    [begin | chunks_end] = streamed
+    {chunks, [_, final]} = Enum.split(chunks_end, 2)
+    body = Enum.map_join(chunks, &Base.decode64!(&1["data"]["base64"]))
+    assert body == expand(List.last(for %{"produce_report_payload" => p} <- steps, do: p))
+    assert begin["sha256"] == Base.encode16(:crypto.hash(:sha256, body), case: :lower)
+    assert final["value"]["body_id"] == begin["body_id"]
+    assert length(reports(lines)) == expected["complete_reports"]
+    assert expected["partial_deliveries"] == 0
+    Port.close(state.port)
+  end
+
   test "WCO-C04 WCO-N02 WCO-N-F24 repeated established failure emits one terminal", context do
     [establish, loss] = Enum.map(~w(WCO-N-F21 WCO-N-F24), &fixture/1)
     assert loss["operation"] == "established_loss_trace"
@@ -314,6 +350,29 @@ defmodule Wotex.CoAP.NativeCorpusTest do
     state
   end
 
+  defp step(%{"produce_report_payload" => payload}, %{initial: true} = state) do
+    assert state.requests["17"]
+    _ = expand(payload)
+    %{state | initial: false}
+  end
+
+  defp step(%{"produce_report_payload" => payload}, state) do
+    registration = state.requests["17"]
+    message_id = rem(registration.outer.message_id + 1_000 + state.produced, 65_536)
+
+    peer =
+      OSCOREPeer.respond_blockwise(state.peer, registration, expand(payload),
+        type: :non,
+        message_id: message_id,
+        code: 69,
+        observe: true,
+        partial_iv: :next,
+        etag: "e#{state.produced + 1}"
+      )
+
+    %{state | peer: peer, produced: state.produced + 1}
+  end
+
   defp step(%{"authenticated_notification" => %{"code" => code}}, state) do
     state = Map.put_new(state, :produced, 1)
     notify(state, code: code, payload: <<>>)
@@ -365,7 +424,9 @@ defmodule Wotex.CoAP.NativeCorpusTest do
 
   defp decode(%{"type" => "bytes", "base64" => value}), do: Base.decode64!(value)
 
-  defp establish(context, name, kind) do
+  defp expand(%{"repeat_byte" => byte, "count" => count}), do: :binary.copy(<<byte>>, count)
+
+  defp establish(context, name, kind, initial \\ "r1") do
     peer = OSCOREPeer.open(context.secret, <<1>>, <<0>>)
     on_exit(fn -> OSCOREPeer.close(peer) end)
     port = open_worker(Map.put(context, :peer_port, peer.port), name, 1)
@@ -379,13 +440,12 @@ defmodule Wotex.CoAP.NativeCorpusTest do
 
     assert {:ok, registration} = OSCOREPeer.receive_request(peer)
 
+    fields = [code: 69, observe: true, partial_iv: :next]
+
     peer =
-      OSCOREPeer.respond(peer, registration,
-        code: 69,
-        observe: true,
-        partial_iv: :next,
-        payload: "r1"
-      )
+      if byte_size(initial) > 1_024,
+        do: OSCOREPeer.respond_blockwise(peer, registration, initial, fields),
+        else: OSCOREPeer.respond(peer, registration, [payload: initial] ++ fields)
 
     state = %{
       port: port,
@@ -403,7 +463,9 @@ defmodule Wotex.CoAP.NativeCorpusTest do
 
   defp reports(lines), do: Enum.filter(lines, &(&1["event"] == "report"))
   defp terminals(lines), do: Enum.filter(lines, &(&1["event"] == "error"))
-  defp credit_replies(lines), do: Enum.filter(lines, &Map.has_key?(&1, "id"))
+
+  defp credit_replies(lines),
+    do: Enum.filter(lines, &(Map.has_key?(&1, "ok") and not Map.has_key?(&1, "event")))
 
   defp notify(state, fields) do
     registration = state.requests["17"]

@@ -670,27 +670,26 @@ Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
 15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 8-test
-stress cohort, 2-test saturation cohort and 12-test native corpus cohort. The
-49-test run passes on macOS arm64; the 47-test run of the preceding commit passes
+stress cohort, 2-test saturation cohort and 13-test native corpus cohort. The
+50-test run passes on macOS arm64; the 47-test run of the preceding commit passes
 inside Linux arm64 containers on both required runtimes, whose builds compile the
 native vectors with ASan/UBSan. From fresh clones of committed sources, `mix check`
 passes on both required runtimes as an unprivileged user, including the Hex archive
 and out-of-tree compilation gate, and both runtimes produce the byte-identical
-archive. Upstream-stack OSCORE independence and the helper half of native-v1 F15
-retain planned status until those assertions execute. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
+archive. Upstream-stack OSCORE independence retains planned status until its
+assertions execute. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute
 against the BEAM decoders. F06 and F16-F20 execute through the manifest-bound
 helper in `test/software/native_corpus_test.exs`, whose UDP socket stands in for
-the peer and counts datagrams. F05, F09 and F21-F24 run through the same helper against an
+the peer and counts datagrams. F05, F09, F15 and F21-F24 run through the same helper against an
 ExUnit-owned RFC 8613 endpoint that is independent of libcoap and verified
 against the RFC 8613 Appendix C vectors. Because helper tokens are random, those
 traces name the answered request and substitute its wire Message ID and token.
 F05 and F24 now name the native terminal codes, because `session_lost` is a
 Runtime transport status. F07 executes in the native store-send vector, because a
-helper context opens at sequence zero and cannot reach 2^40; the helper half of F15
-remains unexecuted. The
+helper context opens at sequence zero and cannot reach 2^40. The
 ExUnit runner expands `repeat_ascii` to its declared byte count, adds the
 matching generation/id envelope to body events, and compares actual native
 outcomes with `expected`. For the credit traces, `grant_report_credit` means the first `ack_seq: 0`

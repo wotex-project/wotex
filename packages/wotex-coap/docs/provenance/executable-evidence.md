@@ -617,7 +617,7 @@ fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
 arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 12 same-stack OSCORE
-tests, 8 lifecycle stress tests, 2 saturation tests and 12 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
+tests, 8 lifecycle stress tests, 2 saturation tests and 13 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
 peers and zero retained processes, ports or library-state resources.
 
 `test/software/lifecycle_stress_test.exs` executes the WCO-C09 matrix once per
@@ -826,8 +826,17 @@ client whose next sender sequence is 2^40; three GET sends return
 `COAP_INVALID_MID`, the peer socket receives nothing and the store boundary stays at
 2^40, because libcoap refuses before encrypting and never asks for a reservation.
 A reservation past 2^40 then returns `WCO_STORE_EXHAUSTED`, whose code is
-`sequence_exhausted`. The corpus runner contract records this placement. The
-helper half of F15 remains unexecuted.
+`sequence_exhausted`. The corpus runner contract records this placement.
+
+The helper half of F15 runs against the same RFC 8613 endpoint, which now serves
+protected Block2 transfers: it sends each payload in 1,024-byte blocks with one
+ETag and answers every follow-up block request libcoap sends with a new token. The
+registration response carries the corpus's 32,768-byte payload and, after credit
+0, is written as one inline report. A 32,769-byte notification then produces
+`body_begin`, two `body_chunk` frames, `body_end` and its report, report sequences
+2 to 6; the chunks reassemble the payload, match the begin digest and precede the
+single report, and two credits remain unused. A helper whose inline limit is one
+byte lower fails F15.
 
 `test/software/native_saturation_test.exs` suspends the actual `Native.Connection`
 owner with `:sys.suspend/1` after a protected subscription is established against
@@ -874,6 +883,5 @@ duplicate-reply fixture race, a fixture helper slow to stop on SIGTERM, and cove
 of 94.9%. A root-run container also let a mode-0 artifact test read its file, so
 the lane runs unprivileged.
 
-Independent upstream-stack OSCORE interoperability and the helper half of native-v1
-F15 are not yet accepted. The historical Python result retains only its own
+Independent upstream-stack OSCORE interoperability is not yet accepted. The historical Python result retains only its own
 recorded cohort.

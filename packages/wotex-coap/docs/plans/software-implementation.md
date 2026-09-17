@@ -21,7 +21,7 @@ cohort through the Mix-built helper and the WCO-C09 lifecycle stress lane for al
 four transports. The same build and run pass inside Linux containers on both
 required Elixir/OTP runtimes with ASan/UBSan native vectors, and `mix check` passes
 from fresh committed-source clones on both runtimes. Independent upstream-stack
-OSCORE and the helper half of native-v1 F15 remain WCO-P09 work.
+OSCORE remains WCO-P09 work.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
@@ -177,12 +177,11 @@ The build and run commands and their task tests pass on macOS arm64. The current
 run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer,
 includes `test/software/lifecycle_stress_test.exs` and
 `test/software/native_corpus_test.exs` and
-`test/software/native_saturation_test.exs` and records 49 passing tests;
+`test/software/native_saturation_test.exs` and records 50 passing tests;
 the run must use the same `OPENSSL_ROOT_DIR` selection as its build. The same two
 commands run inside the `test/software/Dockerfile.linux` environment on both
-required runtimes. The helper half of native-v1 F15 and independent upstream-stack
-OSCORE remain independent software obligations; the clean committed-source gate
-passes on both runtimes. The historical Python-run receipt
+required runtimes. Independent upstream-stack OSCORE remains an independent
+software obligation; the clean committed-source gate passes on both runtimes. The historical Python-run receipt
 retains its original source and command identity only. No build or peer starts
 implicitly. A run is terminal for its disposable workspace because retained
 `software-run` evidence prevents an accidental overwrite; use a fresh build for
