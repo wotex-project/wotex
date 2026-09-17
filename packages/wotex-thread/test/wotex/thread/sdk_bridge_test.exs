@@ -180,17 +180,43 @@ defmodule Wotex.Thread.SdkBridgeTest do
     end
   end
 
-  test "WTH-C03 startup deadlines and wrong backend identity fail without returning a Session",
+  test "WTH-C03 startup deadlines expire before ready or open without returning a Session",
        context do
-    for mode <- ["startup_stall", "open_stall", "bad_ready", "open_bad", "open_error"] do
-      File.write!(Path.join(context.directory, "mode"), mode)
+    source = Path.expand("../../fixtures/startup_stall_peer.c", __DIR__)
+
+    for {name, defines} <- [{"startup-stall", []}, {"open-stall", ["-DWOTEX_THREAD_OPEN_STALL"]}] do
+      executable = Path.join(context.directory, name)
+
+      assert {_, 0} =
+               System.cmd(
+                 "/usr/bin/cc",
+                 ["-std=c11", "-Wall", "-Wextra", "-Werror"] ++
+                   defines ++ [source, "-o", executable],
+                 stderr_to_stdout: true
+               )
+
+      options = Keyword.merge(context.options, executable: executable, timeout: 100)
       started = System.monotonic_time(:millisecond)
-
-      assert {:error, %Error{code: code}} =
-               OpenThread.connect(Keyword.put(context.options, :timeout, 100))
-
-      assert code in [:timeout, :invalid_response, :storage_unavailable]
+      assert {:error, %Error{code: :timeout}} = OpenThread.connect(options)
       assert System.monotonic_time(:millisecond) - started < 1100
+    end
+  end
+
+  test "WTH-C07 wrong backend identity and open replies fail without returning a Session",
+       context do
+    cases = [
+      {"bad_ready", :invalid_response, ["close"]},
+      {"open_bad", :invalid_response, ["open", "close"]},
+      {"open_error", :storage_unavailable, ["open", "close"]}
+    ]
+
+    for {mode, code, operations} <- cases do
+      File.write!(Path.join(context.directory, "mode"), mode)
+      File.rm_rf!(Path.join(context.directory, "requests"))
+      started = System.monotonic_time(:millisecond)
+      assert {:error, %Error{code: ^code}} = OpenThread.connect(context.options)
+      assert System.monotonic_time(:millisecond) - started < 5000
+      assert Enum.map(requests(context), & &1["operation"]) == operations
     end
   end
 

@@ -78,6 +78,20 @@ management and commissioner cases. This is an injected peer, not SDK or radio
 interoperability evidence. The dormant standalone Python native drivers were
 subsequently retired. WTH-B01 Mix/ExUnit acceptance remains open.
 
+A BEAM peer loses SIGTERM delivered during emulator startup. With a 100 ms
+startup deadline the escript was often still booting, so the owner's SIGKILL
+escalation intermittently returned `cleanup_timeout` and the wrong-ready and
+open-reply modes expired before they were exercised. The startup and open
+deadline cases now use `test/fixtures/startup_stall_peer.c`, compiled by the
+test with `/usr/bin/cc`; it honors SIGTERM from process creation and asserts
+exact `timeout` within 1100 ms. Wrong ready identity, invalid open result and
+open failure use the escript with the ordinary 5000 ms deadline and assert
+exact `invalid_response`, `invalid_response` and `storage_unavailable` plus the
+logged `open`/`close` frames. Both cases passed five consecutive runs beside 24
+busy shell loops on macOS arm64 with Elixir 1.20.2/OTP 29.0.4, where the
+previous form failed in 45 of 50 loaded connects. These remain injected-peer
+ownership assertions.
+
 ## Acceptance boundary
 
 [WTH.13](../specs/WTH.13-native-backend.md) defines the required native binary,
