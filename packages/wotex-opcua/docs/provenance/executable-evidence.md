@@ -20,6 +20,46 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Linux arm64 native cohort, 2026-09-17
+
+Source: commit `c38c756cd64ebeb75be837020ab46fb138401291`, copied (without
+`_build`, `deps`, `.git` and generated output) with the sibling `wotex` and
+`wotex-runtime` path dependencies into a Docker container named
+`wotex-opcua-agent-linux-arm64` (`--init --cpus 4 --memory 4g`). The container
+uses the local image `sha256:290e52da1c5d5cbf62344d384387e8bdfa7d8a64784302bb7770e76ad13c88a5`
+(Debian 12, aarch64, Elixir 1.20.2 compiled with Erlang/OTP 29). Installed tools:
+GCC 12.2.0, CMake 3.25.1, Perl 5.36.0, Python 3.11.2 and curl 8.14.1 from
+bookworm-backports (the build task requires curl 8.4.0 or later; bookworm's curl
+7.88.1 is rejected as `unsupported_download_tool`). The first attempt without
+`--init` left orphaned guardian descendants as zombies under `sleep`, so four
+`command_test.exs` reaping assertions saw live PIDs. That run is superseded.
+
+Commands and results inside the container:
+
+- `MIX_ENV=test WOTEX_PATH_DEPS=1 WOTEX_REQUIRE_NATIVE_BUILD=1
+  WOTEX_NATIVE_BUILD_WORKSPACE=/work/native mix test`: 364 passed (10 doctests,
+  4 properties, 350 tests), 62 excluded. This includes the real pinned static
+  build test, whose recipe runs native CTest.
+- `mix wotex.opcua.native.build --workspace /work/keep`: completed. Its native
+  CTest step passes 204/204.
+- A Debug build of `priv/native` with `-DWOTEX_SANITIZERS=ON` against that
+  workspace's SDK and OpenSSL prefixes, then `ctest --test-dir /work/asan
+  --output-on-failure`: 213/213 pass. That includes the nine `custody_leak`
+  cases with LeakSanitizer and the default Linux leak detection for the other
+  instrumented cases.
+
+The optional secure interop, software stress lane and archive consumer did not
+run in this cohort. Linux x86_64 did not run.
+
+| Subject | SHA-256 |
+| --- | --- |
+| Linux arm64 `wotex-native-build.json` receipt | `12cf3cdef5824ac772abb560ee9218210bbb9852b4353af3b3207fccb46bcf4e` |
+| Linux arm64 `wotex_opcua_native` | `c06bfc68538237e18e124dd3cc091e82737d5acf52adfc7e9dee6417331f9317` |
+| Linux arm64 `wotex_opcua_custody` | `aa3fb05515412f6843cdc7c73909a3db38485841f7c18445ab82dc18b6dd61b3` |
+| Linux arm64 native CTest log | `beb3e04fa6a754b23fda988a8b1abd59954b0830c1944a2bb0b4bbf9c25ac0f1` |
+| Linux arm64 ASan/UBSan CTest log | `2d4ff41b9503e27ca09afac06e4a28cd42a1b4f575d3c6dd7d382155b495c123` |
+| Linux arm64 `mix test` log | `680f15c224b88125a59fc425155060da592e4d5de392875723f5edb3b1d35a12` |
+
 ## Peer Bad Publish acknowledgement status, 2026-09-17
 
 The independent asyncua 2.0.1 peer adds a test-only `FailAcks(count)` Method.
