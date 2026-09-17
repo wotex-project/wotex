@@ -45,7 +45,7 @@ defmodule Wotex.Lab.ConformanceTest do
   end
 
   test "the core package passes both corpora as an external subject", context do
-    for {corpus_dir, expected} <- [{"thing-description-1.1", 14}, {"thing-model-1.1", 6}] do
+    for {corpus_dir, expected} <- [{"thing-description-1.1", 16}, {"thing-model-1.1", 8}] do
       {:ok, corpus} =
         Corpus.load(Application.app_dir(:wotex_conformance, "priv/vectors/" <> corpus_dir))
 

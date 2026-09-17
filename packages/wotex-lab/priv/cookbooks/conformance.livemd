@@ -212,8 +212,8 @@ labels_safe? = operations != [] and not (text =~ "Lamp") and not (text =~ "not-a
 
 | Check | Expectation |
 | --- | --- |
-| `td-corpus-pass` | Every Thing Description vector passes (14 of 14) |
-| `tm-corpus-pass` | Every Thing Model vector passes (6 of 6) |
+| `td-corpus-pass` | Every Thing Description vector passes (16 of 16) |
+| `tm-corpus-pass` | Every Thing Model vector passes (8 of 8) |
 | `changed-archive-refused` | A forged digest yields `infrastructure_error` for every vector |
 | `unsupported-operation` | `discovery.list` is `unsupported` with `operation_not_implemented` |
 | `non-object-refused` | A string document is `object_required`; a missing archive is exit 11; undecodable input is exit 14 |
@@ -221,8 +221,8 @@ labels_safe? = operations != [] and not (text =~ "Lamp") and not (text =~ "not-a
 
 ```elixir
 %{
-  "td-corpus-pass" => td_report.failures == [] and td_report.summary["pass"] == 14 and td_report.vectors == 14,
-  "tm-corpus-pass" => tm_report.failures == [] and tm_report.summary["pass"] == 6 and tm_report.vectors == 6,
+  "td-corpus-pass" => td_report.failures == [] and td_report.summary["pass"] == 16 and td_report.vectors == 16,
+  "tm-corpus-pass" => tm_report.failures == [] and tm_report.summary["pass"] == 8 and tm_report.vectors == 8,
   "changed-archive-refused" => refused.summary["infrastructure_error"] == length(tm_corpus.vectors),
   "unsupported-operation" =>
     unsupported["outcome"] == "unsupported" and unsupported["codes"] == ["operation_not_implemented"] and
