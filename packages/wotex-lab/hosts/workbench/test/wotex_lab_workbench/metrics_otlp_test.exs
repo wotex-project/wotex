@@ -102,8 +102,8 @@ defmodule WotexLabWorkbench.MetricsOtlpTest do
       assert {:error, %Error{code: :invalid_otlp_export}} = Otlp.validate(invalid)
     end
 
-    names = ~w(WOTEX_LAB_OTLP_TOKEN WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_METRICS_TOKEN
-               WOTEX_LAB_METRICS_QUERY_TOKEN)
+    names = ~w(WOTEX_LAB_OTLP_TOKEN WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_GREPTIME_ADMIN_TOKEN
+               WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
 
     saved = Map.new(names, &{&1, System.get_env(&1)})
     Enum.each(names, &System.delete_env/1)

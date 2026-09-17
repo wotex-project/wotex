@@ -138,6 +138,14 @@ provision. GreptimeDB removes expired data per flushed file, so recent unflushed
 rows can outlive the TTL briefly. Durable-row verification remains operator
 work.
 
+For a hosted receiver, set `WOTEX_LAB_GREPTIME_ADMIN_TOKEN` in the attached
+operator session and call
+`WotexLabWorkbench.Observability.Provisioning.provision_hosted("https://metrics.example", database: "wotex_lab", ttl: "30d")`,
+adding `tls_ca_certfile:` for a private CA. The administrative token follows
+the 43–128 character URL-safe rule and must differ from every export, query,
+OTLP and listener token; the call refuses it otherwise. It uses the same
+hosted DNS, pinning and TLS checks as hosted export.
+
 For an operator-provisioned remote receiver, explicitly select the separate
 hosted profile:
 
@@ -157,7 +165,7 @@ host, refuses private/link-local/metadata/multicast or mixed DNS answers, pins
 one public peer, and verifies the original hostname through TLS. It follows no
 redirect and performs no implicit client retry. This is an egress transport
 profile, not evidence that a remote receiver retained the row; remote scrape
-ingress, receiver TTL provisioning and deployment verification remain separate.
+ingress and deployment verification remain separate.
 
 An operator attached to this same VM can explicitly open a short-lived query
 scope. This requires the history activation above; it never enables it:
@@ -363,7 +371,8 @@ For an operator-provisioned hosted receiver, set
 `https://metrics.example`, and provide `WOTEX_LAB_GREPTIME_QUERY_TOKEN`.
 `WOTEX_LAB_GREPTIME_QUERY_CA_CERTFILE` may name a private CA. The query token
 follows the same 43–128 character URL-safe rule and must differ from
-`WOTEX_LAB_GREPTIME_TOKEN`, `WOTEX_LAB_METRICS_TOKEN` and
+`WOTEX_LAB_GREPTIME_TOKEN`, `WOTEX_LAB_OTLP_TOKEN`,
+`WOTEX_LAB_GREPTIME_ADMIN_TOKEN`, `WOTEX_LAB_METRICS_TOKEN` and
 `WOTEX_LAB_METRICS_QUERY_TOKEN`; startup is refused otherwise. Each read
 re-resolves the host, refuses private or mixed DNS answers, pins one public
 address and verifies the hostname through TLS.
@@ -418,8 +427,9 @@ For an authenticated hosted receiver, set `WOTEX_LAB_OTLP_PROFILE=hosted`,
 `https://traces.example/v1/otlp`, `WOTEX_LAB_OTLP_AUDIENCE` to that URL's
 origin and `WOTEX_LAB_OTLP_TOKEN` to a 43–128 character URL-safe Bearer token.
 `WOTEX_LAB_OTLP_CA_CERTFILE` may name a private CA. The token must differ from
-`WOTEX_LAB_GREPTIME_QUERY_TOKEN`, `WOTEX_LAB_METRICS_TOKEN` and
-`WOTEX_LAB_METRICS_QUERY_TOKEN`; startup is refused otherwise. Each export
+`WOTEX_LAB_GREPTIME_QUERY_TOKEN`, `WOTEX_LAB_GREPTIME_ADMIN_TOKEN`,
+`WOTEX_LAB_METRICS_TOKEN` and `WOTEX_LAB_METRICS_QUERY_TOKEN`; startup is
+refused otherwise. Each export
 re-resolves the host, refuses private or mixed DNS answers, pins one public
 address and verifies the hostname through TLS.
 

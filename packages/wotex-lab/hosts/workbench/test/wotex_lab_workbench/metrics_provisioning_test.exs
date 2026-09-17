@@ -8,6 +8,7 @@ defmodule WotexLabWorkbench.MetricsProvisioningTest do
   alias WotexLabWorkbench.FakeGreptime
   alias WotexLabWorkbench.Observability.{Durable, Provisioning}
 
+  @admin_token "hosted-retention-admin-token-sentinel-with-43-chars"
   @ddl ~s({"output":[{"affectedrows":0}],"execution_time_ms":1})
 
   test "only an exact loopback receiver and an admitted plan reach the network" do
@@ -84,6 +85,68 @@ defmodule WotexLabWorkbench.MetricsProvisioningTest do
 
     assert {:error, %Error{code: :retention_unavailable}} =
              Provisioning.provision("http://127.0.0.1:#{closed}", database: "lab")
+  end
+
+  test "hosted provisioning needs an exact HTTPS origin and a separate administrative credential" do
+    names =
+      ~w(WOTEX_LAB_GREPTIME_ADMIN_TOKEN WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_GREPTIME_QUERY_TOKEN
+               WOTEX_LAB_OTLP_TOKEN WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
+
+    saved = Map.new(names, &{&1, System.get_env(&1)})
+    Enum.each(names, &System.delete_env/1)
+    {:ok, listen} = :gen_tcp.listen(0, [:binary, ip: {127, 0, 0, 1}, active: false])
+    {:ok, port} = :inet.port(listen)
+    origin = "https://localhost:#{port}"
+
+    try do
+      for {candidate, opts} <- [
+            {"http://metrics.example", [database: "lab"]},
+            {"https://metrics.example/", [database: "lab"]},
+            {"https://metrics.example/v1/sql", [database: "lab"]},
+            {"https://metrics.example?db=public", [database: "lab"]},
+            {"https://admin@metrics.example", [database: "lab"]},
+            {nil, [database: "lab"]},
+            {"https://metrics.example", [database: "public"]},
+            {"https://metrics.example", [database: "lab", ttl: "30m"]},
+            {"https://metrics.example", [database: "lab", tls_ca_certfile: ""]},
+            {"https://metrics.example", [database: "lab", token: @admin_token]}
+          ] do
+        assert {:error, %Error{code: :invalid_retention} = error} =
+                 Provisioning.provision_hosted(candidate, opts)
+
+        refute inspect(error) =~ @admin_token
+      end
+
+      assert {:error, %Error{code: :credential_unavailable}} =
+               Provisioning.provision_hosted(origin, database: "lab")
+
+      System.put_env("WOTEX_LAB_GREPTIME_ADMIN_TOKEN", "short")
+      assert :error = Provisioning.lookup_credential()
+      System.put_env("WOTEX_LAB_GREPTIME_ADMIN_TOKEN", @admin_token)
+      assert {:ok, {:bearer, @admin_token}} = Provisioning.lookup_credential()
+
+      for other <- tl(names) do
+        System.put_env(other, @admin_token)
+
+        assert {:error, %Error{code: :credential_unavailable}} =
+                 Provisioning.provision_hosted(origin, database: "lab")
+
+        System.delete_env(other)
+      end
+
+      # localhost resolves to loopback, so the hosted policy refuses it before connecting.
+      assert {:error, %Error{code: :retention_unavailable}} =
+               Provisioning.provision_hosted(origin, database: "lab", ttl: "30d")
+
+      assert {:error, :timeout} = :gen_tcp.accept(listen, 200)
+    after
+      :gen_tcp.close(listen)
+
+      Enum.each(saved, fn
+        {name, nil} -> System.delete_env(name)
+        {name, value} -> System.put_env(name, value)
+      end)
+    end
   end
 
   test "the exporter writes to a selected database with the database header" do

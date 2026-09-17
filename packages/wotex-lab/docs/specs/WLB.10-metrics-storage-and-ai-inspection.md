@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.27.0. Contract: accepted. Source status: the metric
+Specification version: 0.28.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -17,16 +17,16 @@ provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
 A separately activated loopback operator listener binds the query descriptor
 to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
-provision a durable database TTL on a local receiver. Both operator listeners
+provision a durable database TTL on a local or hosted receiver. Both operator listeners
 can instead use a mutual-TLS remote transport with peer ranges. The base
 library exports Lab spans and exception logs over OTLP, and the Workbench can
-activate that exporter for a local or an authenticated hosted receiver. `Wotex.Lab.Metrics.DurableQuery`
-supplies fixed durable read templates, and the operator listener answers them
-from a local or explicitly selected hosted receiver through the Workbench
-durable reader. Hosted database provisioning, isolated hosted-tenant BeamLens
+activate that exporter for a local or an authenticated hosted receiver.
+`Wotex.Lab.Metrics.DurableQuery` supplies fixed durable read templates, and the
+operator listener answers them from a local or explicitly selected hosted
+receiver through the Workbench durable reader. Isolated hosted-tenant BeamLens
 and public or tenant HTTP query bindings remain planned; the MCP
-`query_metrics` tool binds the local gateway. Hosted exporter and reader
-source is not deployment or durable-row evidence. A template export
+`query_metrics` tool binds the local gateway. Hosted exporter, reader and
+provisioning source is not deployment, retention or durable-row evidence. A template export
 alone is not proof of a Grafana import or query execution; the separate
 Grafana lane below supplies that evidence for one pinned server cohort.
 
@@ -346,9 +346,8 @@ Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
 redacted from stats and errors. The base library's fixed durable read templates
 and the Workbench's durable reader are described with the query contract
-below. Hosted database provisioning remains planned host work; hosted exporter
-and reader TLS and egress policy and the mutual-TLS operator listener transport
-are implemented.
+below. Hosted exporter, reader and provisioning TLS and egress policy and the
+mutual-TLS operator listener transport are implemented.
 
 `Wotex.Lab.Metrics.Retention` implements local TTL provisioning without
 transport. `plan/1` admits a lowercase database identifier other than
@@ -383,8 +382,26 @@ engine's physical table, keeps a current capture, re-provisions three hours
 without restoring the expired row and observes a real refused statement.
 The Workbench's `metrics_provisioning_test.exs` covers receiver admission, the
 exact statements, refused, malformed, oversized and unreachable answers, and
-the exporter's database header. Hosted receivers are provisioned by their
-operator outside this call.
+the exporter's database header.
+
+`Observability.Provisioning.provision_hosted/2` is the same explicit operator
+call for a hosted receiver. It admits an exact HTTPS origin without path,
+query, fragment or userinfo, the plan's `:database` and `:ttl` and an optional
+`:tls_ca_certfile`, and sends the same generated statements to
+`/v1/sql?db=public` through `Metrics.ReqSink`'s hosted destination policy with
+that origin as audience. Every statement re-resolves the host, refuses
+private, link-local, metadata, multicast and mixed answers, pins one public
+peer and verifies the original hostname through TLS, with five-second
+deadlines and a 64 KiB response ceiling. The Bearer credential comes from
+`WOTEX_LAB_GREPTIME_ADMIN_TOKEN` for every statement and is never stored. It
+must be a 43–128 character URL-safe token that differs from the export,
+durable query, OTLP and both operator listener credentials, so no running
+exporter or reader holds DDL authority; otherwise the call returns
+`credential_unavailable` before any connection. The tests cover origin and
+option admission, credential format and separation, and refusal of an origin
+that resolves to loopback as `retention_unavailable` before any connection.
+Provisioning a public hosted receiver is not exercised, and the call does not
+prove that such a receiver enforces the TTL it reports.
 
 Logs/traces use optional OTLP/HTTP-protobuf export to GreptimeDB's documented
 signal endpoints, not a claim that PromEx exports them. Validate signal-specific
@@ -448,8 +465,9 @@ multicast and mixed answers, pins one public peer and verifies the original
 hostname through TLS. The Bearer credential comes from
 `WOTEX_LAB_OTLP_TOKEN`, which boot checks and every write reads again without
 storing it. It must be a 43–128 character URL-safe token that differs from
-the durable query credential and both operator listener credentials, so an
-export credential never doubles as a read credential; a missing, malformed
+the durable query credential, the administrative provisioning credential and
+both operator listener credentials, so an export credential never doubles as
+a read or administrative credential; a missing, malformed
 or reused credential fails the batch as `credential_unavailable`.
 `metrics_otlp_test.exs` covers local and hosted receiver, audience and
 database admission, the paths and headers of a real local export, credential
@@ -543,8 +561,9 @@ multicast and mixed answers, pins one public peer and verifies the original
 hostname through TLS. The Bearer credential comes from
 `WOTEX_LAB_GREPTIME_QUERY_TOKEN`, which boot checks and each executor call
 reads again without storing it. It must be a 43–128 character URL-safe token
-that differs from the export credential and from both operator listener
-credentials, so query and export credentials keep separate scopes; a missing,
+that differs from the metric and OTLP export credentials, the administrative
+provisioning credential and both operator listener credentials, so query,
+export and administrative credentials keep separate scopes; a missing,
 malformed or reused credential makes the store unavailable. The response is
 cut at the same one MiB ceiling, so an oversized hosted answer fails JSON
 decoding and is also unavailable.

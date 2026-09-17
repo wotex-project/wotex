@@ -23,7 +23,8 @@ defmodule WotexLabWorkbench.Observability.Otlp do
   every write and never enters options or exporter state. It must be a 43–128
   character URL-safe token that differs from the query credentials
   `WOTEX_LAB_GREPTIME_QUERY_TOKEN`, `WOTEX_LAB_METRICS_TOKEN` and
-  `WOTEX_LAB_METRICS_QUERY_TOKEN`; otherwise the batch fails as
+  `WOTEX_LAB_METRICS_QUERY_TOKEN` and from the administrative credential
+  `WOTEX_LAB_GREPTIME_ADMIN_TOKEN`; otherwise the batch fails as
   `credential_unavailable`.
 
   `WOTEX_LAB_OTLP_URL` and optional `WOTEX_LAB_OTLP_DATABASE` select the local
@@ -40,7 +41,8 @@ defmodule WotexLabWorkbench.Observability.Otlp do
 
   @keys [:url, :database, :profile, :audience, :tls_ca_certfile]
   @credential_env "WOTEX_LAB_OTLP_TOKEN"
-  @query_credentials ~w(WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
+  @query_credentials ~w(WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_GREPTIME_ADMIN_TOKEN
+                        WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
 
   @doc "Admits the local receiver base URL and an optional database."

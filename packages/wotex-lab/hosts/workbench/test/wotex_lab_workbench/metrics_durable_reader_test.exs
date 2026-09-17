@@ -169,8 +169,8 @@ defmodule WotexLabWorkbench.MetricsDurableReaderTest do
       assert {:error, %Error{code: :invalid_durable_reads}} = DurableReader.validate(opts)
     end
 
-    names = ~w(WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_METRICS_TOKEN
-               WOTEX_LAB_METRICS_QUERY_TOKEN)
+    names = ~w(WOTEX_LAB_GREPTIME_QUERY_TOKEN WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_OTLP_TOKEN
+               WOTEX_LAB_GREPTIME_ADMIN_TOKEN WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
 
     saved = Map.new(names, &{&1, System.get_env(&1)})
     Enum.each(names, &System.delete_env/1)

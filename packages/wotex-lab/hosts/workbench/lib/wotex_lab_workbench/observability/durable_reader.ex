@@ -28,10 +28,11 @@ defmodule WotexLabWorkbench.Observability.DurableReader do
   answers are refused, one public peer is pinned and TLS verifies the original
   hostname. Its Bearer credential is read from `WOTEX_LAB_GREPTIME_QUERY_TOKEN`
   inside each executor call and never enters options or state. It must be a
-  43–128 character URL-safe token that differs from the export credential
-  `WOTEX_LAB_GREPTIME_TOKEN` and from the operator listener credentials
-  `WOTEX_LAB_METRICS_TOKEN` and `WOTEX_LAB_METRICS_QUERY_TOKEN`; otherwise the
-  store is unavailable.
+  43–128 character URL-safe token that differs from the export credentials
+  `WOTEX_LAB_GREPTIME_TOKEN` and `WOTEX_LAB_OTLP_TOKEN`, the administrative
+  credential `WOTEX_LAB_GREPTIME_ADMIN_TOKEN` and the operator listener
+  credentials `WOTEX_LAB_METRICS_TOKEN` and `WOTEX_LAB_METRICS_QUERY_TOKEN`;
+  otherwise the store is unavailable.
 
   GreptimeDB 1.1.4 answers a query against a database that does not exist with
   an empty success. When a selected database yields no series, the executor
@@ -58,7 +59,8 @@ defmodule WotexLabWorkbench.Observability.DurableReader do
   @connect_timeout_ms 1_000
   @receive_timeout_ms 2_000
   @credential_env "WOTEX_LAB_GREPTIME_QUERY_TOKEN"
-  @other_credentials ~w(WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
+  @other_credentials ~w(WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_OTLP_TOKEN WOTEX_LAB_GREPTIME_ADMIN_TOKEN
+                        WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN)
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
   @form [{"content-type", "application/x-www-form-urlencoded"}]
 
