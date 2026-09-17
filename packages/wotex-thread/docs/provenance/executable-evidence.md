@@ -5,8 +5,8 @@ host with semantic Dataset validation/export, interface/Thread enablement,
 formation, management callbacks and commissioner lifecycle/admissions. Native
 ExUnit and C++/process fixtures exercise real SDK/RCP software boundaries; their
 presence is scoped evidence, not a complete Thread profile. Joiner execution,
-state subscriptions, complete simulated-network/application workflows, Mix fixture
-orchestration and final stress/native/package closure remain required.
+complete simulated-network/application workflows and final
+stress/native/package closure remain required.
 The production runtime and explicit native build require no Python; dormant
 Python native test drivers have been retired. Selected native lanes must fail if their SDK/peer/configuration
 is absent. Physical-radio testing is a separate optional lane.
@@ -570,6 +570,83 @@ and all four results report zero survivors and unchanged source identity.
 | `docs/specs/fixtures/native-port-v1.json` | `91d70393eb17360ea253f249ff3710d568c3fd12941b9eae91f7c8aa6dc3ba18` |
 
 C09 stress, dependency audit and clean archive validation remain open for P00.
+
+## Lifecycle stress, 2026-09-17
+
+`test/software/lifecycle_stress_test.exs` executes the C09 software stress cases
+in both lanes of every software run, against the real host and simulation RCP
+unless stated otherwise. Every lifecycle cycle captures the Port's guardian, its
+SDK worker and the radio it started from `/proc`, requires at least those three
+processes while open, and requires each to be gone after the cleanup grace
+together with the connection process.
+
+- 1000 sequential `inspect_state`, `state`, `network_name` and `rloc16`
+  operations return exact typed values. Afterwards the connection has no
+  pending request, waiter, queued or active request, control, subscription,
+  stream, report, monitor or mailbox message, and its report ledger has no
+  pending report, live stream or retained byte with every assigned sequence
+  acknowledged. Native RSS (guardian, worker and radio), connection memory and
+  BEAM total memory are sampled every 100 operations and written per lane
+  beside the case results; they are reported, not asserted.
+- 100 BEAM open/close cycles verify that the guardian and radio executable
+  links equal the configured host and RCP paths, the interface exists while
+  open, and the owned processes, Port count and interface return to baseline
+  each cycle. The BEAM process count returns to its baseline at the end.
+- 100 receiver-death cycles subscribe with a separate receiver, wait for its
+  initial report, kill it, require the stream owner to exit and restore the
+  full connection and ledger baseline above before the next cycle. The native
+  host admits 64 live streams, so cycles 65–100 also require native retirement
+  of every earlier stream.
+- 32 concurrent callers each issue 25 alternating `state`/`version` requests;
+  all 800 replies correlate to their exact type and the baseline is restored.
+- 10 forced 200 ms startup deadlines use a radio that never completes Spinel
+  startup; each returns `timeout` within 1300 ms and no host or radio process
+  or interface remains.
+- 10 peer-loss cycles kill the SDK worker; the connection terminates, later use
+  fails with `connection_closed` or `invalid_handle`, and the guardian, worker,
+  radio and interface are released.
+- 30 malformed-reply cycles (bad JSON, truncated and oversized lines) use the
+  injected escript peer. They are injected-contract evidence, not SDK
+  interoperability; each closes its generation with `invalid_response`,
+  `response_limit` or `connection_closed` and the peer process exits.
+
+A first run (lane 17) of an earlier draft failed its receiver-death case on
+three of four lanes because it checked the connection state once, before the
+last cancellation reply had arrived; lane 18 passed after that check waited for
+the reply. That draft sampled RSS into one file that the sanitizer lane
+overwrote and checked native processes only in the deadline case. The recorded
+run below executes the strengthened test on the committed refactor source.
+
+| Lane | Run | Native tests | Normal lane | Sanitizer lane | Result SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| Linux arm64, Elixir 1.18.4 / OTP 27.3.4.15 | 291357 ms | 6/6 | 176/176 | 35/35 | `03a0a42613e4a32730101dd0ce158b56f58ddf929c5e288cbcbf975916aac241` |
+| Linux arm64, Elixir 1.20.2 / OTP 29.0.4 | 291321 ms | 6/6 | 176/176 | 35/35 | `49e94907e97e67b7746474e9b56baf5ce2a6a60dc7ebfb24a197bcc7a7183c5f` |
+| Linux x86_64 (emulated), Elixir 1.18.4 / OTP 27.3.4.15, `+JMsingle true` | 235305 ms | 6/6 | 176/176 | 35/35 | `e339061eda92c43ae30f3b3df949b2c2a5be2728e62e18f82e4cfc2908829288` |
+| Linux x86_64 (emulated), Elixir 1.20.2 / OTP 29.0.4, `+JMsingle true` | 260694 ms | 6/6 | 176/176 | 35/35 | `1c5994ebe3b85afc652723d49eacf390c7027c8db2540e37ad8b475d5805272a` |
+
+All four results report 176/176 normal-lane and 35/35 sanitizer-lane cases,
+each lane including the seven stress cases, with zero survivors and unchanged
+source identity.
+Over the 1000 operations the uninstrumented host's native RSS stayed constant
+on every lane (7648 KiB and 7624 KiB on arm64, 14832 KiB and 14836 KiB on
+emulated x86_64), and connection process memory stayed between 39328 and 112656
+bytes. The AddressSanitizer host grew by 10536–13352 KiB, from 62556–63696 KiB
+to 73096–75936 KiB, roughly 1 MiB per 100 operations. That growth is consistent
+with AddressSanitizer's freed-memory quarantine rather than evidence of a leak,
+but these runs do not separate the two; the flat uninstrumented trend is the
+production observation.
+
+| Source | SHA-256 |
+| --- | --- |
+| `test/software/lifecycle_stress_test.exs` | `09ed34e43af78a4a14cd32adcca9b17a032f1c81f2c8beb6f8afd4d564f6a73e` |
+| `test/software/acceptance.json` | `203aec22df7e3cf63aff8ff9511a2674f82d104bc408312748b09e3c960df433` |
+| `lib/wotex/thread/open_thread/connection.ex` | `12959cdec08e9b9a5671244703a85feb1b5b441cdfdac74ce48213724f000d2e` |
+| `lib/wotex/thread/software/build.ex` | `fa5ae3045dc6791f4309d4b30dbc64d78015f3025a578879c6699e3763f00324` |
+| `lib/wotex/thread/software/run.ex` | `337494a31a036a4e0b4b03d8f966c8f0a266018c7b4dbcad813bcfb6e99ca78c` |
+| `test/fixtures/stubborn_radio.c` | `a19ea6733534363d3bffc2c66c5b208a59027503ff4fca839aec4a990c18cd49` |
+| `test/fixtures/sdk_bridge.escript` | `68262c3a982d70b4cb615d4f4eb117ff28d3d6a34db03061d0099168c96febeb` |
+
+Dependency audit and clean archive validation remain open for P00.
 
 ## Contract corpus binding, 2026-09-17
 
