@@ -352,7 +352,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.19.0"
+    version: "0.20.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: partial
     evidence_status: partial
@@ -370,6 +370,9 @@ specifications:
       - name: OpenTelemetry Protocol (OTLP/HTTP protobuf)
         revision: "opentelemetry-proto v1.5.0"
         claim: Hand-encoded trace and log export request subset with partial-success decoding, proven against greptime/greptimedb:v1.1.4 behind WOTEX_LAB_GREPTIME=1; no metrics signal, gRPC, JSON encoding or collector compatibility claim.
+      - name: Grafana dashboard JSON model
+        revision: "schemaVersion 39"
+        claim: Inert catalogue exports import into grafana/grafana:13.2.2 and every stored panel target executes through Grafana against greptime/greptimedb:v1.1.4 behind WOTEX_LAB_GRAFANA=1; no other Grafana version, Prometheus server or browser rendering claim.
       - name: BeamLens
         revision: "0.3.1"
         claim: Trusted-local custom-skill integration only; upstream base node/time callbacks and log-store startup are disclosed, and shared hosted tenants remain blocked.
@@ -458,15 +461,16 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/metrics_otlp_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_inspection_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metric_panels_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/grafana_import_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_provider_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_codex_runner_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_ollama_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/beamlens_integration_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
-    compatibility_classification: Optional host contract; the Workbench can activate the OTLP exporter for an exact local receiver. An additive, explicitly started OTLP exporter sends closed Lab spans and exception logs, and Metrics.ReqSink results additionally carry the bounded response body. An additive mutual-TLS remote transport with peer ranges serves the operator scrape and query listeners, while the loopback transport stays the default. Additive Retention plans provision a verified local GreptimeDB database TTL (7d default, 1h to 3650d) and the exporter can select that database, while writes without a selection keep the public database. An additive loopback operator listener binds the query descriptor to POST /query with its own credential, one inspection scope per request and reduced limits, while public and tenant query bindings stay planned. The MCP query_metrics tool now binds one disposable local gateway per call; bridge captures require strictly advancing wall timestamps and revalidated snapshots. The Workbench can explicitly compose the bridge with an exact loopback endpoint or a separately selected authenticated HTTPS endpoint whose audience, DNS answers, peer and TLS identity are checked on every write; remote receiver operation remains independent evidence. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Atomic diagnostic export creates an inert content-addressed, masked, unsplit dataset at an exact history watermark; storage-only history remains available. The checked-in Workbench is the inspectable reference source, while artifact adoption remains a separate axis. Its trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
+    compatibility_classification: Optional host contract; the unchanged inert Grafana export now has a separately selected import and query-execution lane against one pinned Grafana and GreptimeDB cohort. The Workbench can activate the OTLP exporter for an exact local receiver. An additive, explicitly started OTLP exporter sends closed Lab spans and exception logs, and Metrics.ReqSink results additionally carry the bounded response body. An additive mutual-TLS remote transport with peer ranges serves the operator scrape and query listeners, while the loopback transport stays the default. Additive Retention plans provision a verified local GreptimeDB database TTL (7d default, 1h to 3650d) and the exporter can select that database, while writes without a selection keep the public database. An additive loopback operator listener binds the query descriptor to POST /query with its own credential, one inspection scope per request and reduced limits, while public and tenant query bindings stay planned. The MCP query_metrics tool now binds one disposable local gateway per call; bridge captures require strictly advancing wall timestamps and revalidated snapshots. The Workbench can explicitly compose the bridge with an exact loopback endpoint or a separately selected authenticated HTTPS endpoint whose audience, DNS answers, peer and TLS identity are checked on every write; remote receiver operation remains independent evidence. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Atomic diagnostic export creates an inert content-addressed, masked, unsplit dataset at an exact history watermark; storage-only history remains available. The checked-in Workbench is the inspectable reference source, while artifact adoption remains a separate axis. Its trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
-    version: "0.5.5"
+    version: "0.6.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial
@@ -513,9 +517,10 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/sessions_room_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/dashboard_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/grafana_import_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
-    compatibility_classification: The pre-1.0 reference host replaces its internal Vega/browser-hook chart path with the existing closed Elixir geometry and server-rendered HEEx/SVG; Explorer remains optional analysis and pan/zoom is not claimed. It also retains an explicitly activated trusted-local investigation UI. Base Lab consumers keep inert tokens and scoped CSS without Phoenix, Explorer or BeamLens.
+    compatibility_classification: Evidence-only change; the separately selected Grafana lane imports the unchanged catalogue dashboard export and executes every panel target, while query-backed Workbench history panels remain unclaimed. The pre-1.0 reference host replaces its internal Vega/browser-hook chart path with the existing closed Elixir geometry and server-rendered HEEx/SVG; Explorer remains optional analysis and pan/zoom is not claimed. It also retains an explicitly activated trusted-local investigation UI. Base Lab consumers keep inert tokens and scoped CSS without Phoenix, Explorer or BeamLens.
   - id: WLB.12
     version: "0.1.0"
     path: docs/specs/WLB.12-unified-documentation.md

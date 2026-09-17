@@ -246,9 +246,24 @@ through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser
 session is required; no room or collector starts. Importing the JSON and
 choosing a Prometheus-compatible source are operator actions. The export
 preserves label sets, uses five-minute counter rates and bucket-derived p95,
-and never fills missing data with zero. Grafana import compatibility remains
-separate acceptance work, not a claim made by this source export. Saved arrangements are session-only and cannot activate either
-the collector or the separately configured durable exporter.
+and never fills missing data with zero. Saved arrangements are session-only and
+cannot activate either the collector or the separately configured durable
+exporter.
+
+The separately selected Grafana lane checks import and query execution for one
+pinned server cohort. It needs Docker and the digest-pinned Grafana 13.2.2 and
+GreptimeDB 1.1.4 images, which it does not pull:
+
+```sh
+docker pull grafana/grafana:13.2.2@sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0
+docker pull greptime/greptimedb:v1.1.4@sha256:9726587eac95d0360755254cd59a528dbf48abfdf268478aea6a644f62afe44c
+WOTEX_LAB_GRAFANA=1 WOTEX_PATH_DEPS=1 mix test test/wotex_lab_workbench/grafana_import_test.exs
+```
+
+The test writes two real PromEx captures through the bridge. It imports the
+downloaded JSON for all 43 panels, runs every stored target through Grafana
+and removes its containers and network. It covers neither Grafana browser
+rendering, other Grafana versions nor a Prometheus server.
 
 ### Protected local scrape
 

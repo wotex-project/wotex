@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.19.0. Contract: accepted. Source status: the metric
+Specification version: 0.20.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -24,7 +24,8 @@ activate that exporter for a local receiver. Hosted database provisioning, isola
 BeamLens and public or tenant HTTP query bindings remain planned; the MCP
 `query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
-is not proof of a Grafana import or query execution.
+alone is not proof of a Grafana import or query execution; the separate
+Grafana lane below supplies that evidence for one pinned server cohort.
 
 ## Stack and ownership
 
@@ -73,6 +74,12 @@ and histograms bucket-derived p95. Each label set is preserved; templates do
 not accidentally aggregate different receiver job/instance labels or fill
 missing data with zeros. The session-verified `/metrics/dashboard.json` route
 exports only inert definitions; it does not read measurements or upload JSON.
+With `WOTEX_LAB_GRAFANA=1`, the Workbench `grafana_import_test.exs` imports
+that JSON for every catalogue panel into pinned Grafana 13.2.2 and runs each
+stored target through Grafana against pinned GreptimeDB 1.1.4. The bridge wrote
+that history from two real PromEx captures. The test requires distinct label
+sets, unchanged gauge values, bounded p95 values and no values before capture.
+No Prometheus server, other Grafana version or browser rendering is claimed.
 
 PromEx 1.12.0 uses the host's compile-time-selected public `PromEx.Storage`
 adapter. `Observability.Store` admits only this exact definition cohort and

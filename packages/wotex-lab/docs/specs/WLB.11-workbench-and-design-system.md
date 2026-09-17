@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.5.5. Contract: accepted.
+Specification version: 0.6.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -55,8 +55,17 @@ never the opt-in PromEx collector's host-wide measurements as session data.
 `dashboard_test.exs` covers session denial, closed selection, inert export,
 session-owned saved arrangements and exact reproducible selection URLs. A deep
 link may preview an admitted arrangement without silently replacing the saved
-one. Query-backed history panels and a Grafana-server import/browser cohort are
-not yet implemented or claimed.
+one. The separately selected `WOTEX_LAB_GRAFANA=1` lane in
+`grafana_import_test.exs` imports the downloaded JSON for all 43 catalogue
+panels, in 16-panel selections, into pinned Grafana 13.2.2. Grafana binds the
+Prometheus data source input and stores each exact template. The lane runs
+every stored target through Grafana against pinned GreptimeDB 1.1.4 history
+that the Workbench bridge wrote from real PromEx captures. Panels with captured
+source series, including the eight fed by the thermal fixture, return values;
+gauges keep captured values and earlier ranges return none. The other panels
+answer without values or errors. This server cohort does not claim
+query-backed history panels, Grafana browser rendering or other Grafana
+versions.
 
 ## Product and implementation boundary
 

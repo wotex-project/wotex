@@ -46,6 +46,7 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
 | [opentelemetry-proto v1.5.0](https://github.com/open-telemetry/opentelemetry-proto/tree/v1.5.0) (Apache-2.0) | Trace and log export request and response field numbers hand-encoded by `Wotex.Lab.Otlp.Encoder`; no generated protobuf, metrics signal, gRPC or collector compatibility claim |
 | [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` (optionally with `x-greptime-db-name`), read-back and retention DDL through `/v1/sql`, `ADMIN flush_table` and OTLP trace and log ingestion through `/v1/otlp/v1/traces` and `/v1/otlp/v1/logs` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
+| [grafana/grafana:13.2.2](https://hub.docker.com/r/grafana/grafana) | Disposable server for the Workbench `:grafana` lane, pinned by manifest digest `sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0`; the lane pins the GreptimeDB image by the digest recorded below. Only the health, data source, folder, dashboard import/read and data source query APIs are exercised; no plugin installation, browser rendering or other Grafana revision is claimed |
 
 ## Native containment source cohort
 
@@ -100,8 +101,35 @@ not part of this cohort. BEAM/Phoenix/LiveView built-in introspection requires
 a separate admission review and is not enabled. The base library still has no
 PromEx dependency. The portable JSON uses classic Grafana schema 39 and fixed
 [Prometheus rate/histogram queries](https://prometheus.io/docs/prometheus/latest/querying/functions/#histogram_quantile).
-Export shape/query equality is tested; a Grafana import or PromQL-engine cohort
-is not claimed by those source tests.
+Export shape/query equality is tested by those source tests. The Grafana import
+cohort below is separately selected evidence.
+
+## Grafana import cohort
+
+Observation date: 2026-09-17. With `WOTEX_LAB_GRAFANA=1`,
+`hosts/workbench/test/wotex_lab_workbench/grafana_import_test.exs --seed 1`
+passed 1 test in 12.0 seconds on Elixir 1.20.2 / OTP 29 / aarch64 Darwin.
+The lane created a private Docker network, one Grafana 13.2.2 container at the
+digest above and one `greptime/greptimedb:v1.1.4` container at
+`sha256:9726587eac95d0360755254cd59a528dbf48abfdf268478aea6a644f62afe44c`.
+Each container had 2 CPUs, 1 GiB memory with no additional swap, 512 PIDs and
+an ephemeral loopback-only published port. Grafana ran with a generated
+administrator password, no anonymous access or sign-up, no reporting, update
+checks or news feed, and no plugin preinstallation. The lane removed both
+containers and the network afterwards.
+
+The Workbench bridge wrote two real PromEx captures to GreptimeDB, with one
+thermal fixture run before each capture. Grafana imported three downloaded
+exports of 16, 16 and 11 panels into separate folders. It bound
+`DS_PROMETHEUS` to a proxy data source for the GreptimeDB Prometheus API and
+stored every expression unchanged. All 43 stored targets returned HTTP 200
+without a query error. Nine panels returned values: three counter rates, two
+bucket-derived p95 histograms and four gauges, including the exporter backlog.
+The other 34 returned no values. Counters with only one captured sample
+returned no rate. Gauge values equalled captured values, and a range ending ten
+minutes before capture returned no values for any value-bearing panel.
+GreptimeDB 1.1.4 retained `__name__` on `rate` and `histogram_quantile`
+results, whereas Prometheus drops it. The lane asserts neither behaviour.
 
 ## History admission and metrics source cohort
 
