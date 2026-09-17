@@ -1,8 +1,9 @@
-# Repository Contract
+# Wotex Directory Package Contract
 
-This repository contains the public `wotex_directory` Mix library. It owns
+This package is the public `wotex_directory` Mix library. It owns
 storage-neutral W3C Web of Things Discovery values and Thing Description
 Directory mechanics. It is a normal library, not an application host.
+Repository-wide rules are in the root `CLAUDE.md`.
 
 ## Required language
 
@@ -49,50 +50,41 @@ features must be reported explicitly. This library provides no certification.
 ## Public boundary
 
 Source, tests, specifications, documentation, commits, package contents, and
-generated documentation remain consumer-neutral. Do not include consumer brand
-names, consumer namespaces or policy, organization-internal paths, non-public
-fixtures, credentials, customer data, or copied proprietary prose. Examples use
-`consumer`, `consumer host`, reserved URNs, and synthetic values.
+generated documentation remain consumer-neutral. Consumer, company and customer
+names stay out, as do consumer namespaces or policy, non-public fixtures,
+credentials, customer data, and copied proprietary prose. Sibling packages are
+referenced by package name; relative paths inside the repository are allowed,
+absolute machine paths are not. Examples use `consumer`, `consumer host`,
+reserved URNs, and synthetic values.
+
+## Documentation and local state
+
+Specifications, the completion plan, decisions and provenance live under
+`docs/packages/wotex-directory/`; `docs/packages/wotex-directory/specs/catalogue.yaml`
+owns normative status. Machine-local execution records live only in the
+ignored root `docs/tasks/local/wotex-directory/`.
 
 ## Delivery
 
-Implement accepted repository specifications with tests first. Before a local
-commit run formatting, warning-free compilation, tests, documentation, the
-package archive build, and a boundary scan. Commits use conventional lowercase
-subjects without specification identifiers or automation attribution. Never
+Implement accepted package specifications with tests first. Commits use
+conventional lowercase subjects without specification identifiers. Never
 perform a remote action from an agent session.
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` compiles with warnings as errors,
-checks formatting, and runs the behavioral test suite. Static analysis,
-audits, coverage, documentation, package inspection, and archive-only
-repository-port suites are explicit release-evidence checks. This evidence
-covers the configured consumers, not arbitrary production adapters.
+Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-directory`
+before a local commit, then the gate of every dependent package. It compiles
+with warnings as errors, checks formatting, dependencies, Credo, Doctor,
+ex_doc, coverage, Dialyzer, the package archive with its archive-only
+repository-port suites, and the application-free boundary. The external
+release-evidence manifest is written separately by
+`bin/check_release_evidence.exs`. This evidence covers the configured
+consumers, not arbitrary production adapters.
 
 ## External automation boundary
 
-This repository exposes source, specifications, dependency contracts, vectors,
+This package exposes source, specifications, dependency contracts, vectors,
 and deterministic verification commands to external engineering automation. It
-does not own worker coordination, claims, leases, attempts, cross-repository
+does not own worker coordination, claims, leases, attempts, cross-package
 programme state, accepted outcomes, or remote publication policy. Do not add a
 coordination daemon, graph database, shared-workspace application, or
 tool-specific project metadata. External automation must adapt to this
-consumer-neutral repository contract.
-
-## Release metadata
-
-`CHANGELOG.md` is maintained only by GitOps. Never edit it directly. Because
-the initial changelog already exists, once GitOps is configured, the human maintainer prepares the first
-release with `mix git_ops.release --override 0.1.0` and later releases with
-`mix git_ops.release`. Automated agents must not invoke either release task.
-
-## Git authority
-
-Automated agents must never configure, add, change, or remove a Git remote;
-push; create a tag; publish a package or release; or create equivalent remote
-state. Only the human maintainer performs publication. Never change repository
-visibility.
-
-Local commits use the identity already configured by the contributor running
-Git. Automated agents must never set or override Git identity; record an agent,
-tool, or bot as an author, committer, or co-author; invent a contributor
-identity; or remove attribution supplied by a human contributor.
+consumer-neutral package contract.

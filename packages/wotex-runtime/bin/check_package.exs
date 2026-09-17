@@ -89,12 +89,12 @@ defmodule Wotex.Runtime.Check.Package do
   @spec main() :: :ok
   def main do
     source_root = File.cwd!()
-    core_archive = System.get_env("WOTEX_CORE_ARCHIVE")
     package_root = Path.join(System.tmp_dir!(), "wotex-runtime-package.#{unique()}")
 
     result =
       try do
-        verify(source_root, core_archive, package_root)
+        File.mkdir_p!(package_root)
+        verify(source_root, core_archive!(package_root), package_root)
       catch
         :throw, {:violation, message} -> {:violation, message}
       after
@@ -104,21 +104,43 @@ defmodule Wotex.Runtime.Check.Package do
     report(result)
   end
 
-  defp verify(_source_root, nil, _package_root) do
-    violation("WOTEX_CORE_ARCHIVE must name the exact wotex archive")
+  # The exact core archive is either supplied through WOTEX_CORE_ARCHIVE or, under
+  # the sibling switch WOTEX_PATH_DEPS=1, built from the declared wotex path dependency.
+  defp core_archive!(package_root) do
+    case {System.get_env("WOTEX_CORE_ARCHIVE"), System.get_env("WOTEX_PATH_DEPS")} do
+      {nil, "1"} ->
+        target = Path.join(package_root, "wotex.tar")
+        run!("mix", ["hex.build", "--output", target], core_source!())
+        target
+
+      {nil, _switch} ->
+        violation("WOTEX_CORE_ARCHIVE must name the exact wotex archive")
+
+      {supplied, _switch} ->
+        unless File.regular?(supplied) do
+          violation("WOTEX_CORE_ARCHIVE is not a regular file")
+        end
+
+        supplied
+    end
+  end
+
+  defp core_source! do
+    case Enum.find(Mix.Project.config()[:deps], &match?({:wotex, _options}, &1)) do
+      {:wotex, options} when is_list(options) ->
+        Keyword.get(options, :path) || violation("wotex is not declared as a path dependency")
+
+      _other ->
+        violation("wotex is not declared as a path dependency")
+    end
   end
 
   defp verify(source_root, core_archive, package_root) do
-    unless File.regular?(core_archive) do
-      violation("WOTEX_CORE_ARCHIVE is not a regular file")
-    end
-
     runtime_archive = Path.join(package_root, "wotex_runtime-0.1.0.tar")
     unpacked = Path.join(package_root, "runtime")
     core = Path.join(package_root, "core")
     consumer = Path.join(package_root, "consumer")
 
-    File.mkdir_p!(package_root)
     run!("mix", ["hex.build", "--output", runtime_archive], source_root)
     unpack!(runtime_archive, unpacked)
     unpack!(core_archive, core)

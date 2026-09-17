@@ -1,11 +1,20 @@
 # Wotex Directory completion contract
 
-Plan `WTD-C`, revision `1.1.0`. This is a work-definition baseline, not a
+Plan `WTD-C`, revision `1.2.0`. This is a work-definition baseline, not a
 progress report. Preserve work IDs and accepted evidence requirements; change
 scope only through an explicit revision of this plan. Revision 1.1.0 restates
 the listing continuation requirement after the WTD.01 1.1.0 keyset cursor
 decision and adds no work item. Implementation status in the catalogue
 describes WTD.01's bounded implementation, not release readiness.
+
+Revision 1.2.0 records the monorepo layout and adds no work item.
+Documentation now lives under `docs/packages/wotex-directory/`. Package
+archives no longer ship Markdown documentation, governance files or agent
+files; specifications are published through HexDocs. Fixtures and
+machine-read provenance ship under `priv/`. The repository-level gate
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-directory`)
+and the CI lanes now discharge `repository_green` and
+`archive_consumer_green`. Tags use `wotex-directory-v<version>`.
 
 ## Ownership and implementation boundary
 
@@ -45,7 +54,7 @@ the consumer. Port errors must not expose credentials, raw payloads or principal
 | RFC 7396 | Bounded JSON merge patch followed by validation | Not JSON Patch or unrestricted arbitrary allocation |
 | RFC 3339 / RFC 8288 | Registration time and next-link metadata specified in WTD.01 | Consumer wire serialization and HTTP behavior require separate evidence |
 
-`docs/provenance/w3c-sources.md` records primary sources. Do not add standards
+`docs/packages/wotex-directory/provenance/w3c-sources.md` records primary sources. Do not add standards
 claims from a passing unit test alone. The remaining claim ledger is:
 
 - `WTD-CL01`: repository portability under contention requires a second,
@@ -74,7 +83,7 @@ claims from a passing unit test alone. The remaining claim ledger is:
 | WTD-C03 | WTD.01 | Archive-only minimal consumer fixture using no source checkout and no implicit application startup | Build archive, unpack into isolated dependency directory, compile with warnings as errors and run register/get/patch/list/expire plus invalid/conflict cases through public API |
 | WTD-C04 | WTD-C01, WTD-C03 | Independent reference consumer with explicit repository/auth/clock/ID implementations | All public operations and context separation pass against the exact archive digest; consumer tests prove atomicity rather than assuming it |
 | WTD-C05 | WTD-C02, WTD-C04 | Bounded claim-to-test matrix, compatibility review and release evidence manifest | Every claimed clause has a positive and applicable negative test; no unsupported search/transport claim; gate inputs are complete and internally consistent |
-| WTD-C06 | None | Allowlisted package documentation inputs that exclude machine-local progress records | `mix hex.build` archive listing proves docs/tasks/local and all contained files absent even when a sentinel exists locally |
+| WTD-C06 | None | Allowlisted package inputs that exclude documentation, governance and agent files and machine-local progress records | `mix hex.build` archive listing proves `docs/` (including local `docs/tasks/local/wotex-directory/`) and all contained files absent even when a sentinel exists locally |
 
 C01 and C03 can proceed independently. C02 must not invent a database product;
 its adapters are test consumers. No new repository or public operation is
@@ -87,14 +96,19 @@ Each gate records the exact source commit, dependency lock/cohort, runtime,
 commands and outcomes; archive gates additionally bind archive SHA-256. Reusing
 evidence after a relevant change requires rerunning affected gates.
 
-- `repository_green`: format, warnings-as-errors compilation, the entire package
-  test suite, strict Credo, docs and `git diff --check` pass with the declared
-  supported runtime. Existing tests under `test/wotex/directory/` are the starting
-  evidence, not a substitute for C01/C02.
-- `archive_consumer_green`: C03 passes against an unpacked `mix package` archive;
+- `repository_green`: `WOTEX_PATH_DEPS=1 mix check --no-retry` from
+  `packages/wotex-directory` passes with the declared supported runtime: format,
+  warnings-as-errors compilation, dependency audits, strict Credo, Doctor, docs,
+  the entire package test suite with coverage, Dialyzer, the archive and
+  application-free checks and `git diff --check`. The repository-level gate and
+  CI lanes discharge it. Existing tests under `test/wotex/directory/` are the
+  starting evidence, not a substitute for C01/C02.
+- `archive_consumer_green`: C03 passes against the archive unpacked by
+  `bin/check_archive.exs`, which the repository-level gate and CI lanes run;
   inspect metadata/dependencies, no Application callback, private/local files or
-  sibling checkout dependencies. The path-dependency development mode is forbidden
-  as archive proof.
+  sibling checkout dependencies. The path-dependency development mode selects
+  only the core source for building its archive and is forbidden as archive
+  proof.
 - `reference_consumer_green`: C01/C02/C04 pass with an independently implemented
   repository, frozen clock and deliberately failing ports using the same archive.
 - `public_release_candidate`: the preceding gates, C05 and provenance/license/
@@ -103,19 +117,20 @@ evidence after a relevant change requires rerunning affected gates.
   port, error and temporal compatibility review; no unresolved advertised claim
   or undocumented breaking behavior. It is not W3C certification.
 
-The default `mix check --no-retry` is the repository developer gate. The
-release-candidate checks and external manifest run separately through
-`mix run --no-start bin/check_release_evidence.exs`.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` is the package developer gate and
+the repository-level gate. The external release-evidence manifest is written
+separately through `mix run --no-start bin/check_release_evidence.exs`.
 
 ## Local execution records
 
 Execution records, generated consumers, receipts and agent state remain outside
-repositories, including ignored directories. Plans and catalogues contain no
-rolling completion state. Package inputs allowlist public documents;
-`.gitignore` does not govern a Hex archive.
+Git, in the ignored root `docs/tasks/local/wotex-directory/` at most. Plans and
+catalogues contain no rolling completion state. Package inputs allowlist code,
+`README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`; `.gitignore` does not
+govern a Hex archive.
 
 The WTD-C06 acceptance creates synthetic excluded-state sentinels only in a
-system-temporary package mirror, including `docs/tasks/local` and nested files.
+system-temporary package mirror, including `docs/`, `docs/tasks/local` and nested files.
 It builds one Directory archive from unchanged public inputs, verifies exact
 public member bytes and sentinel absence, and consumes that same archive.
 The mirror and generated consumer are removed after verification. External

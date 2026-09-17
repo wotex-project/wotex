@@ -13,6 +13,10 @@ WOTEX_CORE_ARCHIVE=/absolute/path/wotex-0.1.0.tar \
   elixir bin/check_package.exs
 ```
 
+Under the sibling switch `WOTEX_PATH_DEPS=1` and with `WOTEX_CORE_ARCHIVE`
+unset, the checker builds the core archive from the declared `wotex` path
+dependency; this is how the package gate runs it.
+
 The checker builds and unpacks the Runtime archive, verifies required project,
 license, security, plan, specification, catalogue, and source content, and
 rejects local trackers, repository controls, tests, build products, generated

@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_directory.svg)](https://hex.pm/packages/wotex_directory)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_directory)
-[![CI](https://github.com/wotex-project/wotex-directory/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-directory/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-directory/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-directory)
-[![License](https://img.shields.io/hexpm/l/wotex_directory.svg)](https://github.com/wotex-project/wotex-directory/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_directory.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-directory/LICENSE)
 
 [Installation](#installation) · [Quick Start](#quick-start) ·
 [Consumer Ports](#consumer-ports) · [Discovery Semantics](#discovery-semantics) ·
@@ -139,20 +138,21 @@ WOTEX_PATH_DEPS=1 mix test
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-`mix test` is the focused development loop. The default `mix check --no-retry`
-compiles with warnings as errors, checks formatting, and runs the behavioral
-test suite.
+`mix test` is the focused development loop. `mix check --no-retry`, run from
+`packages/wotex-directory` inside the
+[monorepo](https://github.com/wotex-project/wotex), is the development gate:
+it compiles with warnings as errors, checks formatting, dependency audits,
+strict Credo, Doctor, documentation, coverage, Dialyzer, the package archive,
+the application-free boundary, and `git diff --check`.
 
-Release evidence uses an explicit runner:
+The external release-evidence manifest uses an explicit runner:
 
 ```console
 WOTEX_PATH_DEPS=1 mix run --no-start bin/check_release_evidence.exs
 ```
 
-The runner resolves the locked dependency cohort and executes strict Credo,
-Doctor, Dialyzer, dependency audits, documentation, coverage, boundary and
-application checks, package construction, archive inspection, and
-`git diff --check`. It writes `release-evidence.json` only after every command
+The runner resolves the locked dependency cohort and executes the same
+checks, writing `release-evidence.json` only after every command
 succeeds. The archive check builds one Directory archive outside the
 repository, compiles an isolated consumer from that archive and an exact core
 archive, and runs the repository, interleaving and independent reference-port
@@ -187,4 +187,4 @@ production storage implementations.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
 [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-directory/security.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
-[NOTICE](https://github.com/wotex-project/wotex-directory/blob/main/NOTICE).
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-directory/NOTICE).

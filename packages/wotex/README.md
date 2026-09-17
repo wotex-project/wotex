@@ -5,8 +5,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex.svg)](https://hex.pm/packages/wotex)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex)
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex)
-[![License](https://img.shields.io/hexpm/l/wotex.svg)](https://github.com/wotex-project/wotex/blob/main/LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex/LICENSE)
 
 [Installation](#installation) ·
 [Quick start](#quick-start) ·
@@ -220,14 +219,14 @@ mix setup
 mix test
 mix test.cover
 mix lint
-mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 mix docs
 ```
 
-`mix check` is the everyday development gate. It compiles with warnings as
-errors, checks formatting, and runs the test suite. Package, documentation,
-audit, and compatibility checks are release-readiness work rather than blockers
-for every push.
+`mix check` is the development gate, run from `packages/wotex` inside the
+[monorepo](https://github.com/wotex-project/wotex). It compiles with warnings
+as errors, checks formatting, dependencies, Credo, Doctor, ex_doc, coverage
+and Dialyzer, and runs the package archive check.
 
 The explicit package check builds one archive, verifies its contents, and runs
 a temporary consumer against the unpacked artifact. The consumer exercises

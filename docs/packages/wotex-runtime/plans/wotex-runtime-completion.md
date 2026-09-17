@@ -1,9 +1,18 @@
 # Wotex Runtime completion contract
 
-Plan `RT-C@1.0.0` governs package `wotex_runtime 0.1.0`. It defines durable
+Plan `RT-C@1.1.0` governs package `wotex_runtime 0.1.0`. It defines durable
 requirements, not mutable approval or progress. Requirement changes need review
 and a plan revision; historical Git content remains immutable. The normative
-catalogue is `docs/specs/catalogue.yaml`.
+catalogue is `docs/packages/wotex-runtime/specs/catalogue.yaml`.
+
+Revision 1.1.0 records the monorepo layout without changing any obligation.
+Documentation now lives under `docs/packages/wotex-runtime/`. Package archives
+no longer ship Markdown documentation, governance files or agent files;
+specifications are published through HexDocs. Fixtures and machine-read
+provenance ship under `priv/`. The repository-level gate
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`) and
+the CI lanes now discharge `repository_green` and `archive_consumer_green`.
+Tags use `wotex-runtime-v<version>`.
 
 ## Ownership and compatibility
 
@@ -51,15 +60,16 @@ Each gate records exact source/dependency tree or archive digest, command,
 configuration, vector identities, result and limitations. No gate requires an
 automated push, tag, release or registry publication.
 
-`mix check` is the default developer gate. It compiles with warnings as errors,
-checks formatting and runs the behavioral test suite. Documentation, coverage,
-static analysis, dependency audits, boundary checks and package installation
-are explicit evidence lanes and are recorded separately.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-runtime`,
+is the default developer gate and the repository-level gate. It compiles with
+warnings as errors, checks formatting, dependency audits, Credo, Doctor,
+documentation, coverage, Dialyzer and the package archive. Reference-consumer
+and compatibility evidence remain explicit lanes recorded separately.
 
 | Gate | Required evidence | Does not establish |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`: compiler warnings, formatter and behavioral tests; report failures | Documentation, static analysis, dependency audit, package installation or integration |
-| `archive_consumer_green` | Build without path overrides; a separate minimal Mix consumer installs the exact archive/dependency artifacts and exercises one supported success plus typed error through public API, with no live source | Full lifecycle behavior |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`: compiler warnings, formatter, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer and archive checks; the repository-level gate and CI lanes discharge it; report failures | Independent dependency installation or integration |
+| `archive_consumer_green` | `bin/check_package.exs`, run by the repository-level gate and CI lanes: a separate minimal Mix consumer installs the exact archive and exercises one supported success plus typed error through public API, with no live source; a build without path overrides is recorded separately | Full lifecycle behavior |
 | `reference_consumer_green` | RT-C04 tests against that archive, explicit ports and real supervision | External protocol certification or production acceptance |
 | `public_release_candidate` | Prior gates, metadata/license/security, docs links, dependency installation and standards audit; no tracker/secret in archive | Publication permission or stable API |
 | `stable_api_candidate` | RT-C06 compatibility matrix; supported-cell ambiguity closed; advertised bounds/recovery evidenced | Compatibility forever or universal WoT conformance |
@@ -101,19 +111,19 @@ Broader claims need revision-specific assertions and positive/negative vectors.
 | RT-R05 | Exactly-once delivery, remote cleanup or physical effect | Explicit nonclaim; consumer durable semantics |
 | RT-R06 | Clean registry installation/full platform range | RT-C05 dependency and runtime compatibility proof |
 | RT-R07 | Full Scripting API/WoT conformance | Out of declared scope; new contract required |
-| RT-R08 | Local notes excluded from distribution | Inspect every candidate archive and reject any `docs/tasks/local/` member |
+| RT-R08 | Local notes excluded from distribution | Inspect every candidate archive and reject any `docs/` member, including local `docs/tasks/local/wotex-runtime/` state |
 
 ## Local completion memory
 
-Optional mutable state belongs only at ignored
-`docs/tasks/local/wotex-runtime-tracker.yaml`, never in Git, catalogue, plans,
+Optional mutable state belongs only under the ignored root
+`docs/tasks/local/wotex-runtime/`, never in Git, catalogue, plans,
 specs, tests, package archives or ExDoc. Schema: `schema_version: "1.0.0"`, `package`,
 `source_commit`, `dependency_digests`, and `items` keyed by RT-C/RT-R IDs with
 `state`, `evidence`, `limitations`, `next_action`. Evidence records name gate,
 command, result and artifact digest; unknown is not passed. No scheduler,
 worker claims or cross-repository authority belongs here.
 
-Package inputs allowlist publishable documentation and structurally exclude
-`docs/tasks/local/`. Every candidate archive still proves the exclusion; Git
-ignore alone never counts. No local tracker is needed to compile, test or
+Package inputs allowlist code, `README.md`, `CHANGELOG.md`, `LICENSE` and
+`NOTICE` and structurally exclude `docs/` and local state. Every candidate
+archive still proves the exclusion; Git ignore alone never counts. No local tracker is needed to compile, test or
 choose a normative task.

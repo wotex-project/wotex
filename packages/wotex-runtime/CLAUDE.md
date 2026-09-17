@@ -1,10 +1,13 @@
-# Wotex Runtime Contract
+# Wotex Runtime Package Contract
 
 Wotex core owns W3C Web of Things values and terminology. This package inherits
 those types and owns only consumer-neutral interaction mechanics.
+Repository-wide rules are in the root `CLAUDE.md`.
 
-- Never mention or import a consumer product, company, sibling engine,
-  repository, or filesystem path. Say `consumer` or `consumer host`.
+- Consumer, company and customer names stay out of source, tests, docs,
+  fixtures, history and metadata; say `consumer` or `consumer host`. Sibling
+  packages are referenced by package name; relative paths inside the
+  repository are allowed, absolute machine paths are not.
 - No database, Repo, migration, Ash, Phoenix, Ecto, Oban, endpoint, global
   registry, application callback, entitlement, or provider implementation.
 - Loading starts no process. Short operations stay in the caller. A subscription
@@ -18,42 +21,30 @@ those types and owns only consumer-neutral interaction mechanics.
 - No mutable source selection. `WOTEX_PATH_DEPS=1` is the sole local workspace
   switch; normal dependency identity is a released core version.
 
-Run `WOTEX_PATH_DEPS=1 mix check` before local commits. It checks formatting,
-compiles with warnings as errors, and runs the default test suite.
-Consumer-neutrality is a review obligation governed by this contract and the
-runtime-proof skill; do not create a public denylist of private consumers.
+Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`
+before a local commit, then the gate of every dependent package. It compiles
+with warnings as errors, checks formatting, dependencies, Credo, Doctor,
+ex_doc, coverage, Dialyzer and the package archive. Consumer-neutrality is a
+review obligation governed by this contract; do not create a public denylist
+of private consumers.
+
+## Documentation and local state
+
+Specifications, the completion plan and decisions live under
+`docs/packages/wotex-runtime/`; `docs/packages/wotex-runtime/specs/catalogue.yaml`
+owns normative status. Mutable completion and audit trackers belong only in
+the ignored root `docs/tasks/local/wotex-runtime/` and never enter Git,
+package archives or generated documentation. Follow
+`docs/packages/wotex-runtime/plans/wotex-runtime-completion.md`; do not create
+optional local files outside that ignored path. Package and archive checks
+must prove the tracker remains excluded.
 
 ## External automation boundary
 
-This repository exposes source, specifications, dependency contracts, vectors,
+This package exposes source, specifications, dependency contracts, vectors,
 and deterministic verification commands to external engineering automation. It
-does not own worker coordination, claims, leases, attempts, cross-repository
+does not own worker coordination, claims, leases, attempts, cross-package
 programme state, accepted outcomes, or remote publication policy. Do not add a
 coordination daemon, graph database, shared-workspace application, or
 tool-specific project metadata. External automation must adapt to this
-consumer-neutral repository contract.
-
-## Release metadata
-
-`CHANGELOG.md` is maintained only by GitOps. Never edit it directly. Once GitOps is configured and
-release prerequisites pass, the human maintainer prepares the first release with `mix git_ops.release --override 0.1.0` and later releases with
-`mix git_ops.release`. Automated agents must not invoke either release task.
-
-## Git authority
-
-Mutable completion/audit trackers belong only under ignored `docs/tasks/local/`
-and must never enter Git, package archives or generated documentation. Durable
-specifications, dependency contracts and completion plans remain tracked.
-Follow `docs/packages/wotex-runtime/plans/wotex-runtime-completion.md` at the
-repository root; do not create optional local files outside its declared
-ignored tracker path. Package/archive checks must prove the
-tracker remains excluded.
-
-Automated agents must never configure, add, change, or remove a Git remote;
-push; create a tag; publish a package; or create equivalent remote state. Only
-the human maintainer performs publication. Never change repository visibility.
-
-Local commits use the identity already configured by the contributor running
-Git. Automated agents must never set or override Git identity; record an agent,
-tool, or bot as an author, committer, or co-author; invent a contributor
-identity; or remove attribution supplied by a human contributor.
+consumer-neutral package contract.

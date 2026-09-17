@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_runtime.svg)](https://hex.pm/packages/wotex_runtime)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_runtime)
-[![CI](https://github.com/wotex-project/wotex-runtime/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-runtime/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-runtime/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-runtime)
-[![License](https://img.shields.io/hexpm/l/wotex_runtime.svg)](https://github.com/wotex-project/wotex-runtime/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_runtime.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-runtime/LICENSE)
 
 [Installation](#installation) ·
 [Quick start](#quick-start) ·
@@ -272,13 +271,16 @@ checkout explicitly:
 ```bash
 WOTEX_PATH_DEPS=1 mix setup
 WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 WOTEX_PATH_DEPS=1 mix docs
 ```
 
-`mix check` compiles with warnings as errors, checks formatting, and runs the
-test suite. Package, documentation, audit, and compatibility checks are explicit
-release-readiness work.
+`mix check` is the development gate, run from `packages/wotex-runtime` inside
+the [monorepo](https://github.com/wotex-project/wotex). It compiles with
+warnings as errors, checks formatting, dependencies, Credo, Doctor, ex_doc,
+coverage and Dialyzer, and runs the package archive check against a core
+archive built from the sibling `wotex` package. Reference-consumer and
+compatibility evidence remain explicit release-readiness work.
 
 The exact-archive consumer lane is documented in
 [RT-C04](../../docs/packages/wotex-runtime/specs/RT-C04-reference-consumer.md).

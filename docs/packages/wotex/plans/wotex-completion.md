@@ -1,18 +1,28 @@
 # Wotex completion contract
 
-Plan version: 1.2.0. Package baseline: 0.1.0. Normative owners:
+Plan version: 1.3.0. Package baseline: 0.1.0. Normative owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not a progress log.
 An accepted baseline is immutable in meaning: a changed obligation needs an
 explicit new plan version and compatibility review. Execution status, attempts,
-machine-local evidence and handoffs belong only in ignored
-`docs/tasks/local/wotex-tracker.yaml`. Package inputs allowlist publishable
-documentation and structurally exclude `docs/tasks/local/`; archive inspection
-must continue to prove that boundary whenever package inputs change.
+machine-local evidence and handoffs belong only in the ignored root
+`docs/tasks/local/wotex/`. Package inputs allowlist code, `priv/`,
+`README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE` and structurally exclude
+`docs/` and local state; archive inspection must continue to prove that
+boundary whenever package inputs change.
 The catalogue's `implementation_status` describes source coverage of a spec,
 not a passed release gate. No checkbox, green build or package version implies
 W3C certification, complete standards conformance or stable API admission.
+
+Revision 1.3.0 records the monorepo layout without changing any obligation.
+Documentation now lives under `docs/packages/wotex/`. Package archives no
+longer ship Markdown documentation, governance files or agent files;
+specifications are published through HexDocs. Fixtures and machine-read
+provenance ship under `priv/`. The repository-level gate
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex`) and the CI
+lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
+`wotex-v<version>`.
 
 Revision 1.2.0 aligns this acceptance baseline with WTX.03 v1.2.0 and WTX-C02.
 Malformed option containers now return `invalid_options` from option-bearing
@@ -92,8 +102,9 @@ independent hostile-process containment boundary.
 
 Baseline: [TD 1.1 Recommendation, 5 December 2023](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/).
 The informative schema revision and digests are owned by
-`docs/provenance/w3c-td-schema-1.1.md` and
-`docs/provenance/w3c-tm-schema-1.1.md`, not by a moving upstream branch.
+`docs/packages/wotex/provenance/w3c-td-schema-1.1.md` and
+`docs/packages/wotex/provenance/w3c-tm-schema-1.1.md`, not by a moving
+upstream branch.
 
 | Claim | Value | Operation | Interoperability | Profile | Certification |
 | --- | --- | --- | --- | --- | --- |
@@ -116,7 +127,7 @@ Test additions belong beside the listed package tests, not in coordination hooks
 | --- | --- | --- | --- |
 | WTX-C01 | WTX.01–WTX.04 | Review the documented public operations, errors, ownership boundaries, and standards scope against focused behavioral evidence | Every advertised behavior has representative valid, invalid, and boundary evidence where applicable; tests do not assert a complete module or export inventory, incidental struct layout, or documentation formatting. |
 | WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Characterize duplicate JSON keys, non-JSON structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
-| WTX-C03 | WTX-C01 | Archive consumer evidence and package-content inspection | Unpacked package builds without source checkout dependencies; contains both pinned schemas, notices and specs; runs TD/TM parse, wrapper and typed-error examples in an independent minimal Mix consumer. Local trackers and generated audit artifacts are absent. |
+| WTX-C03 | WTX-C01 | Archive consumer evidence and package-content inspection | Unpacked package builds without source checkout dependencies; contains both pinned schemas and notices and no Markdown documentation, governance or agent files (specifications are published through HexDocs); runs TD/TM parse, wrapper and typed-error examples in an independent minimal Mix consumer. Local trackers and generated audit artifacts are absent. |
 | WTX-C04 | WTX-C02, WTX-C03 | Consumer-neutral reference examples and independent standards corpus | Known valid/invalid TD and TM documents exchange with a named, revision-pinned independent implementation or published test corpus. Record exact operations and counterexamples; no transport or profile claims follow from value exchange. |
 | WTX-C05 | WTX-C02–WTX-C04 | Versioned compatibility and release dossier | Confirm minimum/current toolchains, exact locked and permitted dependency cohorts, schema/vector/archive digests, licenses, security review and API evolution decisions. Maintainer reviews a candidate; automated work never publishes it. |
 
@@ -128,15 +139,16 @@ attempt, worker coordinator or cross-repository scheduler to implement these IDs
 
 | Gate | Required evidence; never inferred from a preceding gate |
 | --- | --- |
-| `repository_green` | `mix check` passes on the exact checkout: warnings-as-errors compilation, formatting, and behavioral tests. Record the source and toolchain used. |
-| `archive_consumer_green` | WTX-C03: `mix run --no-start bin/check_package.exs` builds one archive, inspects and unpacks that artifact, compiles it without checkout BEAM files, and runs TD, TM, wrapper, helper, typed-error, and no-callback examples in an isolated minimal consumer. The command reports archive and resolved consumer-lock digests for the evidence receipt. |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes from `packages/wotex` on the exact checkout: warnings-as-errors compilation, formatting, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer and archive checks. The repository-level gate and CI lanes discharge it. Record the source and toolchain used. |
+| `archive_consumer_green` | WTX-C03: `mix run --no-start bin/check_package.exs` (run by the repository-level gate and CI lanes) builds one archive, inspects and unpacks that artifact, compiles it without checkout BEAM files, and runs TD, TM, wrapper, helper, typed-error, and no-callback examples in an isolated minimal consumer. The command reports archive and resolved consumer-lock digests for the evidence receipt. |
 | `reference_consumer_green` | WTX-C04: consumer-neutral end-to-end value examples and explicitly scoped independent corpus evidence using the same archive. No unpublished local dependency assumed. |
 | `public_release_candidate` | All three preceding gates plus explicit documentation, dependency, static-analysis, archive, content, license, provenance, and security checks on an immutable candidate artifact. This is permission to evaluate, not to push, tag or publish. |
 | `stable_api_candidate` | WTX-C05 plus explicit review of every public function/result/error, compatibility policy and negative vectors. Version 0.1.0 and high coverage do not themselves promise stable API semantics. |
 
-Fresh checkout procedure: read `CLAUDE.md`, this plan and the owning WTX files;
-run `mix setup`, use `mix test` for the fast loop, and run
-`mix check` before recording `repository_green`. Use README public
+Fresh checkout procedure: read the root `CLAUDE.md`, `packages/wotex/CLAUDE.md`,
+this plan and the owning WTX files; run `mix setup` from `packages/wotex`, use
+`mix test` for the fast loop, and run `WOTEX_PATH_DEPS=1 mix check --no-retry`
+before recording `repository_green`. Use README public
 examples for the consumer exercise. Check archive contents before claiming any
 public candidate. Record
 the exact source tree, package version, archive SHA-256, lock digest, schema
