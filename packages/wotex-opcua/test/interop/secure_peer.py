@@ -7,6 +7,8 @@ policies and the anonymous, username and certificate user tokens. Other
 variants reuse those credentials and write config-VARIANT.json:
 expired_leaf and wrong_host present faulty server certificates, none_only
 offers only Security None and anonymous_only offers only anonymous tokens.
+The Resources method returns the peer's active subscription and MonitoredItem
+counts as two UInt32 outputs.
 """
 import asyncio
 import base64
@@ -167,6 +169,18 @@ async def main(directory, variant):
                                                      add_values,
                                                      [ua.VariantType.Double, ua.VariantType.Double],
                                                      [ua.VariantType.Double])
+    service = server.iserver.subscription_service
+
+    @uamethod
+    def resources(parent):
+        subscriptions = list(service.subscriptions.values())
+        items = sum(len(entry.monitored_item_srv._monitored_items) for entry in subscriptions)
+        return (ua.Variant(len(subscriptions), ua.VariantType.UInt32),
+                ua.Variant(items, ua.VariantType.UInt32))
+
+    resources_method = await server.nodes.objects.add_method(ua.NodeId("resources", namespace),
+                                                             "Resources", resources, [],
+                                                             [ua.VariantType.UInt32, ua.VariantType.UInt32])
     config = {"executable": sys.executable, "endpoint": endpoint, "certificate": str(directory / "client.der"),
               "private_key": str(directory / "client.pem"), "client_uri": "urn:wotex:fixture:client",
               "server_uri": "urn:wotex:fixture:server", "server_certificate": str(directory / "server.der"),
@@ -177,6 +191,7 @@ async def main(directory, variant):
               "node_value_id": node_value.nodeid.to_string(),
               "name_value_id": name_value.nodeid.to_string(),
               "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string(),
+              "resources_method_id": resources_method.nodeid.to_string(),
               "username": USERNAME, "password": PASSWORD, "variant": variant}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

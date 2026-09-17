@@ -21,6 +21,17 @@
 typedef enum { MODE_SUCCESS, MODE_HOLD, MODE_DELAY, MODE_BAD, MODE_LOSE } Mode;
 
 typedef struct {
+    bool used;
+    uint64_t serial;
+    unsigned remaining;
+    bool fail_after;
+    unsigned sent;
+} FakeSubscription;
+
+typedef struct {
+    FakeSubscription subscriptions[32];
+    uint64_t serial;
+    unsigned subscribes, unsubscribes, reports;
     Mode mode[WOP_OWNER_OPERATIONS];
     double value[WOP_OWNER_OPERATIONS];
     int64_t ready_at[WOP_OWNER_OPERATIONS];
@@ -69,11 +80,32 @@ static WopCompletion fixture_opened(void *context, yyjson_mut_doc *document,
 static bool fixture_prepare(void *context, const WopOperation *operation,
                             yyjson_val *parameters, WopFailure *failure) {
     (void)context; (void)failure;
+    size_t slot = operation->index;
+    if(operation->kind == WOP_OPERATION_UNSUBSCRIBE) {
+        const char *token = yyjson_get_str(yyjson_obj_get(parameters, "subscription"));
+        uint64_t serial = token && token[0] == 's' ? strtoull(token + 1, NULL, 10) : 0;
+        for(size_t i = 0; i < 32; i++) {
+            if(fixture.subscriptions[i].used && fixture.subscriptions[i].serial == serial) {
+                fixture.value[slot] = (double)i;
+                fixture.mode[slot] = MODE_SUCCESS;
+                return true;
+            }
+        }
+        return false;
+    }
     const char *node = yyjson_get_str(yyjson_obj_get(parameters, "node_id"));
     if(!node) node = yyjson_get_str(yyjson_obj_get(parameters, "object_id"));
+    if(operation->kind == WOP_OPERATION_SUBSCRIBE && node) {
+        const char *name = strncmp(node, "ns=1;s=", 7) == 0 ? node + 7 : "";
+        bool stream = strncmp(name, "stream-", 7) == 0, error = strncmp(name, "error-", 6) == 0;
+        if(!stream && !error) return false;
+        fixture.mode[slot] = MODE_SUCCESS;
+        fixture.value[slot] = (double)atoll(name + (stream ? 7 : 6));
+        fixture.ready_at[slot] = error;
+        return true;
+    }
     if(!node || strncmp(node, "ns=1;s=", 7) != 0) return false;
     const char *name = node + 7;
-    size_t slot = operation->index;
     fixture.value[slot] = 0;
     fixture.ready_at[slot] = 0;
     if(strncmp(name, "hold", 4) == 0) {
@@ -128,10 +160,39 @@ static WopCompletion fixture_complete(void *context, const WopOperation *operati
         break;
     }
     fixture.pending[slot] = false;
+    if(operation->kind == WOP_OPERATION_UNSUBSCRIBE) {
+        fixture.subscriptions[(size_t)fixture.value[slot]].used = false;
+        fixture.unsubscribes++;
+        *result = yyjson_mut_null(document);
+        return *result ? WOP_COMPLETION_SUCCESS : WOP_COMPLETION_TERMINAL;
+    }
     *result = yyjson_mut_obj(document);
     if(!*result) return WOP_COMPLETION_TERMINAL;
     bool built;
-    if(operation->kind == WOP_OPERATION_WRITE) {
+    if(operation->kind == WOP_OPERATION_SUBSCRIBE) {
+        size_t index = 0;
+        while(index < 32 && fixture.subscriptions[index].used) index++;
+        if(index == 32) return WOP_COMPLETION_TERMINAL;
+        FakeSubscription *subscription = &fixture.subscriptions[index];
+        memset(subscription, 0, sizeof(*subscription));
+        subscription->used = true;
+        subscription->serial = ++fixture.serial;
+        subscription->remaining = (unsigned)fixture.value[slot];
+        subscription->fail_after = fixture.ready_at[slot] != 0;
+        fixture.subscribes++;
+        char token[24];
+        (void)snprintf(token, sizeof(token), "s%llu", (unsigned long long)subscription->serial);
+        built = yyjson_mut_obj_add_strcpy(document, *result, "subscription", token) &&
+                yyjson_mut_obj_add_uint(document, *result, "subscription_id", 100 + subscription->serial) &&
+                yyjson_mut_obj_add_uint(document, *result, "monitored_item_id", 200 + subscription->serial) &&
+                yyjson_mut_obj_add_uint(document, *result, "client_handle", subscription->serial) &&
+                yyjson_mut_obj_add_real(document, *result, "publishing_interval_ms", 500.5) &&
+                yyjson_mut_obj_add_real(document, *result, "sampling_interval_ms", 250.25) &&
+                yyjson_mut_obj_add_uint(document, *result, "queue_size", 10) &&
+                yyjson_mut_obj_add_uint(document, *result, "lifetime_count", 30) &&
+                yyjson_mut_obj_add_uint(document, *result, "keepalive_count", 10) &&
+                yyjson_mut_obj_add_uint(document, *result, "item_status", 0);
+    } else if(operation->kind == WOP_OPERATION_WRITE) {
         built = yyjson_mut_obj_add_uint(document, *result, "status", 0);
     } else if(operation->kind == WOP_OPERATION_CALL) {
         built = yyjson_mut_obj_add_uint(document, *result, "status", 0) &&
@@ -148,6 +209,54 @@ static WopCompletion fixture_complete(void *context, const WopOperation *operati
                 yyjson_mut_obj_add_uint(document, *result, "status", 0);
     }
     return built ? WOP_COMPLETION_SUCCESS : WOP_COMPLETION_TERMINAL;
+}
+
+/* Emits queued fake reports: data values 1..N, then one error when requested. */
+static bool fixture_report(void *context, yyjson_mut_doc *document, yyjson_mut_val *envelope,
+                           bool *produced, WopFailure *failure) {
+    (void)context; (void)failure;
+    *produced = false;
+    for(size_t i = 0; i < 32; i++) {
+        FakeSubscription *subscription = &fixture.subscriptions[i];
+        if(!subscription->used || (!subscription->remaining && !subscription->fail_after)) continue;
+        char token[24];
+        (void)snprintf(token, sizeof(token), "s%llu", (unsigned long long)subscription->serial);
+        yyjson_mut_val *value = yyjson_mut_obj(document);
+        yyjson_mut_val *metadata = yyjson_mut_obj(document);
+        if(!value || !metadata || !yyjson_mut_obj_add_strcpy(document, envelope, "subscription_id", token))
+            return false;
+        if(subscription->remaining) {
+            subscription->remaining--;
+            subscription->sent++;
+            yyjson_mut_val *variant = yyjson_mut_obj(document);
+            if(!variant || !yyjson_mut_obj_add_str(document, variant, "type", "Double") ||
+               !yyjson_mut_obj_add_bool(document, variant, "array", false) ||
+               !yyjson_mut_obj_add_real(document, variant, "value", (double)subscription->sent) ||
+               !yyjson_mut_obj_add_bool(document, value, "has_value", true) ||
+               !yyjson_mut_obj_add_val(document, value, "value", variant) ||
+               !yyjson_mut_obj_add_uint(document, value, "status", 0) ||
+               !yyjson_mut_obj_add_uint(document, metadata, "sequence", subscription->sent) ||
+               !yyjson_mut_obj_add_sint(document, metadata, "publish_time", 1000 + subscription->sent) ||
+               !yyjson_mut_obj_add_uint(document, metadata, "client_handle", subscription->serial) ||
+               !yyjson_mut_obj_add_bool(document, metadata, "overflow", false) ||
+               !yyjson_mut_obj_add_uint(document, metadata, "datetime_resolution_ns", 100) ||
+               !yyjson_mut_obj_add_bool(document, metadata, "raw_datetime_ticks_available", true) ||
+               !yyjson_mut_obj_add_str(document, envelope, "event", "data"))
+                return false;
+        } else {
+            subscription->used = false;
+            if(!yyjson_mut_obj_add_str(document, value, "code", "sequence_gap") ||
+               !yyjson_mut_obj_add_str(document, value, "phase", "exchange") ||
+               !yyjson_mut_obj_add_str(document, value, "effect", "none") ||
+               !yyjson_mut_obj_add_str(document, envelope, "event", "error"))
+                return false;
+        }
+        fixture.reports++;
+        *produced = yyjson_mut_obj_add_val(document, envelope, "value", value) &&
+                    yyjson_mut_obj_add_val(document, envelope, "metadata", metadata);
+        return *produced;
+    }
+    return true;
 }
 
 static void fixture_cancel(void *context, const WopOperation *operation) {
@@ -184,9 +293,11 @@ static void write_counters(const WopOwner *owner) {
     if(!file) return;
     fprintf(file,
             "{\"requests\":%u,\"cancels\":%u,\"closes\":%u,\"retired\":%u,"
-            "\"occupied\":%zu,\"emitted_messages\":%" PRIu64 ",\"status\":%d}\n",
+            "\"occupied\":%zu,\"emitted_messages\":%" PRIu64 ",\"status\":%d,"
+            "\"subscribes\":%u,\"unsubscribes\":%u,\"reports\":%u}\n",
             fixture.requests, fixture.cancels, fixture.closes, fixture.retired,
-            owner->occupied, owner->output.emitted_messages, owner->status);
+            owner->occupied, owner->output.emitted_messages, owner->status,
+            fixture.subscribes, fixture.unsubscribes, fixture.reports);
     if(fclose(file) == 0) (void)rename("owner-fixture.json.tmp", "owner-fixture.json");
 }
 
@@ -200,7 +311,7 @@ int main(void) {
     WopService service = {
         NULL, fixture_open, fixture_opened, fixture_prepare, fixture_dispatch,
         fixture_complete, fixture_cancel, fixture_retire, fixture_released, fixture_step,
-        fixture_close, NULL, NULL
+        fixture_close, fixture_report, NULL
     };
     static WopOwner owner;
     if(!wop_owner_init(&owner, &service, fixture_clock, NULL) ||

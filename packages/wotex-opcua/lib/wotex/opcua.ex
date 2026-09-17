@@ -136,13 +136,112 @@ defmodule Wotex.OPCUA do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
-  @doc "Baseline client ports do not imply subscription support."
-  @spec subscribe(term(), term()) :: :not_supported
+  @doc """
+  Establishes one monitored data-change subscription through the selected client.
+
+  The request map requires `node_id` and accepts `receiver` (default caller),
+  `publishing_interval_ms` (1000, 10..60000), `sampling_interval_ms`
+  (1000, 0..60000), `queue_size` (100, 1..1000), `discard_oldest` (true),
+  `keepalive_count` (10, 1..1000), `lifetime_count` (30, 3..10000 and at least
+  three keepalives) and `max_queue_length` (1000, 1..10000). Unknown keys fail
+  before I/O. A client without the optional callback returns `:not_supported`.
+  """
+  @spec subscribe(term(), term()) ::
+          {:ok, Wotex.OPCUA.Subscription.t()} | {:error, Error.t()} | :not_supported
+  def subscribe(%Session{client: client} = session, request) do
+    if exported?(client, :subscribe, 4) do
+      with {:ok, validated} <- subscription_request(request) do
+        result =
+          PortCall.invoke(client, :subscribe, [
+            session.handle,
+            Map.delete(validated, :receiver),
+            validated.receiver,
+            session.timeout
+          ])
+
+        :telemetry.execute([:wotex, :opcua, :subscription, :open], %{count: 1}, %{
+          result: if(match?({:ok, %Wotex.OPCUA.Subscription{}}, result), do: :ok, else: :error)
+        })
+
+        case result do
+          {:ok, %Wotex.OPCUA.Subscription{}} -> result
+          {:error, _} -> result
+          _ -> {:error, Error.new(:invalid_transport_return)}
+        end
+      end
+    else
+      :not_supported
+    end
+  end
+
   def subscribe(_, _), do: :not_supported
 
-  @doc "No subscription is created by this baseline."
-  @spec unsubscribe(term(), term()) :: :not_supported
+  @doc "Cancels a subscription; a client without the optional callback returns `:not_supported`."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()} | :not_supported
+  def unsubscribe(%Session{client: client} = session, subscription) do
+    cond do
+      not exported?(client, :unsubscribe, 3) ->
+        :not_supported
+
+      match?(%Wotex.OPCUA.Subscription{}, subscription) ->
+        case PortCall.invoke(client, :unsubscribe, [session.handle, subscription, session.timeout]) do
+          {:ok, _} -> {:error, Error.new(:invalid_transport_return)}
+          result -> result
+        end
+
+      true ->
+        {:error, Error.new(:invalid_subscription)}
+    end
+  end
+
   def unsubscribe(_, _), do: :not_supported
+
+  @subscription_defaults %{
+    publishing_interval_ms: 1000,
+    sampling_interval_ms: 1000,
+    queue_size: 100,
+    discard_oldest: true,
+    keepalive_count: 10,
+    lifetime_count: 30,
+    max_queue_length: 1000
+  }
+  @subscription_keys [:node_id, :receiver | Map.keys(@subscription_defaults)]
+
+  defp subscription_request(%{node_id: node} = request) do
+    request = Map.merge(@subscription_defaults, Map.put_new(request, :receiver, self()))
+
+    with true <- Enum.all?(Map.keys(request), &(&1 in @subscription_keys)),
+         {:ok, _} <- Wotex.OPCUA.Address.new(node),
+         true <- is_pid(request.receiver),
+         true <- interval?(request.publishing_interval_ms, 10),
+         true <- interval?(request.sampling_interval_ms, 0),
+         true <- count?(request.queue_size, 1, 1000),
+         true <- is_boolean(request.discard_oldest),
+         true <- count?(request.keepalive_count, 1, 1000),
+         true <- count?(request.lifetime_count, 3, 10_000),
+         true <- request.lifetime_count >= 3 * request.keepalive_count,
+         true <- count?(request.max_queue_length, 1, 10_000) do
+      {:ok, request}
+    else
+      _ -> {:error, Error.new(:invalid_value)}
+    end
+  end
+
+  defp subscription_request(_), do: {:error, Error.new(:invalid_value)}
+
+  defp interval?(value, minimum) when is_integer(value), do: value >= minimum and value <= 60_000
+
+  defp interval?(value, minimum) when is_float(value),
+    do: value >= minimum and value <= 60_000.0
+
+  defp interval?(_, _), do: false
+
+  defp count?(value, minimum, maximum), do: is_integer(value) and value in minimum..maximum
+
+  defp exported?(module, function, arity),
+    do:
+      is_atom(module) and Code.ensure_loaded?(module) and
+        function_exported?(module, function, arity)
 
   defp open(opts) do
     client = Keyword.get(opts, :client)

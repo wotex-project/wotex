@@ -37,10 +37,11 @@ defmodule Wotex.OPCUA.Native.Host do
   use GenServer
 
   alias Wotex.OPCUA.Browse.Continuation
-  alias Wotex.OPCUA.Error
+  alias Wotex.OPCUA.{Error, Subscription}
   alias Wotex.OPCUA.Native.{Executable, Frame, HostOptions, Ready}
 
   @capacity 64
+  @closed_handles 1024
   @control_ms 1000
   @maximum_line 131_072
   @mutations ~w(write call)
@@ -98,6 +99,58 @@ defmodule Wotex.OPCUA.Native.Host do
   end
 
   def request(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :request)}
+
+  @doc """
+  Establishes one native subscription and binds its reports to `receiver`.
+
+  The handle is returned after the native owner accepted the server subscription
+  and MonitoredItem. The receiver is monitored; its death, a full receiver queue
+  (`max_queue` messages) or one terminal report ends that subscription.
+  """
+  @spec subscribe(pid(), map(), pid(), pos_integer(), pos_integer()) ::
+          {:ok, Subscription.t()} | {:error, Error.t()}
+  def subscribe(host, parameters, receiver, max_queue, timeout)
+      when is_pid(host) and is_map(parameters) and is_pid(receiver) and is_integer(max_queue) and
+             max_queue in 1..10_000 and is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    GenServer.call(
+      host,
+      {__MODULE__, :subscribe, parameters, receiver, max_queue, timeout, deadline},
+      timeout + 100
+    )
+  catch
+    :exit, reason -> {:error, exit_error(reason, "subscribe")}
+  end
+
+  def subscribe(_, _, _, _, _), do: {:error, Error.new(:invalid_value)}
+
+  @doc """
+  Cancels one subscription on this owner.
+
+  A handle whose owner has already stopped, or one this owner recently closed,
+  returns `:ok` without protocol I/O.
+  """
+  @spec unsubscribe(pid(), Subscription.t(), pos_integer()) :: :ok | {:error, Error.t()}
+  def unsubscribe(host, %Subscription{pid: host} = subscription, timeout)
+      when is_pid(host) and is_integer(timeout) and timeout in 1..60_000 do
+    if Process.alive?(host) do
+      deadline = System.monotonic_time(:millisecond) + timeout
+
+      GenServer.call(
+        host,
+        {__MODULE__, :unsubscribe, subscription, timeout, deadline},
+        timeout + @control_ms + 100
+      )
+    else
+      :ok
+    end
+  catch
+    :exit, {reason, _} when reason in [:noproc, :normal] -> :ok
+    :exit, reason -> {:error, exit_error(reason, "unsubscribe")}
+  end
+
+  def unsubscribe(_, _, _), do: {:error, Error.new(:invalid_subscription)}
 
   @doc "Starts one bounded Browse page and binds any native token to this owner."
   @spec browse_page(pid(), map(), map(), pos_integer()) ::
@@ -181,6 +234,11 @@ defmodule Wotex.OPCUA.Native.Host do
              pending: %{},
              monitors: %{},
              controls: %{},
+             subscriptions: %{},
+             tokens: %{},
+             receivers: %{},
+             discarding: MapSet.new(),
+             closed: {:queue.new(), MapSet.new()},
              input: <<>>,
              next_id: 1,
              continuations: %{},
@@ -302,6 +360,50 @@ defmodule Wotex.OPCUA.Native.Host do
     end
   end
 
+  def handle_call(
+        {__MODULE__, :subscribe, parameters, receiver, max_queue, timeout, deadline},
+        from,
+        %{claimed: true, closing: false} = state
+      ) do
+    admit(state, from, "subscribe", parameters, timeout, deadline, %{
+      kind: :subscribe,
+      receiver: receiver,
+      max_queue: max_queue
+    })
+  end
+
+  def handle_call(
+        {__MODULE__, :unsubscribe, %Subscription{} = subscription, timeout, deadline},
+        from,
+        %{claimed: true} = state
+      ) do
+    reference = subscription.reference
+    {_, closed} = state.closed
+
+    cond do
+      subscription.generation != state.generation ->
+        {:reply, {:error, Error.new(:invalid_subscription)}, state}
+
+      MapSet.member?(closed, reference) ->
+        {:reply, :ok, state}
+
+      not Map.has_key?(state.subscriptions, reference) ->
+        {:reply, {:error, Error.new(:invalid_subscription)}, state}
+
+      state.subscriptions[reference].closing ->
+        {:noreply, update_in(state.subscriptions[reference].waiters, &[from | &1])}
+
+      true ->
+        state = put_in(state.subscriptions[reference].closing, true)
+        token = state.subscriptions[reference].token
+
+        admit(state, from, "unsubscribe", %{"subscription" => token}, timeout, deadline, %{
+          kind: :unsubscribe,
+          reference: reference
+        })
+    end
+  end
+
   def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_native_handle)}, state}
 
   defp valid_browse_limits?(%{max_pages: pages, max_references: references})
@@ -339,7 +441,7 @@ defmodule Wotex.OPCUA.Native.Host do
            }}
 
         {:error, %Error{} = error, state} ->
-          fail(%{state | chain: state.chain and is_nil(cursor)}, error, from)
+          fail(%{state | chain: state.chain and not browse_cursor?(cursor)}, error, from)
       end
     end
   end
@@ -446,6 +548,17 @@ defmodule Wotex.OPCUA.Native.Host do
   def handle_info({:DOWN, monitor, :process, owner, _}, %{monitor: monitor, owner: owner} = state),
     do: {:stop, :normal, state}
 
+  def handle_info({:DOWN, monitor, :process, _, _}, %{receivers: receivers} = state)
+      when is_map_key(receivers, monitor) do
+    reference = Map.fetch!(receivers, monitor)
+    state = %{state | receivers: Map.delete(receivers, monitor)}
+
+    case close_internally(state, reference, :receiver_down) do
+      {:ok, state} -> {:noreply, state}
+      {:stop, error, state} -> terminate_generation(state, error)
+    end
+  end
+
   def handle_info({:DOWN, monitor, :process, _, _}, %{monitors: monitors} = state)
       when is_map_key(monitors, monitor) do
     id = Map.fetch!(monitors, monitor)
@@ -529,8 +642,133 @@ defmodule Wotex.OPCUA.Native.Host do
       {:response, id} ->
         response(state, id, line)
 
+      {:report, token} ->
+        report(state, token, line)
+
       {:error, error} ->
         terminate_generation(state, error)
+    end
+  end
+
+  # Routes one validated report; credit returns before any follow-up request.
+  defp report(state, token, line) do
+    if Map.has_key?(state.tokens, token) or MapSet.member?(state.discarding, token) do
+      case Frame.report(line, state.generation, token) do
+        {:error, error} ->
+          terminate_generation(state, error)
+
+        decoded ->
+          reference = Map.get(state.tokens, token)
+          after_native(state, line, fn state -> route(state, reference, decoded) end)
+      end
+    else
+      terminate_generation(state, Error.new(:invalid_native_frame))
+    end
+  end
+
+  defp route(state, nil, _), do: {:ok, state}
+
+  defp route(state, reference, decoded) do
+    subscription = Map.fetch!(state.subscriptions, reference)
+
+    cond do
+      subscription.closing ->
+        {:ok, state}
+
+      match?({:error_report, _}, decoded) ->
+        {:error_report, error} = decoded
+        send(subscription.receiver, {:wotex_opcua, reference, {:error, error}})
+        delivered(:error)
+        {:ok, remove_subscription(state, reference, :terminal)}
+
+      true ->
+        {:data, value, metadata} = decoded
+
+        case Process.info(subscription.receiver, :message_queue_len) do
+          nil ->
+            close_internally(state, reference, :receiver_down)
+
+          {:message_queue_len, length} when length >= subscription.max_queue ->
+            error = Error.new(:receiver_overflow)
+            send(subscription.receiver, {:wotex_opcua, reference, {:error, error}})
+            delivered(:overflow)
+            close_internally(state, reference, :receiver_overflow)
+
+          _ ->
+            send(subscription.receiver, {:wotex_opcua, reference, {:ok, value, metadata}})
+            delivered(:ok)
+            {:ok, state}
+        end
+    end
+  end
+
+  defp delivered(result),
+    do:
+      :telemetry.execute([:wotex, :opcua, :subscription, :deliver], %{count: 1}, %{result: result})
+
+  # Sends native cancellation for a subscription that no caller is waiting on.
+  defp close_internally(state, reference, reason) do
+    subscription = Map.fetch!(state.subscriptions, reference)
+
+    if subscription.closing do
+      {:ok, state}
+    else
+      state = put_in(state.subscriptions[reference].closing, true)
+      state = put_in(state.subscriptions[reference].reason, reason)
+      unsubscribe_control(state, subscription.token, reference)
+    end
+  end
+
+  defp unsubscribe_control(state, token, reference) do
+    deadline = System.monotonic_time(:millisecond) + @control_ms
+
+    case emit(state, "unsubscribe", %{"subscription" => token}, @control_ms, deadline) do
+      {:ok, id, state} ->
+        control = %{
+          kind: :unsubscribe,
+          token: token,
+          reference: reference,
+          timer: :erlang.start_timer(@control_ms, self(), {:control, id})
+        }
+
+        {:ok, %{state | controls: Map.put(state.controls, id, control)}}
+
+      {:error, error, state} ->
+        {:stop, error, state}
+    end
+  end
+
+  defp remove_subscription(state, reference, reason) do
+    case Map.pop(state.subscriptions, reference) do
+      {nil, _} ->
+        state
+
+      {subscription, subscriptions} ->
+        Process.demonitor(subscription.monitor, [:flush])
+        for waiter <- subscription.waiters, do: GenServer.reply(waiter, :ok)
+        {queue, members} = state.closed
+        queue = :queue.in(reference, queue)
+        members = MapSet.put(members, reference)
+
+        {queue, members} =
+          if :queue.len(queue) > @closed_handles do
+            {{:value, oldest}, queue} = :queue.out(queue)
+            {queue, MapSet.delete(members, oldest)}
+          else
+            {queue, members}
+          end
+
+        :telemetry.execute([:wotex, :opcua, :subscription, :close], %{count: 1}, %{
+          result: Map.get(subscription, :reason) || reason
+        })
+
+        %{
+          state
+          | subscriptions: subscriptions,
+            tokens: Map.delete(state.tokens, subscription.token),
+            receivers: Map.delete(state.receivers, subscription.monitor),
+            closed: {queue, members}
+        }
     end
   end
 
@@ -552,7 +790,9 @@ defmodule Wotex.OPCUA.Native.Host do
 
       decoded ->
         if entry.replied do
-          after_native(state, line, fn state -> {:ok, native_error_chain(state, entry)} end)
+          after_native(state, line, fn state ->
+            orphaned(native_error_chain(state, entry), entry, decoded)
+          end)
         else
           Process.demonitor(entry.monitor, [:flush])
           cancel_timer(entry.timer)
@@ -580,6 +820,17 @@ defmodule Wotex.OPCUA.Native.Host do
         GenServer.reply(control.from, {:error, error})
         stop_generation(state, Error.new(:native_process_terminated), false)
 
+      {:unsubscribe, {:ok, nil}} ->
+        after_native(state, line, fn state ->
+          state = %{state | discarding: MapSet.delete(state.discarding, control.token)}
+
+          {:ok,
+           if(control.reference,
+             do: remove_subscription(state, control.reference, :unsubscribed),
+             else: state
+           )}
+        end)
+
       _ ->
         terminate_generation(state, Error.new(:invalid_native_frame))
     end
@@ -597,6 +848,47 @@ defmodule Wotex.OPCUA.Native.Host do
     else
       {:error, error} -> terminate_generation(state, error)
     end
+  end
+
+  # A subscription created after its caller stopped waiting is cancelled at once.
+  defp orphaned(state, %{cursor: %{kind: :subscribe}}, {:ok, %{"subscription" => token}}) do
+    unsubscribe_control(%{state | discarding: MapSet.put(state.discarding, token)}, token, nil)
+  end
+
+  defp orphaned(state, %{cursor: %{kind: :unsubscribe, reference: reference}}, {:ok, nil}),
+    do: {:ok, remove_subscription(state, reference, :unsubscribed)}
+
+  defp orphaned(state, _, _), do: {:ok, state}
+
+  defp deliver(state, %{cursor: %{kind: :subscribe} = cursor} = entry, {:ok, result}, _) do
+    reference = make_ref()
+    monitor = Process.monitor(cursor.receiver)
+
+    subscription = %{
+      token: result["subscription"],
+      receiver: cursor.receiver,
+      monitor: monitor,
+      max_queue: cursor.max_queue,
+      closing: false,
+      reason: nil,
+      waiters: []
+    }
+
+    handle = %Subscription{pid: self(), reference: reference, generation: state.generation}
+    GenServer.reply(entry.from, {:ok, handle})
+
+    {:ok,
+     %{
+       state
+       | subscriptions: Map.put(state.subscriptions, reference, subscription),
+         tokens: Map.put(state.tokens, subscription.token, reference),
+         receivers: Map.put(state.receivers, monitor, reference)
+     }}
+  end
+
+  defp deliver(state, %{cursor: %{kind: :unsubscribe, reference: reference}} = entry, {:ok, nil}, _) do
+    GenServer.reply(entry.from, :ok)
+    {:ok, remove_subscription(state, reference, :unsubscribed)}
   end
 
   defp deliver(state, entry, {:native_error, error}, _) do
@@ -674,8 +966,14 @@ defmodule Wotex.OPCUA.Native.Host do
   defp limited(state, entry, token),
     do: emit_release(state, entry.from, token, Error.new(:response_limit))
 
-  defp native_error_chain(state, %{cursor: nil}), do: state
-  defp native_error_chain(state, _), do: %{state | chain: false}
+  defp native_error_chain(state, %{cursor: cursor}) do
+    if browse_cursor?(cursor), do: %{state | chain: false}, else: state
+  end
+
+  defp browse_cursor?(%{kind: kind}) when kind in [:browse_page, :next, :release, :release_after],
+    do: true
+
+  defp browse_cursor?(_), do: false
 
   # Sends release for a cursor whose caller receives the original error after cleanup.
   defp release_after(state, from, cursor, error) do
@@ -737,12 +1035,20 @@ defmodule Wotex.OPCUA.Native.Host do
     for {_, %{kind: :close, from: from}} <- state.controls,
         do: GenServer.reply(from, {:error, error})
 
-    if notify and unanswered == [] and
+    for {reference, subscription} <- state.subscriptions do
+      for waiter <- subscription.waiters, do: GenServer.reply(waiter, {:error, error})
+
+      unless subscription.closing,
+        do:
+          send(subscription.receiver, {:wotex_opcua, reference, {:error, %{error | effect: :none}}})
+    end
+
+    if notify and unanswered == [] and state.subscriptions == %{} and
          not Enum.any?(state.controls, fn {_, control} -> control.kind == :close end) do
       send(state.owner, {:wotex_opcua_native, self(), {:error, error}})
     end
 
-    {:stop, :normal, %{state | pending: %{}, controls: %{}}}
+    {:stop, :normal, %{state | pending: %{}, controls: %{}, subscriptions: %{}}}
   end
 
   # The host answers every admitted request before a normal stop, so a normal

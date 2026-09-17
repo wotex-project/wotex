@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.28
+  version: 1.1.29
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -603,7 +603,24 @@ confirmed also ends the generation because server state could be unowned.
 The owner emits reports after operation replies in each tick and flushes each
 credited envelope before producing the next, so a suspended owner receives its
 credited reports plus at most 64 queued envelopes before `receiver_overflow`.
-The BEAM host does not yet route subscription reports.
+
+`Native.Host` validates each subscribe result as exactly the ten documented keys,
+with a token matching its client handle, nonzero identities, a non-Bad item
+status and S04 revision ranges. It then monitors the receiver and returns an
+opaque generation-bound handle. A report line is admitted only for a live or
+closing token of the current generation and must be exactly a `data` report with
+a valid DataValue and six-key metadata or an `error` report with an empty metadata
+map; a malformed report or an unknown token ends the generation with
+`invalid_native_frame`. Before each delivery the host checks the receiver's
+message queue against `max_queue_length`; overflow delivers one
+`receiver_overflow`. Overflow or receiver death sends one native `unsubscribe`
+control and removes the handle after its null result; an `error` report removes
+the handle at once. A subscribe response that arrives after its caller stopped waiting is
+cancelled at once; reports for that token are discarded. Concurrent cancellation
+of one handle waits for the single native `unsubscribe`. Closed references are
+kept in a bounded 1,024-entry set so repeated cancellation returns `:ok`; a
+stopped owner returns `:ok` without I/O. Session or owner loss sends one terminal
+error to each live receiver.
 
 ## WOP-X06 — Executable acceptance and evidence
 

@@ -23,7 +23,7 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
     id = "WOP-X-F#{number}"
 
     @tag case: id, corpus_sha256: @corpus_sha256
-    test "#{id} secure policy and user token execute services without subscriptions", context do
+    test "#{id} secure policy and user token execute every listed service", context do
       input = Map.fetch!(@cases, unquote(id))["input"]
       options = options(context, @policies[input["policy"]], token(context, input["user_token"]))
       assert {:ok, session} = Wotex.OPCUA.connect(options)
@@ -56,6 +56,18 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
                Wotex.OPCUA.send(session, %{type: :browse, node_id: peer["object_id"]})
 
       assert peer["method_id"] in children
+
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: peer["node_id"],
+                 publishing_interval_ms: 50
+               })
+
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => 42.25}}, _}}, 5000
+      assert {1, 1} = resources(session, peer)
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert {0, 0} = resources(session, peer)
 
       assert {:ok, %{"status" => 0}} =
                Wotex.OPCUA.send(session, %{
@@ -147,6 +159,17 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
     do: [:certificate_invalid, :connection_failed, :deadline_exceeded]
 
   defp allowed_codes(_), do: [:certificate_invalid, :authentication_failed, :connection_failed]
+
+  defp resources(session, peer) do
+    assert {:ok, %{"status" => 0, "outputs" => [%{"value" => subscriptions}, %{"value" => items}]}} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: peer["resources_method_id"],
+               value: %{object_id: peer["object_id"], arguments: []}
+             })
+
+    {subscriptions, items}
+  end
 
   defp token(_, "anonymous"), do: %{type: :anonymous}
 

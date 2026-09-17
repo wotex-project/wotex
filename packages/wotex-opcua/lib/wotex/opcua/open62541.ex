@@ -20,7 +20,7 @@ defmodule Wotex.OPCUA.Open62541 do
 
   @behaviour Wotex.OPCUA.Client
 
-  alias Wotex.OPCUA.{Address, Binary, Error}
+  alias Wotex.OPCUA.{Address, Binary, Error, Subscription}
   alias Wotex.OPCUA.Native.{Config, Host}
 
   @types ~w(Boolean SByte Byte Int16 UInt16 Int32 UInt32 Int64 UInt64 Float Double String DateTime Guid ByteString NodeId ExpandedNodeId StatusCode QualifiedName LocalizedText ExtensionObject)
@@ -73,6 +73,59 @@ defmodule Wotex.OPCUA.Open62541 do
     with {:ok, result} <- Host.request(host, operation, parameters, timeout),
          do: project_result(operation, result, namespaces)
   end
+
+  @impl Wotex.OPCUA.Client
+  @doc """
+  Creates one server subscription with one Value MonitoredItem on a persistent Session.
+
+  The request is the validated facade map without `receiver`. Reports reach the
+  receiver as `{:wotex_opcua, reference, {:ok, data_value, metadata}}` with the
+  native DataValue map and metadata `sequence`, `publish_time`, `client_handle`,
+  `overflow`, `datetime_resolution_ns` and `raw_datetime_ticks_available`. One
+  terminal `{:wotex_opcua, reference, {:error, error}}` ends delivery.
+  One-shot handles return `:persistent_session_required` before I/O.
+  """
+  def subscribe(
+        %{config: %Config{lifecycle: :persistent}, host: host},
+        %{node_id: node} = request,
+        receiver,
+        timeout
+      )
+      when is_pid(host) and is_pid(receiver) and is_integer(timeout) and timeout in 1..60_000 do
+    with {:ok, id} <- node_id(node) do
+      parameters = %{
+        "node_id" => id,
+        "publishing_interval_ms" => request.publishing_interval_ms,
+        "sampling_interval_ms" => request.sampling_interval_ms,
+        "queue_size" => request.queue_size,
+        "discard_oldest" => request.discard_oldest,
+        "keepalive_count" => request.keepalive_count,
+        "lifetime_count" => request.lifetime_count
+      }
+
+      Host.subscribe(host, parameters, receiver, request.max_queue_length, timeout)
+    end
+  end
+
+  def subscribe(%{config: %Config{lifecycle: :oneshot}}, _, _, _),
+    do: {:error, Error.new(:persistent_session_required)}
+
+  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_native_handle)}
+
+  @impl Wotex.OPCUA.Client
+  @doc "Cancels one subscription; a handle for a stopped owner returns `:ok` without I/O."
+  def unsubscribe(
+        %{config: %Config{lifecycle: :persistent}, host: host},
+        %Subscription{pid: host} = subscription,
+        timeout
+      )
+      when is_pid(host) and is_integer(timeout) and timeout in 1..60_000,
+      do: Host.unsubscribe(host, subscription, timeout)
+
+  def unsubscribe(%{config: %Config{lifecycle: :oneshot}}, _, _),
+    do: {:error, Error.new(:persistent_session_required)}
+
+  def unsubscribe(_, _, _), do: {:error, Error.new(:invalid_subscription)}
 
   @impl Wotex.OPCUA.Client
   @doc "Closes an owned persistent Session; repeated cleanup is safe."

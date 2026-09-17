@@ -248,6 +248,17 @@ static int respond(unsigned long long generation, const char *id, const char *re
     return count > 0 && (size_t)count < sizeof(frame) ? write_all(STDOUT_FILENO, frame, (size_t)count) : -1;
 }
 
+static int report(unsigned long long generation, const char *token) {
+    char frame[512];
+    int count = snprintf(frame, sizeof(frame),
+        "{\"version\":1,\"generation\":%llu,\"subscription_id\":\"%s\",\"event\":\"data\","
+        "\"value\":{\"has_value\":true,\"value\":{\"type\":\"Double\",\"array\":false,"
+        "\"value\":1.0},\"status\":0},\"metadata\":{\"sequence\":1,\"publish_time\":1001,"
+        "\"client_handle\":1,\"overflow\":false,\"datetime_resolution_ns\":100,"
+        "\"raw_datetime_ticks_available\":true}}\n", generation, token);
+    return count > 0 && (size_t)count < sizeof(frame) ? write_all(STDOUT_FILENO, frame, (size_t)count) : -1;
+}
+
 static int wait_eof(void) {
     char byte;
     for(;;) {
@@ -281,6 +292,10 @@ static int session_faults(int fault) {
         if(respond(generation, "999999", "null")) return 82;
         return wait_eof();
     }
+    if(fault == 12) {
+        if(report(generation, "s9")) return 90;
+        return wait_eof();
+    }
     if(fault >= 7) {
         char pending[65] = "";
         for(;;) {
@@ -304,6 +319,24 @@ static int session_faults(int fault) {
                     return 86;
                 }
                 return wait_eof();
+            }
+            if(strstr(frame, "\"operation\":\"cancel\"") && fault == 11) {
+                /* The subscription completes before the cancel reaches the owner. */
+                char body[128];
+                snprintf(body, sizeof(body), "{\"target_id\":\"%s\",\"canceled\":false}", pending);
+                if(respond(generation, pending,
+                           "{\"subscription\":\"s1\",\"subscription_id\":101,"
+                           "\"monitored_item_id\":201,\"client_handle\":1,\"item_status\":0,"
+                           "\"publishing_interval_ms\":500.0,\"sampling_interval_ms\":250.0,"
+                           "\"queue_size\":10,\"keepalive_count\":10,\"lifetime_count\":30}") ||
+                   report(generation, "s1") || respond(generation, id, body)) return 91;
+                continue;
+            }
+            if(strstr(frame, "\"operation\":\"unsubscribe\"")) {
+                FILE *counter = fopen("unsubscribed", "wx");
+                if(!counter || fclose(counter) || report(generation, "s1") ||
+                   respond(generation, id, "null")) return 92;
+                continue;
             }
             if(strstr(frame, "\"operation\":\"cancel\"")) {
                 char body[128];
@@ -447,6 +480,8 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_foreign_cancel")) return session_faults(8);
     if (!strcmp(mode, "session_close_failure")) return session_faults(9);
     if (!strcmp(mode, "session_browse_failure")) return session_faults(10);
+    if (!strcmp(mode, "session_subscription_race")) return session_faults(11);
+    if (!strcmp(mode, "session_unknown_report")) return session_faults(12);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

@@ -146,7 +146,10 @@ defmodule Wotex.OPCUA.Native.Frame do
   for another generation is a `:response_mismatch`, never a delivered result.
   """
   @spec classify(term(), term()) ::
-          {:terminal, Error.t()} | {:response, String.t()} | {:error, Error.t()}
+          {:terminal, Error.t()}
+          | {:response, String.t()}
+          | {:report, String.t()}
+          | {:error, Error.t()}
   def classify(frame, generation)
       when is_binary(frame) and byte_size(frame) in 1..@maximum_frame and
              is_integer(generation) and generation in 1..@maximum_generation do
@@ -155,20 +158,9 @@ defmodule Wotex.OPCUA.Native.Frame do
     with {offset, 1} when offset == size - 1 <- :binary.match(frame, "\n"),
          {:ok, %{"version" => 1, "generation" => line_generation} = decoded} <-
            Wotex.JSON.decode(binary_part(frame, 0, offset), @response_limits) do
-      cond do
-        is_integer(line_generation) and line_generation != generation ->
-          {:error, Error.new(:response_mismatch, :generation)}
-
-        Map.get(decoded, "event") == "terminal" ->
-          classify_terminal(frame, generation)
-
-        is_binary(decoded["id"]) and byte_size(decoded["id"]) in 1..64 and
-            printable_ascii?(decoded["id"]) ->
-          {:response, decoded["id"]}
-
-        true ->
-          {:error, Error.new(:invalid_native_frame, :response)}
-      end
+      if is_integer(line_generation) and line_generation != generation,
+        do: {:error, Error.new(:response_mismatch, :generation)},
+        else: classify_line(decoded, frame, generation)
     else
       _ -> {:error, Error.new(:invalid_native_frame, :response)}
     end
@@ -176,12 +168,107 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   def classify(_, _), do: {:error, Error.new(:invalid_native_frame, :response)}
 
+  defp classify_line(%{"event" => "terminal"}, frame, generation),
+    do: classify_terminal(frame, generation)
+
+  defp classify_line(%{"subscription_id" => token}, _, _) do
+    if subscription_token?(token),
+      do: {:report, token},
+      else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
+  defp classify_line(%{"id" => id}, _, _) when is_binary(id) and byte_size(id) in 1..64 do
+    if printable_ascii?(id),
+      do: {:response, id},
+      else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
+  defp classify_line(_, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
   defp classify_terminal(frame, generation) do
     case terminal(frame, generation) do
       {:ok, error} -> {:terminal, error}
       error -> error
     end
   end
+
+  @doc """
+  Decodes one subscription report for the expected generation and token.
+
+  A data report carries a complete DataValue and exactly its six metadata
+  fields. An error report carries one finite error map and empty metadata.
+  """
+  @spec report(term(), term(), term()) ::
+          {:data, map(), map()} | {:error_report, Error.t()} | {:error, Error.t()}
+  def report(frame, generation, token)
+      when is_binary(frame) and byte_size(frame) in 1..@maximum_frame and
+             is_integer(generation) and generation in 1..@maximum_generation and is_binary(token) do
+    size = byte_size(frame)
+
+    with {offset, 1} when offset == size - 1 <- :binary.match(frame, "\n"),
+         {:ok, decoded} <- Wotex.JSON.decode(binary_part(frame, 0, offset), @response_limits),
+         %{
+           "version" => 1,
+           "generation" => ^generation,
+           "subscription_id" => ^token,
+           "event" => event,
+           "value" => value,
+           "metadata" => metadata
+         } <- decoded,
+         true <- map_size(decoded) == 6,
+         {:ok, report} <- report_body(event, value, metadata) do
+      report
+    else
+      _ -> {:error, Error.new(:invalid_native_frame, :report)}
+    end
+  end
+
+  def report(_, _, _), do: {:error, Error.new(:invalid_native_frame, :report)}
+
+  defp report_body("data", value, metadata) do
+    with {:ok, data_value} <- native_data_value(value),
+         {:ok, _} <- Binary.encode_data_value(data_value),
+         true <- report_metadata?(metadata) do
+      {:ok, {:data, value, metadata}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp report_body("error", value, metadata) when metadata == %{} do
+    case terminal_error(value) do
+      {:ok, error} -> {:ok, {:error_report, error}}
+      _ -> :error
+    end
+  end
+
+  defp report_body(_, _, _), do: :error
+
+  defp report_metadata?(
+         %{
+           "sequence" => sequence,
+           "publish_time" => publish_time,
+           "client_handle" => handle,
+           "overflow" => overflow,
+           "datetime_resolution_ns" => 100,
+           "raw_datetime_ticks_available" => true
+         } = metadata
+       )
+       when map_size(metadata) == 6 and is_integer(sequence) and sequence in 1..4_294_967_295 and
+              is_integer(publish_time) and publish_time in -@maximum_clock..@maximum_clock and
+              is_integer(handle) and handle in 1..4_294_967_295 and is_boolean(overflow),
+       do: true
+
+  defp report_metadata?(_), do: false
+
+  defp subscription_token?("s" <> digits) when byte_size(digits) in 1..20 do
+    case Integer.parse(digits) do
+      {number, ""} when number in 1..4_294_967_295 -> Integer.to_string(number) == digits
+      _ -> false
+    end
+  end
+
+  defp subscription_token?(_), do: false
 
   @doc "Decodes a correlated native service response and validates the open metadata."
   @spec response(term(), term(), term(), term(), term()) ::
@@ -258,6 +345,14 @@ defmodule Wotex.OPCUA.Native.Frame do
       else: {:error, Error.new(:invalid_native_frame, :response)}
   end
 
+  defp response_result("subscribe", result, _, _) do
+    if subscribe_result?(result),
+      do: {:ok, result},
+      else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
+  defp response_result("unsubscribe", nil, _, _), do: {:ok, nil}
+
   defp response_result("health", result, requested, generation),
     do: response_result("read", result, requested, generation)
 
@@ -291,6 +386,38 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp response_result(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  defp subscribe_result?(
+         %{
+           "subscription" => token,
+           "subscription_id" => id,
+           "monitored_item_id" => item,
+           "client_handle" => handle,
+           "item_status" => status
+         } = result
+       )
+       when map_size(result) == 10 do
+    uint32?(id, 1) and uint32?(item, 1) and uint32?(handle, 1) and uint32?(status, 0) and
+      Bitwise.band(status, 0x80000000) == 0 and subscription_token?(token) and
+      "s#{handle}" == token and revised_parameters?(result)
+  end
+
+  defp subscribe_result?(_), do: false
+
+  defp revised_parameters?(result) do
+    keepalive = result["keepalive_count"]
+    lifetime = result["lifetime_count"]
+
+    interval?(result["publishing_interval_ms"], 10) and interval?(result["sampling_interval_ms"], 0) and
+      count?(result["queue_size"], 1, 1000) and count?(keepalive, 1, 1000) and
+      count?(lifetime, 3, 10_000) and lifetime >= 3 * keepalive
+  end
+
+  defp uint32?(value, minimum),
+    do: is_integer(value) and value >= minimum and value <= 4_294_967_295
+
+  defp interval?(value, minimum), do: is_number(value) and value >= minimum and value <= 60_000
+  defp count?(value, minimum, maximum), do: is_integer(value) and value in minimum..maximum
 
   defp valid_continuation?(nil), do: true
 

@@ -25,4 +25,19 @@ defmodule Wotex.OPCUA.Client do
 
   @doc "Releases only resources owned by this handle; must be idempotent."
   @callback disconnect(term()) :: :ok | {:error, term()}
+
+  @doc """
+  Establishes one monitored data-change subscription for a validated request.
+
+  Arguments are the client handle, the validated request, the receiver and the
+  finite timeout. A client without subscriptions omits this optional callback.
+  """
+  @callback subscribe(term(), map(), pid(), pos_integer()) ::
+              {:ok, Wotex.OPCUA.Subscription.t()} | {:error, term()}
+
+  @doc "Cancels one subscription; a recorded closed handle returns `:ok`."
+  @callback unsubscribe(term(), Wotex.OPCUA.Subscription.t(), pos_integer()) ::
+              :ok | {:error, term()}
+
+  @optional_callbacks subscribe: 4, unsubscribe: 3
 end

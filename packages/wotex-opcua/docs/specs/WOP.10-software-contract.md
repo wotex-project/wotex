@@ -3,7 +3,7 @@ spec:
   id: WOP.10
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-opcua
   updated: 2026-09-17
 ---

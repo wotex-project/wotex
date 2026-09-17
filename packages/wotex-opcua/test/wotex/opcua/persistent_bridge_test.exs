@@ -2,8 +2,26 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
-  alias Wotex.OPCUA.Error
+  alias Wotex.OPCUA.{Error, Open62541, Session, Subscription}
   alias Wotex.OPCUA.Native.Host
+
+  @client_options [
+    executable: "/missing/native",
+    executable_digest: String.duplicate("a", 64),
+    guardian: "/missing/guardian",
+    guardian_digest: String.duplicate("b", 64),
+    endpoint: "opc.tcp://127.0.0.1:4840/fixture/",
+    security_policy: :basic256sha256,
+    security_mode: :sign_and_encrypt,
+    client_uri: "urn:wotex:test:client",
+    server_uri: "urn:wotex:test:server",
+    certificate: "/missing/client.der",
+    private_key: "/missing/client.key.der",
+    server_certificate: "/missing/server.der",
+    trust_certificate: "/missing/ca.der",
+    crl: "/missing/clean.crl",
+    authentication: %{type: :anonymous}
+  ]
 
   @corpus "docs/specs/fixtures/native-contract-v1.json"
   @corpus_sha256 :crypto.hash(:sha256, File.read!(@corpus)) |> Base.encode16(case: :lower)
@@ -471,6 +489,294 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
     assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
     assert_reaped(directory)
   end
+
+  describe "subscriptions" do
+    setup do
+      handler = "wotex-opcua-bridge-#{System.unique_integer([:positive])}"
+      test = self()
+
+      :telemetry.attach_many(
+        handler,
+        [
+          [:wotex, :opcua, :subscription, :open],
+          [:wotex, :opcua, :subscription, :deliver],
+          [:wotex, :opcua, :subscription, :close]
+        ],
+        fn event, measurements, metadata, _ ->
+          send(test, {:telemetry, event, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+      :ok
+    end
+
+    test "WOP-S04 reports arrive in order and cancellation records the closed handle",
+         context do
+      {host, directory} = open_fixture(context)
+
+      assert {:ok, %Subscription{} = subscription} =
+               Host.subscribe(host, subscribe("stream-3"), self(), 1000, 1000)
+
+      reference = subscription.reference
+
+      for value <- 1..3 do
+        expected = value * 1.0
+
+        assert_receive {:wotex_opcua, ^reference,
+                        {:ok, %{"value" => %{"value" => ^expected}},
+                         %{"sequence" => ^value, "client_handle" => 1, "overflow" => false}}}
+
+        assert_receive {:telemetry, [:wotex, :opcua, :subscription, :deliver], %{count: 1},
+                        %{result: :ok}}
+      end
+
+      assert :ok = Host.unsubscribe(host, subscription, 1000)
+
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :close], %{count: 1},
+                      %{result: :unsubscribed}}
+
+      assert :ok = Host.unsubscribe(host, subscription, 1000)
+
+      assert {:error, %Error{code: :invalid_subscription}} =
+               Host.unsubscribe(
+                 host,
+                 %{subscription | generation: subscription.generation + 1},
+                 1000
+               )
+
+      assert {:error, %Error{code: :invalid_subscription}} =
+               Host.unsubscribe(host, %{subscription | reference: make_ref()}, 1000)
+
+      assert {:error, %Error{code: :invalid_subscription}} = Host.unsubscribe(host, :handle, 1000)
+      assert {:error, %Error{code: :invalid_value}} = Host.subscribe(host, %{}, self(), 0, 1000)
+
+      assert {:error, %Error{code: :invalid_value}} =
+               Host.subscribe(host, subscribe("unknown"), self(), 10, 1000)
+
+      refute_receive {:wotex_opcua, ^reference, _}, 50
+      assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+      assert %{"subscribes" => 1, "unsubscribes" => 1, "reports" => 3} = counters(directory)
+      assert_reaped(directory)
+      assert :ok = Host.unsubscribe(host, subscription, 1000)
+    end
+
+    test "WOP-C05 one terminal report ends delivery and closes the handle", context do
+      {host, directory} = open_fixture(context)
+      assert {:ok, subscription} = Host.subscribe(host, subscribe("error-2"), self(), 1000, 1000)
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, %{"sequence" => 1}}}
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, %{"sequence" => 2}}}
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :sequence_gap, effect: :none}}}
+
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :close], _, %{result: :terminal}}
+      assert :ok = Host.unsubscribe(host, subscription, 1000)
+      refute_receive {:wotex_opcua, ^reference, _}, 50
+      assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+      assert %{"unsubscribes" => 0, "reports" => 3} = counters(directory)
+      assert_reaped(directory)
+    end
+
+    test "WOP-C05 a full receiver queue and receiver death cancel natively", context do
+      {host, directory} = open_fixture(context)
+
+      stalled =
+        spawn(fn ->
+          receive do
+            :stop -> :ok
+          end
+        end)
+
+      assert {:ok, overflowed} = Host.subscribe(host, subscribe("stream-5"), stalled, 1, 1000)
+      reference = overflowed.reference
+
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :deliver], _,
+                      %{result: :overflow}}
+
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :close], _,
+                      %{result: :receiver_overflow}}
+
+      {:messages, messages} = Process.info(stalled, :messages)
+
+      assert [
+               {:wotex_opcua, ^reference, {:ok, _, %{"sequence" => 1}}},
+               {:wotex_opcua, ^reference, {:error, %Error{code: :receiver_overflow}}}
+             ] = messages
+
+      receiver = spawn(fn -> Process.sleep(:infinity) end)
+      assert {:ok, lost} = Host.subscribe(host, subscribe("stream-0"), receiver, 10, 1000)
+      Process.exit(receiver, :kill)
+
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :close], _,
+                      %{result: :receiver_down}}
+
+      assert :ok = Host.unsubscribe(host, lost, 1000)
+      assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+      assert %{"subscribes" => 2, "unsubscribes" => 2} = counters(directory)
+      assert_reaped(directory)
+    end
+
+    test "WOP-X04 Session loss ends each live subscription once without noise", context do
+      {host, directory} = open_fixture(context)
+      assert {:ok, subscription} = Host.subscribe(host, subscribe("stream-0"), self(), 10, 1000)
+      reference = subscription.reference
+      monitor = Process.monitor(host)
+
+      assert {:error, %Error{code: :connection_failed}} =
+               Host.request(host, "read", read("lose"), 5000)
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :connection_failed, effect: :none}}}
+
+      refute_receive {:wotex_opcua, ^reference, _}, 50
+      assert :ok = Host.unsubscribe(host, subscription, 1000)
+      refute_receive {:wotex_opcua_native, ^host, _}
+      assert_reaped(directory)
+    end
+
+    test "WOP-C05 a subscription completed after its caller stopped waiting is cancelled",
+         context do
+      {host, directory} = open_probe(context, "session_subscription_race")
+
+      assert {:error, %Error{code: :deadline_exceeded}} =
+               Host.subscribe(host, subscribe("stream-1"), self(), 10, 50)
+
+      assert eventually(fn -> File.exists?(Path.join(directory, "unsubscribed")) end)
+      assert eventually(fn -> :sys.get_state(host).discarding == MapSet.new() end)
+      refute_receive {:wotex_opcua, _, _}, 50
+      refute_receive {:telemetry, [:wotex, :opcua, :subscription, :deliver], _, _}
+      monitor = Process.monitor(host)
+      assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      assert_reaped(directory)
+    end
+
+    test "WOP-C05 a report for an unknown subscription ends the generation", context do
+      {host, directory} = open_probe(context, "session_unknown_report")
+      monitor = Process.monitor(host)
+
+      assert_receive {:wotex_opcua_native, ^host, {:error, %Error{code: :invalid_native_frame}}},
+                     1000
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      assert_reaped(directory)
+    end
+
+    test "WOP-S04 concurrent cancellation waits for the one native unsubscribe", context do
+      {host, directory} = open_fixture(context)
+      assert {:ok, subscription} = Host.subscribe(host, subscribe("stream-0"), self(), 10, 1000)
+      :ok = :sys.suspend(host)
+      tasks = for _ <- 1..2, do: Task.async(fn -> Host.unsubscribe(host, subscription, 1000) end)
+      assert eventually(fn -> message_queue(host) >= 2 end)
+      :ok = :sys.resume(host)
+      assert [:ok, :ok] = Task.await_many(tasks)
+      assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+      assert %{"subscribes" => 1, "unsubscribes" => 1} = counters(directory)
+      assert_reaped(directory)
+    end
+
+    test "WOP-S04 persistent facade subscribes through the owner and cancels", context do
+      {host, directory} = open_fixture(context)
+      assert {:ok, config} = Wotex.OPCUA.Native.Config.new(@client_options)
+
+      handle = %{
+        owner: self(),
+        config: %{config | lifecycle: :persistent},
+        host: host,
+        namespace_array: ["http://opcfoundation.org/UA/", "urn:fixture"]
+      }
+
+      session = %Session{client: Open62541, handle: handle, timeout: 1000}
+
+      assert {:ok, %Subscription{pid: ^host} = subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: "ns=1;s=stream-1",
+                 publishing_interval_ms: 25.5,
+                 max_queue_length: 4
+               })
+
+      reference = subscription.reference
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :open], _, %{result: :ok}}
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, %{"sequence" => 1}}}
+
+      assert {:error, %Error{code: :invalid_node_id}} =
+               Open62541.subscribe(handle, facade_request("bad"), self(), 1000)
+
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+      assert %{"subscribes" => 1, "unsubscribes" => 1} = counters(directory)
+      assert_reaped(directory)
+    end
+
+    test "WOP-S04 facade validates requests and one-shot handles acquire nothing" do
+      assert {:ok, config} = Wotex.OPCUA.Native.Config.new(@client_options)
+      oneshot = %{owner: self(), config: %{config | lifecycle: :oneshot}, host: nil}
+      session = %Session{client: Wotex.OPCUA.Open62541, handle: oneshot, timeout: 1000}
+
+      for request <- [
+            %{node_id: "ns=1;s=x", queue_size: 0},
+            %{node_id: "ns=1;s=x", publishing_interval_ms: 9},
+            %{node_id: "ns=1;s=x", sampling_interval_ms: 60_000.5},
+            %{node_id: "ns=1;s=x", keepalive_count: 10, lifetime_count: 29},
+            %{node_id: "ns=1;s=x", discard_oldest: :yes},
+            %{node_id: "ns=1;s=x", receiver: :self},
+            %{node_id: "ns=1;s=x", max_queue_length: 10_001},
+            %{node_id: "ns=1;s=x", other: 1},
+            %{node_id: "bad"},
+            %{},
+            :request
+          ] do
+        assert {:error, %Error{code: :invalid_value}} = Wotex.OPCUA.subscribe(session, request)
+      end
+
+      assert {:error, %Error{code: :persistent_session_required}} =
+               Wotex.OPCUA.subscribe(session, %{node_id: "ns=1;s=x", publishing_interval_ms: 25.5})
+
+      assert_receive {:telemetry, [:wotex, :opcua, :subscription, :open], _, %{result: :error}}
+      handle = %Subscription{pid: self(), reference: make_ref(), generation: 1}
+
+      assert {:error, %Error{code: :persistent_session_required}} =
+               Wotex.OPCUA.unsubscribe(session, handle)
+
+      assert {:error, %Error{code: :invalid_subscription}} =
+               Wotex.OPCUA.unsubscribe(session, :handle)
+
+      assert {:error, %Error{code: :invalid_native_handle}} =
+               Open62541.subscribe(%{}, %{}, self(), 10)
+
+      assert {:error, %Error{code: :invalid_subscription}} = Open62541.unsubscribe(%{}, handle, 10)
+      assert :not_supported = Wotex.OPCUA.subscribe(:session, %{})
+      assert :not_supported = Wotex.OPCUA.unsubscribe(:session, handle)
+    end
+  end
+
+  defp facade_request(node),
+    do: %{
+      node_id: node,
+      publishing_interval_ms: 500,
+      sampling_interval_ms: 250,
+      queue_size: 10,
+      discard_oldest: true,
+      keepalive_count: 10,
+      lifetime_count: 30,
+      max_queue_length: 4
+    }
+
+  defp subscribe(name),
+    do: %{
+      "node_id" => "ns=1;s=#{name}",
+      "publishing_interval_ms" => 500,
+      "sampling_interval_ms" => 250,
+      "queue_size" => 10,
+      "discard_oldest" => true,
+      "keepalive_count" => 10,
+      "lifetime_count" => 30
+    }
 
   defp receive_connected do
     receive do

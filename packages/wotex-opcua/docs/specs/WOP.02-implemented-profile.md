@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.6
+  version: 2.0.7
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -227,8 +227,13 @@ The owner now sends one bounded initial credit control before its request. The
 C process binds that credit to the generation, rejects a request without it,
 and rejects further credit before any output has been consumed. Terminal output
 uses the separate control allowance. Open/read/write/call/close responses consume credit and
-the owner replenishes validated consumption. Report queues and subscriptions
-remain unimplemented.
+the owner replenishes validated consumption. Subscription reports use the same
+credit. `Wotex.OPCUA.subscribe/2` and `unsubscribe/2` are optional client
+callbacks; a client without them returns `:not_supported`. The explicitly
+selected native client supports one Value MonitoredItem per handle on a
+persistent Session only and delivers native DataValue maps and metadata to the
+receiver as described in WOP.13 X05. One-shot handles return
+`:persistent_session_required`. Runtime observation remains unimplemented.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

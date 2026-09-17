@@ -20,6 +20,67 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Persistent native subscription delivery, 2026-09-17
+
+`Wotex.OPCUA.subscribe/2` and `unsubscribe/2` validate the closed S04 request map
+before I/O and call optional client callbacks; `Wotex.OPCUA.Subscription` is the
+opaque, Inspect-redacted handle. `Wotex.OPCUA.Open62541` admits subscriptions on
+persistent Sessions only. `Native.Frame` validates subscribe results and report
+lines exactly, and `Native.Host` routes reports to monitored receivers as
+recorded in WOP.13 X05.
+
+`frame_test.exs` covers valid and malformed report, token and subscribe-result
+frames. `port_test.exs` covers normalization of subscription client returns.
+`persistent_bridge_test.exs` runs the production owner behind the injected
+process fixture and deterministic probes. It checks ordered reports, closed-handle
+cancellation, one terminal report, receiver overflow and death, Session loss,
+concurrent cancellation with one native unsubscribe, a subscribe response after
+the caller's deadline (cancelled with its report discarded), an unknown-token
+report ending the generation, facade validation and one-shot rejection.
+
+The independent asyncua 2.0.1 peer (Python 3.14.7) now exposes a Resources
+method that returns its active subscription and MonitoredItem counts. In
+`native_subscription_test.exs` a Basic256Sha256 Session receives the initial
+value and two fresh written values once in increasing sequence with a stable
+client handle. The counts are 1/1 while subscribed and 0/0 after cancellation.
+Receiver death cancels only its own subscription, a two-message receiver bound
+ends delivery with exactly one `receiver_overflow` and returns the counts to 0/0,
+and a missing node returns `remote_error` without a server subscription.
+`security_fault_test.exs` adds subscribe, report, count and unsubscribe to all
+nine policy/token cells. X-F30..F38 stay unbound because their request-cancel
+operation and peer continuation counts are not asserted.
+
+Commands: `WOTEX_PATH_DEPS=1 mix check --no-retry` passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29: 336 passed (10 doctests, 4 properties, 322 tests),
+42 optional tests excluded, 95.5% coverage. With a fresh peer started by
+`secure_peer.py` and `WOTEX_OPCUA_INTEROP_CONFIG`, `WOTEX_OPCUA_NATIVE_EXECUTABLE`,
+`WOTEX_OPCUA_NATIVE_GUARDIAN`, `WOTEX_OPCUA_NATIVE_PROBE` and
+`WOTEX_OPCUA_PAGED_PEER` naming one build, `mix test --include interop --seed 0
+test/interop` passes 42/42 against the RelWithDebInfo build and 42/42 against
+the macOS ASan/UBSan build. Live Republish, peer-side subscription loss,
+lifetime expiry against a peer and Runtime observation are not accepted.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua.ex` | `58c5fbbc710ab79499f34d77585d76a44d5af7e3dc0bb12b6f527e4de71598de` |
+| `lib/wotex/opcua/subscription.ex` | `b33c2bbd0a8358a169b02b1f46a16dd658362cf4103c2643eaff2d80bbcc30d5` |
+| `lib/wotex/opcua/client.ex` | `b51508a444b5f6b89bb95e2d6cca7efabda8bb25734e6e2a921fb8904580960d` |
+| `lib/wotex/opcua/port_call.ex` | `55a4c67cfc601060399caf84b52ff1b53e892722daba84cef26dadef352edc81` |
+| `lib/wotex/opcua/native/frame.ex` | `b43875bf207648e0a1f15e5ba8cdcbec8068d7607fa1fdaff6ab3dee75b727c1` |
+| `lib/wotex/opcua/native/host.ex` | `66198181841bdc2023534e7a3af77a6ead498e6e6185f6e7bb8b70ae30faa584` |
+| `lib/wotex/opcua/open62541.ex` | `b63cfc990bd85a63e825da99f4a48cfcca5ce5bf814c339940b866941053c968` |
+| `test/wotex/opcua/persistent_bridge_test.exs` | `b410df76990588894e9d76168a19ebbca15280fab76b27280874bffaafec9c19` |
+| `test/wotex/opcua/native/frame_test.exs` | `06c2099f16c9026211b9bd05bba1cc103edcff143396f1b23fd1d806b74f69e2` |
+| `test/wotex/opcua/port_test.exs` | `4eb19312e994ed141dd862b0e791f3adc643aef09015c5db774bacc2aef5bfb4` |
+| `test/native/owner_fixture.c` | `4f9d6c52949926621e3816b0bb4c65cb2e2e8b395a6a7f4da8c0359c2c63bc4c` |
+| `test/native/host_probe.c` | `6f285d8aae621f1c129539aa07105e1832e5138efcda458b46cb02a59587b921` |
+| `test/interop/native_subscription_test.exs` | `c19de44038c1484859e6d3e98a808e3ef35f837e1d7efb69227fa7d40a5ec54c` |
+| `test/interop/security_fault_test.exs` | `1ecb20275d3dd9134e2ca85c43cb4ac59fd896c4be36951e5e377f5ab7807d49` |
+| `test/interop/secure_peer.py` | `919e7de635150d4d7459967dfd7b8ad9f859fc4d3293db600ac26dc4dadaf9da` |
+| `docs/specs/fixtures/native-contract-v1.json` | `24e519c756f189c0d55f4e95fc45c26e9451fb0088141d4f7b6f903ac6c0edf0` |
+| RelWithDebInfo `wotex_opcua_native` | `a52f105354e141693710b807d4290bcc6911036876fc228d28b38523d2ac3034` |
+| ASan/UBSan `wotex_opcua_native` | `b336153fce394d126a1a2904db5c1d30b69b194ae3647c03991533b98d66a482` |
+
 ## Native raw-service subscriptions, 2026-09-17
 
 The native owner now admits `subscribe` and `unsubscribe` and emits subscription

@@ -383,6 +383,99 @@ defmodule Wotex.OPCUA.Native.FrameTest do
     end
   end
 
+  test "WOP-S04 subscription reports and subscribe results are exact and token-bound" do
+    frame = fn attributes -> Jason.encode!(attributes) <> "\n" end
+    variant = %{"type" => "Double", "array" => false, "value" => 1.5}
+    value = %{"has_value" => true, "status" => 0, "value" => variant}
+
+    metadata = %{
+      "sequence" => 1,
+      "publish_time" => 1001,
+      "client_handle" => 7,
+      "overflow" => false,
+      "datetime_resolution_ns" => 100,
+      "raw_datetime_ticks_available" => true
+    }
+
+    base = %{
+      "version" => 1,
+      "generation" => 7,
+      "subscription_id" => "s7",
+      "event" => "data",
+      "value" => value,
+      "metadata" => metadata
+    }
+
+    failure = %{"code" => "sequence_gap", "phase" => "exchange", "effect" => "none"}
+    error_report = %{base | "event" => "error", "value" => failure, "metadata" => %{}}
+
+    assert {:report, "s7"} = Frame.classify(frame.(base), 7)
+    assert {:data, ^value, ^metadata} = Frame.report(frame.(base), 7, "s7")
+
+    assert {:error_report, %Error{code: :sequence_gap, effect: :none}} =
+             Frame.report(frame.(error_report), 7, "s7")
+
+    for token <- ["s0", "s01", "s4294967296", "x7", 7] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.classify(frame.(%{base | "subscription_id" => token}), 7)
+    end
+
+    for invalid <- [
+          Map.put(base, "extra", true),
+          %{base | "event" => "status"},
+          %{base | "value" => %{value | "status" => -1}},
+          %{base | "value" => Map.delete(value, "value")},
+          %{base | "metadata" => %{metadata | "datetime_resolution_ns" => 1}},
+          %{base | "metadata" => Map.put(metadata, "extra", 1)},
+          %{error_report | "value" => Map.put(failure, "secret", "x")},
+          %{error_report | "metadata" => metadata},
+          %{base | "subscription_id" => "s8"},
+          %{base | "generation" => 8}
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame, field: :report}} =
+               Frame.report(frame.(invalid), 7, "s7")
+    end
+
+    assert {:error, %Error{field: :report}} = Frame.report(frame.(base) <> "{}\n", 7, "s7")
+    assert {:error, %Error{field: :report}} = Frame.report(:line, 7, "s7")
+
+    result = %{
+      "subscription" => "s7",
+      "subscription_id" => 11,
+      "monitored_item_id" => 12,
+      "client_handle" => 7,
+      "item_status" => 0,
+      "publishing_interval_ms" => 500.5,
+      "sampling_interval_ms" => 250,
+      "queue_size" => 10,
+      "keepalive_count" => 10,
+      "lifetime_count" => 30
+    }
+
+    response = %{"version" => 1, "generation" => 7, "id" => "s1", "ok" => true}
+    subscribe = &Frame.response(frame.(Map.put(response, "result", &1)), 7, "s1", "subscribe", nil)
+
+    assert {:ok, ^result} = subscribe.(result)
+
+    assert {:ok, nil} =
+             Frame.response(frame.(Map.put(response, "result", nil)), 7, "s1", "unsubscribe", nil)
+
+    for invalid <- [
+          Map.put(result, "extra", 1),
+          %{result | "subscription" => "s8"},
+          %{result | "subscription_id" => 0},
+          %{result | "item_status" => 0x8000_0000},
+          %{result | "publishing_interval_ms" => 9},
+          %{result | "sampling_interval_ms" => "250"},
+          %{result | "queue_size" => 1001},
+          %{result | "keepalive_count" => 11},
+          %{result | "lifetime_count" => 10_001},
+          :result
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} = subscribe.(invalid)
+    end
+  end
+
   test "WOP-X04 close and finite native failures remain correlated to one request" do
     frame = fn attributes -> Jason.encode!(attributes) <> "\n" end
     base = %{"version" => 1, "generation" => 7, "id" => "close-1"}
