@@ -3,14 +3,14 @@
 Current implementation: typed domain APIs, persistent native host ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 263 tests, 49 declared interoperability/
-hardware exclusions; 95.9% coverage.
+local gate: 9 doctests, 17 properties and 263 tests, 54 declared interoperability,
+hardware and software-stress exclusions; 95.9% coverage.
 The [virtual-controller fixture](virtual-controller.md) and its
-[software run receipt](software-run-v1.json) execute the 10 public BLE and
-Runtime interoperability tests against the Mix-built C++ host, real BlueZ 5.85
-and two virtual controllers in both BEAM lanes. Complete WBL-C09 stress, the
-remaining scenarios from the retired Python adapter lane and package evidence
-remain required. The Python persistent adapter, its packaged helper and its
+[stress receipt](software-run-v2.json) execute the 10 public BLE and Runtime
+interoperability tests and the 5 WBL-C09 lifecycle stress tests against the
+Mix-built C++ host, real BlueZ 5.85 and two virtual controllers in both BEAM
+lanes. The remaining scenarios from the retired Python adapter lane, the x86_64
+guest lane and package evidence remain required. The Python persistent adapter, its packaged helper and its
 unit tests are removed.
 Uncommitted fixture work is not acceptance evidence.
 
@@ -202,6 +202,19 @@ zero remaining owned containers. These are BlueZ-to-BlueZ virtual-controller
 results with an independent GATT application, not an independent protocol
 stack or physical RF. The first runs exposed the two native close and input
 defects recorded above.
+
+`test/software/lifecycle_stress_test.exs` is tagged `:software`, excluded from
+the default suite and run by the same guest after the public files. The
+[stress receipt](software-run-v2.json) records a fresh verified build and three
+consecutive runs, 15 of 15 tests in both lanes, with per-lane `stress.jsonl`
+samples. The WBL-C09 counts, baselines, forced faults and memory observations are
+described in [virtual-controller.md](virtual-controller.md). An earlier attempt
+failed once in the lower lane because the open/close cycle checked
+`Process.alive?/1` immediately after `disconnect/1` returned, before the
+connection process had exited; the cycle now waits for its `DOWN` message within
+the cleanup grace. The fault cases use a fixture-owned delayed ReadValue, an
+injected truncated frame, SIGKILL of the host and a peer-side disconnect; they
+are not physical link-loss measurements.
 
 ## Native report reservations
 

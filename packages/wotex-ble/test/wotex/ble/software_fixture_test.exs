@@ -209,12 +209,15 @@ defmodule Wotex.BLE.SoftwareFixtureTest do
 
     File.chmod!(Path.join(virtual, "guest.sh"), 0o755)
 
+    File.write!(Path.join(checkout, "test/interop/bluez_test.exs"), ~s(  test "one"\n))
+    File.write!(Path.join(checkout, "test/interop/bluez_runtime_test.exs"), ~s(  test "two"\n))
+    File.mkdir_p!(Path.join(checkout, "test/software"))
+
     File.write!(
-      Path.join(checkout, "test/interop/bluez_test.exs"),
-      ~s(  test "one"\n  test "two"\n)
+      Path.join(checkout, "test/software/lifecycle_stress_test.exs"),
+      ~s(  test "three"\n)
     )
 
-    File.write!(Path.join(checkout, "test/interop/bluez_runtime_test.exs"), ~s(  test "three"\n))
     %{root: root, checkout: checkout, workspace: Path.join(root, "workspace")}
   end
 

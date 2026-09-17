@@ -19,7 +19,7 @@ for attempt in $(seq 1 300); do
 done
 test -f /run/wbl/software.json
 export MIX_HOME="/opt/wbl/mix/$lane" MIX_REBAR3="/opt/wbl/rebar-source/$lane/rebar3"
-export WOTEX_BLE_SOFTWARE_REPORT=/results/exunit.json
+export WOTEX_BLE_SOFTWARE_REPORT=/results/exunit.json WOTEX_BLE_STRESS_REPORT=/results/stress.jsonl
 if test "$lane" = latest; then
   export PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 else
@@ -27,7 +27,7 @@ else
 fi
 cd "/software/$lane/wotex-ble"
 mix --version > /results/runtime.log 2>&1
-mix test test/interop/bluez_test.exs test/interop/bluez_runtime_test.exs --include interop --exclude hardware --seed 0 > /results/exunit.log 2>&1
+mix test test/interop/bluez_test.exs test/interop/bluez_runtime_test.exs test/software/lifecycle_stress_test.exs --include interop --include software --exclude hardware --seed 0 > /results/exunit.log 2>&1
 kill -TERM "$peer_process"
 for attempt in $(seq 1 100); do
   kill -0 "$peer_process" 2>/dev/null || break

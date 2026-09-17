@@ -39,11 +39,12 @@ defmodule Wotex.BLE.Software.Fixture do
 
   def inputs(_), do: {:error, :invalid_software_sources}
 
-  @doc "Counts the literal ExUnit test definitions in the public software lane files."
+  @doc "Counts the literal ExUnit test definitions in the public and stress software lane files."
   @spec public_case_count(String.t()) :: {:ok, pos_integer()} | {:error, :invalid_software_sources}
   def public_case_count(root) do
     counts =
-      for file <- ~w(test/interop/bluez_test.exs test/interop/bluez_runtime_test.exs) do
+      for file <-
+            ~w(test/interop/bluez_test.exs test/interop/bluez_runtime_test.exs test/software/lifecycle_stress_test.exs) do
         case File.read(Path.join(root, file)) do
           {:ok, bytes} -> length(Regex.scan(~r/^\s*test "/m, bytes))
           _ -> 0

@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.21
+  version: 1.0.22
   owner: wotex-ble
   updated: 2026-09-17
 ---
@@ -112,11 +112,11 @@ artifact digests; sources that change during the build fail it.
 `mix wotex.software.run` verifies that manifest read-only and never builds. For
 each lane it creates a copy-on-write overlay and boots one QEMU TCG guest in an
 owned container within 600 seconds. The guest runs the public BLE and Runtime
-interoperability tests with `WOTEX_REQUIRE_SOFTWARE=1` and native selectors from
-its native build manifest. Owned containers are removed and counted after every
+interoperability tests and the `:software` WBL-C09 lifecycle stress file with
+`WOTEX_REQUIRE_SOFTWARE=1` and native selectors from its native build manifest. Owned containers are removed and counted after every
 lane. A lane passes only with an exact guest success record, no kernel panic,
 clean peer release, zero remaining owned containers and exactly the literal
-public test count passed with no other status. Every run keeps a separate
+public and stress test count passed with no other status. Every run keeps a separate
 result directory and `result.json`.
 
 ## WBL-B02 — Typed process boundary

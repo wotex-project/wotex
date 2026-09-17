@@ -90,6 +90,7 @@ class Peer:
         self.values["duplicate_b"] = b"\xb2"
         self.notifying = set()
         self.denied = set()
+        self.delays = {}
         self.trace = []
         self.confirms = 0
         self.bus.add_message_handler(self.receive)
@@ -189,7 +190,13 @@ class Peer:
             if message.member == "ReadValue":
                 assert message.signature == "a{sv}"
                 self.trace[-1]["value"] = self.values[label].hex()
-                return Message.new_method_return(message, "ay", [self.values[label]])
+                reply = Message.new_method_return(message, "ay", [self.values[label]])
+                delay = self.delays.get(label, 0)
+                if delay:
+                    # A delayed stimulus still answers exactly once; True marks it handled.
+                    asyncio.get_running_loop().call_later(delay / 1000, self.bus.send, reply)
+                    return True
+                return reply
             if message.member == "WriteValue":
                 assert message.signature == "aya{sv}" and type(message.body[0]) is bytes
                 value, options = message.body

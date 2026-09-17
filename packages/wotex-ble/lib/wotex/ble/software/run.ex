@@ -23,8 +23,9 @@ defmodule Wotex.BLE.Software.Run do
   alias Wotex.BLE.Software.{Build, Fixture, Operations}
 
   @lanes ~w(latest lower)
-  @evidence ~w(console.log runtime.log exunit.log exunit.json peer.log public-peer-result.json
-    guest-result.json btvirt.log dbus.log bluetoothd.log btmon.log wire.btsnoop)
+  @evidence ~w(console.log runtime.log exunit.log exunit.json stress.jsonl peer.log
+    public-peer-result.json guest-result.json btvirt.log dbus.log bluetoothd.log btmon.log
+    wire.btsnoop)
 
   @doc "Validates the exact task argument vector before any run I/O."
   @spec arguments(term()) :: {:ok, String.t()} | {:error, :invalid_native_build_arguments}

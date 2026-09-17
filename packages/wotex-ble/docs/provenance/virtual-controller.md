@@ -8,7 +8,8 @@ implementation of BlueZ's GATT server API supplies private UUIDs and values; it
 does not implement or replace the client boundary. Both wire endpoints use
 BlueZ, so this is same-stack protocol evidence with an independent GATT
 application provider. The exact executed cohort is the
-[software run receipt](software-run-v1.json).
+[software run receipt](software-run-v2.json); the earlier
+[public-only receipt](software-run-v1.json) remains historical.
 
 ## Explicit invocation
 
@@ -53,13 +54,14 @@ Each lane creates a copy-on-write disk overlay and boots QEMU TCG in one owned
 container, without a network device or physical Bluetooth controller, within
 ten minutes. The guest starts `btvirt -L -l2`, a private D-Bus daemon,
 `bluetoothd`, `btmon` and the independent GATT peer, then runs
-`test/interop/bluez_test.exs` and `test/interop/bluez_runtime_test.exs` with
+`test/interop/bluez_test.exs`, `test/interop/bluez_runtime_test.exs` and the
+`:software` stress file `test/software/lifecycle_stress_test.exs` with
 `WOTEX_REQUIRE_SOFTWARE=1` against the native host and guardian named by the
 guest's native build manifest. The host removes and counts owned containers
 after every lane, including failures. A lane passes only when the guest reports
 zero remaining owned processes and virtual controllers, the console has no
 kernel panic, the peer reports clean release and ExUnit records exactly the
-literal public test count as passed with no other status.
+literal public and stress test count as passed with no other status.
 
 ## Assertions and source boundaries
 
@@ -96,16 +98,35 @@ or persisted host bonds are used.
 
 ## Executed cohorts
 
-Three consecutive runs of one verified build pass both lanes, 10 of 10 public
-tests in each, with zero remaining owned containers. Lane durations and evidence
-digests are in the [software run receipt](software-run-v1.json). The first runs
+The public-only cohort in [software-run-v1.json](software-run-v1.json) passed
+three consecutive runs, 10 of 10 tests per lane. The first runs
 of this fixture exposed two native host defects during rejected and timed-out
 pairing: link loss relabelled a completed explicit close as `cleanup_timeout`,
 and a closed private sender stopped the host from reading its input. Both have
 native regressions.
 
+The [stress receipt](software-run-v2.json) records a fresh verified build and
+three consecutive runs that pass both lanes, 15 of 15 tests in each (about 250 s
+per lane), with zero remaining owned containers. The stress file performs 1000
+alternating acknowledged writes and correlated reads on one sender; 100
+connect/health/disconnect cycles that each return to the BEAM process and port
+baseline, zero guardian or host OS processes and released BlueZ senders, Agents
+and notification sessions (the fixture resets every 50 cycles because its
+monitor bounds unique senders); 100 subscribe/notify/receiver-kill cycles that
+release the real CCC session within 1100 ms with no retained stream or credit
+record; 32 concurrent callers over 320 correlated reads, plus 65 callers queued
+behind a suspended owner, of which exactly 64 are admitted and one is `busy`;
+and forced faults. A peer ReadValue delayed 1500 ms against a 200 ms request
+deadline, a truncated native frame injected into the connection, SIGKILL of the
+host and a peer-side Device1.Disconnect each end the generation and return to
+the same baseline. The borrowed link stays connected except after the peer-side
+disconnect. Samples of `:erlang.memory(:total)` and the long-lived host VmRSS
+are separate `stress.jsonl` evidence: host RSS stayed at 3.9 MB throughout each
+session and BEAM totals varied within about 1.4 MB. BEAM timers are not globally
+enumerable; their release is covered only through exit of the owning processes.
+
 An earlier Python-orchestrated guest ran the retired Python adapter through 15
 cases, including a wrong pairing challenge, read-caused Value changes, stale
 targets and BlueZ link-drain timing. Those results apply only to that adapter.
 Their scenarios that the public ExUnit lanes do not yet cover remain open, as do
-the WBL-C09 stress counts, an x86_64 guest lane and final package gates.
+an x86_64 guest lane and final package gates.

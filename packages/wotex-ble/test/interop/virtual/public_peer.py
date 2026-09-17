@@ -234,6 +234,7 @@ class PublicPeer:
         self.peer.values["duplicate_a"] = b"\xa1"
         self.peer.values["duplicate_b"] = b"\xb2"
         self.peer.denied.clear()
+        self.peer.delays.clear()
         assert not self.peer.notifying
         self.peer.trace.clear()
         self.peer.confirms = 0
@@ -298,6 +299,19 @@ class PublicPeer:
                 self.peer.denied.add(parameters["label"])
             else:
                 self.peer.denied.discard(parameters["label"])
+            return {}
+        if (
+            operation == "delay"
+            and isinstance(parameters, dict)
+            and set(parameters) == {"label", "milliseconds"}
+        ):
+            if (
+                parameters["label"] not in UUIDS
+                or type(parameters["milliseconds"]) is not int
+                or not 0 <= parameters["milliseconds"] <= 5000
+            ):
+                raise ValueError("invalid_delay")
+            self.peer.delays[parameters["label"]] = parameters["milliseconds"]
             return {}
         if operation == "disconnect" and parameters == {}:
             await call(self.bus, self.device, DEVICE, "Disconnect")
