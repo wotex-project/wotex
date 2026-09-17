@@ -15,6 +15,10 @@ defmodule Wotex.BACnet.Check.Archive do
     NOTICE
     README.md
     mix.exs
+  )
+  # Machine-read fixtures ship only in this package's archive; the exact core
+  # and Runtime archives carry their own `priv/` content.
+  @required_fixtures ~w(
     priv/fixtures/contract-v1.json
     priv/fixtures/ingress-v1.json
     priv/fixtures/software-sources-v1.json
@@ -153,7 +157,7 @@ defmodule Wotex.BACnet.Check.Archive do
       violation("#{archive} contains development, local-task, or agent machinery")
     end
 
-    Enum.each(@required_content, fn file ->
+    Enum.each(required_content(package.app), fn file ->
       unless file in content_members, do: violation("#{archive} is missing #{file}")
     end)
 
@@ -163,6 +167,9 @@ defmodule Wotex.BACnet.Check.Archive do
 
     verify_package_metadata!(metadata, package.app, archive)
   end
+
+  defp required_content(:wotex_bacnet), do: @required_content ++ @required_fixtures
+  defp required_content(_app), do: @required_content
 
   defp verify_package_metadata!(metadata, :wotex_bacnet, archive) do
     for value <- [

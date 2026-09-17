@@ -23,7 +23,8 @@ structural check remain separate release checks. Runtime path dependencies
 require the explicit switch; the archive preserves ordinary Hex dependency
 declarations.
 The pinned Decimal parser regression remains active; there are no advisory
-waivers. See SECURITY.md and the dependency-security test.
+waivers. See the [security policy](../security.md) and the dependency-security
+test.
 
 ## Mix native build, 2026-09-17
 

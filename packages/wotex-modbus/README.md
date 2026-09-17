@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_modbus.svg)](https://hex.pm/packages/wotex_modbus)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_modbus)
-[![CI](https://github.com/wotex-project/wotex-modbus/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-modbus/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-modbus/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-modbus)
-[![License](https://img.shields.io/hexpm/l/wotex_modbus.svg)](https://github.com/wotex-project/wotex-modbus/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_modbus.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-modbus/LICENSE)
 
 [Installation](#installation) ·
 [Ownership](#ownership) ·
@@ -60,10 +59,10 @@ failure can therefore leave the physical effect unknown to the caller.
 Use Elixir 1.18 or newer and an appropriate OTP release. To use local Wotex core
 and Runtime checkouts, run `WOTEX_PATH_DEPS=1 mix deps.get` then
 `WOTEX_PATH_DEPS=1 mix check --no-retry`. The developer gate covers
-warnings-as-errors compilation, formatting and the behavioral test suite.
-Normal dependency resolution uses Hex versions. Dependency audits, strict
-Credo, Doctor, documentation, coverage, Dialyzer, the Application-free check,
-candidate archives and software peers run as explicit release evidence.
+warnings-as-errors compilation, formatting, dependency audits, strict Credo,
+Doctor, documentation with warnings as errors, coverage, Dialyzer, the
+Application-free check and the candidate archive check. Normal dependency
+resolution uses Hex versions. Software peers run as explicit release evidence.
 Optional interoperability suites run only on explicit invocation and must fail
 when their configured peer is missing or returns no response.
 

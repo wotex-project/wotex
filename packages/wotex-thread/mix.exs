@@ -24,7 +24,7 @@ defmodule WotexThread.MixProject do
     ]
   end
 
-  def application, do: [extra_applications: []]
+  def application, do: [extra_applications: [:public_key]]
 
   def cli do
     [

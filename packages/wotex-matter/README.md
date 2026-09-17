@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_matter.svg)](https://hex.pm/packages/wotex_matter)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_matter)
-[![CI](https://github.com/wotex-project/wotex-matter/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-matter/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-matter/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-matter)
-[![License](https://img.shields.io/hexpm/l/wotex_matter.svg)](https://github.com/wotex-project/wotex-matter/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_matter.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-matter/LICENSE)
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·
@@ -303,9 +302,11 @@ See [implemented profile](../../docs/packages/wotex-matter/specs/WMA.02-implemen
 
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
-Run `mix check` before commits. It checks formatting, compiles with warnings as
-errors, and runs the default test suite. Wider checks belong to release readiness.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses
+Hex versions. Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before commits. It
+checks formatting, compiles with warnings as errors, runs strict Credo, Doctor,
+documentation with warnings as errors, coverage, Dialyzer, the archive check
+and the Application-free check. Native lanes belong to explicit invocation.
 The separate `elixir bin/check_p01_native.exs` lane compiles and tests the P01
 descriptor/value unit on the pinned Linux x86_64 reference toolchain with and
 without AddressSanitizer and UndefinedBehaviorSanitizer.
@@ -339,7 +340,7 @@ the checked-in Wotex integration corpus through public TD, ConsumedThing,
 Context, Result, Subscription and Retry APIs, plus negative selection and
 resource-ownership cases. It also adds no native build surface.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
-live OSV audit. None of these native commands belongs to routine `mix check`.
+live OSV audit. None of these native commands belongs to the routine gate.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 

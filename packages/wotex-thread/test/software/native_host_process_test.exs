@@ -158,7 +158,7 @@ defmodule Wotex.Thread.NativeHostProcessTest do
       id = "split-#{offset}"
       bytes = frame(id, "inspect", %{})
       split = min(offset, byte_size(bytes) - 1)
-      <<head::binary-size(split), tail::binary>> = bytes
+      <<head::binary-size(^split), tail::binary>> = bytes
       assert Port.command(host.port, head)
       refute_receive {_, {:data, _}}, 1
       assert Port.command(host.port, tail)

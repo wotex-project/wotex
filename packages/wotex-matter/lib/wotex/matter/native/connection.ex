@@ -61,6 +61,13 @@ defmodule Wotex.Matter.Native.Connection do
   @mutating_operations [:write, :invoke, :commission_on_network, :open_window]
   @mutating_wire_operations Enum.map(@mutating_operations, &Atom.to_string/1)
 
+  @doc """
+  Starts one native controller process for `owner` and returns its fixed
+  identity: the process, its generation and the admission table.
+
+  Only `owner` can retrieve the identity; any startup failure, including a
+  missed startup deadline, is a structured `Wotex.Matter.Error`.
+  """
   @spec start(pid(), map()) ::
           {:ok, pid(), String.t(), :ets.tid()} | {:error, Error.t()}
   def start(owner, options) do
@@ -88,12 +95,25 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
+  @doc """
+  Submits one admitted request frame and waits for its correlated reply.
+
+  The call is rejected without native I/O when the generation or admission
+  capability does not match, and it expires at the caller's absolute deadline.
+  """
   @spec request(pid(), String.t(), :ets.tid(), map(), pos_integer(), integer()) ::
           {:ok, term()} | {:error, Error.t()}
   def request(pid, generation, admission, message, timeout, deadline),
     do:
       call(pid, generation, admission, {:request, generation, message, timeout}, timeout, deadline)
 
+  @doc """
+  Registers a native subscription delivering reports to `receiver`.
+
+  `acknowledged` selects credit-returning delivery. Losing the receiver or the
+  stream owner before confirmation closes the generation instead of returning
+  a live handle.
+  """
   @spec subscribe(pid(), String.t(), :ets.tid(), map(), pid(), pos_integer(), boolean()) ::
           {:ok, Subscription.t()} | {:error, Error.t()}
   def subscribe(pid, generation, admission, request, receiver, timeout, acknowledged) do
@@ -106,6 +126,13 @@ defmodule Wotex.Matter.Native.Connection do
     )
   end
 
+  @doc """
+  Retires a subscription, joining an already pending cancellation when one is
+  outstanding.
+
+  A subscription whose connection has already exited is reported as retired
+  when its handle is valid for that connection.
+  """
   @spec unsubscribe(pid(), String.t(), :ets.tid(), Subscription.t(), pos_integer()) ::
           :ok | {:error, Error.t()}
   def unsubscribe(pid, generation, admission, subscription, timeout) do
@@ -127,6 +154,10 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
+  @doc """
+  Runs the explicit native health probe through ordinary admission and returns
+  the bounded native status map.
+  """
   @spec health(pid(), String.t(), :ets.tid(), pos_integer()) ::
           {:ok, map()} | {:error, Error.t()}
   def health(pid, generation, admission, timeout),
@@ -137,6 +168,12 @@ defmodule Wotex.Matter.Native.Connection do
   def invalidate(pid, generation, admission),
     do: control_call(pid, generation, admission, :invalidate, @cleanup_timeout)
 
+  @doc """
+  Closes the connection through its reserved close-control capability and
+  waits for the native process, Port monitor and Port release.
+
+  An already closed transport or an exited process is a successful disconnect.
+  """
   @spec disconnect(pid(), String.t(), :ets.tid(), pos_integer()) :: :ok | {:error, Error.t()}
   def disconnect(pid, generation, admission, timeout \\ @cleanup_timeout) do
     if Process.alive?(pid) do

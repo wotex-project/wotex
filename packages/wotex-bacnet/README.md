@@ -4,9 +4,8 @@ Consumer-neutral BACnet interactions for W3C Web of Things consumers.
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_bacnet.svg)](https://hex.pm/packages/wotex_bacnet)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_bacnet)
-[![CI](https://github.com/wotex-project/wotex-bacnet/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-bacnet/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-bacnet/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-bacnet)
-[![License](https://img.shields.io/hexpm/l/wotex_bacnet.svg)](https://github.com/wotex-project/wotex-bacnet/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_bacnet.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-bacnet/LICENSE)
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·
@@ -135,16 +134,14 @@ See [implemented profile](../../docs/packages/wotex-bacnet/specs/WBA.02-implemen
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
 `WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex
-versions. `mix test` is the fast loop. The default `mix check --no-retry` covers
-warnings-as-errors compilation, formatting and the behavioral test suite.
-Optional interoperability suites fail if invoked without their required peer.
-No remote repository, published package or publication action is implied.
-
-Release evidence runs explicitly: locked and unused dependency checks,
-`mix deps.audit`, `mix hex.audit`, strict Credo, Doctor, documentation with
-warnings as errors, coverage, Dialyzer, `bin/check_application_free.exs` and
-`bin/check_archive.exs`. The software peer tasks below remain separate from both
-the developer gate and archive evidence.
+versions. `mix test` is the fast loop. The gate covers warnings-as-errors
+compilation, locked and unused dependency checks, `mix deps.audit`,
+`mix hex.audit`, formatting, strict Credo, Doctor, documentation with warnings
+as errors, coverage, Dialyzer, `bin/check_application_free.exs` and
+`bin/check_archive.exs`. Optional interoperability suites fail if invoked
+without their required peer. No published package or publication action is
+implied. The software peer tasks below remain separate from both the developer
+gate and archive evidence.
 
 The accepted software fixture entry points are
 `mix wotex.software.build --workspace ABS` and

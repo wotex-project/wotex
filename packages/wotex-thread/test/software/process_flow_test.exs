@@ -75,14 +75,14 @@ defmodule Wotex.Thread.ProcessFlowTest do
     {receiver, monitor} = spawn_monitor(fn -> receiver(parent, config, input) end)
 
     try do
-      observe_case(item, input, receiver, monitor, gate, result, directory)
+      observe_case(item, input, receiver, monitor, gate, result)
     after
       # A failed assertion still ends the receiver, which owns the session and native host.
       Process.exit(receiver, :kill)
     end
   end
 
-  defp observe_case(item, input, receiver, monitor, gate, result, directory) do
+  defp observe_case(item, input, receiver, monitor, gate, result) do
     assert_receive {:flow_prepared, ^receiver, prepared}, 30_000
     processes = Map.put(prepared, :receiver, receiver)
     selected = Map.fetch!(processes, String.to_existing_atom(input["suspend"]))

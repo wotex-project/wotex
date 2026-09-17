@@ -48,8 +48,8 @@ explicit switch; the archive preserves ordinary Hex dependency declarations.
 Strict Credo, dependency audits, Dialyzer, Doctor, ExDoc, coverage, packaging,
 out-of-tree compilation, Application-free loading and native builds are
 separate release or packet evidence. The pinned Decimal parser regression
-remains active; there are no advisory waivers. See `SECURITY.md` and the
-dependency-security test.
+remains active; there are no advisory waivers. See the
+[security policy](../security.md) and the dependency-security test.
 
 ## P09 reproducible build tasks
 

@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_thread.svg)](https://hex.pm/packages/wotex_thread)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_thread)
-[![CI](https://github.com/wotex-project/wotex-thread/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-thread/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-thread/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-thread)
-[![License](https://img.shields.io/hexpm/l/wotex_thread.svg)](https://github.com/wotex-project/wotex-thread/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_thread.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-thread/LICENSE)
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·
@@ -123,11 +122,14 @@ See [protocol and graduation contract](../../docs/packages/wotex-thread/specs/WT
 
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
-Run `mix check` before commits. It checks formatting, compiles with warnings as
-errors, and runs the default test suite. Wider checks belong to release readiness.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses
+Hex versions. Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before commits. It
+checks formatting, compiles with warnings as errors, runs strict Credo, Doctor,
+documentation with warnings as errors, coverage, Dialyzer, the archive check
+and the Application-free check. Native builds belong to explicit invocation.
 `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_native_advisories.exs` is the
-live native source advisory release check described in [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-thread/security.md).
+live native source advisory release check described in the
+[security policy](../../docs/packages/wotex-thread/security.md).
 Optional interoperability suites fail if invoked without their required peer.
 The software suite includes native OpenThread simulation tests for Dataset
 validation, formation, management callbacks and commissioner admission/cleanup,
