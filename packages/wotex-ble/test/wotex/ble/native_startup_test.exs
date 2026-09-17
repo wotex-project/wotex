@@ -368,7 +368,12 @@ defmodule Wotex.BLE.NativeStartupTest do
         compiler,
         ["-std=c11", "-Wall", "-Wextra", "-Werror", source, "-o", target],
         cd: directory,
-        env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end),
+        # GCC resolves its linker through PATH; every other variable is cleared.
+        env:
+          Enum.map(System.get_env(), fn
+            {"PATH", value} -> {"PATH", value}
+            {key, _} -> {key, nil}
+          end),
         stderr_to_stdout: true
       )
 
