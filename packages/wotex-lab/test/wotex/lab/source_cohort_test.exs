@@ -38,7 +38,7 @@ defmodule Wotex.Lab.SourceCohortTest do
     on_exit(fn -> File.rm_rf!(workspace) end)
     lab = Path.join(workspace, "wotex-lab")
     File.mkdir_p!(Path.join(lab, "bin"))
-    provenance = Path.join(lab, "docs/provenance")
+    provenance = Path.join(lab, "priv/provenance")
     File.mkdir_p!(provenance)
     script = Path.join(lab, "bin/check_source_cohort.exs")
     File.cp!(Path.join(@root, "bin/check_source_cohort.exs"), script)

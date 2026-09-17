@@ -6,6 +6,7 @@ defmodule Wotex.Lab.WLB01EvidenceManifestTest do
   @moduletag :integration
 
   alias Wotex.Lab.Evidence.{Digest, Record}
+  alias Wotex.Lab.Test.SourceTree
 
   @record_keys ~w(children default_children_per_role instances max_children_per_role roles
                   run_ms test_count)a
@@ -13,9 +14,9 @@ defmodule Wotex.Lab.WLB01EvidenceManifestTest do
   @source_files [
     "mix.exs",
     "docs/plans/wotex-lab-completion.md",
-    "docs/provenance/source-cohort.json",
-    "docs/provenance/source-index.json",
-    "docs/provenance/wotex-lab-api.json",
+    "priv/provenance/source-cohort.json",
+    "priv/provenance/source-index.json",
+    "priv/provenance/wotex-lab-api.json",
     "docs/specs/WLB.01-library-foundation.md",
     "docs/specs/catalogue.yaml",
     "lib/wotex/lab.ex",
@@ -31,7 +32,7 @@ defmodule Wotex.Lab.WLB01EvidenceManifestTest do
   test "the foundation record is complete and bound to its source cohort" do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
-    path = Path.join(root, "docs/provenance/WLB.01-evidence.json")
+    path = Path.join(root, "priv/provenance/WLB.01-evidence.json")
     assert {:ok, map} = path |> File.read!() |> Wotex.JSON.decode()
     assert {:ok, record} = Record.from_map(map)
 
@@ -39,7 +40,7 @@ defmodule Wotex.Lab.WLB01EvidenceManifestTest do
     assert record.outcomes.test_count == 12
     assert Enum.all?(record.assertions, &(&1.status == :pass))
     assert record.cleanup == %{status: :ok, details: %{"children" => 0, "instances" => 0}}
-    assert {:ok, record.source_tree_digest} == Digest.tree(root, @source_files)
+    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "mix.lock"))
   end
 end

@@ -6,6 +6,7 @@ defmodule Wotex.Lab.WLB02EvidenceManifestTest do
   @moduletag :integration
 
   alias Wotex.Lab.Evidence.{Digest, Record}
+  alias Wotex.Lab.Test.SourceTree
   alias Wotex.Lab.Runner.Budgets
 
   @record_keys ~w(children_per_role cleanup_ms ingress_bytes max_steps queued_deliveries
@@ -31,8 +32,8 @@ defmodule Wotex.Lab.WLB02EvidenceManifestTest do
   @source_files [
     "mix.exs",
     "docs/plans/wotex-lab-completion.md",
-    "docs/provenance/source-cohort.json",
-    "docs/provenance/source-index.json",
+    "priv/provenance/source-cohort.json",
+    "priv/provenance/source-index.json",
     "docs/specs/WLB.02-scenarios-and-reference-components.md",
     "docs/specs/catalogue.yaml",
     "hosts/workbench/lib/wotex_lab_workbench/control.ex",
@@ -60,7 +61,7 @@ defmodule Wotex.Lab.WLB02EvidenceManifestTest do
   test "the scenario runner record covers every WLB.02 obligation and its exact inputs" do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
-    path = Path.join(root, "docs/provenance/WLB.02-evidence.json")
+    path = Path.join(root, "priv/provenance/WLB.02-evidence.json")
     assert {:ok, map} = path |> File.read!() |> Wotex.JSON.decode()
     assert {:ok, record} = Record.from_map(map)
 
@@ -76,7 +77,7 @@ defmodule Wotex.Lab.WLB02EvidenceManifestTest do
 
     assert record.cleanup == %{status: :ok, details: %{"children" => 0, "work_files" => 0}}
 
-    assert {:ok, record.source_tree_digest} == Digest.tree(root, @source_files)
+    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "mix.lock"))
 
     for {name, digest} <- record.fixtures do

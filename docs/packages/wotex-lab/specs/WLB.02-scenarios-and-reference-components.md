@@ -93,7 +93,7 @@ duplicate stop; receiver death; and absence of leaked children/files/topics.
 Plugin tests MUST use two independent host configurations with no environment
 transplant. Catalogue status remains partial until all these obligations pass.
 
-[`WLB.02-evidence.json`](../provenance/WLB.02-evidence.json) records the
+[`WLB.02-evidence.json`](../../../../packages/wotex-lab/priv/provenance/WLB.02-evidence.json) records the
 fixed-seed source cohort that closes these obligations.
 `scenario_frontends_test.exs` compares the CLI, MCP resource and cookbook
 descriptors, and the Workbench control test compares the HTTP descriptors with

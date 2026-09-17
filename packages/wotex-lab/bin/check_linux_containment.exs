@@ -95,7 +95,7 @@ defmodule Wotex.Lab.Check.LinuxContainment do
       File.cp!(Path.join(root, file), target)
     end
 
-    index = root |> Path.join("docs/provenance/source-index.json") |> File.read!() |> JSON.decode!()
+    index = root |> Path.join("priv/provenance/source-index.json") |> File.read!() |> JSON.decode!()
 
     for package <- index["packages"] do
       directory = package["repository"] |> String.split("/") |> List.last()

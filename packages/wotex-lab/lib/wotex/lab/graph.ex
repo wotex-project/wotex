@@ -19,10 +19,16 @@ defmodule Wotex.Lab.Graph do
   and cycles in required scenario steps, each with a typed `Wotex.Lab.Error`.
   `render/2` and `write/2` produce the accepted representations, and
   `answer/2` resolves the WLB.07 ownership questions from the graph nodes.
+
+  Catalogue paths that start with `docs/` name the package documentation tree
+  located by `Wotex.Lab.Documentation` (`docs/` beside `mix.exs` in a
+  standalone checkout, `docs/packages/wotex-lab/` in the monorepo); document
+  nodes keep that `docs/<kind>/` form so specification and document
+  identifiers agree in both layouts.
   """
 
   alias Wotex.JSON
-  alias Wotex.Lab.{Cookbook, Error}
+  alias Wotex.Lab.{Cookbook, Documentation, Error}
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Graph.{Descriptors, Interfaces, Render}
 
@@ -42,8 +48,9 @@ defmodule Wotex.Lab.Graph do
     "WCF" => "wotex_conformance"
   }
   @apps ~w(wotex_lab wotex wotex_nx wotex_runtime wotex_binding_http wotex_binding_mqtt wotex_directory wotex_continuum wotex_conformance)a
-  @source_patterns ~w(lib/**/* priv/**/* docs/**/* mix.exs README.md CHANGELOG.md)
-  @document_patterns ~w(README.md docs/specs/*.md docs/plans/*.md docs/decisions/*.md docs/provenance/*.md priv/cookbooks/*.livemd)
+  @source_patterns ~w(lib/**/* priv/**/* mix.exs README.md CHANGELOG.md)
+  @document_patterns ~w(README.md priv/cookbooks/*.livemd)
+  @document_kind ~r{\Adocs/(?:packages/[^/]+/)?(specs|plans|decisions|provenance)/}
   @representations [
     well_known: "/.well-known/wotex",
     manifest: "/manifest.json",
@@ -90,10 +97,11 @@ defmodule Wotex.Lab.Graph do
 
   Options: `:catalogue` (required, the decoded `docs/specs/catalogue.yaml`),
   `:revision` (required, the 40-hex Lab source revision the source URLs name),
-  `:root` (required, the Lab source checkout: the catalogue's executable
-  evidence names test sources that a package archive does not ship, so an
-  unpacked archive is refused with `:unresolved_path`, and the compiled
-  application directory has no documentation at all), `:generated_at` (a
+  `:root` (required, the Lab source checkout with its documentation tree:
+  the catalogue's executable evidence names test sources that a package
+  archive does not ship, so an unpacked archive is refused with
+  `:unresolved_path`, and the compiled application directory has no
+  documentation at all), `:generated_at` (a
   `DateTime`), and
   descriptor overrides `:scenarios`, `:adapters`, `:seams`, `:cookbooks` for
   hosts that add their own.
@@ -901,15 +909,27 @@ defmodule Wotex.Lab.Graph do
          fixture: fixture
        })}
 
+  # Package documents are read beside `mix.exs`; documentation is read from
+  # the tree `Wotex.Lab.Documentation` locates and named `docs/<kind>/…`.
   defp documents(root, revision) do
-    documents =
+    {:ok, docs} = Documentation.directory(root)
+
+    package =
       @document_patterns
       |> Enum.flat_map(&Path.wildcard(Path.join(root, &1)))
-      |> Enum.filter(&File.regular?/1)
+      |> Enum.map(&{Path.relative_to(&1, root), &1})
+
+    documentation =
+      Documentation.kinds()
+      |> Enum.flat_map(&Path.wildcard(Path.join(docs, "#{&1}/*.md")))
+      |> Enum.map(&{Path.join("docs", Path.relative_to(&1, docs)), &1})
+
+    documents =
+      (package ++ documentation)
+      |> Enum.filter(fn {_, file} -> File.regular?(file) end)
       |> Enum.uniq()
       |> Enum.sort()
-      |> Enum.map(fn file ->
-        relative = Path.relative_to(file, root)
+      |> Enum.map(fn {relative, file} ->
         content = File.read!(file)
 
         %{
@@ -926,14 +946,15 @@ defmodule Wotex.Lab.Graph do
     {:ok, documents}
   end
 
+  # Both `docs/<kind>/` and the monorepo's `docs/packages/<name>/<kind>/`
+  # classify the same way.
   defp document_kind(path) do
-    cond do
-      String.starts_with?(path, "docs/specs/") -> "specification"
-      String.starts_with?(path, "docs/plans/") -> "completion_plan"
-      String.starts_with?(path, "docs/decisions/") -> "decision"
-      String.starts_with?(path, "docs/provenance/") -> "provenance"
-      String.ends_with?(path, ".livemd") -> "cookbook"
-      true -> "readme"
+    case Regex.run(@document_kind, path) do
+      [_, "specs"] -> "specification"
+      [_, "plans"] -> "completion_plan"
+      [_, "decisions"] -> "decision"
+      [_, "provenance"] -> "provenance"
+      nil -> if String.ends_with?(path, ".livemd"), do: "cookbook", else: "readme"
     end
   end
 
@@ -972,11 +993,16 @@ defmodule Wotex.Lab.Graph do
     do: Map.take(spec, ["implementation_status", "evidence_status", "adoption_status"])
 
   defp root(root) when is_binary(root) do
-    if File.dir?(Path.join(root, "docs/specs")) and File.dir?(Path.join(root, "priv/fixtures")),
-      do: {:ok, Path.expand(root)},
-      else:
-        {:error,
-         Error.new(:invalid_input, :construction, "root must hold docs/specs and priv/fixtures")}
+    if match?({:ok, _}, Documentation.directory(root)) and
+         File.dir?(Path.join(root, "priv/fixtures")),
+       do: {:ok, Path.expand(root)},
+       else:
+         {:error,
+          Error.new(
+            :invalid_input,
+            :construction,
+            "root must hold priv/fixtures and a documentation tree"
+          )}
   end
 
   defp root(_),
@@ -1019,22 +1045,30 @@ defmodule Wotex.Lab.Graph do
   end
 
   defp read_file(root, path) when is_binary(path) do
-    if local_file?(root, path),
-      do: File.read(Path.join(root, path)) |> wrap(path),
-      else:
+    case local_file(root, path) do
+      {:ok, file} ->
+        File.read(file) |> wrap(path)
+
+      :error ->
         {:error,
          reject(:unresolved_path, "input file is missing or outside the root", %{path: path})}
+    end
   end
 
   defp read_file(_, _),
     do: {:error, reject(:unresolved_path, "input path must be a string", %{})}
 
-  defp local_file?(root, path) when is_binary(path) do
-    candidate = Path.expand(path, root)
-    String.starts_with?(candidate, Path.expand(root) <> "/") and File.regular?(candidate)
-  end
-
+  defp local_file?(root, path) when is_binary(path), do: match?({:ok, _}, local_file(root, path))
   defp local_file?(_, _), do: false
+
+  defp local_file(root, path) do
+    with {:ok, candidate} <- Documentation.resolve(root, path),
+         true <- File.regular?(candidate) do
+      {:ok, candidate}
+    else
+      _ -> :error
+    end
+  end
 
   defp wrap({:ok, value}, _), do: {:ok, value}
 
@@ -1057,9 +1091,11 @@ defmodule Wotex.Lab.Graph do
   defp source_url(repository, revision, path), do: repository <> "/blob/" <> revision <> "/" <> path
 
   defp file_sha256(root, path) do
-    case File.read(Path.join(root, path)) do
-      {:ok, content} -> sha256(content)
-      {:error, _} -> nil
+    with {:ok, file} <- local_file(root, path),
+         {:ok, content} <- File.read(file) do
+      sha256(content)
+    else
+      _ -> nil
     end
   end
 

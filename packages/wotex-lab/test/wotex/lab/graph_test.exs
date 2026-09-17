@@ -3,19 +3,21 @@ defmodule Wotex.Lab.GraphTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab.{Cookbook, Error, Graph}
+  alias Wotex.Lab.{Cookbook, Documentation, Error, Graph}
   alias Wotex.Lab.Graph.{Descriptors, Interfaces, Render}
 
   @root Path.expand("../../..", __DIR__)
+  {:ok, docs} = Documentation.directory(@root)
+  @docs docs
   @revision String.duplicate("b", 40)
   @generated_at ~U[2026-09-08 00:00:00Z]
   @hex ~r/\A[0-9a-f]{64}\z/
 
   setup_all do
-    catalogue = YamlElixir.read_from_file!(Path.join(@root, "docs/specs/catalogue.yaml"))
+    catalogue = YamlElixir.read_from_file!(Path.join(@docs, "specs/catalogue.yaml"))
 
     index =
-      @root |> Path.join("docs/provenance/source-index.json") |> File.read!() |> JSON.decode!()
+      @root |> Path.join("priv/provenance/source-index.json") |> File.read!() |> JSON.decode!()
 
     {:ok, graph} = generate(catalogue)
     %{catalogue: catalogue, index: index, graph: graph}
@@ -339,7 +341,13 @@ defmodule Wotex.Lab.GraphTest do
              Graph.generate(catalogue: catalogue, revision: nil, root: @root)
 
     assert {:error, %Error{code: :unresolved_path}} =
-             generate(%{catalogue | "source_index" => "docs/provenance/nope.json"})
+             generate(%{catalogue | "source_index" => "priv/provenance/nope.json"})
+
+    assert {:error, %Error{code: :unresolved_path}} =
+             generate(%{catalogue | "completion_plan" => "docs/plans/nope.md"})
+
+    assert {:error, %Error{code: :unresolved_path}} =
+             generate(%{catalogue | "completion_plan" => "docs/../mix.exs"})
 
     assert {:error, %Error{code: :unresolved_path}} =
              generate(%{catalogue | "completion_plan" => "../../etc/passwd"})
@@ -406,18 +414,21 @@ defmodule Wotex.Lab.GraphTest do
     File.mkdir_p!(Path.join(root, "priv"))
 
     # Copy source inputs only. Host docs/build output can change concurrently
-    # and must never become part of this fixture's source snapshot.
+    # and must never become part of this fixture's source snapshot. The
+    # documentation tree is copied beside mix.exs, the standalone layout.
     for entry <-
           ~w(lib test bin clients hosts/workbench/lib hosts/workbench/test hosts/workbench/bin
              hosts/nerves/test
-             priv/fixtures priv/cookbooks priv/conformance/native/src
+             priv/fixtures priv/cookbooks priv/provenance priv/conformance/native/src
              priv/conformance/native/tests priv/conformance/native/probes
              priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
-             docs README.md CHANGELOG.md mix.exs) do
+             README.md CHANGELOG.md mix.exs) do
       target = Path.join(root, entry)
       File.mkdir_p!(Path.dirname(target))
       File.cp_r!(Path.join(@root, entry), target)
     end
+
+    File.cp_r!(@docs, Path.join(root, "docs"))
 
     for excluded <- ~w(hosts/workbench/doc hosts/workbench/_build hosts/workbench/deps
                        priv/conformance/native/target) do

@@ -32,9 +32,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
              bin/check_workbench_archive.exs bin/support/archive_repository.exs
              bin/support/release_review.exs
-             bin/support/work_directory.exs docs/specs/WLB.08-distribution-and-compatibility.md
-             docs/provenance/workbench-bom.cdx.json
-             docs/provenance/wotex-lab-api.json)
+             bin/support/work_directory.exs priv/provenance/workbench-bom.cdx.json
+             priv/provenance/wotex-lab-api.json)
 
   def run do
     root = Path.expand("..", __DIR__)
@@ -279,7 +278,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
   end
 
   defp check_sbom!(root, bom) do
-    path = Path.join(root, "docs/provenance/workbench-bom.cdx.json")
+    path = Path.join(root, "priv/provenance/workbench-bom.cdx.json")
     generated = ReleaseReview.encode!(bom)
 
     if "--update-sbom" in System.argv() do

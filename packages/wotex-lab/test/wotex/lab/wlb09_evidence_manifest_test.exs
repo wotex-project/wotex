@@ -6,6 +6,7 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
   @moduletag :integration
 
   alias Wotex.Lab.Evidence.{Digest, Record}
+  alias Wotex.Lab.Test.SourceTree
   alias Wotex.Lab.Formal.Model
 
   @record_keys ~w(broken_variants cookbook_checks deadline_ms descendants excluded_count
@@ -16,8 +17,8 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
     "mix.exs",
     "bin/provision_maude.exs",
     "docs/plans/wotex-lab-completion.md",
-    "docs/provenance/source-cohort.json",
-    "docs/provenance/source-index.json",
+    "priv/provenance/source-cohort.json",
+    "priv/provenance/source-index.json",
     "docs/specs/WLB.07-cookbooks-and-machine-interfaces.md",
     "docs/specs/WLB.09-formal-control-verification.md",
     "docs/specs/catalogue.yaml",
@@ -52,7 +53,7 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
 
-    assert {:ok, json} = File.read(Path.join(root, "docs/provenance/WLB.09-evidence.json"))
+    assert {:ok, json} = File.read(Path.join(root, "priv/provenance/WLB.09-evidence.json"))
     assert {:ok, map} = Wotex.JSON.decode(json)
     assert {:ok, record} = Record.from_map(map)
 
@@ -81,7 +82,7 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
     assert {:ok, model} = Model.fetch(:thermal_control_v1)
     assert {:ok, ^model} = Model.verify(model)
     assert record.fixtures["model:thermal-control-v1"] == model.digest
-    assert {:ok, record.source_tree_digest} == Digest.tree(root, @source_files)
+    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "mix.lock"))
   end
 end

@@ -1,7 +1,7 @@
 # WoTEx Lab workbench
 
 This is the non-umbrella Phoenix LiveView reference host owned by
-[WLB.11](../../docs/specs/WLB.11-workbench-and-design-system.md). It consumes
+[WLB.11](../../../../docs/packages/wotex-lab/specs/WLB.11-workbench-and-design-system.md). It consumes
 the public Lab and profile-package APIs; the base `wotex_lab` library does not
 depend on Phoenix.
 
@@ -37,7 +37,7 @@ umbrella child. `.check.exs` remains the declarative list of the same checks.
 Node is needed only for the optional Playwright browser cohort, not by the
 running Elixir host. The exact Decimal 3.1.1 parser regression and removal of
 the now-unmatched advisory waiver are documented in the Lab's
-[dependency review](../../docs/provenance/standards-and-dependencies.md) and
+[dependency review](../../../../docs/packages/wotex-lab/provenance/standards-and-dependencies.md) and
 protected by the host's own locked-version and bounded-parser regression.
 
 ## Interactive charts and browser evidence
@@ -460,7 +460,7 @@ replays the retained outcome for an identical retry with
 identifier, Thing, Action, input, proposal digest, state revision and expiry;
 the room policy then rechecks freshness and dispatches the simulated Action at
 most once. The full contract is in
-[WLB.07](../../docs/specs/WLB.07-cookbooks-and-machine-interfaces.md#http-control-mutations).
+[WLB.07](../../../../docs/packages/wotex-lab/specs/WLB.07-cookbooks-and-machine-interfaces.md#http-control-mutations).
 
 ## OCI release source
 

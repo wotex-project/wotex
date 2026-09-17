@@ -162,7 +162,7 @@ unbuildable Thing. The `:broker` tagged case runs the same room against the
 disposable mosquitto container.
 
 The complete source-run record is
-[`WLB.05-evidence.json`](../provenance/WLB.05-evidence.json). It binds the dual
+[`WLB.05-evidence.json`](../../../../packages/wotex-lab/priv/provenance/WLB.05-evidence.json). It binds the dual
 repository, authenticated channel, fault/replay and smart-room assertions to
 the exact source tree, lock, fixture and observed broker image digests. Source
 dependency archives remain explicitly missing, so artifact verification stays

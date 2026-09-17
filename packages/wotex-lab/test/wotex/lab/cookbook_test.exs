@@ -4,6 +4,7 @@ defmodule Wotex.Lab.CookbookTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Lab.Cookbook
+  alias Wotex.Lab.Documentation
   alias Wotex.Lab.Error
   alias Wotex.Lab.Test.{CookbookRunner, MqttBroker}
 
@@ -11,12 +12,14 @@ defmodule Wotex.Lab.CookbookTest do
   @moduletag capture_log: true
 
   @root Path.expand("../../..", __DIR__)
-  @spec_path "docs/specs/WLB.07-cookbooks-and-machine-interfaces.md"
+  {:ok, docs} = Documentation.directory(@root)
+  @docs docs
+  @spec_path "specs/WLB.07-cookbooks-and-machine-interfaces.md"
   @fault_checks ["connect-reported", "oversized-dropped", "transport-down"]
   @http_notebooks ~w(consume-http write-and-act observe-sse smart-room)
 
   setup_all do
-    catalogue = YamlElixir.read_from_file!(Path.join(@root, "docs/specs/catalogue.yaml"))
+    catalogue = YamlElixir.read_from_file!(Path.join(@docs, "specs/catalogue.yaml"))
     source = @root |> Path.join(catalogue["source_index"]) |> File.read!() |> JSON.decode!()
     specs = catalogue["specifications"]
 
@@ -29,7 +32,7 @@ defmodule Wotex.Lab.CookbookTest do
 
   test "the catalogue lists the sixteen WLB.07 rows in the spec's order" do
     table_ids =
-      @root
+      @docs
       |> Path.join(@spec_path)
       |> File.read!()
       |> then(&Regex.scan(~r/^\| ([a-z][a-z-]*) \| /m, &1))

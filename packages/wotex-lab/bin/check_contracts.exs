@@ -5,11 +5,19 @@
 defmodule Wotex.Lab.Check.Contracts do
   @moduledoc false
 
+  alias Wotex.Lab.Documentation
+
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
 
-    catalogue = YamlElixir.read_from_file!("docs/specs/catalogue.yaml")
+    docs =
+      case Documentation.directory(root) do
+        {:ok, docs} -> docs
+        :error -> check!(false, "missing documentation tree beside the checkout")
+      end
+
+    catalogue = YamlElixir.read_from_file!(Path.join(docs, "specs/catalogue.yaml"))
     local_file!(catalogue["completion_plan"])
     local_file!(catalogue["source_index"])
     source = catalogue["source_index"] |> File.read!() |> JSON.decode!()
@@ -34,7 +42,11 @@ defmodule Wotex.Lab.Check.Contracts do
     check!(Enum.uniq(ids) == ids, "duplicate specification ID")
 
     check!(
-      Enum.sort(Path.wildcard("docs/specs/WLB.*.md")) == Enum.sort(Enum.map(specs, & &1["path"])),
+      docs
+      |> Path.join("specs/WLB.*.md")
+      |> Path.wildcard()
+      |> Enum.map(&Path.join("docs", Path.relative_to(&1, docs)))
+      |> Enum.sort() == Enum.sort(Enum.map(specs, & &1["path"])),
       "uncatalogued spec"
     )
 
@@ -49,7 +61,7 @@ defmodule Wotex.Lab.Check.Contracts do
         Enum.map(package["specifications"], &"#{package["package"]}:#{&1["id"]}")
       end)
 
-    plan = File.read!(catalogue["completion_plan"])
+    plan = File.read!(resolve!(catalogue["completion_plan"]))
     completion_ids = Regex.scan(~r/\| (WLB-C\d+) \|/, plan) |> Enum.map(&Enum.at(&1, 1))
     check!(Enum.uniq(completion_ids) == completion_ids, "duplicate completion ID")
 
@@ -62,7 +74,7 @@ defmodule Wotex.Lab.Check.Contracts do
 
     Enum.each(specs, fn spec ->
       local_file!(spec["path"])
-      content = File.read!(spec["path"])
+      content = File.read!(resolve!(spec["path"]))
       check!(String.starts_with?(content, "# #{spec["id"]}:"), "spec heading mismatch")
 
       check!(
@@ -139,7 +151,9 @@ defmodule Wotex.Lab.Check.Contracts do
       )
     end)
 
-    ["README.md", "CONTRIBUTING.md" | Path.wildcard("docs/**/*.md")]
+    # Relative links may cross between the package and its documentation
+    # tree, so every target is checked against both.
+    ["README.md", "CONTRIBUTING.md" | Path.wildcard(Path.join(docs, "**/*.md"))]
     |> Enum.each(fn path ->
       ~r/\]\(([^)]+)\)/
       |> Regex.scan(File.read!(path))
@@ -147,7 +161,13 @@ defmodule Wotex.Lab.Check.Contracts do
       |> Enum.reject(&Regex.match?(~r/\A(?:https?:|mailto:|#)/, &1))
       |> Enum.each(fn target ->
         [file | _fragment] = String.split(target, "#")
-        local_file!(Path.join(Path.dirname(path), file))
+        candidate = Path.expand(file, Path.dirname(path))
+
+        check!(
+          Enum.any?([root, docs], &String.starts_with?(candidate, &1 <> "/")) and
+            File.regular?(candidate),
+          "missing/unsafe link target in #{Path.relative_to(path, root)}: #{target}"
+        )
       end)
     end)
 
@@ -178,14 +198,18 @@ defmodule Wotex.Lab.Check.Contracts do
     end
   end
 
+  # `docs/` paths resolve inside the documentation tree, every other path
+  # inside the package; both stay contained.
   defp local_file!(path) do
-    root = File.cwd!()
-    candidate = Path.expand(path, root)
+    case Documentation.resolve(File.cwd!(), path) do
+      {:ok, candidate} -> check!(File.regular?(candidate), "missing/unsafe file: #{path}")
+      :error -> check!(false, "missing/unsafe file: #{path}")
+    end
+  end
 
-    check!(
-      String.starts_with?(candidate, root <> "/") and File.regular?(candidate),
-      "missing/unsafe file: #{path}"
-    )
+  defp resolve!(path) do
+    {:ok, candidate} = Documentation.resolve(File.cwd!(), path)
+    candidate
   end
 
   defp check!(true, _message), do: :ok

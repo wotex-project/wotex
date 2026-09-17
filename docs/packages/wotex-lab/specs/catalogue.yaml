@@ -1,8 +1,8 @@
 schema_version: "1.3.0"
 package: wotex_lab
 completion_plan: docs/plans/wotex-lab-completion.md
-source_index: docs/provenance/source-index.json
-source_cohort: docs/provenance/source-cohort.json
+source_index: priv/provenance/source-index.json
+source_cohort: priv/provenance/source-cohort.json
 specifications:
   - id: WLB.01
     version: "0.1.1"
@@ -10,7 +10,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.01-evidence.json
+    evidence_manifest: priv/provenance/WLB.01-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -33,7 +33,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.02-evidence.json
+    evidence_manifest: priv/provenance/WLB.02-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -66,7 +66,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.03-evidence.json
+    evidence_manifest: priv/provenance/WLB.03-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -99,7 +99,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.04-evidence.json
+    evidence_manifest: priv/provenance/WLB.04-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -145,7 +145,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.05-evidence.json
+    evidence_manifest: priv/provenance/WLB.05-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -184,7 +184,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.06-evidence.json
+    evidence_manifest: priv/provenance/WLB.06-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -305,8 +305,8 @@ specifications:
       - "bin/support/archive_repository.exs"
       - "bin/support/release_review.exs"
       - "bin/generate_api_surface.exs"
-      - "docs/provenance/workbench-bom.cdx.json"
-      - "docs/provenance/wotex-lab-api.json"
+      - "priv/provenance/workbench-bom.cdx.json"
+      - "priv/provenance/wotex-lab-api.json"
       - "bin/check_reference_consumer.exs"
       - "test/wotex/lab/reference_summary_test.exs"
       - "test/wotex/lab/reference_inputs_test.exs"
@@ -325,7 +325,7 @@ specifications:
     implementation_status: implemented
     evidence_status: complete
     adoption_status: reference_available
-    evidence_manifest: docs/provenance/WLB.09-evidence.json
+    evidence_manifest: priv/provenance/WLB.09-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"

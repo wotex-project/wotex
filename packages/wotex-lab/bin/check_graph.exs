@@ -6,13 +6,19 @@
 defmodule Wotex.Lab.Check.Graph do
   @moduledoc false
 
-  alias Wotex.Lab.Graph
+  alias Wotex.Lab.{Documentation, Graph}
   alias Wotex.Lab.Graph.{Interfaces, Render}
 
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
-    catalogue = YamlElixir.read_from_file!("docs/specs/catalogue.yaml")
+
+    catalogue =
+      case Documentation.resolve(root, "docs/specs/catalogue.yaml") do
+        {:ok, path} -> YamlElixir.read_from_file!(path)
+        :error -> abort("the graph check needs the documentation tree beside the checkout")
+      end
+
     revision = revision!(root)
 
     graph =

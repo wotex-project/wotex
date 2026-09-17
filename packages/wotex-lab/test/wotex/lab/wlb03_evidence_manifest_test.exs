@@ -6,6 +6,7 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
   @moduletag :integration
 
   alias Wotex.Lab.Evidence.{Digest, Record}
+  alias Wotex.Lab.Test.SourceTree
 
   @record_keys ~w(deadline_ms device_tensors effects excluded_count max_samples
                   max_schedule_entries required_lanes run_ms servings test_count tolerance_ppm)a
@@ -13,8 +14,8 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
   @source_files [
     "mix.exs",
     "docs/plans/wotex-lab-completion.md",
-    "docs/provenance/source-cohort.json",
-    "docs/provenance/source-index.json",
+    "priv/provenance/source-cohort.json",
+    "priv/provenance/source-index.json",
     "docs/specs/WLB.03-nx-experiments.md",
     "docs/decisions/0005-interactive-elixir-analytics.md",
     "docs/specs/catalogue.yaml",
@@ -45,7 +46,7 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
   test "the numerical adoption record covers every required local lane" do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
-    path = Path.join(root, "docs/provenance/WLB.03-evidence.json")
+    path = Path.join(root, "priv/provenance/WLB.03-evidence.json")
     assert {:ok, map} = path |> File.read!() |> Wotex.JSON.decode()
     assert {:ok, record} = Record.from_map(map)
 
@@ -60,7 +61,7 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
              details: %{"device_tensors" => 0, "effects" => 0, "servings" => 0}
            }
 
-    assert {:ok, record.source_tree_digest} == Digest.tree(root, @source_files)
+    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "mix.lock"))
 
     for {name, digest} <- record.fixtures do

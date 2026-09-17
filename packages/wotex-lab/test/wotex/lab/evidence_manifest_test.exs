@@ -6,13 +6,14 @@ defmodule Wotex.Lab.EvidenceManifestTest do
   @moduletag :integration
 
   alias Wotex.Lab.Evidence.{Digest, Record}
+  alias Wotex.Lab.Test.SourceTree
 
   @record_keys ~w(deadline_ms max_inflight max_payload_bytes max_response_bytes
                   maximum_packet_size receive_maximum run_ms broker_enabled test_count)a
 
   @source_files [
     "mix.exs",
-    "docs/provenance/source-cohort.json",
+    "priv/provenance/source-cohort.json",
     "docs/specs/WLB.04-runtime-and-network-adapters.md",
     "lib/wotex/lab/adapters/http/req_client.ex",
     "lib/wotex/lab/adapters/http/sse/parser.ex",
@@ -46,7 +47,7 @@ defmodule Wotex.Lab.EvidenceManifestTest do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
 
-    assert {:ok, json} = File.read(Path.join(root, "docs/provenance/WLB.04-evidence.json"))
+    assert {:ok, json} = File.read(Path.join(root, "priv/provenance/WLB.04-evidence.json"))
     assert {:ok, map} = Wotex.JSON.decode(json)
     assert {:ok, record} = Record.from_map(map)
 
@@ -57,7 +58,7 @@ defmodule Wotex.Lab.EvidenceManifestTest do
     assert record.durations.run_ms > 0
     assert Enum.all?(record.assertions, &(&1.status == :pass))
 
-    assert {:ok, record.source_tree_digest} == Digest.tree(root, @source_files)
+    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "mix.lock"))
 
     Enum.each(record.fixtures, fn {name, digest} ->

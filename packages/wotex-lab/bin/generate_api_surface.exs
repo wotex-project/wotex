@@ -9,7 +9,7 @@ defmodule Wotex.Lab.Check.ApiSurface do
 
   def run(args) do
     root = Path.expand("..", __DIR__)
-    output = Path.join(root, "docs/provenance/wotex-lab-api.json")
+    output = Path.join(root, "priv/provenance/wotex-lab-api.json")
     bytes = JSON.encode!(surface()) <> "\n"
 
     case args do

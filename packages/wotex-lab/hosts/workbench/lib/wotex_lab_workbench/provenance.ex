@@ -27,8 +27,18 @@ defmodule WotexLabWorkbench.Provenance do
       {dependency.app, version}
     end)
 
-  @external_resource Path.join(@lab_path, "docs/provenance/source-cohort.json")
-  @external_resource Path.join(@lab_path, "docs/provenance/source-index.json")
+  # A source checkout keeps its specifications in the documentation tree
+  # (`docs/` beside mix.exs, or `docs/packages/wotex-lab/` in the monorepo);
+  # a Hex archive ships none and records no specification digests.
+  @docs_path Enum.find(
+               [
+                 Path.join(@lab_path, "docs"),
+                 Path.expand("../../docs/packages/wotex-lab", @lab_path)
+               ],
+               &File.dir?(Path.join(&1, "specs"))
+             )
+  @external_resource Path.join(@lab_path, "priv/provenance/source-cohort.json")
+  @external_resource Path.join(@lab_path, "priv/provenance/source-index.json")
   @external_resource "mix.lock"
 
   @source_mode if(Map.has_key?(@lock, :wotex_lab), do: "hex artifact", else: "workspace path")
@@ -43,15 +53,16 @@ defmodule WotexLabWorkbench.Provenance do
                 {Path.relative_to(path, Path.join(@lab_path, "priv")), Digest.file!(path)}
               end
             )
-  @specs Map.new(Path.wildcard(Path.join(@lab_path, "docs/specs/WLB.*.md")), fn path ->
-           {Path.basename(path), Digest.file!(path)}
-         end)
+  @specs Map.new(
+           if(@docs_path, do: Path.wildcard(Path.join(@docs_path, "specs/WLB.*.md")), else: []),
+           fn path -> {Path.basename(path), Digest.file!(path)} end
+         )
   @cohort @lab_path
-          |> Path.join("docs/provenance/source-cohort.json")
+          |> Path.join("priv/provenance/source-cohort.json")
           |> File.read!()
           |> JSON.decode!()
   @index @lab_path
-         |> Path.join("docs/provenance/source-index.json")
+         |> Path.join("priv/provenance/source-index.json")
          |> File.read!()
          |> JSON.decode!()
   @dependencies Enum.map(

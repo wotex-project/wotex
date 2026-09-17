@@ -4,7 +4,7 @@ defmodule WotexLab.MixProject do
   @version "0.1.0"
 
   # Dated, scoped acknowledgements are justified in
-  # docs/provenance/standards-and-dependencies.md and protected by regression
+  # docs/packages/wotex-lab/provenance/standards-and-dependencies.md and protected by regression
   # tests where the affected code is reachable. Renew them whenever the lock or
   # advisory records change.
   @acknowledged_advisories [
@@ -13,7 +13,8 @@ defmodule WotexLab.MixProject do
     "EEF-CVE-2026-43969",
     "EEF-CVE-2026-43971"
   ]
-  @source_url "https://github.com/wotex-project/wotex-lab"
+  @source_url "https://github.com/wotex-project/wotex"
+  @docs Path.expand("../../docs/packages/wotex-lab", __DIR__)
 
   def project do
     [
@@ -131,10 +132,16 @@ defmodule WotexLab.MixProject do
       name: "wotex_lab",
       licenses: ["Apache-2.0"],
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      links: %{"GitHub" => @source_url, "Project" => "https://wotex.io"},
-      files:
-        ~w(lib priv/fixtures priv/models priv/cookbooks priv/conformance docs/specs docs/plans docs/decisions docs/provenance
-        .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md SECURITY.md CONTRIBUTING.md)
+      links: %{
+        "GitHub" => @source_url,
+        "Project" => "https://wotex.io",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-lab/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-lab"
+      },
+      # Tarballs ship no Markdown documentation; specifications reach
+      # consumers through HexDocs.
+      files: ~w(lib priv/fixtures priv/models priv/cookbooks priv/conformance priv/provenance
+        .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
     ]
   end
 
@@ -149,15 +156,17 @@ defmodule WotexLab.MixProject do
           {"LICENSE", [title: "License"]},
           {"NOTICE", [title: "Notices"]}
         ] ++
-          Path.wildcard("docs/{specs,plans,decisions,provenance}/*.md"),
+          Path.wildcard("#{@docs}/{specs,plans,decisions,provenance}/*.md"),
       groups_for_extras: [
-        Specifications: ~r/docs\/specs/,
-        "Completion contract": ~r/docs\/plans/,
-        Decisions: ~r/docs\/decisions/,
-        Provenance: ~r/docs\/provenance/
+        Specifications: ~r/wotex-lab\/specs/,
+        "Completion contract": ~r/wotex-lab\/plans/,
+        Decisions: ~r/wotex-lab\/decisions/,
+        Provenance: ~r/wotex-lab\/provenance/
       ],
-      source_ref: "v#{@version}",
-      source_url: @source_url
+      source_ref: "wotex-lab-v#{@version}",
+      source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-lab-v#{@version}/packages/wotex-lab/%{path}#L%{line}"
     ]
   end
 end

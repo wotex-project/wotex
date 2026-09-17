@@ -1,12 +1,13 @@
 Code.require_file("support/typescript_client.exs", __DIR__)
 
 alias Wotex.Lab.Check.TypeScriptClient
-alias Wotex.Lab.Graph
+alias Wotex.Lab.{Documentation, Graph}
 alias Wotex.Lab.Graph.Interfaces
 
 root = Path.expand("..", __DIR__)
 target = Path.join(root, "clients/typescript")
-catalogue = YamlElixir.read_from_file!(Path.join(root, "docs/specs/catalogue.yaml"))
+{:ok, catalogue_path} = Documentation.resolve(root, "docs/specs/catalogue.yaml")
+catalogue = YamlElixir.read_from_file!(catalogue_path)
 {revision, 0} = System.cmd("git", ["-C", root, "rev-parse", "HEAD"], stderr_to_stdout: true)
 {:ok, graph} = Graph.generate(catalogue: catalogue, revision: String.trim(revision), root: root)
 files = TypeScriptClient.render(Interfaces.openapi(graph), File.read!(Path.join(root, "LICENSE")))

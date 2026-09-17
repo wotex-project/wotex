@@ -7,6 +7,7 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
 
   alias Wotex.Conformance.Corpus
   alias Wotex.Lab.Evidence.{Digest, Record}
+  alias Wotex.Lab.Test.SourceTree
 
   @record_keys ~w(cpu_seconds deadline_ms max_output_bytes memory_bytes processes samples
                   run_ms excluded_count test_count thing_description_vectors thing_model_vectors
@@ -17,8 +18,8 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "mix.exs",
     "bin/check_linux_containment.exs",
     "docs/plans/wotex-lab-completion.md",
-    "docs/provenance/source-cohort.json",
-    "docs/provenance/source-index.json",
+    "priv/provenance/source-cohort.json",
+    "priv/provenance/source-index.json",
     "docs/specs/WLB.06-evidence-conformance-and-observability.md",
     "docs/decisions/0006-native-containment-executable.md",
     "docs/decisions/0009-kernel-isolated-conformance-profile.md",
@@ -58,7 +59,7 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
 
-    assert {:ok, json} = File.read(Path.join(root, "docs/provenance/WLB.06-evidence.json"))
+    assert {:ok, json} = File.read(Path.join(root, "priv/provenance/WLB.06-evidence.json"))
     assert {:ok, map} = Wotex.JSON.decode(json)
     assert {:ok, record} = Record.from_map(map)
 
@@ -92,7 +93,7 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
              &(&1.status == :pass)
            )
 
-    assert {:ok, record.source_tree_digest} == Digest.tree(root, @source_files)
+    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "mix.lock"))
 
     for {id, digest} <- record.fixtures do

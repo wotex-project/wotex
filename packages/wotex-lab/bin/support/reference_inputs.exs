@@ -3,14 +3,14 @@ defmodule Wotex.Lab.Check.ReferenceInputs do
 
   alias Wotex.Lab.Evidence.Digest
 
-  # Include executable notebooks and compile-time documentation inputs as well
-  # as Elixir/test/native source. Build output, caches, PLTs and retained attempt
+  # Include executable notebooks and provenance records as well as
+  # Elixir/test/native source. Documentation lives outside the package and is
+  # not a source input; build output, caches, PLTs and retained attempt
   # evidence are deliberately outside this source cohort.
   @patterns ~w(lib/**/* test/**/* config/**/* priv/fixtures/**/* priv/models/**/*
-               priv/cookbooks/**/* priv/conformance/* priv/conformance/native/*
-               priv/conformance/native/src/*.rs priv/conformance/native/tests/*.rs
-               priv/conformance/native/probes/*.rs
-               docs/specs/**/* docs/plans/**/* docs/decisions/**/* docs/provenance/**/*
+               priv/cookbooks/**/* priv/provenance/**/* priv/conformance/*
+               priv/conformance/native/* priv/conformance/native/src/*.rs
+               priv/conformance/native/tests/*.rs priv/conformance/native/probes/*.rs
                bin/check_reference_consumer.exs bin/check_source_cohort.exs
                bin/support/reference_inputs.exs bin/support/reference_summary.exs
                bin/support/work_directory.exs .check.exs .formatter.exs mix.exs mix.lock

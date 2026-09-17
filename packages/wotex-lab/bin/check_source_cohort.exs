@@ -4,13 +4,18 @@
 defmodule Wotex.Lab.Check.SourceCohort do
   @moduledoc false
 
+  # Package patterns match beside the owner's mix.exs. Its specifications,
+  # plans and decisions live in the owner's documentation tree: `docs/` beside
+  # mix.exs in a standalone checkout, `docs/packages/<owner>/` two levels up in
+  # the monorepo. Both are recorded under the same `docs/<kind>/` names.
   @patterns ~w(lib/**/* test/**/* priv/w3c/**/* priv/schemas/**/* priv/vectors/**/*
                docs/specs/**/* specs/**/* docs/plans/**/* docs/decisions/**/*
                mix.exs mix.lock README.md CLAUDE.md)
+  @documentation_patterns ~w(specs/**/* plans/**/* decisions/**/*)
 
   def run(argv) do
     root = Path.expand("..", __DIR__)
-    index = root |> Path.join("docs/provenance/source-index.json") |> File.read!() |> JSON.decode!()
+    index = root |> Path.join("priv/provenance/source-index.json") |> File.read!() |> JSON.decode!()
 
     entries =
       Enum.map(index["packages"], fn package ->
@@ -22,16 +27,17 @@ defmodule Wotex.Lab.Check.SourceCohort do
         files =
           @patterns
           |> Enum.flat_map(&Path.wildcard(Path.join(repo, &1)))
-          |> Enum.filter(&File.regular?/1)
+          |> Enum.map(&{Path.relative_to(&1, repo), &1})
+          |> Kernel.++(documentation(repo, directory))
+          |> Enum.filter(fn {_, file} -> File.regular?(file) end)
           |> Enum.uniq()
           |> Enum.sort()
 
         files != [] || abort("empty source owner: #{directory}")
 
         digest =
-          Enum.reduce(files, :crypto.hash_init(:sha256), fn file, acc ->
+          Enum.reduce(files, :crypto.hash_init(:sha256), fn {relative, file}, acc ->
             symlink?(file) && abort("symlink in source cohort: #{directory}")
-            relative = Path.relative_to(file, repo)
             file_digest = :crypto.hash(:sha256, File.read!(file)) |> Base.encode16(case: :lower)
 
             acc
@@ -59,7 +65,7 @@ defmodule Wotex.Lab.Check.SourceCohort do
 
       [] ->
         expected =
-          root |> Path.join("docs/provenance/source-cohort.json") |> File.read!() |> JSON.decode!()
+          root |> Path.join("priv/provenance/source-cohort.json") |> File.read!() |> JSON.decode!()
 
         actual == expected ||
           abort(
@@ -72,6 +78,18 @@ defmodule Wotex.Lab.Check.SourceCohort do
 
       _other ->
         abort("usage: elixir bin/check_source_cohort.exs [--print]")
+    end
+  end
+
+  defp documentation(repo, directory) do
+    docs = Path.expand("../../docs/packages/#{directory}", repo)
+
+    if File.dir?(docs) and not File.dir?(Path.join(repo, "docs")) do
+      @documentation_patterns
+      |> Enum.flat_map(&Path.wildcard(Path.join(docs, &1)))
+      |> Enum.map(&{Path.join("docs", Path.relative_to(&1, docs)), &1})
+    else
+      []
     end
   end
 

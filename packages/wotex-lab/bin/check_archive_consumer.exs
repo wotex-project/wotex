@@ -14,7 +14,7 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
 
   @base_packages [{:wotex, "wotex"}, {:wotex_nx, "wotex-nx"}, {:wotex_lab, "wotex-lab"}]
   @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt axon polaris exla fine xla explorer aws_signature table table_rex kino kino_explorer)a
-  @cohort ~w(lib/**/* priv/fixtures/**/* docs/specs/**/*
+  @cohort ~w(lib/**/* priv/fixtures/**/* priv/provenance/**/*
              bin/check_archive_consumer.exs bin/support/archive_repository.exs
              bin/support/work_directory.exs mix.exs mix.lock)
   @deadline_ms 900_000

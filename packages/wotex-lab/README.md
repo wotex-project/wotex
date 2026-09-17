@@ -26,8 +26,8 @@ community, the entry point is a typed sensor observation becoming a numerical
 batch, a model result and an inert Action proposal with traceable provenance.
 
 This checkout supplies the library foundation, not the complete laboratory.
-The [specification catalogue](docs/specs/catalogue.yaml) and
-[completion contract](docs/plans/wotex-lab-completion.md) define the entire
+The [specification catalogue](../../docs/packages/wotex-lab/specs/catalogue.yaml) and
+[completion contract](../../docs/packages/wotex-lab/plans/wotex-lab-completion.md) define the entire
 accepted programme, including network adapters, dual Directory stores,
 Nx.Serving/Axon experiments, formal verification, conformance, MCP,
 PromEx/GreptimeDB/BeamLens, a lean LiveView workbench, hosted and embedded
@@ -75,7 +75,7 @@ Record the resulting executable's reviewed SHA-256 and pass
 `Wotex.Lab.Conformance.Containment.external_map/5`. The API verifies that
 descriptor; it never compiles, downloads or discovers a helper. The package
 includes source, not platform binaries. See the
-[native containment decision](docs/decisions/0006-native-containment-executable.md)
+[native containment decision](../../docs/packages/wotex-lab/decisions/0006-native-containment-executable.md)
 for the sampled-limit, hostile-target and deprecated macOS sandbox limitations.
 
 An untrusted target needs `Wotex.Lab.Conformance.KernelContainment` instead: a
@@ -88,7 +88,7 @@ core corpora and the hostile probes against the pinned `hexpm/elixir` image:
 WOTEX_PATH_DEPS=1 WOTEX_LAB_CONTAINER=1 mix test test/wotex/lab/kernel_containment_lane_test.exs
 ```
 
-See the [kernel-isolated profile decision](docs/decisions/0009-kernel-isolated-conformance-profile.md)
+See the [kernel-isolated profile decision](../../docs/packages/wotex-lab/decisions/0009-kernel-isolated-conformance-profile.md)
 for its trusted runtime, kernel and image boundary.
 
 `mix check` needs no container runtime: the MQTT broker lane is tagged
@@ -144,9 +144,9 @@ and Workbench-release checks are explicit release-readiness work. Publication
 and repository visibility are maintainer-owned.
 
 The same gate checks the deterministic CycloneDX 1.7 production SBOM at
-`docs/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
+`priv/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
 Lab exports, behaviours, struct keys and typespecs in
-`docs/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
+`priv/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
 These are release-review inputs, not a stable-API or public-candidate claim.
 
 The Workbench explicitly selects Explorer 0.12.0 for read-only run inspection:
@@ -182,7 +182,7 @@ controller or evidence of prediction accuracy. Read
 ## Cookbooks
 
 `priv/cookbooks/` holds the sixteen Livebook notebooks of
-[WLB.07](docs/specs/WLB.07-cookbooks-and-machine-interfaces.md), one per
+[WLB.07](../../docs/packages/wotex-lab/specs/WLB.07-cookbooks-and-machine-interfaces.md), one per
 cookbook row from `parse-td` to `nerves-and-mcp`. Each shows the package
 calls beside any Lab convenience API, breaks something on purpose, inspects
 the telemetry it emitted and ends with a cell that returns its checks.
@@ -343,8 +343,8 @@ mandatory Prometheus
 server or separate collector. GreptimeDB is local/self-hosted, not embedded in
 the BEAM. Prompt results cite measurements and cannot invoke Actions. Plain
 experiments work without an LLM or durable database. See
-[metrics and AI](docs/specs/WLB.10-metrics-storage-and-ai-inspection.md) and
-[workbench/design system](docs/specs/WLB.11-workbench-and-design-system.md) for
+[metrics and AI](../../docs/packages/wotex-lab/specs/WLB.10-metrics-storage-and-ai-inspection.md) and
+[workbench/design system](../../docs/packages/wotex-lab/specs/WLB.11-workbench-and-design-system.md) for
 query budgets, isolation, privacy, components and acceptance tests.
 
 ## Source, evidence and adoption
@@ -359,7 +359,7 @@ query budgets, isolation, privacy, components and acceptance tests.
 milestone. The small OTP foundation, the scenario runner with its
 cross-frontend descriptors and all six required local Nx lanes have complete
 content-bound evidence; wider upstream and release programmes remain partial. No entry claims artifact verification. The
-[source baseline](docs/provenance/standards-and-dependencies.md) records the
+[source baseline](../../docs/packages/wotex-lab/provenance/standards-and-dependencies.md) records the
 materials inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
 
@@ -368,7 +368,7 @@ contract test suite. Source-cohort snapshots, external services, native tools,
 and cookbook execution are opt-in integration checks; set
 `WOTEX_LAB_INTEGRATION=1` when intentionally refreshing that evidence. Separate
 release gates do not claim registry publication, OCI runtime, hosted or hardware evidence. See
-[WLB.08](docs/specs/WLB.08-distribution-and-compatibility.md) for the stronger
+[WLB.08](../../docs/packages/wotex-lab/specs/WLB.08-distribution-and-compatibility.md) for the stronger
 release gates.
 
 ## License

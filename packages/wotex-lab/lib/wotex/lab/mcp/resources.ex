@@ -3,10 +3,13 @@ defmodule Wotex.Lab.MCP.Resources do
   Read-only MCP resources: package, spec, seam, scenario, Thing and evidence
   metadata that already exists in the package or in the explicit Lab instance.
 
-  URIs use the `wotex-lab://` scheme. Catalogue, plan and provenance documents
-  are embedded verbatim at compile time (the YAML catalogue as text, the
-  provenance index as JSON), so they are served from the compiled package
-  without a source tree; fixture manifests and models come from `priv`; design
+  URIs use the `wotex-lab://` scheme. Provenance data (the source index and
+  cohort), fixture manifests and models come from `priv`, so they are served
+  from the compiled package without a source tree. The catalogue, the
+  completion plan and the standards review are documentation for people: they
+  are read from the documentation tree `Wotex.Lab.Documentation` locates
+  beside a source checkout and reported as unavailable when the compiled
+  package has none. Design
   tokens, seam ownership and the admitted scenario descriptors of
   `Wotex.Lab.Scenario.admitted/0` are Lab data; Things are the
   reference hosts of the session's instance, described by their own Thing
@@ -14,6 +17,7 @@ defmodule Wotex.Lab.MCP.Resources do
   """
 
   alias Wotex.Lab.DesignSystem
+  alias Wotex.Lab.Documentation
   alias Wotex.Lab.MCP.Seams
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Lab.Scenario
@@ -21,16 +25,6 @@ defmodule Wotex.Lab.MCP.Resources do
 
   @max_file_bytes 1_048_576
   @root Path.expand("../../../..", __DIR__)
-  @documents %{
-    "docs/specs/catalogue.yaml" => Path.join(@root, "docs/specs/catalogue.yaml"),
-    "docs/plans/wotex-lab-completion.md" => Path.join(@root, "docs/plans/wotex-lab-completion.md"),
-    "docs/provenance/source-index.json" => Path.join(@root, "docs/provenance/source-index.json"),
-    "docs/provenance/source-cohort.json" => Path.join(@root, "docs/provenance/source-cohort.json"),
-    "docs/provenance/standards-and-dependencies.md" =>
-      Path.join(@root, "docs/provenance/standards-and-dependencies.md")
-  }
-  for {_, absolute} <- @documents, do: @external_resource(absolute)
-  @embedded Map.new(@documents, fn {relative, absolute} -> {relative, File.read!(absolute)} end)
 
   @static [
     {"wotex-lab://catalogue", "Specification catalogue", "text/yaml",
@@ -38,9 +32,9 @@ defmodule Wotex.Lab.MCP.Resources do
     {"wotex-lab://completion-plan", "Completion contract", "text/markdown",
      {:doc, "docs/plans/wotex-lab-completion.md"}},
     {"wotex-lab://provenance/source-index", "Historical source inspection baseline",
-     "application/json", {:doc, "docs/provenance/source-index.json"}},
+     "application/json", {:priv, "priv/provenance/source-index.json"}},
     {"wotex-lab://provenance/source-cohort", "Source content digests", "application/json",
-     {:doc, "docs/provenance/source-cohort.json"}},
+     {:priv, "priv/provenance/source-cohort.json"}},
     {"wotex-lab://provenance/standards", "Standards and dependencies", "text/markdown",
      {:doc, "docs/provenance/standards-and-dependencies.md"}},
     {"wotex-lab://fixtures/loopback", "Loopback fixture manifest", "application/json",
@@ -74,8 +68,14 @@ defmodule Wotex.Lab.MCP.Resources do
     end
   end
 
-  defp content(uri, mime, {:doc, relative}),
-    do: {:ok, [%{"uri" => uri, "mimeType" => mime, "text" => Map.fetch!(@embedded, relative)}]}
+  # Documentation is served only beside a source checkout; a compiled package
+  # ships none and says so.
+  defp content(uri, mime, {:doc, relative}) do
+    case Documentation.resolve(@root, relative) do
+      {:ok, path} -> file(uri, mime, path)
+      :error -> {:error, -32_002, "documentation is not available in this package"}
+    end
+  end
 
   defp content(uri, mime, {:priv, relative}),
     do: file(uri, mime, Path.join(package_dir(), relative))

@@ -12,9 +12,8 @@ defmodule Wotex.Lab.ReferenceInputsTest do
              priv/models/example.maude priv/conformance/profile.json
              priv/conformance/native/Cargo.lock priv/conformance/native/src/main.rs
              priv/conformance/native/tests/lifecycle.rs priv/conformance/native/probes/probe.rs
-             docs/specs/catalogue.yaml docs/plans/completion.md docs/decisions/choice.md
-             docs/provenance/source-index.json docs/provenance/source-cohort.json
-             docs/provenance/WLB.05-evidence.json docs/provenance/review.md
+             priv/provenance/source-index.json priv/provenance/source-cohort.json
+             priv/provenance/WLB.05-evidence.json
              bin/check_reference_consumer.exs bin/check_source_cohort.exs
              bin/support/reference_inputs.exs bin/support/reference_summary.exs
              bin/support/work_directory.exs .check.exs .formatter.exs mix.exs mix.lock
@@ -48,7 +47,7 @@ defmodule Wotex.Lab.ReferenceInputsTest do
     for relative <- ~w(_build/test/module.beam deps/example/lib/module.ex
                        priv/plts/dialyxir.plt priv/conformance/native/target/release/helper
                        .archive-check.reference-previous/evidence.json
-                       docs/tasks/local/progress.md) do
+                       docs/specs/catalogue.yaml docs/tasks/local/progress.md) do
       put_file(root, relative, "generated")
     end
 

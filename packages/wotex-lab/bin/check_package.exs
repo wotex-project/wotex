@@ -6,15 +6,17 @@ Code.require_file("support/work_directory.exs", __DIR__)
 defmodule Wotex.Lab.Check.Package do
   @moduledoc false
 
-  @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE
-               docs/specs/catalogue.yaml docs/plans/wotex-lab-completion.md priv/models/manifest.json
-               docs/provenance/source-index.json priv/fixtures/thermal/thing-description.json
+  @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE CHANGELOG.md
+               priv/models/manifest.json priv/provenance/source-index.json
+               priv/provenance/source-cohort.json priv/fixtures/thermal/thing-description.json
                priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
                priv/conformance/native/src/main.rs priv/conformance/native/src/config.rs
                priv/conformance/native/src/accounting.rs
                priv/fixtures/thermal/manifest.json priv/fixtures/thermal/expected-output.json
                priv/cookbooks/thermal-nx.livemd priv/cookbooks/smart-room.livemd)
-  @excluded ~r{\A(?:docs/tasks|deps|_build|test|bin|\.git)(?:/|\z)}
+  # Documentation reaches consumers through HexDocs, never the archive; no
+  # docs or tasks tree and no development tooling may enter it.
+  @excluded ~r{\A(?:docs|tasks|deps|_build|test|bin|\.git|\.claude)(?:/|\z)}
 
   def run do
     root = Path.expand("..", __DIR__)

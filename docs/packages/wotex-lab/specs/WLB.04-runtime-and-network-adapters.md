@@ -157,7 +157,7 @@ WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
 ```
 
 The complete source-run record is
-[`WLB.04-evidence.json`](../provenance/WLB.04-evidence.json). It binds the
+[`WLB.04-evidence.json`](../../../../packages/wotex-lab/priv/provenance/WLB.04-evidence.json). It binds the
 passing assertions to the source-tree, lock, TLS fixture and observed broker
 image digests, exact toolchain, seed, budgets, duration and cleanup outcome.
 The source dependency archives remain explicitly missing, so this record does
