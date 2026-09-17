@@ -883,5 +883,15 @@ duplicate-reply fixture race, a fixture helper slow to stop on SIGTERM, and cove
 of 94.9%. A root-run container also let a mode-0 artifact test read its file, so
 the lane runs unprivileged.
 
+The [custody leak-audit receipt](native-custody-leak-audit-v1.json) runs the eleven
+opaque-stream custody cases in the `test/native/Dockerfile.custody` image with
+LeakSanitizer enabled and the `--leak-audit` instrumentation allowance. Every case
+exits 0 without a leak report. WCO-G10 launches 200 short children with alternating
+inherited signal state and directly reaps all 200 in 213 s. It first exceeded the
+180-second aggregate alarm: that bound was below 200 launches times the 500-ms reap
+deadline plus the named 1,000-ms instrumentation allowance, so the leak-audit alarm
+is now that 300-second product. The ordinary lane keeps its 20-second alarm and all
+per-child limits.
+
 Independent upstream-stack OSCORE interoperability is not yet accepted. The historical Python result retains only its own
 recorded cohort.

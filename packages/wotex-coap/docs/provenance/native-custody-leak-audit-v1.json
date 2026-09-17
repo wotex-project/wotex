@@ -1,0 +1,260 @@
+{
+  "schema": "wotex.coap.native-custody-leak-audit-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "The eleven opaque-stream custody cases, including 200 short child launches, under Linux ASan/UBSan with leak detection and the named leak-audit instrumentation allowance",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/custody.md": "a833e708838ac42b22591572d017e668645bb228d7edec4d151e2f7539022244",
+      "test/native/oscore_custody_test.c": "c20300255b142018563540ab963526a6c2027efb8131b37fb797ec84363ea062",
+      "test/native/oscore_custody_entry.c": "ded7210a35280e646894d7df4f0d69a3e8bae9618903c55702bc758607ff003b",
+      "test/native/Dockerfile.custody": "e608a42dcbcd00a5b081fed2cc771f6aa6e95e047777e990ff6345a098778316",
+      "docs/specs/fixtures/custody-v1.json": "b14876756b139d9b96c5551420eb702e2f6ea724db8903b285c4835830c6e363"
+    }
+  },
+  "requirements": [
+    "WCO-N02",
+    "WCO-C03"
+  ],
+  "environment": {
+    "image": "sha256:5dc281689d02b46f8a49fa45cf34838f2b2a1c5135c92e38a696d82d029822ee",
+    "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+    "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+    "executables": {
+      "custody": "859170f14fd9baca31e7cda27fcbb04dcbdca468389bf6249160927e1682b7c9",
+      "custody-check": "45f648b65d124a32d08c7ad710f1b56a485355ddb8e014be0a1c13191ac53bf8"
+    },
+    "command": "docker run --rm --cap-add SYS_PTRACE --tmpfs /tmp:rw,size=64m -e ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1 --entrypoint /usr/local/bin/custody-check IMAGE /usr/local/bin/custody CASE /tmp --leak-audit",
+    "sanitizers": [
+      "address",
+      "undefined",
+      "leak"
+    ]
+  },
+  "defect": {
+    "observed": "WCO-G10 exceeded the 180-second aggregate leak-audit alarm while still passing each per-child cleanup check",
+    "cause": "The aggregate allowance was below 200 launches times the 500 ms reap deadline plus the named 1000 ms instrumentation allowance; each leak-scanned launch took about one second"
+  },
+  "assertions": [
+    "Every case exits 0 with leak detection enabled and reports status passed",
+    "WCO-G10 launches 200 children with alternating inherited signal state, directly reaps all 200 and reports no leak within 213 seconds of container time",
+    "The leak-audit aggregate alarm is 300 seconds; the ordinary lane keeps its 20-second alarm and per-child cleanup assertions keep their 500 ms limits plus the named 1000 ms guardian-exit instrumentation allowance",
+    "Leak-audit results do not accept the production guardian-exit deadline"
+  ],
+  "cases": [
+    {
+      "case": "WCO-G01",
+      "exit_code": 0,
+      "container_elapsed_s": 9,
+      "result": {
+        "case": "WCO-G01",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 513,
+        "cleanup_ms": 0,
+        "guardian_exit_ms": 0,
+        "guardian_post_reap_ms": 0,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G02",
+      "exit_code": 0,
+      "container_elapsed_s": 3,
+      "result": {
+        "case": "WCO-G02",
+        "status": "passed",
+        "sent_bytes": 4097,
+        "received_bytes": 4097,
+        "cleanup_ms": 0,
+        "guardian_exit_ms": 0,
+        "guardian_post_reap_ms": 0,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G03",
+      "exit_code": 0,
+      "container_elapsed_s": 2,
+      "result": {
+        "case": "WCO-G03",
+        "status": "passed",
+        "sent_bytes": 1048576,
+        "received_bytes": 2097152,
+        "cleanup_ms": 0,
+        "guardian_exit_ms": 0,
+        "guardian_post_reap_ms": 0,
+        "input_capacity": 3072,
+        "output_capacity": 4096,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G04",
+      "exit_code": 0,
+      "container_elapsed_s": 2,
+      "result": {
+        "case": "WCO-G04",
+        "status": "passed",
+        "sent_bytes": 122880,
+        "received_bytes": 0,
+        "cleanup_ms": 274,
+        "guardian_exit_ms": 818,
+        "guardian_post_reap_ms": 544,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G05",
+      "exit_code": 0,
+      "container_elapsed_s": 2,
+      "result": {
+        "case": "WCO-G05",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 0,
+        "cleanup_ms": 12,
+        "guardian_exit_ms": 538,
+        "guardian_post_reap_ms": 526,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G06",
+      "exit_code": 0,
+      "container_elapsed_s": 3,
+      "result": {
+        "case": "WCO-G06",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 0,
+        "cleanup_ms": 0,
+        "guardian_exit_ms": 0,
+        "guardian_post_reap_ms": 0,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 3,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G07",
+      "exit_code": 0,
+      "container_elapsed_s": 6,
+      "result": {
+        "case": "WCO-G07",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 135168,
+        "cleanup_ms": 0,
+        "guardian_exit_ms": 0,
+        "guardian_post_reap_ms": 0,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 5,
+        "background_stopped": 1
+      }
+    },
+    {
+      "case": "WCO-G08",
+      "exit_code": 0,
+      "container_elapsed_s": 3,
+      "result": {
+        "case": "WCO-G08",
+        "status": "passed",
+        "sent_bytes": 1024,
+        "received_bytes": 1024,
+        "cleanup_ms": 262,
+        "guardian_exit_ms": 782,
+        "guardian_post_reap_ms": 520,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 2,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G09",
+      "exit_code": 0,
+      "container_elapsed_s": 2,
+      "result": {
+        "case": "WCO-G09",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 0,
+        "cleanup_ms": 263,
+        "guardian_exit_ms": 777,
+        "guardian_post_reap_ms": 514,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G10",
+      "exit_code": 0,
+      "container_elapsed_s": 213,
+      "result": {
+        "case": "WCO-G10",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 3400,
+        "cleanup_ms": 0,
+        "guardian_exit_ms": 0,
+        "guardian_post_reap_ms": 0,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 200,
+        "background_stopped": 0
+      }
+    },
+    {
+      "case": "WCO-G11",
+      "exit_code": 0,
+      "container_elapsed_s": 2,
+      "result": {
+        "case": "WCO-G11",
+        "status": "passed",
+        "sent_bytes": 0,
+        "received_bytes": 0,
+        "cleanup_ms": 262,
+        "guardian_exit_ms": 761,
+        "guardian_post_reap_ms": 499,
+        "input_capacity": 17,
+        "output_capacity": 23,
+        "instrumented_exit_allowance_ms": 1000,
+        "direct_reaped": 1,
+        "background_stopped": 0
+      }
+    }
+  ],
+  "output_sha256": "f7f2c75f893e4e29dc6f9ecf204a66ea1676b40794388acb6fbf2513d071641d",
+  "unaccepted": [
+    "A macOS leak audit"
+  ]
+}

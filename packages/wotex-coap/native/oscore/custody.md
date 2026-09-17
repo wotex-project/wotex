@@ -67,5 +67,6 @@ admission failures. Test-only `-Dsetpgid=wco_fault_setpgid` linkage denies the
 parent's group operation while preserving the child's system call, so the old
 uncoordinated design executes the probe and fails the expected no-output check.
 The production primitive contains no fault override. The leak-audit driver's
-aggregate fixture allowance is 180 seconds for 200 independent process-exit
-scans; its per-child cleanup assertions retain the limits above.
+aggregate fixture allowance is 300 seconds for 200 independent process-exit
+scans, 200 launches times the 500-ms reap deadline plus the named 1000-ms
+instrumentation allowance; its per-child cleanup assertions retain the limits above.

@@ -403,8 +403,9 @@ int main(int argc, char **argv) {
 #endif
     CHECK(signal(SIGALRM, on_alarm) != SIG_ERR, "test deadline signal");
     /* Leak scans of 200 separate short processes need an explicit aggregate
-     * fixture allowance. Per-child cleanup deadlines remain unchanged. */
-    alarm(instrumented_exit_allowance ? 180 : 20); check_case(argv[2]);
+     * fixture allowance: each launch may use the 500 ms reap deadline plus the
+     * named 1000 ms instrumentation allowance. Per-child deadlines are unchanged. */
+    alarm(instrumented_exit_allowance ? 300 : 20); check_case(argv[2]);
     printf("{\"case\":\"%s\",\"status\":\"passed\",\"sent_bytes\":%zu,\"received_bytes\":%zu,"
            "\"cleanup_ms\":%lld,\"guardian_exit_ms\":%lld,\"guardian_post_reap_ms\":%lld,"
            "\"input_capacity\":%d,\"output_capacity\":%d,"

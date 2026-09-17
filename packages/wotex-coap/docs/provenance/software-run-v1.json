@@ -17,8 +17,8 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "29e1d223744539fca82439e6eb25c869dcc81704e8780193ecb14edd23acf3ce",
-    "peer_executable_sha256": "576384f4832aff7b0ab23540adb9818628a026f080fa61a7325040cdee7614ef",
+    "native_helper_sha256": "5fc94a53deb7f20719c7ba96b36ba5a25c47a4e5aeef61842162c91a21dacf76",
+    "peer_executable_sha256": "85f23cc4ecd84b90b0fa28459235ad96b7c7a3a640f182e63a1940977ff055d8",
     "version": "4.3.5"
   },
   "source_identity": {
@@ -48,10 +48,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "c52821f76ef789a218e0108037b7965600ddc78b351e43dab0e66d265fd52fb1",
-    "nested_native_manifest_sha256": "5e1f5bfe6f045ec6549cc8fc53f52daf312d4291574d2b52c092158b649d4f8d"
+    "manifest_sha256": "2837c42b739306c36746a9d582e9e9e91edd9025e59b8751c53dfd881f726b0f",
+    "nested_native_manifest_sha256": "4566df681d3cbaea299a05c1758426de6f5906bec32f8ec3e78d9eac89f7c6cf"
   },
-  "result_sha256": "8d01eb2376d5858a73d3dddfb41cc70c1382c2c887a3205fc179c1358e946511",
+  "result_sha256": "aa8773a4831dba3b7576b72e1551e2a22aff1d9437f002c7c2ad8a912f33d931",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -82,7 +82,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 48340,
+    "elapsed_ms": 55375,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -94,8 +94,8 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "576384f4832aff7b0ab23540adb9818628a026f080fa61a7325040cdee7614ef",
-      "wotex-coap-oscore": "29e1d223744539fca82439e6eb25c869dcc81704e8780193ecb14edd23acf3ce"
+      "coap-server": "85f23cc4ecd84b90b0fa28459235ad96b7c7a3a640f182e63a1940977ff055d8",
+      "wotex-coap-oscore": "5fc94a53deb7f20719c7ba96b36ba5a25c47a4e5aeef61842162c91a21dacf76"
     },
     "scenario_ids": [
       "WCO-C03",
@@ -124,9 +124,9 @@
     "source_sha256": "f738a2520e00538395904d7895ba95d932aabfd2ed252fdedb9fd6732421717a",
     "status": "passed",
     "test_log": {
-      "bytes": 4206,
+      "bytes": 4183,
       "path": "tests.log",
-      "sha256": "86f1729fea543f2d901aea8a08906889be8de12b09d47065f5073d507044956f"
+      "sha256": "4bf4574a9a7f84d9926fa8daff620fa8efeb46425e455aa874b420f7831c814c"
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
@@ -146,26 +146,26 @@
   "resource_trends": {
     "udp": {
       "beam_total_bytes": [
-        78475051,
-        78982419
+        78004809,
+        78540025
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        78628619,
-        79046515
+        78197057,
+        78623217
       ]
     },
     "dtls_pki": {
       "beam_total_bytes": [
-        80719875,
-        81232931
+        80388521,
+        80886713
       ]
     },
     "oscore": {
       "beam_total_bytes": [
-        80778211,
-        80951547
+        80738289,
+        80773385
       ],
       "helper_rss_kib": [
         1936,
