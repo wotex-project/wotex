@@ -1,0 +1,81 @@
+{
+  "schema": "wotex.coap.native-worker-intervening-response-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Protected notifications that arrive between a native Observe cancellation or Max-Age renewal and its response",
+  "standard": {
+    "name": "IETF OSCORE",
+    "revision": "RFC 8613 2019-07",
+    "sections": ["8.4", "8.4.2"],
+    "summary": "A client stops processing a message that fails verification, and an error in a notification does not cancel the observation"
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "f1b485c3cadd14bef0b099ce32033d326dd9ca840f00bbcad8e2da04058f7d0b",
+      "native/oscore/patches/0009-keep-association-after-unverified-response.patch": "e218e7db735231d0d507323e939dab7085592f0a0057b1545ae49970d3bbc8c2",
+      "native/oscore/exchange.c": "1ef8f927c5d774b6b456ac9d28e9694fdb51995cb7b1fd53fe49ce895e95a37b",
+      "native/oscore/worker.c": "fa33f577ec6d3debd6817f23133edd97210e01927a65e0a524b393f6f570a9c3",
+      "test/native/oscore_worker_exchange_test.c": "8a1a8f17ab1a503a14cf392c117ce0fc5d1097b1b477c8b2e11041ed7008cf07",
+      "test/native/Dockerfile": "010e33d8ed57114b599b6dc23310b754703d864a8dd8938d9b1f3042e8789afc",
+      "lib/wotex/coap/native/build.ex": "25a84ca4a0ae3500c0d7ff3792339c70091c0b21ddb2bd5a874ba1a6e872a171",
+      "lib/wotex/coap/native/workspace.ex": "70dbb3be295832146c5aa60f95b1e6495684ae76510ef02298de93d9c452c247"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 9,
+    "patched_coap_oscore_sha256": "59089f1d3cd06a31b47c0fb76f5b03342405855552d2c2a03e89e4e8894c621b"
+  },
+  "requirements": ["WCO-S03", "WCO-S06", "WCO-V08", "WCO-V09", "WCO-N02"],
+  "defects": [
+    {
+      "observed": "A notification sent after the worker's cancellation and before the peer's confirmation ended the cancel command with security_handshake_failed; a notification in flight across a Max-Age renewal ended the observation with observation_failed",
+      "cause": "libcoap keeps one OSCORE association per token and refreshes it when the cancellation or renewal is sent, so a notification protected for the registration fails verification; the worker treated that failure as fatal whenever a request was pending"
+    },
+    {
+      "observed": "With the worker discarding that failure, the peer's genuine cancellation confirmation still failed with no security context association and the command returned timeout",
+      "cause": "libcoap deleted a non-Observe request association on any response decryption error, including one from a message that never verified"
+    }
+  ],
+  "assertions": [
+    "While an observation exists, OSCORE decryption, missing-protection and decoding failures are discarded and a pending renewal or cancellation continues to its own response or deadline",
+    "Patch 0009 deletes a request association only after a correlated message verifies",
+    "The harness holds the cancellation in the unserviced peer socket and sends a notification ahead of it; the peer handles the cancellation after generating that notification",
+    "With report credit open, the intervening notification writes no report and is not cancellation success",
+    "When the peer confirms, the cancel command returns result null; when the peer only acknowledges, it returns timeout at its 1,000 ms deadline",
+    "In both cancellation cases no later output follows, the peer has no observer and exactly one cancellation arrives",
+    "A notification sent after the Max-Age renewal and before the renewal is handled is discarded; the renewal response delivers report 2 with the new value and a later cancel returns result null",
+    "The preceding helper returns security_handshake_failed for the confirmed cancellation and observation_failed for the renewal; the worker change alone returns timeout for the confirmed cancellation; patch 0009 alone fails both cases"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "harness_sha256": "bcc38b724717559b284ad35536bf32234c04ee6ad1063c2d5e31cdd0c7fc7dc0",
+      "harness_output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "349b045ece45918b5d00b32e9373a54493d1263c4a48cee4ec6b71ad47e8973a",
+      "software_run_result_sha256": "312384408f02bb2447fa8235204084e9d4784de3a51030348aff31fed72c99f8",
+      "software_run_tests": 35,
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:intervening CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "image": "sha256:c8ba8d4b2db5fffc58b49ded4ba06c482ce4a5f3932cc93f2d06885006c055cc",
+      "worker_sha256": "0fbaeb8b25b8357d27848dae771763360f9c73d86f9150b6b3894a1f596f0596",
+      "harness_sha256": "27fa35bbe0f5364c9499261008b6d8abaee9f6ef0446c92cd00efc8373bd1502",
+      "build_log_sha256": "0eab3beb830cef41d3b5b2cc27fbf2e611ae21d3c34e4ed0920ea31d35745ff6",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "sanitizers": ["address", "undefined", "leak"]
+    }
+  ],
+  "unaccepted": [
+    "An authenticated stale or duplicate notification during a pending renewal, which renewal admission exempts from serial ordering",
+    "Verification of a notification protected for the registration after a renewal or cancellation refreshed libcoap's single token association",
+    "Independent-stack OSCORE interoperability"
+  ]
+}

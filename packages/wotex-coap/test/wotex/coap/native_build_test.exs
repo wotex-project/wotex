@@ -31,7 +31,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
     @revision "7cf7465b784baded4de183290c547d582becfd28"
 
     @patched %{
-      "src/coap_oscore.c" => "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6",
+      "src/coap_oscore.c" => "59089f1d3cd06a31b47c0fb76f5b03342405855552d2c2a03e89e4e8894c621b",
       "src/oscore/oscore_cbor.c" =>
         "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
       "src/coap_block.c" => "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6",
@@ -282,7 +282,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     assert {:error, :invalid_build_workspace} = Build.run(nil, Operations)
     assert {:error, :invalid_build_workspace} = Build.run_resolved(nil, %{}, Operations)
-    assert length(Build.artifacts()) == 23
+    assert length(Build.artifacts()) == 24
     assert_raise Mix.Error, ~r/usage:/, fn -> BuildTask.run(["--workspace", "relative"]) end
     assert Mix.Project.config()[:aliases][:"wotex.native.build"] == "wotex.coap.native.build"
   end
@@ -299,10 +299,10 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     assert manifest["build"]["feature_probe"]["oscore"]
     assert manifest["build"]["worker_probe"]["event"] == "ready"
-    assert length(manifest["build"]["steps"]) == 18
+    assert length(manifest["build"]["steps"]) == 19
     assert manifest["build"]["sanitizers"] == []
     assert length(manifest["build"]["dynamic_dependencies"]) == 1
-    assert length(manifest["build"]["source"]["patches"]) == 8
+    assert length(manifest["build"]["source"]["patches"]) == 9
     assert map_size(manifest["build"]["tools"]["versions"]) == 7
 
     executable = Path.join(root, "bin/wotex-coap-oscore")

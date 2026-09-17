@@ -72,7 +72,11 @@ executes the public-API original-route/token fallback, one distinct cancellation
 Message ID and exact deadline-driven local cleanup when no usable confirmation
 arrives. Its `timeout` came from libcoap's OSCORE send hold rather than the peer:
 under the send-hold patch the peer's response confirms that cancellation within
-the command deadline. Intervening-Observe ordering remains separate work.
+the command deadline. The
+[intervening-response receipt](../../docs/provenance/native-worker-intervening-response-v1.json)
+binds a notification that reaches the worker between a renewal or cancellation
+and its response: it is neither a report nor cancellation success, and the
+pending exchange still completes.
 
 The [owner-cleanup receipt](../../docs/provenance/native-worker-owner-cleanup-v1.json)
 binds abrupt public-custody owner EOF after a protected observation is
@@ -105,7 +109,9 @@ confirmable peer response is acknowledged before custody signals the worker. The
 binds ignoring libcoap's discarded-datagram event instead of closing the exchange.
 The [notification-verification receipt](../../docs/provenance/native-worker-notification-verification-v1.json)
 binds discarding a notification that fails OSCORE processing without cancelling
-the observation.
+the observation. While a renewal or cancellation is pending, the same failure is
+also discarded, because the pending request refreshed libcoap's token association
+and a notification still in flight cannot verify against it.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
@@ -136,6 +142,13 @@ PDU construction ran `coap_client_delay_first` and blocked the worker for up to
 five seconds. The worker serializes exchanges and bounds each with its own
 deadline, so a cancellation behind an unanswered registration or renewal is sent
 at once.
+
+The unverified-response patch keeps a request's OSCORE association when a
+correlated message fails verification. libcoap deleted a non-Observe association
+on any decryption error, so a notification protected for the registration
+removed the association of a pending cancellation and the genuine confirmation
+then found none. RFC 8613 section 8.4 stops processing an unverified message;
+it cannot change security state.
 
 The real native regression in `test/native/oscore_sequence_test.c` creates an
 OSCORE client through public libcoap APIs and a local UDP receiver. It asserts

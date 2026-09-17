@@ -1,0 +1,29 @@
+--- a/src/coap_oscore.c
++++ b/src/coap_oscore.c
+@@ -845,6 +845,7 @@
+   oscore_sender_ctx_t *snd_ctx = NULL;
+   uint8_t response_partial_iv[8];
+   size_t response_partial_iv_length = 0;
++  int verified = 0;
+ #if COAP_CLIENT_SUPPORT
+   coap_pdu_t *sent_pdu = NULL;
+ #endif /* COAP_CLIENT_SUPPORT */
+@@ -1393,6 +1394,7 @@
+   }
+ 
+   assert((size_t)pltxt_size < pdu->alloc_size + pdu->max_hdr_size);
++  verified = 1;
+ 
+   /* Appendix B.2 Trap */
+   if (session->b_2_step == COAP_OSCORE_B_2_STEP_2) {
+@@ -1640,7 +1642,9 @@
+ error:
+   coap_send_ack_lkd(session, pdu);
+ error_no_ack:
+-  if (association && association->is_observe == 0)
++  /* A message that failed verification cannot change the request association
++   * (RFC 8613 section 8.4); the genuine response can still arrive. */
++  if (association && association->is_observe == 0 && verified)
+     oscore_delete_association(session, association);
+   coap_delete_pdu(decrypt_pdu);
+   coap_delete_pdu(plain_pdu);

@@ -58,7 +58,7 @@ defmodule Wotex.CoAP.Native.Build do
                "tool-versions",
                "download"
              ] ++
-               Enum.map(1..8, &("patch-" <> String.pad_leading(Integer.to_string(&1), 2, "0"))) ++
+               Enum.map(1..9, &("patch-" <> String.pad_leading(Integer.to_string(&1), 2, "0"))) ++
                ~w(cmake-configure cmake-build feature-probe-build feature-probe worker-build
                  worker-probe-build worker-probe dynamic-dependencies)
   @artifacts ~w(bin/build-command bin/wotex-coap-oscore downloads/libcoap.tar.gz
@@ -172,10 +172,10 @@ defmodule Wotex.CoAP.Native.Build do
     end
   end
 
-  defp valid_patches?(patches) when is_list(patches) and length(patches) == 8 do
+  defp valid_patches?(patches) when is_list(patches) and length(patches) == 9 do
     paths = Enum.map(patches, & &1["path"])
 
-    length(Enum.uniq(paths)) == 8 and
+    length(Enum.uniq(paths)) == 9 and
       Enum.all?(patches, fn
         %{"path" => "patches/" <> path, "sha256" => hash} when is_binary(path) ->
           path != "" and not String.contains?(path, ["/", "\\", "..", <<0>>]) and hash?(hash)

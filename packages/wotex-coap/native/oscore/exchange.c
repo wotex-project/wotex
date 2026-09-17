@@ -279,11 +279,13 @@ static int event_handler(coap_session_t *session, coap_event_t event) {
         case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
         case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
         case COAP_EVENT_OSCORE_DECODE_ERROR:
-            /* With an established observation and no pending request, the
-             * failed message is a notification. RFC 8613 section 8.4.2: the
-             * client stops processing it, and the error does not cancel the
-             * observation. */
-            if (exchange->observing && !exchange->active) break;
+            /* While an observation exists the failed message may be a
+             * notification. RFC 8613 section 8.4.2: the client stops
+             * processing it, and the error does not cancel the observation.
+             * A renewal or cancellation refreshes libcoap's single token
+             * association, so a notification still in flight fails here; the
+             * pending exchange continues to its own response or deadline. */
+            if (exchange->observing) break;
             fail(exchange, "security_handshake_failed");
             break;
         case COAP_EVENT_OSCORE_NOT_ENABLED:

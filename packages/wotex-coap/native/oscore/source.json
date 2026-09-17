@@ -36,10 +36,14 @@
     {
       "path": "patches/0008-drop-oscore-client-send-hold.patch",
       "sha256": "01a3be4fa8174891e1b72a07e35b41ccd696714439624775c8755415a12650e8"
+    },
+    {
+      "path": "patches/0009-keep-association-after-unverified-response.patch",
+      "sha256": "e218e7db735231d0d507323e939dab7085592f0a0057b1545ae49970d3bbc8c2"
     }
   ],
   "patched_sources": {
-    "src/coap_oscore.c": "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6",
+    "src/coap_oscore.c": "59089f1d3cd06a31b47c0fb76f5b03342405855552d2c2a03e89e4e8894c621b",
     "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
     "src/coap_block.c": "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6",
     "src/coap_net.c": "a998fd11c41deadda9879e8f939c2e8cb38cb63fad09e90a984b3da422be495b"

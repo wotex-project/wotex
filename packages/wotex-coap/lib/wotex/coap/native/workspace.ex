@@ -71,7 +71,7 @@ defmodule Wotex.CoAP.Native.Workspace do
 
   defp validate(path, identity, artifacts) do
     if absolute?(path) and is_map(identity) and json?(identity, 262_144) and
-         is_list(artifacts) and length(artifacts) in 1..64 and
+         is_list(artifacts) and length(artifacts) in 1..128 and
          length(Enum.uniq(artifacts)) == length(artifacts) and
          Enum.all?(artifacts, &relative?/1) do
       :ok

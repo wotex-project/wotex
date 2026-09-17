@@ -743,6 +743,25 @@ cancellation within 1,000 ms. A renewal-timeout observation now ends within
 3,500 ms, and a cancellation behind an unanswered renewal returns `result: null`.
 The harness fails against the preceding helper.
 
+The [native worker intervening-response receipt](native-worker-intervening-response-v1.json)
+binds the next source cohort. The harness holds the worker's cancellation in the
+unserviced peer socket and sends a notification ahead of it. libcoap keeps one
+OSCORE association per token and refreshes it when the cancellation is sent, so
+the notification, protected for the registration request, fails verification.
+The worker ended the pending cancellation with `security_handshake_failed`, which
+supersedes the notification-verification cohort's rule for pending renewals and
+cancellations. libcoap also deleted the refreshed association on that failure,
+so the peer's genuine confirmation found none. The worker now discards OSCORE
+verification failures whenever an observation exists, and patch 0009 keeps a
+request association after a message fails verification. The confirmed case
+returns `result: null`, the unanswered case returns `timeout`, and neither writes
+a report despite open credit. A notification in flight
+across a Max-Age renewal is likewise discarded, and the renewal response
+delivers report 2 with the new value. The preceding helper returns
+`security_handshake_failed` for the cancellation and ends the renewed observation
+with `observation_failed`. With only the worker change, the confirmed cancellation
+returns `timeout`; with only the patch, both cases fail as before.
+
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
 recorded cohort.

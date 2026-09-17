@@ -67,7 +67,8 @@ metadata before representation identity and accept the protected FFFFFF-to-zero
 serial wrap. If libcoap cannot submit tracked cancellation during renewal, the
 worker sends an explicit original-route/token Observe=1 request, returns the
 peer's confirmation and still closes at the caller's finite deadline when none
-arrives. Abrupt owner EOF after establishment, or while registration or renewal
+arrives. A notification that arrives between a renewal or cancellation and its
+response is neither a report nor cancellation success. Abrupt owner EOF after establishment, or while registration or renewal
 awaits the peer, sends one best-effort cancellation before the worker releases
 its protected session and custody reaps the process. The same cleanup
 remains bounded while the actual owner output pipe is full and report output is

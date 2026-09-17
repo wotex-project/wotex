@@ -52,7 +52,10 @@ notifications. The send-hold patch removes the OSCORE client hold that libcoap
 re-armed on every `coap_send`, because a client recipient context never leaves
 its initial replay state; while a request lacked a response, the next PDU
 construction otherwise blocked the worker for up to five seconds. The worker
-serializes exchanges and bounds each with its own deadline. These fixed profile
+serializes exchanges and bounds each with its own deadline. The
+unverified-response patch keeps a request's OSCORE association when a correlated
+message fails verification, so an unverified notification cannot remove the
+association a pending cancellation's confirmation needs. These fixed profile
 policies preserve libcoap's exchange ownership.
 The native manifest records base archive, patches and
 resulting source hashes separately; it cannot describe this build as unmodified
@@ -222,13 +225,17 @@ protected run cancels while renewal is in flight: when tracked cancellation is
 unavailable, the exchange submits an original-route/token public-API fallback,
 the peer receives it once with a new Message ID, and the peer's response
 confirms the cancellation with `result: null` inside the 1,000 ms command
-deadline. An intervening Observe response before confirmation, replay,
-independent OSCORE interoperability and the final Mix-built helper remain
-unaccepted. Another
-protected run closes the public custody owner's input after establishment. The
-worker sends one original-route/token cancellation during exit cleanup, the peer
-removes its observer, and custody reaps the worker with exact owner-loss status
-within C03. Receiver death through the production BEAM owner executes in the
+deadline. In further runs the peer sends a notification after the worker sends
+a cancellation and before the peer answers it. That notification produces
+neither a report nor success; the confirmation then returns `result: null`, or
+`timeout` when the peer never answers. A notification in flight across a
+Max-Age renewal is discarded and the renewal response delivers the next report.
+Replay, independent OSCORE interoperability and the final Mix-built helper
+remain unaccepted. Another protected run closes the public custody owner's
+input after establishment. The worker sends one original-route/token
+cancellation during exit cleanup, the peer removes its observer, and custody
+reaps the worker with exact owner-loss status within C03. Receiver death
+through the production BEAM owner executes in the
 same-stack software run described in N05. Owner EOF while a registration or
 renewal awaits the peer produces exactly one original-token cancellation during
 exit cleanup; owner EOF while a cancellation awaits the peer produces none. Each
@@ -248,9 +255,11 @@ counter with 8 random bytes. A response whose token has no request association
 cleanup services its best-effort cancellation for at most 20 ms,
 inside custody's 25 ms termination signal, so a peer's separate confirmable
 response is acknowledged rather than retransmitted toward a reused endpoint.
-While an observation is established and no request is pending, a notification
-that fails decryption, lacks protection or fails OSCORE decoding is discarded and
-the observation continues, as RFC 8613 section 8.4.2 requires.
+While an observation exists, including while its renewal or cancellation is
+pending, a message that fails decryption, lacks protection or fails OSCORE
+decoding is discarded and the observation continues, as RFC 8613 section 8.4.2
+requires for notifications. A pending renewal or cancellation then completes on
+its own response or deadline.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

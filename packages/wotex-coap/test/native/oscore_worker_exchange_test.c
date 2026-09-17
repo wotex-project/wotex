@@ -37,6 +37,7 @@ static int notification, notification_streamed, notification_inline_large;
 static int notification_value;
 static int initial_max_age_zero;
 static int cancel_silent;
+static unsigned cancel_observe_count;
 static const char server_conf[] =
     "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
     "master_salt,hex,\"\"\n"
@@ -133,6 +134,7 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
                     assert(renewal_mid != 0 && mid != renewal_mid);
                 }
                 cancel_count++;
+                cancel_observe_count = observe_count;
                 if (cancel_silent) {
                     coap_pdu_set_code(response, COAP_EMPTY_CODE);
                     return;
@@ -291,29 +293,31 @@ static size_t fill_pipe(int descriptor) {
     }
 }
 
+static char line_pending[262144];
+static size_t line_used;
+
 static void line(coap_context_t *context, int descriptor,
                  char *output, size_t capacity) {
-    static char pending[262144];
-    static size_t used;
     int64_t deadline = now_ms() + 12000;
     output[0] = '\0';
     while (now_ms() < deadline) {
-        char *newline = memchr(pending, '\n', used);
+        char *newline = memchr(line_pending, '\n', line_used);
         ssize_t count;
         if (newline) {
-            size_t length = (size_t)(newline - pending) + 1;
+            size_t length = (size_t)(newline - line_pending) + 1;
             assert(length < capacity);
-            memcpy(output, pending, length);
+            memcpy(output, line_pending, length);
             output[length] = '\0';
-            used -= length;
-            memmove(pending, pending + length, used);
+            line_used -= length;
+            memmove(line_pending, line_pending + length, line_used);
             return;
         }
         assert(coap_io_process(context, 1) >= 0);
-        assert(used < sizeof(pending));
-        count = read(descriptor, pending + used, sizeof(pending) - used);
+        assert(line_used < sizeof(line_pending));
+        count = read(descriptor, line_pending + line_used,
+                     sizeof(line_pending) - line_used);
         if (count > 0) {
-            used += (size_t)count;
+            line_used += (size_t)count;
         } else if (count == 0) {
             break;
         } else {
@@ -321,7 +325,7 @@ static void line(coap_context_t *context, int descriptor,
         }
     }
     fprintf(stderr, "worker response deadline at %s after %zu buffered bytes\n",
-            stage, used);
+            stage, line_used);
     if (worker_child > 0) {
         int status = 0;
         pid_t waited = waitpid(worker_child, &status, WNOHANG);
@@ -330,6 +334,21 @@ static void line(coap_context_t *context, int descriptor,
                 waited == worker_child && WIFEXITED(status) ? WEXITSTATUS(status) : -1);
     }
     assert(!"worker response deadline");
+}
+
+/* Services the peer until the worker's output reaches EOF with no further line. */
+static void drained(coap_context_t *context, int descriptor) {
+    int64_t deadline = now_ms() + 3000;
+    assert(line_used == 0);
+    for (;;) {
+        char byte;
+        ssize_t count;
+        assert(now_ms() < deadline);
+        assert(coap_io_process(context, 1) >= 0);
+        count = read(descriptor, &byte, 1);
+        if (count == 0) return;
+        assert(count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR));
+    }
 }
 
 static void exact(coap_context_t *context, int descriptor, const char *expected) {
@@ -903,6 +922,258 @@ static void renewal_cancel_observation(const char *executable) {
     initial_max_age_zero = 0;
     renewal_fault = 0;
     renewal_mid = 0;
+}
+
+/* A notification sent after the worker's cancellation but before its
+ * confirmation is neither success nor a report. When the peer confirms with a
+ * response without Observe, the command succeeds; when it never answers, the
+ * command deadline returns timeout. No report follows in either case. */
+static void intervening_cancel_observation(const char *executable, int confirmed) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status;
+    int64_t deadline;
+    pid_t child;
+    unsigned port;
+    coap_context_t *context;
+    struct timespec pause = {0, 200000000L};
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-intervening-%d",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-intervening-%d",
+#endif
+                    (long)getpid(), confirmed) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]); close(result[1]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    cancel_observe_count = 0;
+    observe_token_length = 0;
+    renewal_mid = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_value = 0;
+    initial_max_age_zero = renewal_fault = 0;
+    cancel_silent = !confirmed;
+    context = server(&port);
+    stage = "intervening ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":11,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "intervening open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":true,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "intervening establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"2\",\"generation\":11}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":11,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "intervening credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+    stage = "intervening initial";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+    /* Open report credit so a misclassified notification could be written. */
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"4\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":11,\"ack_seq\":1},\"timeout_ms\":5000}\n");
+    stage = "intervening acknowledgment";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"5\",\"operation\":\"cancel\",\"parameters\":{"
+        "\"subscription_id\":\"2\",\"generation\":11},\"timeout_ms\":1000}\n");
+    /* The peer is not serviced, so the cancellation waits in its socket while
+     * the notification is sent ahead of it. */
+    assert(nanosleep(&pause, NULL) == 0);
+    assert(cancel_count == 0 && observe_count == 1);
+    notification = 1;
+    notification_value = 21;
+    assert(coap_resource_notify_observers(observed_resource, NULL));
+    coap_check_notify(context);
+    assert(observe_count == 2);
+    stage = "intervening cancellation";
+    deadline = now_ms() + 3000;
+    while (cancel_count < 1 && now_ms() < deadline)
+        assert(coap_io_process(context, 1) >= 0);
+    assert(cancel_count == 1 && cancel_observe_count == 2);
+    stage = "intervening result";
+    if (confirmed) {
+        exact(context, result[0],
+              "{\"version\":1,\"id\":\"5\",\"ok\":true,\"result\":null}\n");
+        assert(close(input[1]) == 0);
+    } else {
+        exact(context, result[0],
+              "{\"version\":1,\"id\":\"5\",\"ok\":false,\"error\":{"
+              "\"code\":\"timeout\"}}\n");
+    }
+    assert(!coap_resource_notify_observers(observed_resource, NULL));
+    stage = "intervening drain";
+    drained(context, result[0]);
+    assert(cancel_count == 1 && observe_count == 2);
+    assert(waitpid(child, &status, 0) == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == (confirmed ? 127 : 0));
+    if (!confirmed) close(input[1]);
+    close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+    cancel_silent = 0;
+    notification = notification_value = 0;
+}
+
+/* A notification sent under the registration's protection after the worker's
+ * Max-Age renewal cannot verify against the refreshed association. It is
+ * discarded, and the renewal response still renews the observation. */
+static void intervening_renewal_observation(const char *executable) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status;
+    int64_t deadline;
+    pid_t child;
+    unsigned port;
+    coap_context_t *context;
+    struct timespec pause = {1, 300000000L};
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-intervening-renewal",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-intervening-renewal",
+#endif
+                    (long)getpid()) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]); close(result[1]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    observe_token_length = 0;
+    renewal_mid = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_value = 0;
+    initial_max_age_zero = 1;
+    renewal_fault = 0;
+    context = server(&port);
+    stage = "intervening renewal ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":12,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "intervening renewal open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":true,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "intervening renewal establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"2\",\"generation\":12}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":12,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "intervening renewal credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+    stage = "intervening renewal initial";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+    assert(strstr(output, "\"max_age\":0}"));
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"4\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":12,\"ack_seq\":1},\"timeout_ms\":5000}\n");
+    stage = "intervening renewal acknowledgment";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
+    /* The peer is not serviced past the one-second renewal, so the renewal
+     * waits in its socket while the notification is sent ahead of it. */
+    assert(nanosleep(&pause, NULL) == 0);
+    assert(observe_count == 1);
+    notification = 1;
+    notification_value = 21;
+    assert(coap_resource_notify_observers(observed_resource, NULL));
+    coap_check_notify(context);
+    assert(observe_count == 2);
+    stage = "intervening renewal response";
+    deadline = now_ms() + 3000;
+    while (observe_count < 3 && now_ms() < deadline)
+        assert(coap_io_process(context, 1) >= 0);
+    assert(observe_count == 3);
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":2,\"event\":\"report\""));
+    assert_report_payload(output, 21);
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"5\",\"operation\":\"cancel\",\"parameters\":{"
+        "\"subscription_id\":\"2\",\"generation\":12},\"timeout_ms\":1000}\n");
+    stage = "intervening renewal cancel";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"5\",\"ok\":true,\"result\":null}\n");
+    assert(cancel_count == 1);
+    assert(close(input[1]) == 0);
+    stage = "intervening renewal drain";
+    drained(context, result[0]);
+    assert(cancel_count == 1);
+    assert(waitpid(child, &status, 0) == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 127);
+    close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+    initial_max_age_zero = 0;
+    notification = notification_value = 0;
 }
 
 /* Owner EOF while a registration (0), renewal (1) or cancellation (2) is still
@@ -1584,6 +1855,9 @@ int main(int argc, char **argv) {
                               "{\"code\":\"representation_changed\"}");
     renewal_fault_observation(argv[1], 4, "{\"code\":\"timeout\"}");
     renewal_cancel_observation(argv[1]);
+    intervening_cancel_observation(argv[1], 1);
+    intervening_cancel_observation(argv[1], 0);
+    intervening_renewal_observation(argv[1]);
     overloaded_observation(argv[1], 0);
     overloaded_observation(argv[1], 1);
     wraparound_observation(argv[1]);

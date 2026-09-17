@@ -92,6 +92,7 @@ defmodule Wotex.CoAP.Native.WorkspaceTest do
           {root, nil, ["out"]},
           {root, %{bad: self()}, ["out"]},
           {root, %{}, []},
+          {root, %{}, Enum.map(1..129, &"out-#{&1}")},
           {root, %{}, ["out", "out"]},
           {root, %{}, ["../out"]},
           {root, %{}, ["/out"]},
