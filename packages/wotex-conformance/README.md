@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_conformance.svg)](https://hex.pm/packages/wotex_conformance)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_conformance)
-[![CI](https://github.com/wotex-project/wotex-conformance/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-conformance/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-conformance/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-conformance)
-[![License](https://img.shields.io/hexpm/l/wotex_conformance.svg)](https://github.com/wotex-project/wotex-conformance/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_conformance.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-conformance/LICENSE)
 
 [Installation](#installation) · [Evidence Model](#evidence-model) ·
 [Quick Start](#quick-start) · [External Target Protocol](#external-target-protocol) ·
@@ -152,18 +151,19 @@ loads a corpus, verifies an artifact, or runs an external target.
 
 ```console
 mix deps.get
-mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-`mix check` runs warnings-as-errors compilation, formatting, and the test suite.
-Package, documentation, audit, and compatibility checks are explicit
-release-readiness work. The
+`mix check --no-retry` is the package gate: warnings-as-errors compilation,
+locked and unused-dependency checks, formatting, dependency and Hex audits,
+strict Credo, Doctor, documentation with warnings as errors, coverage,
+Dialyzer, the archive and application-free checks, and whitespace. The
 [runtime compatibility evidence](../../docs/packages/wotex-conformance/provenance/runtime-compatibility.md)
 records the tested Elixir and Erlang/OTP cohorts and their limits. The
-[package input boundary](../../docs/packages/wotex-conformance/provenance/package-inputs.md) describes which
-documentation roots enter the Hex archive.
+[package input boundary](../../docs/packages/wotex-conformance/provenance/package-inputs.md) describes what
+enters the Hex archive; Markdown documentation reaches consumers through HexDocs.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md),
 [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/security.md), and [GOVERNANCE.md](https://github.com/wotex-project/wotex/blob/main/GOVERNANCE.md). Licensed under
 Apache-2.0; see [LICENSE](LICENSE) and
-[NOTICE](https://github.com/wotex-project/wotex-conformance/blob/main/NOTICE).
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-conformance/NOTICE).

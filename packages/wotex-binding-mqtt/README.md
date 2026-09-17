@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_binding_mqtt.svg)](https://hex.pm/packages/wotex_binding_mqtt)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_binding_mqtt)
-[![CI](https://github.com/wotex-project/wotex-binding-mqtt/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-binding-mqtt/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-binding-mqtt/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-binding-mqtt)
-[![License](https://img.shields.io/hexpm/l/wotex_binding_mqtt.svg)](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_binding_mqtt.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/LICENSE)
 
 [Installation](#installation) · [Quick Start](#quick-start) ·
 [Form Mapping](#form-mapping) · [Client Port](#client-port) ·
@@ -191,23 +190,14 @@ WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-The developer gate covers warnings-as-errors compilation, formatting, and the
-behavioral test suite. Release evidence is run explicitly:
+`mix check --no-retry` is the package gate: warnings-as-errors compilation,
+locked and unused-dependency checks, formatting, dependency and Hex audits,
+strict Credo, Doctor, documentation with warnings as errors, coverage,
+Dialyzer, the exact-archive and application-free checks, and whitespace. The
+public boundary script runs separately:
 
 ```console
-WOTEX_PATH_DEPS=1 mix deps.get --check-locked
-WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
-WOTEX_PATH_DEPS=1 mix deps.audit
-WOTEX_PATH_DEPS=1 mix hex.audit
-WOTEX_PATH_DEPS=1 mix credo --strict
-WOTEX_PATH_DEPS=1 mix doctor
-WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
-WOTEX_PATH_DEPS=1 MIX_ENV=test mix coveralls
-WOTEX_PATH_DEPS=1 mix dialyzer
 WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
-WOTEX_PATH_DEPS=1 mix run --no-start bin/check_application_free.exs
-WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
-git diff --check
 ```
 
 These commands do not invoke a release task, publish a package, or mutate a
@@ -215,5 +205,5 @@ remote.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
 [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/security.md). Licensed under Apache-2.0; see
-[LICENSE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/LICENSE) and
-[NOTICE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/NOTICE).
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/NOTICE).

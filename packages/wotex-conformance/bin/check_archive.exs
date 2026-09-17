@@ -1,6 +1,9 @@
 # Verifies the Hex archive contents and out-of-tree compilation using Elixir only.
 #
 #     mix run --no-start bin/check_archive.exs
+#
+# The script builds one exact archive with released requirements into an
+# OS-temporary directory before verifying it.
 
 defmodule CheckArchive do
   @moduledoc false
@@ -16,18 +19,24 @@ defmodule CheckArchive do
 
   def run do
     version = Mix.Project.config()[:version]
-    archive = "wotex_conformance-#{version}.tar"
-
-    unless File.regular?(archive) do
-      halt("expected current wotex_conformance archive: #{archive}")
-    end
-
     temporary = temporary_directory()
+    archive = Path.join(temporary, "wotex_conformance-#{version}.tar")
 
     try do
+      build(archive, temporary)
       verify(archive, temporary)
     after
       File.rm_rf(temporary)
+    end
+  end
+
+  defp build(archive, temporary) do
+    run!(temporary, "mix", ["hex.build", "--output", archive],
+      env: [{"MIX_ENV", "prod"}, {"WOTEX_PATH_DEPS", nil}]
+    )
+
+    unless File.regular?(archive) do
+      fail(temporary, "expected current wotex_conformance archive: #{archive}")
     end
   end
 

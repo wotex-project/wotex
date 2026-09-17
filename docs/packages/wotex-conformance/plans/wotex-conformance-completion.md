@@ -1,9 +1,19 @@
 # Wotex Conformance completion contract
 
-Plan `WCF-C`, revision `1.1.0`. This immutable baseline defines work, not current
+Plan `WCF-C`, revision `1.2.0`. This immutable baseline defines work, not current
 progress. Preserve work IDs; revisions that change scope require an explicit
 successor. Package 0.1.0, WCF.01 specification 1.1.0, corpus/schema revisions and
 target protocol 1.0 are distinct version axes.
+
+Revision 1.2.0 records the package's move into the `wotex` repository without
+changing any obligation. Documentation now lives under
+`docs/packages/wotex-conformance/`. Package archives no longer ship Markdown
+documentation, governance files or agent files; specifications are published
+through HexDocs. Fixtures and machine-read provenance ship under `priv/`. The
+repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
+`packages/wotex-conformance`, and the package's CI lane now discharge
+`repository_green` and `archive_consumer_green`. Tags use
+`wotex-conformance-v<version>`.
 
 Revision 1.1.0 aligns this acceptance baseline with WCF.01 1.1.0 and accepted
 decision 0003's normalized-observation contract. It does not promote any
@@ -67,7 +77,8 @@ retrieval, certification service, hardware harness or production SLA is implied.
 | WCF-CL05 | Discovery Recommendation 2023-12-05 is reserved provenance | No bundled Discovery corpus or Discovery conformance claim exists |
 | WCF-CL06 | Bounded subprocess execution | No OS isolation, descendant termination guarantee or trusted hardware attestation |
 
-Authoritative source URLs and sections belong in `docs/provenance/standards.md`
+Authoritative source URLs and sections belong in
+`docs/packages/wotex-conformance/provenance/standards.md`
 and each claim. A profile label such as `certification` or `live_transport` is a
 classification, not evidence that this package performs that activity.
 
@@ -89,7 +100,7 @@ classification, not evidence that this package performs that activity.
 | WCF-C04 | WCF-C03 | Cross-run isolation and lifecycle proof | Concurrent target runs cannot exchange output; timeout during write/read cleans up ports; oversized/late/partial responses and target crashes remain bounded; changed artifact never starts target |
 | WCF-C05 | WCF-C01 | Decision contract for any proposed Discovery corpus; keep it separate from existing TD/TM evidence | Before implementation, enumerate exact Discovery operations/assertions, source sections, consumer fixture obligations and unsupported profiles; no Discovery claim until vectors and independent target pass |
 | WCF-C06 | WCF-C02, WCF-C03, WCF-C04 | Release evidence and explicit runtime compatibility cohort | Confirm the matching Elixir `~> 1.18` CLAUDE/Mix requirement, test the accepted minimum/current cohort cleanly, validate all ten schemas and publish no stronger claim than tested |
-| WCF-C07 | None | Allowlisted package documentation inputs that exclude machine-local execution records | `mix hex.build` archive listing excludes docs/tasks/local including a local sentinel |
+| WCF-C07 | None | Package inputs that ship no Markdown documentation, governance or agent files and exclude machine-local execution records | The `bin/check_archive.exs` archive listing contains no `docs/` or `tasks/` path segment, including a local sentinel under the root `docs/tasks/local/wotex-conformance/` |
 
 C02 expands data/evidence, not the target execution protocol. New operations,
 expectation operators or claim semantics require a revised WCF.01 contract before
@@ -99,11 +110,17 @@ An independent target must not calculate expected answers using runner internals
 
 ## Gates and evidence
 
-- `repository_green`: clean-build warnings-as-errors compilation, format, all
-  tests, strict Credo, docs, schema mirror checks and `git diff --check`. Record
-  exact commit/runtime/dependencies; incremental compilation is not clean proof.
-- `archive_consumer_green`: build and inspect the Hex archive, verify license,
-  schema/corpus assets and dependency allowlist, then run C03 using only the
+- `repository_green`: the repository-level gate `WOTEX_PATH_DEPS=1 mix check
+  --no-retry`, run from `packages/wotex-conformance` and mirrored by the
+  package's CI lane: clean-build warnings-as-errors compilation, locked and
+  unused-dependency checks, format, dependency and Hex audits, strict Credo,
+  Doctor, docs with warnings as errors, all tests with coverage, Dialyzer,
+  schema mirror checks, the archive and application-free checks and
+  `git diff --check`. Record exact commit/runtime/dependencies; incremental
+  compilation is not clean proof.
+- `archive_consumer_green`: `bin/check_archive.exs`, run by the same gate and
+  CI lane, builds and inspects one exact Hex archive, verifies license,
+  schema/corpus assets and dependency allowlist, then runs C03 using only the
   archive and declared dependencies. No source checkout or subject dependency.
 - `reference_consumer_green`: C03/C04 independent target and isolation evidence
   against that exact archive, with expected outcomes kept exclusively runner-side.
@@ -120,11 +137,11 @@ corpus or subject cannot discharge a claim for the selected artifact.
 
 ## Local tracker contract
 
-Use only ignored `docs/tasks/local/wotex-conformance-tracker.yaml`. Package
-inputs allowlist publishable documentation and structurally exclude the path;
+Use only the ignored root `docs/tasks/local/wotex-conformance/`. Package
+inputs ship no Markdown documentation and structurally exclude that path;
 every candidate archive still proves WCF-C07 because Git ignore is not Hex
 exclusion. Schema: `schema_version: "1.0.0"`,
-`plan_id: WCF-C`, `plan_revision: "1.1.0"`, `work_items` with `id`,
+`plan_id: WCF-C`, `plan_revision: "1.2.0"`, `work_items` with `id`,
 `state` (`queued|active|blocked|verified`), `prerequisites`, `evidence`
 (source_commit, archive_sha256, corpus_digest, runtime, dependency_cohort,
 command, exit_code), and `remaining_claims`. Unavailable proof is explicit null.

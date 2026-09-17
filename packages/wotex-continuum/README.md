@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_continuum.svg)](https://hex.pm/packages/wotex_continuum)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_continuum)
-[![CI](https://github.com/wotex-project/wotex-continuum/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-continuum/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-continuum/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-continuum)
-[![License](https://img.shields.io/hexpm/l/wotex_continuum.svg)](https://github.com/wotex-project/wotex-continuum/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_continuum.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-continuum/LICENSE)
 
 [Installation](#installation) ·
 [Quick Start](#quick-start) ·
@@ -157,23 +156,14 @@ dependency under the `prod` dependency environment. Package construction
 unsets it and records the released `wotex` version requirement instead of a
 local path.
 
-`mix test` is the fast development loop. The default `mix check --no-retry`
-compiles with warnings as errors, checks formatting, and runs the behavioral
-test suite.
-
-Release-candidate evidence uses explicit checks:
+`mix test` is the fast development loop. `mix check --no-retry` is the package
+gate: it compiles with warnings as errors, checks locked and unused
+dependencies, formatting, dependency and Hex audits, strict Credo, Doctor,
+documentation with warnings as errors, coverage, Dialyzer, the archive check
+and whitespace. The public boundary script runs separately:
 
 ```sh
-WOTEX_PATH_DEPS=1 mix credo --strict
-WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
-WOTEX_PATH_DEPS=1 mix deps.audit
-WOTEX_PATH_DEPS=1 mix hex.audit
-WOTEX_PATH_DEPS=1 mix dialyzer
-WOTEX_PATH_DEPS=1 mix doctor
-WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
-WOTEX_PATH_DEPS=1 mix coveralls
 elixir bin/check_boundary.exs
-WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
 ```
 
 The archive check builds one exact artifact and installs it through a signed
@@ -193,4 +183,4 @@ See `../../docs/packages/wotex-continuum/specs/` for the normative contracts and
 
 ## License
 
-Wotex Continuum is released under the [Apache License 2.0](https://github.com/wotex-project/wotex-continuum/blob/main/LICENSE).
+Wotex Continuum is released under the [Apache License 2.0](https://github.com/wotex-project/wotex/blob/main/packages/wotex-continuum/LICENSE).

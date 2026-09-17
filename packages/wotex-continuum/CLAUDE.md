@@ -1,6 +1,7 @@
 # Wotex Continuum Contract
 
-This file is the canonical repository instruction contract.
+This file is the instruction contract for the `wotex-continuum` package.
+Repository-wide rules are in the root `CLAUDE.md`.
 
 ## Scope
 
@@ -34,47 +35,22 @@ fields or imply W3C certification.
 
 ## Dependency direction
 
-The only Wotex-family compile dependency allowed is the Wotex core. Never
-import a consumer host or a downstream library. External dependencies must be
-small, justified, and included in provenance review.
+The only Wotex-family compile dependency allowed is the `wotex` core package.
+Never import a consumer host or a downstream library. External dependencies
+must be small, justified, and included in provenance review.
 
 ## Change gate
 
-Public wire changes update the owning WCT specification, executable vectors,
-tests, implementation, and compatibility classification atomically. Run every
-verification command in `README.md` before committing.
+Public wire changes update the owning WCT specification under
+`docs/packages/wotex-continuum/specs/`, executable vectors, tests,
+implementation, and compatibility classification atomically. Run
+`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-continuum` before
+a local commit, then the gate of every dependent package.
 
 ## Public boundary
 
-Source, tests, documentation, commit messages, package contents, and generated
-documentation must contain no consumer brand, organization-internal path,
-credential, or non-public fixture. Synthetic examples use `example` names and
-reserved URNs only.
-
-## External automation boundary
-
-This repository exposes source, specifications, dependency contracts, vectors,
-and deterministic verification commands to external engineering automation. It
-does not own worker coordination, claims, leases, attempts, cross-repository
-programme state, accepted outcomes, or remote publication policy. Do not add a
-coordination daemon, graph database, shared-workspace application, or
-tool-specific project metadata. External automation must adapt to this
-consumer-neutral repository contract.
-
-## Release metadata
-
-`CHANGELOG.md` is maintained only by GitOps. Never edit it directly.
-Once GitOps is configured for this repository, the human maintainer prepares
-the first release from the existing changelog with
-`mix git_ops.release --override 0.1.0` and later releases with `mix git_ops.release`. Automated agents must not invoke either release task.
-
-## Git authority
-
-Automated agents must never configure, add, change, or remove a Git remote;
-push; create a tag; publish a package; or create equivalent remote state. Only
-the human maintainer performs publication. Never change repository visibility.
-
-Local commits use the identity already configured by the contributor running
-Git. Automated agents must never set or override Git identity; record an agent,
-tool, or bot as an author, committer, or co-author; invent a contributor
-identity; or remove attribution supplied by a human contributor.
+Consumer, company and customer names stay out of source, tests, documentation,
+commit messages, package contents, and generated documentation, as do
+credentials and non-public fixtures. Sibling packages are referenced by package
+name; relative paths inside the repository are allowed, absolute machine paths
+are not. Synthetic examples use `example` names and reserved URNs only.

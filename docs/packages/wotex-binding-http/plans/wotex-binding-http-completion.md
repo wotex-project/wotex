@@ -1,9 +1,20 @@
 # Wotex HTTP binding completion contract
 
-Plan `WBH-C@1.0.0`; package baseline `wotex_binding_http 0.1.0`. This tracked
+Plan `WBH-C@1.1.0`; package baseline `wotex_binding_http 0.1.0`. This tracked
 plan owns durable scope, prerequisites and acceptance criteria, not mutable
-status. Catalogue `docs/specs/catalogue.yaml` owns specification identities.
-Revision changes preserve historical Git evidence rather than rewriting it.
+status. Catalogue `docs/packages/wotex-binding-http/specs/catalogue.yaml` owns
+specification identities. Revision changes preserve historical Git evidence
+rather than rewriting it.
+
+Revision 1.1.0 records the package's move into the `wotex` repository without
+changing any obligation. Documentation now lives under
+`docs/packages/wotex-binding-http/`. Package archives no longer ship Markdown
+documentation, governance files or agent files; specifications are published
+through HexDocs. Fixtures and machine-read provenance ship under `priv/`. The
+repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
+`packages/wotex-binding-http`, and the package's CI lane now discharge
+`repository_green` and `archive_consumer_green`. Tags use
+`wotex-binding-http-v<version>`.
 
 ## Boundary and compatibility
 
@@ -40,10 +51,10 @@ authorizes automated publication, tags or Git remote operations.
 
 | Gate | Evidence requirement | Nonclaim |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes warnings-as-errors compilation, formatting, and behavioral tests | Not independent install or full protocol conformance |
-| `archive_consumer_green` | The mandatory archive check builds each exact archive once without path overrides, inspects and extracts those same bytes, then compiles a separate Mix consumer whose Wotex dependency, compile-source, BEAM and code paths exclude every live checkout | Not full lifecycle behavior |
+| `repository_green` | The repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-binding-http` and mirrored by the package's CI lane, passes warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, coverage, Dialyzer, the archive check and a whitespace diff | Not independent install or full protocol conformance |
+| `archive_consumer_green` | `bin/check_archive.exs`, run by the same gate and CI lane, builds each exact archive once without path overrides, inspects and extracts those same bytes, then compiles a separate Mix consumer whose Wotex dependency, compile-source, BEAM and code paths exclude every live checkout | Not full lifecycle behavior |
 | `reference_consumer_green` | That external consumer exercises WBH-A01..A06 through public APIs, including a supplied client and consumer-owned Runtime supervisor | No production transport certification |
-| `public_release_candidate` | Previous gates plus explicit dependency audits, documentation, coverage, Dialyzer, boundary, package metadata/license/security, and claim review pass | Not registry availability, runtime matrix, or permission to publish |
+| `public_release_candidate` | Previous gates (whose repository-level gate already carries the dependency audits, documentation, coverage and Dialyzer checks) plus boundary, package metadata/license/security, and claim review pass | Not registry availability, runtime matrix, or permission to publish |
 | `stable_api_candidate` | Consumer-visible compatibility behavior and documented API changes receive review against WBH-C06 | Not a published release, serialized ABI, runtime matrix, or universal HTTP/WoT compliance |
 
 `mix test` remains the fast loop. The archive helper supplies exact dependency
@@ -63,7 +74,8 @@ test name, documentation row, or developer-gate entry.
 | SSE adaptation | HTML Living Standard, repository observation 2026-09-02 | `client_lifecycle_inventory_test.exs`, `integration_test.exs`, `transport_test.exs` | Already-framed events; no parser/reconnect claim |
 | Binding Registry membership | Draft Registry 2025-11-04 baseline | No registration evidence | No membership or W3C endorsement claim |
 
-Exact primary links and maturity labels are in `docs/standards-baseline.md`.
+Exact primary links and maturity labels are in
+`docs/packages/wotex-binding-http/standards-baseline.md`.
 These are dated repository baselines, not freshly revalidated current maturity.
 Newer draft text does not silently change a released mapping.
 
@@ -85,7 +97,7 @@ Newer draft text does not silently change a released mapping.
 | WBH-R04 | All TD operations or non-JSON content | Outside nine-operation profile; new reviewed mapping required |
 | WBH-R05 | Full WoT Profile/Registry/HTTP client conformance | Explicit nonclaim; no badge or label upgrade from test count |
 | WBH-R06 | Whole declared runtime matrix and registry installation | WBH-C05 pins one exact QA pair and proves the archive dependency graph; actual registry installation and a broader matrix remain promotion evidence |
-| WBH-R07 | Local tracker exclusion from archive | Inspect every candidate archive and reject any `docs/tasks/local/` member |
+| WBH-R07 | Local tracker exclusion from archive | Inspect every candidate archive and reject any Markdown documentation, governance, agent-file or `docs/tasks/local/` member |
 
 WBH-C06 keeps the documented `0.1.0` operations, callback and receiver tuples,
 error identities, defaults, limit measurements, mappings, and value accessors.
@@ -95,7 +107,8 @@ decision; a newer draft does not silently change the package mapping.
 
 ## Local evidence contract
 
-Optional file: ignored `docs/tasks/local/wotex-binding-http-tracker.yaml`.
+Optional file: a tracker under the ignored root
+`docs/tasks/local/wotex-binding-http/`.
 Schema is `schema_version: "1.0.0"`, `package`, `source_commit`,
 `dependency_digests`, `items`.
 Items keyed by WBH-C/WBH-R IDs carry `state`, `evidence`, `limitations`,
@@ -103,7 +116,7 @@ Items keyed by WBH-C/WBH-R IDs carry `state`, `evidence`, `limitations`,
 No mutable status, worker assignment, attempts or approvals enter tracked
 specifications/plans or package output. Unknown is not passed.
 
-Package inputs allowlist publishable documentation and structurally exclude
+Package inputs ship no Markdown documentation and structurally exclude
 `docs/tasks/local/`. Every candidate archive still proves the exclusion; Git
 ignore alone never counts. A clean checkout requires no local tracker or
 external automation service to build, test or select a normative task.

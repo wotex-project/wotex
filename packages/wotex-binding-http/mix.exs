@@ -14,6 +14,7 @@ defmodule WotexBindingHTTP.MixProject do
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
+      aliases: aliases(),
       description: "Caller-owned HTTP and Server-Sent Events binding for Wotex Runtime",
       package: package(),
       docs: docs(),
@@ -89,6 +90,14 @@ defmodule WotexBindingHTTP.MixProject do
       _value ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
+  end
+
+  defp aliases do
+    [
+      setup: ["deps.get", "deps.compile"],
+      "test.cover": ["coveralls"],
+      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+    ]
   end
 
   defp package do

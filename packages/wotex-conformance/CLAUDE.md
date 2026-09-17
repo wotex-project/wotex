@@ -1,15 +1,19 @@
-# Repository contract
+# Wotex Conformance Contract
 
 Wotex Conformance is a public, normal Mix library. It owns conformance claims,
 vectors, the external target protocol, evidence classification, and reports.
+This file governs the `wotex-conformance` package. Repository-wide rules are
+in the root `CLAUDE.md`.
 
 ## Non-negotiable boundaries
 
 - Use exact W3C Web of Things terminology. `Thing`, `Thing Description`,
   `Property`, `Action`, `Event`, `Form`, and `DataSchema` are canonical terms.
 - Refer to an integrating system as a `consumer` or `consumer host`.
-- Keep consumer names, consumer namespaces, consumer-specific rules, customer
-  fixtures, internal paths, and non-public service details out of every file.
+- Consumer, company and customer names, consumer-specific rules, customer
+  fixtures, and non-public service details stay out of every file. Sibling
+  packages are referenced by package name; relative paths inside the
+  repository are allowed, absolute machine paths are not.
 - Production code may not compile-depend on a tested subject. Subjects are
   exercised only through immutable archives or public interfaces via an
   external adapter.
@@ -25,9 +29,10 @@ vectors, the external target protocol, evidence classification, and reports.
 
 ## Implementation rules
 
-- Elixir `~> 1.18`, matching `mix.exs`; current CI uses Elixir 1.20 and
-  Erlang/OTP 29. Minimum-runtime evidence and the accepted cohort are reviewed
-  separately under WCF-C06; the Mix requirement alone does not prove coverage.
+- Elixir `~> 1.18`, matching `mix.exs`; the repository toolchain in the root
+  `.tool-versions` is Elixir 1.20 and Erlang/OTP 29. Minimum-runtime evidence
+  and the accepted cohort are reviewed separately under WCF-C06; the Mix
+  requirement alone does not prove coverage.
 - One module per `.ex` file.
 - Use tagged return values and `Wotex.Conformance.Error`; do not raise for
   untrusted data.
@@ -37,42 +42,14 @@ vectors, the external target protocol, evidence classification, and reports.
 - Reports contain observation digests and bounded diagnostic codes, not raw
   target values, stdout, credentials, endpoints, or exception text.
 - External commands use direct executable invocation, never a shell.
-- Tests and specifications change with the contract they prove.
-- Commits use a conventional lowercase subject without task/spec identifiers,
-  attribution trailers, or generated-author language.
+- Tests and specifications under `docs/packages/wotex-conformance/` change
+  with the contract they prove.
 
 ## Required gates
 
-Run `mix format --check-formatted`, `mix compile --warnings-as-errors`,
-`mix test`, `mix docs`, and `mix hex.build`. Verify the dependency allowlist,
-the absence of an application callback, deterministic corpus/report digests,
-and archive-target isolation before handoff.
-
-## External automation boundary
-
-This repository exposes source, specifications, dependency contracts, vectors,
-and deterministic verification commands to external engineering automation. It
-does not own worker coordination, claims, leases, attempts, cross-repository
-programme state, accepted outcomes, or remote publication policy. Do not add a
-coordination daemon, graph database, shared-workspace application, or
-tool-specific project metadata. External automation must adapt to this
-consumer-neutral repository contract.
-
-## Release metadata
-
-`CHANGELOG.md` is maintained only by GitOps. Never edit it directly. Because
-the initial changelog already exists, once GitOps is configured, the human maintainer prepares the first
-release with `mix git_ops.release --override 0.1.0` and later releases with
-`mix git_ops.release`. Automated agents must not invoke either release task.
-
-## Git authority
-
-Automated agents must never configure, add, change, or remove a Git remote;
-push; create a tag; publish a package or release; or create equivalent remote
-state. Only the human maintainer performs publication. Never change repository
-visibility.
-
-Local commits use the identity already configured by the contributor running
-Git. Automated agents must never set or override Git identity; record an agent,
-tool, or bot as an author, committer, or co-author; invent a contributor
-identity; or remove attribution supplied by a human contributor.
+Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-conformance`
+before a local commit, then the gate of every dependent package. The gate
+verifies the dependency allowlist, the absence of an application callback,
+deterministic corpus/report digests, and archive-target isolation through
+`bin/check_archive.exs` and `bin/check_application_free.exs`; run
+`elixir bin/check_boundary.exs` for the public boundary.

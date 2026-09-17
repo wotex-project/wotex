@@ -1,17 +1,28 @@
 # Wotex Continuum completion contract
 
-Plan version: 1.1.0. Package baseline: 0.1.0. Wire schema: 2.0.0.
+Plan version: 1.2.0. Package baseline: 0.1.0. Wire schema: 2.0.0.
 The single [catalogue](../specs/catalogue.yaml) points to normative WCT owners
-under `specs/`; it does not duplicate them.
+under `docs/packages/wotex-continuum/specs/`; it does not duplicate them.
+
+Revision 1.2.0 records the package's move into the `wotex` repository without
+changing any obligation. Documentation now lives under
+`docs/packages/wotex-continuum/`. Package archives no longer ship Markdown
+documentation, governance files or agent files; specifications are published
+through HexDocs. Fixtures and machine-read provenance ship under `priv/` (this
+package's schemas are `priv/schemas/`; its packaged vectors stay under
+`test/vectors/` as WCT-C04 records). The repository-level gate
+`WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-continuum`,
+and the package's CI lane now discharge `repository_green` and
+`archive_consumer_green`. Tags use `wotex-continuum-v<version>`.
 
 This tracked document is a versioned acceptance baseline, not a mutable work
 tracker. An accepted baseline is immutable in meaning; changed obligations need
 a new plan version and compatibility classification. Store execution status,
-attempts, machine-local handoffs and evidence only in ignored
-`docs/tasks/local/wotex-continuum-tracker.yaml`. Package inputs allowlist
-publishable documentation and structurally exclude `docs/tasks/local/`; every
-candidate archive must still prove that boundary because Git ignore is not an
-archive rule.
+attempts, machine-local handoffs and evidence only in the ignored root
+`docs/tasks/local/wotex-continuum/`. Package inputs allowlist code, `priv/`
+schemas, packaged vectors and release files and structurally exclude
+documentation and `docs/tasks/local/`; every candidate archive must still prove
+that boundary because Git ignore is not an archive rule.
 Catalogue implementation coverage and a successful local gate are distinct
 from archive admission, independent interoperability and stable API readiness.
 
@@ -82,7 +93,8 @@ rights, clock accuracy or current authority. Capabilities declare abilities,
 not grants. Extension keys are absolute IRIs but are never dereferenced.
 The consumer controls URI origin/scheme/media/size policy and credential
 resolution. It must not place secrets in envelopes or assume the codec redacts
-arbitrary extension data. See `docs/THREAT_MODEL.md` for the threat boundary.
+arbitrary extension data. See `docs/packages/wotex-continuum/THREAT_MODEL.md`
+for the threat boundary.
 
 ## Standards-claim matrix
 
@@ -117,21 +129,23 @@ remote-commit requirement to support parallel workers.
 
 | Gate | Required evidence |
 | --- | --- |
-| `repository_green` | Exact source, lock and toolchain plus the default warnings-as-errors, format and behavioral-test gate; explicit strict Credo, dependency audits, Doctor, Dialyzer, docs, >=95% coverage, boundary and archive checks. A run with explicit development dependency selection proves only that named cohort. |
-| `archive_consumer_green` | WCT-C04's `bin/check_archive.exs` builds one exact archive with released requirements, then installs it through a signed temporary Hex registry in independently isolated OS-temporary consumers. Their lockfiles contain only exact Hex dependencies, downloaded continuum bytes match the candidate archive, no checkout BEAM is loaded, and the public examples pass. WCT-C05 adds a direct Jason-floor consumer. The core package is represented by an exact candidate archive until it is publicly released; this is not public-registry availability evidence. |
+| `repository_green` | Exact source, lock and toolchain plus the repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry` run from `packages/wotex-continuum` and mirrored by the package's CI lane: warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, >=95% coverage, Dialyzer, the archive check and a whitespace diff; `bin/check_boundary.exs` covers the public boundary. A run with explicit development dependency selection proves only that named cohort. |
+| `archive_consumer_green` | WCT-C04's `bin/check_archive.exs`, run by the repository-level gate and the CI lane, builds one exact archive with released requirements, then installs it through a signed temporary Hex registry in independently isolated OS-temporary consumers. Their lockfiles contain only exact Hex dependencies, downloaded continuum bytes match the candidate archive, no checkout BEAM is loaded, and the public examples pass. WCT-C05 adds a direct Jason-floor consumer. The core package is represented by an exact candidate archive until it is publicly released; this is not public-registry availability evidence. |
 | `reference_consumer_green` | The second WCT-C04 consumer uses the same archive to execute all packaged vectors across the three WCT contracts, plus supplied TD checking, failures, unknown effects, lifecycle generation and extension round trips. This is consumer proof, not cross-vendor certification. |
 | `public_release_candidate` | All preceding gates, WCT-C03 agreement, reviewed threat model, public content, licenses/provenance, accurate claims and immutable candidate evidence. The maintainer alone may later publish. |
 | `stable_api_candidate` | WCT-C05 compatibility review of API and wire contracts independently, exact error/result/null/default/canonical-byte rules and upgrade/rejection vectors. A stable wire version does not automatically make package 0.1 APIs stable. |
 
-Fresh checkout: read `CLAUDE.md`, this plan and the catalogue's owning specs;
-resolve the declared dependencies with `mix deps.get`, then run `mix check --no-retry`.
+Fresh checkout: read the root and package `CLAUDE.md`, this plan and the
+catalogue's owning specs; from `packages/wotex-continuum` resolve the declared
+dependencies with `mix deps.get`, then run `mix check --no-retry`.
 If a required package is not available, record the dependency-admission gap;
 do not silently convert fresh-checkout evidence to a local-path pass. The README
 development switch remains useful for implementation, but its exact dependency
 source must be recorded and must not be mistaken for archive-consumer proof.
 Package construction unsets development path selection.
 
-Evidence must name source-tree identity, archive SHA-256, package/wire versions,
+Evidence must name source-tree identity and the package path
+`packages/wotex-continuum`, archive SHA-256, package/wire versions,
 dependency lock digest, exact core source or artifact identity, schemas and
 vector digests, Elixir/OTP versions and command results. Re-run evidence after
 source, dependency or schema changes; a commit ID does not identify a dirty tree.
@@ -144,7 +158,7 @@ source, dependency or schema changes; a commit ID does not identify a dirty tree
 | Uniform resource bounds | WCT-C02 | Source admission is delegated to the core bounded decoder, iodata length is checked before flattening, and one `max_depth` covers decoded and native values. The residual claim is native construction: byte, node, collection and string bounds do not apply to a native map handed straight to a constructor. |
 | Normative schema/implementation agreement | WCT-C03 | Canonical, valid and invalid vectors execute against the embedded schemas through every assertion keyword used, including `format` and `propertyNames`; the invalid set separates schema-expressible rules from deliberate semantic constructor checks. |
 | Independent fresh consumer installation | WCT-C04 | The exact continuum archive is downloaded by two independently isolated temporary consumers from a signed candidate registry. Both use declared Hex requirements, Hex-only locks and consumer-local BEAMs; public Hex availability remains a separate release fact. |
-| Local execution files excluded from public archives | WCT-C04 | Package presence/absence checks retain published specs, schemas and vectors while rejecting local tasks, tooling, checkout, build, dependency and test-suite roots. Archive text is also checked for source-path leakage and symlinks are rejected. |
+| Local execution files excluded from public archives | WCT-C04 | Package presence/absence checks retain release files, schemas and packaged vectors while rejecting Markdown documentation, governance and agent files, local tasks, tooling, checkout, build, dependency and test-suite roots; specifications reach consumers through HexDocs. Archive text is also checked for source-path leakage and symlinks are rejected. |
 | Stable API and canonical-byte compatibility | WCT-C05 | The release dossier and behavioral contract evidence separate unstable package 0.1 APIs from exact wire 2.0.0, error, null/default, schema-version and canonical-byte rules. Packaged compatibility/rejection vectors and isolated archive consumers retain the executable boundary. |
 | Authority, exactly-once delivery, actual air-gap execution or certified interoperability | Consumer-owned/non-claim | Remain non-claims; do not implement host authority to close a value-library checklist. |
 

@@ -3,9 +3,12 @@
 Wotex core owns W3C Web of Things values and terminology. Wotex Runtime owns
 consumer-neutral interaction mechanics. This package owns only HTTP message
 mapping and Server-Sent Events adaptation through a consumer-supplied client.
+Repository-wide rules are in the root `CLAUDE.md`.
 
-- Never mention or import a consumer product, company, sibling engine,
-  repository, or filesystem path. Say `consumer` or `consumer host`.
+- Consumer, company and customer names stay out of every file. Say `consumer`
+  or `consumer host`. Sibling packages are referenced by package name;
+  relative paths inside the repository are allowed, absolute machine paths are
+  not.
 - No database, Repo, migration, web framework, job framework, endpoint, global
   registry, application callback, built-in client, connection pool, credential
   store, or provider implementation.
@@ -20,43 +23,15 @@ mapping and Server-Sent Events adaptation through a consumer-supplied client.
 - No mutable source selection. `WOTEX_PATH_DEPS=1` is the sole local workspace
   switch; normal dependency identities are released package versions.
 
-Run `WOTEX_PATH_DEPS=1 mix check` and `elixir bin/check_boundary.exs` before
-local commits.
+Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-binding-http`
+before a local commit, then the gate of every dependent package. Run
+`elixir bin/check_boundary.exs` for the public boundary.
 
-## External automation boundary
+## Local execution state
 
-This repository exposes source, specifications, dependency contracts, vectors,
-and deterministic verification commands to external engineering automation. It
-does not own worker coordination, claims, leases, attempts, cross-repository
-programme state, accepted outcomes, or remote publication policy. Do not add a
-coordination daemon, graph database, shared-workspace application, or
-tool-specific project metadata. External automation must adapt to this
-consumer-neutral repository contract.
-
-## Release metadata
-
-`CHANGELOG.md` is reserved for GitOps release metadata; never edit it directly.
-Once GitOps tooling and configuration are installed, the human maintainer
-prepares the first release with `mix git_ops.release --override 0.1.0` because
-the initial changelog already exists. Later releases use `mix git_ops.release`.
-These are future human release steps, not a claim that tooling is configured
-or a release is ready. Automated agents must not invoke either release task.
-
-## Git authority
-
-Mutable completion/audit trackers belong only under ignored `docs/tasks/local/`
-and must never enter Git, package archives or generated documentation. Durable
-specifications and completion plans remain tracked. Follow
-`../../docs/packages/wotex-binding-http/plans/wotex-binding-http-completion.md`; create no
-optional tracker beneath exported documentation outside its declared ignored path. Package/archive checks must
-prove the tracker remains excluded.
-
-Automated agents must never configure, add, change, or remove a Git remote;
-push; create a tag; publish a package or release; or create equivalent remote
-state. Only the human maintainer performs publication. Never change repository
-visibility.
-
-Local commits use the identity already configured by the contributor running
-Git. Automated agents must never set or override Git identity; record an agent,
-tool, or bot as an author, committer, or co-author; invent a contributor
-identity; or remove attribution supplied by a human contributor.
+Mutable completion/audit trackers belong only under the ignored root
+`docs/tasks/local/wotex-binding-http/` and must never enter Git, package
+archives or generated documentation. Durable specifications and the completion
+plan `docs/packages/wotex-binding-http/plans/wotex-binding-http-completion.md`
+remain tracked; create no optional tracker beneath publishable documentation.
+Package/archive checks must prove the tracker remains excluded.

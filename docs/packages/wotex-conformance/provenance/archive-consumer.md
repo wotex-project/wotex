@@ -26,12 +26,12 @@ or provenance. One selected vector exercises these runner classifications:
 Run the proof with the repository's selected Elixir and Erlang/OTP versions:
 
 ```console
-mix hex.build
 mix run --no-start bin/check_archive.exs
 ```
 
-The command prints the verified corpus coordinates and SHA-256 digest of the
-exact Hex archive it exercised. Its temporary archive, dependency copy,
+The command builds one exact archive into an OS-temporary directory and prints
+the verified corpus coordinates and SHA-256 digest of the archive it
+exercised. Its temporary archive, dependency copy,
 bytecode, consumer, target, and subject are removed after the run. The proof
 opens no network connection and uses no tested subject dependency.
 

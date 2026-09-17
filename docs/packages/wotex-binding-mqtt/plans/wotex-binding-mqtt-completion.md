@@ -1,10 +1,20 @@
 # Wotex MQTT binding completion contract
 
-Plan `WBM-C@1.0.0`; package baseline `wotex_binding_mqtt 0.1.0`. This tracked
+Plan `WBM-C@1.1.0`; package baseline `wotex_binding_mqtt 0.1.0`. This tracked
 document fixes durable work scope, prerequisites and acceptance, not mutable
-approval. Catalogue `docs/specs/catalogue.yaml` assigns WBM.01–03 identities,
-versions and evidence. Changes are reviewed revisions, not retroactive changes
-to historical evidence.
+approval. Catalogue `docs/packages/wotex-binding-mqtt/specs/catalogue.yaml`
+assigns WBM.01–03 identities, versions and evidence. Changes are reviewed
+revisions, not retroactive changes to historical evidence.
+
+Revision 1.1.0 records the package's move into the `wotex` repository without
+changing any obligation. Documentation now lives under
+`docs/packages/wotex-binding-mqtt/`. Package archives no longer ship Markdown
+documentation, governance files or agent files; specifications are published
+through HexDocs. Fixtures and machine-read provenance ship under `priv/`. The
+repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
+`packages/wotex-binding-mqtt`, and the package's CI lane now discharge
+`repository_green` and `archive_consumer_green`. Tags use
+`wotex-binding-mqtt-v<version>`.
 
 ## Ownership and compatibility
 
@@ -41,14 +51,14 @@ No gate authorizes an automated push, tag, package or release publication.
 
 | Gate | Required evidence | Nonclaim |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes warnings-as-errors compilation, formatting, and behavioral tests | Not registry install or protocol certification |
-| `archive_consumer_green` | Build without path switch; a separate minimal Mix consumer installs exact archives and exercises one mapping/transport success plus typed rejection through public API, with no live source | Not complete Runtime lifecycle |
+| `repository_green` | The repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-binding-mqtt` and mirrored by the package's CI lane, passes warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, coverage, Dialyzer, the archive and application-free checks and a whitespace diff | Not registry install or protocol certification |
+| `archive_consumer_green` | `bin/check_archive.exs`, run by the same gate and CI lane, builds without path switch; a separate minimal Mix consumer installs exact archives and exercises one mapping/transport success plus typed rejection through public API, with no live source | Not complete Runtime lifecycle |
 | `reference_consumer_green` | WBM-C04 semantic and failure vectors, real supervision and explicit client ownership | Not actual broker fleet interoperability |
-| `public_release_candidate` | Prior gates plus explicit dependency audits, documentation, coverage, Dialyzer, application, boundary, package metadata/license/security, and standards review pass | Not publication permission |
+| `public_release_candidate` | Prior gates (whose repository-level gate already carries the dependency audits, documentation, coverage, Dialyzer and application-free checks) plus boundary, package metadata/license/security, and standards review pass | Not publication permission |
 | `stable_api_candidate` | Consumer-visible compatibility behavior and documented API changes receive review against WBM-C06 | Not universal WoT/MQTT conformance |
 
-The package/archive/application-free commands are separate evidence. Behavior
-tests assert mappings, callbacks, messages, defaults, limits, results, errors,
+The archive and application-free checks run inside the gate; the boundary
+script is separate evidence. Behavior tests assert mappings, callbacks, messages, defaults, limits, results, errors,
 redaction, and lifecycle behavior without enumerating every export, struct key,
 test name, documentation row, or developer-gate entry.
 
@@ -62,7 +72,8 @@ test name, documentation row, or developer-gate entry.
 | JSON/byte boundaries | RFC 8259 and WBM.01 package limits | `json_test.exs`, `delivery_test.exs` | Not streaming or whole-process allocation bound |
 | Binding Registry status | Draft Registry 2025-11-04 repository baseline | Provenance document only | No registration or W3C endorsement |
 
-Primary links and dated observations live in `docs/provenance/`. They are not a
+Primary links and dated observations live in
+`docs/packages/wotex-binding-mqtt/provenance/`. They are not a
 fresh revalidation of the present editor draft. Broader claims require exact
 assertions and revision-specific positive/negative vectors; test counts and
 funding or product plans are not standards evidence.
@@ -87,19 +98,19 @@ funding or product plans are not standards evidence.
 | WBM-R06 | Action query/cancel, aggregate operations, binary codecs | Out of declared profile; new contract required |
 | WBM-R07 | Registry membership/full WoT conformance/current draft parity | Explicit nonclaim; revalidate exact sources before broader claims |
 | WBM-R08 | Registry installation/full platform range | WBM-C05 exact artifact/environment evidence |
-| WBM-R09 | Local notes excluded from distribution | Inspect every candidate archive and reject any `docs/tasks/local/` member |
+| WBM-R09 | Local notes excluded from distribution | Inspect every candidate archive and reject any Markdown documentation, governance, agent-file or `docs/tasks/local/` member |
 
 ## Local completion memory
 
-Optional tracker path: ignored
-`docs/tasks/local/wotex-binding-mqtt-tracker.yaml`. Schema:
+Optional tracker path: a tracker under the ignored root
+`docs/tasks/local/wotex-binding-mqtt/`. Schema:
 `schema_version: "1.0.0"`, `package`, `source_commit`, `dependency_digests`, `items`.
 Items keyed by WBM-C/WBM-R IDs contain `state`, `evidence`, `limitations`,
 `next_action`; evidence names gate, command, result and artifact digest. Mutable
 audit/attempt/assignment/approval information never belongs in tracked specs,
 plans, package contents or generated docs. Unknown cannot be marked passed.
 
-Package inputs allowlist publishable documentation and structurally exclude
+Package inputs ship no Markdown documentation and structurally exclude
 `docs/tasks/local/`. Every candidate archive still proves the exclusion; ignore
 rules alone never count. A clean checkout needs neither tracker nor external
 automation service for local work.
