@@ -487,7 +487,10 @@ remain present in discovery results.
 `test/native/host_process_test.hpp` executes `priv/bluez/native/main.cpp` as an
 owned child with actual stdin/stdout pipes. WBL-B-F61 through WBL-B-F63 project
 startup, complete discovery, explicit close, duplicate flow rejection and stdin
-loss during a withheld opening response. Independent NameHasOwner queries check
+loss during a withheld opening response. A regression sends `close` and then
+closes input before the reply: the admitted close still returns a null result
+and exit status zero instead of a `cleanup_timeout` failure. Before the fix the
+same trace failed its exit-status assertion on the Linux arm64 lane. Independent NameHasOwner queries check
 client-sender release and service-sender isolation after process exit. The fixture
 owns and reaps this direct, non-forking SDK child; runtime guardian process-group
 custody has its separate fault corpus. This evidence does not establish native

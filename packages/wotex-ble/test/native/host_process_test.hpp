@@ -147,5 +147,14 @@ inline void invariants(const std::string &address, const std::string &executable
     process.send({{"version", 1}, {"event", "flow_open"}, {"session_generation", std::string(32, 'c')}});
     until(peer, process, [&] { return process.status.has_value(); }); PROCESS_CHECK(process.status == 1);
   }
+  {
+    // Input loss after an admitted close cannot relabel that close as a cleanup failure.
+    Process process(executable); until(peer, process, [&] { return !process.frames.empty(); });
+    process.send({{"version", 1}, {"event", "flow_open"}, {"session_generation", std::string(32, 'd')}});
+    process.request("close", "close"); process.eof();
+    until(peer, process, [&] { return process.status.has_value(); });
+    PROCESS_CHECK(process.status == 0 && process.response("close") && process.response("close")->at("ok") == true);
+    PROCESS_CHECK(process.response("close")->at("result").is_null());
+  }
 }
 } // namespace host_process_test

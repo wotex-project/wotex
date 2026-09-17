@@ -211,7 +211,12 @@ public:
     if (pending->operation() == "agent_reply" || pending->operation() == "unsubscribe") control(pending);
     else queued_.push_back(std::move(pending));
   }
-  void stop() { close(false, Clock::now() + std::chrono::milliseconds(500), 1); }
+  // An admitted close already owns the bounded cleanup deadline and final result.
+  // Later input loss or a termination signal cannot relabel it as a failure.
+  void stop() {
+    if (closing_) return;
+    close(false, Clock::now() + std::chrono::milliseconds(500), 1);
+  }
   void poll(std::vector<pollfd> &extra, int wait_ms) {
     if (finished_) return;
     if (closing_) {
