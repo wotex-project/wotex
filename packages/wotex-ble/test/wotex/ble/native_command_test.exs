@@ -5,7 +5,7 @@ defmodule Wotex.BLE.NativeCommandTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.BLE.NativeCommand
+  alias Wotex.BLE.{NativeCommand, NativeLane}
 
   @root Path.expand("../../..", __DIR__)
 
@@ -20,74 +20,80 @@ defmodule Wotex.BLE.NativeCommandTest do
 
     File.mkdir!(directory)
     on_exit(fn -> File.rm_rf!(directory) end)
-    options = [cd: directory, timeout: 15_000, env: compiler_environment()]
+
+    options = [
+      cd: directory,
+      timeout: NativeLane.timeout(15_000),
+      env: NativeLane.environment(compiler_environment())
+    ]
+
     native = Path.join(@root, "test/interop/native")
+    bootstrap = Path.join(directory, "bootstrap")
     command = Path.join(directory, "command")
 
     assert {:ok, "", 0} =
-             NativeCommand.bootstrap(compiler, guardian_source(), command, options)
+             NativeCommand.bootstrap(compiler, guardian_source(), bootstrap, options)
 
-    for name <- ["command_launcher", "command_probe"] do
+    # The bootstrap guardian only compiles; the guardian under test is built in
+    # the selected lane.
+    for {name, inputs} <- [
+          {"command", [guardian_source()]},
+          {"command_launcher", [Path.join(native, "command_launcher.c")]},
+          {"command_probe", [Path.join(native, "command_probe.c")]},
+          {"fault",
+           [
+             "-Dsetpgid=wotex_test_setpgid",
+             guardian_source(),
+             Path.join(native, "command_group_fault.c")
+           ]}
+        ] do
       assert {:ok, "", 0} =
                NativeCommand.run(
-                 command,
+                 bootstrap,
                  compiler,
-                 [
-                   "-std=c11",
-                   "-Wall",
-                   "-Wextra",
-                   "-Werror",
-                   Path.join(native, name <> ".c"),
-                   "-o",
-                   Path.join(directory, name)
-                 ],
+                 NativeLane.flags() ++
+                   ["-std=c11", "-O1", "-Wall", "-Wextra", "-Werror"] ++
+                   inputs ++ ["-o", Path.join(directory, name)],
                  options
                )
     end
 
-    fault = Path.join(directory, "fault")
-
-    assert {:ok, "", 0} =
-             NativeCommand.run(
-               command,
-               compiler,
-               [
-                 "-std=c11",
-                 "-Wall",
-                 "-Wextra",
-                 "-Werror",
-                 "-Dsetpgid=wotex_test_setpgid",
-                 guardian_source(),
-                 Path.join(native, "command_group_fault.c"),
-                 "-o",
-                 fault
-               ],
-               options
-             )
-
     {:ok,
      directory: directory,
      command: command,
-     fault: fault,
+     fault: Path.join(directory, "fault"),
      probe: Path.join(directory, "command_probe"),
      launcher: Path.join(directory, "command_launcher"),
-     options: Keyword.merge(options, timeout: 2000, cleanup: 400, limit: 65_536)}
+     options:
+       Keyword.merge(options,
+         timeout: 2000,
+         cleanup: 400,
+         limit: 65_536,
+         env: NativeLane.environment(empty_environment())
+       )}
   end
 
   test "WBL-B01 inherited SIGCHLD and signal masks cannot discard owned child status", context do
+    environment =
+      Enum.map(NativeLane.environment(empty_environment()), fn
+        {key, nil} -> {String.to_charlist(key), false}
+        {key, value} -> {String.to_charlist(key), String.to_charlist(value)}
+      end)
+
     port =
       Port.open({:spawn_executable, context.launcher}, [
         :binary,
         :exit_status,
         :stderr_to_stdout,
         args: [context.command, "2000", "65536", "400", context.directory, context.probe, "output"],
-        env: Enum.map(System.get_env(), fn {key, _} -> {String.to_charlist(key), false} end)
+        env: environment
       ])
 
-    assert {:ok, "stdout\nstderr\n", 0} = NativeCommand.await(port, 3000, 65_536)
+    assert {:ok, "stdout\nstderr\n", 0} =
+             NativeCommand.await(port, NativeLane.timeout(3000), 65_536)
   end
 
-  @tag timeout: 60_000
+  @tag timeout: NativeLane.timeout(60_000)
   test "WBL-B01 one thousand short commands retain group custody and exact exit", context do
     for _ <- 1..1000 do
       assert {:ok, "", 7} =
@@ -99,7 +105,7 @@ defmodule Wotex.BLE.NativeCommandTest do
       fn _ -> NativeCommand.run(context.command, context.probe, ["output"], context.options) end,
       max_concurrency: 32,
       ordered: false,
-      timeout: 5000
+      timeout: NativeLane.timeout(5000)
     )
     |> Enum.each(fn result -> assert result == {:ok, {:ok, "stdout\nstderr\n", 0}} end)
   end
@@ -115,7 +121,7 @@ defmodule Wotex.BLE.NativeCommandTest do
     refute File.exists?(marker)
   end
 
-  # Compilers resolve their linker through PATH; the guardian cases clear it again.
+  # Compilers resolve their linker through PATH; the guardian cases clear it.
   defp compiler_environment do
     Enum.map(System.get_env(), fn
       {"PATH", value} -> {"PATH", value}

@@ -85,7 +85,11 @@ defmodule Wotex.BLE.NativeGuardianStartupTest do
      directory: directory,
      command: command,
      check: Path.join(directory, "check"),
-     options: Keyword.put(options, :timeout, NativeLane.timeout(30_000))}
+     options:
+       Keyword.merge(options,
+         timeout: NativeLane.timeout(30_000),
+         env: NativeLane.environment(empty_environment())
+       )}
   end
 
   for {executable, count, inheritance, status} <- [
@@ -120,7 +124,7 @@ defmodule Wotex.BLE.NativeGuardianStartupTest do
     end
   end
 
-  # Compilers resolve their linker through PATH; executed fixtures receive no other value.
+  # Compilers resolve their linker through PATH; executed fixtures receive a cleared environment.
   defp compiler_environment do
     Enum.map(System.get_env(), fn
       {"PATH", value} -> {"PATH", value}

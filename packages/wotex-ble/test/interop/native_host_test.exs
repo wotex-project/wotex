@@ -73,7 +73,8 @@ defmodule Wotex.BLE.NativeHostTest do
            }
 
     for split <- 1..(byte_size(stream) - 1) do
-      <<first::binary-size(split), second::binary>> = stream
+      first = binary_part(stream, 0, split)
+      second = binary_part(stream, split, byte_size(stream) - split)
       assert exchange(context, [first, second]) == baseline, "split at byte #{split}"
     end
   end

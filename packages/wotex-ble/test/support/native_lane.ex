@@ -56,6 +56,17 @@ defmodule Wotex.BLE.NativeLane do
       "ASAN_OPTIONS" => "#{leaks}:abort_on_error=1",
       "UBSAN_OPTIONS" => "print_stacktrace=1:halt_on_error=1"
     }
+    |> Map.merge(symbolizer())
+  end
+
+  # Executed fixtures receive a cleared PATH. The macOS runtime otherwise reports
+  # a missing atos symbolizer on every instrumented start; GCC on Linux
+  # symbolizes internally.
+  defp symbolizer do
+    case System.find_executable("atos") do
+      nil -> %{}
+      atos -> %{"ASAN_SYMBOLIZER_PATH" => atos}
+    end
   end
 
   defp linux!(mode) do
