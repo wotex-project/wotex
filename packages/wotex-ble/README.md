@@ -58,7 +58,7 @@ their ELF dependencies and records `native-manifest.json`; see the
 [native build receipt](docs/provenance/native-build-v1.json). From a source
 checkout, `mix wotex.software.build` and `mix wotex.software.run` build and boot
 the BlueZ virtual-controller fixture once per BEAM lane; see the
-[software run receipt](docs/provenance/software-run-v2.json). Upstream SDK
+[software run receipt](docs/provenance/software-run-v3.json). Upstream SDK
 Python is build-time only, and the fixture's independent GATT peer uses Python
 only as a test peer.
 
@@ -80,13 +80,13 @@ It does not install dependencies, start that service or power an adapter.
 `:owned` explicitly allows connection establishment and owned-link cleanup.
 Pending Pair sender loss may separately make BlueZ disconnect a borrowed peer.
 
-The native host passes the 10 public BLE and Runtime tests and the 5 WBL-C09
+The native host passes the 11 public BLE and Runtime tests and the 5 WBL-C09
 lifecycle stress tests against real BlueZ 5.85 and two virtual Linux controllers
 in both BEAM lanes. The independent
 provider uses BlueZ's GATT server API, so the wire endpoints remain the same
 stack. See the [virtual-controller fixture](docs/provenance/virtual-controller.md).
-The x86_64 guest lane, remaining retired-adapter scenarios and final package
-gates remain unfinished in the ordered plan.
+The x86_64 guest lane and final package gates remain unfinished in the ordered
+plan.
 
 ## Quick start
 

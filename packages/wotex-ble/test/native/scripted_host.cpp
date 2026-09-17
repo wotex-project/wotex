@@ -176,19 +176,19 @@ class Script {
   }
 
   // Selects one scripted characteristic by the exact address fields the BEAM sent.
+  // Mirrors the production selector order: generation, then exact fields.
   std::optional<std::size_t> resolve(const std::string &id, const Json &address) {
+    if (!address.at("generation").is_null() && address.at("generation") != 1) { fail(id, "stale_discovery"); return std::nullopt; }
     std::vector<std::size_t> matches;
-    const char *failure = "invalid_characteristic";
     for (std::size_t index = 0; index < characteristics_.size(); ++index) {
       const auto &item = characteristics_[index];
       if (item.at("service_uuid") != address.at("service") || item.at("characteristic_uuid") != address.at("characteristic")) continue;
       if (!address.at("object_path").is_null() && item.at("object_path") != address.at("object_path")) continue;
       if (!address.at("handle").is_null() && item.at("handle") != address.at("handle")) continue;
-      if (!address.at("generation").is_null() && item.at("generation") != address.at("generation")) { failure = "stale_discovery"; continue; }
       matches.push_back(index);
     }
     if (matches.size() == 1) return matches.front();
-    fail(id, matches.empty() ? failure : "ambiguous_characteristic");
+    fail(id, matches.empty() ? "address_mismatch" : "ambiguous_characteristic");
     return std::nullopt;
   }
 

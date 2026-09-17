@@ -1,0 +1,999 @@
+{
+  "build": {
+    "artifacts": {
+      "downloads/bluez.tar.gz": "53a95c3dc9897f617b8bae0121d3f4c55c28a757bd48546c707bd2bbac45af0a",
+      "downloads/hex-source.tar.gz": "bdd6ef2015aa6e50a1c21212e098e8cbe7317da65f067955d154d890532742ae",
+      "downloads/rebar-source.tar.gz": "985cae6e957334cfa549190b9f5efb9185c184a18fc181c87b8dde096ba79f38",
+      "guest-build.json": "86fb094131733176bd01db2672eb96f9b2735c3a232434feafe54cbd120e0cce",
+      "native-manifest.json": "5b0eeb26426e85e168f3eb00f1b6b96a4bb288abf7557874a2faa550de220461",
+      "rootfs.raw": "e84e16ce459c72eaa590c81aaa3d74fcc284e743d11bcb5c50054a9c2edc23dc",
+      "rootfs.tar": "cb54a34f32079157d4ceedc84e23e4a14aae6ff1c68d456f88a0b59452d1196b"
+    },
+    "guest": {
+      "bluez": "5.85",
+      "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "elixir_latest": "Elixir 1.20.2 (compiled with Erlang/OTP 29)",
+      "elixir_lower": "Elixir 1.18.4 (compiled with Erlang/OTP 27)",
+      "qemu": "QEMU emulator version 7.2.22 (Debian 1:7.2+dfsg-7+deb12u18+b3)",
+      "sha256": {
+        "/boot/config-6.1.0-53-arm64": "46c1f1aa2acc1777d7e5f02fce773b5a685f00c062d0529557805b3e24804ac2",
+        "/boot/initrd.img-6.1.0-53-arm64": "c344a51dbcfe4a41b3d78acbccee0d0cf291fabb53b15a1bec859982b8fd4e91",
+        "/boot/vmlinuz-6.1.0-53-arm64": "4909442ce8c53a14239e29b0074ca7190733795ecce56b43b0ec8741fa9734da",
+        "/lib/modules/6.1.0-53-arm64/kernel/drivers/bluetooth/hci_vhci.ko": "d4b4dc17af5de3b1e3bac7e5b95a37348986f06e221ae1c1cc80a02cd95c57a7",
+        "/module/hci_vhci.c": "73e20d1971b77d38f3715990562e2fe8be03043362e01c5b0217c9e920d65e41",
+        "/opt/bluez/bin/btmon": "05205eadeb8e7f522818b5878ffd6b49e3944e1807a5fe20725cc5f2201e6ee9",
+        "/opt/bluez/bin/btvirt": "daa11ea0767b307bb44d481c0a641fd3f8e908a6eef7375049c8349cdb45825d",
+        "/opt/bluez/libexec/bluetooth/bluetoothd": "6a793d62c19911f5e4859863d820e7c3c41ca375b0faba28b1b27aeda19b62d8",
+        "/opt/wbl/native/native-manifest.json": "5b0eeb26426e85e168f3eb00f1b6b96a4bb288abf7557874a2faa550de220461",
+        "/opt/wbl/native/output/bin/wotex-ble-guardian": "7d7dbf0be43557bcaa9337a009374c421b109b4e4811de5a96c94e16dbf3c9bf",
+        "/opt/wbl/native/output/bin/wotex-ble-host": "9404b783474e5bfe23086246eb65981ed12c756e1f3de097794215d1d58a8fdb",
+        "/opt/wbl/native/output/lib/libdbus-1.so.3": "a0b7d157679100ff5b209b0a50cb91dc07c6342978808e2f1d4a5b53bf873afb",
+        "/usr/bin/dbus-daemon": "af2bdccb6f2942f11b6048ac3db69c7cbf283c75094ab2aa49e60c864320b8a7",
+        "/usr/bin/qemu-img": "59c9214d58ef2e3844fc10bc835b01edde6a850bef300169db8898f6263c1bee",
+        "/usr/bin/qemu-system-aarch64": "05d8eba0b9d1b07677aba4d8ef560e63e3ba4e315346a608a7eb5e69cb12a056"
+      }
+    },
+    "images": {
+      "bluez": "sha256:f7a3d10c0fdfd9bff652f0d159a208901cc3b5490951883cf7632b9a2359b19a",
+      "public": "sha256:bf89eabc06db4af32117365b1804dd42205bcc21e35204b9291de7673e289b1f",
+      "system": "sha256:3b3caa334052412644fba9b1211afefbb4109204407469f60af7baf4a22e4b5f"
+    },
+    "manifest_sha256": "51d9a50df32d7aedb740081dbeaa1fc20cabd9e7ca4f2df66fde29dd744e9478",
+    "native_host_sha256": "9404b783474e5bfe23086246eb65981ed12c756e1f3de097794215d1d58a8fdb",
+    "native_target": "aarch64-linux-gnu"
+  },
+  "commands": [
+    "WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace ABSOLUTE_WORKSPACE",
+    "WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace ABSOLUTE_WORKSPACE (three times)"
+  ],
+  "expected_cases_per_lane": 16,
+  "host": {
+    "docker_sha256": "70d5a06adf388bd09b652f47ddc9ca31663a3e5353d24188bdb0054b3014ab3e",
+    "platform": "macOS arm64 with Docker Desktop Linux arm64"
+  },
+  "requirements": [
+    "WBL-B01",
+    "WBL-B03",
+    "WBL-B04",
+    "WBL-N03",
+    "WBL-V03",
+    "WBL-V04",
+    "WBL-V05",
+    "WBL-V06",
+    "WBL-V07",
+    "WBL-V08",
+    "WBL-V09",
+    "WBL-V11",
+    "WBL-I02",
+    "WBL-I03",
+    "WBL-I04",
+    "WBL-I05",
+    "WBL-C09"
+  ],
+  "runs": [
+    {
+      "lanes": [
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 227730,
+          "evidence": {
+            "bluetoothd.log": "415d8f3ede4533ff17c477d8a9b900111916e70c80d6bd31e8c67764c6efe38b",
+            "btmon.log": "a5302988d953089ab3265550677119f1246df58f28ed9c90bdd003b7692fcd5b",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "571b3287a283e990a78aa8c70b383483f904710dad4082919e3db1ab17b42800",
+            "dbus.log": "deb64aa52b22628acf3a5a29f77a3544193c55c22ce75f2bb542746965acd7cc",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "563381b6a8d2780569e13b7f2eb1cdf25db2452b07542548bac0fc6fa561adc0",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "1677aa1f60ada5b24ee1d319bc515cbf4174ee962673cca9f0c13a1e4d082007",
+            "runtime.log": "ceb35590edbd029ded1200b5199627ce1a8097f1f7b9b79bd9aa78ffc42eda07",
+            "stress.jsonl": "a36f1f97a03e21c54448adf7cdb80c27e51fb9a5bc9b000aae018a00b1370ae2",
+            "wire.btsnoop": "c65853c58d1e928ad0f5689ebbddcde32f50680f1f0299b1911043ad12817d3e"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "latest",
+          "peer_clean_release": true,
+          "status": "passed",
+          "stress": [
+            {
+              "case": "sequential_operations",
+              "samples": [
+                {
+                  "beam_total_bytes": 53390004,
+                  "host_rss_kb": 3892,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 53355436,
+                  "host_rss_kb": 3892,
+                  "index": 250
+                },
+                {
+                  "beam_total_bytes": 53338924,
+                  "host_rss_kb": 3892,
+                  "index": 500
+                },
+                {
+                  "beam_total_bytes": 52121868,
+                  "host_rss_kb": 3892,
+                  "index": 750
+                },
+                {
+                  "beam_total_bytes": 52088484,
+                  "host_rss_kb": 3892,
+                  "index": 1000
+                }
+              ]
+            },
+            {
+              "case": "open_close_cycles",
+              "samples": [
+                {
+                  "beam_total_bytes": 52040276,
+                  "host_rss_kb": null,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 52064420,
+                  "host_rss_kb": null,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 52038412,
+                  "host_rss_kb": null,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 52072916,
+                  "host_rss_kb": null,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "receiver_terminations",
+              "samples": [
+                {
+                  "beam_total_bytes": 52218092,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 52159060,
+                  "host_rss_kb": 3908,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 52141124,
+                  "host_rss_kb": 3908,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 52092404,
+                  "host_rss_kb": 3908,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 52137284,
+                  "host_rss_kb": 3908,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "fault_deadline",
+              "samples": [
+                {
+                  "elapsed_ms": 388
+                }
+              ]
+            },
+            {
+              "case": "fault_corrupt_frame",
+              "samples": [
+                {
+                  "elapsed_ms": 120
+                }
+              ]
+            },
+            {
+              "case": "fault_host_loss",
+              "samples": [
+                {
+                  "elapsed_ms": 288
+                }
+              ]
+            },
+            {
+              "case": "fault_peer_close",
+              "samples": [
+                {
+                  "elapsed_ms": 2923
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 229409,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "57e42c66c43bff83232ea4a78f697a30c666aacb864e83c24878ccceddf90dc4",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "9a2ac4aff1b7352296fd30ab714b6f84e0f6d9214c6b03ac0078811c368bb6cc",
+            "dbus.log": "84e6865e3ef3b2aa88443b775e32d3374083aea5ee3ade4a3661f07da8e014a2",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "66a7b0d03f0a9d7f3a1119c4c9b156c35d795db4c7fe8da4b608cd73f724efb4",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "14033ce70349fdc6bcfa00017e9bdf16e3fc15644b7a7048893d4458e378d4ac",
+            "runtime.log": "d836dde8e57c07ebb1200a0b0cc71ab6fcb69bb5b08e39d77b1d87846a6af581",
+            "stress.jsonl": "e20e7b1205f4f6dc5da00033c9d445850e933187bc164cd59799c0bc296757a2",
+            "wire.btsnoop": "5a560f0f3ee70d480d27809c8dad233d7ac177e2f9bf1305f9bc0b1b8e5afa47"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "lower",
+          "peer_clean_release": true,
+          "status": "passed",
+          "stress": [
+            {
+              "case": "sequential_operations",
+              "samples": [
+                {
+                  "beam_total_bytes": 49854700,
+                  "host_rss_kb": 3904,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 49728676,
+                  "host_rss_kb": 3904,
+                  "index": 250
+                },
+                {
+                  "beam_total_bytes": 49722204,
+                  "host_rss_kb": 3904,
+                  "index": 500
+                },
+                {
+                  "beam_total_bytes": 49657788,
+                  "host_rss_kb": 3904,
+                  "index": 750
+                },
+                {
+                  "beam_total_bytes": 49683300,
+                  "host_rss_kb": 3904,
+                  "index": 1000
+                }
+              ]
+            },
+            {
+              "case": "open_close_cycles",
+              "samples": [
+                {
+                  "beam_total_bytes": 49635380,
+                  "host_rss_kb": null,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 49646460,
+                  "host_rss_kb": null,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 49705692,
+                  "host_rss_kb": null,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 49623172,
+                  "host_rss_kb": null,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "receiver_terminations",
+              "samples": [
+                {
+                  "beam_total_bytes": 49766708,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 49720748,
+                  "host_rss_kb": 3908,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 49706684,
+                  "host_rss_kb": 3908,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 49702316,
+                  "host_rss_kb": 3908,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 49684012,
+                  "host_rss_kb": 3908,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "fault_deadline",
+              "samples": [
+                {
+                  "elapsed_ms": 372
+                }
+              ]
+            },
+            {
+              "case": "fault_corrupt_frame",
+              "samples": [
+                {
+                  "elapsed_ms": 176
+                }
+              ]
+            },
+            {
+              "case": "fault_host_loss",
+              "samples": [
+                {
+                  "elapsed_ms": 270
+                }
+              ]
+            },
+            {
+              "case": "fault_peer_close",
+              "samples": [
+                {
+                  "elapsed_ms": 2768
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "result": "passed",
+      "result_sha256": "686478a8886a063c38b3a7028a25717f176ea5371136fe5f9d4554604d9b9446"
+    },
+    {
+      "lanes": [
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 207990,
+          "evidence": {
+            "bluetoothd.log": "62e683eca7bdf33775230cc3c45aa9e580c1b2a1792cfb5e3695b080ad678b66",
+            "btmon.log": "fcef5a9e45fee52661c6e608bc327ac232455f58934013ba40d9409806faa302",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "843c25d48e412096b5a8b04041ba233c53fd6db1e5aca31b1522fdcee892f488",
+            "dbus.log": "0147bb1bca123d4ff436724f6ed3e156064ff0e5210e9c8cd91b2825365f5444",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "48dbc6ff2609bed8d00a32397b988eea9b4417cf8fa66ea0f8b397b699e39b60",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "1677aa1f60ada5b24ee1d319bc515cbf4174ee962673cca9f0c13a1e4d082007",
+            "runtime.log": "ceb35590edbd029ded1200b5199627ce1a8097f1f7b9b79bd9aa78ffc42eda07",
+            "stress.jsonl": "0533fabef269171fe8e5305ba30f53b42cc63d67684ed435885b615fca7706ed",
+            "wire.btsnoop": "8bde431789babb2edfe3f815b9a90797a54c2f08e4fdc75c049389342299285e"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "latest",
+          "peer_clean_release": true,
+          "status": "passed",
+          "stress": [
+            {
+              "case": "sequential_operations",
+              "samples": [
+                {
+                  "beam_total_bytes": 53317923,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 53377643,
+                  "host_rss_kb": 3908,
+                  "index": 250
+                },
+                {
+                  "beam_total_bytes": 53290163,
+                  "host_rss_kb": 3908,
+                  "index": 500
+                },
+                {
+                  "beam_total_bytes": 53323523,
+                  "host_rss_kb": 3908,
+                  "index": 750
+                },
+                {
+                  "beam_total_bytes": 51926667,
+                  "host_rss_kb": 3908,
+                  "index": 1000
+                }
+              ]
+            },
+            {
+              "case": "open_close_cycles",
+              "samples": [
+                {
+                  "beam_total_bytes": 52015811,
+                  "host_rss_kb": null,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 52034027,
+                  "host_rss_kb": null,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 51991931,
+                  "host_rss_kb": null,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 52012315,
+                  "host_rss_kb": null,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "receiver_terminations",
+              "samples": [
+                {
+                  "beam_total_bytes": 52194299,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 52135451,
+                  "host_rss_kb": 3908,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 52124819,
+                  "host_rss_kb": 3908,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 52143739,
+                  "host_rss_kb": 3908,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 52111531,
+                  "host_rss_kb": 3908,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "fault_deadline",
+              "samples": [
+                {
+                  "elapsed_ms": 331
+                }
+              ]
+            },
+            {
+              "case": "fault_corrupt_frame",
+              "samples": [
+                {
+                  "elapsed_ms": 110
+                }
+              ]
+            },
+            {
+              "case": "fault_host_loss",
+              "samples": [
+                {
+                  "elapsed_ms": 178
+                }
+              ]
+            },
+            {
+              "case": "fault_peer_close",
+              "samples": [
+                {
+                  "elapsed_ms": 2325
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 262467,
+          "evidence": {
+            "bluetoothd.log": "415d8f3ede4533ff17c477d8a9b900111916e70c80d6bd31e8c67764c6efe38b",
+            "btmon.log": "751f04210a2d6fee414e1c8695b5b2909e903ff7b949e98c318049e9b118c06b",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "d86147ed3b530c09206ff9447f19a4304b5431f0009eba1cbd23e3dc37d6e0c0",
+            "dbus.log": "d37c8688c4a05e801e969a5d9306e4c5ea6a1511c60dd1ded7dcdc6c3419494b",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "258f4225a1a120e4f177dcea486f91faa004c61780ca897be7d85403df1fe75b",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "1677aa1f60ada5b24ee1d319bc515cbf4174ee962673cca9f0c13a1e4d082007",
+            "runtime.log": "d836dde8e57c07ebb1200a0b0cc71ab6fcb69bb5b08e39d77b1d87846a6af581",
+            "stress.jsonl": "a1518973b083f0b8b04df15b23d55d22e6186e08b3ad94f0fcdb82ca551ae54e",
+            "wire.btsnoop": "0c83486b8ce11aed68341ef47c79e71d5739e3bba679dcd823c3938dc551d34d"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "lower",
+          "peer_clean_release": true,
+          "status": "passed",
+          "stress": [
+            {
+              "case": "sequential_operations",
+              "samples": [
+                {
+                  "beam_total_bytes": 49865628,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 49733044,
+                  "host_rss_kb": 3908,
+                  "index": 250
+                },
+                {
+                  "beam_total_bytes": 49741396,
+                  "host_rss_kb": 3908,
+                  "index": 500
+                },
+                {
+                  "beam_total_bytes": 49666028,
+                  "host_rss_kb": 3908,
+                  "index": 750
+                },
+                {
+                  "beam_total_bytes": 49660932,
+                  "host_rss_kb": 3908,
+                  "index": 1000
+                }
+              ]
+            },
+            {
+              "case": "open_close_cycles",
+              "samples": [
+                {
+                  "beam_total_bytes": 49677412,
+                  "host_rss_kb": null,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 49596556,
+                  "host_rss_kb": null,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 49675964,
+                  "host_rss_kb": null,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 49598228,
+                  "host_rss_kb": null,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "receiver_terminations",
+              "samples": [
+                {
+                  "beam_total_bytes": 49770236,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 49727588,
+                  "host_rss_kb": 3908,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 49692116,
+                  "host_rss_kb": 3908,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 49714572,
+                  "host_rss_kb": 3908,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 49719284,
+                  "host_rss_kb": 3908,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "fault_deadline",
+              "samples": [
+                {
+                  "elapsed_ms": 372
+                }
+              ]
+            },
+            {
+              "case": "fault_corrupt_frame",
+              "samples": [
+                {
+                  "elapsed_ms": 136
+                }
+              ]
+            },
+            {
+              "case": "fault_host_loss",
+              "samples": [
+                {
+                  "elapsed_ms": 282
+                }
+              ]
+            },
+            {
+              "case": "fault_peer_close",
+              "samples": [
+                {
+                  "elapsed_ms": 2825
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "result": "passed",
+      "result_sha256": "6cd85083990c0689442f3a564dfddc02bbf2d65677b3ecec2fd957f18e68528b"
+    },
+    {
+      "lanes": [
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 228766,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "aa05b9a2ebf69ea65b345a8e329a6b478daf486b95565fdb9639169bd7a6f683",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "4b9a644a176799c931d88d65c6430a5c5cb2100706084c314b6e19fb3558ec13",
+            "dbus.log": "84e6865e3ef3b2aa88443b775e32d3374083aea5ee3ade4a3661f07da8e014a2",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "7e10ff54cdef55822331f2dffec32fa50d1a2eacd8bf4f0da47d08b1e74c3cfb",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "14033ce70349fdc6bcfa00017e9bdf16e3fc15644b7a7048893d4458e378d4ac",
+            "runtime.log": "ceb35590edbd029ded1200b5199627ce1a8097f1f7b9b79bd9aa78ffc42eda07",
+            "stress.jsonl": "d0a202378c69ec5afc3a18c79e44b89dccd25fdd6fb3da9d45cb36eb67e6d5f2",
+            "wire.btsnoop": "cc5038d74a674e0d619d5cd8562ed14584d324d119930d5b3ef5b0c161bbaf30"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "latest",
+          "peer_clean_release": true,
+          "status": "passed",
+          "stress": [
+            {
+              "case": "sequential_operations",
+              "samples": [
+                {
+                  "beam_total_bytes": 53341427,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 53385107,
+                  "host_rss_kb": 3908,
+                  "index": 250
+                },
+                {
+                  "beam_total_bytes": 53355123,
+                  "host_rss_kb": 3908,
+                  "index": 500
+                },
+                {
+                  "beam_total_bytes": 52006763,
+                  "host_rss_kb": 3908,
+                  "index": 750
+                },
+                {
+                  "beam_total_bytes": 51945531,
+                  "host_rss_kb": 3908,
+                  "index": 1000
+                }
+              ]
+            },
+            {
+              "case": "open_close_cycles",
+              "samples": [
+                {
+                  "beam_total_bytes": 52039243,
+                  "host_rss_kb": null,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 52054691,
+                  "host_rss_kb": null,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 52028963,
+                  "host_rss_kb": null,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 52033267,
+                  "host_rss_kb": null,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "receiver_terminations",
+              "samples": [
+                {
+                  "beam_total_bytes": 52207139,
+                  "host_rss_kb": 3904,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 52149819,
+                  "host_rss_kb": 3904,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 52118579,
+                  "host_rss_kb": 3904,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 52092731,
+                  "host_rss_kb": 3904,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 52126675,
+                  "host_rss_kb": 3904,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "fault_deadline",
+              "samples": [
+                {
+                  "elapsed_ms": 350
+                }
+              ]
+            },
+            {
+              "case": "fault_corrupt_frame",
+              "samples": [
+                {
+                  "elapsed_ms": 128
+                }
+              ]
+            },
+            {
+              "case": "fault_host_loss",
+              "samples": [
+                {
+                  "elapsed_ms": 248
+                }
+              ]
+            },
+            {
+              "case": "fault_peer_close",
+              "samples": [
+                {
+                  "elapsed_ms": 2034
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 264768,
+          "evidence": {
+            "bluetoothd.log": "08c9e41180d39a80c95cf8cd039550d6441c1b954c163d80220361c34bceb475",
+            "btmon.log": "8dca009d6cf1fe6800664bdfb786eac754e46322d3af59f8b7e68ae6d9967878",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "a868f18287df138addaf507f7752d309513c0b73174581b151e04e58fd804270",
+            "dbus.log": "1ad166108bf8a2ca5e38e61d81274fb34bf3b48d6139a403bdd047ec4dede6f8",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "e869736a41167d5aa53d285693a202f96b10cc1e3796afc54a34237a70fa7e74",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "1677aa1f60ada5b24ee1d319bc515cbf4174ee962673cca9f0c13a1e4d082007",
+            "runtime.log": "d836dde8e57c07ebb1200a0b0cc71ab6fcb69bb5b08e39d77b1d87846a6af581",
+            "stress.jsonl": "ce7213f0d24102d7353c13871b38d1922a8852334f9bd7e50a810102db826c02",
+            "wire.btsnoop": "0a7ada87a8449cdf914ffe0a817b963e9356115899cde11479b2bac8bf9d0c31"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "lower",
+          "peer_clean_release": true,
+          "status": "passed",
+          "stress": [
+            {
+              "case": "sequential_operations",
+              "samples": [
+                {
+                  "beam_total_bytes": 49736892,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 49606828,
+                  "host_rss_kb": 3908,
+                  "index": 250
+                },
+                {
+                  "beam_total_bytes": 49600268,
+                  "host_rss_kb": 3908,
+                  "index": 500
+                },
+                {
+                  "beam_total_bytes": 49528380,
+                  "host_rss_kb": 3908,
+                  "index": 750
+                },
+                {
+                  "beam_total_bytes": 49553756,
+                  "host_rss_kb": 3908,
+                  "index": 1000
+                }
+              ]
+            },
+            {
+              "case": "open_close_cycles",
+              "samples": [
+                {
+                  "beam_total_bytes": 49499116,
+                  "host_rss_kb": null,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 49496356,
+                  "host_rss_kb": null,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 49485780,
+                  "host_rss_kb": null,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 49512652,
+                  "host_rss_kb": null,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "receiver_terminations",
+              "samples": [
+                {
+                  "beam_total_bytes": 49598284,
+                  "host_rss_kb": 3908,
+                  "index": 0
+                },
+                {
+                  "beam_total_bytes": 49588956,
+                  "host_rss_kb": 3908,
+                  "index": 25
+                },
+                {
+                  "beam_total_bytes": 49519908,
+                  "host_rss_kb": 3908,
+                  "index": 50
+                },
+                {
+                  "beam_total_bytes": 49573452,
+                  "host_rss_kb": 3908,
+                  "index": 75
+                },
+                {
+                  "beam_total_bytes": 49582076,
+                  "host_rss_kb": 3908,
+                  "index": 100
+                }
+              ]
+            },
+            {
+              "case": "fault_deadline",
+              "samples": [
+                {
+                  "elapsed_ms": 351
+                }
+              ]
+            },
+            {
+              "case": "fault_corrupt_frame",
+              "samples": [
+                {
+                  "elapsed_ms": 155
+                }
+              ]
+            },
+            {
+              "case": "fault_host_loss",
+              "samples": [
+                {
+                  "elapsed_ms": 325
+                }
+              ]
+            },
+            {
+              "case": "fault_peer_close",
+              "samples": [
+                {
+                  "elapsed_ms": 2816
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "result": "passed",
+      "result_sha256": "6bb7f693eb8a3f9279fd930244238953d63b457db5c43fc939d5d6be5819b703"
+    }
+  ],
+  "schema": "wotex.ble.software-run-evidence@1",
+  "scope": "Mix-built BlueZ 5.85 virtual-controller fixture running the public BLE and Runtime interoperability lanes, including ported owned-link drain, address-mismatch and wrong-challenge scenarios, and the WBL-C09 lifecycle stress file against the Mix-built native host in both BEAM lanes",
+  "source_identity": {
+    "files": {
+      "test/support/software_formatter.ex": "eb9eafd5f38a0736f0ee4ed0a27192fbec6f3488b37b321cc7819dd8f25aba91",
+      "priv/bluez/native/bus.hpp": "ac27f5ade5a0d9376ddf3e4a5920b7206f92acdd70b82e78f895715c7fe19145",
+      "test/support/software_peer.ex": "736cef63919fa9cf919f56f6e078c4424d8ecc28ead05d1d0f5736c8685b65a7",
+      "test/interop/virtual/gatt_peer.py": "380d5826543d4693569f398244839205b9fdaaee6795a3620d228391030e4449",
+      "test/interop/bluez_runtime_test.exs": "038f9906d97e3bc8fd478af86e9a4ae9a7dba92b54de53f6d9d8cb3c3c39e906",
+      "test/interop/virtual/requirements.txt": "dc0a57e5b5d71e6f23cfe2fb8c115c71918a8648003938427ec0093f2ac1767a",
+      "priv/bluez/native/discovery.hpp": "073b6ca57de5c7bd2c5ab5301464ef4bf3d453488ab8b2b2fb4388e3355336ab",
+      "test/interop/virtual/build_manifest.exs": "b24983b585842c91019d29827cf76f971c8b6ab4424283d657f09ed4395e435a",
+      "priv/bluez/native/pairing.hpp": "fc4036b469e1e34c4dda82fa37e107f4ded21628ec41cacb5c4e744f3e4ca8e6",
+      "test/test_helper.exs": "dab3922d034b24583d36237c56fea4fb0a38ffc43e675dd5e960c595224b7d44",
+      "lib/wotex/ble/software/operations.ex": "0057d826760a9831cac8e90d4777fdce8ab41e19f8dd0d3087ea3efbc48aa557",
+      "test/interop/virtual/bootstrap.sh": "7fd1bf2481b69d4cd327e75d008fda45f0d0c3230de5165c0cd7476582d1f7ce",
+      "lib/mix/tasks/wotex.ble.software.run.ex": "fb8b211b47967a103d29b4c04e261ae976987b24c24c24afae04a4fd9d09d983",
+      "test/interop/virtual/public_peer.py": "19a4e27c39f395be1b6041d9925aea713754faaf930c5b7777250e1163733a02",
+      "lib/wotex/ble/software/fixture.ex": "1ae61554327aecffc443f1ab95d6e5575648ee03bce2ecbab5ef8163c11a8d68",
+      "test/interop/virtual/Dockerfile.system": "2e1ede7d6782e8fb584e35da23330743bf842e7e6555a4b072000b702ad4a998",
+      "lib/wotex/ble/software/build.ex": "3ccfc1b22eb3ed68efb43ecd8204ed18edda64525ee4020d78ff6b8e4f07bd20",
+      "test/interop/virtual/main.conf": "d9138fbd977a539a8688565fd39a95645409baace48db418224d4fe99b9e72af",
+      "test/interop/virtual/bus.conf": "49d30001cd1fe98737d42ad726feafb0c0407125941dd834d4e0302d0342e3e7",
+      "priv/bluez/native/main.cpp": "d3bae62ef60fb56aa7147ea3df6ca8e2ec39d90d2ffcac54079455730f863e68",
+      "test/interop/bluez_test.exs": "c1c2fdb401a583680cc06e375f6b8461449ae570f9935c0e501ecd8bbccdd835",
+      "test/software/lifecycle_stress_test.exs": "4e264c81b22d6bd3e0d8c7bba2dc307f8698d8e26d185c30c9472dec82182f55",
+      "test/interop/virtual/guest.sh": "37ea3c7eb55a4db9b2f8d08d06d3a17f1a6d519d9d7ed5a4148bebd84d1a7bb8",
+      "test/interop/virtual/Dockerfile.public": "1e760777ffbf52c09a33ecb0e5eaa10896f3310d26e98c32a5b7550f05f53f99",
+      "priv/bluez/native/host.hpp": "d903a9564885126a628067bf23cc5a85bf5d162328502297597e63cfad42e69b",
+      "test/interop/virtual/Dockerfile.bluez": "ad9be19b128a1e137c49f560bd29583ae0c40fe7689f9b1759b958b9eb776d7b",
+      "lib/mix/tasks/wotex.ble.software.build.ex": "7cb786918d6983cce03850ad3324336207fb8a03b5bf091f0616d8c789484d74",
+      "test/interop/virtual/make_filesystem.sh": "24f193d3b942e3a83ab0ae210801b2d3fde2e429a46840b760e7e74695a84353",
+      "lib/wotex/ble/software/run.ex": "4e5fec396d5e878a0cd43964345004b6127bcce9ab80776cfbf802b48aa4dd59",
+      "test/interop/virtual/dbus_monitor.py": "521625cd67e801e5c706bc94e1fe1992d6451fe9984cf5124955ae944a6452dc",
+      "lib/wotex/ble/bluez/options.ex": "7fac0342c850e01615ab9b3c1cb20b95d5eef6ea60d863a7fb16b64372dd2b0e",
+      "lib/wotex/ble/bluez/connection.ex": "6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac",
+      "test/interop/virtual/public.sh": "609dbd1749ad4479de5786e01b1121c55da67ea94e3c3098a7f6bd6f5b7d65ad",
+      "priv/bluez/native/custody.c": "d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2"
+    },
+    "kind": "exact source-file SHA-256; no source commit association asserted"
+  },
+  "specification": "WBL.13@1.0.22"
+}

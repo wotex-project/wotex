@@ -8,8 +8,9 @@ implementation of BlueZ's GATT server API supplies private UUIDs and values; it
 does not implement or replace the client boundary. Both wire endpoints use
 BlueZ, so this is same-stack protocol evidence with an independent GATT
 application provider. The exact executed cohort is the
-[software run receipt](software-run-v2.json); the earlier
-[public-only receipt](software-run-v1.json) remains historical.
+[software run receipt](software-run-v3.json); the earlier
+[public-only](software-run-v1.json) and [first stress](software-run-v2.json)
+receipts remain historical.
 
 ## Explicit invocation
 
@@ -74,6 +75,17 @@ first sender's cleanup, receiver death releasing the CCC session, explicit
 pairing acceptance, rejection and timeout, and real ConsumedThing Property/Event
 values, context, media and error projection.
 
+Scenarios ported from the retired adapter lane add an address whose object path
+names a different characteristic, which fails `address_mismatch` without a
+WriteValue. A wrong Agent challenge ID is injected by replacing the owner's
+recorded challenge ID while the policy decides; the host rejects that reply, the
+pairing fails and the Agent is unregistered without CancelPairing or RemoveDevice.
+A read-caused Value change is the existing stream assertion that a plain read
+delivers a `bluez_value_change` report. An owned link is opened after a
+peer-side disconnect: explicit close succeeds, submits exactly one Connect and one
+Disconnect from the native sender, releases that sender within 1000 ms, and BlueZ
+drops the controller link within 3500 ms of close.
+
 A read-only private-bus monitor accounts for successful Agent and notification
 control acknowledgements and unique-sender loss. It does not respond to the
 observed calls. Native senders may not call `CancelPairing`, `RemoveDevice` or
@@ -105,8 +117,13 @@ pairing: link loss relabelled a completed explicit close as `cleanup_timeout`,
 and a closed private sender stopped the host from reading its input. Both have
 native regressions.
 
-The [stress receipt](software-run-v2.json) records a fresh verified build and
-three consecutive runs that pass both lanes, 15 of 15 tests in each (about 250 s
+The [first stress receipt](software-run-v2.json) records three consecutive
+passing runs, 15 of 15 tests per lane. The owned-link scenario then failed with
+`cleanup_timeout` in both lanes: the host exited on its cooperative deadline
+before writing a completed close, and the BEAM handed cleanup to the guardian at
+that same deadline. After both fixes, the current
+[software run receipt](software-run-v3.json) records a fresh verified build and
+three consecutive runs that pass both lanes, 16 of 16 tests in each (208 to 265 s
 per lane), with zero remaining owned containers. The stress file performs 1000
 alternating acknowledged writes and correlated reads on one sender; 100
 connect/health/disconnect cycles that each return to the BEAM process and port
@@ -128,5 +145,5 @@ enumerable; their release is covered only through exit of the owning processes.
 An earlier Python-orchestrated guest ran the retired Python adapter through 15
 cases, including a wrong pairing challenge, read-caused Value changes, stale
 targets and BlueZ link-drain timing. Those results apply only to that adapter.
-Their scenarios that the public ExUnit lanes do not yet cover remain open, as do
-an x86_64 guest lane and final package gates.
+Their scenarios now run in the public ExUnit lanes as described above. An x86_64
+guest lane and final package gates remain open.

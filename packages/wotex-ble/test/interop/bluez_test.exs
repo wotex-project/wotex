@@ -48,6 +48,11 @@ defmodule Wotex.BLE.BlueZInteropTest do
     assert {:error, %Error{code: :stale_discovery, effect: :none}} =
              BLE.write(session, %{address | generation: address.generation + 1}, <<0>>)
 
+    notify = SoftwarePeer.selected(page, :notify)
+
+    assert {:error, %Error{code: :address_mismatch, effect: :none}} =
+             BLE.write(session, %{address | object_path: notify.object_path}, <<0>>)
+
     assert SoftwarePeer.command("stats")["peer_calls"]["WriteValue"] == writes
     SoftwarePeer.command("deny", %{label: "value", denied: true})
     assert {:error, %Error{code: :not_permitted}} = BLE.read(session, address)
@@ -160,7 +165,7 @@ defmodule Wotex.BLE.BlueZInteropTest do
        %{
          options: options
        } do
-    for decision <- [:accept, :reject, :timeout] do
+    for decision <- [:accept, :reject, :timeout, :wrong_challenge] do
       SoftwarePeer.command("reset")
       session = connect(options)
 
@@ -170,8 +175,18 @@ defmodule Wotex.BLE.BlueZInteropTest do
         timeout: 1000
       }
 
-      result = BLE.pair(session, request)
-      assert_receive {:pair_challenge, challenge}, 1000
+      pairing = Task.async(fn -> BLE.pair(session, request) end)
+      assert_receive {:pair_challenge, challenge, policy}, 1000
+
+      # Fault injection: the BEAM answers the live Agent prompt with a foreign ID.
+      if decision == :wrong_challenge do
+        :sys.replace_state(session.handle.pid, fn state ->
+          put_in(state.policy.challenge_id, String.duplicate("f", 32))
+        end)
+      end
+
+      send(policy, :decide)
+      result = Task.await(pairing, 5000)
       assert challenge.peer == options[:peer]
       assert challenge.kind == :confirm_passkey
       assert challenge.value in 0..999_999
@@ -181,11 +196,11 @@ defmodule Wotex.BLE.BlueZInteropTest do
           :ok
 
         {decision, {:error, %Error{code: :pairing_rejected}}}
-        when decision in [:reject, :timeout] ->
+        when decision in [:reject, :timeout, :wrong_challenge] ->
           :ok
 
         {decision, {:error, %Error{code: :disconnected}}}
-        when decision in [:reject, :timeout] ->
+        when decision in [:reject, :timeout, :wrong_challenge] ->
           assert SoftwarePeer.command("stats")["peer_connected"] == false
 
         unexpected ->
@@ -203,11 +218,41 @@ defmodule Wotex.BLE.BlueZInteropTest do
     end
   end
 
-  @spec decide(Wotex.BLE.Challenge.t(), {pid(), atom()}) :: atom()
+  @spec decide(Wotex.BLE.Challenge.t(), {pid(), atom()}) :: :accept | :reject
   def decide(challenge, {receiver, decision}) do
-    send(receiver, {:pair_challenge, challenge})
-    if decision == :timeout, do: Process.sleep(60_000)
-    decision
+    send(receiver, {:pair_challenge, challenge, self()})
+
+    receive do
+      :decide -> :ok
+    end
+
+    case decision do
+      :timeout -> Process.sleep(60_000)
+      :wrong_challenge -> :accept
+      decision -> decision
+    end
+  end
+
+  test "WBL-N03 WBL-V04 owned native link connects and drains only through its own cleanup", %{
+    options: options
+  } do
+    SoftwarePeer.command("disconnect")
+    SoftwarePeer.wait_until(fn -> not SoftwarePeer.command("stats")["peer_connected"] end, 3500)
+    session = connect(Keyword.put(options, :connection, :owned))
+    assert {:ok, %{connected: true, services_resolved: true}} = BLE.health_check(session)
+    monitor = Process.monitor(session.handle.pid)
+    started = System.monotonic_time(:millisecond)
+    assert :ok = BLE.disconnect(session)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    SoftwarePeer.wait_until(fn -> SoftwarePeer.command("stats")["native_senders"] == [] end, 1000)
+    assert System.monotonic_time(:millisecond) - started <= 1000
+
+    # BlueZ postpones the kernel disconnect after Device1.Disconnect; that daemon
+    # drain is measured separately from the library cleanup grace.
+    SoftwarePeer.wait_until(fn -> not SoftwarePeer.command("stats")["peer_connected"] end, 3500)
+    stats = SoftwarePeer.command("stats")
+    assert stats["calls"]["Connect"] == 1 and stats["calls"]["Disconnect"] == 1
+    assert Map.get(stats["calls"], "RemoveDevice", 0) == 0
   end
 
   defp connect(options) do
