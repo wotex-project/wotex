@@ -6,9 +6,11 @@ defmodule CheckArchive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
-  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "CHANGELOG.md", "lib", "priv", "docs"]
+  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "CHANGELOG.md", "lib", "priv"]
   @development [".git", "deps", "_build"]
-  @local_tasks "docs/tasks/local"
+  # Markdown documentation reaches consumers through HexDocs; no `docs/` tree
+  # and no task-tracker path may travel inside the archive.
+  @forbidden_segments ["docs", "tasks"]
   @consumer_fixture "test/fixtures/archive_consumer.exs"
   @target_fixture "test/fixtures/external_target.exs"
 
@@ -48,9 +50,15 @@ defmodule CheckArchive do
       end
     end)
 
-    if File.exists?(Path.join(package, @local_tasks)) do
-      fail(temporary, "archive contains local task state")
-    end
+    package
+    |> entries()
+    |> Enum.each(fn path ->
+      relative = Path.relative_to(path, package)
+
+      if Enum.any?(Path.split(relative), &(&1 in @forbidden_segments)) do
+        fail(temporary, "archive contains documentation or task path #{relative}")
+      end
+    end)
 
     unless development_state(package) == [] do
       fail(temporary, "archive contains development state")
@@ -184,6 +192,21 @@ defmodule CheckArchive do
 
       case File.lstat(path) do
         {:ok, %File.Stat{type: :directory}} -> [path | directories(path)]
+        _other -> []
+      end
+    end)
+  end
+
+  defp entries(root) do
+    root
+    |> File.ls!()
+    |> Enum.sort()
+    |> Enum.flat_map(fn entry ->
+      path = Path.join(root, entry)
+
+      case File.lstat(path) do
+        {:ok, %File.Stat{type: :directory}} -> [path | entries(path)]
+        {:ok, _stat} -> [path]
         _other -> []
       end
     end)

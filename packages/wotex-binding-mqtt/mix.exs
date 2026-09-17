@@ -2,7 +2,8 @@ defmodule WotexBindingMQTT.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-binding-mqtt"
+  @source_url "https://github.com/wotex-project/wotex"
+  @docs_root Path.expand("../../docs/packages/wotex-binding-mqtt", __DIR__)
 
   def project do
     [
@@ -107,16 +108,16 @@ defmodule WotexBindingMQTT.MixProject do
       name: "wotex_binding_mqtt",
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-binding-mqtt/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_binding_mqtt",
         "Project" => "https://wotex.io",
         "Source" => @source_url,
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-mqtt",
         "W3C WoT MQTT Binding" =>
           "https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/reference-consumer-inventory.md docs/release-candidate-inventory.md docs/runtime-baseline.md docs/specs lib mix.exs)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)
     ]
   end
 
@@ -124,30 +125,30 @@ defmodule WotexBindingMQTT.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md": [title: "Overview"],
-        "docs/plans/wotex-binding-mqtt-completion.md": [title: "Completion Contract"],
-        "docs/specs/WBM.01-values-and-client-port.md": [title: "Values and client port"],
-        "docs/specs/WBM.02-form-mapping.md": [title: "Form mapping"],
-        "docs/specs/WBM.03-runtime-transport.md": [title: "Runtime transport"],
-        "docs/specs/WBM-C01-operation-inventory.md": [title: "Operation inventory"],
-        "docs/specs/WBM-C02-client-lifecycle.md": [title: "Client lifecycle proof"],
-        "docs/specs/WBM-C03-limits-security.md": [title: "Limits and security"],
-        "docs/reference-consumer-inventory.md": [title: "Archive reference consumer"],
-        "docs/release-candidate-inventory.md": [title: "Release candidate"],
-        "docs/runtime-baseline.md": [title: "Runtime baseline"],
-        "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
-        "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
-        "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],
-        "CHANGELOG.md": [title: "Changelog"],
-        "SECURITY.md": [title: "Security"],
-        "CONTRIBUTING.md": [title: "Contributing"],
-        LICENSE: [title: "License"],
-        NOTICE: [title: "Notices"]
+        {"README.md", title: "Overview"},
+        {doc("plans/wotex-binding-mqtt-completion.md"), title: "Completion Contract"},
+        {doc("specs/WBM.01-values-and-client-port.md"), title: "Values and client port"},
+        {doc("specs/WBM.02-form-mapping.md"), title: "Form mapping"},
+        {doc("specs/WBM.03-runtime-transport.md"), title: "Runtime transport"},
+        {doc("specs/WBM-C01-operation-inventory.md"), title: "Operation inventory"},
+        {doc("specs/WBM-C02-client-lifecycle.md"), title: "Client lifecycle proof"},
+        {doc("specs/WBM-C03-limits-security.md"), title: "Limits and security"},
+        {doc("reference-consumer-inventory.md"), title: "Archive reference consumer"},
+        {doc("release-candidate-inventory.md"), title: "Release candidate"},
+        {doc("runtime-baseline.md"), title: "Runtime baseline"},
+        {doc("provenance/mqtt-binding-draft-2026-07-01.md"), title: "MQTT binding draft"},
+        {doc("provenance/mqtt-primary-sources.md"), title: "MQTT primary sources"},
+        {doc("provenance/wot-binding-registry-2025-11-04.md"), title: "Binding Registry status"},
+        {"CHANGELOG.md", title: "Changelog"},
+        {"SECURITY.md", title: "Security"},
+        {"CONTRIBUTING.md", title: "Contributing"},
+        {"LICENSE", title: "License"},
+        {"NOTICE", title: "Notices"}
       ],
       groups_for_extras: [
-        "Completion plans": ~r/docs\/plans/,
-        "Library specifications": ~r/docs\/specs/,
-        Provenance: ~r/docs\/provenance/,
+        "Completion plans": ~r/docs\/packages\/wotex-binding-mqtt\/plans/,
+        "Library specifications": ~r/docs\/packages\/wotex-binding-mqtt\/specs/,
+        Provenance: ~r/docs\/packages\/wotex-binding-mqtt\/provenance/,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
@@ -168,11 +169,15 @@ defmodule WotexBindingMQTT.MixProject do
           Wotex.Binding.MQTT.Transport
         ]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-binding-mqtt-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-binding-mqtt-v#{@version}/packages/wotex-binding-mqtt/%{path}#L%{line}",
       formatters: ["html", "markdown", "epub"]
     ]
   end
+
+  defp doc(path), do: Path.join(@docs_root, path)
 
   defp dialyzer do
     [

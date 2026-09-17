@@ -47,8 +47,8 @@ or a release is ready. Automated agents must not invoke either release task.
 Mutable completion/audit trackers belong only under ignored `docs/tasks/local/`
 and must never enter Git, package archives or generated documentation. Durable
 specifications and completion plans remain tracked. Follow
-`docs/plans/wotex-binding-http-completion.md`; create no optional tracker beneath exported
-documentation outside its declared ignored path. Package/archive checks must
+`../../docs/packages/wotex-binding-http/plans/wotex-binding-http-completion.md`; create no
+optional tracker beneath exported documentation outside its declared ignored path. Package/archive checks must
 prove the tracker remains excluded.
 
 Automated agents must never configure, add, change, or remove a Git remote;

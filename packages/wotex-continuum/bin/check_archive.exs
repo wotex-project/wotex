@@ -15,18 +15,7 @@ defmodule WotexContinuum.CheckArchive do
     "README.md",
     "LICENSE",
     "NOTICE",
-    "SECURITY.md",
-    "GOVERNANCE.md",
-    "provenance/DEPENDENCIES.md",
-    "provenance/SOURCES.md",
-    "docs/specs/WCT-C01-contract-map.md",
-    "docs/specs/WCT-C02-admission-map.md",
-    "docs/specs/WCT-C03-schema-agreement.md",
-    "docs/specs/WCT-C04-archive-consumer.md",
-    "docs/specs/WCT-C05-release-dossier.md",
-    "specs/WCT.01-manifest-context-capability.md",
-    "specs/WCT.02-exchange-values.md",
-    "specs/WCT.03-mode-lifecycle-exit.md",
+    "CHANGELOG.md",
     "priv/schemas/wct-01.schema.json",
     "priv/schemas/wct-02.schema.json",
     "priv/schemas/wct-03.schema.json",
@@ -41,17 +30,29 @@ defmodule WotexContinuum.CheckArchive do
     ".elixir_ls",
     ".git",
     ".github",
+    "AGENTS.md",
     "CLAUDE.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "GOVERNANCE.md",
+    "SECURITY.md",
     "_build",
     "bin",
     "cover",
+    "coveralls.json",
     "deps",
     "doc",
-    "docs/tasks",
+    "docs",
     "priv/plts",
+    "provenance",
+    "specs",
     "test/support",
     "test/wotex_continuum"
   ]
+
+  # Markdown documentation reaches consumers through HexDocs; no `docs/` tree
+  # and no task-tracker path may travel inside the archive.
+  @forbidden_segments ["docs", "tasks"]
 
   @contract_consumer_test ~S"""
   defmodule WotexContinuumArchiveContractTest do
@@ -554,6 +555,16 @@ defmodule WotexContinuum.CheckArchive do
     Enum.each(@absent, &absent!(unpacked, &1))
 
     unpacked
+    |> all_entries()
+    |> Enum.each(fn path ->
+      relative_path = relative(path, unpacked)
+
+      if Enum.any?(Path.split(relative_path), &(&1 in @forbidden_segments)) do
+        violation("packaged archive contains documentation or task path #{relative_path}")
+      end
+    end)
+
+    unpacked
     |> regular_files()
     |> Enum.each(fn path ->
       content = read_text(path)
@@ -605,9 +616,13 @@ defmodule WotexContinuum.CheckArchive do
       |> Map.new()
 
     unless links == %{
+             "Changelog" =>
+               "https://github.com/wotex-project/wotex/blob/main/packages/wotex-continuum/CHANGELOG.md",
              "Documentation" => "https://hexdocs.pm/wotex_continuum",
-             "GitHub" => "https://github.com/wotex-project/wotex-continuum",
+             "GitHub" => "https://github.com/wotex-project/wotex",
              "Project" => "https://wotex.io",
+             "Specifications" =>
+               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-continuum",
              "W3C Web of Things" => "https://www.w3.org/WoT/"
            } do
       violation("archive metadata does not declare the reviewed public links")

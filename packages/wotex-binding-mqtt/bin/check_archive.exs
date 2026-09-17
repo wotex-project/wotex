@@ -4,17 +4,15 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   @prefix "wotex-binding-mqtt-archive."
   @version "0.1.0"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.gitignore|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs/tasks|mix\.lock|priv/plts|test|_build)(/|$)}
+  # Markdown documentation reaches consumers through HexDocs: no `docs/` tree
+  # and no task-tracker path may travel inside an archive.
+  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.gitignore|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs|tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @required_content ~w(
     .formatter.exs
     CHANGELOG.md
-    CODE_OF_CONDUCT.md
-    CONTRIBUTING.md
-    GOVERNANCE.md
     LICENSE
     NOTICE
     README.md
-    SECURITY.md
     mix.exs
   )
 
@@ -150,7 +148,9 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
     for value <- [
           "Immutable MQTT command mapping and caller-owned transport adaptation for W3C Web of Things",
           "https://hexdocs.pm/wotex_binding_mqtt",
-          "https://github.com/wotex-project/wotex-binding-mqtt",
+          "https://github.com/wotex-project/wotex",
+          "https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/CHANGELOG.md",
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-binding-mqtt",
           "https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/",
           "https://wotex.io"
         ] do
@@ -161,11 +161,7 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   defp verify_binding_metadata!(_, _, _), do: :ok
 
   defp verify_binding_content!(members, :wotex_binding_mqtt, archive) do
-    for file <- [
-          "docs/reference-consumer-inventory.md",
-          "docs/release-candidate-inventory.md",
-          "docs/runtime-baseline.md"
-        ] do
+    for file <- ["lib/wotex/binding/mqtt.ex", "README.md", "CHANGELOG.md"] do
       unless file in members, do: violation("#{archive} is missing #{file}")
     end
   end

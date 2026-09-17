@@ -1,8 +1,9 @@
 defmodule WotexConformance.MixProject do
   use Mix.Project
 
-  @source_url "https://github.com/wotex-project/wotex-conformance"
+  @source_url "https://github.com/wotex-project/wotex"
   @version "0.1.0"
+  @docs_root Path.expand("../../docs/packages/wotex-conformance", __DIR__)
 
   def project do
     [
@@ -76,32 +77,21 @@ defmodule WotexConformance.MixProject do
       licenses: ["Apache-2.0"],
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-conformance/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_conformance",
         "Project" => "https://wotex.io",
         "Source" => @source_url,
-        "Specifications" => "#{@source_url}/tree/main/docs/specs"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-conformance"
       },
       files: [
-        ".claude",
         "lib",
         "priv/schemas",
         "priv/vectors",
-        "docs/decisions",
-        "docs/plans",
-        "docs/provenance",
-        "docs/specs",
         ".formatter.exs",
-        "AGENTS.md",
-        "CLAUDE.md",
         "CHANGELOG.md",
-        "CODE_OF_CONDUCT.md",
-        "CONTRIBUTING.md",
-        "GOVERNANCE.md",
         "LICENSE",
         "NOTICE",
         "README.md",
-        "SECURITY.md",
         "mix.exs"
       ]
     ]
@@ -111,35 +101,31 @@ defmodule WotexConformance.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md": [title: "Overview"],
-        "docs/plans/wotex-conformance-completion.md": [title: "Completion Contract"],
-        "CONTRIBUTING.md": [title: "Contributing"],
-        "SECURITY.md": [title: "Security"],
-        "GOVERNANCE.md": [title: "Governance"],
-        "docs/specs/WCF.01-conformance-runner.md": [title: "Conformance runner"],
-        "docs/decisions/0001-external-target-isolation.md": [title: "External target isolation"],
-        "docs/decisions/0002-evidence-digests.md": [title: "Evidence digests"],
-        "docs/decisions/0003-normalized-observations.md": [
-          title: "Normalized observations"
-        ],
-        "docs/decisions/0004-discovery-corpus-boundary.md": [
-          title: "Discovery corpus boundary"
-        ],
-        "docs/provenance/source.md": [title: "Source provenance"],
-        "docs/provenance/standards.md": [title: "Standards provenance"],
-        "docs/provenance/assertion-inventory.md": [title: "Assertion inventory"],
-        "docs/provenance/archive-consumer.md": [title: "Archive-only consumer"],
-        "docs/provenance/external-lifecycle.md": [title: "External target lifecycle"],
-        "docs/provenance/package-inputs.md": [title: "Package inputs"],
-        "docs/provenance/runtime-compatibility.md": [title: "Runtime compatibility"],
-        "CHANGELOG.md": [title: "Changelog"],
-        LICENSE: [title: "License"]
+        {"README.md", title: "Overview"},
+        {doc("plans/wotex-conformance-completion.md"), title: "Completion Contract"},
+        {"CONTRIBUTING.md", title: "Contributing"},
+        {"SECURITY.md", title: "Security"},
+        {"GOVERNANCE.md", title: "Governance"},
+        {doc("specs/WCF.01-conformance-runner.md"), title: "Conformance runner"},
+        {doc("decisions/0001-external-target-isolation.md"), title: "External target isolation"},
+        {doc("decisions/0002-evidence-digests.md"), title: "Evidence digests"},
+        {doc("decisions/0003-normalized-observations.md"), title: "Normalized observations"},
+        {doc("decisions/0004-discovery-corpus-boundary.md"), title: "Discovery corpus boundary"},
+        {doc("provenance/source.md"), title: "Source provenance"},
+        {doc("provenance/standards.md"), title: "Standards provenance"},
+        {doc("provenance/assertion-inventory.md"), title: "Assertion inventory"},
+        {doc("provenance/archive-consumer.md"), title: "Archive-only consumer"},
+        {doc("provenance/external-lifecycle.md"), title: "External target lifecycle"},
+        {doc("provenance/package-inputs.md"), title: "Package inputs"},
+        {doc("provenance/runtime-compatibility.md"), title: "Runtime compatibility"},
+        {"CHANGELOG.md", title: "Changelog"},
+        {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
-        "Completion plans": ~r|docs/plans/|,
-        Specifications: ~r|docs/specs/|,
-        Decisions: ~r|docs/decisions/|,
-        Provenance: ~r|docs/provenance/|,
+        "Completion plans": ~r|docs/packages/wotex-conformance/plans/|,
+        Specifications: ~r|docs/packages/wotex-conformance/specs/|,
+        Decisions: ~r|docs/packages/wotex-conformance/decisions/|,
+        Provenance: ~r|docs/packages/wotex-conformance/provenance/|,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|GOVERNANCE|LICENSE/
       ],
       groups_for_modules: [
@@ -167,11 +153,15 @@ defmodule WotexConformance.MixProject do
           Wotex.Conformance.Pointer
         ]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-conformance-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-conformance-v#{@version}/packages/wotex-conformance/%{path}#L%{line}",
       formatters: ["html", "markdown", "epub"]
     ]
   end
+
+  defp doc(path), do: Path.join(@docs_root, path)
 
   defp dialyzer do
     [

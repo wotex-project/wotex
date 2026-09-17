@@ -2,7 +2,8 @@ defmodule WotexBindingHTTP.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-binding-http"
+  @source_url "https://github.com/wotex-project/wotex"
+  @docs_root Path.expand("../../docs/packages/wotex-binding-http", __DIR__)
 
   def project do
     [
@@ -95,45 +96,48 @@ defmodule WotexBindingHTTP.MixProject do
       name: "wotex_binding_http",
       licenses: ["Apache-2.0"],
       links: %{
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-binding-http/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_binding_http",
         "GitHub" => @source_url,
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-http",
         "Wotex" => "https://wotex.io",
         "W3C Web of Things" => "https://www.w3.org/WoT/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/client-lifecycle-inventory.md docs/http-operation-inventory.md docs/limits-security-inventory.md docs/reference-consumer-inventory.md docs/release-candidate-inventory.md docs/plans docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)
     ]
   end
 
   defp docs do
     [
       main: "readme",
-      source_ref: "v#{@version}",
+      source_ref: "wotex-binding-http-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-binding-http-v#{@version}/packages/wotex-binding-http/%{path}#L%{line}",
       formatters: ["html", "epub", "markdown"],
       extras: [
-        "README.md": [title: "Overview"],
-        "CHANGELOG.md": [title: "Changelog"],
-        LICENSE: [title: "License"],
-        NOTICE: [title: "Notices"],
-        "docs/client-lifecycle-inventory.md": [title: "Client lifecycle inventory"],
-        "docs/http-operation-inventory.md": [title: "HTTP operation inventory"],
-        "docs/limits-security-inventory.md": [title: "Limits and security inventory"],
-        "docs/reference-consumer-inventory.md": [title: "Archive reference consumer"],
-        "docs/release-candidate-inventory.md": [title: "Release-candidate inventory"],
-        "docs/standards-baseline.md": [title: "Standards baseline"],
-        "docs/runtime-baseline.md": [title: "Runtime baseline"],
-        "docs/plans/wotex-binding-http-completion.md": [title: "Completion Contract"],
-        "docs/specs/WBH.01-http-transport.md": [title: "HTTP transport"],
-        "docs/specs/WBH.02-client-port-and-values.md": [title: "Client port and values"],
-        "docs/specs/WBH.03-sse-subscriptions.md": [title: "SSE subscriptions"]
+        {"README.md", title: "Overview"},
+        {"CHANGELOG.md", title: "Changelog"},
+        {"LICENSE", title: "License"},
+        {"NOTICE", title: "Notices"},
+        {doc("client-lifecycle-inventory.md"), title: "Client lifecycle inventory"},
+        {doc("http-operation-inventory.md"), title: "HTTP operation inventory"},
+        {doc("limits-security-inventory.md"), title: "Limits and security inventory"},
+        {doc("reference-consumer-inventory.md"), title: "Archive reference consumer"},
+        {doc("release-candidate-inventory.md"), title: "Release-candidate inventory"},
+        {doc("standards-baseline.md"), title: "Standards baseline"},
+        {doc("runtime-baseline.md"), title: "Runtime baseline"},
+        {doc("plans/wotex-binding-http-completion.md"), title: "Completion Contract"},
+        {doc("specs/WBH.01-http-transport.md"), title: "HTTP transport"},
+        {doc("specs/WBH.02-client-port-and-values.md"), title: "Client port and values"},
+        {doc("specs/WBH.03-sse-subscriptions.md"), title: "SSE subscriptions"}
       ],
       groups_for_extras: [
-        "Completion plans": ~r/docs\/plans/,
-        "Normative package specifications": ~r/docs\/specs/,
+        "Completion plans": ~r/docs\/packages\/wotex-binding-http\/plans/,
+        "Normative package specifications": ~r/docs\/packages\/wotex-binding-http\/specs/,
         "Contract evidence":
-          ~r/docs\/((client-lifecycle|http-operation|limits-security|reference-consumer|release-candidate)-inventory|(standards|runtime)-baseline)/
+          ~r/docs\/packages\/wotex-binding-http\/((client-lifecycle|http-operation|limits-security|reference-consumer|release-candidate)-inventory|(standards|runtime)-baseline)/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Binding.HTTP, Wotex.Binding.HTTP.Client],
@@ -155,6 +159,8 @@ defmodule WotexBindingHTTP.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
+
+  defp doc(path), do: Path.join(@docs_root, path)
 
   defp dialyzer do
     [

@@ -106,7 +106,7 @@ configured non-sensitive values are applied.
 Arguments may contain `{subject_archive}` to receive the verified absolute
 archive path. The target response must echo the vector ID and declare either an
 `observed` value or an `unsupported` outcome. The complete protocol and failure
-codes are specified in [`WCF.01`](docs/specs/WCF.01-conformance-runner.md).
+codes are specified in [`WCF.01`](../../docs/packages/wotex-conformance/specs/WCF.01-conformance-runner.md).
 
 ### Normalized observations
 
@@ -158,9 +158,9 @@ mix check
 `mix check` runs warnings-as-errors compilation, formatting, and the test suite.
 Package, documentation, audit, and compatibility checks are explicit
 release-readiness work. The
-[runtime compatibility evidence](docs/provenance/runtime-compatibility.md)
+[runtime compatibility evidence](../../docs/packages/wotex-conformance/provenance/runtime-compatibility.md)
 records the tested Elixir and Erlang/OTP cohorts and their limits. The
-[package input boundary](docs/provenance/package-inputs.md) describes which
+[package input boundary](../../docs/packages/wotex-conformance/provenance/package-inputs.md) describes which
 documentation roots enter the Hex archive.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md),

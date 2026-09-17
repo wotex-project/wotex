@@ -2,7 +2,8 @@ defmodule WotexContinuum.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-continuum"
+  @source_url "https://github.com/wotex-project/wotex"
+  @docs_root Path.expand("../../docs/packages/wotex-continuum", __DIR__)
 
   def project do
     [
@@ -86,13 +87,15 @@ defmodule WotexContinuum.MixProject do
       name: "wotex_continuum",
       links: %{
         "GitHub" => @source_url,
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-continuum/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-continuum",
         "Documentation" => "https://hexdocs.pm/wotex_continuum",
         "Project" => "https://wotex.io",
         "W3C Web of Things" => "https://www.w3.org/WoT/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(docs/THREAT_MODEL.md docs/plans docs/specs lib priv/schemas provenance specs test/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md SECURITY.md GOVERNANCE.md CONTRIBUTING.md CODE_OF_CONDUCT.md)
+        ~w(lib priv/schemas test/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
     ]
   end
 
@@ -101,24 +104,24 @@ defmodule WotexContinuum.MixProject do
       main: "readme",
       extras: [
         "README.md",
-        "docs/plans/wotex-continuum-completion.md",
-        "docs/specs/WCT-C01-contract-map.md",
-        "docs/specs/WCT-C02-admission-map.md",
-        "docs/specs/WCT-C03-schema-agreement.md",
-        "docs/specs/WCT-C04-archive-consumer.md",
-        "docs/specs/WCT-C05-release-dossier.md",
-        "specs/WCT.01-manifest-context-capability.md",
-        "specs/WCT.02-exchange-values.md",
-        "specs/WCT.03-mode-lifecycle-exit.md",
-        "docs/THREAT_MODEL.md",
+        Path.join(@docs_root, "plans/wotex-continuum-completion.md"),
+        Path.join(@docs_root, "specs/WCT-C01-contract-map.md"),
+        Path.join(@docs_root, "specs/WCT-C02-admission-map.md"),
+        Path.join(@docs_root, "specs/WCT-C03-schema-agreement.md"),
+        Path.join(@docs_root, "specs/WCT-C04-archive-consumer.md"),
+        Path.join(@docs_root, "specs/WCT-C05-release-dossier.md"),
+        Path.join(@docs_root, "specs/WCT.01-manifest-context-capability.md"),
+        Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
+        Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
+        Path.join(@docs_root, "THREAT_MODEL.md"),
         "SECURITY.md",
         "GOVERNANCE.md"
       ],
       groups_for_extras: [
-        "Completion plans": ~r/docs\/plans/,
-        "Verification maps": ~r/docs\/specs/,
-        Specifications: ~r/specs\//,
-        Security: ~r/docs\//,
+        "Completion plans": ~r/docs\/packages\/wotex-continuum\/plans/,
+        "Verification maps": ~r/docs\/packages\/wotex-continuum\/specs\/WCT-C/,
+        Specifications: ~r/docs\/packages\/wotex-continuum\/specs\/WCT\./,
+        Security: ~r/docs\/packages\/wotex-continuum\/THREAT_MODEL/,
         Project: ~r/(SECURITY|GOVERNANCE)\.md/
       ],
       groups_for_modules: [
@@ -155,8 +158,10 @@ defmodule WotexContinuum.MixProject do
           WotexContinuum.ThingReference
         ]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-continuum-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-continuum-v#{@version}/packages/wotex-continuum/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end

@@ -4,17 +4,15 @@ defmodule WotexBindingHTTP.Check.Archive do
   @prefix "wotex-binding-http-archive."
   @version "0.1.0"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs/tasks/local|mix\.lock|priv/plts|test|_build)(/|$)}
+  # Markdown documentation reaches consumers through HexDocs: no `docs/` tree
+  # and no task-tracker path may travel inside an archive.
+  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs|tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @required_content ~w(
     .formatter.exs
     CHANGELOG.md
-    CODE_OF_CONDUCT.md
-    CONTRIBUTING.md
-    GOVERNANCE.md
     LICENSE
     NOTICE
     README.md
-    SECURITY.md
     mix.exs
   )
 
@@ -153,7 +151,9 @@ defmodule WotexBindingHTTP.Check.Archive do
     for value <- [
           "Caller-owned HTTP and Server-Sent Events binding for Wotex Runtime",
           "https://hexdocs.pm/wotex_binding_http",
-          "https://github.com/wotex-project/wotex-binding-http",
+          "https://github.com/wotex-project/wotex",
+          "https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-http/CHANGELOG.md",
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-binding-http",
           "https://www.w3.org/WoT/",
           "https://wotex.io"
         ] do

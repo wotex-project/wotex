@@ -25,7 +25,7 @@ client library, pool, supervision tree, credential store, or deployment model.
 
 The package implements a dated standards baseline. It does **not** claim
 conformance with a W3C WoT Profile or registration in the pilot WoT Binding
-Registry. See the [standards baseline](docs/standards-baseline.md).
+Registry. See the [standards baseline](../../docs/packages/wotex-binding-http/standards-baseline.md).
 
 ## Why the client is supplied
 
@@ -151,7 +151,7 @@ or fragments. It supports JSON representations and maps these WoT operations:
 | `observeproperty` | `GET` | SSE stream |
 | `subscribeevent` | `GET` | SSE stream |
 
-The [HTTP operation inventory](docs/http-operation-inventory.md) records the
+The [HTTP operation inventory](../../docs/packages/wotex-binding-http/http-operation-inventory.md) records the
 complete nine-operation open/close matrix, the unsupported aggregate cell,
 exact authorities, and named positive/negative vectors.
 
@@ -183,17 +183,17 @@ and a client session status becomes `{:status, :reconnected | :session_lost |
 :transport_down}`. `unobserveproperty` and `unsubscribeevent` call
 `Client.close/2`; they never issue a hidden HTTP request.
 
-The [client and SSE lifecycle inventory](docs/client-lifecycle-inventory.md)
+The [client and SSE lifecycle inventory](../../docs/packages/wotex-binding-http/client-lifecycle-inventory.md)
 maps callback failures, handshake cleanup, close concurrency, configuration
 identity, and owner failure to named vectors. It also identifies
 pending-establishment owner monitoring as a supplied-client obligation.
 
-The [exact archive and reference-consumer inventory](docs/reference-consumer-inventory.md)
+The [exact archive and reference-consumer inventory](../../docs/packages/wotex-binding-http/reference-consumer-inventory.md)
 maps the isolated three-archive installation, finite request, redirect/audience,
 limit, supervised SSE and failure-redaction vectors. The generated consumer and
 run artifacts remain outside this repository.
 
-The [limits and security inventory](docs/limits-security-inventory.md) records
+The [limits and security inventory](../../docs/packages/wotex-binding-http/limits-security-inventory.md) records
 exact thresholds, native JSON admission, sustained receiver overload, deadline
 and destination policy seams, redaction vectors, and the remaining client-owned
 nonclaims.
@@ -255,7 +255,7 @@ package requirement is not a tested runtime matrix. CI also pins the exact core
 and Runtime source revisions used by the workspace gate.
 
 The boundary and exact-archive commands are focused proofs. The
-[public release-candidate inventory](docs/release-candidate-inventory.md)
+[public release-candidate inventory](../../docs/packages/wotex-binding-http/release-candidate-inventory.md)
 documents package metadata, legal/security, dependency, documentation,
 toolchain, and remaining publication-order evidence.
 

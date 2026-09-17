@@ -125,22 +125,24 @@ accepted struct.
 
 ## Development
 
-The [specification catalogue](docs/specs/catalogue.yaml) and completion contract
-at `docs/plans/wotex-continuum-completion.md` separate package
-verification from independent consumer, release and stable-API evidence.
-Normative WCT documents retain their single owners under `specs/`.
-The [WCT-C01 contract map](docs/specs/WCT-C01-contract-map.md) indexes every
+The [specification catalogue](../../docs/packages/wotex-continuum/specs/catalogue.yaml) and completion contract
+at `../../docs/packages/wotex-continuum/plans/wotex-continuum-completion.md`
+separate package verification from independent consumer, release and
+stable-API evidence.
+Normative WCT documents retain their single owners under
+`../../docs/packages/wotex-continuum/specs/`.
+The [WCT-C01 contract map](../../docs/packages/wotex-continuum/specs/WCT-C01-contract-map.md) indexes every
 field, default, null rule, error family, and lifecycle edge to executable
-evidence. The [WCT-C02 admission map](docs/specs/WCT-C02-admission-map.md)
+evidence. The [WCT-C02 admission map](../../docs/packages/wotex-continuum/specs/WCT-C02-admission-map.md)
 records native UTF-8 parity and the intentional native-versus-decoder resource
-boundary. The [WCT-C03 schema agreement map](docs/specs/WCT-C03-schema-agreement.md)
+boundary. The [WCT-C03 schema agreement map](../../docs/packages/wotex-continuum/specs/WCT-C03-schema-agreement.md)
 connects every registered kind and nested owner route to schemas,
 constructors, reconstruction, codecs, and published vectors.
-The [WCT-C04 archive-consumer proof](docs/specs/WCT-C04-archive-consumer.md)
+The [WCT-C04 archive-consumer proof](../../docs/packages/wotex-continuum/specs/WCT-C04-archive-consumer.md)
 installs one exact candidate archive in two behavior-complete isolated Hex
 consumers and exercises the three WCT contracts without path or Git
 dependencies.
-The [WCT-C05 release-candidate dossier](docs/specs/WCT-C05-release-dossier.md)
+The [WCT-C05 release-candidate dossier](../../docs/packages/wotex-continuum/specs/WCT-C05-release-dossier.md)
 separates package API from wire compatibility and records metadata, dependency,
 toolchain, public-content, standards, and nonclaim boundaries.
 
@@ -186,8 +188,8 @@ selection uses the published package requirement; a nearby directory never
 changes dependency selection implicitly. A successful local-path check does
 not establish independent consumer installation against released dependencies.
 
-See `specs/` for the normative contracts and `test/vectors/` for executable
-examples.
+See `../../docs/packages/wotex-continuum/specs/` for the normative contracts and
+`test/vectors/` for executable examples.
 
 ## License
 
