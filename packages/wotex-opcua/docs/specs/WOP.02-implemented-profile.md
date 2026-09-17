@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.12
+  version: 2.0.13
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -183,6 +183,9 @@ public request path exposes typed native DataValue, Write status and Call result
 maps in persistent mode plus bounded child-NodeId Browse through the facade.
 One-shot Read, Write and Call project the recorded successful result
 shapes: `{type, value, status}`, `"written"`, and zero/one/many method outputs.
+One-shot failures are not translated: they return the same native Error code,
+effect and Runtime class as persistent mode (WOP.10 S02). The Python adapter's
+bridge-specific error codes were retired with that adapter.
 The independent Basic256Sha256 anonymous peer passes read, write/readback,
 Call, Browse and one-shot result projection. This is an explicitly selected
 partial native client, not a complete compatibility or Runtime projection.

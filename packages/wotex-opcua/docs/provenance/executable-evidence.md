@@ -20,6 +20,45 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## One-shot error parity, 2026-09-17
+
+WOP.10 S02 (1.1.3), WOP.11 N04 (1.1.14) and WOP.02 (2.0.13) now specify that only
+successful results have a one-shot compatibility translation. A one-shot failure
+returns the same native Error code and effect, and so the same I04 class, as
+persistent mode. The Python adapter's bridge-specific codes (`exchange_failed`,
+`transport_unavailable`, `response_limit`) were removed with that adapter in
+`9426fb9`.
+
+`test/interop/oneshot_error_parity_test.exs` runs six stimuli against the
+independent asyncua 2.0.1 peer, once through a one-shot handle and once through a
+persistent Session. Each projects `code`, `effect` and `Error.classify/1`'s
+class; the two projections must be equal and carry the named code:
+
+| Stimulus | Observed in both modes |
+| --- | --- |
+| 800 ms timeout on the peer's `Slow(3000)` Method call | `deadline_exceeded`, effect unknown, class permanent |
+| Endpoint on a closed loopback port | `connection_failed`, effect none, class unavailable |
+| Read of a missing node | `remote_error`, effect none, class nil |
+| Read of the peer's Variant-array `Variants` variable | `unsupported_type`, effect none, class permanent |
+| Write with an unknown Variant type | `invalid_value`, effect none, class permanent |
+| Wrong username password | `authentication_failed`, effect none, class permanent |
+
+The peer adds the `Slow` Method and the `Variants` variable for these stimuli.
+Opening failures reach one-shot callers from `send/2` and persistent callers from
+`connect/1`. A timeout with class `timeout` (a Read the peer delays) is not
+executed, because the asyncua peer cannot delay a Read.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29: the optional
+secure suite with the lifecycle file passes 61/61 against the RelWithDebInfo and
+macOS ASan/UBSan builds. `WOTEX_PATH_DEPS=1 mix check --no-retry` passes with
+370 passed (10 doctests, 4 properties, 356 tests), 65 optional tests excluded and
+95.4% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/oneshot_error_parity_test.exs` | `418e7e77e5df4862d192a6f76d79cfd007e18512d21ea208822b7a9b7b25aa51` |
+| `test/interop/secure_peer.py` | `e3520dd0cd123904a689fed6681c40cdf03e7f11337684981c192dc279211a5d` |
+
 ## X-F19 Runtime class and a workspace snapshot race, 2026-09-17
 
 `owner_check.c` already binds WOP-X-F19's native projection: one Write request,

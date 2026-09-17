@@ -15,6 +15,8 @@ withheld and Republish counts. LoseSubscriptions queues a BadTimeout
 StatusChangeNotification on every subscription and returns their count.
 FailDeletes(count) makes the next `count` DeleteSubscriptions calls return
 BadInternalError without deleting and returns the remaining count.
+Slow(milliseconds) waits before returning its input, and the Variants variable
+holds a Variant array that the native value profile does not support.
 FailAcks(count) makes the next `count` Publish requests that acknowledge
 notifications report BadInternalError for each acknowledgement and returns the
 remaining count.
@@ -180,6 +182,19 @@ async def main(directory, variant):
                                                      add_values,
                                                      [ua.VariantType.Double, ua.VariantType.Double],
                                                      [ua.VariantType.Double])
+    variants = await server.nodes.objects.add_variable(ua.NodeId("variants", namespace), "Variants",
+                                                       [ua.Variant(1, ua.VariantType.Int32),
+                                                        ua.Variant("x", ua.VariantType.String)],
+                                                       ua.VariantType.Variant,
+                                                       ua.NodeId(ua.ObjectIds.BaseDataType))
+
+    @uamethod
+    async def slow(parent, milliseconds):
+        await asyncio.sleep(milliseconds / 1000)
+        return ua.Variant(milliseconds, ua.VariantType.UInt32)
+
+    slow_method = await server.nodes.objects.add_method(ua.NodeId("slow", namespace), "Slow", slow,
+                                                        [ua.VariantType.UInt32], [ua.VariantType.UInt32])
     service = server.iserver.subscription_service
     faults = {"withhold": 0, "discard": False, "withheld": 0, "republished": 0, "fail_deletes": 0, "fail_acks": 0}
     delete_subscriptions = InternalSession.delete_subscriptions
@@ -291,6 +306,8 @@ async def main(directory, variant):
               "loss_method_id": loss_method.nodeid.to_string(),
               "delete_method_id": delete_method.nodeid.to_string(),
               "acks_method_id": acks_method.nodeid.to_string(),
+              "variants_node_id": variants.nodeid.to_string(),
+              "slow_method_id": slow_method.nodeid.to_string(),
               "username": USERNAME, "password": PASSWORD, "variant": variant}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

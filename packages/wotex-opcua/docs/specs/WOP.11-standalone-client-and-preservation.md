@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.13
+  version: 1.1.14
   owner: wotex-opcua
   updated: 2026-09-17
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.13**. Implementation status: **partial**.
+Specification version: **1.1.14**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -234,7 +234,9 @@ closes it afterward. It cannot issue each page on a new Session. Typed page
 handles are deliberately unavailable in one-shot mode. Early limit, decode or
 transport failure still releases the continuation or closes that temporary
 Session. Keep existing read/write/Call one-shot result translations versioned;
-do not silently change them to the richer native helper shapes.
+do not silently change them to the richer native helper shapes. One-shot
+failures are not translated: they keep the native Error code, effect and class
+defined in WOP.10 S02.
 
 ## WOP-N05 — Concrete fixtures and acceptance binding
 

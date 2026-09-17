@@ -3,7 +3,7 @@ spec:
   id: WOP.10
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -135,7 +135,15 @@ cannot erase individual Write/Call result statuses.
 
 `Open62541.connect/1` accepts `lifecycle: :persistent` by default and the explicit
 `:oneshot` compatibility projection. Both use the same native executable and
-typed service path. Persistent mode is required for subscriptions. Its
+typed service path. Only successful results have a one-shot compatibility
+translation. Failures in one-shot mode return the same finite native
+`%Wotex.OPCUA.Error{}` code and effect as persistent mode, and so the same I04
+class; no legacy error translation exists. The removed Python adapter's
+bridge-specific codes (`exchange_failed`, `transport_unavailable` and its
+`response_limit` decode failure) retired with that adapter. A one-shot handle
+opens its Session on each request, so an opening failure such as
+`authentication_failed` or `connection_failed` is returned by that request
+instead of by `connect/1`. Persistent mode is required for subscriptions. Its
 `connect/1` returns only after channel
 creation, CreateSession, ActivateSession and namespace initialization succeed.
 Use WOP-C07 versioned envelopes; fail an unsupported bridge version explicitly.
