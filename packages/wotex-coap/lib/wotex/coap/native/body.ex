@@ -39,7 +39,7 @@ defmodule Wotex.CoAP.Native.Body do
 
   @doc "Creates an empty body assembler without allocating a payload buffer."
   @spec new() :: t()
-  def new, do: %__MODULE__{}
+  def new, do: struct(__MODULE__)
 
   @doc "Applies one exact body event and returns the next state or a poisoned state."
   @spec push(term(), term()) :: {:ok, t()} | {:error, Error.t(), t()}

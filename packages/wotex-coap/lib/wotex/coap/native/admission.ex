@@ -169,9 +169,9 @@ defmodule Wotex.CoAP.Native.Admission do
           else: {:error, :invalid_handle}
 
       :undefined ->
-        if is_reference(table),
-          do: {:error, :transport_closed},
-          else: {:error, :invalid_handle}
+        if is_atom(table),
+          do: {:error, :invalid_handle},
+          else: {:error, :transport_closed}
 
       _ ->
         {:error, :invalid_handle}
