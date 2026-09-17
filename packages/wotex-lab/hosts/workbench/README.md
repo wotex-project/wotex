@@ -122,8 +122,18 @@ present, it must be a 43–128 character URL-safe Bearer token and is resolved
 from that fixed environment reference inside each export worker rather than
 stored in application state. Adding `WOTEX_LAB_METRICS_HISTORY=1` writes the
 same captures to volatile ETS and GreptimeDB through the exporter; the periodic
-standalone sampler is then omitted so captures are not duplicated. Receiver
-provisioning, database TTL and durable-row verification remain operator work.
+standalone sampler is then omitted so captures are not duplicated.
+
+Retention is provisioned explicitly. From an attached operator session, run
+`WotexLabWorkbench.Observability.Provisioning.provision("http://127.0.0.1:<port>", database: "wotex_lab")`
+to create the database with the seven-day default TTL, or pass `ttl: "30d"`
+(whole hours or days from `1h` to `3650d`). The call verifies the TTL that the
+receiver reports and repeats safely to change it. Then set
+`WOTEX_LAB_GREPTIME_DATABASE=wotex_lab` so each write carries
+`x-greptime-db-name`; without it writes go to `public`, which the Lab does not
+provision. GreptimeDB removes expired data per flushed file, so recent unflushed
+rows can outlive the TTL briefly. Durable-row verification remains operator
+work.
 
 For an operator-provisioned remote receiver, explicitly select the separate
 hosted profile:

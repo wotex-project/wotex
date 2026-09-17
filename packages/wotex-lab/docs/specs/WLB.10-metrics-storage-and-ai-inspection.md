@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.15.0. Contract: accepted. Source status: the metric
+Specification version: 0.16.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -16,9 +16,10 @@ owner-bound no-queue broker, an active-scope capability-protected loopback
 provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
 A separately activated loopback operator listener binds the query descriptor
-to HTTP. Remote/TLS scraping, TTL provisioning, OTLP signal export, isolated
-hosted-tenant BeamLens and public or tenant HTTP query bindings remain
-planned; the MCP `query_metrics` tool binds the local gateway. Hosted
+to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
+provision a durable database TTL on a local receiver. Remote/TLS scraping,
+hosted database provisioning, OTLP signal export, isolated hosted-tenant
+BeamLens and public or tenant HTTP query bindings remain planned; the MCP `query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 is not proof of a Grafana import or query execution.
 
@@ -295,9 +296,45 @@ verify TLS/hostname, restrict egress and redact credentials before diagnostics.
 Default durable metric TTL is seven days; a profile may explicitly override it.
 Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
-redacted from stats and errors. The query gateway and TTL provisioning remain
-planned host work; hosted exporter TLS and egress policy are implemented, while
-remote scrape ingress is not.
+redacted from stats and errors. The durable query gateway and hosted database
+provisioning remain planned host work; hosted exporter TLS and egress policy
+are implemented, while remote scrape ingress is not.
+
+`Wotex.Lab.Metrics.Retention` implements local TTL provisioning without
+transport. `plan/1` admits a lowercase database identifier other than
+`public`, `information_schema` and `greptime_private`, and a TTL of whole hours
+or days from `1h` to `3650d`, defaulting to `7d`. `provision/2` sends only
+`CREATE DATABASE IF NOT EXISTS <db> WITH (ttl = '<ttl>')`, then
+`ALTER DATABASE <db> SET 'ttl' = '<ttl>'`, then a fixed
+`information_schema.schemata` read through a host executor. It converts the
+normalized TTL that GreptimeDB reports, such as `2months 29days 2h 52m 48s`,
+to seconds and returns `retention_not_applied` unless they equal the plan. A
+refused statement, unavailable receiver or unreadable option is
+`retention_refused`, `retention_unavailable` or `retention_unverified`, without
+the receiver's error text. The Workbench's
+`Observability.Provisioning.provision/2` is the explicit operator call for an
+exact `http://127.0.0.1:<port>` receiver: it posts the generated statements to
+`/v1/sql` with five-second deadlines, no redirect or retry and a 64 KiB
+response ceiling. `WOTEX_LAB_GREPTIME_DATABASE` separately makes the exporter
+send `x-greptime-db-name` with each write; without it writes stay in `public`,
+whose retention the Lab does not provision.
+
+GreptimeDB 1.1.4 enforces TTL per stored file, not per query. A flushed file
+whose newest row is older than the TTL disappears, and raising the TTL later
+does not restore it. Rows still in memory, or sharing a file with newer rows,
+remain queryable until a later flush or compaction. Retention therefore bounds
+stored history; consumers must not treat it as a query-time age filter.
+`metrics_retention_test.exs` covers plan bounds, fixed templates, TTL text
+conversion, refusal, unavailable, unverified and drift cases. In the
+`WOTEX_LAB_GREPTIME=1` lane, `greptime_bridge_test.exs` provisions a one-hour
+database on the pinned server, writes a two-hour-old capture through
+`ReqSink`, shows it before the flush and absent after flushing the metric
+engine's physical table, keeps a current capture, re-provisions three hours
+without restoring the expired row and observes a real refused statement.
+The Workbench's `metrics_provisioning_test.exs` covers receiver admission, the
+exact statements, refused, malformed, oversized and unreachable answers, and
+the exporter's database header. Hosted receivers are provisioned by their
+operator outside this call.
 
 Logs/traces use optional OTLP/HTTP-protobuf export to GreptimeDB's documented
 signal endpoints, not a claim that PromEx exports them. Validate signal-specific
@@ -589,8 +626,8 @@ admission, bounded exporter overload, retry and no-retry, network loss,
 shutdown, two-instance isolation, immutable diagnostic export and the export
 credential sentinel;
 `test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. The local
-protected query endpoint has its own test described above. TTL expiry,
-remote protected/query endpoints, prompt injection, cloud disclosure and
+protected query endpoint and TTL expiry have their own tests described above.
+Remote protected/query endpoints, prompt injection, cloud disclosure and
 cancelled-agent tests arrive with their planned features. Local capability
 scope substitution, bounded admission, blocked calls, expiry, cancellation,
 worker/owner/history death, history replacement and late-result rejection are

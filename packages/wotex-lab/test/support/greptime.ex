@@ -4,9 +4,12 @@ defmodule Wotex.Lab.Test.Greptime do
   # A disposable greptime/greptimedb:v1.1.4 standalone container for the
   # metrics lane. It binds an ephemeral loopback port for the HTTP API only,
   # keeps no volume, has a 2 CPU / 1 GiB / 256 PID budget, and is removed in
-  # `on_exit`. `read/3` is the bounded read
+  # `on_exit`. `read/4` is the bounded read
   # template used to verify ingestion: a fixed SELECT over one metric table
-  # with validated identifiers, never caller-supplied SQL.
+  # with validated identifiers, never caller-supplied SQL. `sql/2` is the
+  # retention provisioning executor for statements that
+  # `Wotex.Lab.Metrics.Retention` generates, and `flush/2` is the fixed
+  # `ADMIN flush_table` template for the metric engine's physical table.
 
   @image "greptime/greptimedb:v1.1.4"
   @identifier ~r/\A[a-zA-Z_][a-zA-Z0-9_]*\z/
@@ -43,11 +46,39 @@ defmodule Wotex.Lab.Test.Greptime do
     :ok
   end
 
-  @spec read(t(), String.t(), [{String.t(), String.t()}]) :: [
+  @spec sql(t(), String.t()) :: {:ok, map()} | {:error, term()}
+  def sql(greptime, statement) when is_binary(statement) do
+    case Req.post(greptime.base_url <> "/v1/sql?db=public",
+           form: [sql: statement],
+           retry: false,
+           receive_timeout: 10_000
+         ) do
+      {:ok, %{body: body}} when is_map(body) -> {:ok, body}
+      {:ok, response} -> {:error, {:unexpected_status, response.status}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @spec flush(t(), String.t()) :: :ok
+  def flush(greptime, database) do
+    true = Regex.match?(@identifier, database)
+
+    response =
+      Req.post!(greptime.base_url <> "/v1/sql?db=" <> database,
+        form: [sql: "ADMIN flush_table('greptime_physical_table')"],
+        retry: false,
+        receive_timeout: 10_000
+      )
+
+    200 = response.status
+    :ok
+  end
+
+  @spec read(t(), String.t(), [{String.t(), String.t()}], String.t()) :: [
           %{timestamp: integer(), value: number()}
         ]
-  def read(greptime, metric, labels) do
-    true = Regex.match?(@identifier, metric)
+  def read(greptime, metric, labels, database \\ "public") do
+    true = Regex.match?(@identifier, metric) and Regex.match?(@identifier, database)
 
     conditions =
       Enum.map(labels, fn {name, value} ->
@@ -62,7 +93,7 @@ defmodule Wotex.Lab.Test.Greptime do
         "ORDER BY greptime_timestamp ASC LIMIT 100"
 
     response =
-      Req.post!(greptime.base_url <> "/v1/sql?db=public",
+      Req.post!(greptime.base_url <> "/v1/sql?db=" <> database,
         form: [sql: sql],
         retry: false,
         receive_timeout: 10_000

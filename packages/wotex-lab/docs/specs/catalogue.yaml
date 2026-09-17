@@ -352,7 +352,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.15.0"
+    version: "0.16.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: partial
     evidence_status: partial
@@ -389,6 +389,7 @@ specifications:
       - "Wotex.Lab.Metrics.Snappy"
       - "Wotex.Lab.Metrics.ReqSink"
       - "Wotex.Lab.Metrics.GreptimeBridge"
+      - "Wotex.Lab.Metrics.Retention"
       - "Wotex.Lab.Analytics"
       - "Wotex.Lab.Analytics.Source"
       - "Wotex.Lab.Analytics.Query"
@@ -402,6 +403,7 @@ specifications:
       - "WotexLabWorkbench.Observability.Scrape"
       - "WotexLabWorkbench.Observability.QueryListener"
       - "WotexLabWorkbench.Observability.Durable"
+      - "WotexLabWorkbench.Observability.Provisioning"
       - "WotexLabWorkbench.Observability.Inspection"
       - "WotexLabWorkbench.Observability.Supervisor"
       - "WotexLabWorkbench.Observability.Panels"
@@ -431,6 +433,7 @@ specifications:
       - "test/wotex/lab/metrics_remote_write_test.exs"
       - "test/wotex/lab/metrics_bridge_test.exs"
       - "test/wotex/lab/greptime_bridge_test.exs"
+      - "test/wotex/lab/metrics_retention_test.exs"
       - "test/wotex/lab/analytics_test.exs"
       - "priv/fixtures/metrics/equality/manifest.json"
       - "hosts/workbench/test/wotex_lab_workbench/observability_test.exs"
@@ -438,6 +441,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/metrics_scrape_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_query_listener_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_durable_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/metrics_provisioning_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_inspection_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metric_panels_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_provider_test.exs"
@@ -446,7 +450,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/beamlens_integration_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
-    compatibility_classification: Optional host contract; an additive loopback operator listener binds the query descriptor to POST /query with its own credential, one inspection scope per request and reduced limits, while public and tenant query bindings stay planned. The MCP query_metrics tool now binds one disposable local gateway per call; bridge captures require strictly advancing wall timestamps and revalidated snapshots. The Workbench can explicitly compose the bridge with an exact loopback endpoint or a separately selected authenticated HTTPS endpoint whose audience, DNS answers, peer and TLS identity are checked on every write; remote receiver operation remains independent evidence. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Atomic diagnostic export creates an inert content-addressed, masked, unsplit dataset at an exact history watermark; storage-only history remains available. The checked-in Workbench is the inspectable reference source, while artifact adoption remains a separate axis. Its trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
+    compatibility_classification: Optional host contract; additive Retention plans provision a verified local GreptimeDB database TTL (7d default, 1h to 3650d) and the exporter can select that database, while writes without a selection keep the public database. An additive loopback operator listener binds the query descriptor to POST /query with its own credential, one inspection scope per request and reduced limits, while public and tenant query bindings stay planned. The MCP query_metrics tool now binds one disposable local gateway per call; bridge captures require strictly advancing wall timestamps and revalidated snapshots. The Workbench can explicitly compose the bridge with an exact loopback endpoint or a separately selected authenticated HTTPS endpoint whose audience, DNS answers, peer and TLS identity are checked on every write; remote receiver operation remains independent evidence. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Atomic diagnostic export creates an inert content-addressed, masked, unsplit dataset at an exact history watermark; storage-only history remains available. The checked-in Workbench is the inspectable reference source, while artifact adoption remains a separate axis. Its trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
     version: "0.5.5"
     path: docs/specs/WLB.11-workbench-and-design-system.md

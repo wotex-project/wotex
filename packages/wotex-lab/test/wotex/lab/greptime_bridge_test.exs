@@ -7,7 +7,17 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
 
   alias Wotex.Lab
   alias Wotex.Lab.Examples.Thermal
-  alias Wotex.Lab.Metrics.{Collector, Exposition, GreptimeBridge, History, RemoteWrite, ReqSink}
+
+  alias Wotex.Lab.Metrics.{
+    Collector,
+    Exposition,
+    GreptimeBridge,
+    History,
+    RemoteWrite,
+    ReqSink,
+    Retention
+  }
+
   alias Wotex.Lab.Test.Greptime
 
   @labels [
@@ -112,6 +122,59 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
                Greptime.await_rows(greptime, metric, [], 1)
 
       assert stored == value * 1.0
+    end
+  end
+
+  test "provisioned retention removes a flushed capture older than the database TTL" do
+    greptime = Greptime.start()
+    executor = &Greptime.sql(greptime, &1)
+    {:ok, plan} = Retention.plan(database: "wotex_lab_retention", ttl: "1h")
+
+    assert {:ok, %{database: "wotex_lab_retention", seconds: 3_600}} =
+             Retention.provision(plan, executor)
+
+    metric = "wotex_lab_fixture_retention"
+    now = System.system_time(:millisecond)
+    expired = now - 2 * 3_600_000
+
+    write = fn value, wall_time_ms ->
+      {:ok, snapshot} =
+        Exposition.parse("# TYPE #{metric} gauge\n#{metric} #{value}\n",
+          sequence: value,
+          wall_time_ms: wall_time_ms
+        )
+
+      {:ok, request} = RemoteWrite.encode(snapshot)
+      request = %{request | headers: [{"x-greptime-db-name", plan.database} | request.headers]}
+      url = greptime.base_url <> "/v1/prometheus/write"
+      assert {:ok, %{status: status}} = ReqSink.write(request, nil, %{url: url})
+      assert status in 200..299
+    end
+
+    write.(1, expired)
+    assert [%{timestamp: ^expired}] = Greptime.read(greptime, metric, [], plan.database)
+    :ok = Greptime.flush(greptime, plan.database)
+    assert await_empty(greptime, metric, plan.database, 50)
+
+    write.(2, now)
+    :ok = Greptime.flush(greptime, plan.database)
+    assert [%{timestamp: ^now, value: 2.0}] = Greptime.read(greptime, metric, [], plan.database)
+
+    {:ok, longer} = Retention.plan(database: plan.database, ttl: "3h")
+    assert {:ok, %{seconds: 10_800}} = Retention.provision(longer, executor)
+    assert [%{timestamp: ^now}] = Greptime.read(greptime, metric, [], plan.database)
+
+    assert {:error, %Wotex.Lab.Error{code: :retention_refused}} =
+             Retention.provision(plan, fn statement ->
+               executor.(String.replace(statement, "'1h'", "'x1'"))
+             end)
+  end
+
+  defp await_empty(greptime, metric, database, attempts) do
+    cond do
+      Greptime.read(greptime, metric, [], database) == [] -> true
+      attempts == 0 -> false
+      true -> Process.sleep(100) && await_empty(greptime, metric, database, attempts - 1)
     end
   end
 

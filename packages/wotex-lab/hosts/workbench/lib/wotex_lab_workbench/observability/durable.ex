@@ -11,20 +11,26 @@ defmodule WotexLabWorkbench.Observability.Durable do
   When bearer authentication is selected, only a fixed environment reference
   enters supervision; the token is resolved inside each disposable export
   worker and is never retained in application or bridge state.
+
+  `put_database/2` optionally selects a provisioned database, such as one
+  created by `WotexLabWorkbench.Observability.Provisioning` with a retention
+  TTL. Each write then carries `x-greptime-db-name`; without it GreptimeDB
+  writes to `public`, whose retention the Lab does not provision.
   """
 
   alias Wotex.Lab.Error
-  alias Wotex.Lab.Metrics.ReqSink
+  alias Wotex.Lab.Metrics.{ReqSink, Retention}
   alias Wotex.Lab.Options
   alias WotexLabWorkbench.Observability.Capture
 
   @credential_env "WOTEX_LAB_GREPTIME_TOKEN"
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
-  @keys ~w(url profile audience tls_ca_certfile bearer interval_ms queue_limit deadline_ms)a
+  @keys ~w(url profile audience tls_ca_certfile bearer interval_ms queue_limit deadline_ms database)a
   @defaults [
     profile: :local,
     audience: nil,
     tls_ca_certfile: nil,
+    database: nil,
     interval_ms: 5_000,
     queue_limit: 16,
     deadline_ms: 5_000
@@ -61,12 +67,27 @@ defmodule WotexLabWorkbench.Observability.Durable do
 
   def configure_hosted(_url, _audience, _bearer, _tls_ca_certfile), do: invalid()
 
+  @doc "Selects the provisioned GreptimeDB database for admitted exporter options."
+  @spec put_database(keyword(), term()) :: {:ok, keyword()} | {:error, Error.t()}
+  def put_database(opts, database) when is_list(opts) do
+    with {:ok, database} <- Retention.database(database),
+         options = Keyword.put(opts, :database, database),
+         :ok <- validate(options) do
+      {:ok, options}
+    else
+      _ -> invalid()
+    end
+  end
+
+  def put_database(_, _), do: invalid()
+
   @doc "Validates the closed local exporter configuration without opening a connection."
   @spec validate(term()) :: :ok | {:error, Error.t()}
   def validate(opts) when is_list(opts) do
     with :ok <- Options.validate(opts, @keys),
          true <- destination?(opts),
          true <- is_boolean(Keyword.get(opts, :bearer)),
+         true <- database?(Keyword.get(opts, :database)),
          true <- integer?(opts, :interval_ms, 1_000, 60_000),
          true <- integer?(opts, :queue_limit, 1, 256),
          true <- integer?(opts, :deadline_ms, 100, 60_000) do
@@ -95,7 +116,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
       id: :workbench,
       name: __MODULE__.Bridge,
       scrape: &Capture.sample/0,
-      sink: fn request, credential -> ReqSink.write(request, credential, sink_config) end,
+      sink: sink(sink_config, Keyword.get(opts, :database)),
       credential: credential(Keyword.fetch!(opts, :bearer)),
       history: history,
       interval_ms: Keyword.fetch!(opts, :interval_ms),
@@ -137,6 +158,22 @@ defmodule WotexLabWorkbench.Observability.Durable do
         false
     end
   end
+
+  defp sink(config, nil),
+    do: fn request, credential -> ReqSink.write(request, credential, config) end
+
+  defp sink(config, database) do
+    fn %{headers: headers} = request, credential ->
+      ReqSink.write(
+        %{request | headers: [{"x-greptime-db-name", database} | headers]},
+        credential,
+        config
+      )
+    end
+  end
+
+  defp database?(nil), do: true
+  defp database?(database), do: match?({:ok, _}, Retention.database(database))
 
   defp credential(false), do: nil
 

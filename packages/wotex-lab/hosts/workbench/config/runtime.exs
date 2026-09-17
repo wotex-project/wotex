@@ -33,6 +33,18 @@ metrics_durable =
             {:error, :invalid_profile}
         end
 
+      configured =
+        case {configured, System.get_env("WOTEX_LAB_GREPTIME_DATABASE")} do
+          {{:ok, options}, nil} ->
+            {:ok, options}
+
+          {{:ok, options}, database} ->
+            WotexLabWorkbench.Observability.Durable.put_database(options, database)
+
+          {error, _} ->
+            error
+        end
+
       case configured do
         {:ok, options} -> options
         {:error, _error} -> raise "GreptimeDB exporter configuration is invalid"
