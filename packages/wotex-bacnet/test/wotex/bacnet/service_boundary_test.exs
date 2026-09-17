@@ -10,7 +10,7 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
   alias Wotex.BACnet.{Address, BACstack, IPv4, Value, ValueBoundary}
 
   @moduletag :capture_log
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @corpus
   @cases Jason.decode!(File.read!(@corpus))["cases"]
   @corpus_sha256 Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)

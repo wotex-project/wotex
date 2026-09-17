@@ -8,7 +8,7 @@ defmodule Wotex.BACnet.DiscoveryFixtureTest do
   alias Wotex.BACnet.Test.{DiscoveryClock, DiscoveryPeer}
 
   @moduletag :capture_log
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @corpus
   @cases Jason.decode!(File.read!(@corpus))["cases"]
   @moduletag corpus_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)

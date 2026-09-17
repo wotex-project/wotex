@@ -9,7 +9,7 @@ defmodule Wotex.BACnet.ErrorClassTest do
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Retry}
   alias Wotex.Runtime.Error, as: RuntimeError
 
-  @corpus Path.expand("../../../docs/specs/fixtures/wotex-integration-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/wotex-integration-v1.json", __DIR__)
   @external_resource @corpus
   @cases Jason.decode!(File.read!(@corpus))["cases"]
   @moduletag corpus_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)

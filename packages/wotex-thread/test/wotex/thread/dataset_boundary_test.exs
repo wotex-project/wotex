@@ -6,7 +6,7 @@ defmodule Wotex.Thread.DatasetBoundaryTest do
 
   alias Wotex.Thread.{Dataset, Error}
 
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @corpus
   @corpus_bytes File.read!(@corpus)
   @corpus_sha256 :crypto.hash(:sha256, @corpus_bytes) |> Base.encode16(case: :lower)

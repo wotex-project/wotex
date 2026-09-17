@@ -5,18 +5,20 @@ defmodule Wotex.BACnet.Check.Archive do
   @version "0.1.0"
   @consumer_fixture "test/fixtures/archive_reference_consumer.exs"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs/tasks/local|mix\.lock|priv/plts|test|_build)(/|$)}
+  # Documentation lives in the monorepo `docs/` tree and reaches consumers through
+  # HexDocs; no `docs` or `tasks` path may ship in the archive.
+  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
   @required_content ~w(
     .formatter.exs
     CHANGELOG.md
-    CODE_OF_CONDUCT.md
-    CONTRIBUTING.md
-    GOVERNANCE.md
     LICENSE
     NOTICE
     README.md
-    SECURITY.md
     mix.exs
+    priv/fixtures/contract-v1.json
+    priv/fixtures/ingress-v1.json
+    priv/fixtures/software-sources-v1.json
+    priv/fixtures/wotex-integration-v1.json
   )
 
   @packages [
@@ -166,7 +168,8 @@ defmodule Wotex.BACnet.Check.Archive do
     for value <- [
           "Consumer-neutral BACnet protocol values, operations and Web of Things Form mapping",
           "https://hexdocs.pm/wotex_bacnet",
-          "https://github.com/wotex-project/wotex-bacnet",
+          "https://github.com/wotex-project/wotex",
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-bacnet",
           "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
           "https://wotex.io"
         ] do

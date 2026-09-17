@@ -8,9 +8,7 @@ defmodule Wotex.BACnet.IngressLifecycleTest do
   alias Wotex.BACnet.Test.{BlockingClient, DiscoveryPeer}
 
   @moduletag :capture_log
-  @fixture Jason.decode!(
-             File.read!(Path.expand("../../../docs/specs/fixtures/ingress-v1.json", __DIR__))
-           )
+  @fixture Jason.decode!(File.read!(Path.expand("../../../priv/fixtures/ingress-v1.json", __DIR__)))
   @read %{type: :read_property, object_type: 1, instance: 0, property: 85}
 
   test "WBA-IG01 WBA-S03a the real full pipeline stops receiving until consumption" do

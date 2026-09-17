@@ -4,7 +4,7 @@ defmodule Wotex.Thread.NativeAdvisoriesTest do
   use ExUnit.Case, async: true
 
   @dependencies "priv/openthread/dependencies.json"
-  @advisories "docs/provenance/native-advisories.json"
+  @advisories "priv/provenance/native-advisories.json"
 
   test "native advisory sources are the exact build pins" do
     pins = Jason.decode!(File.read!(@dependencies))

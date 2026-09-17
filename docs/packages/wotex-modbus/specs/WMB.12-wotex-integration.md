@@ -217,7 +217,7 @@ No-stream modes return a structured unsupported error without creating a process
 
 ## WMB-I06 — Acceptance through public packages
 
-The concrete [integration corpus](fixtures/wotex-integration-v1.json) fixes a
+The concrete [integration corpus](../../../../packages/wotex-modbus/priv/fixtures/wotex-integration-v1.json) fixes a
 synthetic TD, selected route/command and public payload projection. It is labelled
 specified_unexecuted until its assertions run. JSON validity or an identifier
 in a fixture does not accept a work package. The driver receives only input,

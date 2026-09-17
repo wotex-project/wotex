@@ -97,7 +97,7 @@ argument vectors.
 
 The build task verifies the locked BACstack Hex source and the C-stack archive
 listed in
-[software-sources-v1.json](../specs/fixtures/software-sources-v1.json) before
+[software-sources-v1.json](../../../../packages/wotex-bacnet/priv/fixtures/software-sources-v1.json) before
 extraction. Archive members cannot escape the workspace. Downloads have a
 120-second and 100-MiB per-archive ceiling. BACstack and C-stack source checks
 apply their narrower compressed limits and a 4096-member, 64-MiB expanded

@@ -193,7 +193,7 @@ existing version-one/two wrapper modes retain their locally tested native
 operations; their capability list does not imply bounded ingress. Raw
 borrowed SDK support remains read/write only and never owns the borrowed stack.
 
-[ingress-v1.json](fixtures/ingress-v1.json) defines the exact normalization and
+[ingress-v1.json](../../../../packages/wotex-bacnet/priv/fixtures/ingress-v1.json) defines the exact normalization and
 locally bound traces. Software tests suspend StackOwner and StackClient separately, emit at least
 10000 maximum-size datagrams continuously, and assert at most eight admitted
 packet references across the pipeline, one terminal error, saturated-safe counters,

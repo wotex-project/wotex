@@ -7,9 +7,7 @@ defmodule Wotex.BACnet.COVTest do
   alias BACnet.Protocol.ApplicationTags.Encoding
   alias Wotex.BACnet.{CharacterString, COV, COVRequest, Subscription, Tags}
   @request %{type: :cov, object_type: :analog_output, instance: 0, device_instance: 123}
-  @corpus Jason.decode!(
-            File.read!(Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__))
-          )
+  @corpus Jason.decode!(File.read!(Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)))
 
   test "WBA-S04 WBA-V06 explicit device and finite subscription fields normalize before I/O" do
     assert {:ok, request} = COVRequest.new(@request, self())

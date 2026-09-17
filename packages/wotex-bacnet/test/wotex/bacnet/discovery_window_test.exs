@@ -5,7 +5,7 @@ defmodule Wotex.BACnet.DiscoveryWindowTest do
   alias BACnet.Protocol.{APDU, ObjectIdentifier}
   alias Wotex.BACnet.{DiscoveryWindow, Error}
 
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @corpus
   @cases Jason.decode!(File.read!(@corpus))["cases"]
   @moduletag corpus_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)

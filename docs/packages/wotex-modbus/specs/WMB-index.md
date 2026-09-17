@@ -16,7 +16,7 @@ provenance; software evidence does not establish a stable release.
 
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and scoped execution evidence
 - [WMB.12 Wotex integration and evidence contract](WMB.12-wotex-integration.md)
-- [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
+- [Concrete Wotex integration corpus](../../../../packages/wotex-modbus/priv/fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
 
 - [WMB.13 Native build and software evidence](WMB.13-native-build-and-software-evidence.md) — explicit Mix tasks, native peer ownership and acceptance
 - [WMB.14 Release-candidate dossier](WMB.14-release-candidate-dossier.md) — package and public-behavior review, evidence map and nonclaims

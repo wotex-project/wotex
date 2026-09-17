@@ -2,7 +2,7 @@ defmodule WotexBACnet.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-bacnet"
+  @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
@@ -111,16 +111,16 @@ defmodule WotexBACnet.MixProject do
       name: "wotex_bacnet",
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-bacnet/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_bacnet",
         "Project" => "https://wotex.io",
         "Source" => @source_url,
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-bacnet",
         "W3C Thing Description 1.1" =>
           "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs priv/fixtures)
     ]
   end
 
@@ -129,8 +129,13 @@ defmodule WotexBACnet.MixProject do
       main: "readme",
       extras:
         ["README.md", "CHANGELOG.md", "SECURITY.md"] ++
-          Path.wildcard("docs/{specs,plans,provenance}/*.md"),
+          Path.wildcard(
+            Path.expand("../../docs/packages/wotex-bacnet/{specs,plans,provenance}/*.md", __DIR__)
+          ),
       source_url: @source_url,
+      source_ref: "wotex-bacnet-v#{@version}",
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-bacnet-v#{@version}/packages/wotex-bacnet/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end

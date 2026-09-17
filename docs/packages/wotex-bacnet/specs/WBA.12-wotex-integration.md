@@ -229,7 +229,7 @@ No-stream modes return a structured unsupported error without creating a process
 
 ## WBA-I06 — Acceptance through public packages
 
-The concrete [integration corpus](fixtures/wotex-integration-v1.json) fixes a
+The concrete [integration corpus](../../../../packages/wotex-bacnet/priv/fixtures/wotex-integration-v1.json) fixes a
 synthetic TD, selected route/command and public payload projection. I-F01 has an
 actual Runtime read binding in `runtime_integration_test.exs`. Each I-F02–I-F07
 case has a separately named native Error/ConsumedThing/Retry projection test in

@@ -7,7 +7,7 @@ defmodule Wotex.Thread.ProcessFlowTest do
 
   @moduletag :software
   @moduletag requirements: ["WTH-B02", "WTH-B03", "WTH-C05"]
-  @fixture Path.expand("../../docs/specs/fixtures/native-port-v1.json", __DIR__)
+  @fixture Path.expand("../../priv/fixtures/native-port-v1.json", __DIR__)
 
   setup do
     assert match?({:unix, :linux}, :os.type()), "process-flow ownership requires Linux procfs"

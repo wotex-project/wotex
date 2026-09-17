@@ -4,7 +4,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
   use ExUnit.Case, async: true
 
   @moduletag requirements: ["WTH-N04"]
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @corpus
 
   # Every corpus case is either bound to the executable test that compares its

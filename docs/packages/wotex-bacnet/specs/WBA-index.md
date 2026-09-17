@@ -14,11 +14,11 @@ BACnet conformance or downstream consumer parity.
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 
 - [WBA.11 Standalone client and preservation](WBA.11-standalone-client-and-preservation.md)
-- [Concrete specified fixture corpus](fixtures/contract-v1.json) — local bindings are in WBA-N05 and independent peer receipts are recorded in executable evidence
+- [Concrete specified fixture corpus](../../../../packages/wotex-bacnet/priv/fixtures/contract-v1.json) — local bindings are in WBA-N05 and independent peer receipts are recorded in executable evidence
 
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and baseline evidence
 - [WBA.12 Wotex integration and evidence contract](WBA.12-wotex-integration.md)
-- [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — assertions bound through I-F01–I-F07 and supplemental Runtime cases
+- [Concrete Wotex integration corpus](../../../../packages/wotex-bacnet/priv/fixtures/wotex-integration-v1.json) — assertions bound through I-F01–I-F07 and supplemental Runtime cases
 
-- [Owned UDP ingress cases](fixtures/ingress-v1.json) — local credit, lifecycle and sustained UDP bindings
-- [Software peer source identities](fixtures/software-sources-v1.json) — pinned inputs whose accepted build and run identities are recorded in executable evidence
+- [Owned UDP ingress cases](../../../../packages/wotex-bacnet/priv/fixtures/ingress-v1.json) — local credit, lifecycle and sustained UDP bindings
+- [Software peer source identities](../../../../packages/wotex-bacnet/priv/fixtures/software-sources-v1.json) — pinned inputs whose accepted build and run identities are recorded in executable evidence

@@ -243,7 +243,7 @@ or pure flow test alone cannot satisfy these process tests.
 
 ## WTH-B03 — Concrete native acceptance
 
-[The native corpus](fixtures/native-port-v1.json) has format
+[The native corpus](../../../../packages/wotex-thread/priv/fixtures/native-port-v1.json) has format
 `wotex.native-contract`, version `1.0.0`, and `specified_unexecuted` status.
 It supplements the .11 value/lifecycle and .12 Runtime corpora. Every case names
 an operation, exact input and exact normalized expectation. `line_utf8` includes

@@ -660,7 +660,7 @@ release). It submits one OSV commit batch, then NVD CPE queries for Mbed TLS
 3.6.7 (`arm` and `trustedfirmware` vendors), nlohmann/json 3.11.3 and every
 OpenThread version, and an NVD `OpenThread` keyword query because the pinned
 commit has no CPE version. Every reported advisory needs a checked-in
-[review](native-advisories.json). A `fixed_in_pin` review is accepted only when
+[review](../../../../packages/wotex-thread/priv/provenance/native-advisories.json). A `fixed_in_pin` review is accepted only when
 the GitHub compare API reports each named fix commit as an ancestor of the pin.
 `test/wotex/thread/native_advisories_test.exs` keeps the review file bound to
 the build pins in the default gate; it does not query any service.

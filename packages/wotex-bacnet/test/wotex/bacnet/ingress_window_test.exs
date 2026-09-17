@@ -5,9 +5,7 @@ defmodule Wotex.BACnet.IngressWindowTest do
   use ExUnitProperties
   alias Wotex.BACnet.{IngressWindow, IPv4Packet}
 
-  @fixture Jason.decode!(
-             File.read!(Path.expand("../../../docs/specs/fixtures/ingress-v1.json", __DIR__))
-           )
+  @fixture Jason.decode!(File.read!(Path.expand("../../../priv/fixtures/ingress-v1.json", __DIR__)))
 
   test "WBA-IG01 WBA-S03a a full receipt window expires exactly at the fixed deadline" do
     row = fixture("WBA-IG01")

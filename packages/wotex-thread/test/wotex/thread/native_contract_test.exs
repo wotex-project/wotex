@@ -6,7 +6,7 @@ defmodule Wotex.Thread.NativeContractTest do
 
   @moduletag :software
   @moduletag requirements: ["WTH-B02", "WTH-B03"]
-  @fixture Path.expand("../../../docs/specs/fixtures/native-port-v1.json", __DIR__)
+  @fixture Path.expand("../../../priv/fixtures/native-port-v1.json", __DIR__)
   # LeakSanitizer is part of the Linux fault lane; Apple AddressSanitizer rejects it.
   @leaks if match?({:unix, :linux}, :os.type()), do: "detect_leaks=1:", else: ""
   @sanitizer_env [
@@ -73,7 +73,7 @@ defmodule Wotex.Thread.NativeContractTest do
 
   test "WTH-F09 coalesces State changes through the production stream owner", context do
     corpus =
-      Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+      Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
       |> File.read!()
       |> Jason.decode!()
 

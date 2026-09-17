@@ -20,7 +20,7 @@ Consumer-neutral BACnet interactions for W3C Web of Things consumers.
 This is a development checkout with an unstable public API. The ordered plan
 records the accepted software profile and its exact evidence boundary.
 
-Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+Build handoff: [software implementation sequence](../../docs/packages/wotex-bacnet/plans/software-implementation.md).
 
 ## Installation
 
@@ -126,9 +126,9 @@ because this profile supplies native values rather than a serialization codec.
 Runtime request tests preserve false, zero, empty values, typed metadata and
 request identity, and reject positive replies that arrive after the deadline.
 
-See [implemented profile](docs/specs/WBA.02-implemented-profile.md),
-[primary sources](docs/provenance/primary-sources.md) and
-[executable evidence](docs/provenance/executable-evidence.md).
+See [implemented profile](../../docs/packages/wotex-bacnet/specs/WBA.02-implemented-profile.md),
+[primary sources](../../docs/packages/wotex-bacnet/provenance/primary-sources.md) and
+[executable evidence](../../docs/packages/wotex-bacnet/provenance/executable-evidence.md).
 
 ## Development
 
@@ -154,20 +154,20 @@ native executable build task is required for this BEAM client.
 
 ## Software implementation contract
 
-The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WBA-index.md) define the accepted software
+The [ordered implementation sequence](../../docs/packages/wotex-bacnet/plans/software-implementation.md)
+and [specification index](../../docs/packages/wotex-bacnet/specs/WBA-index.md) define the accepted software
 profile with exact behavior, limits, failure transitions and acceptance scenario
 families. Acceptance is limited to the source, dependency, fixture and toolchain
 identities in executable evidence. Required software peers are separate from
 physical-device tests.
 
-The [WBA.11 standalone client contract](docs/specs/WBA.11-standalone-client-and-preservation.md)
+The [WBA.11 standalone client contract](../../docs/packages/wotex-bacnet/specs/WBA.11-standalone-client-and-preservation.md)
 records required native APIs, preserved protocol assets and concrete specified
 fixtures. The concrete standalone corpus has local executable bindings and the
 independent peer matrix is recorded separately in executable evidence.
 
-The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
-software profiles from separately scoped nonclaims. The [Wotex integration contract](docs/specs/WBA.12-wotex-integration.md)
+The [specification catalogue](../../docs/packages/wotex-bacnet/specs/catalogue.yaml) distinguishes implemented
+software profiles from separately scoped nonclaims. The [Wotex integration contract](../../docs/packages/wotex-bacnet/specs/WBA.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. It does not claim publication, hardware, BTL or
 full BACnet conformance, or downstream consumer parity.

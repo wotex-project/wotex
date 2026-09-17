@@ -382,7 +382,7 @@ defmodule Wotex.Thread.Software.Run do
     root = environment.project_root
 
     trees =
-      Map.new(~w(lib priv/openthread test docs/specs/fixtures), fn path ->
+      Map.new(~w(lib priv/openthread test priv/fixtures), fn path ->
         {:ok, hash} = Source.tree_digest(Path.join(root, path))
         {path, hash}
       end)

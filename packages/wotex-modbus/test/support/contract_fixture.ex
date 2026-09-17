@@ -3,7 +3,7 @@ defmodule Wotex.Modbus.ContractFixture do
 
   alias Wotex.Modbus.{Address, Codec, Command, Error, Value}
 
-  @path Path.expand("../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @path Path.expand("../../priv/fixtures/contract-v1.json", __DIR__)
   @ids ~w(FC01 FC02 FC03 FC04 FC05 FC06 FC15 FC16 WRONG-TID WRONG-UNIT
     EXCEPTION-02 EXCEPTION-FF EXCEPTION-EXTRA BYTE-COUNT FRAME-INCOMPLETE FRAME-TAIL
     MBAP-TOO-LARGE RANGE-LAST RANGE-OVERFLOW QUANTITY-126 FORGED-FUNCTION

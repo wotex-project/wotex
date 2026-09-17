@@ -152,7 +152,7 @@ mapping tests. P06 is not accepted before P00, P04 and P05.
 ### WTH-P07a: Prove the Wotex consumer boundary
 
 - Requirements: WTH-I01, WTH-I02, WTH-I03, WTH-I04, WTH-I05, WTH-I06; all previous native/profile packages are dependencies.
-- Concrete cases: every `WTH-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Concrete cases: every `WTH-I-Fxx` case in `priv/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
 - Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
 - Test destinations: `test/wotex/thread/runtime_integration_test.exs` and explicit test-only credential/client ports.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.

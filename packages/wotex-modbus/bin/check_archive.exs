@@ -9,23 +9,18 @@ defmodule Wotex.Modbus.Check.Archive do
 
   @present [
     "mix.exs",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md",
-    "SECURITY.md",
-    "GOVERNANCE.md",
-    "docs/plans/wotex-modbus-completion.md",
-    "docs/specs/WMB.00-library-contract.md",
-    "docs/specs/WMB.10-software-contract.md",
-    "docs/specs/WMB.11-standalone-client-and-preservation.md",
-    "docs/specs/WMB.12-wotex-integration.md",
-    "docs/specs/WMB.13-native-build-and-software-evidence.md",
-    "docs/specs/WMB.14-release-candidate-dossier.md",
-    "docs/specs/catalogue.yaml",
+    "priv/fixtures/contract-v1.json",
+    "priv/fixtures/wotex-integration-v1.json",
     "lib/wotex/modbus.ex",
     "lib/wotex/modbus/transport.ex"
   ]
 
+  # Documentation lives in the monorepo `docs/` tree and reaches consumers through
+  # HexDocs; no `docs` or `tasks` path may ship in the archive.
   @absent [
     ".check.exs",
     ".claude",
@@ -39,8 +34,9 @@ defmodule Wotex.Modbus.Check.Archive do
     "cover",
     "deps",
     "doc",
-    "docs/tasks",
+    "docs",
     "priv/plts",
+    "tasks",
     "test"
   ]
 
@@ -490,10 +486,13 @@ defmodule Wotex.Modbus.Check.Archive do
       |> Map.new()
 
     unless links == %{
-             "Changelog" => "https://github.com/wotex-project/wotex-modbus/blob/main/CHANGELOG.md",
+             "Changelog" =>
+               "https://github.com/wotex-project/wotex/blob/main/packages/wotex-modbus/CHANGELOG.md",
              "Documentation" => "https://hexdocs.pm/wotex_modbus",
              "Project" => "https://wotex.io",
-             "Source" => "https://github.com/wotex-project/wotex-modbus",
+             "Source" => "https://github.com/wotex-project/wotex",
+             "Specifications" =>
+               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus",
              "W3C Thing Description 1.1" =>
                "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
            } do

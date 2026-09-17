@@ -403,7 +403,7 @@ defmodule Wotex.Modbus.LifecycleTest do
 
   @tag requirements: ["WMB-S03", "WMB-D03", "WMB-D04"], scenarios: ["WMB-V08"]
   test "WMB-F-WRITE-UNCERTAINTY uses the virtual event clock and actual TCP observations" do
-    path = Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+    path = Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
 
     fixture =
       Jason.decode!(File.read!(path))["cases"]

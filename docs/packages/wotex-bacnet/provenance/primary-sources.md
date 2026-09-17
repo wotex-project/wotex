@@ -89,7 +89,7 @@ the actual Present_Value and maintain their own last-report value, so a requeste
 increment below the object's default has independent semantics.
 The fixture's finite control interface and loss controls are first-party test
 code; they are not production SDK extensions or a certification claim. Their
-exact scope is in [the fixture contract](../../test/interop/cstack/README.md).
+exact scope is in [the fixture contract](../../../../packages/wotex-bacnet/test/interop/cstack/README.md).
 
 ## Hex source identity
 
@@ -101,4 +101,4 @@ The fixture verifier checks both pinned values against the Mix lock and checks
 every installed package file against the verified archive. Archive/file bounds
 and rejection of additional installed source are fixture policy, not Hex
 package-format requirements. The exact checks and executable evidence are
-described in [source verification](../../test/support/software/README.md).
+described in [source verification](../../../../packages/wotex-bacnet/test/support/software/README.md).

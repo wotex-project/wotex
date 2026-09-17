@@ -25,7 +25,7 @@ defmodule Wotex.Modbus.RuntimeIntegrationTest do
 
   alias Wotex.Runtime.Error, as: RuntimeError
 
-  @fixture_path Path.expand("../../../docs/specs/fixtures/wotex-integration-v1.json", __DIR__)
+  @fixture_path Path.expand("../../../priv/fixtures/wotex-integration-v1.json", __DIR__)
   @fixture Jason.decode!(File.read!(@fixture_path))
   @digest Base.encode16(:crypto.hash(:sha256, File.read!(@fixture_path)), case: :lower)
 

@@ -149,7 +149,7 @@ lane; keep its result distinct from actual libmodbus interoperability.
 
 ## WMB-D04 — Concrete fixture and executable-oracle contract
 
-`docs/specs/fixtures/contract-v1.json` is versioned exact input/expected-output
+`priv/fixtures/contract-v1.json` is versioned exact input/expected-output
 data. Its cases are **specified, not accepted or executed evidence** merely
 because this file exists or parses as JSON. The WMB-Vxx table in WMB.10 contains
 scenario families; it is not itself a packet corpus. The checked-in corpus

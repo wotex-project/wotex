@@ -1,7 +1,7 @@
 # Independent BACnet C fixture
 
 `peer.c` links the pinned BACnet C stack from
-`docs/specs/fixtures/software-sources-v1.json`. The production client remains
+`priv/fixtures/software-sources-v1.json`. The production client remains
 BEAM BACstack. This executable owns one BACnet/IP endpoint, one UDP control
 endpoint and the SDK's device/transaction/subscription state. It runs only when
 the software test explicitly starts it.

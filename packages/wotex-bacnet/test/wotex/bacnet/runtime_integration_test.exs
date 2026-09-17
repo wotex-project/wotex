@@ -8,7 +8,7 @@ defmodule Wotex.BACnet.RuntimeIntegrationTest do
   alias Wotex.BACnet.Test.{IntegrationClient, IntegrationTransport, RuntimeCredentials}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
 
-  @corpus Path.expand("../../../docs/specs/fixtures/wotex-integration-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/wotex-integration-v1.json", __DIR__)
   @external_resource @corpus
   @vector Enum.find(Jason.decode!(File.read!(@corpus))["cases"], &(&1["id"] == "WBA-I-F01"))
   @moduletag corpus_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)

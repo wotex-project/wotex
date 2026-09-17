@@ -37,7 +37,7 @@ defmodule Wotex.BACnet.SoftwareManifest do
     "test/**/CMakeLists.txt",
     "test/**/Dockerfile*",
     "bin/*",
-    "docs/specs/fixtures/*.json",
+    "priv/fixtures/*.json",
     "mix.exs",
     "mix.lock"
   ]

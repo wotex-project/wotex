@@ -18,7 +18,7 @@ defmodule Wotex.Modbus.SoftwareManifest do
     "test/**/*.c",
     "test/**/Dockerfile",
     "bin/*",
-    "docs/specs/fixtures/*.json",
+    "priv/fixtures/*.json",
     "mix.exs",
     "mix.lock"
   ]

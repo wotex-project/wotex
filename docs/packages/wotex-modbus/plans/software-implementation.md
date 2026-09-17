@@ -37,7 +37,7 @@ If an upstream API cannot meet a requirement, add the smallest adapter needed
 or document a precise source-backed contract correction with regression evidence;
 do not silently skip, simulate or weaken the requirement.
 
-The concrete fixture file is `docs/specs/fixtures/contract-v1.json`. Its cases
+The concrete fixture file is `priv/fixtures/contract-v1.json`. Its cases
 are input data, not passing test evidence. Implement fixed operation adapters and
 assert actual outputs against the expected projections described in .11; never
 accept an identifier-presence or JSON-load assertion as requirement closure.
@@ -83,7 +83,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 ### WMB-P04a: Prove the Wotex consumer boundary
 
 - Requirements: WMB-I01, WMB-I02, WMB-I03, WMB-I04, WMB-I05, WMB-I06; all previous native/profile packages are dependencies.
-- Concrete cases: every `WMB-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Concrete cases: every `WMB-I-Fxx` case in `priv/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
 - Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
 - Test destinations: `test/wotex/modbus/runtime_integration_test.exs` and explicit test-only credential/client ports.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.

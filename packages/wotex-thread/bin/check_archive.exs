@@ -2,8 +2,21 @@ defmodule Wotex.Thread.Check.Archive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
-  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "lib", "docs"]
-  @development [".git", "deps", "_build"]
+  @packaged [
+    "mix.exs",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "lib",
+    "priv/fixtures",
+    "priv/openthread",
+    "priv/provenance/native-advisories.json"
+  ]
+  # Documentation lives in the monorepo `docs/` tree and reaches consumers through
+  # HexDocs; no `docs` or `tasks` path may ship in the archive.
+  @development [".git", "deps", "_build", "docs"]
+  @excluded_roots ["docs", "tasks"]
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.Thread.Error.beam"
 
@@ -98,6 +111,12 @@ defmodule Wotex.Thread.Check.Archive do
     unless directories == [] do
       violation("archive contains development state")
     end
+
+    Enum.each(@excluded_roots, fn entry ->
+      if File.exists?(Path.join(package, entry)) do
+        violation("archive contains #{entry}")
+      end
+    end)
   end
 
   defp identities!(package) do

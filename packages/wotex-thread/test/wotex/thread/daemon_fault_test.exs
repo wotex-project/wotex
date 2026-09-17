@@ -5,7 +5,7 @@ defmodule Wotex.Thread.DaemonFaultTest do
   use ExUnitProperties
   alias Wotex.Thread.{Address, Daemon}
 
-  @external_resource "docs/specs/fixtures/contract-v1.json"
+  @external_resource "priv/fixtures/contract-v1.json"
   @corpus File.read!(@external_resource)
   @cases Map.fetch!(Jason.decode!(@corpus), "cases")
   @moduletag requirements: ["WTH-S02", "WTH-N02", "WTH-N04"], vectors: ["WTH-V03"]

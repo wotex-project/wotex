@@ -4,7 +4,7 @@ defmodule Wotex.Thread.Check.NativeAdvisories do
   # Live release check: every advisory reported for an exact native source pin must have
   # a checked-in review, and a fixed_in_pin review must name upstream ancestors of the pin.
   @dependencies "priv/openthread/dependencies.json"
-  @reviews "docs/provenance/native-advisories.json"
+  @reviews "priv/provenance/native-advisories.json"
   @osv "https://api.osv.dev/v1/querybatch"
   @nvd "https://services.nvd.nist.gov/rest/json/cves/2.0"
   @github "https://api.github.com/repos"

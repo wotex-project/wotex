@@ -190,7 +190,7 @@ ownership contract without an adapter.
 
 ## WBA-N05 — Concrete fixture corpus and execution binding
 
-[contract-v1.json](fixtures/contract-v1.json) is a specified assertion
+[contract-v1.json](../../../../packages/wotex-bacnet/priv/fixtures/contract-v1.json) is a specified assertion
 corpus with current executable bindings, not an independent peer test result. The WBA-Vxx table in .10 lists scenario
 families. Each family still needs executable boundary and fault cases; these
 concrete cases fix selected exact expectations without exhausting each family.

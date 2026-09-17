@@ -196,7 +196,7 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
   defp project_root(context) do
     project = Path.join(context.root, "project")
 
-    for path <- ~w(lib priv/openthread test/software docs/specs/fixtures) do
+    for path <- ~w(lib priv/openthread test/software priv/fixtures) do
       File.mkdir_p!(Path.join(project, path))
       File.write!(Path.join([project, path, "placeholder"]), "disposable\n")
     end
