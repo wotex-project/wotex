@@ -7,23 +7,21 @@
 #include "credit.hpp"
 #include "error_value.hpp"
 #include "output.hpp"
-#include <set>
+#include "report_queue.hpp"
 
 namespace wotex::ble {
 class NativeReports {
   struct Stream {
     Json metadata;
-    std::size_t limit, queued = 0;
+    std::size_t limit;
     std::uint64_t last_sequence = 0;
     bool accepting = true;
   };
-  struct Queued { std::uint64_t stream; AttributeBytes value; std::size_t charge; };
   NativeOutput &output_;
   std::string generation_;
   Credits credits_;
   std::map<std::uint64_t, Stream> streams_;
-  std::deque<Queued> queued_;
-  std::size_t queued_bytes_ = 0;
+  ReportQueue<AttributeBytes> queue_;
   Json envelope(std::uint64_t identifier, const Stream &stream, const AttributeBytes &value, std::uint64_t sequence) const {
     return {{"version", 1}, {"session_generation", generation_}, {"report_sequence", sequence},
       {"subscription_id", std::to_string(identifier)}, {"generation", 1}, {"event", "value"},
@@ -38,18 +36,9 @@ class NativeReports {
     if (!output_.report(encoded, *sequence)) throw InvalidFrame();
     stream.last_sequence = *sequence; return true;
   }
-  void erase(std::deque<Queued>::iterator &item) {
-    auto &stream = streams_.at(item->stream); --stream.queued;
-    queued_bytes_ -= item->charge; item = queued_.erase(item);
-  }
   void drain() {
     // At most 64 visits. A credit-blocked stream cannot block another stream.
-    std::set<std::uint64_t> blocked;
-    for (auto item = queued_.begin(); item != queued_.end();) {
-      auto &stream = streams_.at(item->stream);
-      if (!blocked.count(item->stream) && dispatch(item->stream, stream, item->value)) erase(item);
-      else { blocked.insert(item->stream); ++item; }
-    }
+    queue_.drain([this](std::uint64_t id, const AttributeBytes &value) { return dispatch(id, streams_.at(id), value); });
   }
   static std::uint64_t identifier(const Json &value) {
     if (!value.is_string()) throw InvalidFrame();
@@ -93,23 +82,19 @@ public:
     auto &stream = found->second;
     AttributeBytes bytes = AttributeBytes::from(value.at("value"));
     if (!stream.accepting) return false;
-    if (!stream.queued && dispatch(id, stream, bytes)) return true;
+    if (!queue_.queued(id) && dispatch(id, stream, bytes)) return true;
     // Twenty decimal sequence digits charge an upper bound before assignment;
     // queued values retain only bounded bytes and an ID, not copied metadata.
     const auto charge = EncodedFrame::from(envelope(id, stream, bytes, UINT64_MAX)).size();
-    if (stream.queued == stream.limit || queued_.size() == 64 || charge > 1048576 - queued_bytes_) {
-      silence(id); return false;
-    }
-    queued_.push_back({id, std::move(bytes), charge}); ++stream.queued; queued_bytes_ += charge; return true;
+    if (!queue_.admit(id, stream.limit, std::move(bytes), charge)) { silence(id); return false; }
+    return true;
   }
 
   bool silence(std::uint64_t id) {
     const auto found = streams_.find(id);
     if (found == streams_.end() || !found->second.accepting) return false;
     found->second.accepting = false;
-    for (auto item = queued_.begin(); item != queued_.end();) {
-      if (item->stream == id) erase(item); else ++item;
-    }
+    queue_.discard(id);
     return true;
   }
 
@@ -138,8 +123,8 @@ public:
   }
   std::size_t active_streams() const { return streams_.size(); }
   std::size_t credit_records() const { return credits_.stream_records(); }
-  std::size_t queued_reports() const { return queued_.size(); }
-  std::size_t queued_bytes() const { return queued_bytes_; }
+  std::size_t queued_reports() const { return queue_.size(); }
+  std::size_t queued_bytes() const { return queue_.bytes(); }
   std::size_t available_frames() const { return credits_.available_frames(); }
   std::size_t available_bytes() const { return credits_.available_bytes(); }
 };

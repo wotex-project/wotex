@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "credit.hpp"
+#include "report_queue.hpp"
 #include <cstdlib>
 #include <iostream>
 using namespace wotex::ble;
@@ -8,6 +9,38 @@ static void check(bool result) { if (!result) std::abort(); }
 template <typename F> static void rejects(F action) {
   try { action(); } catch (const InvalidFrame &) { return; }
   std::abort();
+}
+static void queue_invariants() {
+  ReportQueue<std::size_t> queue;
+  rejects([&] { queue.admit(0, 1, 1, 1); });
+  rejects([&] { queue.admit(1, 0, 1, 1); });
+  rejects([&] { queue.admit(1, 10001, 1, 1); });
+  rejects([&] { queue.admit(1, 1, 1, 0); });
+  rejects([&] { queue.admit(1, 1, 1, 1048577); });
+  check(queue.admit(1, 2, 1, 128) && queue.admit(1, 2, 2, 128) && !queue.admit(1, 2, 3, 128));
+  check(queue.size() == 2 && queue.queued(1) == 2 && queue.bytes() == 256);
+  check(queue.admit(2, 64, 4, 128));
+  std::vector<std::size_t> order;
+  bool allow_one = true;
+  queue.drain([&](std::uint64_t stream, std::size_t payload) {
+    if (stream == 1 && !allow_one) return false;
+    if (stream == 1) allow_one = false;
+    order.push_back(payload); return true;
+  });
+  check((order == std::vector<std::size_t>{1, 4}) && queue.size() == 1 && queue.queued(1) == 1);
+  queue.discard(1);
+  check(queue.size() == 0 && queue.bytes() == 0 && queue.stream_records() == 0);
+  for (std::uint64_t stream = 1; stream <= 64; ++stream) check(queue.admit(stream, 1, stream, 1));
+  check(!queue.admit(65, 1, 65, 1) && queue.size() == 64);
+  for (std::uint64_t stream = 1; stream <= 64; ++stream) queue.discard(stream);
+  for (int i = 0; i < 8; ++i) check(queue.admit(1, 64, 0, 131072));
+  check(queue.bytes() == 1048576 && !queue.admit(2, 64, 0, 1));
+  queue.drain([](std::uint64_t, std::size_t) { return true; });
+  check(queue.size() == 0 && queue.bytes() == 0 && queue.stream_records() == 0);
+  for (std::uint64_t stream = 1; stream <= 100000; ++stream) {
+    check(queue.admit(stream, 1, 0, 128)); queue.discard(stream);
+    check(queue.stream_records() == 0);
+  }
 }
 static void invariants() {
   rejects([] { Credits invalid(""); });
@@ -68,12 +101,15 @@ static void invariants() {
   auto forged = ack; forged["extra"] = true; rejects([&] { bytes.acknowledge(forged); });
   forged = ack; forged["report_sequence"] = true; rejects([&] { bytes.acknowledge(forged); });
   bytes.acknowledge(ack); check(bytes.available_bytes() == 1048576);
+  queue_invariants();
 }
 
 static Json trace(const Json &input) {
   const auto token = input.at("session_generation").get<std::string>();
   Credits credits(token);
   std::map<std::string, std::uint64_t> streams;
+  ReportQueue<std::size_t> queue;
+  const auto queue_limit = input.at("queue_limit").get<std::size_t>();
   struct Observation { std::uint64_t stream, sequence, bytes; bool consumed; };
   std::vector<Observation> observed;
   std::uint64_t acknowledged = 0, acknowledged_bytes = 0;
@@ -92,35 +128,52 @@ static Json trace(const Json &input) {
       acknowledged = sequence; acknowledged_bytes = bytes;
     }
   };
+  // A transmit attempt uses the production credit manager first and otherwise
+  // the production deferred queue, exactly as a value callback admits a report.
+  auto send = [&](std::uint64_t stream, std::size_t bytes) {
+    const auto result = credits.reserve(stream, bytes);
+    if (!result) return false;
+    observed.push_back({stream, *result, bytes, false});
+    ++transmitted;
+    return true;
+  };
+  auto drain = [&] { queue.drain([&](std::uint64_t stream, std::size_t bytes) { return send(stream, bytes); }); };
   try {
     for (const auto &event : input.at("events")) {
       const auto kind = event.at("event").get<std::string>();
       if (kind == "transmit") {
-        if (!fields(event, {"event", "stream", "bytes"})) throw InvalidFrame();
+        if (!fields(event, {"event", "stream", "bytes"}) && !fields(event, {"event", "stream", "bytes", "count"}))
+          throw InvalidFrame();
         const auto label = event.at("stream").get<std::string>();
         if (!streams.count(label)) {
           const auto id = streams.size() + 1;
-          check(credits.open(id, input.at("queue_limit").get<std::size_t>()));
+          check(credits.open(id, queue_limit));
           streams.emplace(label, id);
         }
+        const auto count = event.contains("count") ? event.at("count").get<std::size_t>() : 1;
+        if (count == 0 || count > 100000) throw InvalidFrame();
         const auto bytes = event.at("bytes").get<std::size_t>();
-        // These accepted trace cells have no deferred report queue. The actual
-        // output queue and process-overproducer cases have separate acceptance.
-        const auto result = credits.reserve(streams.at(label), bytes);
-        if (!result) throw InvalidFrame();
-        observed.push_back({streams.at(label), *result, bytes, false});
-        ++transmitted;
+        const auto id = streams.at(label);
+        for (std::size_t attempt = 0; attempt < count; ++attempt) {
+          if (queue.queued(id) || !send(id, bytes)) {
+            if (!queue.admit(id, queue_limit, bytes, bytes)) { queue.discard(id); terminal = "queue_overflow"; break; }
+          }
+        }
+        if (!terminal.is_null()) break;
       } else if (kind == "ack") {
         const auto sequence = event.at("report_sequence").get<std::uint64_t>();
         const auto bytes = event.at("acknowledged_bytes").get<std::uint64_t>();
         credits.acknowledge(event.at("session_generation").get<std::string>(), sequence, bytes);
         acknowledged = sequence; acknowledged_bytes = bytes;
         for (auto &report : observed) if (report.sequence <= sequence) report.consumed = true;
+        drain();
       } else if (kind == "retire") {
         const auto id = streams.at(event.at("stream").get<std::string>());
+        queue.discard(id);
         credits.retire(id, event.at("last_report_sequence").get<std::uint64_t>());
         for (auto &report : observed) if (report.stream == id) report.consumed = true;
         acknowledge_prefix();
+        drain();
       } else if (kind == "consume") {
         const auto id = streams.at(event.at("stream").get<std::string>());
         const auto sequence = event.at("report_sequence").get<std::uint64_t>();
@@ -130,10 +183,11 @@ static Json trace(const Json &input) {
         }
         if (!found) throw InvalidFrame();
         acknowledge_prefix();
+        drain();
       } else throw InvalidFrame();
     }
   } catch (const InvalidFrame &) { terminal = "invalid_frame"; }
-  return {{"transmitted", transmitted}, {"queued", 0}, {"terminal", terminal},
+  return {{"transmitted", transmitted}, {"queued", queue.size()}, {"terminal", terminal},
           {"frame_credit", credits.available_frames()}, {"byte_credit", credits.available_bytes()}};
 }
 int main(int argc, char **argv) {

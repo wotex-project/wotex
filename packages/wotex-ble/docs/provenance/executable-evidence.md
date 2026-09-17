@@ -65,14 +65,21 @@ below; selection alone does not establish the remaining native flow obligations.
 
 ## Native report reservations
 
-`test/wotex/ble/native_credit_test.exs` binds B-F07/B-F08/B-F09/B-F14/B-F15
-to the production `credit.hpp` manager. Exact byte/sequence acknowledgements
-release only the consumed prefix; retirement preserves outstanding credits until
-acknowledged and cannot release a different stream's reservations. Native tests
-exercise 64 active streams, 64 outstanding frames, the 1 MiB byte ceiling, forged
-acknowledgements, a false retirement barrier and 100000 subscription lifetimes
-with no retained closed-stream records. The six focused ExUnit tests and Linux
-ARM64 GCC ASan/UBSan invariants pass.
+`test/wotex/ble/native_credit_test.exs` binds B-F07 through B-F10, B-F14 and
+B-F15 to the production `credit.hpp` manager and `report_queue.hpp` deferred
+queue. Exact byte/sequence acknowledgements release only the consumed prefix;
+retirement preserves outstanding credits until acknowledged and cannot release a
+different stream's reservations. A transmit attempt without credit enters the
+same bounded queue that `NativeReports` uses; B-F10's seventeenth attempt stays
+queued after the sixteen-report stream window. Native tests exercise 64 active
+streams, 64 outstanding frames, the 1 MiB byte ceiling, forged acknowledgements,
+a false retirement barrier, 100000 subscription lifetimes with no retained
+closed-stream records and the queue's per-stream, 64-entry, 1 MiB, ordering and
+discard bounds. The seven focused ExUnit tests pass. A Debian 12 Linux ARM64
+lane with GCC 12.2.0 (`g++-12 12.2.0-14+deb12u1`), ASan/UBSan and leak
+detection compares all six flow traces with the corpus and runs the credit and
+report invariants. These traces use explicit byte lengths and component calls;
+they are not process-flow or SDK callback evidence.
 
 `test/wotex/ble/report_flow_test.exs` exercises the production BEAM
 `ReportFlow` ledger and `SubscriptionOwner` admission boundary. Two live stream
