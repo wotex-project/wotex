@@ -37,6 +37,40 @@ defmodule Wotex.Thread.NativeContractTest do
     end
   end
 
+  test "WTH-B-F06 captures the actual host ready frame and reaps its owned processes", context do
+    assert match?({:unix, :linux}, :os.type()),
+           "the SDK host and procfs ownership census require Linux"
+
+    [item] = cases("ready")
+    assert item["id"] == "WTH-B-F06" and item["input"] == %{"stdin" => "close_after_ready"}
+    host = System.fetch_env!("WOTEX_THREAD_HOST")
+    assert Path.type(host) == :absolute and File.regular?(host)
+
+    port =
+      Port.open({:spawn_executable, host}, [
+        :binary,
+        :exit_status,
+        {:line, 131_072},
+        args: [],
+        env: Enum.map(System.get_env(), fn {key, _} -> {String.to_charlist(key), false} end)
+      ])
+
+    {:os_pid, guardian} = Port.info(port, :os_pid)
+    assert_receive {^port, {:data, {:eol, ready}}}, 5_000
+    # The guardian's worker is the owned process-group leader for SDK descendants.
+    owned = [guardian | children(guardian)]
+    assert length(owned) == 2
+    Port.close(port)
+    Process.sleep(1_000)
+
+    observation = %{
+      "frame" => Jason.decode!(ready),
+      "owned_processes_after_grace" => Enum.count(owned ++ group_members(owned), &alive?/1)
+    }
+
+    assert observation == expectation!(item), context.directory
+  end
+
   test "WTH-B-F07 through F10 observe production report credit accounting", context do
     selected =
       Enum.filter(cases("flow_trace"), &(&1["id"] in ~w(WTH-B-F07 WTH-B-F08 WTH-B-F09 WTH-B-F10)))
@@ -220,6 +254,26 @@ defmodule Wotex.Thread.NativeContractTest do
         flunk("native contract driver exceeded its deadline")
     end
   end
+
+  defp children(pid) do
+    case File.read("/proc/#{pid}/task/#{pid}/children") do
+      {:ok, text} -> text |> String.split() |> Enum.map(&String.to_integer/1)
+      {:error, _} -> []
+    end
+  end
+
+  # Processes that remain in an owned process group after its leader exited.
+  defp group_members(groups) do
+    for entry <- File.ls!("/proc"),
+        entry =~ ~r/\A\d+\z/,
+        {:ok, stat} <- [File.read("/proc/#{entry}/stat")],
+        [_, fields] <- [String.split(stat, ") ", parts: 2)],
+        [_state, _ppid, group | _] = String.split(fields),
+        String.to_integer(group) in groups,
+        do: String.to_integer(entry)
+  end
+
+  defp alive?(pid), do: File.exists?("/proc/#{pid}")
 
   defp exited?(os_pid, attempts \\ 100)
   defp exited?(_, 0), do: false

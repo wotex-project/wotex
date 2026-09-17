@@ -102,6 +102,51 @@ inline Request request(const Json &value) {
           value.at("parameters"), value.at("timeout_ms").get<std::uint32_t>()};
 }
 
+// Owner-to-host control frames from WTH.13. Requests and these events share the
+// C07 line, depth and node limits; every field outside the exact allowlist fails.
+struct FlowControl {
+  enum class Kind { flow_open, report_ack } kind;
+  std::string session_generation;
+  std::uint64_t report_sequence = 0;
+  std::uint64_t acknowledged_bytes = 0;
+};
+
+inline bool is_control_frame(const Json &value) { return value.is_object() && value.contains("event"); }
+
+inline FlowControl flow_control(const Json &value) {
+  const auto hex = [](const Json &text) {
+    if (!text.is_string() || text.get_ref<const std::string &>().size() != 32) return false;
+    for (char byte : text.get_ref<const std::string &>()) {
+      if (!((byte >= '0' && byte <= '9') || (byte >= 'a' && byte <= 'f'))) return false;
+    }
+    return true;
+  };
+  if (!is_control_frame(value) || !value.contains("version") || !value.at("version").is_number_integer() ||
+      value.at("version") != 1) {
+    throw ProtocolError();
+  }
+  if (exact_keys(value, {"version", "event", "session_generation"}) && value.at("event") == "flow_open" &&
+      hex(value.at("session_generation"))) {
+    return {FlowControl::Kind::flow_open, value.at("session_generation").get<std::string>()};
+  }
+  if (exact_keys(value, {"version", "event", "session_generation", "report_sequence", "acknowledged_bytes"}) &&
+      value.at("event") == "report_ack" && hex(value.at("session_generation")) &&
+      value.at("report_sequence").is_number_unsigned() && value.at("report_sequence").get<std::uint64_t>() > 0 &&
+      value.at("acknowledged_bytes").is_number_unsigned() && value.at("acknowledged_bytes").get<std::uint64_t>() > 0) {
+    return {FlowControl::Kind::report_ack, value.at("session_generation").get<std::string>(),
+            value.at("report_sequence").get<std::uint64_t>(), value.at("acknowledged_bytes").get<std::uint64_t>()};
+  }
+  throw ProtocolError();
+}
+
+inline void validate_inbound(const Json &value) {
+  if (is_control_frame(value)) {
+    (void)flow_control(value);
+  } else {
+    (void)request(value);
+  }
+}
+
 inline Json ready() {
   return {{"version", 1}, {"event", "ready"}, {"backend", "openthread"}, {"revision", kRevision}};
 }

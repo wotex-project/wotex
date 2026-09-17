@@ -2,8 +2,10 @@ defmodule Wotex.Thread.OpenThread.Connection do
   @moduledoc """
   Owns one explicitly started OpenThread bridge process and its request queue.
 
-  The GenServer monitors the supplied owner, validates the native ready/open
-  handshake and returns an opaque handle for one acquired generation. Calls
+  The GenServer monitors the supplied owner, validates the native ready frame,
+  sends one `flow_open` frame with a fresh random 128-bit session generation
+  before `open`, and returns an opaque handle for one acquired generation. The
+  generation is an identity token, never a credential. Calls
   have finite admission deadlines and correlated replies. Ordinary work uses
   at most 63 pending slots, reserving the 64th for a stop operation that can
   precede queued work and cancel an outstanding commissioning operation.
@@ -129,6 +131,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
       close_waiters: [],
       close_ack: false,
       failure: nil,
+      session_generation: Base.encode16(:crypto.strong_rand_bytes(16), case: :lower),
       start_timer: Process.send_after(self(), :startup_timeout, max(deadline - now(), 0))
     }
 
@@ -314,9 +317,14 @@ defmodule Wotex.Thread.OpenThread.Connection do
         allow_network_creation: state.config.allow_network_creation
       }
 
-      if send_frame(state.port, "open", "open", parameters, state.deadline),
-        do: %{state | status: :opening},
-        else: close(state, Error.new(:connection_closed))
+      # Flow initialization precedes open; its generation identifies this IPC session only.
+      if send_line(state.port, %{
+           version: 1,
+           event: "flow_open",
+           session_generation: state.session_generation
+         }) and send_frame(state.port, "open", "open", parameters, state.deadline),
+         do: %{state | status: :opening},
+         else: close(state, Error.new(:connection_closed))
     else
       close(state, Error.new(:invalid_response))
     end
@@ -531,17 +539,17 @@ defmodule Wotex.Thread.OpenThread.Connection do
     timeout = deadline - now()
 
     timeout > 0 and
-      Port.command(
-        port,
-        Jason.encode!(%{
-          version: 1,
-          id: id,
-          operation: operation,
-          parameters: parameters,
-          timeout_ms: min(timeout, 60_000)
-        }) <> "\n",
-        [:nosuspend]
-      )
+      send_line(port, %{
+        version: 1,
+        id: id,
+        operation: operation,
+        parameters: parameters,
+        timeout_ms: min(timeout, 60_000)
+      })
+  end
+
+  defp send_line(port, frame) do
+    Port.command(port, Jason.encode!(frame) <> "\n", [:nosuspend])
   rescue
     _ -> false
   end

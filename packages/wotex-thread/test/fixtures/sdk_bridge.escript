@@ -37,13 +37,39 @@ loop(Root, Mode, State, Petition) ->
     receive
         eof -> ok;
         {line, Line} ->
-            Request = json:decode(list_to_binary(Line)),
-            ok = file:write_file(filename:join(Root, "requests"), Line, [append]),
-            case respond(Root, Mode, State, Petition, Request) of
-                {NextState, NextPetition, continue} ->
-                    loop(Root, Mode, NextState, NextPetition);
-                {_, _, stop} -> ok
+            case json:decode(list_to_binary(Line)) of
+                #{<<"event">> := _} = Control ->
+                    flow(Root, Control),
+                    loop(Root, Mode, State, Petition);
+                Request ->
+                    request(Root, Mode, State, Petition, Request, Line)
             end
+    end.
+
+%% Records the exact flow initialization; a request before it is logged as missing.
+flow(Root, #{<<"version">> := 1, <<"event">> := <<"flow_open">>,
+             <<"session_generation">> := Generation} = Control)
+  when map_size(Control) == 3, byte_size(Generation) == 32 ->
+    Valid = lists:all(fun(Byte) -> (Byte >= $0 andalso Byte =< $9) orelse
+                                       (Byte >= $a andalso Byte =< $f) end,
+                      binary_to_list(Generation)),
+    Entry = case {Valid, get(flow_open)} of
+        {true, undefined} -> put(flow_open, true), <<Generation/binary, "\n">>;
+        _ -> <<"invalid\n">>
+    end,
+    ok = file:write_file(filename:join(Root, "flow"), Entry, [append]);
+flow(Root, _) ->
+    ok = file:write_file(filename:join(Root, "flow"), <<"invalid\n">>, [append]).
+
+request(Root, Mode, State, Petition, Request, Line) ->
+    ok = file:write_file(filename:join(Root, "requests"), Line, [append]),
+    case get(flow_open) of
+        true -> ok;
+        undefined -> ok = file:write_file(filename:join(Root, "flow"), <<"missing\n">>, [append])
+    end,
+    case respond(Root, Mode, State, Petition, Request) of
+        {NextState, NextPetition, continue} -> loop(Root, Mode, NextState, NextPetition);
+        {_, _, stop} -> ok
     end.
 
 respond(_Root, Mode, State, Petition, #{<<"operation">> := <<"open">>} = Request) ->
@@ -199,7 +225,15 @@ await_release(Root) ->
         false ->
             receive
                 eof -> halt(0);
-                {line, _} -> await_release(Root)
+                {line, Line} ->
+                    %% Like the native host, close is served while other work waits.
+                    case json:decode(list_to_binary(Line)) of
+                        #{<<"operation">> := <<"close">>} = Close ->
+                            ok = file:write_file(filename:join(Root, "requests"), Line, [append]),
+                            reply(Close, null),
+                            halt(0);
+                        _ -> await_release(Root)
+                    end
             after 2 -> await_release(Root)
             end
     end.

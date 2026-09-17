@@ -18,9 +18,10 @@ archive admission, exact before/after SDK fixes, a C process guardian, empty
 workspace admission and content-bound manifest reuse. It replaces the generic
 Python build utility. A Debian 12 arm64 build emitted the expected native ready
 frame. The shared report-flow owner and BEAM ledger execute the parser and
-flow_trace corpus cases through a contract driver; host flow integration,
-process-flow and ready cases, the required x86_64 lane and software tasks still
-need evidence, so B01–B03 are not accepted.
+flow_trace corpus cases through a contract driver. The host admits flow
+initialization and acknowledgements with reserved output lanes, and the real
+host ready case executes. Report sources, process-flow cases, the required
+x86_64 lane and software tasks still need evidence, so B01–B03 are not accepted.
 
 ## WTH-B01 — Production and build boundary
 

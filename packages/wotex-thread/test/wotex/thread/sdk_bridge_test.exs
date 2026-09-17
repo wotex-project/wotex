@@ -72,6 +72,25 @@ defmodule Wotex.Thread.SdkBridgeTest do
              Enum.map(requests(context), & &1["id"])
   end
 
+  test "WTH-B02 exactly one random flow_open precedes open for each generation", context do
+    generations =
+      for _ <- 1..2 do
+        File.rm_rf!(Path.join(context.directory, "flow"))
+        assert {:ok, handle} = OpenThread.connect(context.options)
+
+        assert [generation] =
+                 context.directory |> Path.join("flow") |> File.read!() |> String.split()
+
+        assert generation =~ ~r/\A[0-9a-f]{32}\z/
+        refute inspect(:sys.get_status(handle.pid)) =~ generation
+        assert :ok = OpenThread.disconnect(handle)
+        assert Enum.map(requests(context), & &1["operation"]) |> Enum.take(-2) == ["open", "close"]
+        generation
+      end
+
+    assert Enum.uniq(generations) == generations
+  end
+
   test "WTH-C03 supervision is explicit, temporary and returns an acquired Session", context do
     spec = OpenThread.child_spec(context.options)
     assert spec.restart == :temporary and spec.shutdown == 1000
@@ -318,7 +337,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
     assert {:error, %Error{code: :timeout}} = Task.await(active)
     assert {:error, %Error{code: :timeout}} = Task.await(queued)
     refute Process.alive?(handle.pid)
-    assert Enum.map(requests(context), & &1["operation"]) == ["open", "state"]
+    assert Enum.map(requests(context), & &1["operation"]) == ["open", "state", "close"]
 
     assert {:error, %Error{code: :connection_closed}} =
              OpenThread.request(handle, %{type: :state}, 100)
@@ -489,7 +508,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
              Wotex.Thread.set_enabled(session, %{ipv6: false, thread: false}, 20)
 
     assert {:error, %Error{code: :timeout, effect: :unknown}} = Task.await(active)
-    assert Enum.map(requests(context), & &1["operation"]) == ["open", "set_enabled"]
+    assert Enum.map(requests(context), & &1["operation"]) == ["open", "set_enabled", "close"]
     File.rm!(Path.join(context.directory, "requests"))
 
     assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])

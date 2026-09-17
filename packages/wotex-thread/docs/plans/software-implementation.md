@@ -51,9 +51,10 @@ The bounded source download, archive admission, exact SDK fixes and content-boun
 workspace now feed `mix wotex.native.build`. A Debian 12 arm64 SDK host build and
 ready-frame smoke passed without Python. The shared native report-flow owner,
 its BEAM ledger and the parser/flow corpus cases WTH-B-F01–F05, F07–F10, F14 and
-F15 execute through a native contract driver. Host flow integration, F06 and
-F11–F13, the required x86_64 lane and the software build/run tasks remain open,
-so P00 is unaccepted.
+F15 execute through a native contract driver. The host accepts `flow_open` and
+`report_ack` under separate reply, control and report output reservations, and
+WTH-B-F06 executes against the real host. Report sources, F11–F13, the required
+x86_64 lane and the software build/run tasks remain open, so P00 is unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 

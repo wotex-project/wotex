@@ -154,9 +154,81 @@ flow test abort and failed F08.
 | `docs/specs/fixtures/native-port-v1.json` | `91d70393eb17360ea253f249ff3710d568c3fd12941b9eae91f7c8aa6dc3ba18` |
 
 These are production credit primitives and a contract driver, not a helper
-process. The host does not yet exchange `flow_open`, reports or `report_ack`;
-WTH-B-F06 (actual host ready), F11–F13 (process flow), the Mix software tasks,
-the x86_64 lane and C09 stress remain unexecuted.
+process.
+
+## Host flow initialization and output reservations, 2026-09-17
+
+The BEAM connection now writes exactly one `flow_open` frame after the ready
+frame and before `open`. Its session generation is 16 fresh bytes from
+`:crypto.strong_rand_bytes/1` as 32 lowercase hexadecimal characters and is not
+exposed through process status. The host accepts that frame once; a request
+before it, a second initialization, an invalid generation or an acknowledgement
+the report-flow owner rejects terminates the generation. `report_ack` is
+admitted only with its exact five fields. The guardian applies the same inbound
+validator to every owner line. Frames from JSON text decode integers as unsigned
+values; the parser compares them as unsigned 64-bit integers, which the native
+test's `2^64-1` acknowledgement exposed.
+
+`priv/openthread/output.hpp` replaces the former single 128 KiB output string.
+Frames keep stdout order while charging one of three reservations: at most 64
+successful replies of up to 131072 bytes each, 256 control or failure frames of
+up to 4096 bytes each, and 64 credited report frames within 1048576 bytes.
+A frame keeps its reservation until its final byte is written; an exhausted
+reservation or a failed report-flow writer ends the generation rather than
+blocking or evicting work. Ready, failure and close frames use the control
+reservation; other successes use the reply reservation.
+
+`test/native/output_test.cpp` asserts each lane's frame count, frame size and
+aggregate bounds, independence between lanes, ordered partial nonblocking writes
+with reservations held until completion, and closed-reader failure.
+`protocol_test.cpp` adds exact `flow_open`/`report_ack` allowlists, unsigned
+field bounds, version/event checks and the shared inbound validator. The escript
+ownership peer records the initialization, and `sdk_bridge_test.exs` asserts
+one valid, distinct, status-redacted generation before `open` for each
+connection. `native_contract_test.exs` executes WTH-B-F06 against the real host:
+the first frame equals the corpus ready frame, and after input closure and the
+1000 ms grace no guardian, worker or member of their process groups remains.
+
+On Linux the injected escript peer waiting for a release discarded `close` and
+depended on SIGTERM. Elixir 1.18.4/OTP 27.3.4.15 needed about 1026 ms to shut
+down an escript blocked on standard input after SIGTERM, beyond the 900 ms
+escalation, so two deadline tests observed `cleanup_timeout`. The peer now
+serves `close` while waiting, as the native host does, and those tests assert
+the logged `close` frame. SIGTERM-ignoring cleanup remains covered by the
+`close_stall` mode.
+
+| Lane | Result |
+| --- | --- |
+| macOS arm64, Apple clang 21.0.0, Elixir 1.20.2 / OTP 29.0.4 | 4/4 sanitizer CTest; `sdk_bridge_test.exs` 33/33 |
+| Linux arm64 minimum: image `sha256:95ca03c1f4714893eb0f33791ecb05eb8a234816fe96aa9a7168c1c3c9012b68`, Debian 12.15, GCC 12.2.0, CMake 3.25.1, Ninja 1.11.1, Elixir 1.18.4 / OTP 27.3.4.15, privileged container | `mix wotex.native.build` normal and `--sanitizers` hosts; 4/4 ASan/UBSan/LeakSanitizer CTest; Spinel matrix; 45/45 ExUnit (contract F01–F10/F14/F15, native owner, native Dataset/formation/management/commissioner and bridge tests) with the normal host; 8/8 software tests with the sanitizer host; seed 0 |
+| Linux arm64 current: image `sha256:cd12556442e9d686112fc225e1b2ce62db1eb9f7e1fff22b9d9bf24591728535` from `hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da` (arm64 manifest), same toolchain, Elixir 1.20.2 / OTP 29.0.4 | Same builds and commands: 4/4 CTest, Spinel matrix, 45/45 and 8/8 ExUnit |
+
+The Linux run built the simulation RCP with `-DOT_PLATFORM=simulation
+-DOT_APP_RCP=ON -DOT_RCP=ON -DOT_FTD=OFF -DOT_MTD=OFF -DOT_APP_CLI=OFF
+-DOT_APP_NCP=OFF` from the manifest-bound patched SDK tree and the Dataset seed
+and Spinel test from a sanitizer SDK configuration. Normal host
+`7ffca56512e00b5ef31282feaf7e1b431ede2c21e6ea7b2795b9f0ad55525c10`, sanitizer
+host `2261ad512583bb6c61943142ed0cbda064d920e756711c89c33ed341991dd974`, RCP
+`62159ea108a52d31d06b97074d825632f0bd164e509b7625d864ecca36f5997b` and contract
+driver `0c2335e7ba6757916aa98dc26e4a674d1792fd9a76602a123ff88e96cfa21f85`.
+These builds embed their workspace path, so binary hashes differ between
+workspaces. The lane was a manual container script, not the specified
+`mix wotex.software.build`/`run` tasks.
+
+| Source | SHA-256 |
+| --- | --- |
+| `priv/openthread/host.cpp` | `aab028ca093b3073d9fae4cbd7699a87b511612a8388c91de73a8ca7751b498a` |
+| `priv/openthread/output.hpp` | `857860b717dbe684a203afc9de6c1c0a03e61243823659caf292ce39c9f66cbe` |
+| `priv/openthread/protocol.hpp` | `75cd199a8f8d125ecb700b2ca650e2a92bfd8cc573fe5e7e9237dfe424a76424` |
+| `test/native/output_test.cpp` | `cf878689fbfc5ad007ad5b8795640f3dd39f41e783a4d699f1f9e25de0d5e40e` |
+| `test/native/protocol_test.cpp` | `260ac52a2d39d8dcb76c04c8a9bb9f5b7f22b20119e5eec2709910a1561b1248` |
+| `lib/wotex/thread/open_thread/connection.ex` | `7fc067e3d9de5301ced1037967d88c57ec4ee2bcce89461ba94b840c42a9be60` |
+| `test/fixtures/sdk_bridge.escript` | `3c33aef2a2ef143487e703dceb57bc0e63146ff712fb1a0fd946d20abfc5fb50` |
+| `test/wotex/thread/native_contract_test.exs` | `42d33388608b1a9987d1f09f7635d8e26abed1164dd7ab3a2f7dc2c83405f950` |
+
+The production host still has no report source: no stream report or
+`stream_retired` barrier crosses its Port. F11–F13, the Mix software tasks, the
+x86_64 lane and C09 stress remain unexecuted.
 
 ## Acceptance boundary
 

@@ -1,4 +1,6 @@
 #include "sdk.hpp"
+#include "flow.hpp"
+#include "output.hpp"
 #include <openthread/platform/logging.h>
 #include <sys/poll.h>
 #include <sys/prctl.h>
@@ -39,22 +41,22 @@ static void nonblocking(int fd) {
 class Worker final {
  public:
   Worker() {
-    output_ = ::dup(STDOUT_FILENO);
-    if (output_ < 0) throw SdkError("io_failed");
-    nonblocking(output_); nonblocking(STDIN_FILENO);
+    output_fd_ = ::dup(STDOUT_FILENO);
+    if (output_fd_ < 0) throw SdkError("io_failed");
+    nonblocking(output_fd_); nonblocking(STDIN_FILENO);
     FileDescriptor sink(::open("/dev/null", O_WRONLY | O_CLOEXEC));
     if (sink.get() < 0 || ::dup2(sink.get(), STDOUT_FILENO) < 0 ||
         ::dup2(sink.get(), STDERR_FILENO) < 0) throw SdkError("io_failed");
-    append(ready());
+    emit(Lane::control, ready());
   }
-  ~Worker() { if (output_ >= 0) (void)::close(output_); }
+  ~Worker() { if (output_fd_ >= 0) (void)::close(output_fd_); }
   int run() {
-    while (!closing_ || !outgoing_.empty()) {
+    while (!closing_ || !output_.empty()) {
       otSysMainloopContext loop {};
-      loop.mMaxFd = std::max(STDIN_FILENO, output_);
+      loop.mMaxFd = std::max(STDIN_FILENO, output_fd_);
       loop.mTimeout = {0, 50000};
       if (!closing_) FD_SET(STDIN_FILENO, &loop.mReadFdSet);
-      if (!outgoing_.empty()) FD_SET(output_, &loop.mWriteFdSet);
+      if (!output_.empty()) FD_SET(output_fd_, &loop.mWriteFdSet);
       if (sdk_) sdk_->update(loop);
       const int result = ::select(loop.mMaxFd + 1, &loop.mReadFdSet, &loop.mWriteFdSet,
                                   &loop.mErrorFdSet, &loop.mTimeout);
@@ -64,22 +66,19 @@ class Worker final {
       finish_formation();
       finish_management();
       finish_commissioner();
-      if (FD_ISSET(output_, &loop.mWriteFdSet)) flush();
+      if (FD_ISSET(output_fd_, &loop.mWriteFdSet) && output_.flush(output_fd_) == Output::Flush::failed) return 2;
       if (!closing_ && FD_ISSET(STDIN_FILENO, &loop.mReadFdSet)) input();
+      if (flow_ && flow_->failed()) throw ChannelError();
     }
     return 0;
   }
  private:
-  void append(const Json &value) {
-    std::string frame = value.dump() + "\n";
-    if (frame.size() > kMaximumLine || outgoing_.size() + frame.size() > kMaximumLine) throw ProtocolError();
-    outgoing_ += frame;
+  // A frame that exceeds its lane reservation ends this generation; dispatch
+  // cannot convert that channel failure into an operation error.
+  void emit(Lane lane, const Json &value) {
+    if (!output_.push(lane, value.dump())) throw ChannelError();
   }
-  void flush() {
-    const ssize_t written = ::write(output_, outgoing_.data(), outgoing_.size());
-    if (written > 0) outgoing_.erase(0, static_cast<std::size_t>(written));
-    else if (written < 0 && errno != EAGAIN && errno != EINTR) throw SdkError("io_failed");
-  }
+  void reply(const Json &value) { emit(Lane::reply, value); }
   void input() {
     char bytes[4096]; const ssize_t count = ::read(STDIN_FILENO, bytes, sizeof bytes);
     if (count == 0) {
@@ -94,10 +93,28 @@ class Worker final {
       if (incoming_.size() == kMaximumLine) throw ProtocolError();
       incoming_.push_back(bytes[i]);
       if (bytes[i] == '\n') {
-        Request command = request(parse_line(incoming_)); incoming_.clear();
-        dispatch(command);
+        const Json frame = parse_line(incoming_); incoming_.clear();
+        if (is_control_frame(frame)) {
+          control(flow_control(frame));
+        } else {
+          // Flow initialization precedes every operation, including open.
+          if (!flow_) throw ProtocolError();
+          dispatch(request(frame));
+        }
         if (closing_ && i != count - 1) throw ProtocolError();
       }
+    }
+  }
+  void control(const FlowControl &frame) {
+    if (frame.kind == FlowControl::Kind::flow_open) {
+      if (flow_) throw ProtocolError();
+      flow_.emplace(
+          frame.session_generation,
+          [this](const std::string &report) { return output_.push(Lane::report, report); },
+          [this](const std::string &barrier) { return output_.push(Lane::control, barrier); });
+    } else if (!flow_ || !flow_->acknowledge(frame.session_generation, frame.report_sequence,
+                                             frame.acknowledged_bytes)) {
+      throw ProtocolError();
     }
   }
   void dispatch(const Request &command) {
@@ -105,7 +122,7 @@ class Worker final {
       if (command.operation == "open") {
         if (sdk_) throw SdkError("already_open");
         sdk_ = std::make_unique<Sdk>(command.parameters);
-        append(success(command, sdk_->snapshot()));
+        reply(success(command, sdk_->snapshot()));
       } else if (command.operation == "close") {
         if (!command.parameters.empty()) throw ProtocolError();
         forming_.reset(); managing_.reset(); petitioning_.reset(); sdk_.reset();
@@ -113,12 +130,12 @@ class Worker final {
         // Check explicit, fully torn-down sessions before acknowledging close.
         __lsan_do_leak_check();
 #endif
-        append(success(command, nullptr)); closing_ = true;
+        emit(Lane::control, success(command, nullptr)); closing_ = true;
       } else if (command.operation == "inspect" || command.operation == "state" ||
                  command.operation == "version" || command.operation == "network_name" || command.operation == "rloc16") {
         if (!command.parameters.empty()) throw ProtocolError();
         if (!sdk_) throw SdkError("not_open");
-        append(success(command, sdk_->inspect(command.operation)));
+        reply(success(command, sdk_->inspect(command.operation)));
       } else if (command.operation == "form_network") {
         if (!sdk_) throw SdkError("not_open");
         if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
@@ -143,24 +160,24 @@ class Worker final {
         if (!sdk_) throw SdkError("not_open");
         sdk_->commissioning().stop();
         if (petitioning_) { reject(petitioning_->command, "cancelled"); petitioning_.reset(); }
-        append(success(command, {{"state", "disabled"}}));
+        reply(success(command, {{"state", "disabled"}}));
       } else if (command.operation == "add_joiner" || command.operation == "remove_joiner") {
         if (!sdk_) throw SdkError("not_open");
         if (command.operation == "add_joiner") {
           sdk_->commissioning().add(command.parameters);
-          append(success(command, {{"identity", command.parameters.at("identity")},
+          reply(success(command, {{"identity", command.parameters.at("identity")},
                                    {"lifetime_s", command.parameters.at("lifetime")}}));
         } else {
           sdk_->commissioning().remove(command.parameters);
-          append(success(command, nullptr));
+          reply(success(command, nullptr));
         }
       } else if (command.operation == "set_enabled") {
         if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
-        append(success(command, sdk_->set_enabled(command.parameters)));
+        reply(success(command, sdk_->set_enabled(command.parameters)));
       } else if (command.operation == "validate_dataset" || command.operation == "get_dataset") {
         if (!sdk_) throw SdkError("not_open");
-        append(success(command, sdk_->dataset(command.operation, command.parameters)));
+        reply(success(command, sdk_->dataset(command.operation, command.parameters)));
       } else {
         throw SdkError("not_supported");
       }
@@ -175,7 +192,7 @@ class Worker final {
     Json response = failure(command, code);
     if (status) response["error"]["status"] = *status;
     if (command.operation == "form_network" && sdk_) response["error"]["state"] = sdk_->snapshot();
-    append(response);
+    emit(Lane::control, response);
   }
   void finish_formation() {
     if (!forming_) return;
@@ -185,7 +202,7 @@ class Worker final {
     } else {
       Json state = sdk_->snapshot();
       if (state.at("role") == "leader") {
-        append(success(forming_->command, state));
+        reply(success(forming_->command, state));
         forming_.reset();
       }
     }
@@ -199,7 +216,7 @@ class Worker final {
       managing_.reset(); // SDK context survives until callback or instance teardown.
     } else if (result) {
       if (*result == OT_ERROR_NONE) {
-        append(success(managing_->command, {{"accepted", true}, {"effective", "not_verified"}}));
+        reply(success(managing_->command, {{"accepted", true}, {"effective", "not_verified"}}));
       } else {
         reject(managing_->command, "remote_error", static_cast<unsigned>(*result));
       }
@@ -215,7 +232,7 @@ class Worker final {
     } else {
       const auto state = sdk_->commissioning().observed_state();
       if (state == OT_COMMISSIONER_STATE_ACTIVE) {
-        append(success(petitioning_->command, {{"state", "active"}}));
+        reply(success(petitioning_->command, {{"state", "active"}}));
         petitioning_.reset();
       } else if (state == OT_COMMISSIONER_STATE_DISABLED) {
         sdk_->commissioning().stop();
@@ -226,9 +243,11 @@ class Worker final {
   }
   struct Formation { Request command; Clock::time_point deadline; };
   std::optional<Formation> forming_, managing_, petitioning_;
-  int output_ = -1;
+  int output_fd_ = -1;
+  Output output_;
+  std::optional<ReportFlow> flow_;
   std::unique_ptr<Sdk> sdk_;
-  std::string incoming_, outgoing_;
+  std::string incoming_;
   bool closing_ = false;
 };
 
@@ -313,7 +332,7 @@ static int guardian(pid_t child, int input, int output) {
             if (owner_fragment.size() == kMaximumLine) throw ProtocolError();
             owner_fragment.push_back(bytes[i]);
             if (bytes[i] == '\n') {
-              (void)request(parse_line(owner_fragment)); owner_fragment.clear();
+              validate_inbound(parse_line(owner_fragment)); owner_fragment.clear();
             }
           }
         }

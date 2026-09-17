@@ -6,9 +6,13 @@
 
 using namespace wotex::thread;
 
-static void check(bool value) {
-  if (!value) std::abort();
+static void check_at(bool value, int line) {
+  if (!value) {
+    std::cerr << "check failed at line " << line << "\n";
+    std::abort();
+  }
 }
+#define check(value) check_at((value), __LINE__)
 static void rejects(const std::string &bytes) {
   try { (void)parse_line(bytes); std::abort(); }
   catch (const ProtocolError &error) { check(std::string(error.what()) == "invalid_bridge_message"); }
@@ -81,5 +85,43 @@ int main() {
     bytes.push_back('\n');
     try { (void)parse_line(bytes); } catch (const ProtocolError &) {}
   }
+  // WTH-B02: flow control frames have exact allowlists and share the inbound validator.
+  const std::string session = "0123456789abcdef0123456789abcdef";
+  const Json open = {{"version", 1}, {"event", "flow_open"}, {"session_generation", session}};
+  auto opened = flow_control(parse_line(open.dump() + "\n"));
+  check(opened.kind == FlowControl::Kind::flow_open && opened.session_generation == session);
+  const Json ack = {{"version", 1}, {"event", "report_ack"}, {"session_generation", session},
+                    {"report_sequence", UINT64_MAX}, {"acknowledged_bytes", 128}};
+  auto acknowledged = flow_control(parse_line(ack.dump() + "\n"));
+  check(acknowledged.kind == FlowControl::Kind::report_ack && acknowledged.report_sequence == UINT64_MAX &&
+        acknowledged.acknowledged_bytes == 128);
+  // Integers decoded from owner text are unsigned JSON numbers.
+  for (const Json &frame : {open, ack, base}) validate_inbound(parse_line(frame.dump() + "\n"));
+  auto rejects_control = [](const Json &input) {
+    const Json decoded = parse_line(input.dump() + "\n");
+    try { (void)flow_control(decoded); std::abort(); } catch (const ProtocolError &) {}
+    try { validate_inbound(decoded); std::abort(); } catch (const ProtocolError &) {}
+  };
+  for (const Json &generation : {Json("0123456789ABCDEF0123456789abcdef"), Json(session + "0"), Json(1), Json(nullptr)}) {
+    auto bad_open = open; bad_open["session_generation"] = generation; rejects_control(bad_open);
+  }
+  for (const auto &key : {"version", "session_generation"}) {
+    auto missing = open; missing.erase(key); rejects_control(missing);
+  }
+  auto extra_open = open; extra_open["report_sequence"] = 1; rejects_control(extra_open);
+  for (const Json &version : {Json(2), Json(true), Json(1.0)}) {
+    auto bad = open; bad["version"] = version; rejects_control(bad);
+  }
+  for (const Json &event : {Json("flow_close"), Json("ready"), Json(1)}) {
+    auto bad = open; bad["event"] = event; rejects_control(bad);
+  }
+  for (const auto &key : {"report_sequence", "acknowledged_bytes"}) {
+    for (const Json &number : {Json(0), Json(-1), Json(1.0), Json("1"), Json(true)}) {
+      auto bad = ack; bad[key] = number; rejects_control(bad);
+    }
+    auto missing = ack; missing.erase(key); rejects_control(missing);
+  }
+  auto extra_ack = ack; extra_ack["id"] = "1"; rejects_control(extra_ack);
+  auto request_with_event = base; request_with_event["event"] = "flow_open"; rejects_control(request_with_event);
   std::cout << "WTH-C07 WTH-V04 bounded JSON and request envelope checks passed\n";
 }
