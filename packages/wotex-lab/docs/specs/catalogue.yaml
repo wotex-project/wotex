@@ -31,8 +31,9 @@ specifications:
     version: "0.2.0"
     path: docs/specs/WLB.02-scenarios-and-reference-components.md
     implementation_status: implemented
-    evidence_status: partial
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: docs/provenance/WLB.02-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -57,7 +58,8 @@ specifications:
       - "test/wotex/lab/runner_test.exs"
       - "test/wotex/lab/scenario_frontends_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/control_controller_test.exs"
-    compatibility_classification: Initial 0.1 API with additive admitted-descriptor functions and the `mix wotex.lab.scenarios` task; the CLI, MCP resource, Workbench control API and cookbooks read one admitted list. Runner cleanup and observer deliveries now fail closed at their budgets. Full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/wlb02_evidence_manifest_test.exs"
+    compatibility_classification: Initial 0.1 API with additive admitted-descriptor functions and the `mix wotex.lab.scenarios` task; the CLI, MCP resource, Workbench control API and cookbooks read one admitted list. Runner cleanup and observer deliveries now fail closed at their budgets. The fixed-seed source cohort has a content-bound complete local evidence record; artifact adoption remains a WLB.08 obligation.
   - id: WLB.03
     version: "1.5.1"
     path: docs/specs/WLB.03-nx-experiments.md

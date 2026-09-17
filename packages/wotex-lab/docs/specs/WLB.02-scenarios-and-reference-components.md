@@ -92,3 +92,18 @@ startup unwind; exhausted limits; deterministic replay; callback failures;
 duplicate stop; receiver death; and absence of leaked children/files/topics.
 Plugin tests MUST use two independent host configurations with no environment
 transplant. Catalogue status remains partial until all these obligations pass.
+
+[`WLB.02-evidence.json`](../provenance/WLB.02-evidence.json) records the
+fixed-seed source cohort that closes these obligations.
+`scenario_frontends_test.exs` compares the CLI, MCP resource and cookbook
+descriptors, and the Workbench control test compares the HTTP descriptors with
+the same admitted list. `runner_test.exs` executes two concurrent attempts, two
+independent instances with separate host configurations and an unchanged
+application environment, partial-startup unwind, step, ingress, child, wall,
+observer-delivery and cleanup budget exhaustion, deterministic replay and
+divergence, callback raise, throw, exit and invalid return, idempotent
+cancellation, forced kill, observer death and late results, with no remaining
+children or work files. The runner allocates no broker topic or repository
+context; adapters that create them own their isolation, and the WLB.04 broker
+tests use a fresh topic prefix per run. This is source evidence; artifact
+adoption remains a WLB.08 obligation.

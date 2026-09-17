@@ -84,6 +84,58 @@ defmodule Wotex.Lab.RunnerTest do
     assert File.ls!(context.tmp_dir) == []
   end
 
+  test "plugin hosts on independent instances share no configuration or environment",
+       context do
+    environment = Application.get_all_env(:wotex_lab)
+    other = start_supervised!({Lab, id: "runner-other", max_children: 8}, id: :other_lab)
+    cold_root = Path.join(context.tmp_dir, "cold")
+    warm_root = Path.join(context.tmp_dir, "warm")
+    File.mkdir_p!(cold_root)
+    File.mkdir_p!(warm_root)
+
+    {:ok, cold_host} =
+      Host.new(
+        modules: [{RoomComponent, [temperature: 11.0]}],
+        instance: context.lab,
+        work_root: cold_root,
+        dependency_versions: %{"wotex_runtime" => "0.1.0"}
+      )
+
+    {:ok, warm_host} =
+      Host.new(
+        modules: [{RoomComponent, [temperature: 33.0]}],
+        instance: other,
+        work_root: warm_root,
+        dependency_versions: %{"wotex_runtime" => "0.1.0"}
+      )
+
+    {:ok, definition} =
+      definition([
+        step("temperature", "room.read", "read", %{"property" => "temperature"}),
+        step("hold", "room.util", "sleep", 200, ["temperature"])
+      ])
+
+    {:ok, scenario} = scenario(definition)
+    assert {:ok, cold} = Runner.start(scenario, definition, cold_host)
+    assert {:ok, warm} = Runner.start(scenario, definition, warm_host)
+
+    assert eventually(fn ->
+             length(role_children(context.lab, :things)) == 1 and
+               length(role_children(other, :things)) == 1
+           end)
+
+    assert {:ok, cold_status} = Runner.await(cold, 2_000)
+    assert {:ok, warm_status} = Runner.await(warm, 2_000)
+    assert {cold_status.outcome, warm_status.outcome} == {:pass, :pass}
+    assert cold_status.results["temperature"] == 11.0
+    assert warm_status.results["temperature"] == 33.0
+    assert role_children(context.lab, :things) == []
+    assert role_children(other, :things) == []
+    assert File.ls!(cold_root) == []
+    assert File.ls!(warm_root) == []
+    assert Application.get_all_env(:wotex_lab) == environment
+  end
+
   test "preflight rejects unsupported capabilities and bad fixtures before starting a child",
        context do
     {:ok, host} = host(context, component: [receiver: self()])

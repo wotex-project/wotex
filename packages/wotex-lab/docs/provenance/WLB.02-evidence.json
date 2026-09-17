@@ -1,0 +1,137 @@
+{
+  "assertions": [
+    {
+      "id": "WLB-C02:closed-descriptor",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:identical-frontend-descriptors",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:preflight-before-startup",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:concurrent-attempt-isolation",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:independent-plugin-hosts",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:partial-startup-unwind",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:exhausted-limits",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:callback-failures",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:cancellation-and-late-results",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:receiver-death-and-forced-kill",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:deterministic-replay",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:no-leaked-children-or-files",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C02:manifest-integrity",
+      "status": "pass"
+    }
+  ],
+  "attempt": 1,
+  "budgets": {
+    "children_per_role": 128,
+    "cleanup_ms": 5000,
+    "ingress_bytes": 1048576,
+    "max_steps": 100,
+    "queued_deliveries": 1024,
+    "reconnect_attempts": 100,
+    "wall_ms": 60000
+  },
+  "cleanup": {
+    "details": {
+      "children": 0,
+      "work_files": 0
+    },
+    "status": "ok"
+  },
+  "dependencies": [
+    {
+      "archive": "missing",
+      "name": "wotex",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_nx",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_runtime",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
+      "name": "nx",
+      "version": "0.13.1"
+    },
+    {
+      "archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1",
+      "name": "telemetry",
+      "version": "1.4.2"
+    },
+    {
+      "archive": "sha256:b0c823996102bcd0239b3c2444eb00409b72f6a140c1950bc8b457d836b30684",
+      "name": "jason",
+      "version": "1.4.5"
+    }
+  ],
+  "durations": {
+    "run_ms": 1600
+  },
+  "fixtures": {
+    "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
+  },
+  "inputs": [
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 mix test test/wotex/lab/runner_test.exs test/wotex/lab/scenario_test.exs test/wotex/lab/scenario_frontends_test.exs --seed 1",
+    "command:hosts/workbench:WOTEX_PATH_DEPS=1 mix test test/wotex_lab_workbench_web/control_controller_test.exs --seed 1",
+    "workbench-lock:sha256:aa636355943bef14952b7be7cf324fd24a787c5d6a1391b838a56039ec231093",
+    "frontends:cli+mcp-resource+workbench-control-api+cookbook",
+    "exclusions:runner-allocates-no-broker-topic-or-repository-context",
+    "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
+  ],
+  "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
+  "outcomes": {
+    "admitted_scenarios": 16,
+    "frontends": 4,
+    "test_count": 30,
+    "workbench_test_count": 2
+  },
+  "revision": "ad723e109ade84bf74cda59d5a5afa6cbdabebb4",
+  "scenario_id": "WLB.02-scenarios-and-reference-components",
+  "schema_version": "1.0.0",
+  "seed": 1,
+  "source_tree_digest": "sha256:b95c2e37c5a85673a836829acd2f69803906bf77e84766b0e2d688040e39b73b",
+  "toolchain": {
+    "backend": "BEAM-supervision",
+    "elixir": "1.20.2",
+    "otp": "29",
+    "platform": "aarch64-apple-darwin"
+  }
+}

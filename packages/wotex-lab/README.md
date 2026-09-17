@@ -336,10 +336,9 @@ query budgets, isolation, privacy, components and acceptance tests.
 | `adoption_status` | `no_reference`, `reference_available`, `artifact_verified`: external consumption proof |
 
 `planned` means an accepted contract with no implementation, not a deferred
-milestone. The scenario runner is implemented with partial cross-frontend
-evidence. The small OTP foundation and all six required local Nx lanes have
-complete content-bound evidence; wider upstream and release programmes remain
-partial. No entry claims artifact verification. The
+milestone. The small OTP foundation, the scenario runner with its
+cross-frontend descriptors and all six required local Nx lanes have complete
+content-bound evidence; wider upstream and release programmes remain partial. No entry claims artifact verification. The
 [source baseline](docs/provenance/standards-and-dependencies.md) records the
 materials inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
