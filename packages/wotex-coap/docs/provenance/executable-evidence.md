@@ -617,7 +617,7 @@ fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
 arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 12 same-stack OSCORE
-tests, 8 lifecycle stress tests and 12 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
+tests, 8 lifecycle stress tests, 2 saturation tests and 12 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
 peers and zero retained processes, ports or library-state resources.
 
 `test/software/lifecycle_stress_test.exs` executes the WCO-C09 matrix once per
@@ -816,6 +816,24 @@ still cancels. F24 replaces the corpus's abstract `session_lost` failures with t
 authenticated 4.04 notifications: one `observation_failed` terminal follows, the
 second writes nothing and the helper exits 0. A helper that keeps a second
 pending Event report fails F05. F07 and the helper half of F15 remain unexecuted.
+
+`test/software/native_saturation_test.exs` suspends the actual `Native.Connection`
+owner with `:sys.suspend/1` after a protected subscription is established against
+the ExUnit RFC 8613 endpoint. The peer then sends 40 non-confirmable notifications
+while the test samples the owner's mailbox every 10 ms for 600 ms and counts newline-
+terminated Port frames by type. For a Property subscription the report frames reach
+exactly eight and never exceed it, at most one in-flight credit reply accompanies
+them, no other frame appears, the Port output queue stays empty and the buffered
+bytes stay under eight 131,072-byte frames. A 4.04 notification then adds exactly
+one terminal frame beside the full report window; after resume the receiver gets at
+most eight values and the terminal error, and the owner exits within 1,100 ms. For
+an Event subscription the eighth report is followed by one
+`overlapping_event_report` terminal. Killing that suspended owner makes the helper
+send its exit cancellation, which the peer receives and verifies with inner Observe
+1, and the helper process is gone within 1,100 ms. A helper whose credit window is
+16 fails both tests. This lane does not also saturate the OS pipe, because the
+runtime keeps draining the Port; `native-worker-output-saturation-v1.json` covers
+that pipe condition.
 
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own

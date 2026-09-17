@@ -19,7 +19,7 @@ active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup, token-matched cancellation and
 best-effort established-observation cancellation on owner EOF. The remaining
-protected fault matrix, Port-mailbox measurement and full matrix remain planned
+protected fault matrix and full matrix remain planned
 contracts. The native build, software build, current independent UDP/DTLS
 software-run cohort and same-stack OSCORE software-run cohort execute;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
@@ -245,8 +245,12 @@ variant fills the actual owner output pipe to `EAGAIN`, stops owner reads and
 dispatches fourteen protected 16 KiB notifications across two credit intervals.
 Their base64 payload bytes exceed custody's 262,144-byte output capacity. Network
 progress and the same cancellation/cleanup bound hold under that backpressure.
-Actual BEAM Port-mailbox sampling and reserved-control delivery with both
-channels saturated remain unaccepted. The event loop waits on libcoap network
+The software run suspends the actual native owner and samples its mailbox while
+a protected peer sends notifications: at most eight report frames and one
+in-flight credit reply wait there, a Property terminal still arrives through its
+reserved control slot with the window full, and killing the suspended owner
+cancels the observation and reaps the helper within C03. That lane does not also
+fill the OS pipe, because the runtime keeps draining the Port. The event loop waits on libcoap network
 readiness and its next timer together with the owner pipes, so no fixed owner
 poll interval paces a protected exchange; the harness bounds 32 sequential
 protected GET exchanges below one second. Each session seeds libcoap's token
@@ -402,7 +406,7 @@ only a consumed contiguous prefix. A proposal remains in flight until its exact
 successful credit response is recorded. Its tests execute the owner-side
 accounting component of F15. `Native.Connection` adds process-level receiver
 admission, inline/streamed report delivery and in-flight-credit cancellation;
-live native replay and Port mailbox saturation remain acceptance obligations.
+live native replay remains an acceptance obligation.
 
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte
@@ -663,7 +667,8 @@ Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
 15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 8-test
-stress cohort and 12-test native corpus cohort. The 47-test run passes on macOS
+stress cohort, 2-test saturation cohort and 12-test native corpus cohort. The
+49-test run passes on macOS
 arm64; the earlier 33-test run passes inside Linux arm64 containers on both
 required runtimes, whose builds compile the native vectors with ASan/UBSan. The remaining OSCORE independence, native fault corpus and
 clean-package matrix retains planned status until those assertions execute. Earlier Python-run results validate their historical cohort

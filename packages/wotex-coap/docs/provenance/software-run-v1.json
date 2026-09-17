@@ -17,17 +17,17 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "fd24239f7fb8afb6d7ea1727f8a7e5a3931db260b86671f624b75a7045214d3a",
-    "peer_executable_sha256": "65952c33ba81c13d0ea0e685a2395fba64ede33e4933b6000eb6afb7c53cbc24",
+    "native_helper_sha256": "c49e6399f43242845b0fe7699702adb6419fbf108b3363da3fa2d319fa3884f2",
+    "peer_executable_sha256": "f00b02ecfa73fbe4a12512bb6b452b633a6d706ba7a26ed5d8960a43d2eac57c",
     "version": "4.3.5"
   },
   "source_identity": {
-    "aggregate_sha256": "b30380fc33e49c9e253a1708f48bbb30c012c8fcb4b358e824fd3b1e9e1f88a4",
+    "aggregate_sha256": "6c81d80a81a4c0daa05bb2ebfde9662a6799767aa209988cf54ca4a884b1a013",
     "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
     "selected_files": {
       "docs/specs/fixtures/native-v1.json": "c3ca8726cdc18d38bdc5f26955a385355b20d7eb6dd3cab5162632c2f4a18d96",
       "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
-      "lib/wotex/coap/software/run.ex": "7590a9b760c66d482449808dc63302ab4226ddc1281dba6e6759bf2651251300",
+      "lib/wotex/coap/software/run.ex": "64be6f2a03921a43f288dbfe904fb4fe53731d9c396ee78de7b754e08f3c35c8",
       "mix.exs": "bf8e1cab6c097fde6f57bba0c0ee05b713910528b024cd04b10a752a3478f41b",
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5",
       "test/fixtures/dtls_pki/manifest.json": "55efbe5822d3bf3de81fe16fb7e224b84ff3bebb7f9075fd9a65422f133fd08d",
@@ -37,6 +37,7 @@
       "test/interop/oscore_test.exs": "bad235e0d4f17f1ac6346e20f4f3b2942a24ef385c89bfd5696fe469a2e05877",
       "test/software/lifecycle_stress_test.exs": "e40fdbbdc1b4d5120915cafc28fee670e07104e6641271cfcc72a06a4bd062fb",
       "test/software/native_corpus_test.exs": "8276cf4a2e292112d2969a5306d5a1cd71229258480431535938a8127ced02f5",
+      "test/software/native_saturation_test.exs": "69934b7057e9c328ccb3be41e67d1e79bdc8f59797dc5bfe8033a8927c3bbcdd",
       "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
       "test/support/libcoap_peer.ex": "361f280b66191d2d0fdb8f0417e4461b7d924781ce1874434a9f1895833052ea",
       "test/support/oscore.ex": "24e4466d88aecfffaa657035862694bbf0eb6ab6d13330a20fdf4b41d619c20c",
@@ -47,10 +48,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "035886d7f0bc3702744237132d04246cb73bdea23095032057fdf2beb6a384d0",
-    "nested_native_manifest_sha256": "00c658910fcc6ebf221bfce9fbe40c7a4eca784dcdef9de9076e156e4a5ecb88"
+    "manifest_sha256": "0d2a7d207ac6b1aaedf4549baec84c0930f4534ae1405268d336c426979d49a4",
+    "nested_native_manifest_sha256": "3cfbfa06f517a86f47999124e24efc5570e94037d8b61ac5d220bee9b99cb2dd"
   },
-  "result_sha256": "979c70ffe8c1de4ce25786e4cfbb4e6751f1ad60da4e004fea7eaa330fb94e30",
+  "result_sha256": "af12b3f8affeb9a835520894ae6b6ef0ddf8b3a4d65bb9d9f90805ff15cc018e",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -68,6 +69,7 @@
       "test/interop/oscore_test.exs",
       "test/software/lifecycle_stress_test.exs",
       "test/software/native_corpus_test.exs",
+      "test/software/native_saturation_test.exs",
       "--include",
       "interop",
       "--include",
@@ -80,7 +82,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 44579,
+    "elapsed_ms": 51153,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -92,11 +94,12 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "65952c33ba81c13d0ea0e685a2395fba64ede33e4933b6000eb6afb7c53cbc24",
-      "wotex-coap-oscore": "fd24239f7fb8afb6d7ea1727f8a7e5a3931db260b86671f624b75a7045214d3a"
+      "coap-server": "f00b02ecfa73fbe4a12512bb6b452b633a6d706ba7a26ed5d8960a43d2eac57c",
+      "wotex-coap-oscore": "c49e6399f43242845b0fe7699702adb6419fbf108b3363da3fa2d319fa3884f2"
     },
     "scenario_ids": [
       "WCO-C03",
+      "WCO-C05",
       "WCO-C07",
       "WCO-C09",
       "WCO-I02",
@@ -118,17 +121,17 @@
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "b30380fc33e49c9e253a1708f48bbb30c012c8fcb4b358e824fd3b1e9e1f88a4",
+    "source_sha256": "6c81d80a81a4c0daa05bb2ebfde9662a6799767aa209988cf54ca4a884b1a013",
     "status": "passed",
     "test_log": {
-      "bytes": 4180,
+      "bytes": 4205,
       "path": "tests.log",
-      "sha256": "56b440ebc064d38d3bf582c1645d03b103ef9ac2ca064f933fda7ed525b09972"
+      "sha256": "f5c906e33db13beb3c921dc250e3f0a7aba330f1eeb817ce1b8b09b6a806aa46"
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
       "failed": 0,
-      "passed": 47
+      "passed": 49
     }
   },
   "stack_labels": {
@@ -137,31 +140,32 @@
     "test/interop/libcoap_test.exs": "independent libcoap UDP peer",
     "test/interop/oscore_test.exs": "same-stack libcoap OSCORE peer and Mix-built native helper",
     "test/software/lifecycle_stress_test.exs": "independent libcoap UDP, PSK and PKI peers plus the same-stack OSCORE peer, one case per transport and phase group, with an ExUnit raw UDP fault peer",
-    "test/software/native_corpus_test.exs": "Mix-built native helper against a test-owned UDP socket and an ExUnit-owned RFC 8613 endpoint independent of libcoap"
+    "test/software/native_corpus_test.exs": "Mix-built native helper against a test-owned UDP socket and an ExUnit-owned RFC 8613 endpoint independent of libcoap",
+    "test/software/native_saturation_test.exs": "Mix-built native helper behind the public native owner against an ExUnit-owned RFC 8613 endpoint independent of libcoap"
   },
   "resource_trends": {
     "udp": {
       "beam_total_bytes": [
-        77095387,
-        77604339
+        78611169,
+        79234353
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        77329228,
-        77944516
+        78408609,
+        78972337
       ]
     },
     "dtls_pki": {
       "beam_total_bytes": [
-        79299716,
-        79858132
+        80588337,
+        81070577
       ]
     },
     "oscore": {
       "beam_total_bytes": [
-        79606397,
-        79768613
+        80578257,
+        80821937
       ],
       "helper_rss_kib": [
         1920,
@@ -199,7 +203,8 @@
     "Five native-v1 observe commands with an absent, null, 0, \"true\" or {} renew close the helper generation with a nonzero exit, no reply and no datagram to the open peer, while renew false sends the protected registration",
     "A closed OSCORE context reopened in a second helper generation returns fresh_context_required, leaves the registry bytes unchanged and sends no datagram",
     "Against an ExUnit-owned RFC 8613 endpoint independent of libcoap, native-v1 F21 establishes a protected observation whose report carries Observe 9 after the credit reply, F22 ignores a notification protected for the registration during cancellation and confirms the cancel with result null, and F23 returns invalid_observation_response for a registration answered without Observe",
-    "Native-v1 F05 ends an Event subscription with overlapping_event_report after eight credited reports and one pending report, F09 grants no report for replayed or regressing credit and keeps report 13 queued until fresh credit, and F24 emits one observation_failed terminal for two authenticated 4.04 notifications"
+    "Native-v1 F05 ends an Event subscription with overlapping_event_report after eight credited reports and one pending report, F09 grants no report for replayed or regressing credit and keeps report 13 queued until fresh credit, and F24 emits one observation_failed terminal for two authenticated 4.04 notifications",
+    "A suspended native owner holds at most eight report frames and one in-flight credit reply in its mailbox, still receives a terminal through the reserved control slot with the report window full, and a killed suspended owner leaves the helper to cancel the observation and exit within 1100 ms"
   ],
   "unaccepted": [
     "Independent-stack OSCORE interoperability",

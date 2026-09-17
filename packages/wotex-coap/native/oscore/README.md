@@ -91,9 +91,9 @@ for a registration or renewal and none after a pending cancellation.
 The [output-saturation receipt](../../docs/provenance/native-worker-output-saturation-v1.json)
 binds an actual owner pipe filled to `EAGAIN`, fourteen protected 16 KiB
 notifications across two credit intervals, continued network progress and the
-same bounded owner-loss cleanup while report output is backpressured. Actual
-BEAM Port-mailbox sampling and dual-channel reserved-control delivery remain
-separate work.
+same bounded owner-loss cleanup while report output is backpressured. The
+software run separately samples a suspended BEAM owner's Port mailbox at no more
+than eight report frames and delivers a terminal beside the full window.
 
 The [network-wait receipt](../../docs/provenance/native-worker-network-wait-v1.json)
 binds readiness-driven exchange progress. The worker waits on libcoap's epoll

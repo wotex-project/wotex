@@ -10,8 +10,9 @@ production path also executes renewal failures and bounded Property/Event
 overload. Native serial admission, protected wraparound, confirmed in-flight
 renewal cancellation, intervening-notification ordering and owner-EOF cleanup
 for established or pending observations execute. The protected worker also
-progresses under an actually full owner output pipe and tears down within C03;
-BEAM Port-mailbox sampling remains. The independent secure matrix and complete
+progresses under an actually full owner output pipe and tears down within C03,
+and a suspended BEAM owner's Port mailbox holds at most eight report frames. The
+independent secure matrix and complete
 software closure remain targets. Native and software
 build orchestration is implemented with bounded, manifest-bound workspaces and
 native-vector probes. The software-run task now verifies that build and executes
@@ -174,7 +175,8 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 The build and run commands and their task tests pass on macOS arm64. The current
 run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer,
 includes `test/software/lifecycle_stress_test.exs` and
-`test/software/native_corpus_test.exs` and records 47 passing tests;
+`test/software/native_corpus_test.exs` and
+`test/software/native_saturation_test.exs` and records 49 passing tests;
 the run must use the same `OPENSSL_ROOT_DIR` selection as its build. The same two
 commands run inside the `test/software/Dockerfile.linux` environment on both
 required runtimes. The remaining P09 native fault corpus and clean-package matrix
