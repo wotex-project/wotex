@@ -7,7 +7,8 @@ defmodule Wotex.Lab.MCP.Resources do
   are embedded verbatim at compile time (the YAML catalogue as text, the
   provenance index as JSON), so they are served from the compiled package
   without a source tree; fixture manifests and models come from `priv`; design
-  tokens, seam ownership and scenario descriptors are Lab data; Things are the
+  tokens, seam ownership and the admitted scenario descriptors of
+  `Wotex.Lab.Scenario.admitted/0` are Lab data; Things are the
   reference hosts of the session's instance, described by their own Thing
   Description. Nothing is fetched from the network and nothing is executed.
   """
@@ -15,6 +16,7 @@ defmodule Wotex.Lab.MCP.Resources do
   alias Wotex.Lab.DesignSystem
   alias Wotex.Lab.MCP.Seams
   alias Wotex.Lab.Reference.Thing
+  alias Wotex.Lab.Scenario
   alias Wotex.ThingDescription
 
   @max_file_bytes 1_048_576
@@ -48,7 +50,8 @@ defmodule Wotex.Lab.MCP.Resources do
     {"wotex-lab://models", "Formal model manifest", "application/json",
      {:priv, "priv/models/manifest.json"}},
     {"wotex-lab://design-tokens", "Design system tokens", "application/json", :tokens},
-    {"wotex-lab://seams", "Ownership seams", "application/json", :seams}
+    {"wotex-lab://seams", "Ownership seams", "application/json", :seams},
+    {"wotex-lab://scenarios", "Admitted scenario descriptors", "application/json", :scenarios}
   ]
 
   @doc "Lists every resource the session can read."
@@ -86,6 +89,13 @@ defmodule Wotex.Lab.MCP.Resources do
 
   defp content(uri, mime, :seams) do
     {:ok, text} = Wotex.JSON.encode(Seams.all())
+    {:ok, [%{"uri" => uri, "mimeType" => mime, "text" => text}]}
+  end
+
+  defp content(uri, mime, :scenarios) do
+    {:ok, text} =
+      Wotex.JSON.encode(%{"scenarios" => Enum.map(Scenario.admitted(), &Scenario.to_map/1)})
+
     {:ok, [%{"uri" => uri, "mimeType" => mime, "text" => text}]}
   end
 

@@ -221,9 +221,18 @@ There is no automatic scenario execution or plugin discovery.
 Wotex.Lab.Scenario.to_map(scenario)
 ```
 
-Descriptors are data. `Wotex.Lab.Runner` executes revision-pinned definitions
-through an explicit trusted-component host with bounded attempts, deadlines,
-faults, assertions, cancellation, cleanup and deterministic logical replay.
+Descriptors are data. `Wotex.Lab.Scenario.admitted/0` holds the admitted
+descriptors, one per cookbook. `mix wotex.lab.scenarios [ID]`, the MCP
+`wotex-lab://scenarios` resource, the Workbench control API and the cookbooks
+read that list, so they present identical descriptors:
+
+```sh
+WOTEX_PATH_DEPS=1 mix wotex.lab.scenarios thermal-nx
+```
+
+`Wotex.Lab.Runner` executes revision-pinned definitions through an explicit
+trusted-component host with bounded attempts, deadlines, faults, assertions,
+observer deliveries, cancellation, cleanup and deterministic logical replay.
 
 ## Architecture
 

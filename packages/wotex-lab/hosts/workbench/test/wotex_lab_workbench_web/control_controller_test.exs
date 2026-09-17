@@ -11,6 +11,9 @@ defmodule WotexLabWorkbenchWeb.ControlControllerTest do
     scenarios = conn |> get("/api/v1/scenarios") |> json_response(200)
     assert length(scenarios["scenarios"]) == 16
 
+    assert scenarios["scenarios"] ==
+             Enum.map(Wotex.Lab.Scenario.admitted(), &Wotex.Lab.Scenario.to_map/1)
+
     assert %{
              "schema_version" => "1.0.0",
              "id" => "thermal-nx",
@@ -29,6 +32,11 @@ defmodule WotexLabWorkbenchWeb.ControlControllerTest do
              recycle(conn)
              |> get("/api/v1/scenarios/not-admitted")
              |> json_response(404)
+
+    assert %{"code" => "invalid_scenario_id", "phase" => "control_api"} =
+             recycle(conn)
+             |> get("/api/v1/scenarios/" <> String.duplicate("a", 129))
+             |> json_response(400)
 
     catalogue = conn |> recycle() |> get("/api/v1/metrics/catalogue") |> json_response(200)
     assert catalogue["schema_version"] == "1.0.0"

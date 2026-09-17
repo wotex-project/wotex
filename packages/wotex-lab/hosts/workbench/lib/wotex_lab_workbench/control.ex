@@ -9,7 +9,6 @@ defmodule WotexLabWorkbench.Control do
 
   alias Wotex.Lab.Error
   alias Wotex.Lab.Evidence.Record
-  alias Wotex.Lab.Graph.Descriptors
   alias Wotex.Lab.Metrics.Catalogue
   alias Wotex.Lab.Scenario
   alias WotexLabWorkbench.Room
@@ -17,19 +16,17 @@ defmodule WotexLabWorkbench.Control do
   @doc "Returns every admitted Lab scenario as the versioned public descriptor."
   @spec scenarios() :: [map()]
   def scenarios do
-    Enum.map(Descriptors.scenarios(), &scenario_map/1)
+    Enum.map(Scenario.admitted(), &Scenario.to_map/1)
   end
 
   @doc "Returns one admitted scenario descriptor by exact identifier."
   @spec fetch_scenario(term()) :: {:ok, map()} | {:error, Error.t()}
-  def fetch_scenario(id) when is_binary(id) and byte_size(id) <= 128 do
-    case Enum.find(Descriptors.scenarios(), &(&1.id == id)) do
-      nil -> {:error, error(:unknown_scenario, "scenario is not admitted")}
-      descriptor -> {:ok, scenario_map(descriptor)}
+  def fetch_scenario(id) do
+    case Scenario.fetch_admitted(id) do
+      {:ok, scenario} -> {:ok, Scenario.to_map(scenario)}
+      {:error, %Error{} = error} -> {:error, %{error | phase: :control_api}}
     end
   end
-
-  def fetch_scenario(_id), do: {:error, error(:invalid_scenario_id, "scenario id is malformed")}
 
   @doc "Returns one evidence record retained by the supplied room and exact digest."
   @spec fetch_evidence(pid(), term()) :: {:ok, map()} | {:error, Error.t()}
@@ -58,19 +55,6 @@ defmodule WotexLabWorkbench.Control do
       "schema_version" => Catalogue.version(),
       "metrics" => Enum.map(Catalogue.metrics(), &metric_map/1)
     }
-  end
-
-  defp scenario_map(descriptor) do
-    {:ok, scenario} =
-      Scenario.new(
-        id: descriptor.id,
-        title: descriptor.title,
-        capabilities: descriptor.capabilities,
-        seed: 1,
-        max_steps: max(length(descriptor.steps), 1)
-      )
-
-    Scenario.to_map(scenario)
   end
 
   defp metric_map(metric) do

@@ -1,6 +1,6 @@
 # WLB.02: Scenarios and reference components
 
-Specification version: 0.1.1. Contract: accepted.
+Specification version: 0.2.0. Contract: accepted.
 
 ## Public descriptor foundation
 
@@ -17,6 +17,16 @@ The descriptor is serializable intent. It MUST NOT contain modules, callbacks,
 PIDs, credentials or executable strings. Network input MUST NOT create atoms.
 Construction does not execute steps, enforce a runtime timeout or seed global
 random state. A descriptor cannot establish that its requested capability exists.
+
+`admitted/0` returns the admitted descriptors, one per WLB.07 cookbook row in
+catalogue order, and `fetch_admitted/1` selects one by exact identifier. An
+admitted descriptor uses seed 1 and a step budget equal to its required step
+count. Every frontend reads this single source: `mix wotex.lab.scenarios [ID]`
+prints the JSON document `{"scenarios": [...]}` or one descriptor, the MCP
+`wotex-lab://scenarios` resource serves the same document, the optional
+Workbench control API returns the same maps, and a cookbook fetches its own
+descriptor. Unknown and malformed identifiers are `unknown_scenario` and
+`invalid_scenario_id`.
 
 ## Execution contract
 

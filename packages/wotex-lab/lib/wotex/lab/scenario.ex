@@ -16,9 +16,15 @@ defmodule Wotex.Lab.Scenario do
   must reconstruct and validate boundary input, match requested capabilities
   to its reviewed configuration, and supply the revision-pinned scenario
   definition and resource budgets separately.
+
+  `admitted/0` and `fetch_admitted/1` are the single source of the admitted
+  descriptors. The `mix wotex.lab.scenarios` task, the MCP
+  `wotex-lab://scenarios` resource, the optional Workbench control API and the
+  cookbooks all read them, so every frontend presents identical descriptors.
   """
 
   alias Wotex.Lab.{Error, Options}
+  alias Wotex.Lab.Graph.Descriptors
 
   @typedoc "Version-one descriptor; construct through `new/1`."
   @opaque t :: %__MODULE__{
@@ -58,6 +64,27 @@ defmodule Wotex.Lab.Scenario do
     }
   end
 
+  @doc """
+  Returns the admitted descriptors, one per cookbook row, in catalogue order.
+
+  Each admitted descriptor uses seed 1 and a step budget equal to its required
+  step count. A host that needs another seed constructs a new descriptor.
+  """
+  @spec admitted() :: [t()]
+  def admitted, do: Enum.map(Descriptors.scenarios(), &admitted_descriptor/1)
+
+  @doc "Returns one admitted descriptor by its exact identifier."
+  @spec fetch_admitted(term()) :: {:ok, t()} | {:error, Error.t()}
+  def fetch_admitted(id) when is_binary(id) and byte_size(id) <= 128 do
+    case Enum.find(Descriptors.scenarios(), &(&1.id == id)) do
+      nil -> {:error, Error.new(:unknown_scenario, :construction, "scenario is not admitted")}
+      descriptor -> {:ok, admitted_descriptor(descriptor)}
+    end
+  end
+
+  def fetch_admitted(_),
+    do: {:error, Error.new(:invalid_scenario_id, :construction, "scenario id is malformed")}
+
   @doc false
   @spec revalidate(term()) :: {:ok, t()} | {:error, Error.t()}
   def revalidate(%__MODULE__{} = scenario) do
@@ -76,6 +103,19 @@ defmodule Wotex.Lab.Scenario do
 
   def revalidate(_),
     do: {:error, Error.new(:invalid_scenario, :preflight, "scenario is invalid")}
+
+  defp admitted_descriptor(descriptor) do
+    {:ok, scenario} =
+      new(
+        id: descriptor.id,
+        title: descriptor.title,
+        capabilities: descriptor.capabilities,
+        seed: 1,
+        max_steps: max(length(descriptor.steps), 1)
+      )
+
+    scenario
+  end
 
   defp valid_fields?(%{id: id, title: title, capabilities: caps, seed: seed, max_steps: steps}) do
     Options.identifier?(id) and is_binary(title) and byte_size(title) in 1..256 and

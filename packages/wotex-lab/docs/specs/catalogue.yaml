@@ -28,7 +28,7 @@ specifications:
       - "test/wotex/lab/wlb01_evidence_manifest_test.exs"
     compatibility_classification: The initial 0.1 API and isolated OTP lifecycle are unchanged; the fixed-seed source cohort now has a content-bound complete local evidence record. Artifact and runtime-cohort adoption remain WLB.08 obligations.
   - id: WLB.02
-    version: "0.1.1"
+    version: "0.2.0"
     path: docs/specs/WLB.02-scenarios-and-reference-components.md
     implementation_status: implemented
     evidence_status: partial
@@ -51,10 +51,13 @@ specifications:
       - "Wotex.Lab.Runner.Definition"
       - "Wotex.Lab.Runner.Host"
       - "Wotex.Lab.Runner.Recording"
+      - "Mix.Tasks.Wotex.Lab.Scenarios"
     executable_evidence:
       - "test/wotex/lab/scenario_test.exs"
       - "test/wotex/lab/runner_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/scenario_frontends_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/control_controller_test.exs"
+    compatibility_classification: Initial 0.1 API with additive admitted-descriptor functions and the `mix wotex.lab.scenarios` task; the CLI, MCP resource, Workbench control API and cookbooks read one admitted list. Runner cleanup and observer deliveries now fail closed at their budgets. Full spec and evidence obligations apply independently of source coverage.
   - id: WLB.03
     version: "1.5.1"
     path: docs/specs/WLB.03-nx-experiments.md
@@ -211,7 +214,7 @@ specifications:
       - "priv/conformance/native/tests/lifecycle.rs"
     compatibility_classification: Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling. The main repository gate now executes its locked unit and feature-gated lifecycle tests in a private cleaned target; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
-    version: "0.4.4"
+    version: "0.4.5"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
     implementation_status: partial
     evidence_status: partial
@@ -252,7 +255,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/control_controller_test.exs"
       - "bin/generate_typescript_client.exs"
       - "clients/typescript/test/client.test.mjs"
-    compatibility_classification: The Nerves/MCP notebook now identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
+    compatibility_classification: MCP resources now include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. The Nerves/MCP notebook identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
     version: "0.9.2"
     path: docs/specs/WLB.08-distribution-and-compatibility.md

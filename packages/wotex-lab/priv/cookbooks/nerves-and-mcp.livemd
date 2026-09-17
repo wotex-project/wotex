@@ -80,7 +80,7 @@ dependencies =
   end
 
 record_fields = %{
-  scenario_id: "nerves-smoke",
+  scenario_id: "nerves-and-mcp",
   revision: "unrecorded",
   attempt: 1,
   source_tree_digest: Digest.bytes("source tree not digested in this notebook"),
@@ -113,18 +113,13 @@ record_fields = %{
 ```
 
 The scenario descriptor an assistant would list: data with string ids and
-capabilities, a seed and a step budget, and no executable authority.
+capabilities, a seed and a step budget, and no executable authority. It comes
+from `Scenario.admitted/0`, the same source `mix wotex.lab.scenarios`, the MCP
+`wotex-lab://scenarios` resource and the Workbench control API read, so every
+frontend lists this exact descriptor.
 
 ```elixir
-{:ok, scenario} =
-  Scenario.new(
-    id: "nerves-smoke",
-    title: "Boot, run the thermal foundation, reconnect",
-    capabilities: ["nx.encode", "nx.evaluate", "nx.decode", "runtime.loopback"],
-    seed: 42,
-    max_steps: 100
-  )
-
+{:ok, scenario} = Scenario.fetch_admitted("nerves-and-mcp")
 descriptor = Scenario.to_map(scenario)
 ```
 
@@ -182,7 +177,7 @@ public? = not (encoded =~ "/Users") and not (encoded =~ "/home") and not (encode
 | `stylesheet-scoped` | Scoped to `.wotex-lab`, no `:root`, no `url(`, every token emitted |
 | `evidence-record-digest` | The canonical digest is stable across two equal records and the record reads back |
 | `archive-missing-stated` | Every dependency states `:missing`; an omitted field is `:archive_evidence_unstated` |
-| `scenario-descriptor-data` | The descriptor is a string-keyed map with schema version `1.0.0` and hidden execution fields are refused |
+| `scenario-descriptor-data` | The admitted `nerves-and-mcp` descriptor is a string-keyed map with schema version `1.0.0` from the shared admitted list, and hidden execution fields are refused |
 
 ```elixir
 %{
@@ -201,6 +196,7 @@ public? = not (encoded =~ "/Users") and not (encoded =~ "/home") and not (encode
       secret_code == :not_public_evidence,
   "scenario-descriptor-data" =>
     descriptor["schema_version"] == "1.0.0" and Enum.all?(Map.keys(descriptor), &is_binary/1) and
+      descriptor["id"] == "nerves-and-mcp" and descriptor in Enum.map(Scenario.admitted(), &Scenario.to_map/1) and
       scenario_code == :invalid_options
 }
 ```
