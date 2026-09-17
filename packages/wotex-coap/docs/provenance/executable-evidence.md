@@ -617,7 +617,7 @@ fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
 arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 12 same-stack OSCORE
-tests, 8 lifecycle stress tests and 9 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
+tests, 8 lifecycle stress tests and 12 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
 peers and zero retained processes, ports or library-state resources.
 
 `test/software/lifecycle_stress_test.exs` executes the WCO-C09 matrix once per
@@ -800,9 +800,22 @@ notification writes nothing, and a second cancel returns `invalid_request` witho
 a datagram. In F23 a registration answered without Observe returns
 `invalid_observation_response` and the helper exits 0. A helper restoring the
 earlier rule that OSCORE failures end a pending request returns
-`security_handshake_failed` for F22. F05, F07, F09, F24 and the helper half of F15
-remain unexecuted; F05 and F24 name `session_lost`, a Runtime transport status
-rather than a native terminal code.
+`security_handshake_failed` for F22.
+
+The credit and loss traces use the same peer. The acknowledged registration
+response is the first produced report, and later reports are non-confirmable
+notifications with increasing Partial IVs. In F05 an Event subscription with
+eight credits writes eight reports; the ninth waits in the pending slot and the
+tenth ends the subscription with `overlapping_event_report`, a terminal without
+`report_seq`, after which the helper exits 0. The corpus had named that terminal
+`session_lost`, which is a Runtime transport status, not a native code. In F09
+eight and then four reports follow credit 0 and 4; replayed and regressing
+credit (4, 2, 0) returns `result: null` without releasing a report, a thirteenth
+report waits, credit 12 then releases exactly report 13, and the subscription
+still cancels. F24 replaces the corpus's abstract `session_lost` failures with two
+authenticated 4.04 notifications: one `observation_failed` terminal follows, the
+second writes nothing and the helper exits 0. A helper that keeps a second
+pending Event report fails F05. F07 and the helper half of F15 remain unexecuted.
 
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own

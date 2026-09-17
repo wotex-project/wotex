@@ -167,6 +167,80 @@ defmodule Wotex.CoAP.NativeCorpusTest do
     assert expected["subscriptions_after"] == 0
   end
 
+  test "WCO-C05 WCO-N02 WCO-N-F05 a second pending Event report ends the subscription",
+       context do
+    corpus = fixture("WCO-N-F05")
+    assert corpus["operation"] == "report_credit_trace"
+    expected = corpus["expected"]
+    state = establish(context, "overlap", "event")
+
+    {state, emitted} = run_trace(corpus["input"]["steps"], state)
+    lines = Enum.concat(emitted)
+    assert Enum.all?(credit_replies(lines), &(&1["ok"] == true))
+    assert length(reports(lines)) == expected["report_frames"]
+    assert [terminal] = terminals(lines)
+    assert length([terminal]) == expected["terminal_frames"]
+    assert terminal["value"] == %{"code" => expected["terminal"]}
+    refute Map.has_key?(terminal, "report_seq")
+
+    # The terminal closes the generation, so neither a queued report nor the
+    # subscription survives.
+    assert {<<>>, 0} = await_exit(state.port)
+    assert expected["queued_reports"] == 0 and expected["subscriptions_after"] == 0
+  end
+
+  test "WCO-C05 WCO-N02 WCO-N-F09 replayed and regressing credit grants no report", context do
+    corpus = fixture("WCO-N-F09")
+    assert corpus["operation"] == "report_credit_replay_trace"
+    expected = corpus["expected"]
+    state = establish(context, "replay", "event")
+
+    {state, emitted} = run_trace(corpus["input"]["steps"], state)
+    lines = Enum.concat(emitted)
+    assert Enum.all?(credit_replies(lines), &(&1["ok"] == true))
+    sequences = Enum.map(reports(lines), & &1["report_seq"])
+    assert sequences == Enum.to_list(1..expected["report_frames"])
+    assert Enum.max(sequences) == expected["highest_assigned_seq"]
+    assert state.acknowledged == expected["acknowledged_seq"]
+    assert state.acknowledged + 8 - Enum.max(sequences) == expected["unused_report_credit"]
+    assert length(terminals(lines)) == expected["terminal_frames"]
+
+    # Fresh credit releases exactly the queued report on the live subscription.
+    command(state.port, "credit-release", "credit", %{"generation" => 1, "ack_seq" => 12})
+    {state, released} = collect(state)
+    assert [release | queued] = released
+    assert release == success("credit-release")
+    assert length(queued) == expected["queued_reports"]
+    assert Enum.map(queued, & &1["report_seq"]) == [13]
+    command(state.port, "cancel", "cancel", %{"subscription_id" => "17", "generation" => 1})
+    assert {:ok, cancellation} = OSCOREPeer.receive_request(state.peer)
+    OSCOREPeer.respond(state.peer, cancellation, code: 69)
+    assert {_, [cancelled]} = collect(state)
+    assert cancelled == success("cancel")
+    assert expected["subscriptions_after"] == 1
+    Port.close(state.port)
+  end
+
+  test "WCO-C04 WCO-N02 WCO-N-F24 repeated established failure emits one terminal", context do
+    [establish, loss] = Enum.map(~w(WCO-N-F21 WCO-N-F24), &fixture/1)
+    assert loss["operation"] == "established_loss_trace"
+    peer = OSCOREPeer.open(context.secret, <<1>>, <<0>>)
+    on_exit(fn -> OSCOREPeer.close(peer) end)
+    port = open_worker(Map.put(context, :peer_port, peer.port), "loss", 1)
+    state = %{port: port, peer: peer, requests: %{}, buffer: <<>>, acknowledged: nil}
+    {state, _} = run_trace(establish["input"]["steps"], state)
+
+    {state, emitted} = run_trace(loss["input"]["steps"], state)
+    expected = resolve(loss["expected"], state)
+    assert Enum.concat(emitted) == expected["stdout"]
+    assert [[_], []] = emitted
+    assert length(expected["stdout"]) == expected["terminal_frames"]
+    refute Map.has_key?(hd(expected["stdout"]), "report_seq")
+    assert expected["report_credit_consumed"] == 0
+    assert {<<>>, 0} = await_exit(state.port)
+    assert expected["subscriptions_after"] == 0 and expected["generation_closed"]
+  end
+
   defp run_trace(steps, state) do
     Enum.map_reduce(steps, state, fn step, state ->
       state = step(step, state)
@@ -213,6 +287,38 @@ defmodule Wotex.CoAP.NativeCorpusTest do
     %{state | peer: OSCOREPeer.respond(state.peer, request, fields)}
   end
 
+  defp step(%{"grant_report_credit" => 8}, state),
+    do: step(%{"request_id" => "grant", "ack_seq" => 0}, state)
+
+  defp step(%{"request_id" => id, "ack_seq" => ack}, state) do
+    command(state.port, id, "credit", %{"generation" => 1, "ack_seq" => ack})
+    %{state | acknowledged: max(state.acknowledged || 0, ack)}
+  end
+
+  defp step(%{"suspend_beam_owner" => true}, state), do: state
+
+  defp step(%{"produce_complete_single_frame_reports" => count}, state) do
+    count = if Map.get(state, :initial), do: count - 1, else: count
+    state = Map.put(state, :initial, false)
+
+    Enum.reduce(1..count//1, state, fn _, state ->
+      state = notify(state, code: 69, payload: "r#{state.produced + 1}")
+      Process.sleep(20)
+      state
+    end)
+  end
+
+  defp step(%{"validate_report_frames_through" => sequence}, state) do
+    {state, _} = collect(state)
+    assert Map.get(state, :highest, 0) >= sequence
+    state
+  end
+
+  defp step(%{"authenticated_notification" => %{"code" => code}}, state) do
+    state = Map.put_new(state, :produced, 1)
+    notify(state, code: code, payload: <<>>)
+  end
+
   defp resolve(%{"request" => id, "field" => "message_id"}, state),
     do: state.requests[id].outer.message_id
 
@@ -235,7 +341,16 @@ defmodule Wotex.CoAP.NativeCorpusTest do
   defp collect(state, lines \\ []) do
     case :binary.split(state.buffer, "\n") do
       [line, rest] ->
-        collect(%{state | buffer: rest}, [Jason.decode!(line) | lines])
+        decoded = Jason.decode!(line)
+        state = %{state | buffer: rest}
+
+        state =
+          case decoded do
+            %{"report_seq" => sequence} -> Map.update(state, :highest, sequence, &max(&1, sequence))
+            _ -> state
+          end
+
+        collect(state, [decoded | lines])
 
       [_] ->
         port = state.port
@@ -249,6 +364,60 @@ defmodule Wotex.CoAP.NativeCorpusTest do
   end
 
   defp decode(%{"type" => "bytes", "base64" => value}), do: Base.decode64!(value)
+
+  defp establish(context, name, kind) do
+    peer = OSCOREPeer.open(context.secret, <<1>>, <<0>>)
+    on_exit(fn -> OSCOREPeer.close(peer) end)
+    port = open_worker(Map.put(context, :peer_port, peer.port), name, 1)
+
+    command(port, "17", "observe", %{
+      "path" => "/value",
+      "confirmable" => true,
+      "observation_kind" => kind,
+      "renew" => false
+    })
+
+    assert {:ok, registration} = OSCOREPeer.receive_request(peer)
+
+    peer =
+      OSCOREPeer.respond(peer, registration,
+        code: 69,
+        observe: true,
+        partial_iv: :next,
+        payload: "r1"
+      )
+
+    state = %{
+      port: port,
+      peer: peer,
+      requests: %{"17" => registration},
+      buffer: <<>>,
+      acknowledged: nil,
+      initial: true,
+      produced: 1
+    }
+
+    assert {state, [%{"id" => "17", "ok" => true}]} = collect(state)
+    state
+  end
+
+  defp reports(lines), do: Enum.filter(lines, &(&1["event"] == "report"))
+  defp terminals(lines), do: Enum.filter(lines, &(&1["event"] == "error"))
+  defp credit_replies(lines), do: Enum.filter(lines, &Map.has_key?(&1, "id"))
+
+  defp notify(state, fields) do
+    registration = state.requests["17"]
+    message_id = rem(registration.outer.message_id + 1_000 + state.produced, 65_536)
+
+    peer =
+      OSCOREPeer.respond(
+        state.peer,
+        registration,
+        [type: :non, message_id: message_id, observe: true, partial_iv: :next] ++ fields
+      )
+
+    %{state | peer: peer, produced: state.produced + 1}
+  end
 
   defp fixture(id) do
     @fixture_path

@@ -663,7 +663,7 @@ Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
 15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 8-test
-stress cohort and 9-test native corpus cohort. The 44-test run passes on macOS
+stress cohort and 12-test native corpus cohort. The 47-test run passes on macOS
 arm64; the earlier 33-test run passes inside Linux arm64 containers on both
 required runtimes, whose builds compile the native vectors with ASan/UBSan. The remaining OSCORE independence, native fault corpus and
 clean-package matrix retains planned status until those assertions execute. Earlier Python-run results validate their historical cohort
@@ -673,11 +673,12 @@ The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute
 against the BEAM decoders. F06 and F16-F20 execute through the manifest-bound
 helper in `test/software/native_corpus_test.exs`, whose UDP socket stands in for
-the peer and counts datagrams. F21-F23 run through the same helper against an
+the peer and counts datagrams. F05, F09 and F21-F24 run through the same helper against an
 ExUnit-owned RFC 8613 endpoint that is independent of libcoap and verified
 against the RFC 8613 Appendix C vectors. Because helper tokens are random, those
 traces name the answered request and substitute its wire Message ID and token.
-F05, F07, F09, F24 and the helper half of F15 remain unexecuted. The
+F05 and F24 now name the native terminal codes, because `session_lost` is a
+Runtime transport status. F07 and the helper half of F15 remain unexecuted. The
 ExUnit runner expands `repeat_ascii` to its declared byte count, adds the
 matching generation/id envelope to body events, and compares actual native
 outcomes with `expected`. For the credit traces, `grant_report_credit` means the first `ack_seq: 0`
