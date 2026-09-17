@@ -249,7 +249,6 @@ class PublicPeer:
                 "address_type": properties["AddressType"].value,
             },
             "bus_address": self.address,
-            "executable": "/opt/sdk/bin/python",
         }
 
     async def operation(self, request):

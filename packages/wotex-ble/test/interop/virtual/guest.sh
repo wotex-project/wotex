@@ -51,7 +51,4 @@ test -S /run/wbl/bus
 pids+=("$!")
 /opt/bluez/bin/btmon -w /results/wire.btsnoop > /results/btmon.log 2>&1 &
 pids+=("$!")
-/opt/sdk/bin/python -B -u /opt/wbl/fixture/native_gatt.py
-if test -d /software/latest/wotex-ble; then
-  source /opt/wbl/fixture/public.sh
-fi
+source /opt/wbl/fixture/public.sh

@@ -1,0 +1,16 @@
+# Software fixture BlueZ layer: pinned BlueZ with emulator tools, the unmodified
+# matching hci_vhci module and the independent dbus-next GATT peer environment.
+ARG SYSTEM_IMAGE
+FROM ${SYSTEM_IMAGE}
+COPY bluez.tar.gz /source/bluez.tar.gz
+RUN echo '53a95c3dc9897f617b8bae0121d3f4c55c28a757bd48546c707bd2bbac45af0a  /source/bluez.tar.gz' | sha256sum -c - && tar -xzf /source/bluez.tar.gz -C /source
+WORKDIR /source/bluez-2123ab772fbe97d1369fc9e179ea87c3469cf98f
+RUN ./bootstrap && ./configure --prefix=/opt/bluez --enable-testing --enable-experimental --enable-deprecated --disable-systemd --disable-udev --disable-cups --disable-obex --disable-manpages --disable-mesh && make -j6 && make install && cp emulator/btvirt /opt/bluez/bin/btvirt
+# The distribution omits HCIVHCI. Build the unmodified matching driver with
+# its exact kernel headers/configuration/Module.symvers, never on the host.
+RUN echo 'c0fc1b659e3a2cf9145f8056c80913ac3c5a992013ce72c172795412583bc8dc  /usr/src/linux-source-6.1.tar.xz' | sha256sum -c - && mkdir /module && tar -xJf /usr/src/linux-source-6.1.tar.xz -C /module --strip-components=3 linux-source-6.1/drivers/bluetooth/hci_vhci.c && echo '73e20d1971b77d38f3715990562e2fe8be03043362e01c5b0217c9e920d65e41  /module/hci_vhci.c' | sha256sum -c - && echo 'obj-m := hci_vhci.o' > /module/Makefile && make -C /lib/modules/6.1.0-53-arm64/build M=/module CONFIG_BT_HCIVHCI=m modules && install -m644 /module/hci_vhci.ko /lib/modules/6.1.0-53-arm64/kernel/drivers/bluetooth/hci_vhci.ko && depmod -a 6.1.0-53-arm64
+COPY virtual/requirements.txt /opt/wbl/peer/requirements.txt
+RUN python3 -m venv /opt/peer && /opt/peer/bin/pip install --require-hashes --no-cache-dir -r /opt/wbl/peer/requirements.txt
+COPY virtual /opt/wbl/fixture
+RUN cp /opt/wbl/fixture/bootstrap.sh /bootstrap.sh && chmod 755 /bootstrap.sh && mkdir -p /results
+WORKDIR /results

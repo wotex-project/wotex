@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.19
+  version: 1.0.20
   owner: wotex-ble
   updated: 2026-09-17
 ---
@@ -92,6 +92,32 @@ host then starts once with closed input and must emit exactly the pinned ready
 frame and exit with status 1. The manifest records `advisory_scan:
 "not_performed"`; advisory review remains a separate release obligation. A
 failed build keeps its lock and diagnostic logs and cannot be reused.
+
+### Software fixture workspace
+
+`mix wotex.software.build` (qualified `mix wotex.ble.software.build`) runs from
+a Wotex BLE source checkout with adjacent `wotex` and `wotex-runtime` checkouts.
+It requires `docker` and `cc` on `PATH` and hashes every fixture asset and the
+`mix.exs`, `mix.lock`, `config`, `lib`, `priv` and `test` files of the three
+packages, with modes, before mutation. BlueZ, Hex 2.5.1 and Rebar3 3.27.0 source
+archives must match their SHA-256 pins. Three Linux arm64 images are built in
+order through the command guardian, each within 600 seconds, with tags owned by
+the workspace path: `Dockerfile.system`, `Dockerfile.bluez` and
+`Dockerfile.public`. The public image compiles all three packages in both BEAM
+lanes and runs `mix wotex.native.build`. It is exported to `rootfs.tar` and a
+6 GiB `rootfs.raw` guest disk. `software-manifest.json` binds inputs, tools,
+downloads, images, guest build evidence, the guest native manifest, logs and
+artifact digests; sources that change during the build fail it.
+
+`mix wotex.software.run` verifies that manifest read-only and never builds. For
+each lane it creates a copy-on-write overlay and boots one QEMU TCG guest in an
+owned container within 600 seconds. The guest runs the public BLE and Runtime
+interoperability tests with `WOTEX_REQUIRE_SOFTWARE=1` and native selectors from
+its native build manifest. Owned containers are removed and counted after every
+lane. A lane passes only with an exact guest success record, no kernel panic,
+clean peer release, zero remaining owned containers and exactly the literal
+public test count passed with no other status. Every run keeps a separate
+result directory and `result.json`.
 
 ## WBL-B02 — Typed process boundary
 

@@ -1,0 +1,250 @@
+{
+  "schema": "wotex.ble.software-run-evidence@1",
+  "specification": "WBL.13@1.0.20",
+  "scope": "Mix-built BlueZ 5.85 virtual-controller fixture running the public BLE and Runtime interoperability lanes against the Mix-built native host in both BEAM lanes",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "lib/mix/tasks/wotex.ble.software.build.ex": "7cb786918d6983cce03850ad3324336207fb8a03b5bf091f0616d8c789484d74",
+      "lib/mix/tasks/wotex.ble.software.run.ex": "fb8b211b47967a103d29b4c04e261ae976987b24c24c24afae04a4fd9d09d983",
+      "lib/wotex/ble/software/build.ex": "3ccfc1b22eb3ed68efb43ecd8204ed18edda64525ee4020d78ff6b8e4f07bd20",
+      "lib/wotex/ble/software/fixture.ex": "a43b7a2382a3f4c2b43908f6ffb811c19500252bea85b8d04b29c0b777dd16cf",
+      "lib/wotex/ble/software/operations.ex": "0057d826760a9831cac8e90d4777fdce8ab41e19f8dd0d3087ea3efbc48aa557",
+      "lib/wotex/ble/software/run.ex": "a201937a7beba98ce8dc28b84d9b277a44ea2881afa9783cf7f516a010369189",
+      "priv/bluez/native/bus.hpp": "ac27f5ade5a0d9376ddf3e4a5920b7206f92acdd70b82e78f895715c7fe19145",
+      "priv/bluez/native/custody.c": "d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2",
+      "priv/bluez/native/host.hpp": "d903a9564885126a628067bf23cc5a85bf5d162328502297597e63cfad42e69b",
+      "priv/bluez/native/main.cpp": "761b5bfe8e121ceb2d04b8deec0fc99f0bbd702e33e696591d63c2078c81f1d2",
+      "priv/bluez/native/pairing.hpp": "fc4036b469e1e34c4dda82fa37e107f4ded21628ec41cacb5c4e744f3e4ca8e6",
+      "test/interop/bluez_runtime_test.exs": "038f9906d97e3bc8fd478af86e9a4ae9a7dba92b54de53f6d9d8cb3c3c39e906",
+      "test/interop/bluez_test.exs": "f69de68028a8b3c3fccedc95017264602866aa77b63a4c91aa00e667652cf4cc",
+      "test/interop/virtual/Dockerfile.bluez": "ad9be19b128a1e137c49f560bd29583ae0c40fe7689f9b1759b958b9eb776d7b",
+      "test/interop/virtual/Dockerfile.public": "1e760777ffbf52c09a33ecb0e5eaa10896f3310d26e98c32a5b7550f05f53f99",
+      "test/interop/virtual/Dockerfile.system": "2e1ede7d6782e8fb584e35da23330743bf842e7e6555a4b072000b702ad4a998",
+      "test/interop/virtual/bootstrap.sh": "7fd1bf2481b69d4cd327e75d008fda45f0d0c3230de5165c0cd7476582d1f7ce",
+      "test/interop/virtual/build_manifest.exs": "b24983b585842c91019d29827cf76f971c8b6ab4424283d657f09ed4395e435a",
+      "test/interop/virtual/bus.conf": "49d30001cd1fe98737d42ad726feafb0c0407125941dd834d4e0302d0342e3e7",
+      "test/interop/virtual/dbus_monitor.py": "521625cd67e801e5c706bc94e1fe1992d6451fe9984cf5124955ae944a6452dc",
+      "test/interop/virtual/gatt_peer.py": "276af9998a355161d83f6e3657c99484843cdf57eaaaf0c43cc9bc4d0ad7329f",
+      "test/interop/virtual/guest.sh": "37ea3c7eb55a4db9b2f8d08d06d3a17f1a6d519d9d7ed5a4148bebd84d1a7bb8",
+      "test/interop/virtual/main.conf": "d9138fbd977a539a8688565fd39a95645409baace48db418224d4fe99b9e72af",
+      "test/interop/virtual/make_filesystem.sh": "24f193d3b942e3a83ab0ae210801b2d3fde2e429a46840b760e7e74695a84353",
+      "test/interop/virtual/public.sh": "eed98a408d9299e8f9fef47ed1c3b62319bc47c03298a6d3691202f90a9779ce",
+      "test/interop/virtual/public_peer.py": "2a4e56d84eba587dfd42eea0fbe42e97a6e1e6bdc9ad78bb0ad8e842f8638988",
+      "test/interop/virtual/requirements.txt": "dc0a57e5b5d71e6f23cfe2fb8c115c71918a8648003938427ec0093f2ac1767a",
+      "test/support/software_formatter.ex": "eb9eafd5f38a0736f0ee4ed0a27192fbec6f3488b37b321cc7819dd8f25aba91",
+      "test/support/software_peer.ex": "736cef63919fa9cf919f56f6e078c4424d8ecc28ead05d1d0f5736c8685b65a7"
+    }
+  },
+  "requirements": [
+    "WBL-B01",
+    "WBL-B03",
+    "WBL-B04",
+    "WBL-N03",
+    "WBL-V03",
+    "WBL-V04",
+    "WBL-V05",
+    "WBL-V06",
+    "WBL-V07",
+    "WBL-V08",
+    "WBL-V09",
+    "WBL-V11",
+    "WBL-I02",
+    "WBL-I03",
+    "WBL-I04",
+    "WBL-I05",
+    "WBL-C09"
+  ],
+  "commands": [
+    "WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace ABSOLUTE_WORKSPACE",
+    "WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace ABSOLUTE_WORKSPACE (three times)"
+  ],
+  "host": {
+    "platform": "macOS arm64 with Docker Desktop Linux arm64",
+    "docker_sha256": "70d5a06adf388bd09b652f47ddc9ca31663a3e5353d24188bdb0054b3014ab3e"
+  },
+  "build": {
+    "manifest_sha256": "6c18ecbc2f7db17293d55e1aa95aa5e1fa36a41ef5f671ece8994dcec78f95b8",
+    "images": {
+      "bluez": "sha256:9220ef32c5010cf72654b0e35710235c62ec1a3bf6e0e5d975f4931c120117a8",
+      "public": "sha256:7d08f59a798bdb50cf76c95918dbf655107e30c72469175b9b1213e01782352d",
+      "system": "sha256:ffe9d3da5cf2105086b257a16db67401eeeb37ddd59af73f316a8e80dec0dd91"
+    },
+    "artifacts": {
+      "downloads/bluez.tar.gz": "53a95c3dc9897f617b8bae0121d3f4c55c28a757bd48546c707bd2bbac45af0a",
+      "downloads/hex-source.tar.gz": "bdd6ef2015aa6e50a1c21212e098e8cbe7317da65f067955d154d890532742ae",
+      "downloads/rebar-source.tar.gz": "985cae6e957334cfa549190b9f5efb9185c184a18fc181c87b8dde096ba79f38",
+      "guest-build.json": "b660b58e302cf5922ebb06030debfceabcd810966a2696ede47d83febb877e96",
+      "native-manifest.json": "940f4e53569a7d756cced7d0afa51c7005867ae49abd1e3c53795d3aaf64f6ba",
+      "rootfs.raw": "845cc257f97d3dbd4502eb051463ed6a048e8f29d029c7059b6f39bad88ab1ed",
+      "rootfs.tar": "ea31970c2f0d0da426143602943be2961ad8926667d4f8458b808ec1301e69aa"
+    },
+    "guest": {
+      "bluez": "5.85",
+      "qemu": "QEMU emulator version 7.2.22 (Debian 1:7.2+dfsg-7+deb12u18+b3)",
+      "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "elixir_latest": "Elixir 1.20.2 (compiled with Erlang/OTP 29)",
+      "elixir_lower": "Elixir 1.18.4 (compiled with Erlang/OTP 27)",
+      "sha256": {
+        "/boot/config-6.1.0-53-arm64": "46c1f1aa2acc1777d7e5f02fce773b5a685f00c062d0529557805b3e24804ac2",
+        "/boot/initrd.img-6.1.0-53-arm64": "c344a51dbcfe4a41b3d78acbccee0d0cf291fabb53b15a1bec859982b8fd4e91",
+        "/boot/vmlinuz-6.1.0-53-arm64": "4909442ce8c53a14239e29b0074ca7190733795ecce56b43b0ec8741fa9734da",
+        "/lib/modules/6.1.0-53-arm64/kernel/drivers/bluetooth/hci_vhci.ko": "d4b4dc17af5de3b1e3bac7e5b95a37348986f06e221ae1c1cc80a02cd95c57a7",
+        "/module/hci_vhci.c": "73e20d1971b77d38f3715990562e2fe8be03043362e01c5b0217c9e920d65e41",
+        "/opt/bluez/bin/btmon": "05205eadeb8e7f522818b5878ffd6b49e3944e1807a5fe20725cc5f2201e6ee9",
+        "/opt/bluez/bin/btvirt": "daa11ea0767b307bb44d481c0a641fd3f8e908a6eef7375049c8349cdb45825d",
+        "/opt/bluez/libexec/bluetooth/bluetoothd": "6a793d62c19911f5e4859863d820e7c3c41ca375b0faba28b1b27aeda19b62d8",
+        "/opt/wbl/native/native-manifest.json": "940f4e53569a7d756cced7d0afa51c7005867ae49abd1e3c53795d3aaf64f6ba",
+        "/opt/wbl/native/output/bin/wotex-ble-guardian": "7d7dbf0be43557bcaa9337a009374c421b109b4e4811de5a96c94e16dbf3c9bf",
+        "/opt/wbl/native/output/bin/wotex-ble-host": "e0071e518d9164cccdbc22fc44961af59d7fd7f4eaa4ba2c027ffd24657c4471",
+        "/opt/wbl/native/output/lib/libdbus-1.so.3": "a0b7d157679100ff5b209b0a50cb91dc07c6342978808e2f1d4a5b53bf873afb",
+        "/usr/bin/dbus-daemon": "af2bdccb6f2942f11b6048ac3db69c7cbf283c75094ab2aa49e60c864320b8a7",
+        "/usr/bin/qemu-img": "59c9214d58ef2e3844fc10bc835b01edde6a850bef300169db8898f6263c1bee",
+        "/usr/bin/qemu-system-aarch64": "05d8eba0b9d1b07677aba4d8ef560e63e3ba4e315346a608a7eb5e69cb12a056"
+      }
+    },
+    "native_host_sha256": "e0071e518d9164cccdbc22fc44961af59d7fd7f4eaa4ba2c027ffd24657c4471",
+    "native_target": "aarch64-linux-gnu"
+  },
+  "expected_cases_per_lane": 10,
+  "runs": [
+    {
+      "result": "passed",
+      "result_sha256": "54bf43f40218a19aded9e8cc649e41b922c63670f7f0eb4d559ff83b3d17a48c",
+      "lanes": [
+        {
+          "lane": "latest",
+          "status": "passed",
+          "exunit": {
+            "passed": 10
+          },
+          "elapsed_ms": 74450,
+          "containers_remaining": 0,
+          "peer_clean_release": true,
+          "evidence": {
+            "console.log": "7b05d3d0d423b7d080c55c76fe639462b50529e6d8976a3e6612b3802e3f6a2b",
+            "exunit.json": "1fc6b78f2fdd5258296e2d5a2c7a2e543f585f974c822dd4a6e15c41775bda15",
+            "exunit.log": "d81cacbe056fd60620085f6382748411f07fde06f5b24841ca1a76ce408b4c1d",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "public-peer-result.json": "e5d8484086dde0a624ddebb6292c82621236b9cb04305859dd6e64a57e86a63c",
+            "wire.btsnoop": "c4f4d0d5053b23ec2a65a1a3cb5a8ff97118e1443ba341ae0a156c59e69ea3da"
+          }
+        },
+        {
+          "lane": "lower",
+          "status": "passed",
+          "exunit": {
+            "passed": 10
+          },
+          "elapsed_ms": 71346,
+          "containers_remaining": 0,
+          "peer_clean_release": true,
+          "evidence": {
+            "console.log": "c852b37aa68db6df969835a3b2e0dfe5b63c97b015a60584744a47f320292b8a",
+            "exunit.json": "1fc6b78f2fdd5258296e2d5a2c7a2e543f585f974c822dd4a6e15c41775bda15",
+            "exunit.log": "ea4c296c6ce8805ced3b9140388155a4ac5d371451321a80369e4dcd994f3fea",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "public-peer-result.json": "e5d8484086dde0a624ddebb6292c82621236b9cb04305859dd6e64a57e86a63c",
+            "wire.btsnoop": "06755bf6ad26424457df7d0e5a614652b09c24a52f0078783e83efabb0d6ec14"
+          }
+        }
+      ]
+    },
+    {
+      "result": "passed",
+      "result_sha256": "c6d8134ef3a3e3b7453ab383980e42e0c39adaba4123310f5c3b002650ee603d",
+      "lanes": [
+        {
+          "lane": "latest",
+          "status": "passed",
+          "exunit": {
+            "passed": 10
+          },
+          "elapsed_ms": 84198,
+          "containers_remaining": 0,
+          "peer_clean_release": true,
+          "evidence": {
+            "console.log": "c4c04dc864628a7a74f8b67c16c1021c49444a575fc3872bc95f64f6cd1763ef",
+            "exunit.json": "1fc6b78f2fdd5258296e2d5a2c7a2e543f585f974c822dd4a6e15c41775bda15",
+            "exunit.log": "2121051008beb0366942d3c62749c1c09915e3d1ab76cd46d8ff70252d8b82a2",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "public-peer-result.json": "e5d8484086dde0a624ddebb6292c82621236b9cb04305859dd6e64a57e86a63c",
+            "wire.btsnoop": "8466a5ee5f2fa290487e626ef6b459ed00607f37c26ac0f3280c92676d2067d0"
+          }
+        },
+        {
+          "lane": "lower",
+          "status": "passed",
+          "exunit": {
+            "passed": 10
+          },
+          "elapsed_ms": 72072,
+          "containers_remaining": 0,
+          "peer_clean_release": true,
+          "evidence": {
+            "console.log": "572bbea88f4903b7c999c2f60014eb9b49203f45c6b949e88464a67ddfe3da0e",
+            "exunit.json": "1fc6b78f2fdd5258296e2d5a2c7a2e543f585f974c822dd4a6e15c41775bda15",
+            "exunit.log": "c32bb61189d54b27399c34f4c599b438a8317a13dad102d5d49d8b27e2238606",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "public-peer-result.json": "e5d8484086dde0a624ddebb6292c82621236b9cb04305859dd6e64a57e86a63c",
+            "wire.btsnoop": "3f1aca75a259edc7631925decbc3da214ba2627a21cf91c359017694147203e2"
+          }
+        }
+      ]
+    },
+    {
+      "result": "passed",
+      "result_sha256": "a44f6f0c18526f52c588bd0a0cfc76dda5c0f8d7273504889edb3db38a36ab5c",
+      "lanes": [
+        {
+          "lane": "latest",
+          "status": "passed",
+          "exunit": {
+            "passed": 10
+          },
+          "elapsed_ms": 79831,
+          "containers_remaining": 0,
+          "peer_clean_release": true,
+          "evidence": {
+            "console.log": "bd1d85a239879fd7f4f033f9306f6180820925f4003794e170ac23215170ff77",
+            "exunit.json": "1fc6b78f2fdd5258296e2d5a2c7a2e543f585f974c822dd4a6e15c41775bda15",
+            "exunit.log": "2c5b3d492b368c0763a8b52325c17d4db90f1fd75f99515ea4d6d8056d0ac2bc",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "public-peer-result.json": "e5d8484086dde0a624ddebb6292c82621236b9cb04305859dd6e64a57e86a63c",
+            "wire.btsnoop": "eaef65d4e5e9e714be23695237ef7309da900dc5f7de3ae7140eb7ce8661c65b"
+          }
+        },
+        {
+          "lane": "lower",
+          "status": "passed",
+          "exunit": {
+            "passed": 10
+          },
+          "elapsed_ms": 75166,
+          "containers_remaining": 0,
+          "peer_clean_release": true,
+          "evidence": {
+            "console.log": "bdbcab7df425d22fcf1e08624e8a536485e65d0b6aa90d3d8cc11c0f0366f4e9",
+            "exunit.json": "1fc6b78f2fdd5258296e2d5a2c7a2e543f585f974c822dd4a6e15c41775bda15",
+            "exunit.log": "27470da1f5b556a4be32add06a97c853b4e3c5288ee13094ba4ed17610ae7b7a",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "public-peer-result.json": "e5d8484086dde0a624ddebb6292c82621236b9cb04305859dd6e64a57e86a63c",
+            "wire.btsnoop": "8b2e88a52889a4076065cbcb106d501f7390fec2c7783432ab109ebc7ba2736a"
+          }
+        }
+      ]
+    }
+  ],
+  "labels": [
+    "BlueZ-to-BlueZ virtual controllers with an independent dbus-next GATT application; not an independent protocol stack",
+    "Virtual controllers are software radios; no physical RF evidence",
+    "The Python GATT peer is a permitted independent test peer and does not answer native client IPC"
+  ],
+  "unaccepted": [
+    "Scenarios from the retired Python adapter guest lane not yet ported to ExUnit: wrong pairing challenge, read-caused Value change, stale target before write, and BlueZ link-drain timing",
+    "WBL-C09 1,000-operation, 100 open/close, 100 receiver-death and 32-caller stress in the virtual fixture",
+    "Linux x86_64 guest lane",
+    "Retirement of the Python persistent adapter",
+    "Clean committed-source archive and out-of-tree package gates"
+  ]
+}

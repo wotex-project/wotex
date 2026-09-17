@@ -97,6 +97,8 @@ defmodule WotexBLE.MixProject do
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
       "wotex.native.build": "wotex.ble.native.build",
+      "wotex.software.build": "wotex.ble.software.build",
+      "wotex.software.run": "wotex.ble.software.run",
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
   end

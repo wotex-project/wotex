@@ -5,12 +5,12 @@ native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
 local gate: 9 doctests, 17 properties and 250 tests, 46 declared interoperability/
 hardware exclusions; 58 Python contract tests; 96.2% coverage.
-The [virtual-controller evidence](virtual-controller.md) identifies 15 real BlueZ
-cases with two software controllers. These exercise the Python adapter and a
-shared BlueZ wire stack. They do not execute the accepted C++ .13 backend.
-Public BEAM/Runtime virtual-peer acceptance, native build tasks and complete
-stress/package evidence remain required. Uncommitted fixture work is not
-acceptance evidence.
+The [virtual-controller fixture](virtual-controller.md) and its
+[software run receipt](software-run-v1.json) execute the 10 public BLE and
+Runtime interoperability tests against the Mix-built C++ host, real BlueZ 5.85
+and two virtual controllers in both BEAM lanes. Complete WBL-C09 stress, the
+remaining ported Python-lane scenarios and package evidence remain required.
+Uncommitted fixture work is not acceptance evidence.
 
 Open finding: with a Runtime relay `max_queue_length` of 1, the buffered initial
 report can be rejected as `receiver_overflow` when the opening result is still
@@ -53,7 +53,6 @@ excluded. Native software results require their own immutable manifest.
 | `test/wotex/ble/runtime_integration_test.exs` | `9c32f64eabf16aff5e4121e2508b801ca6efb92975a4614f3aaca6ec6bbed470` |
 | `test/wotex/ble/dbus_bridge_test.exs` | `7caf2b7d067ba761eeadc0d2b8886b8ccb3683012701a6d46c03b2c968c0b96d` |
 | `test/wotex/ble/stream_bridge_test.exs` | `5d6aa2bb8bc287acab7e1a83cac9c8f686767fa6a00ced315d87cf8b10e58246` |
-| `test/interop/virtual/native_gatt.py` | `e188f44614f59ad358658a461949d0346d1795d17062eb4c4ee86bf0ae72c83b` |
 
 ## Native C++ request parsing
 
@@ -180,6 +179,27 @@ Running the default guardian startup and command tests on Linux exposed cleared
 PATH values that stopped GCC from finding `ld`; compilation now keeps PATH.
 The BEAM-launched startup and process-flow executables and x86_64 sanitizer
 lanes remain unaccepted.
+
+## Mix software fixture and virtual-controller lanes
+
+`test/wotex/ble/software_fixture_test.exs` executes the software build and run
+task contracts with deterministic Docker operations: exact arguments, tool
+admission before mutation, fixture input hashing with modes and link rejection,
+pinned download failures, failed image builds with retained lock and log,
+foreign image platforms, malformed guest evidence, sources changed during a
+build, read-only reuse with image and artifact verification, and run rejection
+of failed guests, kernel panics, unreleased peers, incomplete ExUnit counts and
+remaining containers. The Mix tasks report fixed usage and failure messages.
+
+The [software run receipt](software-run-v1.json) records an actual build on
+macOS arm64 with Docker Desktop and three consecutive runs of that verified
+build. Each run boots one QEMU guest per BEAM lane and passes all 10 public
+tests in `bluez_test.exs` and `bluez_runtime_test.exs` against the Mix-built
+native host, with clean peer release, zero guest processes and controllers and
+zero remaining owned containers. These are BlueZ-to-BlueZ virtual-controller
+results with an independent GATT application, not an independent protocol
+stack or physical RF. The first runs exposed the two native close and input
+defects recorded above.
 
 ## Native report reservations
 

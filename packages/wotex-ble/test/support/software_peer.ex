@@ -70,8 +70,26 @@ defmodule Wotex.BLE.SoftwarePeer do
       peer: peer,
       connection: :borrowed,
       bus_address: config["bus_address"],
-      executable: config["executable"],
       timeout: 5000
+    ] ++ native_selectors()
+  end
+
+  # The native host and runtime guardian come from the completed Mix native
+  # build in the guest. The GATT peer configuration never selects the backend.
+  defp native_selectors do
+    workspace = System.fetch_env!("WOTEX_BLE_NATIVE_WORKSPACE")
+    assert Path.type(workspace) == :absolute
+    manifest = Jason.decode!(File.read!(Path.join(workspace, "native-manifest.json")))
+    assert manifest["schema"] == "wotex.native-build" and manifest["package"] == "wotex_ble"
+    binaries = Map.new(manifest["binaries"], &{&1["purpose"], &1})
+    host = binaries["sdk_host"]
+    guardian = binaries["runtime_guardian"]
+
+    [
+      executable: Path.join(workspace, host["path"]),
+      executable_sha256: host["sha256"],
+      guardian: Path.join(workspace, guardian["path"]),
+      guardian_sha256: guardian["sha256"]
     ]
   end
 

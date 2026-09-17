@@ -160,12 +160,16 @@ facilities, missing responses, failed assertions or cleanup failure. Do not
 convert a failed setup to an ExUnit skip. Existing hardware tests require separate
 explicit target configuration and are never selected by this runner.
 
-Use this command contract once the runner is implemented:
+The implemented command contract is:
 
 ```sh
 mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
+
+[WBL.13](../specs/WBL.13-native-backend.md) defines the implemented fixture
+layers, per-lane guest boots and result criteria; the retired Python guest
+runner is not part of this contract.
 
 The runner executes `mix test --include interop --include software --exclude hardware`
 and all required native tests/audits from .10. Add `@tag :software` only to tests

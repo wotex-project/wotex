@@ -1,0 +1,8 @@
+# Software fixture system layer: Debian 12 packages, the pinned guest kernel and
+# QEMU, and both supported BEAM lanes. Built only by mix wotex.software.build.
+FROM hexpm/elixir@sha256:4aa97e06567fc47061ca94f7fcab89157608a03a06a0d0c1282620a77031dbc1 AS lower
+FROM hexpm/elixir@sha256:290e52da1c5d5cbf62344d384387e8bdfa7d8a64784302bb7770e76ad13c88a5
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates build-essential autoconf automake libtool pkg-config libdbus-1-dev libglib2.0-dev libreadline-dev libudev-dev python3 python3-venv qemu-system-arm=1:7.2+dfsg-7+deb12u18+b3 qemu-utils=1:7.2+dfsg-7+deb12u18+b3 linux-image-6.1.0-53-arm64=6.1.187-1 linux-headers-6.1.0-53-arm64=6.1.187-1 linux-source-6.1=6.1.187-1 initramfs-tools kmod iproute2 dbus e2fsprogs cmake ninja-build binutils xz-utils libexpat1-dev && rm -rf /var/lib/apt/lists/*
+COPY --from=lower /usr/local/lib/erlang /opt/lower/erlang
+COPY --from=lower /usr/local/lib/elixir /opt/lower/elixir

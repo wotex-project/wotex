@@ -1,46 +1,44 @@
-# Python adapter virtual-controller evidence
+# Virtual-controller software fixture
 
-`test/interop/virtual_machine.py` builds and runs a disposable ARM64 Linux guest
-with two virtual LE controllers. The first-party `priv/bluez` SDK connects to
-real BlueZ through its own D-Bus sender. A separate fixture implementation of
-BlueZ's GATT server API supplies private UUIDs and values; it does not implement
-or replace the SDK's client boundary. Both wire endpoints use BlueZ, so this is
-same-stack protocol evidence with an independent GATT application provider.
-
-This is scoped Python adapter evidence for WBL-P07 scenarios. Public BEAM/Runtime interoperability,
-the complete software stress/version matrix and final package acceptance remain
-separate required proof. This entry point does not accept WBL-P07 or WBL-P08 as
-a whole. The accepted native/Mix entry points and source profile are in
-[WBL.13](../specs/WBL.13-native-backend.md); this current Python runner is not
-the target orchestration implementation.
+`mix wotex.software.build --workspace ABSOLUTE_PATH` builds a disposable Linux
+ARM64 guest with two virtual LE controllers, and `mix wotex.software.run
+--workspace ABSOLUTE_PATH` boots it once per BEAM lane. The Mix-built native
+host connects to real BlueZ through its own D-Bus sender. A separate fixture
+implementation of BlueZ's GATT server API supplies private UUIDs and values; it
+does not implement or replace the client boundary. Both wire endpoints use
+BlueZ, so this is same-stack protocol evidence with an independent GATT
+application provider. The exact executed cohort is the
+[software run receipt](software-run-v1.json).
 
 ## Explicit invocation
 
-The host needs Python 3.11 or later and Docker with Linux ARM64 execution. The
-build uses pinned base images and downloads the pinned BlueZ archive. The guest
-runs QEMU TCG, without an emulated network adapter or physical Bluetooth controller.
-The workspace must be an absolute disposable directory outside the repository.
-An unrelated nonempty workspace, changed source manifest, changed artifact,
-missing tool or missing guest facility fails. Concurrent runners cannot share
-the same workspace. Reuse checks the artifact hashes and immutable image ID.
+The host needs Docker with Linux ARM64 execution and a C compiler for the
+command guardian. The build requires adjacent `wotex` and `wotex-runtime` source
+checkouts and records every package source, fixture asset, tool, download and
+image identity before creating `software-manifest.json`. The workspace must be
+an absolute disposable directory. An unrelated nonempty workspace, a locked or
+failed build, changed sources, a changed artifact, a missing tool or a missing
+guest facility fails. A completed workspace is verified read-only before every
+run, and each run retains a separate result directory.
 
 ```sh
-python3 test/interop/virtual_machine.py build /absolute/disposable/ble-fixture
-python3 test/interop/virtual_machine.py run /absolute/disposable/ble-fixture
+WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace /absolute/disposable/workspace
+WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/workspace
 ```
 
-The workspace records the source-input hashes, BlueZ archive hash, image ID,
-installed Debian package versions, compiler/SDK versions, kernel/configuration/
-module/binary hashes, and root filesystem hashes. Each run has a separate disk
-overlay, packet capture, bounded peer and D-Bus traces, assertion result and
-host/guest cleanup counters. Failed runs retain their evidence. SDK builds,
-images, logs, disposable bonds and controller state stay in this workspace.
+The build produces three owned images through the command guardian, each within
+ten minutes: `test/interop/virtual/Dockerfile.system` (Debian 12 packages, the
+pinned kernel and QEMU, both BEAM lanes), `Dockerfile.bluez` (BlueZ, virtual HCI
+module and peer environment) and `Dockerfile.public` (pinned Hex and Rebar3,
+all three packages compiled in both lanes and `mix wotex.native.build`). The
+public image is exported to a 6 GiB ext4 guest disk. `build_manifest.exs`
+records BlueZ, QEMU, compiler, BEAM, peer package and kernel/module/binary
+hashes inside the image.
 
 The selected guest uses Debian Linux `6.1.0-53-arm64` (`6.1.187-1`), QEMU
 `7.2.22` (`1:7.2+dfsg-7+deb12u18+b3`), BlueZ source
-`2123ab772fbe97d1369fc9e179ea87c3469cf98f` (5.85), and dbus-next 0.2.3 with
-required package hashes. The Dockerfile pins both Elixir/OTP base images; their
-presence alone is not a completed BEAM matrix result.
+`2123ab772fbe97d1369fc9e179ea87c3469cf98f` (5.85), dbus-next 0.2.3 with required
+package hashes, Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15.
 
 The Debian kernel omits `CONFIG_BT_HCIVHCI`. The fixture builds the unmodified
 matching `hci_vhci.c` against the exact kernel headers/configuration and
@@ -49,53 +47,65 @@ The guest checks `/dev/vhci` and exactly two controller paths under
 `/sys/devices/virtual/bluetooth`. It loads no module into the host kernel.
 The module's unsigned/external taint is recorded in the guest console.
 
+## Run ownership
+
+Each lane creates a copy-on-write disk overlay and boots QEMU TCG in one owned
+container, without a network device or physical Bluetooth controller, within
+ten minutes. The guest starts `btvirt -L -l2`, a private D-Bus daemon,
+`bluetoothd`, `btmon` and the independent GATT peer, then runs
+`test/interop/bluez_test.exs` and `test/interop/bluez_runtime_test.exs` with
+`WOTEX_REQUIRE_SOFTWARE=1` against the native host and guardian named by the
+guest's native build manifest. The host removes and counts owned containers
+after every lane, including failures. A lane passes only when the guest reports
+zero remaining owned processes and virtual controllers, the console has no
+kernel panic, the peer reports clean release and ExUnit records exactly the
+literal public test count as passed with no other status.
+
 ## Assertions and source boundaries
 
-The native lane asserts exact read `3412`, acknowledged write `7856` and
-readback, denied reads, duplicate UUID rejection and explicit instance selection,
-stale/wrong target rejection before a write, equal notifications, equal
-indications and the server's actual `Confirm()` calls. It exercises an independent
-second sender surviving the first sender's cleanup, read-caused Value changes,
-explicit pairing acceptance/rejection/timeout/wrong challenge, and local owner
-cleanup within 1000 ms. The separate BlueZ-managed link drain must finish within
-3500 ms in this pinned VM.
+The public lanes assert exact read `3412`, acknowledged write `7856` and
+readback, denied reads and writes with retained effects, duplicate UUID
+rejection and explicit instance selection, stale generation rejection before a
+write, equal notifications, equal indications and the server's actual
+`Confirm()` calls. They exercise an independent second sender surviving the
+first sender's cleanup, receiver death releasing the CCC session, explicit
+pairing acceptance, rejection and timeout, and real ConsumedThing Property/Event
+values, context, media and error projection.
 
 A read-only private-bus monitor accounts for successful Agent and notification
 control acknowledgements and unique-sender loss. It does not respond to the
 observed calls. Native senders may not call `CancelPairing`, `RemoveDevice` or
-`RequestDefaultAgent`. The fixture uses `RemoveDevice` and
-`RequestDefaultAgent` only for its own disposable peer and Agent. Borrowed native owners may not call `Disconnect`.
-Pinned [`device_request_disconnect`](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/device.c)
-schedules its kernel disconnect through a two-second timer. The library releases
-its sender within the one-second ownership grace; it does not wait for or claim
-an immediate physical disconnect. The fixture records both durations and still
-requires the subsequent BlueZ link drain to complete.
-The guest also requires zero owned processes and zero virtual controllers after
-cleanup; host cleanup requires zero owned containers.
+`RequestDefaultAgent`. The fixture uses `RemoveDevice` and `RequestDefaultAgent`
+only for its own disposable peer and Agent. Borrowed native owners may not call
+`Disconnect`. Pinned [`device_request_disconnect`](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/device.c)
+schedules its kernel disconnect through a two-second timer; the library releases
+its sender within the one-second ownership grace and does not claim an
+immediate physical disconnect.
 
 BlueZ's pinned [`notify_cb` and `write_characteristic_cb`](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/gatt-client.c)
 retain equal values and emit a shared Value property change for each registered
 client callback. With two senders, one ATT notification can therefore produce
-more than one BlueZ property signal for each listener. The fixture counts those
-D-Bus reports separately from wire stimuli. The binding retains the actual
-`bluez_value_change` source; it does not infer a one-to-one ATT delivery count.
+more than one BlueZ property signal for each listener. The binding retains the
+actual `bluez_value_change` source; it does not infer a one-to-one ATT delivery
+count.
 
 The private-bus policy is deliberately limited to this disposable guest's root
 processes. It is a fixture configuration, not a production D-Bus policy example.
 The GATT values and pairing decisions are fixture-owned; no production credentials
 or persisted host bonds are used.
 
-## Executed Python adapter cohort
+## Executed cohorts
 
-The native runner passed all 15 listed cases on the selected ARM64 guest.
-Local sender cleanup took 833.2 ms; BlueZ link drain took 2342.3 ms. The result
-reported two indication confirmations and zero remaining native senders, Agents,
-notification sessions, guest processes, virtual controllers and host containers.
+Three consecutive runs of one verified build pass both lanes, 10 of 10 public
+tests in each, with zero remaining owned containers. Lane durations and evidence
+digests are in the [software run receipt](software-run-v1.json). The first runs
+of this fixture exposed two native host defects during rejected and timed-out
+pairing: link loss relabelled a completed explicit close as `cleanup_timeout`,
+and a closed private sender stopped the host from reading its input. Both have
+native regressions.
 
-- Image ID: `sha256:a4188f75fe57c2647bbe7a081df614b6880ba1c487d9b7488e18e70b71578605`.
-- Assertion report SHA-256: `0cdb3115158fccc2aa7de273525f21a581395c4c9845f4e5fab63d99c3b0fe0a`.
-- Ownership report SHA-256: `cfae775b6e8336e22ce47abc96cb6d7a5313d8337f6711b6cad3cd0cf06ab822`.
-- Packet capture SHA-256: `5915933ecd8ce8bc3c8f851aa391780d54fdc9afb2d3baf6c6a107c268f3331e`.
-
-These are Python adapter/shared-BlueZ results only; the pending public BEAM/Runtime software-peer
-and stress gates above remain required.
+An earlier Python-orchestrated guest ran the retired Python adapter through 15
+cases, including a wrong pairing challenge, read-caused Value changes, stale
+targets and BlueZ link-drain timing. Those results apply only to that adapter.
+Their scenarios that the public ExUnit lanes do not yet cover remain open, as do
+the WBL-C09 stress counts, an x86_64 guest lane and final package gates.
