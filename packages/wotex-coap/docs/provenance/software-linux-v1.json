@@ -4,15 +4,19 @@
   "scope": "mix wotex.software.build and mix wotex.software.run inside Linux arm64 containers on both required Elixir/OTP runtimes, with the Linux ASan/UBSan native vector build",
   "source_identity": {
     "kind": "git working tree copied into each container",
-    "commit": "d8d856f99b4bf38fd5e637bb80b731eda2dedc3b",
-    "untracked_at_run": ["test/software/Dockerfile.linux (environment definition; outside software-run source identity)"],
-    "software_run_aggregate_sha256": "d560d4e061f49dae75203b6465e5bed074b89d3ad34bd1b157fb5cc0b6fa6fcb",
+    "commit": "4325f52b1c6f0bf1a61b2643d513273a47a1234f",
+    "software_run_aggregate_sha256": "b30380fc33e49c9e253a1708f48bbb30c012c8fcb4b358e824fd3b1e9e1f88a4",
     "dockerfile_sha256": "b9bdea4f9c4210ea5464c0abeee4aa471b327e2911dad25d79f77d4fa97e7792"
   },
   "environment": {
     "dockerfile": "test/software/Dockerfile.linux",
     "platform": "Linux arm64 (Docker Desktop VM on macOS arm64)",
-    "packages_recorded_not_locked": {"gcc-12": "12.2.0-14+deb12u1", "cmake": "3.25.1-1", "libssl-dev": "3.0.20-1~deb12u2", "openssl": "3.0.20-1~deb12u2"},
+    "packages_recorded_not_locked": {
+      "gcc-12": "12.2.0-14+deb12u1",
+      "cmake": "3.25.1-1",
+      "libssl-dev": "3.0.20-1~deb12u2",
+      "openssl": "3.0.20-1~deb12u2"
+    },
     "distribution": "Debian GNU/Linux 12 (bookworm)",
     "container": "docker run --rm --cpus 4 --memory 6g; read-only mounts of the wotex, wotex-runtime and wotex-coap checkouts; rsync to /work/src excluding _build, deps, cover, doc, docs/tasks/local and archives; WOTEX_PATH_DEPS=1 TMPDIR=/work/tmp",
     "commands": [
@@ -24,7 +28,8 @@
   "defect_found": {
     "lane": "minimum",
     "observed": "mix wotex.software.build failed with extraction_failed because OTP 27.3.4.15 erl_tar rejects libcoap's examples/contiki/coap_config.h -> ../../coap_config.h.contiki link as unsafe_symlink",
-    "fixed_by": "commit d8d856f extracts only validated files and directories through erl_tar and creates the two digest-bound links explicitly"
+    "fixed_by": "commit d8d856f extracts only validated files and directories through erl_tar and creates the two digest-bound links explicitly",
+    "note": "Found by the first minimum-lane run; later runs build on the fixed extraction"
   },
   "lanes": [
     {
@@ -34,15 +39,46 @@
       "toolchain": "Elixir 1.20.2 (compiled with Erlang/OTP 29); erts-17.0.4",
       "build_exit": 0,
       "run_exit": 0,
-      "tests": {"passed": 33, "failed": 0},
-      "run_elapsed_ms": 59723,
-      "native_vectors": {"count": 12, "all_exit_zero": true, "sanitizers": ["-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"]},
-      "native_hashes": {"coap-server":"36609784a22c9ada73c09004454f531aa1acc779202aa605197fd6142b5f4a2d","wotex-coap-oscore":"b8c4a01fc32bd3ea16615efc8658c902a4cd16440973fcfe1eb1f7c5aec09a33"},
-      "result_sha256": "409cff787d1b0cc6f6dcd39987d57e3ae290823ccfbc7d818cc48a1349df1432",
-      "test_log_sha256": "f326ec8b385697986565bbdaa68210439052289516960edd01b5358c7c7cd861",
-      "software_manifest_sha256": "d566d4ff16aa30e5f466976687d88a1d0f4d06eabc4e22d01cfee21900aaa627",
-      "resource_trends_beam_total_bytes": {"udp": [82728944, 83345568], "dtls_psk": [82807392, 83388160], "dtls_pki": [84683679, 85134879], "oscore": [84555341, 84683165]},
-      "oscore_helper_rss_kib": 2984
+      "tests": {
+        "passed": 47,
+        "failed": 0
+      },
+      "run_elapsed_ms": 77134,
+      "native_vectors": {
+        "count": 12,
+        "all_exit_zero": true,
+        "sanitizers": [
+          "-fsanitize=address,undefined",
+          "-fno-sanitize-recover=all",
+          "-fno-omit-frame-pointer"
+        ]
+      },
+      "native_hashes": {
+        "coap-server": "36609784a22c9ada73c09004454f531aa1acc779202aa605197fd6142b5f4a2d",
+        "wotex-coap-oscore": "d356ad83e8e825ef30a43d6c1a34d5c0459f6ef58f493b227bc7212424c5d97b"
+      },
+      "result_sha256": "92330b7c603f7208caad12c812bd2bc33a1087472e66087c1ba7128992c51d7e",
+      "test_log_sha256": "0c85e6352f57fbcfeaae602a03c7c722beac637c63bc6e218f4afb0a48d8d995",
+      "software_manifest_sha256": "771f636ce67899c3ffca89721b09c0c35a201a2e4618a5bab19de4568cb3b87c",
+      "resource_trends_beam_total_bytes": {
+        "udp": [
+          83347555,
+          83989099
+        ],
+        "dtls_psk": [
+          84969634,
+          85489474
+        ],
+        "dtls_pki": [
+          86205689,
+          86688409
+        ],
+        "oscore": [
+          85558895,
+          85763639
+        ]
+      },
+      "oscore_helper_rss_kib": 2960
     },
     {
       "lane": "minimum",
@@ -51,28 +87,59 @@
       "toolchain": "Elixir 1.18.4 (compiled with Erlang/OTP 27); erts-15.2.7.11",
       "build_exit": 0,
       "run_exit": 0,
-      "tests": {"passed": 33, "failed": 0},
-      "run_elapsed_ms": 61987,
-      "native_vectors": {"count": 12, "all_exit_zero": true, "sanitizers": ["-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"]},
-      "native_hashes": {"coap-server":"36609784a22c9ada73c09004454f531aa1acc779202aa605197fd6142b5f4a2d","wotex-coap-oscore":"b8c4a01fc32bd3ea16615efc8658c902a4cd16440973fcfe1eb1f7c5aec09a33"},
-      "result_sha256": "2e210564b7e7c75c3ab5e52e4062e0c80623c48798df36fb805597233ddf95b8",
-      "test_log_sha256": "e6d3ae1a0c9b5b16cd450cd0e649151bb3b135aad466d89c5b522a3888901cf4",
-      "software_manifest_sha256": "47c20d34db3e51594293e47964cf618950fc9d0bd9095cb1fcdc17dfe2268ce0",
-      "resource_trends_beam_total_bytes": {"udp": [85809349, 86375245], "dtls_psk": [85932493, 86417373], "dtls_pki": [85537469, 86125541], "oscore": [85187069, 85319317]},
-      "oscore_helper_rss_kib": 2964
+      "tests": {
+        "passed": 47,
+        "failed": 0
+      },
+      "run_elapsed_ms": 70524,
+      "native_vectors": {
+        "count": 12,
+        "all_exit_zero": true,
+        "sanitizers": [
+          "-fsanitize=address,undefined",
+          "-fno-sanitize-recover=all",
+          "-fno-omit-frame-pointer"
+        ]
+      },
+      "native_hashes": {
+        "coap-server": "36609784a22c9ada73c09004454f531aa1acc779202aa605197fd6142b5f4a2d",
+        "wotex-coap-oscore": "d356ad83e8e825ef30a43d6c1a34d5c0459f6ef58f493b227bc7212424c5d97b"
+      },
+      "result_sha256": "6559db294c991a7b53f98404ea841d45752433ccb06a665550fed839ae24c56d",
+      "test_log_sha256": "64bac97206f540ce8011ee72723f36c5f8a47d4c4ea3c9d98a989a4253762435",
+      "software_manifest_sha256": "9a8a70947c17bc97cce78682dd4d3de8357428cd82d3c23395c82aaf4c4fefc3",
+      "resource_trends_beam_total_bytes": {
+        "udp": [
+          91791146,
+          92440666
+        ],
+        "dtls_psk": [
+          91830426,
+          92442338
+        ],
+        "dtls_pki": [
+          91443346,
+          92127538
+        ],
+        "oscore": [
+          90787378,
+          91101274
+        ]
+      },
+      "oscore_helper_rss_kib": 2984
     }
   ],
   "assertions": [
-    "Both lanes build the pinned libcoap, the production helper, the upstream coap-server peer and 12 native fault/vector executables; every vector compiles with ASan/UBSan and exits 0, including the production-worker exchange harness",
+    "Both lanes build the pinned libcoap with its nine ordered patches, the production helper, the upstream coap-server peer and 12 native fault/vector executables; every vector compiles with ASan/UBSan and exits 0, including the production-worker exchange harness",
     "The production helper and peer binaries are byte-identical across the two lanes",
-    "Both lanes run the 15 independent UDP/PSK/PKI tests, 10 same-stack OSCORE tests and 8 lifecycle stress tests with seed zero and 33 passes",
+    "Both lanes run the 15 independent UDP/PSK/PKI tests, 12 same-stack OSCORE tests, 8 lifecycle stress tests and 12 native-v1 corpus tests with seed zero and 47 passes, including the ExUnit-owned RFC 8613 endpoint traces",
     "Each software run records zero retained command groups, peer processes, UDP ports and session/context/subscription/store locks"
   ],
   "unaccepted": [
-    "The production helper used by the ExUnit OSCORE and stress cases is not itself sanitizer-instrumented in this lane; the separately sanitized helper remains the test/native/Dockerfile evidence",
+    "The production helper used by the ExUnit OSCORE, corpus and stress cases is not itself sanitizer-instrumented in this lane; the separately sanitized helper remains the test/native/Dockerfile evidence",
     "Linux x86_64, other distributions and other toolchains",
-    "Independent-stack OSCORE interoperability",
-    "Pending-operation owner loss, authenticated duplicate/stale and replay injection, Port-mailbox sampling and the native-v1 corpus",
+    "Independent upstream-stack OSCORE interoperability",
+    "Port-mailbox saturation tests added after this commit, the live replay window, native-v1 F07 and the helper half of F15",
     "Clean committed-source archive and out-of-tree package gates on both runtimes",
     "Hardware and publication"
   ]

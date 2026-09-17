@@ -668,11 +668,11 @@ per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
 15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 8-test
 stress cohort, 2-test saturation cohort and 12-test native corpus cohort. The
-49-test run passes on macOS
-arm64; the earlier 33-test run passes inside Linux arm64 containers on both
-required runtimes, whose builds compile the native vectors with ASan/UBSan. The remaining OSCORE independence, native fault corpus and
-clean-package matrix retains planned status until those assertions execute. Earlier Python-run results validate their historical cohort
-only. Hardware and publication are separate.
+49-test run passes on macOS arm64; the 47-test run of the preceding commit passes
+inside Linux arm64 containers on both required runtimes, whose builds compile the
+native vectors with ASan/UBSan. The remaining OSCORE independence, native fault
+corpus and clean-package matrix retains planned status until those assertions
+execute. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute

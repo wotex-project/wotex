@@ -646,12 +646,14 @@ the native-v1 corpus.
 The [Linux software lane receipt](software-linux-v1.json) runs the same
 `mix wotex.software.build` and `mix wotex.software.run` inside Linux arm64
 containers built from `test/software/Dockerfile.linux`, once on Elixir 1.20.2 /
-OTP 29.0.4 and once on Elixir 1.18.4 / OTP 27.3.4.15, from commit `d8d856f`. Each
-lane compiles the 12 native fault/vector executables with ASan/UBSan, including
-the production-worker exchange harness, and all exit 0; each software run passes
-all 33 tests with zero retained resources. The production helper and peer are
-byte-identical across lanes. The minimum lane first exposed the OTP 27 archive
-link failure fixed in `d8d856f`. The helper that ExUnit drives in these lanes is
+OTP 29.0.4 and once on Elixir 1.18.4 / OTP 27.3.4.15, from commit `4325f52`. Each
+lane builds libcoap with the nine ordered patches and compiles the 12 native
+fault/vector executables with ASan/UBSan, including the production-worker
+exchange harness, and all exit 0; each software run passes all 47 tests, including
+the ExUnit-owned RFC 8613 endpoint traces, with zero retained resources. The
+production helper and peer are byte-identical across lanes. The minimum lane first
+exposed the OTP 27 archive link failure fixed in `d8d856f`. The two saturation
+tests added afterwards have run only on macOS. The helper that ExUnit drives in these lanes is
 not itself sanitizer-instrumented; its sanitized evidence remains the
 `test/native/Dockerfile` harness lane.
 

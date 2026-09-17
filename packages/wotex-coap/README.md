@@ -226,9 +226,10 @@ lifecycle through those boundaries.
 Mix and ExUnit own first-party build and test orchestration; the tracked source
 and package contain no Python. The current run receipt covers 15 independent UDP,
 PSK and PKI tests, 12 same-stack OSCORE tests, including a 1 MiB protected body,
-an 8-test lifecycle stress lane across all four transports, 2 Port-mailbox saturation tests and 12 native-v1 corpus
-tests through the Mix-built helper. The earlier 33-test build and run pass in Linux
-containers on Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 /
-OTP 27.3.4.15 with sanitizer-built native vectors. Independent OSCORE
+an 8-test lifecycle stress lane across all four transports, 2 Port-mailbox
+saturation tests and 12 native-v1 corpus tests through the Mix-built helper. The
+47-test cohort before the saturation tests builds and runs in Linux containers on
+Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15 with sanitizer-built
+native vectors. Independent OSCORE
 interoperability, the complete native fault corpus and clean-package gates remain
 open acceptance work.
