@@ -3,7 +3,7 @@
 Current implementation: typed domain APIs, persistent native host ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 264 tests, 54 declared interoperability,
+local gate: 9 doctests, 17 properties and 264 tests, 55 declared interoperability,
 hardware and software-stress exclusions; 95.9% coverage.
 The [virtual-controller fixture](virtual-controller.md) and its
 [software run receipt](software-run-v3.json) execute the 11 public BLE and
