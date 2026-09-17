@@ -8,7 +8,9 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   `:scrape` separately admits an authenticated loopback-only operator listener.
   `:durable` adds one bounded local or explicitly pinned hosted GreptimeDB
   exporter; when history is also active that exporter is its sole writer, so
-  no capture is duplicated.
+  no capture is duplicated. `:query` adds the loopback operator query listener
+  after the history cohort; it needs history and a credential distinct from
+  `:scrape`.
   """
 
   use Supervisor
@@ -23,16 +25,31 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     Status
   }
 
-  alias WotexLabWorkbench.Observability.{Durable, Inspection, PromEx, Relay, Sampler, Scrape}
+  alias WotexLabWorkbench.Observability.{
+    Durable,
+    Inspection,
+    PromEx,
+    QueryListener,
+    Relay,
+    Sampler,
+    Scrape
+  }
 
   @doc "Starts capture/relay; explicit options add bounded history, scrape and BeamLens surfaces."
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
   def start_link(opts) do
-    with :ok <- Options.validate(opts, [:history, :scrape, :durable, :beamlens]),
+    with :ok <- Options.validate(opts, [:history, :scrape, :durable, :beamlens, :query]),
          :ok <- history_options(Keyword.get(opts, :history, false)),
          :ok <- scrape_options(Keyword.get(opts, :scrape, false)),
          :ok <- durable_options(Keyword.get(opts, :durable, false)),
          :ok <- beamlens_options(Keyword.get(opts, :beamlens, false)),
+         :ok <- query_options(Keyword.get(opts, :query, false)),
+         :ok <-
+           query_dependencies(
+             Keyword.get(opts, :history, false),
+             Keyword.get(opts, :scrape, false),
+             Keyword.get(opts, :query, false)
+           ),
          :ok <-
            dependencies(Keyword.get(opts, :history, false), Keyword.get(opts, :beamlens, false)),
          do: Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
@@ -48,6 +65,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
         history_children(history, durable) ++
         durable_children(durable, history) ++
         scrape_children(Keyword.get(opts, :scrape, false)) ++
+        query_children(Keyword.get(opts, :query, false)) ++
         beamlens_children(Keyword.get(opts, :beamlens, false))
 
     Supervisor.init(children, strategy: :one_for_all)
@@ -82,6 +100,35 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
       {:error, Error.new(:beamlens_requires_history, :construction, "BeamLens needs local history")}
 
   defp dependencies(_history, _beamlens), do: :ok
+
+  defp query_options(false), do: :ok
+  defp query_options(opts), do: QueryListener.validate(opts)
+
+  defp query_dependencies(_, _, false), do: :ok
+
+  defp query_dependencies(false, _, _),
+    do:
+      {:error,
+       Error.new(
+         :metrics_query_requires_history,
+         :construction,
+         "metric queries need local history"
+       )}
+
+  defp query_dependencies(_, scrape, query) do
+    if scrape != false and scrape[:token_digest] == query[:token_digest],
+      do:
+        {:error,
+         Error.new(
+           :metrics_query_requires_distinct_credential,
+           :construction,
+           "the query credential must differ from the scrape credential"
+         )},
+      else: :ok
+  end
+
+  defp query_children(false), do: []
+  defp query_children(opts), do: [{QueryListener, opts}]
 
   defp scrape_children(false), do: []
   defp scrape_children(opts), do: [{Scrape, opts}]

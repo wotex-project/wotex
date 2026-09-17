@@ -84,6 +84,21 @@ if port = System.get_env("WOTEX_LAB_METRICS_PORT") do
   end
 end
 
+# The operator query listener is also opt-in, loopback-only and keeps only the
+# digest of its own credential, which must differ from the scrape credential.
+if port = System.get_env("WOTEX_LAB_METRICS_QUERY_PORT") do
+  case WotexLabWorkbench.Observability.QueryListener.configure(
+         port,
+         System.get_env("WOTEX_LAB_METRICS_QUERY_TOKEN")
+       ) do
+    {:ok, options} ->
+      config :wotex_lab_workbench, metrics_query: options
+
+    {:error, _} ->
+      raise "metric query listener requires an admitted port and URL-safe token (43–128 characters)"
+  end
+end
+
 # Every operator-owned value is read here, once, at boot. Nothing below
 # downloads, discovers or starts anything: the formal engine path only names
 # a binary the operator provisioned and the host verifies before use.

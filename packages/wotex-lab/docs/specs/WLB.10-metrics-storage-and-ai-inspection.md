@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.14.0. Contract: accepted. Source status: the metric
+Specification version: 0.15.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -15,9 +15,10 @@ trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
 owner-bound no-queue broker, an active-scope capability-protected loopback
 provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
-Remote/TLS scraping, TTL provisioning, OTLP signal export, isolated
-hosted-tenant BeamLens and the HTTP query binding remain planned; the MCP
-`query_metrics` tool binds the local gateway. Hosted
+A separately activated loopback operator listener binds the query descriptor
+to HTTP. Remote/TLS scraping, TTL provisioning, OTLP signal export, isolated
+hosted-tenant BeamLens and public or tenant HTTP query bindings remain
+planned; the MCP `query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 is not proof of a Grafana import or query execution.
 
@@ -321,8 +322,10 @@ answers gauges, counters with reset awareness and histogram quantiles from ETS
 or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway`
 admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits, and the MCP `query_metrics` tool
-opens one gateway per call from a host-bound history and scope. Public HTTP
-query bindings, durable query templates and non-local/multi-tenant BeamLens callers remain planned.
+opens one gateway per call from a host-bound history and scope. The operator
+HTTP query binding below opens one inspection scope per request. Public or
+tenant HTTP query bindings, durable query templates and non-local/multi-tenant
+BeamLens callers remain planned.
 
 History query admission binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
@@ -374,6 +377,39 @@ no query or LLM call. No browser route, LiveView event or MCP tool exposes this
 host-wide history, and neither a browser token nor the scrape credential grants
 access. Browser tenant isolation, durable reads and investigation-specific
 provider/cost/context budgets remain separate acceptance work.
+
+### Operator HTTP query binding
+
+`WotexLabWorkbench.Observability.QueryListener` is the only HTTP route to that
+history. It starts only when the operator sets `WOTEX_LAB_METRICS_QUERY_PORT`
+and `WOTEX_LAB_METRICS_QUERY_TOKEN` with local history active, and startup is
+refused when history is off or when the query credential equals the scrape
+credential. The listener binds IPv4 loopback, keeps only the credential's
+SHA-256, admits eight connections with one HTTP/1 request each and serves only
+`POST /query`. A request carries `Authorization: Bearer`, one
+`Content-Type: application/json`, one `Content-Length` from 1 to 8,192 bytes
+and no query string, `Origin`, `Expect` or `Transfer-Encoding`. The body is
+the closed `Metrics.Request` field set; scope and limits in the body are
+refused as `invalid_request`.
+
+Each request process opens one `Inspection` scope with a three-second lifetime,
+one call and reduced limits: six-hour range, 5-second minimum step, 2,000
+points, 256 KiB output, a two-second deadline and one worker. It waits at most
+2.25 seconds for the terminal result, cancels late work and revokes the scope
+before answering. A 200 answer is the query result as JSON of at most one MiB.
+Refusals are JSON `code`, `phase` and `message` objects: 400 for framing, body
+and descriptor errors, 401 for a missing or wrong credential (including the
+scrape credential), 403 for a non-loopback peer, 404 and 405 for other paths
+and methods, 409 for `clock_rollback`, 413 for a declared body above 8,192
+bytes, 415 for another media type, 422 for `unsupported_query`,
+`query_too_large` or `output_too_large`, 429 when inspection scopes are
+exhausted, 503 when history is unavailable and 504 at the deadline.
+`metrics_query_listener_test.exs` covers configuration, activation
+dependencies, credential separation, framing refusals, server-bound scope,
+unsupported and invalid descriptors, scope capacity, unavailable history, the
+deadline with a blocked history and a real loopback socket. This is a
+trusted-local operator profile; TLS, remote ingress and tenant-scoped query
+bindings are not claimed.
 
 Snapshots and query structs are revalidated at the execution boundary. Query
 samples must match the catalogue's type, finite labels and exact histogram
@@ -552,7 +588,8 @@ fixture, reset, stale and histogram cases, series and history budgets, atomic
 admission, bounded exporter overload, retry and no-retry, network loss,
 shutdown, two-instance isolation, immutable diagnostic export and the export
 credential sentinel;
-`test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. TTL expiry,
+`test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. The local
+protected query endpoint has its own test described above. TTL expiry,
 remote protected/query endpoints, prompt injection, cloud disclosure and
 cancelled-agent tests arrive with their planned features. Local capability
 scope substitution, bounded admission, blocked calls, expiry, cancellation,

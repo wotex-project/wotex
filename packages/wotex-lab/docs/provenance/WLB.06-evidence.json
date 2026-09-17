@@ -69,7 +69,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 33,
+  "attempt": 34,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -200,11 +200,11 @@
     "thing_description_vectors": 16,
     "thing_model_vectors": 8
   },
-  "revision": "8138a2784932de27cbe4e3d81637c3c7addb973b",
+  "revision": "6dd7ca3374949f8023ba3224c7a923a853a8c919",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:2ffdb382cdabf0754e6ba8bbfdeb015955744c60da43684539d2992181d4c33c",
+  "source_tree_digest": "sha256:326588ecd7680bfa9442db050d70cf51024f47496a3b1ea3e3da66304ffe9eae",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

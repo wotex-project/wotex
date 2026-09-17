@@ -107,9 +107,10 @@ The public capture API pairs PromEx text with the custom adapter's body-hash
 receipt, preserving reset identity, clocks and loss counters. Changed or
 unavailable receipts fail the sample; the sampler counts failures and subsequent
 gaps, preserves one-time stale markers and exposes evictions through history.
-Its fixed instance is `workbench`, not the current browser session. No route
-reads this host-wide history. Remote query authentication and tenant isolation
-remain separate work. Restarting the optional supervisor discards its history;
+Its fixed instance is `workbench`, not the current browser session. No browser
+route reads this host-wide history; only the separately activated loopback
+query listener described below does. Remote query authentication and tenant
+isolation remain separate work. Restarting the optional supervisor discards its history;
 neither sampling nor dataframe conversion makes it durable or training data.
 
 Set `WOTEX_LAB_GREPTIME_URL` to the exact local endpoint
@@ -267,16 +268,43 @@ the client. This local operator profile is not a TLS/remote deployment, and
 must not be port-forwarded or exposed by a proxy as if it were one. Neither
 the listener nor its credential starts a database, history, experiment or LLM.
 
+### Protected local query
+
+The optional query listener is a second loopback listener for the operator
+history. Set `WOTEX_LAB_METRICS_QUERY_PORT` and `WOTEX_LAB_METRICS_QUERY_TOKEN`
+together with `WOTEX_LAB_PROMEX=1` and `WOTEX_LAB_METRICS_HISTORY=1`. The query
+token follows the scrape token rules and must differ from it; startup is
+refused otherwise.
+
+Send `POST /query` with `Authorization: Bearer <token>`,
+`Content-Type: application/json` and a `Content-Length` of at most 8,192 bytes.
+The body holds only `schema_version`, `metric`, `aggregation`, `filters`,
+`quantile`, `start_at`, `end_at` and `step_ms`:
+
+```sh
+curl -sS -X POST http://127.0.0.1:9465/query \
+  -H "Authorization: Bearer $WOTEX_LAB_METRICS_QUERY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"schema_version":"1.0.0","metric":"nx_operations_total","aggregation":"sum","start_at":"2026-01-01T00:00:00Z","end_at":"2026-01-01T00:05:00Z","step_ms":5000}'
+```
+
+The server chooses the instance and session scope. Each request gets one
+short-lived inspection scope limited to a six-hour range, 2,000 points,
+256 KiB of output and a two-second deadline. Refusals are JSON objects with a
+stable `code`. Like the scrape listener, this profile is loopback-only and is
+not a TLS, remote or tenant endpoint.
+
 ## Runtime configuration
 
 Production requires `SECRET_KEY_BASE`. Optional variables are `PHX_HOST`,
 `PORT`, `WOTEX_LAB_WORKBENCH_SESSION_TTL_MS`, `WOTEX_LAB_PROMEX`,
-`WOTEX_LAB_METRICS_HISTORY` and `WOTEX_LAB_MAUDE`. A Maude
+`WOTEX_LAB_METRICS_HISTORY`, `WOTEX_LAB_CONTROL_MUTATIONS` and `WOTEX_LAB_MAUDE`. A Maude
 path is verified and supervised explicitly; no configured engine is reported
 as unsupported, never as successful evidence.
 
-The separately requested operator listener also uses `WOTEX_LAB_METRICS_PORT`
-and `WOTEX_LAB_METRICS_TOKEN`; invalid or incomplete options refuse startup.
+The separately requested operator listeners also use `WOTEX_LAB_METRICS_PORT`
+and `WOTEX_LAB_METRICS_TOKEN`, or `WOTEX_LAB_METRICS_QUERY_PORT` and
+`WOTEX_LAB_METRICS_QUERY_TOKEN`; invalid or incomplete options refuse startup.
 
 ## Control API mutations
 

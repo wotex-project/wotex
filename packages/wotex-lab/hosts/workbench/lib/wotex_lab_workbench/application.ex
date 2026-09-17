@@ -14,6 +14,8 @@ defmodule WotexLabWorkbench.Application do
   history is also active.
   `metrics_scrape` separately admits a credential-protected loopback listener;
   it also requires explicit PromEx activation and never joins browser routing.
+  `metrics_query` adds a separate loopback operator query listener; it needs
+  local history and a credential different from the scrape credential.
   BeamLens additionally requires explicit activation plus local history, and
   starts only its bounded trusted-operator skill/provider bridge processes.
   A `control_mutations` limit list, instead of the default `false`, adds
@@ -61,8 +63,10 @@ defmodule WotexLabWorkbench.Application do
     scrape = Keyword.fetch!(env, :metrics_scrape)
     durable = Keyword.fetch!(env, :metrics_durable)
     beamlens? = Keyword.fetch!(env, :beamlens_enabled)
+    query = Keyword.fetch!(env, :metrics_query)
 
     with :ok <- observability_requirements(promex?, history?, scrape, durable, beamlens?),
+         :ok <- query_requirements(history?, scrape, query),
          do: observability_children(promex?, history?, scrape, durable, beamlens?, env)
   end
 
@@ -75,7 +79,11 @@ defmodule WotexLabWorkbench.Application do
       {:ok,
        [
          {WotexLabWorkbench.Observability.Supervisor,
-          history: history, scrape: scrape, durable: durable, beamlens: beamlens}
+          history: history,
+          scrape: scrape,
+          durable: durable,
+          beamlens: beamlens,
+          query: Keyword.fetch!(env, :metrics_query)}
        ]}
     end
   end
@@ -93,6 +101,15 @@ defmodule WotexLabWorkbench.Application do
     do: {:error, :metrics_durable_requires_promex}
 
   defp observability_requirements(_promex, _history, _scrape, _durable, _beamlens), do: :ok
+
+  defp query_requirements(_, _, false), do: :ok
+  defp query_requirements(false, _, _), do: {:error, :metrics_query_requires_history}
+
+  defp query_requirements(true, scrape, query) do
+    if scrape != false and scrape[:token_digest] == query[:token_digest],
+      do: {:error, :metrics_query_requires_distinct_credential},
+      else: :ok
+  end
 
   defp control(false), do: {:ok, []}
 
