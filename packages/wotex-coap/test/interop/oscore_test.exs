@@ -10,7 +10,7 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
   alias Wotex.CoAP.Test.{DTLSRecordProxy, LibcoapPeer}
   @moduletag :interop
   @moduletag :capture_log
-  @recipients Enum.map(1..9, &<<&1>>)
+  @recipients Enum.map(1..10, &<<&1>>)
 
   setup_all do
     peer = LibcoapPeer.verify!()
@@ -244,6 +244,26 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
     token = :crypto.strong_rand_bytes(8)
     stale = <<1::2, 0::2, 8::4, 69, stale_mid::16, token::binary, 0x90, 0xFF>>
     :ok = DTLSRecordProxy.deliver(proxy, stale <> :crypto.strong_rand_bytes(16))
+    :ok = DTLSRecordProxy.deliver(proxy, first)
+
+    assert {:ok, %Message{code: 69, payload: root}} = forward_until(proxy, caller)
+    assert root =~ "libcoap"
+    assert :ok = CoAP.disconnect(session)
+  end
+
+  test "WCO-S01 WCO-S06 a malformed datagram cannot end the active protected exchange",
+       context do
+    proxy = start_proxy(context, :hold_all)
+    session = connect!(Map.put(context, :port, DTLSRecordProxy.endpoint(proxy)), <<10>>)
+    caller = Task.async(fn -> CoAP.get(session, "/") end)
+    assert_receive {:held_datagram, ^proxy, first}, 5_000
+
+    # The request's own MID and token with an option whose declared length runs
+    # past the datagram, which libcoap's parser rejects before correlation.
+    <<_::4, token_length::4, _, mid::16, rest::binary>> = first
+    token = binary_part(rest, 0, token_length)
+    malformed = <<1::2, 2::2, token_length::4, 69, mid::16, token::binary, 0xD5, 0x01>>
+    :ok = DTLSRecordProxy.deliver(proxy, malformed)
     :ok = DTLSRecordProxy.deliver(proxy, first)
 
     assert {:ok, %Message{code: 69, payload: root}} = forward_until(proxy, caller)

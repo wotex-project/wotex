@@ -96,7 +96,9 @@ exchanges complete in less than one second.
 The [stale-traffic receipt](../../docs/provenance/native-worker-stale-traffic-v1.json)
 binds random 8-byte initial tokens, discarded responses without a request
 association and a 20 ms exit window in which the best-effort cancellation's
-confirmable peer response is acknowledged before custody signals the worker.
+confirmable peer response is acknowledged before custody signals the worker. The
+[malformed-datagram receipt](../../docs/provenance/native-worker-malformed-datagram-v1.json)
+binds ignoring libcoap's discarded-datagram event instead of closing the exchange.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the

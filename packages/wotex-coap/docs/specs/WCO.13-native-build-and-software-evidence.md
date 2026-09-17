@@ -226,8 +226,9 @@ readiness and its next timer together with the owner pipes, so no fixed owner
 poll interval paces a protected exchange; the harness bounds 32 sequential
 protected GET exchanges below one second. Each session seeds libcoap's token
 counter with 8 random bytes. A response whose token has no request association
-(`COAP_EVENT_OSCORE_NO_SECURITY`) is discarded without ending the active
-exchange. Exit cleanup services its best-effort cancellation for at most 20 ms,
+(`COAP_EVENT_OSCORE_NO_SECURITY`) or a datagram libcoap discards as malformed
+(`COAP_EVENT_BAD_PACKET`) is ignored without ending the active exchange. Exit
+cleanup services its best-effort cancellation for at most 20 ms,
 inside custody's 25 ms termination signal, so a peer's separate confirmable
 response is acknowledged rather than retransmitted toward a reused endpoint.
 
@@ -589,13 +590,13 @@ The implemented cohort runs `test/interop/libcoap_test.exs`,
 `test/interop/dtls_test.exs`, `test/interop/dtls_pki_test.exs` and
 `test/interop/oscore_test.exs` with seed zero. Fifteen tests cover independent
 libcoap UDP, PSK and PKI unary, Block1/Block2, Observe, Runtime and
-certificate/record-fault paths. Nine same-stack tests drive the manifest-bound
+certificate/record-fault paths. Ten same-stack tests drive the manifest-bound
 helper through the public native owner against the software-build `coap-server`
 configured with a matching OSCORE context: protected methods, negative status,
 bodies above the inline threshold, discovery, a 1 MiB Block1 upload and Block2
 download, an authentication failure, Observe changes from a second UDP client,
 receiver and owner death, context consumption after close, a real ConsumedThing
-read, an uncorrelated relayed response and acknowledgment of the peer's
+read, uncorrelated and malformed relayed responses and acknowledgment of the peer's
 confirmable response to exit cancellation. The run retains its result
 directory on success or failure, so another run requires a fresh disposable
 software-build workspace.
@@ -624,7 +625,7 @@ Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
-15-test independent UDP/PSK/PKI cohort and 9-test same-stack OSCORE cohort. The
+15-test independent UDP/PSK/PKI cohort and 10-test same-stack OSCORE cohort. The
 remaining OSCORE independence, fault, stress, Linux sanitizer,
 second-toolchain and clean-package matrix retains planned status until those
 assertions execute. Earlier Python-run results validate their historical cohort

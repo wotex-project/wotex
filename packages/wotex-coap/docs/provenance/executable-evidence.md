@@ -602,7 +602,7 @@ probes, runtime manifest verification and read-only reuse all pass. The
 fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
-arm64 run: 15 independent libcoap UDP, PSK and PKI tests and 9 same-stack OSCORE
+arm64 run: 15 independent libcoap UDP, PSK and PKI tests and 10 same-stack OSCORE
 tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned peers and zero retained
 processes, ports or library-state resources.
 
@@ -623,7 +623,8 @@ the native owner within 1,100 ms and reap the helper. A real ConsumedThing
 `readproperty` call selects `:coap_oscore` and decodes the protected JSON value.
 Through an ExUnit UDP relay, a confirmable 2.05 with an empty OSCORE option and a
 token no request used arrives before the real response and the protected GET
-still succeeds. A second relay case records every datagram after receiver death:
+still succeeds, as it does after an ACK carrying the request's MID and token with
+an option length past the datagram. A further relay case records every datagram after receiver death:
 each confirmable peer message has an ACK or RST with its message ID before the
 helper exits. Pending-operation owner loss, authenticated duplicate/stale and
 replay injection, independent OSCORE interoperability and the stress matrix are
@@ -647,6 +648,17 @@ bytes; the two relay cases and this token assertion fail against the preceding
 helper. Unprotected nonempty responses are still rejected before token
 correlation and end the active exchange, and an abruptly killed helper still
 cannot acknowledge a pending peer response.
+
+The [native worker malformed-datagram receipt](native-worker-malformed-datagram-v1.json)
+binds the next source cohort. A C09 forced-failure lane answered a protected
+request with an ACK carrying its MID and token and a truncated option. The helper
+returned `connection_closed` at once because the worker treated
+`COAP_EVENT_BAD_PACKET` as fatal, although libcoap raises that event only after
+discarding an unparseable or uncorrelated datagram. The event is now ignored; a
+correlated bad response still reaches the exchange as `COAP_NACK_BAD_RESPONSE`
+and ends it with `invalid_response`. The relay regression fails against the
+preceding helper and passes on macOS through the software run; the complete
+native harness also passes the Linux ASan/UBSan/leak lane.
 
 The Linux sanitizer lane, independent OSCORE interoperability,
 remaining fault/stress scenarios, second required toolchain and complete package

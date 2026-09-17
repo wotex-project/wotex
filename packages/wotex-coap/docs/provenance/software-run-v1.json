@@ -17,12 +17,12 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "f1f91a63a1d0def4aaaaaf58448cf23141ff8a7b3181c2851b4418a88bb6f8c8",
-    "peer_executable_sha256": "78b90eb50ca7bed182f7ef042d19252c92c14ad512f8455b9c39f1b237459360",
+    "native_helper_sha256": "403e44c52905daa7c60aaa8b93ba38714cafdfaa10a8db4652833b504aee7d65",
+    "peer_executable_sha256": "282b2da5518393ff9af06078334b3cc937bb6e78ac5d7a3b590737cd2b82d58b",
     "version": "4.3.5"
   },
   "source_identity": {
-    "aggregate_sha256": "a1a71c2f38c657d64a4e1c503590930a10debcef944307ab832cc1cde6c73aad",
+    "aggregate_sha256": "40af4d0fa3e2fdfa40b8fac2e5a57f137d63364fdd37f8d481c89ba280612377",
     "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
     "selected_files": {
       "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
@@ -33,7 +33,7 @@
       "test/interop/dtls_pki_test.exs": "904dc82410941ed7e29a67f7518c13db09005bc49a7a9c1b587f935021dc8b24",
       "test/interop/dtls_test.exs": "01a4fe710e24cb98868c266659d3e9c817e2c8e36a4e2a63eb39c6fb7f3ac184",
       "test/interop/libcoap_test.exs": "dec95bf3e905bf57526836e0db40ab6955559494b26541ef4cf28f9a84f17d49",
-      "test/interop/oscore_test.exs": "4d1d0bcba99f74020c96eac4e38649a6172740931de428d8d2d00f6cb34810a3",
+      "test/interop/oscore_test.exs": "c284c0e4c92f983e3f7fb8751279b97f6f5b1e8e32d4d494d49d88ab46c93a1f",
       "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
       "test/support/libcoap_peer.ex": "76e8ccb79334b7892388978018310284fb589d6f224ac1b02aa95d7d5f0f8363",
       "test/test_helper.exs": "575578ae4f12e6e41336ad856bccd8db4bcf9e741764bbc1d6f2bf9ac110f1d1",
@@ -42,10 +42,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "64165c37b00a79f6bcac12ac226b36bf16fb094c5bc521cb7a2e05d0fc4c6ac1",
-    "nested_native_manifest_sha256": "ce61b0d05cf474efbb6992ab811eb5a783ea041816dd12f5cd160564aaad1076"
+    "manifest_sha256": "270397cb3f51c788bf05cb8c98fa3cf8fe8ed974a7b0f1203e587a39f09a63d7",
+    "nested_native_manifest_sha256": "5f0a0b7bf67f57f42e07b3da359db43dd2d6f01fb07d703680fe6632b06e745f"
   },
-  "result_sha256": "aff6d246fd3aafff4e330f690b72701d75b803d81e74dfc333654f32242d3dd4",
+  "result_sha256": "b53d8fbf4b167678bcbe4b8d2de09e8077b1e0b9f76f4ccf9e218a11fa025ebf",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -73,7 +73,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 8675,
+    "elapsed_ms": 8756,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -85,8 +85,8 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "78b90eb50ca7bed182f7ef042d19252c92c14ad512f8455b9c39f1b237459360",
-      "wotex-coap-oscore": "f1f91a63a1d0def4aaaaaf58448cf23141ff8a7b3181c2851b4418a88bb6f8c8"
+      "coap-server": "282b2da5518393ff9af06078334b3cc937bb6e78ac5d7a3b590737cd2b82d58b",
+      "wotex-coap-oscore": "403e44c52905daa7c60aaa8b93ba38714cafdfaa10a8db4652833b504aee7d65"
     },
     "scenario_ids": [
       "WCO-C03",
@@ -105,16 +105,16 @@
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "a1a71c2f38c657d64a4e1c503590930a10debcef944307ab832cc1cde6c73aad",
+    "source_sha256": "40af4d0fa3e2fdfa40b8fac2e5a57f137d63364fdd37f8d481c89ba280612377",
     "status": "passed",
     "test_log": {
-      "bytes": 682,
+      "bytes": 683,
       "path": "tests.log",
-      "sha256": "253c278bde02f0584bbf011d16c61ed41d18b6b25540efa17cc138f9b59c510d"
+      "sha256": "c2aa4eb29f8983fa1050c5a28cd91e459dbaf85f819f6b8f500153fe7583645d"
     },
     "tests": {
       "failed": 0,
-      "passed": 24
+      "passed": 25
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n"
   },
@@ -129,8 +129,9 @@
     "The checked-in native guardian bounds the exact tagged ExUnit command to 300 seconds, 16 MiB of output and five seconds of process-group cleanup",
     "Each UDP, PSK, PKI and OSCORE test owns and closes its libcoap peer, selected adjacent ports and credential workspace",
     "Fifteen independent unary, Block1/Block2, Observe, Runtime, authentication, certificate and DTLS-record cases pass with seed zero",
-    "Nine same-stack OSCORE cases pass through the manifest-verified Mix-built helper and the public native owner",
+    "Ten same-stack OSCORE cases pass through the manifest-verified Mix-built helper and the public native owner",
     "A relayed confirmable response with an unused token and an empty OSCORE option cannot end the active protected GET",
+    "A relayed malformed datagram carrying the request MID and token cannot end the active protected GET",
     "After receiver death every confirmable peer message is acknowledged or reset with its message ID before the helper exits",
     "Protected GET/PUT/POST/DELETE, a negative status as details.code, a 43,500-byte echoed body and discovery succeed before a graceful close that releases the helper and makes the context identity require fresh keying",
     "A mismatched master secret returns security_handshake_failed with effect none, terminates the generation within 1100 ms and never yields an application value",

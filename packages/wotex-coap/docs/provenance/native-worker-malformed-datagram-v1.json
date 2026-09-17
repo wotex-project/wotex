@@ -1,0 +1,72 @@
+{
+  "schema": "wotex.coap.native-worker-malformed-datagram-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Malformed datagrams discarded by libcoap cannot end an active protected exchange",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/exchange.c": "1e342a3614305c37f2657a062e942b37ec39fb715822b364b1fed649a8e1ca3e",
+      "native/oscore/worker.c": "f4e34c5a102c5a553b07f7f205098770b98c41cca2bde95c649c4f2acc0b7e13",
+      "test/native/oscore_worker_exchange_test.c": "f9cadad27892f5dd4bd80cffc67e52b7f534702c2c77df8ed19eaab2f9d0c055",
+      "test/interop/oscore_test.exs": "c284c0e4c92f983e3f7fb8751279b97f6f5b1e8e32d4d494d49d88ab46c93a1f",
+      "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "event": "COAP_EVENT_BAD_PACKET",
+    "raised_by": "src/coap_net.c after coap_pdu_parse rejects a datagram, and for an invalid-code packet with no matching sent message; a matching sent message instead receives COAP_NACK_BAD_RESPONSE"
+  },
+  "requirements": [
+    "WCO-S01",
+    "WCO-S06",
+    "WCO-C09",
+    "WCO-N02"
+  ],
+  "defect": {
+    "observed": "A C09 forced-failure lane answered a protected request with an ACK carrying its MID and token and a truncated option; the helper returned connection_closed immediately instead of discarding the datagram",
+    "cause": "The worker mapped COAP_EVENT_BAD_PACKET, which libcoap raises after discarding the datagram, to a fatal connection_closed exchange failure"
+  },
+  "assertions": [
+    "Through an ExUnit UDP relay, an ACK with the request's MID and token and an option length past the datagram arrives before the real response, and the protected GET still returns the peer's 2.05 value",
+    "The same relay case against the preceding helper returned connection_closed",
+    "COAP_NACK_BAD_RESPONSE for a correlated bad response continues to end the exchange with invalid_response"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "harness_output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "harness_sha256": "9590bd8a3d25e6bcecbe7fff7e6e24ce0c0de6e8f41521e0c7fb238ca17cb6c8",
+      "worker_sha256": "403e44c52905daa7c60aaa8b93ba38714cafdfaa10a8db4652833b504aee7d65",
+      "software_run_result_sha256": "b53d8fbf4b167678bcbe4b8d2de09e8077b1e0b9f76f4ccf9e218a11fa025ebf",
+      "software_run_tests": 25,
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:badpacket CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "image": "sha256:8d799f05d7e2a9ea794dfed08b87c69374a66043b5301d30755f06e23492db99",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "69da21cf88e9b8fa6e59b4c912fbe1f71f69d4e42e97a298f7a74ea983889098",
+      "harness_sha256": "d64ebd420ccb1dca92c40968ab61979e25f973e000888be5335ef5df9eea7830",
+      "build_log_sha256": "2d127f0dd02e045929795e3e296955967bd0dd53aafac3a36cfd629b4bc558b9",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "sanitizers": [
+        "address",
+        "undefined",
+        "leak"
+      ],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Unprotected nonempty responses are still rejected before token correlation by the response-admission patch and end the active exchange"
+  ]
+}

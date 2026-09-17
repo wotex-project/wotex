@@ -172,7 +172,7 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 
 The build and run commands and their task tests pass on macOS arm64. The current
 run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer
-and records 24 passing tests; the run must use the same `OPENSSL_ROOT_DIR`
+and records 25 passing tests; the run must use the same `OPENSSL_ROOT_DIR`
 selection as its build. The complete P09 transport, fault, stress, sanitizer and dual-toolchain matrix
 remains an independent software obligation. The historical Python-run receipt
 retains its original source and command identity only. No build or peer starts

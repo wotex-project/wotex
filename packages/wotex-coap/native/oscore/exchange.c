@@ -287,10 +287,13 @@ static int event_handler(coap_session_t *session, coap_event_t event) {
             /* libcoap found no request association for the response token, so
              * the datagram belongs to no exchange of this generation. It is
              * discarded unverified and cannot end the active exchange. */
+        case COAP_EVENT_BAD_PACKET:
+            /* libcoap raises this after discarding an unparseable or
+             * uncorrelated datagram (RFC 7252 section 4.2); a correlated bad
+             * response arrives as COAP_NACK_BAD_RESPONSE instead. */
             break;
         case COAP_EVENT_SESSION_FAILED:
         case COAP_EVENT_SESSION_CLOSED:
-        case COAP_EVENT_BAD_PACKET:
             fail(exchange, "connection_closed");
             break;
         default: break;
