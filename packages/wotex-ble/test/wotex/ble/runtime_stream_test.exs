@@ -201,7 +201,10 @@ defmodule Wotex.BLE.RuntimeStreamTest do
 
   test "WBL-I05 relay protects the Runtime owner mailbox and releases its session on overflow" do
     {native, record} = options("stream_runtime")
-    {consumed, context} = runtime_consumer([max_queue_length: 1] ++ native, :property)
+    # A bound of 1 can also count the opening result still waiting in the owner
+    # mailbox when the buffered initial report arrives. Bound 2 keeps that
+    # establishment race out of this overflow case; three reports still exceed it.
+    {consumed, context} = runtime_consumer([max_queue_length: 2] ++ native, :property)
     owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
     assert_receive {:runtime_decode, ^owner, {:value, _, metadata}, _}, 5000
     assert_receive {:wotex_runtime, _, {:ok, 1, _}}, 5000

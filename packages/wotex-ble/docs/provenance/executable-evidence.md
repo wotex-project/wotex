@@ -12,6 +12,13 @@ Public BEAM/Runtime virtual-peer acceptance, native build tasks and complete
 stress/package evidence remain required. Uncommitted fixture work is not
 acceptance evidence.
 
+Open finding: with a Runtime relay `max_queue_length` of 1, the buffered initial
+report can be rejected as `receiver_overflow` when the opening result is still
+in the Runtime owner mailbox. The full default suite reproduced this under load;
+60 isolated repetitions did not. The WBL-I05 overflow case therefore uses a
+bound of 2 and still injects three reports while the owner is suspended. This
+establishment race is recorded, not accepted as fixed.
+
 ## Mandatory local gate
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` runs compile warnings-as-errors, formatting, strict
