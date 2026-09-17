@@ -73,11 +73,14 @@ node bin/check_chart_browser.cjs http://127.0.0.1:4107
 ```
 
 Supply Playwright through your tool environment (for example `NODE_PATH`). The
-script reports actual Node, Playwright and Chromium versions. The 2026-09-08
-source cohort passed with Node 26.8.1, Playwright 1.63.0-alpha-2026-08-31 and
-Chromium 153.0.8010.12, including saved dashboard and exact analysis/chart
+script reports actual Node, Playwright and Chromium versions. The 2026-09-17
+source cohort passed with Node 26.8.2, Playwright 1.63.0-alpha-2026-08-31 and
+Chromium 153.0.8010.12. It covered saved dashboard and exact analysis/chart
 links, keyboard disclosure/skip navigation, reflow, session isolation and
-bounded download checks. This is neither a stable-browser compatibility
+bounded downloads. It also covered keyboard-loaded history panels with mobile
+reflow, reload without replay and session isolation. The first run of the
+history checks found a 10-pixel horizontal overflow at 375 pixels, which the
+host stylesheet now prevents. This is neither a stable-browser compatibility
 matrix, WCAG certification nor installed-artifact evidence.
 
 ## Optional operator-owned metrics

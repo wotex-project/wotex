@@ -73,7 +73,7 @@ defmodule WotexLabWorkbenchWeb.Components.HistoryPanels do
           <details :if={panel.digests != []}>
             <summary>Query digests ({length(panel.digests)})</summary>
             <ul>
-              <li :for={digest <- panel.digests}><code>{digest}</code></li>
+              <li :for={digest <- panel.digests}><code class="wl-query-code">{digest}</code></li>
             </ul>
           </details>
         </.metric_panel>

@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.9.0. Contract: accepted.
+Specification version: 0.9.1. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -40,7 +40,12 @@ evidence in `chart_contract_test.exs`. The separately invoked, optional
 `bin/check_chart_browser.cjs` source cohort checks real Chromium rendering,
 mark updates, exact analysis/chart/dashboard links, saved session arrangements,
 keyboard disclosure and skip navigation, themes, mobile reflow, bounded
-downloads, reload/no-replay and session isolation. It is not part of the
+downloads, reload/no-replay and session isolation. It also loads saved history
+panels from the keyboard and checks their charts, mobile reflow, reload without
+replay and absence from a second session. Its first run found history panels
+widening a 375-pixel page, because stacked grid items kept the min-content
+width of charts and query digests. Stacked items may now shrink and digests
+wrap. It is not part of the
 twelve-check `mix check` host gate and requires an operator-owned server plus an
 explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
 source evidence, not the complete WLB.08 browser matrix or a WCAG certification.

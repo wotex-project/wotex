@@ -39,7 +39,7 @@ defmodule WotexLabWorkbenchWeb.Components.AnswerBlock do
       <ul :if={Map.get(@answer, :sources, []) != []}>
         <li :for={source <- Map.get(@answer, :sources, [])}>
           <a :if={source.href} href={source.href}>{source.label}</a>
-          <code :if={is_nil(source.href)}>{source.label}</code>
+          <code :if={is_nil(source.href)} class="wl-query-code">{source.label}</code>
         </li>
       </ul>
     </section>

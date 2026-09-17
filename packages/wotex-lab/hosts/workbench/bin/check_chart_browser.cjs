@@ -116,6 +116,25 @@ async function run() {
     assert.equal(dashboard.panels.length, 1);
     assert.equal(dashboard.panels[0].targets[0].expr,
       "histogram_quantile(0.95, rate(wotex_lab_nx_duration_seconds_bucket[5m]))");
+
+    assert.equal(await page.locator("#history-results").count(), 0);
+    await page.locator("#history-range").selectOption("5m");
+    await page.locator("#history-query button[type=submit]").focus();
+    await page.keyboard.press("Enter");
+    const historyChart = page.locator("#history-chart-nx_duration_seconds svg.wl-chart-svg");
+    await historyChart.waitFor({state: "visible"});
+    assert.equal(await page.locator("#history-results").getAttribute("aria-live"), "polite");
+    assert.ok(await page.getByText(/p95 per step in seconds; 3 of 3 label sets/).isVisible());
+    assert.equal(await page.locator("#history-chart-nx_duration_seconds .wl-chart-series").count(), 3);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await page.reload();
+    await page.locator("#history-query").waitFor({state: "visible"});
+    assert.equal(await page.locator("#history-results").count(), 0);
+    const historyOther = await browser.newPage();
+    await historyOther.goto(new URL("/metrics", origin).href);
+    await historyOther.locator("#metric-catalogue").waitFor({state: "visible"});
+    assert.equal(await historyOther.locator("#history-query").count(), 0);
+    await historyOther.close();
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       kind: "local_source_browser_cohort", node: process.version, playwright: version,
@@ -124,7 +143,8 @@ async function run() {
         "analysis-deep-link", "chart-fragment", "analysis-no-evidence-mutation",
         "reload-no-replay", "session-isolation", "keyboard-skip-and-details",
         "catalogue-selection", "saved-dashboard", "catalogue-mobile-reflow",
-        "dashboard-deep-link", "dashboard-download"],
+        "dashboard-deep-link", "dashboard-download", "history-panels", "history-keyboard-submit",
+        "history-mobile-reflow", "history-reload-no-replay", "history-session-isolation"],
       status: "passed", artifact_adoption: false, wcag_certification: false
     }));
   } finally { await browser.close(); }

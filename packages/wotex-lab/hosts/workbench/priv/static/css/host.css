@@ -167,6 +167,11 @@
   gap: var(--wl-space-3);
 }
 
+/* Grid items otherwise take the min-content width of wide charts and tables. */
+.wl-stack > * {
+  min-width: 0;
+}
+
 .wl-main {
   grid-area: main;
   min-width: 0;

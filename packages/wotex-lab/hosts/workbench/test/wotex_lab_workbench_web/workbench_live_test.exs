@@ -204,6 +204,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     host_css = File.read!(Application.app_dir(:wotex_lab_workbench, "priv/static/css/host.css"))
     assert host_css =~ "prefers-reduced-motion"
     assert host_css =~ "@media (max-width: 48rem)"
+    assert host_css =~ ~r/\.wl-stack > \* \{\s*min-width: 0;/
     refute host_css =~ "gradient"
 
     {:ok, view, _html} = live(conn, "/evidence")
