@@ -6,7 +6,7 @@ defmodule Wotex.BLE.RuntimeErrorTest do
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Retry}
   alias Wotex.ThingDescription
 
-  @corpus Path.expand("../../..", __DIR__) <> "/docs/specs/fixtures/wotex-integration-v1.json"
+  @corpus Path.expand("../../..", __DIR__) <> "/priv/fixtures/wotex-integration-v1.json"
   @external_resource @corpus
   @cases @corpus
          |> File.read!()

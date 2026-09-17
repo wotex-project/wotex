@@ -122,7 +122,7 @@ do not silently skip, simulate or weaken the requirement.
 ### WBL-P07a: Prove the Wotex consumer boundary
 
 - Requirements: WBL-I01, WBL-I02, WBL-I03, WBL-I04, WBL-I05, WBL-I06; all previous native/profile packages are dependencies.
-- Concrete cases: every `WBL-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Concrete cases: every `WBL-I-Fxx` case in `priv/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
 - Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
 - Test destinations: `test/wotex/ble/runtime_integration_test.exs` and explicit test-only credential/client ports.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.

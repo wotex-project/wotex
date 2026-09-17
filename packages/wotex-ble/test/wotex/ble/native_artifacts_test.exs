@@ -17,7 +17,7 @@ defmodule Wotex.BLE.NativeArtifactsTest do
     guardian_sha256: @digest
   ]
 
-  @fixtures Path.expand("../../../docs/specs/fixtures/native-port-v1.json", __DIR__)
+  @fixtures Path.expand("../../../priv/fixtures/native-port-v1.json", __DIR__)
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")

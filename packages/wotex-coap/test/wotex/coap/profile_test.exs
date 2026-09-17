@@ -9,7 +9,7 @@ defmodule Wotex.CoAP.ProfileTest do
   alias Wotex.CoAP.{Codec, Error, Message, Transport}
   alias Wotex.CoAP.Test.{RuntimeCapture, RuntimeCredentials}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, ExecutionContext, Request}
-  @corpus Path.expand("../../../docs/specs/fixtures/wotex-integration-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/wotex-integration-v1.json", __DIR__)
   @case Enum.find(Jason.decode!(File.read!(@corpus))["cases"], &(&1["id"] == "WCO-I-F01"))
 
   test "WCO-I02 profiles admit exactly UDP unary and Observe cells without acquisition" do

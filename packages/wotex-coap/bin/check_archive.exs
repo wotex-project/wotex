@@ -2,7 +2,17 @@ defmodule Wotex.CoAP.Check.Archive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
-  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "lib", "docs"]
+  @packaged [
+    "mix.exs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "lib",
+    "priv/fixtures/contract-v1.json",
+    "priv/fixtures/custody-v1.json",
+    "priv/fixtures/native-v1.json",
+    "priv/fixtures/wotex-integration-v1.json"
+  ]
   @development [".git", "deps", "_build"]
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.CoAP.Error.beam"
@@ -58,6 +68,7 @@ defmodule Wotex.CoAP.Check.Archive do
     Enum.each(@packaged, &packaged!(package, &1))
 
     development!(package)
+    documentation!(package)
     identities!(package)
 
     dependencies!(project_root)
@@ -105,6 +116,21 @@ defmodule Wotex.CoAP.Check.Archive do
 
     unless directories == [] do
       violation("archive contains development state")
+    end
+  end
+
+  # Documentation reaches consumers through HexDocs; the archive ships no
+  # documentation tree and no task ledger.
+  defp documentation!(package) do
+    paths =
+      package
+      |> Path.join("**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.map(&Path.relative_to(&1, package))
+      |> Enum.filter(&(hd(Path.split(&1)) in ["docs", "tasks"]))
+
+    unless paths == [] do
+      violation("archive contains documentation or task paths: #{Enum.join(paths, ", ")}")
     end
   end
 

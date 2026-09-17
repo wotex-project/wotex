@@ -328,7 +328,7 @@ or pure flow test alone cannot satisfy these process tests.
 
 ## WBL-B03 — Concrete native acceptance
 
-[The native corpus](fixtures/native-port-v1.json) has format
+[The native corpus](../../../../packages/wotex-ble/priv/fixtures/native-port-v1.json) has format
 `wotex.native-contract`, version `1.0.0`, and explicit execution status. Its executed_cases list
 identifies only cases bound to passing tests in executable-evidence.md.
 It supplements the .11 value/lifecycle and .12 Runtime corpora. Every case names
@@ -417,7 +417,7 @@ versions, command, result and cleanup counters. Missing software peers, optional
 kernel facilities required by the selected fixture, skipped required cases and
 zero-case runs fail. Evidence for a different backend does not accept this one.
 
-The separate [custody corpus](fixtures/custody-contract-v1.json) binds WBL-G01
+The separate [custody corpus](../../../../packages/wotex-ble/priv/fixtures/custody-contract-v1.json) binds WBL-G01
 through WBL-G09 to the native `custody_check.c` driver and ExUnit assertions.
 The driver receives the case ID and its workspace, never expected results. It
 emits observed capacities, byte counts, direct reaping, background termination

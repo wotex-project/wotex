@@ -2,7 +2,7 @@ defmodule WotexBLE.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-ble"
+  @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
@@ -111,16 +111,17 @@ defmodule WotexBLE.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-ble/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_ble",
         "Project" => "https://wotex.io",
         "Source" => @source_url,
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-ble",
         "W3C Thing Description 1.1" =>
           "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib priv/bluez/native mix.exs)
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib priv/bluez/native priv/fixtures mix.exs)
     ]
   end
 
@@ -129,8 +130,13 @@ defmodule WotexBLE.MixProject do
       main: "readme",
       extras:
         ["README.md", "CHANGELOG.md", "SECURITY.md"] ++
-          Path.wildcard("docs/{specs,plans,provenance}/*.md"),
+          Path.wildcard(
+            Path.expand("../../docs/packages/wotex-ble/{specs,plans,provenance}/*.md", __DIR__)
+          ),
       source_url: @source_url,
+      source_ref: "wotex-ble-v#{@version}",
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-ble-v#{@version}/packages/wotex-ble/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end

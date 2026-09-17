@@ -7,7 +7,7 @@ defmodule Wotex.BLE.StreamValueTest do
   alias Wotex.BLE.BlueZ.Stream
   alias Wotex.BLE.{Error, Subscription}
 
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
 
   test "WBL-P05 WBL-V07 mode selection preserves the BlueZ procedure limitation" do
     for {flags, requested, effective} <- [

@@ -4,7 +4,7 @@ defmodule Wotex.CoAP.NativeContractTest do
   use ExUnit.Case, async: true
   alias Wotex.CoAP
   alias Wotex.CoAP.{Blockwise, Codec, ContractFixture, Error, Message}
-  @path Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @path Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @fixture Jason.decode!(File.read!(@path))
   @digest Base.encode16(:crypto.hash(:sha256, File.read!(@path)), case: :lower)
   @operations ~w(codec.encode codec.decode codec.validate message.new observe.fresh link_format.decode)

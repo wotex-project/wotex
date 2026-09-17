@@ -40,7 +40,7 @@ owns configuration, exchange context and sender-sequence callbacks. No private
 SDK layout or Python bridge is part of the interface.
 
 Apply the ordered patches and verify their resulting source hashes from
-[`native/oscore/source.json`](../../native/oscore/source.json). The sequence
+[`native/oscore/source.json`](../../../../packages/wotex-coap/native/oscore/source.json). The sequence
 patch requires a successful persistence callback before advancing the cached
 boundary or encrypting a PDU. The CBOR patch avoids a null-pointer copy for a
 valid empty byte string. The whole-body patch bounds advertised Size1/Size2
@@ -90,7 +90,7 @@ production owner, durable replay, independent-stack or complete secure workflows
 
 The native JSON dependency is unmodified yyjson 0.12.0, commit
 `8b4a38dc994a110abaec8a400615567bd996105f`. Its
-[pin and MIT notice](../../native/oscore/vendor/yyjson/source.json) identify the
+[pin and MIT notice](../../../../packages/wotex-coap/native/oscore/vendor/yyjson/source.json) identify the
 archive and vendored file hashes. Compile with `YYJSON_DISABLE_NON_STANDARD=1`,
 `YYJSON_DISABLE_UTILS=1` and `YYJSON_DISABLE_INCR_READER=1`; the sole read flag is
 `YYJSON_READ_NUMBER_AS_RAW`. The native manifest includes these hashes and flags.
@@ -708,7 +708,7 @@ against Californium 3.14.0 on macOS arm64 through the manifest-bound helper;
 its renewed full-run receipt and its Linux lanes remain open, and Group OSCORE,
 context re-derivation and a second independent stack remain unaccepted. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 
-The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
+The [native corpus](../../../../packages/wotex-coap/priv/fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute
 against the BEAM decoders. F06 and F16-F20 execute through the manifest-bound
 helper in `test/software/native_corpus_test.exs`, whose UDP socket stands in for

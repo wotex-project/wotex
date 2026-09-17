@@ -8,7 +8,7 @@ defmodule Wotex.BLE.NativeCreditTest do
   @root Path.expand("../../..", __DIR__)
   @source Path.join(@root, "test/native/credit_test.cpp")
   @include Path.join(@root, "priv/bluez/native")
-  @corpus Path.join(@root, "docs/specs/fixtures/native-port-v1.json")
+  @corpus Path.join(@root, "priv/fixtures/native-port-v1.json")
   @fixtures get_in(Jason.decode!(File.read!(@corpus)), ["cases"])
   @implemented ~w(WBL-B-F07 WBL-B-F08 WBL-B-F09 WBL-B-F10 WBL-B-F14 WBL-B-F15)
 

@@ -36,7 +36,7 @@ defmodule Wotex.CoAP.Software.Run do
                   Path.join(@project_root, "mix.exs"),
                   Path.join(@project_root, "mix.lock"),
                   Path.join(@project_root, "test/test_helper.exs"),
-                  Path.join(@project_root, "docs/specs/fixtures/native-v1.json")
+                  Path.join(@project_root, "priv/fixtures/native-v1.json")
                 ] ++
                   Enum.map(@cases, &Path.join(@project_root, &1)) ++
                   Path.wildcard(Path.join(@project_root, "test/support/*.ex")) ++

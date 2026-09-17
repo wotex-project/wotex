@@ -7,7 +7,7 @@ defmodule Wotex.CoAP.NativeWireTest do
   alias Wotex.CoAP.{Error, Message, Native.Wire}
 
   @revision "7cf7465b784baded4de183290c547d582becfd28"
-  @fixture_path Path.expand("../../../docs/specs/fixtures/native-v1.json", __DIR__)
+  @fixture_path Path.expand("../../../priv/fixtures/native-v1.json", __DIR__)
   @fixture Jason.decode!(File.read!(@fixture_path))
 
   test "WCO-C07 WCO-N-F01 decodes the exact bounded ready line" do

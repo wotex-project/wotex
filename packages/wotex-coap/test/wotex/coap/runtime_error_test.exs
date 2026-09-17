@@ -8,7 +8,7 @@ defmodule Wotex.CoAP.RuntimeErrorTest do
   alias Wotex.CoAP.Test.{ErrorTransport, RuntimeCredentials}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Retry}
 
-  @corpus Path.expand("../../../docs/specs/fixtures/wotex-integration-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/wotex-integration-v1.json", __DIR__)
   @cases Jason.decode!(File.read!(@corpus))["cases"]
   @faults %{
     "read_timeout" => {:deadline_exceeded, :none},

@@ -9,7 +9,7 @@ defmodule Wotex.BLE.NativeReportsTest do
 
   @root Path.expand("../../..", __DIR__)
   @fixtures @root
-            |> Path.join("docs/specs/fixtures/native-port-v1.json")
+            |> Path.join("priv/fixtures/native-port-v1.json")
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")

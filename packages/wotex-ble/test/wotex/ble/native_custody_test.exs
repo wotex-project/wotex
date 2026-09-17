@@ -9,7 +9,7 @@ defmodule Wotex.BLE.NativeCustodyTest do
 
   @root Path.expand("../../..", __DIR__)
   @fixtures @root
-            |> Path.join("docs/specs/fixtures/custody-contract-v1.json")
+            |> Path.join("priv/fixtures/custody-contract-v1.json")
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")

@@ -202,7 +202,7 @@ cleanup without a peer acknowledgment must not be reported as remote cancellatio
 
 ## WCO-D05 — Concrete fixture and executable-oracle contract
 
-`docs/specs/fixtures/contract-v1.json` supplies exact inputs/expected outputs.
+`priv/fixtures/contract-v1.json` supplies exact inputs/expected outputs.
 The WCO-Vxx table in WCO.10 describes scenario families. Neither its rows nor
 the existence of JSON cases constitutes accepted executable evidence. The corpus
 instantiates selected wire, URI, discovery, freshness and observation cells;

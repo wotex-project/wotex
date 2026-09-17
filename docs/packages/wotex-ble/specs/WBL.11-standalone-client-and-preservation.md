@@ -152,7 +152,7 @@ explicitly pinned Python exception; it never supplies client IPC responses.
 
 ## WBL-N04 — Concrete corpus and executable acceptance
 
-[contract-v1.json](fixtures/contract-v1.json) is fixture format `1.0.0` with
+[contract-v1.json](../../../../packages/wotex-ble/priv/fixtures/contract-v1.json) is fixture format `1.0.0` with
 status `specified_unexecuted`. It contains concrete examples; the broader Vxx
 rows in .10 are scenario families. Neither a scenario row nor parseable JSON
 counts as an executed test. All Vxx alternatives and boundaries still need tests.

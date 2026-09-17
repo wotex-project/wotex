@@ -4,7 +4,7 @@ defmodule Wotex.BLE.ContractFixtureTest do
   use ExUnit.Case, async: true
   alias Wotex.BLE.{Address, UUID, Value}
 
-  @fixture_path Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @fixture_path Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @fixture_path
   @corpus Jason.decode!(File.read!(@fixture_path))
   @root Path.expand("../../..", __DIR__)

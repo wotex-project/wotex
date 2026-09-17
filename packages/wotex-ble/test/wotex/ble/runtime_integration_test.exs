@@ -6,7 +6,7 @@ defmodule Wotex.BLE.RuntimeIntegrationTest do
   alias Wotex.BLE.{Error, Mapping, RuntimeClient, RuntimeErrorPort, RuntimeRecordingTransport}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result}
 
-  @corpus Path.expand("../../../docs/specs/fixtures/wotex-integration-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/wotex-integration-v1.json", __DIR__)
   @external_resource @corpus
   @vector @corpus
           |> File.read!()

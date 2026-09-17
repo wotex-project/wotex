@@ -8,7 +8,10 @@ defmodule Wotex.BLE.Check.Archive do
     "NOTICE",
     "README.md",
     "lib",
-    "docs",
+    "priv/fixtures/contract-v1.json",
+    "priv/fixtures/custody-contract-v1.json",
+    "priv/fixtures/native-port-v1.json",
+    "priv/fixtures/wotex-integration-v1.json",
     "priv/bluez/native/frame.hpp",
     "priv/bluez/native/bytes.hpp",
     "priv/bluez/native/agent.hpp",
@@ -88,6 +91,7 @@ defmodule Wotex.BLE.Check.Archive do
     Enum.each(@packaged, &packaged!(package, &1))
 
     development!(package)
+    documentation!(package)
     interpreters!(package)
     identities!(package)
 
@@ -136,6 +140,21 @@ defmodule Wotex.BLE.Check.Archive do
 
     unless directories == [] do
       violation("archive contains development state")
+    end
+  end
+
+  # Documentation reaches consumers through HexDocs; the archive ships no
+  # documentation tree and no task ledger.
+  defp documentation!(package) do
+    paths =
+      package
+      |> Path.join("**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.map(&Path.relative_to(&1, package))
+      |> Enum.filter(&(hd(Path.split(&1)) in ["docs", "tasks"]))
+
+    unless paths == [] do
+      violation("archive contains documentation or task paths: #{Enum.join(paths, ", ")}")
     end
   end
 

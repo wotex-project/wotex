@@ -20,7 +20,8 @@ defmodule Wotex.BLE.Native.BuildOperations do
   @doc false
   @spec tool_digest(String.t()) :: {:ok, String.t()} | {:error, :invalid_native_tool}
   def tool_digest(path) do
-    with {:ok, %File.Stat{type: :regular, size: size}} when size <= @maximum_tool <- File.stat(path),
+    with {:ok, %File.Stat{type: :regular, size: size}} when size <= @maximum_tool <-
+           File.stat(path),
          {:ok, bytes} <- File.read(path) do
       {:ok, Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)}
     else

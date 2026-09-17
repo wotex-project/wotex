@@ -9,7 +9,7 @@ defmodule Wotex.BLE.NativeProcessFlowTest do
   @root Path.expand("../../..", __DIR__)
   @grace 1000
   @fixtures @root
-            |> Path.join("docs/specs/fixtures/native-port-v1.json")
+            |> Path.join("priv/fixtures/native-port-v1.json")
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")

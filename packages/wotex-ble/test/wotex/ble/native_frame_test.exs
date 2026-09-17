@@ -8,7 +8,7 @@ defmodule Wotex.BLE.NativeFrameTest do
   @root Path.expand("../../..", __DIR__)
   @source Path.join(@root, "test/native/frame_test.cpp")
   @include Path.join(@root, "priv/bluez/native")
-  @corpus Path.join(@root, "docs/specs/fixtures/native-port-v1.json")
+  @corpus Path.join(@root, "priv/fixtures/native-port-v1.json")
   @fixtures get_in(Jason.decode!(File.read!(@corpus)), ["cases"])
   @header_hash "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
 

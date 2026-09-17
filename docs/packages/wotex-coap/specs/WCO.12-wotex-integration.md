@@ -219,7 +219,7 @@ No-stream modes return a structured unsupported error without creating a process
 
 ## WCO-I06 — Acceptance through public packages
 
-The concrete [integration corpus](fixtures/wotex-integration-v1.json) fixes a
+The concrete [integration corpus](../../../../packages/wotex-coap/priv/fixtures/wotex-integration-v1.json) fixes a
 synthetic TD, selected route/command and public payload projection. Its seven
 cases execute: F01 in `test/wotex/coap/profile_test.exs` against a real UDP peer
 and F02-F07 in `test/wotex/coap/runtime_error_test.exs`. JSON validity or an identifier

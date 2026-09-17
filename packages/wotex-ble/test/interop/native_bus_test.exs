@@ -12,13 +12,13 @@ defmodule Wotex.BLE.NativeBusTest do
   @root Path.expand("../..", __DIR__)
 
   @fixtures @root
-            |> Path.join("docs/specs/fixtures/native-port-v1.json")
+            |> Path.join("priv/fixtures/native-port-v1.json")
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")
 
   @contract @root
-            |> Path.join("docs/specs/fixtures/contract-v1.json")
+            |> Path.join("priv/fixtures/contract-v1.json")
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")

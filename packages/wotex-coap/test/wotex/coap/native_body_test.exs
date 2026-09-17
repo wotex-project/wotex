@@ -6,7 +6,7 @@ defmodule Wotex.CoAP.NativeBodyTest do
 
   alias Wotex.CoAP.{Error, Native.Body, Native.Wire}
 
-  @fixture_path Path.expand("../../../docs/specs/fixtures/native-v1.json", __DIR__)
+  @fixture_path Path.expand("../../../priv/fixtures/native-v1.json", __DIR__)
   @fixture Jason.decode!(File.read!(@fixture_path))
 
   test "WCO-N-F03 releases an exact body only after verified completion" do

@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.Native.CustodyTest do
 
   use ExUnit.Case, async: false
 
-  @fixtures "docs/specs/fixtures/custody-v1.json"
+  @fixtures "priv/fixtures/custody-v1.json"
   @cases Jason.decode!(File.read!(@fixtures))["cases"]
 
   setup_all do

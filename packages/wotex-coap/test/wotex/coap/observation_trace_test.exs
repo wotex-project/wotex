@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.ObservationTraceTest do
 
   use ExUnit.Case, async: true
 
-  @corpus Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
 
   @tag fixture_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)
   test "WCO-D05 WCO-S01 WCO-S03 WCO-F-OBSERVE-CANCEL-RACE exact virtual execution trace" do

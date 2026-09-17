@@ -21,7 +21,7 @@ This checkout is a `0.1.0-dev` development library. The public API remains
 unstable, and the ordered software profile is unfinished. Package metadata
 does not establish publication or release readiness.
 
-Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+Build handoff: [software implementation sequence](../../docs/packages/wotex-ble/plans/software-implementation.md).
 
 ## Installation
 
@@ -48,17 +48,17 @@ launches the SDK only through the guardian, and opens a fresh report-credit
 generation before the peer. Persistent mode requires that cohort; no interpreter
 backend remains. Complete public software-peer/stress evidence remains required.
 
-[WBL.13](docs/specs/WBL.13-native-backend.md) fixes source/build pins, typed IPC,
+[WBL.13](../../docs/packages/wotex-ble/specs/WBL.13-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. Native value reports are admitted through a
 64-frame/1 MiB BEAM ledger and receive cumulative byte-exact credit only after
 their stream owner admits final receiver delivery; retirement consumes only the
 retired stream's pending records. On Linux, `mix wotex.native.build --workspace
 ABSOLUTE_PATH` builds the host, runtime guardian and pinned shared libdbus, audits
 their ELF dependencies and records `native-manifest.json`; see the
-[native build receipt](docs/provenance/native-build-v1.json). From a source
+[native build receipt](../../docs/packages/wotex-ble/provenance/native-build-v1.json). From a source
 checkout, `mix wotex.software.build` and `mix wotex.software.run` build and boot
 the BlueZ virtual-controller fixture once per BEAM lane; see the
-[software run receipt](docs/provenance/software-run-v3.json). Upstream SDK
+[software run receipt](../../docs/packages/wotex-ble/provenance/software-run-v3.json). Upstream SDK
 Python is build-time only, and the fixture's independent GATT peer uses Python
 only as a test peer.
 
@@ -84,7 +84,7 @@ The native host passes the 11 public BLE and Runtime tests and the 5 WBL-C09
 lifecycle stress tests against real BlueZ 5.85 and two virtual Linux controllers
 in both BEAM lanes. The independent
 provider uses BlueZ's GATT server API, so the wire endpoints remain the same
-stack. See the [virtual-controller fixture](docs/provenance/virtual-controller.md).
+stack. See the [virtual-controller fixture](../../docs/packages/wotex-ble/provenance/virtual-controller.md).
 The x86_64 guest lane and final package gates remain unfinished in the ordered
 plan.
 
@@ -141,9 +141,9 @@ native value codec selectors. Every explicit contentType and Runtime credential
 is rejected before backend I/O. Runtime owns public stream identity; the relay
 releases its original session on owner loss or cancellation.
 
-See the [implemented profile](docs/specs/WBL.02-implemented-profile.md),
-[primary sources](docs/provenance/primary-sources.md) and
-[executable evidence](docs/provenance/executable-evidence.md).
+See the [implemented profile](../../docs/packages/wotex-ble/specs/WBL.02-implemented-profile.md),
+[primary sources](../../docs/packages/wotex-ble/provenance/primary-sources.md) and
+[executable evidence](../../docs/packages/wotex-ble/provenance/executable-evidence.md).
 
 ## Development
 
@@ -159,20 +159,20 @@ No remote repository, published package or publication action is implied.
 
 ## Software implementation contract
 
-The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WBL-index.md) define the remaining software
+The [ordered implementation sequence](../../docs/packages/wotex-ble/plans/software-implementation.md)
+and [specification index](../../docs/packages/wotex-ble/specs/WBL-index.md) define the remaining software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
-The [standalone client contract](docs/specs/WBL.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-ble/specs/WBL.11-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
-Its [concrete corpus](docs/specs/fixtures/contract-v1.json) contains specified
+Its [concrete corpus](priv/fixtures/contract-v1.json) contains specified
 inputs and outcomes. Executable tests cite the cases they implement; the corpus
 file and scenario tables alone do not establish acceptance of the whole profile.
 
-The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](docs/specs/WBL.12-wotex-integration.md)
+The [specification catalogue](../../docs/packages/wotex-ble/specs/catalogue.yaml) distinguishes implemented
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-ble/specs/WBL.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. The implemented mapping and relay cover part of these requirements. A passing
 baseline gate does not accept the unfinished software-peer and stress profile.

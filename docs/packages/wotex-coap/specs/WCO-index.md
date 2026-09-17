@@ -21,6 +21,6 @@ provenance distinguish these scopes.
 
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and scoped execution evidence
 - [WCO.12 Wotex integration and evidence contract](WCO.12-wotex-integration.md)
-- [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
+- [Concrete Wotex integration corpus](../../../../packages/wotex-coap/priv/fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
 
 - [WCO.13 Native build and software evidence](WCO.13-native-build-and-software-evidence.md) — explicit Mix tasks, native peer ownership and acceptance
