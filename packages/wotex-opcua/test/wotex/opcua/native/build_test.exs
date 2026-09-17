@@ -92,10 +92,12 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     native_contract_hash = :crypto.hash(:sha256, native_contract) |> Base.encode16(case: :lower)
     assert receipt["identity"]["native_contract_sha256"] == native_contract_hash
 
-    for number <- 1..16 do
+    for number <- Enum.concat([1..20, 49..50, 52..55]) do
       id = String.pad_leading(Integer.to_string(number), 2, "0")
       assert native_tests =~ "native_contract_WOP-X-F#{id}"
     end
+
+    assert native_tests =~ "native_owner_matrix"
 
     corpus_path = Application.app_dir(:wotex_opcua, "priv/native/fixtures/value-v1.json")
     corpus_bytes = File.read!(corpus_path)
@@ -122,16 +124,19 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     assert_native_terminal(native, [request], nil, "invalid_request", "validation")
 
-    assert_native_terminal(
+    assert_native_failure(
       native,
       [binary_part(request, 0, 23), binary_part(request, 23, byte_size(request) - 23)],
       7,
-      "unsupported_protocol",
+      "r1",
+      "invalid_request",
       "validation"
     )
 
-    expired = String.replace(request, "9223372036854775807", "0")
-    assert_native_terminal(native, [expired], 7, "deadline_exceeded", "admission")
+    assert {:ok, subscribe} =
+             Frame.request(7, "s1", "subscribe", %{}, 1000, 9_223_372_036_854_775_807)
+
+    assert_native_failure(native, [subscribe], 7, "s1", "unsupported_protocol", "validation")
 
     invalid = String.replace(request, "\"timeout_ms\":1000", "\"timeout_ms\":1.5")
     assert_native_terminal(native, [invalid], 7, "invalid_request", "validation")
@@ -160,6 +165,9 @@ defmodule Wotex.OPCUA.Native.BuildTest do
              Frame.request(7, "o1", "open", open, 1000, 9_223_372_036_854_775_807)
 
     assert_native_terminal(native, [secure_open], 7, "certificate_invalid", "opening")
+
+    expired_open = String.replace(secure_open, "9223372036854775807", "0")
+    assert_native_terminal(native, [expired_open], 7, "deadline_exceeded", "admission")
 
     assert {:ok, downgraded_open} =
              Frame.request(
@@ -196,7 +204,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     monitor = Process.monitor(host)
 
-    assert {:error, %Wotex.OPCUA.Error{code: :unsupported_protocol} = failure} =
+    assert {:error, %Wotex.OPCUA.Error{code: :invalid_request} = failure} =
              Wotex.OPCUA.Native.Host.request(host, "read", %{}, 1000)
 
     assert failure.details == %{phase: :validation}
@@ -310,6 +318,31 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     assert {:error, :command_failed, %{exit_status: 1}} = Command.run(guardian, step)
     File.rm_rf!(destination)
+  end
+
+  defp assert_native_failure(executable, fragments, generation, id, code, phase) do
+    port = Port.open({:spawn_executable, executable}, [:binary, :exit_status])
+
+    try do
+      assert_receive {^port, {:data, ready}}, 5_000
+      assert %{"event" => "ready"} = Jason.decode!(ready)
+      assert {:ok, credit} = Frame.credit(generation, 1, 16, 262_144)
+      assert Port.command(port, credit)
+      Enum.each(fragments, fn fragment -> assert Port.command(port, fragment) end)
+      assert_receive {^port, {:data, failure}}, 5_000
+
+      assert Jason.decode!(failure) == %{
+               "version" => 1,
+               "generation" => generation,
+               "id" => id,
+               "ok" => false,
+               "error" => %{"code" => code, "phase" => phase, "effect" => "none"}
+             }
+
+      refute_receive {^port, {:exit_status, _}}, 50
+    after
+      if Port.info(port), do: Port.close(port)
+    end
   end
 
   defp assert_native_terminal(executable, fragments, generation, code, phase) do

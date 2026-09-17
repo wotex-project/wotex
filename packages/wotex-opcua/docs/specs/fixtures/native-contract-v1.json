@@ -20,9 +20,21 @@
       "WOP-X-F14",
       "WOP-X-F15",
       "WOP-X-F16"
+    ],
+    "WOP-P02-partial": [
+      "WOP-X-F17",
+      "WOP-X-F18",
+      "WOP-X-F19",
+      "WOP-X-F20",
+      "WOP-X-F49",
+      "WOP-X-F50",
+      "WOP-X-F52",
+      "WOP-X-F53",
+      "WOP-X-F54",
+      "WOP-X-F55"
     ]
   },
-  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. Persistent owner/service execution and later scenario families remain required.",
+  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. Live SDK service execution and later scenario families remain required.",
   "cases": [
     {
       "id": "WOP-X-F01",

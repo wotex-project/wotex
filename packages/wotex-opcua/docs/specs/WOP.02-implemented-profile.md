@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.1
+  version: 2.0.2
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -94,6 +94,10 @@ activation, the revised timeout and an explicit NamespaceArray read in that
 test binary. Production open/close then acquired the NamespaceArray
 asynchronously and checked the server revision before service work was added.
 
+The native process now multiplexes up to 64 application operations behind one
+Session. Request-scoped failures, `busy`, `cancel` and `health` are implemented
+in the process; the BEAM host still sends one request at a time and still stops
+on any native failure, so public concurrency and cancellation remain open.
 The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
 input line and applies the strict JSON reader and closed outer request envelope

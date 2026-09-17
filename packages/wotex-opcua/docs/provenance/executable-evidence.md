@@ -20,6 +20,77 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Multiplexed native process owner, 2026-09-17
+
+`priv/native/owner.c` replaces the single-flight loop in `main.c`. It admits at
+most 64 application operations, validates and copies each request without
+protocol I/O, and dispatches queued work in admission order on the next loop
+tick with a finite SDK timeout hint and a request handle below 100,000. Each
+admitted request receives exactly one success or request-scoped failure.
+Validation failures, a service before `open`, expired admission, `busy`, Bad
+Read/Write/Call/first-page Browse statuses and `deadline_exceeded` keep the
+Session usable. Malformed frames or envelopes, credit violations, duplicate
+outstanding IDs, Session or channel loss, BrowseNext/release faults and cleanup
+failure remain terminal. `cancel` and `close` use separate control admission.
+`cancel` answers an unfinished target with `canceled`, keeps unknown effect for
+a sent Write or Call, sends the SDK Cancel service through the asynchronous
+service API and returns `{target_id, canceled}`. Retired sent work keeps its
+slot until the SDK callback matching both slot and request ID releases it. A
+retired continuation-owning Browse, BrowseNext or release closes the Session
+because server continuation state could remain unowned. `health` uses the Read
+path. The SDK service stores per-slot requests and waits before reporting
+`open` until the SDK's own namespace table contains every server URI. The loop
+also reads input when `poll` reports `POLLNVAL`, which a device-file stdin
+produces on macOS; before this change such an EOF was never observed.
+
+`wotex_opcua_owner_check` drives the production owner, output queue and IPC
+parser with an explicitly injected service and binds WOP-X-F17 through F20,
+F49, F50 and F52 through F55 in `native-contract-v1.json`. F17's native deadline
+uses the same arithmetic as `Native.Frame.admission/5`; the owner-side
+translation is bound separately in ExUnit. Its matrix covers every split of two
+coalesced request lines, FIFO dispatch and distinct request handles, request
+failures, Bad status, dispatched deadline expiry with protocol cancellation and
+held slot release, queued expiry without I/O, duplicate IDs, Session loss with
+an unknown terminal effect, clean and truncated EOF, malformed and oversized
+input, and receiver overflow with no credit. The real-process build test now
+asserts request-scoped `invalid_request` and `unsupported_protocol` failures
+without process exit, plus terminal deadline admission for an expired `open`.
+`browse_check.c` covers token admission, queued BrowseNext retirement restoring
+the continuation and orphaning after dispatched retirement.
+
+The incremental RelWithDebInfo native CTest suite passes 194/194. A macOS Debug
+build with `-DWOTEX_SANITIZERS=ON` passes 185/185 non-custody CTests under
+AddressSanitizer/UndefinedBehaviorSanitizer; `sanitizer_options.c`, linked only
+into that build, disables symbolizer discovery so the guardian's no-stderr rule
+does not reject the instrumented executable. The optional secure suite against
+the independent asyncua 2.0.1 peer and same-stack paged C peer passes 11 of 12
+tests with both the normal and sanitizer executables; the remaining failure is
+the pre-existing BEAM host Session closure after a typed Browse exceeds
+`max_references: 1`. The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate
+passes on macOS arm64 with Elixir 1.20.2 / OTP 29.0.4: 301 passed
+(10 doctests, 4 properties, 287 tests), 12 optional tests excluded and 95.0%
+coverage, including the fresh pinned native build and CTest.
+
+The BEAM host still submits one request at a time and stops on any native
+failure, so no public concurrency, cancellation, caller-death cleanup or
+terminal per-request effect mapping is accepted. Live SDK cancellation, receiver
+overflow from a report producer, owner death during open and Runtime handoff
+(F21 through F23) and F51, F56 and F57 remain unbound.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/owner.c` | `f9fc86de2df620af7d69bd461db875a00effa5e9f44975970607818966c19faa` |
+| `priv/native/owner.h` | `49d47bc103012dde6b465937d37603f227879348519f3a433559f3a6988c78a8` |
+| `priv/native/owner_check.c` | `fc6f8997dea99ee2d4dab6ca16fffe3e3710bb5583b1d80a33e65399685964b5` |
+| `priv/native/main.c` | `2e83285a6ae601ccaf67e9e9aab5524062308339448c064f808fccacda66b2e4` |
+| `priv/native/session_open.c` | `0072f6cab69eb35acd25b1b7309bd288dde6d240346c0e8eb943603bea0449f1` |
+| `priv/native/session_open.h` | `91a2d0b0cdff3b682a4a1f8da420c1149e90378ab0ba6f67c87b0c6e13b93f48` |
+| `priv/native/browse_check.c` | `90697dd96a2ba3087d4cf3d644e201b19fc86d93adaecd4b3ada84487797c5ee` |
+| `priv/native/sanitizer_options.c` | `4f00dc281b1404be61b25b2f0f474bffa54b4df0bb449cf8074331716ec055ba` |
+| `priv/native/CMakeLists.txt` | `3b03e90710324df33991304918ca3bcb606365fc833004db1743454da4ef994c` |
+| `docs/specs/fixtures/native-contract-v1.json` | `002a0b6876fda6aa0acd870e44c9d94b2b77a4f51d3d61c6563bef187804900b` |
+| native CTest log | `7a1b180825ee0cc358919dad4dabec6d6f5d3db159ce028062538425f04becbd` |
+
 ## Bounded native output queue, 2026-09-17
 
 `priv/native/output.c` now owns normal native output. Each complete

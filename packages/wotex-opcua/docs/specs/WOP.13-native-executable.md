@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.21
+  version: 1.1.22
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -27,6 +27,16 @@ signatures and the current issuer CRL. Invalid credentials end with
 native configuration adapter and exercised by the production executable and
 the separate C probe against an independent Basic256Sha256 peer. The executable
 checks the server's timeout revision and NamespaceArray before reporting open.
+The C process owner now admits up to 64 application operations through an
+injectable service boundary, dispatches queued work in admission order on a
+later loop tick and answers each operation with one success or request-scoped
+failure. `cancel` and `close` use separate control admission; `cancel` retires
+queued work without I/O and sends the SDK Cancel service asynchronously for sent
+work, preserving unknown effect for a sent Write or Call. `health` uses the Read
+service path. Session loss, malformed input, credit violations and duplicate
+outstanding IDs remain terminal. The production owner binds WOP-X-F17 through
+F20, F49, F50 and F52 through F55 with an explicitly injected service; the BEAM
+host is still single-flight, so public concurrency is not yet accepted.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split

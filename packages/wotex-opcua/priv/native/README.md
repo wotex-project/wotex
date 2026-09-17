@@ -60,6 +60,26 @@ An uninstalled `paged_peer.c` securely limits Browse to one reference per
 response and exercises real BrowseNext, one-result release, and persistent and
 one-shot child-list pagination. Independent-peer BrowseNext/release and multiple
 concurrent continuations remain open.
+
+`owner.c` is the process owner behind a `WopService` boundary. It admits at most
+64 application operations and dispatches them in admission order on the next
+loop tick, so a cancellation read in the same input batch prevents queued work
+from being sent. Each operation receives one success or one request-scoped
+failure envelope: invalid parameters, a service before `open`, expired admission,
+capacity (`busy`), Bad statuses and `deadline_exceeded` keep the Session usable.
+Malformed framing or envelopes, credit violations, duplicate outstanding IDs,
+Session loss and cleanup failure end the generation with one terminal control.
+`cancel` and `close` do not consume operation slots. `cancel` answers the target
+with a `canceled` failure (effect `unknown` only for a sent Write or Call), sends
+the SDK Cancel service asynchronously and returns `{target_id, canceled}`.
+Retired sent work keeps its slot until the SDK callback releases its storage;
+callbacks match both the slot address and SDK request ID. `health` uses the Read
+path. `session_open.c` implements the service with per-slot SDK storage, explicit
+request handles below 100,000 and per-request timeout hints. The owner reports
+`open` only after the SDK's own namespace table contains every server URI.
+`owner_check.c` drives the production owner, output queue and IPC parser with an
+injected service for WOP-X-F17 through F20, F49, F50 and F52 through F55 and a
+matrix of line splits, dispatch order, request failures and terminal paths.
 `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.
