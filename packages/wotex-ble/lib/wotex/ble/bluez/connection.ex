@@ -22,10 +22,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   Owner death, fatal bridge output, peer loss and expired active work close
   the connection generation. Cleanup has a one-second local grace and never
-  reconnects or powers an adapter. Cooperative native close has the first
-  500 ms; the process guardian then owns forced termination and reaping for
-  the remaining 500 ms. A stalled cancellation gets 500 ms before that same
-  guardian handover. An owned link receives Disconnect; ordinary
+  reconnects or powers an adapter. Cooperative native close has 500 ms plus
+  150 ms for its final reply to arrive; the process guardian then owns forced
+  termination, killing the host group within 250 ms and reaping it. A stalled
+  cancellation gets 500 ms before an immediate close and a 150 ms reply window. An owned link receives Disconnect; ordinary
   borrowed cleanup does not. BlueZ link teardown can complete after the local
   resources close, and pending Pair sender loss may disconnect a borrowed peer.
   """
@@ -386,9 +386,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
       else: {:noreply, caller_down(state, ref)}
   end
 
-  # The guardian owns the second half of cleanup: it stops forwarding, terminates
-  # the host group by its midpoint and reaps within 500 ms. Killing the guardian
-  # is only the last resort for a guardian that itself failed that allowance.
+  # After handover the guardian stops forwarding, kills the host group by its
+  # 250 ms midpoint and reaps within 500 ms. Killing the guardian is only the
+  # last resort for a guardian that itself failed that allowance.
   def handle_info(:terminate_bridge, %{status: :closing} = state) do
     signal_port(state.port, "-TERM")
     Process.send_after(self(), :kill_bridge, 500)
@@ -1061,7 +1061,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
       end)
 
     request(state.port, "close", "close", %{}, max(state.cleanup_grace - 500, 1))
-    Process.send_after(self(), :terminate_bridge, max(state.cleanup_grace - 500, 0))
+    # A host using its full cooperative allowance still needs time to deliver its reply.
+    Process.send_after(self(), :terminate_bridge, max(state.cleanup_grace - 350, 0))
 
     %{
       state

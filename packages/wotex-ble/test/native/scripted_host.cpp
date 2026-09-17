@@ -29,7 +29,7 @@ const std::set<std::string> known_modes{
   "procedure_duplicate_event", "procedure_malformed", "procedure_read_event", "subscribe_blocked",
   "subscribe_error", "stop_blocked", "stop_error", "stop_bad_ack", "stop_lost", "stop_slow",
   "report_wrong_generation", "report_wrong_metadata", "report_extra", "report_unknown", "read_overtaken",
-  "repeat", "subscribe_wrong_binding", "close_blocked"};
+  "repeat", "subscribe_wrong_binding", "close_blocked", "close_drain"};
 
 struct Scenario {
   std::set<std::string> modes;
@@ -366,6 +366,8 @@ class Script {
     };
     if (mode("close_blocked")) return;
     if (mode("close_slow")) after(50, finish);
+    // A real host may reply after using its complete 500 ms cooperative allowance.
+    else if (mode("close_drain")) after(560, finish);
     else finish();
   }
 

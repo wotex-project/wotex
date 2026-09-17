@@ -206,6 +206,14 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 50
   end
 
+  test "WBL-C03 a close reply at the end of the cooperative allowance still succeeds" do
+    {session, record} = connect("close_drain")
+    monitor = Process.monitor(session.handle.pid)
+    assert :ok = BLE.disconnect(session)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => []}
+  end
+
   test "WBL-C03 concurrent close callers join bounded cleanup and admission stays finite" do
     {session, record} = connect("close_slow")
     tasks = for _ <- 1..32, do: Task.async(fn -> BLE.disconnect(session) end)

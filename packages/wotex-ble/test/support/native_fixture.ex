@@ -27,6 +27,7 @@ defmodule Wotex.BLE.NativeFixture do
     "truncated" => %{"modes" => ["truncated"]},
     "uncooperative" => %{"modes" => ["uncooperative"]},
     "close_slow" => %{"modes" => ["close_slow"]},
+    "close_drain" => %{"modes" => ["close_drain"]},
     "startup_error" => %{"modes" => ["open_error"], "error" => %{"code" => "disconnected"}},
     "blocked" => %{"modes" => ["discover_blocked"]},
     "slow" => %{"modes" => ["discover_slow"]},

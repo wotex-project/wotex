@@ -712,7 +712,14 @@ WBL-B02; the Python adapter lane had ignored it.
 Finding fixed with this lane: the BEAM escalation sent SIGTERM to the guardian at
 850 ms and SIGKILL 100 ms later, before the guardian's 250 ms group SIGKILL. An
 SDK host ignoring SIGTERM and stdin survived as an orphan. Connection close now
-gives the cooperative host the first 500 ms, hands forced termination to the
-guardian, and kills the guardian only if it has not exited 500 ms later. A
-stalled cancellation has 500 ms before that same handover. The `uncooperative`
-and `close_blocked` scenarios assert `cleanup_timeout` and host process exit.
+gives the cooperative host 500 ms plus a 150 ms window for its final reply, then
+hands forced termination to the guardian, and kills the guardian only if it has
+not exited 500 ms after that handover. A stalled cancellation has 500 ms before
+an immediate close with the same reply window. The `uncooperative` and
+`close_blocked` scenarios assert `cleanup_timeout` and host process exit.
+
+A first version handed over at 500 ms. A host that used its whole cooperative
+allowance, as an owned close waiting for BlueZ Disconnect does, then lost its
+successful reply to the guardian stop. The `close_drain` scenario replies 560 ms
+after receiving `close`; it returned `cleanup_timeout` in three runs before the
+handover moved and returns `:ok` after it.
