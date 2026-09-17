@@ -606,9 +606,33 @@ probes, runtime manifest verification and read-only reuse all pass. The
 fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
-arm64 run: 15 independent libcoap UDP, PSK and PKI tests and 10 same-stack OSCORE
-tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned peers and zero retained
-processes, ports or library-state resources.
+arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 10 same-stack OSCORE
+tests and 8 lifecycle stress tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
+peers and zero retained processes, ports or library-state resources.
+
+`test/software/lifecycle_stress_test.exs` executes the WCO-C09 matrix once per
+transport: UDP and DTLS PSK/PKI against the independent peers, OSCORE against the
+same-stack peer. One session completes 1,000 alternating PUT/GET operations with
+exact values. Thirty-two concurrent callers each receive their own resource's
+representation. With the owner suspended, 96 callers yield exactly 64 responses
+and 32 `busy` failures; native sessions reserve before the mailbox and datagram
+sessions admit when the owner reads each call. One hundred open/close, 100
+Observe/cancel and 100 receiver-termination cycles each return owner ports and
+processes to baseline within 1,000 ms, peer debug records count one created and
+one removed subscription per Observe cycle, and each OSCORE helper process is
+gone. A suspended receiver with `max_queue_length: 2` ends its observation with
+one `receiver_overflow`. The forced-failure case per transport ends a 1,500 ms
+request against a 3-second peer delay with `timeout`, answers requests from a raw
+UDP fault peer with a truncated option or non-DTLS bytes, and closes the peer
+mid-session; each failure has effect `none` and releases its resources. The run
+reports BEAM total memory and OSCORE helper RSS every 100 operations without
+asserting a trend: BEAM totals vary by at most 0.6 MiB per transport and helper
+RSS stays at 1,936 KiB. The stress lane found three defects fixed in preceding
+commits: stale peer traffic after exit cancellation, fatal handling of discarded
+malformed datagrams, and `native_protocol_error` from a close racing a finished
+helper. It does not accept the Linux sanitizer software run, the minimum
+toolchain lane, pending-operation owner loss, Port-mailbox sampling or the
+native-v1 corpus.
 
 `test/interop/oscore_test.exs` is same-stack evidence: the peer is the
 software-build `coap-server` with a matching OSCORE configuration, and the client

@@ -85,7 +85,7 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
         "-V",
         "0",
         "-d",
-        if(mode == :oscore, do: "64", else: "4"),
+        "256",
         "-e",
         "-L",
         "1"
@@ -139,15 +139,16 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
   end
 
   @impl GenServer
-  def handle_info({native, {:data, bytes}}, %{native: native, mode: :oscore} = state) do
-    # Debug logs include protected block payloads, so this peer retains only
-    # a bounded partial line and the lifecycle markers asserted by tests.
+  def handle_info({native, {:data, bytes}}, %{native: native} = state) do
+    # Debug logs include block payloads, so the peer retains only a bounded
+    # partial line and the lifecycle markers asserted by tests.
     [partial | lines] = String.split(state.output <> bytes, "\n") |> Enum.reverse()
 
     partial =
       binary_part(partial, max(byte_size(partial) - 65_536, 0), min(byte_size(partial), 65_536))
 
-    ready = state.ready or Enum.any?(lines, &String.contains?(&1, "created UDP  endpoint"))
+    marker = if state.mode == :oscore, do: "created UDP  endpoint", else: "created DTLS endpoint"
+    ready = state.ready or Enum.any?(lines, &String.contains?(&1, marker))
 
     subscriptions =
       Enum.reduce(lines, state.subscriptions, fn line, counts ->
@@ -164,13 +165,6 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
       end)
 
     {:noreply, ready(%{state | output: partial, subscriptions: subscriptions}, ready)}
-  end
-
-  def handle_info({native, {:data, bytes}}, %{native: native} = state) do
-    output = state.output <> bytes
-    assert byte_size(output) <= 1_048_576
-    ready = state.ready or String.contains?(output, "created DTLS endpoint")
-    {:noreply, ready(%{state | output: output}, ready)}
   end
 
   def handle_info({native, {:exit_status, status}}, %{native: native} = state),

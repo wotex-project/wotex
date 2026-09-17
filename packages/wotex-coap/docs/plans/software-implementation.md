@@ -16,9 +16,10 @@ successful race confirmation and intervening-response ordering, the independent
 secure matrix and complete software closure remain targets. Native and software
 build orchestration is implemented with bounded, manifest-bound workspaces and
 native-vector probes. The software-run task now verifies that build and executes
-the owned independent libcoap UDP, PSK and PKI cohort plus a same-stack OSCORE
-cohort through the Mix-built helper; independent OSCORE and the remaining fault,
-stress, sanitizer and toolchain matrix remain WCO-P09 work.
+the owned independent libcoap UDP, PSK and PKI cohort, a same-stack OSCORE
+cohort through the Mix-built helper and the WCO-C09 lifecycle stress lane for all
+four transports; independent OSCORE, the remaining native fault corpus, Linux
+sanitizer software run and minimum-toolchain lane remain WCO-P09 work.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
@@ -171,9 +172,10 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 ```
 
 The build and run commands and their task tests pass on macOS arm64. The current
-run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer
-and records 25 passing tests; the run must use the same `OPENSSL_ROOT_DIR`
-selection as its build. The complete P09 transport, fault, stress, sanitizer and dual-toolchain matrix
+run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer,
+includes `test/software/lifecycle_stress_test.exs` and records 33 passing tests;
+the run must use the same `OPENSSL_ROOT_DIR` selection as its build. The remaining
+P09 native fault corpus, Linux sanitizer and dual-toolchain matrix
 remains an independent software obligation. The historical Python-run receipt
 retains its original source and command identity only. No build or peer starts
 implicitly. A run is terminal for its disposable workspace because retained

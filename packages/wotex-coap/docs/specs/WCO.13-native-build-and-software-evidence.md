@@ -593,8 +593,9 @@ is 15 seconds, suite timeout 300 seconds, combined log bound 16 MiB and total
 harness cleanup five seconds. These harness limits do not extend C03 library
 deadlines. EOF, owner death and test failure stop only manifest-owned processes.
 The implemented cohort runs `test/interop/libcoap_test.exs`,
-`test/interop/dtls_test.exs`, `test/interop/dtls_pki_test.exs` and
-`test/interop/oscore_test.exs` with seed zero. Fifteen tests cover independent
+`test/interop/dtls_test.exs`, `test/interop/dtls_pki_test.exs`,
+`test/interop/oscore_test.exs` and `test/software/lifecycle_stress_test.exs`
+with seed zero. Fifteen tests cover independent
 libcoap UDP, PSK and PKI unary, Block1/Block2, Observe, Runtime and
 certificate/record-fault paths. Ten same-stack tests drive the manifest-bound
 helper through the public native owner against the software-build `coap-server`
@@ -603,7 +604,12 @@ bodies above the inline threshold, discovery, a 1 MiB Block1 upload and Block2
 download, an authentication failure, Observe changes from a second UDP client,
 receiver and owner death, context consumption after close, a real ConsumedThing
 read, uncorrelated and malformed relayed responses and acknowledgment of the peer's
-confirmable response to exit cancellation. The run retains its result
+confirmable response to exit cancellation. Eight stress tests run each of UDP,
+DTLS PSK, DTLS PKI and OSCORE through 1,000 sequential operations, 32 correlated
+concurrent callers, the exact 64-call admission bound, 100 open/close, 100
+Observe/cancel and 100 receiver-termination cycles, receiver overflow, and forced
+deadline, malformed-response and peer-close failures. Every completed cycle
+returns owner ports and processes to baseline within 1,000 ms. The run retains its result
 directory on success or failure, so another run requires a fresh disposable
 software-build workspace.
 
@@ -631,8 +637,8 @@ Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
-15-test independent UDP/PSK/PKI cohort and 10-test same-stack OSCORE cohort. The
-remaining OSCORE independence, fault, stress, Linux sanitizer,
+15-test independent UDP/PSK/PKI cohort, 10-test same-stack OSCORE cohort and
+8-test macOS stress cohort. The remaining OSCORE independence, native fault corpus, Linux sanitizer,
 second-toolchain and clean-package matrix retains planned status until those
 assertions execute. Earlier Python-run results validate their historical cohort
 only. Hardware and publication are separate.

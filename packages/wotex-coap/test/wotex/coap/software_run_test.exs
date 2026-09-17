@@ -114,6 +114,8 @@ defmodule Wotex.CoAP.SoftwareRunTest do
            ]
 
     assert "test/interop/oscore_test.exs" in arguments
+    assert "test/software/lifecycle_stress_test.exs" in arguments
+    assert "WCO-C09" in evidence["scenario_ids"]
     assert "WCO-S06" in evidence["scenario_ids"] and "WCO-V13" in evidence["scenario_ids"]
 
     decoded = Jason.decode!(File.read!(path))
