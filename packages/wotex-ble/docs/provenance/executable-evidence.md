@@ -639,7 +639,15 @@ while `Pair` is still pending, which closes the owned sender by design. The
 host must still report readiness of its own input descriptor so a following
 `close` is read. The private-bus poll previously returned without polling the
 caller's descriptors once its connection was closed or failed; the case failed
-before the fix, and the bus component assertion now requires that readiness. Independent NameHasOwner queries check
+before the fix, and the bus component assertion now requires that readiness.
+A fourth regression opens an owned link and withholds the Device1.Disconnect
+reply, as pinned BlueZ does until its postponed link drain. The host completed
+cleanup in the event-loop turn that reached its 500 ms deadline, but the loop
+then exited on that same deadline with status 1 before writing the close reply;
+the case failed its status and close-result assertion on Linux arm64. The loop
+now writes an already completed result once at the deadline, and the ordinary
+and ASan/UBSan private-bus lanes pass. The software lane first showed this as
+`cleanup_timeout` for every owned close. Independent NameHasOwner queries check
 client-sender release and service-sender isolation after process exit. The fixture
 owns and reaps this direct, non-forking SDK child; runtime guardian process-group
 custody has its separate fault corpus. This evidence does not establish native

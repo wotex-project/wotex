@@ -156,5 +156,29 @@ inline void invariants(const std::string &address, const std::string &executable
     PROCESS_CHECK(process.status == 0 && process.response("close") && process.response("close")->at("ok") == true);
     PROCESS_CHECK(process.response("close")->at("result").is_null());
   }
+  {
+    // BlueZ answers an owned Device1.Disconnect only after its postponed link
+    // drain. The real event loop must report the submitted close as complete.
+    auto &device = peer.objects[1].second[0].second;
+    device[3].value = false; device[4].value = false; bool connected = false; Message disconnect;
+    peer.methods.clear();
+    peer.on_method = [&](DBusMessage *request) {
+      if (dbus_message_has_member(request, "Disconnect")) { disconnect.reset(dbus_message_ref(request)); return; }
+      device[3].value = true; connected = true; peer.empty_reply(request);
+    };
+    Process process(executable); until(peer, process, [&] { return !process.frames.empty(); });
+    process.send({{"version", 1}, {"event", "flow_open"}, {"session_generation", std::string(32, 'e')}});
+    auto options = parameters(address); options["connection"] = "owned";
+    process.request("open", "open", options); until(peer, process, [&] { return connected; });
+    device[4].value = true; peer.changed({{"ServicesResolved", "b", true}}, device_interface, "/org/bluez/hci0/device");
+    until(peer, process, [&] { return process.response("open"); });
+    PROCESS_CHECK(process.response("open")->at("ok") == true && process.response("open")->at("result").at("link_owned") == true);
+    const auto started = Clock::now();
+    process.request("close", "close"); until(peer, process, [&] { return process.status.has_value(); });
+    PROCESS_CHECK(bool(disconnect) && peer.methods.size() == 2 && peer.methods[1].first == "Disconnect");
+    PROCESS_CHECK(Clock::now() - started <= std::chrono::milliseconds(700));
+    PROCESS_CHECK(process.status == 0 && process.response("close") && process.response("close")->at("ok") == true);
+    peer.on_method = {}; device[3].value = true;
+  }
 }
 } // namespace host_process_test

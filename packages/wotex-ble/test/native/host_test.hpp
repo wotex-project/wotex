@@ -217,6 +217,28 @@ inline void invariants(const std::string &address) {
     HOST_CHECK(f.host.status() == 0 && !f.disconnects);
   }
   {
+    // An owned close submits Disconnect; BlueZ withholds that reply until its
+    // postponed link drain, which cannot turn a completed close into a failure.
+    Fixture f(address); bool connected = false; Message disconnect;
+    auto &device = f.peer.objects[1].second[0].second;
+    device[3].value = false; device[4].value = false;
+    f.peer.on_method = [&](DBusMessage *request) {
+      if (dbus_message_has_member(request, "Disconnect")) { ++f.disconnects; disconnect.reset(dbus_message_ref(request)); return; }
+      HOST_CHECK(dbus_message_has_member(request, "Connect"));
+      device[3].value = true; connected = true; f.peer.empty_reply(request);
+    };
+    f.request("open", "open", {{"peer", {{"adapter", "/org/bluez/hci0"}, {"address", "AA:BB:CC:DD:EE:FF"}, {"address_type", "random"}}},
+      {"connection", "owned"}, {"bus_address", address}});
+    f.until([&] { return connected; });
+    device[4].value = true; f.peer.changed({{"ServicesResolved", "b", true}}, device_interface, "/org/bluez/hci0/device");
+    f.until([&] { return f.response("open"); });
+    HOST_CHECK(f.response("open")->at("ok") == true && f.response("open")->at("result").at("link_owned") == true);
+    const auto started = Clock::now();
+    f.request("close", "close"); f.until([&] { return f.host.finished(); }); f.flush();
+    HOST_CHECK(bool(disconnect) && f.disconnects == 1 && Clock::now() - started <= std::chrono::milliseconds(700));
+    HOST_CHECK(f.host.status() == 0 && f.response("close") && f.response("close")->at("ok") == true);
+  }
+  {
     Fixture f(address); f.open();
     f.request("1", "subscribe", {{"address", gatt_address}, {"mode", "auto"}, {"queue_limit", 2}});
     f.until([&] { return f.response("1"); });

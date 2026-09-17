@@ -63,6 +63,12 @@ int main(int argc, char **) {
         }
       } catch (...) { failed = true; stop(); }
     }
+    // Cleanup can finish in the turn that reaches its deadline. Write that
+    // final result once without extending the cooperative allowance.
+    try {
+      host.flush(STDOUT_FILENO);
+      if (host.finished() && !host.output_frames()) return failed ? 1 : host.status();
+    } catch (...) {}
     return 1;
   } catch (...) { return 1; }
 }
