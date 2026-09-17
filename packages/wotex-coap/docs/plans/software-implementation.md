@@ -173,7 +173,8 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 
 The build and run commands and their task tests pass on macOS arm64. The current
 run owns independent libcoap UDP, PSK and PKI peers plus a same-stack OSCORE peer,
-includes `test/software/lifecycle_stress_test.exs` and records 35 passing tests;
+includes `test/software/lifecycle_stress_test.exs` and
+`test/software/native_corpus_test.exs` and records 42 passing tests;
 the run must use the same `OPENSSL_ROOT_DIR` selection as its build. The same two
 commands run inside the `test/software/Dockerfile.linux` environment on both
 required runtimes. The remaining P09 native fault corpus and clean-package matrix

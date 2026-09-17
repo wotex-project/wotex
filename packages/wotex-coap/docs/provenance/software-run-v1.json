@@ -1,7 +1,7 @@
 {
   "schema": "wotex.coap.software-run-evidence@1",
   "specification": "WCO.13@1.7.0",
-  "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability plus same-stack OSCORE sessions through the Mix-built native helper and the WCO-C09 lifecycle stress lane for all four transports, with ExUnit-owned peers and bounded cleanup",
+  "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability plus same-stack OSCORE sessions through the Mix-built native helper, the WCO-C09 lifecycle stress lane for all four transports and native-v1 corpus cases through the same helper, with ExUnit-owned peers and bounded cleanup",
   "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=\"$SAME_ROOT_AS_BUILD\" mix wotex.software.run --workspace \"$ABSOLUTE_COMPLETED_SOFTWARE_WORKSPACE\"",
   "platform": {
     "os_version": [
@@ -17,16 +17,17 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "1d00d14db7d8fac8ac6cdc82a4a756d16ddfb3c072571b805d166e052f3935b7",
-    "peer_executable_sha256": "16b037bc10e32fddf31820584ab75997c83dc5f2ee6c197d689cd55e41947080",
+    "native_helper_sha256": "bd969e25efa5ef41c676006870e54ffecda64f599f38437b2ad0fb794e24911e",
+    "peer_executable_sha256": "482d0d31ff0a64582d324c2b427734d0a73ac82655b678f4a23ec0521499ccd1",
     "version": "4.3.5"
   },
   "source_identity": {
-    "aggregate_sha256": "222147b16bb145052a3509f522b844ec438c6a861e036383a95f92a2953fa155",
+    "aggregate_sha256": "f44f514fb974aebe7fe6a96e30abd23749d9eb752dd1d1bcb267b9b493c30b66",
     "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
     "selected_files": {
+      "docs/specs/fixtures/native-v1.json": "a75bf9e0c3ca18e2dcd3c7c9d02848efb5a75dac57c2bbb1e5608012d5804589",
       "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
-      "lib/wotex/coap/software/run.ex": "db260e99ee9bc7980f5da47ec7321826c1c082b856b8a23f80c2d2356b7b4bee",
+      "lib/wotex/coap/software/run.ex": "7590a9b760c66d482449808dc63302ab4226ddc1281dba6e6759bf2651251300",
       "mix.exs": "bf8e1cab6c097fde6f57bba0c0ee05b713910528b024cd04b10a752a3478f41b",
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5",
       "test/fixtures/dtls_pki/manifest.json": "55efbe5822d3bf3de81fe16fb7e224b84ff3bebb7f9075fd9a65422f133fd08d",
@@ -35,6 +36,7 @@
       "test/interop/libcoap_test.exs": "dec95bf3e905bf57526836e0db40ab6955559494b26541ef4cf28f9a84f17d49",
       "test/interop/oscore_test.exs": "bad235e0d4f17f1ac6346e20f4f3b2942a24ef385c89bfd5696fe469a2e05877",
       "test/software/lifecycle_stress_test.exs": "e40fdbbdc1b4d5120915cafc28fee670e07104e6641271cfcc72a06a4bd062fb",
+      "test/software/native_corpus_test.exs": "8d8ce33327f1a85dc95534e13c8fa72c1c1fb1097820f2929d571d35ca26ccab",
       "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
       "test/support/libcoap_peer.ex": "361f280b66191d2d0fdb8f0417e4461b7d924781ce1874434a9f1895833052ea",
       "test/test_helper.exs": "575578ae4f12e6e41336ad856bccd8db4bcf9e741764bbc1d6f2bf9ac110f1d1",
@@ -43,10 +45,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "7ce30a3a0208c565df9557fa72f60a609d4b1842fb26a7b16f81570a68a5c3d0",
-    "nested_native_manifest_sha256": "2efaffffb3e44d16595fca9183e855b153f722ddb94c64ec02d3f4e051d1b545"
+    "manifest_sha256": "415eed2065f8110f79de67d989b65c296f7b43f3c59fa15e78d081e8981b8653",
+    "nested_native_manifest_sha256": "72bab47287c860db56d84f1fcd3243e9bb54a6ce74f32b8c6adfc7da4b1dc46f"
   },
-  "result_sha256": "544c9f5b3bfe75b3dd0212dd81b0a7a80aa922e4f235ce17dc91e3030d883547",
+  "result_sha256": "5f4caf8e2dc04bff71160f8aa07fba9a6095d733eb16bc193ab7b79b275630ef",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -63,6 +65,7 @@
       "test/interop/dtls_pki_test.exs",
       "test/interop/oscore_test.exs",
       "test/software/lifecycle_stress_test.exs",
+      "test/software/native_corpus_test.exs",
       "--include",
       "interop",
       "--include",
@@ -75,7 +78,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 36302,
+    "elapsed_ms": 40474,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -87,16 +90,19 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "16b037bc10e32fddf31820584ab75997c83dc5f2ee6c197d689cd55e41947080",
-      "wotex-coap-oscore": "1d00d14db7d8fac8ac6cdc82a4a756d16ddfb3c072571b805d166e052f3935b7"
+      "coap-server": "482d0d31ff0a64582d324c2b427734d0a73ac82655b678f4a23ec0521499ccd1",
+      "wotex-coap-oscore": "bd969e25efa5ef41c676006870e54ffecda64f599f38437b2ad0fb794e24911e"
     },
     "scenario_ids": [
       "WCO-C03",
+      "WCO-C07",
       "WCO-C09",
       "WCO-I02",
       "WCO-I03",
       "WCO-I04",
       "WCO-I05",
+      "WCO-N03",
+      "WCO-N04",
       "WCO-S01",
       "WCO-S02",
       "WCO-S03",
@@ -110,17 +116,17 @@
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "222147b16bb145052a3509f522b844ec438c6a861e036383a95f92a2953fa155",
+    "source_sha256": "f44f514fb974aebe7fe6a96e30abd23749d9eb752dd1d1bcb267b9b493c30b66",
     "status": "passed",
     "test_log": {
-      "bytes": 4192,
+      "bytes": 4175,
       "path": "tests.log",
-      "sha256": "25fffe9cc8940af07687d4c163e0e28f0178984b2a6eecaaced395d783815f45"
+      "sha256": "3dded3156abc26ec82f64d37f31b23eee39025850d7e5bad272fd9f2d245b90d"
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
       "failed": 0,
-      "passed": 35
+      "passed": 42
     }
   },
   "stack_labels": {
@@ -133,26 +139,26 @@
   "resource_trends": {
     "udp": {
       "beam_total_bytes": [
-        76803145,
-        77267793
+        79155193,
+        79790449
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        77072586,
-        77592458
+        79441073,
+        79918345
       ]
     },
     "dtls_pki": {
       "beam_total_bytes": [
-        79320690,
-        79836786
+        81403801,
+        81879649
       ]
     },
     "oscore": {
       "beam_total_bytes": [
-        79539603,
-        79698395
+        81657466,
+        81903818
       ],
       "helper_rss_kib": [
         1920,
@@ -186,7 +192,9 @@
     "A suspended receiver with max_queue_length 2 ends the observation with one receiver_overflow terminal error and no more than two delivered values",
     "A 3-second peer delay ends a 1500 ms operation with timeout and effect none; a raw UDP fault peer ends UDP and OSCORE requests with timeout and DTLS connects with an error of effect none; a closed peer ends a request with timeout or connection_closed; every case returns resources to baseline",
     "The passing result records zero retained command groups, peer processes, UDP ports and session/context/subscription/store locks",
-    "The tracked first-party source and packaged test harness contain no Python"
+    "The tracked first-party source and packaged test harness contain no Python",
+    "Five native-v1 observe commands with an absent, null, 0, \"true\" or {} renew close the helper generation with a nonzero exit, no reply and no datagram to the open peer, while renew false sends the protected registration",
+    "A closed OSCORE context reopened in a second helper generation returns fresh_context_required, leaves the registry bytes unchanged and sends no datagram"
   ],
   "unaccepted": [
     "Independent-stack OSCORE interoperability",

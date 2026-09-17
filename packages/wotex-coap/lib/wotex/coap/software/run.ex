@@ -6,9 +6,10 @@ defmodule Wotex.CoAP.Software.Run do
   workspaces. UDP and DTLS peers are independent stacks; the OSCORE peer shares
   the pinned libcoap stack with the manifest-bound native helper, so its cases
   are same-stack evidence. The lifecycle stress file repeats those transports
-  under the WCO-C09 load, lifecycle and forced-failure matrix. This runner
-  invokes them through the native command
-  guardian with one five-minute suite deadline and a 16 MiB combined log bound.
+  under the WCO-C09 load, lifecycle and forced-failure matrix, and the native
+  corpus file drives native-v1 cases through the manifest-bound helper. This
+  runner invokes them through the native command guardian with one five-minute
+  suite deadline and a 16 MiB combined log bound.
   It always writes a bounded `result.json` after command execution.
   """
 
@@ -18,17 +19,18 @@ defmodule Wotex.CoAP.Software.Run do
   @project_root Path.expand("../../../..", __DIR__)
   @cases ~w(test/interop/libcoap_test.exs test/interop/dtls_test.exs
     test/interop/dtls_pki_test.exs test/interop/oscore_test.exs
-    test/software/lifecycle_stress_test.exs)
+    test/software/lifecycle_stress_test.exs test/software/native_corpus_test.exs)
   @arguments ["test" | @cases] ++
                ~w(--include interop --include software --exclude hardware --seed 0)
-  @scenario_ids ~w(WCO-C03 WCO-C09 WCO-I02 WCO-I03 WCO-I04 WCO-I05 WCO-S01 WCO-S02 WCO-S03
-    WCO-S05 WCO-S06 WCO-V02 WCO-V09 WCO-V12 WCO-V13 WCO-V15)
+  @scenario_ids ~w(WCO-C03 WCO-C07 WCO-C09 WCO-I02 WCO-I03 WCO-I04 WCO-I05 WCO-N03 WCO-N04
+    WCO-S01 WCO-S02 WCO-S03 WCO-S05 WCO-S06 WCO-V02 WCO-V09 WCO-V12 WCO-V13 WCO-V15)
   @source_files [
                   __ENV__.file,
                   Path.join(@project_root, "lib/mix/tasks/wotex.coap.software.run.ex"),
                   Path.join(@project_root, "mix.exs"),
                   Path.join(@project_root, "mix.lock"),
-                  Path.join(@project_root, "test/test_helper.exs")
+                  Path.join(@project_root, "test/test_helper.exs"),
+                  Path.join(@project_root, "docs/specs/fixtures/native-v1.json")
                 ] ++
                   Enum.map(@cases, &Path.join(@project_root, &1)) ++
                   Path.wildcard(Path.join(@project_root, "test/support/*.ex")) ++

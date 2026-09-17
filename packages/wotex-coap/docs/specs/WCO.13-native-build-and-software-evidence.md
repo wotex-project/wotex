@@ -662,15 +662,18 @@ Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
-15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort and
-8-test stress cohort. That 33-test run passes on macOS arm64 and inside Linux arm64
-containers on both required runtimes, whose builds compile the native vectors with
-ASan/UBSan. The remaining OSCORE independence, native fault corpus and
+15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 8-test
+stress cohort and 7-test native corpus cohort. The 42-test run passes on macOS
+arm64; the earlier 33-test run passes inside Linux arm64 containers on both
+required runtimes, whose builds compile the native vectors with ASan/UBSan. The remaining OSCORE independence, native fault corpus and
 clean-package matrix retains planned status until those assertions execute. Earlier Python-run results validate their historical cohort
 only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
-inputs and deterministic lifecycle traces. It is specified and unexecuted. The
+inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute
+against the BEAM decoders. F06 and F16-F20 execute through the manifest-bound
+helper in `test/software/native_corpus_test.exs`, whose UDP socket stands in for
+the peer and counts datagrams; the remaining helper traces are unexecuted. The
 ExUnit runner expands `repeat_ascii` to its declared byte count, adds the
 matching generation/id envelope to body events, and compares actual native
 outcomes with `expected`. For the credit traces, `grant_report_credit` means the first `ack_seq: 0`

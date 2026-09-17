@@ -617,7 +617,7 @@ fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
 arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 12 same-stack OSCORE
-tests and 8 lifecycle stress tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
+tests, 8 lifecycle stress tests and 7 native corpus tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
 peers and zero retained processes, ports or library-state resources.
 
 `test/software/lifecycle_stress_test.exs` executes the WCO-C09 matrix once per
@@ -769,6 +769,19 @@ follows and 43 is delivered next. Against a helper whose freshness admission
 never reports a stale serial, that relay case delivers 41 again. The same mutant
 still passes the earlier back-to-back duplicate, which a layer before freshness
 admission discards. No source changes accompany this cohort.
+
+`test/software/native_corpus_test.exs` executes native-v1 cases through the
+manifest-verified helper in the software run. A test-owned UDP socket is the
+open generation's peer. F16-F20 send the corpus observe commands, which omit
+`renew` or give it null, 0, "true" or {}; each helper closes its generation with
+a nonzero exit, writes no reply for request 17 and sends no datagram, while the
+same command with `renew: false` sends the protected registration. F06 opens,
+closes and reopens one context store: the reopen returns `fresh_context_required`,
+the registry bytes stay unchanged and a following request closes the generation
+without a datagram. A helper whose decoder admits any `renew` value fails all
+five command cases. The runner compares with the corpus `expected` values and
+passes no expected value to the helper. F05, F07, F09, F21-F24 and the helper half
+of F15 remain unexecuted.
 
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
