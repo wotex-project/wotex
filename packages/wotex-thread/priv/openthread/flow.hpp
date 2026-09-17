@@ -86,6 +86,8 @@ class ReportFlow final {
     }
     queued_.push_back(Pending{key, encode, reserved});
     queued_bytes_ += reserved;
+    maximum_.queued = std::max(maximum_.queued, queued_.size());
+    maximum_.queued_bytes = std::max(maximum_.queued_bytes, queued_bytes_);
     ++stream->second.queued;
     return Submission::queued;
   }
@@ -133,6 +135,15 @@ class ReportFlow final {
     if (stream->second.outstanding == 0) streams_.erase(stream);
     return drain();
   }
+
+  // Highest simultaneous queued and outstanding report counts and bytes observed.
+  struct Maximum {
+    std::size_t queued = 0;
+    std::size_t queued_bytes = 0;
+    std::size_t outstanding = 0;
+    std::size_t outstanding_bytes = 0;
+  };
+  Maximum maximum() const { return maximum_; }
 
   Snapshot snapshot() const {
     return {queued_.size(), queued_bytes_, kSessionReportFrames - outstanding_.size(),
@@ -196,6 +207,8 @@ class ReportFlow final {
     transmitted_bytes_ += bytes;
     outstanding_.push_back(Record{key, next_sequence_, bytes, transmitted_bytes_});
     outstanding_bytes_ += bytes;
+    maximum_.outstanding = std::max(maximum_.outstanding, outstanding_.size());
+    maximum_.outstanding_bytes = std::max(maximum_.outstanding_bytes, outstanding_bytes_);
     stream.last_sequence = next_sequence_++;
     ++stream.outstanding;
     return true;
@@ -232,6 +245,7 @@ class ReportFlow final {
   std::size_t outstanding_bytes_ = 0;
   std::size_t queued_bytes_ = 0;
   std::size_t live_ = 0;
+  Maximum maximum_{};
   bool failed_ = false;
 };
 }  // namespace wotex::thread

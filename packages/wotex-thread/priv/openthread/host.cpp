@@ -43,6 +43,92 @@ static void nonblocking(int fd) {
       ::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) throw SdkError("io_failed");
 }
 
+#ifdef WOTEX_THREAD_FLOW_TESTING
+// Test-only State callback source for process-flow evidence. It is compiled only into
+// `wotex-thread-flow-host`; the production host has no such input. Its configuration is
+// `<executable>.flow.json` beside the executable, because the owner clears the environment.
+class FlowSource final {
+ public:
+  FlowSource() {
+    char path[4096];
+    const ssize_t length = ::readlink("/proc/self/exe", path, sizeof path - 1);
+    if (length <= 0) throw SdkError("flow_source_unavailable");
+    std::ifstream file(std::string(path, static_cast<std::size_t>(length)) + ".flow.json", std::ios::binary);
+    std::string bytes;
+    char byte = 0;
+    while (file.get(byte) && bytes.size() < 4096) bytes.push_back(byte);
+    if (!file.eof() && bytes.size() >= 4096) throw SdkError("flow_source_unavailable");
+    const Json config = parse_line(bytes);
+    if (!exact_keys(config, {"callback_count", "value_bytes", "callbacks_per_iteration", "gate_path", "result_path"}) ||
+        !config.at("callback_count").is_number_unsigned() || config.at("callback_count").get<std::uint64_t>() == 0 ||
+        config.at("callback_count").get<std::uint64_t>() > 1000000 || !config.at("value_bytes").is_number_unsigned() ||
+        config.at("value_bytes").get<std::uint64_t>() > 4096 || !config.at("callbacks_per_iteration").is_number_unsigned() ||
+        config.at("callbacks_per_iteration").get<std::uint64_t>() == 0 ||
+        config.at("callbacks_per_iteration").get<std::uint64_t>() > 1024 || !bounded_string(config.at("gate_path"), 4096) ||
+        !bounded_string(config.at("result_path"), 4096)) throw SdkError("flow_source_unavailable");
+    count_ = config.at("callback_count").get<std::uint64_t>();
+    value_bytes_ = config.at("value_bytes").get<std::size_t>();
+    per_iteration_ = config.at("callbacks_per_iteration").get<std::uint64_t>();
+    gate_ = config.at("gate_path").get<std::string>();
+    result_ = config.at("result_path").get<std::string>();
+  }
+  // Pads a State value with JSON whitespace to the configured encoded size.
+  std::string encode(const Json &value) const {
+    std::string encoded = value.dump();
+    if (encoded.size() > value_bytes_) throw SdkError("flow_source_value_limit");
+    encoded.insert(encoded.size() - 1, value_bytes_ - encoded.size(), ' ');
+    return encoded;
+  }
+  bool active() const { return started_ && callbacks_ < count_; }
+  bool waiting() const { return !started_; }
+  // Starts after the harness gate once a stream exists, then records one iteration.
+  void step(StateStreams &streams) {
+    if (!started_) {
+      struct stat info {};
+      if (streams.size() == 0 || ::stat(gate_.c_str(), &info) != 0) return;
+      started_ = true;
+      started_at_ = std::chrono::steady_clock::now();
+    }
+    if (callbacks_ >= count_) return;
+    for (std::uint64_t index = 0; index < per_iteration_ && callbacks_ < count_; ++index) {
+      streams.changed(1);
+      ++callbacks_;
+    }
+    ++iterations_;
+  }
+  bool complete() const { return started_ && callbacks_ == count_ && !written_; }
+  void write(const ReportFlow &flow, const StateStreams &streams, const Output &output) {
+    written_ = true;
+    const auto maximum = flow.maximum();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started_at_);
+    const Json result = {
+        {"callbacks", callbacks_}, {"iterations", iterations_}, {"elapsed_us", elapsed.count()},
+        {"reports_assigned", flow.snapshot().last_sequence}, {"stream_errors", streams.stream_errors()},
+        {"retirements", streams.retirements()}, {"live_streams", streams.size()},
+        {"maximum", {{"queued_reports", maximum.queued}, {"queued_report_bytes", maximum.queued_bytes},
+                     {"outstanding_reports", maximum.outstanding}, {"outstanding_report_bytes", maximum.outstanding_bytes},
+                     {"output_report_frames", output.maximum(Lane::report).frames},
+                     {"output_report_bytes", output.maximum(Lane::report).bytes},
+                     {"output_control_frames", output.maximum(Lane::control).frames},
+                     {"output_control_bytes", output.maximum(Lane::control).bytes},
+                     {"output_reply_frames", output.maximum(Lane::reply).frames},
+                     {"output_reply_bytes", output.maximum(Lane::reply).bytes}}}};
+    const std::string bytes = result.dump() + "\n";
+    FileDescriptor file(::open(result_.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600));
+    if (file.get() < 0 || ::write(file.get(), bytes.data(), bytes.size()) != static_cast<ssize_t>(bytes.size())) {
+      throw SdkError("flow_source_result");
+    }
+  }
+
+ private:
+  std::uint64_t count_ = 0, per_iteration_ = 0, callbacks_ = 0, iterations_ = 0;
+  std::size_t value_bytes_ = 0;
+  std::string gate_, result_;
+  bool started_ = false, written_ = false;
+  std::chrono::steady_clock::time_point started_at_{};
+};
+#endif
+
 class Worker final {
  public:
   Worker() {
@@ -52,6 +138,9 @@ class Worker final {
     FileDescriptor sink(::open("/dev/null", O_WRONLY | O_CLOEXEC));
     if (sink.get() < 0 || ::dup2(sink.get(), STDOUT_FILENO) < 0 ||
         ::dup2(sink.get(), STDERR_FILENO) < 0) throw SdkError("io_failed");
+#ifdef WOTEX_THREAD_FLOW_TESTING
+    source_.emplace();
+#endif
     emit(Lane::control, ready());
   }
   ~Worker() { if (output_fd_ >= 0) (void)::close(output_fd_); }
@@ -63,12 +152,23 @@ class Worker final {
       if (!closing_) FD_SET(STDIN_FILENO, &loop.mReadFdSet);
       if (!output_.empty()) FD_SET(output_fd_, &loop.mWriteFdSet);
       if (sdk_) sdk_->update(loop);
+#ifdef WOTEX_THREAD_FLOW_TESTING
+      // Poll the harness gate within about 1 ms, then produce without waiting.
+      if (source_->active()) loop.mTimeout = {0, 0};
+      else if (source_->waiting()) loop.mTimeout = {0, 1000};
+#endif
       const int result = ::select(loop.mMaxFd + 1, &loop.mReadFdSet, &loop.mWriteFdSet,
                                   &loop.mErrorFdSet, &loop.mTimeout);
       if (result < 0 && errno == EINTR) continue;
       if (result < 0) return 2;
       if (sdk_) sdk_->process(loop);
+#ifdef WOTEX_THREAD_FLOW_TESTING
+      if (streams_) source_->step(*streams_);
+#endif
       publish_state();
+#ifdef WOTEX_THREAD_FLOW_TESTING
+      if (streams_ && source_->complete()) source_->write(*flow_, *streams_, output_);
+#endif
       finish_formation();
       finish_management();
       finish_commissioner();
@@ -118,7 +218,13 @@ class Worker final {
           frame.session_generation,
           [this](const std::string &report) { return output_.push(Lane::report, report); },
           [this](const std::string &barrier) { return output_.push(Lane::control, barrier); });
+#ifdef WOTEX_THREAD_FLOW_TESTING
+      streams_.emplace(
+          *flow_, [this](const std::string &frame) { return output_.push(Lane::control, frame); },
+          [this](const Json &value) { return source_->encode(value); });
+#else
       streams_.emplace(*flow_, [this](const std::string &frame) { return output_.push(Lane::control, frame); });
+#endif
     } else if (!flow_ || !flow_->acknowledge(frame.session_generation, frame.report_sequence,
                                              frame.acknowledged_bytes)) {
       throw ProtocolError();
@@ -284,6 +390,9 @@ class Worker final {
   Output output_;
   std::optional<ReportFlow> flow_;
   std::optional<StateStreams> streams_;
+#ifdef WOTEX_THREAD_FLOW_TESTING
+  std::optional<FlowSource> source_;
+#endif
   std::unique_ptr<Sdk> sdk_;
   std::string incoming_;
   bool closing_ = false;

@@ -7,7 +7,9 @@ defmodule Wotex.Thread.Software.Build do
   the pinned OpenThread simulation RCP, and sanitizer-instrumented native test
   executables. The native parser, output, flow and storage tests plus the
   contract driver link only first-party headers; the Dataset seed and Spinel
-  test link the manifest-bound patched SDK tree. Every command runs through the
+  test link the manifest-bound patched SDK tree. An uninstrumented
+  `wotex-thread-flow-host` adds a test-only State callback source to the
+  production host for process-flow cases. Every command runs through the
   owned build guardian with separate arguments and an explicit environment.
 
   The source checkout must contain `test/native`; package consumers do not
@@ -26,7 +28,7 @@ defmodule Wotex.Thread.Software.Build do
     wotex-thread-streams-test wotex-thread-flow-test wotex-thread-contract-driver)
   @sdk_tests ~w(wotex-thread-dataset-seed wotex-thread-spinel-test)
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx rcp_configure
-    rcp_compile tests_configure tests_compile)
+    rcp_compile tests_configure tests_compile flow_configure flow_compile)
   @build_modules [__MODULE__, Mix.Tasks.Wotex.Thread.Software.Build]
   @rcp_options ~w(-DOT_PLATFORM=simulation -DOT_APP_CLI=OFF -DOT_APP_NCP=OFF -DOT_APP_RCP=ON
     -DOT_FTD=OFF -DOT_MTD=OFF -DOT_RCP=ON -DOT_COMPILE_WARNING_AS_ERROR=ON -DBUILD_TESTING=OFF)
@@ -53,6 +55,7 @@ defmodule Wotex.Thread.Software.Build do
       rcp: Path.join(bin, "ot-rcp"),
       contract_driver: Path.join(bin, "wotex-thread-contract-driver"),
       dataset_seed: Path.join(bin, "wotex-thread-dataset-seed"),
+      flow_host: Path.join(bin, "wotex-thread-flow-host"),
       native_tests:
         Enum.map(
           (@pure_tests -- ["wotex-thread-contract-driver"]) ++ ["wotex-thread-spinel-test"],
@@ -126,7 +129,8 @@ defmodule Wotex.Thread.Software.Build do
       "arguments" => %{
         "rcp_configure" => rcp_configure(workspace, tools),
         "tests_configure" => tests_configure(workspace, native, tests, tools),
-        "tests_targets" => @pure_tests ++ @sdk_tests
+        "tests_targets" => @pure_tests ++ @sdk_tests,
+        "flow_configure" => flow_configure(workspace, native, tests, tools)
       },
       "environment_allowlist" => ~w(HOME LC_ALL PATH TMPDIR)
     }
@@ -134,7 +138,10 @@ defmodule Wotex.Thread.Software.Build do
 
   defp artifacts do
     ["bin/build-command", "native/native-manifest.json", "native-sanitized/native-manifest.json"] ++
-      Enum.map(["ot-rcp" | @pure_tests ++ @sdk_tests], &"fixtures/bin/#{&1}") ++
+      Enum.map(
+        ["ot-rcp", "wotex-thread-flow-host" | @pure_tests ++ @sdk_tests],
+        &"fixtures/bin/#{&1}"
+      ) ++
       Enum.map(@log_names, &"logs/#{&1}.log")
   end
 
@@ -156,6 +163,7 @@ defmodule Wotex.Thread.Software.Build do
          {:ok, _} <- Build.run(Path.join(workspace, "native-sanitized"), true),
          :ok <- rcp(guardian, workspace, tools),
          :ok <- tests(guardian, workspace, native, tests, tools),
+         :ok <- flow_host(guardian, workspace, native, tests, tools),
          {:ok, binaries} <- binaries(workspace) do
       {:ok, %{"toolchain_versions" => versions, "binaries" => binaries}}
     else
@@ -247,6 +255,54 @@ defmodule Wotex.Thread.Software.Build do
     end
   end
 
+  # The process-flow host is uninstrumented: its callback rate, not sanitizer coverage,
+  # is what the suspended-owner cases exercise.
+  defp flow_host(guardian, workspace, native, tests, tools) do
+    build = Path.join(workspace, "fixtures/flow-build")
+
+    with {:ok, _} <-
+           command(
+             guardian,
+             workspace,
+             :flow_configure,
+             tools["cmake"].path,
+             flow_configure(workspace, native, tests, tools),
+             300_000
+           ),
+         {:ok, _} <-
+           command(
+             guardian,
+             workspace,
+             :flow_compile,
+             tools["cmake"].path,
+             ["--build", build, "--target", "wotex-thread-flow-host", "-j4"],
+             1_800_000
+           ) do
+      copy(
+        Path.join(build, "wotex-thread-flow-host"),
+        Path.join(workspace, "fixtures/bin/wotex-thread-flow-host")
+      )
+    end
+  end
+
+  defp flow_configure(workspace, native, tests, tools) do
+    [
+      "-G",
+      "Ninja",
+      "-S",
+      native,
+      "-B",
+      Path.join(workspace, "fixtures/flow-build"),
+      "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+      "-DWOTEX_NATIVE_SANITIZERS=OFF",
+      "-DWOTEX_JSON_HEADER=#{Path.join(workspace, "native/downloads/json.hpp")}",
+      "-DWOTEX_OPENTHREAD_SOURCE=#{Path.join([workspace, "native/sources/openthread", @sdk])}",
+      "-DWOTEX_NATIVE_TEST_SOURCE=#{tests}",
+      "-DCMAKE_C_COMPILER=#{tools["cc"].path}",
+      "-DCMAKE_CXX_COMPILER=#{tools["c++"].path}"
+    ]
+  end
+
   defp rcp_configure(workspace, tools) do
     [
       "-G",
@@ -289,7 +345,7 @@ defmodule Wotex.Thread.Software.Build do
   end
 
   defp binaries(workspace) do
-    ["ot-rcp" | @pure_tests ++ @sdk_tests]
+    ["ot-rcp", "wotex-thread-flow-host" | @pure_tests ++ @sdk_tests]
     |> Enum.reduce_while({:ok, []}, fn name, {:ok, found} ->
       path = "fixtures/bin/#{name}"
 

@@ -64,6 +64,7 @@ int main() {
     check(harness.controls.size() == 1 && harness.controls[0].at("event") == "stream_retired");
     check(harness.controls[0].at("last_report_sequence") == 2 && harness.streams.size() == 0);
     check(!harness.streams.remove("s1", generation) && !harness.streams.failed());
+    check(harness.streams.retirements() == 1 && harness.streams.stream_errors() == 0);
     harness.streams.changed(4);
     harness.streams.flush([]() -> Json { std::abort(); });
     check(harness.reports.size() == 2);

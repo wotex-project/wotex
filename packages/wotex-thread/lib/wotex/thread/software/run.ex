@@ -259,6 +259,7 @@ defmodule Wotex.Thread.Software.Run do
         {"WOTEX_THREAD_RCP", executables.rcp},
         {"WOTEX_THREAD_CONTRACT_DRIVER", executables.contract_driver},
         {"WOTEX_THREAD_DATASET_SEED", executables.dataset_seed},
+        {"WOTEX_THREAD_FLOW_HOST", executables.flow_host},
         {"WOTEX_THREAD_CASE_RESULTS", cases}
       ] ++
         Enum.flat_map(~w(MIX_HOME HEX_HOME WOTEX_PATH_DEPS ERL_FLAGS), fn key ->

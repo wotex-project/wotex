@@ -495,6 +495,82 @@ All four results report zero survivors and unchanged source identity.
 | `priv/openthread/host.cpp` | `c2c9e82926cc22a383ef85668ffb4f0ce9657efd426bb8c67f4f12916416a802` |
 | `test/software/native_state_test.exs` | `4fab31812c31bf715ebf1848f2fae14fb246c74012f0af899099aa435ba02247` |
 
+## Process-flow cases WTH-B-F11–F13, 2026-09-17
+
+`test/software/process_flow_test.exs` executes the three `process_flow` cases of
+`native-port-v1.json`. Each case copies `wotex-thread-flow-host` into a private
+directory beside its `flow-host.flow.json` configuration. That executable is the
+production host compiled with `WOTEX_THREAD_FLOW_TESTING`; its only addition is a
+State callback source that, after a harness gate file appears, records one SDK
+changed-flag callback per event-loop iteration through the production stream,
+credit and output code and pads each report value with JSON whitespace to the
+case's `value_bytes`. The production host contains no such input. The software
+build compiles this host without sanitizers so its callback rate reflects the
+production event loop; the loop polls the gate within 1 ms and runs without
+waiting while callbacks remain. The source writes one result with its callback
+and iteration counts, report sequences assigned, stream errors, retirements and
+the maxima of queued and outstanding report credit and of every output lane.
+
+A receiver process opens a real SDK session with the simulation RCP, subscribes
+with the case `queue_limit` and waits for the initial report and returned credit.
+The harness suspends the actual connection, stream owner or receiver, writes the
+gate, resumes the process at 50 ms and samples the connection, owner and receiver
+mailboxes every millisecond through 1050 ms. It classifies Port lines as reports,
+controls or replies, requires every observed report value to be exactly 128
+bytes, and counts owner and receiver deliveries. After a terminal delivery and
+native completion the receiver disconnects. The harness then requires the
+receiver to have exited normally and the connection, stream owner, Port and every
+native process to be gone before counting survivors.
+
+`frame_bound` compares native maxima with 64 queued and outstanding reports, 64
+report, 256 control and 64 reply output frames, and the sampled mailboxes with 64
+Port reports, 64 owner reports, `queue_limit` receiver reports, 256 controls and
+64 replies. `byte_bound` applies 1048576 bytes to native report and control
+bytes and to sampled report, control, owner and receiver bytes, and 8388608 bytes
+to replies. The harness also requires 10000 callbacks and iterations, one
+retirement, no live stream, at least one delivery, a `queue_overflow` terminal
+for the suspended connection and owner, and `queue_overflow` or
+`receiver_overflow` for the suspended receiver. The exact normalized observation
+then equals the corpus expectation. Each run writes `process-flow-WTH-B-F1x.json`
+beside its case results.
+
+In the recorded run the uninstrumented source completed all 10000 callbacks in
+4.1–6.6 ms. Every case reached 64 queued native reports with 16 outstanding and
+ended with one `queue_overflow` terminal; no delivery followed a terminal. With
+the connection suspended its mailbox held 16 report lines. With the owner
+suspended its credit stayed unreturned until the stream error delivered the 16
+validated reports ahead of the terminal and retirement stopped the owner. The
+suspended receiver held 16–31 deliveries, below its 64-message limit, before
+resuming; the native queue overflowed first on every lane. A sanitizer-instrumented source ran too slowly on emulated x86_64 to
+overflow within the 50 ms suspension, and a 50 ms idle loop before the gate
+delayed the burst until after resumption; both were corrected before the
+recorded run.
+
+| Lane | Run | Native tests | Normal lane | Sanitizer lane | Result SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| Linux arm64, Elixir 1.18.4 / OTP 27.3.4.15 | 192424 ms | 6/6 | 169/169 | 28/28 | `0b495d82bc13af400b7d02d705d3bc8152049b1fc4eb8b28ef9c501770fbe0ca` |
+| Linux arm64, Elixir 1.20.2 / OTP 29.0.4 | 189576 ms | 6/6 | 169/169 | 28/28 | `d9dd146cd51f71857c62eff4948832ada02f5a2593c758362fd01ff41bee1fa9` |
+| Linux x86_64 (emulated), Elixir 1.18.4 / OTP 27.3.4.15, `+JMsingle true` | 149887 ms | 6/6 | 169/169 | 28/28 | `181ffe1b165bbe7c6a0d722e77544ce056b9f97e2a66084f726609bfd5f9b763` |
+| Linux x86_64 (emulated), Elixir 1.20.2 / OTP 29.0.4, `+JMsingle true` | 156001 ms | 6/6 | 169/169 | 28/28 | `272720a8068464e6f546f301b71bd114c52fc5849358099ff2cc67b44e6c1c1c` |
+
+Both lanes of each run execute the three cases, now required in the inventory,
+and all four results report zero survivors and unchanged source identity.
+
+| Source | SHA-256 |
+| --- | --- |
+| `test/software/process_flow_test.exs` | `7b976f6211750f6eaf770910f8eba336d4aca472fecd8fe7b14468c444e5d4b0` |
+| `priv/openthread/host.cpp` | `46c3c0efb8053a361f803157d0ea2cabc4a46c016eeb9c532951f4189ef6f1e4` |
+| `priv/openthread/streams.hpp` | `a3eda38ff94d0db22166b28221c03426f686488b07095a6409f152bfddd3e124` |
+| `priv/openthread/flow.hpp` | `e8c7a8b3a9893acc98bc8c3a474f8335cc1a9ebe8ebf922068966ad4c4a78506` |
+| `priv/openthread/CMakeLists.txt` | `c564d14572d2274380e36244928539428cbcba0a4d16b81e7587b298ca680bf0` |
+| `lib/wotex/thread/software/build.ex` | `bb1490374d868e61e05bd4023675036bf90f8a9f437443e79030746a45987e11` |
+| `lib/wotex/thread/software/run.ex` | `315915b5639dda5183fecde6fafba0f14953fad9e96fc4538c74fe221324f766` |
+| `test/test_helper.exs` | `f761431ef9908ed0e0415db352d6cb1fb6d16b50358e043c60755f6d196cde97` |
+| `test/software/acceptance.json` | `647e4ceed31b685f09ec496c5b2b9e8cdc158b324a9bff936ca66b05884726fd` |
+| `docs/specs/fixtures/native-port-v1.json` | `91d70393eb17360ea253f249ff3710d568c3fd12941b9eae91f7c8aa6dc3ba18` |
+
+C09 stress, dependency audit and clean archive validation remain open for P00.
+
 ## Contract corpus binding, 2026-09-17
 
 `test/wotex/thread/contract_fixture_test.exs` runs in the default gate. It

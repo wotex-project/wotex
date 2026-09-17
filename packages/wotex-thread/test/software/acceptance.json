@@ -29,7 +29,10 @@
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 one hundred owned SDK cycles restore processes and interfaces"},
         {"module":"Wotex.Thread.NativeContractTest","name":"test WTH-F09 coalesces State changes through the production stream owner"},
         {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-S06 WTH-V10 real SDK role changes arrive as bounded non-secret snapshots"},
-        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-C05 receiver death and session close release real SDK stream owners"}
+        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-C05 receiver death and session close release real SDK stream owners"},
+        {"module":"Wotex.Thread.ProcessFlowTest","name":"test WTH-B-F11 suspends the actual connection across native State callbacks"},
+        {"module":"Wotex.Thread.ProcessFlowTest","name":"test WTH-B-F12 suspends the actual stream_owner across native State callbacks"},
+        {"module":"Wotex.Thread.ProcessFlowTest","name":"test WTH-B-F13 suspends the actual receiver across native State callbacks"}
       ]
     },
     "sanitized": {
@@ -59,7 +62,10 @@
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 one hundred owned SDK cycles restore processes and interfaces"},
         {"module":"Wotex.Thread.NativeContractTest","name":"test WTH-F09 coalesces State changes through the production stream owner"},
         {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-S06 WTH-V10 real SDK role changes arrive as bounded non-secret snapshots"},
-        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-C05 receiver death and session close release real SDK stream owners"}
+        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-C05 receiver death and session close release real SDK stream owners"},
+        {"module":"Wotex.Thread.ProcessFlowTest","name":"test WTH-B-F11 suspends the actual connection across native State callbacks"},
+        {"module":"Wotex.Thread.ProcessFlowTest","name":"test WTH-B-F12 suspends the actual stream_owner across native State callbacks"},
+        {"module":"Wotex.Thread.ProcessFlowTest","name":"test WTH-B-F13 suspends the actual receiver across native State callbacks"}
       ]
     }
   }

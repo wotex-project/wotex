@@ -21,8 +21,12 @@ class StateStreams final {
  public:
   using Snapshot = std::function<Json()>;
   using Control = std::function<bool(const std::string &frame)>;
+  // Serializes one State value; the software process-flow host pads it to an exact size.
+  using ValueEncoder = std::function<std::string(const Json &value)>;
 
-  StateStreams(ReportFlow &flow, Control control) : flow_(flow), control_(std::move(control)) {}
+  StateStreams(ReportFlow &flow, Control control,
+               ValueEncoder encoder = [](const Json &value) { return value.dump(); })
+      : flow_(flow), control_(std::move(control)), encoder_(std::move(encoder)) {}
 
   // Registers a listener without reporting, so its registration reply can precede
   // the initial snapshot. Returns the stream generation, or zero at capacity.
@@ -65,6 +69,8 @@ class StateStreams final {
   }
 
   std::size_t size() const { return listeners_.size(); }
+  std::size_t stream_errors() const { return stream_errors_; }
+  std::size_t retirements() const { return retirements_; }
   bool failed() const { return failed_ || flow_.failed(); }
   std::uint32_t pending_flags() const { return pending_; }
 
@@ -74,11 +80,13 @@ class StateStreams final {
   void submit(const Key &key, const Json &value, std::uint32_t flags) {
     const std::string session = flow_.session();
     // A queued report re-encodes later with its assigned sequence, so the encoder owns its values.
-    const auto result = flow_.submit(key.first, key.second, [session, key, value, flags](std::uint64_t sequence) {
-      return Json{{"version", 1}, {"event", "state"}, {"session_generation", session},
-                  {"subscription_id", key.first}, {"generation", key.second},
-                  {"report_sequence", sequence}, {"value", value},
-                  {"metadata", {{"changed_flags", flags}}}}.dump();
+    const std::string tail = ",\"metadata\":{\"changed_flags\":" + std::to_string(flags) + "},\"value\":" + encoder_(value) + "}";
+    const auto result = flow_.submit(key.first, key.second, [session, key, tail](std::uint64_t sequence) {
+      std::string frame = Json{{"version", 1}, {"event", "state"}, {"session_generation", session},
+                               {"subscription_id", key.first}, {"generation", key.second},
+                               {"report_sequence", sequence}}.dump();
+      frame.pop_back();
+      return frame + tail;
     });
     if (result != ReportFlow::Submission::overflow) return;
     // Terminal loss: one error frame, then the stream's retirement barrier.
@@ -86,11 +94,13 @@ class StateStreams final {
     const Json error = {{"version", 1}, {"event", "stream_error"}, {"session_generation", session},
                         {"subscription_id", key.first}, {"generation", key.second},
                         {"code", "queue_overflow"}};
+    ++stream_errors_;
     if (!control_(error.dump()) || !retire(key)) failed_ = true;
   }
 
   bool retire(const Key &key) {
     const std::string session = flow_.session();
+    ++retirements_;
     return flow_.retire(key.first, key.second, [&](std::uint64_t last) {
       return Json{{"version", 1}, {"event", "stream_retired"}, {"session_generation", session},
                   {"subscription_id", key.first}, {"generation", key.second},
@@ -100,7 +110,10 @@ class StateStreams final {
 
   ReportFlow &flow_;
   Control control_;
+  ValueEncoder encoder_;
   std::map<Key, bool> listeners_;
+  std::size_t stream_errors_ = 0;
+  std::size_t retirements_ = 0;
   std::uint64_t next_generation_ = 1;
   std::uint32_t pending_ = 0;
   bool failed_ = false;

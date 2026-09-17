@@ -56,8 +56,9 @@ F15 execute through a native contract driver. The host accepts `flow_open` and
 WTH-B-F06 executes against the real host. `mix wotex.software.build` and
 `mix wotex.software.run` pass on Linux arm64 and emulated Linux x86_64 for both
 BEAM lanes, including real-host process ownership cases. Native State
-subscriptions provide the report source; F11–F13 remain open, so P00 is
-unaccepted.
+subscriptions provide the report source, and F11–F13 execute on all four
+lanes. C09 stress, dependency audit and clean archive validation remain open, so
+P00 is unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
