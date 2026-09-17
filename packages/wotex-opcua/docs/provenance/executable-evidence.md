@@ -20,6 +20,30 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Peer lifetime expiry, 2026-09-17
+
+In `native_subscription_test.exs` a persistent Session subscribes with a
+50 ms publishing interval, keepalive count 2 and lifetime count 6, receives the
+initial report, and a second Session reads a peer subscription count of 1. The
+test then stops the SDK process (the guardian's child) with `SIGSTOP`. While it
+is stopped the independent asyncua 2.0.1 peer receives no Publish requests and
+deletes the subscription at its lifetime limit: the second Session reads peer
+counts of zero before the SDK process gets `SIGCONT`. After resuming, the
+receiver gets exactly one `subscription_lost` (effect none), with no further
+report, and cancelling the handle returns `:ok`. In four observation runs (three
+RelWithDebInfo, one ASan/UBSan) the terminal code was `subscription_lost` each
+time.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29: the optional
+secure suite with the lifecycle file passes 60/60 against the RelWithDebInfo
+and macOS ASan/UBSan builds. `WOTEX_PATH_DEPS=1 mix check --no-retry` passes
+with 369 passed (10 doctests, 4 properties, 355 tests), 64 optional tests
+excluded and 95.4% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/native_subscription_test.exs` | `eecc698d66651eb3df3a0379aaad6622b4167ca6278697924eb2f2ac787d3415` |
+
 ## Software build and run tasks, 2026-09-17
 
 `Wotex.OPCUA.Native.Software` with `mix wotex.opcua.software.build` and

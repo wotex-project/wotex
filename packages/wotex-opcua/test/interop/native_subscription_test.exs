@@ -275,6 +275,43 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
     assert :ok = Wotex.OPCUA.disconnect(observer)
   end
 
+  test "WOP-S04 a peer lifetime expiry while the native owner is stopped ends the subscription",
+       context do
+    %{session: session, peer: peer} = context
+    %Session{handle: %{host: host}} = session
+
+    request = %{
+      node_id: peer["node_id"],
+      publishing_interval_ms: 50,
+      sampling_interval_ms: 0,
+      keepalive_count: 2,
+      lifetime_count: 6
+    }
+
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+    assert {:ok, _, _} = next_report(reference)
+    {:ok, observer} = observer(context)
+    assert {1, 1} = resources(observer, peer)
+    [sdk] = sdk_processes(host)
+    assert {_, 0} = System.cmd("/bin/kill", ["-STOP", sdk], env: [{"LC_ALL", "C"}])
+
+    expired =
+      try do
+        eventually(fn -> resources(observer, peer) == {0, 0} end, 500)
+      after
+        System.cmd("/bin/kill", ["-CONT", sdk], env: [{"LC_ALL", "C"}])
+      end
+
+    assert expired
+    assert {:error, %Error{code: :subscription_lost, effect: :none}} = next_report(reference)
+    refute_receive {:wotex_opcua, ^reference, _}, 100
+    assert {0, 0} = resources(observer, peer)
+    assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    assert :ok = Wotex.OPCUA.disconnect(observer)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
   test "WOP-S04 invalid requests and one-shot handles acquire no subscription", context do
     %{session: session, peer: peer} = context
 
@@ -297,6 +334,16 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
   end
 
   defp observer(context), do: Wotex.OPCUA.connect(context.options)
+
+  defp sdk_processes(host) do
+    %{port: port} = :sys.get_state(host)
+    {:os_pid, guardian} = Port.info(port, :os_pid)
+
+    {children, 0} =
+      System.cmd("/usr/bin/pgrep", ["-P", Integer.to_string(guardian)], env: [{"LC_ALL", "C"}])
+
+    String.split(children)
+  end
 
   defp resources(session, peer) do
     assert {:ok, %{"status" => 0, "outputs" => [%{"value" => subscriptions}, %{"value" => items}]}} =
