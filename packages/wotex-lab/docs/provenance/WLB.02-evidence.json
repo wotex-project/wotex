@@ -53,7 +53,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 19,
+  "attempt": 20,
   "budgets": {
     "children_per_role": 128,
     "cleanup_ms": 5000,
@@ -103,7 +103,7 @@
     }
   ],
   "durations": {
-    "run_ms": 1200
+    "run_ms": 1300
   },
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
@@ -123,11 +123,11 @@
     "test_count": 30,
     "workbench_test_count": 2
   },
-  "revision": "f6a239a680dcd97bf6ab43053b1b7d317396f763",
+  "revision": "fd6fb8179939eb9f77a1f23c87487b3258160cf7",
   "scenario_id": "WLB.02-scenarios-and-reference-components",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:7ad448c380b81d3eca22baa296828715e48ff2bb02e490b3b56e1e141dbc043f",
+  "source_tree_digest": "sha256:45aeff8148f4635516b25cb3459b56128ba067ebe90c9f2de378e885ed2e5e81",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

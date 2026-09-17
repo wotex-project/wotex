@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.24.0. Contract: accepted. Source status: the metric
+Specification version: 0.25.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -20,10 +20,12 @@ to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
 provision a durable database TTL on a local receiver. Both operator listeners
 can instead use a mutual-TLS remote transport with peer ranges. The base
 library exports Lab spans and exception logs over OTLP, and the Workbench can
-activate that exporter for a local receiver. Hosted database provisioning, isolated hosted-tenant
-BeamLens, public or tenant HTTP query bindings and a host durable query gateway
-remain planned; the MCP `query_metrics` tool binds the local gateway, and
-`Wotex.Lab.Metrics.DurableQuery` supplies fixed durable read templates. Hosted
+activate that exporter for a local receiver. `Wotex.Lab.Metrics.DurableQuery`
+supplies fixed durable read templates, and the operator listener answers them
+from a local receiver through the Workbench durable reader. Hosted database
+provisioning, isolated hosted-tenant BeamLens, public or tenant HTTP query
+bindings and hosted durable reads remain planned; the MCP `query_metrics` tool
+binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 alone is not proof of a Grafana import or query execution; the separate
 Grafana lane below supplies that evidence for one pinned server cohort.
@@ -343,9 +345,10 @@ Default durable metric TTL is seven days; a profile may explicitly override it.
 Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
 redacted from stats and errors. The base library's fixed durable read templates
-are described with the query contract below. A host durable query gateway and
-hosted database provisioning remain planned host work; hosted exporter TLS and egress policy
-and the mutual-TLS operator listener transport are implemented.
+and the Workbench's local durable reader are described with the query contract
+below. Hosted durable reads and hosted database provisioning remain planned
+host work; hosted exporter TLS and egress policy and the mutual-TLS operator
+listener transport are implemented.
 
 `Wotex.Lab.Metrics.Retention` implements local TTL provisioning without
 transport. `plan/1` admits a lowercase database identifier other than
@@ -453,9 +456,10 @@ or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway`
 admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits, and the MCP `query_metrics` tool
 opens one gateway per call from a host-bound history and scope. The operator
-HTTP query binding below opens one inspection scope per request. Public or
-tenant HTTP query bindings, a host durable query gateway and non-local or
-multi-tenant BeamLens callers remain planned.
+HTTP query binding below opens one inspection scope per request, for local
+history or the local durable receiver. Public or tenant HTTP query bindings,
+hosted durable reads and non-local or multi-tenant BeamLens callers remain
+planned.
 
 `Wotex.Lab.Metrics.DurableQuery` answers the same admitted descriptor from a
 PromQL-compatible durable receiver through fixed read templates and a host
@@ -468,7 +472,11 @@ the per-sample average of local history. Sample aggregations use a trailing
 window equal to the whole-second step, so the receiver's lookback cannot fill a
 missing step. Increases, rates and quantiles use the larger of the step and
 three capture intervals and are the receiver's extrapolated values, not the
-exact per-step deltas of local history. A multi-series `last` answer is
+exact per-step deltas of local history. Steps must be whole seconds and
+`start_at` a whole multiple of the step in Unix time. On GreptimeDB 1.1.4 an
+unaligned grid whose window equals the step can omit a value although a stored
+sample lies inside that window, so such descriptors are refused as
+`unsupported_query`. A multi-series `last` answer is
 ambiguous. `NaN` and infinite values are omitted and marked, and point and
 output limits apply to the admitted answer. Receiver error text is never
 returned, and each response carries the query and template digests. The module
@@ -481,6 +489,39 @@ and `sum` answers then equal local history for the same captures, including
 the gap. Increases are non-negative and positive where calls occurred, p95
 values stay within the observed bucket, and another instance scope reads
 nothing.
+
+`Metrics.Gateway` accepts a `:durable` executor instead of a `:history` PID,
+with an optional `:capture_interval_ms` of 1,000 to 60,000 (5,000 by
+default). The same owner binding, call budget, worker limit, deadline,
+cancellation, expiry and owner-death rules apply; the executor runs inside
+the query worker and stops with it. A binding with both sources, neither
+source or an interval for a history source is refused. The Workbench's
+`Observability.DurableReader` is that executor for a local receiver.
+`WOTEX_LAB_GREPTIME_QUERY_URL` admits only an exact
+`http://127.0.0.1:<port>` base URL, and the database is the exporter's
+`WOTEX_LAB_GREPTIME_DATABASE`, or `public` without it. The executor accepts
+only the four-parameter range template and posts it as a form body to
+`/v1/prometheus/api/v1/query_range?db=<database>`; on GreptimeDB 1.1.4 that
+query parameter overrides the `x-greptime-db-name` header and a `db` form
+field is ignored. It has a one-second connect deadline, a two-second receive
+deadline, no redirect, retry or credential and a one MiB response ceiling.
+Status 200, 400 and 422 bodies are decoded for the template to admit or
+refuse; any other status, an oversized or undecodable body or a transport
+failure makes the store unavailable. That server answers a query against a
+missing database with an empty success, so an empty answer from a selected
+database is followed by the fixed read
+`SELECT schema_name FROM information_schema.schemata WHERE schema_name = '<database>'`
+and a missing database is reported as unavailable, not as no data.
+`metrics_durable_reader_test.exs` covers receiver and database admission,
+the exact request, refused, oversized, malformed and unreachable answers,
+the database check, the listener binding and activation. With
+`WOTEX_LAB_GREPTIME=1`, the Workbench's `greptime_durable_read_test.exs`
+provisions a database on the pinned server and runs the host supervisor
+with volatile history, the exporter writing to that database and the
+durable reader. After three thermal runs and captures, `sum` answers for
+three catalogue metrics through `/durable/query` equal the `/query` answers
+from local history. An unaligned start gets 422, a reader bound to `public`
+or to another instance reads nothing and a missing database is unavailable.
 
 History query admission binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
@@ -530,20 +571,23 @@ per calling process and caps the whole host at 32 live scopes. Neither owner,
 scope, history nor an endpoint is an operator request option. Opening performs
 no query or LLM call. No browser route, LiveView event or MCP tool exposes this
 host-wide history, and neither a browser token nor the scrape credential grants
-access. The browser's saved panels query only the session room's attributed
-history described in WLB.11. Hosted tenant isolation, durable reads and
-investigation-specific provider/cost/context budgets remain separate acceptance
-work.
+access. With durable reads also configured, the broker starts even without
+history, and `open/1` takes `source: :durable` to bind the durable reader
+instead; an unconfigured source is `inspection_source_unavailable`. The
+browser's saved panels query only the session room's attributed history
+described in WLB.11. Hosted tenant isolation and investigation-specific
+provider/cost/context budgets remain separate acceptance work.
 
 ### Operator HTTP query binding
 
 `WotexLabWorkbench.Observability.QueryListener` is the only HTTP route to that
 history. It starts only when the operator sets `WOTEX_LAB_METRICS_QUERY_PORT`
-and `WOTEX_LAB_METRICS_QUERY_TOKEN` with local history active, and startup is
-refused when history is off or when the query credential equals the scrape
-credential. The listener binds IPv4 loopback, keeps only the credential's
-SHA-256, admits eight connections with one HTTP/1 request each and serves only
-`POST /query`. A request carries `Authorization: Bearer`, one
+and `WOTEX_LAB_METRICS_QUERY_TOKEN` with local history or durable reads active,
+and startup is refused when both are off or when the query credential equals
+the scrape credential. The listener binds IPv4 loopback, keeps only the
+credential's SHA-256, admits eight connections with one HTTP/1 request each and
+serves only `POST /query` for local history and `POST /durable/query` for the
+durable reader. A request carries `Authorization: Bearer`, one
 `Content-Type: application/json`, one `Content-Length` from 1 to 8,192 bytes
 and no query string, `Origin`, `Expect` or `Transfer-Encoding`. The body is
 the closed `Metrics.Request` field set; scope and limits in the body are
@@ -560,7 +604,9 @@ scrape credential), 403 for a non-loopback peer, 404 and 405 for other paths
 and methods, 409 for `clock_rollback`, 413 for a declared body above 8,192
 bytes, 415 for another media type, 422 for `unsupported_query`,
 `query_too_large` or `output_too_large`, 429 when inspection scopes are
-exhausted, 503 when history is unavailable and 504 at the deadline.
+exhausted, 502 when the durable receiver refuses the template or answers
+outside it, 503 when the selected source is unavailable or not activated and
+504 at the deadline.
 `metrics_query_listener_test.exs` covers configuration, activation
 dependencies, credential separation, framing refusals, server-bound scope,
 unsupported and invalid descriptors, scope capacity, unavailable history, the
@@ -769,7 +815,9 @@ fixture, reset, stale and histogram cases, series and history budgets, atomic
 admission, bounded exporter overload, retry and no-retry, network loss,
 shutdown, two-instance isolation, immutable diagnostic export and the export
 credential sentinel;
-`test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. The local
+`test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion, and the Workbench
+`greptime_durable_read_test.exs` compares durable and local-history answers for
+the same PromEx captures. The local
 protected query endpoint and TTL expiry have their own tests described above.
 `metrics_operator_transport_test.exs` covers the mutual-TLS scrape and query
 listeners. The Workbench `investigation_acceptance_test.exs` runs scripted

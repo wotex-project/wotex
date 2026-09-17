@@ -5,8 +5,9 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
   The listener is separate from the browser host and from the scrape listener.
   Its default `:local` transport fixes the address to IPv4 loopback; the
   `:transport` option may select the mutual-TLS remote profile of
-  `WotexLabWorkbench.Observability.OperatorTransport`. It admits only `POST /query` with
-  one Bearer query credential, of which only the SHA-256 is retained. The
+  `WotexLabWorkbench.Observability.OperatorTransport`. It admits only
+  `POST /query` and `POST /durable/query` with one Bearer query credential, of
+  which only the SHA-256 is retained. The
   scrape credential, cookies, browser sessions, URLs and forwarding headers
   cannot authorize a query. A request needs `Content-Type: application/json`,
   one `Content-Length` of at most 8,192 bytes and no query string, `Origin`,
@@ -15,19 +16,23 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
   The body is the closed field set of `Wotex.Lab.Metrics.Request`. For each
   request the listener process opens one owner-bound scope through
   `WotexLabWorkbench.Observability.Inspection`, so the instance and session
-  scope come from the server, never from the body. The scope admits one call
+  scope come from the server, never from the body. `/query` reads the volatile
+  history and `/durable/query` the durable receiver configured through
+  `WotexLabWorkbench.Observability.DurableReader`. The scope admits one call
   under reduced limits (six-hour range, 2,000 points, 256 KiB output, two-second
   deadline, one worker), waits at most 2.25 seconds for the terminal result and
   is revoked before the response. Eight connections, one request per
   connection and the broker's 32-scope ceiling bound concurrent work.
 
   A successful answer is JSON with source, interval, unit, freshness, loss
-  markers and query digest. Refusals are JSON `code`, `phase` and `message`
-  objects with distinct statuses: 400 malformed request, 401 credential, 403
-  non-loopback peer, 404 path, 405 method, 409 clock rollback, 413 body size,
-  415 media type, 422 unsupported or oversized query, 429 scope capacity, 503
-  unavailable history and 504 deadline; 403 also covers a peer outside the
-  remote profile's ranges. Neither transport is a tenant endpoint.
+  markers and query digest; durable answers add the template digest. Refusals
+  are JSON `code`, `phase` and `message` objects with distinct statuses: 400
+  malformed request, 401 credential, 403 non-loopback peer, 404 path, 405
+  method, 409 clock rollback, 413 body size, 415 media type, 422 unsupported or
+  oversized query, 429 scope capacity, 502 a durable receiver that refused the
+  template or answered outside it, 503 an unavailable or unactivated source and
+  504 deadline; 403 also covers a peer outside the remote profile's ranges.
+  Neither transport is a tenant endpoint.
   """
 
   @behaviour Plug
@@ -41,6 +46,7 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
 
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
   @max_body_bytes 8_192
+  @sources %{"/query" => :history, "/durable/query" => :durable}
   @max_response_bytes 1_048_576
   @limits %{
     range_ms: 6 * 60 * 60 * 1_000,
@@ -59,6 +65,8 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
     invalid_step: 400,
     invalid_quantile: 400,
     clock_rollback: 409,
+    durable_refused: 502,
+    durable_invalid_response: 502,
     unsupported_query: 422,
     query_too_large: 422,
     output_too_large: 422,
@@ -179,8 +187,8 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
         |> put_resp_header("www-authenticate", "Bearer realm=\"operator-metric-query\"")
         |> refuse(401, :unauthorized, "query credential is required")
 
-      conn.request_path != "/query" ->
-        refuse(conn, 404, :not_found, "only /query is served")
+      not Map.has_key?(@sources, conn.request_path) ->
+        refuse(conn, 404, :not_found, "only /query and /durable/query are served")
 
       conn.method != "POST" ->
         conn
@@ -242,8 +250,11 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
     case read_body(conn, options) do
       {:ok, body, conn} ->
         case Jason.decode(body) do
-          {:ok, request} when is_map(request) -> answer(conn, request)
-          _ -> refuse(conn, 400, :invalid_request, "body is not a JSON object")
+          {:ok, request} when is_map(request) ->
+            answer(conn, Map.fetch!(@sources, conn.request_path), request)
+
+          _ ->
+            refuse(conn, 400, :invalid_request, "body is not a JSON object")
         end
 
       _ ->
@@ -251,8 +262,8 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
     end
   end
 
-  defp answer(conn, request) do
-    case Inspection.open(ttl_ms: 3_000, max_calls: 1, query_limits: @limits) do
+  defp answer(conn, source, request) do
+    case Inspection.open(source: source, ttl_ms: 3_000, max_calls: 1, query_limits: @limits) do
       {:ok, gateway} ->
         monitor = Process.monitor(gateway)
 

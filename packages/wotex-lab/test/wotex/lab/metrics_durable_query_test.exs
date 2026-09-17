@@ -6,7 +6,7 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
   alias Wotex.Lab.Error
   alias Wotex.Lab.Metrics.{DurableQuery, Query}
 
-  @t0 1_700_000_000_000
+  @t0 1_699_999_980_000
   @scope %{instance: "lab-1", session: "session-1"}
 
   defp at(offset_ms), do: DateTime.from_unix!(@t0 + offset_ms, :millisecond)
@@ -66,8 +66,8 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
       assert template.window_ms == window
       assert template.path == "/v1/prometheus/api/v1/query_range"
       assert {"query", ^expression} = hd(template.params)
-      assert {"start", "1700000000.000"} in template.params
-      assert {"end", "1700000060.000"} in template.params
+      assert {"start", "1699999980.000"} in template.params
+      assert {"end", "1700000040.000"} in template.params
       assert String.starts_with?(template.digest, "sha256:")
     end
 
@@ -85,7 +85,9 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
           {:nx_queue_depth, :avg, []},
           {:nx_queue_depth, :rate, []},
           {:nx_duration_seconds, :last, []},
-          {:nx_operations_total, :last, [step_ms: 5_500]}
+          {:nx_operations_total, :last, [step_ms: 5_500]},
+          {:nx_queue_depth, :last, [start_at: at(1_000)]},
+          {:nx_queue_depth, :sum, [start_at: at(5_000)]}
         ] do
       assert {:error, %Error{code: :unsupported_query}} =
                DurableQuery.template(query(metric, aggregation, opts))
@@ -111,9 +113,9 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
       {:ok,
        matrix([
          series([
-           {1_700_000_015.0, "0.0048"},
-           {1_700_000_030.0, "NaN"},
-           {1_700_000_060.0, "0.025"}
+           {1_699_999_995.0, "0.0048"},
+           {1_700_000_010.0, "NaN"},
+           {1_700_000_040.0, "0.025"}
          ])
        ])}
     end
@@ -140,13 +142,13 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
 
     assert {:ok, %{points: [%{value: 5}]}} =
              DurableQuery.query(query(:nx_queue_depth, :last), fn _ ->
-               {:ok, matrix([series([{1_700_000_015.0, "5"}])])}
+               {:ok, matrix([series([{1_699_999_995.0, "5"}])])}
              end)
   end
 
   test "ambiguous, refused, malformed, oversized and unavailable answers are refused" do
     last = query(:nx_queue_depth, :last)
-    two = matrix([series([{1_700_000_015.0, "1"}]), series([{1_700_000_015.0, "2"}])])
+    two = matrix([series([{1_699_999_995.0, "1"}]), series([{1_699_999_995.0, "2"}])])
 
     for {body, code} <- [
           {{:ok, two}, :unsupported_query},
@@ -167,7 +169,7 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
              DurableQuery.query(query(:nx_queue_depth, :sum), fn _ -> {:ok, two} end)
 
     small = query(:nx_queue_depth, :sum, limits: %{points: 13})
-    many = matrix([series(for s <- 0..13, do: {1_700_000_000.0 + s, "1"})])
+    many = matrix([series(for s <- 0..13, do: {1_699_999_980.0 + s, "1"})])
 
     assert {:error, %Error{code: :query_too_large}} =
              DurableQuery.query(small, fn _ -> {:ok, many} end)
@@ -175,11 +177,11 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
     tiny = query(:nx_queue_depth, :sum, limits: %{output_bytes: 64})
 
     assert {:error, %Error{code: :output_too_large}} =
-             DurableQuery.query(tiny, fn _ -> {:ok, matrix([series([{1_700_000_015.0, "1"}])])} end)
+             DurableQuery.query(tiny, fn _ -> {:ok, matrix([series([{1_699_999_995.0, "1"}])])} end)
 
     assert {:ok, %{points: [], markers: [%{kind: :invalid}]}} =
              DurableQuery.query(query(:nx_queue_depth, :sum), fn _ ->
-               {:ok, matrix([series([{1_700_000_015.0, "1x"}])])}
+               {:ok, matrix([series([{1_699_999_995.0, "1x"}])])}
              end)
   end
 end

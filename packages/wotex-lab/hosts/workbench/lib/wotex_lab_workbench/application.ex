@@ -14,8 +14,12 @@ defmodule WotexLabWorkbench.Application do
   history is also active.
   `metrics_scrape` separately admits a credential-protected loopback listener;
   it also requires explicit PromEx activation and never joins browser routing.
+  `metrics_durable_query` lets operator inspection scopes read a local
+  GreptimeDB receiver through `WotexLabWorkbench.Observability.DurableReader`;
+  it also requires explicit PromEx activation.
   `metrics_query` adds a separate loopback operator query listener; it needs
-  local history and a credential different from the scrape credential.
+  local history or durable reads and a credential different from the scrape
+  credential.
   BeamLens additionally requires explicit activation plus local history, and
   starts only its bounded trusted-operator skill/provider bridge processes.
   `metrics_otlp` adds the base library's OTLP exporter with the closed
@@ -69,9 +73,11 @@ defmodule WotexLabWorkbench.Application do
     durable = Keyword.fetch!(env, :metrics_durable)
     beamlens? = Keyword.fetch!(env, :beamlens_enabled)
     query = Keyword.fetch!(env, :metrics_query)
+    durable_query = Keyword.fetch!(env, :metrics_durable_query)
 
     with :ok <- observability_requirements(promex?, history?, scrape, durable, beamlens?),
-         :ok <- query_requirements(history?, scrape, query),
+         :ok <- durable_query_requirements(promex?, durable_query),
+         :ok <- query_requirements(history? or durable_query != false, scrape, query),
          do: observability_children(promex?, history?, scrape, durable, beamlens?, env)
   end
 
@@ -87,6 +93,7 @@ defmodule WotexLabWorkbench.Application do
           history: history,
           scrape: scrape,
           durable: durable,
+          durable_query: Keyword.fetch!(env, :metrics_durable_query),
           beamlens: beamlens,
           query: Keyword.fetch!(env, :metrics_query)}
        ]}
@@ -106,6 +113,11 @@ defmodule WotexLabWorkbench.Application do
     do: {:error, :metrics_durable_requires_promex}
 
   defp observability_requirements(_promex, _history, _scrape, _durable, _beamlens), do: :ok
+
+  defp durable_query_requirements(false, durable_query) when durable_query != false,
+    do: {:error, :metrics_durable_query_requires_promex}
+
+  defp durable_query_requirements(_, _), do: :ok
 
   defp query_requirements(_, _, false), do: :ok
   defp query_requirements(false, _, _), do: {:error, :metrics_query_requires_history}

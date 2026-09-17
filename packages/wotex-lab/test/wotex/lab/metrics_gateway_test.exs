@@ -354,4 +354,79 @@ defmodule Wotex.Lab.MetricsGatewayTest do
       :sys.resume(history)
     end
   end
+
+  test "a durable binding answers through its host executor and stops it with the worker", %{
+    history: history
+  } do
+    parent = self()
+    series = [%{"metric" => %{}, "values" => [[1_767_225_605, "3"]]}]
+    matrix = %{"status" => "success", "data" => %{"resultType" => "matrix", "result" => series}}
+
+    executor = fn template ->
+      send(parent, {:template, self(), template})
+
+      receive do
+        {:reply, reply} -> reply
+      end
+    end
+
+    durable = fn opts ->
+      start_supervised!(
+        {Gateway, Keyword.merge([durable: executor, scope: @scope, owner: self()], opts)},
+        id: make_ref()
+      )
+    end
+
+    access = durable.([])
+    assert {:ok, reference} = Gateway.query(access, @request)
+    assert_receive {:template, worker, template}
+
+    assert template.expression =~ ~s(instance="inspection") and
+             template.expression =~ ~s(profile="test")
+
+    send(worker, {:reply, {:ok, matrix}})
+    assert_receive {:metric_query, ^access, ^reference, {:ok, answer}}, 1_000
+    assert answer.source == :durable_promql and answer.points == [%{t: 1_767_225_605_000, value: 3}]
+    assert {:ok, descriptor} = Request.decode(@request, @scope, %{})
+    assert answer.digest == Query.digest(descriptor)
+
+    increase = %{@request | "metric" => "nx_operations_total", "aggregation" => "increase"}
+    access = durable.(capture_interval_ms: 10_000)
+    assert {:ok, reference} = Gateway.query(access, Map.delete(increase, "filters"))
+    assert_receive {:template, worker, %{window_ms: 30_000}}
+    send(worker, {:reply, {:error, :receiver_down}})
+
+    assert_receive {:metric_query, ^access, ^reference,
+                    {:error, %Error{code: :durable_unavailable}}}
+
+    access = durable.(query_limits: %{deadline_ms: 50, concurrent: 1})
+    assert {:ok, reference} = Gateway.query(access, @request)
+    assert_receive {:template, worker, _}
+    monitor = Process.monitor(worker)
+
+    assert_receive {:metric_query, ^access, ^reference, {:error, %Error{code: :deadline_exceeded}}},
+                   1_000
+
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+    assert %{timed_out: 1, active: 0} = Gateway.stats(access)
+
+    access = durable.([])
+    assert {:ok, _} = Gateway.query(access, @request)
+    assert_receive {:template, worker, _}
+    monitor = Process.monitor(worker)
+    assert :ok = Gateway.revoke(access)
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+
+    for invalid <- [
+          [durable: executor, history: history],
+          [durable: fn _, _ -> :ok end],
+          [durable: executor, capture_interval_ms: 999],
+          [durable: executor, capture_interval_ms: 60_001],
+          [history: history, capture_interval_ms: 5_000],
+          []
+        ] do
+      assert {:error, %Error{code: :invalid_gateway}} =
+               Gateway.start_link([scope: @scope, owner: self()] ++ invalid)
+    end
+  end
 end

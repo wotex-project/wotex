@@ -170,6 +170,26 @@ instead repeat the previous value for up to its five-minute lookback. On this
 server, `increase` over a window holding fewer than two samples returned no
 point. Durable increases therefore use at least three capture intervals.
 
+Observation date: 2026-09-17. With `WOTEX_LAB_GREPTIME=1`,
+`hosts/workbench/test/wotex_lab_workbench/greptime_durable_read_test.exs
+--seed 1` passed 1 test against the same digest, with 2 CPUs, 1 GiB memory
+and no additional swap, 512 PIDs and an ephemeral loopback-only port; the
+container was removed afterwards. Real PromEx captures written with
+`x-greptime-db-name` to a provisioned database were read back through
+`/v1/prometheus/api/v1/query_range?db=<database>`, and `sum` answers for
+three catalogue metrics equalled local history. Separate probes against the
+same image showed that the `db` query parameter overrides the
+`x-greptime-db-name` header, a `db` form field is ignored, and a query naming
+a missing database returns an empty success. Captures carry millisecond
+wall-clock timestamps. In a randomized probe of `last_over_time` with a
+window equal to the step, 64 queries whose start was a whole multiple of the
+step returned all 1,392 expected points, whereas 19 of 64 queries with other
+starts each omitted one point whose window held a stored sample; windows of
+three steps showed no omission. `Wotex.Lab.Metrics.DurableQuery` therefore
+refuses unaligned starts, and the Workbench reader checks
+`information_schema.schemata` before reporting an empty answer from a
+selected database.
+
 History queries now require explicit instance binding; snapshot slots, query
 leases and catalogue metric semantics are independently admitted. Tests cover
 within-bucket resets, no-data/stale histograms, rollback, forged descriptors,

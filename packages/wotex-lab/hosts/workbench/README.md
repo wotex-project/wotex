@@ -344,6 +344,19 @@ short-lived inspection scope limited to a six-hour range, 2,000 points,
 stable `code`. Like the scrape listener, this profile is loopback-only unless the remote
 transport below is selected, and it is not a tenant endpoint.
 
+To read the same descriptors from the local GreptimeDB receiver, also set
+`WOTEX_LAB_GREPTIME_QUERY_URL=http://127.0.0.1:<port>` and send the body to
+`POST /durable/query`. Reads use the database named by
+`WOTEX_LAB_GREPTIME_DATABASE`, or `public` without it, and the `workbench`
+instance label that the exporter writes; the request cannot choose either.
+Durable reads still need `WOTEX_LAB_PROMEX=1`, but with them the listener no
+longer needs `WOTEX_LAB_METRICS_HISTORY=1`. Durable answers come
+from fixed PromQL templates, so `avg` over gauges and steps that are not
+whole seconds are refused, and `start_at` must be a whole multiple of
+`step_ms` in Unix time. A receiver that refuses the template or answers
+outside it gives 502; an unreachable receiver or a missing database gives
+503. The reader sends no credential and is limited to the local receiver.
+
 ### Remote operator transport
 
 To scrape or query from another host, set `WOTEX_LAB_METRICS_TRANSPORT=remote`
@@ -374,7 +387,8 @@ as unsupported, never as successful evidence.
 
 The separately requested operator listeners also use `WOTEX_LAB_METRICS_PORT`
 and `WOTEX_LAB_METRICS_TOKEN`, or `WOTEX_LAB_METRICS_QUERY_PORT` and
-`WOTEX_LAB_METRICS_QUERY_TOKEN`; invalid or incomplete options refuse startup.
+`WOTEX_LAB_METRICS_QUERY_TOKEN`, and durable reads use `WOTEX_LAB_GREPTIME_QUERY_URL`;
+invalid or incomplete options refuse startup.
 
 ## OTLP spans and exception logs
 

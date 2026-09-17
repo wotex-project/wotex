@@ -8,9 +8,11 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   `:scrape` separately admits an authenticated loopback-only operator listener.
   `:durable` adds one bounded local or explicitly pinned hosted GreptimeDB
   exporter; when history is also active that exporter is its sole writer, so
-  no capture is duplicated. `:query` adds the loopback operator query listener
-  after the history cohort; it needs history and a credential distinct from
-  `:scrape`.
+  no capture is duplicated. `:durable_query` admits
+  `WotexLabWorkbench.Observability.DurableReader` options, so inspection scopes
+  can also read the local durable receiver. `:query` adds the loopback operator
+  query listener after the history cohort; it needs history or durable reads
+  and a credential distinct from `:scrape`.
   """
 
   use Supervisor
@@ -27,6 +29,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   alias WotexLabWorkbench.Observability.{
     Durable,
+    DurableReader,
     Inspection,
     PromEx,
     QueryListener,
@@ -38,15 +41,18 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   @doc "Starts capture/relay; explicit options add bounded history, scrape and BeamLens surfaces."
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
   def start_link(opts) do
-    with :ok <- Options.validate(opts, [:history, :scrape, :durable, :beamlens, :query]),
+    with :ok <-
+           Options.validate(opts, [:history, :scrape, :durable, :durable_query, :beamlens, :query]),
          :ok <- history_options(Keyword.get(opts, :history, false)),
          :ok <- scrape_options(Keyword.get(opts, :scrape, false)),
          :ok <- durable_options(Keyword.get(opts, :durable, false)),
+         :ok <- durable_query_options(Keyword.get(opts, :durable_query, false)),
          :ok <- beamlens_options(Keyword.get(opts, :beamlens, false)),
          :ok <- query_options(Keyword.get(opts, :query, false)),
          :ok <-
            query_dependencies(
-             Keyword.get(opts, :history, false),
+             Keyword.get(opts, :history, false) != false or
+               Keyword.get(opts, :durable_query, false) != false,
              Keyword.get(opts, :scrape, false),
              Keyword.get(opts, :query, false)
            ),
@@ -63,6 +69,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     children =
       [PromEx, {Relay, []}] ++
         history_children(history, durable) ++
+        inspection_children(history, Keyword.get(opts, :durable_query, false)) ++
         durable_children(durable, history) ++
         scrape_children(Keyword.get(opts, :scrape, false)) ++
         query_children(Keyword.get(opts, :query, false)) ++
@@ -81,6 +88,9 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   defp durable_options(false), do: :ok
   defp durable_options(opts), do: Durable.validate(opts)
+
+  defp durable_query_options(false), do: :ok
+  defp durable_query_options(opts), do: DurableReader.validate(opts)
 
   defp beamlens_options(false), do: :ok
 
@@ -112,7 +122,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
        Error.new(
          :metrics_query_requires_history,
          :construction,
-         "metric queries need local history"
+         "metric queries need local history or durable reads"
        )}
 
   defp query_dependencies(_, scrape, query) do
@@ -151,14 +161,21 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
       Keyword.take(opts, [:max_snapshots, :max_bytes, :max_queries]) ++
         [id: :operator, name: __MODULE__.History, instance: "workbench", instance_slot: 0]
 
-    base = [
-      {History, history},
-      {Inspection, history: __MODULE__.History}
-    ]
+    base = [{History, history}]
 
     if durable == false,
       do: base ++ [{Sampler, [history: __MODULE__.History] ++ Keyword.take(opts, [:interval_ms])}],
       else: base
+  end
+
+  defp inspection_children(false, false), do: []
+
+  defp inspection_children(history, durable_query) do
+    sources =
+      if(history == false, do: [], else: [history: __MODULE__.History]) ++
+        if durable_query == false, do: [], else: [durable: durable_query]
+
+    [{Inspection, sources}]
   end
 
   defp durable_children(false, _history), do: []

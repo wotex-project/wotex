@@ -23,7 +23,11 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
   rather than filled by the receiver's lookback. PromQL needs two samples inside
   a window to compute an increase, so `r` is the larger of the step and three
   capture intervals (`:capture_interval_ms`, default 5,000, 1,000 to 60,000).
-  Steps must be whole seconds.
+  Steps must be whole seconds, and the start must be a whole multiple of the
+  step in Unix time. GreptimeDB 1.1.4 omits range-function values at some
+  evaluation times when the grid is not aligned that way and the window equals
+  the step, even though a stored sample lies inside the window; an unaligned
+  start is therefore refused rather than answered with silently missing steps.
   Increases are the receiver's extrapolated PromQL values over that trailing
   window; they are not the exact per-step deltas of local history.
 
@@ -62,7 +66,8 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
          {:ok, _} <- Query.estimate(query),
          {:ok, metric} <- Catalogue.fetch(query.metric),
          {:ok, shape} <- shape(metric.type, query.aggregation),
-         :ok <- whole_seconds(query.step_ms) do
+         :ok <- whole_seconds(query.step_ms),
+         :ok <- aligned(query) do
       window = window(shape, query.step_ms, interval)
       expression = expression(shape, metric, query, seconds(window))
 
@@ -157,6 +162,14 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
 
   defp whole_seconds(_),
     do: {:error, error(:unsupported_query, "durable templates need a whole-second step")}
+
+  defp aligned(query) do
+    if rem(DateTime.to_unix(query.start_at, :millisecond), query.step_ms) == 0,
+      do: :ok,
+      else:
+        {:error,
+         error(:unsupported_query, "durable templates need a start on a whole multiple of the step")}
+  end
 
   defp window({:sample, _}, step, _), do: step
   defp window(_, step, interval), do: max(step, div(3 * interval + 999, 1_000) * 1_000)

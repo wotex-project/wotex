@@ -53,6 +53,21 @@ metrics_durable =
 
 config :wotex_lab_workbench, metrics_durable: metrics_durable
 
+# Durable reads are separately selected. The receiver URL is an exact loopback
+# base; the database is the one the exporter writes, never a request value.
+if url = System.get_env("WOTEX_LAB_GREPTIME_QUERY_URL") do
+  case WotexLabWorkbench.Observability.DurableReader.configure(
+         url,
+         System.get_env("WOTEX_LAB_GREPTIME_DATABASE")
+       ) do
+    {:ok, options} ->
+      config :wotex_lab_workbench, metrics_durable_query: options
+
+    {:error, _} ->
+      raise "durable reads require WOTEX_LAB_GREPTIME_QUERY_URL=http://127.0.0.1:<port>"
+  end
+end
+
 # BeamLens remains completely dormant unless the trusted local operator opts
 # in. Provider availability is checked only when an investigation is requested;
 # boot never searches credentials, contacts Ollama or downloads a model.

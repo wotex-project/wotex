@@ -5,8 +5,17 @@ defmodule WotexLabWorkbench.Observability.Inspection do
   `open/1` creates one temporary query gateway per calling process, with a
   server-generated session identifier and the fixed `workbench` instance.
   At most 32 scopes exist, and they expire or disappear on owner/history death.
-  The broker starts only with explicit local-history activation. Opening a
-  scope performs no query, experiment, introspection or model call.
+  The broker starts only with explicit local-history or durable-read
+  activation. Opening a scope performs no query, experiment, introspection or
+  model call.
+
+  The `:source` option selects `:history` (the default), the volatile ETS
+  history, or `:durable`, the receiver configured through
+  `WotexLabWorkbench.Observability.DurableReader`. A durable scope binds that
+  reader's executor, so the receiver, database and response bounds come from
+  host configuration and the `workbench` instance label that the exporter
+  writes. A source the host did not activate is refused as
+  `inspection_source_unavailable`.
 
   This API is for a trusted in-VM operator. Browser sessions cannot open it:
   there is deliberately no route, LiveView event or MCP tool forwarding here.
@@ -19,25 +28,29 @@ defmodule WotexLabWorkbench.Observability.Inspection do
 
   alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.Gateway
+  alias WotexLabWorkbench.Observability.DurableReader
 
   @max_scopes 32
 
-  @doc "Starts the host broker with the explicitly configured history server."
+  @doc "Starts the host broker with the configured history server and/or durable reader options."
   @spec start_link(keyword()) :: GenServer.on_start() | {:error, Error.t()}
   def start_link(opts) do
-    with :ok <- Options.validate(opts, [:history]) do
-      case resolve(Keyword.get(opts, :history)) do
-        history when is_pid(history) -> GenServer.start_link(__MODULE__, history, name: __MODULE__)
-        _unavailable -> failure(:history_unavailable)
-      end
+    with :ok <- Options.validate(opts, [:history, :durable]),
+         {:ok, sources} <- sources(opts) do
+      GenServer.start_link(__MODULE__, sources, name: __MODULE__)
     end
   end
 
-  @doc "Opens an owner-bound scope; accepts only reduced query limits, TTL and call budget."
+  @doc "Opens an owner-bound scope; accepts a source, reduced query limits, TTL and call budget."
   @spec open(keyword()) :: {:ok, pid()} | {:error, Error.t()}
   def open(opts \\ []) do
-    with :ok <- Options.validate(opts, [:ttl_ms, :max_calls, :query_limits]),
-         do: GenServer.call(__MODULE__, {:open, opts})
+    with :ok <- Options.validate(opts, [:source, :ttl_ms, :max_calls, :query_limits]),
+         source when source in [:history, :durable] <- Keyword.get(opts, :source, :history) do
+      GenServer.call(__MODULE__, {:open, source, Keyword.delete(opts, :source)})
+    else
+      {:error, _} = invalid -> invalid
+      _ -> failure(:invalid_inspection)
+    end
   catch
     :exit, _reason -> failure(:inspection_unavailable)
   end
@@ -51,17 +64,19 @@ defmodule WotexLabWorkbench.Observability.Inspection do
   end
 
   @impl GenServer
-  def init(history) do
+  def init(sources) do
     Process.flag(:trap_exit, true)
-    {:ok, %{history: history, history_monitor: Process.monitor(history), owners: %{}}}
+    history_monitor = if sources.history, do: Process.monitor(sources.history)
+    {:ok, Map.merge(sources, %{history_monitor: history_monitor, owners: %{}})}
   end
 
   @impl GenServer
-  def handle_call({:open, opts}, {owner, _tag}, state) do
+  def handle_call({:open, source, opts}, {owner, _tag}, state) do
     state = prune(state)
 
     with :ok <- capacity(state, owner),
-         {:ok, gateway} <- Gateway.start_link(binding(state, owner) ++ opts) do
+         {:ok, binding} <- binding(state, source, owner),
+         {:ok, gateway} <- Gateway.start_link(binding ++ opts) do
       entry = %{gateway: gateway, monitor: Process.monitor(gateway)}
       {:reply, {:ok, gateway}, put_in(state, [:owners, owner], entry)}
     else
@@ -75,8 +90,9 @@ defmodule WotexLabWorkbench.Observability.Inspection do
   end
 
   @impl GenServer
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, %{history_monitor: monitor} = state),
-    do: {:stop, :normal, state}
+  def handle_info({:DOWN, monitor, :process, _, _}, %{history_monitor: monitor} = state)
+      when is_reference(monitor),
+      do: {:stop, :normal, state}
 
   def handle_info({:DOWN, _monitor, :process, _pid, _reason}, state),
     do: {:noreply, prune(state)}
@@ -89,9 +105,45 @@ defmodule WotexLabWorkbench.Observability.Inspection do
     :ok
   end
 
-  defp binding(state, owner) do
+  defp sources(opts) do
+    history = Keyword.get(opts, :history)
+    durable = Keyword.get(opts, :durable)
+
+    with {:ok, history} <- history_source(history, durable),
+         {:ok, executor} <- durable_source(durable) do
+      {:ok, %{history: history, durable: executor}}
+    end
+  end
+
+  defp history_source(nil, durable) when not is_nil(durable), do: {:ok, nil}
+
+  defp history_source(history, _) do
+    case resolve(history) do
+      pid when is_pid(pid) -> {:ok, pid}
+      _ -> failure(:history_unavailable)
+    end
+  end
+
+  defp durable_source(nil), do: {:ok, nil}
+
+  defp durable_source(opts) do
+    with :ok <- DurableReader.validate(opts), do: {:ok, DurableReader.executor(opts)}
+  end
+
+  defp binding(state, source, owner) do
     session = "inspection-" <> Base.encode16(:crypto.strong_rand_bytes(12), case: :lower)
-    [history: state.history, owner: owner, scope: %{instance: "workbench", session: session}]
+    base = [owner: owner, scope: %{instance: "workbench", session: session}]
+
+    case {source, state} do
+      {:history, %{history: history}} when is_pid(history) ->
+        {:ok, [history: history] ++ base}
+
+      {:durable, %{durable: executor}} when is_function(executor) ->
+        {:ok, [durable: executor] ++ base}
+
+      _ ->
+        failure(:inspection_source_unavailable)
+    end
   end
 
   defp capacity(state, owner) do

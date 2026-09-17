@@ -1,12 +1,21 @@
 defmodule Wotex.Lab.Metrics.Gateway do
   @moduledoc """
-  One disposable, owner-bound local-history inspection capability.
+  One disposable, owner-bound metric inspection capability.
 
-  A trusted host explicitly starts this process with a live `:history` PID,
-  authenticated `:scope` and `:owner` PID. Only that owner can submit requests,
-  cancel queries, inspect counters or revoke access. Request text cannot
-  replace any binding or budget. The gateway dies when its owner or its exact
-  history dies; it never follows a restarted registered history into new data.
+  A trusted host explicitly starts this process with an authenticated `:scope`,
+  an `:owner` PID and exactly one source: a live `:history` PID or a `:durable`
+  executor. Only that owner can submit requests, cancel queries, inspect
+  counters or revoke access. Request text cannot replace any binding or budget.
+  The gateway dies when its owner or its exact history dies; it never follows a
+  restarted registered history into new data.
+
+  A `:durable` binding answers each admitted descriptor through
+  `Wotex.Lab.Metrics.DurableQuery.query/3` with that one-argument host executor
+  and the optional `:capture_interval_ms` (5,000 by default, 1,000 to 60,000).
+  The executor runs inside the query worker, so cancellation, expiry, owner
+  death and the deadline stop it together with the worker. Receiver, database,
+  endpoint, credential and response bounds belong to the executor; the gateway
+  itself opens no connection.
 
   Defaults are 30 seconds of scope lifetime, 12 admitted calls, two workers
   and the `Query` defaults. Hosts may reduce query limits, not enlarge them;
@@ -28,15 +37,16 @@ defmodule Wotex.Lab.Metrics.Gateway do
   owner/scope from its authentication context, limit simultaneous gateways per
   session, and bound transport ingress. Arbitrary same-BEAM callers are trusted;
   GenServer calls alone do not bound a hostile population's mailbox traffic.
-  No HTTP, database, model, automatic introspection or Action starts here.
+  No model, automatic introspection or Action starts here, and only a
+  host-bound durable executor performs network access.
   """
 
   use GenServer
 
   alias Wotex.Lab.{Error, Options}
-  alias Wotex.Lab.Metrics.{History, Query, Request}
+  alias Wotex.Lab.Metrics.{DurableQuery, History, Query, Request}
 
-  @options ~w(history scope owner ttl_ms max_calls query_limits)a
+  @options ~w(history durable capture_interval_ms scope owner ttl_ms max_calls query_limits)a
 
   @doc false
   @spec child_spec(keyword()) :: Supervisor.child_spec()
@@ -78,7 +88,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
   def init(config) do
     Process.flag(:trap_exit, true)
     owner_monitor = Process.monitor(config.owner)
-    history_monitor = Process.monitor(config.history)
+    history_monitor = if config.history, do: Process.monitor(config.history)
     expiry = make_ref()
     timer = Process.send_after(self(), {:expire, expiry}, config.ttl_ms)
 
@@ -180,11 +190,11 @@ defmodule Wotex.Lab.Metrics.Gateway do
   defp launch(state, query, deadline) do
     gateway = self()
     reference = make_ref()
-    history = state.history
+    answer = answer(state, query)
 
     {worker, monitor} =
       :erlang.spawn_opt(
-        fn -> send(gateway, {:query_result, self(), reference, History.query(history, query)}) end,
+        fn -> send(gateway, {:query_result, self(), reference, answer.()}) end,
         [:link, :monitor]
       )
 
@@ -193,6 +203,12 @@ defmodule Wotex.Lab.Metrics.Gateway do
 
     {reference, count(%{state | queries: Map.put(state.queries, reference, entry)}, :admitted)}
   end
+
+  defp answer(%{durable: executor, capture_interval_ms: interval}, query)
+       when is_function(executor, 1),
+       do: fn -> DurableQuery.query(query, executor, capture_interval_ms: interval) end
+
+  defp answer(%{history: history}, query), do: fn -> History.query(history, query) end
 
   defp finish(state, reference, result, counter) do
     case Map.pop(state.queries, reference) do
@@ -254,7 +270,8 @@ defmodule Wotex.Lab.Metrics.Gateway do
   defp configure(opts) do
     with :ok <- Options.validate(opts, @options),
          config = Map.new(opts),
-         true <- local_alive?(config[:owner]) and local_alive?(config[:history]),
+         {:ok, source} <- source(config),
+         true <- local_alive?(config[:owner]),
          ttl = Map.get(config, :ttl_ms, 30_000),
          calls = Map.get(config, :max_calls, 12),
          true <- bounded?(ttl, 1, 60_000) and bounded?(calls, 1, 128),
@@ -266,11 +283,33 @@ defmodule Wotex.Lab.Metrics.Gateway do
              limits: Map.get(config, :query_limits, %{})
            ),
          true <- reduced_limits?(probe.limits) do
-      {:ok, Map.merge(config, %{ttl_ms: ttl, max_calls: calls, limits: probe.limits})}
+      {:ok,
+       config
+       |> Map.merge(source)
+       |> Map.merge(%{ttl_ms: ttl, max_calls: calls, limits: probe.limits})}
     else
       _ -> failure(:invalid_gateway)
     end
   end
+
+  defp source(%{history: history} = config) when not is_map_key(config, :durable) do
+    if local_alive?(history) and not is_map_key(config, :capture_interval_ms),
+      do: {:ok, %{history: history, durable: nil}},
+      else: :error
+  end
+
+  defp source(%{durable: executor} = config)
+       when is_function(executor, 1) and not is_map_key(config, :history) do
+    case Map.get(config, :capture_interval_ms, 5_000) do
+      interval when is_integer(interval) and interval in 1_000..60_000 ->
+        {:ok, %{history: nil, durable: executor, capture_interval_ms: interval}}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp source(_), do: :error
 
   defp reduced_limits?(limits) do
     Enum.all?(Query.default_limits(), fn
