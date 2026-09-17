@@ -20,6 +20,39 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Tampered and replayed secure responses, 2026-09-17
+
+`test/interop/tampered_traffic_test.exs` places an Elixir TCP proxy between the
+production native executable and the independent asyncua 2.0.1 peer. The proxy
+forwards client bytes unchanged and forwards the server's complete OPC UA TCP
+chunks. On request it either flips the last byte of the next server `MSG` chunk
+(its signature area under Basic256Sha256 SignAndEncrypt) or sends the previous
+`MSG` chunk again before the next one. Each Session first completes a Read
+through the proxy. Afterwards:
+
+- a Read whose response chunk is tampered fails with `connection_failed` or
+  `invalid_response`, effect none, and no value. The host stops and its
+  guardian and SDK OS processes exit within 1,000 ms;
+- a Read preceded by a replayed earlier response chunk fails the same way and
+  releases the native processes; a direct Session then reads the unchanged
+  value;
+- a Write whose response chunk is tampered fails with effect `unknown`, the host
+  stops, and a direct Session restores the value.
+
+The proxy reports each alteration and the tests require that report. A forged
+service type or requestHandle inside an encrypted chunk cannot be built without
+the channel keys and is not executed.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29: the file passes
+3/3 against the RelWithDebInfo and macOS ASan/UBSan builds. The optional secure
+suite with the lifecycle file passes 58/58 against both builds.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 364 passed (10 doctests,
+4 properties, 350 tests), 62 optional tests excluded and 95.3% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/tampered_traffic_test.exs` | `8aaa89e75b19f29becc34bf69db072aa0fb3d08b04aeffbbe17b2f58caa15e5c` |
+
 ## Software stress lane and minimum runtime, 2026-09-17
 
 `test/software/lifecycle_stress_test.exs` carries the `interop` and `software`
