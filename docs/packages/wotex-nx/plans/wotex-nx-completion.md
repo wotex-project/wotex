@@ -1,9 +1,18 @@
 # Wotex Nx completion contract
 
-Plan `WNX-C`, revision `1.0.0`. This immutable work-definition baseline has no
+Plan `WNX-C`, revision `1.1.0`. This immutable work-definition baseline has no
 rolling completion state. Preserve IDs; scope changes require an explicit
 successor. Catalogue implementation status is about WNX.01, not production,
 release or stable-API admission.
+
+Revision 1.1.0 records the monorepo layout and adds no work item.
+Documentation now lives under `docs/packages/wotex-nx/`. Package archives no
+longer ship Markdown documentation, governance files or agent files;
+specifications are published through HexDocs. Fixtures and machine-read
+provenance ship under `priv/`. The repository-level gate
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-nx`) and the
+CI lanes now discharge `repository_green` and `archive_consumer_green`. Tags
+use `wotex-nx-v<version>`.
 
 ## Implementation authority
 
@@ -32,7 +41,7 @@ but do not imply global metadata-memory limits or callback deadlines.
 | WNX-CL05 | Explicit bounds and schema validation | No OS sandbox, callback time bound or arbitrary payload-memory ceiling |
 | WNX-CL06 | Repository numerical tests and properties | Archive-only and independent consumer compatibility require separate proof |
 
-`docs/provenance/standards-and-dependencies.md` pins external sources. Additional schema support
+`docs/packages/wotex-nx/provenance/standards-and-dependencies.md` pins external sources. Additional schema support
 or backend claims require exact examples, revision/cohort and tests; do not
 convert unsupported values into a silent coercion to make a model run.
 
@@ -53,7 +62,7 @@ convert unsupported values into a silent coercion to make a model run.
 | WNX-C03 | WNX.01 | Archive-only minimal consumer fixture | Build archive, inspect dependencies/assets, unpack without source checkout, compile warnings-as-errors, and run public observation → rows → encoded batch → inert output with rejection cases |
 | WNX-C04 | WNX-C02, WNX-C03 | Independent reference consumer using explicit unit callback and declared Nx backend | Exact archive roundtrip preserves feature order, shapes, masks, quality, timestamps and provenance; missing/quality/unit policies and invalid output never produce an Action effect |
 | WNX-C05 | WNX-C04 | Supported runtime/backend cohort and compatibility evidence manifest | Run declared supported cohort; document numerical tolerance only where WNX.01 permits rounding; no claim of untested cross-backend byte identity |
-| WNX-C06 | None | Allowlisted package documentation inputs that exclude machine-local execution records | `mix hex.build` archive listing proves docs/tasks/local absent including any local sentinel |
+| WNX-C06 | None | Allowlisted package inputs that exclude documentation, governance and agent files and machine-local execution records | `mix hex.build` archive listing proves `docs/` (including local `docs/tasks/local/wotex-nx/`) absent including any local sentinel |
 
 C01/C02 and C03 can proceed independently; C04 requires their common accepted
 contract. New model execution, persistence, dispatch or a separate library is
@@ -63,11 +72,14 @@ or implementation explicitly before advancing its gate; do not hide the case.
 
 ## Gate definitions
 
-- `repository_green`: the repository's `WOTEX_PATH_DEPS=1 mix check --no-retry`
-  developer gate passes warnings-as-errors compilation, formatting, and
-  behavioral tests. Documentation and `git diff --check` run as explicit
-  evidence; record actual commands, coverage, and supported runtime.
-- `archive_consumer_green`: C03 passes using the exact inspected production
+- `repository_green`: `WOTEX_PATH_DEPS=1 mix check --no-retry` from
+  `packages/wotex-nx` passes warnings-as-errors compilation, formatting,
+  dependency audits, Credo, Doctor, documentation, behavioral tests with
+  coverage, Dialyzer, the archive check and `git diff --check`. The
+  repository-level gate and CI lanes discharge it; record actual commands,
+  coverage, and supported runtime.
+- `archive_consumer_green`: C03 passes through `bin/check_archive.exs`, run by
+  the repository-level gate and CI lanes, using the exact inspected production
   archive and declared dependencies, with no development path fallback or
   application callback. Record archive SHA-256 and dependency cohort.
 - `reference_consumer_green`: C02/C04 pass through public functions with an
@@ -84,7 +96,8 @@ Each proof binds source commit, runtime, dependency/backend cohort, commands and
 exit codes. Archive consumers additionally bind archive digest. Changes affecting
 those identities invalidate the corresponding proof until rerun. Mutable agent
 state, task trackers, prompts, handoffs and execution receipts are consumer-owned
-operational data and MUST remain outside this source repository. This repository
-contains only the stable plan, contracts, implementation, tests and reproducible
-verification entry points; neither this plan nor the catalogue is an audit
+operational data and MUST remain outside Git, in the ignored root
+`docs/tasks/local/wotex-nx/` at most. This package contains only the stable
+plan, contracts, implementation, tests and reproducible verification entry
+points; neither this plan nor the catalogue is an audit
 tracker.

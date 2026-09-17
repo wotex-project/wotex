@@ -281,9 +281,17 @@ defmodule WotexNx.CheckArchive do
       end
     end
 
+    @cohort_lanes %{
+      "minimum" => {"1.18.4", "27.3.4.15"},
+      "current" => {"1.20.2", "29.0.4"}
+    }
+
     test "the declared cohort permits only independently reproduced dtype rounding" do
-      assert System.version() == "1.18.4"
-      assert otp_version() == "27.3.4.15"
+      runtime = {System.version(), otp_version()}
+      lane = Enum.find(@cohort_lanes, fn {_name, versions} -> versions == runtime end)
+      assert lane != nil, "runtime #{inspect(runtime)} is not a declared cohort lane"
+      {lane_name, {elixir, otp}} = lane
+      IO.puts("cohort lane: #{lane_name} (Elixir #{elixir}, Erlang/OTP #{otp})")
       assert application_version(:wotex) == "0.1.0"
       assert application_version(:wotex_nx) == "0.1.0"
       assert application_version(:nx) == "0.13.1"

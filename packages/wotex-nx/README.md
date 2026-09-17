@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_nx.svg)](https://hex.pm/packages/wotex_nx)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_nx)
-[![CI](https://github.com/wotex-project/wotex-nx/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-nx/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-nx/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-nx)
-[![License](https://img.shields.io/hexpm/l/wotex_nx.svg)](https://github.com/wotex-project/wotex-nx/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_nx.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-nx/LICENSE)
 
 [Installation](#installation) ·
 [Quick Start](#quick-start) ·
@@ -121,8 +120,9 @@ Wotex Nx 0.1 accepts Wotex 0.1 Thing Description and DataSchema values and
 declares Nx 0.13.1. Feature order, shape, dtype, missing-value behavior, and
 output interpretation are explicit public inputs. Changes to those meanings
 require a documented contract change. The executable reference cohort is
-Elixir 1.18.4, Erlang/OTP 27.3.4.15, Nx 0.13.1, `Nx.BinaryBackend`, and
-`Nx.Defn.Evaluator`; its
+two runtime lanes, Elixir 1.18.4 with Erlang/OTP 27.3.4.15 (minimum) and
+Elixir 1.20.2 with Erlang/OTP 29.0.4 (current), each with Nx 0.13.1,
+`Nx.BinaryBackend`, and `Nx.Defn.Evaluator`; its
 [comparison policy](../../docs/packages/wotex-nx/provenance/runtime-backend-cohort.md)
 does not claim byte or numerical equivalence for untested backends or runtimes.
 
@@ -141,21 +141,15 @@ WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-The developer gate covers warnings-as-errors compilation, formatting, and the
-behavioral test suite. Release evidence is run explicitly:
+`mix check`, run from `packages/wotex-nx` inside the
+[monorepo](https://github.com/wotex-project/wotex), is the development gate.
+It covers warnings-as-errors compilation, formatting, dependency audits,
+strict Credo, Doctor, documentation, coverage, Dialyzer, the archive lane
+(`bin/check_archive.exs`) and `git diff --check`. The boundary scan runs
+explicitly:
 
 ```sh
-WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
-WOTEX_PATH_DEPS=1 mix deps.audit
-WOTEX_PATH_DEPS=1 mix hex.audit
-WOTEX_PATH_DEPS=1 mix credo --strict
-WOTEX_PATH_DEPS=1 mix doctor
-WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
-WOTEX_PATH_DEPS=1 MIX_ENV=test mix coveralls
-WOTEX_PATH_DEPS=1 mix dialyzer
 WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
-WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
-git diff --check
 ```
 
 The archive lane runs on the declared reference cohort. It compiles an isolated
@@ -167,4 +161,4 @@ path switch is never valid in production and never changes package metadata.
 
 ## License
 
-Wotex Nx is released under the [Apache License 2.0](https://github.com/wotex-project/wotex-nx/blob/main/LICENSE).
+Wotex Nx is released under the [Apache License 2.0](https://github.com/wotex-project/wotex/blob/main/packages/wotex-nx/LICENSE).

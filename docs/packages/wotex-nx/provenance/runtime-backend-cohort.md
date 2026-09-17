@@ -1,14 +1,19 @@
 # Runtime and backend compatibility cohort
 
-Manifest `WNX-COHORT-01`, revision `1.0.0`, defines the executable reference
+Manifest `WNX-COHORT-01`, revision `1.1.0`, defines the executable reference
 cohort for WNX.01. It is a stable verification input, not a mutable execution
 receipt. Consumers keep run logs, commit-bound results, and orchestration state
-outside this repository.
+outside this repository. Revision 1.1.0 declares the cohort as the two
+repository CI lanes on which every package gate runs: the minimum lane
+(Elixir 1.18.4-otp-27, Erlang/OTP 27.3.4.15) and the current lane (Elixir
+1.20.2-otp-29, Erlang/OTP 29.0.4, the root `.tool-versions` pin). The archive
+consumer accepts either lane and prints which one ran; the Nx release,
+backend, compiler and comparison policy are unchanged.
 
 | Dimension | Declared reference value |
 | --- | --- |
-| Elixir | 1.18.4 |
-| Erlang/OTP | 27.3.4.15 |
+| Minimum lane | Elixir 1.18.4, Erlang/OTP 27.3.4.15 |
+| Current lane | Elixir 1.20.2, Erlang/OTP 29.0.4 |
 | Wotex | 0.1 archive contract |
 | Wotex Nx | 0.1 archive contract |
 | Nx | 0.13.1 |
