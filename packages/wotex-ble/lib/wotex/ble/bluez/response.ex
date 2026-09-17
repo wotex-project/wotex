@@ -18,7 +18,7 @@ defmodule Wotex.BLE.BlueZ.Response do
   alias Wotex.BLE.BlueZ.Stream
   alias Wotex.BLE.{Characteristic, Error, ObjectPath, Procedure}
 
-  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error pairing_rejected invalid_address invalid_value address_mismatch ambiguous_characteristic unsupported_procedure_selection already_subscribed invalid_subscription response_limit subscription_lost cleanup_timeout)a
+  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error pairing_rejected invalid_address invalid_value address_mismatch ambiguous_characteristic unsupported_procedure_selection already_subscribed invalid_subscription response_limit queue_overflow subscription_lost cleanup_timeout resource_limit transport_unavailable incompatible_backend)a
   @errors Map.new(@codes, &{Atom.to_string(&1), &1})
   @fields ~w(service_uuid characteristic_uuid service_path object_path flags generation handle)
 

@@ -44,7 +44,7 @@ defmodule Wotex.BLE.BlueZSchemaTest do
     end
 
     for code <-
-          ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error) do
+          ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error queue_overflow resource_limit transport_unavailable incompatible_backend) do
       frame = %{"version" => 1, "id" => "id", "ok" => false, "error" => %{"code" => code}}
       assert {:error, %Error{} = error} = Response.parse(frame, "discover")
       assert Atom.to_string(error.code) == code
