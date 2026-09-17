@@ -280,7 +280,7 @@ defmodule Wotex.Thread.BuildFixture do
     spawn(fn ->
       with {:ok, socket} <- :ssl.transport_accept(listen, 10_000),
            {:ok, socket} <- :ssl.handshake(socket, 10_000),
-           {:ok, _request} <- :ssl.recv(socket, 0, 10_000) do
+           {:ok, _} <- :ssl.recv(socket, 0, 10_000) do
         head = "HTTP/1.1 #{status} #{reason}\r\nContent-Length: #{byte_size(body)}\r\n"
         :ssl.send(socket, head <> "Connection: close\r\n\r\n" <> binary_part(body, 0, sent))
         :ssl.close(socket)
