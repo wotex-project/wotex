@@ -144,7 +144,13 @@ absolute context directory, accepts the pinned ready identity and correlates
 the monotonic `open` and `close` commands. Its bounded byte accumulator accepts
 arbitrary Port splits and rejects extra lines, incomplete EOF and frames beyond
 128 KiB. The retained process state contains no credential or command line.
-Sixty-three contract-injection tests cover exact argv and envelopes, invalid options,
+The worker ends its own generation after a terminal exchange failure, so a close
+command can race that exit. A helper exit with status 0 and no partial frame
+completes an active close with `:ok` and ends an active request with
+`connection_closed` under the ordinary effect rules; any other exit during an
+active operation is `native_protocol_error`. This keeps graceful disconnect
+idempotent under WCO-C03.
+Sixty-four contract-injection tests cover exact argv and envelopes, invalid options,
 malformed/truncated/oversized input, wrong and duplicate response identities,
 finite waits, status redaction, admission-owned close control and owner-death
 cleanup within C03. The injected test executable is not the production OSCORE

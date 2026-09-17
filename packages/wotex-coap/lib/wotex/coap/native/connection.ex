@@ -414,6 +414,26 @@ defmodule Wotex.CoAP.Native.Connection do
   def handle_info({port, {:data, _}}, %{port: port} = state),
     do: stop_with(failure(:native_protocol_error), state)
 
+  # A worker ends its own generation after a terminal exchange failure. A clean
+  # exit with no partial frame therefore completes a racing close and reports a
+  # closed connection to an active request; other exits remain protocol errors.
+  def handle_info(
+        {port, {:exit_status, 0}},
+        %{port: port, buffer: <<>>, active: %{operation: :close} = active} = state
+      ) do
+    Process.cancel_timer(active.timer)
+    GenServer.reply(active.from, :ok)
+
+    {:stop, :normal,
+     %{state | active: nil, cleanup_deadline: state.cleanup_deadline || now() + @cleanup_timeout}}
+  end
+
+  def handle_info(
+        {port, {:exit_status, 0}},
+        %{port: port, buffer: <<>>, active: %{operation: :request}} = state
+      ),
+      do: stop_with(failure(:connection_closed), state)
+
   def handle_info({port, {:exit_status, _}}, %{port: port, active: %{}} = state),
     do: stop_with(failure(:native_protocol_error), state)
 

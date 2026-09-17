@@ -1754,7 +1754,30 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     File.write!(Path.join(context.store, "mode"), "close_exit")
     assert {:ok, pid} = Connection.start(context.options)
+    assert :ok = Connection.close(pid)
+    assert :ok = Connection.close(pid)
+    assert_helper_stopped(context.store, 1_000)
+
+    File.write!(Path.join(context.store, "mode"), "close_crash")
+    assert {:ok, pid} = Connection.start(context.options)
     assert {:error, %Error{code: :native_protocol_error}} = Connection.close(pid)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-C03 WCO-C04 a clean helper exit ends active requests as a closed connection",
+       context do
+    for {method, effect} <- [get: :none, put: :unknown] do
+      File.write!(Path.join(context.store, "mode"), "request_exit")
+      assert {:ok, pid} = Connection.start(context.options)
+      monitor = Process.monitor(pid)
+
+      assert {:error, %Error{code: :connection_closed, effect: ^effect, retryable: false}} =
+               Connection.request(pid, %{method: method, path: "/value", confirmable: true}, 1_000)
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+      assert :ok = Connection.close(pid)
+      assert_helper_stopped(context.store, 1_000)
+    end
   end
 
   test "WCO-N02 monitors distinct configured owners and creators", context do
@@ -2588,6 +2611,11 @@ defmodule Wotex.CoAP.NativeConnectionTest do
                   File.write!(Path.join(directory, "request-1.json"), request)
                   IO.read(:stdio, :line)
 
+                "request_exit" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  System.halt(0)
+
                 "request_error" ->
                   request = IO.read(:stdio, :line)
                   File.write!(Path.join(directory, "request-1.json"), request)
@@ -2637,6 +2665,9 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
                 "close_exit" ->
                   :ok
+
+                "close_crash" ->
+                  System.halt(70)
 
                 "split" ->
                   line = response.(id.(close))

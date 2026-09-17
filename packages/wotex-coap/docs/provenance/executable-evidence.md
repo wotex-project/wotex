@@ -265,7 +265,7 @@ decimal uint64 request identity once before exhaustion. The immutable allocator
 retains no command or credential. These tests do not write a Port or prove that
 the production helper accepts the lines.
 
-`native_connection_test.exs` executes sixty-three contract-injection tests for the
+`native_connection_test.exs` executes sixty-four contract-injection tests for the
 BEAM process boundary. The tests launch the manifest-verified executable through
 the exact `--custody ABS_DIRECTORY` entry, inspect the open and close envelopes,
 and assert the pinned ready identity, monotonic correlation, finite ready/close
@@ -287,7 +287,11 @@ distinguish cancelled queued mutations from submitted mutation
 uncertainty, reject forged capabilities before native I/O, reclaim caller loss,
 and close on active timeout, malformed response, ID exhaustion or failed Port
 write. Malformed, duplicate, truncated and oversized output closes the
-generation. Killing the configured owner releases the exact helper within
+generation. A helper that exits with status 0 and no partial frame while close is
+active completes that close with `:ok`, and a second close also returns `:ok`; the
+same exit during an active GET or PUT returns `connection_closed` with effect
+`none` or `unknown`. A nonzero exit during close remains `native_protocol_error`.
+Killing the configured owner releases the exact helper within
 1,000 ms. Five public-boundary tests select this owner only for explicit
 `coap` OSCORE configuration, preserve the two-field session, normalize an absent
 or explicit empty body and formats, dispatch through `send/2` and method helpers,
