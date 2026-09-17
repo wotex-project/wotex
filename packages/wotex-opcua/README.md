@@ -20,7 +20,7 @@ Consumer-neutral OPC Unified Architecture interactions for W3C Web of Things con
 This is a development checkout with an unstable public API. The ordered plan
 tracks the remaining software implementation and verification work.
 
-Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+Build handoff: [software implementation sequence](../../docs/packages/wotex-opcua/plans/software-implementation.md).
 
 ## Installation
 
@@ -66,7 +66,7 @@ The pinned SDK owns secure-channel cryptography and service codecs; the package
 owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
 asyncua is solely an independent software peer in this target.
 
-[WOP.13](docs/specs/WOP.13-native-executable.md) fixes source digests, security,
+[WOP.13](../../docs/packages/wotex-opcua/specs/WOP.13-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
 `mix wotex.native.build --workspace ABS` builds the packaged native bootstrap
 from verified static SDK/OpenSSL sources and writes a content-bound receipt.
@@ -160,10 +160,10 @@ Current result projection checks StatusCode envelopes and ByteString decoding;
 it does not validate every returned Variant type or payload. The strict media
 selector rejection required by WOP.12 has not yet been implemented.
 
-See [protocol and graduation contract](docs/specs/WOP.01-protocol.md),
-[implemented profile](docs/specs/WOP.02-implemented-profile.md),
-[primary sources](docs/provenance/primary-sources.md) and
-[executable evidence](docs/provenance/executable-evidence.md).
+See [protocol and graduation contract](../../docs/packages/wotex-opcua/specs/WOP.01-protocol.md),
+[implemented profile](../../docs/packages/wotex-opcua/specs/WOP.02-implemented-profile.md),
+[primary sources](../../docs/packages/wotex-opcua/provenance/primary-sources.md) and
+[executable evidence](../../docs/packages/wotex-opcua/provenance/executable-evidence.md).
 
 ## Development
 
@@ -180,18 +180,18 @@ No remote repository, published package or publication action is implied.
 
 ## Software implementation contract
 
-The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WOP-index.md) define the remaining software
+The [ordered implementation sequence](../../docs/packages/wotex-opcua/plans/software-implementation.md)
+and [specification index](../../docs/packages/wotex-opcua/specs/WOP-index.md) define the remaining software
 profile with exact behavior, limits, failure transitions and acceptance scenario families.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
-The [WOP.11 standalone client contract](docs/specs/WOP.11-standalone-client-and-preservation.md)
+The [WOP.11 standalone client contract](../../docs/packages/wotex-opcua/specs/WOP.11-standalone-client-and-preservation.md)
 records required native APIs, preserved protocol assets and concrete specified
 fixtures. These cases are not passing evidence until executable bindings run.
 
-The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](docs/specs/WOP.12-wotex-integration.md)
+The [specification catalogue](../../docs/packages/wotex-opcua/specs/catalogue.yaml) distinguishes implemented
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-opcua/specs/WOP.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. These are target requirements; a passing baseline
 gate does not accept the unfinished software profile.

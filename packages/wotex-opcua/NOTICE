@@ -13,4 +13,4 @@ the server's Session timeout revision and to discover a pinned endpoint and
 its user-token policy over the requested secure channel. Their upstream copyright and MPL-2.0
 notices remain intact; the modified files remain MPL-2.0. Exact archive,
 original-file and patched-file identities are recorded in
-docs/specs/fixtures/native-sources-v1.json and the native build receipt.
+priv/fixtures/native-sources-v1.json and the native build receipt.

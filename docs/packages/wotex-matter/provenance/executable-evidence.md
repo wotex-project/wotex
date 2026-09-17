@@ -361,7 +361,7 @@ responsible for the pinned SDK example peers.
 ## P08a public Wotex integration evidence
 
 `test/wotex/matter/runtime_integration_test.exs` executes every case in
-`docs/specs/fixtures/wotex-integration-v1.json` through public core and Runtime
+`priv/fixtures/wotex-integration-v1.json` through public core and Runtime
 APIs. The deterministic ports receive only fixture inputs. The test owns the
 expected projections and checks both Runtime profiles, two-Form precedence,
 read/write/Action values, exact result correlation, bounded metadata, strict

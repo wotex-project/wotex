@@ -622,7 +622,8 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   defp terminal_error(%{"code" => code, "phase" => phase, "effect" => effect} = error)
        when is_binary(code) and is_binary(phase) and is_binary(effect) do
-    with true <- Enum.sort(Map.keys(error)) in [~w(code effect phase), ~w(code effect phase status)],
+    with true <-
+           Enum.sort(Map.keys(error)) in [~w(code effect phase), ~w(code effect phase status)],
          {:ok, code_atom} <- finite(code, @codes),
          {:ok, phase_atom} <- finite(phase, @phases),
          {:ok, effect_atom} <- finite(effect, @effects),

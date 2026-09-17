@@ -152,7 +152,7 @@ foreach(number 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17)
     PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 endforeach()
 set(WOTEX_NATIVE_CONTRACT
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../docs/specs/fixtures/native-contract-v1.json")
+  "${CMAKE_CURRENT_SOURCE_DIR}/../fixtures/native-contract-v1.json")
 if(NOT EXISTS "${WOTEX_NATIVE_CONTRACT}")
   message(FATAL_ERROR "The native contract fixture is required")
 endif()
@@ -196,7 +196,7 @@ add_test(NAME native_sdk_session_revision COMMAND wotex_opcua_sdk_revision_check
 add_test(NAME native_browse_token_state COMMAND wotex_opcua_browse_check)
 foreach(number 14 15 16)
   add_test(NAME native_contract_WOP-F${number} COMMAND wotex_opcua_browse_trace_check
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../docs/specs/fixtures/contract-v1.json" WOP-F${number})
+    "${CMAKE_CURRENT_SOURCE_DIR}/../fixtures/contract-v1.json" WOP-F${number})
   set_tests_properties(native_contract_WOP-F${number} PROPERTIES TIMEOUT 20
     PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 endforeach()

@@ -4,15 +4,15 @@ defmodule Wotex.Matter.Check.Archive do
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
   @packaged [
     "mix.exs",
-    ".check.exs",
-    "coveralls.json",
     "config/config.exs",
     "LICENSE",
     "NOTICE",
     "README.md",
     "lib",
-    "docs",
     "native/src/host.cpp",
+    "priv/fixtures/contract-v1.json",
+    "priv/fixtures/native-port-v1.json",
+    "priv/fixtures/wotex-integration-v1.json",
     "test/native/interaction_test.cpp",
     "test/support/software/build.exs",
     "test/support/software/sources.json",
@@ -21,10 +21,10 @@ defmodule Wotex.Matter.Check.Archive do
     "test/support/software/case_formatter.exs",
     "test/support/software/peer.exs",
     "test/test_helper.exs",
-    "test/support/runtime_credentials.ex",
-    "bin/check_p03_advisories.exs"
+    "test/support/runtime_credentials.ex"
   ]
   @development [".git", "deps", "_build", "doc", "cover", "__pycache__"]
+  @excluded ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|coveralls\.json|docs)(/|$)|^tasks(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.Matter.Error.beam"
 
@@ -120,6 +120,17 @@ defmodule Wotex.Matter.Check.Archive do
     unless directories == [] do
       violation("archive contains development state")
     end
+
+    excluded =
+      package
+      |> Path.join("**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.map(&Path.relative_to(&1, package))
+      |> Enum.filter(&Regex.match?(@excluded, &1))
+
+    unless excluded == [] do
+      violation("archive contains documentation, governance or development files")
+    end
   end
 
   defp acceptance!(package) do
@@ -134,11 +145,6 @@ defmodule Wotex.Matter.Check.Archive do
            do: violation("archive has no required software case inventory")
 
     for item <- inventory["cases"], do: packaged!(package, Map.fetch!(item, "file"))
-
-    coverage = package |> Path.join("coveralls.json") |> File.read!() |> Jason.decode!()
-
-    unless get_in(coverage, ["coverage_options", "minimum_coverage"]) == 95,
-      do: violation("archive does not retain the required coverage floor")
   end
 
   defp identities!(package) do

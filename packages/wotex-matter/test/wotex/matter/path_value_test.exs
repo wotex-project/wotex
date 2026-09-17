@@ -18,7 +18,7 @@ defmodule Wotex.Matter.PathValueTest do
     TLV
   }
 
-  @fixture_path Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @fixture_path Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @fixture_ids ~w(WMA-F01 WMA-F02 WMA-F03 WMA-F04 WMA-F05 WMA-F06 WMA-F10 WMA-F12)
   @fixtures @fixture_path
             |> File.read!()

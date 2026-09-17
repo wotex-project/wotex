@@ -18,7 +18,7 @@ defmodule Wotex.Matter.SoftwareManifest do
     ".credo.exs",
     ".formatter.exs",
     "coveralls.json",
-    "docs/specs/fixtures/*.json",
+    "priv/fixtures/*.json",
     "mix.exs",
     "mix.lock"
   ]

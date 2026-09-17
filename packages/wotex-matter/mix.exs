@@ -2,7 +2,7 @@ defmodule WotexMatter.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-matter"
+  @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
@@ -110,16 +110,18 @@ defmodule WotexMatter.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-matter/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_matter",
+        "GitHub" => @source_url,
         "Project" => "https://wotex.io",
         "Source" => @source_url,
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-matter",
         "W3C Thing Description 1.1" =>
           "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .check.exs .credo.exs .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md bin/check_*.exs config coveralls.json docs/plans docs/provenance docs/specs lib native test/**/*.{ex,exs,cpp,json,inc} mix.exs)
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md config lib native priv/fixtures test/**/*.{ex,exs,cpp,json,inc} mix.exs)
     ]
   end
 
@@ -128,8 +130,18 @@ defmodule WotexMatter.MixProject do
       main: "readme",
       extras:
         ["README.md", "CHANGELOG.md", "SECURITY.md"] ++
-          Path.wildcard("docs/{specs,plans,provenance}/*.md"),
+          Path.wildcard(
+            Path.expand("../../docs/packages/wotex-matter/{specs,plans,provenance}/*.md", __DIR__)
+          ),
+      groups_for_extras: [
+        Specifications: ~r{/docs/packages/wotex-matter/specs/},
+        Plans: ~r{/docs/packages/wotex-matter/plans/},
+        Provenance: ~r{/docs/packages/wotex-matter/provenance/}
+      ],
       source_url: @source_url,
+      source_ref: "wotex-matter-v#{@version}",
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-matter-v#{@version}/packages/wotex-matter/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end

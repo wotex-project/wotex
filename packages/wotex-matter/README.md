@@ -24,7 +24,7 @@ or release readiness. The Python factory adapter has since been removed;
 source-bound software and archive receipts for this exact revision must be
 renewed before a current-source release claim.
 
-Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+Build handoff: [software implementation sequence](../../docs/packages/wotex-matter/plans/software-implementation.md).
 
 ## Installation
 
@@ -57,7 +57,7 @@ onboarding material and typed operational ACL values.
 The earlier Python factory adapter is removed; runtime controllers use the
 first-party native host.
 
-[WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
+[WMA.13](../../docs/packages/wotex-matter/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. `mix run bin/check_p07_native.exs` rebuilds
 and tests the P07 host in a disposable pinned Linux environment.
 `mix wotex.native.build --workspace /absolute/empty/workspace` builds the normal
@@ -73,7 +73,7 @@ workspace for a software build. Docker, Git, curl, tar and the `kill` executable
 must be available.
 The explicit lighting, thermostat and bridge ExUnit workflows have passed in
 both Linux BEAM lanes; their exact cohorts are recorded in
-[executable evidence](docs/provenance/executable-evidence.md).
+[executable evidence](../../docs/packages/wotex-matter/provenance/executable-evidence.md).
 `mix wotex.software.run --workspace /absolute/disposable/workspace` verifies the
 software build and executes the required suite in separate current and minimum
 BEAM containers with owned fixture state, networks and cleanup. Passing command
@@ -152,7 +152,7 @@ oneshot_profile = Wotex.Matter.profile()
 
 Use `client: Wotex.Matter.Native` with the explicit native controller options
 below. Its C++ host owns SDK startup, secure fabric storage, attestation,
-sessions and per-path status validation. See the [client contract](docs/specs/WMA.03-sdk-client.md).
+sessions and per-path status validation. See the [client contract](../../docs/packages/wotex-matter/specs/WMA.03-sdk-client.md).
 Alternatively, supply a module implementing `Wotex.Matter.Client`; injected
 contract tests alone do not establish SDK or device interoperability. Failed
 writes/invokes retain unknown effect and are never retried by the library.
@@ -188,7 +188,7 @@ typed results. A Runtime `:oneshot` transport uses the same options and returns
 schema values, the string `"written"` for writes, and nil for status-only commands.
 Native `:controller` transports require `lifecycle: :persistent`. Both modes use
 an explicitly built first-party executable and POSIX `/bin/kill` for owned-child
-termination. The [one-shot evidence](docs/provenance/executable-evidence.md)
+termination. The [one-shot evidence](../../docs/packages/wotex-matter/provenance/executable-evidence.md)
 records actual peer checks on both required Linux toolchains.
 
 Use `storage_mode: :create_new` with `authority: :generate_root` only for an
@@ -295,9 +295,9 @@ fail explicitly. Callback names alone do not establish consumer behavioral parit
 Compatibility requires concrete differential scenarios and independently observed
 software interactions for each advertised operation.
 
-See [implemented profile](docs/specs/WMA.02-implemented-profile.md),
-[primary sources](docs/provenance/primary-sources.md) and
-[executable evidence](docs/provenance/executable-evidence.md).
+See [implemented profile](../../docs/packages/wotex-matter/specs/WMA.02-implemented-profile.md),
+[primary sources](../../docs/packages/wotex-matter/provenance/primary-sources.md) and
+[executable evidence](../../docs/packages/wotex-matter/provenance/executable-evidence.md).
 
 ## Development
 
@@ -350,7 +350,7 @@ production report credits and delivery. The 128-byte input denotes the encoded J
 callback counts, queue reservations, terminal delivery and cleanup are measured.
 The ordinary native executable contains no process-flow instrumentation. Exact
 results and the software-profile acceptance receipts are recorded in
-[executable evidence](docs/provenance/executable-evidence.md).
+[executable evidence](../../docs/packages/wotex-matter/provenance/executable-evidence.md).
 
 The native input owner services report acknowledgements, cancellation and health
 while an SDK interaction, subscription or commissioning operation waits. It uses
@@ -361,14 +361,14 @@ subscriptions and commissioning windows.
 
 ## Software implementation contract
 
-The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WMA-index.md) define the implemented software
+The [ordered implementation sequence](../../docs/packages/wotex-matter/plans/software-implementation.md)
+and [specification index](../../docs/packages/wotex-matter/specs/WMA-index.md) define the implemented software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
 Required software peers are separate from physical-device tests.
 
-The [standalone client contract](docs/specs/WMA.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-matter/specs/WMA.11-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
-Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is fully executed:
+Its [concrete corpus](priv/fixtures/contract-v1.json) is fully executed:
 the P01 pure cases run in the default suite, the WMA-F07 controller lifecycle
 cases run in the P03 native lane, WMA-F11 runs with P04, and the WMA-F08
 delivery/cancellation projection runs with P05. WMA-F09 default terminal loss and
@@ -383,8 +383,8 @@ deadline/credential rejection, malformed result handling and Runtime-owned
 stream cleanup. Scenario tables and an unselected interop test alone are not
 executable acceptance evidence.
 
-The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
-profiles and their evidence. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)
+The [specification catalogue](../../docs/packages/wotex-matter/specs/catalogue.yaml) distinguishes implemented
+profiles and their evidence. The [Wotex integration contract](../../docs/packages/wotex-matter/specs/WMA.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. The P08a boundary, pinned software-peer matrix
 and isolated immutable-source package checks are executed.

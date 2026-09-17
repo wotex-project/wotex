@@ -2252,7 +2252,7 @@ group isolation and one shared cleanup deadline. The Linux test driver audits
 orphan adoption independently of the guardian. A separate LeakSanitizer lane
 retains the 500 ms SDK reap bound and explicitly reports instrumentation-only
 post-main exit time; ordinary and ASan/UBSan timing lanes retain the 500 ms total
-guardian bound. The [runtime custody contract](../../priv/native/runtime-guardian.md)
+guardian bound. The [runtime custody contract](../../../../packages/wotex-opcua/priv/native/runtime-guardian.md)
 defines those separate acceptance conditions. These checks do not implement or
 accept SDK frame credits, secure Sessions or OPC UA subscription ownership.
 
@@ -2323,7 +2323,7 @@ encoded Variant succeed. The corresponding excessive values fail. An input
 constructor cannot mask these direct SDK faults by rejecting them first.
 
 The source-bound native build receipt includes the corpus, both test drivers,
-typed library sources and CTest log. The [value codec contract](../../priv/native/value-codec.md)
+typed library sources and CTest log. The [value codec contract](../../../../packages/wotex-opcua/priv/native/value-codec.md)
 defines its arenas and result lifetimes. This evidence accepts conversion
 primitives only. SDK network-decoder allocation checks, received reserved type
 IDs, complete framed service output, native Session ownership and independent

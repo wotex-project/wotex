@@ -21,7 +21,7 @@ defmodule Wotex.OPCUA.Native.FrameTest do
 
   @tag case: "WOP-X-F17"
   test "WOP-X-F17 owner deadline translation matches the native contract corpus" do
-    corpus = File.read!("docs/specs/fixtures/native-contract-v1.json")
+    corpus = File.read!("priv/fixtures/native-contract-v1.json")
 
     fixture = Enum.find(Jason.decode!(corpus)["cases"], &(&1["id"] == "WOP-X-F17"))
 

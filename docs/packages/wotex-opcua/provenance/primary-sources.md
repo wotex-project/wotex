@@ -15,7 +15,7 @@ separate authorities. Source inspection is not execution or certification.
 
 ## Native backend
 
-The exact [source manifest](../specs/fixtures/native-sources-v1.json) records
+The exact [source manifest](../../../../packages/wotex-opcua/priv/fixtures/native-sources-v1.json) records
 observed SHA-256 for downloaded source archives. Source hashes prove byte
 identity, not successful compilation. WOP.13 defines all required build lanes.
 

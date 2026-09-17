@@ -667,7 +667,8 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp ordinary_message?({:request, generation, message, timeout})
-       when is_binary(generation) and is_map(message), do: valid_timeout?(timeout)
+       when is_binary(generation) and is_map(message),
+       do: valid_timeout?(timeout)
 
   defp ordinary_message?({:health, generation, timeout}) when is_binary(generation),
     do: valid_timeout?(timeout)

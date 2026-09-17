@@ -23,7 +23,7 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
     authentication: %{type: :anonymous}
   ]
 
-  @corpus "docs/specs/fixtures/native-contract-v1.json"
+  @corpus "priv/fixtures/native-contract-v1.json"
   @corpus_sha256 :crypto.hash(:sha256, File.read!(@corpus)) |> Base.encode16(case: :lower)
   @cases @corpus
          |> File.read!()

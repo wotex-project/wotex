@@ -4,7 +4,7 @@ defmodule Wotex.OPCUA.Native.JSONTest do
   use ExUnit.Case, async: false
   alias Wotex.OPCUA.Native.Command
 
-  @fixture "docs/specs/fixtures/native-json-v1.json"
+  @fixture "priv/fixtures/native-json-v1.json"
   @cases Jason.decode!(File.read!(@fixture))["cases"]
   @flags ~w(-std=c11 -Wall -Wextra -Werror -DYYJSON_DISABLE_NON_STANDARD=1
     -DYYJSON_DISABLE_UTILS=1 -DYYJSON_DISABLE_INCR_READER=1

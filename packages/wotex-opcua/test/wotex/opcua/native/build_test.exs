@@ -88,7 +88,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     native_tests = File.read!(Path.join(workspace, "logs/native_test.log"))
     assert native_tests =~ "native_json_self_test"
-    native_contract = File.read!("docs/specs/fixtures/native-contract-v1.json")
+    native_contract = File.read!("priv/fixtures/native-contract-v1.json")
     native_contract_hash = :crypto.hash(:sha256, native_contract) |> Base.encode16(case: :lower)
     assert receipt["identity"]["native_contract_sha256"] == native_contract_hash
 

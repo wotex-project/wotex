@@ -16,7 +16,7 @@ defmodule Wotex.OPCUA.Native.Vendor do
 
   alias Wotex.OPCUA.Native.Workspace
 
-  @manifest Path.expand("../../../../docs/specs/fixtures/native-sources-v1.json", __DIR__)
+  @manifest Path.expand("../../../../priv/fixtures/native-sources-v1.json", __DIR__)
   @external_resource @manifest
   @files @manifest
          |> File.read!()

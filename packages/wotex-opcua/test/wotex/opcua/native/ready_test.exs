@@ -6,7 +6,7 @@ defmodule Wotex.OPCUA.Native.ReadyTest do
   alias Wotex.OPCUA.Native.Ready
   doctest Ready
 
-  @cases Jason.decode!(File.read!("docs/specs/fixtures/native-ready-v1.json"))["cases"]
+  @cases Jason.decode!(File.read!("priv/fixtures/native-ready-v1.json"))["cases"]
 
   for fixture <- @cases do
     @fixture fixture

@@ -132,7 +132,7 @@ do not silently skip, simulate or weaken the requirement.
 ### WMA-P08a: Prove the Wotex consumer boundary
 
 - Requirements: WMA-I01, WMA-I02, WMA-I03, WMA-I04, WMA-I05, WMA-I06; all previous native/profile packages are dependencies.
-- Concrete cases: every `WMA-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Concrete cases: every `WMA-I-Fxx` case in `priv/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
 - Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
 - Test destinations: `test/wotex/matter/runtime_integration_test.exs` and explicit test-only credential/client ports.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.

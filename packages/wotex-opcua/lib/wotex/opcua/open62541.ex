@@ -146,7 +146,8 @@ defmodule Wotex.OPCUA.Open62541 do
   end
 
   def disconnect(%{owner: owner, config: %Config{lifecycle: :oneshot}, host: nil})
-      when owner == self(), do: :ok
+      when owner == self(),
+      do: :ok
 
   def disconnect(_), do: {:error, Error.new(:invalid_native_handle)}
 

@@ -39,7 +39,7 @@ defmodule Wotex.OPCUA.RuntimeStreamTest do
     "raw_datetime_ticks_available" => true
   }
 
-  @corpus "docs/specs/fixtures/native-contract-v1.json"
+  @corpus "priv/fixtures/native-contract-v1.json"
   @corpus_sha256 :crypto.hash(:sha256, File.read!(@corpus)) |> Base.encode16(case: :lower)
   @handoff @corpus
            |> File.read!()

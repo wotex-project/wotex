@@ -5,7 +5,7 @@ defmodule Wotex.OPCUA.Native.SourceTest do
   alias Wotex.OPCUA.Native.Source
   doctest Source
 
-  @manifest Path.expand("../../../../docs/specs/fixtures/native-sources-v1.json", __DIR__)
+  @manifest Path.expand("../../../../priv/fixtures/native-sources-v1.json", __DIR__)
 
   test "WOP-X01 WOP-X02 source selectors bind exact reviewed runtime archive identities" do
     bytes = File.read!(@manifest)

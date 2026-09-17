@@ -227,7 +227,7 @@ unknown critical and duplicate extensions fail. Invalid credentials return the
 bounded `certificate_invalid` opening error. Validity starts are inclusive and
 expiry is exclusive, tested with explicit wall-clock samples. The peer verifier
 additionally checks a complete DER pin and refreshed trust during SDK network
-verification. See the [native security boundary](../../priv/native/security.md).
+verification. See the [native security boundary](../../../../packages/wotex-opcua/priv/native/security.md).
 The owner now sends one bounded initial credit control before its request. The
 C process binds that credit to the generation, rejects a request without it,
 and rejects further credit before any output has been consumed. Terminal output

@@ -208,7 +208,7 @@ error; native Session/credit ownership remains a separate implementation layer.
 `deadline_exceeded` are finite bootstrap Error codes. Only a native exit status
 may appear in their bounded details; native output and filesystem exception text
 are never exposed. The readiness corpus
-[native-ready-v1.json](fixtures/native-ready-v1.json) contains exact byte frames;
+[native-ready-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-ready-v1.json) contains exact byte frames;
 its runner decodes `frame_base64` and compares either the complete clock value
 or the exact Error code. These cases establish no service acceptance.
 
@@ -232,7 +232,7 @@ is wired into the partial public native client. One independent Basic256Sha256
 anonymous peer passes persistent and one-shot paths; the complete token/policy
 matrix and compatibility projection remain open.
 
-The source authority is [native-sources-v1.json](fixtures/native-sources-v1.json).
+The source authority is [native-sources-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-sources-v1.json).
 open62541 1.5.7 is commit `d1173ccc31560ffc60c29e24ce8adb19f8c3c686`;
 OpenSSL 3.5.8 is commit `f4dc4d58b48d346a8270183f89acf826d459b0ca`.
 Neither a mutable branch nor a host-installed SDK satisfies the reference build.
@@ -365,7 +365,7 @@ the serializer emits `-0.0` for negative zero. Duplicate keys, exponent overflow
 trailing JSON, unknown keys, malformed UTF-8/base64 and incomplete EOF fail closed.
 C parsing has bounded tokens/stack and no input-proportional unchecked VLA.
 The pinned parser, strict flags, exact integer conversion and fixed allocation
-pools are defined in the [native JSON codec contract](../../priv/native/json-codec.md).
+pools are defined in the [native JSON codec contract](../../../../packages/wotex-opcua/priv/native/json-codec.md).
 Its source and MIT notice identities are part of the native source manifest.
 Parser syntax acceptance alone does not admit an operation or allocate SDK values.
 
@@ -639,7 +639,7 @@ error to each live receiver.
 
 ## WOP-X06 — Executable acceptance and evidence
 
-[native-contract-v1.json](fixtures/native-contract-v1.json) fixes independent
+[native-contract-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-contract-v1.json) fixes independent
 inputs and exact observations. Its status is partially_bound: WOP-X-F01 through
 WOP-X-F16 execute through the production bounded JSON parser, SDK value codec
 and pure namespace translator in `wotex_opcua_native_contract_check`. The runner
@@ -698,7 +698,7 @@ result is inferred.
 
 ## WOP-X07 — Independent runtime process custody
 
-The [native runtime guardian contract](../../priv/native/runtime-guardian.md)
+The [native runtime guardian contract](../../../../packages/wotex-opcua/priv/native/runtime-guardian.md)
 is normative for this profile. It defines separate executable identities,
 opaque bidirectional forwarding, exact buffer/argument limits, process-group
 identity retention, status mapping and WOP-G01..G10 acceptance. Those scenarios

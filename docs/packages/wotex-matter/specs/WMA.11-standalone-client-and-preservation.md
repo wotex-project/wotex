@@ -143,7 +143,7 @@ accurately; factory contract tests alone cannot accept P09.
 
 ## WMA-N04 — Concrete corpus and executable acceptance
 
-[contract-v1.json](fixtures/contract-v1.json) is fixture format `1.0.0` with
+[contract-v1.json](../../../../packages/wotex-matter/priv/fixtures/contract-v1.json) is fixture format `1.0.0` with
 status `partially_executed`. P01 binds WMA-F01–F06, WMA-F10 and WMA-F12 to
 public operations in `test/wotex/matter/path_value_test.exs`; later lifecycle
 cases remain unexecuted. The broader Vxx rows in .10 are scenario families.

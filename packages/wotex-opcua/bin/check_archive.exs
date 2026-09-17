@@ -8,7 +8,6 @@ defmodule Wotex.OPCUA.Check.Archive do
     "NOTICE",
     "README.md",
     "lib",
-    "docs",
     "priv/native/main.c",
     "priv/native/CMakeLists.txt",
     "priv/native/build_command.c",
@@ -37,12 +36,15 @@ defmodule Wotex.OPCUA.Check.Archive do
     "priv/native/vendor/yyjson/yyjson.c",
     "priv/native/vendor/yyjson/yyjson.h",
     "priv/native/vendor/yyjson/LICENSE",
-    "docs/specs/fixtures/native-sources-v1.json",
-    "docs/specs/fixtures/native-ready-v1.json",
-    "docs/specs/fixtures/custody-contract-v1.json",
-    "docs/specs/fixtures/native-contract-v1.json"
+    "priv/fixtures/contract-v1.json",
+    "priv/fixtures/wotex-integration-v1.json",
+    "priv/fixtures/native-json-v1.json",
+    "priv/fixtures/native-sources-v1.json",
+    "priv/fixtures/native-ready-v1.json",
+    "priv/fixtures/custody-contract-v1.json",
+    "priv/fixtures/native-contract-v1.json"
   ]
-  @development ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|cover|deps|doc|docs/tasks|mix\.lock|priv/plts|test|_build)(/|$)}
+  @development ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|cover|coveralls\.json|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.OPCUA.Error.beam"
 

@@ -5,7 +5,7 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
   alias Wotex.OPCUA.{Error, Open62541, Session}
   @moduletag :interop
 
-  @corpus "docs/specs/fixtures/native-contract-v1.json"
+  @corpus "priv/fixtures/native-contract-v1.json"
   @corpus_sha256 :crypto.hash(:sha256, File.read!(@corpus)) |> Base.encode16(case: :lower)
   @cases Map.new(Jason.decode!(File.read!(@corpus))["cases"], &{&1["id"], &1})
   @policies %{

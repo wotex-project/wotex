@@ -3,7 +3,7 @@ defmodule Wotex.OPCUA.Native.CustodyTest do
 
   use ExUnit.Case, async: false
 
-  @fixtures "docs/specs/fixtures/custody-contract-v1.json"
+  @fixtures "priv/fixtures/custody-contract-v1.json"
   @cases Jason.decode!(File.read!(@fixtures))["cases"]
 
   setup_all do

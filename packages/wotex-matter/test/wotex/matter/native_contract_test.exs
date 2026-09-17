@@ -10,7 +10,7 @@ defmodule Wotex.Matter.NativeContractTest do
   alias Wotex.Matter.SoftwareCommand
 
   @moduletag :software
-  @fixture "docs/specs/fixtures/native-port-v1.json"
+  @fixture "priv/fixtures/native-port-v1.json"
 
   for {id, suspended} <- [
         {"WMA-B-F11", "connection"},

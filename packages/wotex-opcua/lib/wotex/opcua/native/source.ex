@@ -21,7 +21,7 @@ defmodule Wotex.OPCUA.Native.Source do
       {:error, :unsupported_native_source}
   """
 
-  @manifest Path.expand("../../../../docs/specs/fixtures/native-sources-v1.json", __DIR__)
+  @manifest Path.expand("../../../../priv/fixtures/native-sources-v1.json", __DIR__)
   @external_resource @manifest
   @bytes File.read!(@manifest)
   @digest Base.encode16(:crypto.hash(:sha256, @bytes), case: :lower)

@@ -4,7 +4,7 @@ defmodule Wotex.OPCUA.StandaloneContractTest do
   use ExUnit.Case, async: true
   alias Wotex.OPCUA.{Address, Binary, Error}
 
-  @external_resource Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+  @external_resource Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @corpus File.read!(@external_resource)
   @digest Base.encode16(:crypto.hash(:sha256, @corpus), case: :lower)
   @cases Map.fetch!(Jason.decode!(@corpus), "cases")

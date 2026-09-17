@@ -240,7 +240,7 @@ defined in WOP.10 S02.
 
 ## WOP-N05 — Concrete fixtures and acceptance binding
 
-[contract-v1.json](fixtures/contract-v1.json) is a partially bound corpus.
+[contract-v1.json](../../../../packages/wotex-opcua/priv/fixtures/contract-v1.json) is a partially bound corpus.
 `standalone_contract_test.exs` executes F01 through F13 through the public
 pure codecs and compares every declared output field.
 `priv/native/browse_trace_check.c` executes F14 through F16 through the

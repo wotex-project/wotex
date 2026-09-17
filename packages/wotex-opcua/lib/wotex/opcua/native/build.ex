@@ -41,7 +41,7 @@ defmodule Wotex.OPCUA.Native.Build do
     value_codec.c value_codec.h value_check.c value_fault_check.c
     native_contract_check.c
     value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
-  @native_contract Path.expand("../../../../docs/specs/fixtures/native-contract-v1.json", __DIR__)
+  @native_contract Path.expand("../../../../priv/fixtures/native-contract-v1.json", __DIR__)
   @build_sources [
     Path.expand("../../../mix/tasks/wotex.opcua.native.build.ex", __DIR__)
     | Path.wildcard(Path.join(__DIR__, "*.ex"))

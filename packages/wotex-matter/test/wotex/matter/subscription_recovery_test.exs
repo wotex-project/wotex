@@ -122,7 +122,7 @@ defmodule Wotex.Matter.SubscriptionRecoveryTest do
   end
 
   defp contract_vector!(id) do
-    path = Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+    path = Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
 
     contract =
       path

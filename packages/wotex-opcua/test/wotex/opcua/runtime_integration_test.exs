@@ -15,7 +15,7 @@ defmodule Wotex.OPCUA.RuntimeIntegrationTest do
 
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, ExecutionContext, Request, Retry}
 
-  @corpus "docs/specs/fixtures/wotex-integration-v1.json"
+  @corpus "priv/fixtures/wotex-integration-v1.json"
   @corpus_sha256 :crypto.hash(:sha256, File.read!(@corpus)) |> Base.encode16(case: :lower)
   @cases @corpus
          |> File.read!()

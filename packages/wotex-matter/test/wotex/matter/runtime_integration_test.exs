@@ -9,7 +9,7 @@ defmodule Wotex.Matter.RuntimeIntegrationTest do
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result, Retry}
   alias Wotex.Runtime.Error, as: RuntimeError
 
-  @fixture "docs/specs/fixtures/wotex-integration-v1.json"
+  @fixture "priv/fixtures/wotex-integration-v1.json"
   @context "https://www.w3.org/2022/wot/td/v1.1"
   @attribute_path %{fabric_id: 1, node_id: 1234, endpoint: 1, cluster: 6, member: 0}
   @write_path %{fabric_id: 1, node_id: 1234, endpoint: 1, cluster: 513, member: 17}

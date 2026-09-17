@@ -2,7 +2,7 @@ defmodule Wotex.OPCUA.Check.NativeCustody do
   @moduledoc false
 
   @prefix "wotex-opcua-native-custody."
-  @fixture "docs/specs/fixtures/custody-contract-v1.json"
+  @fixture "priv/fixtures/custody-contract-v1.json"
   @sanitizer_flags ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
 
   @spec main() :: :ok
