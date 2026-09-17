@@ -52,7 +52,8 @@ defmodule Wotex.Thread.OpenThread.ReportLedger do
 
   @doc "Returns an empty ledger for one IPC session generation."
   @spec new() :: t()
-  def new, do: %__MODULE__{}
+  # struct/1 keeps the Dialyzer success typing as general as t/0 on both supported OTP releases.
+  def new, do: struct(__MODULE__)
 
   @doc "Opens a live stream with its validated native queue limit."
   @spec open(t(), stream(), 1..10_000) :: {:ok, t()} | :error

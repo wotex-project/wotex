@@ -32,6 +32,7 @@ defmodule Wotex.Thread.Software.Build do
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx rcp_configure
     rcp_compile tests_configure tests_compile flow_configure flow_compile)
   @build_modules [__MODULE__, Mix.Tasks.Wotex.Thread.Software.Build]
+  @tool_bytes 100_000_000
   @rcp_options ~w(-DOT_PLATFORM=simulation -DOT_APP_CLI=OFF -DOT_APP_NCP=OFF -DOT_APP_RCP=ON
     -DOT_FTD=OFF -DOT_MTD=OFF -DOT_RCP=ON -DOT_COMPILE_WARNING_AS_ERROR=ON -DBUILD_TESTING=OFF)
 
@@ -96,14 +97,19 @@ defmodule Wotex.Thread.Software.Build do
     Enum.reduce_while(@tools, {:ok, %{}}, fn name, {:ok, found} ->
       # Compiler names are commonly links; the recorded digest is of the selected target.
       with path when is_binary(path) <- System.find_executable(name),
-           {:ok, %File.Stat{type: :regular, size: size}} when size <= 100_000_000 <- File.stat(path),
-           {:ok, bytes} <- File.read(path) do
-        hash = Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
+           {:ok, hash} <- tool_digest(path) do
         {:cont, {:ok, Map.put(found, name, %{path: path, sha256: hash})}}
       else
         _ -> {:halt, {:error, {:missing_native_tool, name}}}
       end
     end)
+  end
+
+  defp tool_digest(path) do
+    with {:ok, %File.Stat{type: :regular, size: size}} when size <= @tool_bytes <- File.stat(path),
+         {:ok, bytes} <- File.read(path) do
+      {:ok, Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)}
+    end
   end
 
   defp build_modules do
