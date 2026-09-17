@@ -583,7 +583,13 @@ startup, complete discovery, explicit close, duplicate flow rejection and stdin
 loss during a withheld opening response. A regression sends `close` and then
 closes input before the reply: the admitted close still returns a null result
 and exit status zero instead of a `cleanup_timeout` failure. Before the fix the
-same trace failed its exit-status assertion on the Linux arm64 lane. Independent NameHasOwner queries check
+same trace failed its exit-status assertion on the Linux arm64 lane. A second
+host regression holds `UnregisterAgent` during an explicit close after `Pair`
+and then signals `Connected=false`. Link loss during that owned cleanup no
+longer turns the completed close into `cleanup_timeout`; the case failed its
+close-result assertion before the fix and all 35 private-bus tests pass after
+it on Linux arm64. The failure first appeared when BlueZ dropped a virtual link
+after a rejected pairing decision. Independent NameHasOwner queries check
 client-sender release and service-sender isolation after process exit. The fixture
 owns and reaps this direct, non-forking SDK child; runtime guardian process-group
 custody has its separate fault corpus. This evidence does not establish native

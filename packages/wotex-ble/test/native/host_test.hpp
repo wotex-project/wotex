@@ -170,6 +170,25 @@ inline void invariants(const std::string &address) {
   }
 
   {
+    // BlueZ drops the link after a rejected Pair. Link loss while an explicit
+    // close owns cleanup cannot turn that completed close into a failure.
+    Fixture f(address); f.open(); Message pair, unregister;
+    f.peer.on_other = [&](DBusMessage *request) {
+      const std::string method = dbus_message_get_member(request);
+      if (method == "Pair") { pair.reset(dbus_message_ref(request)); return; }
+      if (method == "UnregisterAgent") { unregister.reset(dbus_message_ref(request)); return; }
+      f.peer.empty_reply(request);
+    };
+    f.request("1", "pair", {{"capability", "DisplayYesNo"}}); f.until([&] { return bool(pair); });
+    f.request("close", "close"); f.until([&] { return bool(unregister); });
+    f.peer.changed({{"Connected", "b", false}}, device_interface, "/org/bluez/hci0/device");
+    for (unsigned turn = 0; turn < 20; ++turn) { f.peer.poll(); std::vector<pollfd> none; f.host.poll(none, 1); f.flush(); }
+    f.peer.empty_reply(unregister.get()); f.until([&] { return f.host.finished(); }); f.flush();
+    HOST_CHECK(f.response("1") && f.response("1")->at("ok") == false);
+    HOST_CHECK(f.response("close") && f.response("close")->at("ok") == true && f.response("close")->at("result").is_null());
+    HOST_CHECK(f.host.status() == 0 && !f.disconnects);
+  }
+  {
     Fixture f(address); f.open();
     f.request("1", "subscribe", {{"address", gatt_address}, {"mode", "auto"}, {"queue_limit", 2}});
     f.until([&] { return f.response("1"); });

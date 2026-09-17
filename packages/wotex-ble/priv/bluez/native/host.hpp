@@ -52,7 +52,13 @@ class NativeHost {
     if (reports_) reports_->retire(id, failure ? std::optional<Json>(failure->envelope()) : std::nullopt);
   }
   void close(bool response, Deadline deadline, int status) {
-    if (closing_) { stop_by_ = std::min(stop_by_, deadline); status_ = std::max(status_, status); return; }
+    if (closing_) {
+      // Link or sender loss during an explicit close is part of that cleanup;
+      // the final completion still reports any cleanup that did not finish.
+      stop_by_ = std::min(stop_by_, deadline);
+      if (!close_reply_) status_ = std::max(status_, status);
+      return;
+    }
     closing_ = true; close_reply_ = response; status_ = status;
     stop_by_ = std::min(deadline, Clock::now() + std::chrono::milliseconds(500));
     for (const auto &pending : queued_) fail(pending, "disconnected");
