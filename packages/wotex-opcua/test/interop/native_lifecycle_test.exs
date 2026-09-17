@@ -118,6 +118,47 @@ defmodule Wotex.OPCUA.NativeLifecycleInteropTest do
     assert eventually(fn -> match?(%{sessions: 0, channels: 0}, counters(context.peer)) end, 500)
   end
 
+  test "WOP-S04 a same-stack queue overflow reaches report metadata", context do
+    host = start_host()
+
+    assert {:ok, %{"namespace_array" => namespaces}} =
+             Host.request(host, "open", context.open, 5000)
+
+    namespace = Enum.find_index(namespaces, &(&1 == "urn:wotex:fixture"))
+
+    parameters = %{
+      "node_id" => "ns=#{namespace};s=burst",
+      "publishing_interval_ms" => 500,
+      "sampling_interval_ms" => 0,
+      "queue_size" => 2,
+      "discard_oldest" => true,
+      "keepalive_count" => 10,
+      "lifetime_count" => 30
+    }
+
+    assert {:ok, subscription} = Host.subscribe(host, parameters, self(), 1000, 5000)
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, %{"overflow" => false}}}, 5000
+    true = Port.command(context.peer, "b")
+    port = context.peer
+    assert_receive {^port, {:data, {:eol, "BURST 5.0 Good"}}}, 2000
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:ok, %{"value" => %{"value" => 4.0}, "status" => 0x480},
+                     %{"overflow" => true, "sequence" => sequence, "client_handle" => handle}}},
+                   5000
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:ok, %{"value" => %{"value" => 5.0}, "status" => 0},
+                     %{"overflow" => false, "sequence" => ^sequence, "client_handle" => ^handle}}},
+                   5000
+
+    refute_receive {:wotex_opcua, ^reference, _}, 700
+    assert :ok = Host.unsubscribe(host, subscription, 5000)
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
+    assert eventually(fn -> match?(%{sessions: 0, channels: 0}, counters(context.peer)) end, 500)
+  end
+
   defp start_host do
     {:ok, host, _} = start_host_link()
     host

@@ -2,7 +2,9 @@
 /* Test-only same-stack secure peer for real BrowseNext and release I/O. Each
  * 's' byte on stdin prints current and cumulative server Session and
  * SecureChannel counters, so tests can distinguish explicit Session deletion,
- * server-side Session timeout and channel release. */
+ * server-side Session timeout and channel release. Each 'b' byte writes five
+ * consecutive Double values to the burst Variable in one server iteration and
+ * prints the last value, so a small MonitoredItem queue overflows. */
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 #include <poll.h>
@@ -59,6 +61,26 @@ static UA_StatusCode add_nodes(UA_Server *server, UA_UInt16 namespace_index) {
             UA_NS0ID(HASCOMPONENT), UA_QUALIFIEDNAME(namespace_index, identifier),
             UA_NS0ID(BASEDATAVARIABLETYPE), attributes, NULL, NULL);
     }
+    if(status != UA_STATUSCODE_GOOD) return status;
+    UA_Double zero = 0.0;
+    UA_VariableAttributes burst = UA_VariableAttributes_default;
+    burst.displayName = UA_LOCALIZEDTEXT("en", "Burst");
+    burst.dataType = UA_TYPES[UA_TYPES_DOUBLE].typeId;
+    UA_Variant_setScalar(&burst.value, &zero, &UA_TYPES[UA_TYPES_DOUBLE]);
+    return UA_Server_addVariableNode(server, UA_NODEID_STRING(namespace_index, "burst"),
+        UA_NS0ID(OBJECTSFOLDER), UA_NS0ID(ORGANIZES), UA_QUALIFIEDNAME(namespace_index, "burst"),
+        UA_NS0ID(BASEDATAVARIABLETYPE), burst, NULL, NULL);
+}
+
+/* Writes five consecutive values without running the server loop between them. */
+static UA_StatusCode write_burst(UA_Server *server, UA_UInt16 namespace_index, UA_Double *value) {
+    UA_StatusCode status = UA_STATUSCODE_GOOD;
+    for(unsigned index = 0; status == UA_STATUSCODE_GOOD && index < 5; index++) {
+        *value += 1.0;
+        UA_Variant variant;
+        UA_Variant_setScalar(&variant, value, &UA_TYPES[UA_TYPES_DOUBLE]);
+        status = UA_Server_writeValue(server, UA_NODEID_STRING(namespace_index, "burst"), variant);
+    }
     return status;
 }
 
@@ -97,6 +119,7 @@ int main(int argc, char **argv) {
     UA_ByteString_clear(&crl);
     if(status != UA_STATUSCODE_GOOD) goto done;
     config->maxReferencesPerNode = 1;
+    config->samplingIntervalLimits.min = 0.0;
     UA_String_clear(&config->applicationDescription.applicationUri);
     config->applicationDescription.applicationUri = UA_STRING_ALLOC("urn:wotex:fixture:server");
     if(!config->applicationDescription.applicationUri.data) {
@@ -170,6 +193,7 @@ int main(int argc, char **argv) {
     if(status != UA_STATUSCODE_GOOD) goto done;
     signal(SIGTERM, stop_peer);
     signal(SIGINT, stop_peer);
+    UA_Double burst_value = 0.0;
     printf("READY %u\n", (unsigned)namespace_index);
     fflush(stdout);
     while(running) {
@@ -182,6 +206,12 @@ int main(int argc, char **argv) {
             ssize_t count = read(0, input, sizeof(input));
             if(count <= 0) break;
             for(ssize_t index = 0; index < count; index++) {
+                if(input[index] == 'b') {
+                    UA_StatusCode written = write_burst(server, namespace_index, &burst_value);
+                    printf("BURST %.1f %s\n", burst_value, UA_StatusCode_name(written));
+                    fflush(stdout);
+                    continue;
+                }
                 if(input[index] != 's') continue;
                 UA_ServerStatistics statistics = UA_Server_getStatistics(server);
                 printf("COUNTERS %zu %zu %zu %zu %zu\n",

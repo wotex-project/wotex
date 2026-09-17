@@ -8,7 +8,11 @@ variants reuse those credentials and write config-VARIANT.json:
 expired_leaf and wrong_host present faulty server certificates, none_only
 offers only Security None and anonymous_only offers only anonymous tokens.
 The Resources method returns the peer's active subscription and MonitoredItem
-counts as two UInt32 outputs.
+counts as two UInt32 outputs. PublishFaults(withhold, discard) arms the peer to
+answer the next `withhold` data-change Publish results with keepalives, keeping
+each withheld message for Republish unless `discard` is true, and returns the
+withheld and Republish counts. LoseSubscriptions queues a BadTimeout
+StatusChangeNotification on every subscription and returns their count.
 """
 import asyncio
 import base64
@@ -22,6 +26,7 @@ from pathlib import Path
 from asyncua import Server, ua
 from asyncua.common.methods import uamethod
 from asyncua.crypto.permission_rules import User, UserRole
+from asyncua.server.internal_subscription import InternalSubscription
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -170,6 +175,55 @@ async def main(directory, variant):
                                                      [ua.VariantType.Double, ua.VariantType.Double],
                                                      [ua.VariantType.Double])
     service = server.iserver.subscription_service
+    faults = {"withhold": 0, "discard": False, "withheld": 0, "republished": 0}
+    pop_result = InternalSubscription._pop_publish_result
+    republish_result = InternalSubscription.republish
+
+    def withheld_result(subscription):
+        result = pop_result(subscription)
+        message = result.NotificationMessage
+        if not (faults["withhold"] and message.NotificationData and subscription.pub_request_callback):
+            return result
+        faults["withhold"] -= 1
+        faults["withheld"] += 1
+        if faults["discard"]:
+            subscription._not_acknowledged_results.pop(message.SequenceNumber, None)
+        keepalive = ua.PublishResult()
+        keepalive.SubscriptionId = result.SubscriptionId
+        keepalive.NotificationMessage.SequenceNumber = subscription._notification_seq
+        keepalive.NotificationMessage.PublishTime = message.PublishTime
+        keepalive.AvailableSequenceNumbers = list(subscription._not_acknowledged_results.keys())
+        return keepalive
+
+    def counted_republish(subscription, sequence):
+        faults["republished"] += 1
+        return republish_result(subscription, sequence)
+
+    InternalSubscription._pop_publish_result = withheld_result
+    InternalSubscription.republish = counted_republish
+
+    @uamethod
+    def publish_faults(parent, withhold, discard):
+        if withhold:
+            faults["withhold"] = withhold
+            faults["discard"] = discard
+        return (ua.Variant(faults["withheld"], ua.VariantType.UInt32),
+                ua.Variant(faults["republished"], ua.VariantType.UInt32))
+
+    @uamethod
+    async def lose_subscriptions(parent):
+        subscriptions = list(service.subscriptions.values())
+        for entry in subscriptions:
+            await entry.monitored_item_srv.trigger_statuschange(ua.StatusCode(ua.StatusCodes.BadTimeout))
+        return ua.Variant(len(subscriptions), ua.VariantType.UInt32)
+
+    faults_method = await server.nodes.objects.add_method(ua.NodeId("publish_faults", namespace),
+                                                          "PublishFaults", publish_faults,
+                                                          [ua.VariantType.UInt32, ua.VariantType.Boolean],
+                                                          [ua.VariantType.UInt32, ua.VariantType.UInt32])
+    loss_method = await server.nodes.objects.add_method(ua.NodeId("lose_subscriptions", namespace),
+                                                        "LoseSubscriptions", lose_subscriptions, [],
+                                                        [ua.VariantType.UInt32])
 
     @uamethod
     def resources(parent):
@@ -192,6 +246,8 @@ async def main(directory, variant):
               "name_value_id": name_value.nodeid.to_string(),
               "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string(),
               "resources_method_id": resources_method.nodeid.to_string(),
+              "faults_method_id": faults_method.nodeid.to_string(),
+              "loss_method_id": loss_method.nodeid.to_string(),
               "username": USERNAME, "password": PASSWORD, "variant": variant}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

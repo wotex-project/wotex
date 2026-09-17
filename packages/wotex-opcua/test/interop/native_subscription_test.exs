@@ -154,6 +154,85 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
     assert :ok = Wotex.OPCUA.disconnect(session)
   end
 
+  test "WOP-S04 a withheld notification is recovered once through Republish in order",
+       context do
+    %{session: session, peer: peer} = context
+    request = %{node_id: peer["node_id"], publishing_interval_ms: 50, sampling_interval_ms: 0}
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+    assert {:ok, _, %{"sequence" => initial}} = next_report(reference)
+    {before, republished} = faults(session, peer, 1, false)
+    count = before + 1
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], 31.0)
+    assert eventually(fn -> match?({^count, _}, faults(session, peer, 0, false)) end)
+    refute_receive {:wotex_opcua, ^reference, _}, 100
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], 32.0)
+    withheld = initial + 1
+    fresh = initial + 2
+
+    assert {:ok, %{"value" => %{"value" => 31.0}}, %{"sequence" => ^withheld}} =
+             next_report(reference)
+
+    assert {:ok, %{"value" => %{"value" => 32.0}}, %{"sequence" => ^fresh}} =
+             next_report(reference)
+
+    expected = republished + 1
+    assert {^count, ^expected} = faults(session, peer, 0, false)
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    assert {0, 0} = resources(session, peer)
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], context.original)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-S04 an unavailable Republish ends only that subscription with sequence_gap",
+       context do
+    %{session: session, peer: peer} = context
+    request = %{node_id: peer["node_id"], publishing_interval_ms: 50, sampling_interval_ms: 0}
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+    assert {:ok, _, _} = next_report(reference)
+    assert {withheld, _} = faults(session, peer, 1, true)
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], 33.0)
+    expected = withheld + 1
+    assert eventually(fn -> match?({^expected, _}, faults(session, peer, 0, false)) end)
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], 34.0)
+
+    assert {:error, %Error{code: :sequence_gap, effect: :none}} = next_report(reference)
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert eventually(fn -> resources(session, peer) == {0, 0} end)
+    assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], context.original)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-S04 a peer StatusChangeNotification ends the subscription as subscription_lost",
+       context do
+    %{session: session, peer: peer} = context
+    request = %{node_id: peer["node_id"], publishing_interval_ms: 50, sampling_interval_ms: 0}
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+    assert {:ok, _, _} = next_report(reference)
+
+    assert {:ok, %{"status" => 0, "outputs" => [%{"value" => 1}]}} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: peer["loss_method_id"],
+               value: %{object_id: peer["object_id"], arguments: []}
+             })
+
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], 35.0)
+
+    assert {:error, %Error{code: :subscription_lost, details: %{status: 0x800A_0000}}} =
+             next_report(reference)
+
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert eventually(fn -> resources(session, peer) == {0, 0} end)
+    assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    assert {:ok, %{"status" => 0}} = write(session, peer["node_id"], context.original)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
   test "WOP-S04 invalid requests and one-shot handles acquire no subscription", context do
     %{session: session, peer: peer} = context
 
@@ -184,6 +263,29 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
              })
 
     {subscriptions, items}
+  end
+
+  defp faults(session, peer, withhold, discard) do
+    assert {:ok, %{"status" => 0, "outputs" => [%{"value" => withheld}, %{"value" => republished}]}} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: peer["faults_method_id"],
+               value: %{
+                 object_id: peer["object_id"],
+                 arguments: [%{type: "UInt32", value: withhold}, %{type: "Boolean", value: discard}]
+               }
+             })
+
+    {withheld, republished}
+  end
+
+  defp next_report(reference) do
+    receive do
+      {:wotex_opcua, ^reference, {:ok, value, metadata}} -> {:ok, value, metadata}
+      {:wotex_opcua, ^reference, {:error, error}} -> {:error, error}
+    after
+      5000 -> flunk("no subscription report")
+    end
   end
 
   defp drain(messages) do

@@ -20,6 +20,53 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Peer Republish, subscription loss and queue overflow, 2026-09-17
+
+The independent asyncua 2.0.1 peer adds two test-only Methods.
+`PublishFaults(withhold, discard)` makes the peer answer the next data-change
+Publish with a keepalive. The peer keeps the withheld message for Republish, or
+discards it when requested, and the Method returns the withheld and Republish
+counts. `LoseSubscriptions` queues a BadTimeout StatusChangeNotification on
+every subscription. Neither Method is part of the native client.
+
+`native_subscription_test.exs` withholds one notification. The next fresh value
+arrives, the native owner issues one Republish (the peer count increases by one)
+and the receiver gets the withheld value and then the fresh value, each once and
+in sequence order. When the withheld message is discarded, the empty Republish
+ends only that subscription with one `sequence_gap`. The peer's subscription and
+MonitoredItem counts return to zero and the Session still accepts a Write. A
+peer StatusChangeNotification delivers one `subscription_lost` with status
+`0x800A0000` and the peer counts also return to zero.
+
+The same-stack C peer (`paged_peer.c`) adds a `burst` Double Variable, allows a
+zero sampling interval and writes five consecutive values when it reads a `b`
+byte. `native_lifecycle_test.exs` subscribes with queue size 2 and discard oldest.
+One Publish then delivers value 4.0 with StatusCode `0x480` and `overflow: true`,
+followed by 5.0 with status 0 and `overflow: false`. Both have the same sequence
+and client handle. After unsubscribe and close the peer reports zero Sessions
+and SecureChannels.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 336 passed (10 doctests,
+4 properties, 322 tests), 46 optional tests excluded and 95.5% coverage. RelWithDebInfo
+native CTest passes 204/204. macOS ASan/UBSan CTest passes 204 of 213; the nine
+`custody_leak_G01`..`G09` cases abort because LeakSanitizer is unavailable on
+macOS. The optional secure suite, run as in the previous section, passes 46/46
+against both builds. Lifetime expiry at a peer, a failed acknowledgement that
+forces Session close at a peer and Linux cohorts are not executed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/paged_peer.c` | `8ecb31b4c7042278fa08dd2d7712235359459d0a896713fd301f96a40466ced8` |
+| `test/interop/secure_peer.py` | `8eee93f8751e12b3389b217c1b0c4c1603968f37d00d5e404e174ab79312bedd` |
+| `test/interop/native_subscription_test.exs` | `767f5b2f8aac3ab7398dbaa877dfa35d9dae7910bdad6b4bdb6bf7a9508c716c` |
+| `test/interop/native_lifecycle_test.exs` | `a6252acc51954f553ec6c9ceacf3e8921da35c5b7a08bc3e4a1b502a3af84d69` |
+| RelWithDebInfo `wotex_opcua_paged_peer` | `3ff091c82b63de651f29d341884b0a4b8bdd744cba43be45eb1ec59b49b46eab` |
+| ASan/UBSan `wotex_opcua_paged_peer` | `cc4756a2c7cd0a3ff948a912e01f6c8138a0de4902a70c750ec1388fd532f195` |
+| RelWithDebInfo `wotex_opcua_native` | `a52f105354e141693710b807d4290bcc6911036876fc228d28b38523d2ac3034` |
+| ASan/UBSan `wotex_opcua_native` | `b336153fce394d126a1a2904db5c1d30b69b194ae3647c03991533b98d66a482` |
+| native CTest log | `600398cad6e847459041faff08c94efce88e733c089a30474f49bb0ccd650219` |
+
 ## Persistent native subscription delivery, 2026-09-17
 
 `Wotex.OPCUA.subscribe/2` and `unsubscribe/2` validate the closed S04 request map
