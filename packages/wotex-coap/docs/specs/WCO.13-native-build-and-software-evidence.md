@@ -641,9 +641,10 @@ Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
 15-test independent UDP/PSK/PKI cohort, 10-test same-stack OSCORE cohort and
-8-test macOS stress cohort. The remaining OSCORE independence, native fault corpus, Linux sanitizer,
-second-toolchain and clean-package matrix retains planned status until those
-assertions execute. Earlier Python-run results validate their historical cohort
+8-test stress cohort. That 33-test run passes on macOS arm64 and inside Linux arm64
+containers on both required runtimes, whose builds compile the native vectors with
+ASan/UBSan. The remaining OSCORE independence, native fault corpus and
+clean-package matrix retains planned status until those assertions execute. Earlier Python-run results validate their historical cohort
 only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control

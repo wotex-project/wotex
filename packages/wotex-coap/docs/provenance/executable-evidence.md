@@ -636,9 +636,20 @@ asserting a trend: BEAM totals vary by at most 0.6 MiB per transport and helper
 RSS stays at 1,936 KiB. The stress lane found three defects fixed in preceding
 commits: stale peer traffic after exit cancellation, fatal handling of discarded
 malformed datagrams, and `native_protocol_error` from a close racing a finished
-helper. It does not accept the Linux sanitizer software run, the minimum
-toolchain lane, pending-operation owner loss, Port-mailbox sampling or the
-native-v1 corpus.
+helper. It does not accept pending-operation owner loss, Port-mailbox sampling or
+the native-v1 corpus.
+
+The [Linux software lane receipt](software-linux-v1.json) runs the same
+`mix wotex.software.build` and `mix wotex.software.run` inside Linux arm64
+containers built from `test/software/Dockerfile.linux`, once on Elixir 1.20.2 /
+OTP 29.0.4 and once on Elixir 1.18.4 / OTP 27.3.4.15, from commit `d8d856f`. Each
+lane compiles the 12 native fault/vector executables with ASan/UBSan, including
+the production-worker exchange harness, and all exit 0; each software run passes
+all 33 tests with zero retained resources. The production helper and peer are
+byte-identical across lanes. The minimum lane first exposed the OTP 27 archive
+link failure fixed in `d8d856f`. The helper that ExUnit drives in these lanes is
+not itself sanitizer-instrumented; its sanitized evidence remains the
+`test/native/Dockerfile` harness lane.
 
 `test/interop/oscore_test.exs` is same-stack evidence: the peer is the
 software-build `coap-server` with a matching OSCORE configuration, and the client
@@ -694,7 +705,6 @@ and ends it with `invalid_response`. The relay regression fails against the
 preceding helper and passes on macOS through the software run; the complete
 native harness also passes the Linux ASan/UBSan/leak lane.
 
-The Linux sanitizer lane, independent OSCORE interoperability,
-remaining fault/stress scenarios, second required toolchain and complete package
-matrix are not yet accepted. The historical Python result retains only its own
+Independent OSCORE interoperability, the remaining native fault scenarios and the
+clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
 recorded cohort.
