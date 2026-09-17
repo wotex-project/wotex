@@ -23,12 +23,10 @@ defmodule Wotex.BLE.RuntimeStreamTest do
       assert_receive {:wotex_runtime, _, {:ok, 1, ^metadata}}, 5000
       refute_received {:wotex_ble, _, _}
       assert :ok = Wotex.Runtime.Subscription.stop(owner)
-      eventually(fn -> Enum.any?(calls(record), &Map.has_key?(&1, "bus_closed")) end)
-      trace = calls(record)
-      assert Enum.count(trace, &(&1["method"] == "StartNotify")) == 1
-      assert Enum.count(trace, &(&1["method"] == "StopNotify")) == 1
-      assert Enum.any?(trace, &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0}))
-      assert Enum.count(trace, &(&1["method"] == "Disconnect")) == 0
+      eventually(fn -> closed(record) != nil end)
+      # The relay owns a dedicated session; native close cancels its stream.
+      assert operations(record) == ["open", "subscribe", "close"]
+      assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
     end
   end
 
@@ -38,14 +36,14 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
 
     eventually(
-      fn -> File.exists?(record) and Enum.any?(calls(record), &(&1["method"] == "StartNotify")) end,
+      fn -> File.exists?(record) and count(record, "subscribe") == 1 end,
       500
     )
 
     refute_receive {:runtime_decode, ^owner, _, _}, 30
     refute_receive {:wotex_runtime, _, {:ok, _, _}}, 30
     assert :ok = Wotex.Runtime.Subscription.stop(owner)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   test "WBL-I05 equal fresh signals remain distinct Runtime deliveries" do
@@ -59,7 +57,7 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     end
 
     assert :ok = Wotex.Runtime.Subscription.stop(owner)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   test "WBL-I05 final receiver death during pending StartNotify releases the complete native owner" do
@@ -70,7 +68,7 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     on_exit(fn -> Process.exit(receiver, :kill) end)
 
     eventually(
-      fn -> File.exists?(record) and Enum.any?(calls(record), &(&1["method"] == "StartNotify")) end,
+      fn -> File.exists?(record) and count(record, "subscribe") == 1 end,
       500
     )
 
@@ -78,21 +76,17 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     started = System.monotonic_time(:millisecond)
     Process.exit(receiver, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, :receiver_down}}, 1000
-    eventually(fn -> Enum.any?(calls(record), &Map.has_key?(&1, "bus_closed")) end)
+    eventually(fn -> closed(record) != nil end)
     assert System.monotonic_time(:millisecond) - started < 1100
-
-    assert Enum.any?(
-             calls(record),
-             &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0})
-           )
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => ["subscribe"]}
 
     refute_received {:runtime_decode, ^owner, _, _}
   end
 
   test "WBL-I05 failed establishment and malformed stream bytes never become Runtime values" do
-    for {mode, code} <- [
-          {"stream_runtime_failed", :not_permitted},
-          {"stream_runtime_invalid_value", :invalid_response}
+    for {mode, code, streams} <- [
+          {"stream_runtime_failed", :not_permitted, 0},
+          {"stream_runtime_invalid_value", :invalid_response, 1}
         ] do
       {native, record} = options(mode)
       {consumed, context} = runtime_consumer(native, :property)
@@ -100,12 +94,8 @@ defmodule Wotex.BLE.RuntimeStreamTest do
       assert_receive {:wotex_runtime, _, {:error, %{details: %{cause: %{code: ^code}}}}}, 5000
       refute_received {:wotex_runtime, _, {:ok, _, _}}
       if mode == "stream_runtime_invalid_value", do: Wotex.Runtime.Subscription.stop(owner)
-      eventually(fn -> Enum.any?(calls(record), &Map.has_key?(&1, "bus_closed")) end)
-
-      assert Enum.any?(
-               calls(record),
-               &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0})
-             )
+      eventually(fn -> closed(record) != nil end)
+      assert closed(record) == %{"closed" => true, "streams" => streams, "pending" => []}
     end
   end
 
@@ -118,12 +108,7 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     assert_receive {:runtime_unsubscribe, handle, request, true}
     assert request.resolved_href == "ble://other/180a/2a00"
     assert :ok = Wotex.BLE.RuntimeRelay.close(handle)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
-
-    assert Enum.any?(
-             calls(record),
-             &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0})
-           )
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   test "WBL-I05 forged relay handles and stale envelopes cannot alter a bound subscription" do
@@ -150,7 +135,7 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     refute_receive {:wotex_runtime, _, {:ok, _, _}}, 20
     assert :ok = Wotex.Runtime.Subscription.stop(owner)
     assert :ok = Wotex.BLE.RuntimeRelay.close(handle)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   test "WBL-I05 native connection loss terminates Runtime and releases relay state" do
@@ -164,11 +149,7 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     assert_receive {:wotex_runtime, _, {:error, _}}, 1000
     assert_receive {:wotex_runtime, _, {:status, :session_lost}}, 1000
     eventually(fn -> not Process.alive?(owner) and not Process.alive?(handle.pid) end)
-
-    assert Enum.any?(
-             calls(record),
-             &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0})
-           )
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   test "WBL-I05 relay opening admits at most 64 reports and excess cannot establish later" do
@@ -177,7 +158,7 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
 
     eventually(
-      fn -> File.exists?(record) and Enum.any?(calls(record), &(&1["method"] == "StartNotify")) end,
+      fn -> File.exists?(record) and count(record, "subscribe") == 1 end,
       500
     )
 
@@ -190,11 +171,8 @@ defmodule Wotex.BLE.RuntimeStreamTest do
                    1000
 
     eventually(fn -> not Process.alive?(owner) and not Process.alive?(relay) end)
-
-    assert Enum.any?(
-             calls(record),
-             &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0})
-           )
+    eventually(fn -> closed(record) != nil end)
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => ["subscribe"]}
 
     refute_received {:wotex_runtime, _, {:ok, _, _}}
   end
@@ -220,7 +198,8 @@ defmodule Wotex.BLE.RuntimeStreamTest do
 
     assert_receive {:wotex_runtime, _, {:status, :session_lost}}, 1000
     eventually(fn -> not Process.alive?(owner) end)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    eventually(fn -> closed(record) != nil end)
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   @tag capture_log: true
@@ -234,13 +213,8 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     Process.exit(owner, :kill)
     eventually(fn -> not Process.alive?(relay) end)
     assert System.monotonic_time(:millisecond) - started < 1100
-
-    assert Enum.any?(
-             calls(record),
-             &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0})
-           )
-
-    assert Enum.count(calls(record), &(&1["method"] == "Disconnect")) == 0
+    eventually(fn -> closed(record) != nil end)
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
   test "WBL-I02 WBL-I03 GATT backend and queue policy are explicit before native acquisition" do
@@ -286,9 +260,9 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     assert {:ok, %{payload: :written, status: :ok}} =
              Wotex.Runtime.ConsumedThing.write_property(consumed, "reading", 513, context)
 
-    assert Enum.count(calls(record), &(&1["method"] == "ReadValue")) == 1
-    assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) == 1
-    assert Enum.count(calls(record), &Map.has_key?(&1, "bus_closed")) == 2
+    assert count(record, "read") == 1
+    assert count(record, "write") == 1
+    assert Enum.count(calls(record), &Map.has_key?(&1, "closed")) == 2
   end
 
   test "WBL-I04 WBL-I05 a pending native stream cannot extend the interaction deadline" do
@@ -307,18 +281,23 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     refute_received {:wotex_runtime, _, {:ok, _, _}}
   end
 
-  test "WBL-I05 stalled StopNotify releases the owned sender within cleanup grace" do
-    {native, record} = options("stream_runtime_stop_blocked")
+  test "WBL-I05 stalled native close releases the owned sender within cleanup grace" do
+    {native, record} = options("stream_runtime_close_blocked")
     {consumed, context} = runtime_consumer(native, :property)
     owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
     assert_receive {:wotex_runtime, _, {:ok, 1, _}}, 5000
     started = System.monotonic_time(:millisecond)
-    assert :ok = Wotex.Runtime.Subscription.stop(owner)
+
+    # The guardian terminates the stalled host; the unfinished close stays visible.
+    assert {:error,
+            %{
+              code: :transport_unsubscribe_failed,
+              details: %{cause: %{code: :cleanup_timeout}}
+            }} = Wotex.Runtime.Subscription.stop(owner)
+
     assert System.monotonic_time(:millisecond) - started < 1100
-    trace = calls(record)
-    assert Enum.count(trace, &(&1["method"] == "StopNotify")) == 1
-    assert Enum.any?(trace, &(&1 == %{"bus_closed" => true, "listeners" => 0, "sessions" => 0}))
-    for %{"pid" => pid} <- trace, do: eventually(fn -> process_gone?(pid) end)
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
+    for %{"pid" => pid} <- calls(record), do: eventually(fn -> process_gone?(pid) end)
   end
 
   defp runtime_consumer(native, kind, fields \\ %{}, controls \\ []) do

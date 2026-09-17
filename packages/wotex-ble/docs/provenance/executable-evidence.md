@@ -51,8 +51,8 @@ excluded. Native software results require their own immutable manifest.
 | --- | --- |
 | `test/wotex/ble/contract_fixture_test.exs` | `3730f210ddcfa19258ccbdafd2721d50beae5234f431b8e81560b894bed32a7d` |
 | `test/wotex/ble/runtime_integration_test.exs` | `9c32f64eabf16aff5e4121e2508b801ca6efb92975a4614f3aaca6ec6bbed470` |
-| `test/wotex/ble/dbus_bridge_test.exs` | `7caf2b7d067ba761eeadc0d2b8886b8ccb3683012701a6d46c03b2c968c0b96d` |
-| `test/wotex/ble/stream_bridge_test.exs` | `5d6aa2bb8bc287acab7e1a83cac9c8f686767fa6a00ced315d87cf8b10e58246` |
+| `test/wotex/ble/dbus_bridge_test.exs` | `97dd201ffe6b43044f346df7c7d2991c7dd142156ae94e229c55010c4fb9c2c2` |
+| `test/wotex/ble/stream_bridge_test.exs` | `f65ce06b4b2e04eaed00c89760bcb4379781e6342da52172615cf9315094e009` |
 
 ## Native C++ request parsing
 
@@ -652,3 +652,34 @@ This closes only BEAM admission and startup for the already implemented native
 host. BEAM report acknowledgement/retirement, native build tasks, sanitizer
 matrix execution and complete virtual-ATT software acceptance remain open in
 WBL-P00 and later ordered packages.
+
+## Scripted native protocol contract lane
+
+`test/support/native_fixture.ex` compiles `test/native/scripted_host.cpp` and
+the production guardian once per ExUnit run, then gives each case a private copy
+of the host with its scenario file. The host links no SDK and opens no D-Bus
+sender. It uses the production request parser/sequence, output reservations,
+discovery cursor ledger, report credits, deferred report queue and stream
+barriers; every reply, error envelope, challenge and value is a scripted input.
+Its `.jsonl` ledger records the received wire operations, emitted
+`write_submitted` events and the active stream count and unanswered operations
+when `close` or EOF arrives.
+
+`test/wotex/ble/dbus_bridge_test.exs`, `test/wotex/ble/stream_bridge_test.exs`
+and `test/wotex/ble/runtime_stream_test.exs` launch it through the verified
+native selector cohort. They assert BEAM startup/frame bounds, admission, queue
+and absolute deadlines, close joining, Agent policy exchange, procedure phases,
+subscription ownership, credit-backed report delivery, cancellation and
+Runtime relay behavior at the native wire boundary. They are injected-contract
+evidence only: D-Bus calls, BlueZ error-name mapping, StopNotify cleanup and
+Agent registration are native component or virtual-controller claims. A report
+for an unknown subscription closes the generation without delivery under
+WBL-B02; the Python adapter lane had ignored it.
+
+Finding fixed with this lane: the BEAM escalation sent SIGTERM to the guardian at
+850 ms and SIGKILL 100 ms later, before the guardian's 250 ms group SIGKILL. An
+SDK host ignoring SIGTERM and stdin survived as an orphan. Connection close now
+gives the cooperative host the first 500 ms, hands forced termination to the
+guardian, and kills the guardian only if it has not exited 500 ms later. A
+stalled cancellation has 500 ms before that same handover. The `uncooperative`
+and `close_blocked` scenarios assert `cleanup_timeout` and host process exit.

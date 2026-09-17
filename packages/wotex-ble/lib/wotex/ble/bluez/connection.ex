@@ -22,7 +22,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   Owner death, fatal bridge output, peer loss and expired active work close
   the connection generation. Cleanup has a one-second local grace and never
-  reconnects or powers an adapter. An owned link receives Disconnect; ordinary
+  reconnects or powers an adapter. Cooperative native close has the first
+  500 ms; the process guardian then owns forced termination and reaping for
+  the remaining 500 ms. A stalled cancellation gets 500 ms before that same
+  guardian handover. An owned link receives Disconnect; ordinary
   borrowed cleanup does not. BlueZ link teardown can complete after the local
   resources close, and pending Pair sender loss may disconnect a borrowed peer.
   """
@@ -343,7 +346,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
   def handle_info({:deadline, id}, state) do
     cond do
       Map.has_key?(state.pending, id) and state.pending[id].operation == "unsubscribe" ->
-        {:noreply, close(%{state | cleanup_grace: 350}, :cleanup_timeout)}
+        {:noreply, close(%{state | cleanup_grace: 500}, :cleanup_timeout)}
 
       state.active == id ->
         {:noreply, close(state, expiry_code(state.pending[id].operation))}
@@ -388,10 +391,16 @@ defmodule Wotex.BLE.BlueZ.Connection do
       else: {:noreply, caller_down(state, ref)}
   end
 
+  # The guardian owns the second half of cleanup: it stops forwarding, terminates
+  # the host group by its midpoint and reaps within 500 ms. Killing the guardian
+  # is only the last resort for a guardian that itself failed that allowance.
   def handle_info(:terminate_bridge, %{status: :closing} = state) do
     signal_port(state.port, "-TERM")
-    Process.send_after(self(), :kill_bridge, 100)
-    {:noreply, %{state | close_result: {:error, Error.new(:cleanup_timeout)}}}
+    Process.send_after(self(), :kill_bridge, 500)
+
+    if state.close_result == :ok,
+      do: {:noreply, state},
+      else: {:noreply, %{state | close_result: {:error, Error.new(:cleanup_timeout)}}}
   end
 
   def handle_info(:kill_bridge, %{status: :closing} = state) do
@@ -848,7 +857,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
         {:noreply, close(complete(state, id, {:error, error}), error.code)}
 
       _ ->
-        {:noreply, close(%{state | cleanup_grace: 350}, :cleanup_timeout)}
+        {:noreply, close(%{state | cleanup_grace: 500}, :cleanup_timeout)}
     end
   end
 
@@ -893,7 +902,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
       {id, %{closing: false}} ->
         if map_size(state.pending) < 64 do
           state = put_in(state.subscriptions[id].closing, true)
-          admit(state, from, %{"subscription_id" => id}, now() + 600, "unsubscribe")
+          admit(state, from, %{"subscription_id" => id}, now() + 500, "unsubscribe")
         else
           close(state, :busy)
         end
@@ -1060,7 +1069,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
   defp caller_down(state, monitor) do
     case Enum.find(state.pending, fn {_, pending} -> pending.monitor == monitor end) do
       {_, %{operation: "unsubscribe"}} ->
-        close(%{state | cleanup_grace: 350}, :disconnected)
+        close(%{state | cleanup_grace: 500}, :disconnected)
 
       {id, _} when id == state.active ->
         close(state, :disconnected)
@@ -1109,8 +1118,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
         complete(acc, id, {:error, error})
       end)
 
-    request(state.port, "close", "close", %{}, max(state.cleanup_grace - 200, 1))
-    Process.send_after(self(), :terminate_bridge, max(state.cleanup_grace - 150, 0))
+    request(state.port, "close", "close", %{}, max(state.cleanup_grace - 500, 1))
+    Process.send_after(self(), :terminate_bridge, max(state.cleanup_grace - 500, 0))
 
     %{
       state

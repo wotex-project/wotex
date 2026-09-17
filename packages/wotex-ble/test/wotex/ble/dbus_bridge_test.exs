@@ -58,11 +58,8 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert :ok = BLE.disconnect(session)
     assert :ok = BLE.disconnect(session)
 
-    eventually(fn ->
-      Enum.any?(calls(record), &(&1 == %{"bus_closed" => true, "listeners" => 0}))
-    end)
-
-    assert Enum.count(calls(record), &(&1["method"] == "Disconnect")) == 0
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => []}
+    assert operations(record) == ["open", "discover", "discover", "discover", "close"]
   end
 
   test "WBL-C03 start_link is explicit and fallible startup never kills caller" do
@@ -74,7 +71,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :invalid_options}} = Connection.start_link([])
 
     assert {:error, %Error{code: :transport_unavailable}} =
-             Connection.connect(Keyword.put(options, :executable, "/nonexistent/python"))
+             Connection.connect(Keyword.put(options, :executable, "/nonexistent/host"))
 
     assert {:error, %Error{code: :invalid_handle}} = Connection.session(nil)
     assert {:error, %Error{code: :invalid_handle}} = Connection.disconnect(%{})
@@ -103,7 +100,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :invalid_address}} =
              BlueZ.request(session.handle, %{type: :read}, 500)
 
-    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2
+    assert operations(record) == ["open", "read"]
   end
 
   test "WBL-C07 startup envelopes and process output fail closed" do
@@ -156,7 +153,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 1 end)
     assert {:error, %Error{code: :timeout}} = Connection.discover(session.handle, [], 20)
     assert :queue.len(:sys.get_state(session.handle.pid).queue) == 0
-    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2
+    assert operations(record) == ["open", "discover"]
     Process.exit(first, :kill)
     eventually(fn -> not Process.alive?(session.handle.pid) end)
   end
@@ -173,11 +170,11 @@ defmodule Wotex.BLE.DBusBridgeTest do
       end)
 
     assert_receive {:handle, handle}, 5000
-    eventually(fn -> Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2 end)
+    eventually(fn -> operations(record) == ["open", "discover"] end)
     monitor = Process.monitor(handle.pid)
     Process.exit(owner, :kill)
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
-    eventually(fn -> Enum.any?(calls(record), &(&1["bus_closed"] == true)) end)
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => ["discover"]}
   end
 
   test "WBL-C03 deadlines close active generation; queued success is serialized" do
@@ -188,13 +185,13 @@ defmodule Wotex.BLE.DBusBridgeTest do
     {session, record} = connect("slow")
     tasks = for _ <- 1..3, do: Task.async(fn -> BLE.discover(session) end)
     assert Enum.all?(Task.await_many(tasks), &match?({:ok, _}, &1))
-    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 4
+    assert count(record, "discover") == 3
   end
 
   test "WBL-C03 an already queued native reply cannot cross the absolute deadline" do
     {session, record} = connect("slow")
     task = Task.async(fn -> Connection.discover(session.handle, [], 100) end)
-    eventually(fn -> Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2 end)
+    eventually(fn -> count(record, "discover") == 1 end)
     :sys.suspend(session.handle.pid)
     Process.sleep(150)
     :sys.resume(session.handle.pid)
@@ -213,7 +210,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     {session, record} = connect("close_slow")
     tasks = for _ <- 1..32, do: Task.async(fn -> BLE.disconnect(session) end)
     assert Task.await_many(tasks) == List.duplicate(:ok, 32)
-    assert Enum.any?(calls(record), &(&1["bus_closed"] == true))
+    assert closed(record)["pending"] == []
 
     {session, _} = connect("uncooperative")
     tasks = for _ <- 1..64, do: Task.async(fn -> BLE.disconnect(session) end)
@@ -237,10 +234,9 @@ defmodule Wotex.BLE.DBusBridgeTest do
       assert challenge.peer.address == "AA:BB:CC:DD:EE:FF"
       refute inspect(challenge) =~ "123456"
       refute File.read!(record) =~ "POLICY_SECRET_CANARY"
-      assert Enum.count(calls(record), &(&1["method"] == "RegisterAgent")) == 1
-      assert Enum.count(calls(record), &(&1["method"] == "UnregisterAgent")) == 1
       assert :ok = BLE.disconnect(session)
-      assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+      assert operations(record) == ["open", "pair", "agent_reply", "close"]
+      assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => []}
     end
   end
 
@@ -257,10 +253,8 @@ defmodule Wotex.BLE.DBusBridgeTest do
       assert_receive {:challenge, _, worker}
       refute Process.alive?(worker)
 
-      refute Enum.any?(
-               calls(record),
-               &(&1["method"] in ["CancelPairing", "RemoveDevice", "RequestDefaultAgent"])
-             )
+      assert operations(record) == ["open", "pair", "agent_reply"]
+      refute File.read!(record) =~ "POLICY_SECRET_CANARY"
 
       BLE.disconnect(session)
     end
@@ -284,7 +278,8 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :pairing_rejected}} = Task.await(task)
     eventually(fn -> not Process.alive?(worker) end)
     assert :ok = BLE.disconnect(session)
-    assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+    assert count(record, "pair") == 1
+    assert closed(record)["streams"] == 0
 
     {options, record} = options("pair")
     receiver = self()
@@ -312,7 +307,8 @@ defmodule Wotex.BLE.DBusBridgeTest do
     Process.exit(owner, :kill)
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
     refute Process.alive?(worker)
-    assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+    eventually(fn -> closed(record) != nil end)
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => ["pair"]}
   end
 
   defp target do
@@ -339,14 +335,9 @@ defmodule Wotex.BLE.DBusBridgeTest do
       assert {:ok, ^bytes} = BLE.read(session, target())
     end
 
-    assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) == 3
-    assert Enum.count(calls(record), &(&1["method"] == "ReadValue")) == 4
-
-    assert Enum.uniq(
-             for call <- calls(record),
-                 call["method"] in ["WriteValue", "ReadValue"],
-                 do: call["sender"]
-           ) == [":1.55"]
+    assert count(record, "write") == 3
+    assert count(record, "read") == 4
+    assert length(for(%{"submitted" => _} <- calls(record), do: true)) == 3
   end
 
   test "WBL-C02 forged native inputs and command-only flags never submit a write" do
@@ -375,7 +366,8 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :invalid_options, effect: :none}} =
              BLE.write(session, target(), <<1>>, timeout: 0)
 
-    refute Enum.any?(calls(record), &(&1["method"] in ["WriteValue", "ReadValue"]))
+    refute Enum.any?(calls(record), &Map.has_key?(&1, "submitted"))
+    assert count(record, "read") == 0
   end
 
   test "WBL-V05 named D-Bus failures preserve phase and never retry submitted writes" do
@@ -392,8 +384,14 @@ defmodule Wotex.BLE.DBusBridgeTest do
           {"NotConnected", :disconnected}
         ],
         operation <- [:read, :write] do
-      {session, record} = connect("procedure_error_" <> name)
       dbus_name = "org.bluez.Error." <> name
+
+      {session, record} =
+        connect(%{
+          "flags" => ["read", "write"],
+          "modes" => ["procedure_error"],
+          "error" => %{"code" => Atom.to_string(code), "name" => dbus_name}
+        })
 
       effect = if operation == :write, do: :unknown, else: :none
 
@@ -405,8 +403,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
       assert {:error, %Error{code: ^code, effect: ^effect, details: %{dbus_name: ^dbus_name}}} =
                result
 
-      method = if operation == :write, do: "WriteValue", else: "ReadValue"
-      assert Enum.count(calls(record), &(&1["method"] == method)) == 1
+      assert count(record, Atom.to_string(operation)) == 1
       BLE.disconnect(session)
     end
   end
@@ -421,7 +418,9 @@ defmodule Wotex.BLE.DBusBridgeTest do
 
       assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
 
-      assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) ==
+      assert count(record, "write") == 1
+
+      assert length(for(%{"submitted" => _} <- calls(record), do: true)) ==
                if(mode == "procedure_timeout", do: 1, else: 0)
     end
   end
@@ -429,24 +428,25 @@ defmodule Wotex.BLE.DBusBridgeTest do
   test "WBL-C03 queued write expiration has no effect and an expired ACK cannot succeed" do
     {session, record} = connect("procedure_timeout")
     active = spawn(fn -> BLE.read(session, target()) end)
-    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "ReadValue")) end)
+    eventually(fn -> count(record, "read") == 1 end)
 
     assert {:error, %Error{code: :timeout, effect: :none}} =
              BLE.write(session, target(), <<42>>, timeout: 20)
 
-    refute Enum.any?(calls(record), &(&1["method"] == "WriteValue"))
+    assert count(record, "write") == 0
     Process.exit(active, :kill)
     eventually(fn -> not Process.alive?(session.handle.pid) end)
 
     {session, record} = connect("procedure_slow")
     task = Task.async(fn -> BLE.write(session, target(), <<42>>, timeout: 100) end)
-    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "WriteValue")) end)
+    eventually(fn -> count(record, "write") == 1 end)
     :sys.suspend(session.handle.pid)
     Process.sleep(150)
     :sys.resume(session.handle.pid)
     assert {:error, %Error{code: :timeout, effect: :unknown}} = Task.await(task)
     eventually(fn -> not Process.alive?(session.handle.pid) end)
-    assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) == 1
+    assert count(record, "write") == 1
+    assert length(for(%{"submitted" => _} <- calls(record), do: true)) == 1
   end
 
   test "WBL-C07 invalid submission phases and malformed acknowledgements close the generation" do
@@ -486,7 +486,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :invalid_options}} =
              BLE.pair(session, %{capability: :display_yes_no, agent: {:erlang, nil}})
 
-    refute Enum.any?(calls(record), &(&1["method"] == "RegisterAgent"))
+    assert operations(record) == ["open"]
   end
 
   test "WBL-C07 exhausted dispatch counter rejects pairing policy control without rollover" do
@@ -504,16 +504,14 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert Enum.map(Enum.filter(calls(record), &Map.has_key?(&1, "wire_id")), & &1["wire_id"]) ==
              ["open", "18446744073709551615", "close"]
 
-    assert Enum.find(calls(record), &(&1["bus_closed"] == true))["agents"] == 0
+    assert closed(record)["pending"] == ["pair"]
   end
 
   test "WBL-P06 WBL-S05 health uses live original peer state with bounded failures" do
     {session, record} = connect()
     assert {:ok, %{connected: true, services_resolved: true} = health} = BLE.health_check(session)
     assert map_size(health) == 2
-    assert Enum.count(calls(record), &(&1["method"] == "GetAll")) == 1
-    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 1
-    refute Enum.any?(calls(record), &(&1["method"] in ["ReadValue", "Pair", "Connect"]))
+    assert operations(record) == ["open", "health"]
     assert :ok = BLE.disconnect(session)
 
     for {mode, code} <- [
@@ -530,7 +528,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
                Connection.health_check(session.handle, timeout)
 
       assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
-      assert Enum.count(calls(record), &(&1["method"] == "GetAll")) == 1
+      assert count(record, "health") == 1
     end
   end
 
@@ -552,7 +550,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
                Connection.health_check(session.handle, timeout)
     end
 
-    refute Enum.any?(calls(record), &(&1["method"] == "GetAll"))
+    assert operations(record) == ["open"]
   end
 
   test "WBL-P06 WBL-S05 WBL-I03 real Runtime reaches persistent native procedures and closes each owner" do
@@ -596,9 +594,10 @@ defmodule Wotex.BLE.DBusBridgeTest do
              Wotex.Runtime.ConsumedThing.write_property(consumed, "reading", 513, context)
 
     trace = calls(record)
-    assert Enum.count(trace, &(&1["method"] == "ReadValue")) == 1
-    assert Enum.count(trace, &(&1["method"] == "WriteValue")) == 1
-    assert Enum.count(trace, &(&1 == %{"bus_closed" => true, "listeners" => 0})) == 2
+    assert count(record, "read") == 1
+    assert count(record, "write") == 1
+    closes = Enum.filter(trace, &Map.has_key?(&1, "closed"))
+    assert closes == List.duplicate(%{"closed" => true, "streams" => 0, "pending" => []}, 2)
     for %{"pid" => pid} <- trace, do: eventually(fn -> process_gone?(pid) end)
   end
 end

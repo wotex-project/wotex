@@ -1,83 +1,16 @@
 defmodule Wotex.BLE.StreamBridgeTest do
   @moduledoc false
   use ExUnit.Case, async: true
+  import Wotex.BLE.NativeFixture
+
   alias Wotex.BLE
-  alias Wotex.BLE.{BlueZ, Error, Peer}
-
-  defp options(mode) do
-    directory =
-      Path.join(
-        System.tmp_dir!(),
-        "wbl-stream-#{System.pid()}-#{System.unique_integer([:positive])}"
-      )
-
-    File.mkdir_p!(directory)
-    executable = Path.join(directory, "python-fixture")
-    record = Path.join(directory, "calls.jsonl")
-    script = Path.expand("../../support/bluez_process.py", __DIR__)
-
-    python =
-      System.find_executable("python3") || flunk("python3 is required for the native owner lane")
-
-    File.write!(
-      executable,
-      "#!#{python}\nimport runpy,sys\nsys.dont_write_bytecode=True\nsys.argv=[#{Jason.encode!(script)},#{Jason.encode!(mode)},#{Jason.encode!(record)}]\nrunpy.run_path(#{Jason.encode!(script)},run_name='__main__')\n"
-    )
-
-    File.chmod!(executable, 0o700)
-
-    on_exit(fn -> cleanup(directory, record) end)
-
-    {:ok, peer} =
-      Peer.new(%{adapter: "/org/bluez/hci0", address: "AA:BB:CC:DD:EE:FF", address_type: :random})
-
-    {[peer: peer, executable: executable, bus_address: "unix:path=/tmp/test-bus", timeout: 5000],
-     record}
-  end
-
-  defp cleanup(directory, record) do
-    if File.exists?(record) do
-      case Enum.find(calls(record), &Map.has_key?(&1, "pid")) do
-        %{"pid" => pid} -> eventually(fn -> process_gone?(pid) end, 150)
-        _ -> :ok
-      end
-    end
-
-    File.rm_rf!(directory)
-  end
-
-  defp process_gone?(pid) do
-    {_, status} =
-      System.cmd("/bin/kill", ["-0", Integer.to_string(pid)],
-        stderr_to_stdout: true,
-        env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
-      )
-
-    status != 0
-  end
+  alias Wotex.BLE.{BlueZ, Error}
 
   defp connect(mode) do
     {options, record} = options(mode)
     assert {:ok, session} = BLE.connect([client: BlueZ, lifecycle: :persistent] ++ options)
     on_exit(fn -> BLE.disconnect(session) end)
     {session, record}
-  end
-
-  defp calls(path),
-    do:
-      path
-      |> File.read!()
-      |> String.split("\n", trim: true)
-      |> Enum.map(&Jason.decode!/1)
-
-  defp eventually(function, remaining \\ 100) do
-    if function.() do
-      :ok
-    else
-      assert remaining > 0
-      Process.sleep(10)
-      eventually(function, remaining - 1)
-    end
   end
 
   defp target,
@@ -107,11 +40,11 @@ defmodule Wotex.BLE.StreamBridgeTest do
       assert :ok = BLE.unsubscribe(session, handle)
       assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
       assert :ok = BLE.unsubscribe(session, handle)
-      assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
-      assert List.last(calls(record))["sessions"] == 0
+      assert operations(record) == ["open", "subscribe", "read", "unsubscribe"]
       assert :sys.get_state(session.handle.pid).subscriptions == %{}
       refute_receive {:wotex_ble, ^ref, _}, 10
       assert :ok = BLE.disconnect(session)
+      assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => []}
     end
   end
 
@@ -153,20 +86,25 @@ defmodule Wotex.BLE.StreamBridgeTest do
       assert {:ok, handle} = BLE.subscribe(session, %{address: target(), receiver: receiver})
       monitor = Process.monitor(handle.pid)
       read = Task.async(fn -> BLE.read(session, target(), timeout: 60_000) end)
-      eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "ReadValue")) end)
+      eventually(fn -> count(record, "read") == 1 end)
       started = System.monotonic_time(:millisecond)
       Process.exit(receiver, :kill)
       assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
       assert System.monotonic_time(:millisecond) - started < 1000
-      assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+      assert count(record, "unsubscribe") == 1
 
       if mode == "stream_blocked_read" do
         assert Process.alive?(session.handle.pid)
-        assert List.last(calls(record))["sessions"] == 0
+        assert closed(record) == nil
         assert :ok = BLE.disconnect(session)
       else
-        eventually(fn -> Enum.any?(calls(record), &(&1["bus_closed"] == true)) end)
-        assert Enum.find(calls(record), &(&1["bus_closed"] == true))["sessions"] == 0
+        eventually(fn -> closed(record) != nil end)
+
+        assert closed(record) == %{
+                 "closed" => true,
+                 "streams" => 1,
+                 "pending" => ["read", "unsubscribe"]
+               }
       end
 
       assert {:error, %Error{}} = Task.await(read, 2000)
@@ -200,14 +138,14 @@ defmodule Wotex.BLE.StreamBridgeTest do
               {:wotex_ble, ^ref, {:error, %Error{code: :receiver_overflow}}}
             ]} = Process.info(receiver, :messages)
 
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    assert count(record, "unsubscribe") == 1
     assert :ok = BLE.unsubscribe(session, handle)
   end
 
   test "WBL-V08 failed early establishment never returns a handle" do
     {session, record} = connect("stream_early_overflow")
     assert {:error, %Error{code: :response_limit}} = BLE.subscribe(session, %{address: target()})
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    assert operations(record) == ["open", "subscribe"]
     assert :sys.get_state(session.handle.pid).subscriptions == %{}
     assert :sys.get_state(session.handle.pid).pending == %{}
     refute_receive {:wotex_ble, _, _}, 10
@@ -226,8 +164,8 @@ defmodule Wotex.BLE.StreamBridgeTest do
       assert state.subscriptions == %{} and state.pending == %{}
     end
 
-    assert Enum.count(calls(record), &(&1["method"] == "StartNotify")) == 1000
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1000
+    assert count(record, "subscribe") == 1000
+    assert count(record, "unsubscribe") == 1000
   end
 
   test "WBL-C05 finite active subscription capacity and duplicate target are independent" do
@@ -260,32 +198,32 @@ defmodule Wotex.BLE.StreamBridgeTest do
     {session, record} = connect("stream_slow_stop")
     assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
     tasks = for _ <- 1..32, do: Task.async(fn -> BLE.unsubscribe(session, handle) end)
-    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "StopNotify")) end)
+    eventually(fn -> count(record, "unsubscribe") == 1 end)
     state = :sys.get_state(session.handle.pid)
     send(session.handle.pid, {:EXIT, state.port, :normal})
     send(session.handle.pid, {:EXIT, state.port, :fixture_reason})
     assert :sys.get_state(session.handle.pid).status == :ready
     assert Enum.map(tasks, &Task.await(&1, 1500)) == List.duplicate(:ok, 32)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
-    assert List.last(calls(record))["sessions"] == 0
+    assert count(record, "unsubscribe") == 1
+    assert :sys.get_state(session.handle.pid).subscriptions == %{}
   end
 
-  test "WBL-C07 bound stream metadata and generations fail closed while unknown IDs never deliver" do
-    for mode <- ["stream_wrong_generation", "stream_wrong_metadata", "stream_extra_report"] do
+  test "WBL-C07 bound stream metadata, generations and unknown IDs fail closed without delivery" do
+    for mode <- [
+          "stream_wrong_generation",
+          "stream_wrong_metadata",
+          "stream_extra_report",
+          "stream_unknown_report"
+        ] do
       {session, _} = connect(mode)
+      monitor = Process.monitor(session.handle.pid)
       assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
       ref = handle.reference
       assert_receive {:wotex_ble, ^ref, {:error, %Error{code: :invalid_response}}}, 1500
       refute_receive {:wotex_ble, ^ref, _}, 10
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
       eventually(fn -> not Process.alive?(handle.pid) end)
     end
-
-    {session, _} = connect("stream_unknown_report")
-    assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
-    ref = handle.reference
-    assert_receive {:wotex_ble, ^ref, {:ok, <<1, 0>>, _}}, 1000
-    refute_receive {:wotex_ble, ^ref, _}, 10
-    assert :ok = BLE.unsubscribe(session, handle)
   end
 
   test "WBL-C03 death while StartNotify is pending closes the generation" do
@@ -299,12 +237,13 @@ defmodule Wotex.BLE.StreamBridgeTest do
       end)
 
     task = Task.async(fn -> BLE.subscribe(session, %{address: target(), receiver: receiver}) end)
-    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "StartNotify")) end)
+    eventually(fn -> count(record, "subscribe") == 1 end)
     started = System.monotonic_time(:millisecond)
     Process.exit(receiver, :kill)
     assert {:error, %Error{}} = Task.await(task, 1100)
     assert System.monotonic_time(:millisecond) - started < 1000
-    assert Enum.find(calls(record), &(&1["bus_closed"] == true))["sessions"] == 0
+    eventually(fn -> closed(record) != nil end)
+    assert closed(record) == %{"closed" => true, "streams" => 0, "pending" => ["subscribe"]}
   end
 
   test "WBL-C02 invalid facade inputs and dead or foreign sessions never acquire subscriptions" do
@@ -332,12 +271,12 @@ defmodule Wotex.BLE.StreamBridgeTest do
   test "WBL-C03 C05 queued caller death releases admission without starting GATT" do
     {session, record} = connect("stream_blocked_read")
     read = Task.async(fn -> BLE.read(session, target(), timeout: 60_000) end)
-    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "ReadValue")) end)
+    eventually(fn -> count(record, "read") == 1 end)
     caller = spawn(fn -> BLE.subscribe(session, %{address: target()}) end)
     eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 2 end)
     Process.exit(caller, :kill)
     eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 1 end)
-    refute Enum.any?(calls(record), &(&1["method"] == "StartNotify"))
+    assert count(record, "subscribe") == 0
     assert Process.alive?(session.handle.pid)
     assert :ok = BLE.disconnect(session)
     assert {:error, %Error{}} = Task.await(read, 1500)
@@ -348,20 +287,23 @@ defmodule Wotex.BLE.StreamBridgeTest do
     assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
     Process.exit(handle.pid, :kill)
     eventually(fn -> :sys.get_state(session.handle.pid).subscriptions == %{} end)
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
-    assert List.last(calls(record))["sessions"] == 0
+    assert count(record, "unsubscribe") == 1
     assert :ok = BLE.unsubscribe(session, handle)
   end
 
   test "WBL-C03 V09 uncertain cancellation releases the sender before returning failure" do
-    for mode <- ["stream_bad_stop_ack", "stream_lost_stop_ack", "stream_stop_error"] do
+    for {mode, streams, pending} <- [
+          {"stream_bad_stop_ack", 0, []},
+          {"stream_lost_stop_ack", 0, ["unsubscribe"]},
+          {"stream_stop_error", 1, []}
+        ] do
       {session, record} = connect(mode)
       assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
       assert {:error, %Error{}} = BLE.unsubscribe(session, handle)
       refute Process.alive?(handle.pid)
-      eventually(fn -> Enum.any?(calls(record), &(&1["bus_closed"] == true)) end)
-      assert Enum.find(calls(record), &(&1["bus_closed"] == true))["sessions"] == 0
-      assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+      eventually(fn -> closed(record) != nil end)
+      assert closed(record) == %{"closed" => true, "streams" => streams, "pending" => pending}
+      assert count(record, "unsubscribe") == 1
     end
   end
 
@@ -374,7 +316,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
     assert_receive {:wotex_ble, ^ref, {:error, %Error{code: :invalid_value}}}, 1000
     eventually(fn -> not Process.alive?(handle.pid) end)
     refute_receive {:wotex_ble, ^ref, _}, 10
-    assert Enum.count(calls(record), &(&1["method"] == "StopNotify")) == 1
+    assert count(record, "unsubscribe") == 1
   end
 
   @spec subscription_event(list(), map(), map(), {pid(), reference()}) :: tuple()
@@ -419,7 +361,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
     assert {:error, %Error{code: :timeout}} = Task.await(task, 1000)
     assert :sys.get_state(session.handle.pid).subscriptions == %{}
     assert :sys.get_state(session.handle.pid).pending == %{}
-    refute Enum.any?(calls(record), &(&1["method"] == "StartNotify"))
+    assert count(record, "subscribe") == 0
   end
 
   test "WBL-C05 C03 saturated data admission escalates receiver cleanup within ownership grace" do
@@ -438,7 +380,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
     monitor = Process.monitor(handle.pid)
     Process.exit(receiver, :kill)
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
-    assert Enum.find(calls(record), &(&1["bus_closed"] == true))["sessions"] == 0
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => ["read"]}
     assert Enum.all?(readers, fn task -> match?({:error, %Error{}}, Task.await(task, 1500)) end)
   end
 
@@ -476,7 +418,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
     {session, record} = connect("stream_dispatch_overtake")
     assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
     first = Task.async(fn -> BLE.read(session, target()) end)
-    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "ReadValue")) end)
+    eventually(fn -> count(record, "read") == 1 end)
     queued = Task.async(fn -> BLE.read(session, target()) end)
     eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 2 end)
     state = :sys.get_state(session.handle.pid)
@@ -519,7 +461,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
              BLE.write(session, target(), <<1>>)
 
     assert :ok = BLE.disconnect(session)
-    refute Enum.any?(calls(record), &(&1["method"] == "WriteValue"))
+    assert count(record, "write") == 0
 
     assert Enum.map(Enum.filter(calls(record), &Map.has_key?(&1, "wire_id")), & &1["wire_id"]) == [
              "open",
