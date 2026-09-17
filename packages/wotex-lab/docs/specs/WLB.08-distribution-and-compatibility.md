@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.3. Contract: accepted. Source status: the workspace
+Specification version: 0.9.4. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -254,7 +254,7 @@ licenses, signing/provenance and no Python interpreter requirement. The package
 currently includes Rust sources, not precompiled binaries. Provisioning is
 explicit; the first tensor neither builds nor starts the helper. Source tests
 compile the feature-gated Rust probes separately. macOS source evidence and
-Linux native tests are not proof of Linux Bubblewrap integration. The WLB.06
+The WLB.06 Linux lane executes Bubblewrap integration in source. The WLB.06
 kernel-isolated OCI profile carries hostile-target isolation in source; a hosted
 worker still owns runtime hardening, image provenance and lifecycle. Those
 profile and artifact obligations remain required.

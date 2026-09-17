@@ -9,7 +9,10 @@ defmodule Wotex.Lab.Conformance.Containment do
   ceilings, runs the target in its own process group, enforces a
   deadline shorter than the runner deadline, and kills the process group on
   timeout or termination. The host sandbox denies networking and writes
-  outside the caller-owned private temporary directory.
+  outside the caller-owned private temporary directory. On Linux, Bubblewrap
+  mounts a private `/proc` and a minimal `/dev`; device nodes bound from the
+  host are unusable inside its user namespace. The target environment selects the
+  `C.UTF-8` locale, so a BEAM target keeps UTF-8 file name encoding on Linux.
 
   This profile admits reviewed local targets only. Sampling does not provide
   kernel-enforced memory/PID limits or proof against unobserved daemonization,
@@ -22,7 +25,7 @@ defmodule Wotex.Lab.Conformance.Containment do
 
   alias Wotex.Lab.Error
 
-  @profile_version "2.0.1"
+  @profile_version "2.0.2"
   @launcher_version "2.0.0"
   @runner_margin_ms 1_000
   @cleanup_reserve_ms 150
@@ -85,8 +88,8 @@ defmodule Wotex.Lab.Conformance.Containment do
            environment: %{
              "HOME" => temporary_directory,
              "TMPDIR" => temporary_directory,
-             "LANG" => "C",
-             "LC_ALL" => "C"
+             "LANG" => "C.UTF-8",
+             "LC_ALL" => "C.UTF-8"
            },
            timeout_ms: limits.timeout_ms,
            max_output_bytes: limits.max_output_bytes
@@ -309,6 +312,8 @@ defmodule Wotex.Lab.Conformance.Containment do
         "/",
         "--proc",
         "/proc",
+        "--dev",
+        "/dev",
         "--bind",
         temporary_directory,
         temporary_directory,

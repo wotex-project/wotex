@@ -198,7 +198,7 @@ defmodule Wotex.Lab.ConformanceTest do
     assert evidence["network"] == "denied"
     assert evidence["temporary_directory"] == "private"
     assert evidence["termination"] == "process_group"
-    assert evidence["schema_version"] == "2.0.1"
+    assert evidence["schema_version"] == "2.0.2"
     assert evidence["limits"]["memory_bytes"] == 1_073_741_824
     assert evidence["limits"]["wall_ms"] == 9_000
     assert evidence["limits"]["runner_timeout_ms"] == 10_000
@@ -298,7 +298,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
   test "invalid containment inputs are refused before a target starts", context do
     valid_args = ["{subject_archive}"]
-    assert Containment.profile().version == "2.0.1"
+    assert Containment.profile().version == "2.0.2"
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
              Containment.external_map("relative", valid_args, context.archive, context.home)
@@ -439,6 +439,9 @@ defmodule Wotex.Lab.ConformanceTest do
 
       {:unix, :linux} ->
         assert ["--bind", directory, directory] in Enum.chunk_every(config.args, 3, 1, :discard)
+        assert ["--dev", "/dev"] in Enum.chunk_every(config.args, 2, 1, :discard)
+        assert config.environment["LC_ALL"] == "C.UTF-8"
+        assert ["--proc", "/proc"] in Enum.chunk_every(config.args, 2, 1, :discard)
     end
   end
 
@@ -614,7 +617,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     Containment.external_map(
       erl,
-      ["+S", "1:1", "+A", "1", "+P", "1024", "-noshell"] ++
+      ["+JMsingle", "true", "+S", "1:1", "+A", "1", "-noshell"] ++
         paths ++ ["-eval", eval, "-extra", "--archive", "{subject_archive}"],
       context.archive,
       context.home,

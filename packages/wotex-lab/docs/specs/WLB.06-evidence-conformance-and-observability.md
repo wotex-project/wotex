@@ -1,14 +1,14 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.5.0. Contract: accepted. Source status: implemented.
+Specification version: 1.6.0. Contract: accepted. Source status: implemented.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
 executable positive, negative, lifecycle and resource evidence for reviewed
 local targets. The native helper's sampled limits are not kernel enforcement;
 the separate kernel-isolated OCI profile carries the hostile whole-tree
-isolation obligation. The reviewed-local profile's Linux Bubblewrap path has no
-executed evidence yet, so evidence status remains partial.
+isolation obligation. A pinned Linux lane executes the reviewed-local profile's
+Bubblewrap path.
 The repository gate runs the locked Rust unit and lifecycle cohort with its
 feature-gated probes in a private, cleaned OS-temporary Cargo target. A passing
 repository gate includes those native results. Generated binaries and probe
@@ -100,13 +100,15 @@ pass. WCF-C07 is package hygiene. Reports MUST state covered assertions and
 exclusions; no certification is implied.
 `Wotex.Lab.Conformance.Containment` refuses a host without an admitted network
 sandbox. On Darwin it combines `sandbox-exec` with an explicitly provisioned
-no-shell Rust executable; on Linux it requires Bubblewrap. The launcher applies inherited CPU,
+no-shell Rust executable; on Linux it requires Bubblewrap with a private `/proc`
+and a minimal `/dev`. The launcher applies inherited CPU,
 open-file, output-file and core limits, accounts resident memory and process
 count over the target tree, gives the target its own process group, and enforces
 an inner deadline before the runner deadline so it can kill descendants. The
 sandbox denies network access and writes outside the private temporary tree.
 Its public descriptor contains limits, mechanism names, profile/helper versions
-and the exact native executable SHA-256 but no paths. Profile 2.0.1 requires
+and the exact native executable SHA-256 but no paths. The target environment
+selects the `C.UTF-8` locale. Profile 2.0.2 requires
 `:launcher` as `%{executable: absolute_path, digest: "sha256:..."}`; absent,
 symlinked, oversized or changed launchers are refused. No Rust toolchain,
 interpreter, download, compiler or NIF is invoked by this runtime API.
@@ -114,7 +116,7 @@ interpreter, download, compiler or NIF is invoked by this runtime API.
 The Rust helper also cleans up after normal target exit, keeps the root's PID
 reserved until group cleanup, tracks observed descendants by start identity,
 and fails on accounting/cleanup errors. It samples every ten milliseconds and
-caps process-table/identity work at 65,536 entries. Profile 2.0.1 reserves one
+caps process-table/identity work at 65,536 entries. Profile 2.0.2 reserves one
 second between the inner launcher deadline and the outer runner deadline; the
 helper's 150 ms cleanup ceiling is explicit evidence inside that margin, leaving
 the remainder for sandbox/launcher startup, scheduler delay and port exit-status
@@ -131,6 +133,23 @@ filesystem reads and the deprecated Darwin sandbox are not proven isolated.
 The reviewed-local source cohort therefore cannot close the whole-tree
 hostile-target contract, and no untrusted hosted target is admitted by this
 helper.
+
+Profile 2.0.2 corrects two Linux defects found by its first Linux execution.
+Bubblewrap previously bound the host `/dev` read-only; inside the unprivileged
+user namespace those device nodes cannot be opened and a BEAM target spun at
+startup until its CPU limit killed it. The profile now mounts a minimal `/dev`.
+The previous `C` locale made a BEAM target on Linux select Latin-1 file name
+encoding and print a warning into its protocol output; the profile now selects
+`C.UTF-8`. The output file-size limit also bounds the memory file of the default
+dual-mapped BEAM JIT, so BEAM targets pass `+JMsingle true`.
+`elixir bin/check_linux_containment.exs` builds
+`test/containers/linux-containment/Dockerfile` from the pinned Rust and
+`hexpm/elixir` images with Debian Bubblewrap, copies the Lab's tracked files
+and each clean source owner's `HEAD` into a private workspace, and runs
+`conformance_target_process_test.exs` and `conformance_test.exs` as the calling
+user. Only seccomp and masked system paths are relaxed, so Bubblewrap can create
+its unprivileged namespaces. It prints the image identity, package versions and
+the log digest, then removes the container and workspace.
 
 `Wotex.Lab.Conformance.KernelContainment` profile 1.0.0 is the kernel-isolated
 profile, recorded in the

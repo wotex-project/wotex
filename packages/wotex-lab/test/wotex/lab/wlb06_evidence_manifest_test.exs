@@ -10,10 +10,11 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
 
   @record_keys ~w(cpu_seconds deadline_ms max_output_bytes memory_bytes processes samples
                   run_ms excluded_count test_count thing_description_vectors thing_model_vectors
-                  container_test_count)a
+                  container_test_count linux_test_count)a
 
   @source_files [
     "mix.exs",
+    "bin/check_linux_containment.exs",
     "docs/plans/wotex-lab-completion.md",
     "docs/provenance/source-cohort.json",
     "docs/provenance/source-index.json",
@@ -37,6 +38,7 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "priv/conformance/native/src/accounting.rs",
     "priv/conformance/native/probes/main.rs",
     "priv/conformance/native/tests/lifecycle.rs",
+    "test/containers/linux-containment/Dockerfile",
     "test/support/native_containment.ex",
     "test/test_helper.exs",
     "test/wotex/lab/benchmark_test.exs",
@@ -71,10 +73,11 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     assert record.outcomes.thing_model_vectors == 8
     assert record.outcomes.test_count > 0
     assert record.outcomes.container_test_count > 0
+    assert record.outcomes.linux_test_count > 0
     assert record.durations.run_ms > 0
 
     assert Enum.map(Enum.filter(record.assertions, &(&1.status == :not_run)), & &1.id) ==
-             ["WCF-C05:discovery-corpus", "WLB-C07:linux-bubblewrap-reviewed-local"]
+             ["WCF-C05:discovery-corpus"]
 
     assert Enum.all?(
              Enum.reject(record.assertions, &(&1.status == :not_run)),

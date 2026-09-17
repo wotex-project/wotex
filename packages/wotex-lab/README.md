@@ -57,7 +57,12 @@ The full conformance source suite requires Rust/Cargo 1.85+ with rustfmt and
 Clippy, plus Darwin `sandbox-exec` or an admitted Linux Bubblewrap environment.
 It explicitly builds and checks the external Rust helper and feature-gated
 test probes. No Python interpreter is used. This is separate from compilation
-or first-tensor use of the base package.
+or first-tensor use of the base package. On a Docker host, the Linux lane runs
+the same suite through Bubblewrap in a pinned image:
+
+```sh
+elixir bin/check_linux_containment.exs
+```
 
 For a reviewed local conformance target, provision the helper explicitly:
 

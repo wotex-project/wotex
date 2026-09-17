@@ -179,10 +179,10 @@ specifications:
       - "test/wotex/lab/wlb05_evidence_manifest_test.exs"
     compatibility_classification: WLB.05 is implemented with independent ETS/SQLite algorithms, authenticated per-source Continuum admission and one-effect smart-room policy races; artifact adoption remains a separate axis.
   - id: WLB.06
-    version: "1.5.0"
+    version: "1.6.0"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
     implementation_status: implemented
-    evidence_status: partial
+    evidence_status: complete
     adoption_status: reference_available
     evidence_manifest: docs/provenance/WLB.06-evidence.json
     standards:
@@ -217,8 +217,10 @@ specifications:
       - "test/wotex/lab/graph_test.exs"
       - "test/wotex/lab/wlb06_evidence_manifest_test.exs"
       - "bin/check_native_containment.exs"
+      - "bin/check_linux_containment.exs"
+      - "test/containers/linux-containment/Dockerfile"
       - "priv/conformance/native/tests/lifecycle.rs"
-    compatibility_classification: Kernel containment profile 1.0.0 adds an additive OCI namespace and cgroup profile that closes hostile whole-tree isolation for its trusted runtime, kernel and pinned image; the reviewed-local Linux Bubblewrap path remains unexecuted, so evidence stays partial. The target process now reads and writes protocol bytes independently of the host locale. Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling. The main repository gate now executes its locked unit and feature-gated lifecycle tests in a private cleaned target; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
+    compatibility_classification: Kernel containment profile 1.0.0 adds an additive OCI namespace and cgroup profile that closes hostile whole-tree isolation for its trusted runtime, kernel and pinned image. Reviewed-local profile 2.0.2 mounts a minimal /dev and selects C.UTF-8 for Linux Bubblewrap targets, and a pinned Linux lane executes that path. The target process now reads and writes protocol bytes independently of the host locale. Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling. The main repository gate now executes its locked unit and feature-gated lifecycle tests in a private cleaned target; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
     version: "0.4.5"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
@@ -263,7 +265,7 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
     compatibility_classification: MCP resources now include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. The Nerves/MCP notebook identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
-    version: "0.9.3"
+    version: "0.9.4"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
