@@ -200,14 +200,39 @@ if config_env() == :prod do
 end
 
 # Lab spans and exception logs leave the host only when the operator names the
-# local OTLP receiver; the database selects a provisioned retention TTL.
+# OTLP receiver; the database selects a provisioned retention TTL. The hosted
+# profile checks its credential here and reads it again per write, never
+# storing it.
 if url = System.get_env("WOTEX_LAB_OTLP_URL") do
-  case WotexLabWorkbench.Observability.Otlp.configure(
-         url,
-         System.get_env("WOTEX_LAB_OTLP_DATABASE")
-       ) do
-    {:ok, options} -> config :wotex_lab_workbench, metrics_otlp: options
-    {:error, _} -> raise "OTLP export requires WOTEX_LAB_OTLP_URL=http://127.0.0.1:<port>/v1/otlp"
+  otlp = WotexLabWorkbench.Observability.Otlp
+  database = System.get_env("WOTEX_LAB_OTLP_DATABASE")
+
+  configured =
+    case System.get_env("WOTEX_LAB_OTLP_PROFILE") do
+      profile when profile in [nil, "local"] ->
+        otlp.configure(url, database)
+
+      "hosted" ->
+        with {:ok, _} <- otlp.lookup_credential() do
+          otlp.configure_hosted(
+            url,
+            System.get_env("WOTEX_LAB_OTLP_AUDIENCE"),
+            database,
+            System.get_env("WOTEX_LAB_OTLP_CA_CERTFILE")
+          )
+        end
+
+      _ ->
+        :error
+    end
+
+  case configured do
+    {:ok, options} ->
+      config :wotex_lab_workbench, metrics_otlp: options
+
+    _ ->
+      raise "OTLP export requires WOTEX_LAB_OTLP_URL=http://127.0.0.1:<port>/v1/otlp, or the " <>
+              "hosted profile with an HTTPS URL, its exact audience and a WOTEX_LAB_OTLP_TOKEN"
   end
 end
 

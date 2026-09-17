@@ -140,6 +140,7 @@ defmodule Wotex.Lab.OtlpExporterTest do
           %{url: "http://user@127.0.0.1:4000/v1/otlp"},
           %{url: "http://127.0.0.1:4000/v1/otlp", database: "public"},
           %{url: "http://127.0.0.1:4000/v1/otlp", finch: :shared},
+          %{url: "http://127.0.0.1:4000/v1/otlp", credential: {:bearer, "token"}},
           %{url: 7},
           nil
         ] do
@@ -177,6 +178,45 @@ defmodule Wotex.Lab.OtlpExporterTest do
 
       :gen_tcp.close(socket)
       assert {:ok, %{status: 200, body: ""}} = Task.await(task)
+    end
+
+    token = "otlp-bearer-sentinel-with-a-bounded-token-value"
+    parent = self()
+
+    credential = fn ->
+      send(parent, :credential_resolved)
+      {:ok, {:bearer, token}}
+    end
+
+    {:ok, authenticated} =
+      GreptimeSink.new(%{
+        url: "http://127.0.0.1:#{port}/v1/otlp",
+        credential: credential,
+        receive_timeout: 2_000
+      })
+
+    for signal <- [:traces, :logs] do
+      task = Task.async(fn -> authenticated.(signal, request) end)
+      {:ok, socket} = :gen_tcp.accept(listener, 2_000)
+      assert read_request(socket, "") =~ "authorization: Bearer " <> token
+      assert_received :credential_resolved
+
+      :ok =
+        :gen_tcp.send(
+          socket,
+          "HTTP/1.1 200 OK\r\ncontent-type: application/x-protobuf\r\ncontent-length: 0\r\n\r\n"
+        )
+
+      :gen_tcp.close(socket)
+      assert {:ok, %{status: 200}} = Task.await(task)
+    end
+
+    for lookup <- [fn -> :error end, fn -> {:ok, nil} end] do
+      {:ok, refused} =
+        GreptimeSink.new(%{url: "http://127.0.0.1:#{port}/v1/otlp", credential: lookup})
+
+      assert {:error, %Error{code: :credential_unavailable}} = refused.(:traces, request)
+      assert {:error, :timeout} = :gen_tcp.accept(listener, 100)
     end
 
     :gen_tcp.close(listener)

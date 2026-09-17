@@ -5,8 +5,9 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
   `new/1` admits a base URL ending in `/v1/otlp`, an optional database
   identifier admitted by `Wotex.Lab.Metrics.Retention.database/1` and the
   `Wotex.Lab.Metrics.ReqSink` transport keys (`:profile`, `:audience`,
-  `:tls_ca_certfile`, `:receive_timeout`, `:connect_timeout`). It returns a
-  sink function for `Wotex.Lab.Otlp.Exporter`. Traces go to `<base>/v1/traces`
+  `:tls_ca_certfile`, `:receive_timeout`, `:connect_timeout`) and an optional
+  `:credential` function. It returns a sink function for
+  `Wotex.Lab.Otlp.Exporter`. Traces go to `<base>/v1/traces`
   with `x-greptime-pipeline-name: greptime_trace_v1`, which GreptimeDB 1.1.4
   requires; logs go to `<base>/v1/logs` without a pipeline header and land in
   the server's default OTLP log table. A selected database adds
@@ -15,9 +16,13 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
 
   Every write goes through `ReqSink.write/3` with redirects and retries
   disabled and a 4 KiB response ceiling, so the hosted profile keeps its DNS
-  admission, peer pinning and TLS checks. This sink sends no credential; an
-  authenticated hosted receiver is not part of this profile. The sink returns
-  the status and bounded body for the exporter to classify.
+  admission, peer pinning and TLS checks. Without `:credential` the sink sends
+  no credential. With it, the zero-arity function is called for every write and
+  returns `{:ok, credential}` with a `ReqSink.credential()` value or `:error`;
+  the credential becomes the `authorization` header of that one exchange and is
+  not retained. `:error`, or any other answer, refuses the write as
+  `credential_unavailable` before a connection opens. The sink returns the
+  status and bounded body for the exporter to classify.
   """
 
   alias Wotex.Lab.Error
@@ -34,9 +39,11 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
   @spec new(map()) :: {:ok, sink()} | {:error, Error.t()}
   def new(%{url: url} = config) when is_binary(url) do
     database = Map.get(config, :database)
-    extra = Map.keys(config) -- [:url, :database | @transport_keys]
+    credential = Map.get(config, :credential)
+    extra = Map.keys(config) -- [:url, :database, :credential | @transport_keys]
 
     with true <- extra == [],
+         true <- is_nil(credential) or is_function(credential, 0),
          true <- byte_size(url) in 1..2_048 and String.ends_with?(url, "/v1/otlp"),
          %URI{query: nil, fragment: nil, userinfo: nil} <- URI.parse(url),
          :ok <- database_ok(database) do
@@ -45,7 +52,8 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
         |> Map.take(@transport_keys)
         |> Map.put(:max_response_bytes, 4_096)
 
-      {:ok, fn signal, request -> write(url, database, transport, signal, request) end}
+      {:ok,
+       fn signal, request -> write({url, database, credential}, transport, signal, request) end}
     else
       _ -> invalid()
     end
@@ -53,19 +61,35 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
 
   def new(_), do: invalid()
 
-  defp write(url, database, transport, signal, %{headers: headers} = request)
+  defp write({url, database, credential}, transport, signal, %{headers: headers} = request)
        when is_map_key(@paths, signal) do
     added =
       if(signal == :traces, do: [{"x-greptime-pipeline-name", "greptime_trace_v1"}], else: []) ++
         if database, do: [{"x-greptime-db-name", database}], else: []
 
-    case ReqSink.write(
-           %{request | headers: added ++ headers},
-           nil,
-           Map.put(transport, :url, url <> Map.fetch!(@paths, signal))
-         ) do
-      {:ok, %{status: status, body: body}} -> {:ok, %{status: status, body: body}}
-      {:error, %Error{} = error} -> {:error, error}
+    with {:ok, credential} <- resolve(credential),
+         {:ok, %{status: status, body: body}} <-
+           ReqSink.write(
+             %{request | headers: added ++ headers},
+             credential,
+             Map.put(transport, :url, url <> Map.fetch!(@paths, signal))
+           ) do
+      {:ok, %{status: status, body: body}}
+    end
+  end
+
+  defp resolve(nil), do: {:ok, nil}
+
+  defp resolve(lookup) do
+    case lookup.() do
+      {:ok, credential} when not is_nil(credential) ->
+        {:ok, credential}
+
+      _ ->
+        {:error,
+         Error.new(:credential_unavailable, :export, "OTLP credential is unavailable",
+           class: :unavailable
+         )}
     end
   end
 

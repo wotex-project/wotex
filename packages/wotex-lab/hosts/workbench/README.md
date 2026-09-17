@@ -413,6 +413,16 @@ results and exception reasons are never exported. The exporter buffers at
 most 512 records per signal, sends one request at a time every five seconds and
 drops records instead of retrying, so treat these signals as diagnostics.
 
+For an authenticated hosted receiver, set `WOTEX_LAB_OTLP_PROFILE=hosted`,
+`WOTEX_LAB_OTLP_URL` to its exact HTTPS base URL, such as
+`https://traces.example/v1/otlp`, `WOTEX_LAB_OTLP_AUDIENCE` to that URL's
+origin and `WOTEX_LAB_OTLP_TOKEN` to a 43–128 character URL-safe Bearer token.
+`WOTEX_LAB_OTLP_CA_CERTFILE` may name a private CA. The token must differ from
+`WOTEX_LAB_GREPTIME_QUERY_TOKEN`, `WOTEX_LAB_METRICS_TOKEN` and
+`WOTEX_LAB_METRICS_QUERY_TOKEN`; startup is refused otherwise. Each export
+re-resolves the host, refuses private or mixed DNS answers, pins one public
+address and verifies the hostname through TLS.
+
 ## Control API mutations
 
 The `/api/v1` control API always serves the catalogue reads and the

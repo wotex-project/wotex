@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.26.0. Contract: accepted. Source status: the metric
+Specification version: 0.27.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -20,7 +20,7 @@ to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
 provision a durable database TTL on a local receiver. Both operator listeners
 can instead use a mutual-TLS remote transport with peer ranges. The base
 library exports Lab spans and exception logs over OTLP, and the Workbench can
-activate that exporter for a local receiver. `Wotex.Lab.Metrics.DurableQuery`
+activate that exporter for a local or an authenticated hosted receiver. `Wotex.Lab.Metrics.DurableQuery`
 supplies fixed durable read templates, and the operator listener answers them
 from a local or explicitly selected hosted receiver through the Workbench
 durable reader. Hosted database provisioning, isolated hosted-tenant BeamLens
@@ -417,13 +417,18 @@ temporality to validate because only traces and logs are exported.
 `x-greptime-pipeline-name: greptime_trace_v1`, which GreptimeDB 1.1.4 requires,
 and logs to `/v1/otlp/v1/logs`; a selected database adds
 `x-greptime-db-name`. It writes through `Metrics.ReqSink`, whose result now
-also carries the response body cut at the sink's 4 KiB ceiling, and sends no
-credential. `otlp_encoder_test.exs` checks field numbers against an independent
+also carries the response body cut at the sink's 4 KiB ceiling. Without a
+`:credential` it sends none. A zero-arity `:credential` function is called for
+every write; its `{:ok, credential}` answer becomes that exchange's
+`authorization` header and is not retained, and any other answer fails the
+write as `credential_unavailable` before a connection opens.
+`otlp_encoder_test.exs` checks field numbers against an independent
 decoder, closed-shape refusals, partial-success decoding and the projection
 vocabulary. `otlp_exporter_test.exs` covers options, trace and log export
 without payload metadata, partial success, rejected statuses, sink errors,
 crashes, deadlines, buffer and batch bounds, handler detachment, periodic
-export and the sink's headers and paths. In the `WOTEX_LAB_GREPTIME=1` lane,
+export, the sink's headers and paths, the per-write Bearer header and the
+refused credential. In the `WOTEX_LAB_GREPTIME=1` lane,
 `greptime_otlp_test.exs` provisions a two-day database, exports OK, timeout and
 exception spans and one log on the pinned server, reads them back from
 `opentelemetry_traces` and `opentelemetry_logs`, finds the database TTL on
@@ -434,9 +439,25 @@ both tables and records a missing pipeline header as a rejected batch.
 `Observability.Otlp`, independently of PromEx, with service instance
 `workbench` and the default budgets; an invalid value refuses startup. The
 exporter observes Lab spans from every session on the host.
-`metrics_otlp_test.exs` covers receiver and database admission, the paths and
-headers of a real host export and the refused application start. Authenticated
-hosted OTLP receivers are not part of this profile.
+`WOTEX_LAB_OTLP_PROFILE=hosted` instead admits an exact HTTPS URL ending in
+`/v1/otlp`, without query, fragment or userinfo, whose origin equals
+`WOTEX_LAB_OTLP_AUDIENCE`, plus an optional `WOTEX_LAB_OTLP_CA_CERTFILE`.
+Writes then use `Metrics.ReqSink`'s hosted destination policy: every
+exchange re-resolves the host, refuses private, link-local, metadata,
+multicast and mixed answers, pins one public peer and verifies the original
+hostname through TLS. The Bearer credential comes from
+`WOTEX_LAB_OTLP_TOKEN`, which boot checks and every write reads again without
+storing it. It must be a 43–128 character URL-safe token that differs from
+the durable query credential and both operator listener credentials, so an
+export credential never doubles as a read credential; a missing, malformed
+or reused credential fails the batch as `credential_unavailable`.
+`metrics_otlp_test.exs` covers local and hosted receiver, audience and
+database admission, the paths and headers of a real local export, credential
+format and separation, token absence from exporter options, a hosted
+receiver that resolves to loopback failing as `destination_not_admitted`
+and a missing credential as `credential_unavailable`, both before any
+connection, and the refused application start. Hosted export to a public
+receiver is not exercised and is not proof that a receiver retained records.
 
 ## Read-only query contract and BeamLens
 
