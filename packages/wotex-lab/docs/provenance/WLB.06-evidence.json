@@ -57,15 +57,19 @@
       "status": "pass"
     },
     {
+      "id": "WLB-C07:hostile-target-whole-tree-isolation",
+      "status": "pass"
+    },
+    {
       "id": "WCF-C05:discovery-corpus",
       "status": "not_run"
     },
     {
-      "id": "WLB-C07:hostile-target-whole-tree-isolation",
+      "id": "WLB-C07:linux-bubblewrap-reviewed-local",
       "status": "not_run"
     }
   ],
-  "attempt": 25,
+  "attempt": 26,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -137,38 +141,57 @@
       "archive": "missing",
       "name": "darwin-sandbox-exec",
       "version": "25.6.0"
+    },
+    {
+      "archive": "sha256:70d5a06adf388bd09b652f47ddc9ca31663a3e5353d24188bdb0054b3014ab3e",
+      "name": "oci-runtime-cli",
+      "version": "29.4.0"
+    },
+    {
+      "archive": "missing",
+      "name": "container-engine",
+      "version": "29.4.0-linux-arm64-kernel-7.0.14"
+    },
+    {
+      "archive": "sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da",
+      "name": "hexpm/elixir",
+      "version": "1.20.2-erlang-29.0.4-debian-12"
     }
   ],
   "durations": {
-    "run_ms": 15200
+    "run_ms": 35200
   },
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154",
     "corpus:thing-model-1.1": "sha256:800bfc2ea61f6c14167898e64bcdb8c8aff0a1fe9857505ed65f2837d6bd10a5"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 RUST_TEST_THREADS=1 mix test test/wotex/lab/benchmark_test.exs test/wotex/lab/conformance_target_process_test.exs test/wotex/lab/conformance_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/evidence_test.exs test/wotex/lab/graph_test.exs test/wotex/lab/telemetry_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 RUST_TEST_THREADS=1 mix test test/wotex/lab/benchmark_test.exs test/wotex/lab/conformance_target_process_test.exs test/wotex/lab/conformance_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/evidence_test.exs test/wotex/lab/graph_test.exs test/wotex/lab/kernel_containment_test.exs test/wotex/lab/telemetry_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 WOTEX_LAB_CONTAINER=1 mix test test/wotex/lab/kernel_containment_lane_test.exs --seed 1",
     "containment:darwin-sandbox-exec+profile-2.0.1+contained-exec-2.0.0",
+    "kernel-containment:oci-linux-namespaces-cgroup-v2+profile-1.0.0",
     "cargo-lock:sha256:de17a723dc3ce87ad3360a2fde43c0ddfb8ce056dae95c4cd1f35329274b1ee5",
     "fault-schedule:1.0.0",
     "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target",
     "launcher-executable:sha256:9869d6abd176877643e58ce853061bc4f962806577654d96b0024522520fb024",
     "launcher-toolchain:rustc-1.97.1",
     "exclusion-scope:one-discovery-corpus;exunit-excluded=0",
+    "not-run:reviewed-local-linux-bubblewrap-path",
     "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
+    "container_test_count": 5,
     "excluded_count": 1,
-    "test_count": 54,
+    "test_count": 58,
     "thing_description_vectors": 16,
     "thing_model_vectors": 8
   },
-  "revision": "db30b34f299f10188914ced5c6aa08f992798a08",
+  "revision": "10323bc020ecfd58035a1257ee2457eb833bba65",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:b2a89b90de90480724c0176e12ae2ccb8eb93b39e02372d20dcfe6d8576f4ec7",
+  "source_tree_digest": "sha256:668894e10099c5666c30055f581d3054e9a6bcef7b664daf9ffe01783745eec1",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

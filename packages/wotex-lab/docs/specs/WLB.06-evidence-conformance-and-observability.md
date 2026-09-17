@@ -1,12 +1,14 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.4.3. Contract: accepted. Source status: partial.
+Specification version: 1.5.0. Contract: accepted. Source status: implemented.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
 executable positive, negative, lifecycle and resource evidence for reviewed
-local targets. The native helper does not complete the accepted hostile
-whole-tree isolation obligation; sampled limits are not kernel enforcement.
+local targets. The native helper's sampled limits are not kernel enforcement;
+the separate kernel-isolated OCI profile carries the hostile whole-tree
+isolation obligation. The reviewed-local profile's Linux Bubblewrap path has no
+executed evidence yet, so evidence status remains partial.
 The repository gate runs the locked Rust unit and lifecycle cohort with its
 feature-gated probes in a private, cleaned OS-temporary Cargo target. A passing
 repository gate includes those native results. Generated binaries and probe
@@ -126,9 +128,40 @@ one-millisecond pauses; persistent absence fails instead of becoming zero RSS.
 The [native containment decision](../decisions/0006-native-containment-executable.md)
 records that rapid unobserved daemonization, between-sample peaks, hostile
 filesystem reads and the deprecated Darwin sandbox are not proven isolated.
-The accepted whole-tree hostile-target contract therefore remains open for a
-kernel-isolated worker/VM profile; the reviewed-local source cohort cannot
-close it. No untrusted hosted target is admitted merely by this helper.
+The reviewed-local source cohort therefore cannot close the whole-tree
+hostile-target contract, and no untrusted hosted target is admitted by this
+helper.
+
+`Wotex.Lab.Conformance.KernelContainment` profile 1.0.0 is the kernel-isolated
+profile, recorded in the
+[kernel-isolated profile decision](../decisions/0009-kernel-isolated-conformance-profile.md).
+`external_map/6` takes an operator-provisioned OCI runtime command line admitted
+by SHA-256 after link resolution, a digest-pinned image that is never pulled,
+the in-image command with one `{subject_archive}` argument, the archive, at most
+sixteen read-only code directories and a private home directory. The container
+has no network, a read-only root, one bounded `tmpfs`, user `65534:65534`, no
+capabilities, no privilege escalation, hard cgroup memory (no swap) and process
+limits, a CPU quota and CPU-time, open-file, file-size and core limits. Its
+entrypoint `/usr/bin/timeout --signal=KILL` is PID 1 with an inner deadline three
+seconds before the runner deadline; when it exits the kernel kills every process
+left in the PID namespace. The evidence descriptor carries limits, mechanism,
+runtime digest and image reference but no path or label. Each map has a random
+label; `residue/3` counts and `release/3` force-removes containers carrying it,
+both through one bounded runtime command.
+
+`test/wotex/lab/kernel_containment_test.exs` covers admission without a
+process. `test/wotex/lab/kernel_containment_lane_test.exs`, selected with
+`WOTEX_LAB_CONTAINER=1`, runs both core corpora through the pinned
+`hexpm/elixir` image and hostile probes: loopback-only networking and a refused
+outbound connection, an unreadable host canary, read-only root and code mounts,
+an effective UID of 65534 with no effective capabilities and `NoNewPrivs`, a
+kernel OOM kill at the memory ceiling, process creation stopped by the cgroup
+limit, a `setsid` descendant that does not outlive its container, a hung target
+killed at its inner deadline, concurrent targets with separate output and zero
+labelled containers after release. The runtime daemon, its kernel and the image
+are trusted; kernel or runtime escape and shared-kernel denial of service are
+outside this profile, and hosted admission remains a WLB.08 deployment
+obligation.
 
 ## Telemetry and faults
 

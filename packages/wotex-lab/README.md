@@ -73,6 +73,19 @@ includes source, not platform binaries. See the
 [native containment decision](docs/decisions/0006-native-containment-executable.md)
 for the sampled-limit, hostile-target and deprecated macOS sandbox limitations.
 
+An untrusted target needs `Wotex.Lab.Conformance.KernelContainment` instead: a
+digest-pinned OCI image run through an operator-provisioned container runtime
+with no network, a read-only root, hard cgroup memory and process limits and a
+PID-namespace deadline. It never pulls an image. The container lane runs both
+core corpora and the hostile probes against the pinned `hexpm/elixir` image:
+
+```sh
+WOTEX_PATH_DEPS=1 WOTEX_LAB_CONTAINER=1 mix test test/wotex/lab/kernel_containment_lane_test.exs
+```
+
+See the [kernel-isolated profile decision](docs/decisions/0009-kernel-isolated-conformance-profile.md)
+for its trusted runtime, kernel and image boundary.
+
 `mix check` needs no container runtime: the MQTT broker lane is tagged
 `:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Integration evidence
 is likewise excluded unless `WOTEX_LAB_INTEGRATION=1` is set. Run broker tests explicitly

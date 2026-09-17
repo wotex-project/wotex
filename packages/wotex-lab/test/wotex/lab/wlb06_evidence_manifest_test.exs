@@ -9,7 +9,8 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @record_keys ~w(cpu_seconds deadline_ms max_output_bytes memory_bytes processes samples
-                  run_ms excluded_count test_count thing_description_vectors thing_model_vectors)a
+                  run_ms excluded_count test_count thing_description_vectors thing_model_vectors
+                  container_test_count)a
 
   @source_files [
     "mix.exs",
@@ -18,9 +19,11 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "docs/provenance/source-index.json",
     "docs/specs/WLB.06-evidence-conformance-and-observability.md",
     "docs/decisions/0006-native-containment-executable.md",
+    "docs/decisions/0009-kernel-isolated-conformance-profile.md",
     "docs/specs/catalogue.yaml",
     "lib/wotex/lab/benchmark.ex",
     "lib/wotex/lab/conformance/containment.ex",
+    "lib/wotex/lab/conformance/kernel_containment.ex",
     "lib/wotex/lab/conformance/target.ex",
     "lib/wotex/lab/continuum/fault_schedule.ex",
     "lib/wotex/lab/evidence/digest.ex",
@@ -35,12 +38,15 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "priv/conformance/native/probes/main.rs",
     "priv/conformance/native/tests/lifecycle.rs",
     "test/support/native_containment.ex",
+    "test/test_helper.exs",
     "test/wotex/lab/benchmark_test.exs",
     "test/wotex/lab/conformance_target_process_test.exs",
     "test/wotex/lab/conformance_test.exs",
     "test/wotex/lab/continuum_test.exs",
     "test/wotex/lab/evidence_test.exs",
     "test/wotex/lab/graph_test.exs",
+    "test/wotex/lab/kernel_containment_lane_test.exs",
+    "test/wotex/lab/kernel_containment_test.exs",
     "test/wotex/lab/telemetry_test.exs",
     "test/wotex/lab/wlb06_evidence_manifest_test.exs"
   ]
@@ -64,10 +70,11 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     assert record.outcomes.thing_description_vectors == 16
     assert record.outcomes.thing_model_vectors == 8
     assert record.outcomes.test_count > 0
+    assert record.outcomes.container_test_count > 0
     assert record.durations.run_ms > 0
 
     assert Enum.map(Enum.filter(record.assertions, &(&1.status == :not_run)), & &1.id) ==
-             ["WCF-C05:discovery-corpus", "WLB-C07:hostile-target-whole-tree-isolation"]
+             ["WCF-C05:discovery-corpus", "WLB-C07:linux-bubblewrap-reviewed-local"]
 
     assert Enum.all?(
              Enum.reject(record.assertions, &(&1.status == :not_run)),
