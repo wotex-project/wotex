@@ -88,6 +88,42 @@ ready frame with closed input on both lanes. These runs establish artifact and
 startup identity only; advisory scanning, sanitizer builds, the software tasks,
 the complete native corpus and BlueZ/GATT execution remain open.
 
+## Native corpus ownership and built host process
+
+`test/wotex/ble/native_contract_test.exs` checks the native corpus format, case
+identifiers, exact expectation shape and known operations. Every case listed in
+`executed_cases` must belong to an owner test that selects its operation or
+identifier and compares `expectation.value`; every other owned case fails the
+check. B-F11 through B-F13 are the only unexecuted cases. The per-case status
+fields that disagreed with `executed_cases` were removed, so the top-level list
+is the single execution record.
+
+`test/interop/native_host_test.exs` admits the host and runtime guardian of a
+completed Mix native build workspace through their manifest digests and the
+production `Artifacts.verify/2` path. It launches the pair with the production
+guardian arguments. B-F06 captures the exact ready frame, closes the Port and
+observes zero surviving guardian or host processes within 1000 ms. The same
+flow initialization and open request is written unsplit and split at every
+byte; each split yields the unsplit reply
+(`transport_unavailable` for an absent private bus), exit status 1 and zero
+survivors. Malformed JSON, a 131,073-byte unterminated line, duplicate flow
+initialization, a request before open and duplicate JSON keys each close the
+generation with status 1 and no reply; a truncated frame followed by owner loss
+releases both processes. The host writes no stderr, so noisy-stderr containment
+remains covered only by the WBL-G custody corpus.
+
+On Linux arm64, from the `test/native/Dockerfile` lane image and a fresh
+workspace built from the current sources, `native_host_test.exs` and
+`native_bus_test.exs` pass 38 tests with `WOTEX_BLE_DBUS_SOURCE` and
+`WOTEX_BLE_DBUS_BUILD` set to that workspace's libdbus source and build
+directories. The bus lane includes B-F19 through B-F41, B-F49 through B-F55 and
+B-F61 through B-F63. On the emulated x86_64 lane, a fresh workspace passes the
+three `native_host_test.exs` tests. Its `native_bus_test.exs` setup exceeded the
+fixture's 15-second compiler deadline under emulation, so those 35 tests were
+invalid there and are not recorded as x86_64 results. These are process and
+private-bus component results, not sanitizer, BEAM process-flow or BlueZ/GATT
+evidence.
+
 ## Native report reservations
 
 `test/wotex/ble/native_credit_test.exs` binds B-F07 through B-F10, B-F14 and

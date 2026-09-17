@@ -27,7 +27,13 @@ receiver loss), 128 (other child termination) and 129 (incomplete cleanup).
 guardian. The fixture starts its own private daemon and verifies libdbus 1.16.2
 connection ownership. It does not touch a system/session bus or require BlueZ.
 The explicitly selected fixture requires absolute `WOTEX_BLE_DBUS_SOURCE` and
-`WOTEX_BLE_DBUS_BUILD` directories from the pinned libdbus source/build. Missing
-inputs fail the selected test. Invoke `mix test --only interop
-test/interop/native_bus_test.exs`. This component lane does not establish native
-GATT, the complete Port helper, or the planned Mix SDK build task.
+`WOTEX_BLE_DBUS_BUILD` directories from the pinned libdbus source/build. A
+`mix wotex.native.build` workspace supplies them as
+`sources/libdbus/dbus-1.16.2` and `build/libdbus`. Missing inputs fail the
+selected test. Invoke `mix test --only interop test/interop/native_bus_test.exs`.
+This component lane does not establish native GATT.
+
+`native_host_test.exs` requires an absolute `WOTEX_BLE_NATIVE_WORKSPACE`
+containing a completed native build manifest. It admits the built host and
+runtime guardian through their manifest digests and drives the actual process
+pair with the production guardian arguments. It needs no D-Bus daemon.

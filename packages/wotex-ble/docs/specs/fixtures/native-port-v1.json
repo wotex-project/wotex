@@ -1602,7 +1602,7 @@
       "operation": "serialize_frame",
       "input": {
         "value": {
-          "value": "a\nb\u00e5\u00e4\u00f6"
+          "value": "a\nbåäö"
         },
         "limit": 64
       },
@@ -1610,7 +1610,7 @@
         "operator": "exact",
         "value": {
           "accepted": true,
-          "line": "{\"value\":\"a\\nb\u00e5\u00e4\u00f6\"}\n",
+          "line": "{\"value\":\"a\\nbåäö\"}\n",
           "bytes": 23
         }
       }
@@ -2472,7 +2472,6 @@
         "WBL-B02"
       ],
       "operation": "discovery_page",
-      "status": "executed",
       "input": {
         "characteristics": [
           {
@@ -2601,7 +2600,6 @@
         "WBL-B02"
       ],
       "operation": "discovery_page",
-      "status": "executed",
       "input": {
         "characteristics": [
           {
@@ -2701,7 +2699,6 @@
         "WBL-B02"
       ],
       "operation": "discovery_page",
-      "status": "executed",
       "input": {
         "characteristics": [
           {
@@ -2771,7 +2768,6 @@
         "WBL-B02"
       ],
       "operation": "discovery_cursor_ledger",
-      "status": "executed",
       "input": {
         "characteristics": [
           {
@@ -2855,7 +2851,6 @@
         "WBL-B02"
       ],
       "operation": "discovery_cursor_ledger",
-      "status": "executed",
       "input": {
         "characteristics": [
           {
@@ -2925,7 +2920,6 @@
         "WBL-B04"
       ],
       "operation": "native_host",
-      "status": "executed",
       "input": {
         "session_generation": "0123456789abcdef0123456789abcdef",
         "parameters": {
@@ -2982,7 +2976,6 @@
         "WBL-B04"
       ],
       "operation": "native_host",
-      "status": "executed",
       "input": {
         "session_generation": "0123456789abcdef0123456789abcdef",
         "parameters": {
@@ -3020,7 +3013,6 @@
         "WBL-B04"
       ],
       "operation": "native_host",
-      "status": "executed",
       "input": {
         "session_generation": "0123456789abcdef0123456789abcdef",
         "parameters": {
@@ -3055,7 +3047,6 @@
         "WBL-B01"
       ],
       "operation": "native_artifact_selectors",
-      "status": "specified",
       "input": {
         "selectors": [
           [
@@ -3089,7 +3080,6 @@
         "WBL-B01"
       ],
       "operation": "native_artifact_selectors",
-      "status": "specified",
       "input": {
         "selectors": [
           [
@@ -3121,7 +3111,6 @@
         "WBL-B01"
       ],
       "operation": "native_artifact_selectors",
-      "status": "specified",
       "input": {
         "selectors": [
           [
@@ -3161,7 +3150,6 @@
         "WBL-B01"
       ],
       "operation": "native_artifact_selectors",
-      "status": "specified",
       "input": {
         "selectors": [
           [
@@ -3198,6 +3186,7 @@
     "WBL-B-F03",
     "WBL-B-F04",
     "WBL-B-F05",
+    "WBL-B-F06",
     "WBL-B-F07",
     "WBL-B-F08",
     "WBL-B-F09",
@@ -3243,6 +3232,18 @@
     "WBL-B-F52",
     "WBL-B-F53",
     "WBL-B-F54",
-    "WBL-B-F55"
+    "WBL-B-F55",
+    "WBL-B-F56",
+    "WBL-B-F57",
+    "WBL-B-F58",
+    "WBL-B-F59",
+    "WBL-B-F60",
+    "WBL-B-F61",
+    "WBL-B-F62",
+    "WBL-B-F63",
+    "WBL-B-F64",
+    "WBL-B-F65",
+    "WBL-B-F66",
+    "WBL-B-F67"
   ]
 }
