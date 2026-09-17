@@ -20,6 +20,68 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Concurrent native host admission, 2026-09-17
+
+`Native.Host` now admits at most 64 outstanding requests. Read, health, Write
+and Call may come from any process; each caller is monitored, while `open`,
+`close` and Browse handles stay owner-only. Output chunks are split into
+complete LF-terminated lines of at most 131,072 bytes, classified by
+`Native.Frame.classify/2` and correlated by request identity. Each validated
+line returns one message and its bytes as credit. A request-scoped native
+failure is delivered and the Session remains open. A caller timeout or caller
+death retires the request locally and sends one `cancel` control with a
+1,000 ms budget; its missing or foreign acknowledgement ends the generation.
+A terminal control, unsolicited or oversized output, a response or terminal for
+another generation (`response_mismatch`), native exit or a failed close ends
+the generation and answers every unanswered request once. A sent Write or Call
+keeps unknown effect; a request still in the host mailbox when the host stops
+reports none, and a call timeout keeps unknown effect for a mutation. The owner
+receives one asynchronous error only when no caller was waiting. Excess Browse
+results and an expired browse deadline now release the live continuation and
+keep the Session; an unowned raw continuation still closes it.
+
+`test/native/owner_fixture.c` runs the production `owner.c`, output queue and
+IPC parser as a guardian-owned process with an explicitly injected service
+selected only by request node identity. `persistent_bridge_test.exs` uses it
+to assert 32 concurrent callers with distinct values, the WOP-X-F20 64-request
+bound with `busy` and close from the control reserve, timeout and caller-death
+cancellation counters, request-scoped Bad status and invalid values,
+per-request effects on Session loss, WOP-X-F22 owner death during Session
+activation with cleanup inside 1,000 ms, an expired activation, a suspended host
+and dead-owner calls. Deterministic `host_probe.c` modes bind WOP-X-F51, F56 and
+F57 (including a queued mailbox Write), coalesced and byte-split responses,
+oversized and unsolicited output, terminal or failed close, a foreign cancel
+acknowledgement and Browse chain recovery. `frame_test.exs` binds the
+WOP-X-F17 owner-side deadline translation and classification cases. Existing
+host and client tests now assert that request timeout sends cancellation and
+that excess or expired Browse results release instead of closing.
+
+The optional secure suite passes 13/13 against the independent asyncua 2.0.1
+peer and same-stack paged C peer with both the RelWithDebInfo and macOS
+ASan/UBSan native executables. It now includes 32 concurrent Read and health
+callers on one secure Session and asserts that Bad Read and rejected Write keep
+the Session usable. The previously failing public-client case passes because a
+typed Browse that exceeds `max_references` without a continuation no longer
+closes the Session. The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate
+passes on macOS arm64 with Elixir 1.20.2 / OTP 29.0.4: 323 passed
+(10 doctests, 4 properties, 309 tests), 13 optional tests excluded and 95.5%
+coverage, with `Native.Host` and `Native.Frame` fully covered.
+
+The public `Open62541` facade still accepts service calls only from its owner
+process, so C09 multi-caller public-client stress is not accepted. WOP-X-F19's
+Runtime `permanent` class, F21 report overflow and F23 Runtime handoff remain
+unbound, as do live SDK Cancel acknowledgement counters and independent-peer
+cancellation.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/host.ex` | `4151bf1952685be1774e5cc06d4666e62aa64c6740b6b2d6d7544c1c1abb573f` |
+| `lib/wotex/opcua/native/frame.ex` | `18ad916a25b0bc8f1092e340e104b91e804f8a6cccea4efc02d106fc3610d19f` |
+| `test/wotex/opcua/persistent_bridge_test.exs` | `0bdadbbe04faf5001830d9167fc1c9973548275503de4f24318b03b3c41104ba` |
+| `test/native/owner_fixture.c` | `38852f327b17e0925e4fd65589be28c8aeb94e19e4cd25e036a013a612d592b9` |
+| `test/native/host_probe.c` | `7373b4c2d698a2d45fe5848d4bea0b2d0b0e725715ab79bdefc47ca128eecb1d` |
+| `test/interop/native_secure_test.exs` | `c6c675c5cc0648f13c41ee5872f512ac98468a2d206247e454cb012826e7b303` |
+
 ## Multiplexed native process owner, 2026-09-17
 
 `priv/native/owner.c` replaces the single-flight loop in `main.c`. It admits at

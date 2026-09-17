@@ -19,6 +19,13 @@ defmodule Wotex.OPCUA.Native.Frame do
   @effects ~w(none unknown)a
   @terminal_keys ~w(error event generation version)
   @response_keys ~w(generation id ok result version)
+  @response_limits [
+    max_bytes: 131_071,
+    max_depth: 8,
+    max_nodes: 4096,
+    max_collection_size: 1024,
+    max_string_bytes: 65_536
+  ]
   @limits [
     max_bytes: 131_071,
     max_depth: 8,
@@ -131,6 +138,51 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   def terminal(_, _), do: {:error, Error.new(:invalid_native_frame, :terminal)}
 
+  @doc """
+  Classifies one complete native output line for its owner generation.
+
+  A terminal control is fully decoded. A response returns only its correlation
+  ID; operation-specific validation remains `response/5`. A well-formed line
+  for another generation is a `:response_mismatch`, never a delivered result.
+  """
+  @spec classify(term(), term()) ::
+          {:terminal, Error.t()} | {:response, String.t()} | {:error, Error.t()}
+  def classify(frame, generation)
+      when is_binary(frame) and byte_size(frame) in 1..@maximum_frame and
+             is_integer(generation) and generation in 1..@maximum_generation do
+    size = byte_size(frame)
+
+    with {offset, 1} when offset == size - 1 <- :binary.match(frame, "\n"),
+         {:ok, %{"version" => 1, "generation" => line_generation} = decoded} <-
+           Wotex.JSON.decode(binary_part(frame, 0, offset), @response_limits) do
+      cond do
+        is_integer(line_generation) and line_generation != generation ->
+          {:error, Error.new(:response_mismatch, :generation)}
+
+        Map.get(decoded, "event") == "terminal" ->
+          classify_terminal(frame, generation)
+
+        is_binary(decoded["id"]) and byte_size(decoded["id"]) in 1..64 and
+            printable_ascii?(decoded["id"]) ->
+          {:response, decoded["id"]}
+
+        true ->
+          {:error, Error.new(:invalid_native_frame, :response)}
+      end
+    else
+      _ -> {:error, Error.new(:invalid_native_frame, :response)}
+    end
+  end
+
+  def classify(_, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  defp classify_terminal(frame, generation) do
+    case terminal(frame, generation) do
+      {:ok, error} -> {:terminal, error}
+      error -> error
+    end
+  end
+
   @doc "Decodes a correlated native service response and validates the open metadata."
   @spec response(term(), term(), term(), term(), term()) ::
           {:ok, term()} | {:native_error, Error.t()} | {:error, Error.t()}
@@ -141,14 +193,7 @@ defmodule Wotex.OPCUA.Native.Frame do
     size = byte_size(frame)
 
     with {offset, 1} when offset == size - 1 <- :binary.match(frame, "\n"),
-         {:ok, decoded} <-
-           Wotex.JSON.decode(binary_part(frame, 0, offset),
-             max_bytes: @maximum_frame - 1,
-             max_depth: 8,
-             max_nodes: 4096,
-             max_collection_size: 1024,
-             max_string_bytes: 65_536
-           ),
+         {:ok, decoded} <- Wotex.JSON.decode(binary_part(frame, 0, offset), @response_limits),
          %{"version" => 1, "generation" => ^generation, "id" => ^id, "ok" => ok} <-
            decoded do
       case {ok, Enum.sort(Map.keys(decoded))} do
@@ -204,6 +249,17 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp response_result("browse_release", nil, _, _), do: {:ok, nil}
+
+  defp response_result("cancel", %{"target_id" => target, "canceled" => canceled} = result, _, _)
+       when map_size(result) == 2 and is_binary(target) and byte_size(target) in 1..64 and
+              is_boolean(canceled) do
+    if printable_ascii?(target),
+      do: {:ok, result},
+      else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
+  defp response_result("health", result, requested, generation),
+    do: response_result("read", result, requested, generation)
 
   defp response_result("read", result, _, _) when is_map(result) do
     with {:ok, value} <- native_data_value(result),

@@ -155,11 +155,13 @@ defmodule Wotex.OPCUA.Native.HostTest do
 
     spawn(fn ->
       send(parent, {:foreign_claim, GenServer.call(host, {Host, :claim, make_ref()})})
-      send(parent, {:foreign_request, Host.request(host, "read", %{}, 1000)})
+      send(parent, {:foreign_request, Host.request(host, "open", %{}, 1000)})
+      send(parent, {:foreign_close, Host.request(host, "close", %{}, 1000)})
     end)
 
     assert_receive {:foreign_claim, {:error, %Error{code: :invalid_native_handle}}}
     assert_receive {:foreign_request, {:error, %Error{code: :invalid_native_handle}}}
+    assert_receive {:foreign_close, {:error, %Error{code: :invalid_native_handle}}}
     assert Process.alive?(host)
     GenServer.stop(host, :normal)
     assert_native_reaped(directory)
@@ -337,12 +339,16 @@ defmodule Wotex.OPCUA.Native.HostTest do
     {options, directory} = fixture(context, "stall_request")
     assert {:ok, host, _} = Host.start_link(options)
     monitor = Process.monitor(host)
+    began = System.monotonic_time(:millisecond)
 
     assert {:error, %Error{code: :deadline_exceeded, field: :request}} =
              Host.request(host, "read", %{}, 100)
 
-    assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
-    refute_receive {:wotex_opcua_native, ^host, _}
+    assert System.monotonic_time(:millisecond) - began < 300
+
+    # The unanswered bounded cancel control ends the generation.
+    assert_receive {:wotex_opcua_native, ^host, {:error, %Error{code: :cleanup_failed}}}, 1500
+    assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 500
     assert_native_reaped(directory)
   end
 
@@ -355,7 +361,8 @@ defmodule Wotex.OPCUA.Native.HostTest do
       assert {:error, %Error{code: :deadline_exceeded, field: :request, effect: :unknown}} =
                Host.request(host, operation, %{}, 100)
 
-      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      assert_receive {:wotex_opcua_native, ^host, {:error, %Error{code: :cleanup_failed}}}, 1500
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 500
       assert_native_reaped(directory)
     end
   end

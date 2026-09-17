@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.2
+  version: 2.0.3
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -96,8 +96,14 @@ asynchronously and checked the server revision before service work was added.
 
 The native process now multiplexes up to 64 application operations behind one
 Session. Request-scoped failures, `busy`, `cancel` and `health` are implemented
-in the process; the BEAM host still sends one request at a time and still stops
-on any native failure, so public concurrency and cancellation remain open.
+in the process. The internal BEAM host admits up to 64 outstanding requests from
+monitored callers, correlates coalesced or split output lines by identity,
+replenishes credit per validated line and keeps the Session after a
+request-scoped failure. A caller timeout or death sends a bounded `cancel`;
+Session loss and invalid or foreign-generation output fail each unanswered
+request once with its own effect. Excess Browse results and an expired browse
+deadline release the live continuation instead of closing the Session. The
+public `Open62541` handle still accepts calls only from its owner process.
 The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
 input line and applies the strict JSON reader and closed outer request envelope

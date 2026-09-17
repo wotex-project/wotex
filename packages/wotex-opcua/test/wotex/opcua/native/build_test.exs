@@ -208,7 +208,8 @@ defmodule Wotex.OPCUA.Native.BuildTest do
              Wotex.OPCUA.Native.Host.request(host, "read", %{}, 1000)
 
     assert failure.details == %{phase: :validation}
-
+    assert Process.alive?(host)
+    assert :ok = GenServer.stop(host, :normal)
     assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
 
     assert {:ok, %{output: self_test}} =

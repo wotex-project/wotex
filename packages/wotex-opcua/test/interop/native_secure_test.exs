@@ -129,7 +129,7 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
   end
 
-  test "a Bad read retains the remote StatusCode and ends the native generation" do
+  test "a Bad read retains the remote StatusCode and keeps the Session usable" do
     config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
     guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
@@ -156,7 +156,65 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
              )
 
     assert Bitwise.band(status, 0x8000_0000) != 0
+    node_id = Jason.decode!(File.read!(config))["node_id"]
+
+    assert {:ok, %{"has_value" => true}} =
+             Host.request(host, "read", %{"node_id" => node_id, "index_range" => nil}, 5000)
+
     monitor = Process.monitor(host)
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
+  end
+
+  test "32 concurrent callers share one secure native Session without cross-delivery" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config), "native-open.json")))
+    peer = Jason.decode!(File.read!(config))
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, host, _} =
+             Host.start_link(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               timeout: 5000
+             )
+
+    assert {:ok, _} = Host.request(host, "open", parameters, 5000)
+
+    tasks =
+      for index <- 1..32 do
+        Task.async(fn ->
+          if rem(index, 2) == 0 do
+            {:value,
+             Host.request(host, "read", %{"node_id" => peer["node_id"], "index_range" => nil}, 5000)}
+          else
+            {:bytes,
+             Host.request(
+               host,
+               "health",
+               %{"node_id" => peer["byte_node_id"], "index_range" => nil},
+               5000
+             )}
+          end
+        end)
+      end
+
+    for result <- Task.await_many(tasks, 15_000) do
+      case result do
+        {:value, response} ->
+          assert {:ok, %{"value" => %{"type" => "Double", "array" => false}}} = response
+
+        {:bytes, response} ->
+          assert {:ok, %{"value" => %{"type" => "ByteString", "array" => false}}} = response
+      end
+    end
+
+    monitor = Process.monitor(host)
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
     assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
   end
 
@@ -289,7 +347,13 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
              Host.request(host, "write", write, 5000)
 
     assert Bitwise.band(status, 0x8000_0000) != 0
+    node_id = Jason.decode!(File.read!(config))["node_id"]
+
+    assert {:ok, %{"has_value" => true}} =
+             Host.request(host, "read", %{"node_id" => node_id, "index_range" => nil}, 5000)
+
     monitor = Process.monitor(host)
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
     assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
   end
 

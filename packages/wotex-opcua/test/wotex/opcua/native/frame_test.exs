@@ -19,6 +19,61 @@ defmodule Wotex.OPCUA.Native.FrameTest do
              Frame.admission(%Ready{clock_ms: 9_223_372_036_854_775_807}, 100, 110, 105, 20)
   end
 
+  @tag case: "WOP-X-F17"
+  test "WOP-X-F17 owner deadline translation matches the native contract corpus" do
+    corpus = File.read!("docs/specs/fixtures/native-contract-v1.json")
+
+    fixture = Enum.find(Jason.decode!(corpus)["cases"], &(&1["id"] == "WOP-X-F17"))
+
+    input = fixture["input"]
+    expected = fixture["expectation"]["value"]["native_deadline_ms"]
+    ready = %Ready{clock_ms: input["ready_native_ms"]}
+    received = input["ready_received_owner_ms"]
+    deadline = input["owner_deadline_ms"]
+
+    assert {:ok, %{deadline_ms: ^expected}} =
+             Frame.admission(ready, received, deadline, received, 60_000)
+  end
+
+  test "WOP-X03 output classification separates terminal, response and mismatch lines" do
+    terminal =
+      ~s({"version":1,"generation":7,"event":"terminal","error":{"code":"busy","phase":"admission","effect":"none"}}\n)
+
+    assert {:terminal, %Error{code: :busy}} = Frame.classify(terminal, 7)
+    assert {:error, %Error{code: :response_mismatch}} = Frame.classify(terminal, 8)
+    assert {:response, "r1"} = Frame.classify(~s({"version":1,"generation":7,"id":"r1"}\n), 7)
+
+    for invalid <- [
+          ~s({"version":1,"generation":7,"id":""}\n),
+          ~s({"version":1,"generation":7,"id":"a\\u0001"}\n),
+          ~s({"version":1,"generation":7,"event":"terminal","error":{}}\n),
+          ~s({"version":1,"generation":7}\n{"version":1}\n),
+          ~s({"version":2,"generation":7,"id":"r1"}\n)
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} = Frame.classify(invalid, 7)
+    end
+
+    assert {:error, %Error{code: :invalid_native_frame}} = Frame.classify(:line, 7)
+
+    assert {:ok, %{"target_id" => "r1", "canceled" => false}} =
+             Frame.response(
+               ~s({"version":1,"generation":7,"id":"c1","ok":true,"result":{"target_id":"r1","canceled":false}}\n),
+               7,
+               "c1",
+               "cancel",
+               nil
+             )
+
+    assert {:error, %Error{code: :invalid_native_frame}} =
+             Frame.response(
+               ~s({"version":1,"generation":7,"id":"c1","ok":true,"result":{"target_id":"r\\u0001","canceled":true}}\n),
+               7,
+               "c1",
+               "cancel",
+               nil
+             )
+  end
+
   test "WOP-X03 request contains only exact integer fields and one LF" do
     assert {:ok, frame} =
              Frame.request(

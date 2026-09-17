@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.22
+  version: 1.1.23
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -35,8 +35,17 @@ queued work without I/O and sends the SDK Cancel service asynchronously for sent
 work, preserving unknown effect for a sent Write or Call. `health` uses the Read
 service path. Session loss, malformed input, credit violations and duplicate
 outstanding IDs remain terminal. The production owner binds WOP-X-F17 through
-F20, F49, F50 and F52 through F55 with an explicitly injected service; the BEAM
-host is still single-flight, so public concurrency is not yet accepted.
+F20, F49, F50 and F52 through F55 with an explicitly injected service.
+`Native.Host` now admits 64 outstanding requests from monitored callers,
+splits arbitrary Port chunks into complete lines, replenishes credit for each
+validated line and keeps request-scoped failures non-terminal. A caller timeout
+or death sends one bounded `cancel` control whose missing acknowledgement ends
+the generation. Terminal controls, invalid output and responses for another
+generation fail each unanswered request once: sent Write/Call keep unknown
+effect, other requests and calls never emitted report none. ExUnit binds
+WOP-X-F17, F20, F22, F51, F56 and F57 through the host with a process fixture
+that runs the production owner and an injected service, or a deterministic
+response probe. The public `Open62541` client remains owner-bound.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split

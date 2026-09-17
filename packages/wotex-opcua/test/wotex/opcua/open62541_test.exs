@@ -441,7 +441,8 @@ defmodule Wotex.OPCUA.Open62541Test do
     assert :ok = Wotex.OPCUA.disconnect(session)
   end
 
-  test "WOP-N03 page, reference and original deadline limits close the owner", context do
+  test "WOP-N04 page, reference and original deadline limits release on the live Session",
+       context do
     for {suffix, opts, steps} <- [
           {"page-limit", [max_pages: 1], 0},
           {"reference-limit", [max_references: 1], 2},
@@ -469,11 +470,13 @@ defmodule Wotex.OPCUA.Open62541Test do
 
           Process.sleep(150)
           assert {:error, %Error{code: :deadline_exceeded}} = Browse.next(session, first)
-          assert :ok = Browse.release(session, first)
+          assert {:error, %Error{code: :invalid_continuation}} = Browse.release(session, first)
       end
 
-      assert_receive {:DOWN, ^monitor, :process, _, _}, 1000
+      refute_receive {:DOWN, ^monitor, :process, _, _}, 50
+      assert Process.alive?(session.handle.host)
       assert :ok = Wotex.OPCUA.disconnect(session)
+      assert_receive {:DOWN, ^monitor, :process, _, _}, 1000
     end
   end
 

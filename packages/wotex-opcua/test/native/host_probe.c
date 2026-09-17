@@ -205,6 +205,158 @@ static int session_services(int remote_browse) {
     }
     return 64;
 }
+/* Reads the next request line, skipping credit controls. */
+static int next_request(char *frame, size_t capacity, unsigned long long *generation,
+                        char id[65]) {
+    for(;;) {
+        if(read_line(frame, capacity)) return -1;
+        if(strstr(frame, "\"event\":\"credit\"")) continue;
+        char *key = strstr(frame, "\"generation\":");
+        char *request_id = strstr(frame, "\"id\":\"");
+        if(!key || !request_id || sscanf(key, "\"generation\":%llu", generation) != 1 ||
+           sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return -1;
+        return 0;
+    }
+}
+
+static const char double_result[] =
+    "{\"has_value\":true,\"value\":{\"type\":\"Double\",\"array\":false,"
+    "\"value\":%d.0},\"status\":0}";
+
+static int respond(unsigned long long generation, const char *id, const char *result) {
+    char frame[1024];
+    int count = snprintf(frame, sizeof(frame),
+        "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,\"result\":%s}\n",
+        generation, id, result);
+    return count > 0 && (size_t)count < sizeof(frame) ? write_all(STDOUT_FILENO, frame, (size_t)count) : -1;
+}
+
+static int wait_eof(void) {
+    char byte;
+    for(;;) {
+        ssize_t size = read(STDIN_FILENO, &byte, 1);
+        if(size < 0 && errno == EINTR) continue;
+        if(size <= 0) return 0;
+    }
+}
+
+/* Deterministic generation, terminal and framing faults after a successful open. */
+static int session_faults(int fault) {
+    char frame[4096], id[65], ids[2][65];
+    unsigned long long generation = 0;
+    if(next_request(frame, sizeof(frame), &generation, id) ||
+       !strstr(frame, "\"operation\":\"open\"")) return 70;
+    char result[256];
+    snprintf(result, sizeof(result),
+             "{\"session_timeout_ms\":60000.0,\"session_generation\":%llu,"
+             "\"namespace_array\":[\"http://opcfoundation.org/UA/\",\"urn:fixture\"]}",
+             generation);
+    if(respond(generation, id, result)) return 71;
+    if(fault == 5) {
+        char *line = malloc(131073);
+        if(!line) return 80;
+        memset(line, 'x', 131073);
+        int failed = write_all(STDOUT_FILENO, line, 131073);
+        free(line);
+        return failed ? 81 : wait_eof();
+    }
+    if(fault == 6) {
+        if(respond(generation, "999999", "null")) return 82;
+        return wait_eof();
+    }
+    if(fault >= 7) {
+        char pending[65] = "";
+        for(;;) {
+            if(next_request(frame, sizeof(frame), &generation, id)) return 83;
+            if(strstr(frame, "\"operation\":\"close\"")) {
+                if(fault == 7) {
+                    char terminal[256];
+                    int count = snprintf(terminal, sizeof(terminal),
+                        "{\"version\":1,\"generation\":%llu,\"event\":\"terminal\",\"error\":"
+                        "{\"code\":\"cleanup_failed\",\"phase\":\"cleanup\",\"effect\":\"none\"}}\n",
+                        generation);
+                    if(count <= 0 || write_all(STDOUT_FILENO, terminal, (size_t)count)) return 84;
+                } else if(fault == 9) {
+                    char failure[256];
+                    int count = snprintf(failure, sizeof(failure),
+                        "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":false,\"error\":"
+                        "{\"code\":\"cleanup_failed\",\"phase\":\"cleanup\",\"effect\":\"none\"}}\n",
+                        generation, id);
+                    if(count <= 0 || write_all(STDOUT_FILENO, failure, (size_t)count)) return 85;
+                } else if(respond(generation, id, "null")) {
+                    return 86;
+                }
+                return wait_eof();
+            }
+            if(strstr(frame, "\"operation\":\"cancel\"")) {
+                char body[128];
+                snprintf(body, sizeof(body), "{\"target_id\":\"%s\",\"canceled\":true}",
+                         fault == 8 ? "foreign" : pending);
+                if(respond(generation, id, body)) return 87;
+                continue;
+            }
+            if(strstr(frame, "\"operation\":\"browse\"") && fault == 10 && !pending[0]) {
+                char failure[256];
+                int count = snprintf(failure, sizeof(failure),
+                    "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":false,\"error\":"
+                    "{\"code\":\"remote_error\",\"phase\":\"exchange\",\"effect\":\"none\","
+                    "\"status\":2150891520}}\n", generation, id);
+                if(count <= 0 || write_all(STDOUT_FILENO, failure, (size_t)count)) return 88;
+                snprintf(pending, sizeof(pending), "%s", id);
+                continue;
+            }
+            if(strstr(frame, "\"operation\":\"browse\"")) {
+                if(respond(generation, id, "{\"status\":0,\"continuation\":null,\"references\":[]}"))
+                    return 89;
+                continue;
+            }
+            /* Other requests are held so the owner times out and cancels them. */
+            snprintf(pending, sizeof(pending), "%s", id);
+        }
+    }
+    if(fault == 3) {
+        if(next_request(frame, sizeof(frame), &generation, id)) return 72;
+        if(respond(generation + 1, id, "null")) return 73;
+        return wait_eof();
+    }
+    for(int i = 0; i < 2; i++) {
+        if(next_request(frame, sizeof(frame), &generation, ids[i])) return 74;
+    }
+    if(fault == 4) {
+        char first[256], second[256], both[1024];
+        snprintf(first, sizeof(first), double_result, 1);
+        snprintf(second, sizeof(second), double_result, 2);
+        int count = snprintf(both, sizeof(both),
+            "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,\"result\":%s}\n"
+            "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,\"result\":%s}\n",
+            generation, ids[1], second, generation, ids[0], first);
+        if(count <= 0 || (size_t)count >= sizeof(both) ||
+           write_all(STDOUT_FILENO, both, (size_t)count)) return 75;
+        if(next_request(frame, sizeof(frame), &generation, id)) return 76;
+        char third[256], line[1024];
+        snprintf(third, sizeof(third), double_result, 3);
+        count = snprintf(line, sizeof(line),
+            "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,\"result\":%s}\n",
+            generation, id, third);
+        for(int index = 0; index < count; index++) {
+            if(write_all(STDOUT_FILENO, line + index, 1)) return 77;
+            sleep_ms(1);
+        }
+        return wait_eof();
+    }
+    FILE *received = fopen("received", "wx");
+    if(!received || fclose(received)) return 78;
+    while(access("trigger", F_OK) != 0) sleep_ms(1);
+    char terminal[256];
+    int count = snprintf(terminal, sizeof(terminal),
+        "{\"version\":1,\"generation\":%llu,\"event\":\"terminal\",\"error\":"
+        "{\"code\":\"receiver_overflow\",\"phase\":\"exchange\",\"effect\":\"none\"}}\n",
+        fault == 2 ? generation + 1 : generation);
+    if(count <= 0 || (size_t)count >= sizeof(terminal) ||
+       write_all(STDOUT_FILENO, terminal, (size_t)count)) return 79;
+    return wait_eof();
+}
+
 int main(int argc, char **argv) {
     if (argc != 1) return 40;
     const char *mode = strrchr(argv[0], '/');
@@ -267,6 +419,16 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_release_failure")) return session_services(15);
     if (!strcmp(mode, "session_uncertain_browse")) return session_services(16);
     if (!strcmp(mode, "session_invalid_next_reference")) return session_services(17);
+    if (!strcmp(mode, "session_terminal_pending")) return session_faults(1);
+    if (!strcmp(mode, "session_terminal_foreign")) return session_faults(2);
+    if (!strcmp(mode, "session_response_foreign")) return session_faults(3);
+    if (!strcmp(mode, "session_split_responses")) return session_faults(4);
+    if (!strcmp(mode, "session_oversized_line")) return session_faults(5);
+    if (!strcmp(mode, "session_unsolicited_response")) return session_faults(6);
+    if (!strcmp(mode, "session_terminal_close")) return session_faults(7);
+    if (!strcmp(mode, "session_foreign_cancel")) return session_faults(8);
+    if (!strcmp(mode, "session_close_failure")) return session_faults(9);
+    if (!strcmp(mode, "session_browse_failure")) return session_faults(10);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

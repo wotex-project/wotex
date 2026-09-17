@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.11
+  version: 1.1.12
   owner: wotex-opcua
   updated: 2026-09-17
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.10**. Implementation status: **partial**.
+Specification version: **1.1.12**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -25,7 +25,10 @@ retains the original deadline and cumulative bounds, and offers `next/2`,
 `release/2` and `all/3` against deterministic response fixtures and a secure
 same-stack C peer that forces one reference per wire page. That peer confirms
 BrowseNext, release and child-list collection in persistent and one-shot mode.
-Multiple live continuations and independent-peer BrowseNext/release remain open;
+Excess results and an expired original browse deadline now release the live
+server continuation on the same Session and keep it usable; a failed release
+still closes the Session. Multiple live continuations and independent-peer
+BrowseNext/release remain open;
 N03/N04 are not accepted. The native one-shot client now
 projects successful Read, Write and Call results into the recorded
 success shapes; error and full lifecycle compatibility remain open.
