@@ -63,7 +63,11 @@ subscription.
 
 Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
 `WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 350 passed (10 doctests,
-4 properties, 336 tests), 54 optional tests excluded and 95.4% coverage. With the peer environment described
+4 properties, 336 tests), 54 optional tests excluded and 95.7% coverage. The
+first gate run for this slice failed one existing `host_test.exs` case: the
+`late` probe ended with guardian status 128 (child signal) before readiness.
+Five separate runs of that file and the full gate run recorded here passed; the
+cause is not identified. With the peer environment described
 above, `mix test --include interop --seed 0 test/interop
 test/wotex/opcua/subscription_lifecycle_test.exs` passes 54/54 against the
 RelWithDebInfo and macOS ASan/UBSan builds (native executable digests unchanged).
