@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.1. Contract: accepted. Source status: the workspace
+Specification version: 0.9.2. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -42,8 +42,10 @@ artifacts fail the applicable gate. Do not silently switch to workspace mode,
 claim source builds as published adoption, or change repository visibility.
 
 `elixir bin/check_source_cohort.exs` is a read-only workspace drift guard over the
-explicit source/spec/test/fixture cohort. It requires all source owners and
-is required by `mix check` when `WOTEX_PATH_DEPS=1`; package-only checks do not
+explicit source/spec/test/fixture cohort. It requires all source owners. It is
+an explicit evidence-refresh check run beside the `WOTEX_LAB_INTEGRATION=1`
+lanes, not part of the everyday `mix check` gate, which exercises sibling
+checkouts without binding them to content digests; package-only checks do not
 require sibling checkouts. Dirty content is covered by content digests;
 the historical revision snapshot is not relabeled. A changed hash requires
 review and renewed evidence, not automatic readiness promotion.

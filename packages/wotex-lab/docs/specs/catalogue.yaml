@@ -254,7 +254,7 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
     compatibility_classification: The Nerves/MCP notebook now identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
-    version: "0.9.1"
+    version: "0.9.2"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
@@ -297,7 +297,7 @@ specifications:
       - "bin/check_nerves_source.exs"
       - "hosts/nerves/test/smoke_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
-    compatibility_classification: The rpi4 delivery lane now has a pinned Nerves source host and a host-tested inert Nx/loopback smoke whose evidence preserves the hardware non-claim. Prebuilt firmware, released-package resolution, integrity/license metadata and on-device boot/reconnect evidence remain independent obligations. The package API is unchanged; full distribution and stable-candidate decisions still apply independently of source coverage.
+    compatibility_classification: The rpi4 delivery lane now has a pinned Nerves source host and a host-tested inert Nx/loopback smoke whose evidence preserves the hardware non-claim. Prebuilt firmware, released-package resolution, integrity/license metadata and on-device boot/reconnect evidence remain independent obligations. Version 0.9.2 records that the unchanged source-cohort drift guard runs as explicit evidence refresh rather than inside the everyday gate. The package API is unchanged; full distribution and stable-candidate decisions still apply independently of source coverage.
   - id: WLB.09
     version: "0.3.0"
     path: docs/specs/WLB.09-formal-control-verification.md

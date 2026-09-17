@@ -7,7 +7,7 @@ defmodule Wotex.Lab.SourceCohortTest do
 
   @root Path.expand("../../..", __DIR__)
 
-  test "workspace check configuration requires the source guard only in workspace mode" do
+  test "the everyday check configuration leaves the source guard to explicit refresh" do
     previous = System.get_env("WOTEX_PATH_DEPS")
 
     on_exit(fn ->
@@ -16,13 +16,17 @@ defmodule Wotex.Lab.SourceCohortTest do
         else: System.delete_env("WOTEX_PATH_DEPS")
     end)
 
-    System.put_env("WOTEX_PATH_DEPS", "1")
-    {workspace, []} = Code.eval_file(Path.join(@root, ".check.exs"))
-    assert workspace[:tools][:source_cohort] == [command: "elixir bin/check_source_cohort.exs"]
+    for mode <- ["1", nil] do
+      if mode,
+        do: System.put_env("WOTEX_PATH_DEPS", mode),
+        else: System.delete_env("WOTEX_PATH_DEPS")
 
-    System.delete_env("WOTEX_PATH_DEPS")
-    {package, []} = Code.eval_file(Path.join(@root, ".check.exs"))
-    assert package[:tools][:source_cohort] == false
+      {config, []} = Code.eval_file(Path.join(@root, ".check.exs"))
+      assert Keyword.fetch!(config, :tools)[:ex_unit] == [command: "mix test"]
+      refute Keyword.has_key?(config[:tools], :source_cohort)
+    end
+
+    assert File.regular?(Path.join(@root, "bin/check_source_cohort.exs"))
   end
 
   test "the actual source guard refuses drift missing owners and symlinks without rewriting" do
