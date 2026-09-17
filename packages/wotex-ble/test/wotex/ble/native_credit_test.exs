@@ -3,6 +3,8 @@ defmodule Wotex.BLE.NativeCreditTest do
 
   use ExUnit.Case, async: false
 
+  alias Wotex.BLE.NativeLane
+
   @root Path.expand("../../..", __DIR__)
   @source Path.join(@root, "test/native/credit_test.cpp")
   @include Path.join(@root, "priv/bluez/native")
@@ -27,20 +29,21 @@ defmodule Wotex.BLE.NativeCreditTest do
     {output, status} =
       System.cmd(
         compiler,
-        [
-          "-std=c++17",
-          "-Wall",
-          "-Wextra",
-          "-Werror",
-          "-pedantic",
-          "-I",
-          @include,
-          @source,
-          "-o",
-          executable
-        ],
+        NativeLane.flags() ++
+          [
+            "-std=c++17",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-I",
+            @include,
+            @source,
+            "-o",
+            executable
+          ],
         stderr_to_stdout: true,
-        env: clean_environment()
+        env: NativeLane.environment(clean_environment())
       )
 
     assert status == 0, output
@@ -49,7 +52,7 @@ defmodule Wotex.BLE.NativeCreditTest do
 
   test "WBL-B02 exact credits, retired streams and 100000 subscription lifetimes", context do
     assert {"native credit invariants passed\n", 0} =
-             System.cmd(context.executable, [], env: clean_environment())
+             System.cmd(context.executable, [], env: NativeLane.environment(clean_environment()))
   end
 
   for fixture <- @fixtures, fixture["id"] in @implemented do
@@ -57,7 +60,7 @@ defmodule Wotex.BLE.NativeCreditTest do
     test "#{fixture["id"]} enforces native reservation and retirement accounting", context do
       {output, status} =
         System.cmd(context.executable, ["--trace", Jason.encode!(@fixture["input"])],
-          env: clean_environment()
+          env: NativeLane.environment(clean_environment())
         )
 
       assert status == 0

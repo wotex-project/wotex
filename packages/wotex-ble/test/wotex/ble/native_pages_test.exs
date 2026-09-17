@@ -5,7 +5,7 @@ defmodule Wotex.BLE.NativePagesTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.BLE.NativeCommand
+  alias Wotex.BLE.{NativeCommand, NativeLane}
 
   @root Path.expand("../../..", __DIR__)
   @fixtures @root
@@ -28,7 +28,13 @@ defmodule Wotex.BLE.NativePagesTest do
     on_exit(fn -> File.rm_rf!(directory) end)
     guardian = Path.join(directory, "command")
     executable = Path.join(directory, "pages-test")
-    options = [cd: @root, timeout: 15_000, limit: 1_048_576, env: clean_environment()]
+
+    options = [
+      cd: @root,
+      timeout: NativeLane.timeout(15_000),
+      limit: 1_048_576,
+      env: NativeLane.environment(clean_environment())
+    ]
 
     assert {:ok, "", 0} =
              NativeCommand.bootstrap(
@@ -38,18 +44,20 @@ defmodule Wotex.BLE.NativePagesTest do
                options
              )
 
-    arguments = [
-      "-std=c++17",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-pedantic",
-      "-I",
-      Path.join(@root, "priv/bluez/native"),
-      Path.join(@root, "test/native/pages_test.cpp"),
-      "-o",
-      executable
-    ]
+    arguments =
+      NativeLane.flags() ++
+        [
+          "-std=c++17",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-pedantic",
+          "-I",
+          Path.join(@root, "priv/bluez/native"),
+          Path.join(@root, "test/native/pages_test.cpp"),
+          "-o",
+          executable
+        ]
 
     assert {:ok, "", 0} = NativeCommand.run(guardian, compiler, arguments, options)
     {:ok, guardian: guardian, executable: executable, options: options}

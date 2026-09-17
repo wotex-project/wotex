@@ -1,0 +1,105 @@
+{
+  "schema": "wotex.ble.native-sanitizer-evidence@1",
+  "specification": "WBL.13@1.0.19",
+  "scope": "Native component, private-bus, SDK-host-process and custody executables compiled by ExUnit in the ordinary, ASan/UBSan and LeakSanitizer lanes",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "test/support/native_lane.ex": "a785d64ef0f1c667307ad629dc8d52c0e2cd01b7c982e5925bc121a89831ef3a",
+      "test/wotex/ble/native_frame_test.exs": "8bbac2af4a085de79e0a55e92897760710438fbcdb4499781a6db564702b9f00",
+      "test/wotex/ble/native_credit_test.exs": "603d61477072b12b4a153e116b24a9a9ad57d213230198e87424887634736eba",
+      "test/wotex/ble/native_bytes_test.exs": "540f4e65a494a2b8a25147e8ea157057e1d3e5a4da15bea3cd9bc8d83c90b714",
+      "test/wotex/ble/native_output_test.exs": "95978f5a27dab9ec63899686f82330cf044e1e72785352d62fa04124623f04c5",
+      "test/wotex/ble/native_pages_test.exs": "8a35d9fd26d68194935615f0391024815e2c32e7c7b1468fed34d225c4eca60d",
+      "test/wotex/ble/native_reports_test.exs": "4a0cb56702f0189f040f2e02c41df0461f5d89003942c295b2c3393402e3392e",
+      "test/wotex/ble/native_custody_test.exs": "27fe59f2ae9c1d47f1d814a429da7aa1e0f8578d6fb3b168aaa2153468dba716",
+      "test/wotex/ble/native_guardian_startup_test.exs": "dc940d32079ab43e7a747cf85c6a5b7a7574207cf089a7f4ccce7f10412a923b",
+      "test/wotex/ble/native_command_test.exs": "72efaa7e92d5820c4f6b84ad973648e950078e509a7c496d6cb6f829649dff14",
+      "test/interop/native_bus_test.exs": "936b34e6b3bdff8643ad1470addbaf622856e266435c9fc2fb4e905eed3fa704",
+      "test/native/frame_test.cpp": "35fb1ecef1abaab35301c73afab2d800cfdd16dd7c8edd3cdc94e749eccd1256",
+      "test/native/credit_test.cpp": "7a648e845ae7d771df299a21b2a72b28cc4b4f015535d76c31aa78acdf0d4393",
+      "test/native/bytes_test.cpp": "4c419413a337b6fe770e5232024847d936144902d98b4c8c54a1192f391f1d5f",
+      "test/native/output_test.cpp": "6a3c6d31dc37d79238a9fbffe0af6d5936dcea2ea00bac0bb79c499bd80cf20c",
+      "test/native/pages_test.cpp": "506f0ad73421b3e288246ab47cfe15b7ecede3b8e617ecb7d312c5ec6051ad0a",
+      "test/native/reports_test.cpp": "6a95d8740b6efdce723dd8fcf7d8fa1bcae6096a340794c7ec7ec121b8fe51e2",
+      "test/native/bus_test.cpp": "b3ef6f204e54a0e52cd348237573071655590ddea7eb54c0a85ce9bb17dcf8c0",
+      "test/native/custody_check.c": "a858e4825a54704d46e8d777340d8010ab7c4c529d9d5975f85f00e1664cc9ac",
+      "test/native/guardian_startup_check.c": "175e318e098a7b3760b432e3e35457079d97bf9841d696ffc5d05ccae3b65b46",
+      "priv/bluez/native/main.cpp": "761b5bfe8e121ceb2d04b8deec0fc99f0bbd702e33e696591d63c2078c81f1d2",
+      "priv/bluez/native/host.hpp": "1df50e947c248fcb77068978aa94b5ecd3c3828d7adcaee39308fb7c87548fbd",
+      "priv/bluez/native/reports.hpp": "4c21103bd60edc43341b4dd3c8c39e1b5ada67af5a6d1113624f8cf66d2341d2",
+      "priv/bluez/native/report_queue.hpp": "053d7f5ad8463c04012dd444e6eb61012946821fee030ade7c3c03138a9f16c8",
+      "priv/bluez/native/custody.c": "d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2",
+      "priv/bluez/native/build_command.c": "2096f9796b249f1d9bcb463b282f4471b99b48c1041feb8ec2cbac79c5468174"
+    }
+  },
+  "requirements": [
+    "WBL-B02",
+    "WBL-B03",
+    "WBL-B04",
+    "WBL-C07",
+    "WBL-G10"
+  ],
+  "platform": "Linux arm64 (Docker Desktop), image sha256:00d701682df01b444c4b7c349d0e1c201ec8faad93f97443c51c8bc0684f802a from test/native/Dockerfile",
+  "runtime": "Elixir 1.18.4 / OTP 27.3.4.15",
+  "compiler": "g++-12 12.2.0-14+deb12u1; libasan8, libubsan1 and liblsan0 12.2.0-14+deb12u1",
+  "libdbus": "1.16.2 from the mix wotex.native.build workspace recorded in native-build-v1.json",
+  "command": "WOTEX_PATH_DEPS=1 MIX_ENV=test [WOTEX_BLE_NATIVE_LANE=sanitizers|leak_audit] mix test --include interop --seed 0 FILES, with WOTEX_BLE_DBUS_SOURCE and WOTEX_BLE_DBUS_BUILD set to that workspace",
+  "files": [
+    "test/wotex/ble/native_frame_test.exs",
+    "test/wotex/ble/native_credit_test.exs",
+    "test/wotex/ble/native_bytes_test.exs",
+    "test/wotex/ble/native_output_test.exs",
+    "test/wotex/ble/native_pages_test.exs",
+    "test/wotex/ble/native_reports_test.exs",
+    "test/wotex/ble/native_custody_test.exs",
+    "test/wotex/ble/native_guardian_startup_test.exs",
+    "test/wotex/ble/native_command_test.exs",
+    "test/interop/native_bus_test.exs"
+  ],
+  "sanitizer_flags": [
+    "-O1",
+    "-g",
+    "-fno-omit-frame-pointer",
+    "-fsanitize=address,undefined",
+    "-fno-sanitize-recover=all"
+  ],
+  "lanes": [
+    {
+      "lane": "ordinary",
+      "result": "passed",
+      "tests": 96,
+      "failures": 0,
+      "seconds": 49.4,
+      "log_sha256": "9609cf08972128446c76df3dc0f328650990436da067b86cde205a1fde43246f"
+    },
+    {
+      "lane": "sanitizers",
+      "runtime_options": "ASAN_OPTIONS=detect_leaks=0:abort_on_error=1; UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1",
+      "result": "passed",
+      "tests": 96,
+      "failures": 0,
+      "seconds": 170.8,
+      "log_sha256": "88caccd6c92450b601d935da32acb18d5c09715eee025936b8c4b7947df6cde6"
+    },
+    {
+      "lane": "leak_audit",
+      "runtime_options": "ASAN_OPTIONS=detect_leaks=1:abort_on_error=1; UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1; custody_check --leak-audit",
+      "result": "passed",
+      "tests": 96,
+      "failures": 0,
+      "seconds": 316.1,
+      "log_sha256": "ff0ba0328347634132cdd1ad7dee7104e1995bab209ce58d162542a50d97bd47",
+      "deviation": "The 1,000-launch guardian startup case runs 32 launches because every instrumented exit is leak-scanned"
+    }
+  ],
+  "defects_found": [
+    "Linux GCC could not locate ld for guardian startup and command tests that cleared PATH during compilation; those compilations now keep PATH only"
+  ],
+  "unaccepted": [
+    "Linux x86_64 sanitizer lanes",
+    "Sanitizer builds of the BEAM-launched startup and process-flow executables, whose production Port clears the environment",
+    "Elixir 1.20.2 / OTP 29.0.4 lane execution",
+    "BlueZ, virtual-controller and GATT interoperability"
+  ]
+}

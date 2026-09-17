@@ -164,6 +164,23 @@ The three cases pass repeatedly on macOS arm64 and on the Linux arm64 lane. The
 callback source replaces BlueZ and D-Bus; SDK notification delivery and
 sanitizer execution remain separate evidence.
 
+## Native sanitizer lanes
+
+`WOTEX_BLE_NATIVE_LANE` selects the WBL-G10 lane for every component executable
+that ExUnit compiles in the frame, credit, byte, output, page, report, custody,
+guardian-startup, command and private-bus tests, including the SDK host process
+compiled by the bus fixture. The sanitizer lane compiles them with ASan/UBSan and
+no recovery and disables exit-time leak scanning for strict timing; the
+leak-audit lane enables LeakSanitizer and the custody driver's named
+`--leak-audit` allowance. Harness waits scale; library deadlines and custody
+assertions do not. The [sanitizer receipt](native-sanitizer-v1.json) records
+all three lanes on Linux arm64 with GCC 12.2.0: 96 tests pass in each. The
+leak-audit lane runs the 1,000-launch guardian startup case with 32 launches.
+Running the default guardian startup and command tests on Linux exposed cleared
+PATH values that stopped GCC from finding `ld`; compilation now keeps PATH.
+The BEAM-launched startup and process-flow executables and x86_64 sanitizer
+lanes remain unaccepted.
+
 ## Native report reservations
 
 `test/wotex/ble/native_credit_test.exs` binds B-F07 through B-F10, B-F14 and

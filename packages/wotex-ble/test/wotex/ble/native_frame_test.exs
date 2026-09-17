@@ -3,6 +3,8 @@ defmodule Wotex.BLE.NativeFrameTest do
 
   use ExUnit.Case, async: false
 
+  alias Wotex.BLE.NativeLane
+
   @root Path.expand("../../..", __DIR__)
   @source Path.join(@root, "test/native/frame_test.cpp")
   @include Path.join(@root, "priv/bluez/native")
@@ -26,20 +28,21 @@ defmodule Wotex.BLE.NativeFrameTest do
     {output, status} =
       System.cmd(
         compiler,
-        [
-          "-std=c++17",
-          "-Wall",
-          "-Wextra",
-          "-Werror",
-          "-pedantic",
-          "-I",
-          @include,
-          @source,
-          "-o",
-          executable
-        ],
+        NativeLane.flags() ++
+          [
+            "-std=c++17",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic",
+            "-I",
+            @include,
+            @source,
+            "-o",
+            executable
+          ],
         stderr_to_stdout: true,
-        env: clean_environment()
+        env: NativeLane.environment(clean_environment())
       )
 
     assert status == 0, output
@@ -59,7 +62,7 @@ defmodule Wotex.BLE.NativeFrameTest do
 
   test "WBL-B02 bounds, malformed input, split frames and monotonic ID churn", context do
     assert {"native frame invariants passed\n", 0} =
-             System.cmd(context.executable, [], env: clean_environment())
+             System.cmd(context.executable, [], env: NativeLane.environment(clean_environment()))
   end
 
   for fixture <- @fixtures,
@@ -68,7 +71,7 @@ defmodule Wotex.BLE.NativeFrameTest do
     test "#{fixture["id"]} validates the production native request parser", context do
       {output, status} =
         System.cmd(context.executable, ["--parse-request", @fixture["input"]["line_utf8"]],
-          env: clean_environment()
+          env: NativeLane.environment(clean_environment())
         )
 
       assert status == 0

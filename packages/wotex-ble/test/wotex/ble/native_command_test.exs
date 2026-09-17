@@ -20,7 +20,7 @@ defmodule Wotex.BLE.NativeCommandTest do
 
     File.mkdir!(directory)
     on_exit(fn -> File.rm_rf!(directory) end)
-    options = [cd: directory, timeout: 15_000, env: empty_environment()]
+    options = [cd: directory, timeout: 15_000, env: compiler_environment()]
     native = Path.join(@root, "test/interop/native")
     command = Path.join(directory, "command")
 
@@ -113,6 +113,14 @@ defmodule Wotex.BLE.NativeCommandTest do
 
     assert System.monotonic_time(:millisecond) - started < 1000
     refute File.exists?(marker)
+  end
+
+  # Compilers resolve their linker through PATH; the guardian cases clear it again.
+  defp compiler_environment do
+    Enum.map(System.get_env(), fn
+      {"PATH", value} -> {"PATH", value}
+      {name, _} -> {name, nil}
+    end)
   end
 
   defp empty_environment, do: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)

@@ -5,7 +5,7 @@ defmodule Wotex.BLE.NativeCustodyTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.BLE.NativeCommand
+  alias Wotex.BLE.{NativeCommand, NativeLane}
 
   @root Path.expand("../../..", __DIR__)
   @fixtures @root
@@ -29,7 +29,14 @@ defmodule Wotex.BLE.NativeCustodyTest do
     command = Path.join(directory, "command")
     guardian = Path.join(directory, "custody")
     executable = Path.join(directory, "custody-check")
-    options = [cd: @root, timeout: 15_000, limit: 1_048_576, env: clean_environment()]
+
+    options = [
+      cd: @root,
+      timeout: NativeLane.timeout(15_000),
+      limit: 1_048_576,
+      env: NativeLane.environment(clean_environment())
+    ]
+
     source = Path.join(@root, "priv/bluez/native/custody.c")
     assert Base.encode16(:crypto.hash(:sha256, File.read!(source)), case: :lower) == @source_digest
 
@@ -45,7 +52,9 @@ defmodule Wotex.BLE.NativeCustodyTest do
           {source, guardian},
           {Path.join(@root, "test/native/custody_check.c"), executable}
         ] do
-      arguments = ["-std=c11", "-Wall", "-Wextra", "-Werror", input, "-o", output]
+      arguments =
+        NativeLane.flags() ++ ["-std=c11", "-Wall", "-Wextra", "-Werror", input, "-o", output]
+
       assert {:ok, "", 0} = NativeCommand.run(command, compiler, arguments, options)
     end
 
@@ -54,12 +63,12 @@ defmodule Wotex.BLE.NativeCustodyTest do
      command: command,
      guardian: guardian,
      executable: executable,
-     options: Keyword.put(options, :env, cleared_environment())}
+     options: Keyword.put(options, :env, NativeLane.environment(cleared_environment()))}
   end
 
   for fixture <- @fixtures do
     @fixture fixture
-    @tag timeout: 30_000
+    @tag timeout: NativeLane.timeout(30_000)
     test "#{fixture["id"]} actual opaque-stream custody matches the executable fixture", context do
       fixture = @fixture
       workspace = Path.join(context.directory, fixture["id"])
@@ -69,7 +78,7 @@ defmodule Wotex.BLE.NativeCustodyTest do
                NativeCommand.run(
                  context.command,
                  context.executable,
-                 [context.guardian, fixture["id"], workspace],
+                 [context.guardian, fixture["id"], workspace] ++ leak_audit(),
                  context.options
                )
 
@@ -87,9 +96,12 @@ defmodule Wotex.BLE.NativeCustodyTest do
         %{"operator" => "positive"} -> assert result["sent_bytes"] > fixture["input_capacity"]
       end
 
+      # Only the LeakSanitizer lane grants the guardian's post-main scan its
+      # named harness allowance; SDK reap keeps the production allowance.
+      instrumentation = if NativeLane.leak_audit?(), do: 1000, else: 0
       assert result["cleanup_ms"] in 0..fixture["cleanup_allowance_ms"]
-      assert result["guardian_exit_ms"] in 0..fixture["cleanup_allowance_ms"]
-      assert result["instrumented_exit_allowance_ms"] == 0
+      assert result["guardian_exit_ms"] in 0..(fixture["cleanup_allowance_ms"] + instrumentation)
+      assert result["instrumented_exit_allowance_ms"] == instrumentation
     end
   end
 
@@ -99,6 +111,8 @@ defmodule Wotex.BLE.NativeCustodyTest do
       {name, _} -> {name, nil}
     end)
   end
+
+  defp leak_audit, do: if(NativeLane.leak_audit?(), do: ["--leak-audit"], else: [])
 
   defp cleared_environment, do: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
 end

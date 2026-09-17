@@ -5,7 +5,7 @@ defmodule Wotex.BLE.NativeBusTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.BLE.NativeCommand
+  alias Wotex.BLE.{NativeCommand, NativeLane}
 
   @moduletag :interop
   @root Path.expand("../..", __DIR__)
@@ -35,7 +35,13 @@ defmodule Wotex.BLE.NativeBusTest do
     config = Path.join(directory, "bus.conf")
     daemon = artifact!(build, ["bin/dbus-daemon", "bus/dbus-daemon"])
     library = library!(build)
-    options = [cd: @root, timeout: 15_000, limit: 1_048_576, env: clean_environment()]
+
+    options = [
+      cd: @root,
+      timeout: NativeLane.timeout(15_000),
+      limit: 1_048_576,
+      env: NativeLane.environment(clean_environment())
+    ]
 
     assert {:ok, output, 0} =
              NativeCommand.bootstrap(
@@ -47,24 +53,26 @@ defmodule Wotex.BLE.NativeBusTest do
 
     assert output == ""
 
-    arguments = [
-      "-std=c++17",
-      "-Wall",
-      "-Wextra",
-      "-Werror",
-      "-pedantic",
-      "-I",
-      Path.join(@root, "priv/bluez/native"),
-      "-I",
-      source,
-      "-I",
-      build,
-      Path.join(@root, "test/native/bus_test.cpp"),
-      library,
-      "-Wl,-rpath,#{Path.dirname(library)}",
-      "-o",
-      executable
-    ]
+    arguments =
+      NativeLane.flags() ++
+        [
+          "-std=c++17",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-pedantic",
+          "-I",
+          Path.join(@root, "priv/bluez/native"),
+          "-I",
+          source,
+          "-I",
+          build,
+          Path.join(@root, "test/native/bus_test.cpp"),
+          library,
+          "-Wl,-rpath,#{Path.dirname(library)}",
+          "-o",
+          executable
+        ]
 
     assert {:ok, output, 0} = NativeCommand.run(guardian, compiler, arguments, options)
     assert output == ""

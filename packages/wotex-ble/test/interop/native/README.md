@@ -37,3 +37,20 @@ This component lane does not establish native GATT.
 containing a completed native build manifest. It admits the built host and
 runtime guardian through their manifest digests and drives the actual process
 pair with the production guardian arguments. It needs no D-Bus daemon.
+
+`WOTEX_BLE_NATIVE_LANE` selects the WBL-G10 lane for component executables
+compiled by `native_frame_test.exs`, `native_credit_test.exs`,
+`native_bytes_test.exs`, `native_output_test.exs`, `native_pages_test.exs`,
+`native_reports_test.exs`, `native_custody_test.exs`,
+`native_guardian_startup_test.exs`, `native_command_test.exs` and
+`native_bus_test.exs`. Unset is the ordinary lane. `sanitizers` adds
+`-O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined
+-fno-sanitize-recover=all` and runs with exit-time leak scanning disabled for
+the strict timing lane. `leak_audit` is Linux-only, enables LeakSanitizer and
+passes `--leak-audit` to the custody driver for its named guardian allowance.
+Sanitizer lanes scale harness waits by 8 or 20; library deadlines and the
+custody assertions are unchanged. The leak-audit lane runs the 1,000-launch
+guardian startup case with 32 launches because every instrumented exit is
+leak-scanned; the ordinary and sanitizer lanes run all 1,000. Sanitizer output changes a compared result or
+exit status and therefore fails the test.
+
