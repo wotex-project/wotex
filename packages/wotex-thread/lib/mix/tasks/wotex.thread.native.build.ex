@@ -14,15 +14,15 @@ defmodule Mix.Tasks.Wotex.Thread.Native.Build do
   alias Wotex.Thread.Native.{Build, Workspace}
 
   @doc "Runs the explicit native build and reports its verified executable."
-  @spec run([String.t()]) :: :ok
+  @spec run([String.t()], Build.environment()) :: :ok
   @impl Mix.Task
-  def run(args) do
+  def run(args, environment \\ Build.environment()) do
     unless Mix.Project.config()[:app] == :wotex_thread,
       do: Mix.raise("Thread native build requires its root project")
 
     case Workspace.arguments(args) do
       {:ok, workspace, sanitizers} ->
-        case Build.run(workspace, sanitizers) do
+        case Build.run(workspace, sanitizers, environment) do
           {:ok, result} ->
             Mix.shell().info(
               "Native build #{if(result.reused, do: "verified", else: "completed")}: #{workspace}"

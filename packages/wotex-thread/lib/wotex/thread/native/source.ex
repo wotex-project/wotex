@@ -156,6 +156,37 @@ defmodule Wotex.Thread.Native.Source do
     ])
   end
 
+  @doc "Finds one executable in an explicit search path, or through the process PATH."
+  @spec executable(String.t(), String.t() | nil) :: Path.t() | nil
+  def executable(name, nil) when is_binary(name), do: System.find_executable(name)
+
+  def executable(name, search_path) when is_binary(name) and is_binary(search_path) do
+    search_path
+    |> String.split(":", trim: true)
+    |> Enum.find_value(fn directory ->
+      path = Path.join(directory, name)
+
+      case File.stat(path) do
+        {:ok, %File.Stat{type: :regular, mode: mode}} ->
+          if Bitwise.band(mode, 0o111) != 0, do: path
+
+        _ ->
+          nil
+      end
+    end)
+  end
+
+  @doc "Returns the SHA-256 digest of a loaded module's object code."
+  @spec module_digest(module()) :: {:ok, String.t()} | {:error, atom()}
+  def module_digest(module) when is_atom(module) do
+    with {:module, ^module} <- Code.ensure_loaded(module),
+         {^module, object, _} <- :code.get_object_code(module) do
+      {:ok, Base.encode16(:crypto.hash(:sha256, object), case: :lower)}
+    else
+      _ -> {:error, :invalid_source_module}
+    end
+  end
+
   defp hash_file(file, hash) do
     case IO.binread(file, 1_048_576) do
       :eof -> hash

@@ -63,40 +63,61 @@ defmodule Wotex.Thread.Software.Build do
     }
   end
 
-  @doc "Builds an empty workspace, or verifies a completed workspace without rebuilding."
-  @spec run(term()) :: {:ok, Workspace.result()} | {:error, term()}
-  def run(workspace) when is_binary(workspace) do
-    native = Application.app_dir(:wotex_thread, "priv/openthread")
-    tests = Path.join(@project_root, "test/native")
+  @typedoc """
+  The explicit outside world of one fixture build.
 
-    with :ok <- platform(),
+  It extends the native build environment with `tests`, the first-party
+  `test/native` sources that only a source checkout contains.
+  """
+  @type environment :: %{
+          required(:platform) => {atom(), atom()},
+          required(:native) => Path.t(),
+          required(:search_path) => String.t() | nil,
+          required(:fetch) => (String.t(), Path.t(), String.t() -> :ok | {:error, atom()}),
+          required(:tests) => Path.t()
+        }
+
+  @doc "Returns the production fixture build environment."
+  @spec environment() :: environment()
+  def environment,
+    do: Map.put(Build.environment(), :tests, Path.join(@project_root, "test/native"))
+
+  @doc "Builds an empty workspace, or verifies a completed workspace without rebuilding."
+  @spec run(term(), environment()) :: {:ok, Workspace.result()} | {:error, term()}
+  def run(workspace, environment \\ environment())
+
+  def run(workspace, environment) when is_binary(workspace) and is_map(environment) do
+    native = environment.native
+    tests = environment.tests
+
+    with :ok <- platform(environment),
          {:ok, ^workspace} <- arguments(["--workspace", workspace]),
          true <- File.dir?(tests) || {:error, :software_sources_unavailable},
-         {:ok, tools} <- tools(),
+         {:ok, tools} <- tools(environment),
          {:ok, native_files} <- Source.file_hashes(native),
          {:ok, test_files} <- Source.file_hashes(tests),
          {:ok, modules} <- build_modules() do
       identity = identity(workspace, native, tests, tools, native_files, test_files, modules)
-      builder = fn -> build(workspace, native, tests, tools) end
+      builder = fn -> build(workspace, native, tests, tools, environment) end
 
       with {:ok, result} <- Workspace.run(workspace, identity, artifacts(), builder, :software),
-           {:ok, _} <- Build.run(Path.join(workspace, "native"), false),
-           {:ok, _} <- Build.run(Path.join(workspace, "native-sanitized"), true) do
+           {:ok, _} <- Build.run(Path.join(workspace, "native"), false, environment),
+           {:ok, _} <- Build.run(Path.join(workspace, "native-sanitized"), true, environment) do
         {:ok, result}
       end
     end
   end
 
-  def run(_), do: {:error, :invalid_software_build_arguments}
+  def run(_, _), do: {:error, :invalid_software_build_arguments}
 
-  defp platform do
-    if :os.type() == {:unix, :linux}, do: :ok, else: {:error, :linux_required}
+  defp platform(%{platform: platform}) do
+    if platform == {:unix, :linux}, do: :ok, else: {:error, :linux_required}
   end
 
-  defp tools do
+  defp tools(environment) do
     Enum.reduce_while(@tools, {:ok, %{}}, fn name, {:ok, found} ->
       # Compiler names are commonly links; the recorded digest is of the selected target.
-      with path when is_binary(path) <- System.find_executable(name),
+      with path when is_binary(path) <- Source.executable(name, environment.search_path),
            {:ok, hash} <- tool_digest(path) do
         {:cont, {:ok, Map.put(found, name, %{path: path, sha256: hash})}}
       else
@@ -114,11 +135,8 @@ defmodule Wotex.Thread.Software.Build do
 
   defp build_modules do
     Enum.reduce_while(@build_modules, {:ok, %{}}, fn module, {:ok, hashes} ->
-      with {:module, ^module} <- Code.ensure_loaded(module),
-           beam when is_list(beam) <- :code.which(module),
-           {:ok, hash} <- Source.digest(List.to_string(beam)) do
-        {:cont, {:ok, Map.put(hashes, Atom.to_string(module), hash)}}
-      else
+      case Source.module_digest(module) do
+        {:ok, hash} -> {:cont, {:ok, Map.put(hashes, Atom.to_string(module), hash)}}
         _ -> {:halt, {:error, :missing_software_build_module}}
       end
     end)
@@ -149,7 +167,7 @@ defmodule Wotex.Thread.Software.Build do
       Enum.map(@log_names, &"logs/#{&1}.log")
   end
 
-  defp build(workspace, native, tests, tools) do
+  defp build(workspace, native, tests, tools, environment) do
     guardian = Path.join(workspace, "bin/build-command")
 
     with :ok <- directories(workspace),
@@ -163,8 +181,8 @@ defmodule Wotex.Thread.Software.Build do
          :ok <-
            File.write(Path.join(workspace, "logs/bootstrap.log"), bootstrap.output, [:exclusive]),
          {:ok, versions} <- versions(guardian, workspace, tools),
-         {:ok, _} <- Build.run(Path.join(workspace, "native"), false),
-         {:ok, _} <- Build.run(Path.join(workspace, "native-sanitized"), true),
+         {:ok, _} <- Build.run(Path.join(workspace, "native"), false, environment),
+         {:ok, _} <- Build.run(Path.join(workspace, "native-sanitized"), true, environment),
          :ok <- rcp(guardian, workspace, tools),
          :ok <- tests(guardian, workspace, native, tests, tools),
          :ok <- flow_host(guardian, workspace, native, tests, tools),

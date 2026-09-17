@@ -45,17 +45,47 @@ defmodule Wotex.Thread.Software.Run do
     end
   end
 
+  @typedoc """
+  The explicit outside world of one software run.
+
+  `platform` is the running operating system, `project_root` the checkout whose
+  suite and inventory are used, `build` the fixture-workspace verification,
+  `mix` the suite runner and `proc` the process table consulted for survivors.
+  """
+  @type environment :: %{
+          platform: {atom(), atom()},
+          project_root: Path.t(),
+          build: (Path.t() -> {:ok, map()} | {:error, term()}),
+          mix: Path.t() | nil,
+          proc: Path.t()
+        }
+
+  @doc "Returns the production software run environment."
+  @spec environment() :: environment()
+  def environment do
+    %{
+      platform: :os.type(),
+      project_root: @project_root,
+      build: &Build.run/1,
+      mix: nil,
+      proc: "/proc"
+    }
+  end
+
   @doc "Runs all software lanes and writes `software-run/result.json`."
-  @spec run(term()) :: {:ok, %{result: map(), path: Path.t()}} | {:error, term()}
-  def run(workspace) when is_binary(workspace) do
-    with :ok <- platform(),
+  @spec run(term(), environment()) ::
+          {:ok, %{result: map(), path: Path.t()}} | {:error, term()}
+  def run(workspace, environment \\ environment())
+
+  def run(workspace, environment) when is_binary(workspace) and is_map(environment) do
+    with :ok <- platform(environment),
          {:ok, ^workspace} <- arguments(["--workspace", workspace]),
          :ok <- built(workspace),
-         {:ok, %{reused: true, manifest: manifest}} <- Build.run(workspace),
-         {:ok, inventory} <- inventory(),
-         {:ok, mix} <- executable("mix"),
+         {:ok, %{reused: true, manifest: manifest}} <- environment.build.(workspace),
+         {:ok, inventory} <- inventory(environment),
+         {:ok, mix} <- executable(environment),
          {:ok, output} <- output_directory(workspace) do
-      result = execute(workspace, output, manifest, inventory, mix)
+      result = execute(workspace, output, manifest, inventory, mix, environment)
       path = Path.join(output, "result.json")
       :ok = File.write(path, Jason.encode_to_iodata!(result, pretty: true), [:exclusive, :sync])
 
@@ -65,7 +95,7 @@ defmodule Wotex.Thread.Software.Run do
     end
   end
 
-  def run(_), do: {:error, :invalid_software_run_arguments}
+  def run(_, _), do: {:error, :invalid_software_run_arguments}
 
   defp built(workspace) do
     if File.regular?(Path.join(workspace, "software-manifest.json")),
@@ -126,12 +156,13 @@ defmodule Wotex.Thread.Software.Run do
     end
   end
 
-  defp platform do
-    if :os.type() == {:unix, :linux}, do: :ok, else: {:error, :linux_required}
+  defp platform(%{platform: platform}) do
+    if platform == {:unix, :linux}, do: :ok, else: {:error, :linux_required}
   end
 
-  defp inventory do
-    with {:ok, bytes} <- File.read(Path.join(@project_root, "test/software/acceptance.json")),
+  defp inventory(environment) do
+    with {:ok, bytes} <-
+           File.read(Path.join(environment.project_root, "test/software/acceptance.json")),
          {:ok,
           %{
             "format" => "wotex.thread.software-acceptance",
@@ -156,10 +187,10 @@ defmodule Wotex.Thread.Software.Run do
 
   defp lane?(_), do: false
 
-  defp executable(name) do
-    case System.find_executable(name) do
+  defp executable(environment) do
+    case environment.mix || System.find_executable("mix") do
       path when is_binary(path) -> {:ok, path}
-      _ -> {:error, {:missing_software_tool, name}}
+      _ -> {:error, {:missing_software_tool, "mix"}}
     end
   end
 
@@ -173,9 +204,9 @@ defmodule Wotex.Thread.Software.Run do
     end
   end
 
-  defp execute(workspace, output, manifest, inventory, mix) do
+  defp execute(workspace, output, manifest, inventory, mix, environment) do
     started = System.monotonic_time(:millisecond)
-    source = source_identity()
+    source = source_identity(environment)
     guardian = Path.join(workspace, "bin/build-command")
     executables = Build.executables(workspace)
     native = Enum.map(executables.native_tests, &native_test(guardian, output, &1))
@@ -186,11 +217,20 @@ defmodule Wotex.Thread.Software.Run do
             {"sanitized", executables.sanitized_host,
              ["test" | inventory["sanitized"]["paths"]] ++ ~w(--seed 0), @sanitizer_options}
           ] do
-        suite(guardian, output, executables, mix, lane, host, arguments, extra, inventory[lane])
+        suite(
+          %{
+            guardian: guardian,
+            output: output,
+            executables: executables,
+            mix: mix,
+            environment: environment
+          },
+          %{lane: lane, host: host, arguments: arguments, extra: extra, inventory: inventory[lane]}
+        )
       end
 
-    cleanup = cleanup(workspace)
-    source_after = source_identity()
+    cleanup = cleanup(workspace, environment)
+    source_after = source_identity(environment)
 
     passed =
       source == source_after and
@@ -245,7 +285,17 @@ defmodule Wotex.Thread.Software.Run do
     }
   end
 
-  defp suite(guardian, output, executables, mix, lane, host, arguments, extra, inventory) do
+  defp suite(context, %{lane: lane, host: host, arguments: arguments, extra: extra} = lane_spec) do
+    %{
+      guardian: guardian,
+      output: output,
+      executables: executables,
+      mix: mix,
+      environment: environment
+    } =
+      context
+
+    inventory = lane_spec.inventory
     cases = Path.join(output, "#{lane}-cases.jsonl")
     tmp = Path.join(output, "tmp-#{lane}")
     :ok = File.mkdir(tmp)
@@ -276,7 +326,7 @@ defmodule Wotex.Thread.Software.Run do
     step = %{
       id: :software_suite,
       executable: mix,
-      cwd: @project_root,
+      cwd: environment.project_root,
       args: arguments,
       env: env,
       timeout_ms: @suite_timeout,
@@ -304,13 +354,14 @@ defmodule Wotex.Thread.Software.Run do
   defp command_result({:error, _, %{output: bytes, exit_status: status}}), do: {status, bytes}
 
   # Any process still executing a workspace binary after the lanes is an owned survivor.
-  defp cleanup(workspace) do
+  defp cleanup(workspace, environment) do
     prefix = workspace <> "/"
+    proc = environment.proc
 
     survivors =
-      for entry <- File.ls!("/proc"),
+      for entry <- File.ls!(proc),
           entry =~ ~r/\A\d+\z/,
-          {:ok, target} <- [File.read_link("/proc/#{entry}/exe")],
+          {:ok, target} <- [File.read_link(Path.join([proc, entry, "exe"]))],
           String.starts_with?(target, prefix),
           do: String.to_integer(entry)
 
@@ -327,14 +378,16 @@ defmodule Wotex.Thread.Software.Run do
 
   defp cleared_environment, do: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
 
-  defp source_identity do
+  defp source_identity(environment) do
+    root = environment.project_root
+
     trees =
       Map.new(~w(lib priv/openthread test docs/specs/fixtures), fn path ->
-        {:ok, hash} = Source.tree_digest(Path.join(@project_root, path))
+        {:ok, hash} = Source.tree_digest(Path.join(root, path))
         {path, hash}
       end)
 
-    Map.merge(trees, Map.new(~w(mix.exs mix.lock), &{&1, digest(Path.join(@project_root, &1))}))
+    Map.merge(trees, Map.new(~w(mix.exs mix.lock), &{&1, digest(Path.join(root, &1))}))
   end
 
   defp toolchain do

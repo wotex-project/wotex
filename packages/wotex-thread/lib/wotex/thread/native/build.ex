@@ -24,36 +24,64 @@ defmodule Wotex.Thread.Native.Build do
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx
     version_readelf target configure compile elf needed)
 
+  @typedoc """
+  The explicit outside world of one build.
+
+  `platform` is the running operating system, `native` the pinned
+  `priv/openthread` sources, `search_path` the directories searched for build
+  tools, and `fetch` the pinned-source transfer. Production callers use the
+  defaults; a verification build supplies its own recorded tools and sources
+  instead of reaching the network.
+  """
+  @type environment :: %{
+          platform: {atom(), atom()},
+          native: Path.t(),
+          search_path: String.t() | nil,
+          fetch: (String.t(), Path.t(), String.t() -> :ok | {:error, atom()})
+        }
+
+  @doc "Returns the production build environment."
+  @spec environment() :: environment()
+  def environment do
+    %{
+      platform: :os.type(),
+      native: Application.app_dir(:wotex_thread, "priv/openthread"),
+      search_path: nil,
+      fetch: &Source.fetch/3
+    }
+  end
+
   @doc "Builds or verifies the pinned host; Linux and required tools are checked before workspace mutation."
-  @spec run(Path.t(), boolean()) :: {:ok, Workspace.result()} | {:error, term()}
-  def run(workspace, sanitizers \\ false)
+  @spec run(Path.t(), boolean(), environment()) :: {:ok, Workspace.result()} | {:error, term()}
+  def run(workspace, sanitizers \\ false, environment \\ environment())
 
-  def run(workspace, sanitizers) when is_binary(workspace) and is_boolean(sanitizers) do
-    native = Application.app_dir(:wotex_thread, "priv/openthread")
+  def run(workspace, sanitizers, environment)
+      when is_binary(workspace) and is_boolean(sanitizers) and is_map(environment) do
+    native = environment.native
 
-    with :ok <- platform(),
-         {:ok, tools} <- tools(),
+    with :ok <- platform(environment),
+         {:ok, tools} <- tools(environment),
          {:ok, pins} <- pins(native),
          {:ok, files} <- Source.file_hashes(native),
          {:ok, modules} <- build_modules(),
          {:ok, revision} <- Source.tree_digest(native) do
-      identity = identity(workspace, sanitizers, tools, pins, files, modules, revision)
+      identity = identity(workspace, sanitizers, tools, pins, files, modules, revision, native)
 
       Workspace.run(workspace, identity, artifacts(pins), fn ->
-        build(workspace, sanitizers, native, tools, pins)
+        build(workspace, sanitizers, native, tools, pins, environment)
       end)
     end
   end
 
-  def run(_, _), do: {:error, :invalid_build_workspace}
+  def run(_, _, _), do: {:error, :invalid_build_workspace}
 
-  defp platform do
-    if :os.type() == {:unix, :linux}, do: :ok, else: {:error, :linux_required}
+  defp platform(%{platform: platform}) do
+    if platform == {:unix, :linux}, do: :ok, else: {:error, :linux_required}
   end
 
-  defp tools do
+  defp tools(environment) do
     Enum.reduce_while(@tools, {:ok, %{}}, fn name, {:ok, found} ->
-      case System.find_executable(name) do
+      case Source.executable(name, environment.search_path) do
         path when is_binary(path) ->
           case tool_hash(path) do
             {:ok, hash} -> {:cont, {:ok, Map.put(found, name, %{path: path, sha256: hash})}}
@@ -90,17 +118,14 @@ defmodule Wotex.Thread.Native.Build do
 
   defp build_modules do
     Enum.reduce_while(@build_modules, {:ok, %{}}, fn module, {:ok, hashes} ->
-      with {:module, ^module} <- Code.ensure_loaded(module),
-           beam when is_list(beam) <- :code.which(module),
-           {:ok, hash} <- Source.digest(List.to_string(beam)) do
-        {:cont, {:ok, Map.put(hashes, Atom.to_string(module), hash)}}
-      else
+      case Source.module_digest(module) do
+        {:ok, hash} -> {:cont, {:ok, Map.put(hashes, Atom.to_string(module), hash)}}
         _ -> {:halt, {:error, :missing_native_build_module}}
       end
     end)
   end
 
-  defp identity(workspace, sanitizers, tools, pins, files, modules, revision) do
+  defp identity(workspace, sanitizers, tools, pins, files, modules, revision, native) do
     sdk =
       Path.join([
         workspace,
@@ -130,14 +155,7 @@ defmodule Wotex.Thread.Native.Build do
       "toolchain" => tools,
       "build_features" => %{"sanitizers" => sanitizers},
       "arguments" => %{
-        "configure" =>
-          configure_args(
-            workspace,
-            Application.app_dir(:wotex_thread, "priv/openthread"),
-            tools,
-            sanitizers,
-            sdk
-          ),
+        "configure" => configure_args(workspace, native, tools, sanitizers, sdk),
         "compile" => [
           "--build",
           Path.join(workspace, "build"),
@@ -164,7 +182,7 @@ defmodule Wotex.Thread.Native.Build do
       end) ++ Enum.map(@log_names, &"logs/#{&1}.log")
   end
 
-  defp build(workspace, sanitizers, native, tools, pins) do
+  defp build(workspace, sanitizers, native, tools, pins, environment) do
     guardian = Path.join(workspace, "bin/build-command")
 
     with :ok <- directories(workspace),
@@ -178,9 +196,9 @@ defmodule Wotex.Thread.Native.Build do
          :ok <-
            File.write(Path.join(workspace, "logs/bootstrap.log"), bootstrap.output, [:exclusive]),
          {:ok, versions} <- versions(guardian, workspace, tools),
-         {:ok, sdk} <- sources(workspace, pins),
+         {:ok, sdk} <- sources(workspace, pins, environment),
          :ok <-
-           Source.fetch(
+           environment.fetch.(
              @json_url,
              Path.join(workspace, "downloads/json.hpp"),
              pins["json"]["sha256"]
@@ -222,7 +240,7 @@ defmodule Wotex.Thread.Native.Build do
     end)
   end
 
-  defp sources(workspace, pins) do
+  defp sources(workspace, pins, environment) do
     result =
       Enum.reduce_while(@source_names, {:ok, %{}}, fn name, {:ok, roots} ->
         pin = pins["sources"][name]
@@ -231,7 +249,7 @@ defmodule Wotex.Thread.Native.Build do
         destination = Path.join(workspace, "sources/#{name}")
         url = "https://codeload.github.com/#{pin["repository"]}/tar.gz/#{pin["commit"]}"
 
-        with :ok <- Source.fetch(url, archive, pin["archive_sha256"]),
+        with :ok <- environment.fetch.(url, archive, pin["archive_sha256"]),
              :ok <- Source.extract(archive, destination, root) do
           {:cont, {:ok, Map.put(roots, name, Path.join(destination, root))}}
         else

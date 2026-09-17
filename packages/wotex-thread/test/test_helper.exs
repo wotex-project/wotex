@@ -1,3 +1,4 @@
+Code.require_file("support/build_fixture.ex", __DIR__)
 Code.require_file("support/client.ex", __DIR__)
 
 # The explicit software runner selects fixtures through the environment; required

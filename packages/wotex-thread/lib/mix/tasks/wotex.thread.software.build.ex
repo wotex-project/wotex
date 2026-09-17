@@ -15,15 +15,15 @@ defmodule Mix.Tasks.Wotex.Thread.Software.Build do
   alias Wotex.Thread.Software.Build
 
   @doc "Runs the explicit software fixture build and reports its manifest."
-  @spec run([String.t()]) :: :ok
+  @spec run([String.t()], Build.environment()) :: :ok
   @impl Mix.Task
-  def run(args) do
+  def run(args, environment \\ Build.environment()) do
     unless Mix.Project.config()[:app] == :wotex_thread,
       do: Mix.raise("Thread software build requires its root project")
 
     case Build.arguments(args) do
       {:ok, workspace} ->
-        case Build.run(workspace) do
+        case Build.run(workspace, environment) do
           {:ok, result} ->
             Mix.shell().info(
               "Software build #{if(result.reused, do: "verified", else: "completed")}: #{workspace}"

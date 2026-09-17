@@ -14,15 +14,15 @@ defmodule Mix.Tasks.Wotex.Thread.Software.Run do
   alias Wotex.Thread.Software.Run
 
   @doc "Runs the explicit software lanes and reports the result path."
-  @spec run([String.t()]) :: :ok
+  @spec run([String.t()], Run.environment()) :: :ok
   @impl Mix.Task
-  def run(args) do
+  def run(args, environment \\ Run.environment()) do
     unless Mix.Project.config()[:app] == :wotex_thread,
       do: Mix.raise("Thread software run requires its root project")
 
     case Run.arguments(args) do
       {:ok, workspace} ->
-        case Run.run(workspace) do
+        case Run.run(workspace, environment) do
           {:ok, %{path: path}} ->
             Mix.shell().info("Software run passed: #{path}")
 
