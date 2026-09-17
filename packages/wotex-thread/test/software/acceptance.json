@@ -26,7 +26,10 @@
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 worker or radio death releases the interface, descendants and store lock"},
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-C07 blocked SDK startup is reaped after owner EOF or SIGTERM"},
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-C07 a full input pipe during blocked startup cannot hide owner EOF"},
-        {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 one hundred owned SDK cycles restore processes and interfaces"}
+        {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 one hundred owned SDK cycles restore processes and interfaces"},
+        {"module":"Wotex.Thread.NativeContractTest","name":"test WTH-F09 coalesces State changes through the production stream owner"},
+        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-S06 WTH-V10 real SDK role changes arrive as bounded non-secret snapshots"},
+        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-C05 receiver death and session close release real SDK stream owners"}
       ]
     },
     "sanitized": {
@@ -53,7 +56,10 @@
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 worker or radio death releases the interface, descendants and store lock"},
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-C07 blocked SDK startup is reaped after owner EOF or SIGTERM"},
         {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-C07 a full input pipe during blocked startup cannot hide owner EOF"},
-        {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 one hundred owned SDK cycles restore processes and interfaces"}
+        {"module":"Wotex.Thread.NativeHostProcessTest","name":"test WTH-S03 WTH-V04 one hundred owned SDK cycles restore processes and interfaces"},
+        {"module":"Wotex.Thread.NativeContractTest","name":"test WTH-F09 coalesces State changes through the production stream owner"},
+        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-S06 WTH-V10 real SDK role changes arrive as bounded non-secret snapshots"},
+        {"module":"Wotex.Thread.NativeStateTest","name":"test WTH-C05 receiver death and session close release real SDK stream owners"}
       ]
     }
   }

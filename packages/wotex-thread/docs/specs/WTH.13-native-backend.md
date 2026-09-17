@@ -3,7 +3,7 @@ spec:
   id: WTH.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.4
+  version: 1.0.5
   owner: wotex-thread
   updated: 2026-09-17
 ---
@@ -22,8 +22,8 @@ flow_trace corpus cases through a contract driver. The host admits flow
 initialization and acknowledgements with reserved output lanes, and the real
 host ready case executes. The software build and run tasks pass for both BEAM
 lanes on Linux arm64 and on the required Debian 12 GCC 12.2.0 x86_64 toolchain
-under emulation. Report sources and process-flow cases still need evidence, so
-B01–B03 are not accepted.
+under emulation. Native State subscriptions are the report source. Process-flow
+cases still need evidence, so B01–B03 are not accepted.
 
 ## WTH-B01 — Production and build boundary
 
@@ -174,6 +174,35 @@ The barrier follows every transmitted frame for that stream in stdout order;
 no such frame is valid after it. Cancellation success follows this barrier.
 The native owner retains bounded outstanding credit records until the BEAM's
 normal cumulative acknowledgement; retirement cannot mint credits independently.
+
+### State stream frames
+
+`subscribe_state` parameters are exactly `queue_limit`, an integer in 1..10000.
+Its success result is exactly `subscription_id`, equal to the request `id`, and
+`generation`, the host's next stream generation starting at 1. The reply is
+written before the stream's initial report so the owner registers the stream
+first. `unsubscribe` parameters are exactly `subscription_id` and `generation`;
+its null success follows that stream's barrier, and an unknown or already
+retired stream returns `subscription_not_found`. A registration beyond 64 live
+streams returns `busy`.
+
+A State report has exactly `version: 1`, `event: "state"`,
+`session_generation`, `subscription_id`, `generation`, `report_sequence`,
+`value` and `metadata`. `value` is the non-secret S02 State object and
+`metadata` is exactly `changed_flags`, an unsigned 32-bit integer. The initial
+report carries flags zero. SDK callbacks only accumulate flags; once per event-loop
+iteration the host takes one snapshot and reports it with the OR of that
+iteration's flags to every live stream. Flags observed while no stream exists
+are discarded. When a stream's report cannot be queued, the host writes one
+control frame with exactly `version: 1`, `event: "stream_error"`,
+`session_generation`, `subscription_id`, `generation` and
+`code: "queue_overflow"`, then that stream's barrier.
+
+The BEAM owner validates every field and the credit ledger before delivery. It
+delivers reports already validated for a stream ahead of that stream's terminal
+error. An unknown stream, a report beyond stream or session credit, a barrier
+for a stream that is neither cancelled nor terminally failed, or a malformed
+field closes the IPC generation.
 
 The BEAM connection marks already validated reports for a retired stream as
 consumed/discarded, including those awaiting a dead stream owner's internal

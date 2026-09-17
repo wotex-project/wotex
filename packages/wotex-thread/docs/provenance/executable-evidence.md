@@ -361,6 +361,86 @@ hardware.
 WTH-B-F11–F13 process-flow cases, the P07 network fixture and C09 stress remain
 unexecuted.
 
+## Native State subscriptions, 2026-09-17
+
+`Wotex.Thread.subscribe/2` accepts `%{type: :state}` with optional `receiver`,
+`max_queue_length` (1..10000, default 1000) and `timeout` for an OpenThread
+Session; other clients keep the `:not_supported` sentinel. The host's
+`subscribe_state` registers a listener in `priv/openthread/streams.hpp`, replies
+with its `subscription_id` and stream `generation`, and then submits the initial
+snapshot through the report-flow owner. SDK state callbacks only accumulate the
+changed-flags mask. Each event-loop iteration takes one snapshot and reports it
+with the OR of that iteration's flags to every live stream; flags observed with
+no listener are discarded. A stream whose report cannot be queued receives one
+`stream_error` with `queue_overflow` followed by its barrier. `unsubscribe`
+writes the barrier before its null reply, and an unknown stream returns
+`subscription_not_found`. The WTH.13 State stream frames subsection defines each
+exact frame.
+
+`Wotex.Thread.OpenThread.Connection` validates every stream frame, registers
+reports in the credit ledger and sends each report to a per-stream
+`Wotex.Thread.OpenThread.StreamOwner`. The owner checks the final receiver's
+queue; the connection rechecks it, delivers
+`{:wotex_thread, reference, {:ok, %State{}, %{changed_flags: flags}}}` and only
+then acknowledges native credit. A full receiver queue delivers one
+`receiver_overflow` error and cancels the native stream. A native stream error
+first delivers the stream's already validated reports in sequence order, then
+one terminal error. Receiver death cancels without delivery; stream-owner death
+delivers `owner_down`; session close gives each live stream one terminal error
+and stops its owner. An internal cancellation that cannot be written within its
+1000 ms deadline closes the generation. Cancellation of a closed handle succeeds;
+this generation remembers at most 1024 closed handles, and a handle whose owner
+ended returns `:ok` without I/O. Unknown streams, reports beyond stream or
+session credit, and barriers for live streams close the generation.
+
+`test/native/streams_test.cpp` asserts the initial report, per-iteration
+coalescing with unknown bit 31, discarded listener-less flags, barrier
+sequence, overflow error ordering while another stream continues, blocked
+control failure and 64-stream capacity. The contract driver's
+`state_coalescing` operation executes corpus case WTH-F09 through the same
+stream owner; `native_contract_test.exs` compares the exact observation.
+`state_subscription_test.exs` runs in the default gate against the injected
+escript peer: initial and credited reports with exact cumulative
+acknowledgements, idempotent cancellation, admission and forged-handle
+validation, receiver overflow, ordered native overflow, receiver death, session
+close, and three generation-closing faults (17 reports in one write beyond
+16-report stream credit, an unsolicited barrier and a report for an unknown
+generation). `test/software/native_state_test.exs` uses the real SDK and
+simulation RCP: two streams receive distinct generations and initial disabled
+snapshots, formation delivers role-flagged reports ending in leader, the
+cancelled stream stays silent while the other receives the disable transition,
+and receiver death plus session close release stream owners.
+
+| Lane | Run | Native tests | Normal lane | Sanitizer lane | Result SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| Linux arm64, Elixir 1.18.4 / OTP 27.3.4.15 | 251675 ms | 6/6 | 166/166 | 25/25 | `b18ccdf29eabf542b1d3834dd549cc435b722b823a432e8fb4d98c041294cc65` |
+| Linux arm64, Elixir 1.20.2 / OTP 29.0.4 | 251314 ms | 6/6 | 166/166 | 25/25 | `3eb69fed0206c1dbeff73da2d836a2a3b0ccf71169f6a3be51cc0461181d56f8` |
+| Linux x86_64 (emulated), Elixir 1.18.4 / OTP 27.3.4.15, `+JMsingle true` | 142420 ms | 6/6 | 166/166 | 25/25 | `402442c42915af5f4f904597c892889c9f51072c33d95cae3605653671dcf03a` |
+| Linux x86_64 (emulated), Elixir 1.20.2 / OTP 29.0.4, `+JMsingle true` | 151700 ms | 6/6 | 166/166 | 25/25 | `cfe491821c477c44f898b8a95358a33ec19c294d38ca7b7e5b1078a7ea4b5ac5` |
+
+The lanes used the same images and commands as the preceding four-lane record,
+each on a fresh workspace built from one snapshot of this source, with zero
+survivors and unchanged source identity. The macOS gate passed 142 checks with
+26 software/hardware exclusions.
+
+| Source | SHA-256 |
+| --- | --- |
+| `priv/openthread/streams.hpp` | `e163a7c02414ec03af164c78947e6ebfdc11bbebc1123891be431bb228e46312` |
+| `priv/openthread/host.cpp` | `f6aae02d90591c20b6a763a5796c4c4f7e80deebd903be55b74be9a3fa212123` |
+| `test/native/streams_test.cpp` | `b71a60c713c17e4184e253971cc0f6297ee870747c4699a8eb8104e8624c4212` |
+| `test/native/contract_driver.cpp` | `51eb96ee45ccf96a13859104668ad557b06a71f454a30d707d5161db13d8c736` |
+| `lib/wotex/thread/open_thread/connection.ex` | `c38321b53e221247cc9dc42d7323955d0b092576db8a541c3cc90a54ca42a54b` |
+| `lib/wotex/thread/open_thread/stream_owner.ex` | `9a26cd611a37dc1005aad0c54439f3efc9cbdd3d53a478d2a0aa2734fa1376f6` |
+| `lib/wotex/thread/open_thread/frame.ex` | `9ba74ca47b41adcf7f2e75e1db53aea877735ea8094a0a718c99bbd7ecea6116` |
+| `lib/wotex/thread.ex` | `6fca13b466018e0d646dfba274ca43d33fe725361fcaed739c50a677a085c374` |
+| `test/wotex/thread/state_subscription_test.exs` | `41fb09637337bbe66cf33eba30235f1a98d60af1dcffba1f80438e4457f5ad22` |
+| `test/software/native_state_test.exs` | `3fb160fa1f3eda6e7085a8772226365a368f170951a81911d6bc70729afd7948` |
+| `test/fixtures/sdk_bridge.escript` | `68262c3a982d70b4cb615d4f4eb117ff28d3d6a34db03061d0099168c96febeb` |
+
+WTH-B-F11–F13 process-flow cases (native callback bursts while the connection,
+stream owner or receiver is suspended), the P07 network fixture and C09 stress
+remain unexecuted.
+
 ## Contract corpus binding, 2026-09-17
 
 `test/wotex/thread/contract_fixture_test.exs` runs in the default gate. It
@@ -368,7 +448,8 @@ requires the exact `contract-v1.json` top-level fields, format 1.0.0, IDs
 WTH-F01–F10, the fixed operation-to-kind table, exact-operator expectations and
 WTH S/N requirement identifiers. Every case is bound to the test that compares
 its actual observation, or recorded as unexecuted with its owning package:
-WTH-F07 and F08 (P04 lifecycle callbacks) and WTH-F09 (P06 state coalescing).
+WTH-F07 and F08 (P04 lifecycle callbacks). WTH-F09 later executed through the
+native State stream owner.
 The pure Dataset cases and the fragmented daemon case already execute in
 `dataset_boundary_test.exs` and `daemon_fault_test.exs`. The binding cannot
 count an unexecuted case as evidence.

@@ -5,6 +5,7 @@
 
 main(_) ->
     Root = filename:dirname(escript:script_name()),
+    put(root, Root),
     {ok, ModeBytes} = file:read_file(filename:join(Root, "mode")),
     Mode = string:trim(binary_to_list(ModeBytes)),
     ok = file:write_file(filename:join(Root, "pid"), os:getpid()),
@@ -39,7 +40,7 @@ loop(Root, Mode, State, Petition) ->
         {line, Line} ->
             case json:decode(list_to_binary(Line)) of
                 #{<<"event">> := _} = Control ->
-                    flow(Root, Control),
+                    flow(Root, Mode, State, Control),
                     loop(Root, Mode, State, Petition);
                 Request ->
                     request(Root, Mode, State, Petition, Request, Line)
@@ -47,18 +48,31 @@ loop(Root, Mode, State, Petition) ->
     end.
 
 %% Records the exact flow initialization; a request before it is logged as missing.
-flow(Root, #{<<"version">> := 1, <<"event">> := <<"flow_open">>,
-             <<"session_generation">> := Generation} = Control)
+flow(Root, _Mode, _State, #{<<"version">> := 1, <<"event">> := <<"flow_open">>,
+                          <<"session_generation">> := Generation} = Control)
   when map_size(Control) == 3, byte_size(Generation) == 32 ->
     Valid = lists:all(fun(Byte) -> (Byte >= $0 andalso Byte =< $9) orelse
                                        (Byte >= $a andalso Byte =< $f) end,
                       binary_to_list(Generation)),
     Entry = case {Valid, get(flow_open)} of
-        {true, undefined} -> put(flow_open, true), <<Generation/binary, "\n">>;
+        {true, undefined} ->
+            put(flow_open, true), put(session, Generation), <<Generation/binary, "\n">>;
         _ -> <<"invalid\n">>
     end,
     ok = file:write_file(filename:join(Root, "flow"), Entry, [append]);
-flow(Root, _) ->
+flow(Root, Mode, State, #{<<"version">> := 1, <<"event">> := <<"report_ack">>} = Ack)
+  when map_size(Ack) == 5 ->
+    ok = file:write_file(filename:join(Root, "acks"), [json:encode(Ack), "\n"], [append]),
+    %% Stream mode emits one further report per acknowledgement until its count ends.
+    case {Mode, get(remaining)} of
+        {"stream", Remaining} when is_integer(Remaining), Remaining > 0 ->
+            case streams() of
+                [Stream | _] -> put(remaining, Remaining - 1), report(Stream, State, 4);
+                [] -> ok
+            end;
+        _ -> ok
+    end;
+flow(Root, _Mode, _State, _) ->
     ok = file:write_file(filename:join(Root, "flow"), <<"invalid\n">>, [append]).
 
 request(Root, Mode, State, Petition, Request, Line) ->
@@ -192,6 +206,47 @@ operation(Mode, State, Petition, Request, <<"set_enabled">>) ->
                              <<"role">> := Role},
             reply(Request, Updated), {Updated, Petition, continue}
     end;
+operation(Mode, State, Petition, Request, <<"subscribe_state">>) ->
+    Id = maps:get(<<"id">>, Request),
+    Generation = case get(stream_generation) of undefined -> 1; Last -> Last + 1 end,
+    put(stream_generation, Generation),
+    Stream = {Id, Generation},
+    put(streams, [Stream | streams()]),
+    reply(Request, #{<<"subscription_id">> => Id, <<"generation">> => Generation}),
+    report(Stream, State, 0),
+    case Mode of
+        "stream" -> put(remaining, stream_count());
+        "burst" ->
+            %% One write places 17 unacknowledged reports ahead of any owner admission.
+            Frames = [begin
+                          Sequence = next_sequence(),
+                          put({last, Id}, Sequence),
+                          [json:encode(stream_frame(Stream, report_fields(State, 4, Sequence))), "\n"]
+                      end || _ <- lists:seq(1, 17)],
+            io:put_chars(Frames);
+        "stream_error" ->
+            write(stream_frame(Stream, #{<<"event">> => <<"stream_error">>,
+                                         <<"code">> => <<"queue_overflow">>})),
+            retire(Stream);
+        "unsolicited_retire" -> retire(Stream);
+        "foreign_report" ->
+            write(stream_frame({Id, Generation + 1},
+                               report_fields(State, 4, next_sequence())));
+        _ -> ok
+    end,
+    {State, Petition, continue};
+operation(_Mode, State, Petition, Request, <<"unsubscribe">>) ->
+    Parameters = maps:get(<<"parameters">>, Request),
+    Stream = {maps:get(<<"subscription_id">>, Parameters), maps:get(<<"generation">>, Parameters)},
+    case lists:member(Stream, streams()) of
+        true ->
+            put(streams, lists:delete(Stream, streams())),
+            retire(Stream),
+            reply(Request, null);
+        false ->
+            failure(Request, #{<<"code">> => <<"subscription_not_found">>})
+    end,
+    {State, Petition, continue};
 operation(Mode, State, Petition, Request, <<"validate_dataset">>) ->
     if Mode =:= "dataset_invalid" ->
            failure(Request, #{<<"code">> => <<"invalid_dataset">>});
@@ -218,6 +273,35 @@ operation(Mode, State, Petition, Request, Operation) ->
             reply(Request, maps:get(Operation, Values))
     end,
     {State, Petition, continue}.
+
+streams() -> case get(streams) of undefined -> []; Streams -> Streams end.
+
+stream_count() ->
+    {ok, Count} = file:read_file(filename:join(get(root), "report_count")),
+    binary_to_integer(string:trim(Count)).
+
+next_sequence() ->
+    Sequence = case get(report_sequence) of undefined -> 1; Last -> Last + 1 end,
+    put(report_sequence, Sequence),
+    Sequence.
+
+report_fields(State, Flags, Sequence) ->
+    #{<<"event">> => <<"state">>, <<"report_sequence">> => Sequence, <<"value">> => State,
+      <<"metadata">> => #{<<"changed_flags">> => Flags}}.
+
+report({Id, _} = Stream, State, Flags) ->
+    Sequence = next_sequence(),
+    put({last, Id}, Sequence),
+    write(stream_frame(Stream, report_fields(State, Flags, Sequence))).
+
+retire({Id, _} = Stream) ->
+    Last = case get({last, Id}) of undefined -> 0; Value -> Value end,
+    write(stream_frame(Stream, #{<<"event">> => <<"stream_retired">>,
+                                 <<"last_report_sequence">> => Last})).
+
+stream_frame({Id, Generation}, Fields) ->
+    Fields#{<<"version">> => 1, <<"session_generation">> => get(session),
+            <<"subscription_id">> => Id, <<"generation">> => Generation}.
 
 await_release(Root) ->
     case filelib:is_file(filename:join(Root, "release")) of

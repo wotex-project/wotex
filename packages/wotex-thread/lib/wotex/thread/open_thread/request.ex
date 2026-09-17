@@ -66,6 +66,15 @@ defmodule Wotex.Thread.OpenThread.Request do
          do: {:ok, {"remove_joiner", %{identity: identity}}}
   end
 
+  def encode(%{type: :subscribe_state, queue_limit: limit} = request)
+      when map_size(request) == 2 and is_integer(limit) and limit in 1..10_000,
+      do: {:ok, {"subscribe_state", %{queue_limit: limit}}}
+
+  def encode(%{type: :unsubscribe, subscription_id: id, generation: generation} = request)
+      when map_size(request) == 3 and is_binary(id) and byte_size(id) in 1..128 and
+             is_integer(generation) and generation in 1..0xFFFFFFFFFFFFFFFE,
+      do: {:ok, {"unsubscribe", %{subscription_id: id, generation: generation}}}
+
   def encode(_), do: {:error, Error.new(:invalid_message)}
 
   @doc false

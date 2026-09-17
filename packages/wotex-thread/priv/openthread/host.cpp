@@ -1,6 +1,7 @@
 #include "sdk.hpp"
 #include "flow.hpp"
 #include "output.hpp"
+#include "streams.hpp"
 #include <openthread/platform/logging.h>
 #include <sys/poll.h>
 #include <sys/prctl.h>
@@ -63,6 +64,7 @@ class Worker final {
       if (result < 0 && errno == EINTR) continue;
       if (result < 0) return 2;
       if (sdk_) sdk_->process(loop);
+      publish_state();
       finish_formation();
       finish_management();
       finish_commissioner();
@@ -112,10 +114,18 @@ class Worker final {
           frame.session_generation,
           [this](const std::string &report) { return output_.push(Lane::report, report); },
           [this](const std::string &barrier) { return output_.push(Lane::control, barrier); });
+      streams_.emplace(*flow_, [this](const std::string &frame) { return output_.push(Lane::control, frame); });
     } else if (!flow_ || !flow_->acknowledge(frame.session_generation, frame.report_sequence,
                                              frame.acknowledged_bytes)) {
       throw ProtocolError();
     }
+  }
+  // One coalesced snapshot per event-loop iteration carries the OR of its SDK flags.
+  void publish_state() {
+    if (!sdk_ || !streams_) return;
+    streams_->changed(sdk_->take_changed_flags());
+    streams_->flush([this] { return sdk_->snapshot(); });
+    if (streams_->failed()) throw ChannelError();
   }
   void dispatch(const Request &command) {
     try {
@@ -175,6 +185,29 @@ class Worker final {
         if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
         reply(success(command, sdk_->set_enabled(command.parameters)));
+      } else if (command.operation == "subscribe_state") {
+        const Json &limit = command.parameters.contains("queue_limit") ? command.parameters.at("queue_limit") : Json();
+        if (!exact_keys(command.parameters, {"queue_limit"}) || !limit.is_number_unsigned() ||
+            limit.get<std::uint64_t>() < 1 || limit.get<std::uint64_t>() > kMaximumQueueLimit) throw ProtocolError();
+        if (!sdk_) throw SdkError("not_open");
+        const std::uint64_t generation = streams_->open(command.id, limit.get<std::size_t>());
+        if (generation == 0) throw SdkError("busy");
+        // The owner registers the stream from this reply before its initial report arrives.
+        reply(success(command, {{"subscription_id", command.id}, {"generation", generation}}));
+        streams_->initial(command.id, generation, sdk_->snapshot());
+        if (streams_->failed()) throw ChannelError();
+      } else if (command.operation == "unsubscribe") {
+        const Json &parameters = command.parameters;
+        if (!exact_keys(parameters, {"subscription_id", "generation"}) ||
+            !bounded_string(parameters.at("subscription_id"), 128) ||
+            !parameters.at("generation").is_number_unsigned() ||
+            parameters.at("generation").get<std::uint64_t>() == 0) throw ProtocolError();
+        if (!streams_->remove(parameters.at("subscription_id").get<std::string>(),
+                              parameters.at("generation").get<std::uint64_t>())) {
+          if (streams_->failed()) throw ChannelError();
+          throw SdkError("subscription_not_found");
+        }
+        reply(success(command, nullptr));
       } else if (command.operation == "validate_dataset" || command.operation == "get_dataset") {
         if (!sdk_) throw SdkError("not_open");
         reply(success(command, sdk_->dataset(command.operation, command.parameters)));
@@ -246,6 +279,7 @@ class Worker final {
   int output_fd_ = -1;
   Output output_;
   std::optional<ReportFlow> flow_;
+  std::optional<StateStreams> streams_;
   std::unique_ptr<Sdk> sdk_;
   std::string incoming_;
   bool closing_ = false;

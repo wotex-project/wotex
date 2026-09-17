@@ -426,7 +426,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
   test "WTH-C03 status formatting redacts native configuration and queued requests" do
     redacted =
       Connection.format_status(%{
-        state: %{status: :ready, pending: %{1 => :secret}},
+        state: %{status: :ready, pending: %{1 => :secret}, subscriptions: %{2 => :secret}},
         message: "secret-message",
         reason: "secret-reason",
         log: ["secret-log"],
@@ -434,7 +434,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
       })
 
     refute inspect(redacted) =~ "secret"
-    assert redacted.state == %{status: :ready, pending: 1}
+    assert redacted.state == %{status: :ready, pending: 1, subscriptions: 1}
     assert redacted.unrelated == :preserved
   end
 

@@ -18,7 +18,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
     "WTH-F06" => {:executed, "test/wotex/thread/daemon_fault_test.exs"},
     "WTH-F07" => {:unexecuted, "WTH-P04"},
     "WTH-F08" => {:unexecuted, "WTH-P04"},
-    "WTH-F09" => {:unexecuted, "WTH-P06"},
+    "WTH-F09" => {:executed, "test/wotex/thread/native_contract_test.exs"},
     "WTH-F10" => {:executed, "test/wotex/thread/dataset_boundary_test.exs"}
   }
   @operations %{
@@ -70,6 +70,6 @@ defmodule Wotex.Thread.ContractFixtureTest do
     end
 
     assert for({id, {:unexecuted, _}} <- @bindings, do: id) |> Enum.sort() ==
-             ~w(WTH-F07 WTH-F08 WTH-F09)
+             ~w(WTH-F07 WTH-F08)
   end
 end

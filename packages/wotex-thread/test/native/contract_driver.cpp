@@ -3,6 +3,7 @@
 // every expected projection.
 #include "flow.hpp"
 #include "protocol.hpp"
+#include "streams.hpp"
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -159,6 +160,61 @@ int flow_session(const Json &input) {
   }
   return 2;
 }
+// WTH-F09: drives the production State stream owner with a scripted snapshot source.
+int state_coalescing(const Json &input) {
+  const std::set<std::string> state_keys = {"role", "network_name", "rloc16", "ipv6_enabled", "thread_enabled", "generation"};
+  if (!exact(input, {"initial", "events"}) || !exact(input.at("initial"), state_keys) ||
+      !input.at("events").is_array() || input.at("events").size() > kMaximumCommands) return 2;
+  const std::string session = "0123456789abcdef0123456789abcdef";
+  Json current = input.at("initial");
+  Json roles = Json::array(), flags = Json::array();
+  bool cancelled = false;
+  std::size_t after_cancel = 0;
+  ReportFlow flow(session, [&](const std::string &frame) {
+    const Json report = Json::parse(frame);
+    roles.push_back(report.at("value").at("role"));
+    flags.push_back(report.at("metadata").at("changed_flags"));
+    if (cancelled) ++after_cancel;
+    return true;
+  }, [](const std::string &) { return true; });
+  StateStreams streams(flow, [](const std::string &) { return true; });
+  std::map<std::string, std::uint64_t> generations;
+  std::uint64_t iteration = 1;
+  for (const Json &event : input.at("events")) {
+    if (!event.is_object() || !event.contains("event") || !event.contains("at_ms") ||
+        !unsigned_value(event.at("at_ms"), 60000)) return 2;
+    const Json &kind = event.at("event");
+    if (kind == "subscribe" && exact(event, {"at_ms", "event", "id"}) && event.at("id").is_string()) {
+      const std::string id = event.at("id");
+      const auto generation = streams.open(id, 64);
+      if (generation == 0 || generations.count(id) != 0) return 2;
+      generations[id] = generation;
+      streams.initial(id, generation, current);
+    } else if (kind == "state_changed" && exact(event, {"at_ms", "event", "iteration", "flags", "role", "rloc16"}) &&
+               unsigned_value(event.at("iteration"), UINT64_MAX) && event.at("iteration") == iteration &&
+               unsigned_value(event.at("flags"), UINT32_MAX)) {
+      current["role"] = event.at("role");
+      current["rloc16"] = event.at("rloc16");
+      streams.changed(event.at("flags").get<std::uint32_t>());
+    } else if (kind == "flush_iteration" && exact(event, {"at_ms", "event", "iteration"}) &&
+               event.at("iteration") == iteration) {
+      streams.flush([&] { return current; });
+      ++iteration;
+    } else if (kind == "cancel" && exact(event, {"at_ms", "event", "id"}) && event.at("id").is_string() &&
+               generations.count(event.at("id").get<std::string>()) != 0) {
+      const std::string id = event.at("id");
+      if (!streams.remove(id, generations.at(id))) return 2;
+      cancelled = true;
+    } else {
+      return 2;
+    }
+  }
+  // Changes recorded after the final scripted event still reach one flush.
+  streams.flush([&] { return current; });
+  std::cout << Json{{"roles_delivered", roles}, {"changed_flags", flags},
+                    {"active_listeners", streams.size()}, {"deliveries_after_cancel", after_cancel}}.dump() << "\n";
+  return std::cout ? 0 : 2;
+}
 }  // namespace
 
 int main(int argc, char **argv) {
@@ -178,9 +234,10 @@ int main(int argc, char **argv) {
     std::cout << (accepted ? "{\"accepted\":true}\n" : "{\"accepted\":false}\n");
     return std::cout ? 0 : 2;
   }
-  if (operation != "flow_trace" && operation != "flow_session") return 2;
+  if (operation != "flow_trace" && operation != "flow_session" && operation != "state_coalescing") return 2;
   try {
     const Json input = parse_line(bytes);
+    if (operation == "state_coalescing") return state_coalescing(input);
     return operation == "flow_trace" ? flow_trace(input) : flow_session(input);
   } catch (const ProtocolError &) {
     return 2;

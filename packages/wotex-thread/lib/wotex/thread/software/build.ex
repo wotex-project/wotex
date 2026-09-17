@@ -23,7 +23,7 @@ defmodule Wotex.Thread.Software.Build do
   @sdk "openthread-5c8c318627954c99cd1a957a290bbd4b1027d04b"
   @tools ~w(cmake ninja cc c++ readelf)
   @pure_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
-    wotex-thread-flow-test wotex-thread-contract-driver)
+    wotex-thread-streams-test wotex-thread-flow-test wotex-thread-contract-driver)
   @sdk_tests ~w(wotex-thread-dataset-seed wotex-thread-spinel-test)
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx rcp_configure
     rcp_compile tests_configure tests_compile)

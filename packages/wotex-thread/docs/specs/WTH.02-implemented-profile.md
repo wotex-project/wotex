@@ -3,7 +3,7 @@ spec:
   id: WTH.02
   title: "Implemented Thread profile"
   status: accepted
-  version: 1.1.3
+  version: 1.1.4
   owner: wotex-thread
   updated: 2026-09-17
 ---
@@ -38,8 +38,9 @@ explicit RCP/radio child, interface and exclusive settings lock. It implements
 SDK Dataset validation/export, IPv6/Thread enablement, authorized formation,
 management callbacks, commissioner start/stop and finite joiner admissions.
 Management acceptance is distinct from pending Dataset activation. Typed Joiner
-configuration validates admission; joiner execution and native state streams
-remain target work. The default Runtime profile is still daemon inspection.
+configuration validates admission. Native State subscriptions deliver an
+initial snapshot and per-iteration coalesced non-secret snapshots with numeric
+changed flags under bounded credit; joiner execution remains target work. The default Runtime profile is still daemon inspection.
 
 The production helper has no Python runtime. BEAM ownership tests now use an
 injected Erlang escript with the same no-environment process boundary. The

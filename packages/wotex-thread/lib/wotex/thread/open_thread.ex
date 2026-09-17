@@ -11,8 +11,9 @@ defmodule Wotex.Thread.OpenThread do
   `start_link/1` supports caller supervision. `session/1` waits for successful
   SDK acquisition. Loading the library starts nothing. Explicit APIs support
   Dataset validation/export, enablement, network formation, management updates
-  and commissioner admissions. Joiner execution and state subscriptions remain
-  planned; commissioner admission alone does not commission a peer.
+  and commissioner admissions, and native State subscriptions deliver bounded,
+  non-secret snapshots. Joiner execution remains planned; commissioner admission
+  alone does not commission a peer.
   """
 
   @behaviour Wotex.Thread.Client
@@ -53,6 +54,15 @@ defmodule Wotex.Thread.OpenThread do
   @impl Wotex.Thread.Client
   @spec request(term(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
   defdelegate request(handle, message, timeout), to: Connection
+
+  @doc "Registers a native State subscription for `receiver` with a bounded delivery queue."
+  @spec subscribe(term(), pid(), 1..10_000, 1..60_000) ::
+          {:ok, Wotex.Thread.Subscription.t()} | {:error, Error.t()}
+  defdelegate subscribe(handle, receiver, queue_limit, timeout), to: Connection
+
+  @doc "Cancels a native State subscription and waits for its retirement barrier."
+  @spec unsubscribe(term(), term(), 1..60_000) :: :ok | {:error, Error.t()}
+  defdelegate unsubscribe(handle, subscription, timeout), to: Connection
 
   @doc "Closes an owned generation and waits for bounded native resource cleanup."
   @impl Wotex.Thread.Client

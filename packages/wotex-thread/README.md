@@ -41,8 +41,8 @@ should replace the path with the constraint of an available Hex release.
 ## Accepted native target
 
 The accepted backend retains the existing first-party C++17 OpenThread
-Port. Joiner execution, native state subscriptions, complete simulated-network
-workflows and full lifecycle proof remain required. Python is not a production
+Port. Joiner execution, complete simulated-network workflows and full lifecycle
+proof remain required. Python is not a production
 runtime dependency. The injected BEAM ownership peer is an Erlang escript; the
 native build is a Mix task. Active software tests use ExUnit. Dormant Python
 protocol/process drivers have been retired; their unexecuted cells remain open.
@@ -88,8 +88,12 @@ settings lock. Its implemented APIs validate and export Datasets, enable IPv6
 and Thread, form an explicitly permitted network, submit management updates,
 and start/stop the commissioner with exact, finite joiner admissions. Management
 acceptance is separate from Dataset activation; commissioner admission is
-separate from joining. Joiner execution and native state subscriptions remain
-planned. Thread management does not provide generic application Property writes.
+separate from joining. `Wotex.Thread.subscribe/2` with `%{type: :state}`
+delivers one initial non-secret State snapshot and later per-iteration
+coalesced snapshots with the SDK changed-flags mask, under bounded native
+credit and receiver queues; `unsubscribe/2` waits for native retirement. These
+are native control reports, not Runtime application streams. Joiner execution
+remains planned. Thread management does not provide generic application Property writes.
 Border-router management and physical-radio interoperability remain outside
 this target profile.
 

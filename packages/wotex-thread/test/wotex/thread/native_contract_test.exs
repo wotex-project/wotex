@@ -71,6 +71,19 @@ defmodule Wotex.Thread.NativeContractTest do
     assert observation == expectation!(item), context.directory
   end
 
+  test "WTH-F09 coalesces State changes through the production stream owner", context do
+    corpus =
+      Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
+      |> File.read!()
+      |> Jason.decode!()
+
+    item = Enum.find(corpus["cases"], &(&1["id"] == "WTH-F09"))
+    assert item["operation"] == "state_coalescing" and item["kind"] == "lifecycle_contract"
+    path = input!(context, item["id"], Jason.encode!(item["input"]) <> "\n")
+    assert {0, output} = run!(context.driver, ["state_coalescing", path])
+    assert Jason.decode!(output) == expectation!(item), item["id"]
+  end
+
   test "WTH-B-F07 through F10 observe production report credit accounting", context do
     selected =
       Enum.filter(cases("flow_trace"), &(&1["id"] in ~w(WTH-B-F07 WTH-B-F08 WTH-B-F09 WTH-B-F10)))

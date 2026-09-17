@@ -22,7 +22,7 @@ defmodule Wotex.Thread do
   """
 
   import Kernel, except: [send: 2]
-  alias Wotex.Thread.{Dataset, Error, OpenThread, PortCall, Session, State}
+  alias Wotex.Thread.{Dataset, Error, OpenThread, PortCall, Session, State, Subscription}
   @operations [:state, :version, :network_name, :rloc16]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
@@ -196,13 +196,56 @@ defmodule Wotex.Thread do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
-  @doc "Baseline client ports do not imply subscription support."
-  @spec subscribe(term(), term()) :: :not_supported
+  @doc """
+  Subscribes a receiver to non-secret State reports of an owned OpenThread session.
+
+  The request is `%{type: :state}` with optional `receiver` (default caller),
+  `max_queue_length` (1..10000, default 1000) and `timeout` (default the Session
+  limit). Success follows native listener registration; the receiver then gets
+  one initial snapshot and later coalesced snapshots as
+  `{:wotex_thread, reference, {:ok, %Wotex.Thread.State{}, %{changed_flags: flags}}}`,
+  or one terminal `{:wotex_thread, reference, {:error, error}}`. Sessions of
+  other clients return the `:not_supported` sentinel; State subscriptions are
+  native control reports, not Runtime application streams.
+  """
+  @spec subscribe(term(), term()) ::
+          {:ok, Subscription.t()} | {:error, Error.t()} | :not_supported
+  def subscribe(%Session{client: OpenThread} = session, request) do
+    with :ok <- Session.validate(session),
+         {:ok, receiver, queue_limit, timeout} <- subscription_request(request, session.timeout) do
+      OpenThread.subscribe(session.handle, receiver, queue_limit, timeout)
+    end
+  end
+
   def subscribe(_, _), do: :not_supported
 
-  @doc "No subscription is created by this baseline."
-  @spec unsubscribe(term(), term()) :: :not_supported
+  @doc """
+  Cancels a native State subscription and waits for its retirement.
+
+  Repeated cancellation of a closed handle and cancellation after the owning
+  session ended return `:ok`. Sessions of other clients return `:not_supported`.
+  """
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()} | :not_supported
+  def unsubscribe(%Session{client: OpenThread} = session, subscription) do
+    with :ok <- Session.validate(session),
+         do: OpenThread.unsubscribe(session.handle, subscription, session.timeout)
+  end
+
   def unsubscribe(_, _), do: :not_supported
+
+  defp subscription_request(%{type: :state} = request, default_timeout) do
+    receiver = Map.get(request, :receiver, self())
+    queue_limit = Map.get(request, :max_queue_length, 1000)
+    timeout = Map.get(request, :timeout, default_timeout)
+
+    if Enum.all?(Map.keys(request), &(&1 in [:type, :receiver, :max_queue_length, :timeout])) and
+         is_pid(receiver) and node(receiver) == node() and is_integer(queue_limit) and
+         queue_limit in 1..10_000 and is_integer(timeout) and timeout in 1..60_000,
+       do: {:ok, receiver, queue_limit, timeout},
+       else: {:error, Error.new(:invalid_subscription)}
+  end
+
+  defp subscription_request(_, _), do: {:error, Error.new(:invalid_subscription)}
 
   defp open(opts) do
     client = Keyword.get(opts, :client)

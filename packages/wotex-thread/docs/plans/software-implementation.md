@@ -55,8 +55,9 @@ F15 execute through a native contract driver. The host accepts `flow_open` and
 `report_ack` under separate reply, control and report output reservations, and
 WTH-B-F06 executes against the real host. `mix wotex.software.build` and
 `mix wotex.software.run` pass on Linux arm64 and emulated Linux x86_64 for both
-BEAM lanes, including real-host process ownership cases. Report sources and
-F11–F13 remain open, so P00 is unaccepted.
+BEAM lanes, including real-host process ownership cases. Native State
+subscriptions provide the report source; F11–F13 remain open, so P00 is
+unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
@@ -72,8 +73,8 @@ F11–F13 remain open, so P00 is unaccepted.
 
 `contract_fixture_test.exs` validates the corpus format, operation kinds and exact
 expectations and binds each case to its executing test. WTH-F01–F05 and F10 run
-in `dataset_boundary_test.exs` and WTH-F06 in `daemon_fault_test.exs`; F07–F09
-remain explicitly unexecuted under P04 and P06.
+in `dataset_boundary_test.exs` and WTH-F06 in `daemon_fault_test.exs`; F07 and F08
+remain explicitly unexecuted under P04; F09 executes in `native_contract_test.exs`.
 
 ### WTH-P02: Own an explicit openthread host sdk instance
 
@@ -127,6 +128,10 @@ remain explicitly unexecuted under P04 and P06.
 
 - Concrete cases: WTH-F09.
 - Standalone closure: Keep native State subscriptions separate from Runtime application streams and eliminate inherited QoS/payload guesses.
+
+Native State subscriptions, the host stream owner, WTH-F09 and real SDK role
+reports execute on Linux software lanes; V11 Form cases rely on the existing
+mapping tests. P06 is not accepted before P00, P04 and P05.
 
 ### WTH-P07: Build a real openthread software network fixture
 

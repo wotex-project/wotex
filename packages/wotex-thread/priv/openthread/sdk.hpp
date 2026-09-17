@@ -128,6 +128,11 @@ class Sdk final {
         : otDatasetSendMgmtPendingSet(instance_, &empty, value.tlvs.mTlvs, value.tlvs.mLength, managed, this);
     if (status != OT_ERROR_NONE) { management_pending_ = false; check_status(status); }
   }
+  otChangedFlags take_changed_flags() {
+    const otChangedFlags flags = changed_flags_;
+    changed_flags_ = 0;
+    return flags;
+  }
   std::optional<otError> management_result() {
     auto result = management_result_;
     management_result_.reset();

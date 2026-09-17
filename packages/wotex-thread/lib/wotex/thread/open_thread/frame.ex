@@ -52,7 +52,8 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "not_supported" => :not_supported,
     "invalid_sdk_state" => :invalid_response,
     "io_failed" => :connection_closed,
-    "remote_error" => :remote_error
+    "remote_error" => :remote_error,
+    "subscription_not_found" => :subscription_not_found
   }
 
   @doc false
@@ -104,6 +105,76 @@ defmodule Wotex.Thread.OpenThread.Frame do
       do: failure(error, operation)
 
   def response(_, _, _), do: :invalid
+
+  @maximum_sequence 0xFFFFFFFFFFFFFFFE
+  @maximum_flags 0xFFFFFFFF
+
+  @doc false
+  @spec stream(term()) ::
+          {:report, binary(), binary(), pos_integer(), pos_integer(), State.t(), non_neg_integer()}
+          | {:stream_error, binary(), binary(), pos_integer(), atom()}
+          | {:retired, binary(), binary(), pos_integer(), non_neg_integer()}
+          | :invalid
+  def stream(
+        %{
+          "version" => 1,
+          "event" => "state",
+          "session_generation" => session,
+          "subscription_id" => id,
+          "generation" => generation,
+          "report_sequence" => sequence,
+          "value" => value,
+          "metadata" => %{"changed_flags" => flags} = metadata
+        } = frame
+      )
+      when map_size(frame) == 8 and map_size(metadata) == 1 and is_integer(sequence) and
+             sequence in 1..@maximum_sequence and is_integer(flags) and flags in 0..@maximum_flags do
+    with true <- stream_identity?(session, id, generation),
+         {:ok, state} <- value(value, "inspect") do
+      {:report, session, id, generation, sequence, state, flags}
+    else
+      _ -> :invalid
+    end
+  end
+
+  def stream(
+        %{
+          "version" => 1,
+          "event" => "stream_error",
+          "session_generation" => session,
+          "subscription_id" => id,
+          "generation" => generation,
+          "code" => "queue_overflow"
+        } = frame
+      )
+      when map_size(frame) == 6 do
+    if stream_identity?(session, id, generation),
+      do: {:stream_error, session, id, generation, :queue_overflow},
+      else: :invalid
+  end
+
+  def stream(
+        %{
+          "version" => 1,
+          "event" => "stream_retired",
+          "session_generation" => session,
+          "subscription_id" => id,
+          "generation" => generation,
+          "last_report_sequence" => last
+        } = frame
+      )
+      when map_size(frame) == 6 and is_integer(last) and last in 0..@maximum_sequence do
+    if stream_identity?(session, id, generation),
+      do: {:retired, session, id, generation, last},
+      else: :invalid
+  end
+
+  def stream(_), do: :invalid
+
+  defp stream_identity?(session, id, generation) do
+    is_binary(session) and session =~ ~r/\A[0-9a-f]{32}\z/ and is_binary(id) and
+      byte_size(id) in 1..128 and is_integer(generation) and generation in 1..@maximum_sequence
+  end
 
   defp depth(<<>>, 0, :outside), do: :ok
   defp depth(<<>>, _, _), do: :error
@@ -203,6 +274,12 @@ defmodule Wotex.Thread.OpenThread.Frame do
     end
   end
 
+  defp value(%{"subscription_id" => id, "generation" => generation} = result, "subscribe_state")
+       when map_size(result) == 2 and is_binary(id) and byte_size(id) in 1..128 and
+              is_integer(generation) and generation in 1..0xFFFFFFFFFFFFFFFE,
+       do: {:ok, %{subscription_id: id, generation: generation}}
+
+  defp value(nil, "unsubscribe"), do: {:ok, nil}
   defp value(nil, "close"), do: {:ok, nil}
   defp value(role, "state") when role in @roles, do: {:ok, role}
   defp value(nil, operation) when operation in ["network_name", "rloc16"], do: {:ok, nil}
