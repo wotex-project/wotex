@@ -69,6 +69,11 @@ F11–F13 and the required x86_64 lane remain open, so P00 is unaccepted.
 - Concrete cases: WTH-F01, WTH-F02, WTH-F03, WTH-F04, WTH-F05, WTH-F06, WTH-F10.
 - Standalone closure: Add the concrete corpus runner and exact Dataset/daemon fixtures; do not mistake presence completeness for semantic validity.
 
+`contract_fixture_test.exs` validates the corpus format, operation kinds and exact
+expectations and binds each case to its executing test. WTH-F01–F05 and F10 run
+in `dataset_boundary_test.exs` and WTH-F06 in `daemon_fault_test.exs`; F07–F09
+remain explicitly unexecuted under P04 and P06.
+
 ### WTH-P02: Own an explicit openthread host sdk instance
 
 - Requirements: WTH-S03, WTH-N01; shared C01–C10 apply wherever relevant.

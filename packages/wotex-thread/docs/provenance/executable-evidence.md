@@ -291,6 +291,18 @@ invalid, duplicated, zero-case and malformed results.
 The x86_64 reference lane, process-flow cases, report sources, the P07 network
 fixture and C09 stress are not part of this run.
 
+## Contract corpus binding, 2026-09-17
+
+`test/wotex/thread/contract_fixture_test.exs` runs in the default gate. It
+requires the exact `contract-v1.json` top-level fields, format 1.0.0, IDs
+WTH-F01–F10, the fixed operation-to-kind table, exact-operator expectations and
+WTH S/N requirement identifiers. Every case is bound to the test that compares
+its actual observation, or recorded as unexecuted with its owning package:
+WTH-F07 and F08 (P04 lifecycle callbacks) and WTH-F09 (P06 state coalescing).
+The pure Dataset cases and the fragmented daemon case already execute in
+`dataset_boundary_test.exs` and `daemon_fault_test.exs`. The binding cannot
+count an unexecuted case as evidence.
+
 ## Acceptance boundary
 
 [WTH.13](../specs/WTH.13-native-backend.md) defines the required native binary,
