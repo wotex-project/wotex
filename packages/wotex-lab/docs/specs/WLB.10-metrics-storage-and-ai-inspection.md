@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.18.0. Contract: accepted. Source status: the metric
+Specification version: 0.19.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -19,8 +19,8 @@ A separately activated loopback operator listener binds the query descriptor
 to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
 provision a durable database TTL on a local receiver. Both operator listeners
 can instead use a mutual-TLS remote transport with peer ranges. The base
-library exports Lab spans and exception logs over OTLP, which the Workbench
-does not activate yet. Hosted database provisioning, isolated hosted-tenant
+library exports Lab spans and exception logs over OTLP, and the Workbench can
+activate that exporter for a local receiver. Hosted database provisioning, isolated hosted-tenant
 BeamLens and public or tenant HTTP query bindings remain planned; the MCP
 `query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
@@ -404,9 +404,16 @@ export and the sink's headers and paths. In the `WOTEX_LAB_GREPTIME=1` lane,
 `greptime_otlp_test.exs` provisions a two-day database, exports OK, timeout and
 exception spans and one log on the pinned server, reads them back from
 `opentelemetry_traces` and `opentelemetry_logs`, finds the database TTL on
-both tables and records a missing pipeline header as a rejected batch. The
-Workbench does not yet activate the exporter, and authenticated hosted OTLP
-receivers are not part of this profile.
+both tables and records a missing pipeline header as a rejected batch.
+
+`WOTEX_LAB_OTLP_URL=http://127.0.0.1:<port>/v1/otlp` and an optional
+`WOTEX_LAB_OTLP_DATABASE` activate the exporter in the Workbench through
+`Observability.Otlp`, independently of PromEx, with service instance
+`workbench` and the default budgets; an invalid value refuses startup. The
+exporter observes Lab spans from every session on the host.
+`metrics_otlp_test.exs` covers receiver and database admission, the paths and
+headers of a real host export and the refused application start. Authenticated
+hosted OTLP receivers are not part of this profile.
 
 ## Read-only query contract and BeamLens
 

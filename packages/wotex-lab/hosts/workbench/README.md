@@ -335,6 +335,18 @@ The separately requested operator listeners also use `WOTEX_LAB_METRICS_PORT`
 and `WOTEX_LAB_METRICS_TOKEN`, or `WOTEX_LAB_METRICS_QUERY_PORT` and
 `WOTEX_LAB_METRICS_QUERY_TOKEN`; invalid or incomplete options refuse startup.
 
+## OTLP spans and exception logs
+
+Set `WOTEX_LAB_OTLP_URL=http://127.0.0.1:<port>/v1/otlp` to send Lab spans and
+exception logs to a local GreptimeDB receiver, and optionally
+`WOTEX_LAB_OTLP_DATABASE` to write them into a database provisioned with a
+retention TTL. The exporter needs no PromEx or history activation. Each span
+carries only the component, operation, outcome class, profile and, for
+exceptions, the exception kind; Thing references, scenario identifiers,
+results and exception reasons are never exported. The exporter buffers at
+most 512 records per signal, sends one request at a time every five seconds and
+drops records instead of retrying, so treat these signals as diagnostics.
+
 ## Control API mutations
 
 The `/api/v1` control API always serves the catalogue reads and the

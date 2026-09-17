@@ -163,6 +163,18 @@ if config_env() == :prod do
     server: true
 end
 
+# Lab spans and exception logs leave the host only when the operator names the
+# local OTLP receiver; the database selects a provisioned retention TTL.
+if url = System.get_env("WOTEX_LAB_OTLP_URL") do
+  case WotexLabWorkbench.Observability.Otlp.configure(
+         url,
+         System.get_env("WOTEX_LAB_OTLP_DATABASE")
+       ) do
+    {:ok, options} -> config :wotex_lab_workbench, metrics_otlp: options
+    {:error, _} -> raise "OTLP export requires WOTEX_LAB_OTLP_URL=http://127.0.0.1:<port>/v1/otlp"
+  end
+end
+
 # HTTP control mutations stay refused unless the operator opts in. The limits
 # below are the documented defaults; nothing else is read for this surface.
 if System.get_env("WOTEX_LAB_CONTROL_MUTATIONS") == "1" do

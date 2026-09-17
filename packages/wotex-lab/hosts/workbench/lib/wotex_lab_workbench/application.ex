@@ -18,6 +18,8 @@ defmodule WotexLabWorkbench.Application do
   local history and a credential different from the scrape credential.
   BeamLens additionally requires explicit activation plus local history, and
   starts only its bounded trusted-operator skill/provider bridge processes.
+  `metrics_otlp` adds the base library's OTLP exporter with the closed
+  `WotexLabWorkbench.Observability.Otlp` profile, independent of PromEx.
   A `control_mutations` limit list, instead of the default `false`, adds
   `WotexLabWorkbench.Control.Limits` before the endpoint so the HTTP control
   API admits its opted-in mutations; invalid limits refuse application start.
@@ -26,6 +28,7 @@ defmodule WotexLabWorkbench.Application do
   use Application
 
   alias WotexLabWorkbench.Investigation.Config, as: InvestigationConfig
+  alias WotexLabWorkbench.Observability.Otlp
 
   @impl Application
   def start(_type, _args) do
@@ -49,8 +52,10 @@ defmodule WotexLabWorkbench.Application do
     ]
 
     with {:ok, observability} <- observability(env),
-         {:ok, control} <- control(Keyword.get(env, :control_mutations, false)) do
-      Supervisor.start_link(observability ++ children ++ control ++ [WotexLabWorkbenchWeb.Endpoint],
+         {:ok, control} <- control(Keyword.get(env, :control_mutations, false)),
+         {:ok, otlp} <- otlp(Keyword.get(env, :metrics_otlp, false)) do
+      Supervisor.start_link(
+        observability ++ children ++ control ++ otlp ++ [WotexLabWorkbenchWeb.Endpoint],
         strategy: :one_for_one,
         name: WotexLabWorkbench.Supervisor
       )
@@ -109,6 +114,13 @@ defmodule WotexLabWorkbench.Application do
     if scrape != false and scrape[:token_digest] == query[:token_digest],
       do: {:error, :metrics_query_requires_distinct_credential},
       else: :ok
+  end
+
+  defp otlp(false), do: {:ok, []}
+
+  defp otlp(opts) do
+    with :ok <- Otlp.validate(opts),
+         do: {:ok, [{Wotex.Lab.Otlp.Exporter, Otlp.child_options(opts)}]}
   end
 
   defp control(false), do: {:ok, []}
