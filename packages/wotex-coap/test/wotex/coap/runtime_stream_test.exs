@@ -387,9 +387,12 @@ defmodule Wotex.CoAP.RuntimeStreamTest do
 
   test "WCO-C05 WCO-I05 owner queue overflow becomes terminal loss without forwarding another value",
        c do
-    {owner, initial, handle} = established(c, config: [timeout: 1000, max_queue_length: 1])
+    # One slot of headroom lets the initial report pass while the owner may still
+    # hold its subscribe reply; two queued messages then fill the bound.
+    {owner, initial, handle} = established(c, config: [timeout: 1000, max_queue_length: 2])
     owned = resources(handle.pid)
     true = :erlang.suspend_process(owner)
+    send(owner, :queued)
     send(owner, :queued)
     reply(c.peer, initial, %{report(initial.message, 11, "true") | type: :non, message_id: 902})
     cancellation = wire(c.peer)
