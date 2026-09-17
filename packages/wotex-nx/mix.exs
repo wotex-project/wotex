@@ -121,14 +121,14 @@ defmodule WotexNx.MixProject do
         docs_path("decisions/0002-batch-and-output-contract.md"),
         docs_path("provenance/standards-and-dependencies.md"),
         docs_path("provenance/runtime-backend-cohort.md"),
-        "SECURITY.md"
+        Path.expand("../../docs/packages/wotex-nx/security.md", __DIR__)
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-nx\/plans/,
         Specifications: ~r/docs\/packages\/wotex-nx\/specs/,
         Decisions: ~r/docs\/packages\/wotex-nx\/decisions/,
         Provenance: ~r/docs\/packages\/wotex-nx\/provenance/,
-        Project: ~r/SECURITY\.md/
+        Project: ~r/security\.md/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Nx, Wotex.Nx.Encoder, Wotex.Nx.Decoder],

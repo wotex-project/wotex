@@ -1,8 +1,0 @@
-# Contributing
-
-Open an issue before a compatibility-affecting change. Keep commits focused and
-lowercase conventional. Run `WOTEX_PATH_DEPS=1 mix check --no-retry` and include
-tests for changed behavior. Run the applicable explicit release-evidence
-commands in the README for documentation, dependency, coverage, or packaging
-changes. Never add credentials, consumer-specific policy, or connection
-ownership to this package.

@@ -133,7 +133,7 @@ defmodule WotexOPCUA.MixProject do
         [
           "README.md",
           "CHANGELOG.md",
-          "SECURITY.md",
+          Path.expand("../../docs/packages/wotex-opcua/security.md", __DIR__),
           "priv/native/runtime-guardian.md",
           "priv/native/json-codec.md",
           "priv/native/security.md",

@@ -114,15 +114,14 @@ defmodule WotexContinuum.MixProject do
         Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
         Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
         Path.join(@docs_root, "THREAT_MODEL.md"),
-        "SECURITY.md",
-        "GOVERNANCE.md"
+        Path.expand("../../docs/packages/wotex-continuum/security.md", __DIR__)
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-continuum\/plans/,
         "Verification maps": ~r/docs\/packages\/wotex-continuum\/specs\/WCT-C/,
         Specifications: ~r/docs\/packages\/wotex-continuum\/specs\/WCT\./,
         Security: ~r/docs\/packages\/wotex-continuum\/THREAT_MODEL/,
-        Project: ~r/(SECURITY|GOVERNANCE)\.md/
+        Project: ~r/(security|GOVERNANCE)\.md/
       ],
       groups_for_modules: [
         "Public API": [

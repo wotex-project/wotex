@@ -185,6 +185,6 @@ callback, authorization, isolation, pagination, expiry, and contention evidence.
 The adapters under `test/support/` are test consumers and are not packaged
 production storage implementations.
 
-See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
-[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
+See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
+[SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-directory/security.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex-directory/blob/main/NOTICE).

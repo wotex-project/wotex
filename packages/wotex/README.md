@@ -239,7 +239,7 @@ results.
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
+Contributions are welcome. Read [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md) before
 widening a standards claim or public value contract.
 
 ## License

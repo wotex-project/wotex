@@ -151,8 +151,7 @@ defmodule WotexLab.MixProject do
       extras:
         [
           "README.md",
-          "SECURITY.md",
-          "CONTRIBUTING.md",
+          Path.expand("../../docs/packages/wotex-lab/security.md", __DIR__),
           {"LICENSE", [title: "License"]},
           {"NOTICE", [title: "Notices"]}
         ] ++

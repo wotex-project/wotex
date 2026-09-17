@@ -213,7 +213,7 @@ git diff --check
 These commands do not invoke a release task, publish a package, or mutate a
 remote.
 
-See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
-[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see
+See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
+[SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/security.md). Licensed under Apache-2.0; see
 [LICENSE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/NOTICE).

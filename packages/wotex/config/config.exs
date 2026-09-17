@@ -5,7 +5,7 @@ if config_env() == :dev do
     mix_project: Mix.Project.get!(),
     changelog_file: "CHANGELOG.md",
     repository_url: "https://github.com/wotex-project/wotex",
-    version_tag_prefix: "v",
+    version_tag_prefix: "wotex-v",
     manage_mix_version?: true,
     manage_readme_version: false,
     github_handle_lookup?: false,

@@ -4,7 +4,7 @@ completion_plan: "docs/plans/wotex-continuum-completion.md"
 specifications:
   - id: "WCT.01"
     version: "2.0.0"
-    path: "specs/WCT.01-manifest-context-capability.md"
+    path: docs/specs/WCT.01-manifest-context-capability.md
     implementation_status: "implemented"
     standards:
       - name: "W3C WoT Thing Description 1.1 and WoT Architecture 1.1"
@@ -16,7 +16,7 @@ specifications:
     compatibility_classification: "Wire 2.0.0, incompatible with wire 1.0.0: the execution_context kind is renamed execution_scope and error paths are RFC 6901 JSON Pointer strings; source admission is delegated to the core bounded decoder; canonical vectors, full used-keyword schema agreement, and candidate-archive consumers are proved locally; public-registry availability and cross-vendor adoption are nonclaims"
   - id: "WCT.02"
     version: "2.0.0"
-    path: "specs/WCT.02-exchange-values.md"
+    path: docs/specs/WCT.02-exchange-values.md
     implementation_status: "implemented"
     standards:
       - name: "W3C WoT Thing Description 1.1, sections 5.3.1–5.3.4"
@@ -28,7 +28,7 @@ specifications:
     compatibility_classification: "Wire 2.0.0, incompatible with wire 1.0.0 through the renamed nested scope kind; inherits WCT.01 boundary limitations; the sibling wire mapping is documentation, not a dependency; no dispatch, deduplication or evidence-authenticity guarantee"
   - id: "WCT.03"
     version: "2.0.0"
-    path: "specs/WCT.03-mode-lifecycle-exit.md"
+    path: docs/specs/WCT.03-mode-lifecycle-exit.md
     implementation_status: "implemented"
     standards: []
     requires: ["WCT.01", "WCT.02"]

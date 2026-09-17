@@ -113,14 +113,13 @@ defmodule WotexRuntime.MixProject do
         {docs_path("specs/WRT.02-exposed-thing-runtime.md"), title: "ExposedThing Runtime"},
         {docs_path("specs/WRT.03-thing-level-interactions.md"), title: "Thing-level Interactions"},
         {"CHANGELOG.md", title: "Changelog"},
-        {"SECURITY.md", title: "Security"},
-        {"CONTRIBUTING.md", title: "Contributing"},
+        {Path.expand("../../docs/packages/wotex-runtime/security.md", __DIR__), title: "Security"},
         {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-runtime\/plans/,
         "Normative specifications": ~r/docs\/packages\/wotex-runtime\/specs/,
-        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
+        Reference: ~r/CHANGELOG|security|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
         "Runtime API": [Wotex.Runtime, Wotex.Runtime.ConsumedThing, Wotex.Runtime.ExposedThing],

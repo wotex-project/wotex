@@ -101,8 +101,7 @@ defmodule Wotex.MixProject do
         {docs_path("provenance/reference-corpus.md"), title: "Reference Corpus Evidence"},
         {docs_path("provenance/release-evidence.md"), title: "Release Evidence Boundary"},
         {"CHANGELOG.md", title: "Changelog"},
-        {"SECURITY.md", title: "Security"},
-        {"CONTRIBUTING.md", title: "Contributing"},
+        {Path.expand("../../docs/packages/wotex/security.md", __DIR__), title: "Security"},
         {"NOTICE", title: "Third-party Notices"},
         {"LICENSE", title: "License"}
       ],
@@ -110,7 +109,7 @@ defmodule Wotex.MixProject do
         "Completion plans": ~r/docs\/packages\/wotex\/plans/,
         "Normative specifications": ~r/docs\/packages\/wotex\/specs/,
         Provenance: ~r/docs\/packages\/wotex\/provenance/,
-        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|NOTICE|LICENSE/
+        Reference: ~r/CHANGELOG|security|CONTRIBUTING|NOTICE|LICENSE/
       ],
       groups_for_modules: [
         "Thing Description and Models": [

@@ -103,9 +103,8 @@ defmodule WotexConformance.MixProject do
       extras: [
         {"README.md", title: "Overview"},
         {doc("plans/wotex-conformance-completion.md"), title: "Completion Contract"},
-        {"CONTRIBUTING.md", title: "Contributing"},
-        {"SECURITY.md", title: "Security"},
-        {"GOVERNANCE.md", title: "Governance"},
+        {Path.expand("../../docs/packages/wotex-conformance/security.md", __DIR__),
+         title: "Security"},
         {doc("specs/WCF.01-conformance-runner.md"), title: "Conformance runner"},
         {doc("decisions/0001-external-target-isolation.md"), title: "External target isolation"},
         {doc("decisions/0002-evidence-digests.md"), title: "Evidence digests"},
@@ -126,7 +125,7 @@ defmodule WotexConformance.MixProject do
         Specifications: ~r|docs/packages/wotex-conformance/specs/|,
         Decisions: ~r|docs/packages/wotex-conformance/decisions/|,
         Provenance: ~r|docs/packages/wotex-conformance/provenance/|,
-        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|GOVERNANCE|LICENSE/
+        Reference: ~r/CHANGELOG|security|CONTRIBUTING|GOVERNANCE|LICENSE/
       ],
       groups_for_modules: [
         Contracts: [

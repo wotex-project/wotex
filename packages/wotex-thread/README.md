@@ -127,7 +127,7 @@ checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
 Run `mix check` before commits. It checks formatting, compiles with warnings as
 errors, and runs the default test suite. Wider checks belong to release readiness.
 `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_native_advisories.exs` is the
-live native source advisory release check described in [SECURITY.md](SECURITY.md).
+live native source advisory release check described in [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-thread/security.md).
 Optional interoperability suites fail if invoked without their required peer.
 The software suite includes native OpenThread simulation tests for Dataset
 validation, formation, management callbacks and commissioner admission/cleanup,

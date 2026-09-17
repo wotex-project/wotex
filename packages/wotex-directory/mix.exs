@@ -124,8 +124,8 @@ defmodule WotexDirectory.MixProject do
         {docs_path("decisions/0002-listing-and-expiry.md"), title: "Listing and expiry"},
         {docs_path("provenance/w3c-sources.md"), title: "W3C sources"},
         {"CHANGELOG.md", title: "Changelog"},
-        {"SECURITY.md", title: "Security"},
-        {"CONTRIBUTING.md", title: "Contributing"},
+        {Path.expand("../../docs/packages/wotex-directory/security.md", __DIR__),
+         title: "Security"},
         {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
@@ -133,7 +133,7 @@ defmodule WotexDirectory.MixProject do
         Specifications: ~r|docs/packages/wotex-directory/specs/|,
         Decisions: ~r|docs/packages/wotex-directory/decisions/|,
         Provenance: ~r|docs/packages/wotex-directory/provenance/|,
-        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
+        Reference: ~r/CHANGELOG|security|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Directory],

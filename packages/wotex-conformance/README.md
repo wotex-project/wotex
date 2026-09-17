@@ -163,7 +163,7 @@ records the tested Elixir and Erlang/OTP cohorts and their limits. The
 [package input boundary](../../docs/packages/wotex-conformance/provenance/package-inputs.md) describes which
 documentation roots enter the Hex archive.
 
-See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md),
-[SECURITY.md](SECURITY.md), and [GOVERNANCE.md](GOVERNANCE.md). Licensed under
+See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md),
+[SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/security.md), and [GOVERNANCE.md](https://github.com/wotex-project/wotex/blob/main/GOVERNANCE.md). Licensed under
 Apache-2.0; see [LICENSE](LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex-conformance/blob/main/NOTICE).

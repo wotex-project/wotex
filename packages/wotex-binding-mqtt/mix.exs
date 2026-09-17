@@ -140,8 +140,8 @@ defmodule WotexBindingMQTT.MixProject do
         {doc("provenance/mqtt-primary-sources.md"), title: "MQTT primary sources"},
         {doc("provenance/wot-binding-registry-2025-11-04.md"), title: "Binding Registry status"},
         {"CHANGELOG.md", title: "Changelog"},
-        {"SECURITY.md", title: "Security"},
-        {"CONTRIBUTING.md", title: "Contributing"},
+        {Path.expand("../../docs/packages/wotex-binding-mqtt/security.md", __DIR__),
+         title: "Security"},
         {"LICENSE", title: "License"},
         {"NOTICE", title: "Notices"}
       ],
@@ -149,7 +149,7 @@ defmodule WotexBindingMQTT.MixProject do
         "Completion plans": ~r/docs\/packages\/wotex-binding-mqtt\/plans/,
         "Library specifications": ~r/docs\/packages\/wotex-binding-mqtt\/specs/,
         Provenance: ~r/docs\/packages\/wotex-binding-mqtt\/provenance/,
-        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
+        Reference: ~r/CHANGELOG|security|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Binding.MQTT],

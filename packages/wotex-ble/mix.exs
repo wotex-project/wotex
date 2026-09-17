@@ -129,7 +129,11 @@ defmodule WotexBLE.MixProject do
     [
       main: "readme",
       extras:
-        ["README.md", "CHANGELOG.md", "SECURITY.md"] ++
+        [
+          "README.md",
+          "CHANGELOG.md",
+          Path.expand("../../docs/packages/wotex-ble/security.md", __DIR__)
+        ] ++
           Path.wildcard(
             Path.expand("../../docs/packages/wotex-ble/{specs,plans,provenance}/*.md", __DIR__)
           ),
