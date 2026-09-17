@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.6.0. Contract: accepted.
+Specification version: 0.7.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -55,7 +55,31 @@ never the opt-in PromEx collector's host-wide measurements as session data.
 `dashboard_test.exs` covers session denial, closed selection, inert export,
 session-owned saved arrangements and exact reproducible selection URLs. A deep
 link may preview an admitted arrangement without silently replacing the saved
-one. The separately selected `WOTEX_LAB_GRAFANA=1` lane in
+one.
+
+Saved panels are also query-backed for the session room. Each room owns a
+catalogue collector attributed to its own process, a history of at most 120
+snapshots and 1 MiB, and a random history instance identifier. The room
+captures after each run or approval and every five seconds. Things and shared
+processes started under the host instance are not attributed. The explicit
+`load_history` event revalidates the session and queries only that room's
+history. `HistoryPanels` accepts 5-minute, 15-minute and 1-hour ranges with 5-,
+15- and 60-second steps. Each label set, at most eight per panel, is one
+`Metrics.Query` with every dimension filtered and reduced limits: 2,000 points,
+256 KiB, a 250 ms deadline and a 1.5-second load budget. Counters show the
+per-second rate inside each step, gauges the last value and histograms the
+bucket-derived p95. The native SVG chart keeps empty steps as gaps. Each panel
+states its label-set count, freshness, history markers and query digests. A
+panel without captured series is unavailable, and a scope from another room
+is refused. Mounting runs no query and a new arrangement clears old results.
+`history_panels_test.exs` covers two rooms on one host, attribution
+through started processes, cleanup with the room, rates, last values, p95,
+gaps, eight-series truncation, budget exhaustion, clock rollback and
+refusals. `dashboard_test.exs` covers the explicit browser flow, invalid
+ranges, cleared arrangements, a second session's empty history and a revoked
+session.
+
+The separately selected `WOTEX_LAB_GRAFANA=1` lane in
 `grafana_import_test.exs` imports the downloaded JSON for all 43 catalogue
 panels, in 16-panel selections, into pinned Grafana 13.2.2. Grafana binds the
 Prometheus data source input and stores each exact template. The lane runs
@@ -63,9 +87,8 @@ every stored target through Grafana against pinned GreptimeDB 1.1.4 history
 that the Workbench bridge wrote from real PromEx captures. Panels with captured
 source series, including the eight fed by the thermal fixture, return values;
 gauges keep captured values and earlier ranges return none. The other panels
-answer without values or errors. This server cohort does not claim
-query-backed history panels, Grafana browser rendering or other Grafana
-versions.
+answer without values or errors. This server cohort does not claim Grafana
+browser rendering or other Grafana versions.
 
 ## Product and implementation boundary
 

@@ -11,6 +11,16 @@ defmodule WotexLabWorkbench.Room do
   decision waits for `approve/3`, which the policy checks again at that
   moment. Runs are synchronous and bounded; the room refuses more than its
   run, dataset and Thing capacities.
+
+  Each room also owns a catalogue collector attributed to the room process
+  and a bounded history of its snapshots. Only events emitted by the room, by
+  processes it started or by tasks it awaits reach that collector; Things and
+  shared processes started under the host instance are not attributed. The
+  room captures a snapshot after each run or approval and every five seconds,
+  keeping at most 120 snapshots and 1 MiB. The history is bound to a random
+  per-room instance identifier, so a query scoped to another room is refused.
+  `history/1` returns the history binding for trusted host queries. The
+  collector, history and snapshots are discarded with the room.
   """
 
   use GenServer
@@ -23,6 +33,7 @@ defmodule WotexLabWorkbench.Room do
   alias Wotex.Lab.Error
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Formal.Result
+  alias Wotex.Lab.Metrics.{Collector, History}
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing}
@@ -37,6 +48,10 @@ defmodule WotexLabWorkbench.Room do
   @max_formal 8
   @max_td_bytes 16_384
   @run_timeout 30_000
+  @history_interval_ms 5_000
+  @history_snapshots 120
+  @history_bytes 1_048_576
+  @history_queries 4
   @things [
     %{
       key: "thermostat",
@@ -140,6 +155,17 @@ defmodule WotexLabWorkbench.Room do
   def verify(room, property, variant),
     do: GenServer.call(room, {:verify, property, variant}, 70_000)
 
+  @typedoc "The room-owned history and the scope its queries must name."
+  @type history_binding :: %{
+          history: pid(),
+          scope: %{instance: String.t(), session: String.t()},
+          interval_ms: pos_integer()
+        }
+
+  @doc "Returns the room's attributed history binding for trusted host queries."
+  @spec history(pid()) :: {:ok, history_binding()}
+  def history(room), do: GenServer.call(room, :history)
+
   @doc "Runs, datasets, formal results, Things and counters for evidence and reports."
   @spec snapshot(pid()) :: map()
   def snapshot(room), do: GenServer.call(room, :snapshot)
@@ -152,6 +178,7 @@ defmodule WotexLabWorkbench.Room do
     lab = Keyword.fetch!(opts, :lab)
     epoch = DateTime.utc_now()
     token = 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+    instance = "room-" <> (8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower))
 
     with {:ok, things} <- start_things(lab, token),
          {:ok, repository} <- managed(lab, :things, {EtsRepository, id: :directory}),
@@ -180,7 +207,19 @@ defmodule WotexLabWorkbench.Room do
                allowed: [:operator],
                limits: %{"setTarget" => %{min: 5, max: 35}}
              )
+           ),
+         {:ok, collector} <- local(Collector.start_link(attribute_to: self())),
+         {:ok, history} <-
+           local(
+             History.start_link(
+               instance: instance,
+               max_snapshots: @history_snapshots,
+               max_bytes: @history_bytes,
+               max_queries: @history_queries
+             )
            ) do
+      schedule_history()
+
       {:ok,
        %{
          id: Keyword.fetch!(opts, :id),
@@ -205,6 +244,12 @@ defmodule WotexLabWorkbench.Room do
          formal: [],
          extra_tds: [],
          control: Ledger.new(),
+         history: %{
+           collector: collector,
+           store: history,
+           instance: instance,
+           last_wall_ms: 0
+         },
          owned_lab: take_owned(:room_owned_lab),
          owned_local: take_owned(:room_owned_local)
        }}
@@ -226,12 +271,13 @@ defmodule WotexLabWorkbench.Room do
       run = build_run(experiment, params, sequence, started, outcome)
       record_metric(state.id, :scenario, :inference, run.duration_ms, run.status)
 
-      state = %{
-        state
-        | sequence: sequence,
-          runs: Map.put(state.runs, run.id, run),
-          order: [run.id | state.order]
-      }
+      state =
+        sample_history(%{
+          state
+          | sequence: sequence,
+            runs: Map.put(state.runs, run.id, run),
+            order: [run.id | state.order]
+        })
 
       {:reply, {:ok, run}, state}
     else
@@ -271,6 +317,16 @@ defmodule WotexLabWorkbench.Room do
 
   def handle_call(:runs, _from, state), do: {:reply, Enum.map(state.order, &state.runs[&1]), state}
 
+  def handle_call(:history, _, state) do
+    binding = %{
+      history: state.history.store,
+      scope: %{instance: state.history.instance, session: state.history.instance},
+      interval_ms: @history_interval_ms
+    }
+
+    {:reply, {:ok, binding}, state}
+  end
+
   def handle_call({:fetch_run, id}, _from, state), do: {:reply, fetch_run_state(state, id), state}
 
   def handle_call({:cancel, id}, _from, state) do
@@ -306,12 +362,12 @@ defmodule WotexLabWorkbench.Room do
       record_metric(state.id, :policy, :dispatch, 0, :dispatched)
 
       {:reply, {:ok, run},
-       %{
+       sample_history(%{
          state
          | runs: Map.put(state.runs, id, run),
            state_revision: state.state_revision + 1,
            watermark: state.watermark + 1
-       }}
+       })}
     else
       {:ok, %Run{}} ->
         {:reply, {:error, Error.new(:not_approvable, :dispatch, "run has no pending decision")},
@@ -492,6 +548,11 @@ defmodule WotexLabWorkbench.Room do
   def handle_info({:wotex_continuum, "edge", delivery_id, _wire}, state) do
     _ack = Channel.ack(state.channel, delivery_id)
     {:noreply, state}
+  end
+
+  def handle_info(:sample_history, state) do
+    schedule_history()
+    {:noreply, sample_history(state)}
   end
 
   def handle_info({:EXIT, _pid, :normal}, state), do: {:noreply, state}
@@ -836,6 +897,20 @@ defmodule WotexLabWorkbench.Room do
     if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
   catch
     :exit, _reason -> :ok
+  end
+
+  defp schedule_history, do: Process.send_after(self(), :sample_history, @history_interval_ms)
+
+  # Snapshots advance wall time strictly, so a capture in the same millisecond
+  # is skipped before it consumes a collector sequence and leaves a false gap.
+  defp sample_history(%{history: history} = state) do
+    with true <- System.system_time(:millisecond) > history.last_wall_ms,
+         {:ok, snapshot} <- Collector.snapshot(history.collector),
+         {:ok, _} <- History.put(history.store, snapshot) do
+      %{state | history: %{history | last_wall_ms: snapshot.wall_time_ms}}
+    else
+      _ -> state
+    end
   end
 
   defp record_metric(scope, component, operation, duration_ms, outcome) do

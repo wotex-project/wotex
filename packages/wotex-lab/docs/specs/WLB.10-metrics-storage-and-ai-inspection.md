@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.20.0. Contract: accepted. Source status: the metric
+Specification version: 0.21.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -117,7 +117,14 @@ failure MUST NOT affect numerical output, authorization or cleanup.
 `Wotex.Lab.Metrics.Collector` is that handler: it aggregates in the emitter
 into a public ETS table with atomic counter updates, reserves series capacity
 atomically before creating a series, drops and counts beyond the budget, and
-counts its own failures instead of raising into the caller.
+counts its own failures instead of raising into the caller. Its optional
+`:attribute_to` owner restricts recording to events emitted by that process,
+by processes whose `$ancestors` include it or by tasks whose `$callers`
+include it; other events are ignored before any table access. Attribution
+follows OTP process-dictionary conventions and is a collection filter for
+trusted same-BEAM code, not an authorization or containment boundary.
+`metrics_collector_test.exs` covers owner, started-process and task
+attribution, unrelated emitters and option refusal.
 
 Default budgets per instance: 256 active scalar series (histogram bucket,
 sum and count each consume capacity), 120 snapshots at 5-second intervals,
@@ -145,8 +152,12 @@ outcome atoms through `outcome_class/1` and unknown profiles or operations to
 `other`, and the collector stamps its configured instance slot on each
 snapshot. The implemented PromEx host adapter describes the single Workbench
 Lab instance, not browser sessions. Its fixed registered names are host-owned;
-no per-session atoms/modules are generated. Slot expiry and tenant-isolated
-collection/history remain planned. VM metrics are not currently enabled.
+no per-session atoms/modules are generated. Each Workbench session room
+instead owns an attributed collector and a separate bounded history under a
+random instance identifier, both discarded with the room (WLB.11). Events from
+Things and shared processes started under the host instance are outside that
+attribution. Slot expiry for shared histories and hosted tenant collection
+remain planned. VM metrics are not currently enabled.
 
 Counters preserve reset identity and cumulative semantics. Histograms use
 versioned fixed buckets; percentile queries derive from bucket counts, never
@@ -492,8 +503,10 @@ per calling process and caps the whole host at 32 live scopes. Neither owner,
 scope, history nor an endpoint is an operator request option. Opening performs
 no query or LLM call. No browser route, LiveView event or MCP tool exposes this
 host-wide history, and neither a browser token nor the scrape credential grants
-access. Browser tenant isolation, durable reads and investigation-specific
-provider/cost/context budgets remain separate acceptance work.
+access. The browser's saved panels query only the session room's attributed
+history described in WLB.11. Hosted tenant isolation, durable reads and
+investigation-specific provider/cost/context budgets remain separate acceptance
+work.
 
 ### Operator HTTP query binding
 

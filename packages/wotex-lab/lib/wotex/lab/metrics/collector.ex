@@ -25,6 +25,18 @@ defmodule Wotex.Lab.Metrics.Collector do
   profile or an operation is always mapped to a closed enum before it becomes
   a label; `:backend_class` is the finite configured class for this instance.
 
+  `:attribute_to` optionally binds the collector to one owner process. The
+  handler then records only events emitted by that process, by a process whose
+  `$ancestors` include it (a process it started with an OTP start function) or
+  by a process whose `$callers` include it (a task it started). Every other
+  event is ignored without touching the table, so an attributed collector
+  counts nothing about unrelated emitters. Attribution follows the standard
+  OTP process dictionary conventions; a process started without them, such as
+  a raw `spawn/1` or a process started by another owner, is not attributed.
+  It is a collection filter for trusted same-BEAM code, not an authorization
+  or isolation boundary. Each attributed collector still receives every
+  catalogue event and discards unrelated ones in constant work.
+
   `snapshot/1` returns an admitted `Wotex.Lab.Metrics.Snapshot` with the
   instance slot, a sequence, monotonic and wall time, sorted series and the
   drop, reject and reset counters.
@@ -40,7 +52,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   @max_budget 4_096
   @nanoseconds_per_second 1_000_000_000
   @counters ~w(dropped_series dropped_samples invalid_samples negative_durations resets)a
-  @options ~w(id series_budget backend_class instance_slot handler_id restart name)a
+  @options ~w(id series_budget backend_class instance_slot attribute_to handler_id restart name)a
 
   @doc false
   @spec child_spec(keyword()) :: Supervisor.child_spec()
@@ -53,7 +65,10 @@ defmodule Wotex.Lab.Metrics.Collector do
     }
   end
 
-  @doc "Starts a collector; `:series_budget` (256), `:backend_class`, `:instance_slot` (0)."
+  @doc """
+  Starts a collector with `:series_budget` (256), `:backend_class`, `:instance_slot` (0)
+  and an optional `:attribute_to` owner process.
+  """
   @spec start_link(keyword()) :: GenServer.on_start() | {:error, Error.t()}
   def start_link(opts) do
     with :ok <- validate(opts) do
@@ -87,9 +102,11 @@ defmodule Wotex.Lab.Metrics.Collector do
   @doc false
   @spec handle_event([atom()], map(), map(), map()) :: :ok
   def handle_event(event, measurements, metadata, config) do
-    Enum.each(Map.get(config.index, event, []), fn metric ->
-      record(config.table, metric, event, measurements, metadata, config.context)
-    end)
+    if attributed?(config.attribute_to) do
+      Enum.each(Map.get(config.index, event, []), fn metric ->
+        record(config.table, metric, event, measurements, metadata, config.context)
+      end)
+    end
 
     :ok
   catch
@@ -109,7 +126,13 @@ defmodule Wotex.Lab.Metrics.Collector do
     index = index()
     handler_id = {__MODULE__, Keyword.get(opts, :handler_id, self())}
     context = %{backend_class: Keyword.get(opts, :backend_class, :other)}
-    config = %{table: table, index: index, context: context}
+
+    config = %{
+      table: table,
+      index: index,
+      context: context,
+      attribute_to: Keyword.get(opts, :attribute_to)
+    }
 
     case :telemetry.attach_many(handler_id, Map.keys(index), &__MODULE__.handle_event/4, config) do
       :ok ->
@@ -190,14 +213,23 @@ defmodule Wotex.Lab.Metrics.Collector do
     with :ok <- Options.validate(opts, @options) do
       budget = Keyword.get(opts, :series_budget, @default_budget)
       slot = Keyword.get(opts, :instance_slot, 0)
+      attribute_to = Keyword.get(opts, :attribute_to)
 
       if is_integer(budget) and budget in 1..@max_budget and is_integer(slot) and
-           slot in 0..65_535 and is_atom(Keyword.get(opts, :backend_class, :other)) do
+           slot in 0..65_535 and is_atom(Keyword.get(opts, :backend_class, :other)) and
+           (is_nil(attribute_to) or is_pid(attribute_to)) do
         :ok
       else
         {:error, Error.new(:invalid_collector, :construction, "budget or slot is out of range")}
       end
     end
+  end
+
+  defp attributed?(nil), do: true
+
+  defp attributed?(owner) do
+    self() == owner or owner in Process.get(:"$ancestors", []) or
+      owner in Process.get(:"$callers", [])
   end
 
   defp index do

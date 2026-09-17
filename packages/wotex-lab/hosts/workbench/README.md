@@ -250,6 +250,19 @@ and never fills missing data with zero. Saved arrangements are session-only and
 cannot activate either the collector or the separately configured durable
 exporter.
 
+Once a room exists, **Load history** charts the saved panels from that room's
+own history. Each room owns a catalogue collector attributed to the room
+process, the processes it started and the tasks it awaits. It also owns a
+volatile history of at most 120 snapshots and 1 MiB. The room captures after
+each run or approval and every five seconds, and discards both with the room.
+Things' server processes, shared host processes and other sessions are not
+included. Choose a 5-minute, 15-minute or 1-hour range. Counters show the
+per-second rate inside each step, gauges the last value and histograms the
+bucket-derived p95. Each panel shows at most eight label sets, states the total,
+and lists its freshness, history markers and query digests. Empty steps are
+gaps. Opening the page runs no query, and this history is separate from the
+host-wide PromEx collector.
+
 The separately selected Grafana lane checks import and query execution for one
 pinned server cohort. It needs Docker and the digest-pinned Grafana 13.2.2 and
 GreptimeDB 1.1.4 images, which it does not pull:

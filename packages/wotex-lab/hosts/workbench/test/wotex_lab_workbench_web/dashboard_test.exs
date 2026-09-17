@@ -99,4 +99,57 @@ defmodule WotexLabWorkbenchWeb.DashboardTest do
              ~s(#dashboard-selection input[value="nx_duration_seconds"][checked])
            )
   end
+
+  test "saved panels query only their own room history on explicit request", %{conn: conn} do
+    conn = get(conn, "/")
+    {:ok, view, _} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-thermal"), %{
+        "experiment_id" => "thermal",
+        "params" => %{"backend" => "binary"}
+      })
+
+    {:ok, _, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+
+    {:ok, metrics, html} = live(recycle(conn), "/metrics")
+    assert html =~ "Session history panels"
+    assert html =~ "History not loaded"
+    refute has_element?(metrics, "#history-results")
+
+    html = render_submit(element(metrics, "#history-query"), %{"range" => "5m"})
+    assert has_element?(metrics, "#history-chart-nx_operations_total svg.wl-chart-svg")
+    assert has_element?(metrics, "#history-chart-nx_duration_seconds svg.wl-chart-svg")
+    assert html =~ "rate per step in count/second; 3 of 3 label sets"
+    assert html =~ "Range 5m ending"
+    assert html =~ "Query digests (3)"
+
+    html = render_submit(element(metrics, "#history-query"), %{"range" => "2h"})
+    assert html =~ "invalid_range"
+    assert render_hook(metrics, "load_history", %{"caller" => "5m"}) =~ "invalid_range"
+
+    html =
+      render_submit(element(metrics, "#dashboard-selection"), %{
+        "panels" => ["directory_operations_total"]
+      })
+
+    refute html =~ "history-results"
+    html = render_submit(element(metrics, "#history-query"), %{"range" => "15m"})
+    assert html =~ "No captured series in this range; nothing is drawn as zero."
+    refute has_element?(metrics, "#history-chart-directory_operations_total")
+
+    other = build_conn() |> get("/")
+    {:ok, other_view, _} = live(recycle(other), "/metrics")
+    refute has_element?(other_view, "#history-query")
+    render_click(element(other_view, "button[phx-click='start_room']"))
+    html = render_submit(element(other_view, "#history-query"), %{"range" => "5m"})
+    assert html =~ "0 of 0 label sets"
+    refute has_element?(other_view, "#history-chart-nx_operations_total")
+
+    :ok = Sessions.revoke(get_session(conn, SessionToken.key()))
+
+    assert render_submit(element(metrics, "#history-query"), %{"range" => "5m"}) =~
+             "unknown_session"
+  end
 end

@@ -262,6 +262,69 @@ defmodule Wotex.Lab.MetricsCollectorTest do
     :ok = GenServer.stop(named)
   end
 
+  test "an attributed collector records only its owner, started processes and tasks" do
+    parent = self()
+
+    owner =
+      spawn_link(fn ->
+        {:ok, collector} = Collector.start_link(attribute_to: self())
+        {:ok, other} = Collector.start_link([])
+        send(parent, {:collectors, collector, other})
+
+        receive do
+          :emit ->
+            emit_encode(1)
+            {:ok, agent} = Agent.start_link(fn -> :ok end)
+            :ok = Agent.get(agent, fn _ -> emit_encode(2) end)
+            emit_encode(3)
+            Task.await(Task.async(fn -> emit_encode(4) end))
+            send(parent, :emitted)
+        end
+
+        receive do
+          :stop -> :ok
+        end
+      end)
+
+    assert_receive {:collectors, collector, other}
+    assert Process.alive?(collector) and Process.alive?(other)
+
+    emit_encode(100)
+    spawn(fn -> emit_encode(200) end) |> Process.monitor()
+    assert_receive {:DOWN, _, :process, _, :normal}
+
+    send(owner, :emit)
+    assert_receive :emitted
+    labels = [{"operation", "encode"}]
+
+    assert {:ok, attributed} = Collector.snapshot(collector)
+    assert %{sample: %{value: 4}} = series(attributed, "wotex_lab_nx_operations_total", labels)
+    assert %{sample: %{value: 10}} = series(attributed, "wotex_lab_nx_rows_total", [])
+    assert Collector.stats(collector).invalid_samples == 0
+
+    # Concurrent test modules may add their own events to the unattributed collector.
+    assert {:ok, unattributed} = Collector.snapshot(other)
+    test_labels = [{"profile", "test"} | labels]
+
+    assert %{sample: %{value: ops}} =
+             series(unattributed, "wotex_lab_nx_operations_total", test_labels)
+
+    assert %{sample: %{value: rows}} =
+             series(unattributed, "wotex_lab_nx_rows_total", [{"profile", "test"}])
+
+    assert ops >= 6 and rows >= 310
+
+    assert {:error, %Error{code: :invalid_collector}} =
+             Collector.start_link(attribute_to: :named_process)
+
+    send(owner, :stop)
+  end
+
+  defp emit_encode(rows) do
+    :telemetry.execute(@encode_stop, %{duration: native(1)}, %{outcome: :ok, profile: :test})
+    :telemetry.execute(@encode_measurement, %{rows: rows}, %{profile: :test})
+  end
+
   test "snapshot admission refuses malformed values with a pointer path" do
     base = %{
       source: :collector,

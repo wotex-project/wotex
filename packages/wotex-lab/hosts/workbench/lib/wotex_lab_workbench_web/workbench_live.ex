@@ -18,6 +18,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Chart,
     Experiments,
     Formal,
+    HistoryPanels,
     Insights,
     Metrics,
     Observability.Panels,
@@ -29,6 +30,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   alias WotexLabWorkbench.Investigation.{Answer, Broker, Provider, RunContext}
 
+  import WotexLabWorkbenchWeb.Components.HistoryPanels
   import WotexLabWorkbenchWeb.Components.Insights
   import WotexLabWorkbenchWeb.Components.MetricCatalogue
   alias WotexLabWorkbenchWeb.Components.StatusBadge
@@ -45,6 +47,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:things, [])
       |> assign(:snapshot, nil)
       |> assign(:metrics, nil)
+      |> assign(:history, nil)
+      |> assign(:history_range, HistoryPanels.default_range())
       |> assign(:dashboard_panels, socket.assigns.scope && socket.assigns.scope.dashboard_panels)
       |> assign(:run, nil)
       |> assign(:charts, [])
@@ -147,6 +151,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end)
   end
 
+  def handle_event("load_history", %{"range" => range}, socket) do
+    command(socket, :query, fn scope ->
+      with {:ok, binding} <- room_history(scope.room),
+           {:ok, history} <-
+             HistoryPanels.load(binding, socket.assigns.dashboard_panels, range) do
+        {:ok, scope, {:history, history}}
+      end
+    end)
+  end
+
+  def handle_event("load_history", _, socket) do
+    reject_event(socket, Error.new(:invalid_range, :metrics, "history range is not admitted"))
+  end
+
   def handle_event("save_dashboard", %{"panels" => panel_ids}, socket) do
     with %{token: token} <- socket.assigns.scope,
          {:ok, session} <- Sessions.put_dashboard(token, panel_ids) do
@@ -156,6 +174,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
        socket
        |> assign(:scope, scope)
        |> assign(:dashboard_panels, session.dashboard_panels)
+       |> assign(:history, nil)
        |> put_flash(:info, "Dashboard arrangement saved for this session.")
        |> push_patch(to: dashboard_path(session.dashboard_panels))}
     else
@@ -288,6 +307,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <% :metrics -> %>
             <.metrics_view
               metrics={@metrics}
+              history={@history}
+              history_range={@history_range}
               room={@scope.room}
               dashboard_panels={@dashboard_panels}
             />
@@ -551,6 +572,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :metrics, :any, required: true
   attr :room, :any, required: true
   attr :dashboard_panels, :list, required: true
+  attr :history, :any, required: true
+  attr :history_range, :string, required: true
 
   defp metrics_view(assigns) do
     latest = assigns.metrics && List.last(assigns.metrics.samples)
@@ -639,6 +662,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         phx-disable-with="Freezing…"
       >Freeze visible measurements as dataset</button>
     </div>
+    <.history_panels :if={@room} history={@history} range={@history_range} />
     <.metric_catalogue selected={@dashboard_panels} />
     """
   end
@@ -731,6 +755,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp apply_effect(socket, {:assign, key, value}), do: assign(socket, key, value)
   defp apply_effect(socket, {:navigate, path}), do: push_navigate(socket, to: path)
 
+  defp apply_effect(socket, {:history, history}),
+    do: socket |> assign(:history, history) |> assign(:history_range, history.range)
+
   defp apply_effect(socket, {:insights, insights}),
     do: socket |> assign(:insights, insights) |> assign(:charts, insights.charts)
 
@@ -766,6 +793,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> assign(:things, [])
     |> assign(:snapshot, nil)
     |> assign(:metrics, nil)
+    |> assign(:history, nil)
     |> assign(:run, nil)
     |> assign(:charts, [])
     |> assign(:insights, nil)
@@ -801,7 +829,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
     case selected do
       {:ok, panel_ids} ->
-        socket |> assign(:run_id, nil) |> assign(:dashboard_panels, panel_ids) |> refresh()
+        socket
+        |> assign(:run_id, nil)
+        |> assign(:dashboard_panels, panel_ids)
+        |> assign(:history, nil)
+        |> refresh()
 
       {:error, error} ->
         socket
@@ -935,6 +967,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp known(_value, _allowed),
     do: {:error, Error.new(:invalid_filter, :metrics, "metric filter is not admitted")}
+
+  defp room_history(room) do
+    Room.history(room)
+  catch
+    :exit, _ -> {:error, Error.new(:history_unavailable, :metrics, "room history is unavailable")}
+  end
 
   defp safe(fun, fallback) do
     fun.()
