@@ -41,7 +41,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 13,
+  "attempt": 14,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -130,7 +130,7 @@
     }
   ],
   "durations": {
-    "run_ms": 35800
+    "run_ms": 33900
   },
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
@@ -147,11 +147,11 @@
     "excluded_count": 0,
     "test_count": 66
   },
-  "revision": "a79aba963709f6513c4e5be4a66231699aa7f704",
+  "revision": "6451b02d2bceac7e9f9e09b5e27393328bff5890",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:eba72c604aae10cb3b739965e29140a44052dee1c366a60213090adb3855cae5",
+  "source_tree_digest": "sha256:cecf674606456fb0813e2e0ce31aaedbb49547ba4a759e7af9137d86cfba0e00",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

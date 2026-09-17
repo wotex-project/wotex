@@ -14,7 +14,10 @@ defmodule Wotex.Lab.MCP.Tools do
   when the host bound a metrics history and scope: each call opens one disposable
   `Wotex.Lab.Metrics.Gateway` owned by the session process, admits the closed
   request fields with the tool's reduced limits, waits at most two seconds and
-  revokes the gateway. `invoke_action` exists
+  revokes the gateway. `start_benchmark`, `benchmark_status` and
+  `cancel_benchmark` exist only when the host bound a `Wotex.Lab.MCP.Jobs` owner:
+  they admit a catalogued workload with a sample count under the session's job
+  quotas, poll its bounded informational record and cancel it. `invoke_action` exists
   only when the host opted into writes: it needs the host's write token, an
   idempotency key that is never accepted twice in a session, and a deadline,
   and it dispatches through the runtime against a simulated Thing of this
@@ -24,13 +27,13 @@ defmodule Wotex.Lab.MCP.Tools do
 
   alias Wotex.Lab.Conformance.Target
   alias Wotex.Lab.Formal.{Abstraction, Model, Profile, Result, Serializer}
-  alias Wotex.Lab.MCP.{Resources, Seams}
+  alias Wotex.Lab.MCP.{Jobs, Resources, Seams}
   alias Wotex.Lab.Metrics.{Gateway, Query}
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
   alias Wotex.{ThingDescription, ThingModel}
 
-  @tool_names ~w(parse_td parse_tm explain_error list_things read_property conformance_observe explain_seam verify_control_model query_metrics invoke_action)
+  @tool_names ~w(parse_td parse_tm explain_error list_things read_property conformance_observe explain_seam verify_control_model query_metrics start_benchmark benchmark_status cancel_benchmark invoke_action)
   @metric_fields ~w(metric aggregation filters quantile start_at end_at step_ms)
   @metric_limits %{
     range_ms: 6 * 60 * 60 * 1_000,
@@ -149,7 +152,29 @@ defmodule Wotex.Lab.MCP.Tools do
       )
     ]
 
+    benchmarks = [
+      tool(
+        "start_benchmark",
+        "Start one bounded informational benchmark job over a catalogued workload.",
+        %{"workload" => %{"type" => "string"}, "samples" => %{"type" => "integer"}},
+        ["workload"]
+      ),
+      tool(
+        "benchmark_status",
+        "Read the status and retained record of a benchmark job of this session.",
+        %{"job_id" => %{"type" => "string"}},
+        ["job_id"]
+      ),
+      tool(
+        "cancel_benchmark",
+        "Cancel a running benchmark job of this session.",
+        %{"job_id" => %{"type" => "string"}},
+        ["job_id"]
+      )
+    ]
+
     read = if Map.get(state, :metrics), do: read ++ metrics, else: read
+    read = if Map.get(state, :jobs), do: read ++ benchmarks, else: read
     if state.writes, do: read ++ write, else: read
   end
 
@@ -312,6 +337,29 @@ defmodule Wotex.Lab.MCP.Tools do
       {:error, -32_602, "invalid arguments for query_metrics"}
     end
   end
+
+  def call(
+        %{jobs: jobs, session_key: key} = state,
+        "start_benchmark",
+        %{"workload" => workload} = args
+      )
+      when is_pid(jobs) and map_size(args) <= 2 do
+    if Enum.all?(Map.keys(args), &(&1 in ["workload", "samples"])),
+      do: job_reply(state, Jobs.start(jobs, key, workload, Map.get(args, "samples", 20))),
+      else: {:error, -32_602, "invalid arguments for start_benchmark"}
+  end
+
+  def call(%{jobs: jobs, session_key: key} = state, "benchmark_status", %{"job_id" => job} = args)
+      when is_pid(jobs) and map_size(args) == 1,
+      do: job_reply(state, Jobs.status(jobs, key, job))
+
+  def call(%{jobs: jobs, session_key: key} = state, "cancel_benchmark", %{"job_id" => job} = args)
+      when is_pid(jobs) and map_size(args) == 1,
+      do: job_reply(state, Jobs.cancel(jobs, key, job))
+
+  def call(%{jobs: nil}, name, _)
+      when name in ["start_benchmark", "benchmark_status", "cancel_benchmark"],
+      do: {:error, -32_601, "benchmark jobs are not bound to this session"}
 
   def call(%{metrics: nil}, "query_metrics", _),
     do: {:error, -32_601, "metrics are not bound to this session"}
@@ -529,6 +577,11 @@ defmodule Wotex.Lab.MCP.Tools do
       0 -> :ok
     end
   end
+
+  defp job_reply(state, {:ok, status}), do: text(state, status)
+
+  defp job_reply(state, {:error, error}),
+    do: text(state, %{"available" => false, "error" => Atom.to_string(error.code)}, true)
 
   defp metrics_failure(state, code),
     do: text(state, %{"available" => false, "error" => Atom.to_string(code)}, true)

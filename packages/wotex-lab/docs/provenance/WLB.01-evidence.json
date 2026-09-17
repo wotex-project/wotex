@@ -25,7 +25,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 12,
+  "attempt": 13,
   "budgets": {
     "default_children_per_role": 128,
     "max_children_per_role": 10000,
@@ -61,7 +61,7 @@
     }
   ],
   "durations": {
-    "run_ms": 80
+    "run_ms": 90
   },
   "fixtures": {},
   "inputs": [
@@ -73,11 +73,11 @@
   "outcomes": {
     "test_count": 12
   },
-  "revision": "a79aba963709f6513c4e5be4a66231699aa7f704",
+  "revision": "6451b02d2bceac7e9f9e09b5e27393328bff5890",
   "scenario_id": "WLB.01-library-foundation",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:9a8d57faffb2132883fafcf132f366b2145531c4617c1a29e45a59bc854557e6",
+  "source_tree_digest": "sha256:982a61aa52a7ce798e24583732d7abb111017322114f4b256cfe30d61cae4cb3",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

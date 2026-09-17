@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.5.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.6.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -141,8 +141,23 @@ disposable owner-bound `Metrics.Gateway` per call with a six-hour range, 2,000
 points, 256 KiB output, a two-second deadline and one worker, then revokes it.
 Scope, limits and unknown fields cannot come from tool arguments.
 `test/wotex/lab/mcp_metrics_test.exs` covers listing, answers, refused fields,
-a foreign scope, a dead history and gateway release. Benchmark jobs remain
-planned.
+a foreign scope, a dead history and gateway release.
+
+Benchmark jobs need a host-started `Wotex.Lab.MCP.Jobs` owner passed as
+`jobs:`. Streamable HTTP handles each request in a different process, so the
+owner, not the transport, holds every worker; each session gets a random job
+key. `start_benchmark` admits a catalogued workload (`json-decode`, `td-parse`
+or `td-canonical-encode` over the packaged loopback fixture, unless the trusted
+host supplies its own catalogue) with at most 200 samples. The defaults allow
+one running job and eight admitted jobs per session, retain four terminal
+results, stop a job at 10 seconds and refuse a record above 65,536 bytes.
+`benchmark_status` returns `running`, `completed` with the informational
+`Wotex.Lab.Benchmark` record, `failed`, `timed_out` or `cancelled`;
+`cancel_benchmark` kills a running worker. An idle session loses its jobs after
+15 minutes. `test/wotex/lab/mcp_jobs_test.exs` covers the catalogue, quotas,
+session isolation, retention, cancellation, deadline, crash, redacted failure,
+closing, idle expiry and the MCP tool binding. Job results are not correctness
+evidence.
 
 Writes/Actions require explicit instance opt-in and per-request authorization.
 `invoke_action` is listed only when the host built the session with

@@ -19,7 +19,7 @@ defmodule Wotex.Lab.MCP.Server do
 
   alias Wotex.Lab.Adapters.Runtime.NoSec
   alias Wotex.Lab.Error
-  alias Wotex.Lab.MCP.{Resources, Tools}
+  alias Wotex.Lab.MCP.{Jobs, Resources, Tools}
 
   @protocol_version "2025-11-25"
   @server_info %{"name" => "wotex_lab", "version" => "0.1.0"}
@@ -38,7 +38,9 @@ defmodule Wotex.Lab.MCP.Server do
           max_output_bytes: pos_integer(),
           idempotency: MapSet.t(String.t()),
           formal: keyword() | nil,
-          metrics: %{history: pid(), scope: map()} | nil
+          metrics: %{history: pid(), scope: map()} | nil,
+          jobs: pid() | nil,
+          session_key: String.t() | nil
         }
 
   @doc "The pinned protocol version this server speaks."
@@ -50,13 +52,16 @@ defmodule Wotex.Lab.MCP.Server do
   (false), `:write_token` (required when writes are on), `:max_calls`,
   `:max_output_bytes`, `:formal` (keyword options for the formal profile, or nil)
   and `:metrics` (`%{history: pid, scope: map}` bound from the host's authenticated
-  context, or nil). The metrics scope never comes from a tool argument.
+  context, or nil). The metrics scope never comes from a tool argument. `:jobs`
+  is a host-started `Wotex.Lab.MCP.Jobs` pid, or nil; a bound session gets a
+  random job key.
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Wotex.Lab.Error.t()}
   def new(opts \\ []) when is_list(opts) do
     writes = Keyword.get(opts, :writes, false)
     token = Keyword.get(opts, :write_token)
     metrics = Keyword.get(opts, :metrics)
+    jobs = Keyword.get(opts, :jobs)
 
     cond do
       not is_boolean(writes) ->
@@ -69,6 +74,9 @@ defmodule Wotex.Lab.MCP.Server do
            :construction,
            "writes need an explicit token of at least 16 bytes"
          )}
+
+      not (is_nil(jobs) or is_pid(jobs)) ->
+        {:error, Error.new(:invalid_options, :construction, "jobs must be a job owner pid")}
 
       not metrics_binding?(metrics) ->
         {:error,
@@ -88,7 +96,9 @@ defmodule Wotex.Lab.MCP.Server do
            max_output_bytes: Keyword.get(opts, :max_output_bytes, @default_max_output_bytes),
            idempotency: MapSet.new(),
            formal: Keyword.get(opts, :formal),
-           metrics: metrics
+           metrics: metrics,
+           jobs: jobs,
+           session_key: if(jobs, do: Jobs.session_key())
          }}
     end
   end

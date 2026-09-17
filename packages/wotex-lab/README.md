@@ -293,7 +293,8 @@ content digests and canonical encoding make evidence attributable. An assistant
 reaches the same data through `Wotex.Lab.MCP` over stdio or Streamable HTTP:
 read tools and resources only, unless the host opts a session into writes
 with a token. A host that binds a metrics history and scope also exposes the
-read-only `query_metrics` tool over the shared WLB.10 query descriptor. The MQTT
+read-only `query_metrics` tool over the shared WLB.10 query descriptor, and a
+host-started `Wotex.Lab.MCP.Jobs` owner adds bounded, cancellable benchmark jobs. The MQTT
 lane is implemented too: `Wotex.Lab.Adapters.MQTT.EmqttClient` and its linked
 `Adapters.MQTT.Session` carry runtime requests, retained reads, publications
 and subscriptions over EMQTT (`emqtt` is an optional dependency selected by
