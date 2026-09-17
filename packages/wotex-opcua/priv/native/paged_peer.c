@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-/* Test-only same-stack secure peer for real BrowseNext and release I/O. */
+/* Test-only same-stack secure peer for real BrowseNext and release I/O. Each
+ * 's' byte on stdin prints current and cumulative server Session and
+ * SecureChannel counters, so tests can distinguish explicit Session deletion,
+ * server-side Session timeout and channel release. */
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 #include <poll.h>
@@ -175,8 +178,18 @@ int main(int argc, char **argv) {
         int ready = poll(&owner, 1, 20);
         if(ready > 0 && (owner.revents & (POLLHUP | POLLERR | POLLNVAL))) break;
         if(ready > 0 && (owner.revents & POLLIN)) {
-            char ignored[16];
-            if(read(0, ignored, sizeof(ignored)) <= 0) break;
+            char input[16];
+            ssize_t count = read(0, input, sizeof(input));
+            if(count <= 0) break;
+            for(ssize_t index = 0; index < count; index++) {
+                if(input[index] != 's') continue;
+                UA_ServerStatistics statistics = UA_Server_getStatistics(server);
+                printf("COUNTERS %zu %zu %zu %zu %zu\n",
+                       statistics.ss.currentSessionCount, statistics.ss.cumulatedSessionCount,
+                       statistics.ss.sessionTimeoutCount, statistics.ss.sessionAbortCount,
+                       statistics.scs.currentChannelCount);
+                fflush(stdout);
+            }
         }
     }
     status = UA_Server_run_shutdown(server);

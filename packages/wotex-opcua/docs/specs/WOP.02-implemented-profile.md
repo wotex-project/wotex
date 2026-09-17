@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.4
+  version: 2.0.5
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -102,8 +102,9 @@ replenishes credit per validated line and keeps the Session after a
 request-scoped failure. A caller timeout or death sends a bounded `cancel`;
 Session loss and invalid or foreign-generation output fail each unanswered
 request once with its own effect. Excess Browse results and an expired browse
-deadline release the live continuation instead of closing the Session. The
-public `Open62541` handle still accepts calls only from its owner process.
+deadline release the live continuation instead of closing the Session. Any
+process may send Read, Write and Call through a persistent `Open62541` handle;
+Browse and disconnect stay owner-only.
 The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
 input line and applies the strict JSON reader and closed outer request envelope

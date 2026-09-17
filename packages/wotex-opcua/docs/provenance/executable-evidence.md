@@ -20,6 +20,47 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Multi-process public client and Session lifecycle counters, 2026-09-17
+
+`Open62541.request/3` now admits Read, Write and Call from any process through a
+persistent handle; the host monitors each caller and bounds admission at 64.
+Browse and disconnect remain owner-only because they own continuation and
+Session cleanup. Against the independent asyncua 2.0.1 peer, 32 processes share
+one public persistent client with interleaved Method Calls and ByteString Reads
+whose outputs match their own inputs, while non-owner Browse and disconnect
+return `invalid_native_handle`.
+
+`paged_peer.c` now prints current and cumulative server Session counts, Session
+timeout and abort counts and current SecureChannels for each `s` byte on its
+input. `native_lifecycle_test.exs` uses those counters with the production
+executable and guardian. An explicit close removes the Session and channel
+within 500 ms of its acknowledgement with a 60,000 ms Session timeout and no
+server timeout. The test measures one full secure activation, then kills the
+host owner at 0, 1/8, 1/4, 1/2, 3/4 and 7/8 of that duration and once after a
+successful open. Each case reaps the host and guardian within 1,000 ms, releases
+the server channel within 1,000 ms and returns the server Session count to zero
+within 5,000 ms with a 1,000 ms Session timeout; the cumulative Session count
+must increase across the kills. Observed local runs activated in 165–186 ms and
+created three Sessions during the kills. One RelWithDebInfo run recorded one
+server Session timeout and the others none, so a Session created before owner
+loss may be deleted cooperatively or expire on the server; the test accepts
+either and asserts no leaked Session. A read, an unknown-namespace validation
+failure and a health read keep the real Session active until an explicit close.
+
+The optional secure suite passes 18/18 with both the RelWithDebInfo and macOS
+ASan/UBSan executables. The complete `WOTEX_PATH_DEPS=1 mix check --no-retry`
+gate passes on macOS arm64 with Elixir 1.20.2 / OTP 29.0.4: 325 passed
+(10 doctests, 4 properties, 311 tests), 18 optional tests excluded and 95.5%
+coverage. The same-stack counter peer is not independent-stack evidence, and no
+server-side Cancel or subscription cleanup counter is accepted.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/open62541.ex` | `a0b3f4ca8571ede6baba634582bc693d42cec0dd00e46f56cd172277a4392228` |
+| `priv/native/paged_peer.c` | `6d4c771241374149578bf1a60bf5bd474c0affd7f6d2524f2e4f6472817ffa17` |
+| `test/interop/native_lifecycle_test.exs` | `122c76549000f76c06f4252add911377697527d882605bb7e833ebcf2df1b14b` |
+| `test/interop/native_secure_test.exs` | `837e1670eff658460add6094d8bd4f51e9715a2e2c9791cd580766e5e711a2e4` |
+
 ## Native namespace projection for identity values, 2026-09-17
 
 The pinned SDK decodes every NodeId namespace index, including the NodeId inside

@@ -9,8 +9,7 @@ defmodule Wotex.OPCUA.PortCall do
 
   This helper does not start a worker or enforce a callback deadline. The
   selected client must honor the supplied timeout and own its resources.
-  `Wotex.OPCUA.Open62541` uses an owned C executable; the older
-  The first-party native implementation runs through the owned C executable.
+  `Wotex.OPCUA.Open62541` runs through its owned C executable.
   """
 
   alias Wotex.OPCUA.Error

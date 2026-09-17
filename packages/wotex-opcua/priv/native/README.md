@@ -58,7 +58,7 @@ memory and return a local token. `browse_next` consumes that token and
 host now binds that token to a caller-held reference, retains the original
 deadline and cumulative bounds, and exposes persistent typed pagination.
 An uninstalled `paged_peer.c` securely limits Browse to one reference per
-response and exercises real BrowseNext, one-result release, and persistent and
+response, prints server Session and channel counters for each `s` input byte, and exercises real BrowseNext, one-result release, and persistent and
 one-shot child-list pagination. Independent-peer BrowseNext/release and multiple
 concurrent continuations remain open.
 

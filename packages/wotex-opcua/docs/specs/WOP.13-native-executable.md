@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.24
+  version: 1.1.25
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -45,7 +45,12 @@ generation fail each unanswered request once: sent Write/Call keep unknown
 effect, other requests and calls never emitted report none. ExUnit binds
 WOP-X-F17, F20, F22, F51, F56 and F57 through the host with a process fixture
 that runs the production owner and an injected service, or a deterministic
-response probe. The public `Open62541` client remains owner-bound.
+response probe. The public `Open62541` persistent client admits Read, Write and
+Call from any process and keeps Browse and disconnect owner-only. A same-stack
+secure peer with server Session/channel counters shows that close deletes the
+server Session before its timeout and that owner death at measured fractions of
+one activation releases the guardian, SDK process and channel within 1,000 ms,
+with any created Session removed by cooperative close or server timeout.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split

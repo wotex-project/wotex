@@ -4,6 +4,10 @@ defmodule Wotex.OPCUA.Open62541 do
 
   `connect/1` validates the WOP.13 native configuration. Persistent mode opens
   one secure Session and binds its temporary native host to the calling process.
+  Any process may send Read, Write and Call through a persistent handle; the
+  host admits at most 64 outstanding requests and monitors each caller. Browse
+  and disconnect remain owner-only because they own continuation and Session
+  cleanup.
   One-shot mode defers credential reads and process startup until `request/3`.
   This client projects Value Read, typed Write and Method Call results as
   validated native maps and complete, bounded child Browse pages as canonical
@@ -35,8 +39,9 @@ defmodule Wotex.OPCUA.Open62541 do
   @impl Wotex.OPCUA.Client
   @doc "Runs one validated native service request within the supplied timeout."
   def request(%{owner: owner, config: %Config{} = config, host: host} = handle, message, timeout)
-      when owner == self() and is_integer(timeout) and timeout in 1..60_000 do
-    with {:ok, operation, parameters} <- service(message) do
+      when is_pid(owner) and is_integer(timeout) and timeout in 1..60_000 do
+    with {:ok, operation, parameters} <- service(message),
+         :ok <- caller(owner, operation) do
       case config.lifecycle do
         :persistent when is_pid(host) ->
           persistent_request(host, operation, parameters, handle.namespace_array, timeout)
@@ -51,6 +56,9 @@ defmodule Wotex.OPCUA.Open62541 do
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_native_handle)}
+
+  defp caller(owner, "browse") when owner != self(), do: {:error, Error.new(:invalid_native_handle)}
+  defp caller(_, _), do: :ok
 
   defp persistent_request(host, "browse", parameters, namespaces, timeout),
     do:

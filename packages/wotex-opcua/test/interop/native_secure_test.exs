@@ -270,6 +270,62 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert :ok = Wotex.OPCUA.disconnect(session)
   end
 
+  test "32 processes share one public persistent client and owner-only operations stay bound" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    peer = Jason.decode!(File.read!(config))
+
+    options = [
+      executable: System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE"),
+      guardian: System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    ]
+
+    session = public_session(options, peer, config)
+
+    results =
+      1..32
+      |> Enum.map(fn index ->
+        Task.async(fn ->
+          if rem(index, 3) == 0 do
+            Wotex.OPCUA.send(session, %{
+              type: :call,
+              node_id: peer["method_id"],
+              value: %{
+                object_id: peer["object_id"],
+                arguments: [%{type: "Double", value: index * 1.0}, %{type: "Double", value: 0.5}]
+              }
+            })
+            |> then(&{:call, index, &1})
+          else
+            {:read, index, Wotex.OPCUA.send(session, %{type: :read, node_id: peer["byte_node_id"]})}
+          end
+        end)
+      end)
+      |> Task.await_many(15_000)
+
+    for result <- results do
+      case result do
+        {:call, index, response} ->
+          expected = index + 0.5
+          assert {:ok, %{"outputs" => [%{"value" => ^expected}]}} = response
+
+        {:read, _, response} ->
+          assert {:ok, %{"value" => %{"type" => "ByteString"}}} = response
+      end
+    end
+
+    assert {:error, %Wotex.OPCUA.Error{code: :invalid_native_handle}} =
+             Task.await(
+               Task.async(fn ->
+                 Wotex.OPCUA.send(session, %{type: :browse, node_id: peer["object_id"]})
+               end)
+             )
+
+    assert {:error, %Wotex.OPCUA.Error{code: :invalid_native_handle}} =
+             Task.await(Task.async(fn -> Wotex.OPCUA.disconnect(session) end))
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
   test "a secure typed native Write is read back without retry" do
     config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
