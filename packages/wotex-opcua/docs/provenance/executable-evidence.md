@@ -20,6 +20,55 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Software stress lane and minimum runtime, 2026-09-17
+
+`test/software/lifecycle_stress_test.exs` carries the `interop` and `software`
+tags; the default test helper now excludes `software` as well. It needs the
+independent asyncua 2.0.1 peer and one native build.
+
+- Operations: one persistent Basic256Sha256 Session performs 2000 sequential
+  operations (a Method call every tenth, otherwise Reads). Then 32 concurrent
+  callers each make 16 Calls whose outputs must equal their own distinct inputs.
+  Then 50 Reads with a 1 ms timeout each end in `deadline_exceeded` or `busy`.
+  Pending work and controls drain, and a later Read succeeds. Growth from the
+  first to the second 1000-operation batch, through the concurrent and
+  deadline phases, must stay under 1 MiB of host process memory and 16 MiB of
+  guardian plus SDK process RSS. Close releases both OS processes within
+  1,000 ms.
+- 100 open/Read/close cycles: each releases its host and native OS processes
+  within 1,000 ms; the BEAM port and process counts return to their start
+  values; and the peer reports zero subscriptions.
+- 100 receiver-death cycles on one Session: each subscription is removed after
+  its receiver is killed, controls drain, the peer reports zero subscriptions
+  and MonitoredItems, and the Session still reads.
+- 100 generations with an unsolicited native reply (deterministic C probe):
+  each ends once with `invalid_native_frame`, and both OS processes are reaped.
+
+Results on macOS arm64 with Elixir 1.20.2 / OTP 29 (`mix test --include interop
+--include software --seed 0 test/software/lifecycle_stress_test.exs` with the
+peer environment described above): 4/4 against the RelWithDebInfo build (host
+memory 2992/2992->2992 bytes; native RSS 9584/9856->9904 KiB, as start/after
+warm-up->end) and 4/4 against the macOS ASan/UBSan build (native RSS
+49328/98784->108544 KiB; the sanitizer allocator grows during the first batch). A single-batch RSS bound that included
+warm-up failed under ASan/UBSan with 54 MiB growth, which is why the bound is
+measured from the second batch. Peer loss is exercised by
+`subscription_lifecycle_test.exs`, not repeated in this lane.
+
+The default suite also runs on Elixir 1.18.4 compiled with OTP 27, with
+Erlang/OTP 27.3.4.15, a separate build root and `mix compile --warnings-as-errors`:
+10 doctests, 4 properties and 409 tests (the 1.18 count includes excluded tests),
+0 failures and 60 excluded. That run repeats no native build and no peer lane.
+Linux cohorts, the software Mix tasks and the archive consumer (X-F48) are not
+executed.
+
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 364 passed (10 doctests,
+4 properties, 350 tests), 59 optional tests excluded and 95.3% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/software/lifecycle_stress_test.exs` | `63f007ac4624dbad565d4e3ffb0bfed3a52a5fc6f4131001f0d86cc5fa57605b` |
+| `test/test_helper.exs` | `9f486e6a6a69aa14066d212f54a10312b2d503853986ede605f83859eb5c86fa` |
+
 ## Bounded native output owed after request timeouts, 2026-09-17
 
 A software stress run against the macOS ASan/UBSan build ended a Session with
