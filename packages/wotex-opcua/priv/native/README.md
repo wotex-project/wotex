@@ -68,8 +68,13 @@ bounded identity strings, canonical base64 envelopes, user-token form and
 session timeout. This shape gate precedes the `security.c` credential checks;
 Session activation uses `session_open.c` after this shape gate.
 `ipc.c` also validates a closed initial credit frame. `main.c` binds it to the
-process generation and requires it before a request. Terminal output uses its
-control allowance; open/read/write/call/browse/close responses spend credit and the BEAM owner
+process generation and requires it before a request. `output.c` owns normal
+output: complete envelopes wait in a 64-frame/1 MiB queue and spend message and
+byte credit only when their first byte is written to the nonblocking pipe.
+Ready and one terminal control share the 4096-byte allowance and follow any
+partially written envelope intact. `output_check.c` covers credit sequence and
+replenishment bounds, queue limits, partial writes and a failed descriptor.
+Open/read/write/call/browse/close responses use this queue and the BEAM owner
 replenishes validated consumption. Queued notifications are not implemented.
 
 `build_command.c` is the reviewed POSIX command guardian from the Wotex Modbus

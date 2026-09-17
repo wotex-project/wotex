@@ -4,6 +4,7 @@
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
 #include "ipc.h"
+#include "output.h"
 #include "session_open.h"
 #include "value_codec.h"
 #include <openssl/crypto.h>
@@ -29,18 +30,15 @@
 
 #define WOTEX_SDK_REVISION "d1173ccc31560ffc60c29e24ce8adb19f8c3c686"
 
-static int write_control(const char *bytes, size_t size) {
-    size_t offset = 0;
-    while(offset < size) {
-        ssize_t count = write(STDOUT_FILENO, bytes + offset, size - offset);
-        if(count > 0)
-            offset += (size_t)count;
-        else if(count < 0 && errno == EINTR)
-            continue;
-        else
-            return 0;
-    }
-    return 1;
+static WopOutput native_output;
+
+static int flush_output(void) {
+    return wop_output_flush(&native_output, STDOUT_FILENO) == WOP_OUTPUT_OK;
+}
+
+static int write_control(const char *bytes, size_t size, bool terminal) {
+    return wop_output_control(&native_output, bytes, size, terminal) == WOP_OUTPUT_OK &&
+           flush_output();
 }
 
 static int64_t monotonic_ms(void) {
@@ -49,6 +47,23 @@ static int64_t monotonic_ms(void) {
        (uint64_t)now.tv_sec > (uint64_t)INT64_MAX / 1000U)
         return -1;
     return (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+/* Bounded best-effort delivery of already admitted output during cleanup. A
+ * blocked owner pipe or absent credit cannot extend process teardown. */
+static void drain_output(int budget_ms) {
+    int64_t deadline = monotonic_ms() + budget_ms;
+    while(!wop_output_drained(&native_output) && wop_output_writable(&native_output)) {
+        int64_t now = monotonic_ms();
+        if(now < 0 || now >= deadline)
+            return;
+        struct pollfd descriptor = {STDOUT_FILENO, POLLOUT, 0};
+        int polled = poll(&descriptor, 1, (int)(deadline - now));
+        if(polled < 0 && errno == EINTR)
+            continue;
+        if(polled <= 0 || !flush_output())
+            return;
+    }
 }
 
 static int self_test(void) {
@@ -87,7 +102,7 @@ static int terminal(uint64_t generation, const char *code, const char *phase) {
             "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"none\"}}\n",
             code, phase);
     }
-    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
+    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size, true);
 }
 
 static int terminal_status(uint64_t generation, const char *code,
@@ -97,7 +112,7 @@ static int terminal_status(uint64_t generation, const char *code,
         "{\"version\":1,\"generation\":%" PRIu64 ",\"event\":\"terminal\","
         "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"none\","
         "\"status\":%" PRIu32 "}}\n", generation, code, phase, status);
-    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
+    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size, true);
 }
 
 static int terminal_mutation(uint64_t generation, const char *code,
@@ -114,7 +129,7 @@ static int terminal_mutation(uint64_t generation, const char *code,
             "{\"version\":1,\"generation\":%" PRIu64 ",\"event\":\"terminal\","
             "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"unknown\"}}\n",
             generation, code, phase);
-    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
+    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size, true);
 }
 
 static int terminal_active(bool mutating, uint64_t generation,
@@ -128,8 +143,7 @@ static bool result_frame(const WopIpcRequest *request, const WopSession *session
                          const UA_StatusCode *write_status,
                          const UA_CallMethodResult *call_result,
                          const UA_BrowseResult *browse_result,
-                         const char *browse_token,
-                         uint64_t *messages, uint64_t *bytes) {
+                         const char *browse_token) {
     yyjson_mut_doc *doc = yyjson_mut_doc_new(NULL);
     if(!doc) return false;
     yyjson_mut_val *root = yyjson_mut_obj(doc);
@@ -188,10 +202,13 @@ static bool result_frame(const WopIpcRequest *request, const WopSession *session
     }
     size_t size = 0;
     char *encoded = valid ? yyjson_mut_write(doc, 0, &size) : NULL;
-    bool sent = encoded && size < WOP_JSON_FRAME_BYTES && *messages > 0 &&
-                size + 1 <= *bytes && write_control(encoded, size) &&
-                write_control("\n", 1);
-    if(sent) { (*messages)--; *bytes -= size + 1; }
+    char *line = encoded && size < WOP_JSON_FRAME_BYTES ? realloc(encoded, size + 1) : NULL;
+    if(line) {
+        encoded = line;
+        line[size] = '\n';
+    }
+    bool sent = line && wop_output_normal(&native_output, line, size + 1) == WOP_OUTPUT_OK &&
+                flush_output();
     free(encoded);
     yyjson_mut_doc_free(doc);
     return sent;
@@ -202,8 +219,6 @@ static int bootstrap(void) {
     if(!json_pool) return 70;
     WopIpcInput input = {0};
     uint64_t admitted_generation = 0;
-    uint64_t credit_sequence = 0, credit_messages = 0, credit_bytes = 0;
-    uint64_t used_messages = 0, used_bytes = 0;
     WopSession session = {0};
     WopIpcRequest open_request = {0};
     WopIpcRequest read_request = {0};
@@ -223,7 +238,7 @@ static int bootstrap(void) {
         "\"revision\":\"%s\",\"clock_ms\":%" PRId64 "}\n", WOTEX_SDK_REVISION, clock_ms);
     int status = 70;
     if(clock_ms < 0 || length < 0 || (size_t)length >= sizeof(ready) ||
-       !write_control(ready, (size_t)length))
+       !write_control(ready, (size_t)length, false))
         goto done;
 
     for(;;) {
@@ -253,12 +268,8 @@ static int bootstrap(void) {
                 break;
             }
             if(opening && session.ready) {
-                uint64_t before = credit_bytes;
-                if(!result_frame(&open_request, &session, NULL, NULL, NULL, NULL, NULL,
-                                 &credit_messages, &credit_bytes))
+                if(!result_frame(&open_request, &session, NULL, NULL, NULL, NULL, NULL))
                     break;
-                used_messages++;
-                used_bytes += before - credit_bytes;
                 opening = false;
                 opened = true;
             }
@@ -278,14 +289,10 @@ static int bootstrap(void) {
                                    "decode");
                     break;
                 }
-                uint64_t before = credit_bytes;
-                if(!result_frame(&read_request, NULL, &session.read_value, NULL, NULL, NULL, NULL,
-                                 &credit_messages, &credit_bytes)) {
+                if(!result_frame(&read_request, NULL, &session.read_value, NULL, NULL, NULL, NULL)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
                 }
-                used_messages++;
-                used_bytes += before - credit_bytes;
                 UA_DataValue_clear(&session.read_value);
                 reading = false;
             }
@@ -300,15 +307,11 @@ static int bootstrap(void) {
                                          "exchange", session.write_status, true);
                     break;
                 }
-                uint64_t before = credit_bytes;
-                if(!result_frame(&write_request, NULL, NULL, &session.write_status, NULL, NULL, NULL,
-                                 &credit_messages, &credit_bytes)) {
+                if(!result_frame(&write_request, NULL, NULL, &session.write_status, NULL, NULL, NULL)) {
                     (void)terminal_mutation(admitted_generation, "response_limit",
                                          "decode", 0, false);
                     break;
                 }
-                used_messages++;
-                used_bytes += before - credit_bytes;
                 UA_WriteValue_clear(&session.write_value);
                 writing = false;
             }
@@ -328,15 +331,11 @@ static int bootstrap(void) {
                                          "decode", 0, false);
                     break;
                 }
-                uint64_t before = credit_bytes;
-                if(!result_frame(&call_request, NULL, NULL, NULL, &session.call_result, NULL, NULL,
-                                 &credit_messages, &credit_bytes)) {
+                if(!result_frame(&call_request, NULL, NULL, NULL, &session.call_result, NULL, NULL)) {
                     (void)terminal_mutation(admitted_generation, "response_limit",
                                          "decode", 0, false);
                     break;
                 }
-                used_messages++;
-                used_bytes += before - credit_bytes;
                 UA_CallMethodRequest_clear(&session.call_method);
                 UA_CallMethodResult_clear(&session.call_result);
                 calling = false;
@@ -347,11 +346,7 @@ static int bootstrap(void) {
                         (void)terminal(admitted_generation, "cleanup_failed", "cleanup");
                         break;
                     }
-                    uint64_t before = credit_bytes;
-                    if(!result_frame(&browse_request, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     &credit_messages, &credit_bytes)) break;
-                    used_messages++;
-                    used_bytes += before - credit_bytes;
+                    if(!result_frame(&browse_request, NULL, NULL, NULL, NULL, NULL, NULL)) break;
                     UA_ByteString_clear(&session.browse_point);
                     session.browse_releasing = false;
                     browsing = false;
@@ -380,27 +375,30 @@ static int bootstrap(void) {
                     (void)terminal(admitted_generation, "invalid_response", "decode");
                     break;
                 }
-                uint64_t before = credit_bytes;
                 if(!result_frame(&browse_request, NULL, NULL, NULL, NULL,
-                                 &session.browse_result, continuation,
-                                 &credit_messages, &credit_bytes)) {
+                                 &session.browse_result, continuation)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
                 }
-                used_messages++;
-                used_bytes += before - credit_bytes;
                 UA_BrowseDescription_clear(&session.browse_description);
                 UA_BrowseResult_clear(&session.browse_result);
                 browsing = false;
             }
         }
-        struct pollfd descriptor = {STDIN_FILENO, POLLIN, 0};
-        int polled = poll(&descriptor, 1, opening || opened ? 1 : 10);
+        struct pollfd descriptors[2] = {
+            {STDIN_FILENO, POLLIN, 0},
+            {STDOUT_FILENO, wop_output_writable(&native_output) ? POLLOUT : 0, 0}
+        };
+        int polled = poll(descriptors, 2, opening || opened ? 1 : 10);
         if(polled < 0 && errno == EINTR)
             continue;
         if(polled < 0)
             break;
-        if(polled == 0)
+        if(descriptors[1].revents & (POLLOUT | POLLERR | POLLHUP)) {
+            if(!flush_output())
+                break;
+        }
+        if(!(descriptors[0].revents & (POLLIN | POLLHUP | POLLERR)))
             continue;
         char buffer[4096];
         ssize_t count = read(STDIN_FILENO, buffer, sizeof(buffer));
@@ -439,26 +437,14 @@ static int bootstrap(void) {
                 if(yyjson_is_obj(root) && yyjson_obj_get(root, "event")) {
                     WopIpcCredit credit;
                     if(!wop_ipc_credit(root, &credit) ||
-                       (!admitted_generation && credit.sequence != 1) ||
-                       (admitted_generation &&
-                        (credit.generation != admitted_generation ||
-                         credit.sequence != credit_sequence + 1 ||
-                         credit.messages > used_messages || credit.bytes > used_bytes ||
-                         credit_messages + credit.messages > 16 ||
-                         credit_bytes + credit.bytes > 262144))) {
+                       wop_output_credit(&native_output, &credit) != WOP_OUTPUT_OK) {
                         (void)terminal_active(writing || calling, admitted_generation,
                                               "invalid_request", "validation");
                     } else {
-                        admitted_generation = credit.generation;
-                        credit_sequence = credit.sequence;
-                        credit_messages += credit.messages;
-                        credit_bytes += credit.bytes;
-                        if(credit.sequence != 1) {
-                            used_messages -= credit.messages;
-                            used_bytes -= credit.bytes;
-                        }
+                        admitted_generation = native_output.generation;
                         wop_json_clear(&parsed);
                         input.used = 0;
+                        if(!flush_output()) goto done;
                         continue;
                     }
                 } else if(!wop_ipc_request(root, &request) || !admitted_generation ||
@@ -591,8 +577,7 @@ static int bootstrap(void) {
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "close") == 0 &&
                           yyjson_obj_size(yyjson_obj_get(root, "parameters")) == 0) {
                     bool released = wop_session_close(&session);
-                    if(released && result_frame(&request, NULL, NULL, NULL, NULL, NULL, NULL,
-                                                &credit_messages, &credit_bytes))
+                    if(released && result_frame(&request, NULL, NULL, NULL, NULL, NULL, NULL))
                         status = 0;
                     else if(!released)
                         (void)terminal_active(writing || calling, request.generation,
@@ -614,7 +599,10 @@ static int bootstrap(void) {
         }
     }
 done:
+    drain_output(100);
     wop_session_close(&session);
+    drain_output(100);
+    wop_output_clear(&native_output);
     OPENSSL_cleanse(input.bytes, sizeof(input.bytes));
     OPENSSL_cleanse(json_pool, WOP_JSON_POOL_BYTES);
     free(json_pool);
@@ -635,7 +623,8 @@ int main(int argc, char **argv) {
             static const char result[] =
                 "{\"self_test\":\"ok\",\"sha256_known_answer\":true,"
                 "\"datetime_ticks\":1,\"network_requests\":0}\n";
-            if(!write_control(result, sizeof(result) - 1))
+            if(fwrite(result, 1, sizeof(result) - 1, stdout) != sizeof(result) - 1 ||
+               fflush(stdout) != 0)
                 status = 70;
         }
     } else {

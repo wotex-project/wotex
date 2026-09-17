@@ -20,6 +20,51 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Bounded native output queue, 2026-09-17
+
+`priv/native/output.c` now owns normal native output. Each complete
+LF-terminated envelope waits in a queue bounded to 64 frames and 1 MiB,
+including a partially written frame. It spends one message credit and its
+encoded bytes only when its first byte is written to the nonblocking pipe, so
+no normal byte is emitted without credit. Replenishment must follow the exact
+sequence, generation and consumed amount, and outstanding credit cannot exceed
+16 messages or 262,144 bytes. Ready and one terminal control share the
+4096-byte allowance; a terminal follows an active partial envelope intact and
+discards queued envelopes that have not started. `main.c` routes all existing
+responses and controls through this queue, polls stdout for writability and
+drains already admitted output for at most 100 ms before and after Session
+cleanup. Temporary backpressure retains state; other write failures end the
+process.
+
+`wotex_opcua_output_check` asserts credit gating and replenishment, replay,
+foreign, skipped and wrapped sequences, the 64-frame and 1 MiB bounds,
+malformed envelopes, a 131,072-byte frame split by real pipe backpressure
+followed by an intact terminal, the shared control allowance and a closed
+descriptor. It passes under the RelWithDebInfo CTest target and under macOS
+AddressSanitizer/UndefinedBehaviorSanitizer (`cc -fsanitize=address,undefined`).
+The incremental native CTest suite passes 183/183. The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 301 passed (10 doctests, 4 properties, 287 tests),
+12 optional tests excluded and 95.0% coverage, including the fresh pinned native
+build and CTest.
+
+The optional secure suite against the independent asyncua 2.0.1 peer and the
+same-stack paged C peer passes 11 of 12 tests with this executable. The failing
+public-client case also fails with the unchanged `9426fb9` executable: after a
+typed Browse exceeds `max_references: 1`, the BEAM host closes the Session, so the
+test's following Write returns `native_process_terminated`. This queue does not
+accept concurrent operations, cancellation, report buffering, receiver overflow
+through a live producer or any `native-contract-v1.json` case.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/output.c` | `27dd3435ce76172fb1e866611b8d1d770fae7d536072ec47cae226fe098094f5` |
+| `priv/native/output.h` | `ae2eaaf4b10b5d18f154fb426f07571343495ede1f296735bccb96b0653e2dc4` |
+| `priv/native/output_check.c` | `63202944c9138a2a79a33030e8b7a18ece0c4b9a4b12bbaa9af5e591dfbd41bb` |
+| `priv/native/main.c` | `ed9baa3a0e2599e74c0fc9139aedf746c6aac9e823731039373630ed3806003b` |
+| `priv/native/CMakeLists.txt` | `99637121401cdb41fbb6ddac887e47edb143ee5a5b9a90f23024681d48cf45db` |
+| native CTest log | `5843c40fd12e778b988a6169818dce03b3b9d8f41247ef6593978e992dfad5cb` |
+
 ## Native-only runtime boundary, 2026-09-17
 
 The first-party `Wotex.OPCUA.Asyncua` client, `priv/opcua_bridge.py` and their

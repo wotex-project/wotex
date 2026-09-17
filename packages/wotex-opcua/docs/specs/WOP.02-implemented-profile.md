@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.0
+  version: 2.0.1
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -132,9 +132,10 @@ one live server continuation per Session, and a second Browse while it is live
 returns `:busy`. The older child-list compatibility call now collects pages
 through the same persistent or temporary one-shot Session, retains duplicates
 and caps the complete result at 256 local children. It releases a cursor after
-a later invalid identity or Uncertain page. Subscriptions,
-complete output buffering, cancellation, full namespace translation and other
-policy/token interoperability remain open P02/P03 work.
+a later invalid identity or Uncertain page. Native responses wait in the
+bounded 64-envelope/1 MiB output queue and spend credit only when written.
+Subscriptions, concurrent services, cancellation, full namespace translation
+and other policy/token interoperability remain open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.

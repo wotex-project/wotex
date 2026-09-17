@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.20
+  version: 1.1.21
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -27,7 +27,10 @@ signatures and the current issuer CRL. Invalid credentials end with
 native configuration adapter and exercised by the production executable and
 the separate C probe against an independent Basic256Sha256 peer. The executable
 checks the server's timeout revision and NamespaceArray before reporting open.
-The owner and C ingress now exchange one initial credit control before the
+Normal native output now waits in the X04 64-envelope/1 MiB queue on a
+nonblocking pipe and spends message/byte credit only when its first byte is
+written; ready and terminal controls use the separate allowance and never split
+a partially written envelope. The owner and C ingress now exchange one initial credit control before the
 request. It binds the process generation; requests without it and later credit
 before consumption fail. Open/read/write/call/browse/close responses spend credit; the BEAM owner
 replenishes validated consumption. The read path translates one concrete input

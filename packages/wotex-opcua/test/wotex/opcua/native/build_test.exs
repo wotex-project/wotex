@@ -112,6 +112,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     end
 
     assert native_tests =~ "native_ipc_admission"
+    assert native_tests =~ "native_output_queue"
     assert native_tests =~ "native_security_preflight"
     assert native_tests =~ "native_sdk_session_revision"
     assert_sdk_patch(workspace, guardian, receipt)
