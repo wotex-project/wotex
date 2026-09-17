@@ -686,7 +686,9 @@ ExUnit-owned RFC 8613 endpoint that is independent of libcoap and verified
 against the RFC 8613 Appendix C vectors. Because helper tokens are random, those
 traces name the answered request and substitute its wire Message ID and token.
 F05 and F24 now name the native terminal codes, because `session_lost` is a
-Runtime transport status. F07 and the helper half of F15 remain unexecuted. The
+Runtime transport status. F07 executes in the native store-send vector, because a
+helper context opens at sequence zero and cannot reach 2^40; the helper half of F15
+remains unexecuted. The
 ExUnit runner expands `repeat_ascii` to its declared byte count, adds the
 matching generation/id envelope to body events, and compares actual native
 outcomes with `expected`. For the credit traces, `grant_report_credit` means the first `ack_seq: 0`

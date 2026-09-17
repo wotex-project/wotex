@@ -817,7 +817,17 @@ report waits, credit 12 then releases exactly report 13, and the subscription
 still cancels. F24 replaces the corpus's abstract `session_lost` failures with two
 authenticated 4.04 notifications: one `observation_failed` terminal follows, the
 second writes nothing and the helper exits 0. A helper that keeps a second
-pending Event report fails F05. F07 and the helper half of F15 remain unexecuted.
+pending Event report fails F05.
+
+F07 cannot run through the helper: each context opens at sender sequence zero and
+is consumed on exit, so 2^40 is unreachable. `test/native/oscore_store_send_test.c`
+now executes it against the patched SDK. A store reserved to 2^40 backs a libcoap
+client whose next sender sequence is 2^40; three GET sends return
+`COAP_INVALID_MID`, the peer socket receives nothing and the store boundary stays at
+2^40, because libcoap refuses before encrypting and never asks for a reservation.
+A reservation past 2^40 then returns `WCO_STORE_EXHAUSTED`, whose code is
+`sequence_exhausted`. The corpus runner contract records this placement. The
+helper half of F15 remains unexecuted.
 
 `test/software/native_saturation_test.exs` suspends the actual `Native.Connection`
 owner with `:sys.suspend/1` after a protected subscription is established against

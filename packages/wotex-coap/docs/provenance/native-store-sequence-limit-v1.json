@@ -1,0 +1,64 @@
+{
+  "schema": "wotex.coap.native-store-sequence-limit-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "native-v1 WCO-N-F07: a sender sequence of 2^40 through the patched SDK send path and the durable store",
+  "standard": {
+    "name": "IETF OSCORE",
+    "revision": "RFC 8613 2019-07",
+    "sections": [
+      "6.1",
+      "7.2.1"
+    ],
+    "summary": "The Partial IV is at most 5 bytes, so a Sender Sequence Number reaching 2^40 cannot protect another message"
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "test/native/oscore_store_send_test.c": "284a2e93d95be16d34d2f24c9e594471cc9043bb3653e62f36f61ef2488ec4bb",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/store.h": "bbee9d6b56231d1a211de44736d44d30612c017de827ecf0fd30ee94aa8102ff",
+      "native/oscore/source.json": "43c59c98329f57558aa6114768b8c844664939f79b0ada5301e5dbba92923eac",
+      "docs/specs/fixtures/native-v1.json": "1acdc3d30a392c57bd5385804cfd5e5deaee5862ac9c160d201c6d8bd5d2e355",
+      "test/native/Dockerfile": "f2ebd96aeb29cc86a3dcb7d3e5e25574d4d064c6543e9352dede3628743b7f9d"
+    }
+  },
+  "requirements": [
+    "WCO-N04",
+    "WCO-V14"
+  ],
+  "assertions": [
+    "A durable store opened with an exclusive boundary of 2^40 backs a public-API libcoap OSCORE client whose start sender sequence is 2^40",
+    "Three GET sends each return COAP_INVALID_MID, the bound UDP peer receives no datagram and the store boundary stays 2^40, because libcoap refuses before encrypting and never requests a reservation",
+    "A reservation past 2^40 returns WCO_STORE_EXHAUSTED and wco_store_code maps it to sequence_exhausted",
+    "The helper cannot reach this state: each context opens at sender sequence zero and is consumed on exit, so the corpus runner contract places F07 in this vector"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "mix wotex.software.build fault probe oscore-store-send",
+      "executable_sha256": "4cee0bb8f2c5edbee635fe4841f6c573696d1041ca223cd6698391df0001b815",
+      "output_sha256": "8e3a50d5b91303ce1cf31e71a834792c5219dd7c3913ea59c88df9ee406f32bc",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --pids-limit 64 --memory 512m --entrypoint /usr/local/bin/oscore-store-send IMAGE",
+      "image": "sha256:50df7aeea2a07708c4031da185cc292ad2e2e863200c9c2c2c8e298574fa3ce9",
+      "executable_sha256": "696a1363dc8b45b558681c617014c017673d5a2c2d5094099fb6c0988f051249",
+      "output_sha256": "8e3a50d5b91303ce1cf31e71a834792c5219dd7c3913ea59c88df9ee406f32bc",
+      "build_log_sha256": "debc2f9f1b802d42d35117b759645613edc2bc222d1824289e29e807028d5fe0",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "sanitizers": [
+        "address",
+        "undefined",
+        "leak"
+      ]
+    }
+  ],
+  "unaccepted": [
+    "The native worker maps a libcoap refusal at the sequence limit to its send failure code rather than sequence_exhausted; no helper context can reach that limit",
+    "The helper half of native-v1 F15"
+  ]
+}

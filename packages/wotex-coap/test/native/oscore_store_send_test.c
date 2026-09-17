@@ -18,7 +18,7 @@ static int save(uint64_t boundary, void *store) {
     return wco_store_reserve(store, boundary) == WCO_STORE_OK;
 }
 
-static void run(int fault) {
+static void run(int fault, uint64_t sequence) {
     static const uint8_t secret[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
     static const uint8_t salt[] = {0x9e,0x7c,0xa9,0x22,0x23,0x78,0x63,0x40};
     static const uint8_t sender = 0, recipient = 1;
@@ -45,7 +45,8 @@ static void run(int fault) {
     assert(peer >= 0 && mkdtemp(template));
     dir = realpath(template, NULL);
     assert(dir && wco_oscore_identity(&material, &identity));
-    assert(wco_store_open(dir, &identity, 1, &store) == WCO_STORE_OK);
+    assert(wco_store_open(dir, &identity, sequence ? WCO_STORE_SEQUENCE_LIMIT : 1, &store) ==
+           WCO_STORE_OK);
     assert(inet_pton(AF_INET, "127.0.0.1", &endpoint.sin_addr) == 1);
     assert(bind(peer, (struct sockaddr *)&endpoint, sizeof(endpoint)) == 0);
     assert(getsockname(peer, (struct sockaddr *)&endpoint, &length) == 0);
@@ -56,7 +57,7 @@ static void run(int fault) {
     context = coap_new_context(NULL);
     assert(context);
     security = coap_new_oscore_conf((coap_str_const_t){sizeof(config) - 1, (const uint8_t *)config},
-                                    save, store, 0);
+                                    save, store, sequence);
     assert(security);
     session = coap_new_client_session_oscore(context, NULL, &address, COAP_PROTO_UDP, security);
     assert(session);
@@ -71,7 +72,13 @@ static void run(int fault) {
         sent = coap_send(session, pdu);
         (void)coap_io_process(context, 5);
         received = recv(peer, bytes, sizeof(bytes), 0);
-        if (fault) {
+        if (sequence) {
+            /* No Partial IV remains, so libcoap refuses before encrypting and the
+             * store is never asked for a reservation past the limit. */
+            assert(sent == COAP_INVALID_MID);
+            assert(received == -1 && (errno == EAGAIN || errno == EWOULDBLOCK));
+            assert(wco_store_boundary(store) == WCO_STORE_SEQUENCE_LIMIT);
+        } else if (fault) {
             assert(sent == COAP_INVALID_MID);
             assert(received == -1 && (errno == EAGAIN || errno == EWOULDBLOCK));
             assert(wco_store_boundary(store) == 1);
@@ -86,6 +93,10 @@ static void run(int fault) {
         }
     }
     wco_store_test_fault(0, 0);
+    if (sequence) {
+        assert(wco_store_reserve(store, WCO_STORE_SEQUENCE_LIMIT + 1) == WCO_STORE_EXHAUSTED);
+        assert(!strcmp(wco_store_code(WCO_STORE_EXHAUSTED), "sequence_exhausted"));
+    }
     coap_session_release(session);
     coap_free_context(context);
     assert(close(peer) == 0);
@@ -100,9 +111,11 @@ static void run(int fault) {
 int main(void) {
     coap_startup();
     coap_set_log_level(COAP_LOG_EMERG);
-    for (int fault = 0; fault <= WCO_STORE_DIRECTORY_SYNC; fault++) run(fault);
+    for (int fault = 0; fault <= WCO_STORE_DIRECTORY_SYNC; fault++) run(fault, 0);
+    run(0, WCO_STORE_SEQUENCE_LIMIT);
     coap_cleanup();
     puts("WCO-N04 WCO-V14: five durable-write failures block actual libcoap sends and unsafe reopen");
     puts("WCO-N04 WCO-S06: persisted allowance permits three protected datagrams");
+    puts("WCO-N04 WCO-N-F07: next sender sequence 2^40 sends nothing and reports sequence_exhausted");
     return 0;
 }
