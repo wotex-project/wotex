@@ -49,7 +49,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 34,
+  "attempt": 35,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -125,11 +125,11 @@
     "safe_properties": 5,
     "test_count": 49
   },
-  "revision": "748509915f4791dfb1eba88f7c6e6f1651d916e5",
+  "revision": "fa169507ea37d5da589e7b9b7a9950c211eef01f",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:7cafebb04e8a9b46feb20c0f6d9f1f948faf917d0c832dea86f6b2902cf8a4d6",
+  "source_tree_digest": "sha256:786cb796dcc2dac608687442a20656204257b927930a720f03a26345f86bf26d",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

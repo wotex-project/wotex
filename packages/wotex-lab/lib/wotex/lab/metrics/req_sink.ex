@@ -19,7 +19,9 @@ defmodule Wotex.Lab.Metrics.ReqSink do
   `:client_unavailable` instead of raising. Configuration keys are
   `:url`, `:profile` (`:local` by default), `:audience`, `:resolver`,
   `:tls_ca_certfile`, `:receive_timeout` (5,000 ms), `:connect_timeout`
-  (5,000 ms), `:max_response_bytes` and `:finch`.
+  (5,000 ms), `:max_response_bytes` and `:finch`. The result carries the status,
+  headers and the response body cut at `:max_response_bytes`; callers treat that
+  body as untrusted server text.
   """
 
   alias Wotex.Lab.Error
@@ -30,10 +32,10 @@ defmodule Wotex.Lab.Metrics.ReqSink do
 
   @type credential :: nil | {:bearer, String.t()} | {:basic, String.t(), String.t()}
   @type result ::
-          {:ok, %{status: pos_integer(), headers: [{String.t(), String.t()}]}}
+          {:ok, %{status: pos_integer(), headers: [{String.t(), String.t()}], body: binary()}}
           | {:error, Error.t()}
 
-  @doc "Sends one remote-write body; the result carries the status and headers only."
+  @doc "Sends one request body; the result carries the status, headers and bounded body."
   @spec write(%{body: binary(), headers: [{String.t(), String.t()}]}, credential(), map()) ::
           result()
   def write(%{body: body, headers: headers}, credential, config)
@@ -178,11 +180,12 @@ defmodule Wotex.Lab.Metrics.ReqSink do
 
   defp collect({:data, _}, acc, _), do: {:halt, acc}
 
-  defp classify({:ok, %{status: status, headers: headers}}) do
+  defp classify({:ok, %{status: status, headers: headers} = response}) do
     flattened =
       Enum.flat_map(headers, fn {name, values} -> Enum.map(List.wrap(values), &{name, &1}) end)
 
-    {:ok, %{status: status, headers: flattened}}
+    body = if is_binary(response.body), do: response.body, else: ""
+    {:ok, %{status: status, headers: flattened, body: body}}
   end
 
   defp classify({:error, %{reason: :timeout}}),

@@ -10,6 +10,8 @@ defmodule Wotex.Lab.Test.Greptime do
   # retention provisioning executor for statements that
   # `Wotex.Lab.Metrics.Retention` generates, and `flush/2` is the fixed
   # `ADMIN flush_table` template for the metric engine's physical table.
+  # `otlp_rows/3` and `table_ttl/3` are fixed reads of the default OTLP trace
+  # and log tables and of a table's TTL option.
 
   @image "greptime/greptimedb:v1.1.4"
   @identifier ~r/\A[a-zA-Z_][a-zA-Z0-9_]*\z/
@@ -56,6 +58,52 @@ defmodule Wotex.Lab.Test.Greptime do
       {:ok, %{body: body}} when is_map(body) -> {:ok, body}
       {:ok, response} -> {:error, {:unexpected_status, response.status}}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @spec otlp_rows(t(), :traces | :logs, String.t()) :: [list()]
+  def otlp_rows(greptime, signal, database) do
+    true = Regex.match?(@identifier, database)
+
+    sql =
+      case signal do
+        :traces ->
+          ~s(SELECT span_name, service_name, span_status_code, "span_attributes.wotex.lab.outcome_class" ) <>
+            "FROM opentelemetry_traces ORDER BY span_name ASC LIMIT 100"
+
+        :logs ->
+          "SELECT severity_text, body, log_attributes FROM opentelemetry_logs ORDER BY timestamp ASC LIMIT 100"
+      end
+
+    response =
+      Req.post!(greptime.base_url <> "/v1/sql?db=" <> database,
+        form: [sql: sql],
+        retry: false,
+        receive_timeout: 10_000
+      )
+
+    case response.body do
+      %{"output" => [%{"records" => %{"rows" => rows}}]} -> rows
+      _ -> []
+    end
+  end
+
+  @spec table_ttl(t(), String.t(), String.t()) :: String.t() | nil
+  def table_ttl(greptime, table, database) do
+    true = Regex.match?(@identifier, table) and Regex.match?(@identifier, database)
+
+    response =
+      Req.post!(greptime.base_url <> "/v1/sql?db=" <> database,
+        form: [sql: ~s(SHOW CREATE TABLE "#{table}")],
+        retry: false,
+        receive_timeout: 10_000
+      )
+
+    with %{"output" => [%{"records" => %{"rows" => [[_, create]]}}]} <- response.body,
+         [_, ttl] <- Regex.run(~r/ttl = '([^']+)'/, create) do
+      ttl
+    else
+      _ -> nil
     end
   end
 

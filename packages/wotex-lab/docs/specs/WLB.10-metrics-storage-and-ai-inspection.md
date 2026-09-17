@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.17.0. Contract: accepted. Source status: the metric
+Specification version: 0.18.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -18,9 +18,11 @@ Codex-plan/local-Ollama providers and trusted-local browser presentation.
 A separately activated loopback operator listener binds the query descriptor
 to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
 provision a durable database TTL on a local receiver. Both operator listeners
-can instead use a mutual-TLS remote transport with peer ranges. Hosted
-database provisioning, OTLP signal export, isolated hosted-tenant BeamLens and
-public or tenant HTTP query bindings remain planned; the MCP `query_metrics` tool binds the local gateway. Hosted
+can instead use a mutual-TLS remote transport with peer ranges. The base
+library exports Lab spans and exception logs over OTLP, which the Workbench
+does not activate yet. Hosted database provisioning, isolated hosted-tenant
+BeamLens and public or tenant HTTP query bindings remain planned; the MCP
+`query_metrics` tool binds the local gateway. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 is not proof of a Grafana import or query execution.
 
@@ -365,7 +367,46 @@ Logs/traces use optional OTLP/HTTP-protobuf export to GreptimeDB's documented
 signal endpoints, not a claim that PromEx exports them. Validate signal-specific
 pipeline headers, temporality, partial-success replies and retention against
 the pinned server. No mandatory collector or tracing of raw sensor payloads.
-OTLP export is planned; nothing in the base library sends logs or traces.
+`Wotex.Lab.Otlp.Exporter` implements that optional export for Lab telemetry.
+A host starts it explicitly with a sink; while alive it attaches one handler to
+the closing `:stop` and `:exception` events of every catalogued component and
+operation and detaches it on stop. `Wotex.Lab.Otlp.Events` turns each event
+into one internal span named `component.operation`, with random trace and span
+identifiers and no parent, and each exception into one ERROR log record with a
+fixed body and event name. Attributes come only from the closed component,
+operation, outcome class, profile and exception kind vocabularies; Thing
+references, scenario identifiers, results and exception reasons never leave
+the process. `Wotex.Lab.Otlp.Encoder` hand-encodes the opentelemetry-proto
+v1.5.0 `ExportTraceServiceRequest` and `ExportLogsServiceRequest` fields it
+needs, refuses records outside that shape and decodes `partial_success`.
+
+The exporter keeps at most `max_buffer` records per signal (512, ceiling
+4,096), counts drops in its buffers and in the emitting-process handler when
+its mailbox is full, and exports at most `max_batch` records (256, ceiling
+1,024) per request with one request in flight, a `deadline_ms` of 5,000 and
+an `interval_ms` of 5,000. A 2xx answer with a valid `partial_success` counts
+accepted and rejected records; any other status, malformed response, sink
+error, crash or deadline counts the batch as failed. Failed batches are not
+retried and nothing is persisted, so the export is lossy. There is no
+temporality to validate because only traces and logs are exported.
+
+`Wotex.Lab.Otlp.GreptimeSink` sends traces to `/v1/otlp/v1/traces` with
+`x-greptime-pipeline-name: greptime_trace_v1`, which GreptimeDB 1.1.4 requires,
+and logs to `/v1/otlp/v1/logs`; a selected database adds
+`x-greptime-db-name`. It writes through `Metrics.ReqSink`, whose result now
+also carries the response body cut at the sink's 4 KiB ceiling, and sends no
+credential. `otlp_encoder_test.exs` checks field numbers against an independent
+decoder, closed-shape refusals, partial-success decoding and the projection
+vocabulary. `otlp_exporter_test.exs` covers options, trace and log export
+without payload metadata, partial success, rejected statuses, sink errors,
+crashes, deadlines, buffer and batch bounds, handler detachment, periodic
+export and the sink's headers and paths. In the `WOTEX_LAB_GREPTIME=1` lane,
+`greptime_otlp_test.exs` provisions a two-day database, exports OK, timeout and
+exception spans and one log on the pinned server, reads them back from
+`opentelemetry_traces` and `opentelemetry_logs`, finds the database TTL on
+both tables and records a missing pipeline header as a rejected batch. The
+Workbench does not yet activate the exporter, and authenticated hosted OTLP
+receivers are not part of this profile.
 
 ## Read-only query contract and BeamLens
 

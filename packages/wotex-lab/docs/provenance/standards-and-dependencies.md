@@ -44,7 +44,8 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Prometheus text exposition 0.0.4](https://prometheus.io/docs/instrumenting/exposition_formats/) | Pinned input contract of the WLB.10 self-scraper; counters, gauges and classic histograms only, parsed and rendered by `Wotex.Lab.Metrics.Exposition` |
 | [Prometheus Remote Write 1.0](https://prometheus.io/docs/specs/prw/remote_write_spec/) and [prompb](https://github.com/prometheus/prometheus/tree/main/prompb) (Apache-2.0) | `WriteRequest`/`TimeSeries`/`Label`/`Sample` field numbers hand-encoded by `Wotex.Lab.Metrics.RemoteWrite`; no generated protobuf and no claim beyond the tested receiver |
 | [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
-| [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` (optionally with `x-greptime-db-name`), read-back and retention DDL through `/v1/sql` and `ADMIN flush_table` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
+| [opentelemetry-proto v1.5.0](https://github.com/open-telemetry/opentelemetry-proto/tree/v1.5.0) (Apache-2.0) | Trace and log export request and response field numbers hand-encoded by `Wotex.Lab.Otlp.Encoder`; no generated protobuf, metrics signal, gRPC or collector compatibility claim |
+| [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` (optionally with `x-greptime-db-name`), read-back and retention DDL through `/v1/sql`, `ADMIN flush_table` and OTLP trace and log ingestion through `/v1/otlp/v1/traces` and `/v1/otlp/v1/logs` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 
 ## Native containment source cohort
 
@@ -122,6 +123,14 @@ TTL applies to metric-engine tables, is reported in normalized humantime units
 and removes a flushed file whose newest row is older than the TTL; unflushed
 rows and rows sharing a file with newer data remain readable. This observation
 is limited to GreptimeDB 1.1.4 standalone and is not a hosted-service claim.
+
+Observation date: 2026-09-17. `test/wotex/lab/greptime_otlp_test.exs --seed 1`
+passed 1 test against the same digest. The server accepted protobuf OTLP trace
+requests only with `x-greptime-pipeline-name: greptime_trace_v1`, answered a
+missing pipeline with HTTP 400 and a JSON error, accepted log requests without
+a pipeline header, returned empty protobuf bodies on success and created the
+default `opentelemetry_traces` and `opentelemetry_logs` tables with the
+selected database's TTL.
 
 History queries now require explicit instance binding; snapshot slots, query
 leases and catalogue metric semantics are independently admitted. Tests cover
