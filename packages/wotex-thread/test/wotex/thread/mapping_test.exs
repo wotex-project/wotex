@@ -22,7 +22,8 @@ defmodule Wotex.Thread.MappingTest do
           @href <> "#fragment",
           "relative",
           "X",
-          :binary.copy("x", 4097)
+          :binary.copy("x", 4097),
+          "thread+unix://mesh/unknown"
         ] do
       assert {:error, _} = Mapping.command(form, :readproperty, nil, href)
     end

@@ -42,7 +42,7 @@ defmodule Wotex.Thread.NativeTasksTest do
     assert_received {:mix_shell, :info, ["Native build verified: " <> ^workspace]}
 
     assert_raise Mix.Error, ~r/usage: mix wotex.thread.native.build/, fn ->
-      NativeBuildTask.run(["--workspace", "relative"], environment)
+      NativeBuildTask.run(["--workspace", "relative"])
     end
 
     assert_raise Mix.Error, ~r/Thread native build failed: :linux_required/, fn ->
@@ -67,7 +67,7 @@ defmodule Wotex.Thread.NativeTasksTest do
     assert_received {:mix_shell, :info, ["Software build verified: " <> ^workspace]}
 
     assert_raise Mix.Error, ~r/usage: mix wotex.thread.software.build/, fn ->
-      SoftwareBuildTask.run([], environment)
+      SoftwareBuildTask.run([])
     end
 
     assert_raise Mix.Error, ~r/Thread software build failed: :linux_required/, fn ->
@@ -91,7 +91,7 @@ defmodule Wotex.Thread.NativeTasksTest do
     assert Jason.decode!(File.read!(path))["status"] == "passed"
 
     assert_raise Mix.Error, ~r/usage: mix wotex.thread.software.run/, fn ->
-      SoftwareRunTask.run(["--workspace", "relative"], environment)
+      SoftwareRunTask.run(["--workspace", "relative"])
     end
 
     assert_raise Mix.Error, ~r/Thread software run failed: :software_run_exists/, fn ->

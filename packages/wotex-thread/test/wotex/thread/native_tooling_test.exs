@@ -2,6 +2,7 @@ defmodule Wotex.Thread.NativeToolingTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
+  alias Wotex.Thread.BuildFixture
   alias Wotex.Thread.Native.{Bootstrap, Command, Source, Workspace}
 
   @moduletag requirements: ["WTH-B01"]
@@ -56,6 +57,12 @@ defmodule Wotex.Thread.NativeToolingTest do
     File.write!(occupied, "not a directory")
     assert {:error, :invalid_source_tree} = Source.copy_tree(source, occupied)
 
+    File.write!(Path.join(destination, "other"), "old")
+    File.write!(Path.join(source, "other"), "new")
+    File.rm_rf!(Path.join(destination, "file"))
+    assert :ok = Source.copy_tree(source, destination)
+    assert File.read!(Path.join(destination, "other")) == "new"
+
     archive = Path.join(context.root, "archive.tar.gz")
     File.write!(archive, "not an archive")
     assert {:error, :invalid_source_archive} = Source.validate_archive(archive, "root")
@@ -81,6 +88,50 @@ defmodule Wotex.Thread.NativeToolingTest do
     directory = Path.join(context.root, "directory.tar.gz")
     File.mkdir_p!(directory)
     assert {:error, :invalid_source_download} = Source.fetch(url, directory, digest)
+  end
+
+  test "WTH-B01 a verified HTTPS transfer streams, digests and links the source", context do
+    body = String.duplicate("source", 20_000)
+    digest = Base.encode16(:crypto.hash(:sha256, body), case: :lower)
+    target = Path.join(context.root, "transfer.tar.gz")
+
+    {url, ssl} = BuildFixture.https_server(200, body)
+    assert :ok = Source.transfer(url, target, digest, ssl)
+    assert File.read!(target) == body
+    refute File.exists?(target <> ".download")
+    assert :ok = Source.transfer(url, target, digest, ssl)
+
+    {url, ssl} = BuildFixture.https_server(200, body)
+    mismatch = Path.join(context.root, "mismatch.tar.gz")
+
+    assert {:error, :source_hash_mismatch} =
+             Source.transfer(url, mismatch, String.duplicate("0", 64), ssl)
+
+    refute File.exists?(mismatch) or File.exists?(mismatch <> ".download")
+
+    {url, ssl} = BuildFixture.https_server(404, "absent", reason: "Not Found")
+    absent = Path.join(context.root, "absent.tar.gz")
+    assert {:error, :invalid_source_download} = Source.transfer(url, absent, digest, ssl)
+    refute File.exists?(absent) or File.exists?(absent <> ".download")
+
+    {url, ssl} = BuildFixture.https_server(200, body, close_after: 100)
+    truncated = Path.join(context.root, "truncated.tar.gz")
+    assert {:error, :invalid_source_download} = Source.transfer(url, truncated, digest, ssl)
+    refute File.exists?(truncated)
+
+    {url, ssl} = BuildFixture.https_server(200, body)
+    untrusted = Keyword.put(ssl, :cacerts, [])
+
+    assert {:error, :invalid_source_download} =
+             Source.transfer(url, target <> ".2", digest, untrusted)
+
+    assert {:error, :invalid_source_download} =
+             Source.transfer(url, target, digest, verify: :verify_none)
+
+    assert {:error, :invalid_source_download} =
+             Source.transfer("http://localhost/x", target, digest, ssl)
+
+    assert {:error, :invalid_source_download} = Source.transfer(url, target, digest, :ssl)
   end
 
   test "WTH-B01 executables are found in an explicit search path only when executable", context do
@@ -168,6 +219,7 @@ defmodule Wotex.Thread.NativeToolingTest do
     end
 
     assert {:error, :invalid_command, _} = Command.run("relative", step)
+    assert {:error, :invalid_command, _} = Command.run(guardian, %{step | executable: :echo})
     assert {:error, :invalid_command, _} = Command.run(:guardian, step)
     assert {:error, :invalid_command, _} = Command.run(guardian, %{step | env: [{"PATH", <<0>>}]})
   end
@@ -194,6 +246,9 @@ defmodule Wotex.Thread.NativeToolingTest do
     end
 
     assert {:error, :invalid_build_workspace} = Workspace.run(workspace, identity, ["f"], :builder)
+    assert {:error, :invalid_build_workspace} = Workspace.run(workspace, identity, [:file], builder)
+    assert {:error, :invalid_build_workspace} = Workspace.run(:path, identity, ["file"], builder)
+    assert {:ok, ^workspace, true} = Workspace.arguments(["--sanitizers", "--workspace", workspace])
 
     assert {:error, :invalid_build_workspace} =
              Workspace.run(workspace, identity, ["f"], builder, :other)
@@ -245,6 +300,15 @@ defmodule Wotex.Thread.NativeToolingTest do
     end
 
     assert {:error, :invalid_build_artifact} = Workspace.run(linked, identity, artifacts, builder)
+
+    existing = Path.join(context.root, "existing-empty")
+    File.mkdir_p!(existing)
+
+    assert {:ok, %{reused: false}} =
+             Workspace.run(existing, identity, artifacts, fn ->
+               File.write!(Path.join(existing, "output"), "bytes")
+               {:ok, %{}}
+             end)
 
     unencodable = Path.join(context.root, "unencodable")
 

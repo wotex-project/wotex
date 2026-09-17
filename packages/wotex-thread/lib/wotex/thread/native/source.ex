@@ -17,18 +17,37 @@ defmodule Wotex.Thread.Native.Source do
   @spec fetch(String.t(), Path.t(), String.t()) :: :ok | {:error, atom()}
   def fetch(url, target, expected)
       when is_binary(url) and is_binary(target) and is_binary(expected) do
+    if pinned_url?(url),
+      do: transfer(url, target, expected, ssl()),
+      else: {:error, :invalid_source_download}
+  end
+
+  def fetch(_, _, _), do: {:error, :invalid_source_download}
+
+  @doc """
+  Transfers one HTTPS resource into a cached target within the byte limit.
+
+  `fetch/3` applies the pinned-source allowlist before calling this step with the
+  system trust store. The explicit `ssl` options must verify the peer; a build
+  verification run may supply its own trust anchors. A cached target is only
+  re-verified, a mismatched digest removes the download, and redirects fail.
+  """
+  @spec transfer(String.t(), Path.t(), String.t(), keyword()) :: :ok | {:error, atom()}
+  def transfer(url, target, expected, ssl)
+      when is_binary(url) and is_binary(target) and is_binary(expected) and is_list(ssl) do
     with true <-
-           pinned_url?(url) and Path.type(target) == :absolute and
-             String.match?(expected, ~r/\A[0-9a-f]{64}\z/),
+           String.starts_with?(url, "https://") and Path.type(target) == :absolute and
+             String.match?(expected, ~r/\A[0-9a-f]{64}\z/) and
+             Keyword.get(ssl, :verify) == :verify_peer,
          :ok <- cached_or_absent(target, expected) do
-      if File.exists?(target), do: :ok, else: download(url, target, expected)
+      if File.exists?(target), do: :ok, else: download(url, target, expected, ssl)
     else
       {:error, _} = error -> error
       _ -> {:error, :invalid_source_download}
     end
   end
 
-  def fetch(_, _, _), do: {:error, :invalid_source_download}
+  def transfer(_, _, _, _), do: {:error, :invalid_source_download}
 
   @doc "Returns the lowercase SHA-256 digest of one regular file."
   @spec digest(Path.t()) :: {:ok, String.t()} | {:error, atom()}
@@ -286,7 +305,15 @@ defmodule Wotex.Thread.Native.Source do
     end
   end
 
-  defp download(url, target, expected) do
+  defp ssl do
+    [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+    ]
+  end
+
+  defp download(url, target, expected, ssl) do
     temporary = target <> ".download"
 
     with {:ok, _} <- Application.ensure_all_started(:ssl),
@@ -294,7 +321,7 @@ defmodule Wotex.Thread.Native.Source do
          {:ok, file} <- File.open(temporary, [:write, :exclusive, :binary]) do
       result =
         try do
-          request(url, file)
+          request(url, file, ssl)
         rescue
           _ -> {:error, :invalid_source_download}
         after
@@ -314,13 +341,7 @@ defmodule Wotex.Thread.Native.Source do
     end
   end
 
-  defp request(url, file) do
-    ssl = [
-      verify: :verify_peer,
-      cacerts: :public_key.cacerts_get(),
-      customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
-    ]
-
+  defp request(url, file, ssl) do
     options = [timeout: @download_ms, connect_timeout: 15_000, ssl: ssl, autoredirect: false]
 
     case :httpc.request(:get, {String.to_charlist(url), []}, options,

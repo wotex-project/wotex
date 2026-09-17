@@ -154,6 +154,23 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
 
     File.write!(Path.join(project, "test/software/acceptance.json"), "{}")
     assert {:error, :invalid_software_inventory} = Run.run(workspace, environment)
+
+    malformed = %{inventory() | "lanes" => %{"normal" => %{"paths" => []}, "sanitized" => %{}}}
+    File.write!(Path.join(project, "test/software/acceptance.json"), Jason.encode!(malformed))
+    assert {:error, :invalid_software_inventory} = Run.run(workspace, environment)
+  end
+
+  test "WTH-B03 a suite runner that exits nonzero fails its lane", context do
+    workspace = prepared(context)
+    project = project_root(context)
+    proc = proc_table(context, nil)
+
+    environment =
+      run_environment(context, workspace, project, proc, mix: mix_script(project, :crash))
+
+    assert {:error, {:software_run_failed, path}} = Run.run(workspace, environment)
+    [normal, _] = Jason.decode!(File.read!(path))["lanes"]
+    assert normal["exit_status"] == 7 and normal["evaluation"]["accepted"]
   end
 
   defp prepared(context, name \\ "workspace") do
@@ -163,7 +180,7 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     workspace
   end
 
-  defp run_environment(context, _workspace, project, proc, options \\ []) do
+  defp run_environment(context, _, project, proc, options \\ []) do
     build = fn path -> Build.run(path, BuildFixture.software_environment(context.root)) end
 
     %{
@@ -213,7 +230,7 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     for name in #{Enum.join(cases, " ")}; do
       printf '{"module":"M","name":"%s","state":"passed"}\\n' "$name" >> "$WOTEX_THREAD_CASE_RESULTS"
     done
-    exit 0
+    exit #{if mode == :crash, do: 7, else: 0}
     """)
 
     File.chmod!(path, 0o755)

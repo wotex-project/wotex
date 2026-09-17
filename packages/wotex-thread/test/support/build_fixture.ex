@@ -38,7 +38,7 @@ defmodule Wotex.Thread.BuildFixture do
 
   @doc "Returns the synthetic pins recorded in the disposable native sources."
   @spec pins(Path.t()) :: map()
-  def pins(native), do: native |> Path.join("dependencies.json") |> File.read!() |> Jason.decode!()
+  def pins(native), do: Jason.decode!(File.read!(Path.join(native, "dependencies.json")))
 
   defp native_sources(root) do
     native = Path.join(root, "priv-openthread")
@@ -253,6 +253,49 @@ defmodule Wotex.Thread.BuildFixture do
     if [ -n "$header" ]; then cp "$header" "$build/include/nlohmann/json.hpp" || exit 1; fi
     exit 0
     """
+  end
+
+  @doc """
+  Serves one HTTPS response from a generated certificate chain for `localhost`.
+
+  Returns the URL and the client TLS options that trust only this server. The
+  server answers exactly one request with `status` and `body`, then closes; a
+  `:close_after` byte count truncates the body mid-transfer.
+  """
+  @spec https_server(non_neg_integer(), binary(), keyword()) :: {String.t(), keyword()}
+  def https_server(status, body, options \\ []) do
+    san = {:Extension, {2, 5, 29, 17}, false, [dNSName: ~c"localhost"]}
+    key = {:rsa, 2048, 65_537}
+    chain = %{root: [key: key], intermediates: [], peer: [key: key, extensions: [san]]}
+    data = :public_key.pkix_test_data(%{server_chain: chain, client_chain: chain})
+    {:ok, _} = Application.ensure_all_started(:ssl)
+
+    {:ok, listen} =
+      :ssl.listen(0, [:binary, active: false, reuseaddr: true] ++ data.server_config)
+
+    {:ok, {_, port}} = :ssl.sockname(listen)
+    reason = Keyword.get(options, :reason, "OK")
+    sent = Keyword.get(options, :close_after, byte_size(body))
+
+    spawn(fn ->
+      with {:ok, socket} <- :ssl.transport_accept(listen, 10_000),
+           {:ok, socket} <- :ssl.handshake(socket, 10_000),
+           {:ok, _request} <- :ssl.recv(socket, 0, 10_000) do
+        head = "HTTP/1.1 #{status} #{reason}\r\nContent-Length: #{byte_size(body)}\r\n"
+        :ssl.send(socket, head <> "Connection: close\r\n\r\n" <> binary_part(body, 0, sent))
+        :ssl.close(socket)
+      end
+
+      :ssl.close(listen)
+    end)
+
+    client = [
+      verify: :verify_peer,
+      cacerts: Keyword.fetch!(data.client_config, :cacerts),
+      customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+    ]
+
+    {"https://localhost:#{port}/source.tar.gz", client}
   end
 
   defp sha256(bytes), do: Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)

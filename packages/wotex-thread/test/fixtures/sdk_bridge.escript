@@ -206,6 +206,15 @@ operation(Mode, State, Petition, Request, <<"set_enabled">>) ->
                              <<"role">> := Role},
             reply(Request, Updated), {Updated, Petition, continue}
     end;
+operation(Mode, State, Petition, Request, <<"subscribe_state">>)
+  when Mode =:= "subscribe_bad"; Mode =:= "subscribe_error" ->
+    case Mode of
+        "subscribe_bad" ->
+            reply(Request, #{<<"subscription_id">> => <<"other">>, <<"generation">> => 1});
+        "subscribe_error" ->
+            failure(Request, #{<<"code">> => <<"remote_error">>, <<"status">> => 9})
+    end,
+    {State, Petition, continue};
 operation(Mode, State, Petition, Request, <<"subscribe_state">>) ->
     Id = maps:get(<<"id">>, Request),
     Generation = case get(stream_generation) of undefined -> 1; Last -> Last + 1 end,
@@ -215,6 +224,21 @@ operation(Mode, State, Petition, Request, <<"subscribe_state">>) ->
     reply(Request, #{<<"subscription_id">> => Id, <<"generation">> => Generation}),
     report(Stream, State, 0),
     case Mode of
+        "stream_invalid" ->
+            %% A report without its value is not a stream frame.
+            write(stream_frame(Stream, #{<<"event">> => <<"state">>,
+                                         <<"report_sequence">> => next_sequence()}));
+        "stream_error_late" ->
+            %% After the harness releases it, one more report precedes the terminal error.
+            await_release(get(root)),
+            report(Stream, State, 4),
+            write(stream_frame(Stream, #{<<"event">> => <<"stream_error">>,
+                                         <<"code">> => <<"queue_overflow">>})),
+            retire(Stream);
+        "stream_error_unknown" ->
+            write(stream_frame({Id, Generation + 1},
+                               #{<<"event">> => <<"stream_error">>,
+                                 <<"code">> => <<"queue_overflow">>}));
         "stream" -> put(remaining, stream_count());
         "burst" ->
             %% One write places 17 unacknowledged reports ahead of any owner admission.
@@ -235,15 +259,24 @@ operation(Mode, State, Petition, Request, <<"subscribe_state">>) ->
         _ -> ok
     end,
     {State, Petition, continue};
-operation(_Mode, State, Petition, Request, <<"unsubscribe">>) ->
+operation(Mode, State, Petition, Request, <<"unsubscribe">>) ->
     Parameters = maps:get(<<"parameters">>, Request),
     Stream = {maps:get(<<"subscription_id">>, Parameters), maps:get(<<"generation">>, Parameters)},
-    case lists:member(Stream, streams()) of
-        true ->
+    case {Mode, lists:member(Stream, streams())} of
+        {"unsubscribe_no_retire", true} ->
+            reply(Request, null);
+        {"unsubscribe_error", true} ->
+            failure(Request, #{<<"code">> => <<"remote_error">>, <<"status">> => 11});
+        {"unsubscribe_wait", true} ->
+            await_release(get(root)),
             put(streams, lists:delete(Stream, streams())),
             retire(Stream),
             reply(Request, null);
-        false ->
+        {_, true} ->
+            put(streams, lists:delete(Stream, streams())),
+            retire(Stream),
+            reply(Request, null);
+        {_, false} ->
             failure(Request, #{<<"code">> => <<"subscription_not_found">>})
     end,
     {State, Petition, continue};
@@ -266,6 +299,7 @@ operation(Mode, State, Petition, Request, Operation) ->
     case Mode of
         "error" -> failure(Request, #{<<"code">> => <<"remote_error">>,
                                       <<"status">> => 253});
+        "error_closed" -> failure(Request, #{<<"code">> => <<"io_failed">>});
         _ ->
             Values = #{<<"inspect">> => State, <<"state">> => <<"disabled">>,
                        <<"version">> => <<"fixture">>,
