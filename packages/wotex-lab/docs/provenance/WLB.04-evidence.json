@@ -29,7 +29,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 10,
+  "attempt": 11,
   "budgets": {
     "deadline_ms": 60000,
     "max_inflight": 2,
@@ -118,7 +118,7 @@
     }
   ],
   "durations": {
-    "run_ms": 13300
+    "run_ms": 13500
   },
   "fixtures": {
     "tls/ca-cert.pem": "sha256:f8fa6c43f51909fd87f28bae9fd227ffd10df539261c26accf62bb09611457b6",
@@ -137,11 +137,11 @@
     "broker_enabled": true,
     "test_count": 56
   },
-  "revision": "8138a2784932de27cbe4e3d81637c3c7addb973b",
+  "revision": "997f9d30e0019e3019feba8941b24f43497be42a",
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:32ecd6cf86fd01f60ca66b26200ec251d40268f45966a55aae3b6ec48d486c66",
+  "source_tree_digest": "sha256:de233e52d3ee9f4e3bb452090eee75b31b2ba635c1c586e2a9d571443da4e1e1",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

@@ -5,6 +5,12 @@ defmodule Wotex.Lab.Test.MqttBroker do
   # binds an ephemeral loopback port, keeps no persistence, and is removed in
   # `on_exit`. Every run also gets its own topic prefix so concurrent tests and
   # repeated runs never share retained state.
+  #
+  # Readiness is an MQTT CONNACK, not an accepted TCP connection: the Docker
+  # port proxy accepts connections before the broker listens inside the
+  # container and then closes them. A fixture client linked to a test process
+  # that connects in that window exits with `{:shutdown, :closed}` and takes the
+  # test process with it.
 
   @image "eclipse-mosquitto:2"
   @loopback ~c"127.0.0.1"
@@ -29,7 +35,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
     end)
 
     port = mapped_port(container, fixture.listener, 40)
-    :ok = await_port(port, 100)
+    :ok = await_broker(fixture, port, System.monotonic_time(:millisecond) + 20_000)
 
     %{
       host: fixture.host,
@@ -245,16 +251,58 @@ defmodule Wotex.Lab.Test.MqttBroker do
     mapped_port(container, listener, attempts - 1)
   end
 
-  defp await_port(port, 0), do: raise("broker on port #{port} never accepted a connection")
+  # Any CONNACK, including a refusal for missing credentials, proves the broker
+  # serves MQTT on the mapped port.
+  defp await_broker(fixture, port, deadline) do
+    cond do
+      connack?(fixture, port) ->
+        :ok
 
-  defp await_port(port, attempts) do
-    case :gen_tcp.connect(@loopback, port, [:binary, active: false], 200) do
-      {:ok, socket} ->
-        :gen_tcp.close(socket)
+      System.monotonic_time(:millisecond) >= deadline ->
+        raise "broker on port #{port} never answered an MQTT CONNECT"
 
-      {:error, _} ->
+      true ->
         Process.sleep(50)
-        await_port(port, attempts - 1)
+        await_broker(fixture, port, deadline)
     end
+  end
+
+  defp connack?(fixture, port) do
+    client_id = "lab-ready-" <> token()
+
+    connect =
+      <<0x10, 12 + byte_size(client_id), 0, 4, "MQTT", 4, 2, 0, 5, byte_size(client_id)::16,
+        client_id::binary>>
+
+    case probe_open(fixture, port) do
+      {:ok, {transport, socket}} ->
+        try do
+          with :ok <- transport.send(socket, connect),
+               {:ok, <<0x20, _::binary>>} <- transport.recv(socket, 0, 500) do
+            true
+          else
+            _ -> false
+          end
+        after
+          transport.close(socket)
+        end
+
+      _ ->
+        false
+    end
+  end
+
+  defp probe_open(%{scheme: :mqtt}, port) do
+    with {:ok, socket} <- :gen_tcp.connect(@loopback, port, [:binary, active: false], 500),
+         do: {:ok, {:gen_tcp, socket}}
+  end
+
+  defp probe_open(%{scheme: :mqtts} = fixture, port) do
+    options =
+      [:binary, active: false] ++
+        Keyword.fetch!(tls_options(%{scheme: :mqtts, ca_certfile: fixture.ca_certfile}), :ssl_opts)
+
+    with {:ok, socket} <- :ssl.connect(@loopback, port, options, 500),
+         do: {:ok, {:ssl, socket}}
   end
 end
