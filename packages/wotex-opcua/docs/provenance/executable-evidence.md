@@ -20,6 +20,60 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Browse lifecycle traces WOP-F14..F16, 2026-09-17
+
+`priv/native/browse_trace_check.c` binds the three Browse lifecycle cases of
+`contract-v1.json`. It drives the production owner, Session adapter and
+continuation chains. Three boundaries are injected and labelled: the owner
+clock, the Session adapter's SDK send hooks (`WopSessionSdk`, NULL in
+production), and the BEAM host role that WOP-N04 defines. The hooks record the
+exact requests the adapter builds and answer only with the case's scripted
+responses; the runner loads the corpus, passes only `input`, and compares the
+declared projection.
+
+- WOP-F14: the Browse carries `requestedMaxReferencesPerNode` 1; the scripted
+  page returns one reference and continuation bytes `0102`; the caller's release
+  sends BrowseNext with `releaseContinuationPoints` true and exactly those
+  bytes; the null release result is `ok`; no continuation stays live and the
+  Session stays open. The returned local token is projected as the corpus's
+  symbolic handle `h1`.
+- WOP-F15: nobody consumes the page, so at the original browse deadline the host
+  releases it; that release gets no response, and after the cleanup grace the
+  Session and its channel close. Services are browse, browse_release,
+  close_session, close_channel; no continuation is live, no owner slot is
+  occupied and the browse budget is never widened.
+- WOP-F16: a BrowseNext is sent and never answered; at the original deadline the
+  caller gets `deadline_exceeded` with effect none, and the Session and channel
+  close with no live continuation and no owner slot.
+
+Mutants (applied to production, run, reverted):
+
+| Mutant | Cases that fail |
+| --- | --- |
+| `browse_admit` ignores the release flag | F14, F15 |
+| A consumed continuation stays live in its chain | F14, F15, F16 |
+| Browse sends `requestedMaxReferencesPerNode` 0 | F14 |
+| The owner never expires a dispatched operation | F15, F16 |
+
+Results on macOS arm64 with Elixir 1.20.2 / OTP 29: RelWithDebInfo native CTest
+passes 207/207 and macOS ASan/UBSan CTest passes 207/207, both including the
+three new `native_contract_WOP-F14..F16` cases.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 370 passed (10 doctests,
+4 properties, 356 tests), 65 optional tests excluded and 95.4% coverage. An
+earlier run of that gate, while an emulated container lane and two native builds
+shared the host, failed two load-sensitive cases (`workspace_test.exs` waiting
+100 ms for a concurrent builder and `config_test.exs` reading credential files
+within 1,000 ms); both pass on an idle host and no bound was changed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/browse_trace_check.c` | `0f0f3adbe384b497e4e058c9c448889fbd7c5e5d4ddbc2476ab841ba150c6173` |
+| `priv/native/session_open.c` | `145bfbd6e3ea96a6b4bd677298c5da3d2a568c4acb8611db38dbb885e7230e28` |
+| `priv/native/session_open.h` | `293af9b9567a02679679fabd98287a805b103ce764cd2eac858da8069937d337` |
+| `priv/native/CMakeLists.txt` | `99e87f52580f8affba849bfd5771fd77b3a82aa579f8ac372ac7d98931d29465` |
+| `docs/specs/fixtures/contract-v1.json` | `c862c2ab8ee76c2bb932c7c0d2f02e7d4619b2cb47cb0aefc7c7e7a7c18601d9` |
+| macOS native CTest log | `d4925f6e709fe998efd2756ec161cd5425684d06c6fefddf28fcb9fe9ec03a3f` |
+
 ## One-shot error parity, 2026-09-17
 
 WOP.10 S02 (1.1.3), WOP.11 N04 (1.1.14) and WOP.02 (2.0.13) now specify that only

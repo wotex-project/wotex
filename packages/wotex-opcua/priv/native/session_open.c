@@ -606,6 +606,16 @@ static void receive_browse_next(UA_Client *client, void *userdata,
     capture_page(operation, &response->results[0]);
 }
 
+void wop_session_browse_receive(WopSessionOperation *operation, UA_UInt32 request_id,
+                                UA_BrowseResponse *response) {
+    receive_browse(NULL, operation, request_id, response);
+}
+
+void wop_session_browse_next_receive(WopSessionOperation *operation, UA_UInt32 request_id,
+                                     UA_BrowseNextResponse *response) {
+    receive_browse_next(NULL, operation, request_id, response);
+}
+
 static bool prepare_read(WopSession *session, WopSessionOperation *operation,
                          yyjson_val *parameters) {
     if(!yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 2 ||
@@ -916,8 +926,10 @@ static bool session_dispatch(void *context, const WopOperation *owner_operation,
         request.nodesToBrowse = &operation->browse_description;
         request.nodesToBrowseSize = 1;
         request.requestedMaxReferencesPerNode = operation->page_size;
-        status = UA_Client_sendAsyncBrowseRequest(session->client, &request, receive_browse,
-                                                  operation, &operation->request_id);
+        status = session->sdk && session->sdk->browse
+                     ? session->sdk->browse(session->sdk->context, operation, &request)
+                     : UA_Client_sendAsyncBrowseRequest(session->client, &request, receive_browse,
+                                                        operation, &operation->request_id);
         break;
     }
     case WOP_OPERATION_BROWSE_NEXT:
@@ -928,8 +940,10 @@ static bool session_dispatch(void *context, const WopOperation *owner_operation,
         request.releaseContinuationPoints = operation->releasing;
         request.continuationPointsSize = 1;
         request.continuationPoints = &operation->browse_point;
-        status = UA_Client_sendAsyncBrowseNextRequest(session->client, &request,
-            receive_browse_next, operation, &operation->request_id);
+        status = session->sdk && session->sdk->browse_next
+                     ? session->sdk->browse_next(session->sdk->context, operation, &request)
+                     : UA_Client_sendAsyncBrowseNextRequest(session->client, &request,
+                           receive_browse_next, operation, &operation->request_id);
         break;
     }
     case WOP_OPERATION_SUBSCRIBE:
@@ -1162,7 +1176,12 @@ static void ignore_cancel(UA_Client *client, void *userdata, UA_UInt32 request_i
 static void session_cancel(void *context, const WopOperation *owner_operation) {
     WopSession *session = context;
     WopSessionOperation *operation = slot(session, owner_operation);
-    if(!operation || !operation->pending || !session->client) return;
+    if(!operation || !operation->pending) return;
+    if(session->sdk && session->sdk->cancel) {
+        session->sdk->cancel(session->sdk->context, operation);
+        return;
+    }
+    if(!session->client) return;
     UA_CancelRequest request;
     UA_CancelRequest_init(&request);
     request.requestHeader.timeoutHint = 1000;
@@ -1235,6 +1254,13 @@ void wop_session_service(WopSession *session, WopService *service) {
 bool wop_session_close(WopSession *session) {
     if(!session) return false;
     bool closed = true;
+    if(session->sdk && session->sdk->disconnect) {
+        closed = session->sdk->disconnect(session->sdk->context);
+        if(session->client) {
+            UA_Client_delete(session->client);
+            session->client = NULL;
+        }
+    }
     if(session->client) {
         UA_ClientConfig *config = UA_Client_getConfig(session->client);
         config->timeout = 350;

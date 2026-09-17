@@ -51,6 +51,11 @@ add_executable(wotex_opcua_browse_check browse_check.c)
 target_compile_features(wotex_opcua_browse_check PRIVATE c_std_11)
 target_compile_options(wotex_opcua_browse_check PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(wotex_opcua_browse_check PRIVATE wotex_opcua_security)
+add_executable(wotex_opcua_browse_trace_check browse_trace_check.c)
+target_compile_features(wotex_opcua_browse_trace_check PRIVATE c_std_11)
+target_compile_options(wotex_opcua_browse_trace_check PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_browse_trace_check PRIVATE wotex_opcua_security)
+
 add_executable(wotex_opcua_paged_peer paged_peer.c)
 target_compile_features(wotex_opcua_paged_peer PRIVATE c_std_11)
 target_compile_options(wotex_opcua_paged_peer PRIVATE -Wall -Wextra -Werror)
@@ -122,7 +127,8 @@ if(WOTEX_SANITIZERS)
       wotex_opcua_json wotex_opcua_json_check wotex_opcua_ipc_check wotex_opcua_output_check wotex_opcua_owner_check wotex_opcua_publish_sequence_check wotex_opcua_values wotex_opcua_value_check
       wotex_opcua_value_fault_check wotex_opcua_native_contract_check
       wotex_opcua_security wotex_opcua_security_check wotex_opcua_session_probe
-      wotex_opcua_browse_check wotex_opcua_namespace_check wotex_opcua_subscription_check wotex_opcua_paged_peer
+      wotex_opcua_browse_check wotex_opcua_browse_trace_check
+      wotex_opcua_namespace_check wotex_opcua_subscription_check wotex_opcua_paged_peer
       wotex_opcua_sdk_revision_check)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
@@ -188,6 +194,12 @@ set_tests_properties(native_security_preflight PROPERTIES
   TIMEOUT 30 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 add_test(NAME native_sdk_session_revision COMMAND wotex_opcua_sdk_revision_check)
 add_test(NAME native_browse_token_state COMMAND wotex_opcua_browse_check)
+foreach(number 14 15 16)
+  add_test(NAME native_contract_WOP-F${number} COMMAND wotex_opcua_browse_trace_check
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../docs/specs/fixtures/contract-v1.json" WOP-F${number})
+  set_tests_properties(native_contract_WOP-F${number} PROPERTIES TIMEOUT 20
+    PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
+endforeach()
 foreach(number 27 28)
   add_test(NAME native_contract_WOP-X-F${number} COMMAND wotex_opcua_subscription_check
     "${WOTEX_NATIVE_CONTRACT}" WOP-X-F${number})

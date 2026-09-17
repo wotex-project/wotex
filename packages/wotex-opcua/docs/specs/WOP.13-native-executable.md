@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.34
+  version: 1.1.35
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -655,7 +655,10 @@ shape. They do not bind any additional `native-contract-v1.json` case, validate
 service parameters or credentials cryptographically, activate a Session or send
 a service request.
 Native traces use a deterministic service/clock boundary; peer lanes separately
-prove real bytes, certificates and callbacks. The full S/N/I scenario matrices
+prove real bytes, certificates and callbacks. The Session adapter additionally
+accepts explicitly labelled SDK send hooks (`WopSessionSdk`), NULL in
+production, so a trace can record the exact Browse, BrowseNext and cancellation
+requests it builds and answer them from a script without a socket. The full S/N/I scenario matrices
 remain required in addition to the concrete corpus.
 
 Required fixture tasks are `mix wotex.software.build --workspace ABS` and

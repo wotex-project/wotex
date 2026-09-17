@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.14
+  version: 1.1.15
   owner: wotex-opcua
   updated: 2026-09-17
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.14**. Implementation status: **partial**.
+Specification version: **1.1.15**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -242,7 +242,14 @@ defined in WOP.10 S02.
 
 [contract-v1.json](fixtures/contract-v1.json) is a partially bound corpus.
 `standalone_contract_test.exs` executes F01 through F13 through the public
-pure codecs and compares every declared output field. Its test tags bind the
+pure codecs and compares every declared output field.
+`priv/native/browse_trace_check.c` executes F14 through F16 through the
+production owner, Session adapter and continuation chains. It injects the SDK
+send boundary (recording the exact Browse and BrowseNext requests the adapter
+builds and answering only with the case's scripted responses), the owner clock,
+and the host role that WOP-N04 defines: release at the original browse deadline
+and cleanup after the .00 grace. The runner compares the complete declared
+projection and never hands an expectation to the adapter. Its test tags bind the
 case, requirements and exact corpus SHA-256. Other corpus cases remain specified
 and unexecuted. Existing WOP-Vxx entries in .10 are scenario families, not
 implemented test vectors. Together with the production native value-contract

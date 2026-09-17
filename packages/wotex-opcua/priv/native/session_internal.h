@@ -15,6 +15,11 @@ bool wop_session_supported(const UA_DataType *type);
 bool wop_session_accept(WopSessionOperation *operation, UA_UInt32 request_id,
                         const UA_ResponseHeader *header);
 int64_t wop_session_clock(void);
+/* Delivers one scripted SDK response to the production receive path. */
+void wop_session_browse_receive(WopSessionOperation *operation, UA_UInt32 request_id,
+                                UA_BrowseResponse *response);
+void wop_session_browse_next_receive(WopSessionOperation *operation, UA_UInt32 request_id,
+                                     UA_BrowseNextResponse *response);
 
 /* Subscription service, implemented in session_subscription.c. */
 bool wop_subscription_prepare(WopSession *session, WopSessionOperation *operation,

@@ -61,6 +61,20 @@ typedef struct {
 
 #define WOP_SESSION_CONTINUATIONS 64
 
+/* Optional SDK send hooks. Production leaves this NULL and calls the pinned SDK
+ * directly; a native trace injects recording hooks with scripted responses. */
+typedef struct WopSessionOperation WopSessionOperation;
+
+typedef struct {
+    void *context;
+    UA_StatusCode (*browse)(void *context, WopSessionOperation *operation,
+                            const UA_BrowseRequest *request);
+    UA_StatusCode (*browse_next)(void *context, WopSessionOperation *operation,
+                                 const UA_BrowseNextRequest *request);
+    bool (*disconnect)(void *context);
+    void (*cancel)(void *context, const WopSessionOperation *operation);
+} WopSessionSdk;
+
 /* One owned continuation chain. `used` covers a live continuation and any
  * unfinished operation that may create or consume one. */
 typedef struct {
@@ -74,7 +88,7 @@ typedef struct {
 /* Per-slot SDK storage. The SDK callback userdata is this stable address and
  * every callback also matches the SDK request ID, so a late response for a
  * retired request can never attach to a later request in the same slot. */
-typedef struct {
+struct WopSessionOperation {
     WopSession *session;
     WopOperationKind kind;
     UA_UInt32 request_id;
@@ -110,7 +124,7 @@ typedef struct {
     UA_StatusCode item_status;
     size_t subscription;
     uint64_t serial;
-} WopSessionOperation;
+};
 
 struct WopSession {
     UA_Client *client;
@@ -129,6 +143,8 @@ struct WopSession {
     UA_UInt64 browse_serial;
     /* Continuation state may exist on the server without local ownership. */
     bool browse_orphaned;
+    /* Injected SDK hooks for native traces; NULL in production. */
+    const WopSessionSdk *sdk;
     WopSubscription subscriptions[WOP_SESSION_SUBSCRIPTIONS];
     uint64_t subscription_serial;
     WopReadyReport reports[WOP_SESSION_READY];

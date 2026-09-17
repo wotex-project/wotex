@@ -36,7 +36,7 @@ defmodule Wotex.OPCUA.Native.Build do
     session_subscription.c session_internal.h subscription_rules.c subscription_rules.h
     subscription_check.c
     security.c security.h security_check.c session_config.c session_config.h
-    session_probe.c session_open.c session_open.h browse_check.c namespace_check.c paged_peer.c
+    session_probe.c session_open.c session_open.h browse_check.c browse_trace_check.c namespace_check.c paged_peer.c
     security.md patch-sdk.cmake sdk_revision_check.c
     value_codec.c value_codec.h value_check.c value_fault_check.c
     native_contract_check.c
