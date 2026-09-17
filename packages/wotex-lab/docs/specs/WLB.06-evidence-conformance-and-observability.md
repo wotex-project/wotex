@@ -1,6 +1,6 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.4.2. Contract: accepted. Source status: partial.
+Specification version: 1.4.3. Contract: accepted. Source status: partial.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
@@ -68,7 +68,11 @@ runner internals, inspect expectation files or receive expected values.
 normalized observation from the declared document and projection by running
 the core package, and `main/1` is the process entry the runner starts through
 a port (an `erl` invocation with explicit code paths, no shell, a private
-`HOME`). The subject archive is a tar of the loaded core `ebin` directory, so
+`HOME`). `main/1` switches standard input and output to byte mode, so the UTF-8
+exchange does not depend on the host locale;
+`test/wotex/lab/conformance_target_process_test.exs` runs the process entry
+under the C and UTF-8 locales. The subject archive is a tar of the loaded core
+`ebin` directory, so
 the evidence names the compiled subject that actually answered; it is source
 mode evidence, not a Hex artifact claim.
 Claims/vectors/expected results remain runner-owned. A Lab target wrapping

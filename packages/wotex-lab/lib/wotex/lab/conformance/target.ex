@@ -52,9 +52,16 @@ defmodule Wotex.Lab.Conformance.Target do
 
   def respond(_), do: base("unknown", "unsupported") |> Map.put("codes", ["invalid_request"])
 
-  @doc "Runs the target as an operating-system process: `--archive <path>` then one request line on stdin."
+  @doc """
+  Runs the target as an operating-system process: `--archive <path>` then one request line on stdin.
+
+  Standard input and output are switched to byte mode first, so the UTF-8
+  request and response pass through unchanged whatever locale the host selects.
+  """
   @spec main([String.t()]) :: no_return()
   def main(args) do
+    :ok = :io.setopts(:standard_io, binary: true, encoding: :latin1)
+
     case run(args, fn -> IO.binread(:stdio, :line) end) do
       {:ok, encoded} ->
         IO.binwrite(encoded <> "\n")

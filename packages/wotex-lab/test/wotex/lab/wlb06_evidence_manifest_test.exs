@@ -36,6 +36,7 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "priv/conformance/native/tests/lifecycle.rs",
     "test/support/native_containment.ex",
     "test/wotex/lab/benchmark_test.exs",
+    "test/wotex/lab/conformance_target_process_test.exs",
     "test/wotex/lab/conformance_test.exs",
     "test/wotex/lab/continuum_test.exs",
     "test/wotex/lab/evidence_test.exs",

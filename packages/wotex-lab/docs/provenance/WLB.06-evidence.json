@@ -65,7 +65,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 24,
+  "attempt": 25,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -140,14 +140,14 @@
     }
   ],
   "durations": {
-    "run_ms": 13000
+    "run_ms": 15200
   },
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154",
     "corpus:thing-model-1.1": "sha256:800bfc2ea61f6c14167898e64bcdb8c8aff0a1fe9857505ed65f2837d6bd10a5"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 RUST_TEST_THREADS=1 mix test test/wotex/lab/benchmark_test.exs test/wotex/lab/conformance_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/evidence_test.exs test/wotex/lab/graph_test.exs test/wotex/lab/telemetry_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 RUST_TEST_THREADS=1 mix test test/wotex/lab/benchmark_test.exs test/wotex/lab/conformance_target_process_test.exs test/wotex/lab/conformance_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/evidence_test.exs test/wotex/lab/graph_test.exs test/wotex/lab/telemetry_test.exs --seed 1",
     "containment:darwin-sandbox-exec+profile-2.0.1+contained-exec-2.0.0",
     "cargo-lock:sha256:de17a723dc3ce87ad3360a2fde43c0ddfb8ce056dae95c4cd1f35329274b1ee5",
     "fault-schedule:1.0.0",
@@ -160,15 +160,15 @@
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "excluded_count": 1,
-    "test_count": 53,
+    "test_count": 54,
     "thing_description_vectors": 16,
     "thing_model_vectors": 8
   },
-  "revision": "ad723e109ade84bf74cda59d5a5afa6cbdabebb4",
+  "revision": "db30b34f299f10188914ced5c6aa08f992798a08",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:cd7c00b6b2c41a3e2e065e158d96f800c5859d3900f8eb065880fea75e8ab970",
+  "source_tree_digest": "sha256:b2a89b90de90480724c0176e12ae2ccb8eb93b39e02372d20dcfe6d8576f4ec7",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",
