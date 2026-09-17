@@ -15,6 +15,9 @@ withheld and Republish counts. LoseSubscriptions queues a BadTimeout
 StatusChangeNotification on every subscription and returns their count.
 FailDeletes(count) makes the next `count` DeleteSubscriptions calls return
 BadInternalError without deleting and returns the remaining count.
+FailAcks(count) makes the next `count` Publish requests that acknowledge
+notifications report BadInternalError for each acknowledgement and returns the
+remaining count.
 """
 import asyncio
 import base64
@@ -178,7 +181,7 @@ async def main(directory, variant):
                                                      [ua.VariantType.Double, ua.VariantType.Double],
                                                      [ua.VariantType.Double])
     service = server.iserver.subscription_service
-    faults = {"withhold": 0, "discard": False, "withheld": 0, "republished": 0, "fail_deletes": 0}
+    faults = {"withhold": 0, "discard": False, "withheld": 0, "republished": 0, "fail_deletes": 0, "fail_acks": 0}
     delete_subscriptions = InternalSession.delete_subscriptions
 
     async def failing_delete(session, ids):
@@ -188,6 +191,16 @@ async def main(directory, variant):
         return [ua.StatusCode(ua.StatusCodes.BadInternalError) for _ in ids]
 
     InternalSession.delete_subscriptions = failing_delete
+    publish_acks = InternalSession.publish
+
+    def failing_publish(session, acks=None):
+        count, results = publish_acks(session, acks)
+        if faults["fail_acks"] and results:
+            faults["fail_acks"] -= 1
+            results = [ua.StatusCode(ua.StatusCodes.BadInternalError) for _ in results]
+        return count, results
+
+    InternalSession.publish = failing_publish
     pop_result = InternalSubscription._pop_publish_result
     republish_result = InternalSubscription.republish
 
@@ -234,6 +247,14 @@ async def main(directory, variant):
         faults["fail_deletes"] = count
         return ua.Variant(faults["fail_deletes"], ua.VariantType.UInt32)
 
+    @uamethod
+    def fail_acks(parent, count):
+        faults["fail_acks"] = count
+        return ua.Variant(faults["fail_acks"], ua.VariantType.UInt32)
+
+    acks_method = await server.nodes.objects.add_method(ua.NodeId("fail_acks", namespace),
+                                                        "FailAcks", fail_acks,
+                                                        [ua.VariantType.UInt32], [ua.VariantType.UInt32])
     delete_method = await server.nodes.objects.add_method(ua.NodeId("fail_deletes", namespace),
                                                           "FailDeletes", fail_deletes,
                                                           [ua.VariantType.UInt32], [ua.VariantType.UInt32])
@@ -269,6 +290,7 @@ async def main(directory, variant):
               "faults_method_id": faults_method.nodeid.to_string(),
               "loss_method_id": loss_method.nodeid.to_string(),
               "delete_method_id": delete_method.nodeid.to_string(),
+              "acks_method_id": acks_method.nodeid.to_string(),
               "username": USERNAME, "password": PASSWORD, "variant": variant}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

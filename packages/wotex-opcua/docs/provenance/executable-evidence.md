@@ -20,6 +20,31 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Peer Bad Publish acknowledgement status, 2026-09-17
+
+The independent asyncua 2.0.1 peer adds a test-only `FailAcks(count)` Method.
+It makes the next `count` Publish requests that carry acknowledgements report
+BadInternalError for each one. In `native_subscription_test.exs`, a
+persistent Session subscribes and receives its initial report. A second
+Session arms one failure and writes a value. The next report still arrives,
+because its Publish carried the acknowledgement. After a further write, the
+receiver gets exactly one `invalid_response` (effect none), the host stops
+normally, and the peer's subscription and MonitoredItem counts reach zero.
+Cancellation of the stale handle returns `:ok`. This confirms the X05 rule
+that an acknowledgement status other than Good, BadSequenceNumberUnknown or
+BadSubscriptionIdInvalid ends the Session.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29: the optional
+secure suite with the lifecycle file passes 59/59 against the RelWithDebInfo
+and macOS ASan/UBSan builds. `WOTEX_PATH_DEPS=1 mix check --no-retry` passes
+with 364 passed (10 doctests, 4 properties, 350 tests), 63 optional tests
+excluded and 95.3% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/secure_peer.py` | `58c1c5bd6c45a4ec8851a74b2d27b457726c9e858634815ebe9835ea4760b8d2` |
+| `test/interop/native_subscription_test.exs` | `cb145184e265aa1242115b9a331a2bb8768654b1cfa0c9fcbadd412f4af96b03` |
+
 ## Pipe-independent X-F21 owner trace, 2026-09-17
 
 A Linux arm64 run (Docker container from the local `hexpm/elixir` image

@@ -12,28 +12,28 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
     guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
 
-    assert {:ok, session} =
-             Wotex.OPCUA.connect(
-               client: Open62541,
-               executable: executable,
-               executable_digest: digest(executable),
-               guardian: guardian,
-               guardian_digest: digest(guardian),
-               endpoint: peer["endpoint"],
-               security_policy: :basic256sha256,
-               security_mode: :sign_and_encrypt,
-               client_uri: peer["client_uri"],
-               server_uri: peer["server_uri"],
-               certificate: peer["certificate"],
-               private_key: Path.join(directory, "client.key.der"),
-               server_certificate: peer["server_certificate"],
-               trust_certificate: Path.join(directory, "ca.der"),
-               crl: peer["crl"],
-               authentication: %{type: :anonymous}
-             )
+    options = [
+      client: Open62541,
+      executable: executable,
+      executable_digest: digest(executable),
+      guardian: guardian,
+      guardian_digest: digest(guardian),
+      endpoint: peer["endpoint"],
+      security_policy: :basic256sha256,
+      security_mode: :sign_and_encrypt,
+      client_uri: peer["client_uri"],
+      server_uri: peer["server_uri"],
+      certificate: peer["certificate"],
+      private_key: Path.join(directory, "client.key.der"),
+      server_certificate: peer["server_certificate"],
+      trust_certificate: Path.join(directory, "ca.der"),
+      crl: peer["crl"],
+      authentication: %{type: :anonymous}
+    ]
 
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
     {:ok, original} = read(session, peer["node_id"])
-    %{session: session, peer: peer, original: original}
+    %{session: session, peer: peer, original: original, options: options}
   end
 
   test "WOP-S04 a monitored Value delivers the initial and each fresh report once", context do
@@ -245,6 +245,36 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
     assert :ok = Wotex.OPCUA.disconnect(session)
   end
 
+  test "WOP-S04 a Bad acknowledgement status closes the Session and its peer subscriptions",
+       context do
+    %{session: session, peer: peer} = context
+    %Session{handle: %{host: host}} = session
+    request = %{node_id: peer["node_id"], publishing_interval_ms: 50, sampling_interval_ms: 0}
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+    assert {:ok, _, _} = next_report(reference)
+    {:ok, observer} = observer(context)
+
+    assert {:ok, %{"outputs" => [%{"value" => 1}]}} =
+             Wotex.OPCUA.send(observer, %{
+               type: :call,
+               node_id: peer["acks_method_id"],
+               value: %{object_id: peer["object_id"], arguments: [%{type: "UInt32", value: 1}]}
+             })
+
+    monitor = Process.monitor(host)
+    assert {:ok, %{"status" => 0}} = write(observer, peer["node_id"], 36.0)
+    assert {:ok, _, _} = next_report(reference)
+    assert {:ok, %{"status" => 0}} = write(observer, peer["node_id"], 37.0)
+    assert {:error, %Error{code: :invalid_response, effect: :none}} = next_report(reference)
+    assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 5000
+    refute_receive {:wotex_opcua, ^reference, _}, 100
+    assert eventually(fn -> resources(observer, peer) == {0, 0} end)
+    assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    assert {:ok, %{"status" => 0}} = write(observer, peer["node_id"], context.original)
+    assert :ok = Wotex.OPCUA.disconnect(observer)
+  end
+
   test "WOP-S04 invalid requests and one-shot handles acquire no subscription", context do
     %{session: session, peer: peer} = context
 
@@ -265,6 +295,8 @@ defmodule Wotex.OPCUA.NativeSubscriptionInteropTest do
     assert {0, 0} = resources(session, peer)
     assert :ok = Wotex.OPCUA.disconnect(session)
   end
+
+  defp observer(context), do: Wotex.OPCUA.connect(context.options)
 
   defp resources(session, peer) do
     assert {:ok, %{"status" => 0, "outputs" => [%{"value" => subscriptions}, %{"value" => items}]}} =
