@@ -20,6 +20,52 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Software build and run tasks, 2026-09-17
+
+`Wotex.OPCUA.Native.Software` with `mix wotex.opcua.software.build` and
+`mix wotex.opcua.software.run` (root aliases `wotex.software.build` and
+`wotex.software.run`) implements the X06 fixture tasks for a source checkout.
+`test/interop/requirements.lock` pins the 13 peer distributions with every
+PyPI-published SHA-256 for their releases (168 hashes). A fresh venv installs it
+with `--require-hashes --no-deps`, and `pip check` then reports no broken
+requirements.
+
+`software_test.exs` runs both functions with fake Python, CMake, CTest and Mix
+executables. It checks the manifest and a passing run, then a failed lane that
+still writes its report, invalid and relative workspaces, missing fixtures and
+tools, a stale manifest before a build and after an executable change, native,
+sanitizer and peer step failures, a missing artifact, a non-empty workspace, and
+a peer that exits or misses its readiness deadline. It also checks that both
+tasks reject a missing or relative workspace argument.
+
+Real run on macOS arm64 (Elixir 1.20.2 / OTP 29, Homebrew Python 3.14.7):
+`WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace
+/private/tmp/wotex-opcua-agent/software` completed. The native build CTest step
+passed, and the recorded peer distributions include asyncua 2.0.1.
+`WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace` on the same workspace
+passed every lane:
+
+- ExUnit with interop and software: 430 passed (10 doctests, 4 properties,
+  416 tests), 1 excluded (the native build test);
+- native CTest: 204/204;
+- ASan/UBSan CTest: 204/204;
+- `mix deps.audit`: no vulnerabilities;
+- `mix hex.audit`: no retired or advisory packages.
+
+No peer process remained afterwards. `WOTEX_PATH_DEPS=1 mix check --no-retry`
+passes with 369 passed (10 doctests, 4 properties, 355 tests), 63 optional tests
+excluded and 95.4% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/software.ex` | `4f434591cad859198d01ee54c5e447a4625308c43ac6aefecbf392e4d25a9b0b` |
+| `lib/mix/tasks/wotex.opcua.software.build.ex` | `9ea49a40280541c47557d90626b10c29d78fc428c3cc87b0b6a50b89cc89a11b` |
+| `lib/mix/tasks/wotex.opcua.software.run.ex` | `8b1d5ac5586f43d170a0e9c85b29a1907068ba19d6867a844ece4d8e7c882fec` |
+| `test/interop/requirements.lock` | `5c4909b5fda8aa0b0c299ffdf6b86cdcd112a1cf64be1aff70fe26c3b1055202` |
+| `test/wotex/opcua/native/software_test.exs` | `7e882aef1043a8695ec061fd314239204b8b1cba9943a3e8356e203cb881610e` |
+| `software-build.json` | `f529273edcc37a36b63111602b06d6ed3bf76b086c4d61fce0a8ceb5469c8991` |
+| `software-run.json` | `ee5e825fa76f2433d4ad5f5554e9eda84eb5fcaa14cf19756dc566f000ebbc70` |
+
 ## Leak audits only on LeakSanitizer toolchains, 2026-09-17
 
 Apple toolchains provide AddressSanitizer and UndefinedBehaviorSanitizer but

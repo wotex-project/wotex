@@ -94,6 +94,8 @@ defmodule WotexOPCUA.MixProject do
     [
       setup: ["deps.get", "deps.compile"],
       "wotex.native.build": "wotex.opcua.native.build",
+      "wotex.software.build": "wotex.opcua.software.build",
+      "wotex.software.run": "wotex.opcua.software.run",
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"

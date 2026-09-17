@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.33
+  version: 1.1.34
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -668,6 +668,18 @@ peer environment is not a runtime package asset. Run selects
 ASan/UBSan and dependency audits. `WOTEX_REQUIRE_SOFTWARE=1` makes missing tools,
 configuration, responses and cleanup evidence failures, never skips. Native
 audit inputs include SDK/OpenSSL source and shim/patch hashes, not just Mix.lock.
+`Wotex.OPCUA.Native.Software` implements both tasks
+(`mix wotex.opcua.software.build` and `mix wotex.opcua.software.run`, with the
+root aliases above) for a source checkout. Build runs the native workspace
+build and its CTest step, builds a Debug ASan/UBSan tree from that workspace's
+prefixes, and installs `test/interop/requirements.lock` into a peer virtual
+environment with `--require-hashes --no-deps`. It records the lock digest, the
+installed distributions and five executable digests. Run re-verifies that
+manifest. It starts the peer with a finite readiness deadline and runs the
+ExUnit lane with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, and the
+Mix dependency and Hex audits. It stops the peer and records each lane's status
+and log digest; any failed lane fails the task. The peer audit (`pip-audit`) and
+the SDK/OpenSSL source-hash audit are not part of these tasks.
 
 The driver owns disposable ports, processes, keys and state; readiness has a
 finite deadline and every exit closes only manifest-owned resources. Evidence
