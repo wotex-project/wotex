@@ -397,7 +397,7 @@ defmodule Wotex.OPCUA.Native.Host do
   defp valid_browse_limits?(_), do: false
 
   defp admit(state, from, operation, parameters, timeout, deadline, cursor) do
-    if outstanding(state) >= @capacity do
+    if outstanding(state) >= @capacity or owed(state) >= @capacity do
       {:reply, {:error, %{Error.new(:busy) | details: %{phase: :admission}}}, state}
     else
       case emit(state, operation, parameters, timeout, deadline) do
@@ -444,6 +444,11 @@ defmodule Wotex.OPCUA.Native.Host do
   end
 
   defp outstanding(state), do: Enum.count(state.pending, fn {_, entry} -> not entry.replied end)
+
+  # Each pending request and control still owes exactly one native output line.
+  # Keeping that total within the credit window plus the 64-envelope native queue
+  # means a burst of timed-out requests cannot overflow the native output.
+  defp owed(state), do: map_size(state.pending) + map_size(state.controls)
 
   # Writes one request line; the first request carries the initial credit.
   defp emit(state, operation, parameters, timeout, deadline) do
@@ -509,6 +514,10 @@ defmodule Wotex.OPCUA.Native.Host do
       do: {:open_lost, state},
       else: send_cancel(state, id)
   end
+
+  # Without room for another owed line the native deadline ends the target instead.
+  defp send_cancel(state, _) when map_size(state.pending) + map_size(state.controls) >= 80,
+    do: {:ok, state}
 
   defp send_cancel(state, target) do
     deadline = System.monotonic_time(:millisecond) + @control_ms

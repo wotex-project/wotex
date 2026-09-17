@@ -20,6 +20,36 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Bounded native output owed after request timeouts, 2026-09-17
+
+A software stress run against the macOS ASan/UBSan build ended a Session with
+`receiver_overflow` after 50 sequential Reads with a 1 ms timeout. Each timed-out
+request owed one response and its cancellation one acknowledgement, and the
+slower native process read the whole burst at once and produced more than the
+16 credited plus 64 queued envelopes. `Native.Host` now counts every pending
+request and control as one owed native output line. A request is admitted only
+while fewer than 64 are owed, and a timeout or caller death sends `cancel` only
+while fewer than 80 are owed; otherwise the native deadline ends that request.
+
+`persistent_bridge_test.exs` stops the process-fixture owner with `SIGSTOP`,
+issues 100 Reads with 5 ms timeouts, and resumes it. Every result is
+`deadline_exceeded` or `busy`, at least one is `busy`, at most 80 lines are
+owed, pending work and controls drain, no terminal error reaches the owner, and
+a later Read and close succeed. Against the previous host the same stimulus
+leaves 198 owed lines.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 364 passed (10 doctests,
+4 properties, 350 tests), 55 optional tests excluded and 95.3% coverage. The
+optional secure suite with the lifecycle file passes 55/55 against the
+RelWithDebInfo and macOS ASan/UBSan builds. Report bursts from active
+subscriptions are not counted as owed lines.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/host.ex` | `aeb16a19b71209247458b0cc825f8bbcac233b298472a188c2a8664c6188a586` |
+| `test/wotex/opcua/persistent_bridge_test.exs` | `e154409e4d01c94646ec56cca469b412d7402513dde10bb823d06f2a8a6ea01f` |
+
 ## Runtime binding profiles and the integration corpus, 2026-09-17
 
 `Wotex.OPCUA.profile/0` returns the static one-shot `:opcua` profile (`opc.tcp`,

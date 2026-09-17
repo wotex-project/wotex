@@ -160,6 +160,43 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
     assert_reaped(directory)
   end
 
+  test "WOP-X04 timed-out bursts to a stalled native owner stay within its output bound",
+       context do
+    {host, directory} = open_fixture(context)
+    [native, _] = String.split(File.read!(Path.join(directory, "host.pid")))
+    assert {_, 0} = System.cmd("/bin/kill", ["-STOP", native], env: [{"LC_ALL", "C"}])
+
+    results =
+      try do
+        for _ <- 1..100, do: Host.request(host, "read", read("hold"), 5)
+      after
+        System.cmd("/bin/kill", ["-CONT", native], env: [{"LC_ALL", "C"}])
+      end
+
+    assert Enum.all?(results, fn
+             {:error, %Error{code: code}} -> code in [:deadline_exceeded, :busy]
+             _ -> false
+           end)
+
+    assert Enum.any?(results, &match?({:error, %Error{code: :busy}}, &1))
+    state = :sys.get_state(host)
+    assert map_size(state.pending) + map_size(state.controls) <= 80
+
+    assert eventually(fn ->
+             state = :sys.get_state(host)
+             map_size(state.pending) == 0 and map_size(state.controls) == 0
+           end)
+
+    refute_received {:wotex_opcua_native, ^host, _}
+
+    assert {:ok, %{"value" => %{"value" => 3.0}}} =
+             Host.request(host, "read", read("value-3"), 1000)
+
+    assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+    assert %{"status" => 0} = counters(directory)
+    assert_reaped(directory)
+  end
+
   test "WOP-C03 caller death during blocked work sends one cancellation", context do
     {host, directory} = open_fixture(context)
     caller = spawn(fn -> Host.request(host, "call", call("hold"), 10_000) end)

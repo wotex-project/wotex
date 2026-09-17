@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.32
+  version: 1.1.33
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -47,7 +47,10 @@ terminal control that the native process wrote before exiting are handled in
 order: credit for them is not sent to an exited process, and its exit status
 ends the generation only after them. Owner death fails each unanswered request
 with `native_owner_lost` and its effect, and sends that error once to each live
-subscription receiver. ExUnit binds
+subscription receiver. Each pending request and control owes one native output
+line; the host admits a request only while fewer than 64 are owed and sends a
+timeout or caller-death `cancel` only while fewer than 80 are owed, so bursts
+stay within the 16-message credit window plus the 64-envelope queue. ExUnit binds
 WOP-X-F17, F20, F22, F51, F56 and F57 through the host with a process fixture
 that runs the production owner and an injected service, or a deterministic
 response probe. The public `Open62541` persistent client admits Read, Write and
