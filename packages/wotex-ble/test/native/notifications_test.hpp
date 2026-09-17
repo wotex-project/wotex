@@ -265,6 +265,95 @@ inline Json projection(const Json &input, const std::string &address) {
     {"signal_listeners", fixture.session.owner.bus().listener_count()}, {"remote_subscriptions", fixture.remote.size()},
     {"owner_active", fixture.session.owner.active()}, {"sender_releases", fixture.session.sender_releases}};
 }
+// WBL-N04 lifecycle cases from contract-v1.json. The private daemon is the
+// scripted backend: `bound` names the fixture characteristic, the case's
+// `sender` is the org.bluez owner and every other signal sender is a separate
+// connection. Events run in list order and each signal is followed by a
+// daemon round trip on its sender and on the client, so the observation is
+// taken after the native owner has admitted or dropped it. ExUnit compares.
+inline Json contract(const Json &input, const std::string &address) {
+  const bool lifecycle = fields(input, {"sender", "client_sender", "path", "mode", "flags", "events"});
+  NOTIFY_CHECK((lifecycle || fields(input, {"mode", "flags", "events"})) && input.at("flags").is_array() &&
+    input.at("mode").is_string() && input.at("events").is_array() && !input.at("events").empty() && input.at("events").size() <= 32);
+  if (lifecycle) NOTIFY_CHECK(input.at("sender").is_string() && input.at("client_sender").is_string() &&
+    input.at("path").is_string() && input.at("sender") != input.at("client_sender"));
+  const std::string bound = "/org/bluez/hci0/device/service/char";
+  Fixture fixture(address); fixture.session.peer.objects.back().second[0].second.back().value = input.at("flags");
+  fixture.hold = "StartNotify";
+  std::map<std::string, std::unique_ptr<discovery_test::Peer>> foreign;
+  std::optional<std::string> subscription;
+  std::optional<std::size_t> cancelled_at;
+  std::uint64_t previous = 0;
+  const auto sync = [&](discovery_test::Peer &emitter) {
+    emitter.barrier(); bool synced = false;
+    Message request(dbus_message_new_method_call(DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetId"));
+    NOTIFY_CHECK(request && fixture.session.owner.bus().call(request.get(), "s", Clock::now() + std::chrono::seconds(1),
+      [&](BusReply reply) { NOTIFY_CHECK(!reply.error); synced = true; }));
+    fixture.until([&] { return synced; });
+  };
+  for (const auto &event : input.at("events")) {
+    NOTIFY_CHECK(event.is_object() && event.contains("at_ms") && integer(event.at("at_ms"), previous, 60000) &&
+      event.contains("event") && event.at("event").is_string());
+    previous = event.at("at_ms").get<std::uint64_t>();
+    const auto kind = event.at("event").get<std::string>();
+    if (kind == "subscribe") {
+      NOTIFY_CHECK(fields(event, {"at_ms", "event", "id"}) && event.at("id").is_string() && !subscription);
+      subscription = event.at("id").get<std::string>();
+      fixture.start(201, fixture.parameters(procedures_test::address, input.at("mode").get<std::string>()));
+      fixture.until([&] { return fixture.starts.count(bound) || fixture.results.count(201); });
+    } else if (kind == "start_notify_ok" || kind == "stop_notify_ok") {
+      NOTIFY_CHECK(fields(event, {"at_ms", "event"}));
+      auto &held = kind == "start_notify_ok" ? fixture.starts : fixture.stops;
+      NOTIFY_CHECK(held.count(bound)); fixture.session.peer.empty_reply(held.at(bound).get());
+      if (kind == "start_notify_ok") fixture.until([&] { return fixture.results.count(201); });
+      else fixture.until([&] { return fixture.cancellations.count(201); });
+    } else if (kind == "cancel") {
+      NOTIFY_CHECK(lifecycle && fields(event, {"at_ms", "event", "id"}) && subscription == event.at("id").get<std::string>() &&
+        !cancelled_at);
+      cancelled_at = fixture.reports.size(); fixture.hold = "StopNotify"; fixture.cancel(201);
+      fixture.until([&] { return fixture.stops.count(bound) || fixture.cancellations.count(201); });
+    } else {
+      NOTIFY_CHECK(lifecycle && kind == "value_changed" && fields(event, {"at_ms", "event", "sender", "path", "bytes_hex"}) &&
+        event.at("sender").is_string() && event.at("path").is_string() && event.at("bytes_hex").is_string());
+      const auto hex = event.at("bytes_hex").get<std::string>();
+      NOTIFY_CHECK(hex.size() % 2 == 0 && hex.size() <= 1024 && hex.find_first_not_of("0123456789abcdef") == std::string::npos);
+      Json bytes = Json::array();
+      for (std::size_t index = 0; index < hex.size(); index += 2) bytes.push_back(std::stoul(hex.substr(index, 2), nullptr, 16));
+      const auto sender = event.at("sender").get<std::string>(), path = event.at("path").get<std::string>();
+      NOTIFY_CHECK(sender != input.at("client_sender").get<std::string>());
+      const auto target = path == "bound" ? bound : path;
+      if (sender == input.at("sender").get<std::string>()) {
+        fixture.session.peer.changed({{"Value", "ay", bytes}}, characteristic_interface, target); sync(fixture.session.peer);
+      } else {
+        auto &peer = foreign[sender];
+        if (!peer) peer = std::make_unique<discovery_test::Peer>(address, false);
+        peer->changed({{"Value", "ay", bytes}}, characteristic_interface, target, fixture.session.sender); sync(*peer);
+      }
+    }
+  }
+  NOTIFY_CHECK(subscription.has_value());
+  const auto active = fixture.notifications.active_count();
+  const auto symbol = [&](DBusMessage *message) {
+    const std::string sender = dbus_message_get_sender(message);
+    return lifecycle && sender == fixture.session.sender ? input.at("client_sender").get<std::string>() :
+      lifecycle && sender == fixture.session.peer.sender() ? input.at("sender").get<std::string>() : std::string("unknown");
+  };
+  Json pairs = Json::array();
+  for (const auto &[path, start] : fixture.starts)
+    pairs.push_back({symbol(start.get()), fixture.stops.count(path) ? Json(symbol(fixture.stops.at(path).get())) : Json()});
+  if (active) { fixture.hold.clear(); fixture.cancel(); fixture.until([&] { return fixture.cancellations.count(201); }); }
+  fixture.clean();
+  Json deliveries = Json::array();
+  for (const auto &report : fixture.reports)
+    deliveries.push_back({{"value", report.at("value")}, {"source", report.at("metadata").at("source")}});
+  const auto count = [&](const std::string &member) {
+    return std::count_if(fixture.methods.begin(), fixture.methods.end(), [&](const auto &method) { return method.first == member; });
+  };
+  const auto &result = fixture.results.at(201);
+  return {{"result", result.failure ? result.failure->envelope() : Json()}, {"deliveries", deliveries},
+    {"calls", {{"start_notify", count("StartNotify")}, {"stop_notify", count("StopNotify")}}}, {"sender_pairs", pairs},
+    {"active_subscriptions", active}, {"deliveries_after_cancel", cancelled_at ? fixture.reports.size() - *cancelled_at : 0}};
+}
 inline void invariants(const std::string &address) {
   boundaries(address); capacity(address);
   // WBL-V07/V08: exact mode selection, ACK-before-early-value, no equality deduplication.

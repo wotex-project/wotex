@@ -5,6 +5,7 @@ defmodule Wotex.BLE.NativeBusTest do
 
   use ExUnit.Case, async: false
 
+  alias Wotex.BLE.BlueZ.Response
   alias Wotex.BLE.{NativeCommand, NativeLane}
 
   @moduletag :interop
@@ -15,6 +16,14 @@ defmodule Wotex.BLE.NativeBusTest do
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")
+
+  @contract @root
+            |> Path.join("docs/specs/fixtures/contract-v1.json")
+            |> File.read!()
+            |> Jason.decode!()
+            |> Map.fetch!("cases")
+            |> Enum.filter(&(&1["kind"] == "lifecycle_contract"))
+  @contract_operations ~w(subscribe_value_changes subscribe_wrong_source subscribe_ambiguous_procedure)
 
   setup_all do
     source = required_directory!("WOTEX_BLE_DBUS_SOURCE")
@@ -127,7 +136,7 @@ defmodule Wotex.BLE.NativeBusTest do
              NativeCommand.run(
                context.guardian,
                context.executable,
-               ["--host-executable", context.host, context.daemon, context.config],
+               ["--host-executable", context.host, context.daemon, context.config] ++ leak_audit(),
                context.options
              )
   end
@@ -199,6 +208,61 @@ defmodule Wotex.BLE.NativeBusTest do
       assert Jason.decode!(output) == @fixture["expectation"]["value"]
     end
   end
+
+  # WBL-N04 lifecycle cases run against the native notification owner and the
+  # private daemon as scripted backend. The corpus names the observed fields.
+  for fixture <- @contract do
+    @fixture fixture
+    test "#{fixture["id"]} WBL-N04 executes the lifecycle contract through the native owner",
+         context do
+      assert @fixture["operation"] in @contract_operations
+      assert @fixture["expectation"]["operator"] == "exact"
+
+      assert {:ok, output, 0} =
+               NativeCommand.run(
+                 context.guardian,
+                 context.executable,
+                 [
+                   "--contract-input",
+                   Jason.encode!(@fixture["input"]),
+                   context.daemon,
+                   context.config
+                 ],
+                 context.options
+               )
+
+      expected = @fixture["expectation"]["value"]
+      observed = observation(Jason.decode!(output))
+      assert Map.take(observed, Map.keys(expected)) == expected
+    end
+  end
+
+  defp observation(%{"result" => result, "deliveries" => deliveries} = native) do
+    %{
+      native
+      | "result" => failure(result),
+        "deliveries" =>
+          Enum.map(deliveries, fn %{
+                                    "value" => %{"type" => "bytes", "base64" => base64},
+                                    "source" => source
+                                  } ->
+            bytes = Base.decode64!(base64)
+            %{"bytes_hex" => Base.encode16(bytes, case: :lower), "source" => source}
+          end)
+    }
+  end
+
+  defp failure(nil), do: nil
+
+  # The native error envelope is projected through the production BEAM reply
+  # admission, which assigns the stable code and effect.
+  defp failure(envelope) do
+    frame = %{"version" => 1, "id" => "contract", "ok" => false, "error" => envelope}
+    assert {:error, error} = Response.parse(frame, "subscribe")
+    %{"error" => %{"code" => Atom.to_string(error.code), "effect" => Atom.to_string(error.effect)}}
+  end
+
+  defp leak_audit, do: if(NativeLane.leak_audit?(), do: ["--leak-audit"], else: [])
 
   defp required_directory!(name) do
     value = System.get_env(name)

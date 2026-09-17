@@ -8,6 +8,9 @@
 namespace host_process_test {
 using namespace wotex::ble;
 inline void verify(bool value, unsigned line) { if (!value) throw std::runtime_error("native host process assertion at line " + std::to_string(line)); }
+// The named leak-audit allowance covers only LeakSanitizer scanning at the
+// instrumented host exit; production close deadlines are unchanged.
+inline std::chrono::milliseconds instrumentation{0};
 #define PROCESS_CHECK(value) ::host_process_test::verify((value), __LINE__)
 class Process {
   pid_t pid_ = -1;
@@ -137,7 +140,7 @@ inline void invariants(const std::string &address, const std::string &executable
     const auto calls = peer.calls;
     process.request("open", "open", parameters(address), 60000); until(peer, process, [&] { return peer.calls > calls; });
     const auto started = Clock::now(); process.eof(); until(peer, process, [&] { return process.status.has_value(); });
-    PROCESS_CHECK(process.status == 1 && Clock::now() - started < std::chrono::milliseconds(750) && peer.methods.empty());
+    PROCESS_CHECK(process.status == 1 && Clock::now() - started < std::chrono::milliseconds(750) + instrumentation && peer.methods.empty());
     PROCESS_CHECK(!opening_sender.empty() && !dbus_bus_name_has_owner(peer.connection(), opening_sender.c_str(), nullptr));
     peer.on_query = {};
   }
@@ -176,7 +179,7 @@ inline void invariants(const std::string &address, const std::string &executable
     const auto started = Clock::now();
     process.request("close", "close"); until(peer, process, [&] { return process.status.has_value(); });
     PROCESS_CHECK(bool(disconnect) && peer.methods.size() == 2 && peer.methods[1].first == "Disconnect");
-    PROCESS_CHECK(Clock::now() - started <= std::chrono::milliseconds(700));
+    PROCESS_CHECK(Clock::now() - started <= std::chrono::milliseconds(700) + instrumentation);
     PROCESS_CHECK(process.status == 0 && process.response("close") && process.response("close")->at("ok") == true);
     peer.on_method = {}; device[3].value = true;
   }

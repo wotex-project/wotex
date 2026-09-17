@@ -637,6 +637,9 @@ static void invariants(const std::string &address) {
   check(callback_owner.pending_count() == 0 && callback_owner.watch_count() == 0 && callback_owner.timeout_count() == 0);
 }
 int main(int argc, char **argv) {
+  if (argc > 3 && std::string(argv[argc - 1]) == "--leak-audit") {
+    host_process_test::instrumentation = std::chrono::milliseconds(1000); --argc;
+  }
   if (argc != 3 && argc != 5 && argc != 6) return 2;
   try {
     if (argc == 6) {
@@ -651,14 +654,16 @@ int main(int argc, char **argv) {
         { Daemon daemon(argv[3], argv[4]); host_process_test::invariants(daemon.address, argv[2]); }
         dbus_shutdown(); std::cout << "native host process invariants passed\n"; return 0;
       }
-      if (operation != "--pair-input" && operation != "--gatt-input" && operation != "--notify-input" && operation != "--health-input") return 2;
+      if (operation != "--pair-input" && operation != "--gatt-input" && operation != "--notify-input" && operation != "--health-input" &&
+          operation != "--contract-input") return 2;
       Json result;
       {
         Daemon daemon(argv[3], argv[4]);
         const auto input = parse_line(std::string(argv[2]) + "\n");
         result = operation == "--pair-input" ? pairing_test::projection(input, daemon.address) :
           operation == "--gatt-input" ? procedures_test::projection(input, daemon.address) :
-          operation == "--health-input" ? health_test::projection(input, daemon.address) : notifications_test::projection(input, daemon.address);
+          operation == "--health-input" ? health_test::projection(input, daemon.address) :
+          operation == "--contract-input" ? notifications_test::contract(input, daemon.address) : notifications_test::projection(input, daemon.address);
       }
       dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
     }

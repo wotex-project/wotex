@@ -7,13 +7,42 @@ defmodule Wotex.BLE.ContractFixtureTest do
   @fixture_path Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
   @external_resource @fixture_path
   @corpus Jason.decode!(File.read!(@fixture_path))
+  @root Path.expand("../../..", __DIR__)
   @p01_ids ~w(WBL-F01 WBL-F02 WBL-F03 WBL-F04 WBL-F05 WBL-F09 WBL-F10)
   @cases Enum.filter(@corpus["cases"], &(&1["id"] in @p01_ids))
+
+  # Pure cases execute in this file. Lifecycle cases need the private-bus native
+  # lane and execute in its explicitly selected interop test.
+  @owners %{
+    "pure" => "test/wotex/ble/contract_fixture_test.exs",
+    "lifecycle_contract" => "test/interop/native_bus_test.exs"
+  }
 
   test "WBL-N04 P01 executes its exact assigned concrete case set" do
     assert @corpus["format_version"] == "1.0.0"
     assert Enum.sort(Enum.map(@cases, & &1["id"])) == Enum.sort(@p01_ids)
     assert Enum.all?(@cases, &(&1["kind"] == "pure"))
+  end
+
+  test "WBL-N04 every corpus case has an executing owner that compares its expectation" do
+    ids = Enum.map(@corpus["cases"], & &1["id"])
+    assert ids == Enum.uniq(ids)
+
+    for fixture <- @corpus["cases"] do
+      assert Map.keys(fixture) |> Enum.sort() ==
+               ~w(expectation id input kind operation requirements)
+
+      assert fixture["expectation"]["operator"] == "exact"
+      assert owner = @owners[fixture["kind"]], "#{fixture["id"]} has an unknown kind"
+      assert fixture["kind"] != "pure" or fixture["id"] in @p01_ids
+      source = File.read!(Path.join(@root, owner))
+
+      assert String.contains?(source, fixture["operation"]),
+             "#{owner} does not select #{fixture["id"]}"
+
+      assert String.contains?(source, ~s(["expectation"]["value"])),
+             "#{owner} does not compare #{fixture["id"]}"
+    end
   end
 
   for fixture <- @cases do

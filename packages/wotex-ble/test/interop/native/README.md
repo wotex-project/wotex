@@ -47,13 +47,16 @@ compiled by `native_frame_test.exs`, `native_credit_test.exs`,
 `-O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined
 -fno-sanitize-recover=all` and runs with exit-time leak scanning disabled for
 the strict timing lane. `leak_audit` is Linux-only, enables LeakSanitizer and
-passes `--leak-audit` to the custody driver for its named guardian allowance.
+passes `--leak-audit` to the custody driver and the private-bus fixture for their
+named post-main allowances.
 Sanitizer lanes scale harness waits by 8 or 20; library deadlines and the
 custody assertions are unchanged. Executed fixtures receive a cleared
 environment, so on macOS the lanes pass the harness-resolved `atos` as
 `ASAN_SYMBOLIZER_PATH`; the guardian under test in `native_command_test.exs` is
 compiled in the selected lane by a separate bootstrap guardian. The leak-audit lane runs the 1,000-launch
-guardian startup case with 32 launches because every instrumented exit is
-leak-scanned; the ordinary and sanitizer lanes run all 1,000. Sanitizer output changes a compared result or
+guardian startup case and the 1,000 sequential command case with 32 launches
+because every instrumented exit is leak-scanned, and grants the failed command
+admission bound the same named 1,000 ms instrumentation allowance as the custody
+cases; the ordinary and sanitizer lanes run all 1,000 without it. Sanitizer output changes a compared result or
 exit status and therefore fails the test.
 

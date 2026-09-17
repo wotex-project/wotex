@@ -66,7 +66,7 @@ defmodule Wotex.BLE.NativeCommandTest do
      launcher: Path.join(directory, "command_launcher"),
      options:
        Keyword.merge(options,
-         timeout: 2000,
+         timeout: NativeLane.timeout(2000),
          cleanup: 400,
          limit: 65_536,
          env: NativeLane.environment(empty_environment())
@@ -85,7 +85,15 @@ defmodule Wotex.BLE.NativeCommandTest do
         :binary,
         :exit_status,
         :stderr_to_stdout,
-        args: [context.command, "2000", "65536", "400", context.directory, context.probe, "output"],
+        args: [
+          context.command,
+          Integer.to_string(context.options[:timeout]),
+          "65536",
+          "400",
+          context.directory,
+          context.probe,
+          "output"
+        ],
         env: environment
       ])
 
@@ -95,7 +103,11 @@ defmodule Wotex.BLE.NativeCommandTest do
 
   @tag timeout: NativeLane.timeout(60_000)
   test "WBL-B01 one thousand short commands retain group custody and exact exit", context do
-    for _ <- 1..1000 do
+    # LeakSanitizer scans every instrumented exit; its lane keeps the exact exit
+    # and concurrent output cases but limits sequential churn, as for startup.
+    count = if NativeLane.leak_audit?(), do: 32, else: 1000
+
+    for _ <- 1..count do
       assert {:ok, "", 7} =
                NativeCommand.run(context.command, context.probe, ["exit"], context.options)
     end
@@ -117,7 +129,9 @@ defmodule Wotex.BLE.NativeCommandTest do
     assert {:ok, "", 126} =
              NativeCommand.run(context.fault, context.probe, ["marker", marker], context.options)
 
-    assert System.monotonic_time(:millisecond) - started < 1000
+    # The named leak-audit allowance covers only LeakSanitizer exit scanning.
+    instrumentation = if NativeLane.leak_audit?(), do: 1000, else: 0
+    assert System.monotonic_time(:millisecond) - started < 1000 + instrumentation
     refute File.exists?(marker)
   end
 
