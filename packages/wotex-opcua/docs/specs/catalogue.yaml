@@ -21,7 +21,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "Listed typed scalar and URI subset plus partial native secure client; not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "2.0.8"
+    version: "2.0.9"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7", "claim": "explicitly selected partial native persistent/one-shot read, Write, Call and bounded child Browse client and persistent-only Value data-change subscriptions; typed and child-list pagination have deterministic response fixtures and same-stack secure C peer wire evidence; full native profile unaccepted"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
@@ -53,9 +53,9 @@ specifications:
     implementation_status: "partial"
     standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Selected native one-shot ByteString Runtime Form scalar and flat-array Write/readback paths have independent-peer evidence; full integration remains unaccepted"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WOP.00", "WOP.10", "WOP.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.OPCUA.Mapping", "Wotex.OPCUA.Transport", "Wotex.OPCUA.Value", "Wotex.OPCUA.Open62541"]
-    executable_evidence: ["test/wotex/opcua/open62541_test.exs", "test/interop/native_secure_test.exs"]
-    compatibility_classification: "One explicitly selected native one-shot Runtime ByteString Form path preserves raw scalar bytes and supports typed flat-array Write/readback/restore with ordered bounded binary elements. The complete I01..I06 integration, profile factory, lifecycle, error/retry and subscription cells remain unaccepted."
+    implementation_modules: ["Wotex.OPCUA.Mapping", "Wotex.OPCUA.Transport", "Wotex.OPCUA.Value", "Wotex.OPCUA.Open62541", "Wotex.OPCUA.RuntimeRelay", "Wotex.OPCUA.RuntimeHandle"]
+    executable_evidence: ["test/wotex/opcua/open62541_test.exs", "test/interop/native_secure_test.exs", "test/wotex/opcua/runtime_stream_test.exs", "test/interop/native_runtime_stream_test.exs"]
+    compatibility_classification: "One explicitly selected native one-shot Runtime ByteString Form path preserves raw scalar bytes and supports typed flat-array Write/readback/restore with ordered bounded binary elements. Runtime observeproperty runs through a relay owned by the real Runtime subscription process: ConsumedThing child specifications deliver independent-peer Double and ByteString values with observation metadata, stop and owner death return the peer's subscription counts to zero, and peer subscription loss reaches the receiver as session_lost; subscribeevent and one-shot configurations acquire no peer subscription. The I02 profile factory, I04 retry classes, I06 corpus and the remaining integration cells remain unaccepted."
   - id: "WOP.13"
     version: "1.1.30"
     path: "docs/specs/WOP.13-native-executable.md"

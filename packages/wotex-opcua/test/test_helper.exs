@@ -5,3 +5,5 @@ excluded =
 
 ExUnit.start(exclude: excluded)
 Code.require_file("support/client.ex", __DIR__)
+Code.require_file("support/stream_client.ex", __DIR__)
+Code.require_file("support/nosec_credentials.ex", __DIR__)

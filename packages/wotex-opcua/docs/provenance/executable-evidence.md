@@ -20,6 +20,69 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Runtime Property observation relay, 2026-09-17
+
+`Wotex.OPCUA.Transport` now implements the Runtime `observeproperty`
+callbacks. `Mapping` maps observation Form operations to an `:observe` message,
+and `request/3` rejects every operation other than Property read and write
+before I/O. `subscribe/4` rejects `subscribeevent`, input, a non-nil credential,
+a dead or remote owner, a target mismatch, unknown `:subscription` keys and an
+invalid `:max_queue_length` before starting a process. It then starts one
+`Wotex.OPCUA.RuntimeRelay`, which opens its own Session through the configured
+client and subscribes with itself as the 64-message native receiver. A watcher
+kills the relay if the owner or the establishing caller exits before handoff.
+When bound, the relay forwards frames within the owner's queue bound. On
+overflow, a native error or an abnormal client exit it sends one error frame and
+a `session_lost` or `transport_down` status. Cancellation and Session close share
+one 900 ms release budget. `decode_frame/3` requires the six observation
+metadata keys and projects the DataValue through `Value.native_result/1`.
+`unsubscribe/4` validates the relay generation and releases it; with a non-nil
+credential it still releases before returning `invalid_transport_context`.
+
+`runtime_stream_test.exs` uses real `ConsumedThing` child specifications and an
+injected streaming client. It covers projected delivery and stop,
+`session_lost`/`transport_down` terminal loss without unsubscribe, owner-queue
+overflow, owner death after binding, owner or caller death during establishment
+(the relay is killed), establishment failures and deadlines, invalid requests,
+frame decoding and handle validation, status redaction, and an Event child
+failing without a Session. It binds WOP-X-F23: a short-lived worker establishes
+the observation and exits normally, the final owner receives one notification,
+and its death releases the relay. The actual Runtime `SubscriptionOpening`
+reports `transport_down` when its callback worker is killed, so this binding
+uses the transport boundary rather than a killed Runtime worker.
+
+`native_runtime_stream_test.exs` uses the native persistent client and the
+independent asyncua 2.0.1 peer. A Runtime observation child receives the
+initial Double value and two written values with increasing sequence and a
+stable client handle, and a ByteString child receives raw bytes. After stop the
+peer's subscription and MonitoredItem counts are zero. Killing the Runtime
+owner returns them to zero within 1,000 ms. A peer StatusChangeNotification
+reaches the receiver as an error and `session_lost`, and the owner stops. An
+Event child and a one-shot client configuration each fail without a peer
+subscription.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 350 passed (10 doctests,
+4 properties, 336 tests), 54 optional tests excluded and 95.4% coverage. With the peer environment described
+above, `mix test --include interop --seed 0 test/interop
+test/wotex/opcua/subscription_lifecycle_test.exs` passes 54/54 against the
+RelWithDebInfo and macOS ASan/UBSan builds (native executable digests unchanged).
+The I02 profile factory, I04 retry classes and I06 corpus are not executed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/runtime_relay.ex` | `64a3823840ae1f0df47c397522050bec113079dfde5626061c73f6e87a00c713` |
+| `lib/wotex/opcua/runtime_handle.ex` | `4f25b875ec43a92398d1f595ed27b1ec66c459cbedc27f8f8f4b093c17402b4c` |
+| `lib/wotex/opcua/transport.ex` | `d6a1c3b3ae2f83f1180d65b817c9ef8055383114c77f4facd18a1b0f3b28467b` |
+| `lib/wotex/opcua/mapping.ex` | `e1bbffdd57cb9fc451fd31e79ee2402ce7493a87fb19319ebf8456c06a389fdd` |
+| `lib/wotex/opcua/value.ex` | `5b96ad14d42af1ce9c46fcbf1bcb200104046368fac4e140aa35fecd1350fc78` |
+| `test/support/stream_client.ex` | `fbb941d04910dc47720f176b0ccec2a30d352a81ec91d4400d03641b4a723d35` |
+| `test/support/nosec_credentials.ex` | `93f2647788ee2cab1d9f994349113aad896fa8e07df0a85fa52721e3d55a7500` |
+| `test/test_helper.exs` | `ce5e1d8930afc61f7f50b6a1a825a1527d44b617eb18578153365b52d5309160` |
+| `test/wotex/opcua/runtime_stream_test.exs` | `d86d2e93a183b8a79f601d9357b0510021dac0b2b5848f71d989d98d20afb455` |
+| `test/interop/native_runtime_stream_test.exs` | `ab3d0ebda5ba6a22849aaee7a5e781fc36d30ac66955c9815171cb71803045ff` |
+| `docs/specs/fixtures/native-contract-v1.json` | `5b43aae7c5d4313a75d4f597e741ca4a815eec34797bcd47d87a3f94bd8211ea` |
+
 ## Concrete Read health probe, 2026-09-17
 
 `Wotex.OPCUA.health_check/2` accepts exactly `%{node_id: node}`. It sends one

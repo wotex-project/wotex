@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.8
+  version: 2.0.9
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -233,7 +233,16 @@ callbacks; a client without them returns `:not_supported`. The explicitly
 selected native client supports one Value MonitoredItem per handle on a
 persistent Session only and delivers native DataValue maps and metadata to the
 receiver as described in WOP.13 X05. One-shot handles return
-`:persistent_session_required`. Runtime observation remains unimplemented.
+`:persistent_session_required`. `Wotex.OPCUA.Transport` implements Runtime
+`observeproperty` only: after the Form target matches, it starts one
+`Wotex.OPCUA.RuntimeRelay` for the Runtime subscription owner, which opens its
+own Session and one Value MonitoredItem and forwards
+`{:wotex_transport_frame, {:value, data_value, metadata}}` within the owner's
+queue bound. `decode_frame/3` returns the Runtime value and metadata described
+in `Wotex.OPCUA.Value.native_result/1`. Terminal loss sends an error frame and a
+`session_lost` or `transport_down` status. `subscribeevent`, input and
+non-nil credentials fail before a process starts. The profile factory and the
+Runtime retry classes are not implemented.
 `health_check/2` takes exactly `%{node_id: node}` and returns `:ok` only after a
 successful Read of that node through the selected client; `health_check/1`
 still returns `probe_required`.

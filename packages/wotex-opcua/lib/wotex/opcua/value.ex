@@ -15,8 +15,12 @@ defmodule Wotex.OPCUA.Value do
   metadata, and decodes scalar or bounded flat-array ByteString envelopes. It does not validate
   other returned types against their payloads; values without a StatusCode envelope
   pass through with empty metadata. Invalid status envelopes and malformed
-  Base64 return `Wotex.OPCUA.Error`. Full typed result validation, general arrays and
-  DataValue metadata remain target work. Conversion does not validate an
+  Base64 return `Wotex.OPCUA.Error`. `native_result/1` projects one native typed
+  DataValue map from an observation the same way: Bad status and an absent value
+  fail, a Variant without dimensions whose elements are null, Boolean, number,
+  string or ByteString becomes the payload, and metadata keeps the type, status
+  and any timestamps or picosecond fractions. Full typed result validation and
+  general DataValue projection remain target work. Conversion does not validate an
   application DataSchema, perform unit conversion, or establish Property state.
 
   ## Examples
@@ -104,6 +108,69 @@ defmodule Wotex.OPCUA.Value do
 
   def result(%{"status" => _}), do: {:error, Error.new(:invalid_result)}
   def result(value), do: {:ok, value, %{}}
+
+  @timestamps %{
+    "source_timestamp" => :source_timestamp,
+    "server_timestamp" => :server_timestamp,
+    "source_picoseconds" => :source_picoseconds,
+    "server_picoseconds" => :server_picoseconds
+  }
+
+  @doc "Projects one native typed DataValue map onto a Runtime payload and metadata."
+  @spec native_result(term()) :: {:ok, term(), map()} | {:error, Error.t()}
+  def native_result(%{"status" => status, "has_value" => present} = data_value)
+      when is_integer(status) and status in 0..4_294_967_295 and is_boolean(present) do
+    cond do
+      band(status, 0x80000000) != 0 -> {:error, Error.new(:bad_status, nil, %{status: status})}
+      not present -> {:error, Error.new(:missing_value, nil, %{status: status})}
+      true -> native_variant(data_value["value"], status, data_value)
+    end
+  end
+
+  def native_result(_), do: {:error, Error.new(:invalid_result)}
+
+  defp native_variant(
+         %{"type" => type, "array" => array, "value" => element} = variant,
+         status,
+         data_value
+       )
+       when is_binary(type) and is_boolean(array) and map_size(variant) == 3 do
+    with {:ok, legacy} <- legacy_element(element),
+         {:ok, payload} <- payload(type, legacy) do
+      metadata =
+        Enum.reduce(@timestamps, %{opcua_type: type, status: status}, fn {key, atom}, metadata ->
+          if Map.has_key?(data_value, key),
+            do: Map.put(metadata, atom, data_value[key]),
+            else: metadata
+        end)
+
+      {:ok, payload, metadata}
+    end
+  end
+
+  defp native_variant(_, _, _), do: {:error, Error.new(:unsupported_type)}
+
+  defp legacy_element(%{"type" => "bytes", "base64" => text} = envelope)
+       when map_size(envelope) == 2 and is_binary(text),
+       do: {:ok, %{"type" => "ByteString", "base64" => text}}
+
+  defp legacy_element(values) when is_list(values) do
+    converted =
+      Enum.reduce_while(values, {:ok, []}, fn value, {:ok, converted} ->
+        case legacy_element(value) do
+          {:ok, item} -> {:cont, {:ok, [item | converted]}}
+          error -> {:halt, error}
+        end
+      end)
+
+    with {:ok, items} <- converted, do: {:ok, Enum.reverse(items)}
+  end
+
+  defp legacy_element(value)
+       when is_nil(value) or is_boolean(value) or is_number(value) or is_binary(value),
+       do: {:ok, value}
+
+  defp legacy_element(_), do: {:error, Error.new(:unsupported_type)}
 
   defp payload("ByteString", values) when is_list(values) and length(values) <= 1024 do
     result =

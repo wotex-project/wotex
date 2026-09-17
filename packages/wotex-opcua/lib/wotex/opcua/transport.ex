@@ -5,8 +5,18 @@ defmodule Wotex.OPCUA.Transport do
   The transport validates the Runtime request and execution context, maps the
   selected Form through `Wotex.OPCUA.Mapping`, opens the configured client,
   performs one read or write, normalizes the result, and closes the exact
-  session. Subscription callbacks return explicit unsupported errors because
-  the current transport does not maintain OPC UA subscriptions.
+  session.
+
+  `subscribe/4` accepts only `observeproperty` with nil input and a nil
+  credential. After the Form target matches `:target`, it starts one
+  `Wotex.OPCUA.RuntimeRelay` for the Runtime owner pid. The relay opens its own
+  Session with the remaining options and one Value MonitoredItem. The optional
+  `:subscription` map supplies S04 interval, queue, discard, keepalive and
+  lifetime parameters, and `:max_queue_length` (default 1000, 1..10000) bounds
+  the owner's queue. `subscribeevent` returns `unsupported_operation` without
+  starting a process. `decode_frame/3` validates observation metadata and
+  projects a native DataValue with `Wotex.OPCUA.Value.native_result/1`.
+  `unsubscribe/4` releases the relay; a stopped relay returns `:ok`.
   For an explicitly selected native client, it converts the Form mapper's
   validated scalar or flat-array ByteString base64 back to raw bytes before
   a typed Value Write.
@@ -22,10 +32,14 @@ defmodule Wotex.OPCUA.Transport do
   """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.OPCUA
-  alias Wotex.OPCUA.{Error, Mapping, Value}
+  alias Wotex.OPCUA.{Address, Error, Mapping, RuntimeRelay, Value}
   alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
 
   @impl Wotex.Runtime.Transport
+  def request(%Request{operation: operation}, %ExecutionContext{credential: nil}, _)
+      when operation not in [:readproperty, :writeproperty],
+      do: {:error, Error.new(:unsupported_operation)}
+
   def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
       when is_list(config) do
     with true <- Keyword.keyword?(config),
@@ -52,10 +66,101 @@ defmodule Wotex.OPCUA.Transport do
 
   def request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
+  @stream_parameters [
+    :publishing_interval_ms,
+    :sampling_interval_ms,
+    :queue_size,
+    :discard_oldest,
+    :keepalive_count,
+    :lifetime_count
+  ]
+  @observation_metadata %{
+    "sequence" => :sequence,
+    "publish_time" => :publish_time,
+    "client_handle" => :client_handle,
+    "overflow" => :overflow,
+    "datetime_resolution_ns" => :datetime_resolution_ns,
+    "raw_datetime_ticks_available" => :raw_datetime_ticks_available
+  }
+
   @impl Wotex.Runtime.Transport
-  def subscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
+  def subscribe(%Request{operation: :subscribeevent}, _, _, _),
+    do: {:error, Error.new(:unsupported_operation)}
+
+  def subscribe(
+        %Request{operation: :observeproperty, input: nil} = request,
+        owner,
+        %ExecutionContext{credential: nil},
+        config
+      )
+      when is_pid(owner) and node(owner) == node() and is_list(config) do
+    with true <- Keyword.keyword?(config) and Process.alive?(owner),
+         {:ok, mapping} <-
+           Mapping.command(request.form, request.operation, nil, request.resolved_href),
+         :ok <- target(config, mapping),
+         {:ok, parameters} <- stream_parameters(Keyword.get(config, :subscription, %{})),
+         {:ok, max_queue_length} <- max_queue_length(Keyword.get(config, :max_queue_length, 1000)),
+         {:ok, timeout} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)) do
+      RuntimeRelay.open(%{
+        owner: owner,
+        node_id: Address.to_string(mapping.message.node_id),
+        parameters: parameters,
+        max_queue_length: max_queue_length,
+        connection: Keyword.drop(config, [:target, :subscription, :max_queue_length]),
+        deadline: System.monotonic_time(:millisecond) + timeout
+      })
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_transport_context)}
+    end
+  end
+
+  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_transport_context)}
+
   @impl Wotex.Runtime.Transport
-  def unsubscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
+  def unsubscribe(handle, _, %ExecutionContext{credential: nil}, _), do: RuntimeRelay.close(handle)
+
+  def unsubscribe(handle, _, _, _) do
+    with :ok <- RuntimeRelay.close(handle), do: {:error, Error.new(:invalid_transport_context)}
+  end
+
+  @impl Wotex.Runtime.Transport
+  def decode_frame({:value, value, metadata}, %Request{operation: :observeproperty}, _) do
+    with {:ok, observed} <- observation_metadata(metadata),
+         {:ok, payload, projected} <- Value.native_result(value),
+         do: {:ok, payload, Map.merge(projected, observed)}
+  end
+
+  def decode_frame({:error, %Error{} = error}, _, _), do: {:error, error}
+  def decode_frame(_, _, _), do: :ignore
+
+  defp target(config, mapping) do
+    if Keyword.get(config, :target) == mapping.target,
+      do: :ok,
+      else: {:error, Error.new(:target_mismatch)}
+  end
+
+  defp stream_parameters(parameters) when is_map(parameters) do
+    if Enum.all?(Map.keys(parameters), &(&1 in @stream_parameters)),
+      do: {:ok, parameters},
+      else: {:error, Error.new(:invalid_value)}
+  end
+
+  defp stream_parameters(_), do: {:error, Error.new(:invalid_value)}
+
+  defp max_queue_length(value) when is_integer(value) and value in 1..10_000, do: {:ok, value}
+  defp max_queue_length(_), do: {:error, Error.new(:invalid_value)}
+
+  defp observation_metadata(metadata) when is_map(metadata) and map_size(metadata) == 6 do
+    Enum.reduce_while(metadata, {:ok, %{}}, fn {key, value}, {:ok, observed} ->
+      case Map.fetch(@observation_metadata, key) do
+        {:ok, atom} -> {:cont, {:ok, Map.put(observed, atom, value)}}
+        :error -> {:halt, {:error, Error.new(:invalid_native_frame)}}
+      end
+    end)
+  end
+
+  defp observation_metadata(_), do: {:error, Error.new(:invalid_native_frame)}
 
   defp execute(session, message, request, remaining) when remaining > 0 do
     with {:ok, message} <- native_message(session, message),

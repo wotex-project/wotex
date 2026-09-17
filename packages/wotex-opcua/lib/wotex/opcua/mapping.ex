@@ -2,7 +2,9 @@ defmodule Wotex.OPCUA.Mapping do
   @moduledoc """
   Maps a W3C Web of Things Form to a concrete OPC UA request.
 
-  `command/4` accepts Property reads and writes declared by the Form. It parses
+  `command/4` accepts Property reads, writes and observation start/stop
+  operations declared by the Form; observation maps to an `:observe` message
+  that only a streaming transport path uses. It parses
   an `opc.tcp` href, requires exactly one NodeId in the `id` query parameter,
   supplies the default port 4840, and constructs an immutable request map. A
   write value is converted through `Wotex.OPCUA.Value` when the Form declares
@@ -18,7 +20,13 @@ defmodule Wotex.OPCUA.Mapping do
   """
   alias Wotex.Form
   alias Wotex.OPCUA.{Address, Error, Value}
-  @operations %{readproperty: :read, writeproperty: :write}
+
+  @operations %{
+    readproperty: :read,
+    writeproperty: :write,
+    observeproperty: :observe,
+    unobserveproperty: :observe
+  }
 
   @doc "Maps a selected Form, preserving extensions and requiring an explicit target identity."
   @spec command(Form.t(), atom(), term(), String.t() | nil) :: {:ok, map()} | {:error, Error.t()}
