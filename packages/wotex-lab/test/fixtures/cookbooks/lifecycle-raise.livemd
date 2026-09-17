@@ -1,0 +1,15 @@
+# Lifecycle fixture: raised cell
+
+Checked-in input for `test/wotex/lab/cookbook_runner_test.exs`, not a
+cookbook. Its first cell leaves an unlinked process and its second cell
+raises, so the runner must report the failed cell and still reclaim the
+process.
+
+```elixir
+unlinked = spawn(fn -> receive do: (:release -> :ok) end)
+send(observer, {:raise_fixture, unlinked})
+```
+
+```elixir
+raise ArgumentError, "lifecycle fixture failure"
+```

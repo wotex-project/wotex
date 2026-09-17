@@ -96,6 +96,7 @@ defmodule Wotex.Lab.CookbookTest do
 
       assert {:ok, outcome} = CookbookRunner.run(entry.id)
       assert outcome.leaked == 0
+      assert outcome.reclaimed == %{processes: 0, handlers: 0}
       assert outcome.cells > 3
       assert_checks(outcome.result, entry.checks)
 
@@ -137,6 +138,7 @@ defmodule Wotex.Lab.CookbookTest do
 
       for outcome <- outcomes do
         assert outcome.leaked == 0
+        assert outcome.reclaimed == %{processes: 0, handlers: 0}
         assert is_function(Keyword.fetch!(outcome.binding, :http_handler), 2)
         assert_checks(outcome.result, entry.checks)
       end
@@ -162,6 +164,7 @@ defmodule Wotex.Lab.CookbookTest do
              CookbookRunner.run("parse-td", binding: [lab: supervisor, tmp_dir: dir])
 
     assert outcome.leaked == 0
+    assert outcome.reclaimed == %{processes: 0, handlers: 0}
     assert Process.alive?(supervisor)
     assert File.read!(path) == "caller data"
   end
@@ -181,6 +184,7 @@ defmodule Wotex.Lab.CookbookTest do
                CookbookRunner.run("consume-mqtt", binding: [broker_href: MqttBroker.href(broker)])
 
       assert outcome.leaked == 0
+      assert outcome.reclaimed == %{processes: 0, handlers: 0}
       assert_checks(outcome.result, entry.checks -- @fault_checks)
     end
 
@@ -191,6 +195,7 @@ defmodule Wotex.Lab.CookbookTest do
                CookbookRunner.run("smart-room", binding: [broker_href: MqttBroker.href(broker)])
 
       assert outcome.leaked == 0
+      assert outcome.reclaimed == %{processes: 0, handlers: 0}
       assert_checks(outcome.result, entry.checks)
     end
   end

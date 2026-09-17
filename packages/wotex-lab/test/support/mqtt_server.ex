@@ -9,6 +9,7 @@ defmodule Wotex.Lab.Test.MqttServer do
   # and shared-subscription semantics are proven against eclipse-mosquitto.
   # `start/2` registers an `on_exit` cleanup inside an ExUnit test process;
   # pass `on_exit: false` outside one (the cookbooks do) and call `stop/1`.
+  # `stop/1` closes every accepted connection and waits for its process to exit.
 
   import Bitwise
 
@@ -25,7 +26,10 @@ defmodule Wotex.Lab.Test.MqttServer do
       :gen_tcp.listen(0, [:binary, ip: {127, 0, 0, 1}, active: false, reuseaddr: true])
 
     {:ok, port} = :inet.port(listener)
-    {:ok, controller} = Agent.start_link(fn -> %{test: test, connection: nil} end)
+
+    {:ok, controller} =
+      Agent.start_link(fn -> %{test: test, connection: nil, connections: []} end)
+
     acceptor = spawn(fn -> accept(listener, controller, opts) end)
     server = %{port: port, controller: controller, listener: listener, acceptor: acceptor}
 
@@ -41,10 +45,23 @@ defmodule Wotex.Lab.Test.MqttServer do
     Process.exit(server.acceptor, :kill)
     :gen_tcp.close(server.listener)
 
-    case connection_pid(server.controller) do
-      pid when is_pid(pid) -> send(pid, :close)
-      nil -> :ok
-    end
+    server.controller
+    |> connection_pids()
+    |> Enum.map(fn pid -> {Process.monitor(pid), pid} end)
+    |> Enum.each(fn {monitor, pid} ->
+      send(pid, :close)
+
+      receive do
+        {:DOWN, ^monitor, :process, ^pid, _} -> :ok
+      after
+        1_000 ->
+          Process.exit(pid, :kill)
+
+          receive do
+            {:DOWN, ^monitor, :process, ^pid, _} -> :ok
+          end
+      end
+    end)
 
     stop_controller(server.controller)
   end
@@ -55,10 +72,10 @@ defmodule Wotex.Lab.Test.MqttServer do
     :exit, _ -> :ok
   end
 
-  defp connection_pid(controller) do
-    Agent.get(controller, & &1.connection)
+  defp connection_pids(controller) do
+    Agent.get(controller, & &1.connections)
   catch
-    :exit, _ -> nil
+    :exit, _ -> []
   end
 
   @spec href(t()) :: String.t()
@@ -109,7 +126,11 @@ defmodule Wotex.Lab.Test.MqttServer do
       {:ok, socket} ->
         connection = spawn(fn -> own(socket, controller, opts) end)
         :ok = :gen_tcp.controlling_process(socket, connection)
-        Agent.update(controller, &Map.put(&1, :connection, connection))
+
+        Agent.update(controller, fn state ->
+          %{state | connection: connection, connections: [connection | state.connections]}
+        end)
+
         send(connection, :owned)
         accept(listener, controller, opts)
 

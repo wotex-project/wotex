@@ -1,0 +1,69 @@
+# Lifecycle fixture: leaked run resources
+
+Checked-in input for `test/wotex/lab/cookbook_runner_test.exs`, not a
+cookbook. Its cells deliberately leave unlinked processes, a process that
+replaces its group leader, a nested spawn, a linked process that traps exits
+and two telemetry handlers behind. The cookbook runner must reclaim all of
+them and leave caller-owned resources alone.
+
+```elixir
+Mix.install([])
+```
+
+```elixir
+caller = self()
+suffix = System.unique_integer([:positive])
+hold = fn -> receive do: (:release -> :ok) end
+unlinked = spawn(hold)
+{:ok, agent} = Agent.start(fn -> :state end)
+
+regrouped =
+  spawn(fn ->
+    Process.group_leader(self(), self())
+    hold.()
+  end)
+```
+
+```elixir
+middle =
+  spawn(fn ->
+    send(caller, {:grandchild, spawn(hold)})
+    hold.()
+  end)
+
+grandchild = receive do: ({:grandchild, pid} -> pid)
+
+trapping =
+  spawn_link(fn ->
+    Process.flag(:trap_exit, true)
+    send(caller, :trapping)
+    hold.()
+  end)
+
+receive do: (:trapping -> :ok)
+```
+
+```elixir
+ignore = fn _event, _measurements, _metadata, _config -> :ok end
+evaluator_handler = "lifecycle-evaluator-#{suffix}"
+:ok = :telemetry.attach(evaluator_handler, [:lifecycle_fixture, :evaluator], ignore, nil)
+spawned_handler = "lifecycle-spawned-#{suffix}"
+
+spawn(fn ->
+  :ok = :telemetry.attach_many(spawned_handler, [[:lifecycle_fixture, :spawned]], ignore, nil)
+  send(caller, :attached)
+end)
+
+receive do: (:attached -> :ok)
+detached_handler = "lifecycle-detached-#{suffix}"
+:ok = :telemetry.attach(detached_handler, [:lifecycle_fixture, :detached], ignore, nil)
+:ok = :telemetry.detach(detached_handler)
+```
+
+```elixir
+%{
+  processes: [unlinked, agent, regrouped, middle, grandchild, trapping],
+  handlers: [evaluator_handler, spawned_handler],
+  detached_handler: detached_handler
+}
+```

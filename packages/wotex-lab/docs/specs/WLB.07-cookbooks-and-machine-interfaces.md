@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.7.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.8.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -55,13 +55,32 @@ local development documentation and does not claim this notebook gate.
 The four disposable HTTP/SSE cookbook servers use per-evaluation function
 plugs and ephemeral loopback ports. Repeating or overlapping these examples
 MUST NOT redefine shared named modules or generate module atoms per run.
-The source runner accepts catalogue IDs, not arbitrary submitted code. Caller
+The source runner accepts catalogue IDs and checked-in lifecycle fixture
+names, not arbitrary submitted code. Caller
 bindings, including values named `lab` or `tmp_dir`, MUST NOT authorize process
 shutdown or filesystem deletion; notebooks explicitly close their owned
-resources. A temporary-directory prefix is not ownership evidence. These
-source tests do not prove isolation of arbitrary notebook code, cleanup after
-timeout, or reclamation of unlinked processes/global telemetry handlers. Those
-lifecycle obligations and clone-free installation remain independently required.
+resources. A temporary-directory prefix is not ownership evidence.
+
+Each source-runner evaluation owns an unlinked evaluator process, a
+dedicated group leader that forwards IO to the caller's group leader, and one
+session of the Erlang/OTP 29 `trace` module. The session follows every
+process the evaluator spawns, transitively, and records the handler identifier
+of each `:telemetry.attach/4` and `:telemetry.attach_many/4` call those
+processes make. After the last cell, a raised cell, an evaluator exit or the
+notebook timeout, the runner kills every run process still alive, meaning a
+traced descendant or a holder of the run group leader, and detaches every
+recorded handler that is still attached. It reports both counts as
+`reclaimed`. Every catalogue notebook must finish with no leaked link and no
+reclaimed process or handler, so a notebook that leaves its resources for the
+runner fails. `test/wotex/lab/cookbook_runner_test.exs` evaluates checked-in
+fixtures under `test/fixtures/cookbooks/` with unlinked, nested, regrouped and
+exit-trapping processes, attached and detached handlers, overlapping runs, a
+timeout, a raised cell and an evaluator exit, and checks that caller-owned
+processes and handlers survive. The runner is not a sandbox. Cells run in the
+test VM with full authority; a process that an outside process starts without
+the run group leader is not reclaimed, and files a notebook writes are not
+deleted. Isolation of arbitrary notebook code and clone-free installation
+remain independently required.
 
 Data exploration follows the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md):

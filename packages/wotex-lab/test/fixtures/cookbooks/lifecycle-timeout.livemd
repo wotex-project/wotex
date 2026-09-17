@@ -1,0 +1,18 @@
+# Lifecycle fixture: timeout
+
+Checked-in input for `test/wotex/lab/cookbook_runner_test.exs`, not a
+cookbook. It leaves an unlinked process and a telemetry handler, reports
+both to the test and then never finishes, so the runner must reclaim them
+after its deadline.
+
+```elixir
+unlinked = spawn(fn -> receive do: (:release -> :ok) end)
+handler = "lifecycle-timeout-#{System.unique_integer([:positive])}"
+ignore = fn _event, _measurements, _metadata, _config -> :ok end
+:ok = :telemetry.attach(handler, [:lifecycle_fixture, :timeout], ignore, nil)
+send(observer, {:timeout_fixture, unlinked, handler})
+```
+
+```elixir
+Process.sleep(:infinity)
+```

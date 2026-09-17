@@ -1,0 +1,15 @@
+# Lifecycle fixture: evaluator exit
+
+Checked-in input for `test/wotex/lab/cookbook_runner_test.exs`, not a
+cookbook. Its first cell leaves an unlinked process and its second cell
+kills the evaluating process, so the runner must report the exit and still
+reclaim the process.
+
+```elixir
+unlinked = spawn(fn -> receive do: (:release -> :ok) end)
+send(observer, {:exit_fixture, unlinked})
+```
+
+```elixir
+Process.exit(self(), :kill)
+```
