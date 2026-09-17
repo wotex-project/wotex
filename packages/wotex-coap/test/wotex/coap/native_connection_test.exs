@@ -2258,6 +2258,7 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
           "duplicate" ->
             reply.(open_id)
+            Process.sleep(50)
             reply.(open_id)
             Process.sleep(:infinity)
 
