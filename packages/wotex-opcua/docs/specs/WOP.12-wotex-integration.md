@@ -3,7 +3,7 @@ spec:
   id: WOP.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.4
+  version: 1.1.5
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -26,6 +26,12 @@ pure Variant validation and raw-byte native Write before readback. This is parti
 I03 value conversion.
 This slice does not accept the complete I01 profile, profile factory, metadata,
 error/retry, subscription or final-owner requirements.
+`Wotex.OPCUA.Error` now has the additive `class` field and `Error.classify/1`,
+and every Transport error returned to Runtime is classified. The I04 table,
+including WOP-I-F02 through F07, unclassified, default-mutation and admission
+budget cases, passes through a Runtime Transport failure return, ConsumedThing
+and `Runtime.Retry`; Runtime's cause keeps no native effect. The profile factory
+and I-F01 remain open.
 
 ## WOP-I01 — Dependency direction and owned values
 

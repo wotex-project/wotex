@@ -29,6 +29,10 @@ defmodule Wotex.OPCUA.Transport do
   Property truth or a physical effect. The consumer owns endpoint policy,
   credential provisioning, deadlines, supervision, data-model validation, and
   interpretation of returned status metadata.
+
+  Every error returned to Runtime passes through `Wotex.OPCUA.Error.classify/1`,
+  so Runtime retry decisions see the finite class while native details and effect
+  stay on the library Error.
   """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.OPCUA
@@ -36,12 +40,29 @@ defmodule Wotex.OPCUA.Transport do
   alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
 
   @impl Wotex.Runtime.Transport
-  def request(%Request{operation: operation}, %ExecutionContext{credential: nil}, _)
-      when operation not in [:readproperty, :writeproperty],
-      do: {:error, Error.new(:unsupported_operation)}
+  def request(request, execution, config),
+    do: classified(run_request(request, execution, config))
 
-  def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
-      when is_list(config) do
+  @impl Wotex.Runtime.Transport
+  def subscribe(request, owner, execution, config),
+    do: classified(run_subscribe(request, owner, execution, config))
+
+  @impl Wotex.Runtime.Transport
+  def unsubscribe(handle, request, execution, config),
+    do: classified(run_unsubscribe(handle, request, execution, config))
+
+  @impl Wotex.Runtime.Transport
+  def decode_frame(frame, request, config), do: classified(run_decode_frame(frame, request, config))
+
+  defp classified({:error, %Error{} = error}), do: {:error, Error.classify(error)}
+  defp classified(result), do: result
+
+  defp run_request(%Request{operation: operation}, %ExecutionContext{credential: nil}, _)
+       when operation not in [:readproperty, :writeproperty],
+       do: {:error, Error.new(:unsupported_operation)}
+
+  defp run_request(%Request{} = request, %ExecutionContext{credential: nil}, config)
+       when is_list(config) do
     with true <- Keyword.keyword?(config),
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
@@ -64,7 +85,7 @@ defmodule Wotex.OPCUA.Transport do
     end
   end
 
-  def request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
+  defp run_request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
   @stream_parameters [
     :publishing_interval_ms,
@@ -83,17 +104,16 @@ defmodule Wotex.OPCUA.Transport do
     "raw_datetime_ticks_available" => :raw_datetime_ticks_available
   }
 
-  @impl Wotex.Runtime.Transport
-  def subscribe(%Request{operation: :subscribeevent}, _, _, _),
+  defp run_subscribe(%Request{operation: :subscribeevent}, _, _, _),
     do: {:error, Error.new(:unsupported_operation)}
 
-  def subscribe(
-        %Request{operation: :observeproperty, input: nil} = request,
-        owner,
-        %ExecutionContext{credential: nil},
-        config
-      )
-      when is_pid(owner) and node(owner) == node() and is_list(config) do
+  defp run_subscribe(
+         %Request{operation: :observeproperty, input: nil} = request,
+         owner,
+         %ExecutionContext{credential: nil},
+         config
+       )
+       when is_pid(owner) and node(owner) == node() and is_list(config) do
     with true <- Keyword.keyword?(config) and Process.alive?(owner),
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, nil, request.resolved_href),
@@ -115,24 +135,23 @@ defmodule Wotex.OPCUA.Transport do
     end
   end
 
-  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_transport_context)}
+  defp run_subscribe(_, _, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
-  @impl Wotex.Runtime.Transport
-  def unsubscribe(handle, _, %ExecutionContext{credential: nil}, _), do: RuntimeRelay.close(handle)
+  defp run_unsubscribe(handle, _, %ExecutionContext{credential: nil}, _),
+    do: RuntimeRelay.close(handle)
 
-  def unsubscribe(handle, _, _, _) do
+  defp run_unsubscribe(handle, _, _, _) do
     with :ok <- RuntimeRelay.close(handle), do: {:error, Error.new(:invalid_transport_context)}
   end
 
-  @impl Wotex.Runtime.Transport
-  def decode_frame({:value, value, metadata}, %Request{operation: :observeproperty}, _) do
+  defp run_decode_frame({:value, value, metadata}, %Request{operation: :observeproperty}, _) do
     with {:ok, observed} <- observation_metadata(metadata),
          {:ok, payload, projected} <- Value.native_result(value),
          do: {:ok, payload, Map.merge(projected, observed)}
   end
 
-  def decode_frame({:error, %Error{} = error}, _, _), do: {:error, error}
-  def decode_frame(_, _, _), do: :ignore
+  defp run_decode_frame({:error, %Error{} = error}, _, _), do: {:error, error}
+  defp run_decode_frame(_, _, _), do: :ignore
 
   defp target(config, mapping) do
     if Keyword.get(config, :target) == mapping.target,

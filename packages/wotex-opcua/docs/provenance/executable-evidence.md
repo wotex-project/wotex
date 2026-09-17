@@ -20,6 +20,42 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Runtime error classes and retry decisions, 2026-09-17
+
+`Wotex.OPCUA.Error` gains the additive `class` field. `Error.classify/1` maps an
+unknown effect to `:permanent`. Otherwise deadlines map to `:timeout`,
+connection and native process loss to `:unavailable`, `busy` to
+`:rate_limited`, mismatched or malformed responses to `:protocol`, and invalid
+input, route, security or unsupported operations to `:permanent`; other codes
+stay `nil`. It sets `retryable` only for the first three classes with no
+effect. `Transport` classifies every error it returns to Runtime.
+
+`runtime_integration_test.exs` binds WOP-I-F02 through F07. Each case builds a
+real Thing Description, a test binding profile admitting only the input
+operation and a ConsumedThing. Its test Transport returns the input native
+code and effect through `Error.classify/1`. The runner projects Runtime's class,
+cause code, whether the cause retained an effect and `Runtime.Retry.decision/3`
+with the input options, and compares that with the expectation. Extra cases
+cover unclassified failures, a default non-idempotent Write timeout, an
+unknown-effect mutation marked idempotent, an admission budget with and without
+remaining attempts, protocol, unavailable and authentication failures. The
+production Transport returns classified target, transport, unknown-effect Write,
+Event, handle and frame errors.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 360 passed (10 doctests,
+4 properties, 346 tests), 54 optional tests excluded and 95.3% coverage. The
+optional secure suite with the lifecycle file still passes 54/54 against the
+RelWithDebInfo build.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/error.ex` | `61d13316977e21cf7847ecd94219465d3ccb71b4c04ad8fc9cb26263cdff4d68` |
+| `lib/wotex/opcua/transport.ex` | `47f4754a1be0311d2cb8dad260e6ac6dc7aad3163d02d7a28438f40ee2646c0f` |
+| `test/support/failure_transport.ex` | `74dc9ef6ceeb90cb26b52cf60881b795d3e0fa4ce899e7bc1fa47fde26aa940f` |
+| `test/wotex/opcua/runtime_integration_test.exs` | `05a893b7a4f925fb69ece471a4626d5c505934b15304dd71660929f83ec9569e` |
+| `docs/specs/fixtures/wotex-integration-v1.json` | `f592760b4ddbd15c40f110b247e5184f9f3591a717a5ba45c69094b2187a64e4` |
+
 ## Bound secure policy and user-token workflows, 2026-09-17
 
 `security_fault_test.exs` now binds WOP-X-F30 through F38 against the

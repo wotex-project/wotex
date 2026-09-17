@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.10
+  version: 2.0.11
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -243,8 +243,9 @@ own Session and one Value MonitoredItem and forwards
 queue bound. `decode_frame/3` returns the Runtime value and metadata described
 in `Wotex.OPCUA.Value.native_result/1`. Terminal loss sends an error frame and a
 `session_lost` or `transport_down` status. `subscribeevent`, input and
-non-nil credentials fail before a process starts. The profile factory and the
-Runtime retry classes are not implemented.
+non-nil credentials fail before a process starts. Transport errors carry the
+Runtime `class` from `Wotex.OPCUA.Error.classify/1`; an unknown mutation effect
+is always `:permanent`. The profile factory is not implemented.
 `health_check/2` takes exactly `%{node_id: node}` and returns `:ok` only after a
 successful Read of that node through the selected client; `health_check/1`
 still returns `probe_required`.

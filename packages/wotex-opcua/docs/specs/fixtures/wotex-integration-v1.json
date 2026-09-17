@@ -1,7 +1,13 @@
 {
   "format": "wotex.protocol.integration",
   "version": "1.0.0",
-  "status": "specified_unexecuted",
+  "status": "partially_bound",
+  "executable_bindings": [
+    {
+      "path": "test/wotex/opcua/runtime_integration_test.exs",
+      "case_ids": ["WOP-I-F02", "WOP-I-F03", "WOP-I-F04", "WOP-I-F05", "WOP-I-F06", "WOP-I-F07"]
+    }
+  ],
   "requirements": [
     "WOP-I02",
     "WOP-I03",
