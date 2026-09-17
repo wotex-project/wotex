@@ -219,6 +219,9 @@ foreach(number 01 02 03 04 05 06 07 08 09)
   if(WOTEX_SANITIZERS)
     set_tests_properties(custody_G${number} PROPERTIES ENVIRONMENT
       "ASAN_OPTIONS=detect_leaks=0:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+  endif()
+  # LeakSanitizer is unavailable in Apple toolchains; Linux runs the leak audit.
+  if(WOTEX_SANITIZERS AND NOT APPLE)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/custody-leak-G${number}")
     add_test(NAME custody_leak_G${number} COMMAND wotex_opcua_custody_check
       $<TARGET_FILE:wotex_opcua_custody> WOP-G${number}

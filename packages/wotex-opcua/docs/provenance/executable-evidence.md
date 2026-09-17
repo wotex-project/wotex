@@ -20,6 +20,25 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Leak audits only on LeakSanitizer toolchains, 2026-09-17
+
+Apple toolchains provide AddressSanitizer and UndefinedBehaviorSanitizer but
+not LeakSanitizer, so the nine `custody_leak_G01`..`G09` CTest cases could only
+abort on macOS; earlier macOS records show 204 of 213. `priv/native/CMakeLists.txt`
+now registers those cases only for sanitizer builds on non-Apple toolchains. The
+strict `custody_G01`..`G09` cases (leak detection off) are still registered
+everywhere. The Linux arm64 cohort above ran all nine leak audits with
+LeakSanitizer and passed 213/213. After reconfiguring, the macOS ASan/UBSan build
+passes 204/204.
+
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 364 passed (10 doctests,
+4 properties, 350 tests), 63 optional tests excluded and 95.3% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/CMakeLists.txt` | `0899cfe97300b701b10dd24de3a16b08622d5b4649c26cb7cfedc1a6a6677c02` |
+| macOS ASan/UBSan CTest log | `116a349ec2cb56300e34554488b25121ce77ffa25a3e65081c0b2a0e6b75e853` |
+
 ## Linux arm64 secure interop and stress lanes, 2026-09-17
 
 In the same Linux arm64 container, the test sources at commit
