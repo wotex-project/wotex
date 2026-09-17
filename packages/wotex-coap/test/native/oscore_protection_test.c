@@ -114,16 +114,18 @@ static void plain_fault(unsigned variant, coap_pdu_code_t method, int secure) {
         assert(coap_io_process(context, 10) >= 0);
         assert(deliveries == 0 && failures == 0); /* Empty ACK is only transport progress. */
     }
-    reply[0] = (uint8_t)((variant == 1 || variant == 4 ? 0x50 : variant == 2 ? 0x40 : 0x60) | token);
+    reply[0] = (uint8_t)((variant == 1 || variant == 4 ? 0x50 : variant == 2 || variant == 6 ? 0x40 : 0x60) | token);
     reply[1] = variant == 3 ? 129 : 69;
     reply[2] = variant == 0 || variant == 3 ? request[2] : 0x71;
     reply[3] = variant == 0 || variant == 3 ? request[3] : 0x27;
     memcpy(reply + 4, request + 4, token); size = 4 + token;
+    if (variant == 6) reply[4] ^= 0xff; /* A token no pending request used. */
     reply[size++] = 0xff; memcpy(reply + size, "forged", 6); size += 6;
     assert(sendto(peer, reply, size, 0, (struct sockaddr *)&source, source_length) == (ssize_t)size);
     deadline = now_ms() + 1000;
     while (!deliveries && !failures && now_ms() < deadline) assert(coap_io_process(context, 1) >= 0);
-    if (secure) assert(deliveries == 0 && failures == 1);
+    if (variant == 6) assert(deliveries == 0 && failures == 0);
+    else if (secure) assert(deliveries == 0 && failures == 1);
     else assert(deliveries == 1 && failures == 0);
     coap_session_release(session); coap_free_context(context); assert(close(peer) == 0);
 }
@@ -174,7 +176,9 @@ int main(int argc, char **argv) {
     }
     plain_fault(0, COAP_REQUEST_CODE_GET, 0);
     plain_fault(5, COAP_REQUEST_CODE_GET, 1);
+    plain_fault(6, COAP_REQUEST_CODE_GET, 1);
     protected_peer();
+    puts("WCO-S06 WCO-N02: a plaintext response with an unused token raises no protection failure");
     puts("WCO-S06 WCO-N02: plain UDP, empty RST and actual protected OSCORE same-stack controls succeed");
     coap_cleanup(); return 0;
 }

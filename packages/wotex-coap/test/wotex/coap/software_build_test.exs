@@ -57,8 +57,8 @@ defmodule Wotex.CoAP.SoftwareBuildTest do
     assert {:error, {:software_build_setup, "invalid software toolchain"}} =
              Build.run("/absolute/workspace", InvalidOperations, NativeBuild)
 
-    assert length(Build.artifacts(NativeBuild)) == 65
-    assert length(Enum.uniq(Build.artifacts(NativeBuild))) == 65
+    assert length(Build.artifacts(NativeBuild)) == 66
+    assert length(Enum.uniq(Build.artifacts(NativeBuild))) == 66
 
     assert_raise Mix.Error, ~r/usage:/, fn -> BuildTask.run(["--workspace", "relative"]) end
 

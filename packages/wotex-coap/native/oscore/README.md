@@ -151,6 +151,10 @@ removed the association of a pending cancellation and the genuine confirmation
 then found none. RFC 8613 section 8.4 stops processing an unverified message;
 it cannot change security state.
 
+The uncorrelated-plaintext patch narrows the response-admission patch. A plaintext
+nonempty response raises the protection event only when its token belongs to a
+pending protected request; any other plaintext response is discarded, so a stray
+or spoofed datagram cannot end an unrelated exchange.
 The real native regression in `test/native/oscore_sequence_test.c` creates an
 OSCORE client through public libcoap APIs and a local UDP receiver. It asserts
 three failed reservations each produce `COAP_INVALID_MID` and zero received

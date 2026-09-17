@@ -1,0 +1,70 @@
+{
+  "schema": "wotex.coap.native-worker-uncorrelated-plaintext-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Plaintext nonempty responses on an OSCORE session whose token no pending protected request used",
+  "standard": {
+    "name": "IETF OSCORE",
+    "revision": "RFC 8613 2019-07",
+    "sections": ["8.4", "D.5.3"],
+    "summary": "A client does not let unprotected responses drive application behavior; only a response correlated with its request is processed for that request"
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "43c59c98329f57558aa6114768b8c844664939f79b0ada5301e5dbba92923eac",
+      "native/oscore/patches/0010-ignore-uncorrelated-plaintext-responses.patch": "191bf1dd87239b3247a6f91cd8493b2793d7284df713836c32561dd7d01e1f00",
+      "test/interop/oscore_test.exs": "ca7d8b5dd9824dd567c7ab041db2e37d3292616231770f56b01b6f7da4a15936",
+      "test/native/oscore_protection_test.c": "3bc630f0d050ac189936f2e6ccbde56dfd1b2d2eae3a2bea60058e98c8e1ba47",
+      "test/native/Dockerfile": "f2ebd96aeb29cc86a3dcb7d3e5e25574d4d064c6543e9352dede3628743b7f9d",
+      "lib/wotex/coap/native/build.ex": "dd4e1337267d7156f0ba5e0401b8c3b6cdd8d1f7d56d4453f2a1780cf1f4b0c4"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 10,
+    "patched_coap_net_sha256": "5b69423ac2e04a9dba89750cf6342658b3d7a31d7fb4801b11be314380e7b6b0"
+  },
+  "requirements": ["WCO-S01", "WCO-S06", "WCO-N02"],
+  "defect": {
+    "observed": "A plaintext 2.05 with a token no request had used, relayed before the genuine protected response, ended the active protected GET with security_handshake_failed",
+    "cause": "The response-admission patch raised COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD for every plaintext nonempty response on an OSCORE session before token correlation, and the worker ends a pending request on that event"
+  },
+  "assertions": [
+    "Patch 0010 raises the missing-protection event only when an OSCORE request association exists for the response token and otherwise discards the plaintext response",
+    "The same-stack relay case injects an OSCORE-optioned 2.05 and a plaintext 2.05, each with an unused token, before the genuine response; the protected GET returns the libcoap root resource",
+    "Against the preceding helper the relay case returns security_handshake_failed",
+    "A protection-vector variant sends a plaintext response with an unused token and requires no delivery and no protection event; it fails against the nine-patch SDK",
+    "The fifteen correlated plaintext GET/POST/PUT variants still report exactly one protection failure and no application value each"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "worker_sha256": "56635b768caf9618b23312821f692c2e22501dd1e3541cdff0b38f07a742b970",
+      "protection_vector_sha256": "cf0b1c53de21a37ca7d98594505e7f4d64ccf7c0f207e7ab0036f0568979ddcc",
+      "protection_output_sha256": "6f286bb1d05b97b9f40479f1850f69edab223bd3ac11051c748096f78a39d176",
+      "software_run_result_sha256": "ade2260eeea6b6b39fd98665ecc64d0ca294e91fa4f78f88fdc37691bc92319f",
+      "software_run_tests": 49,
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:plaintext CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "image": "sha256:defc63def3b0b829489a999979aaefea6706de4782de5dc5a4d35b7e4d82b64f",
+      "worker_sha256": "45204c31529626119020a66c65e3b5a5f873d065db588dc794b26ba3c9be2d42",
+      "harness_sha256": "ecfdaf376b3d0d35e12598ea8d69787efc17626ceb2ef8e8f1ca2e9a52cea365",
+      "protection_vector_sha256": "b7d574d5598d07be1c10f8b927e1b9e059546b590f386df3cc47b61bc0dbbd08",
+      "build_log_sha256": "bd70135143a3ae2f2210ae704bddf2705bbfb80acaadc351e32e70207cff00e1",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "sanitizers": ["address", "undefined", "leak"]
+    }
+  ],
+  "unaccepted": [
+    "A plaintext response whose token matches a pending request still ends that request with security_handshake_failed, by design",
+    "Independent upstream-stack OSCORE interoperability"
+  ]
+}

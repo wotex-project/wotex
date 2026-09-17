@@ -1,0 +1,14 @@
+--- a/src/coap_net.c
++++ b/src/coap_net.c
+@@ -3902,7 +3902,10 @@
+    * behavior (RFC 8613 Appendix D.5.3); empty ACK/RST remain transport control. */
+   if (session->oscore_encryption && COAP_PDU_IS_RESPONSE(pdu) &&
+       coap_check_option(pdu, COAP_OPTION_OSCORE, &opt_iter) == NULL) {
+-    coap_handle_event_lkd(context, COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD, session);
++    /* Only a token that a pending protected request used reports the missing
++     * protection; any other plaintext response is discarded uncorrelated. */
++    if (oscore_find_association(session, &pdu->actual_token))
++      coap_handle_event_lkd(context, COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD, session);
+     goto cleanup;
+   }
+ 

@@ -837,6 +837,20 @@ send its exit cancellation, which the peer receives and verifies with inner Obse
 runtime keeps draining the Port; `native-worker-output-saturation-v1.json` covers
 that pipe condition.
 
+The [native worker uncorrelated-plaintext receipt](native-worker-uncorrelated-plaintext-v1.json)
+binds the next source cohort. The response-admission patch raised
+`COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD` for every plaintext nonempty response on
+an OSCORE session before token correlation, so the worker ended an active protected
+GET with `security_handshake_failed` when a stray or spoofed plaintext 2.05 carried
+a token no request had used. Patch 0010 raises the event only when an OSCORE
+request association exists for the response token and otherwise discards the
+datagram. The relay case now also injects a plaintext 2.05 with an unused token
+before the genuine response and the GET still succeeds; against the preceding
+helper it returns `security_handshake_failed`. A new protection-vector variant
+sends a plaintext response with an unused token and requires no delivery and no
+protection event; it fails against the nine-patch SDK. The fifteen correlated
+plaintext variants still report exactly one protection failure each.
+
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
 recorded cohort.

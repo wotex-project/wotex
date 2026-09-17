@@ -229,7 +229,7 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
     refute Process.alive?(caller)
   end
 
-  test "WCO-S01 WCO-S06 an uncorrelated protected response cannot end the active exchange",
+  test "WCO-S01 WCO-S06 uncorrelated protected and plaintext responses cannot end the active exchange",
        context do
     proxy = start_proxy(context, :hold_all)
     session = connect!(Map.put(context, :port, DTLSRecordProxy.endpoint(proxy)), <<8>>)
@@ -244,6 +244,11 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
     token = :crypto.strong_rand_bytes(8)
     stale = <<1::2, 0::2, 8::4, 69, stale_mid::16, token::binary, 0x90, 0xFF>>
     :ok = DTLSRecordProxy.deliver(proxy, stale <> :crypto.strong_rand_bytes(16))
+
+    # A plaintext 2.05 with another unused token is equally uncorrelated.
+    plain_token = :crypto.strong_rand_bytes(8)
+    plain = <<1::2, 0::2, 8::4, 69, rem(stale_mid + 1, 65_536)::16, plain_token::binary, 0xFF>>
+    :ok = DTLSRecordProxy.deliver(proxy, plain <> "forged")
     :ok = DTLSRecordProxy.deliver(proxy, first)
 
     assert {:ok, %Message{code: 69, payload: root}} = forward_until(proxy, caller)

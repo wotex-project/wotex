@@ -55,8 +55,11 @@ construction otherwise blocked the worker for up to five seconds. The worker
 serializes exchanges and bounds each with its own deadline. The
 unverified-response patch keeps a request's OSCORE association when a correlated
 message fails verification, so an unverified notification cannot remove the
-association a pending cancellation's confirmation needs. These fixed profile
-policies preserve libcoap's exchange ownership.
+association a pending cancellation's confirmation needs. The
+uncorrelated-plaintext patch raises the missing-protection event only for a
+plaintext response whose token a pending protected request used and discards any
+other plaintext response. These fixed profile policies preserve libcoap's
+exchange ownership.
 The native manifest records base archive, patches and
 resulting source hashes separately; it cannot describe this build as unmodified
 upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
