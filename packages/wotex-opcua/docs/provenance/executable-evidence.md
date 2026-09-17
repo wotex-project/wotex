@@ -20,6 +20,51 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Linux x86_64 cohort under Rosetta, 2026-09-17
+
+Source: commit `4b7e3bbb72d35b995623c3dfec704a400ba59f60`, copied without
+`_build`, `deps`, `.git` and generated output, with the sibling path
+dependencies, into a container named `wotex-opcua-agent-linux-amd64`
+(`docker run --platform linux/amd64 --init --cpus 4 --memory 4g`, removed
+afterwards). Image `hexpm/elixir:1.20.2-erlang-29.0.4-debian-bookworm-20260713`,
+amd64 manifest digest
+`sha256:c03b976b9a1c3b86e72e217681f86a12d417e1e515e6c5583359002f29840ac3`.
+The lane ran as an unprivileged user with GCC 12.2.0, CMake 3.25.1, Perl 5.36.0,
+Python 3.11.2 and curl 8.14.1 from bookworm-backports.
+
+This is x86_64 user space under Rosetta translation (OrbStack VM, arm64 kernel
+`7.0.14-orbstack-00380-ga7e0a2dc9535`); it is not a native x86_64 host.
+`/proc/sys/fs/binfmt_misc` is not visible inside the container, so the
+translation is recorded from the host environment rather than read there. Every
+BEAM invocation used `ERL_FLAGS="+JMsingle true"`; without it the emulated
+runtime aborts during boot. All timing bounds were left unchanged.
+
+Commands and results inside the container:
+
+- `MIX_ENV=test WOTEX_PATH_DEPS=1 WOTEX_REQUIRE_NATIVE_BUILD=1 mix test`
+  (including the real pinned static build and its CTest step): 370 passed
+  (10 doctests, 4 properties, 356 tests), 65 excluded.
+- `mix wotex.opcua.native.build --workspace /work/keep`: completed; its native
+  CTest step passes 204/204.
+- A Debug `-DWOTEX_SANITIZERS=ON` build of `priv/native` against that
+  workspace's prefixes, then `ctest --output-on-failure`: 213/213, including the
+  nine `custody_leak` cases with LeakSanitizer, which behaves normally here.
+- The independent asyncua 2.0.1 peer from the hash-pinned lock, then
+  `mix test --include interop --include software --seed 0` over the interop,
+  lifecycle and stress files: 65 passed. The stress lane reported host memory
+  2888/2888->2888 bytes and native RSS 16988/17064->21180 KiB.
+
+No timing case failed under translation. The native x86_64 host claim in WOP.13
+stays open; this cohort is labelled translation, not a native kernel.
+
+| Subject | SHA-256 |
+| --- | --- |
+| x86_64 `mix test` log | `c8b7f89d2b07a9f7370d2978919cdc4538106752021c3f34a2ea733635e09a18` |
+| x86_64 native CTest log | `9976ef4df7a8d1f96bf9d3835757e445f4f9f5b729aa7e6d82ec0e88271134f2` |
+| x86_64 ASan/UBSan/LSan CTest log | `ddcdec7839186fed8eb896e19e624bcc2d171b0326b45699784d68625c85e9a0` |
+| x86_64 interop and stress log | `7c3ec3006f7e353f6c4a03a07b835461436632c40df2318eee4fcf0fe67a71c4` |
+| x86_64 peer `pip freeze` | `11551a6f089e3e5844983df38c571b19b07135113135d728131fbaa4e760af61` |
+
 ## Browse lifecycle traces WOP-F14..F16, 2026-09-17
 
 `priv/native/browse_trace_check.c` binds the three Browse lifecycle cases of
