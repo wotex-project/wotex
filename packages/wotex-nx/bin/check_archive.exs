@@ -23,8 +23,7 @@ defmodule WotexNx.CheckArchive do
     "lib/wotex/nx.ex",
     "lib/wotex/nx/encoder.ex",
     "lib/wotex/nx/decoder.ex",
-    "docs/specs/WNX.01-observation-numerical-boundary.md",
-    "docs/provenance/runtime-backend-cohort.md"
+    "CHANGELOG.md"
   ]
 
   @absent [
@@ -41,10 +40,13 @@ defmodule WotexNx.CheckArchive do
     "cover",
     "deps",
     "doc",
-    "docs/tasks",
+    "docs",
     "priv",
+    "tasks",
     "test"
   ]
+
+  @absent_anywhere ["docs", "tasks"]
 
   @callback_probe """
   for app <- [:wotex, :wotex_nx] do
@@ -409,6 +411,7 @@ defmodule WotexNx.CheckArchive do
 
     Enum.each(@present, &present!(nx_unpacked, &1))
     Enum.each(@absent, &absent!(nx_unpacked, &1))
+    Enum.each(@absent_anywhere, &absent_anywhere!(nx_unpacked, &1))
     metadata = verify_metadata!(Path.join(nx_outer, "metadata.config"))
     verify_source_identity!(source_root, nx_unpacked, metadata)
 
@@ -469,16 +472,24 @@ defmodule WotexNx.CheckArchive do
   defp prepare_package_source!(source_root, package_source) do
     File.mkdir_p!(package_source)
 
-    for entry <- package_inputs() ++ @excluded_source_inputs do
-      source = Path.join(source_root, entry)
+    for entry <- package_inputs() ++ @excluded_source_inputs,
+        source = Path.join(source_root, entry),
+        File.exists?(source) do
       destination = Path.join(package_source, entry)
       File.mkdir_p!(Path.dirname(destination))
       File.cp_r!(source, destination)
     end
 
-    task_sentinel = Path.join(package_source, "docs/tasks/local-agent-harness-sentinel.md")
-    File.mkdir_p!(Path.dirname(task_sentinel))
-    File.write!(task_sentinel, "must remain outside the package\n")
+    for sentinel <- [
+          "docs/tasks/local-agent-harness-sentinel.md",
+          "docs/specs/documentation-sentinel.md",
+          "tasks/task-sentinel.md"
+        ] do
+      path = Path.join(package_source, sentinel)
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "must remain outside the package\n")
+    end
+
     File.write!(Path.join(package_source, ".local-agent-harness"), "must remain local\n")
   end
 
@@ -566,6 +577,18 @@ defmodule WotexNx.CheckArchive do
   defp absent!(unpacked, entry) do
     if File.exists?(Path.join(unpacked, entry)) do
       violation("packaged archive contains #{entry}")
+    end
+  end
+
+  defp absent_anywhere!(unpacked, segment) do
+    unpacked
+    |> Path.join("**")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.map(&Path.relative_to(&1, unpacked))
+    |> Enum.filter(&(segment in Path.split(&1)))
+    |> case do
+      [] -> :ok
+      [path | _rest] -> violation("packaged archive contains #{path}")
     end
   end
 

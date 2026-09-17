@@ -2,7 +2,7 @@ defmodule WotexNx.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-nx"
+  @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
@@ -90,6 +90,8 @@ defmodule WotexNx.MixProject do
       name: "wotex_nx",
       links: %{
         "GitHub" => @source_url,
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-nx/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-nx",
         "Documentation" => "https://hexdocs.pm/wotex_nx",
         "Project" => "https://wotex.io",
         "W3C Web of Things" => "https://www.w3.org/WoT/",
@@ -98,18 +100,12 @@ defmodule WotexNx.MixProject do
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w[
         lib
-        docs/decisions
-        docs/plans
-        docs/provenance
-        docs/specs
         .formatter.exs
         mix.exs
         README.md
         LICENSE
         NOTICE
         CHANGELOG.md
-        SECURITY.md
-        CONTRIBUTING.md
       ]
     ]
   end
@@ -119,19 +115,19 @@ defmodule WotexNx.MixProject do
       main: "readme",
       extras: [
         "README.md",
-        "docs/plans/wotex-nx-completion.md",
-        "docs/specs/WNX.01-observation-numerical-boundary.md",
-        "docs/decisions/0001-caller-owned-execution.md",
-        "docs/decisions/0002-batch-and-output-contract.md",
-        "docs/provenance/standards-and-dependencies.md",
-        "docs/provenance/runtime-backend-cohort.md",
+        docs_path("plans/wotex-nx-completion.md"),
+        docs_path("specs/WNX.01-observation-numerical-boundary.md"),
+        docs_path("decisions/0001-caller-owned-execution.md"),
+        docs_path("decisions/0002-batch-and-output-contract.md"),
+        docs_path("provenance/standards-and-dependencies.md"),
+        docs_path("provenance/runtime-backend-cohort.md"),
         "SECURITY.md"
       ],
       groups_for_extras: [
-        "Completion plans": ~r/docs\/plans/,
-        Specifications: ~r/docs\/specs/,
-        Decisions: ~r/docs\/decisions/,
-        Provenance: ~r/docs\/provenance/,
+        "Completion plans": ~r/docs\/packages\/wotex-nx\/plans/,
+        Specifications: ~r/docs\/packages\/wotex-nx\/specs/,
+        Decisions: ~r/docs\/packages\/wotex-nx\/decisions/,
+        Provenance: ~r/docs\/packages\/wotex-nx\/provenance/,
         Project: ~r/SECURITY\.md/
       ],
       groups_for_modules: [
@@ -152,11 +148,16 @@ defmodule WotexNx.MixProject do
         ],
         "Extension ports": [Wotex.Nx.UnitConverter]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-nx-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-nx-v#{@version}/packages/wotex-nx/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end
+
+  defp docs_path(relative),
+    do: Path.expand("../../docs/packages/wotex-nx/#{relative}", __DIR__)
 
   defp dialyzer do
     [

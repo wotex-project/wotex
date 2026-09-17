@@ -2,7 +2,7 @@ defmodule WotexDirectory.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-directory"
+  @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
@@ -92,31 +92,20 @@ defmodule WotexDirectory.MixProject do
     [
       files: [
         ".formatter.exs",
-        "CODE_OF_CONDUCT.md",
-        "CONTRIBUTING.md",
-        "GOVERNANCE.md",
         "LICENSE",
         "NOTICE",
         "README.md",
         "CHANGELOG.md",
-        "SECURITY.md",
-        "docs/decisions/0001-consumer-owned-runtime.md",
-        "docs/decisions/0002-listing-and-expiry.md",
-        "docs/plans/wotex-directory-completion.md",
-        "docs/provenance/w3c-sources.md",
-        "docs/specs/WTD.01-directory-contract.md",
-        "docs/specs/catalogue.yaml",
-        "docs/specs/repository-port-evidence.md",
-        "docs/specs/claim-compatibility-matrix.md",
         "lib",
         "mix.exs"
       ],
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-directory/CHANGELOG.md",
         "Documentation" => "https://hexdocs.pm/wotex_directory",
         "Homepage" => "https://wotex.io",
-        "Source" => @source_url
+        "Source" => @source_url,
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-directory"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"]
     ]
@@ -126,24 +115,24 @@ defmodule WotexDirectory.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md": [title: "Overview"],
-        "docs/plans/wotex-directory-completion.md": [title: "Completion Contract"],
-        "docs/specs/WTD.01-directory-contract.md": [title: "Directory contract"],
-        "docs/specs/repository-port-evidence.md": [title: "Repository port evidence"],
-        "docs/specs/claim-compatibility-matrix.md": [title: "Claims and compatibility"],
-        "docs/decisions/0001-consumer-owned-runtime.md": [title: "Consumer-owned runtime"],
-        "docs/decisions/0002-listing-and-expiry.md": [title: "Listing and expiry"],
-        "docs/provenance/w3c-sources.md": [title: "W3C sources"],
-        "CHANGELOG.md": [title: "Changelog"],
-        "SECURITY.md": [title: "Security"],
-        "CONTRIBUTING.md": [title: "Contributing"],
-        LICENSE: [title: "License"]
+        {"README.md", title: "Overview"},
+        {docs_path("plans/wotex-directory-completion.md"), title: "Completion Contract"},
+        {docs_path("specs/WTD.01-directory-contract.md"), title: "Directory contract"},
+        {docs_path("specs/repository-port-evidence.md"), title: "Repository port evidence"},
+        {docs_path("specs/claim-compatibility-matrix.md"), title: "Claims and compatibility"},
+        {docs_path("decisions/0001-consumer-owned-runtime.md"), title: "Consumer-owned runtime"},
+        {docs_path("decisions/0002-listing-and-expiry.md"), title: "Listing and expiry"},
+        {docs_path("provenance/w3c-sources.md"), title: "W3C sources"},
+        {"CHANGELOG.md", title: "Changelog"},
+        {"SECURITY.md", title: "Security"},
+        {"CONTRIBUTING.md", title: "Contributing"},
+        {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
-        "Completion plans": ~r|docs/plans/|,
-        Specifications: ~r|docs/specs/|,
-        Decisions: ~r|docs/decisions/|,
-        Provenance: ~r|docs/provenance/|,
+        "Completion plans": ~r|docs/packages/wotex-directory/plans/|,
+        Specifications: ~r|docs/packages/wotex-directory/specs/|,
+        Decisions: ~r|docs/packages/wotex-directory/decisions/|,
+        Provenance: ~r|docs/packages/wotex-directory/provenance/|,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
@@ -174,11 +163,16 @@ defmodule WotexDirectory.MixProject do
           Wotex.Directory.ThingDescriptions
         ]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-directory-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-directory-v#{@version}/packages/wotex-directory/%{path}#L%{line}",
       formatters: ["html", "markdown", "epub"]
     ]
   end
+
+  defp docs_path(relative),
+    do: Path.expand("../../docs/packages/wotex-directory/#{relative}", __DIR__)
 
   defp dialyzer do
     [

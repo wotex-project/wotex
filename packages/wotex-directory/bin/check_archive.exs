@@ -12,7 +12,7 @@ defmodule CheckArchive do
 
   @runtime_dependencies [:decimal, :ex_json_schema, :jason]
   @support ~w(fixtures memory_repository scoped_memory_repository table_repository repository_probe repository_contract repository_barrier public_operation_contract reference_consumer_contract reference_authorization reference_clock reference_identifier test_authorization test_clock test_identifier)
-  @forbidden ~w(.claude .codex .agents .git .github AGENTS.md CLAUDE.md _build deps doc cover test bin docs/tasks priv/plts)
+  @forbidden ~w(.claude .codex .agents .git .github AGENTS.md CLAUDE.md _build deps doc cover test bin docs tasks priv/plts)
 
   def run do
     source = File.cwd!()
@@ -250,6 +250,11 @@ defmodule CheckArchive do
     Enum.each(@forbidden, fn path ->
       if File.exists?(Path.join(directory, path)),
         do: raise("development state in archive: #{path}")
+    end)
+
+    Enum.each(actual, fn path ->
+      if Enum.any?(~w(docs tasks), &(&1 in Path.split(path))),
+        do: raise("repository documentation or task state in archive: #{path}")
     end)
 
     requirements = Enum.map(metadata["requirements"], &Map.new/1)

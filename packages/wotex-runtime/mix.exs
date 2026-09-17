@@ -2,7 +2,7 @@ defmodule WotexRuntime.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/wotex-project/wotex-runtime"
+  @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
@@ -86,13 +86,14 @@ defmodule WotexRuntime.MixProject do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @source_url,
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-runtime/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-runtime",
         "Documentation" => "https://hexdocs.pm/wotex_runtime",
         "Project" => "https://wotex.io",
         "W3C Web of Things" => "https://www.w3.org/WoT/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/specs lib mix.exs)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)
     ]
   end
 
@@ -100,28 +101,25 @@ defmodule WotexRuntime.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md": [title: "Overview"],
-        "docs/plans/wotex-runtime-completion.md": [title: "Completion Contract"],
-        "docs/specs/RT-C02-runtime-hardening.md": [title: "Runtime Hardening Contract"],
-        "docs/specs/RT-C03-exposed-thing-boundary.md": [
-          title: "ExposedThing Boundary Contract"
-        ],
-        "docs/specs/RT-C04-reference-consumer.md": [title: "Reference Consumer"],
-        "docs/specs/RT-C05-release-evidence.md": [title: "Release Evidence"],
-        "docs/specs/RT-C06-stable-api.md": [title: "Stable API Candidate"],
-        "docs/specs/WRT.01-consumed-thing-runtime.md": [title: "ConsumedThing Runtime"],
-        "docs/specs/WRT.02-exposed-thing-runtime.md": [title: "ExposedThing Runtime"],
-        "docs/specs/WRT.03-thing-level-interactions.md": [
-          title: "Thing-level Interactions"
-        ],
-        "CHANGELOG.md": [title: "Changelog"],
-        "SECURITY.md": [title: "Security"],
-        "CONTRIBUTING.md": [title: "Contributing"],
-        LICENSE: [title: "License"]
+        {"README.md", title: "Overview"},
+        {docs_path("plans/wotex-runtime-completion.md"), title: "Completion Contract"},
+        {docs_path("specs/RT-C02-runtime-hardening.md"), title: "Runtime Hardening Contract"},
+        {docs_path("specs/RT-C03-exposed-thing-boundary.md"),
+         title: "ExposedThing Boundary Contract"},
+        {docs_path("specs/RT-C04-reference-consumer.md"), title: "Reference Consumer"},
+        {docs_path("specs/RT-C05-release-evidence.md"), title: "Release Evidence"},
+        {docs_path("specs/RT-C06-stable-api.md"), title: "Stable API Candidate"},
+        {docs_path("specs/WRT.01-consumed-thing-runtime.md"), title: "ConsumedThing Runtime"},
+        {docs_path("specs/WRT.02-exposed-thing-runtime.md"), title: "ExposedThing Runtime"},
+        {docs_path("specs/WRT.03-thing-level-interactions.md"), title: "Thing-level Interactions"},
+        {"CHANGELOG.md", title: "Changelog"},
+        {"SECURITY.md", title: "Security"},
+        {"CONTRIBUTING.md", title: "Contributing"},
+        {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
-        "Completion plans": ~r/docs\/plans/,
-        "Normative specifications": ~r/docs\/specs/,
+        "Completion plans": ~r/docs\/packages\/wotex-runtime\/plans/,
+        "Normative specifications": ~r/docs\/packages\/wotex-runtime\/specs/,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
@@ -141,11 +139,16 @@ defmodule WotexRuntime.MixProject do
         Subscriptions: [Wotex.Runtime.Subscription],
         Observability: [Wotex.Runtime.Telemetry]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-runtime-v#{@version}",
       source_url: @source_url,
+      source_url_pattern:
+        "#{@source_url}/blob/wotex-runtime-v#{@version}/packages/wotex-runtime/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end
+
+  defp docs_path(relative),
+    do: Path.expand("../../docs/packages/wotex-runtime/#{relative}", __DIR__)
 
   defp dialyzer do
     [

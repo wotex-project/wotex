@@ -7,6 +7,7 @@ defmodule DirectoryPackageMirror do
     docs/tasks/local/exclusion-sentinel.json docs/tasks/local/nested/exclusion-sentinel.json
     docs/tasks/exclusion-sentinel.json docs/plans/exclusion-sentinel.json
     docs/specs/exclusion-sentinel.json docs/provenance/exclusion-sentinel.json
+    docs/exclusion-sentinel.json tasks/exclusion-sentinel.json
     _build/exclusion-sentinel deps/exclusion-sentinel doc/exclusion-sentinel
     cover/exclusion-sentinel test/exclusion-sentinel bin/exclusion-sentinel
     priv/plts/exclusion-sentinel tmp/exclusion-sentinel

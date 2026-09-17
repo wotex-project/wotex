@@ -281,17 +281,17 @@ test suite. Package, documentation, audit, and compatibility checks are explicit
 release-readiness work.
 
 The exact-archive consumer lane is documented in
-[RT-C04](docs/specs/RT-C04-reference-consumer.md). It requires an explicitly
-supplied core archive and exercises Runtime under consumer-owned ports and
-supervision.
+[RT-C04](../../docs/packages/wotex-runtime/specs/RT-C04-reference-consumer.md).
+It requires an explicitly supplied core archive and exercises Runtime under
+consumer-owned ports and supervision.
 
-[RT-C05](docs/specs/RT-C05-release-evidence.md) defines the separate archive,
-documentation, analysis, audit, and compatibility evidence used for release
-readiness.
+[RT-C05](../../docs/packages/wotex-runtime/specs/RT-C05-release-evidence.md)
+defines the separate archive, documentation, analysis, audit, and compatibility
+evidence used for release readiness.
 
-[RT-C06](docs/specs/RT-C06-stable-api.md) records the candidate compatibility
-contract for consumer-visible values, callback shapes, errors, limits, and
-lifecycle defaults.
+[RT-C06](../../docs/packages/wotex-runtime/specs/RT-C06-stable-api.md) records
+the candidate compatibility contract for consumer-visible values, callback
+shapes, errors, limits, and lifecycle defaults.
 
 ## Contributing
 

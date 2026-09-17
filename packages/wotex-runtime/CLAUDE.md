@@ -44,8 +44,9 @@ release prerequisites pass, the human maintainer prepares the first release with
 Mutable completion/audit trackers belong only under ignored `docs/tasks/local/`
 and must never enter Git, package archives or generated documentation. Durable
 specifications, dependency contracts and completion plans remain tracked.
-Follow `docs/plans/wotex-runtime-completion.md`; do not create optional local files
-outside its declared ignored tracker path. Package/archive checks must prove the
+Follow `docs/packages/wotex-runtime/plans/wotex-runtime-completion.md` at the
+repository root; do not create optional local files outside its declared
+ignored tracker path. Package/archive checks must prove the
 tracker remains excluded.
 
 Automated agents must never configure, add, change, or remove a Git remote;

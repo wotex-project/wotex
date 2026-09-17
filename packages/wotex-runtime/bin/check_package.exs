@@ -7,18 +7,7 @@ defmodule Wotex.Runtime.Check.Package do
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "NOTICE",
-    "SECURITY.md",
-    "docs/plans/wotex-runtime-completion.md",
-    "docs/specs/catalogue.yaml",
-    "docs/specs/WRT.01-consumed-thing-runtime.md",
-    "docs/specs/WRT.02-exposed-thing-runtime.md",
-    "docs/specs/WRT.03-thing-level-interactions.md",
-    "docs/specs/RT-C02-runtime-hardening.md",
-    "docs/specs/RT-C03-exposed-thing-boundary.md",
-    "docs/specs/RT-C04-reference-consumer.md",
-    "docs/specs/RT-C05-release-evidence.md",
-    "docs/specs/RT-C06-stable-api.md"
+    "NOTICE"
   ]
 
   @absent [
@@ -33,10 +22,13 @@ defmodule Wotex.Runtime.Check.Package do
     "cover",
     "deps",
     "doc",
-    "docs/tasks",
+    "docs",
     "priv/plts",
+    "tasks",
     "test"
   ]
+
+  @absent_anywhere ["docs", "tasks"]
 
   @consumer_test ~S"""
   defmodule RuntimePackageConsumerTest do
@@ -133,6 +125,7 @@ defmodule Wotex.Runtime.Check.Package do
 
     Enum.each(@present, &present!(unpacked, &1))
     Enum.each(@absent, &absent!(unpacked, &1))
+    Enum.each(@absent_anywhere, &absent_anywhere!(unpacked, &1))
 
     run!("elixir", [Path.join(source_root, "bin/check_boundary.exs")], unpacked)
     write_consumer!(consumer, unpacked, core)
@@ -214,6 +207,18 @@ defmodule Wotex.Runtime.Check.Package do
   defp absent!(unpacked, entry) do
     if File.exists?(Path.join(unpacked, entry)) do
       violation("packaged archive contains #{entry}")
+    end
+  end
+
+  defp absent_anywhere!(unpacked, segment) do
+    unpacked
+    |> Path.join("**")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.map(&Path.relative_to(&1, unpacked))
+    |> Enum.filter(&(segment in Path.split(&1)))
+    |> case do
+      [] -> :ok
+      [path | _rest] -> violation("packaged archive contains #{path}")
     end
   end
 

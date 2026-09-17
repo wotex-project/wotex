@@ -14,8 +14,6 @@ defmodule Wotex.Runtime.Check.Boundary do
     "cover",
     "deps",
     "doc",
-    "docs/tasks/inbox.md",
-    "docs/tasks/local",
     "priv/plts"
   ]
 

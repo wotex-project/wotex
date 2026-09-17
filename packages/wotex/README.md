@@ -185,9 +185,9 @@ The Thing Description and Thing Model production baseline is the
 dated 5 December 2023. The bundled informative validation schema is pinned to
 the upstream `REC1.1` tag. Exact commits, digests, licenses, and local
 modifications are recorded in the TD and Thing Model provenance documents.
-The [reference corpus evidence](docs/provenance/reference-corpus.md) records the
-content-addressed positive and negative vectors exercised through the external
-value adapter.
+The [reference corpus evidence](../../docs/packages/wotex/provenance/reference-corpus.md)
+records the content-addressed positive and negative vectors exercised through
+the external value adapter.
 
 Only `application/td+json` and `application/tm+json` are claimed. Turtle,
 RDF/XML, remote JSON-LD context retrieval, Thing Description 2.0 drafts,
@@ -210,10 +210,10 @@ keeps dependency loading free of hidden work.
 
 ## Development
 
-The [specification catalogue](docs/specs/catalogue.yaml) and completion contract
-at `docs/plans/wotex-completion.md` define independently
-implementable work, acceptance gates and remaining claim obligations. Local
-execution tracking is not part of the published contract.
+The [specification catalogue](../../docs/packages/wotex/specs/catalogue.yaml)
+and [completion contract](../../docs/packages/wotex/plans/wotex-completion.md)
+define independently implementable work, acceptance gates and remaining claim
+obligations. Local execution tracking is not part of the published contract.
 
 ```bash
 mix setup
@@ -233,8 +233,9 @@ The explicit package check builds one archive, verifies its contents, and runs
 a temporary consumer against the unpacked artifact. The consumer exercises
 Thing Description, Thing Model, wrapper, helper, typed-error, and passive-load
 behavior and prints the archive and resolved consumer-lock digests.
-The [release evidence boundary](docs/provenance/release-evidence.md) records the
-tested runtime and dependency cohorts and the limits of those results.
+The [release evidence boundary](../../docs/packages/wotex/provenance/release-evidence.md)
+records the tested runtime and dependency cohorts and the limits of those
+results.
 
 ## Contributing
 

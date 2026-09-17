@@ -3,6 +3,8 @@ Code.require_file("package_mirror.exs", __DIR__)
 defmodule DirectoryEvidence do
   @moduledoc false
 
+  @documentation_root Path.expand("../../../docs/packages/wotex-directory", __DIR__)
+
   def begin(tools) do
     {output, 0} =
       System.cmd("mktemp", ["-d", Path.join(System.tmp_dir!(), "wotex-directory-evidence.XXXXXX")])
@@ -26,12 +28,13 @@ defmodule DirectoryEvidence do
   end
 
   def snapshot do
-    paths =
+    package_paths =
       Mix.Project.config()[:package][:files] ++
         ~w(mix.exs mix.lock .check.exs .formatter.exs .credo.exs .doctor.exs coveralls.json) ++
         Path.wildcard("{lib,test,bin}/**/*.{ex,exs}") ++
-        Path.wildcard("config/*.exs") ++
-        Path.wildcard("docs/{decisions,plans,provenance,specs}/**/*")
+        Path.wildcard("config/*.exs")
+
+    inputs = Enum.map(package_paths, &{&1, &1}) ++ documentation_inputs()
 
     {commit, 0} = System.cmd("git", ["rev-parse", "HEAD"])
     {status, 0} = System.cmd("git", ["status", "--porcelain", "--untracked-files=normal"])
@@ -40,7 +43,12 @@ defmodule DirectoryEvidence do
       "source_commit" => String.trim(commit),
       "source_clean" => status == "",
       "inputs" =>
-        for(path <- Enum.uniq(paths), File.regular?(path), into: %{}, do: {path, digest(path)}),
+        for(
+          {name, path} <- Enum.uniq(inputs),
+          File.regular?(path),
+          into: %{},
+          do: {name, digest(path)}
+        ),
       "runtime" => %{
         "elixir" => System.version(),
         "otp" => System.otp_release(),
@@ -161,6 +169,16 @@ defmodule DirectoryEvidence do
        do: raise("evidence directory must be outside the source tree and its ancestors")
 
     :ok
+  end
+
+  # Documentation lives at the repository root and is keyed by its repository-relative path.
+  defp documentation_inputs do
+    @documentation_root
+    |> Path.join("{decisions,plans,provenance,specs}/**/*")
+    |> Path.wildcard()
+    |> Enum.map(
+      &{"docs/packages/wotex-directory/" <> Path.relative_to(&1, @documentation_root), &1}
+    )
   end
 
   defp path_dependencies do

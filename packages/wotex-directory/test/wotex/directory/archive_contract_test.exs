@@ -3,7 +3,7 @@ defmodule Wotex.Directory.ArchiveContractTest do
 
   use ExUnit.Case, async: true
 
-  test "package inputs exclude development instructions and allowlist individual documents" do
+  test "package inputs exclude development instructions and repository documentation" do
     files = Mix.Project.config()[:package][:files]
 
     for excluded <- [
@@ -14,13 +14,14 @@ defmodule Wotex.Directory.ArchiveContractTest do
           "CLAUDE.md",
           "test",
           "bin",
-          "docs/tasks"
+          "docs",
+          "tasks"
         ],
-        do: refute(excluded in files)
+        do: refute(Enum.any?(files, &(excluded in Path.split(&1))))
 
-    documents = Enum.filter(files, &String.starts_with?(&1, "docs/"))
-    assert documents != []
-    assert Enum.all?(documents, &File.regular?/1)
-    assert "docs/specs/repository-port-evidence.md" in documents
+    for required <- ["README.md", "CHANGELOG.md", "LICENSE", "NOTICE", "lib", "mix.exs"],
+        do: assert(required in files)
+
+    assert Enum.all?(files, &File.exists?/1)
   end
 end

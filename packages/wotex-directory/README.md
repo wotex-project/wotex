@@ -99,8 +99,9 @@ Adapters must handle their own exceptions; the facade does not rescue them.
 
 The 0.1 series targets the W3C WoT Discovery Recommendation dated 2023-12-05
 and Thing Description 1.1. Supported behavior is recorded in
-[`WTD.01`](docs/specs/WTD.01-directory-contract.md). This package does not claim
-W3C certification and does not implement JSONPath, XPath, or SPARQL profiles.
+[`WTD.01`](../../docs/packages/wotex-directory/specs/WTD.01-directory-contract.md).
+This package does not claim W3C certification and does not implement JSONPath,
+XPath, or SPARQL profiles.
 
 Listing is a bounded keyset page chain. `Wotex.Directory.Page` carries its
 entries, the repository-defined collection revision, and an opaque
@@ -173,12 +174,12 @@ the archives and consumer lock outside the repository.
 The explicit release runner writes an external `release-evidence.json`
 manifest after all checks succeed. It binds source and dependency inputs,
 runtime, commands, the exact archives, consumer lock and test outcome. The
-[claim and compatibility matrix](docs/specs/claim-compatibility-matrix.md)
+[claim and compatibility matrix](../../docs/packages/wotex-directory/specs/claim-compatibility-matrix.md)
 defines its schema and the reviewed 0.1.0 compatibility baseline. A dirty-tree
 run is qualified explicitly; neither a manifest nor a passing gate authorizes
 publication or establishes a stable API.
 
-The [repository port evidence contract](docs/specs/repository-port-evidence.md)
+The [repository port evidence contract](../../docs/packages/wotex-directory/specs/repository-port-evidence.md)
 defines the reusable adapter suite, its fixture interface, and the exact
 callback, authorization, isolation, pagination, expiry, and contention evidence.
 The adapters under `test/support/` are test consumers and are not packaged

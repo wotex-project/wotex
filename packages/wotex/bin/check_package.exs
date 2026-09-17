@@ -6,10 +6,7 @@ defmodule Wotex.Check.Package do
     "README.md",
     "LICENSE",
     "NOTICE",
-    "docs/specs/WTX.01-thing-description.md",
-    "docs/specs/WTX.02-affordance-values.md",
-    "docs/specs/WTX.03-errors-extensions-and-compatibility.md",
-    "docs/specs/WTX.04-thing-model.md",
+    "CHANGELOG.md",
     "priv/w3c/td-json-schema-validation-1.1.json",
     "priv/w3c/tm-json-schema-validation-1.1.json"
   ]
@@ -25,10 +22,13 @@ defmodule Wotex.Check.Package do
     "cover",
     "deps",
     "doc",
-    "docs/tasks",
+    "docs",
     "priv/plts",
+    "tasks",
     "test"
   ]
+
+  @absent_anywhere ["docs", "tasks"]
 
   @callback_probe """
   Application.load(:wotex)
@@ -146,6 +146,7 @@ defmodule Wotex.Check.Package do
 
     Enum.each(@present, &present!(unpacked, &1))
     Enum.each(@absent, &absent!(unpacked, &1))
+    Enum.each(@absent_anywhere, &absent_anywhere!(unpacked, &1))
 
     run!("mix", ["deps.get"], unpacked)
     run!("mix", ["compile", "--warnings-as-errors"], unpacked)
@@ -235,6 +236,18 @@ defmodule Wotex.Check.Package do
   defp absent!(unpacked, entry) do
     if File.exists?(Path.join(unpacked, entry)) do
       violation("packaged archive contains #{entry}")
+    end
+  end
+
+  defp absent_anywhere!(unpacked, segment) do
+    unpacked
+    |> Path.join("**")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.map(&Path.relative_to(&1, unpacked))
+    |> Enum.filter(&(segment in Path.split(&1)))
+    |> case do
+      [] -> :ok
+      [path | _rest] -> violation("packaged archive contains #{path}")
     end
   end
 

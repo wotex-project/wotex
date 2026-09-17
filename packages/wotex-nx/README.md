@@ -122,13 +122,14 @@ declares Nx 0.13.1. Feature order, shape, dtype, missing-value behavior, and
 output interpretation are explicit public inputs. Changes to those meanings
 require a documented contract change. The executable reference cohort is
 Elixir 1.18.4, Erlang/OTP 27.3.4.15, Nx 0.13.1, `Nx.BinaryBackend`, and
-`Nx.Defn.Evaluator`; [its comparison policy](docs/provenance/runtime-backend-cohort.md)
+`Nx.Defn.Evaluator`; its
+[comparison policy](../../docs/packages/wotex-nx/provenance/runtime-backend-cohort.md)
 does not claim byte or numerical equivalence for untested backends or runtimes.
 
 The package implements
-[`WNX.01`](docs/specs/WNX.01-observation-numerical-boundary.md). It uses W3C
-Web of Things vocabulary from Wotex core, but its numerical contracts do not
-claim W3C certification or define a W3C numerical binding.
+[`WNX.01`](../../docs/packages/wotex-nx/specs/WNX.01-observation-numerical-boundary.md).
+It uses W3C Web of Things vocabulary from Wotex core, but its numerical
+contracts do not claim W3C certification or define a W3C numerical binding.
 
 ## Development
 

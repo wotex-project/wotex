@@ -74,13 +74,14 @@ defmodule Wotex.MixProject do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @source_url,
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex",
         "Documentation" => "https://hexdocs.pm/wotex",
         "Project" => "https://wotex.io",
         "W3C Web of Things" => "https://www.w3.org/WoT/"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs priv/w3c)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs priv/w3c)
     ]
   end
 
@@ -88,28 +89,27 @@ defmodule Wotex.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md": [title: "Overview"],
-        "docs/plans/wotex-completion.md": [title: "Completion Contract"],
-        "docs/specs/WTX.01-thing-description.md": [title: "Thing Description"],
-        "docs/specs/WTX.02-affordance-values.md": [title: "Affordance Values"],
-        "docs/specs/WTX.03-errors-extensions-and-compatibility.md": [
-          title: "Errors, Extensions, and Compatibility"
-        ],
-        "docs/specs/WTX.04-thing-model.md": [title: "Thing Model"],
-        "docs/provenance/w3c-td-schema-1.1.md": [title: "TD 1.1 Schema Provenance"],
-        "docs/provenance/w3c-tm-schema-1.1.md": [title: "Thing Model Schema Provenance"],
-        "docs/provenance/reference-corpus.md": [title: "Reference Corpus Evidence"],
-        "docs/provenance/release-evidence.md": [title: "Release Evidence Boundary"],
-        "CHANGELOG.md": [title: "Changelog"],
-        "SECURITY.md": [title: "Security"],
-        "CONTRIBUTING.md": [title: "Contributing"],
-        NOTICE: [title: "Third-party Notices"],
-        LICENSE: [title: "License"]
+        {"README.md", title: "Overview"},
+        {docs_path("plans/wotex-completion.md"), title: "Completion Contract"},
+        {docs_path("specs/WTX.01-thing-description.md"), title: "Thing Description"},
+        {docs_path("specs/WTX.02-affordance-values.md"), title: "Affordance Values"},
+        {docs_path("specs/WTX.03-errors-extensions-and-compatibility.md"),
+         title: "Errors, Extensions, and Compatibility"},
+        {docs_path("specs/WTX.04-thing-model.md"), title: "Thing Model"},
+        {docs_path("provenance/w3c-td-schema-1.1.md"), title: "TD 1.1 Schema Provenance"},
+        {docs_path("provenance/w3c-tm-schema-1.1.md"), title: "Thing Model Schema Provenance"},
+        {docs_path("provenance/reference-corpus.md"), title: "Reference Corpus Evidence"},
+        {docs_path("provenance/release-evidence.md"), title: "Release Evidence Boundary"},
+        {"CHANGELOG.md", title: "Changelog"},
+        {"SECURITY.md", title: "Security"},
+        {"CONTRIBUTING.md", title: "Contributing"},
+        {"NOTICE", title: "Third-party Notices"},
+        {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
-        "Completion plans": ~r/docs\/plans/,
-        "Normative specifications": ~r/docs\/specs/,
-        Provenance: ~r/docs\/provenance/,
+        "Completion plans": ~r/docs\/packages\/wotex\/plans/,
+        "Normative specifications": ~r/docs\/packages\/wotex\/specs/,
+        Provenance: ~r/docs\/packages\/wotex\/provenance/,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|NOTICE|LICENSE/
       ],
       groups_for_modules: [
@@ -127,11 +127,14 @@ defmodule Wotex.MixProject do
         "TD Values": [Wotex.DataSchema, Wotex.Form, Wotex.SecurityScheme],
         "JSON admission": [Wotex.JSON, Wotex.JSON.Limits]
       ],
-      source_ref: "v#{@version}",
+      source_ref: "wotex-v#{@version}",
       source_url: @source_url,
+      source_url_pattern: "#{@source_url}/blob/wotex-v#{@version}/packages/wotex/%{path}#L%{line}",
       formatters: ["html"]
     ]
   end
+
+  defp docs_path(relative), do: Path.expand("../../docs/packages/wotex/#{relative}", __DIR__)
 
   defp dialyzer do
     [
