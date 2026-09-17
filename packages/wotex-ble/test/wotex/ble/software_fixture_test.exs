@@ -386,10 +386,11 @@ defmodule Wotex.BLE.SoftwareFixtureTest do
   end
 
   test "WBL-N03 software run boots both lanes and retains passing evidence", context do
+    File.mkdir_p!(Path.join(context.root, "empty-run"))
+    File.write!(Path.join(context.root, "empty-run/x"), "")
+
     assert {:error, :unrecognized_build_workspace} ==
-             (File.mkdir_p!(Path.join(context.root, "empty-run")) &&
-                File.write!(Path.join(context.root, "empty-run/x"), "") &&
-                Run.run(Path.join(context.root, "empty-run"), context.checkout, Docker))
+             Run.run(Path.join(context.root, "empty-run"), context.checkout, Docker)
 
     assert {:error, :software_build_required} = Run.run(context.workspace, context.checkout, Docker)
     refute File.exists?(context.workspace)
