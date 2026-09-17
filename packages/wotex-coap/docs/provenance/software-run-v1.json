@@ -17,8 +17,8 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "3a0291c55bd55b074b24c359fc79259b1f9e6d91df66614fd27ec5bc107bc78c",
-    "peer_executable_sha256": "6b26d70d4ffd3f44fc15cf11e146dbc769a433a0cbb5359213c51d34e14664d8",
+    "native_helper_sha256": "f1bf59b59dcd8776fc456843eae28da56d7be1298171202ba5e9009457965954",
+    "peer_executable_sha256": "ba8dd0baf0e11b1a1d8602337000849361a31704e5dd8b0308cd39688c8f3414",
     "version": "4.3.5"
   },
   "source_identity": {
@@ -43,10 +43,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "3f515d901fe66f1f194535744a0a28880374e4778d916b52c8c52bf8f8399e49",
-    "nested_native_manifest_sha256": "4df5c2fc6cd77e82f1b4d09793b75a93fae4b833f7791d8166befb6561ce5784"
+    "manifest_sha256": "7a6b6632d7168290e26559e645be9c38e055e404f1cd3855c00118f4c1e9faf0",
+    "nested_native_manifest_sha256": "fca717fb1107ff20e6ee8b2456b1cccb1289c97576fb80f296653ef3ec054cfc"
   },
-  "result_sha256": "ff96eadc3a9c0112db0b2cc3160dff0ded7da33ac7cb5c79b00f1e61e3c878ff",
+  "result_sha256": "f6f97fcfb538369269e1a081c0f43077b05c05c32572d366e092d56e157364a9",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -75,7 +75,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 32471,
+    "elapsed_ms": 36403,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -87,8 +87,8 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "6b26d70d4ffd3f44fc15cf11e146dbc769a433a0cbb5359213c51d34e14664d8",
-      "wotex-coap-oscore": "3a0291c55bd55b074b24c359fc79259b1f9e6d91df66614fd27ec5bc107bc78c"
+      "coap-server": "ba8dd0baf0e11b1a1d8602337000849361a31704e5dd8b0308cd39688c8f3414",
+      "wotex-coap-oscore": "f1bf59b59dcd8776fc456843eae28da56d7be1298171202ba5e9009457965954"
     },
     "scenario_ids": [
       "WCO-C03",
@@ -113,15 +113,15 @@
     "source_sha256": "ee970d8299459bd80728e6142148e4eb59cc7ef24293ce2760fb0eb9c24f883d",
     "status": "passed",
     "test_log": {
-      "bytes": 4168,
+      "bytes": 4192,
       "path": "tests.log",
-      "sha256": "c3fb0f286f9545e57f3fc406e9f8671177ef89a7cb4f3f5b79cf743cd1849cbb"
+      "sha256": "3559f8ae6e631ff8c55f68e2ec252162dabd45ec2fd081372984ebdc447c6fd3"
     },
+    "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
       "failed": 0,
       "passed": 35
-    },
-    "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n"
+    }
   },
   "stack_labels": {
     "test/interop/dtls_pki_test.exs": "independent libcoap PKI DTLS peer",
@@ -131,35 +131,35 @@
     "test/software/lifecycle_stress_test.exs": "independent libcoap UDP, PSK and PKI peers plus the same-stack OSCORE peer, one case per transport and phase group, with an ExUnit raw UDP fault peer"
   },
   "resource_trends": {
-    "dtls_pki": {
+    "udp": {
       "beam_total_bytes": [
-        80663470,
-        81113438
+        76661355,
+        77218523
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        78534694,
-        79065278
+        76979684,
+        77354668
       ]
     },
-    "kind": "BEAM :erlang.memory(:total) bytes and helper RSS KiB sampled every 100 of 1000 sequential operations; reported, not asserted",
+    "dtls_pki": {
+      "beam_total_bytes": [
+        79170180,
+        79689268
+      ]
+    },
     "oscore": {
       "beam_total_bytes": [
-        81237983,
-        81275527
+        79431005,
+        79565693
       ],
       "helper_rss_kib": [
         1920,
         1920
       ]
     },
-    "udp": {
-      "beam_total_bytes": [
-        78510077,
-        79023037
-      ]
-    }
+    "kind": "BEAM :erlang.memory(:total) bytes and helper RSS KiB sampled every 100 of 1000 sequential operations; reported, not asserted"
   },
   "assertions": [
     "The task verifies an existing completed software-build manifest and never builds a missing workspace",

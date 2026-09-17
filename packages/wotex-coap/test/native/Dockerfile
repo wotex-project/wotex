@@ -17,6 +17,8 @@ COPY 0006-release-whole-body-first-response.patch /build/whole-body-first.patch
 RUN patch --batch --fuzz=0 -p1 -d source < /build/whole-body-first.patch
 COPY 0007-preserve-oscore-observe-sequence.patch /build/observe-sequence.patch
 RUN patch --batch --fuzz=0 -p1 -d source < /build/observe-sequence.patch
+COPY 0008-drop-oscore-client-send-hold.patch /build/send-hold.patch
+RUN patch --batch --fuzz=0 -p1 -d source < /build/send-hold.patch
 ENV CFLAGS="-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
 ENV LDFLAGS="-fsanitize=address,undefined"
 RUN cmake -S source -B build -DENABLE_OSCORE=ON -DENABLE_DTLS=ON -DDTLS_BACKEND=openssl -DBUILD_SHARED_LIBS=OFF -DENABLE_DOCS=OFF -DENABLE_EXAMPLES=OFF && cmake --build build --parallel 2
@@ -31,7 +33,7 @@ RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -I/build/first-party -c /build/fir
 COPY oscore_block_limit_test.c /build/oscore_block_limit_test.c
 RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -DWCO_ALLOCATION_WRAP -I/build/build/include -I/build/source/include /build/oscore_block_limit_test.c /build/build/libcoap-3.a $LDFLAGS -Wl,--wrap=coap_new_binary,--wrap=coap_resize_binary -lssl -lcrypto -o /usr/local/bin/oscore-block-limit && sha256sum body-limit.patch representation.patch whole-body-first.patch source/src/coap_block.c oscore_block_limit_test.c /usr/local/bin/oscore-block-limit >> /build/artifacts.sha256
 COPY oscore_protection_test.c /build/oscore_protection_test.c
-RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -I/build/build/include -I/build/source/include /build/oscore_protection_test.c /build/build/libcoap-3.a $LDFLAGS -lssl -lcrypto -o /usr/local/bin/oscore-protection && sha256sum response-admission.patch observe-sequence.patch source/src/coap_net.c source/src/coap_oscore.c oscore_protection_test.c /usr/local/bin/oscore-protection >> /build/artifacts.sha256
+RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -I/build/build/include -I/build/source/include /build/oscore_protection_test.c /build/build/libcoap-3.a $LDFLAGS -lssl -lcrypto -o /usr/local/bin/oscore-protection && sha256sum response-admission.patch observe-sequence.patch send-hold.patch source/src/coap_net.c source/src/coap_oscore.c oscore_protection_test.c /usr/local/bin/oscore-protection >> /build/artifacts.sha256
 COPY main.c worker.c worker.h exchange.c exchange.h observation.c observation.h custody.c command.c command.h json.c json.h frame.c frame.h body.c body.h credit.c credit.h yyjson.c yyjson.h /build/worker/
 COPY oscore_worker_exchange_test.c /build/oscore_worker_exchange_test.c
 RUN mkdir -p /build/worker/vendor/yyjson && cp /build/worker/yyjson.h /build/worker/vendor/yyjson/yyjson.h

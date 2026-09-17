@@ -214,7 +214,11 @@ closes the worker cleanly and permits no further server report. macOS and Linux
 sanitizer lanes execute the same trace. Successful race confirmation, an
 intervening Observe response before confirmation, authenticated duplicate/stale
 injection, actual output saturation, replay, independent interoperability and
-Mix orchestration remain unaccepted.
+Mix orchestration remain unaccepted. The
+[pending owner-loss receipt](native-worker-pending-owner-loss-v1.json) corrects
+the cause of that `timeout`: libcoap's OSCORE send hold delayed the cancellation
+past the command deadline, and without it the peer's response confirms the
+cancellation.
 
 The [native worker owner-cleanup receipt](native-worker-owner-cleanup-v1.json)
 binds the next production source cohort. After a protected observation is
@@ -721,7 +725,24 @@ if the datagram were dropped and the next change is delivered. The tampered-rela
 regression fails against the preceding helper; the replay/duplicate case already
 passed and closes an evidence gap.
 
-Independent OSCORE interoperability,
- the remaining native fault scenarios and the
+The [native worker pending owner-loss receipt](native-worker-pending-owner-loss-v1.json)
+binds the next source cohort. Owner EOF while a protected registration still
+awaited the peer sent no cancellation, because exit cleanup cancelled only an
+established observation. Owner EOF while a renewal awaited the peer also sent
+none: libcoap sets its OSCORE client hold on every `coap_send`, because a client
+recipient context never leaves its initial replay state, and clears it only when
+a response arrives. Constructing the cancellation therefore blocked inside
+`coap_client_delay_first` until custody's 25 ms termination signal killed the
+worker. The same hold stalled a renewal timeout's terminal cancellation for five
+seconds and turned a cancellation behind an unanswered renewal into a command
+`timeout`. Patch 0008 removes the hold, and exit cleanup now abandons a pending
+registration as a possible peer observer while ignoring callbacks. The harness
+closes the owner during a pending registration, renewal and cancellation. Each
+reaps the worker with owner-loss status, and the peer receives exactly one
+cancellation within 1,000 ms. A renewal-timeout observation now ends within
+3,500 ms, and a cancellation behind an unanswered renewal returns `result: null`.
+The harness fails against the preceding helper.
+
+Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
 recorded cohort.

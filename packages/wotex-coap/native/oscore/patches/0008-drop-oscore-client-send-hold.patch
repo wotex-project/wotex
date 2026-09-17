@@ -1,0 +1,21 @@
+--- a/src/coap_net.c
++++ b/src/coap_net.c
+@@ -1431,14 +1431,10 @@
+ 
+ #if COAP_OSCORE_SUPPORT
+   if (session->oscore_encryption) {
+-    if (session->recipient_ctx->initial_state == 1) {
+-      /*
+-       * Not sure if remote supports OSCORE, or is going to send us a
+-       * "4.01 + ECHO" etc. so need to hold off future coap_send()s until all
+-       * is OK. Continue sending current pdu to test things.
+-       */
+-      session->doing_first = 1;
+-    }
++    /* A client recipient context keeps initial_state set, so libcoap's hold
++     * would re-arm on every send and block later PDU construction inside
++     * coap_client_delay_first() until a response or its five-second timeout.
++     * This profile serializes exchanges and bounds them with its own deadlines. */
+     /* Need to convert Proxy-Uri to Proxy-Scheme option if needed */
+     if (COAP_PDU_IS_REQUEST(pdu) && !coap_rebuild_pdu_for_proxy(pdu)) {
+       goto error;

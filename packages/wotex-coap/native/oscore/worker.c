@@ -120,6 +120,7 @@ struct worker {
     int opened;
     int closing;
     int failed;
+    int exiting;
 };
 
 struct secret {
@@ -813,6 +814,8 @@ static int exchange_response(void *argument,
                              const struct wco_exchange_message *message) {
     struct worker *worker = argument;
     int valid, status;
+    /* Exit cleanup only services the protocol exchange; results have no owner. */
+    if (worker->exiting) return 1;
     if (message->delivery != WCO_EXCHANGE_UNARY)
         valid = observation_response(worker, message);
     else if (!worker->request.active) valid = 0;
@@ -832,6 +835,7 @@ static int exchange_response(void *argument,
 
 static void exchange_failure(void *argument, const char *code) {
     struct worker *worker = argument;
+    if (worker->exiting) return;
     if (worker->observation.established && !worker->request.active) {
         if (!terminal_observation(worker, "observation_failed")) worker->failed = 1;
         return;
@@ -1335,9 +1339,10 @@ static void cancel_observation_on_exit(struct worker *worker) {
     const char *error;
     int64_t deadline;
     if (!worker->exchange || !worker->observation.path[0]) return;
-    error = wco_exchange_cancel(worker->exchange, worker->observation.path,
-                                worker->observation.accept_present,
-                                worker->observation.accept);
+    worker->exiting = 1;
+    error = wco_exchange_abandon(worker->exchange, worker->observation.path,
+                                 worker->observation.accept_present,
+                                 worker->observation.accept);
     if (error) return;
     (void)wco_exchange_io(worker->exchange);
     /* A peer may answer with an empty ACK and a separate CON response. Keep

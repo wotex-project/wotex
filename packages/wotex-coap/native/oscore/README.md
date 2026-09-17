@@ -70,14 +70,18 @@ The [renewal/cancel receipt](../../docs/provenance/native-worker-renewal-cancel-
 binds a protected cancellation admitted while renewal remains in flight. It
 executes the public-API original-route/token fallback, one distinct cancellation
 Message ID and exact deadline-driven local cleanup when no usable confirmation
-arrives. Successful confirmation and intervening-Observe ordering remain
-separate work.
+arrives. Its `timeout` came from libcoap's OSCORE send hold rather than the peer:
+under the send-hold patch the peer's response confirms that cancellation within
+the command deadline. Intervening-Observe ordering remains separate work.
 
 The [owner-cleanup receipt](../../docs/provenance/native-worker-owner-cleanup-v1.json)
 binds abrupt public-custody owner EOF after a protected observation is
 established. Worker exit cleanup sends one original-route/token cancellation,
-the peer removes its observer and custody reaps the helper within C03. Owner EOF
-during pending registration, renewal or cancellation remains separate work.
+the peer removes its observer and custody reaps the helper within C03. The
+[pending owner-loss receipt](../../docs/provenance/native-worker-pending-owner-loss-v1.json)
+binds the same bound when owner EOF arrives while registration, renewal or
+cancellation still awaits the peer: exit cleanup sends exactly one cancellation
+for a registration or renewal and none after a pending cancellation.
 
 The [output-saturation receipt](../../docs/provenance/native-worker-output-saturation-v1.json)
 binds an actual owner pipe filled to `EAGAIN`, fourteen protected 16 KiB
@@ -124,6 +128,14 @@ trusted. Empty ACK/RST preserve their transport-only meaning. The
 controls. The protected
 peer uses the same pinned SDK and is labelled same-stack. The fixture reservation
 callback is not the production durable store.
+
+The send-hold patch removes libcoap's OSCORE client hold from `coap_send`. A
+client recipient context never leaves its initial replay state, so libcoap
+re-armed the hold on every send; while any request lacked a response, the next
+PDU construction ran `coap_client_delay_first` and blocked the worker for up to
+five seconds. The worker serializes exchanges and bounds each with its own
+deadline, so a cancellation behind an unanswered registration or renewal is sent
+at once.
 
 The real native regression in `test/native/oscore_sequence_test.c` creates an
 OSCORE client through public libcoap APIs and a local UDP receiver. It asserts

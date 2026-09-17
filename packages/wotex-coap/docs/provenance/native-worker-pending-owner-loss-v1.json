@@ -1,0 +1,82 @@
+{
+  "schema": "wotex.coap.native-worker-pending-owner-loss-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Owner EOF while a protected registration, renewal or cancellation awaits the peer, and removal of libcoap's OSCORE client send hold",
+  "standard": {
+    "name": "IETF Observing Resources in CoAP",
+    "revision": "RFC 7641 2015-09",
+    "sections": ["3.6"],
+    "summary": "A client may deregister explicitly with a GET carrying the observation token and Observe value 1"
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "0436bd68dc161596edf96d672b74a437ecc97ef01858b3f11c59c061bd4eadd1",
+      "native/oscore/patches/0008-drop-oscore-client-send-hold.patch": "01a3be4fa8174891e1b72a07e35b41ccd696714439624775c8755415a12650e8",
+      "native/oscore/exchange.c": "b9b6bf4a110d04088892a2f7e74cf85814a5d610b9dc5ba9ae258765b88b5d4a",
+      "native/oscore/exchange.h": "7d003af6f3b3fe585f6960c9ac5f72d07260ee5a34807a8fdbc7228f285584ab",
+      "native/oscore/worker.c": "fa33f577ec6d3debd6817f23133edd97210e01927a65e0a524b393f6f570a9c3",
+      "test/native/oscore_worker_exchange_test.c": "ccadd4683aec879267bdac1bacc2270ae48def619d3f0a9964e541ec43312ef7",
+      "test/native/Dockerfile": "18db41822f648faa7582e5043fece056e48dcbc2463f60c52c5969efedc4ea1a",
+      "lib/wotex/coap/native/build.ex": "8bfb8c7e64481b0d9fe536f0d34b4d8fc15de63cef60b41779e62d081ab39aba"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 8,
+    "patched_coap_net_sha256": "a998fd11c41deadda9879e8f939c2e8cb38cb63fad09e90a984b3da422be495b"
+  },
+  "requirements": ["WCO-C03", "WCO-S03", "WCO-V09", "WCO-V15", "WCO-N02", "WCO-N04"],
+  "defects": [
+    {
+      "observed": "Owner EOF while the protected registration awaited the peer sent no cancellation",
+      "cause": "Exit cleanup cancelled only an established observation, although the sent registration may already have created a peer observer"
+    },
+    {
+      "observed": "Owner EOF while a Max-Age renewal awaited the peer sent no cancellation; a renewal timeout's terminal event arrived about five seconds late; a cancel command behind an unanswered renewal returned timeout",
+      "cause": "libcoap sets its OSCORE client hold on every coap_send because a client recipient context never leaves its initial replay state, and clears the hold only when a response arrives. The next PDU construction blocked in coap_client_delay_first for up to five seconds, past custody's 25 ms termination signal on exit"
+    }
+  ],
+  "assertions": [
+    "Patch 0008 removes the OSCORE hold from coap_send; the worker keeps one exchange at a time and its own deadlines",
+    "Owner EOF during a pending registration abandons it as a possible peer observer and sends exactly one original-token cancellation",
+    "Owner EOF during a pending renewal sends exactly one original-token cancellation",
+    "Owner EOF during a pending cancellation sends no second cancellation",
+    "Each case reaps the worker with owner-loss status and the peer count is checked for 1,000 ms after EOF",
+    "Exit cleanup ignores exchange callbacks, so no report or reply is produced after owner loss",
+    "A renewal-timeout observation reaches its terminal event within 3,500 ms of the initial report",
+    "A cancellation admitted behind an unanswered renewal is confirmed by the peer's response with result null within the 1,000 ms command deadline; this corrects the timeout recorded by native-worker-renewal-cancel-v1.json",
+    "On macOS the harness fails its pending owner-loss cancellation assertion against the preceding helper and against the updated worker built with the seven-patch SDK"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "harness_sha256": "36393721ff03a461c9a15b4148639e3f40aaf817382b37e628c7b6d5203aab35",
+      "harness_output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "f1bf59b59dcd8776fc456843eae28da56d7be1298171202ba5e9009457965954",
+      "software_run_result_sha256": "f6f97fcfb538369269e1a081c0f43077b05c05c32572d366e092d56e157364a9",
+      "software_run_tests": 35,
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:pending CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "image": "sha256:56d4ada5aec0e937abbbd89bb3aee5f3ad790175b04c8dfa34f9587aab5f6248",
+      "worker_sha256": "c9a6401e35523b86756e7ac3ee0b1c5fac8b765018ea6f13a2e601a691df423b",
+      "harness_sha256": "48440da07a66596ebf8662749a1222cb012e6a7d66c33ebb1fbfde07ccffd2f5",
+      "build_log_sha256": "e331888a9e2907744b843277938f9e5adf75328e9d256aa15d726e7e5eaf9800",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "sanitizers": ["address", "undefined", "leak"]
+    }
+  ],
+  "unaccepted": [
+    "An intervening Observe response before a renewal or cancellation is confirmed",
+    "Concurrent requests before a peer that uses the RFC 8613 Appendix B.1.2 Echo exchange",
+    "Independent-stack OSCORE interoperability"
+  ]
+}

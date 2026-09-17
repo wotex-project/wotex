@@ -36,6 +36,7 @@ static coap_resource_t *observed_resource;
 static int notification, notification_streamed, notification_inline_large;
 static int notification_value;
 static int initial_max_age_zero;
+static int cancel_silent;
 static const char server_conf[] =
     "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
     "master_salt,hex,\"\"\n"
@@ -132,6 +133,10 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
                     assert(renewal_mid != 0 && mid != renewal_mid);
                 }
                 cancel_count++;
+                if (cancel_silent) {
+                    coap_pdu_set_code(response, COAP_EMPTY_CODE);
+                    return;
+                }
             } else {
                 if (notification && observe_count == 1)
                     zero_max_age_at = now_ms();
@@ -699,6 +704,7 @@ static void renewal_fault_observation(const char *executable, int mode,
                                       const char *value) {
     char directory[192], command[8192], output[131072], expected[512];
     int input[2], result[2], status;
+    int64_t reported_at;
     pid_t child;
     unsigned port;
     coap_context_t *context;
@@ -766,6 +772,7 @@ static void renewal_fault_observation(const char *executable, int mode,
           "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
     stage = "fault initial report";
     line(context, result[0], output, sizeof(output));
+    reported_at = now_ms();
     assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
     assert(strstr(output, "\"max_age\":0}"));
     assert(snprintf(expected, sizeof(expected),
@@ -773,6 +780,10 @@ static void renewal_fault_observation(const char *executable, int mode,
           "\"event\":\"error\",\"value\":%s,\"metadata\":{}}\n", value) > 0);
     stage = "fault terminal";
     exact(context, result[0], expected);
+    /* Max-Age 0 renews after one second and each fault ends within the renewal
+     * timeout. The terminal cancellation must not wait for libcoap's five-second
+     * OSCORE first-response hold behind an unanswered renewal. */
+    assert(now_ms() - reported_at < 3500);
     for (unsigned attempt = 0; attempt < 100 && cancel_count == 0; attempt++)
         assert(coap_io_process(context, 1) >= 0);
     if (mode == 3) assert(cancel_count == 1);
@@ -868,15 +879,21 @@ static void renewal_cancel_observation(const char *executable) {
     write_all(input[1],
         "{\"version\":1,\"id\":\"4\",\"operation\":\"cancel\",\"parameters\":{"
         "\"subscription_id\":\"2\",\"generation\":7},\"timeout_ms\":1000}\n");
+    /* The peer's response to the cancellation confirms it within the command
+     * deadline; the unanswered renewal does not hold the cancellation back. */
     stage = "renew cancel result";
     exact(context, result[0],
-          "{\"version\":1,\"id\":\"4\",\"ok\":false,\"error\":{"
-          "\"code\":\"timeout\"}}\n");
+          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
     assert(cancel_count == 1);
     assert(!coap_resource_notify_observers(observed_resource, NULL));
+    assert(close(input[1]) == 0);
+    deadline = now_ms() + 1000;
+    while (now_ms() < deadline)
+        assert(coap_io_process(context, 1) >= 0);
+    assert(cancel_count == 1);
     assert(waitpid(child, &status, 0) == child);
-    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
-    close(input[1]); close(result[0]);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 127);
+    close(result[0]);
     coap_free_context(context);
     snprintf(command, sizeof(command), "%s/contexts.v1", directory);
     assert(unlink(command) == 0);
@@ -886,6 +903,132 @@ static void renewal_cancel_observation(const char *executable) {
     initial_max_age_zero = 0;
     renewal_fault = 0;
     renewal_mid = 0;
+}
+
+/* Owner EOF while a registration (0), renewal (1) or cancellation (2) is still
+ * awaiting the peer. Each must end with one original-token cancellation on the
+ * wire and custody must reap the worker within the owner-loss bound. */
+static void pending_owner_eof_observation(const char *executable, int phase) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status = 0;
+    int64_t began, deadline;
+    pid_t child, waited = 0;
+    unsigned port;
+    coap_context_t *context;
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-pending-%d",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-pending-%d",
+#endif
+                    (long)getpid(), phase) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]); close(result[1]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    observe_token_length = 0;
+    renewal_mid = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_value = 0;
+    initial_max_age_zero = phase == 1;
+    renewal_fault = phase == 1 ? 4 : 0;
+    cancel_silent = phase == 2;
+    context = server(&port);
+    stage = "pending owner ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":9,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "pending owner open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":true,\"accept\":0},\"timeout_ms\":5000}\n");
+    deadline = now_ms() + 3000;
+    if (phase == 0) {
+        /* The peer is not serviced, so the registration stays unanswered in
+         * its socket buffer while the worker sends it and the owner exits. */
+        struct timespec pause = {0, 200000000L};
+        stage = "pending owner registration";
+        assert(nanosleep(&pause, NULL) == 0);
+        assert(observe_count == 0);
+    } else {
+        stage = "pending owner establish";
+        exact(context, result[0],
+              "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+              "\"subscription_id\":\"2\",\"generation\":9}}\n");
+        write_all(input[1],
+            "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+            "\"generation\":9,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+        stage = "pending owner credit";
+        exact(context, result[0],
+              "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+        stage = "pending owner initial";
+        line(context, result[0], output, sizeof(output));
+        assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+        if (phase == 1) {
+            stage = "pending owner renewal";
+            while (observe_count < 2 && now_ms() < deadline)
+                assert(coap_io_process(context, 1) >= 0);
+            assert(observe_count == 2);
+        } else {
+            write_all(input[1],
+                "{\"version\":1,\"id\":\"4\",\"operation\":\"cancel\",\"parameters\":{"
+                "\"subscription_id\":\"2\",\"generation\":9},\"timeout_ms\":5000}\n");
+            stage = "pending owner cancellation";
+            while (cancel_count < 1 && now_ms() < deadline)
+                assert(coap_io_process(context, 1) >= 0);
+        }
+    }
+    assert(cancel_count == (phase == 2 ? 1u : 0u));
+    began = now_ms();
+    assert(close(input[1]) == 0);
+    deadline = began + 1000;
+    while (now_ms() < deadline && (cancel_count == 0 || waited == 0)) {
+        assert(coap_io_process(context, 1) >= 0);
+        if (!waited) {
+            waited = waitpid(child, &status, WNOHANG);
+            assert(waited >= 0);
+        }
+    }
+    /* Keep servicing briefly so a duplicate cancellation would be counted. */
+    while (now_ms() < began + 1000)
+        assert(coap_io_process(context, 1) >= 0);
+    assert(cancel_count == 1);
+    assert(waited == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 127);
+    close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+    cancel_silent = 0;
+    initial_max_age_zero = renewal_fault = 0;
 }
 
 static void overloaded_observation(const char *executable, int event_kind) {
@@ -1431,6 +1574,7 @@ int main(int argc, char **argv) {
     assert(rmdir(directory) == 0);
     stale_observation(argv[1]);
     owner_eof_observation(argv[1]);
+    for (int phase = 0; phase < 3; phase++) pending_owner_eof_observation(argv[1], phase);
     saturated_owner_eof_observation(argv[1]);
     renewal_fault_observation(argv[1], 1,
                               "{\"code\":\"remote_response\",\"status\":128}");

@@ -7,13 +7,12 @@ worker now owns durable open, bounded upload state and close. Its libcoap engine
 executes unary requests and protected Observe registration, inline or streamed
 reports, report credit, Max-Age renewal, stale cleanup and cancellation. The
 production path also executes renewal failures and bounded Property/Event
-overload. Native serial admission, protected wraparound, the in-flight
-renewal/cancel deadline path and established-observation owner-EOF cleanup
-execute. The protected worker also progresses under an actually full owner
-output pipe and tears down within C03; BEAM Port-mailbox sampling remains.
-Pending-registration owner loss, authenticated duplicate/stale injection,
-successful race confirmation and intervening-response ordering, the independent
-secure matrix and complete software closure remain targets. Native and software
+overload. Native serial admission, protected wraparound, confirmed in-flight
+renewal cancellation and owner-EOF cleanup for established or pending
+observations execute. The protected worker also progresses under an actually
+full owner output pipe and tears down within C03; BEAM Port-mailbox sampling
+remains. Authenticated duplicate/stale injection, intervening-response ordering,
+the independent secure matrix and complete software closure remain targets. Native and software
 build orchestration is implemented with bounded, manifest-bound workspaces and
 native-vector probes. The software-run task now verifies that build and executes
 the owned independent libcoap UDP, PSK and PKI cohort, a same-stack OSCORE

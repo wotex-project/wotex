@@ -48,7 +48,12 @@ after authenticated Block2 assembly so a following request is not delayed by
 the internal five-second guard. The OSCORE Observe patch preserves the response
 Partial IV before libcoap temporarily substitutes the request Partial IV for AAD
 calculation, so the decrypted 24-bit Observe value advances with authenticated
-notifications. These fixed profile policies preserve libcoap's exchange ownership.
+notifications. The send-hold patch removes the OSCORE client hold that libcoap
+re-armed on every `coap_send`, because a client recipient context never leaves
+its initial replay state; while a request lacked a response, the next PDU
+construction otherwise blocked the worker for up to five seconds. The worker
+serializes exchanges and bounds each with its own deadline. These fixed profile
+policies preserve libcoap's exchange ownership.
 The native manifest records base archive, patches and
 resulting source hashes separately; it cannot describe this build as unmodified
 upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
@@ -215,16 +220,19 @@ peer starts at Observe FFFFFF and delivers zero next. It does not accept
 authenticated duplicate/stale injection through the complete worker. A further
 protected run cancels while renewal is in flight: when tracked cancellation is
 unavailable, the exchange submits an original-route/token public-API fallback,
-the peer receives it once with a new Message ID, and the command closes cleanly
-with `timeout` when no usable confirmation arrives. Successful race confirmation,
-an intervening Observe response before confirmation, replay, independent OSCORE
-interoperability and the final Mix-built helper remain unaccepted. Another
+the peer receives it once with a new Message ID, and the peer's response
+confirms the cancellation with `result: null` inside the 1,000 ms command
+deadline. An intervening Observe response before confirmation, replay,
+independent OSCORE interoperability and the final Mix-built helper remain
+unaccepted. Another
 protected run closes the public custody owner's input after establishment. The
 worker sends one original-route/token cancellation during exit cleanup, the peer
 removes its observer, and custody reaps the worker with exact owner-loss status
 within C03. Receiver death through the production BEAM owner executes in the
-same-stack software run described in N05. Owner loss during pending
-registration, renewal or cancellation remains unaccepted. A saturated
+same-stack software run described in N05. Owner EOF while a registration or
+renewal awaits the peer produces exactly one original-token cancellation during
+exit cleanup; owner EOF while a cancellation awaits the peer produces none. Each
+case reaps the worker with exact owner-loss status within C03. A saturated
 variant fills the actual owner output pipe to `EAGAIN`, stops owner reads and
 dispatches fourteen protected 16 KiB notifications across two credit intervals.
 Their base64 payload bytes exceed custody's 262,144-byte output capacity. Network

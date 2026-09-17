@@ -598,6 +598,20 @@ unavailable:
     return "native_unavailable";
 }
 
+const char *wco_exchange_abandon(struct wco_exchange *exchange,
+                                 const char *path, int accept_present,
+                                 uint16_t accept) {
+    if (!exchange || exchange->failed) return "connection_closed";
+    if (exchange->pending == WCO_PENDING_CANCEL) return NULL;
+    if (exchange->pending == WCO_PENDING_OBSERVE) {
+        /* A registration already sent may have created a peer observer. */
+        exchange->observing = 1;
+        exchange->active = 0;
+        exchange->pending = WCO_PENDING_NONE;
+    }
+    return wco_exchange_cancel(exchange, path, accept_present, accept);
+}
+
 int wco_exchange_io(struct wco_exchange *exchange) {
     if (!exchange || exchange->failed) return 0;
     if (coap_io_process(exchange->context, COAP_IO_NO_WAIT) < 0) {
@@ -695,6 +709,12 @@ const char *wco_exchange_renew(struct wco_exchange *exchange,
 const char *wco_exchange_cancel(struct wco_exchange *exchange,
                                 const char *path, int accept_present,
                                 uint16_t accept) {
+    (void)exchange; (void)path; (void)accept_present; (void)accept;
+    return "native_unavailable";
+}
+const char *wco_exchange_abandon(struct wco_exchange *exchange,
+                                 const char *path, int accept_present,
+                                 uint16_t accept) {
     (void)exchange; (void)path; (void)accept_present; (void)accept;
     return "native_unavailable";
 }

@@ -73,6 +73,12 @@ const char *wco_exchange_renew(struct wco_exchange *exchange,
 const char *wco_exchange_cancel(struct wco_exchange *exchange,
                                 const char *path, int accept_present,
                                 uint16_t accept);
+/* Owner-loss cleanup. Sends best-effort original-token cancellation for an
+ * established, renewing or still-pending registration; an already pending
+ * cancellation returns NULL so the caller can service its response. */
+const char *wco_exchange_abandon(struct wco_exchange *exchange,
+                                 const char *path, int accept_present,
+                                 uint16_t accept);
 int wco_exchange_io(struct wco_exchange *exchange);
 /* Blocks for at most timeout_ms until libcoap has network work or a timer
  * expires, or until an owner descriptor (-1 when unused) is ready. Returns
