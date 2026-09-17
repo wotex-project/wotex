@@ -203,6 +203,72 @@ async function run() {
     await historyOther.locator("#metric-catalogue").waitFor({state: "visible"});
     assert.equal(await historyOther.locator("#history-query").count(), 0);
     await historyOther.close();
+
+    const freshContext = await browser.newContext({viewport: {width: 1280, height: 900}});
+    const fresh = await freshContext.newPage();
+    fresh.setDefaultTimeout(15_000);
+    fresh.on("pageerror", (error) => errors.push(error.message));
+    let probingNoRoom = false;
+    fresh.on("console", (message) => {
+      const expected = probingNoRoom && message.text().includes("status of 404");
+      if (message.type() === "error" && !expected) errors.push(message.text());
+    });
+    const freshConnected = () => fresh.waitForFunction(() => window.liveSocket.isConnected() &&
+      document.querySelector("[data-phx-main].phx-connected") !== null);
+    const freshReport = () => fresh.evaluate(async () => (await fetch("/evidence/report.json")).json());
+    for (const [path, title] of [["/things", "No room"], ["/metrics", "No room"], ["/evidence", "No evidence yet"]]) {
+      await fresh.goto(new URL(path, origin).href);
+      await freshConnected();
+      assert.ok(await fresh.locator(`section.wl-empty[aria-label="${title}"]`).isVisible());
+      assert.equal(await fresh.locator("#metric-query, #register-td, #formal-verify").count(), 0);
+    }
+    probingNoRoom = true;
+    const noRoom = await fresh.evaluate(async () => {
+      const response = await fetch("/evidence/report.json");
+      return {status: response.status, text: await response.text()};
+    });
+    probingNoRoom = false;
+    assert.equal(noRoom.status, 404);
+    assert.ok(noRoom.text.startsWith("no room"));
+
+    await fresh.goto(new URL("/metrics", origin).href);
+    await freshConnected();
+    await fresh.locator("button[phx-click=start_room]").focus();
+    await fresh.keyboard.press("Enter");
+    await fresh.locator("#metric-query").waitFor({state: "visible"});
+    assert.ok(await fresh.locator('section.wl-empty[aria-label="No session measurements"]').isVisible());
+    assert.deepEqual((await freshReport()).runs, []);
+
+    const runThermal = async () => {
+      await fresh.goto(origin.href);
+      await freshConnected();
+      await fresh.locator("#run-thermal button[type=submit]").click();
+      await fresh.waitForURL("**/runs/**");
+      await fresh.goto(new URL("/metrics", origin).href);
+      await freshConnected();
+      await fresh.locator("#metric-query button[type=submit]").click();
+      const retained = fresh.locator('section[aria-label="Retained samples"] .wl-metric-value span');
+      await retained.waitFor({state: "visible"});
+      return Number(await retained.textContent());
+    };
+    const firstSamples = await runThermal();
+    assert.ok(firstSamples > 0);
+    await fresh.locator("button[phx-click=export_dataset]").click();
+    await fresh.waitForFunction(async () =>
+      (await (await fetch("/evidence/report.json")).json()).datasets.length === 1);
+    const frozen = (await freshReport()).datasets;
+    const laterSamples = await runThermal();
+    assert.ok(laterSamples > firstSamples);
+    const after = await freshReport();
+    assert.equal(after.runs.length, 2);
+    assert.deepEqual(after.datasets, frozen);
+
+    await fresh.goto(new URL("/evidence", origin).href);
+    await freshConnected();
+    await fresh.locator("#formal-verify button[type=submit]").click();
+    await fresh.getByText("no verified Maude engine is configured").first().waitFor({state: "visible"});
+    assert.deepEqual((await freshReport()).datasets, frozen);
+    await freshContext.close();
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       kind: "local_source_browser_cohort", node: process.version, playwright: version,
@@ -214,7 +280,8 @@ async function run() {
         "dashboard-deep-link", "dashboard-download", "history-panels", "history-keyboard-submit",
         "history-mobile-reflow", "history-reload-no-replay", "history-session-isolation",
         "approval-keyboard-submit", "approval-reconnect-no-replay", "cancel-reconnect-no-dispatch",
-        "hostile-td-escaped", "no-llm-composer-disabled"],
+        "hostile-td-escaped", "no-llm-composer-disabled", "fresh-session-empty-states",
+        "keyboard-room-start", "frozen-dataset-immutable", "formal-engine-unavailable"],
       status: "passed", artifact_adoption: false, wcag_certification: false
     }));
   } finally { await browser.close(); }

@@ -49,7 +49,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 48,
+  "attempt": 49,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -103,7 +103,7 @@
     }
   ],
   "durations": {
-    "run_ms": 32800
+    "run_ms": 33600
   },
   "fixtures": {
     "model:thermal-control-v1": "sha256:04d49d3e2f8c80e4b1e1199bbc41a22f410c76bbb7606a378a5b0be3ae005b13"
@@ -125,11 +125,11 @@
     "safe_properties": 5,
     "test_count": 49
   },
-  "revision": "b622637eccdc20688478e31f8ae84e245e2d536d",
+  "revision": "30b55b061919e420216b47dca0d35d28fa95e997",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:85e3da28919b41dbecf867085c69fd1d55858a75f5be49006b36a36eca702402",
+  "source_tree_digest": "sha256:537b9d077fc74dbb6a2de4e5f57322ff6bc23f87f92fe9f8451b46d41fdd4a86",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

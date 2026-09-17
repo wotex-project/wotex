@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.10.0. Contract: accepted.
+Specification version: 0.11.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -52,7 +52,13 @@ in the evidence report. A run cancelled before approval stays undispatched
 across a reconnect. A registered Thing Description whose title holds image and
 script markup must render that title as text, with no created element, dialog
 or executed handler. Without a configured provider the investigation composer
-is disabled, names that reason and shows no data disclosure. It is not part of the
+is disabled, names that reason and shows no data disclosure. A separate browser
+context then sees the Things, Metrics and Evidence empty states with no room
+controls, and the evidence report refuses with 404 while no room exists. It
+starts a room from the keyboard, runs the thermal experiment twice and freezes
+the retained measurements between the runs: the live sample count grows while
+the frozen dataset in the report stays identical, and a formal verification
+request without an engine reports the unavailable engine. It is not part of the
 twelve-check `mix check` host gate and requires an operator-owned server plus an
 explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
 source evidence, not the complete WLB.08 browser matrix or a WCAG certification.

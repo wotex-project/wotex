@@ -82,7 +82,10 @@ reflow, reload without replay and session isolation. A later run of the same
 cohort added a keyboard-submitted smart-room approval around LiveView socket
 reconnects without replay, a cancelled run that stays undispatched, a Thing
 Description title with image and script markup rendered as text, and the
-disabled investigation composer without a provider. The first run of the
+disabled investigation composer without a provider, and then a fresh browser
+context with its empty states, a keyboard-started room, a frozen dataset that
+stays unchanged while live measurements grow, and the unavailable formal
+engine. The first run of the
 history checks found a 10-pixel horizontal overflow at 375 pixels, which the
 host stylesheet now prevents. This is neither a stable-browser compatibility
 matrix, WCAG certification nor installed-artifact evidence.
