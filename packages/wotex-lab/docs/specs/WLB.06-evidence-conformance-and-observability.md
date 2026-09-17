@@ -1,6 +1,6 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.6.1. Contract: accepted. Source status: implemented.
+Specification version: 1.7.0. Contract: accepted. Source status: implemented.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
@@ -151,7 +151,7 @@ user. Only seccomp and masked system paths are relaxed, so Bubblewrap can create
 its unprivileged namespaces. It prints the image identity, package versions and
 the log digest, then removes the container and workspace.
 
-`Wotex.Lab.Conformance.KernelContainment` profile 1.0.0 is the kernel-isolated
+`Wotex.Lab.Conformance.KernelContainment` profile 1.1.0 is the kernel-isolated
 profile, recorded in the
 [kernel-isolated profile decision](../decisions/0009-kernel-isolated-conformance-profile.md).
 `external_map/6` takes an operator-provisioned OCI runtime command line admitted
@@ -167,6 +167,16 @@ left in the PID namespace. The evidence descriptor carries limits, mechanism,
 runtime digest and image reference but no path or label. Each map has a random
 label; `residue/3` counts and `release/3` force-removes containers carrying it,
 both through one bounded runtime command.
+
+`run_map/5` contains work that has no subject archive: it takes the same runtime,
+command and home, and at most sixteen absolute host files and directories that
+are bound read-only at their own paths. Every other flag, limit, deadline and
+evidence field is the one above, so a contained notebook is contained exactly
+like a contained target. Its `:network` option is `:none` by default. The
+`{:internal, name}` variant instead joins a network that the caller created
+without egress, and the evidence then reads `internal:<name>` rather than
+`none`, so a run that could reach a peer container is never counted as
+no-network evidence. WLB.07 owns what that variant executes.
 
 `test/wotex/lab/kernel_containment_test.exs` covers admission without a
 process. `test/wotex/lab/kernel_containment_lane_test.exs`, selected with

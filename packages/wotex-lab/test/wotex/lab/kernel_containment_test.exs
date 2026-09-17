@@ -155,6 +155,59 @@ defmodule Wotex.Lab.KernelContainmentTest do
     end
   end
 
+  test "a subject-free run mounts its files and names its network variant", context do
+    notebook = Path.join(context.home, "run.livemd")
+    File.write!(notebook, "# run\n")
+    command = ["/usr/local/lib/erlang/bin/erl", "-noshell", "-eval", "halt(0).", "-extra", notebook]
+
+    assert {:ok, %{run: run, evidence: evidence, label: label}} =
+             KernelContainment.run_map(
+               context.runtime,
+               command,
+               [context.code, notebook],
+               context.home,
+               timeout_ms: 20_000
+             )
+
+    assert label =~ ~r/\A[0-9a-f]{32}\z/
+    assert run.executable == context.runtime.executable
+    assert run.timeout_ms == 20_000
+    refute Map.has_key?(run, :artifact_path)
+    assert "--network=none" in run.args
+    assert "--mount=type=bind,source=#{notebook},target=#{notebook},readonly" in run.args
+    assert "--mount=type=bind,source=#{context.code},target=#{context.code},readonly" in run.args
+    assert List.last(run.args) == notebook
+    assert evidence["network"] == "none"
+    assert evidence["schema_version"] == KernelContainment.profile().version
+    assert evidence["host_mounts"] == %{"mode" => "read-only", "count" => 2}
+    refute inspect(evidence) =~ context.home
+
+    assert {:ok, %{run: internal, evidence: internal_evidence}} =
+             KernelContainment.run_map(
+               context.runtime,
+               command,
+               [notebook],
+               context.home,
+               network: {:internal, "wotex-lab-agent-net"}
+             )
+
+    assert "--network=wotex-lab-agent-net" in internal.args
+    refute "--network=none" in internal.args
+    assert internal_evidence["network"] == "internal:wotex-lab-agent-net"
+
+    for network <- [{:internal, "Bad Name"}, {:internal, ""}, :host, "none", {:internal, nil}] do
+      assert {:error, %Error{code: :invalid_options}} =
+               KernelContainment.run_map(context.runtime, command, [notebook], context.home,
+                 network: network
+               )
+    end
+
+    for subjects <- [[], :subjects, [context.code, context.code], ["relative.livemd"]] do
+      assert {:error, %Error{code: :invalid_path, details: %{field: :mounts}}} =
+               KernelContainment.run_map(context.runtime, command, subjects, context.home)
+    end
+  end
+
   test "files, mounts, limits and the runner argument ceiling are bounded", context do
     call = fn archive, mounts, home, opts ->
       KernelContainment.external_map(

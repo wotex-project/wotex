@@ -23,7 +23,7 @@ adds an operator stack that the Lab cannot provision from a Mix project.
 
 ## Decision
 
-`Wotex.Lab.Conformance.KernelContainment` profile 1.0.0 runs an untrusted target
+`Wotex.Lab.Conformance.KernelContainment` profile 1.1.0 runs an untrusted target
 with an operator-provisioned OCI runtime command line and a digest-pinned image.
 The runtime file is admitted by SHA-256 after symbolic-link resolution. The
 image is never pulled. Every run uses:
@@ -37,6 +37,11 @@ image is never pulled. Every run uses:
 - `/usr/bin/timeout --signal=KILL` as PID 1, with an inner deadline three
   seconds before the runner deadline. Both deadlines are fixed hostile-target
   budgets; measured wall times belong in the WLB.06 record, not in the limits.
+
+Profile 1.1.0 additionally exposes `run_map/5` for contained work without a
+subject archive and an explicit `:network` option: `:none` keeps the isolated
+namespace, and `{:internal, name}` joins a caller-created network with no
+egress and is recorded as a separate evidence value.
 
 When PID 1 exits, the kernel kills every remaining process in the PID
 namespace, so detached descendants cannot outlive the run. Each target map

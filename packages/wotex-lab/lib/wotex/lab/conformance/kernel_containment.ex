@@ -23,8 +23,13 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
   loaded host, and the WLB.06 lane records the observed wall times instead of
   tightening it. Images are never pulled.
 
-  `external_map/6` builds the runner configuration, a path-free evidence
-  descriptor and a random container label. It validates files and digests and
+  `external_map/6` builds the conformance runner configuration, a path-free
+  evidence descriptor and a random container label. `run_map/5` builds the same
+  contained invocation for work that has no subject archive, such as a notebook
+  evaluated from read-only mounts, and accepts `:network`. `:none`, the default,
+  keeps the loopback-only network namespace; `{:internal, name}` instead joins an
+  operator-created network that the caller must have created without egress, and
+  the evidence names that variant so it is never read as `network=none` evidence. It validates files and digests and
   starts no process. `residue/3` and `release/3` are explicit, bounded runtime
   calls that count and force-remove any container still carrying that label.
   The container runtime daemon, its kernel and the pinned image remain trusted
@@ -38,15 +43,17 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
 
   alias Wotex.Lab.Error
 
-  @profile_version "1.0.0"
+  @profile_version "1.1.0"
   @runner_margin_ms 3_000
   @archive_placeholder "{subject_archive}"
   @label_key "wotex.lab.containment"
   @max_runner_args 64
   @max_command_args 40
   @max_mounts 16
+  @max_binds 17
   @max_runtime_bytes 134_217_728
-  @option_keys ~w(timeout_ms max_output_bytes cpu_seconds cpu_millis memory_bytes processes open_files tmpfs_bytes)a
+  @option_keys ~w(timeout_ms max_output_bytes cpu_seconds cpu_millis memory_bytes processes open_files tmpfs_bytes network)a
+  @network ~r|\A[a-z0-9][a-z0-9_.-]{0,62}\z|
   @defaults %{
     timeout_ms: 15_000,
     max_output_bytes: 1_048_576,
@@ -112,21 +119,56 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
           {:ok, %{target: map(), evidence: map(), label: String.t()}} | {:error, Error.t()}
   def external_map(runtime, command, archive, mounts, temporary_directory, opts \\ []) do
     with :ok <- option_keys(opts),
-         {:ok, limits} <- limits(opts),
+         :ok <- placeholder(command),
+         :ok <- archive(archive),
+         :ok <- mounts(mounts, @max_mounts),
+         {:ok, invocation} <-
+           contained(runtime, command, [archive | mounts], temporary_directory, opts) do
+      {:ok,
+       %{
+         target: Map.put(invocation.run, :artifact_path, archive),
+         evidence: invocation.evidence,
+         label: invocation.label
+       }}
+    end
+  end
+
+  @doc """
+  Builds a contained invocation for work that carries no subject archive.
+
+  `subjects` lists at most sixteen absolute host files and directories, each
+  mounted read-only at the same path; `command` needs no archive placeholder.
+  The returned `:run` map holds the same executable, arguments, environment and
+  bounds as a contained target, and the evidence names the network variant.
+  """
+  @spec run_map(runtime(), [String.t()], [Path.t()], Path.t(), keyword()) ::
+          {:ok, %{run: map(), evidence: map(), label: String.t()}} | {:error, Error.t()}
+  def run_map(runtime, command, subjects, temporary_directory, opts \\ []) do
+    with :ok <- option_keys(opts),
+         :ok <- subjects(subjects),
+         do: contained(runtime, command, subjects, temporary_directory, opts)
+  end
+
+  defp subjects(subjects) when is_list(subjects) and subjects != [], do: :ok
+
+  defp subjects(_),
+    do: invalid(:invalid_path, "a contained run needs at least one subject", %{field: :mounts})
+
+  defp contained(runtime, command, mounts, temporary_directory, opts) do
+    with {:ok, limits} <- limits(opts),
+         {:ok, network} <- network(opts),
          {:ok, executable, runtime_digest, image} <- runtime(runtime),
          :ok <- command(command),
-         :ok <- archive(archive),
-         :ok <- mounts(mounts),
+         :ok <- mounts(mounts, @max_binds),
          :ok <- directory(temporary_directory),
          label = label(),
-         args = run_args(image, command, archive, mounts, limits, label),
+         args = run_args(image, command, mounts, limits, network, label),
          :ok <- argument_count(args) do
       {:ok,
        %{
-         target: %{
+         run: %{
            executable: executable,
            args: args,
-           artifact_path: archive,
            environment: %{
              "HOME" => temporary_directory,
              "LANG" => "C",
@@ -135,9 +177,24 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
            timeout_ms: limits.timeout_ms,
            max_output_bytes: limits.max_output_bytes
          },
-         evidence: evidence(limits, runtime_digest, image, length(mounts) + 1),
+         evidence: evidence(limits, runtime_digest, image, length(mounts), network),
          label: label
        }}
+    end
+  end
+
+  defp network(opts) do
+    case Keyword.get(opts, :network, :none) do
+      :none ->
+        {:ok, :none}
+
+      {:internal, name} when is_binary(name) ->
+        if Regex.match?(@network, name),
+          do: {:ok, {:internal, name}},
+          else: invalid(:invalid_options, "contained network name is not admitted")
+
+      _ ->
+        invalid(:invalid_options, "contained network must be none or an internal network")
     end
   end
 
@@ -359,12 +416,22 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
       Path.type(first) != :absolute or first == @archive_placeholder ->
         invalid(:invalid_arguments, "contained command must start with an absolute path")
 
+      true ->
+        :ok
+    end
+  end
+
+  defp command(_), do: invalid(:invalid_arguments, "contained command must be a bounded list")
+
+  defp placeholder(command) when is_list(command) do
+    cond do
       Enum.count(command, &(&1 == @archive_placeholder)) != 1 ->
         invalid(:invalid_arguments, "contained command requires exactly one archive placeholder")
 
       Enum.any?(
         command,
-        &(String.contains?(&1, @archive_placeholder) and &1 != @archive_placeholder)
+        &(is_binary(&1) and String.contains?(&1, @archive_placeholder) and
+              &1 != @archive_placeholder)
       ) ->
         invalid(:invalid_arguments, "archive placeholder must occupy one complete argument")
 
@@ -373,7 +440,7 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
     end
   end
 
-  defp command(_), do: invalid(:invalid_arguments, "contained command must be a bounded list")
+  defp placeholder(_), do: invalid(:invalid_arguments, "contained command must be a bounded list")
 
   defp archive(path) when is_binary(path) do
     with true <- Path.type(path) == :absolute and not unsafe?(path),
@@ -387,7 +454,7 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
   defp archive(_),
     do: invalid(:invalid_path, "archive must be an absolute regular file", %{field: :archive})
 
-  defp mounts(mounts) when is_list(mounts) and length(mounts) <= @max_mounts do
+  defp mounts(mounts, ceiling) when is_list(mounts) and length(mounts) <= ceiling do
     cond do
       length(mounts) != length(Enum.uniq(mounts)) ->
         invalid(:invalid_path, "mounts must be distinct", %{field: :mounts})
@@ -396,16 +463,18 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
         :ok
 
       true ->
-        invalid(:invalid_path, "mounts must be absolute existing directories", %{field: :mounts})
+        invalid(:invalid_path, "mounts must be absolute existing files or directories", %{
+          field: :mounts
+        })
     end
   end
 
-  defp mounts(_),
+  defp mounts(_, _),
     do: invalid(:invalid_path, "mounts must be a bounded list", %{field: :mounts})
 
   defp mount?(path) when is_binary(path) do
     Path.type(path) == :absolute and path != "/" and not unsafe?(path) and
-      match?({:ok, %File.Stat{type: :directory}}, File.lstat(path))
+      match?({:ok, %File.Stat{type: type}} when type in [:directory, :regular], File.lstat(path))
   end
 
   defp mount?(_), do: false
@@ -446,14 +515,14 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
         })
   end
 
-  defp run_args(image, command, archive, mounts, limits, label) do
+  defp run_args(image, command, mounts, limits, network, label) do
     [
       "run",
       "--rm",
       "--interactive",
       "--pull=never",
       "--label=" <> @label_key <> "=" <> label,
-      "--network=none",
+      network_arg(network),
       "--read-only",
       "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=#{limits.tmpfs_bytes}",
       "--cap-drop=ALL",
@@ -471,8 +540,7 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
       "--ulimit=cpu=#{limits.cpu_seconds}:#{limits.cpu_seconds}",
       "--ulimit=nofile=#{limits.open_files}:#{limits.open_files}",
       "--ulimit=fsize=#{limits.max_output_bytes}:#{limits.max_output_bytes}",
-      "--ulimit=core=0:0",
-      bind(archive)
+      "--ulimit=core=0:0"
     ] ++
       Enum.map(mounts, &bind/1) ++
       [
@@ -485,6 +553,9 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
 
   defp bind(path), do: "--mount=type=bind,source=#{path},target=#{path},readonly"
 
+  defp network_arg(:none), do: "--network=none"
+  defp network_arg({:internal, name}), do: "--network=" <> name
+
   defp cpus(millis),
     do:
       "#{div(millis, 1_000)}.#{millis |> rem(1_000) |> Integer.to_string() |> String.pad_leading(3, "0")}"
@@ -492,12 +563,12 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
   defp seconds(ms),
     do: "#{div(ms, 1_000)}.#{ms |> rem(1_000) |> Integer.to_string() |> String.pad_leading(3, "0")}"
 
-  defp evidence(limits, runtime_digest, image, host_mounts) do
+  defp evidence(limits, runtime_digest, image, host_mounts, network) do
     %{
       "schema_version" => @profile_version,
       "kind" => "wotex_lab_conformance_kernel_containment",
       "mechanism" => "oci-linux-namespaces-cgroup-v2",
-      "network" => "none",
+      "network" => network_evidence(network),
       "root_filesystem" => "read-only",
       "writable" => "tmpfs",
       "host_mounts" => %{"mode" => "read-only", "count" => host_mounts},
@@ -522,6 +593,9 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
       }
     }
   end
+
+  defp network_evidence(:none), do: "none"
+  defp network_evidence({:internal, name}), do: "internal:" <> name
 
   defp inner_wall_ms(runner_timeout_ms), do: max(runner_timeout_ms - @runner_margin_ms, 1)
 

@@ -69,7 +69,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 53,
+  "attempt": 54,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -169,11 +169,11 @@
     }
   ],
   "durations": {
-    "container_concurrent_ms": 833,
-    "container_corpora_td_ms": 7557,
-    "container_corpora_tm_ms": 3795,
-    "container_isolation_ms": 485,
-    "run_ms": 54000
+    "container_concurrent_ms": 836,
+    "container_corpora_td_ms": 7241,
+    "container_corpora_tm_ms": 3380,
+    "container_isolation_ms": 405,
+    "run_ms": 50100
   },
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154",
@@ -200,15 +200,15 @@
     "container_test_count": 5,
     "excluded_count": 1,
     "linux_test_count": 17,
-    "test_count": 58,
+    "test_count": 59,
     "thing_description_vectors": 16,
     "thing_model_vectors": 8
   },
-  "revision": "42b5592c8dd044ceb389cedef05a187587c28de7",
+  "revision": "2fe704fd7c02096bda8f0d382bc8aeaab12652fe",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:20b7c43c5055d0e422e3188b8df82e7a336c32c58847398f1dedd8b712291164",
+  "source_tree_digest": "sha256:68f120a464b91df6efb32ce85ed5ba3502f37ddb48f501fafb76f4956de6eaab",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",
