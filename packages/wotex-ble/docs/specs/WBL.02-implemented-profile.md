@@ -3,9 +3,9 @@ spec:
   id: WBL.02
   title: "Implemented BLE profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-ble
-  updated: 2026-09-09
+  updated: 2026-09-17
 ---
 
 # WBL.02 Implemented BLE profile
@@ -34,20 +34,19 @@ interprets a caller's requested security level as proof of BlueZ link security.
 
 ## Persistent implementation
 
-The current persistent backend is the packaged Python/dbus-next helper, selected
-explicitly with `lifecycle: :persistent` and an absolute Python executable.
-It owns a private D-Bus sender, bounded discovery generation, explicit Agent
+The persistent backend is the first-party C++ host from WBL.13, selected
+explicitly with `lifecycle: :persistent` and the complete verified host and
+runtime guardian path/SHA-256 cohort. No interpreter backend remains. It owns a private D-Bus sender, bounded discovery generation, explicit Agent
 pairing, acknowledged procedures, health and notification/indication streams.
 Typed Peer/Characteristic/Value APIs and Property/Event Runtime relays are
 implemented. `connection: :borrowed` preserves ordinary borrowed links; pending
 Pair sender loss can separately cause BlueZ to disconnect the peer. Explicit
 pairing never authorizes removing bonds or registering a default Agent.
 
-Fifteen native adapter cases use real BlueZ and virtual controllers; they are
-Python adapter/shared-stack evidence. The C++ .13 backend, completed public
-BEAM/Runtime virtual-peer lane and complete stress acceptance are not established
-by those results. The accepted native target preserves the domain API and adds
-its exact backend identity and bounded credit protocol.
+The Mix-built host passes the 10 public BLE and Runtime cases against real BlueZ
+and virtual controllers in both BEAM lanes. Complete stress acceptance is not
+established by those results. The native backend preserves the domain API and
+adds its exact backend identity and bounded credit protocol.
 
 ## Evidence and compatibility
 

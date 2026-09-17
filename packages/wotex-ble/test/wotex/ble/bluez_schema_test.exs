@@ -101,7 +101,17 @@ defmodule Wotex.BLE.BlueZSchemaTest do
 
   test "WBL-C02 explicit native options reject ambiguity before process acquisition" do
     peer = %{adapter: "/adapter", address: "00:11:22:33:44:55", address_type: :public}
-    options = [peer: peer, bus_address: "unix:path=/tmp/bus", executable: "/usr/bin/python3"]
+    digest = String.duplicate("a", 64)
+
+    options = [
+      peer: peer,
+      bus_address: "unix:path=/tmp/bus",
+      executable: "/opt/wotex/host",
+      executable_sha256: digest,
+      guardian: "/opt/wotex/guardian",
+      guardian_sha256: digest
+    ]
+
     assert {:ok, %{timeout: 5000, parameters: %{"connection" => "borrowed"}}} = Options.new(options)
     assert {:ok, _} = Options.new(Keyword.put(options, :bus_address, "unix:abstract=private-bus"))
 
@@ -117,7 +127,10 @@ defmodule Wotex.BLE.BlueZSchemaTest do
           Keyword.put(options, :connection, :auto),
           Keyword.put(options, :timeout, 0),
           Keyword.put(options, :timeout, 60_001),
-          Keyword.put(options, :executable, "python"),
+          Keyword.delete(options, :guardian),
+          Keyword.drop(options, [:executable_sha256, :guardian, :guardian_sha256]),
+          Keyword.put(options, :guardian_sha256, "A"),
+          Keyword.put(options, :executable, "host"),
           Keyword.put(options, :executable, String.duplicate("/", 4097)),
           Keyword.put(options, :bus_address, "tcp:host=remote"),
           Keyword.put(options, :bus_address, "unix:path=/tmp/x;unix:path=/tmp/y")

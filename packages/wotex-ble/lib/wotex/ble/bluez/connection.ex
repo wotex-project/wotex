@@ -4,9 +4,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   `connect/1` waits for the selected bridge to resolve the peer before returning
   an opaque handle. A complete native executable/digest/guardian/digest cohort
-  selects the first-party SDK host. Both files are verified under the original
-  startup deadline in a monitored worker before the guardian starts either
-  process. The prior explicit bridge shape remains available during migration.
+  selects the first-party SDK host and is required. Both files are verified
+  under the original startup deadline in a monitored worker before the guardian
+  starts either process.
   The caller supplies local `:bus_address` and peer identity; `:owner` defaults
   to the caller. `start_link/1` supports consumer supervision, and `session/1`
   retrieves the session.
@@ -191,13 +191,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   @impl GenServer
-  def handle_call(:open, from, %{status: :new} = state) do
-    if state.options.backend == :bluez_native do
-      {:noreply, verify_native(state, from)}
-    else
-      open_bridge(state, from, nil)
-    end
-  end
+  def handle_call(:open, from, %{status: :new} = state),
+    do: {:noreply, verify_native(state, from)}
 
   def handle_call(:session, _, %{status: :ready} = state) do
     {:reply,
@@ -460,31 +455,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
              status: :starting
          }}
 
-      :error when state.status == :new ->
-        {:stop, :normal, {:error, Error.new(:transport_unavailable)}, state}
-
       :error ->
         startup_failure(state, Error.new(:transport_unavailable))
     end
-  end
-
-  defp open_port(%{backend: :dbus_next, executable: executable}, nil) do
-    if File.regular?(executable) do
-      script = Path.join(to_string(:code.priv_dir(:wotex_ble)), "bluez/bridge.py")
-
-      {:ok,
-       Port.open({:spawn_executable, executable}, [
-         :binary,
-         :exit_status,
-         {:line, 131_071},
-         args: ["-s", "-E", "-B", script],
-         env: Enum.map(System.get_env(), fn {key, _} -> {String.to_charlist(key), false} end)
-       ])}
-    else
-      :error
-    end
-  rescue
-    _ -> :error
   end
 
   defp open_port(%{backend: :bluez_native}, %{executable: executable, guardian: guardian}) do
@@ -667,22 +640,6 @@ defmodule Wotex.BLE.BlueZ.Connection do
     _ -> {:noreply, close(state, :transport_error)}
   end
 
-  defp frame(
-         %{"version" => 1, "event" => "ready", "backend" => "dbus-next", "revision" => "0.2.3"} =
-           frame,
-         %{status: :starting} = state
-       )
-       when map_size(frame) == 4 do
-    remaining = state.options.deadline - now()
-
-    if remaining > 0 do
-      request(state.port, "open", "open", state.options.parameters, remaining)
-      {:noreply, %{state | status: :opening}}
-    else
-      {:noreply, close(state, :timeout)}
-    end
-  end
-
   defp frame(%{"id" => "open"} = frame, %{status: :opening} = state) do
     case timed_parse(frame, "open", state.options.deadline) do
       :expired ->
@@ -709,20 +666,6 @@ defmodule Wotex.BLE.BlueZ.Connection do
     case Response.parse(frame, "agent_reply") do
       {:ok, nil} -> {:noreply, %{state | policy_control: nil}}
       _ -> {:noreply, close(state, :pairing_rejected)}
-    end
-  end
-
-  defp frame(%{"subscription_id" => id} = frame, %{status: :ready} = state) do
-    subscription = state.subscriptions[id]
-    binding = if subscription, do: subscription.binding, else: nil
-
-    case Stream.report(frame, binding) do
-      :invalid ->
-        {:noreply, close(state, :invalid_response)}
-
-      event ->
-        if subscription, do: send(subscription.pid, {:ble_stream, id, event})
-        {:noreply, state}
     end
   end
 
@@ -1032,13 +975,12 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp issue(state, id, pending) do
     wire = Integer.to_string(state.counter + 1)
-    parameters = wire_parameters(state.options.backend, pending.operation, pending.parameters)
 
     request(
       state.port,
       wire,
       pending.operation,
-      parameters,
+      pending.parameters,
       max(pending.deadline - now(), 1)
     )
 
@@ -1249,8 +1191,6 @@ defmodule Wotex.BLE.BlueZ.Connection do
       else: {:noreply, close(state, :transport_error)}
   end
 
-  defp open_report_flow(%{report_flow: nil} = state, _, _, _), do: {:ok, state}
-
   defp open_report_flow(%{report_flow: flow} = state, id, owner, queue_limit) do
     case ReportFlow.open(flow, id, owner, queue_limit) do
       {:ok, updated} -> {:ok, %{state | report_flow: updated}}
@@ -1258,13 +1198,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp native_stream_retired?(%{report_flow: nil}, _), do: true
   defp native_stream_retired?(%{report_flow: flow}, id), do: not ReportFlow.active?(flow, id)
-
-  defp wire_parameters(:dbus_next, "subscribe", parameters),
-    do: Map.delete(parameters, "queue_limit")
-
-  defp wire_parameters(_, _, parameters), do: parameters
 
   defp now, do: System.monotonic_time(:millisecond)
 end

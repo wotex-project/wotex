@@ -45,9 +45,8 @@ The accepted backend is a first-party C++17 Port using libdbus and the real
 BlueZ service. A complete explicit SDK/digest/guardian/digest selector cohort
 now verifies both native artifacts under the original connection deadline,
 launches the SDK only through the guardian, and opens a fresh report-credit
-generation before the peer. The Python/dbus-next bridge remains the explicit
-migration backend when no native cohort is supplied. Complete public
-software-peer/stress evidence remains required.
+generation before the peer. Persistent mode requires that cohort; no interpreter
+backend remains. Complete public software-peer/stress evidence remains required.
 
 [WBL.13](docs/specs/WBL.13-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. Native value reports are admitted through a
@@ -68,12 +67,14 @@ only as a test peer.
 The package provides typed peer, UUID, address, characteristic and value APIs,
 plus two explicit Linux BlueZ backends. The default one-shot backend invokes a
 supplied `busctl` for an already connected characteristic. The persistent backend
-owns a packaged Python/dbus-next bridge and one unique D-Bus sender. It supports
+launches the verified C++ host through its process guardian and owns one unique
+D-Bus sender. It supports
 GATT discovery, explicit Agent pairing, live health, typed reads, acknowledged
 writes, notification/indication subscriptions and bounded cleanup.
 
-The persistent backend requires an installed Python interpreter with dbus-next
-0.2.3, a running BlueZ service, an explicit local bus address and a selected peer.
+The persistent backend requires the Linux host and runtime guardian built by
+`mix wotex.native.build` with their manifest SHA-256 digests, a running BlueZ
+service, an explicit local bus address and a selected peer.
 It does not install dependencies, start that service or power an adapter.
 `connection: :borrowed` leaves ordinary existing device connections intact;
 `:owned` explicitly allows connection establishment and owned-link cleanup.
@@ -99,8 +100,9 @@ Send `%{type: :read, service: 0x180F, characteristic: 0x2A19}` or an explicit
 `:write` with binary `value`. UUIDs accept short integers/text or canonical
 128-bit text. Handles are 1..65535; values are at most 512 bytes.
 
-For a persistent session, also select `lifecycle: :persistent`; `executable`
-then names Python. Supply a validated `Wotex.BLE.Peer`, `bus_address` and the
+For a persistent session, also select `lifecycle: :persistent`; `executable`,
+`executable_sha256`, `guardian` and `guardian_sha256` then name the built native
+host and runtime guardian. Supply a validated `Wotex.BLE.Peer`, `bus_address` and the
 explicit connection mode. `discover/2` returns paginated characteristic values;
 `Wotex.BLE.Characteristic.address/1` preserves an exact discovery generation.
 `read/3` and `write/4` accept `value_type` and `byte_order` options. `pair/2`

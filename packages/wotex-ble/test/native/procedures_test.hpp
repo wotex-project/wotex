@@ -19,7 +19,7 @@ struct Fixture {
   std::vector<Json> events;
   std::vector<std::string> methods;
   std::vector<unsigned char> value{0, 255, 52, 18};
-  std::string mode;
+  std::string mode, error_name = "org.bluez.Error.NotPermitted";
   Message pending;
   unsigned completions = 0;
   bool emit_ok = true, cancel_on_emit = false;
@@ -70,7 +70,7 @@ struct Fixture {
       pending.reset(dbus_message_ref(request));
       if (mode == "held") return;
       if (mode == "remote") {
-        session.peer.send(Message(dbus_message_new_error(request, "org.bluez.Error.NotPermitted", "private fixture diagnostic"))); return;
+        session.peer.send(Message(dbus_message_new_error(request, error_name.c_str(), "private fixture diagnostic"))); return;
       }
       Message response(dbus_message_new_method_return(request));
       if (mode == "malformed") {
@@ -298,6 +298,24 @@ inline void invariants(const std::string &bus_address) {
       const auto &failure = *fixture.result->failure;
       PROCEDURE_CHECK(failure.code() == (mode == "remote" ? "not_permitted" : mode == "malformed" ? "invalid_response" : "timeout"));
       PROCEDURE_CHECK(failure.envelope().dump().find("private") == std::string::npos);
+    }
+  }
+  // WBL-V05: bounded BlueZ names keep stable codes; only link loss closes the sender.
+  const std::pair<const char *, const char *> names[] = {
+    {"org.bluez.Error.NotPermitted", "not_permitted"}, {"org.bluez.Error.NotAuthorized", "not_authorized"},
+    {"org.bluez.Error.NotSupported", "not_supported"}, {"org.bluez.Error.InProgress", "busy"},
+    {"org.bluez.Error.InvalidOffset", "invalid_offset"}, {"org.bluez.Error.InvalidValueLength", "invalid_value_length"},
+    {"org.bluez.Error.ImproperlyConfigured", "improperly_configured"}, {"org.bluez.Error.Failed", "remote_error"},
+    {"org.bluez.Error.FutureCase", "remote_error"}, {"org.bluez.Error.NotConnected", "disconnected"}};
+  for (const std::string name : {"read", "write"}) {
+    for (const auto &[error, code] : names) {
+      Fixture fixture(bus_address); fixture.mode = "remote"; fixture.error_name = error;
+      fixture.start(name, name == "read" ? Json{{"address", address}} : write_parameters({1}));
+      const bool open = std::string(code) != "disconnected";
+      fixture.until([&] { return bool(fixture.result); }); fixture.clean(open);
+      PROCEDURE_CHECK(fixture.result->failure && fixture.methods.size() == 1 &&
+        fixture.result->write_submitted == (name == "write") &&
+        fixture.result->failure->envelope() == Json({{"code", code}, {"name", error}}));
     }
   }
   {

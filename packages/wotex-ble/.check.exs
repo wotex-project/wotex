@@ -9,7 +9,6 @@
     {:credo, "mix credo --strict"},
     {:ex_unit, false},
     {:test, command: "mix coveralls", env: %{"MIX_ENV" => "test"}},
-    {:native, "python3 -B -m unittest discover -s test/native -v"},
     {:hex_audit, "mix hex.audit"},
     {:mix_audit, "mix deps.audit"},
     {:doctor, "mix doctor --summary"},

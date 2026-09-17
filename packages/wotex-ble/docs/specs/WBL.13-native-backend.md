@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.20
+  version: 1.0.21
   owner: wotex-ble
   updated: 2026-09-17
 ---
@@ -712,8 +712,8 @@ sets test stimuli and observes indication Confirm calls. It never answers native
 client IPC. Its source/dbus-next hashes are fixture dependencies only; production
 ELF/runtime dependency inspection must contain no Python dependency. Generic VM,
 build, manifest, result and cleanup orchestration belongs to Mix/ExUnit.
-The existing virtual-controller results concern the Python adapter baseline;
-they define scenarios and do not establish execution of the accepted C++ helper.
+Earlier virtual-controller results for the retired Python adapter define
+scenarios only; they do not establish execution of the accepted C++ helper.
 
 Required implementation package WBL-P00: native host, libdbus event loop, bounded
 parser/output, unchanged BEAM connection API, backend readiness, all corpus cases

@@ -3,9 +3,9 @@ spec:
   id: WBL.10
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.3
+  version: 1.1.4
   owner: wotex-ble
-  updated: 2026-09-09
+  updated: 2026-09-17
 ---
 
 # WBL.10 Complete BlueZ GATT central software profile
@@ -13,7 +13,7 @@ spec:
 Read [WBL.00](WBL.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
 [WBL.11](WBL.11-standalone-client-and-preservation.md) fixes the native API, protocol workflows and concrete fixture contract.
 The accepted native backend is [WBL.13](WBL.13-native-backend.md). Current
-pure APIs, persistent Python D-Bus ownership, Runtime mapping and scoped virtual
+pure APIs, persistent native D-Bus ownership, Runtime mapping and scoped virtual
 BlueZ results are described separately in the implemented profile and provenance.
 A scripted D-Bus response proves a boundary, not a GATT exchange.
 

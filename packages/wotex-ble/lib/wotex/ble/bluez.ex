@@ -9,11 +9,10 @@ defmodule Wotex.BLE.BlueZ do
   Attribute values are limited to 512 bytes in both modes.
 
   With `lifecycle: :persistent`, `Wotex.BLE.BlueZ.Connection` owns the selected
-  peer and one unique D-Bus sender. A complete native SDK path/digest and
-  guardian path/digest cohort selects the first-party native host; both
-  executables are verified under the original startup deadline before the
-  guardian starts. The prior explicit Python/dbus-next executable shape remains
-  available during migration. Persistent mode implements GATT discovery,
+  peer and one unique D-Bus sender. Persistent mode requires the complete native
+  SDK path/digest and guardian path/digest cohort; both executables are verified
+  under the original startup deadline before the guardian starts the
+  first-party native host. Persistent mode implements GATT discovery,
   consumer-directed pairing, health probes, reads, acknowledged writes and
   value-change streams. The consumer supplies the local bus address and chooses
   borrowed or owned connection behavior.

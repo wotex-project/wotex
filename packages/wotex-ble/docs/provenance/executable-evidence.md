@@ -1,15 +1,17 @@
 # Executable evidence
 
-Current implementation: typed domain APIs, persistent Python/dbus-next ownership,
+Current implementation: typed domain APIs, persistent native host ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 250 tests, 46 declared interoperability/
-hardware exclusions; 58 Python contract tests; 96.2% coverage.
+local gate: 9 doctests, 17 properties and 263 tests, 49 declared interoperability/
+hardware exclusions; 95.9% coverage.
 The [virtual-controller fixture](virtual-controller.md) and its
 [software run receipt](software-run-v1.json) execute the 10 public BLE and
 Runtime interoperability tests against the Mix-built C++ host, real BlueZ 5.85
 and two virtual controllers in both BEAM lanes. Complete WBL-C09 stress, the
-remaining ported Python-lane scenarios and package evidence remain required.
+remaining scenarios from the retired Python adapter lane and package evidence
+remain required. The Python persistent adapter, its packaged helper and its
+unit tests are removed.
 Uncommitted fixture work is not acceptance evidence.
 
 Open finding: with a Runtime relay `max_queue_length` of 1, the buffered initial
@@ -325,8 +327,8 @@ watches and timers. A callback can close its own discovery owner.
 This peer implements the D-Bus boundary without a Bluetooth controller. These
 tests do not establish radio discovery, real BlueZ Connect/Pair/ReadValue/WriteValue,
 GATT notifications, the complete Port helper or the virtual-controller profile.
-The existing public Elixir connection still executes the separately described
-Python adapter baseline.
+The public Elixir connection now launches only the native host through its
+guardian; see the scripted protocol lane and virtual-controller receipts.
 
 The native connection cases issue actual D-Bus Connect and Disconnect methods to
 the private fixture service. Both owned and borrowed modes preserve an initially
@@ -447,6 +449,16 @@ request-only write options. Read/write sizes 0, 1, 2, 255, 256 and 512 are exerc
 unknown fields, invalid UUID/path/handle/generation types, stale snapshots,
 conflicting selectors, duplicate UUID matches and absent procedure flags.
 Malformed inputs cause no discovery or GATT request.
+
+Each of NotPermitted, NotAuthorized, NotSupported, InProgress, InvalidOffset,
+InvalidValueLength, ImproperlyConfigured, Failed, an unknown FutureCase and
+NotConnected is returned by the receiver for both read and write. The envelope
+keeps the bounded BlueZ name with its stable code (`remote_error` for Failed and
+unknown names); a write still reports submission once, and only NotConnected
+closes the sender. The retired Python unit tests previously held this table.
+On 2026-09-17, `mix test --include interop --seed 0 test/interop/native_bus_test.exs`
+passed 35 tests in the Linux arm64 ordinary lane and the ASan/UBSan lane (GCC
+12.2.0, libdbus 1.16.2 workspace).
 
 Lifecycle tests cover cancellation before submission, during discovery and while
 an acknowledgement is pending; unavailable submission-event capacity; selected

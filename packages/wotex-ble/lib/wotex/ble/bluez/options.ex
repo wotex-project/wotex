@@ -5,10 +5,9 @@ defmodule Wotex.BLE.BlueZ.Options do
   This implementation helper rejects unknown or duplicate options, validates
   an explicit `Wotex.BLE.Peer`, and admits only local Unix D-Bus addresses.
   The owner defaults to the caller, connection mode to borrowed, and timeout to
-  5000 ms within the accepted 1 to 60,000 ms range. The native backend is
-  selected only by the complete executable/digest/guardian/digest cohort; its
-  pure selector validation performs no filesystem access. The legacy bridge
-  shape remains admitted without that cohort while its callers migrate.
+  5000 ms within the accepted 1 to 60,000 ms range. The native host requires the
+  complete executable/digest/guardian/digest cohort; its pure selector
+  validation performs no filesystem access. There is no interpreter backend.
 
   Discovery pages have a limit from 1 to 64 and an optional 32-byte cursor.
   The live bridge separately validates cursor identity and generation. No
@@ -91,24 +90,11 @@ defmodule Wotex.BLE.BlueZ.Options do
   end
 
   defp backend(options) do
-    case Enum.filter(@native_fields, &Keyword.has_key?(options, &1)) do
-      [] ->
-        {:ok, %{backend: :dbus_next, executable: Keyword.fetch!(options, :executable)}}
-
-      fields when length(fields) == length(@native_fields) ->
-        selectors =
-          Keyword.take(
-            options,
-            [:executable, :executable_sha256, :guardian, :guardian_sha256]
-          )
-
-        case Artifacts.new(selectors) do
-          {:ok, artifacts} -> {:ok, %{backend: :bluez_native, artifacts: artifacts}}
-          {:error, %Error{} = error} -> {:error, error}
-        end
-
-      _ ->
-        {:error, Error.new(:invalid_options, :native_artifacts)}
+    with true <- Enum.all?(@native_fields, &Keyword.has_key?(options, &1)),
+         {:ok, artifacts} <- Artifacts.new(Keyword.take(options, [:executable | @native_fields])) do
+      {:ok, %{backend: :bluez_native, artifacts: artifacts}}
+    else
+      _ -> {:error, Error.new(:invalid_options, :native_artifacts)}
     end
   end
 end

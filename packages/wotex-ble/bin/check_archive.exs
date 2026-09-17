@@ -9,12 +9,6 @@ defmodule Wotex.BLE.Check.Archive do
     "README.md",
     "lib",
     "docs",
-    "priv/bluez/bridge.py",
-    "priv/bluez/client.py",
-    "priv/bluez/pairing.py",
-    "priv/bluez/procedures.py",
-    "priv/bluez/notifications.py",
-    "priv/bluez/requirements.txt",
     "priv/bluez/native/frame.hpp",
     "priv/bluez/native/bytes.hpp",
     "priv/bluez/native/agent.hpp",
@@ -94,6 +88,7 @@ defmodule Wotex.BLE.Check.Archive do
     Enum.each(@packaged, &packaged!(package, &1))
 
     development!(package)
+    interpreters!(package)
     identities!(package)
 
     dependencies!(project_root)
@@ -141,6 +136,19 @@ defmodule Wotex.BLE.Check.Archive do
 
     unless directories == [] do
       violation("archive contains development state")
+    end
+  end
+
+  # WBL-B01: the production package carries no interpreter program or pin.
+  defp interpreters!(package) do
+    files =
+      package
+      |> Path.join("**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.filter(&(Path.extname(&1) == ".py" or Path.basename(&1) == "requirements.txt"))
+
+    unless files == [] do
+      violation("archive contains Python runtime files")
     end
   end
 
