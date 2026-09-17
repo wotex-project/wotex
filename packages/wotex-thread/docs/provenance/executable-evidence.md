@@ -453,11 +453,47 @@ under ASan/UBSan/LeakSanitizer in all four Linux lanes of the following run
 `e6382087cf75e52d6899874935efa20cd1ab85c56fffe736b3b0839da2fd26d5`,
 `5300ba2e3ed4a5cf86758e0fc9a5df38a9da1fd92569768223c79d11d1395cd3` and
 `ce08179b1d8d2beb57b331cf54f0648fec8ca3c7a66c1ce9f0a6736b49f68608`); the
-arm64 Elixir 1.20.2 run failed three ExUnit cases, recorded with its correction
+arm64 Elixir 1.20.2 run failed three ExUnit cases, recorded with their correction
 below. Fixed `priv/openthread/streams.hpp` SHA-256 is
 `3c8d4d1287b0ebb8d625dc619979466264bd4a151c03f0f6919b95dcf64ed0cf` and
 `test/native/streams_test.cpp` is
 `a13f63b238e269dda39ce71bc542fa50410cda241bde6d6335ba3e8f9d5847b0`.
+
+## Graceful native close within the cleanup grace, 2026-09-17
+
+The connection wrote `close` and sent SIGTERM 40 ms later. A host or injected
+peer that had not replied by then was terminated, so a slow but correct close
+became forced termination, and under a concurrent lane the escript peer could be
+cut off mid-reply. That run's Elixir 1.20.2 arm64 lane returned
+`invalid_response` from one bridge disconnect and `cleanup_timeout` from the
+first sanitizer-host State connect. WTH.13 B02 gives the owner C03's 1000 ms
+grace before termination, so SIGTERM now follows `close` after 700 ms; SIGKILL
+remains at 900 ms and the cleanup deadline at 1000 ms.
+
+The longer grace exposed the sanitizer host's own close time on arm64: 498–522 ms
+to the close reply, which includes the explicit leak check after SDK teardown,
+and 981–1001 ms to exit because LeakSanitizer ran again at exit in the worker and
+guardian. Sanitizer hosts now default `leak_check_at_exit=0` through
+`__asan_default_options`; the explicit post-teardown check remains, and explicit
+environment options still override the default. Three measured closes of the
+rebuilt sanitizer host took 484–529 ms to reply and 490–536 ms to exit. The
+State software test now uses a 10000 ms connect bound and simulation node 24,
+distinct from the node IDs used by the other software modules.
+
+| Lane | Run | Native tests | Normal lane | Sanitizer lane | Result SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| Linux arm64, Elixir 1.18.4 / OTP 27.3.4.15 | 187226 ms | 6/6 | 166/166 | 25/25 | `bb2fa52ee96badd40cb21c901ff4ac76f57bc1f3fefd9de873de27101e60452d` |
+| Linux arm64, Elixir 1.20.2 / OTP 29.0.4 | 178633 ms | 6/6 | 166/166 | 25/25 | `86408ab696f61d839c89f54e7d20a5808f9c2c712838571a5b954e1bf78a236b` |
+| Linux x86_64 (emulated), Elixir 1.18.4 / OTP 27.3.4.15, `+JMsingle true` | 146450 ms | 6/6 | 166/166 | 25/25 | `4ccc494ff42cf4e5ef1317673484e753bb941b254be55780efb1bb04465d3000` |
+| Linux x86_64 (emulated), Elixir 1.20.2 / OTP 29.0.4, `+JMsingle true` | 150595 ms | 6/6 | 166/166 | 25/25 | `8837608f90728d604385fc8528acf3c658c9cacef73eaf2f04dcff864528fd82` |
+
+All four results report zero survivors and unchanged source identity.
+
+| Source | SHA-256 |
+| --- | --- |
+| `lib/wotex/thread/open_thread/connection.ex` | `205bc3396e28239c69baf6a6037fc07e9c0d72efa51d01b2cbc7fa86a196f42c` |
+| `priv/openthread/host.cpp` | `c2c9e82926cc22a383ef85668ffb4f0ce9657efd426bb8c67f4f12916416a802` |
+| `test/software/native_state_test.exs` | `4fab31812c31bf715ebf1848f2fae14fb246c74012f0af899099aa435ba02247` |
 
 ## Contract corpus binding, 2026-09-17
 

@@ -24,13 +24,14 @@ defmodule Wotex.Thread.NativeStateTest do
     options = [
       client: OpenThread,
       executable: System.fetch_env!("WOTEX_THREAD_HOST"),
-      radio_url: "spinel+hdlc+forkpty://#{System.fetch_env!("WOTEX_THREAD_RCP")}?forkpty-arg=3",
+      radio_url: "spinel+hdlc+forkpty://#{System.fetch_env!("WOTEX_THREAD_RCP")}?forkpty-arg=24",
       interface: "wthstate",
       storage_path: Path.join(directory, "settings"),
       storage_mode: :create_new,
       allow_network_creation: true,
       owner: self(),
-      timeout: 5000
+      # Sanitizer-host startup under a concurrent lane can exceed the 5000 ms default.
+      timeout: 10_000
     ]
 
     %{options: options}

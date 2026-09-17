@@ -909,7 +909,8 @@ defmodule Wotex.Thread.OpenThread.Connection do
   defp close(state, error) do
     Process.cancel_timer(state.start_timer)
     send_frame(state.port, "close", "close", %{}, now() + 900)
-    Process.send_after(self(), :terminate_bridge, 40)
+    # A graceful close keeps most of the 1000 ms cleanup grace before escalation.
+    Process.send_after(self(), :terminate_bridge, 700)
     Process.send_after(self(), :kill_bridge, 900)
     %{state | status: :closing, failure: error}
   end

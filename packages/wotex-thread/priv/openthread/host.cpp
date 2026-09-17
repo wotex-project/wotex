@@ -19,6 +19,10 @@
 #include <thread>
 #ifdef WOTEX_NATIVE_SANITIZERS
 #include <sanitizer/lsan_interface.h>
+// A sanitizer host checks leaks explicitly after SDK teardown and before its close
+// reply; skipping the duplicate at-exit check keeps a graceful close inside the
+// owner's cleanup grace. Explicit environment options still take precedence.
+extern "C" const char *__asan_default_options() { return "leak_check_at_exit=0"; }
 #endif
 
 extern "C" void otPlatReset(otInstance *) {
