@@ -1,0 +1,55 @@
+{
+  "schema": "wotex.coap.native-worker-stale-notification-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Authenticated stale notification injection through the manifest-verified Mix-built OSCORE helper and public native owner",
+  "standard": {
+    "name": "IETF Observing Resources in CoAP",
+    "revision": "RFC 7641 2015-09",
+    "sections": ["3.4"],
+    "summary": "A client orders notifications by Observe sequence number and does not treat an older notification as fresh within the 128-second window"
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "test/interop/oscore_test.exs": "bad235e0d4f17f1ac6346e20f4f3b2942a24ef385c89bfd5696fe469a2e05877",
+      "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
+      "native/oscore/observation.c": "f09c27e0f61b770bd95803fc9cd9fc5f4a8303786f31b699cb22b088bce4215b",
+      "native/oscore/worker.c": "fa33f577ec6d3debd6817f23133edd97210e01927a65e0a524b393f6f570a9c3",
+      "native/oscore/exchange.c": "1ef8f927c5d774b6b456ac9d28e9694fdb51995cb7b1fd53fe49ce895e95a37b",
+      "native/oscore/source.json": "f1b485c3cadd14bef0b099ce32033d326dd9ca840f00bbcad8e2da04058f7d0b"
+    }
+  },
+  "requirements": ["WCO-S03", "WCO-V13"],
+  "assertions": [
+    "The relay case subscribes through a UDP relay, delivers 40 and 41 and captures the confirmable authenticated notification carrying 41",
+    "Delivering that notification three more times back to back yields no value",
+    "After 42 is delivered, delivering the captured 41 three more times yields no value within 500 ms",
+    "The observation then delivers 43",
+    "Against a helper whose freshness admission never returns stale, the relay case delivers 41 again after 42 and fails",
+    "The same mutant still passes the back-to-back duplicate step, so that step does not by itself exercise freshness admission",
+    "No production source changes accompany this cohort"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "worker_sha256": "1d00d14db7d8fac8ac6cdc82a4a756d16ddfb3c072571b805d166e052f3935b7",
+      "software_run_result_sha256": "544c9f5b3bfe75b3dd0212dd81b0a7a80aa922e4f235ce17dc91e3030d883547",
+      "software_run_tests": 35
+    },
+    {
+      "platform": "macOS arm64",
+      "result": "failed as expected",
+      "command": "mix test test/interop/oscore_test.exs:321 --include interop --include software --seed 0 with WOTEX_COAP_NATIVE_WORKER set to the mutant helper",
+      "mutation": "native/oscore/observation.c returns no stale admission for an equal or older serial inside 128 seconds",
+      "worker_sha256": "35715051185e1ae133f4e3e7e990fcebb7286edf20906815ebe62157f8205775",
+      "failure": "refute_receive after replaying 41 following 42 received payload 41"
+    }
+  ],
+  "unaccepted": [
+    "The live replay window of 32 for concurrent duplicate ciphertexts",
+    "Which layer before freshness admission discards the back-to-back duplicate",
+    "Independent-stack OSCORE interoperability"
+  ]
+}

@@ -17,12 +17,12 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "349b045ece45918b5d00b32e9373a54493d1263c4a48cee4ec6b71ad47e8973a",
-    "peer_executable_sha256": "2d1abb958e45e577e6d3c366466def65d78c309603e383622c079d71b1e8682d",
+    "native_helper_sha256": "1d00d14db7d8fac8ac6cdc82a4a756d16ddfb3c072571b805d166e052f3935b7",
+    "peer_executable_sha256": "16b037bc10e32fddf31820584ab75997c83dc5f2ee6c197d689cd55e41947080",
     "version": "4.3.5"
   },
   "source_identity": {
-    "aggregate_sha256": "ee970d8299459bd80728e6142148e4eb59cc7ef24293ce2760fb0eb9c24f883d",
+    "aggregate_sha256": "222147b16bb145052a3509f522b844ec438c6a861e036383a95f92a2953fa155",
     "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
     "selected_files": {
       "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
@@ -33,7 +33,7 @@
       "test/interop/dtls_pki_test.exs": "904dc82410941ed7e29a67f7518c13db09005bc49a7a9c1b587f935021dc8b24",
       "test/interop/dtls_test.exs": "01a4fe710e24cb98868c266659d3e9c817e2c8e36a4e2a63eb39c6fb7f3ac184",
       "test/interop/libcoap_test.exs": "dec95bf3e905bf57526836e0db40ab6955559494b26541ef4cf28f9a84f17d49",
-      "test/interop/oscore_test.exs": "37417f88f9d7bb928695a14ec09c716e7bb2cc25e23de9dd117abf6dade1177f",
+      "test/interop/oscore_test.exs": "bad235e0d4f17f1ac6346e20f4f3b2942a24ef385c89bfd5696fe469a2e05877",
       "test/software/lifecycle_stress_test.exs": "e40fdbbdc1b4d5120915cafc28fee670e07104e6641271cfcc72a06a4bd062fb",
       "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
       "test/support/libcoap_peer.ex": "361f280b66191d2d0fdb8f0417e4461b7d924781ce1874434a9f1895833052ea",
@@ -43,10 +43,10 @@
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "2fe6dcdb18b274c2f6fa3351b9e04607e513b14feaadad5ee3c4349a33a7327c",
-    "nested_native_manifest_sha256": "f5632960364a1e61a2a34b725965bb4e7d5b3213457d2acc119aad3ded045842"
+    "manifest_sha256": "7ce30a3a0208c565df9557fa72f60a609d4b1842fb26a7b16f81570a68a5c3d0",
+    "nested_native_manifest_sha256": "2efaffffb3e44d16595fca9183e855b153f722ddb94c64ec02d3f4e051d1b545"
   },
-  "result_sha256": "312384408f02bb2447fa8235204084e9d4784de3a51030348aff31fed72c99f8",
+  "result_sha256": "544c9f5b3bfe75b3dd0212dd81b0a7a80aa922e4f235ce17dc91e3030d883547",
   "result": {
     "cleanup": {
       "assertion_source": "interop peer owners plus build-command process-group cleanup",
@@ -75,7 +75,7 @@
     "dependency_hashes": {
       "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
     },
-    "elapsed_ms": 36538,
+    "elapsed_ms": 36302,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
@@ -87,8 +87,8 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "2d1abb958e45e577e6d3c366466def65d78c309603e383622c079d71b1e8682d",
-      "wotex-coap-oscore": "349b045ece45918b5d00b32e9373a54493d1263c4a48cee4ec6b71ad47e8973a"
+      "coap-server": "16b037bc10e32fddf31820584ab75997c83dc5f2ee6c197d689cd55e41947080",
+      "wotex-coap-oscore": "1d00d14db7d8fac8ac6cdc82a4a756d16ddfb3c072571b805d166e052f3935b7"
     },
     "scenario_ids": [
       "WCO-C03",
@@ -110,12 +110,12 @@
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "ee970d8299459bd80728e6142148e4eb59cc7ef24293ce2760fb0eb9c24f883d",
+    "source_sha256": "222147b16bb145052a3509f522b844ec438c6a861e036383a95f92a2953fa155",
     "status": "passed",
     "test_log": {
       "bytes": 4192,
       "path": "tests.log",
-      "sha256": "14133ae8cc4252da989a97ce071dd29514061d29f9e51cec8e6a3f1fb408bd19"
+      "sha256": "25fffe9cc8940af07687d4c163e0e28f0178984b2a6eecaaced395d783815f45"
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
@@ -133,30 +133,30 @@
   "resource_trends": {
     "udp": {
       "beam_total_bytes": [
-        76952683,
-        77530011
+        76803145,
+        77267793
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        77274204,
-        77766636
+        77072586,
+        77592458
       ]
     },
     "dtls_pki": {
       "beam_total_bytes": [
-        79341956,
-        79939908
+        79320690,
+        79836786
       ]
     },
     "oscore": {
       "beam_total_bytes": [
-        79583781,
-        79830677
+        79539603,
+        79698395
       ],
       "helper_rss_kib": [
-        1936,
-        1936
+        1920,
+        1920
       ]
     },
     "kind": "BEAM :erlang.memory(:total) bytes and helper RSS KiB sampled every 100 of 1000 sequential operations; reported, not asserted"
@@ -169,7 +169,7 @@
     "Twelve same-stack OSCORE cases pass through the manifest-verified Mix-built helper and the public native owner",
     "A relayed confirmable response with an unused token and an empty OSCORE option cannot end the active protected GET",
     "A relayed malformed datagram carrying the request MID and token cannot end the active protected GET",
-    "A captured authenticated notification delivered three more times yields no second value, and the next change is delivered",
+    "A captured authenticated notification delivered three more times yields no second value; delivered again after a newer notification it yields none, and the next change is delivered",
     "An unprotected 2.05 with the observation token and a tag-altered genuine notification do not cancel the observation; the next change is delivered",
     "After receiver death every confirmable peer message is acknowledged or reset with its message ID before the helper exits",
     "Protected GET/PUT/POST/DELETE, a negative status as details.code, a 43,500-byte echoed body and discovery succeed before a graceful close that releases the helper and makes the context identity require fresh keying",
@@ -190,7 +190,7 @@
   ],
   "unaccepted": [
     "Independent-stack OSCORE interoperability",
-    "Owner loss during pending Observe registration, renewal or cancellation, and authenticated duplicate/stale or replay injection through the software run",
+    "Owner loss during pending Observe registration, renewal or cancellation, and live replay-window injection through the software run",
     "Actual BEAM Port-mailbox sampling and reserved-control delivery with both channels saturated",
     "The complete native-v1 corpus through the production helper",
     "A Linux AddressSanitizer and UndefinedBehaviorSanitizer software-run lane",

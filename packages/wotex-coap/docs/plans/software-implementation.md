@@ -11,8 +11,8 @@ overload. Native serial admission, protected wraparound, confirmed in-flight
 renewal cancellation, intervening-notification ordering and owner-EOF cleanup
 for established or pending observations execute. The protected worker also
 progresses under an actually full owner output pipe and tears down within C03;
-BEAM Port-mailbox sampling remains. Authenticated duplicate/stale injection, the
-independent secure matrix and complete software closure remain targets. Native and software
+BEAM Port-mailbox sampling remains. The independent secure matrix and complete
+software closure remain targets. Native and software
 build orchestration is implemented with bounded, manifest-bound workspaces and
 native-vector probes. The software-run task now verifies that build and executes
 the owned independent libcoap UDP, PSK and PKI cohort, a same-stack OSCORE

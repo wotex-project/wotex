@@ -318,7 +318,7 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
     end
   end
 
-  test "WCO-S03 WCO-V13 replayed and duplicate protected notifications deliver no second value",
+  test "WCO-S03 WCO-V13 replayed, duplicate and stale protected notifications deliver no value",
        context do
     path = "/wotex-replay-#{System.unique_integer([:positive])}"
     {:ok, writer} = CoAP.connect(host: "127.0.0.1", port: context.port, timeout: 5_000)
@@ -344,6 +344,13 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
 
       assert {:ok, %Message{code: 68}} = CoAP.put(writer, path, "42", content_format: :text)
       assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "42"}, _}}, 5_000
+
+      # After 42, the authenticated 41 is older than the delivered serial.
+      for _ <- 1..3, do: :ok = DTLSRecordProxy.deliver(proxy, notification)
+      refute_receive {:wotex_coap, ^reference, _}, 500
+
+      assert {:ok, %Message{code: 68}} = CoAP.put(writer, path, "43", content_format: :text)
+      assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "43"}, _}}, 5_000
     after
       CoAP.disconnect(session)
       CoAP.disconnect(writer)

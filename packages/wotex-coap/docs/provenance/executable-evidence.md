@@ -674,13 +674,13 @@ Through an ExUnit UDP relay, a confirmable 2.05 with an empty OSCORE option and 
 token no request used arrives before the real response and the protected GET
 still succeeds, as it does after an ACK carrying the request's MID and token with
 an option length past the datagram. A captured authenticated notification
-delivered three more times yields no second value, and an unprotected 2.05 with
+delivered three more times yields no second value, delivering it again after a
+newer notification yields none, and an unprotected 2.05 with
 the observation token followed by the genuine notification with an altered tag
 leaves the observation delivering the next change. A further relay case records every datagram after receiver death:
 each confirmable peer message has an ACK or RST with its message ID before the
-helper exits. Pending-operation owner loss, authenticated duplicate/stale and
-replay injection, independent OSCORE interoperability and the stress matrix are
-outside this cohort.
+helper exits. Pending-operation owner loss, the live replay window, independent
+OSCORE interoperability and the stress matrix are outside this cohort.
 
 The [native worker stale-traffic receipt](native-worker-stale-traffic-v1.json)
 binds the fix for a failure that repeated Observe receiver-death generations
@@ -761,6 +761,14 @@ delivers report 2 with the new value. The preceding helper returns
 `security_handshake_failed` for the cancellation and ends the renewed observation
 with `observation_failed`. With only the worker change, the confirmed cancellation
 returns `timeout`; with only the patch, both cases fail as before.
+
+The [native worker stale-notification receipt](native-worker-stale-notification-v1.json)
+binds authenticated stale injection through the complete Mix-built helper. The
+relay replays notification 41 three times after 42 is delivered; no value
+follows and 43 is delivered next. Against a helper whose freshness admission
+never reports a stale serial, that relay case delivers 41 again. The same mutant
+still passes the earlier back-to-back duplicate, which a layer before freshness
+admission discards. No source changes accompany this cohort.
 
 Independent OSCORE interoperability, the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own

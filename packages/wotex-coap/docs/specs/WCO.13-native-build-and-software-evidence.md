@@ -219,8 +219,9 @@ changed Content-Format and deadline renewal faults with exact terminal codes,
 then exhausts report credit to prove latest-Property coalescing and terminal
 Event overlap. The native freshness primitive executes equal, older, half-range,
 128-second escape and representation-identity ordering cases, while a protected
-peer starts at Observe FFFFFF and delivers zero next. It does not accept
-authenticated duplicate/stale injection through the complete worker. A further
+peer starts at Observe FFFFFF and delivers zero next. The software run relays a
+captured authenticated notification after a newer one through the Mix-built
+helper and receives no value. A further
 protected run cancels while renewal is in flight: when tracked cancellation is
 unavailable, the exchange submits an original-route/token public-API fallback,
 the peer receives it once with a new Message ID, and the peer's response
@@ -626,7 +627,7 @@ configured with a matching OSCORE context: protected methods, negative status,
 bodies above the inline threshold, discovery, a 1 MiB Block1 upload and Block2
 download, an authentication failure, Observe changes from a second UDP client,
 receiver and owner death, context consumption after close, a real ConsumedThing
-read, uncorrelated and malformed relayed responses, replayed, tampered and
+read, uncorrelated and malformed relayed responses, replayed, stale, tampered and
 unprotected notifications, and acknowledgment of the peer's
 confirmable response to exit cancellation. Eight stress tests run each of UDP,
 DTLS PSK, DTLS PKI and OSCORE through 1,000 sequential operations, 32 correlated

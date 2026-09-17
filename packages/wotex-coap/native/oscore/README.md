@@ -63,8 +63,9 @@ executable.
 The [freshness receipt](../../docs/provenance/native-worker-freshness-v1.json)
 binds the worker's native equal/older/half-range/128-second admission primitive,
 including stale metadata ordering, and a protected same-stack FFFFFF-to-zero
-Observe wrap. Authenticated duplicate/stale injection through the complete
-protected exchange remains separate from that primitive evidence.
+Observe wrap. The [stale-notification receipt](../../docs/provenance/native-worker-stale-notification-v1.json)
+binds the same admission through the Mix-built helper: a captured authenticated
+notification relayed again after a newer one yields no value.
 
 The [renewal/cancel receipt](../../docs/provenance/native-worker-renewal-cancel-v1.json)
 binds a protected cancellation admitted while renewal remains in flight. It
