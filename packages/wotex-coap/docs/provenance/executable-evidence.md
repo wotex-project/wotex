@@ -861,6 +861,19 @@ sends a plaintext response with an unused token and requires no delivery and no
 protection event; it fails against the nine-patch SDK. The fifteen correlated
 plaintext variants still report exactly one protection failure each.
 
-Independent OSCORE interoperability, the remaining native fault scenarios and the
-clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
+The [clean-source receipt](clean-source-v1.json) runs `mix check` from `git clone
+--no-local` copies of the committed wotex, wotex-runtime and wotex-coap HEADs in
+Linux arm64 containers, once on Elixir 1.18.4 / OTP 27 and once on Elixir 1.20.2 /
+OTP 29, as an unprivileged user under an init process. Every configured tool passes
+on both runtimes, coverage is 95.3%, the archive tool compiles the Hex package out
+of tree and both runtimes produce archive
+`92d3b5cf75031456f718ecc7791b557d2f0b3d7066f5f0699abf29f096ffe291`, and the clones
+stay clean. The matrix first found four defects on OTP 27, fixed in `65945eb`,
+`a109595`, `1f013a4` and `6edd61b`: two Dialyzer opacity findings, a coalesced
+duplicate-reply fixture race, a fixture helper slow to stop on SIGTERM, and coverage
+of 94.9%. A root-run container also let a mode-0 artifact test read its file, so
+the lane runs unprivileged.
+
+Independent upstream-stack OSCORE interoperability and the helper half of native-v1
+F15 are not yet accepted. The historical Python result retains only its own
 recorded cohort.

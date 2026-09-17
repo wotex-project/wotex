@@ -673,9 +673,11 @@ committed-source/package gates. The current software-run receipt accepts only it
 stress cohort, 2-test saturation cohort and 12-test native corpus cohort. The
 49-test run passes on macOS arm64; the 47-test run of the preceding commit passes
 inside Linux arm64 containers on both required runtimes, whose builds compile the
-native vectors with ASan/UBSan. The remaining OSCORE independence, native fault
-corpus and clean-package matrix retains planned status until those assertions
-execute. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
+native vectors with ASan/UBSan. From fresh clones of committed sources, `mix check`
+passes on both required runtimes as an unprivileged user, including the Hex archive
+and out-of-tree compilation gate, and both runtimes produce the byte-identical
+archive. Upstream-stack OSCORE independence and the helper half of native-v1 F15
+retain planned status until those assertions execute. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute

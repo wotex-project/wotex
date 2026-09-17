@@ -1,0 +1,119 @@
+{
+  "schema": "wotex.coap.clean-source-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "mix check from fresh clones of committed sources, including the Hex archive and out-of-tree compilation gate, on both required Elixir/OTP runtimes",
+  "source_identity": {
+    "kind": "git clone --no-local of each committed HEAD inside the container; no working-tree copy",
+    "commits": {
+      "wotex": "eadc6c9f9c285faf9324b8a7396a001381098b6c",
+      "wotex-runtime": "65d0b521ccb6b7838fe37bf26bf9dac65b40cc68",
+      "wotex-coap": "6edd61b61c7e00164bd887ae6c8a6d02a7d4869e"
+    }
+  },
+  "environment": {
+    "dockerfile": "test/software/Dockerfile.linux",
+    "platform": "Linux arm64 (Docker Desktop VM on macOS arm64)",
+    "distribution": "Debian GNU/Linux 12 (bookworm)",
+    "container": "docker run --rm --init --cpus 4 --memory 6g with read-only source mounts; the check runs as unprivileged uid 1000 so permission-denial tests observe ordinary filesystem semantics",
+    "commands": [
+      "git clone --no-local SOURCE /work/src/REPOSITORY for wotex, wotex-runtime and wotex-coap",
+      "WOTEX_PATH_DEPS=1 mix deps.get",
+      "WOTEX_PATH_DEPS=1 mix check --no-retry"
+    ]
+  },
+  "lanes": [
+    {
+      "lane": "minimum",
+      "base_image": "hexpm/elixir@sha256:473f77ee88977dc8cc5d05fb91080a308be86be3fc27d50aef9a837d07c8268b",
+      "lane_image": "sha256:be9f6bf087b20759d42956f59427c85d9e19620a840725ff9c6db907e241c250",
+      "toolchain": "Elixir 1.18.4 (compiled with Erlang/OTP 27); erts-15.2.7.11",
+      "deps_exit": 0,
+      "check_exit": 0,
+      "tools_passed": [
+        "application_free",
+        "archive",
+        "compiler",
+        "coverage",
+        "credo",
+        "deps_get",
+        "dialyzer",
+        "diff",
+        "doctor",
+        "ex_doc",
+        "formatter",
+        "hex_audit",
+        "mix_audit",
+        "unused_deps"
+      ],
+      "tests": "3 doctests, 11 properties, 485 tests, 0 failures, 49 excluded",
+      "coverage_total": "95.3%",
+      "archive_sha256": "92d3b5cf75031456f718ecc7791b557d2f0b3d7066f5f0699abf29f096ffe291",
+      "clone_status_after_check": "clean",
+      "check_log_sha256": "3d42aa4dad9c5be12121165bc13a2088df864a61c1555d30989268415bf48b92"
+    },
+    {
+      "lane": "current",
+      "base_image": "hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da",
+      "lane_image": "sha256:67ab8e2499fd31740f43e06575240e57c2682c341cb43c4d52e5e759c9e111d2",
+      "toolchain": "Elixir 1.20.2 (compiled with Erlang/OTP 29); erts-17.0.4",
+      "deps_exit": 0,
+      "check_exit": 0,
+      "tools_passed": [
+        "application_free",
+        "archive",
+        "compiler",
+        "coverage",
+        "credo",
+        "deps_get",
+        "dialyzer",
+        "diff",
+        "doctor",
+        "ex_doc",
+        "formatter",
+        "hex_audit",
+        "mix_audit",
+        "unused_deps"
+      ],
+      "tests": "450 passed (3 doctests, 11 properties, 436 tests), 49 excluded",
+      "coverage_total": "95.3%",
+      "archive_sha256": "92d3b5cf75031456f718ecc7791b557d2f0b3d7066f5f0699abf29f096ffe291",
+      "clone_status_after_check": "clean",
+      "check_log_sha256": "dbcb79d2d04515f3e9023f9ad36ade6ec921eae649822acfbd1d9c0c7f1a5aa6"
+    }
+  ],
+  "assertions": [
+    "Both lanes clone committed HEADs and pass every configured mix check tool with exit 0",
+    "The archive tool builds the Hex package, checks its outer and packaged contents, development-artifact exclusion and dependency identities, and compiles it out of tree on both runtimes",
+    "Both runtimes produce the byte-identical Hex archive",
+    "The application-free tool confirms no Application callback and that starting the application and constructing PSK and PKI security values starts no SSL supervisor, on both runtimes",
+    "The cloned working trees stay clean after the full check"
+  ],
+  "defects_found": [
+    {
+      "observed": "Dialyzer on OTP 27 reported an opaque ets:tid type test and a contract supertype for Native.Body.new/0",
+      "fixed_by": "65945eb"
+    },
+    {
+      "observed": "A fixture helper wrote two open replies back to back; coalesced in one read they failed start instead of closing after it",
+      "fixed_by": "a109595"
+    },
+    {
+      "observed": "After a lost Port handle the fixture helper, an Elixir script, stopped gracefully on SIGTERM too slowly for the cleanup bound on OTP 27",
+      "fixed_by": "1f013a4"
+    },
+    {
+      "observed": "Coverage was 94.9% on OTP 27 against the 95% floor",
+      "fixed_by": "6edd61b adds tests for encoder, workspace and build-verification edges"
+    },
+    {
+      "observed": "Running the check as root let the unreadable-artifact test read a mode-0 file",
+      "fixed_by": "the lane runs as an unprivileged user"
+    }
+  ],
+  "unaccepted": [
+    "The macOS-arm64 clean clone check; macOS runs the same gate from the working tree",
+    "Hex dependency resolution without WOTEX_PATH_DEPS, which awaits published core and Runtime packages",
+    "Linux x86_64 and other distributions",
+    "Publication"
+  ]
+}
