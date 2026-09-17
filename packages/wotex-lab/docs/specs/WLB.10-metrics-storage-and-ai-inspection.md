@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.22.0. Contract: accepted. Source status: the metric
+Specification version: 0.23.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -610,6 +610,18 @@ terminate the investigation and revoke its query scope, not merely detach the
 UI caller. Local providers are supported; cloud model use requires explicit
 provider selection and disclosure of exactly which redacted data leaves the
 host. No automatic API-key discovery, model download or endless agent loop.
+`Investigation.Disclosure` derives that statement from configuration alone,
+and the browser composer shows it before a question is submitted. With
+`codex_then_ollama`, data leaves the host: Codex through the signed-in
+ChatGPT-plan account is attempted first, then the configured Ollama endpoint.
+With `ollama`, data stays on the host only when the configured base URL is plain
+HTTP on a loopback host. Any other endpoint is disclosed as leaving it. Either
+provider can receive the question (4 KiB), the fixed skill and operator
+instructions with catalogue metadata, the closed current and baseline run
+summaries (8 KiB), read-only callback results (16 KiB) and the node name,
+operating system, uptime and current time that BeamLens 0.3.1 adds.
+Credentials, session and room tokens, dataset rows, Thing Description documents
+and other sessions' data are not part of that content.
 
 The browser binds its revalidated live room and LiveView owner to the broker.
 There is one investigation for the entire trusted host, no queue, a 4 KiB
@@ -741,7 +753,9 @@ run note. Grounded findings are shown with escaped text and no Action seam.
 Uncited, fabricated and mixed citations are withheld, and a digest from an
 earlier investigation cannot ground a later one. Cancelling an agent blocked
 in a metric query kills the worker, closes its inspection scope and leaves no
-history lease. Cloud-disclosure evidence is not yet claimed. Local capability
+history lease. `investigation_disclosure_test.exs` covers cloud-first, loopback,
+non-loopback, unconfigured and unselected providers, and the browser
+investigation test finds the disclosure on the run page. Local capability
 scope substitution, bounded admission, blocked calls, expiry, cancellation,
 worker/owner/history death, history replacement and late-result rejection are
 covered by `metrics_gateway_test.exs`. The Workbench's

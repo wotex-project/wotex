@@ -69,7 +69,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 41,
+  "attempt": 42,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -169,7 +169,7 @@
     }
   ],
   "durations": {
-    "run_ms": 52500
+    "run_ms": 53900
   },
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154",
@@ -200,11 +200,11 @@
     "thing_description_vectors": 16,
     "thing_model_vectors": 8
   },
-  "revision": "a2e24080b390de0d17fd4be7af88b952a5dd93a9",
+  "revision": "a286b613e0b464a04d454f0ede51b4d2190399d4",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:8bb716b8f5e9ce56e1b6c1bea281ecda07a252eacb3d684d975b71daeac07483",
+  "source_tree_digest": "sha256:7400b086f0233935af046c1cd2cf6b343d95177d103dd69cc6503a72a7075987",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

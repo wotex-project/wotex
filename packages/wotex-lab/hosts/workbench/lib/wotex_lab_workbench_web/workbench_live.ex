@@ -28,7 +28,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Sessions
   }
 
-  alias WotexLabWorkbench.Investigation.{Answer, Broker, Provider, RunContext}
+  alias WotexLabWorkbench.Investigation.{Answer, Broker, Disclosure, Provider, RunContext}
 
   import WotexLabWorkbenchWeb.Components.HistoryPanels
   import WotexLabWorkbenchWeb.Components.Insights
@@ -56,6 +56,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:read_result, nil)
       |> assign(:answer, nil)
       |> assign(:investigation, investigation_state())
+      |> assign(:disclosure, Disclosure.current())
       |> refresh()
 
     {:ok, socket}
@@ -301,6 +302,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               insights={@insights}
               investigation={@investigation}
               answer={@answer}
+              disclosure={@disclosure}
             />
           <% :things -> %>
             <.things_view things={@things} room={@scope.room} read_result={@read_result} />
@@ -318,6 +320,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               room={@scope.room}
               answer={@answer}
               investigation={@investigation}
+              disclosure={@disclosure}
             />
         <% end %>
       </.shell>
@@ -432,6 +435,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :charts, :list, required: true
   attr :insights, :any, required: true
   attr :investigation, :map, required: true
+  attr :disclosure, :map, required: true
   attr :answer, :any, required: true
 
   defp run_view(assigns) do
@@ -492,6 +496,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         running={@investigation.state == :running}
         reason={prompt_reason(@investigation, true)}
         value={@investigation.prompt}
+        disclosure={@disclosure}
       />
       <.answer_block :if={@answer} answer={@answer} />
     </div>
@@ -671,6 +676,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :room, :any, required: true
   attr :answer, :any, required: true
   attr :investigation, :map, required: true
+  attr :disclosure, :map, required: true
 
   defp evidence_view(assigns) do
     properties = Enum.map(Formal.properties(), fn {id, text} -> {text, Atom.to_string(id)} end)
@@ -734,6 +740,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         running={@investigation.state == :running}
         reason={prompt_reason(@investigation, @snapshot.runs != [])}
         value={@investigation.prompt}
+        disclosure={@disclosure}
       /><.answer_block :if={@answer} answer={@answer} />
     </div>
     """

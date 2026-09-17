@@ -234,6 +234,13 @@ callbacks cannot issue Actions or select scope/endpoints. BeamLens
 explicit disclosure is why this profile is not admitted for shared hosted
 tenants.
 
+Before a question is submitted, the composer states whether investigation data
+leaves this host. With `codex_then_ollama` it does: Codex is attempted first,
+then the configured Ollama endpoint. With `ollama` it stays on the host only
+for a loopback base URL. The composer lists the bounded content a request can
+include, including the node name, operating system, uptime and current time
+that BeamLens adds.
+
 The browser revalidates the signed session and live room on every submit and
 cancel, then supplies only the selected run and nearest older same-experiment
 run through a closed summary. It renders one escaped terminal answer with

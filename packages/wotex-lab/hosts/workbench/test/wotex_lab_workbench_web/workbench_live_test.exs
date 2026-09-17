@@ -231,6 +231,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
        ]}
     end)
 
+    provider = Application.get_env(:wotex_lab_workbench, :beamlens_provider)
+    Application.put_env(:wotex_lab_workbench, :beamlens_provider, :codex_then_ollama)
+    on_exit(fn -> Application.put_env(:wotex_lab_workbench, :beamlens_provider, provider) end)
+
     conn = get(conn, "/")
     {:ok, view, _html} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
@@ -243,6 +247,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
     assert html =~ "Trusted-local only"
+    assert html =~ "Data leaves this host"
+    assert has_element?(run_view, "#investigation-disclosure li", "node name, operating system")
     refute has_element?(run_view, "#investigation textarea[disabled]")
 
     _html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Explain this run"})
