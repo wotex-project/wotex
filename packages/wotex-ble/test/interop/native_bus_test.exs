@@ -40,7 +40,7 @@ defmodule Wotex.BLE.NativeBusTest do
     assert {:ok, output, 0} =
              NativeCommand.bootstrap(
                bootstrap,
-               Path.join(@root, "test/interop/native/command.c"),
+               Path.join(@root, "priv/bluez/native/build_command.c"),
                guardian,
                options
              )

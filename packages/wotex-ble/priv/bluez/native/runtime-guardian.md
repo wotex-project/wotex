@@ -1,7 +1,7 @@
 # Native runtime custody contract
 
 This is the required runtime guardian contract. Its implementation and fault
-cases are separate from the tooling-only `test/interop/native/command.c` boundary, which sends
+cases are separate from the tooling-only `build_command.c` boundary, which sends
 `/dev/null` to the child and cannot carry a native session protocol.
 
 The portable guardian owns one explicitly selected SDK child in one process

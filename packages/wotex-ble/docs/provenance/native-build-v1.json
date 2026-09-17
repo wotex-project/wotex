@@ -1,0 +1,269 @@
+{
+  "schema": "wotex.ble.native-build-evidence@1",
+  "specification": "WBL.13@1.0.19",
+  "scope": "Explicit Mix native build of the first-party BlueZ SDK host, runtime guardian, pinned shared libdbus and private-bus fixture daemon in disposable Linux workspaces",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "lib/mix/tasks/wotex.ble.native.build.ex": "110d2f9cccce82a86b6d82342c7ee1e4e88b4da81baecbe32726d1dccc9e1b7b",
+      "lib/wotex/ble/native/bootstrap.ex": "1fbe4d2a397643b4a53b29c13c8d683b9aa132eb885a28c6ca8899b5fd1fd56f",
+      "lib/wotex/ble/native/build.ex": "06457e438802c9f33d3938e1dd6263eebc104b018f9b9a9af674a7660f283ff8",
+      "lib/wotex/ble/native/build_operations.ex": "3323767448a1f617df550606653a9ef4c6b2a38e80dde0224d74fa2f70d4769f",
+      "lib/wotex/ble/native/command.ex": "f9720faeb900be4837454e28c07517ad39f82e12ba849bec9b565f34e789d9bc",
+      "lib/wotex/ble/native/source.ex": "8e19fd327e591fe36eb0fa5c32c01b9a4d39be0af2a530a1923f16bba84ed9fe",
+      "lib/wotex/ble/native/workspace.ex": "11092e297d9f7be03c00a7f9a23343c9f80baf5feeae953ef4f9e379d37e16aa",
+      "priv/bluez/native/dependencies.json": "febc60faf7798033c7692db6088a7cf84cbf03a12ddd4e910739acdd610ca56c",
+      "priv/bluez/native/build_command.c": "2096f9796b249f1d9bcb463b282f4471b99b48c1041feb8ec2cbac79c5468174",
+      "priv/bluez/native/main.cpp": "761b5bfe8e121ceb2d04b8deec0fc99f0bbd702e33e696591d63c2078c81f1d2",
+      "priv/bluez/native/custody.c": "d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2",
+      "test/native/Dockerfile": "da24c174d52dc9bef5f25cc5babed5f193d32658b4ca99a809233a805df90c92",
+      "test/wotex/ble/native_build_test.exs": "db139f702020200fa9765d63e88e3ce402ba5027aea5dc52c44b9a3b84d59bbb",
+      "test/wotex/ble/native_source_test.exs": "c9319a80061a7be4c694fd611e293460192f5b83de2f64352486af3c1a84ea03"
+    }
+  },
+  "upstream": {
+    "libdbus": {
+      "version": "1.16.2",
+      "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz",
+      "archive_sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2"
+    },
+    "nlohmann/json": {
+      "version": "3.11.3",
+      "vendored_sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+    }
+  },
+  "requirements": [
+    "WBL-B01",
+    "WBL-B02",
+    "WBL-C09"
+  ],
+  "command": "docker run --platform PLATFORM IMAGE with sibling wotex, wotex-runtime and wotex-ble working trees copied to /code; WOTEX_PATH_DEPS=1 MIX_ENV=dev mix deps.get; mix compile; mix wotex.native.build --workspace /work/native (twice)",
+  "assertions": [
+    "The task admits exactly one absolute --workspace argument and requires Linux plus cmake, ninja, pkg-config, cc, c++, readelf and xz before workspace mutation",
+    "The libdbus archive arrives over verified HTTPS and matches its pinned SHA-256 before extraction of a regular-file tree",
+    "CMake/Ninja build the shared libdbus-1.so.3 and dbus-daemon with origin-relative runpaths only",
+    "wotex-ble-host links libdbus-1.so.3 through runpath $ORIGIN/../lib and has no Python runtime dependency",
+    "The actual host started with closed input emits exactly the pinned bluez-native ready frame and exits with status 1",
+    "native-manifest.json records schema wotex.native-build version 1, source/pin/tool/argument/feature/binary/log identity and advisory_scan not_performed",
+    "A second invocation verifies every recorded artifact digest read-only"
+  ],
+  "lanes": [
+    {
+      "platform": "Linux arm64 (native)",
+      "docker_platform": "linux/arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "image": "sha256:00d701682df01b444c4b7c349d0e1c201ec8faad93f97443c51c8bc0684f802a",
+      "base_image": "hexpm/elixir@sha256:473f77ee88977dc8cc5d05fb91080a308be86be3fc27d50aef9a837d07c8268b",
+      "runtime": "Elixir 1.18.4 / OTP 27.3.4.15",
+      "packages": {
+        "cmake": "3.25.1-1",
+        "ninja-build": "1.11.1-2~deb12u1",
+        "pkg-config": "1.8.1-1",
+        "gcc-12": "12.2.0-14+deb12u1",
+        "g++-12": "12.2.0-14+deb12u1",
+        "binutils": "2.40-2",
+        "xz-utils": "5.4.1-1+deb12u1",
+        "libexpat1-dev": "2.5.0-1+deb12u3"
+      },
+      "manifest_sha256": "adec17c2620a7125a33e046789ab949a5a46c94f611a3441235e4c1577d95fdb",
+      "target_triple": "aarch64-linux-gnu",
+      "source_revision": "9e26f3a28d7eafd902caaa57057c21d1330971d448c352c772202306b86705ba",
+      "binaries": {
+        "output/bin/wotex-ble-host": {
+          "sha256": "5b6b478def69aa5601dc913955f9a29e421193d322a9aad2fbd788204d81e77a",
+          "elf_machine": "AArch64",
+          "needed_libraries": [
+            "libdbus-1.so.3",
+            "libstdc++.so.6",
+            "libm.so.6",
+            "libgcc_s.so.1",
+            "libc.so.6"
+          ],
+          "runpath": "$ORIGIN/../lib",
+          "soname": null
+        },
+        "output/bin/wotex-ble-guardian": {
+          "sha256": "7d7dbf0be43557bcaa9337a009374c421b109b4e4811de5a96c94e16dbf3c9bf",
+          "elf_machine": "AArch64",
+          "needed_libraries": [
+            "libc.so.6"
+          ],
+          "runpath": null,
+          "soname": null
+        },
+        "output/bin/dbus-daemon": {
+          "sha256": "2c10665ec416fd4d723b349f495a52aa9763987842008fce44e9d8a3c82b945e",
+          "elf_machine": "AArch64",
+          "needed_libraries": [
+            "libdbus-1.so.3",
+            "libexpat.so.1",
+            "libc.so.6"
+          ],
+          "runpath": "$ORIGIN/../lib:",
+          "soname": null
+        },
+        "output/lib/libdbus-1.so.3": {
+          "sha256": "6498c03779cec1df9f9543355beb1068df51bdec5cd13586137aa50e107f5ce2",
+          "elf_machine": "AArch64",
+          "needed_libraries": [
+            "libc.so.6"
+          ],
+          "runpath": "$ORIGIN:",
+          "soname": "libdbus-1.so.3"
+        }
+      },
+      "ready_probe": {
+        "exit_status": 1,
+        "frame": {
+          "backend": "bluez-native",
+          "event": "ready",
+          "revision": "2123ab772fbe97d1369fc9e179ea87c3469cf98f",
+          "version": 1
+        },
+        "output_sha256": "5ed31958181054bc6c6d8e86e32076dffcfc457dfc441d79204edb47d076f3ba"
+      },
+      "reuse": "second invocation reported verified without rebuilding",
+      "step_logs": {
+        "compile": {
+          "sha256": "1fd2d3288ad322cce737ddba8f45d9a55afc373ae8e017613aca6254a218bec6",
+          "exit_status": 0,
+          "elapsed_ms": 1380
+        },
+        "configure": {
+          "sha256": "8ffa13a24a35f47ff7fccf1da65a6d10db5bf06062aadd6bb5cff48d5fde65a7",
+          "exit_status": 0,
+          "elapsed_ms": 4839
+        },
+        "guardian": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exit_status": 0,
+          "elapsed_ms": 85
+        },
+        "host": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exit_status": 0,
+          "elapsed_ms": 8271
+        },
+        "ready_probe": {
+          "sha256": "5ed31958181054bc6c6d8e86e32076dffcfc457dfc441d79204edb47d076f3ba",
+          "exit_status": 1,
+          "elapsed_ms": 19
+        }
+      }
+    },
+    {
+      "platform": "Linux x86_64 (Docker Desktop emulation)",
+      "docker_platform": "linux/amd64",
+      "result": "passed",
+      "exit_code": 0,
+      "image": "sha256:e3d56e633f64b3fff7fe5827598255db35ef76a7c950e139cfee531ed4a5e5e0",
+      "base_image": "hexpm/elixir@sha256:473f77ee88977dc8cc5d05fb91080a308be86be3fc27d50aef9a837d07c8268b",
+      "runtime": "Elixir 1.18.4 / OTP 27.3.4.15",
+      "packages": {
+        "cmake": "3.25.1-1",
+        "ninja-build": "1.11.1-2~deb12u1",
+        "pkg-config": "1.8.1-1",
+        "gcc-12": "12.2.0-14+deb12u1",
+        "g++-12": "12.2.0-14+deb12u1",
+        "binutils": "2.40-2",
+        "xz-utils": "5.4.1-1+deb12u1",
+        "libexpat1-dev": "2.5.0-1+deb12u3"
+      },
+      "manifest_sha256": "64b1f3712c317c94f1dad467371711b0e2e20a31e23a1e76540f8a40e034df43",
+      "target_triple": "x86_64-linux-gnu",
+      "source_revision": "9e26f3a28d7eafd902caaa57057c21d1330971d448c352c772202306b86705ba",
+      "binaries": {
+        "output/bin/wotex-ble-host": {
+          "sha256": "967b230be41cc2feab7808fbca80e46d1bc04f2622b53e59fd0735ab6932a17c",
+          "elf_machine": "Advanced Micro Devices X86-64",
+          "needed_libraries": [
+            "libdbus-1.so.3",
+            "libstdc++.so.6",
+            "libm.so.6",
+            "libgcc_s.so.1",
+            "libc.so.6"
+          ],
+          "runpath": "$ORIGIN/../lib",
+          "soname": null
+        },
+        "output/bin/wotex-ble-guardian": {
+          "sha256": "881710a4006106c131fde17f53842c71aca7be2d4eac5ba42c22bf36b23824d0",
+          "elf_machine": "Advanced Micro Devices X86-64",
+          "needed_libraries": [
+            "libc.so.6"
+          ],
+          "runpath": null,
+          "soname": null
+        },
+        "output/bin/dbus-daemon": {
+          "sha256": "8d6683df3f353d127a1d0233f850dd3a63741e5f48a5a23ae671c76371ab27f7",
+          "elf_machine": "Advanced Micro Devices X86-64",
+          "needed_libraries": [
+            "libdbus-1.so.3",
+            "libexpat.so.1",
+            "libc.so.6"
+          ],
+          "runpath": "$ORIGIN/../lib:",
+          "soname": null
+        },
+        "output/lib/libdbus-1.so.3": {
+          "sha256": "9e8740f7bbb320b275d00bf4439dfeed49cadbba2cb6c297277c37b9b289a861",
+          "elf_machine": "Advanced Micro Devices X86-64",
+          "needed_libraries": [
+            "libc.so.6"
+          ],
+          "runpath": "$ORIGIN:",
+          "soname": "libdbus-1.so.3"
+        }
+      },
+      "ready_probe": {
+        "exit_status": 1,
+        "frame": {
+          "backend": "bluez-native",
+          "event": "ready",
+          "revision": "2123ab772fbe97d1369fc9e179ea87c3469cf98f",
+          "version": 1
+        },
+        "output_sha256": "5ed31958181054bc6c6d8e86e32076dffcfc457dfc441d79204edb47d076f3ba"
+      },
+      "reuse": "second invocation reported verified without rebuilding",
+      "step_logs": {
+        "compile": {
+          "sha256": "8d182cf594a2f83b5bdbd6c563415487283a15f03a99b7b96b765830fc22d5f8",
+          "exit_status": 0,
+          "elapsed_ms": 7945
+        },
+        "configure": {
+          "sha256": "3394c783b5a10191b57c32e4d93e294416da418e66368b51ba42717cdf37599b",
+          "exit_status": 0,
+          "elapsed_ms": 57118
+        },
+        "guardian": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exit_status": 0,
+          "elapsed_ms": 556
+        },
+        "host": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exit_status": 0,
+          "elapsed_ms": 11830
+        },
+        "ready_probe": {
+          "sha256": "5ed31958181054bc6c6d8e86e32076dffcfc457dfc441d79204edb47d076f3ba",
+          "exit_status": 1,
+          "elapsed_ms": 36
+        }
+      }
+    }
+  ],
+  "unaccepted": [
+    "Automated advisory scanning for libdbus and the toolchain",
+    "Sanitizer native builds and ASan/UBSan execution of the complete host",
+    "mix wotex.software.build and mix wotex.software.run",
+    "Native contract corpus execution against this workspace, including WBL-B-F06 process ownership after the grace",
+    "A Linux x86_64 lane on x86_64 hardware; the recorded x86_64 lane runs under emulation",
+    "The minimum lane only; Elixir 1.20.2 / OTP 29.0.4 build execution is not recorded here",
+    "BlueZ, D-Bus or GATT interoperability"
+  ]
+}

@@ -26,7 +26,12 @@ defmodule Wotex.BLE.NativeGuardianStartupTest do
     custody = Path.join(@root, "priv/bluez/native/custody.c")
 
     assert {:ok, "", 0} =
-             NativeCommand.bootstrap(compiler, Path.join(native, "command.c"), command, options)
+             NativeCommand.bootstrap(
+               compiler,
+               Path.join(@root, "priv/bluez/native/build_command.c"),
+               command,
+               options
+             )
 
     for {name, input} <- [
           {"custody", custody},

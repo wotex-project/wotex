@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 /*
- * Explicit fixture command guardian. stdin is an owner-liveness pipe. The child
+ * Explicit build and fixture command guardian. stdin is an owner-liveness pipe. The child
  * receives /dev/null stdin and its own process group. stdout is a bounded,
  * nonblocking combined stdout/stderr stream. No command text is interpreted.
  *
@@ -27,7 +27,7 @@
  * Exit: child's 0..123, 124 deadline, 125 output bound, 126 setup/protocol error,
  * 127 owner EOF/signal/output consumer loss, 128 child signal, 129 cleanup failure.
  * The unreaped child pins the process-group identity until final cleanup. This
- * helper contains ordinary fixture descendants remaining in that group; it is
+ * helper contains ordinary build or fixture descendants remaining in that group; it is
  * not a sandbox for a child deliberately escaping with setsid/setpgid.
  */
 #define QUEUE_SIZE 65536U

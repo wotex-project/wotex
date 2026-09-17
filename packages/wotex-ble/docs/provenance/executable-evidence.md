@@ -3,8 +3,8 @@
 Current implementation: typed domain APIs, persistent Python/dbus-next ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 235 tests, 46 declared interoperability/
-hardware exclusions; 58 Python contract tests; 95.1% coverage.
+local gate: 9 doctests, 17 properties and 250 tests, 46 declared interoperability/
+hardware exclusions; 58 Python contract tests; 96.2% coverage.
 The [virtual-controller evidence](virtual-controller.md) identifies 15 real BlueZ
 cases with two software controllers. These exercise the Python adapter and a
 shared BlueZ wire stack. They do not execute the accepted C++ .13 backend.
@@ -62,6 +62,31 @@ native parser evidence, not D-Bus ownership, complete .13 flow control or GATT
 interoperability. The required Linux x86_64 reference lane remains separate.
 Production selection requires the complete verified SDK/guardian cohort described
 below; selection alone does not establish the remaining native flow obligations.
+
+## Native build workspace
+
+`test/wotex/ble/native_build_test.exs` and `native_source_test.exs` execute the
+WBL-B01 build contract in the default suite. Deterministic build operations
+drive the production recipe, workspace lock, manifest and audit code: exact
+arguments, tool and platform admission before mutation, manifest identity and
+read-only reuse, forged or changed manifests, retained failure locks and logs,
+architecture mismatch, failed or expired steps, missing libraries, Python and
+absolute-runpath dependencies, wrong sonames and malformed ready probes. The
+source tests admit the packaged libdbus pin, reject links and foreign archive
+roots, and transfer from a local verified-TLS server with trust, status, digest,
+size and deadline failures. The packaged command guardian is compiled and run
+for output, deadline and argument bounds, including a guardian that ignores
+them.
+
+The [native build receipt](native-build-v1.json) records two actual Linux runs
+of `mix wotex.native.build` from a Debian 12, Elixir 1.18.4 / OTP 27.3.4.15 image
+defined by `test/native/Dockerfile`: native arm64 and x86_64 under Docker Desktop
+emulation. Each downloads and verifies libdbus 1.16.2, builds the shared library,
+fixture daemon, host and guardian with GCC 12.2.0, CMake 3.25.1 and Ninja 1.11.1,
+and verifies reuse on a second invocation. The actual host emits the exact
+ready frame with closed input on both lanes. These runs establish artifact and
+startup identity only; advisory scanning, sanitizer builds, the software tasks,
+the complete native corpus and BlueZ/GATT execution remain open.
 
 ## Native report reservations
 

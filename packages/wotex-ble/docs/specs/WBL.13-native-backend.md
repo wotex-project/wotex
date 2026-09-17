@@ -3,9 +3,9 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.18
+  version: 1.0.19
   owner: wotex-ble
-  updated: 2026-09-09
+  updated: 2026-09-17
 ---
 
 # WBL.13 Native backend, build and IPC contract
@@ -63,6 +63,35 @@ Downloads are source archives from the pinned upstreams; no remote is configured
 Every required transitive SDK source is content-bound before compilation.
 Build failure, an unreviewed advisory, hash mismatch or missing required tool is
 nonzero. A manifest is not successful execution evidence.
+
+### Native build workspace
+
+`mix wotex.native.build` (qualified task `mix wotex.ble.native.build`) runs only
+on Linux. Before workspace mutation it resolves `cmake`, `ninja`, `pkg-config`,
+`cc`, `c++`, `readelf` and `xz` from the caller's `PATH` and records each path and
+executable SHA-256. The compiler's target architecture must equal the running
+BEAM architecture. The libdbus source is the pinned archive in
+`priv/bluez/native/dependencies.json`, transferred over verified HTTPS without
+redirects within 8 MiB and 120 seconds, and admitted only as a regular-file tree
+below its pinned root.
+
+CMake and Ninja build the shared `libdbus-1.so.3` and the private-bus fixture
+`dbus-daemon` with tests, documentation, systemd, GLib, X11 and pkg-config
+output disabled and origin-relative build runpaths. The host is compiled from
+`main.cpp` with `-std=c++17 -O2 -Wall -Wextra -Werror -pedantic` and runpath
+`$ORIGIN/../lib`; the runtime guardian is compiled from `custody.c` as C11.
+Every command after bootstrap runs through the packaged `build_command.c`
+guardian with an explicit `HOME`, `LC_ALL`, `PATH` and `TMPDIR` environment, a
+finite deadline of at most 600 seconds and a retained log.
+
+Outputs are `output/bin/wotex-ble-host`, `output/bin/wotex-ble-guardian`,
+`output/lib/libdbus-1.so.3` and `output/bin/dbus-daemon`. The audit rejects a
+Python runtime dependency, an absolute runpath, a host without
+`libdbus-1.so.3` through `$ORIGIN/../lib` and a library with another soname. The
+host then starts once with closed input and must emit exactly the pinned ready
+frame and exit with status 1. The manifest records `advisory_scan:
+"not_performed"`; advisory review remains a separate release obligation. A
+failed build keeps its lock and diagnostic logs and cannot be reused.
 
 ## WBL-B02 — Typed process boundary
 

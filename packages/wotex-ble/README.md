@@ -53,11 +53,13 @@ software-peer/stress evidence remains required.
 flow control and native ownership. Native value reports are admitted through a
 64-frame/1 MiB BEAM ledger and receive cumulative byte-exact credit only after
 their stream owner admits final receiver delivery; retirement consumes only the
-retired stream's pending records. The target tooling is `mix wotex.native.build`,
-`mix wotex.software.build` and `mix wotex.software.run`, each with an explicit
-`--workspace` absolute directory. These tasks are specified implementation work,
-not commands claimed to exist in this checkout. Upstream SDK Python is
-build-time only.
+retired stream's pending records. On Linux, `mix wotex.native.build --workspace
+ABSOLUTE_PATH` builds the host, runtime guardian and pinned shared libdbus, audits
+their ELF dependencies and records `native-manifest.json`; see the
+[native build receipt](docs/provenance/native-build-v1.json). The software tasks
+`mix wotex.software.build` and `mix wotex.software.run` remain specified
+implementation work, not commands claimed to exist in this checkout. Upstream
+SDK Python is build-time only.
 
 ## Implemented profile
 

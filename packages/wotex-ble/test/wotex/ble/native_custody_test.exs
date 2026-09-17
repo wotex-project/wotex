@@ -36,7 +36,7 @@ defmodule Wotex.BLE.NativeCustodyTest do
     assert {:ok, "", 0} =
              NativeCommand.bootstrap(
                compiler,
-               Path.join(@root, "test/interop/native/command.c"),
+               Path.join(@root, "priv/bluez/native/build_command.c"),
                command,
                options
              )

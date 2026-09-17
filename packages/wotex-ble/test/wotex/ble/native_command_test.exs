@@ -25,7 +25,7 @@ defmodule Wotex.BLE.NativeCommandTest do
     command = Path.join(directory, "command")
 
     assert {:ok, "", 0} =
-             NativeCommand.bootstrap(compiler, Path.join(native, "command.c"), command, options)
+             NativeCommand.bootstrap(compiler, guardian_source(), command, options)
 
     for name <- ["command_launcher", "command_probe"] do
       assert {:ok, "", 0} =
@@ -57,7 +57,7 @@ defmodule Wotex.BLE.NativeCommandTest do
                  "-Wextra",
                  "-Werror",
                  "-Dsetpgid=wotex_test_setpgid",
-                 Path.join(native, "command.c"),
+                 guardian_source(),
                  Path.join(native, "command_group_fault.c"),
                  "-o",
                  fault
@@ -116,4 +116,5 @@ defmodule Wotex.BLE.NativeCommandTest do
   end
 
   defp empty_environment, do: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
+  defp guardian_source, do: Path.join(@root, "priv/bluez/native/build_command.c")
 end

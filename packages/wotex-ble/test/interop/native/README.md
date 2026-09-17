@@ -1,8 +1,10 @@
 # Native fixture command ownership
 
-`command.c` is the first-party POSIX C11 command guardian shared with Wotex
-Modbus at source commit `018f419`. It executes explicit argument vectors for
-native component tests. It is test tooling, not a BLE transport or SDK.
+`priv/bluez/native/build_command.c` is the first-party POSIX C11 command
+guardian shared with Wotex Modbus at source commit `018f419`. It executes
+explicit argument vectors for the native build task and native component tests.
+It is build and test tooling, not a BLE transport, runtime guardian or SDK.
+The files in this directory are its fault-injection and signal-state probes.
 
 ```text
 command TIMEOUT_MS OUTPUT_BYTES CLEANUP_MS ABSOLUTE_CWD ABSOLUTE_EXECUTABLE ARG...

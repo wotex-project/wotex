@@ -29,6 +29,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/native/report_queue.hpp",
     "priv/bluez/native/error_value.hpp",
     "priv/bluez/native/custody.c",
+    "priv/bluez/native/build_command.c",
     "priv/bluez/native/runtime-guardian.md",
     "priv/bluez/native/credit.hpp",
     "priv/bluez/native/bus.hpp",
