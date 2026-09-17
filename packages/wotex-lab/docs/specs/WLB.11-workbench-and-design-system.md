@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.9.1. Contract: accepted.
+Specification version: 0.10.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -45,7 +45,14 @@ panels from the keyboard and checks their charts, mobile reflow, reload without
 replay and absence from a second session. Its first run found history panels
 widening a 375-pixel page, because stacked grid items kept the min-content
 width of charts and query digests. Stacked items may now shrink and digests
-wrap. It is not part of the
+wrap. The cohort also drops and restores the LiveView socket before submitting
+a smart-room approval from the keyboard, then requires that neither a further
+reconnect nor a reload shows the approval again or changes the dispatched run
+in the evidence report. A run cancelled before approval stays undispatched
+across a reconnect. A registered Thing Description whose title holds image and
+script markup must render that title as text, with no created element, dialog
+or executed handler. Without a configured provider the investigation composer
+is disabled, names that reason and shows no data disclosure. It is not part of the
 twelve-check `mix check` host gate and requires an operator-owned server plus an
 explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
 source evidence, not the complete WLB.08 browser matrix or a WCAG certification.

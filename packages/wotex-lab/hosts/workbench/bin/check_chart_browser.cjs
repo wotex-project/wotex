@@ -15,6 +15,7 @@ async function run() {
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    page.on("dialog", async (dialog) => { errors.push(`dialog: ${dialog.message()}`); await dialog.dismiss(); });
     const response = await page.goto(origin.href);
     assert.ok(!response.headers()["content-security-policy"].includes("unsafe-eval"));
     assert.equal(await page.locator("main#main").count(), 1);
@@ -84,6 +85,73 @@ async function run() {
     assert.ok(await other.getByText("Run unavailable", {exact: true}).isVisible());
     await other.close();
 
+    const connected = () => page.waitForFunction(() => window.liveSocket.isConnected() &&
+      document.querySelector("[data-phx-main].phx-connected") !== null);
+    const reconnect = async () => {
+      await page.evaluate(() => window.liveSocket.disconnect());
+      await page.waitForFunction(() => !window.liveSocket.isConnected());
+      await page.evaluate(() => window.liveSocket.connect());
+      await connected();
+    };
+    const reportRun = (id) => page.evaluate(async (runId) =>
+      (await (await fetch("/evidence/report.json")).json()).runs.find((run) => run.id === runId), id);
+    const startSmartRoom = async () => {
+      await page.goto(origin.href);
+      await connected();
+      await page.locator("#run-smart_room button[type=submit]").click();
+      await page.waitForURL("**/runs/**");
+      await connected();
+      return new URL(page.url()).pathname.split("/").pop();
+    };
+    const approval = page.locator("form[phx-submit=approve]");
+
+    const approvedId = await startSmartRoom();
+    await approval.waitFor({state: "visible"});
+    assert.ok(await page.getByText("Running the experiment did not dispatch it.").isVisible());
+    assert.ok(await page.locator("#investigation-prompt").isDisabled());
+    assert.ok(await page.locator("#investigation button[type=submit]").isDisabled());
+    assert.ok(await page.getByText("No investigation provider is configured.", {exact: true}).isVisible());
+    assert.equal(await page.locator("#investigation-disclosure").count(), 0);
+    await reconnect();
+    assert.equal(await approval.count(), 1);
+    const pending = await reportRun(approvedId);
+    assert.equal(pending.status, "awaiting_approval");
+    assert.equal(pending.dispatch, null);
+    await approval.locator("button[type=submit]").focus();
+    await page.keyboard.press("Enter");
+    await approval.waitFor({state: "detached"});
+    const dispatched = await reportRun(approvedId);
+    assert.equal(dispatched.status, "dispatched");
+    assert.ok(dispatched.dispatch);
+    await reconnect();
+    await page.reload();
+    await connected();
+    assert.equal(await approval.count(), 0);
+    assert.deepEqual(await reportRun(approvedId), dispatched);
+
+    const cancelledId = await startSmartRoom();
+    await approval.waitFor({state: "visible"});
+    await page.locator("button[phx-click=cancel]").click();
+    await approval.waitFor({state: "detached"});
+    await reconnect();
+    assert.equal(await approval.count(), 0);
+    const cancelled = await reportRun(cancelledId);
+    assert.equal(cancelled.status, "cancelled");
+    assert.equal(cancelled.dispatch, null);
+    assert.deepEqual(await reportRun(approvedId), dispatched);
+
+    await page.goto(new URL("/things", origin).href);
+    await connected();
+    const hostileTitle = "<img src=x onerror=\"window.__wotexHostile=1\"><script>window.__wotexHostile=2</script>";
+    await page.locator("#thing-description").fill(JSON.stringify({
+      "@context": "https://www.w3.org/2022/wot/td/v1.1", id: "urn:test:hostile", title: hostileTitle,
+      security: ["nosec_sc"], securityDefinitions: {nosec_sc: {scheme: "nosec"}}
+    }));
+    await page.locator("#register-td button[type=submit]").click();
+    await page.getByText(hostileTitle, {exact: true}).first().waitFor({state: "visible"});
+    assert.equal(await page.locator("main img, main script").count(), 0);
+    assert.equal(await page.evaluate(() => window.__wotexHostile), undefined);
+
     await page.goto(new URL("/metrics", origin).href);
     await page.locator("#metric-catalogue summary").focus();
     await page.keyboard.press("Enter");
@@ -144,7 +212,9 @@ async function run() {
         "reload-no-replay", "session-isolation", "keyboard-skip-and-details",
         "catalogue-selection", "saved-dashboard", "catalogue-mobile-reflow",
         "dashboard-deep-link", "dashboard-download", "history-panels", "history-keyboard-submit",
-        "history-mobile-reflow", "history-reload-no-replay", "history-session-isolation"],
+        "history-mobile-reflow", "history-reload-no-replay", "history-session-isolation",
+        "approval-keyboard-submit", "approval-reconnect-no-replay", "cancel-reconnect-no-dispatch",
+        "hostile-td-escaped", "no-llm-composer-disabled"],
       status: "passed", artifact_adoption: false, wcag_certification: false
     }));
   } finally { await browser.close(); }
