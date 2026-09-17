@@ -54,8 +54,9 @@ its BEAM ledger and the parser/flow corpus cases WTH-B-F01–F05, F07–F10, F14
 F15 execute through a native contract driver. The host accepts `flow_open` and
 `report_ack` under separate reply, control and report output reservations, and
 WTH-B-F06 executes against the real host. `mix wotex.software.build` and
-`mix wotex.software.run` execute on both Linux arm64 BEAM lanes. Report sources,
-F11–F13 and the required x86_64 lane remain open, so P00 is unaccepted.
+`mix wotex.software.run` pass on Linux arm64 and emulated Linux x86_64 for both
+BEAM lanes, including real-host process ownership cases. Report sources and
+F11–F13 remain open, so P00 is unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 

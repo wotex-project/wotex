@@ -20,7 +20,15 @@ defmodule Wotex.Thread.SdkBridgeTest do
 
     escript = System.find_executable("escript") || raise "Escript is required for the injected peer"
 
-    File.write!(executable, String.replace(source, "#!/usr/bin/env escript", "#!" <> escript))
+    # The injected peer runs with the lane's emulator flags; the owner clears its environment,
+    # so flags such as the emulated-x86_64 `+JMsingle true` travel in the escript header.
+    header =
+      case System.get_env("ERL_FLAGS") do
+        flags when is_binary(flags) and flags != "" -> "#!" <> escript <> "\n%%! " <> flags
+        _ -> "#!" <> escript
+      end
+
+    File.write!(executable, String.replace(source, "#!/usr/bin/env escript", header))
     File.chmod!(executable, 0o700)
     File.write!(Path.join(directory, "mode"), "normal")
     on_exit(fn -> File.rm_rf!(directory) end)

@@ -208,6 +208,7 @@ defmodule Wotex.Thread.Software.Run do
         "sanitized" => digest(executables.sanitized_host)
       },
       "toolchain" => toolchain(),
+      "erl_flags" => System.get_env("ERL_FLAGS"),
       "native_tests" => native,
       "lanes" => lanes,
       "cleanup" => cleanup
@@ -260,7 +261,7 @@ defmodule Wotex.Thread.Software.Run do
         {"WOTEX_THREAD_DATASET_SEED", executables.dataset_seed},
         {"WOTEX_THREAD_CASE_RESULTS", cases}
       ] ++
-        Enum.flat_map(~w(MIX_HOME HEX_HOME WOTEX_PATH_DEPS), fn key ->
+        Enum.flat_map(~w(MIX_HOME HEX_HOME WOTEX_PATH_DEPS ERL_FLAGS), fn key ->
           case System.get_env(key) do
             nil -> []
             value -> [{key, value}]

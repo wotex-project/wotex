@@ -291,6 +291,76 @@ invalid, duplicated, zero-case and malformed results.
 The x86_64 reference lane, process-flow cases, report sources, the P07 network
 fixture and C09 stress are not part of this run.
 
+## Native host process ownership and four software lanes, 2026-09-17
+
+`test/software/native_host_process_test.exs` restores, in ExUnit, the host
+process cases formerly held by the retired Python owner driver. Each case opens
+the real host through a Port, checks the exact ready frame, sends `flow_open`
+and drives C07 frames directly against the SDK and simulation RCP:
+
+- open, inspect, version and close with a private mode-0600 store preserved
+  byte for byte across close and `open_existing`, and the interface removed;
+- competing store and interface owners fail with `storage_unavailable` and
+  `interface_in_use` without disturbing the first owner;
+- eight invalid configurations fail with `invalid_request` and create no store;
+  unopened `inspect` fails `not_open` and an unknown operation `not_supported`;
+- symlinked, hard-linked, mode-0644 or directory `settings.data` and
+  `settings.Swap` entries fail with `storage_unavailable` and leave the outside
+  file unchanged;
+- every byte split of a request, two coalesced requests, and a radio child that
+  writes 300000 bytes to its own standard error produce exact replies and no
+  stray frame;
+- truncated input at EOF, duplicate keys, a 131073-byte line and a request before
+  `flow_open` terminate the host with nonzero status;
+- killing the worker or the radio releases descendants, the interface and the
+  store lock, proven by reopening the store;
+- a radio that ignores SIGHUP and SIGTERM and never completes startup is reaped
+  after owner EOF or SIGTERM, including with 4000 queued input frames; and
+- 100 open/close cycles restore process and interface baselines.
+
+`test/fixtures/stubborn_radio.c` is the injected radio for the blocked-startup
+cases; it is not radio or SDK evidence. The 100-cycle case carries a 300-second
+ExUnit bound because a sanitizer-host cycle under a concurrent lane exceeded the
+default 60 seconds. The ten cases are required in both software lanes, raising
+each lane inventory to 22 cases.
+
+On emulated x86_64, Erlang/OTP 29.0.4 needs `+JMsingle true`. The owner clears
+the child environment, so the injected escript peer previously started without
+it, failed emulator startup and turned 30 bridge cases into `cleanup_timeout`.
+`sdk_bridge_test.exs` now writes the lane's `ERL_FLAGS` into the escript header,
+and `mix wotex.software.run` passes and records `ERL_FLAGS`. The production host
+has no BEAM and is unaffected.
+
+All four lanes ran `mix wotex.software.build` and `mix wotex.software.run` on
+fresh workspaces from the same source tree, in privileged containers with
+`WOTEX_PATH_DEPS=1`. The x86_64 lanes run under Docker Desktop emulation on an
+arm64 host.
+
+| Lane | Image | Run | Native tests | Normal lane | Sanitizer lane | Result SHA-256 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Linux arm64, Elixir 1.18.4 / OTP 27.3.4.15 | `sha256:95ca03c1f4714893eb0f33791ecb05eb8a234816fe96aa9a7168c1c3c9012b68` | 252630 ms | 5/5 | 154/154 | 22/22 | `e8edfc6b21f07897f8602cb360f8b5cb074e66243a2d5ef0815ee8f4dbbd8892` |
+| Linux arm64, Elixir 1.20.2 / OTP 29.0.4 | `sha256:cd12556442e9d686112fc225e1b2ce62db1eb9f7e1fff22b9d9bf24591728535` | 256204 ms | 5/5 | 154/154 | 22/22 | `53a796bb52c4a7eb7556e98796d4576f8ee4007698505ba4548d429d24c76d26` |
+| Linux x86_64, Elixir 1.18.4 / OTP 27.3.4.15, `+JMsingle true` | `sha256:052f076067fbb6b76e976e62d4ce5f35a33220f0a650e2aed5cba5d17e0f7743` from the pinned image's amd64 manifest | 132022 ms | 5/5 | 154/154 | 22/22 | `a6cf91d4329037dd7d29645b72ad76f2b5de6aa81762120621a1622d1e099fc9` |
+| Linux x86_64, Elixir 1.20.2 / OTP 29.0.4, `+JMsingle true` | `sha256:38288d79170bd92f6f34dec49f484323f5aeaffe283a6a08f0476c3096b269d2` from the pinned image's amd64 manifest | 140247 ms | 5/5 | 154/154 | 22/22 | `50516596d6f8fdafcc431e26178d30318bad741bce63a27bc69e82c601fde2f3` |
+
+Every result reports zero surviving workspace processes and unchanged source
+identity. All lanes use Debian 12.15 with GCC/G++ 12.2.0-14+deb12u1, CMake
+3.25.1 and Ninja 1.11.1. Host, RCP and manifest digests differ per lane and
+workspace; each is bound in its result. The x86_64 results execute the required
+reference architecture and toolchain under emulation, not on native x86_64
+hardware.
+
+| Source | SHA-256 |
+| --- | --- |
+| `test/software/native_host_process_test.exs` | `5e21310bffd462f549ca7cfdfde0e9bb1473220064e56234ea3253c6534eedd1` |
+| `test/fixtures/stubborn_radio.c` | `a19ea6733534363d3bffc2c66c5b208a59027503ff4fca839aec4a990c18cd49` |
+| `lib/wotex/thread/software/run.ex` | `0d30e3f39ea39fab26bdd6f69f1443d41cc3e5b8ce07a99bb85fe8f07267d799` |
+| `test/software/acceptance.json` | `c58b28b7e02724b609c585ffa6bc8c29b469eebdb02a00e16a0d23b4708cba4d` |
+| `test/wotex/thread/sdk_bridge_test.exs` | `4ccafa935dda284fe879d6457525c827b8484613c82caaec1657c354fd9a9895` |
+
+WTH-B-F11–F13 process-flow cases, the P07 network fixture and C09 stress remain
+unexecuted.
+
 ## Contract corpus binding, 2026-09-17
 
 `test/wotex/thread/contract_fixture_test.exs` runs in the default gate. It
