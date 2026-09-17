@@ -24,62 +24,83 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
 
     @tag case: id, corpus_sha256: @corpus_sha256
     test "#{id} secure policy and user token execute every listed service", context do
-      input = Map.fetch!(@cases, unquote(id))["input"]
+      %{"input" => input, "expectation" => %{"value" => expected}} =
+        Map.fetch!(@cases, unquote(id))
+
       options = options(context, @policies[input["policy"]], token(context, input["user_token"]))
-      assert {:ok, session} = Wotex.OPCUA.connect(options)
       peer = context.peer
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      %Session{handle: %{host: host}} = session
+      processes = native_processes(host)
+      read = %{type: :read, node_id: peer["node_id"]}
+      {:ok, %{"value" => %{"value" => original}}} = Wotex.OPCUA.send(session, read)
 
-      assert {:ok, %{"value" => %{"value" => original}}} =
-               Wotex.OPCUA.send(session, %{type: :read, node_id: peer["node_id"]})
-
-      assert {:ok, %{"status" => 0}} =
-               Wotex.OPCUA.send(session, %{
-                 type: :write,
-                 node_id: peer["node_id"],
-                 value: %{type: "Double", value: 42.25}
-               })
-
-      assert {:ok, %{"value" => %{"value" => 42.25}}} =
-               Wotex.OPCUA.send(session, %{type: :read, node_id: peer["node_id"]})
-
-      assert {:ok, %{"outputs" => [%{"value" => 3.5}]}} =
-               Wotex.OPCUA.send(session, %{
-                 type: :call,
-                 node_id: peer["method_id"],
-                 value: %{
-                   object_id: peer["object_id"],
-                   arguments: [%{type: "Double", value: 1.25}, %{type: "Double", value: 2.25}]
-                 }
-               })
-
-      assert {:ok, children} =
-               Wotex.OPCUA.send(session, %{type: :browse, node_id: peer["object_id"]})
-
-      assert peer["method_id"] in children
-
-      assert {:ok, subscription} =
-               Wotex.OPCUA.subscribe(session, %{
-                 node_id: peer["node_id"],
-                 publishing_interval_ms: 50
-               })
+      {:ok, subscription} =
+        Wotex.OPCUA.subscribe(session, %{node_id: peer["node_id"], publishing_interval_ms: 50})
 
       reference = subscription.reference
-      assert_receive {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => 42.25}}, _}}, 5000
-      assert {1, 1} = resources(session, peer)
-      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
-      assert {0, 0} = resources(session, peer)
 
-      assert {:ok, %{"status" => 0}} =
-               Wotex.OPCUA.send(session, %{
-                 type: :write,
-                 node_id: peer["node_id"],
-                 value: %{type: "Double", value: original}
-               })
+      results = %{
+        "read" =>
+          match?({:ok, %{"value" => %{"value" => ^original}}}, Wotex.OPCUA.send(session, read)),
+        "write" =>
+          match?(
+            {:ok, %{"status" => 0}},
+            Wotex.OPCUA.send(session, %{
+              type: :write,
+              node_id: peer["node_id"],
+              value: %{type: "Double", value: 42.25}
+            })
+          ),
+        "readback" =>
+          match?({:ok, %{"value" => %{"value" => 42.25}}}, Wotex.OPCUA.send(session, read)),
+        "call" =>
+          match?(
+            {:ok, %{"outputs" => [%{"value" => 3.5}]}},
+            Wotex.OPCUA.send(session, %{
+              type: :call,
+              node_id: peer["method_id"],
+              value: %{
+                object_id: peer["object_id"],
+                arguments: [%{type: "Double", value: 1.25}, %{type: "Double", value: 2.25}]
+              }
+            })
+          ),
+        "browse" => browsed?(session, peer),
+        "subscribe" =>
+          receive do
+            {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => value}}, _}} ->
+              value in [original, 42.25]
+          after
+            5000 -> false
+          end,
+        "cancel" => Wotex.OPCUA.unsubscribe(session, subscription) == :ok
+      }
 
-      %Session{handle: %{host: host}} = session
+      {active_subscriptions, _} = resources(session, peer)
+
+      {:ok, %{"status" => 0}} =
+        Wotex.OPCUA.send(session, %{
+          type: :write,
+          node_id: peer["node_id"],
+          value: %{type: "Double", value: original}
+        })
+
+      live_continuations = map_size(:sys.get_state(host).continuations)
       monitor = Process.monitor(host)
-      assert :ok = Wotex.OPCUA.disconnect(session)
+      results = Map.put(results, "close", Wotex.OPCUA.disconnect(session) == :ok)
       assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
+      assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end, 1000)
+
+      observed = %{
+        "operations_succeeded" => Enum.count(input["operations"], &Map.fetch!(results, &1)),
+        "active_peer_subscriptions" => active_subscriptions,
+        "active_peer_continuations" => live_continuations,
+        "active_local_resources" => Enum.count([host | processes], &alive?/1)
+      }
+
+      assert observed == expected
+      assert Enum.sort(Map.keys(results)) == Enum.sort(input["operations"])
     end
   end
 
@@ -159,6 +180,62 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
     do: [:certificate_invalid, :connection_failed, :deadline_exceeded]
 
   defp allowed_codes(_), do: [:certificate_invalid, :authentication_failed, :connection_failed]
+
+  # The peer returns every child in one page, so no server continuation is left.
+  defp browsed?(session, peer) do
+    case Wotex.OPCUA.Browse.references(session, peer["object_id"]) do
+      {:ok, %Wotex.OPCUA.Browse.Page{status: 0, continuation: nil, references: references}} ->
+        Enum.any?(
+          references,
+          &(Wotex.OPCUA.Address.to_string(&1.node_id.node_id) == peer["method_id"])
+        )
+
+      _ ->
+        false
+    end
+  end
+
+  defp native_processes(host) do
+    %{port: port} = :sys.get_state(host)
+    {:os_pid, guardian} = Port.info(port, :os_pid)
+
+    {children, 0} =
+      System.cmd("/usr/bin/pgrep", ["-P", Integer.to_string(guardian)], env: [{"LC_ALL", "C"}])
+
+    [guardian | Enum.map(String.split(children), &String.to_integer/1)]
+  end
+
+  defp alive?(pid) when is_pid(pid), do: Process.alive?(pid)
+  defp alive?(pid), do: os_alive?(pid)
+
+  defp os_alive?(pid) do
+    {_, status} =
+      System.cmd("/bin/kill", ["-0", Integer.to_string(pid)],
+        stderr_to_stdout: true,
+        env: [{"LC_ALL", "C"}]
+      )
+
+    status == 0
+  end
+
+  defp eventually(check, budget_ms) do
+    deadline = System.monotonic_time(:millisecond) + budget_ms
+    poll(check, deadline)
+  end
+
+  defp poll(check, deadline) do
+    cond do
+      check.() ->
+        true
+
+      System.monotonic_time(:millisecond) >= deadline ->
+        false
+
+      true ->
+        Process.sleep(10)
+        poll(check, deadline)
+    end
+  end
 
   defp resources(session, peer) do
     assert {:ok, %{"status" => 0, "outputs" => [%{"value" => subscriptions}, %{"value" => items}]}} =

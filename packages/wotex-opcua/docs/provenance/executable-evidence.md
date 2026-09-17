@@ -20,6 +20,38 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Bound secure policy and user-token workflows, 2026-09-17
+
+`security_fault_test.exs` now binds WOP-X-F30 through F38 against the
+independent asyncua 2.0.1 peer. For each policy and user-token cell, the runner
+opens a Session and subscribes to the Double Variable. It then records success
+for read, write, readback, Method call, typed Browse of the Objects folder
+(Status Good, the Method among the references and no continuation), receipt of
+one subscription report, subscription cancellation and close. After
+cancellation it reads the peer's active subscription count through the
+Resources Method. It reads the host's live continuation count before close;
+because the peer returns every reference in one page with no continuation
+point, no peer continuation can exist for the Session. After close it counts
+the host process and its guardian and SDK OS processes that are still alive.
+The observed map
+`operations_succeeded`, `active_peer_subscriptions`,
+`active_peer_continuations` and `active_local_resources` must equal the
+corpus expectation (8, 0, 0 and 0) for all nine cells, and the recorded
+operation names must equal the corpus list.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29: the optional
+secure suite with the lifecycle file passes 54/54 against the RelWithDebInfo
+and macOS ASan/UBSan builds, whose executable digests are unchanged, and
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 352 passed (10 doctests,
+4 properties, 338 tests), 54 optional tests excluded and 95.3% coverage.
+Tampered or replayed traffic (V09), user-token encryption algorithm assertions
+and Linux cohorts are not executed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/security_fault_test.exs` | `b3c870aa1483cc3953b956f0e57facceed6bc25b54f991924c13c6b794598a09` |
+| `docs/specs/fixtures/native-contract-v1.json` | `e81f63e897fba024a64a2022f80ffdab6700170e62a450757be0cf192778f281` |
+
 ## Multiple live Browse continuations and deadline release, 2026-09-17
 
 `session_open.c` replaces the single continuation with 64 continuation chains.

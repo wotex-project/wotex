@@ -46,6 +46,15 @@
       "WOP-X-F29"
     ],
     "WOP-P03-partial": [
+      "WOP-X-F30",
+      "WOP-X-F31",
+      "WOP-X-F32",
+      "WOP-X-F33",
+      "WOP-X-F34",
+      "WOP-X-F35",
+      "WOP-X-F36",
+      "WOP-X-F37",
+      "WOP-X-F38",
       "WOP-X-F39",
       "WOP-X-F40",
       "WOP-X-F41",
@@ -57,7 +66,7 @@
       "WOP-X-F47"
     ]
   },
-  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. The WOP-P04 partial binding executes F24 through F26 through the production Publish sequence state with runner-supplied Republish outcomes, F21 and F29 through the production owner with an injected report and deletion service, and F27 and F28 through Session subscription processing and revision rules with an unconnected SDK client. The WOP-P05 partial binding executes F23 through the Runtime transport subscribe callback and relay with an injected streaming client: a short-lived worker establishes the observation, exits normally, the final owner receives one notification and its death releases the relay. The WOP-P03 partial binding executes F39 through F47 against the independent asyncua peer; F30 through F38 execute every listed operation except cancel, with peer subscription and MonitoredItem counts, but assert neither request cancellation nor peer continuation counts and are not bound. Live SDK service execution and later scenario families remain required.",
+  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. The WOP-P04 partial binding executes F24 through F26 through the production Publish sequence state with runner-supplied Republish outcomes, F21 and F29 through the production owner with an injected report and deletion service, and F27 and F28 through Session subscription processing and revision rules with an unconnected SDK client. The WOP-P05 partial binding executes F23 through the Runtime transport subscribe callback and relay with an injected streaming client: a short-lived worker establishes the observation, exits normally, the final owner receives one notification and its death releases the relay. The WOP-P03 partial binding executes F39 through F47 against the independent asyncua peer; F30 through F38 execute read, write, readback, call, typed browse, subscribe, subscription cancellation and close for each policy and user token; the runner counts successful operations, reads the peer subscription count through its Resources method after cancellation, counts live continuations (the peer returns one complete page with no continuation point) and counts the host and native processes still alive after close. Live SDK service execution and later scenario families remain required.",
   "cases": [
     {
       "id": "WOP-X-F01",

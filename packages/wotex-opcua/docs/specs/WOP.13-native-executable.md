@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.31
+  version: 1.1.32
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -61,7 +61,10 @@ token and user signature rejections map to `authentication_failed`; certificate,
 security-check, policy and mode rejections map to `certificate_invalid`; other
 statuses are `connection_failed`. The independent asyncua peer executes the
 nine policy/token Session cells with Read, Write/readback, Call, Browse and close,
-and the X-F39..F47 rejection cells, without subscription or cancellation cells.
+and the X-F39..F47 rejection cells. X-F30..F38 now also subscribe, receive a
+report and cancel the subscription, and are bound: the peer's subscription
+count after cancellation, the live continuation count and the host and native
+processes alive after close are all zero.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split
