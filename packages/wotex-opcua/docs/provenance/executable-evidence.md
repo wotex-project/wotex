@@ -20,6 +20,28 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Linux arm64 secure interop and stress lanes, 2026-09-17
+
+In the same Linux arm64 container, the test sources at commit
+`ca60fad05dc17e622d45773ed61cfb043b18797a` (no `lib`, `priv` or `test` change
+since `130c983`) ran against the native executable, guardian, Session probe and
+same-stack paged peer from the `/work/keep` build recorded above; `priv/native`
+is unchanged since that build's commit. A Python 3.11.2 virtual environment
+installed `test/interop/requirements.txt` (asyncua 2.0.1). The independent peer
+generated fresh credentials, then
+`MIX_ENV=test WOTEX_PATH_DEPS=1 mix test --include interop --include software
+--seed 0 test/interop test/wotex/opcua/subscription_lifecycle_test.exs
+test/software/lifecycle_stress_test.exs` passed 63/63. That is every secure,
+policy/token, fault, subscription, Runtime, tampering, lifecycle and paged test
+plus the four C09 stress tests (host memory 2880/2880->2880 bytes; native RSS
+9960/9976->9976 KiB; 50/50 forced-deadline or busy errors). Linux x86_64 and the
+archive consumer were not executed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| Linux arm64 interop and stress log | `abce7056ab2152d92ce100d063fd13f3b1f59ceba12e10a081abf4b1cb1bd51d` |
+| Linux arm64 peer `pip freeze` | `5272ac7cc4a63f3217f89cb89cdcacf1659bba81ea0c78fabd9e668d93b3b95e` |
+
 ## Linux arm64 native cohort, 2026-09-17
 
 Source: commit `c38c756cd64ebeb75be837020ab46fb138401291`, copied (without
