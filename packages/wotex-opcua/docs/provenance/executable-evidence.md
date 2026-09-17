@@ -20,6 +20,33 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## X-F19 Runtime class and a workspace snapshot race, 2026-09-17
+
+`owner_check.c` already binds WOP-X-F19's native projection: one Write request,
+unknown effect and no late result after cancellation. `persistent_bridge_test.exs`
+now binds the case's remaining `class` element through the host. A held Write
+through the production owner fixture times out after 100 ms, and the host sends
+one cancellation, so the caller gets `deadline_exceeded` with effect `unknown`.
+`Error.classify/1` makes that error `permanent` and not retryable. The fixture
+counts one request and one cancellation, and the observed write request count,
+effect and class equal the corpus expectation for those keys.
+
+The first gate run for this change failed one existing
+`workspace_test.exs` assertion. Its directory snapshot compared full
+`File.Stat` values, and reading the file contents for the first snapshot moved
+the access time across a second boundary. The snapshot now ignores access time
+only; size, modes, modification and change times and contents are still
+compared.
+
+`WOTEX_PATH_DEPS=1 mix check --no-retry` then passes with 370 passed
+(10 doctests, 4 properties, 356 tests), 64 optional tests excluded and 95.4%
+coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/wotex/opcua/persistent_bridge_test.exs` | `0199ce6d55bc8424564e067c0698026cfa2d5c571c1835d4656425d485a60ba1` |
+| `test/wotex/opcua/native/workspace_test.exs` | `45db7a92306fef628d2367f7210890eb336526e41212340505619c8611da147e` |
+
 ## Peer lifetime expiry, 2026-09-17
 
 In `native_subscription_test.exs` a persistent Session subscribes with a

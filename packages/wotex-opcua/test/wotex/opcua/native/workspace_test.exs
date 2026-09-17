@@ -221,10 +221,11 @@ defmodule Wotex.OPCUA.Native.WorkspaceTest do
     assert {:error, :invalid_build_workspace} = Workspace.run(path, %{}, ["out"], fn -> :never end)
   end
 
+  # Access time is excluded because reading the snapshot contents updates it.
   defp snapshot(path) do
     Path.wildcard(Path.join(path, "**/*"), match_dot: true)
     |> Enum.map(fn file ->
-      {Path.relative_to(file, path), File.stat!(file),
+      {Path.relative_to(file, path), %{File.stat!(file) | atime: nil},
        if(File.regular?(file), do: File.read!(file), else: nil)}
     end)
   end

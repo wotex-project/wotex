@@ -140,6 +140,33 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
     assert_reaped(directory)
   end
 
+  @tag case: "WOP-X-F19", corpus_sha256: @corpus_sha256
+  test "WOP-X-F19 a cancelled transmitted Write reaches Runtime as a permanent unknown effect",
+       context do
+    expected = Map.fetch!(@cases, "WOP-X-F19")["expectation"]["value"]
+    {host, directory} = open_fixture(context)
+
+    assert {:error, %Error{code: :deadline_exceeded, effect: :unknown} = error} =
+             Host.request(host, "write", write("hold"), 100)
+
+    classified = Error.classify(error)
+    assert eventually(fn -> map_size(:sys.get_state(host).controls) == 0 end)
+    refute_receive {:wotex_opcua_native, ^host, _}, 50
+    assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+    %{"requests" => requests, "cancels" => 1} = counters(directory)
+
+    # owner_check binds the native late-result suppression; this host path binds
+    # the Runtime class and effect of the same transmitted cancellation.
+    assert %{
+             "write_requests" => requests,
+             "effect" => Atom.to_string(classified.effect),
+             "class" => Atom.to_string(classified.class)
+           } == Map.take(expected, ["write_requests", "effect", "class"])
+
+    refute classified.retryable
+    assert_reaped(directory)
+  end
+
   test "WOP-X04 caller timeout retires held work and keeps the Session usable", context do
     {host, directory} = open_fixture(context)
 
