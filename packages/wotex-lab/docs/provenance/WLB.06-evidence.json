@@ -65,7 +65,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 21,
+  "attempt": 22,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -140,34 +140,35 @@
     }
   ],
   "durations": {
-    "run_ms": 10100
+    "run_ms": 12600
   },
   "fixtures": {
-    "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
-    "corpus:thing-model-1.1": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
+    "corpus:thing-description-1.1": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154",
+    "corpus:thing-model-1.1": "sha256:800bfc2ea61f6c14167898e64bcdb8c8aff0a1fe9857505ed65f2837d6bd10a5"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 RUST_TEST_THREADS=1 mix test test/wotex/lab/benchmark_test.exs test/wotex/lab/conformance_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/evidence_test.exs test/wotex/lab/graph_test.exs test/wotex/lab/telemetry_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 RUST_TEST_THREADS=1 mix test test/wotex/lab/benchmark_test.exs test/wotex/lab/conformance_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/evidence_test.exs test/wotex/lab/graph_test.exs test/wotex/lab/telemetry_test.exs --seed 1",
     "containment:darwin-sandbox-exec+profile-2.0.1+contained-exec-2.0.0",
     "cargo-lock:sha256:de17a723dc3ce87ad3360a2fde43c0ddfb8ce056dae95c4cd1f35329274b1ee5",
     "fault-schedule:1.0.0",
     "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target",
-    "launcher-executable:sha256:21917819b2d8811107f42bd236bce3e7dea9adf752bd2b9501dae399e43d86a5",
+    "launcher-executable:sha256:9869d6abd176877643e58ce853061bc4f962806577654d96b0024522520fb024",
+    "launcher-toolchain:rustc-1.97.1",
     "exclusion-scope:one-discovery-corpus;exunit-excluded=0",
-    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "excluded_count": 1,
     "test_count": 53,
-    "thing_description_vectors": 14,
-    "thing_model_vectors": 6
+    "thing_description_vectors": 16,
+    "thing_model_vectors": 8
   },
-  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
+  "revision": "65959fc438ffdda33c321163c705f697449e5ebf",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:039de5b0419ddacb013907221762838283762577b36be0a0174491a5ce3e4935",
+  "source_tree_digest": "sha256:5973bece0ce8237400731570d2891ae628ff5f1d4ba63e762b482f5a0c1897fc",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

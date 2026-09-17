@@ -41,7 +41,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 10,
+  "attempt": 11,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -130,16 +130,16 @@
     }
   ],
   "durations": {
-    "run_ms": 38000
+    "run_ms": 33000
   },
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/continuum_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/directory_test.exs test/wotex/lab/smart_room_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/continuum_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/directory_test.exs test/wotex/lab/smart_room_test.exs --seed 1",
     "broker-image:eclipse-mosquitto:2",
     "fault-schedule:1.0.0",
-    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
@@ -147,11 +147,11 @@
     "excluded_count": 0,
     "test_count": 66
   },
-  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
+  "revision": "65959fc438ffdda33c321163c705f697449e5ebf",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:2a18c2c65b5e1e73c15e971003ffa167996bb0b66b7b3b2602506d8eb77dfeed",
+  "source_tree_digest": "sha256:5307541d2281bd783267283530cde843b19e6e4e9ae3c9140932a00f67fbc950",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

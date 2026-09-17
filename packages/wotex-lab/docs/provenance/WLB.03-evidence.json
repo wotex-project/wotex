@@ -33,7 +33,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 4,
+  "attempt": 5,
   "budgets": {
     "deadline_ms": 60000,
     "max_samples": 4096,
@@ -81,7 +81,7 @@
     }
   ],
   "durations": {
-    "run_ms": 30800
+    "run_ms": 31400
   },
   "fixtures": {
     "expected-output.json": "sha256:ae6f8b18388457d6f8b279ad8dfc0ee49dc7a9a142fe5ca235b5cca6886d56aa",
@@ -89,10 +89,10 @@
     "thing-description.json": "sha256:951b814403e00efc5e3a742cfce5c905e5f228db42978b3e59eaaee2e15d2c81"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 mix test test/wotex/lab/backend_cohort_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/room_model_test.exs test/wotex/lab/serving_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/thermal_test.exs test/wotex/lab/window_anomaly_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 mix test test/wotex/lab/backend_cohort_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/room_model_test.exs test/wotex/lab/serving_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/thermal_test.exs test/wotex/lab/window_anomaly_test.exs --seed 1",
     "backend:Nx.BinaryBackend-and-EXLA-CPU",
     "exclusions:three-real-broker-cases-owned-by-WLB.04",
-    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
@@ -100,11 +100,11 @@
     "required_lanes": 6,
     "test_count": 52
   },
-  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
+  "revision": "65959fc438ffdda33c321163c705f697449e5ebf",
   "scenario_id": "WLB.03-nx-experiments",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:6d788649b58e3fe2e7ff292774d8f78c0a58882adbbe4fe200abc06a46ff2c46",
+  "source_tree_digest": "sha256:06e5214a572a5d2cca5f4f5cc98e0c23d994783b26e2df9618566db7bb1d1473",
   "toolchain": {
     "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
     "elixir": "1.20.2",

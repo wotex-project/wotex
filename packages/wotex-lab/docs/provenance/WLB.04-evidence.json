@@ -29,7 +29,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 8,
+  "attempt": 9,
   "budgets": {
     "deadline_ms": 60000,
     "max_inflight": 2,
@@ -118,7 +118,7 @@
     }
   ],
   "durations": {
-    "run_ms": 18800
+    "run_ms": 13200
   },
   "fixtures": {
     "tls/ca-cert.pem": "sha256:f8fa6c43f51909fd87f28bae9fd227ffd10df539261c26accf62bb09611457b6",
@@ -126,22 +126,22 @@
     "tls/localhost-key.pem": "sha256:1c6bc80befe0d03160829900e58819eec13a2e3291b5194a5efd61bfd7ad309d"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/http_destination_test.exs test/wotex/lab/http_test.exs test/wotex/lab/loopback_test.exs test/wotex/lab/mqtt_broker_test.exs test/wotex/lab/mqtt_sample_admission_test.exs test/wotex/lab/mqtt_test.exs --seed 1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/http_destination_test.exs test/wotex/lab/http_test.exs test/wotex/lab/loopback_test.exs test/wotex/lab/mqtt_broker_test.exs test/wotex/lab/mqtt_sample_admission_test.exs test/wotex/lab/mqtt_test.exs --seed 1",
     "broker-image:eclipse-mosquitto:2",
     "profile:http-local-and-hosted",
     "profile:mqtt-local-and-mqtts",
-    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "broker_enabled": true,
     "test_count": 56
   },
-  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
+  "revision": "65959fc438ffdda33c321163c705f697449e5ebf",
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:1562726ecc9aee965cd60dfa1fae4b5d138a4fbc6d0388c41ea3388412a9639e",
+  "source_tree_digest": "sha256:5e7f55f1430037dfbfa1944f4da750ac60caf0628ae9c622ef6649c68a43a34f",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

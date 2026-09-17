@@ -60,8 +60,8 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
            }
 
     assert record.outcomes.excluded_count == 1
-    assert record.outcomes.thing_description_vectors == 14
-    assert record.outcomes.thing_model_vectors == 6
+    assert record.outcomes.thing_description_vectors == 16
+    assert record.outcomes.thing_model_vectors == 8
     assert record.outcomes.test_count > 0
     assert record.durations.run_ms > 0
 

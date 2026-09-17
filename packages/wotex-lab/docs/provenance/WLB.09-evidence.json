@@ -49,7 +49,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 21,
+  "attempt": 22,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -103,18 +103,18 @@
     }
   ],
   "durations": {
-    "run_ms": 32600
+    "run_ms": 32000
   },
   "fixtures": {
     "model:thermal-control-v1": "sha256:04d49d3e2f8c80e4b1e1199bbc41a22f410c76bbb7606a378a5b0be3ae005b13"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=pinned-maude-3.5.1 mix test test/wotex/lab/cookbook_test.exs test/wotex/lab/formal_maude_mcp_test.exs test/wotex/lab/formal_maude_test.exs test/wotex/lab/formal_search_test.exs test/wotex/lab/formal_test.exs test/wotex/lab/mcp_formal_tool_test.exs --seed 1",
-    "catalogue-rebind:WLB.06-1.4.1",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 WOTEX_LAB_MAUDE=pinned-maude-3.5.1 mix test test/wotex/lab/cookbook_test.exs test/wotex/lab/formal_maude_mcp_test.exs test/wotex/lab/formal_maude_test.exs test/wotex/lab/formal_search_test.exs test/wotex/lab/formal_test.exs test/wotex/lab/mcp_formal_tool_test.exs --seed 1",
+    "catalogue-rebind:WLB.08-0.9.2",
     "engine-executable:sha256:266eed04679fde6029a18e5e2b1828223d4a7169ac55503aa15d67e126792fbf",
     "model:thermal-control-v1",
     "cookbook:formal-control",
-    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-17-default-gate-and-integration-lane;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
@@ -125,11 +125,11 @@
     "safe_properties": 5,
     "test_count": 49
   },
-  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
+  "revision": "65959fc438ffdda33c321163c705f697449e5ebf",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:5ef2ba9a56eabcf4b8e8093366d0c1420d9e25711bcbb2186f01975a29b7d26a",
+  "source_tree_digest": "sha256:04a579966f8419ac5562ac0bd691e42f9368ac5f9700ce20d54eb55af9c7ac2e",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

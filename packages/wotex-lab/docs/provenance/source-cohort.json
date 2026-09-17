@@ -19,43 +19,43 @@
   "packages": [
     {
       "package": "wotex",
-      "files": 39,
-      "sha256": "9dd8e33fb9521ccb63b38e93b6a7f66fccb17f0f8f4c221b3c1b409943459fa3"
+      "files": 40,
+      "sha256": "39a4ea6415e82f457fc840743973db8d3d5e6d74f32ba71166197f6cbdc69d6b"
     },
     {
       "package": "wotex_runtime",
-      "files": 42,
-      "sha256": "118d20abae7a24826f051f2fb319127acc7c288df0b264d45188b35593a08a64"
+      "files": 47,
+      "sha256": "a5e9e6f63ac77095ec3783025633d0989f56b3ff259389127d3a2665739d68e0"
     },
     {
       "package": "wotex_binding_http",
-      "files": 35,
-      "sha256": "7b677aee4a44c6875d573f4973708b4aebef27ccce0aef031048431c1891ca75"
+      "files": 38,
+      "sha256": "8f29720b37b70aacf52aec9d006bdec1fceb93d9a160934ba258fa16f45098de"
     },
     {
       "package": "wotex_binding_mqtt",
-      "files": 38,
-      "sha256": "b592a0d654aeb6b4a19a89e2f7400cdd75dc1840df75ebd4e5737291beb253d3"
+      "files": 45,
+      "sha256": "21cd46770440375238f2e20fbc61e0ff1c72fc37bff950e337a57252e9785b1f"
     },
     {
       "package": "wotex_directory",
-      "files": 50,
-      "sha256": "92cff137751abbf82f4527a705e081074322439933dba65cf2c19489707ffc4c"
+      "files": 68,
+      "sha256": "c2ee0dc0ad2e1f526aa65afce5e804e46dc7b959e178ba7e73fb08f0ed621007"
     },
     {
       "package": "wotex_continuum",
-      "files": 86,
-      "sha256": "b6804cd4fcc7aec17bf1a5e38aba8ec25dd1ab07db376c1b9686618c6dca8940"
+      "files": 107,
+      "sha256": "a44b3b7bf585e224fb9c0d780754573316b94349b1e41a30c96393e9967457f4"
     },
     {
       "package": "wotex_conformance",
-      "files": 82,
-      "sha256": "93d1e137796f30b38719bef2cf00c2b06b3059942ba71da842d6dda367b255dc"
+      "files": 89,
+      "sha256": "4a285e1757b873b76228ffaa3519590451c8da0bc838c2f769eabd168f2f747b"
     },
     {
       "package": "wotex_nx",
-      "files": 40,
-      "sha256": "81e849143280f8b3f9f416238e0cd4f9f4729b2e5988d9dfbba20a81bcbb454d"
+      "files": 42,
+      "sha256": "b4d907e79b2da31dbe3910b6ac3e97a3e0f42d6c71d1c3d6dbced7d5e5154cef"
     }
   ]
 }
