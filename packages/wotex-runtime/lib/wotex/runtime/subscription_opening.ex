@@ -10,7 +10,8 @@ defmodule Wotex.Runtime.SubscriptionOpening do
 
   After the callback returns, the worker remains as a link endpoint for any
   transport it started, without retaining the callback closure. Abnormal linked
-  transport exits are reported to the subscription. Owner death or cancellation
+  transport exits, and loss of the worker itself, are reported to the
+  subscription as transport loss. Owner death or cancellation
   terminates the worker; the subscription owns transport-specific cleanup.
   Status formatting omits callback state and result contents.
 

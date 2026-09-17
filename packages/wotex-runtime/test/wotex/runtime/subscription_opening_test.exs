@@ -254,6 +254,22 @@ defmodule Wotex.Runtime.SubscriptionOpeningTest do
     eventually(fn -> not Process.alive?(owner) and not Process.alive?(callback) end)
   end
 
+  test "WRT.01-12 established callback worker loss ends its linked resources and the Runtime owner" do
+    {owner, _} = start_opening(monitor_owner: false)
+    assert_receive {:opening, callback, ^owner, resource}
+    send(callback, :release)
+    send(owner, {:wotex_transport_frame, {:value, 1}})
+    assert_receive {:opening_decoded, ^owner, 1}
+    assert Process.alive?(callback) and Process.alive?(resource)
+    monitor = Process.monitor(owner)
+    Process.exit(callback, :kill)
+    assert_receive {:wotex_runtime, _, {:status, :transport_down}}, 500
+    assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, :transport_down}}, 500
+    assert_receive {:opening_unsubscribe, ^resource}
+    refute_received {:opening_unsubscribe, _}
+    eventually(fn -> not Process.alive?(resource) end)
+  end
+
   test "WRT.01-12 opening diagnostics redact result, message, reason and log" do
     canary = "OPENING_CREDENTIAL_CANARY"
 
