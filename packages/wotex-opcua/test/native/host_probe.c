@@ -296,6 +296,26 @@ static int session_faults(int fault) {
         if(report(generation, "s9")) return 90;
         return wait_eof();
     }
+    if(fault == 13) {
+        /* Credited output and one terminal control precede an immediate exit. */
+        if(next_request(frame, sizeof(frame), &generation, id) ||
+           !strstr(frame, "\"operation\":\"subscribe\"") ||
+           respond(generation, id,
+                   "{\"subscription\":\"s1\",\"subscription_id\":101,"
+                   "\"monitored_item_id\":201,\"client_handle\":1,\"item_status\":0,"
+                   "\"publishing_interval_ms\":500.0,\"sampling_interval_ms\":250.0,"
+                   "\"queue_size\":10,\"keepalive_count\":10,\"lifetime_count\":30}"))
+            return 93;
+        while(access("trigger", F_OK) != 0) sleep_ms(1);
+        char terminal[256];
+        int count = snprintf(terminal, sizeof(terminal),
+            "{\"version\":1,\"generation\":%llu,\"event\":\"terminal\",\"error\":"
+            "{\"code\":\"receiver_overflow\",\"phase\":\"exchange\",\"effect\":\"none\"}}\n",
+            generation);
+        if(report(generation, "s1") || count <= 0 || (size_t)count >= sizeof(terminal) ||
+           write_all(STDOUT_FILENO, terminal, (size_t)count)) return 94;
+        return 0;
+    }
     if(fault >= 7) {
         char pending[65] = "";
         for(;;) {
@@ -482,6 +502,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_browse_failure")) return session_faults(10);
     if (!strcmp(mode, "session_subscription_race")) return session_faults(11);
     if (!strcmp(mode, "session_unknown_report")) return session_faults(12);
+    if (!strcmp(mode, "session_terminal_exit")) return session_faults(13);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

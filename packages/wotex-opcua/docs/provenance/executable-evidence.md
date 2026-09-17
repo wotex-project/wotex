@@ -20,6 +20,67 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Subscription loss, owner death and a suspended overproducer, 2026-09-17
+
+`Native.Host` no longer lets a failed credit write to an exited native process
+replace the lines that process wrote before exiting. The lines are handled in
+order, followed by the exit status. Owner death now fails each unanswered
+request with `native_owner_lost` and its effect, and sends that error once to
+each live subscription receiver. `host_probe.c` mode
+`session_terminal_exit` writes a report and a terminal `receiver_overflow`
+control, then exits while the host is suspended. `persistent_bridge_test.exs`
+asserts that the report and then one `receiver_overflow` are delivered. With
+the process fixture it asserts that owner death sends `native_owner_lost` once
+to a subscription receiver and to a transmitted Write caller (unknown effect).
+Both tests fail against the previous host. The same file's idle-generation probe
+test no longer races its monitor against the probe's immediate output. That race
+caused an intermittent `:noproc` DOWN reason, and ten further consecutive runs
+passed 31/31.
+
+`subscription_lifecycle_test.exs` runs against real peers.
+
+- Owner death with two live independent-peer subscriptions: the host stops
+  within 100 ms, its guardian and SDK processes exit and the peer's subscription
+  and MonitoredItem counts reach zero within 1,000 ms. Each receiver gets one
+  `native_owner_lost`.
+- A peer `FailDeletes(1)` fault: unsubscribe returns `cleanup_failed`, the
+  Session closes, the other receiver gets one `cleanup_failed` and the peer
+  counts reach zero.
+- Closing the same-stack peer: each of two subscriptions gets one
+  `connection_failed` with a Bad status, and the native processes exit within
+  1,000 ms.
+- A suspended BEAM owner with four subscriptions while the same-stack peer
+  (new `c` command) writes continuously: before the owner resumes, its mailbox
+  holds exactly 16 report lines of at most 262,144 bytes, then one terminal
+  `receiver_overflow` control and the exit status. The native processes are
+  already gone. After resume the receiver gets the 16 reports and exactly one
+  `receiver_overflow` per subscription, and the peer reports zero Sessions within
+  1,000 ms. RSS is not measured because the native process exits first.
+
+Commands and results on macOS arm64 with Elixir 1.20.2 / OTP 29:
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes with 338 passed (10 doctests,
+4 properties, 324 tests), 50 optional tests excluded and 95.5% coverage.
+RelWithDebInfo native CTest passes 204/204. With the peer environment described
+above, `mix test --include interop --seed 0 test/interop
+test/wotex/opcua/subscription_lifecycle_test.exs` passes 50/50 against both the
+RelWithDebInfo and the macOS ASan/UBSan builds. Runtime final-owner handoff
+(X-F23), live SDK Cancel acknowledgement counters and C09 repetition counts are
+not executed.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/host.ex` | `e45e5fe9e8db46bebdd8a0413091cbe40d2d450f895172863e7022bd146e77be` |
+| `priv/native/paged_peer.c` | `4c5d3715d518085d2e33c27effeb6b3dbf811304b6fb6b5b6106df24a2c5fa21` |
+| `test/native/host_probe.c` | `27c5426d67bc139374ef83246a226e0af139ba5be6f0dab793ee8ddc094e7bb4` |
+| `test/interop/secure_peer.py` | `36f5cad83d5112a35377f4d0b4ffc7360ac26fcf0cb2ad2620f82a8ae7e98d62` |
+| `test/wotex/opcua/persistent_bridge_test.exs` | `edc404ff4e3825ae831f58a7bf3e0321257af1aa8e24f00ca7e439e801c816b9` |
+| `test/wotex/opcua/subscription_lifecycle_test.exs` | `2a17ba910dc59b3b7c895680d51141f75d2103fa7ddd49f38c83141e0c2516b1` |
+| RelWithDebInfo `wotex_opcua_paged_peer` | `90c0afc58a6b9bb5a2364afc6f00916c956875123cff57c3d00de18c4edf9af7` |
+| ASan/UBSan `wotex_opcua_paged_peer` | `548c97ba8a8475a51dd3cd2c308af316ad20e799bf4fa30acb5894af5744a5e9` |
+| RelWithDebInfo `wotex_opcua_native` | `a52f105354e141693710b807d4290bcc6911036876fc228d28b38523d2ac3034` |
+| ASan/UBSan `wotex_opcua_native` | `b336153fce394d126a1a2904db5c1d30b69b194ae3647c03991533b98d66a482` |
+| native CTest log | `32e00b25f6a696a724e8645bf84bbb53e9317e57792c11f88718fc46cc853be9` |
+
 ## Peer Republish, subscription loss and queue overflow, 2026-09-17
 
 The independent asyncua 2.0.1 peer adds two test-only Methods.

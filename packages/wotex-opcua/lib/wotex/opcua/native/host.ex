@@ -546,7 +546,7 @@ defmodule Wotex.OPCUA.Native.Host do
 
   @impl GenServer
   def handle_info({:DOWN, monitor, :process, owner, _}, %{monitor: monitor, owner: owner} = state),
-    do: {:stop, :normal, state}
+    do: stop_generation(state, Error.new(:native_owner_lost), false)
 
   def handle_info({:DOWN, monitor, :process, _, _}, %{receivers: receivers} = state)
       when is_map_key(receivers, monitor) do
@@ -836,11 +836,13 @@ defmodule Wotex.OPCUA.Native.Host do
     end
   end
 
-  # Replenishes credit for one validated line before any follow-up request.
+  # Replenishes credit for one validated line before any follow-up request. A
+  # native process that already exited cannot use the credit; its remaining
+  # lines and exit status are still in the mailbox and are handled in order.
   defp after_native(state, line, continuation) do
     with {:ok, credit} <-
            Frame.credit(state.generation, state.credit_sequence + 1, 1, byte_size(line)),
-         :ok <- send_frame(state.port, credit) do
+         :ok <- replenish(state.port, credit) do
       case continuation.(%{state | credit_sequence: state.credit_sequence + 1}) do
         {:ok, state} -> {:noreply, state}
         {:stop, error, state} -> terminate_generation(state, error)
@@ -1145,6 +1147,13 @@ defmodule Wotex.OPCUA.Native.Host do
         {:error, Error.new(:native_owner_lost)}
     after
       remaining(deadline) -> {:error, Error.new(:deadline_exceeded, :ready)}
+    end
+  end
+
+  defp replenish(port, frame) do
+    case send_frame(port, frame) do
+      {:error, _} = error -> if Port.info(port), do: error, else: :ok
+      :ok -> :ok
     end
   end
 

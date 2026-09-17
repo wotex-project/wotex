@@ -13,6 +13,8 @@ answer the next `withhold` data-change Publish results with keepalives, keeping
 each withheld message for Republish unless `discard` is true, and returns the
 withheld and Republish counts. LoseSubscriptions queues a BadTimeout
 StatusChangeNotification on every subscription and returns their count.
+FailDeletes(count) makes the next `count` DeleteSubscriptions calls return
+BadInternalError without deleting and returns the remaining count.
 """
 import asyncio
 import base64
@@ -26,6 +28,7 @@ from pathlib import Path
 from asyncua import Server, ua
 from asyncua.common.methods import uamethod
 from asyncua.crypto.permission_rules import User, UserRole
+from asyncua.server.internal_session import InternalSession
 from asyncua.server.internal_subscription import InternalSubscription
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -175,7 +178,16 @@ async def main(directory, variant):
                                                      [ua.VariantType.Double, ua.VariantType.Double],
                                                      [ua.VariantType.Double])
     service = server.iserver.subscription_service
-    faults = {"withhold": 0, "discard": False, "withheld": 0, "republished": 0}
+    faults = {"withhold": 0, "discard": False, "withheld": 0, "republished": 0, "fail_deletes": 0}
+    delete_subscriptions = InternalSession.delete_subscriptions
+
+    async def failing_delete(session, ids):
+        if not faults["fail_deletes"]:
+            return await delete_subscriptions(session, ids)
+        faults["fail_deletes"] -= 1
+        return [ua.StatusCode(ua.StatusCodes.BadInternalError) for _ in ids]
+
+    InternalSession.delete_subscriptions = failing_delete
     pop_result = InternalSubscription._pop_publish_result
     republish_result = InternalSubscription.republish
 
@@ -217,6 +229,14 @@ async def main(directory, variant):
             await entry.monitored_item_srv.trigger_statuschange(ua.StatusCode(ua.StatusCodes.BadTimeout))
         return ua.Variant(len(subscriptions), ua.VariantType.UInt32)
 
+    @uamethod
+    def fail_deletes(parent, count):
+        faults["fail_deletes"] = count
+        return ua.Variant(faults["fail_deletes"], ua.VariantType.UInt32)
+
+    delete_method = await server.nodes.objects.add_method(ua.NodeId("fail_deletes", namespace),
+                                                          "FailDeletes", fail_deletes,
+                                                          [ua.VariantType.UInt32], [ua.VariantType.UInt32])
     faults_method = await server.nodes.objects.add_method(ua.NodeId("publish_faults", namespace),
                                                           "PublishFaults", publish_faults,
                                                           [ua.VariantType.UInt32, ua.VariantType.Boolean],
@@ -248,6 +268,7 @@ async def main(directory, variant):
               "resources_method_id": resources_method.nodeid.to_string(),
               "faults_method_id": faults_method.nodeid.to_string(),
               "loss_method_id": loss_method.nodeid.to_string(),
+              "delete_method_id": delete_method.nodeid.to_string(),
               "username": USERNAME, "password": PASSWORD, "variant": variant}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

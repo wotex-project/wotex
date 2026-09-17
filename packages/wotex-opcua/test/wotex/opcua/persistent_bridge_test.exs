@@ -411,7 +411,10 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
       monitor = Process.monitor(host)
       code = unquote(code)
       assert_receive {:wotex_opcua_native, ^host, {:error, %Error{code: ^code}}}, 1000
-      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      # The probe writes at once, so the linked host may exit before the monitor
+      # exists; an abnormal exit would have ended this linked test process.
+      assert_receive {:DOWN, ^monitor, :process, ^host, reason}, 1000
+      assert reason in [:normal, :noproc]
       refute_receive {:wotex_opcua_native, ^host, _}
       assert_reaped(directory)
     end
@@ -653,6 +656,59 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
       monitor = Process.monitor(host)
       assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
       assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      assert_reaped(directory)
+    end
+
+    test "WOP-X04 output and terminal control written before native exit are handled in order",
+         context do
+      {host, directory} = open_probe(context, "session_terminal_exit")
+      assert {:ok, subscription} = Host.subscribe(host, subscribe("stream-1"), self(), 10, 1000)
+      reference = subscription.reference
+      monitor = Process.monitor(host)
+      :ok = :sys.suspend(host)
+      File.write!(Path.join(directory, "trigger"), "go")
+      assert_reaped(directory)
+      assert eventually(fn -> message_queue(host) >= 3 end)
+      :ok = :sys.resume(host)
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, %{"sequence" => 1}}}, 1000
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :receiver_overflow, effect: :none}}},
+                     1000
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      refute_receive {:wotex_opcua, ^reference, _}, 50
+      refute_receive {:wotex_opcua_native, ^host, _}
+    end
+
+    test "WOP-C03 owner death ends live subscriptions and unanswered callers once", context do
+      options = fixture_options(context, "owner_fixture")
+      parent = self()
+
+      owner =
+        spawn(fn ->
+          {:ok, host, _} = Host.start_link(options)
+          {:ok, _} = Host.request(host, "open", @open, 5000)
+          send(parent, {:host, host})
+          Process.sleep(:infinity)
+        end)
+
+      assert_receive {:host, host}, 5000
+      directory = Path.dirname(options[:executable])
+      assert {:ok, subscription} = Host.subscribe(host, subscribe("stream-0"), self(), 10, 1000)
+      reference = subscription.reference
+      spawn(fn -> send(parent, {:write, Host.request(host, "write", write("hold"), 5000)}) end)
+      assert eventually(fn -> outstanding(host) == 1 end)
+      monitor = Process.monitor(host)
+      Process.exit(owner, :kill)
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :native_owner_lost, effect: :none}}}
+
+      assert_receive {:write, {:error, %Error{code: :native_owner_lost, effect: :unknown}}}
+      refute_receive {:wotex_opcua, ^reference, _}, 50
+      assert :ok = Host.unsubscribe(host, subscription, 1000)
       assert_reaped(directory)
     end
 

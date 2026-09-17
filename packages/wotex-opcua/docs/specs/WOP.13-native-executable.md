@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.29
+  version: 1.1.30
   owner: wotex-opcua
   updated: 2026-09-17
 ---
@@ -42,7 +42,12 @@ validated line and keeps request-scoped failures non-terminal. A caller timeout
 or death sends one bounded `cancel` control whose missing acknowledgement ends
 the generation. Terminal controls, invalid output and responses for another
 generation fail each unanswered request once: sent Write/Call keep unknown
-effect, other requests and calls never emitted report none. ExUnit binds
+effect, other requests and calls never emitted report none. Lines and a
+terminal control that the native process wrote before exiting are handled in
+order: credit for them is not sent to an exited process, and its exit status
+ends the generation only after them. Owner death fails each unanswered request
+with `native_owner_lost` and its effect, and sends that error once to each live
+subscription receiver. ExUnit binds
 WOP-X-F17, F20, F22, F51, F56 and F57 through the host with a process fixture
 that runs the production owner and an injected service, or a deterministic
 response probe. The public `Open62541` persistent client admits Read, Write and

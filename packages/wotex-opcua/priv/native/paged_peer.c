@@ -4,11 +4,13 @@
  * SecureChannel counters, so tests can distinguish explicit Session deletion,
  * server-side Session timeout and channel release. Each 'b' byte writes five
  * consecutive Double values to the burst Variable in one server iteration and
- * prints the last value, so a small MonitoredItem queue overflows. */
+ * prints the last value, so a small MonitoredItem queue overflows. Each 'c'
+ * byte toggles such a burst on every loop iteration and prints the new state. */
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -194,10 +196,13 @@ int main(int argc, char **argv) {
     signal(SIGTERM, stop_peer);
     signal(SIGINT, stop_peer);
     UA_Double burst_value = 0.0;
+    bool continuous = false;
     printf("READY %u\n", (unsigned)namespace_index);
     fflush(stdout);
     while(running) {
         (void)UA_Server_run_iterate(server, false);
+        if(continuous && write_burst(server, namespace_index, &burst_value) != UA_STATUSCODE_GOOD)
+            break;
         struct pollfd owner = {.fd = 0, .events = POLLIN};
         int ready = poll(&owner, 1, 20);
         if(ready > 0 && (owner.revents & (POLLHUP | POLLERR | POLLNVAL))) break;
@@ -206,6 +211,12 @@ int main(int argc, char **argv) {
             ssize_t count = read(0, input, sizeof(input));
             if(count <= 0) break;
             for(ssize_t index = 0; index < count; index++) {
+                if(input[index] == 'c') {
+                    continuous = !continuous;
+                    printf("CONTINUOUS %s\n", continuous ? "on" : "off");
+                    fflush(stdout);
+                    continue;
+                }
                 if(input[index] == 'b') {
                     UA_StatusCode written = write_burst(server, namespace_index, &burst_value);
                     printf("BURST %.1f %s\n", burst_value, UA_StatusCode_name(written));
