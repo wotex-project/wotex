@@ -82,7 +82,9 @@ lines (`--fix` formats them). The full gate adds `native_lint` (clang-tidy;
 the D-Bus host and the bus test need the Linux libdbus build) and
 `native_test` (on Linux, `test/interop/native_bus_test.exs` and
 `native_host_test.exs` against that build; the other native tests run in
-the ExUnit suite). On another host the Linux suite fails with a message.
+the ExUnit suite). On another host with Docker the Linux suite runs in the
+Linux container of the native checks (`tooling/native/docker/linux.Dockerfile`);
+without Docker it fails with a message.
 `priv/bluez/native/vendor/` is never formatted or linted, and
 `native_custody_test.exs` pins the digest of `custody.c`.
 

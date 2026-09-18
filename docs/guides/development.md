@@ -114,15 +114,37 @@ mix native.test --package wotex-coap          # native tests
   Every first-party translation unit needs a compile command from some suite.
 - **Workspaces.** A suite's build runs in a cached workspace outside the
   repository, `$WOTEX_NATIVE_CACHE` or `wotex-native` in the system temporary
-  directory, keyed by a digest of the package's files other than Markdown:
-  the first run builds, later runs of the same sources reuse it, and a
-  workspace the build task refuses is rebuilt. `--workspace /abs/dir` names
-  the build task's workspace instead, for example one built by
-  `mix native.build`.
-- **Host requirements.** A suite that needs Linux (the BlueZ D-Bus host and
-  the OpenThread SDK host) or Docker (the Matter SDK build, the BACnet and
-  Modbus peers) fails with a message on a host without it; nothing is
-  skipped silently.
+  directory, keyed by a digest of the package's files other than Markdown
+  and by the suite's name and build task: the first run builds, later runs
+  of the same sources reuse it, and a workspace the build task refuses is
+  rebuilt. `--workspace /abs/dir` names the build task's workspace instead,
+  for example one built by `mix native.build`.
+- **Linux suites on another host.** A suite that needs Linux (the BlueZ
+  D-Bus host and the OpenThread SDK host) runs natively on Linux, as in CI.
+  On macOS or another host with a running Docker daemon it runs in the Linux
+  container built from `tooling/native/docker/linux.Dockerfile` (Ubuntu
+  24.04 with GCC 13, LLVM 23 and the current lane's Elixir, base image pinned
+  by digest; the image tag is a digest of the Dockerfile, so the first run
+  builds it). The repository is mounted read-only and the native cache
+  writable, both at their host paths; Mix keeps the container's dependencies
+  and build output in `<cache>/linux-container`. The suite's build, its
+  clang-tidy run and its tests run there and report their status to the
+  host. Without Linux and without Docker the suite fails with a message
+  naming both options. A suite that needs Docker (the Matter SDK build, the
+  BACnet and Modbus peers) fails on a host without it. Nothing is skipped
+  silently.
+- **Suite containers.** A suite may declare a `container` (the Matter `sdk`
+  suite does): its prepare and test commands and clang-tidy run in an image
+  built from `tooling/native/docker/<name>.Dockerfile`, with volumes that
+  map the build's container paths to the workspace and the package. The
+  Matter SDK-bound sources are analysed in the image their build runs in
+  (`matter-sdk.Dockerfile`, which adds clang-tidy 23) on the compile
+  commands ninja exports from that build.
+- **Cached results.** clang-tidy results are cached per translation unit in
+  the native cache, keyed by the unit's content, its compile command, the
+  package's first-party headers, `.clang-tidy` and the clang-tidy version
+  (and the image, for a container). A clean unit whose key is unchanged is
+  not analysed again; a unit with findings is analysed on every run.
 - **Findings.** clang-tidy findings fail the check. A false positive gets a
   `NOLINTNEXTLINE(check)` or `NOLINTBEGIN`/`NOLINTEND` comment with the
   reason; `.clang-tidy` lists each disabled check with its reason.
@@ -146,23 +168,29 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
 
 `.github/workflows/ci.yml` runs one workflow:
 
+- **Manifest**: reads the toolchain lanes and the native packages from
+  `tooling/packages.yaml` and the Rust toolchain from `rust-toolchain.toml`
+  (with `yq`); every other job takes them from its outputs, so the workflow
+  repeats none of them.
 - **Affected**: `mix wotex.affected --json` selects packages.
 - **Workspace**: root compile, format, Credo, tests, catalogue drift, docs
   links, native source pins, `mix native.lint --all` (clang-format on the
   changed lines of every package, rustfmt, clippy) with LLVM 23 from
   apt.llvm.org and Rust 1.97.1, `cargo test` of the Rust crate, the
   sibling-API boundary, and shared-file and LICENSE checks.
-- **Check**: every affected package's gate on two lanes, minimum
-  (Elixir 1.18.4, OTP 27.3.4.15) and current (Elixir 1.20.2, OTP 29.0.4). The
-  minimum lane skips static analysis whose results depend on the compiler
-  version and the native tools (`lanes.minimum.skip` in
-  `tooling/packages.yaml`); the current lane runs everything, including
+- **Check**: every affected package's gate on each lane of
+  `tooling/packages.yaml`, minimum (Elixir 1.18.4, OTP 27.3.4.15) and current
+  (Elixir 1.20.2, OTP 29.0.4). The minimum lane skips static analysis whose
+  results depend on the compiler version and the native tools
+  (`lanes.minimum.skip`); the current lane runs everything, including
   clang-tidy and the native tests, with native build workspaces cached per
-  package.
+  package. The runners are Linux, so the Linux suites run natively; Matter's
+  SDK build and its clang-tidy run in Docker.
 - **Archive**: package archives and their consumers.
-- **Native**: the native and software-profile lanes, nightly, on dispatch, or
-  on pull requests labelled `native`; after the native build it runs
-  `mix native.lint --tidy` and `mix native.test` against that build.
+- **Native**: the native and software-profile lanes of every native package
+  in `tooling/packages.yaml`, nightly, on dispatch, or on pull requests
+  labelled `native`; after the native build it runs `mix native.lint --tidy`
+  and `mix native.test` against that build.
 
 ## Adding a package
 

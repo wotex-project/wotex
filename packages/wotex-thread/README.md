@@ -178,6 +178,8 @@ mix native.test --package wotex-thread                        # native tests
 The full gate also checks the first-party C and C++ code: clang-format on the
 changed lines, clang-tidy and the native tests, built in a cached workspace
 outside the repository; see [Native code](https://github.com/wotex-project/wotex/blob/main/docs/guides/development.md#native-code).
+On a host that is not Linux, the OpenThread SDK suite runs in the Linux
+container of the native checks when Docker is available.
 
 The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-thread`. It compiles with warnings as errors, checks the lock

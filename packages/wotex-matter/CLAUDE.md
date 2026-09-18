@@ -76,10 +76,12 @@ wotex-matter` checks clang-format on the changed lines (`--fix` formats
 them). The full gate adds `native_lint` and `native_test`: the SDK-free value
 library and its CTest build on the host; the SDK-bound sources build in the
 pinned linux/amd64 container (`wotex.matter.native.build`, Docker), which
-runs their CTest suite, normal and sanitized. clang-tidy has no compile
-commands for the SDK-bound translation units outside that container, so
-`native_lint` reports them as not analysed. The `.inc` peer fragments follow
-the SDK's style and are excluded.
+runs their CTest suite, normal and sanitized. clang-tidy analyses the
+SDK-bound translation units in that image with LLVM added
+(`tooling/native/docker/matter-sdk.Dockerfile`), on the compile commands
+ninja exports from the GN and CMake builds; results are cached per
+translation unit. The `.inc` peer fragments follow the SDK's style and are
+excluded.
 
 The full gate alone is `mix pkg wotex-matter check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-matter`); it
