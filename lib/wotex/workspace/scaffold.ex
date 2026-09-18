@@ -51,7 +51,7 @@ defmodule Wotex.Workspace.Scaffold do
          :ok <- check_absent(name, manifest, root),
          :ok <- check_dependencies(depends_on, manifest),
          {:ok, templates} <- templates(root) do
-      files = files(name, depends_on, transitive(depends_on, manifest), templates)
+      files = files(name, depends_on, templates)
       Enum.each(files, fn {relative, content} -> write(root, relative, content) end)
       append_manifest(manifest_path, name, depends_on)
 
@@ -138,14 +138,6 @@ defmodule Wotex.Workspace.Scaffold do
     end
   end
 
-  # The direct dependencies plus everything they depend on, in manifest order:
-  # a consumer declares all of them for a `git:`/`sparse:` dependency.
-  defp transitive(depends_on, manifest) do
-    depends_on
-    |> Enum.flat_map(&[&1 | Manifest.transitive_dependencies(&1, manifest)])
-    |> Manifest.in_order(manifest)
-  end
-
   defp templates(root) do
     sources = [
       license: "LICENSE",
@@ -176,7 +168,7 @@ defmodule Wotex.Workspace.Scaffold do
     end)
   end
 
-  defp files(name, depends_on, transitive, templates) do
+  defp files(name, depends_on, templates) do
     namespace = namespace(name)
     package = "packages/#{name}"
     docs = "docs/packages/#{name}"
@@ -200,7 +192,7 @@ defmodule Wotex.Workspace.Scaffold do
       {"#{package}/coveralls.json", templates.coveralls},
       {"#{package}/config/config.exs", elixir(config(), bindings)},
       {"#{package}/CLAUDE.md", render(claude_md(depends_on), bindings)},
-      {"#{package}/README.md", align_comments(render(readme(transitive), bindings))},
+      {"#{package}/README.md", align_comments(render(readme(), bindings))},
       {"#{package}/CHANGELOG.md", render(changelog(), bindings)},
       {"#{package}/LICENSE", templates.license},
       {"#{package}/NOTICE", render(notice(), bindings)},
@@ -498,40 +490,20 @@ defmodule Wotex.Workspace.Scaffold do
     """
   end
 
-  defp readme(transitive) do
-    # The package itself is named by placeholders until the bindings apply.
-    packages = Enum.concat(Enum.map(transitive, &{app(&1), &1}), [{"@@app@@", "@@name@@"}])
-
-    git_deps =
-      Enum.map_join(packages, ",\n", fn {app, name} ->
-        """
-            {:#{app},
-             git: "https://github.com/wotex-project/wotex.git",
-             ref: @wotex_ref,
-             sparse: "packages/#{name}",
-             override: true}\
-        """
-      end)
-
-    path_deps =
-      Enum.map_join(packages, ",\n", fn {app, name} ->
-        ~s|{:#{app}, path: "../wotex/packages/#{name}", override: true}|
-      end)
-
+  defp readme do
     ~S"""
     # @@title@@
 
     **Describe what `@@name@@` owns in one sentence.**
 
-    @@title@@ is a package of the WoTEx family. It is a development checkout
-    with an unstable public API.
+    @@title@@ is a package of the WoTEx family.
 
     ## Installation
 
     @@title@@ 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
     1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
     in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-    No version is published on Hex yet. Once one is, depend on it as usual:
+    Add it to your dependencies:
 
     ```elixir
     def deps do
@@ -539,29 +511,6 @@ defmodule Wotex.Workspace.Scaffold do
         {:@@app@@, "~> 0.1"}
       ]
     end
-    ```
-
-    Until then, depend on one commit of the
-    [WoTEx repository](https://github.com/wotex-project/wotex) and select each
-    package directory with `sparse:`. Declare every WoTEx package it needs at
-    the same `ref` with `override: true`, as the
-    [consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-    describes:
-
-    ```elixir
-    @wotex_ref "<commit>"
-
-    def deps do
-      [
-    @@git_deps@@
-      ]
-    end
-    ```
-
-    For local development with the repository checked out next to your project:
-
-    ```elixir
-    @@path_deps@@
     ```
 
     ## Development
@@ -595,8 +544,6 @@ defmodule Wotex.Workspace.Scaffold do
     @@title@@ is released under the
     [Apache License 2.0](https://github.com/wotex-project/wotex/blob/main/packages/@@name@@/LICENSE).
     """
-    |> String.replace("@@git_deps@@", String.trim_trailing(git_deps))
-    |> String.replace("@@path_deps@@", path_deps)
     |> String.replace("@@commands@@", commands())
   end
 

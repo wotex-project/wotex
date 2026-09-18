@@ -14,9 +14,6 @@
 
 ---
 
-This is the `0.1.0` stable API candidate in a development checkout. No published
-release or W3C certification is implied.
-
 `wotex_binding_http` maps selected W3C Web of Things Thing Description (TD)
 Forms to immutable HTTP messages. A consumer-supplied client performs every
 network action, so the package adds protocol semantics without imposing a
@@ -46,8 +43,8 @@ testable HTTP meaning for Wotex interactions.
 Wotex HTTP Binding 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual; Hex
-resolves `wotex` and `wotex_runtime` from the package's own requirements:
+Add it to your dependencies; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
@@ -56,50 +53,6 @@ def deps do
   ]
 end
 ```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. The binding's `mix.exs` declares Hex
-requirements for `wotex` and `wotex_runtime`, so declare all three packages at
-the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-def deps do
-  [
-    {:wotex,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex",
-     override: true},
-    {:wotex_runtime,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-runtime",
-     override: true},
-    {:wotex_binding_http,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-binding-http",
-     override: true}
-  ]
-end
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
-{:wotex_binding_http, path: "../wotex/packages/wotex-binding-http", override: true}
-```
-
-Path dependencies prove nothing about a released artifact. The package's
-archive check rejects Git and path dependencies and agent files in the
-packaged source.
 
 ## Implement the client port
 
@@ -296,7 +249,7 @@ profile, interop or container lane.
 The boundary and exact-archive commands are focused proofs. The
 [public release-candidate inventory](../../docs/packages/wotex-binding-http/release-candidate-inventory.md)
 documents package metadata, legal/security, dependency, documentation,
-toolchain, and remaining publication-order evidence.
+toolchain, and publication-order evidence.
 
 ## License
 

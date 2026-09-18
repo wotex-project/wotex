@@ -18,9 +18,6 @@
 
 ---
 
-This is a development checkout with an unstable public API. Package
-publication and release readiness require separate verification.
-
 WoTEx libraries describe, interact with, discover and exchange Thing values.
 Lab composes their public seams into inspectable experiments. For the Nx
 community, the entry point is a typed sensor observation becoming a numerical
@@ -40,9 +37,7 @@ is an unspecified backlog item or an advertised working feature.
 Wotex Lab 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version of Lab or of the WoTEx packages it uses is published on Hex yet; the
-source cohort was inspected on 2026-09-08, when the Hex API returned no WoTEx
-package. Once Lab is published, depend on it as usual:
+Add it to your dependencies:
 
 ```elixir
 def deps do
@@ -58,53 +53,6 @@ Explorer are optional profile packages a host adds explicitly; the Lab modules
 behind each seam compile only when that package is present. The conformance
 runner is a development and test dependency of Lab, not a consumer
 requirement.
-
-Until publication, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. Declare Lab and every WoTEx package it needs
-at the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes. The base profile needs `wotex` and `wotex_nx`; add the profile
-packages your host selects (`wotex_runtime` is required by both bindings):
-
-```elixir
-@wotex_ref "<commit>"
-
-defp wotex(app, directory) do
-  {app,
-   git: "https://github.com/wotex-project/wotex.git",
-   ref: @wotex_ref,
-   sparse: "packages/#{directory}",
-   override: true}
-end
-
-def deps do
-  [
-    wotex(:wotex_lab, "wotex-lab"),
-    wotex(:wotex, "wotex"),
-    wotex(:wotex_nx, "wotex-nx"),
-    # Optional profile packages, only when the host selects them:
-    wotex(:wotex_runtime, "wotex-runtime"),
-    wotex(:wotex_binding_http, "wotex-binding-http"),
-    wotex(:wotex_binding_mqtt, "wotex-binding-mqtt"),
-    wotex(:wotex_directory, "wotex-directory"),
-    wotex(:wotex_continuum, "wotex-continuum")
-  ]
-end
-```
-
-For local development with the repository checked out next to your project,
-use path dependencies into `packages/`, for example:
-
-```elixir
-{:wotex_lab, path: "../wotex/packages/wotex-lab", override: true},
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_nx, path: "../wotex/packages/wotex-nx", override: true}
-```
-
-Path and Git dependencies are source evidence only; they do not satisfy the
-clone-free acceptance gate. Production rejects `WOTEX_PATH_DEPS` and uses Hex
-requirements.
 
 Ordinary numerical setup needs no native compiler: `exqlite` ships
 precompiled NIFs and `emqtt` is compiled without its QUIC transport, so its
@@ -166,9 +114,7 @@ documentation-only cells (`formal-control` and `nerves-and-mcp`).
 notebook when `WOTEX_LAB_INTEGRATION=1`; the MQTT lane runs
 against the scripted in-BEAM peer and, with `WOTEX_LAB_BROKER=1`, against a
 disposable `eclipse-mosquitto:2` broker. The `Mix.install` cells name
-published artifact requirements such as `{:wotex_lab, "~> 0.1.0"}`; those
-packages are not published, so opening a notebook in Livebook today does not
-install them, and every notebook says so. `Wotex.Lab.Graph` and
+published artifact requirements such as `{:wotex_lab, "~> 0.1.0"}`. `Wotex.Lab.Graph` and
 `mix run --no-start bin/check_graph.exs` generate and validate the machine
 interface of WLB.07 as a source snapshot with digests; no control plane, MCP
 deployment, npm client or public site is deployed. The MCP server and its
@@ -333,8 +279,8 @@ milestone. The small OTP foundation, the scenario runner with its
 cross-frontend descriptors and all six required local Nx lanes have complete
 content-bound evidence; wider upstream and release programmes remain partial. No entry claims artifact verification. The
 [source baseline](../../docs/packages/wotex-lab/provenance/standards-and-dependencies.md) records the
-materials inspected. Package publication, standards conformance, model
-accuracy and stable API admission are separate claims.
+materials inspected. Standards conformance, model accuracy and stable API
+admission are separate claims.
 
 ## Development
 
@@ -448,8 +394,7 @@ consumer and Workbench archive runs are explicit release-readiness work; see
 [WLB.08](../../docs/packages/wotex-lab/specs/WLB.08-distribution-and-compatibility.md)
 for those gates. Source-cohort snapshots, external services, native tools and
 cookbook execution refresh evidence; separate release gates do not claim
-registry publication, OCI runtime, hosted or hardware evidence. Publication
-and repository visibility are maintainer-owned.
+OCI runtime, hosted or hardware evidence.
 
 The reference hosts are separate Mix projects inside this package, run from
 their own directories with their own `README.md`: `hosts/workbench/` (the

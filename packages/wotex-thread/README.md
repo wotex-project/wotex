@@ -16,18 +16,13 @@
 
 ---
 
-This package is under development. The public API remains unstable, and the
-software implementation plan is not complete. Package publication is separate.
-
-Build handoff: [software implementation sequence](../../docs/packages/wotex-thread/plans/software-implementation.md).
-
 ## Installation
 
 Wotex Thread 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual; Hex
-resolves `wotex` and `wotex_runtime` from the package's own requirements:
+Add it to your dependencies; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
@@ -36,51 +31,6 @@ def deps do
   ]
 end
 ```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. This package's `mix.exs` declares Hex
-requirements for `wotex` and `wotex_runtime`, so declare all three packages at
-the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-def deps do
-  [
-    {:wotex,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex",
-     override: true},
-    {:wotex_runtime,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-runtime",
-     override: true},
-    {:wotex_thread,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-thread",
-     override: true}
-  ]
-end
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
-{:wotex_thread, path: "../wotex/packages/wotex-thread", override: true}
-```
-
-Path dependencies prove nothing about a released artifact. The native host is
-built only by the explicit Linux task described under
-[Development](#development); a package consumer does not receive the software
-fixtures.
 
 ## Accepted native target
 

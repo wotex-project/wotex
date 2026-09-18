@@ -13,9 +13,6 @@
 
 ---
 
-This development checkout has an unstable public API. Package publication
-requires a separately reviewed release.
-
 `wotex_directory` implements the deterministic application mechanics of a W3C
 Web of Things Discovery Thing Description Directory: registration, retrieval,
 replacement, bounded JSON Merge Patch, deletion, stable listing, expiry, and
@@ -34,7 +31,7 @@ that refused the request, an optional JSON Pointer `path`, a deterministic
 Wotex Directory 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual:
+Add it to your dependencies:
 
 ```elixir
 def deps do
@@ -44,35 +41,6 @@ end
 
 The only production dependency is `wotex ~> 0.1.0`, which owns Thing
 Description values and validation.
-
-Until publication, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. Declare Wotex Directory and `wotex` at the
-same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-{:wotex,
- git: "https://github.com/wotex-project/wotex.git",
- ref: @wotex_ref,
- sparse: "packages/wotex",
- override: true},
-{:wotex_directory,
- git: "https://github.com/wotex-project/wotex.git",
- ref: @wotex_ref,
- sparse: "packages/wotex-directory",
- override: true}
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_directory, path: "../wotex/packages/wotex-directory", override: true}
-```
 
 ## Quick start
 
@@ -202,8 +170,8 @@ repository, compiles an isolated consumer from that archive and an exact core
 archive, and runs the repository, interleaving and independent reference-port
 suites against two test consumers. It prints both archive SHA-256 digests and
 the consumer lock cohort. This establishes archive-only interoperability for
-those configured consumers, not production adapter compatibility,
-certification or publication to Hex.
+those configured consumers, not production adapter compatibility or
+certification.
 
 `mix pkg wotex-directory package` (inside the package,
 `WOTEX_PATH_DEPS=1 mix package`) runs that archive check on its own. The explicit
@@ -221,8 +189,8 @@ manifest after all checks succeed. It binds source and dependency inputs,
 runtime, commands, the exact archives, consumer lock and test outcome. The
 [claim and compatibility matrix](../../docs/packages/wotex-directory/plans/claim-compatibility-matrix.md)
 defines its schema and the reviewed 0.1.0 compatibility baseline. A dirty-tree
-run is qualified explicitly; neither a manifest nor a passing gate authorizes
-publication or establishes a stable API.
+run is qualified explicitly; neither a manifest nor a passing gate establishes
+a stable API.
 
 The [repository port evidence contract](../../docs/packages/wotex-directory/plans/repository-port-evidence.md)
 defines the reusable adapter suite, its fixture interface, and the exact

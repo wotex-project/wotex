@@ -149,9 +149,8 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert readme =~ "\n## Installation\n"
     assert readme =~ "\n## Development\n"
     assert readme =~ ~s|{:wotex_demo, "~> 0.1"}|
-    assert readme =~ ~s|sparse: "packages/wotex-runtime",|
-    assert readme =~ ~s|sparse: "packages/wotex-demo",|
-    assert readme =~ ~s|{:wotex_demo, path: "../wotex/packages/wotex-demo", override: true}|
+    refute readme =~ "sparse:"
+    refute readme =~ "path: "
     assert readme =~ "mix check.fast --package wotex-demo"
     refute readme =~ "@@"
 
@@ -170,13 +169,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
            )
   end
 
-  test "lists transitive sibling packages for git dependencies and omits an unused switch",
-       %{root: root} do
-    assert {:ok, _paths} = Scaffold.create("wotex-over", root: root, depends_on: ["wotex-runtime"])
-    readme = File.read!(Path.join(root, "packages/wotex-over/README.md"))
-    assert readme =~ ~s|{:wotex, path: "../wotex/packages/wotex", override: true}|
-    assert readme =~ ~s|sparse: "packages/wotex",|
-
+  test "omits the sibling switch from a package without siblings", %{root: root} do
     assert {:ok, _paths} = Scaffold.create("wotex-solo", root: root, depends_on: [])
     mix_exs = File.read!(Path.join(root, "packages/wotex-solo/mix.exs"))
     assert {:ok, _ast} = Code.string_to_quoted(mix_exs)

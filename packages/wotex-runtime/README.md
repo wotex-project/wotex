@@ -17,9 +17,6 @@
 
 ---
 
-This is a development checkout with an unstable public API. Package
-publication and release readiness require separate verification.
-
 Wotex Runtime turns the values in `wotex` into explicit interaction plans. It
 constructs ConsumedThings and ExposedThings, selects compatible Forms and
 binding profiles deterministically, resolves credentials through a consumer
@@ -40,8 +37,7 @@ than a second state or process model.
 Wotex Runtime 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual; it
-brings `wotex` with it:
+Add it to your dependencies; it brings `wotex` with it:
 
 ```elixir
 def deps do
@@ -49,35 +45,6 @@ def deps do
     {:wotex_runtime, "~> 0.1"}
   ]
 end
-```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. Declare Wotex Runtime and `wotex`, which it
-requires, at the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-{:wotex,
- git: "https://github.com/wotex-project/wotex.git",
- ref: @wotex_ref,
- sparse: "packages/wotex",
- override: true},
-{:wotex_runtime,
- git: "https://github.com/wotex-project/wotex.git",
- ref: @wotex_ref,
- sparse: "packages/wotex-runtime",
- override: true}
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true}
 ```
 
 ## Quick start

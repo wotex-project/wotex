@@ -17,10 +17,6 @@
 
 ---
 
-This development checkout has package version `0.1.0`. The public API remains
-unstable. Package metadata does not establish publication or acceptance of every
-work package in the completion contract.
-
 *Continuum* is a project term for the span from disconnected edge devices to
 cloud services across which these inert values are exchanged. W3C Web of Things
 does not standardize such exchange values; every member name defined here is a
@@ -42,7 +38,7 @@ consumer.
 Wotex Continuum 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual:
+Add it to your dependencies:
 
 ```elixir
 def deps do
@@ -50,39 +46,6 @@ def deps do
     {:wotex_continuum, "~> 0.1"}
   ]
 end
-```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. Wotex Continuum needs the core `wotex`
-package, so declare both at the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-def deps do
-  [
-    {:wotex,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex",
-     override: true},
-    {:wotex_continuum,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-continuum",
-     override: true}
-  ]
-end
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_continuum, path: "../wotex/packages/wotex-continuum", override: true}
 ```
 
 ## Quick start

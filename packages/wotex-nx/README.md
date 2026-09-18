@@ -16,10 +16,6 @@
 
 ---
 
-This development checkout has package version `0.1.0`. The public API remains
-unstable. Package metadata does not establish publication or acceptance of every
-work package in the completion contract.
-
 Wotex Nx is the consumer-neutral numerical boundary between W3C Web of Things
 values and Elixir Nx. It converts explicitly typed Property and Event
 observations into deterministic temporal rows, tensors, masks, quality vectors,
@@ -37,7 +33,7 @@ preparation reproducible while allowing any consumer-selected Nx backend.
 Wotex Nx 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual:
+Add it to your dependencies:
 
 ```elixir
 def deps do
@@ -45,39 +41,6 @@ def deps do
     {:wotex_nx, "~> 0.1"}
   ]
 end
-```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. Wotex Nx needs the core `wotex` package, so
-declare both at the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-def deps do
-  [
-    {:wotex,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex",
-     override: true},
-    {:wotex_nx,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-nx",
-     override: true}
-  ]
-end
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_nx, path: "../wotex/packages/wotex-nx", override: true}
 ```
 
 ## Contract

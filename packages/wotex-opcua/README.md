@@ -17,18 +17,13 @@
 
 ---
 
-This package is under development and its public API is unstable. The ordered
-plan tracks the remaining software implementation and verification work.
-
-Build handoff: [software implementation sequence](../../docs/packages/wotex-opcua/plans/software-implementation.md).
-
 ## Installation
 
 Wotex OPC UA 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual; Hex
-resolves `wotex` and `wotex_runtime` from the package's own requirements:
+Add it to your dependencies; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
@@ -37,50 +32,6 @@ def deps do
   ]
 end
 ```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select each
-package directory with `sparse:`. This package's `mix.exs` declares Hex
-requirements for `wotex` and `wotex_runtime`, so declare all three packages at
-the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-@wotex_ref "<commit>"
-
-def deps do
-  [
-    {:wotex,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex",
-     override: true},
-    {:wotex_runtime,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-runtime",
-     override: true},
-    {:wotex_opcua,
-     git: "https://github.com/wotex-project/wotex.git",
-     ref: @wotex_ref,
-     sparse: "packages/wotex-opcua",
-     override: true}
-  ]
-end
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true},
-{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
-{:wotex_opcua, path: "../wotex/packages/wotex-opcua", override: true}
-```
-
-Path dependencies prove nothing about a released artifact. The native
-executable is not built on dependency load; a consumer builds it explicitly
-with the task described under [Development](#development).
 
 ## Implemented profile
 

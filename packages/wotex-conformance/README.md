@@ -14,9 +14,6 @@
 
 ---
 
-This development checkout has an unstable public API. Package publication
-requires a separately reviewed release.
-
 `wotex_conformance` owns versioned claims, immutable vectors, verified corpora,
 an external target protocol, result classification, and canonical evidence
 reports. It never links the subject under test into its production dependency
@@ -34,34 +31,12 @@ clause, not invented codes.
 Wotex Conformance 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual:
+Add it to your dependencies:
 
 ```elixir
 def deps do
   [{:wotex_conformance, "~> 0.1"}]
 end
-```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select the
-package directory with `sparse:`. The package depends on no other WoTEx
-package. When you also use other WoTEx packages, declare every one of them at
-the same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-{:wotex_conformance,
- git: "https://github.com/wotex-project/wotex.git",
- ref: "<commit>",
- sparse: "packages/wotex-conformance",
- override: true}
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex_conformance, path: "../wotex/packages/wotex-conformance", override: true}
 ```
 
 ## Evidence model

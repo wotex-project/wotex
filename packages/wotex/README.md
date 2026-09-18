@@ -16,9 +16,6 @@
 
 ---
 
-This is a development checkout with an unstable public API. Package
-publication and release readiness require separate verification.
-
 Wotex is the storage-neutral value layer for W3C Web of Things applications.
 It parses, validates, preserves, and encodes W3C WoT Thing Description 1.1 and
 Thing Model 1.1 documents without deciding where a Thing lives, who may
@@ -46,7 +43,7 @@ distributed service without changing their meaning.
 Wotex 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
-No version is published on Hex yet. Once one is, depend on it as usual:
+Add it to your dependencies:
 
 ```elixir
 def deps do
@@ -54,28 +51,6 @@ def deps do
     {:wotex, "~> 0.1"}
   ]
 end
-```
-
-Until then, depend on one commit of the
-[WoTEx repository](https://github.com/wotex-project/wotex) and select the
-package directory with `sparse:`. Wotex depends on no other WoTEx package.
-When you also use packages built on it, declare every WoTEx package at the
-same `ref` with `override: true`, as the
-[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
-describes:
-
-```elixir
-{:wotex,
- git: "https://github.com/wotex-project/wotex.git",
- ref: "<commit>",
- sparse: "packages/wotex",
- override: true}
-```
-
-For local development with the repository checked out next to your project:
-
-```elixir
-{:wotex, path: "../wotex/packages/wotex", override: true}
 ```
 
 ## Quick start
