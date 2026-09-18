@@ -99,10 +99,8 @@ Open/read/write/call/browse/close responses use this queue and the BEAM owner
 replenishes validated consumption. Queued notifications are not implemented.
 
 `build_command.c` is the reviewed POSIX command guardian from
-`test/interop/native/command.c` of the former `wotex-modbus` repository at
-commit `018f419b0644cfecc83891551d10b5c8d771d7c6` (mapped in
-`tooling/import/commit-map/wotex-modbus.txt`; that file now lives under
-`packages/wotex-modbus/`). It is Apache-2.0 source and retains its original
+`packages/wotex-modbus/test/interop/native/command.c` at commit
+`c0780c9f753a626f4c88a0a6b61ce782f59637e6`. It is Apache-2.0 source and retains its original
 notice. It belongs to explicit build tooling, independently of the production
 OPC UA service process.
 

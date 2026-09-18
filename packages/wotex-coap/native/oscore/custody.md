@@ -37,15 +37,16 @@ from report credit. No whole-VM crash, detached `setsid` descendant, kernel-stuc
 process or inaccessible external service cleanup guarantee is inferred from
 ordinary process-group ownership.
 
-`custody.c` derives from Wotex OPC UA commit
-`ca2c4afc2fe8d4afa42b7621363c567da89ce288`, source SHA-256
+`custody.c` derives from `packages/wotex-opcua/priv/native/custody.c` at
+commit `64a05c16f63792671343f94f89af5b7ab6b321b5`, source SHA-256
 `ba2e2cc2ef7d32ed5e9691fce34a58f1f04e8605b73f3257caee31d619c71e41`.
-Its group-identity retention derives from Wotex Modbus commit
-`018f419b0644cfecc83891551d10b5c8d771d7c6`. The first-party Apache-2.0 notice is
+Its group-identity retention derives from
+`packages/wotex-modbus/test/interop/native/command.c` at commit
+`c0780c9f753a626f4c88a0a6b61ce782f59637e6`. The first-party Apache-2.0 notice is
 retained. The adaptation renames its C entry point for fixed same-binary dispatch
 and requires a parent-owned startup barrier. The native test entry exposes the
 generic primitive solely to the pipe-level fault driver; it is not a production
-backend executable. Cross-repository evidence does not accept this package's
+backend executable. Evidence from other packages does not accept this package's
 exchange worker. The local lifecycle tests accept same-binary BEAM ownership and
 durable open/close, while actual CoAP traffic, saturation and exchange deadlines
 remain required.

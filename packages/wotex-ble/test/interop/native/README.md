@@ -2,8 +2,8 @@
 
 `priv/bluez/native/build_command.c` is the first-party POSIX C11 command
 guardian shared with Wotex Modbus
-(`packages/wotex-modbus/test/interop/native/command.c`) at commit `c0780c9`
-(`018f419` in the former per-package history). It executes
+(`packages/wotex-modbus/test/interop/native/command.c`) at commit `c0780c9`.
+It executes
 explicit argument vectors for the native build task and native component tests.
 It is build and test tooling, not a BLE transport, runtime guardian or SDK.
 The files in this directory are its fault-injection and signal-state probes.
