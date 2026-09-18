@@ -113,6 +113,7 @@ int main() {
       harness.streams.flush([value] { return state(value.c_str()); });
     }
     check(harness.reports.size() == 2 && harness.flow.snapshot().queued == 1);
+    // NOLINTNEXTLINE(bugprone-unused-local-non-trivial-variable): an allocation between the flush and the acknowledgement; its value is not read
     std::string scratch(4096, 'x');
     const auto first_bytes = static_cast<std::uint64_t>(harness.reports[0].dump().size() + 1);
     check(harness.flow.acknowledge(kSession, 1, first_bytes));

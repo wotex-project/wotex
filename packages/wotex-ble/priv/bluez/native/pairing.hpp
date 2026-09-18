@@ -246,6 +246,7 @@ private:
       if (phase == Phase::idle || phase == Phase::finished) return;
       completion = {}; emit = {};
       const auto stop_by = phase == Phase::closing ? cleanup_deadline : Clock::now() + std::chrono::milliseconds(500);
+      // NOLINTNEXTLINE(bugprone-empty-catch): teardown must not throw; the failure is already terminal
       try { detach(); owner.close(stop_by); } catch (...) {}
       phase = Phase::finished;
     }

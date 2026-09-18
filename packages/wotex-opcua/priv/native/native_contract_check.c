@@ -222,6 +222,7 @@ static bool namespace_array(yyjson_val *input, UA_String **output, size_t *count
     if(!yyjson_is_arr(input) || !yyjson_arr_size(input) || yyjson_arr_size(input) > 65536)
         return false;
     *count = yyjson_arr_size(input);
+    /* NOLINTNEXTLINE(clang-analyzer-optin.portability.UnixAPI): count is at least 1, the array size was checked above */
     *output = calloc(*count, sizeof(**output));
     if(!*output)
         return false;

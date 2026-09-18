@@ -29,6 +29,7 @@ void require(bool condition, const std::string &message) {
 wotex::matter::Element successful(Conversion conversion, const std::string &name) {
   require(conversion.error == ConversionError::None, name + " returned an error");
   require(conversion.element.has_value(), name + " omitted its element");
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access): require exits the test when the element is absent
   return std::move(*conversion.element);
 }
 

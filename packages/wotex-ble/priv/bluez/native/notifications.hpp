@@ -106,8 +106,11 @@ private:
       if (!entry->call) force_close(entry, NativeFailure::local("resource_limit"));
     }
     Json result(const Entry &entry) const {
+      // NOLINTBEGIN(bugprone-unchecked-optional-access): an entry has its mode from the
+      // moment it is resolving.
       return {{"subscription_id", std::to_string(entry.identifier)}, {"generation", 1},
         {"characteristic", entry.characteristic}, {"requested_mode", entry.mode->requested()}, {"effective_mode", entry.mode->effective()}};
+      // NOLINTEND(bugprone-unchecked-optional-access)
     }
     void value(const std::shared_ptr<Entry> &entry, const AttributeBytes &bytes) {
       if (!live(*entry) || entry->phase == Phase::resolving) return;
@@ -116,9 +119,11 @@ private:
         else entry->early = bytes;
         return;
       }
+      // NOLINTBEGIN(bugprone-unchecked-optional-access): an active entry has its mode.
       const Json envelope{{"version", 1}, {"subscription_id", std::to_string(entry->identifier)}, {"generation", 1},
         {"event", "value"}, {"value", bytes.envelope()}, {"metadata", {{"source", "bluez_value_change"},
           {"characteristic", entry->characteristic}, {"requested_mode", entry->mode->requested()}, {"effective_mode", entry->mode->effective()}}}};
+      // NOLINTEND(bugprone-unchecked-optional-access)
       if (!report(envelope)) stop(entry, NativeFailure::local("queue_overflow"));
     }
     void signal(DBusMessage *message) {
@@ -209,6 +214,7 @@ private:
     void abandon() noexcept {
       if (listener) owner.bus().unlisten(listener);
       listener = 0;
+      // NOLINTNEXTLINE(bugprone-empty-catch): teardown must not throw; the failure is already terminal
       if (!entries.empty()) { try { owner.close(); } catch (...) {} }
       entries.clear(); paths.clear(); report = {}; retired = {};
     }

@@ -65,6 +65,7 @@ static int split_lines(void) {
 static int bounds(void) {
     WopIpcInput *input = calloc(1, sizeof(*input));
     char *bytes = malloc(WOP_JSON_FRAME_BYTES + 1);
+    /* NOLINTNEXTLINE(clang-analyzer-unix.Malloc): an allocation failure fails the check, which exits */
     CHECK(input && bytes);
     memset(bytes, ' ', WOP_JSON_FRAME_BYTES + 1);
     bytes[WOP_JSON_FRAME_BYTES - 1] = '\n';

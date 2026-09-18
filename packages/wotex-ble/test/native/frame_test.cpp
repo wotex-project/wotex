@@ -84,6 +84,7 @@ static void invariants() {
 int main(int argc, char **argv) {
   if (argc == 3 && std::string(argv[1]) == "--parse-request") {
     bool accepted = false;
+    // NOLINTNEXTLINE(bugprone-empty-catch): a rejected request leaves accepted false
     try { accepted = request(parse_line(argv[2])); } catch (const InvalidFrame &) {}
     std::cout << Json({{"accepted", accepted}}).dump() << '\n';
     return 0;

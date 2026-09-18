@@ -200,6 +200,7 @@ private:
     else if (dbus_message_contains_unix_fds(reply.get())) error = failure_ = "invalid_response";
     else {
       const char *sender = dbus_message_get_sender(reply.get());
+      // NOLINTNEXTLINE(bugprone-branch-clone): distinct causes of the same invalid_response
       if (!sender || pending->sender != sender) error = "invalid_response";
       else if (dbus_message_get_type(reply.get()) == DBUS_MESSAGE_TYPE_ERROR) error = "remote_error";
       else if (dbus_message_get_type(reply.get()) != DBUS_MESSAGE_TYPE_METHOD_RETURN ||

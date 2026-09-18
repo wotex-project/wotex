@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+// NOLINTBEGIN(bugprone-unchecked-optional-access): the CHECK helpers throw when an optional
+// is empty; the check does not follow them.
 #include "procedures.hpp"
 #include "pairing_test.hpp"
 
@@ -86,7 +88,7 @@ struct Fixture {
       session.peer.send(std::move(response));
     };
   }
-  void start(const std::string &name, Json parameters, int milliseconds = 2000) {
+  void start(const std::string &name, const Json &parameters, int milliseconds = 2000) {
     PROCEDURE_CHECK(operation.start(name, parameters, 81, Clock::now() + std::chrono::milliseconds(milliseconds),
       [&](const Json &event) {
         events.push_back(event);
@@ -168,7 +170,8 @@ inline void admission(const std::string &bus_address) {
   }
   for (const bool exact : {false, true}) {
     Fixture fixture(bus_address);
-    auto duplicate = fixture.session.peer.objects.back(); duplicate.first += "2";
+    auto duplicate = fixture.session.peer.objects.back();
+    duplicate.first += '2';
     duplicate.second[0].second[2].value = 18; fixture.session.peer.objects.push_back(duplicate);
     auto selector = address;
     if (exact) { selector["handle"] = 17; selector["object_path"] = "/org/bluez/hci0/device/service/char"; }
@@ -238,11 +241,15 @@ inline void lifecycle(const std::string &bus_address) {
     Fixture fixture(bus_address);
     for (std::uint64_t counter = 1; counter <= 1000; ++counter) {
       NativeProcedure operation(fixture.session.owner); unsigned completed = 0;
-      PROCEDURE_CHECK(operation.start("read", {{"address", address}}, counter, Clock::now() + std::chrono::seconds(2),
-        [&](const Json &) { PROCEDURE_CHECK(false); return false; }, [&](ProcedureResult result) {
-          PROCEDURE_CHECK(!result.failure && !result.write_submitted && result.value == write_parameters(fixture.value).at("value"));
-          ++completed;
-        }));
+      PROCEDURE_CHECK(operation.start("read", {{"address", address}}, counter,
+                                      Clock::now() + std::chrono::seconds(2), [&](const Json &) {
+        PROCEDURE_CHECK(false);
+        return false;
+      }, [&](const ProcedureResult &result) {
+        PROCEDURE_CHECK(!result.failure && !result.write_submitted &&
+                        result.value == write_parameters(fixture.value).at("value"));
+        ++completed;
+      }));
       const auto deadline = Clock::now() + std::chrono::seconds(2);
       while (!completed && Clock::now() < deadline) {
         fixture.session.peer.poll(); std::vector<pollfd> none; operation.poll(none, 1);
@@ -280,6 +287,7 @@ inline void invariants(const std::string &bus_address) {
     for (const std::size_t size : {0U, 1U, 2U, 255U, 256U, 512U}) {
       Fixture fixture(bus_address);
       std::vector<unsigned char> value;
+      value.reserve(size);
       for (std::size_t index = 0; index < size; ++index) value.push_back(static_cast<unsigned char>(index));
       fixture.value = value;
       fixture.start(name, name == "read" ? Json{{"address", address}} : write_parameters(value));
@@ -325,3 +333,4 @@ inline void invariants(const std::string &bus_address) {
   }
 }
 } // namespace procedures_test
+// NOLINTEND(bugprone-unchecked-optional-access)

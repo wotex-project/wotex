@@ -49,6 +49,7 @@ static int session_reply(void) {
        !strstr(frame, "\"session_timeout_ms\":60000")) return 51;
     char *key = strstr(frame, "\"generation\":");
     char *request_id = strstr(frame, "\"id\":\"");
+    /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): parses frames the probe's own host wrote */
     if(!key || !request_id || sscanf(key, "\"generation\":%llu", &generation) != 1 ||
        sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return 52;
     int count = snprintf(frame, sizeof(frame),
@@ -79,6 +80,7 @@ static int session_services(int remote_browse) {
         if(read_line(frame, sizeof(frame))) return 59;
         char *key = strstr(frame, "\"generation\":");
         char *request_id = strstr(frame, "\"id\":\"");
+        /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): parses frames the probe's own host wrote */
         if(!key || !request_id || sscanf(key, "\"generation\":%llu", &generation) != 1 ||
            sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return 60;
         int closing = strstr(frame, "\"operation\":\"close\"") != NULL;
@@ -230,6 +232,7 @@ static int next_request(char *frame, size_t capacity, unsigned long long *genera
         if(strstr(frame, "\"event\":\"credit\"")) continue;
         char *key = strstr(frame, "\"generation\":");
         char *request_id = strstr(frame, "\"id\":\"");
+        /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): parses frames the probe's own host wrote */
         if(!key || !request_id || sscanf(key, "\"generation\":%llu", generation) != 1 ||
            sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return -1;
         return 0;

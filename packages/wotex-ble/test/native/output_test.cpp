@@ -63,8 +63,10 @@ static void capacity() {
   const auto frame = EncodedFrame::from(Json{{"value", 1}});
   std::vector<NativeOutput::ReplySlot> slots;
   for (unsigned index = 0; index < 64; ++index) {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access): CHECK ends the test when a slot is empty.
     const auto slot = output.reserve_reply(); CHECK(bool(slot)); slots.push_back(*slot);
     CHECK(output.reply(*slot, frame) && !output.reply(*slot, frame) && !output.release_reply(*slot));
+    // NOLINTEND(bugprone-unchecked-optional-access)
     CHECK(output.report(frame));
   }
   CHECK(!output.reserve_reply() && !output.report(frame) && output.reply_reservations() == 64 && output.report_frames() == 64);
@@ -77,8 +79,10 @@ static void capacity() {
   NativeOutput churn;
   auto previous = churn.reserve_reply(); CHECK(previous && churn.release_reply(*previous));
   for (unsigned index = 0; index < 100000; ++index) {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access): CHECK ends the test when a slot is empty.
     auto current = churn.reserve_reply(); CHECK(current && !churn.release_reply(*previous) && !churn.reply(*previous, frame));
     CHECK(churn.release_reply(*current) && !churn.release_reply(*current) && churn.reply_reservations() == 0); previous = current;
+    // NOLINTEND(bugprone-unchecked-optional-access)
   }
   std::cout << "native output capacity passed\n";
 }
@@ -94,6 +98,7 @@ static void pipes() {
   CHECK(!output.report(control) && output.report_bytes() == 1048576);
   std::vector<NativeOutput::ReplySlot> slots;
   for (unsigned index = 0; index < 64; ++index) {
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): CHECK ends the test when a slot is empty
     auto slot = output.reserve_reply(); CHECK(slot && output.reply(*slot, maximum)); slots.push_back(*slot); observe(maximum);
   }
   CHECK(output.control(control)); observe(control); // independent reservation under report/reply pressure

@@ -413,12 +413,15 @@ static int prepare_report(const struct wco_exchange_message *message,
         memcpy(report->body, message->payload, message->payload_length);
         report->body_length = message->payload_length;
         report->phase = WCO_REPORT_BEGIN;
+        /* NOLINTBEGIN(clang-analyzer-unix.Malloc): report owns body and clear_report frees it; the
+         * analyzer drops the pointer when report->value is passed. */
         if (!sha256_hex(report->body, report->body_length, report->sha256) ||
             !message_value(message, WCO_REPORT_BODY_ID, report->value,
                            sizeof(report->value), &used)) {
             clear_report(report);
             return 0;
         }
+        /* NOLINTEND(clang-analyzer-unix.Malloc) */
     } else if (!message_value(message, NULL, report->value,
                               sizeof(report->value), &used)) {
         clear_report(report);
@@ -947,6 +950,7 @@ static int string_value(yyjson_val *object, const char *name,
     if (!yyjson_is_str(value)) return 0;
     *bytes = yyjson_get_str(value);
     *length = yyjson_get_len(value);
+    /* NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker): yyjson_is_str guarantees a non-NULL string */
     return !memchr(*bytes, 0, *length);
 }
 

@@ -160,6 +160,7 @@ static int data_value_projection(yyjson_val *fixture) {
     yyjson_val *projected = yyjson_obj_get(root, "value");
     yyjson_val *metadata = yyjson_obj_get(root, "metadata");
     yyjson_val *expected = yyjson_obj_get(yyjson_obj_get(fixture, "expectation"), "value");
+    CHECK(yyjson_is_obj(expected));
     size_t index, count;
     yyjson_val *key, *expected_value;
     size_t value_keys = 0;

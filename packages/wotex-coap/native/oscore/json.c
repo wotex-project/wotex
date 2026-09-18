@@ -93,10 +93,12 @@ static enum wco_json_status validate(struct wco_json *json, yyjson_val *value,
         }
     } else {
         yyjson_val *keys[1024], *key;
-        yyjson_obj_foreach(value, index, maximum, key, element) keys[index] = key;
-        qsort(keys, size, sizeof(keys[0]), compare_keys);
-        for (index = 1; index < size; index++)
-            if (compare_keys(&keys[index - 1], &keys[index]) == 0) return WCO_JSON_DUPLICATE;
+        size_t count = 0;
+        yyjson_obj_foreach(value, index, maximum, key, element) keys[count++] = key;
+        qsort((void *)keys, count, sizeof(keys[0]), compare_keys);
+        for (index = 1; index < count; index++)
+            if (compare_keys((const void *)&keys[index - 1], (const void *)&keys[index]) == 0)
+                return WCO_JSON_DUPLICATE;
         yyjson_obj_foreach(value, index, maximum, key, element) {
             status = validate(json, element, depth, nodes);
             if (status != WCO_JSON_OK) return status;

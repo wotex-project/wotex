@@ -102,6 +102,8 @@ static void malformed(struct wco_json *json) {
             assert(wco_body_end(&body, "b1", 2));
             assert(!wco_body_end(&body, "b1", 2)); break;
         case 8: wco_body_fail(&body); break;
+        default:
+            abort();
         }
         poisoned(&body);
     }

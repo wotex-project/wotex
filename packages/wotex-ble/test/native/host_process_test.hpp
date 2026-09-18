@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+// NOLINTBEGIN(bugprone-unchecked-optional-access): the CHECK helpers throw when an optional
+// is empty; the check does not follow them.
 #include "discovery_test.hpp"
 #include <array>
 #include <csignal>
@@ -185,3 +187,4 @@ inline void invariants(const std::string &address, const std::string &executable
   }
 }
 } // namespace host_process_test
+// NOLINTEND(bugprone-unchecked-optional-access)

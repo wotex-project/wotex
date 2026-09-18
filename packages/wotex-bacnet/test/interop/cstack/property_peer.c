@@ -185,7 +185,7 @@ void property_peer_subscribe(uint8_t *request, uint16_t length, BACNET_ADDRESS *
                 SERVICE_CONFIRMED_SUBSCRIBE_COV_PROPERTY, error_class, error);
         }
     }
-    if (encoded <= 0 || (size_t)(offset + encoded) > sizeof(output)) {
+    if (encoded <= 0 || (size_t)offset + (size_t)encoded > sizeof(output)) {
         exit(77);
     }
     peer_control_begin(kind);
@@ -226,7 +226,7 @@ static bool notify(struct property_entry *entry, uint64_t now,
     int encoded = confirmed ?
         ccov_notify_encode_apdu(output + offset, sizeof(output) - (unsigned)offset, invoke_id, &notification) :
         ucov_notify_encode_apdu(output + offset, sizeof(output) - (unsigned)offset, &notification);
-    if (encoded <= 0 || (size_t)(offset + encoded) > sizeof(output)) {
+    if (encoded <= 0 || (size_t)offset + (size_t)encoded > sizeof(output)) {
         if (invoke_id) {
             tsm_free_invoke_id(invoke_id);
         }

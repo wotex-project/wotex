@@ -129,6 +129,7 @@ int flow_session(const Json &input) {
     const bool close = exact(event, {"event"}) && event.at("event") == "close";
     if (close) {
       // The final snapshot precedes cooperative exit and sanitizer teardown.
+      // NOLINTNEXTLINE(bugprone-branch-clone): distinct rejection causes share the exit status
     } else if (!terminal.is_null()) {
       return 2;
     } else if (event.at("event") == "transmit") {
@@ -227,10 +228,12 @@ int main(int argc, char **argv) {
   while (bytes.size() <= kMaximumLine && file.get(byte)) bytes.push_back(byte);
   if (operation == "parse_request") {
     bool accepted = false;
+    // NOLINTBEGIN(bugprone-empty-catch): a rejected request leaves accepted false.
     try {
       (void)request(parse_line(bytes));
       accepted = true;
     } catch (const ProtocolError &) {}
+    // NOLINTEND(bugprone-empty-catch)
     std::cout << (accepted ? "{\"accepted\":true}\n" : "{\"accepted\":false}\n");
     return std::cout ? 0 : 2;
   }

@@ -192,6 +192,7 @@ class Sdk final {
   }
  private:
   static void check_status(otError error) {
+    // NOLINTNEXTLINE(bugprone-std-exception-baseclass): the OpenThread status is thrown as a value; the host reports it as remote_error
     if (error != OT_ERROR_NONE) throw error;
   }
   static void managed(otError status, void *context) {

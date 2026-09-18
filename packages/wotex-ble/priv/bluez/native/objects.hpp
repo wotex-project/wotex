@@ -28,6 +28,7 @@ inline std::string uuid_text(const std::string &value) {
       if (c != '-') throw InvalidObjects("invalid_characteristic");
       continue;
     }
+    // NOLINTNEXTLINE(bugprone-branch-clone): digits and lower-case hex digits are both kept as they are
     if (c >= '0' && c <= '9') compact += c;
     else if (c >= 'a' && c <= 'f') compact += c;
     else if (c >= 'A' && c <= 'F') compact += static_cast<char>(c + ('a' - 'A'));

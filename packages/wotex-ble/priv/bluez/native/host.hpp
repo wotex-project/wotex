@@ -66,9 +66,9 @@ class NativeHost {
     if (reports_) for (auto id : streams_) reports_->silence(id);
     if (notifications_) {
       const auto streams = streams_;
-      for (auto id : streams) notifications_->cancel(id, stop_by_, [](auto) {});
+      for (auto id : streams) notifications_->cancel(id, stop_by_, [](const auto &) {});
       if (active_ && active_->operation() == "subscribe" && !streams.count(active_->number()))
-        notifications_->cancel(active_->number(), stop_by_, [](auto) {});
+        notifications_->cancel(active_->number(), stop_by_, [](const auto &) {});
     }
     if (pairing_ && pairing_->active()) pairing_->cancel(stop_by_);
     if (procedure_ && procedure_->active()) procedure_->cancel(stop_by_);
@@ -137,6 +137,9 @@ class NativeHost {
       })) fail(pending, "busy");
     } catch (const PageFailure &error) { fail(pending, error.what()); }
   }
+  // By value: the copy keeps the operation alive while dispatch clears active_, which the
+  // caller passes.
+  // NOLINTNEXTLINE(performance-unnecessary-value-param)
   void dispatch(std::shared_ptr<Pending> pending) {
     if (Clock::now() >= pending->deadline) { fail(pending, "timeout"); return; }
     const auto &operation = pending->operation();

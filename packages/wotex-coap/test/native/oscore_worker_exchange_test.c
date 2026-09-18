@@ -58,6 +58,14 @@ static int saved(uint64_t boundary, void *argument) {
     return 1;
 }
 
+/* Compares members: the struct has padding, so its bytes are not a value. */
+static int same_freshness(const struct wco_observation_freshness *a,
+                          const struct wco_observation_freshness *b) {
+    return a->received_at == b->received_at && a->observe == b->observe &&
+           a->content_format == b->content_format &&
+           a->content_format_present == b->content_format_present && a->set == b->set;
+}
+
 static void freshness_primitives(void) {
     struct wco_observation_freshness freshness, retained;
     memset(&freshness, 0, sizeof(freshness));
@@ -66,25 +74,25 @@ static void freshness_primitives(void) {
     retained = freshness;
     assert(wco_observation_admit(&freshness, 10, 1001, 1, 42, 0) ==
            WCO_OBSERVATION_STALE);
-    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(same_freshness(&freshness, &retained));
     assert(wco_observation_admit(&freshness, 9, 1002, 0, 0, 0) ==
            WCO_OBSERVATION_STALE);
-    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(same_freshness(&freshness, &retained));
     assert(wco_observation_admit(&freshness, 10 + 0x800000u, 1003, 1, 0, 0) ==
            WCO_OBSERVATION_STALE);
-    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(same_freshness(&freshness, &retained));
     assert(wco_observation_admit(&freshness, 11, 1004, 1, 0, 0) ==
            WCO_OBSERVATION_FRESH);
     retained = freshness;
     assert(wco_observation_admit(&freshness, 12, 1005, 1, 42, 0) ==
            WCO_OBSERVATION_CHANGED);
-    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(same_freshness(&freshness, &retained));
     assert(wco_observation_admit(&freshness, 11, 2000, 1, 0, 1) ==
            WCO_OBSERVATION_FRESH);
     retained = freshness;
     assert(wco_observation_admit(&freshness, 11, 2001, 1, 42, 1) ==
            WCO_OBSERVATION_CHANGED);
-    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(same_freshness(&freshness, &retained));
     assert(wco_observation_admit(&freshness, 11, 130002, 1, 0, 0) ==
            WCO_OBSERVATION_FRESH);
     memset(&freshness, 0, sizeof(freshness));
@@ -249,6 +257,7 @@ static coap_context_t *server(unsigned *port) {
     bind.size = sizeof(bind.addr.sin);
     endpoint = coap_new_endpoint(context, &bind, COAP_PROTO_UDP);
     assert(endpoint);
+    /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): libcoap formats the port */
     assert(sscanf(coap_endpoint_str(endpoint), "127.0.0.1:%u UDP", port) == 1);
     assert(*port > 0 && *port <= 65535);
     value = coap_resource_init(coap_make_str_const("value"),

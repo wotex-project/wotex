@@ -104,6 +104,7 @@ static void receive_create_subscription(UA_Client *client, void *userdata, UA_UI
     UA_CreateSubscriptionResponse *response = raw;
     if(!wop_session_accept(operation, request_id, response ? &response->responseHeader : NULL))
         return;
+    /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
     operation->created_subscription = response->subscriptionId;
     operation->revised.publishing_interval_ms = response->revisedPublishingInterval;
     operation->revised.lifetime_count = response->revisedLifetimeCount;
@@ -118,6 +119,7 @@ static void receive_create_items(UA_Client *client, void *userdata, UA_UInt32 re
     UA_CreateMonitoredItemsResponse *response = raw;
     if(!wop_session_accept(operation, request_id, response ? &response->responseHeader : NULL))
         return;
+    /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
     if(response->resultsSize != 1 || !response->results) return;
     const UA_MonitoredItemCreateResult *result = &response->results[0];
     operation->item_status = result->statusCode;
@@ -136,12 +138,14 @@ static void receive_delete(UA_Client *client, void *userdata, UA_UInt32 request_
         UA_DeleteMonitoredItemsResponse *response = raw;
         if(!wop_session_accept(operation, request_id, response ? &response->responseHeader : NULL))
             return;
+        /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
         operation->valid = response->resultsSize == 1 && response->results &&
                            response->results[0] == UA_STATUSCODE_GOOD;
     } else {
         UA_DeleteSubscriptionsResponse *response = raw;
         if(!wop_session_accept(operation, request_id, response ? &response->responseHeader : NULL))
             return;
+        /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
         operation->valid = response->resultsSize == 1 && response->results &&
                            response->results[0] == UA_STATUSCODE_GOOD;
     }

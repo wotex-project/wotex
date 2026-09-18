@@ -138,6 +138,7 @@ inline void signal_invariants() {
     OBJECT_CHECK(rejected);
   }
   std::vector<std::string> names;
+  names.reserve(256);
   for (unsigned i = 0; i < 256; ++i) names.push_back("Field" + std::to_string(i));
   input = changed_message({}, names);
   OBJECT_CHECK(ObjectReader().changed(input.get()).invalidated.size() == 256);

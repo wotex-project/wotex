@@ -68,6 +68,7 @@ int main(int argc, char **) {
     try {
       host.flush(STDOUT_FILENO);
       if (host.finished() && !host.output_frames()) return failed ? 1 : host.status();
+      // NOLINTNEXTLINE(bugprone-empty-catch): a failed final flush leaves status 1 below.
     } catch (...) {}
     return 1;
   } catch (...) { return 1; }

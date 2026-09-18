@@ -73,6 +73,7 @@ private:
       DBusMessageIter root, array, options;
       dbus_message_iter_init_append(message.get(), &root);
       if (operation == "write") {
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access): start() admitted bytes for a write.
         const auto &value = bytes->value();
         constexpr unsigned char empty = 0;
         const unsigned char *data = value.empty() ? &empty : value.data();
@@ -122,6 +123,7 @@ private:
       try {
         std::string path = owner.snapshot()->device_path;
         if (operation != "health") {
+          // NOLINTNEXTLINE(bugprone-unchecked-optional-access): start() admitted an address for it.
           const auto &item = address->select(*owner.snapshot(), owner.generation());
           const auto &flags = item.at("flags");
           if (std::find(flags.begin(), flags.end(), operation) == flags.end()) {
@@ -195,6 +197,7 @@ private:
       if (phase == Phase::idle || phase == Phase::finished) return;
       completion = {}; emit = {};
       const auto stop_by = phase == Phase::closing ? cleanup_deadline : Clock::now() + std::chrono::milliseconds(500);
+      // NOLINTNEXTLINE(bugprone-empty-catch): teardown must not throw; the failure is already terminal
       try { owner.close(stop_by); } catch (...) {}
       phase = Phase::finished;
     }

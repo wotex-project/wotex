@@ -17,10 +17,12 @@ static void rejects(const std::string &bytes) {
   try { (void)parse_line(bytes); std::abort(); }
   catch (const ProtocolError &error) { check(std::string(error.what()) == "invalid_bridge_message"); }
 }
+// NOLINTBEGIN(bugprone-empty-catch): the rejection is the expected outcome.
 static void rejects_request(const Json &input) {
   try { (void)request(input); std::abort(); }
   catch (const ProtocolError &) {}
 }
+// NOLINTEND(bugprone-empty-catch)
 int main() {
   // WTH-C07/WTH-V04: scalar identity, UTF-8 and exact envelopes.
   const Json base = {{"version", 1}, {"id", "opaque-id"}, {"operation", "inspect"},
@@ -44,7 +46,10 @@ int main() {
 
   // WTH-C07/WTH-V04: depth, per-collection and aggregate limits are independent.
   std::string depth = "0";
-  for (std::size_t i = 0; i < kMaximumDepth; ++i) depth = "[" + depth + "]";
+  for (std::size_t i = 0; i < kMaximumDepth; ++i) {
+    depth.insert(depth.begin(), '[');
+    depth.push_back(']');
+  }
   check(parse_line(depth + "\n").is_array());
   rejects("[" + depth + "]\n");
   Json array = Json::array(), object = Json::object();
@@ -78,11 +83,13 @@ int main() {
   bad = base; bad["operation"] = std::string(65, 'x'); rejects_request(bad);
   rejects_request(nullptr);
   // WTH-C07/WTH-V04: deterministic malformed-byte stress under native sanitizers.
+  // NOLINTNEXTLINE(bugprone-random-generator-seed,cert-msc32-c,cert-msc51-cpp): a fixed seed keeps the stress input reproducible
   std::mt19937 generator(0x575448);
   for (std::size_t iteration = 0; iteration < 10000; ++iteration) {
     std::string bytes(generator() % 256, '\0');
     for (char &byte : bytes) byte = static_cast<char>(generator() & 0xff);
     bytes.push_back('\n');
+    // NOLINTNEXTLINE(bugprone-empty-catch): malformed input is expected to be rejected
     try { (void)parse_line(bytes); } catch (const ProtocolError &) {}
   }
   // WTH-B02: flow control frames have exact allowlists and share the inbound validator.
@@ -99,8 +106,10 @@ int main() {
   for (const Json &frame : {open, ack, base}) validate_inbound(parse_line(frame.dump() + "\n"));
   auto rejects_control = [](const Json &input) {
     const Json decoded = parse_line(input.dump() + "\n");
+    // NOLINTBEGIN(bugprone-empty-catch): the rejection is the expected outcome.
     try { (void)flow_control(decoded); std::abort(); } catch (const ProtocolError &) {}
     try { validate_inbound(decoded); std::abort(); } catch (const ProtocolError &) {}
+    // NOLINTEND(bugprone-empty-catch)
   };
   for (const Json &generation : {Json("0123456789ABCDEF0123456789abcdef"), Json(session + "0"), Json(1), Json(nullptr)}) {
     auto bad_open = open; bad_open["session_generation"] = generation; rejects_control(bad_open);

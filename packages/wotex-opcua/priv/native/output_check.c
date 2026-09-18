@@ -56,6 +56,7 @@ static int credit_gates_emission(void) {
     wop_output_init(&output);
     char *report = frame(1024, 'r');
     CHECK(report);
+    /* NOLINTNEXTLINE(clang-analyzer-unix.Malloc): a failed step fails the check, which exits */
     CHECK(wop_output_normal(&output, report, 1024) == WOP_OUTPUT_OK);
     CHECK(!wop_output_writable(&output));
     CHECK(wop_output_flush(&output, pipe_fds[1]) == WOP_OUTPUT_OK);
@@ -121,6 +122,7 @@ static int queue_bounds(void) {
     wop_output_init(&output);
     char *small = frame(16, 'q');
     char *large = frame(WOP_JSON_FRAME_BYTES, 'l');
+    /* NOLINTNEXTLINE(clang-analyzer-unix.Malloc): an allocation failure fails the check, which exits */
     CHECK(small && large);
     for (size_t i = 0; i < WOP_OUTPUT_FRAMES; i++)
         CHECK(wop_output_normal(&output, small, 16) == WOP_OUTPUT_OK);
@@ -158,6 +160,7 @@ static int partial_write_then_terminal(void) {
     CHECK(wop_output_credit(&output, &credit) == WOP_OUTPUT_OK);
     char *first = frame(WOP_JSON_FRAME_BYTES, 'a');
     char *second = frame(512, 'b');
+    /* NOLINTNEXTLINE(clang-analyzer-unix.Malloc): an allocation failure fails the check, which exits */
     CHECK(first && second);
     CHECK(wop_output_normal(&output, first, WOP_JSON_FRAME_BYTES) == WOP_OUTPUT_OK);
     CHECK(wop_output_normal(&output, second, 512) == WOP_OUTPUT_OK);
@@ -205,6 +208,7 @@ static int control_allowance_and_closed_descriptor(void) {
     char *ready = frame(4000, 'c');
     char *terminal = frame(97, 't');
     char *exact = frame(96, 't');
+    /* NOLINTNEXTLINE(clang-analyzer-unix.Malloc): an allocation failure fails the check, which exits */
     CHECK(ready && terminal && exact);
     CHECK(wop_output_control(&output, ready, 4000, false) == WOP_OUTPUT_OK);
     CHECK(wop_output_control(&output, terminal, 97, true) == WOP_OUTPUT_INVALID);

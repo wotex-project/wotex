@@ -366,6 +366,7 @@ static WopValueStatus read_element(unsigned id, yyjson_val *input, WopValueArena
     switch(id) {
     case 1:
         if(!yyjson_is_bool(input)) return WOP_VALUE_INVALID;
+        /* NOLINTNEXTLINE(clang-analyzer-optin.core.FixedAddressDereference): an empty array never reaches read_element; the analyzer does not tie yyjson_arr_size to the loop bound */
         *(UA_Boolean*)output = yyjson_get_bool(input);
         return WOP_VALUE_OK;
 #define READ_SIGNED(ID, TYPE, MINIMUM, MAXIMUM) \

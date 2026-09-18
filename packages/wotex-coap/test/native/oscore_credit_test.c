@@ -2,6 +2,7 @@
 #include "credit.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static void sent(struct wco_credit *credit, uint64_t expected) {
     uint64_t sequence = 0;
@@ -52,6 +53,8 @@ static void invalid(void) {
             assert(wco_credit_ack(&credit, 17, 0) == WCO_CREDIT_OK);
             sent(&credit, 1);
             assert(wco_credit_written(&credit, 1) == WCO_CREDIT_INVALID); break;
+        default:
+            abort();
         }
         assert(credit.failed && !wco_credit_available(&credit));
         assert(wco_credit_ack(&credit, 17, 0) == WCO_CREDIT_INVALID);

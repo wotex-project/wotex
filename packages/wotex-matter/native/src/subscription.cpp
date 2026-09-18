@@ -134,10 +134,13 @@ bool SubscriptionBuffer::Add(PathResult result) {
       initial_attribute_paths_.push_back(report.result.path);
     }
   } else {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access): valid_subscription_report
+    // admitted only event results for an event subscription.
     current_event_ids_.emplace_back(report.result.path,
                                     report.result.event->event_number);
     event_id_cache_.emplace_back(report.result.path,
                                  report.result.event->event_number);
+    // NOLINTEND(bugprone-unchecked-optional-access)
     if (event_id_cache_.size() > 1024) {
       event_id_cache_.pop_front();
     }
@@ -490,9 +493,12 @@ bool ReportCreditManager::Drain() {
   return true;
 }
 
+// NOLINTBEGIN(performance-unnecessary-value-param): a sink parameter, so BeginRecovery
+// moves its barrier in.
 bool ReportCreditManager::Retire(const std::string &subscription_id,
                                  std::uint64_t generation,
                                  std::string barrier) {
+  // NOLINTEND(performance-unnecessary-value-param)
   auto stream = streams_.find(Key(subscription_id, generation));
   if (stream == streams_.end() || !stream->second.live) {
     return false;

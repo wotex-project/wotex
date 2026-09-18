@@ -264,6 +264,7 @@ class Script {
   }
   void agent_reply(const std::string &id, const Json &parameters) {
     if (!challenge_) { fail(id, "pairing_rejected"); return; }
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): challenge_ was checked above; std::exchange returns that value
     const auto pair = *std::exchange(challenge_, std::nullopt);
     const auto &action = parameters.at("decision").at("action");
     const auto &kind = scenario_.challenge.at("kind");
@@ -350,6 +351,7 @@ class Script {
     retire(stream);
     reply(id, nullptr);
     if (overtaken_) {
+      // NOLINTNEXTLINE(bugprone-unchecked-optional-access): overtaken_ was checked above; std::exchange returns that value
       const auto read = *std::exchange(overtaken_, std::nullopt);
       reply(read, scenario_.value);
     }

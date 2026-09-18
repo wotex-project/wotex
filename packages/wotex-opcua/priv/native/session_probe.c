@@ -128,6 +128,7 @@ int main(int argc, char **argv) {
     void *pool = malloc(WOP_JSON_POOL_BYTES);
     if(!bytes || !pool) { fclose(file); free(bytes); free(pool); return 70; }
     size_t length = fread(bytes, 1, WOP_JSON_FRAME_BYTES, file);
+    /* NOLINTNEXTLINE(clang-analyzer-unix.Stream): EOF here is the expected proof that the input fit the frame */
     int extra = fgetc(file);
     fclose(file);
     WopJson parsed = {0};

@@ -74,7 +74,7 @@ static UA_StatusCode send_browse(void *context, WopSessionOperation *operation,
     entry->timeout_hint = request->requestHeader.timeoutHint;
     trace->pending = operation;
     trace->pending_next = false;
-    trace->pending_request = ++trace->pending_request;
+    ++trace->pending_request;
     operation->request_id = trace->pending_request;
     return UA_STATUSCODE_GOOD;
 }
@@ -90,7 +90,7 @@ static UA_StatusCode send_browse_next(void *context, WopSessionOperation *operat
     hex(&request->continuationPoints[0], entry->continuation_hex, sizeof(entry->continuation_hex));
     trace->pending = operation;
     trace->pending_next = true;
-    trace->pending_request = ++trace->pending_request;
+    ++trace->pending_request;
     operation->request_id = trace->pending_request;
     return UA_STATUSCODE_GOOD;
 }
@@ -265,6 +265,7 @@ static bool page_response(Trace *trace, yyjson_val *event) {
         result.continuationPoint.length = bytes;
         for(size_t i = 0; i < bytes; i++) {
             unsigned value = 0;
+            /* NOLINTNEXTLINE(clang-analyzer-unix.Malloc,bugprone-unchecked-string-to-number-conversion,cert-err34-c): two hex digits cannot overflow; a failed parse fails the check, which exits */
             if(sscanf(point + 2 * i, "%2x", &value) != 1) return false;
             result.continuationPoint.data[i] = (UA_Byte)value;
         }

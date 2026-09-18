@@ -175,6 +175,7 @@ static void ready(struct run *run) {
         FILE *file = fopen(run->file, "r");
         if (file) {
             long sdk_pid, background;
+            /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): reads PIDs the check's own child wrote */
             int count = fscanf(file, "%ld %ld", &sdk_pid, &background); fclose(file);
             if (count == 2) { run->sdk = (pid_t)sdk_pid; run->background = (pid_t)background; return; }
         }

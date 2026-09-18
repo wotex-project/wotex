@@ -73,6 +73,7 @@ class Commissioning final {
       throw CommissioningError("busy");
     }
     const otError status = otCommissionerStart(instance_, commissioner_state, joiner_event, this);
+    // NOLINTNEXTLINE(bugprone-std-exception-baseclass): the OpenThread status is thrown as a value; the host reports it as remote_error
     if (status != OT_ERROR_NONE) throw status;
     owned_ = true;
   }
@@ -84,6 +85,7 @@ class Commissioning final {
       admissions_.clear(); return;
     }
     const otError status = otCommissionerStop(instance_);
+    // NOLINTNEXTLINE(bugprone-std-exception-baseclass): the OpenThread status is thrown as a value; the host reports it as remote_error
     if (status != OT_ERROR_NONE && status != OT_ERROR_ALREADY) throw status;
     owned_ = false;
     admissions_.clear();
@@ -102,6 +104,7 @@ class Commissioning final {
     const otError status = identity.is_discerner
         ? otCommissionerAddJoinerWithDiscerner(instance_, &identity.discerner, pskd.c_str(), lifetime)
         : otCommissionerAddJoiner(instance_, &identity.eui, pskd.c_str(), lifetime);
+    // NOLINTNEXTLINE(bugprone-std-exception-baseclass): the OpenThread status is thrown as a value; the host reports it as remote_error
     if (status != OT_ERROR_NONE) throw status;
     admissions_[identity.key] = deadline;
   }
@@ -112,6 +115,7 @@ class Commissioning final {
     const otError status = identity.is_discerner
         ? otCommissionerRemoveJoinerWithDiscerner(instance_, &identity.discerner)
         : otCommissionerRemoveJoiner(instance_, &identity.eui);
+    // NOLINTNEXTLINE(bugprone-std-exception-baseclass): the OpenThread status is thrown as a value; the host reports it as remote_error
     if (status != OT_ERROR_NONE) throw status;
     admissions_.erase(identity.key);
   }

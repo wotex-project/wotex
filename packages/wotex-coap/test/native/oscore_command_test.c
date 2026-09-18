@@ -28,7 +28,9 @@ static void line(const char *input, int valid, enum wco_operation operation) {
         assert(status == WCO_JSON_OK && command.operation == operation);
         assert(command.timeout_ms >= 1 && command.timeout_ms <= 60000 && command.parameters);
         char retained[65];
-        strcpy(retained, yyjson_get_str(yyjson_obj_get(wco_json_root(json), "id")));
+        int written = snprintf(retained, sizeof(retained), "%s",
+                               yyjson_get_str(yyjson_obj_get(wco_json_root(json), "id")));
+        assert(written >= 0 && (size_t)written < sizeof(retained));
         wco_json_reset(json);
         assert(strcmp(command.id, retained) == 0); /* Identity owns its bytes. */
     } else {

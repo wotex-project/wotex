@@ -77,6 +77,8 @@ class LiveDiscovery {
       if (callback) callback(nullptr);
     }
     void advance_connection() {
+      // NOLINTBEGIN(bugprone-unchecked-optional-access): advance_connection runs only after a
+      // snapshot of the device was taken.
       if (snapshot->connected && snapshot->services_resolved) {
         linked = true; complete(); return;
       }
@@ -87,6 +89,7 @@ class LiveDiscovery {
       // attempt's cleanup even when Connect's acknowledgement is lost.
       connect_attempted = true; link_owned = true;
       Message request(dbus_message_new_method_call(service.owner().c_str(), snapshot->device_path.c_str(), device_interface, "Connect"));
+      // NOLINTEND(bugprone-unchecked-optional-access)
       std::weak_ptr<State> weak = shared_from_this();
       if (!service.bus().call(request.get(), "", deadline, [weak](BusReply reply) {
         const auto state = weak.lock();
@@ -124,11 +127,13 @@ class LiveDiscovery {
           for (const auto &name : update.invalidated) relevant = relevant || metadata(update.interface, name);
           if (!relevant) return;
           const auto *path = dbus_message_get_path(message);
+          // NOLINTBEGIN(bugprone-unchecked-optional-access): linked implies a snapshot.
           if (linked && path && snapshot->device_path == path && update.interface == device_interface &&
               ((update.values.contains("Connected") && !update.values.at("Connected").get<bool>()) ||
                (update.values.contains("ServicesResolved") && !update.values.at("ServicesResolved").get<bool>()))) {
             fail("disconnected"); return;
           }
+          // NOLINTEND(bugprone-unchecked-optional-access)
         } else if (dbus_message_is_signal(message, "org.freedesktop.DBus.ObjectManager", "InterfacesAdded")) {
           const auto update = reader.added(message);
           if (update.values().begin().value().empty()) return;

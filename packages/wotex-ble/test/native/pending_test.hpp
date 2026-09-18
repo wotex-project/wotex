@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+// NOLINTBEGIN(bugprone-unchecked-optional-access): the CHECK helpers throw when an optional
+// is empty; the check does not follow them.
 #include "pairing_test.hpp"
 
 namespace pending_test {
@@ -59,3 +61,4 @@ inline void invariants(const std::string &address) {
   fixture.owner.close(); PENDING_CHECK(!bus.cancel(*old));
 }
 } // namespace pending_test
+// NOLINTEND(bugprone-unchecked-optional-access)

@@ -138,6 +138,7 @@ static void faulted_reservations(void) {
         wco_store_test_fault((enum wco_store_step)step, 0);
         assert(wco_store_reserve(store, 64) == WCO_STORE_UNAVAILABLE);
         assert(wco_store_boundary(store) == 32);
+        /* NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): step 0 clears the injected fault */
         wco_store_test_fault(0, 0);
         assert(wco_store_reserve(store, 32) == WCO_STORE_UNAVAILABLE);
         wco_store_close(store);
@@ -156,6 +157,7 @@ static void faulted_admission(void) {
         struct wco_store *store;
         wco_store_test_fault((enum wco_store_step)step, 0);
         assert(wco_store_open(dir, &selected, 32, &store) == WCO_STORE_UNAVAILABLE && !store);
+        /* NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): step 0 clears the injected fault */
         wco_store_test_fault(0, 0);
         assert(wco_store_open(dir, &selected, 32, &store) ==
                (step == WCO_STORE_DIRECTORY_SYNC ? WCO_STORE_FRESH_REQUIRED : WCO_STORE_CORRUPT));

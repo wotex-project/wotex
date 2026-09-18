@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
+// NOLINTBEGIN(bugprone-unchecked-optional-access): the CHECK helpers throw when an optional
+// is empty; the check does not follow them.
 #include "notifications.hpp"
 #include "procedures_test.hpp"
 #include "pending_test.hpp"
@@ -225,7 +227,8 @@ inline void capacity(const std::string &address) {
       fixture.start(identifier); fixture.until([&] { return fixture.results.count(identifier); });
       NOTIFY_CHECK(!fixture.results.at(identifier).failure); fixture.cancel(identifier);
       fixture.until([&] { return fixture.cancellations.count(identifier); }); fixture.clean();
-      NOTIFY_CHECK(!fixture.notifications.cancel(identifier, Clock::now() + std::chrono::seconds(1), [](auto) { NOTIFY_CHECK(false); }));
+      NOTIFY_CHECK(!fixture.notifications.cancel(identifier, Clock::now() + std::chrono::seconds(1),
+                                                 [](const auto &) { NOTIFY_CHECK(false); }));
     }
     NOTIFY_CHECK(fixture.methods.size() == 2000 && fixture.session.peer.calls == 1001);
   }
@@ -432,3 +435,4 @@ inline void invariants(const std::string &address) {
   }
 }
 } // namespace notifications_test
+// NOLINTEND(bugprone-unchecked-optional-access)

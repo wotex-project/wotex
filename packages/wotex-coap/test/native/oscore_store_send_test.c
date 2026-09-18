@@ -92,6 +92,7 @@ static void run(int fault, uint64_t sequence) {
             assert(wco_store_boundary(store) == 32);
         }
     }
+    /* NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): step 0 clears the injected fault */
     wco_store_test_fault(0, 0);
     if (sequence) {
         assert(wco_store_reserve(store, WCO_STORE_SEQUENCE_LIMIT + 1) == WCO_STORE_EXHAUSTED);

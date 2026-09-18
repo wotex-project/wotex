@@ -100,6 +100,7 @@ static bool fixture_prepare(void *context, const WopOperation *operation,
         bool stream = strncmp(name, "stream-", 7) == 0, error = strncmp(name, "error-", 6) == 0;
         if(!stream && !error) return false;
         fixture.mode[slot] = MODE_SUCCESS;
+        /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): node names are written by the tests */
         fixture.value[slot] = (double)atoll(name + (stream ? 7 : 6));
         fixture.ready_at[slot] = error;
         return true;
@@ -112,6 +113,7 @@ static bool fixture_prepare(void *context, const WopOperation *operation,
         fixture.mode[slot] = MODE_HOLD;
     } else if(strncmp(name, "delay-", 6) == 0) {
         fixture.mode[slot] = MODE_DELAY;
+        /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): node names are written by the tests */
         fixture.ready_at[slot] = atoll(name + 6);
     } else if(strcmp(name, "bad") == 0) {
         fixture.mode[slot] = MODE_BAD;
@@ -119,6 +121,7 @@ static bool fixture_prepare(void *context, const WopOperation *operation,
         fixture.mode[slot] = MODE_LOSE;
     } else if(strncmp(name, "value-", 6) == 0) {
         fixture.mode[slot] = MODE_SUCCESS;
+        /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): node names are written by the tests */
         fixture.value[slot] = (double)atoll(name + 6);
     } else {
         return false;

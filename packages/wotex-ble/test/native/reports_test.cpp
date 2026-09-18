@@ -20,7 +20,8 @@ static Json metadata() {
       {"characteristic_uuid", "00002a19-0000-1000-8000-00805f9b34fb"}, {"service_path", "/org/bluez/hci0/device/service"},
       {"object_path", "/org/bluez/hci0/device/service/char"}, {"handle", 17}, {"flags", {"read", "notify"}}, {"generation", 1}}}};
 }
-static Json value(std::uint64_t id, const Json &bound = metadata(), std::string bytes = "\x01") {
+static Json value(std::uint64_t id, const Json &bound = metadata(),
+                  const std::string &bytes = "\x01") {
   return {{"version", 1}, {"subscription_id", std::to_string(id)}, {"generation", 1}, {"event", "value"},
     {"value", AttributeBytes::from_bytes(bytes).envelope()}, {"metadata", bound}};
 }

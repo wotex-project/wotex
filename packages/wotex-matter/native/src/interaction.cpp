@@ -66,8 +66,11 @@ bool ValidPathResult(const InteractionRequest &request, const PathResult &result
                          result.path.member, Operation::Read,
                          result.event->value) == ConversionError::None;
   }
+  // NOLINTBEGIN(bugprone-unchecked-optional-access): exactly one alternative is present
+  // (counted above), so the error is set.
   return !result.error->code.empty() &&
       result.error->effect == InteractionEffect::None;
+  // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
 } // namespace
@@ -111,10 +114,13 @@ bool valid_interaction_request(const InteractionRequest &request) {
     return false;
   }
   if (mutation) {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access): ValidSelector admitted only
+    // concrete paths for a mutation.
     const ConcretePath path{request.fabric_id, request.node_id,
                             *request.paths[0].endpoint,
                             *request.paths[0].cluster,
                             *request.paths[0].member};
+    // NOLINTEND(bugprone-unchecked-optional-access)
     const MemberKind member_kind = request.kind == InteractionKind::Write
         ? MemberKind::Attribute
         : MemberKind::Command;

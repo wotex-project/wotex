@@ -549,6 +549,7 @@ static void exported_methods(Daemon &daemon) {
   Message request_template(dbus_message_new_method_call(blocked.unique_name().c_str(), path, interface, "Release"));
   check(dbus_message_set_sender(request_template.get(), source.unique_name().c_str()));
   dbus_message_set_serial(request_template.get(), 1);
+  // NOLINTNEXTLINE(bugprone-exception-escape): a failed resume ends the test process
   struct Resume { Daemon &daemon; ~Resume() { daemon.resume(); } } resume{daemon};
   daemon.suspend();
   unsigned admitted = 0;

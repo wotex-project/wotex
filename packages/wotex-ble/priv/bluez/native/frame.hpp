@@ -189,6 +189,7 @@ public:
         const auto newline = bytes.find('\n');
         const auto count = newline == std::string_view::npos ? bytes.size() : newline + 1;
         if (count > max_line - partial_.size()) throw InvalidFrame();
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage): count bytes are appended by length
         partial_.append(bytes.data(), count);
         bytes.remove_prefix(count);
         if (newline != std::string_view::npos) {

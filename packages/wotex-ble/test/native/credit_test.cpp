@@ -70,8 +70,10 @@ static void invariants() {
     check(credits.open(id, 1));
     auto seq = credits.reserve(id, 128); check(seq.has_value());
     check(!credits.reserve(id, 128).has_value());
+    // NOLINTBEGIN(bugprone-unchecked-optional-access): check ends the test when seq is empty.
     credits.retire(id, *seq);
     credits.acknowledge(generation, *seq, *seq * 128);
+    // NOLINTEND(bugprone-unchecked-optional-access)
     check(credits.stream_records() == 0);
   }
   rejects([&] { credits.open(3, 1); });

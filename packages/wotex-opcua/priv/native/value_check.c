@@ -162,11 +162,11 @@ static int check_case(const char *path, const char *id) {
     input = tmpfile(); report = tmpfile();
     if(!input || !report || fwrite(yyjson_get_str(json), 1, yyjson_get_len(json), input) != yyjson_get_len(json))
         goto done;
-    rewind(input);
+    if (fseek(input, 0, SEEK_SET) != 0) goto done;
     FILE *owned_input = input;
     input = NULL; /* process consumes and closes the input stream. */
     if(process(mode, owned_input, (size_t)capacity, report)) goto done;
-    rewind(report);
+    if (fseek(report, 0, SEEK_SET) != 0) goto done;
     length = fread(response, 1, WOP_JSON_FRAME_BYTES + 1, report);
     if(ferror(report) || wop_json_read(response, length, response_pool, WOP_JSON_POOL_BYTES, &result) != WOP_JSON_OK)
         goto done;

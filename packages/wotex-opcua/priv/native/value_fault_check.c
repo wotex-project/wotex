@@ -94,6 +94,7 @@ static int faults(Fixture *fixture, const char *id) {
         public_id.namespaceIndex = 4;
         CHECK(wop_value_translate_node_id(server, 4, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
         public_id.namespaceIndex = 2;
+        /* NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): a deliberately invalid identifier type for the fault case */
         public_id.identifierType = (enum UA_NodeIdType)255;
         CHECK(wop_value_translate_node_id(server, 4, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
         return 0;

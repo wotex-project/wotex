@@ -47,6 +47,7 @@ int main() {
     check(data.get() >= 0 && ::write(data.get(), "durable", 7) == 7);
     check(::fsync(data.get()) == 0 && ::fsync(owned.directory()) == 0);
     Storage moved(std::move(owned));
+    // NOLINTNEXTLINE(bugprone-use-after-move): asserts the moved-from state
     check(moved.directory() >= 0 && owned.directory() == -1);
   }
   {

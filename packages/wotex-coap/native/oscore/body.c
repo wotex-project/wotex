@@ -47,6 +47,7 @@ int wco_body_base64(yyjson_val *value, uint8_t *output, size_t capacity, size_t 
         unsigned b = (unsigned)digit((unsigned char)input[offset + 1]);
         unsigned c = input[offset + 2] == '=' ? 0 : (unsigned)digit((unsigned char)input[offset + 2]);
         unsigned d = input[offset + 3] == '=' ? 0 : (unsigned)digit((unsigned char)input[offset + 3]);
+        /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): output is non-NULL whenever a byte decodes (checked above) */
         output[written++] = (uint8_t)((a << 2) | (b >> 4));
         if (written < decoded) output[written++] = (uint8_t)((b << 4) | (c >> 2));
         if (written < decoded) output[written++] = (uint8_t)((c << 6) | d);

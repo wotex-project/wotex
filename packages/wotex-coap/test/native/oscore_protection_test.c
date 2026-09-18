@@ -150,6 +150,7 @@ static void protected_peer(void) {
     bind.size = sizeof(bind.addr.sin);
     endpoint = coap_new_endpoint(server, &bind, COAP_PROTO_UDP); assert(endpoint);
     /* The pinned public formatter reports the kernel-selected bound port. */
+    /* NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion,cert-err34-c): libcoap formats the port */
     assert(sscanf(coap_endpoint_str(endpoint), "127.0.0.1:%u UDP", &port) == 1 && port && port <= 65535);
     address.sin_port = htons((uint16_t)port); address.sin_addr = bind.addr.sin.sin_addr;
     resource = coap_resource_init(coap_make_str_const("value"), COAP_RESOURCE_FLAGS_OSCORE_ONLY); assert(resource);

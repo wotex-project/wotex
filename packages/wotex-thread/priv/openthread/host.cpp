@@ -295,6 +295,8 @@ class Worker final {
         if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
         reply(success(command, sdk_->set_enabled(command.parameters)));
+        // NOLINTBEGIN(bugprone-unchecked-optional-access): commands dispatch only after
+        // flow_open, which emplaces streams_ together with flow_.
       } else if (command.operation == "subscribe_state") {
         const Json &limit = command.parameters.contains("queue_limit") ? command.parameters.at("queue_limit") : Json();
         if (!exact_keys(command.parameters, {"queue_limit"}) || !limit.is_number_unsigned() ||
@@ -318,6 +320,7 @@ class Worker final {
           throw SdkError("subscription_not_found");
         }
         reply(success(command, nullptr));
+        // NOLINTEND(bugprone-unchecked-optional-access)
       } else if (command.operation == "validate_dataset" || command.operation == "get_dataset") {
         if (!sdk_) throw SdkError("not_open");
         reply(success(command, sdk_->dataset(command.operation, command.parameters)));
@@ -525,6 +528,7 @@ int main() {
     if (::dup2(input[0], STDIN_FILENO) < 0 || ::dup2(output[1], STDOUT_FILENO) < 0) ::_exit(2);
     (void)::close(input[0]); (void)::close(output[1]);
     int outcome = 2;
+    // NOLINTNEXTLINE(bugprone-empty-catch): an exception leaves outcome 2, the failure status.
     try { Worker host; outcome = host.run(); } catch (const std::exception &) {}
     ::_exit(outcome);
   }
