@@ -44,6 +44,8 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
           %Encoding{encoding: :primitive, type: :signed_integer, value: 1 <<< 64, extras: []},
           %Encoding{encoding: :primitive, type: :real, value: 1.0e100, extras: []},
           %Encoding{encoding: :tagged, type: nil, value: <<1>>, extras: [tag_number: 256]},
+          # The pinned SDK encoder raises on a bitstring of non-boolean bits.
+          %Encoding{encoding: :primitive, type: :bitstring, value: {1, 2}, extras: []},
           1.5,
           [Encoding.create!({:null, nil}) | :improper]
         ] do
@@ -398,6 +400,57 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
 
     assert :sys.get_state(state.segments_store).sequences == %{}
   end
+
+  test "WBA-S02 WBA-V04 a segmented ACK with reserved header bits fails only its call" do
+    {:ok, peer} = :gen_udp.open(55_824, [:binary, active: false, ip: {127, 0, 0, 1}])
+
+    {:ok, handle} =
+      IPv4.connect(local_ip: :none, local_port: 55_821, destination: {{127, 0, 0, 1}, 55_824})
+
+    on_exit(fn ->
+      IPv4.disconnect(handle)
+      :gen_udp.close(peer)
+    end)
+
+    %{client: client, segments_store: store} = :sys.get_state(handle.owner)
+    payload = <<0x0C, 1::10, 0::22, 0x19, 85, 0x3E, 0x44, 1.0::float-32, 0x3F>>
+    <<first::binary-size(4), rest::binary>> = payload
+
+    # Reserved bits in the first segment, then in a later one after the store
+    # accepted a valid first segment.
+    for {flags, later} <- [{0x3D, nil}, {0x3C, 0x3A}] do
+      task = Task.async(fn -> IPv4.request(handle, @message, 1000) end)
+      {ip, port, id} = request(peer)
+      reply(peer, ip, port, <<flags, id, 0, 2, 12, first::binary>>)
+
+      if later do
+        assert {:ok, {^ip, ^port, <<0x81, 0x0A, _::16, 1, 0, 0x40, ^id, 0, 2>>}} =
+                 :gen_udp.recv(peer, 0, 1000)
+
+        reply(peer, ip, port, <<later, id, 1, 2, 12, rest::binary>>)
+      end
+
+      assert {:error, %{code: :invalid_response, class: :protocol}} = Task.await(task)
+      assert %{client: ^client} = :sys.get_state(handle.owner)
+      assert :sys.get_state(client).sdk.apdu_timers == %{}
+      assert :sys.get_state(store).sequences == %{}
+    end
+
+    task = Task.async(fn -> IPv4.request(handle, @message, 1000) end)
+    {ip, port, id} = request(peer)
+    reply(peer, ip, port, <<0x30, id, 12, payload::binary>>)
+    assert {:ok, %Encoding{type: :real, value: 1.0}} = Task.await(task)
+  end
+
+  defp request(peer) do
+    assert {:ok, {ip, port, <<0x81, 0x0A, _::16, 1, 4, _, _, id, 12, _::binary>>}} =
+             :gen_udp.recv(peer, 0, 1000)
+
+    {ip, port, id}
+  end
+
+  defp reply(peer, ip, port, apdu),
+    do: :gen_udp.send(peer, ip, port, <<0x81, 0x0A, byte_size(apdu) + 6::16, 1, 0, apdu::binary>>)
 
   defp segment(sequence, more),
     do: %IncompleteAPDU{

@@ -59,7 +59,11 @@ defmodule Wotex.BACnet.Value do
   @doc "Validates bounded native tags without invoking user-provided encoders."
   @spec validate_native(term()) :: :ok | {:error, Error.t()}
   def validate_native(value) do
-    with :ok <- ValueBoundary.validate(value), do: validate_encodings(value)
+    with :ok <- ValueBoundary.validate(value) do
+      if character_strings?(value),
+        do: validate_encodings(value),
+        else: {:error, Error.new(:invalid_value)}
+    end
   rescue
     _ -> {:error, Error.new(:invalid_value)}
   end
@@ -86,6 +90,18 @@ defmodule Wotex.BACnet.Value do
 
   defp typed_value(:character_string, value), do: %CharacterString{character_set: 0, bytes: value}
   defp typed_value(_, value), do: value
+
+  # ValueBoundary counts only a CharacterString's bytes, so every struct, in any
+  # position, must be exactly the value `CharacterString.new/2` builds.
+  defp character_strings?(%CharacterString{} = string),
+    do:
+      CharacterString.new(Map.get(string, :character_set), Map.get(string, :bytes)) ==
+        {:ok, string}
+
+  defp character_strings?(value) when is_list(value), do: Enum.all?(value, &character_strings?/1)
+  defp character_strings?(value) when is_tuple(value), do: character_strings?(Tuple.to_list(value))
+  defp character_strings?(value) when is_map(value), do: character_strings?(Map.values(value))
+  defp character_strings?(_), do: true
 
   defp characters?(%Encoding{type: :character_string, value: value}, mode),
     do: characters?({:character_string, value}, mode)

@@ -42,6 +42,40 @@ defmodule Wotex.BACnet.CharacterStringTest do
     assert {:error, _} = CharacterString.new(1, :binary.copy("a", 65_537))
   end
 
+  test "WBA-S01 WBA-V01 a forged CharacterString fails send validation with a typed error" do
+    {:ok, session} = Wotex.BACnet.connect(client: Wotex.BACnet.TestClient)
+    on_exit(fn -> Wotex.BACnet.disconnect(session) end)
+    valid = %CharacterString{character_set: 0, bytes: "a"}
+
+    nested = fn string ->
+      %Encoding{encoding: :constructed, type: nil, value: {:null, string}, extras: [tag_number: 3]}
+    end
+
+    for value <- [
+          nested.(%{valid | character_set: [0 | 0]}),
+          nested.(%{valid | character_set: self()}),
+          nested.(Map.put(valid, :extra, [1 | 2])),
+          Encoding.create!({:character_string, Map.delete(valid, :bytes)}),
+          Encoding.create!({:character_string, Map.put(valid, :extra, self())})
+        ] do
+      message = Map.merge(@message, %{type: :write_property, value: value})
+
+      assert {:error, %{code: :invalid_value, effect: :none}} =
+               Wotex.BACnet.send(session, message)
+
+      assert {:error, %{code: :invalid_value}} = Value.validate_native(value)
+    end
+
+    assert {:ok, _} =
+             Wotex.BACnet.send(
+               session,
+               Map.merge(@message, %{
+                 type: :write_property,
+                 value: Encoding.create!({:character_string, valid})
+               })
+             )
+  end
+
   property "WBA-S01 WBA-V01 opaque charset values retain all bytes" do
     check all(set <- integer(1..255), bytes <- binary(max_length: 1024)) do
       assert {:ok, [character_string: %CharacterString{character_set: ^set, bytes: ^bytes}]} =

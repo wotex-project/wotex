@@ -351,9 +351,24 @@ defmodule Wotex.BACnet.StackClient do
 
   defp receive_apdu(message, state), do: delegate(Client.handle_info(message, state.sdk), state)
 
-  defp segment(bytes, source, id, {protocol, bvlc, npci, portal}, state) do
-    {:incomplete, incomplete} = APDU.decode(bytes)
+  defp segment(bytes, source, id, route, state) do
+    case decode_segment(bytes) do
+      {:ok, incomplete} -> assemble(incomplete, source, id, route, state)
+      :error -> complete(source, id, {:error, Error.new(:invalid_response)}, state)
+    end
+  end
 
+  # Peer bytes reach the pinned decoder here. It raises on a segmented
+  # ComplexACK whose reserved header bits are set, so a malformed segment
+  # fails only the matching call instead of this process.
+  defp decode_segment(bytes) do
+    {:incomplete, incomplete} = APDU.decode(bytes)
+    {:ok, incomplete}
+  rescue
+    _ -> :error
+  end
+
+  defp assemble(incomplete, source, id, {protocol, bvlc, npci, portal}, state) do
     case SegmentsStore.segment(
            state.sdk.segments_store,
            incomplete,
