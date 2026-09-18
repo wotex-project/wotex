@@ -15,8 +15,8 @@ receipts remain historical.
 ## Explicit invocation
 
 The host needs Docker with Linux ARM64 execution and a C compiler for the
-command guardian. The build requires adjacent `wotex` and `wotex-runtime` source
-checkouts and records every package source, fixture asset, tool, download and
+command guardian. The build reads the sibling `packages/wotex` and
+`packages/wotex-runtime` sources and records every package source, fixture asset, tool, download and
 image identity before creating `software-manifest.json`. The workspace must be
 an absolute disposable directory. An unrelated nonempty workspace, a locked or
 failed build, changed sources, a changed artifact, a missing tool or a missing
@@ -24,9 +24,13 @@ guest facility fails. A completed workspace is verified read-only before every
 run, and each run retains a separate result directory.
 
 ```sh
-WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace /absolute/disposable/workspace
-WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/workspace
+mix pkg wotex-ble wotex.software.build --workspace /absolute/disposable/workspace
+mix pkg wotex-ble wotex.software.run --workspace /absolute/disposable/workspace
 ```
+
+Both run from the repository root; inside `packages/wotex-ble` the equivalent is
+`WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace ...` and likewise for
+`wotex.software.run`.
 
 The build produces three owned images through the command guardian, each within
 ten minutes: `test/interop/virtual/Dockerfile.system` (Debian 12 packages, the

@@ -3,9 +3,9 @@ spec:
   id: WMB.14
   title: Release-candidate dossier
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-modbus
-  updated: 2026-09-14
+  updated: 2026-09-18
 ---
 
 # WMB.14 Release-candidate dossier
@@ -23,20 +23,23 @@ outputs. Embedding a digest in a document contained by the same archive would be
 self-referential, so a maintainer retains command output beside any later
 immutable release record.
 
-The developer command is:
+The developer command, run inside `packages/wotex-modbus`, is:
 
 ```sh
 WOTEX_PATH_DEPS=1 mise exec erlang@29.0.4 elixir@1.20.2-otp-29 -- \
   mix check --no-retry
 ```
 
-It compiles with warnings as errors, checks formatting and runs the behavioral
-test suite. Strict Credo, dependency audits, Dialyzer, Doctor, docs, coverage,
-process-free loading and the archive consumer run as explicit release evidence.
-The minimum archive and native-software lanes use Elixir 1.18.4/OTP 27.3.4.15;
-current lanes use Elixir 1.20.2/OTP 29.0.4. The explicit software command is the
-WMB.13 `mix wotex.software.run --workspace ABS` task. Release and publication
-commands are not verification steps.
+It runs the package's full standard gate from `.check.exs`: warnings-as-errors
+compilation, locked dependency resolution, unused-dependency detection,
+formatting, dependency and Hex audits, strict Credo, Doctor, ExDoc with warnings
+as errors, the behavioral test suite under coverage with a 95% minimum,
+Dialyzer, the candidate-archive consumer (`bin/check_archive.exs`), the
+Application-free loading check and `git diff --check`. The minimum archive
+and native-software lanes use Elixir 1.18.4/OTP 27.3.4.15; current lanes use
+Elixir 1.20.2/OTP 29.0.4. The explicit software command is the WMB.13
+`mix wotex.software.run --workspace ABS` task. Release and publication commands
+are not verification steps.
 
 ## Package and API review
 
@@ -74,7 +77,7 @@ The archive metadata declares four runtime requirements:
 
 The isolated consumer additionally locks core-owned `ex_json_schema` 0.11.5
 and `decimal` 3.1.1. All seven entries must be Hex entries; the three candidate
-archives must match the bytes built from their named source checkouts. The
+archives must match the bytes built from their package source directories. The
 consumer has independent Mix/Hex/dependency/build roots, no path dependency,
 and loads package BEAMs only from its own build. This proves the exact candidate
 graph, not every solver result allowed by the declared ranges.
@@ -98,11 +101,12 @@ alternate production backend.
 
 ## Archive, legal and security review
 
-The package contains the public source, README, LICENSE, exact Modbus NOTICE,
-SECURITY, governance/contribution documents, specifications, fixtures and
-provenance. It excludes repository control instructions, agent configuration,
-tests, build output, dependencies, coverage/docs output, PLTs, credentials,
-sockets, downloaded native sources and executable verification scripts. The
+The package contains the public source, `mix.exs`, README, CHANGELOG, LICENSE,
+exact Modbus NOTICE and fixtures. Specifications, provenance and other
+documentation reach consumers through HexDocs, not the archive. It excludes
+repository control instructions, agent configuration, tests, build output,
+dependencies, coverage/docs output, PLTs, credentials, sockets, downloaded
+native sources and executable verification scripts. The
 archive checker rejects symlinks and embedded source-checkout paths.
 
 The package defines no Application callback and starts no transport while being
@@ -113,7 +117,7 @@ policy are not silently inferred from a URI or connection option.
 ## Executed evidence and nonclaims
 
 The source-bound cohorts and exact result classifications live in
-`docs/provenance/executable-evidence.md`. Candidate archive, minimum/current
+[executable evidence](../provenance/executable-evidence.md). Candidate archive, minimum/current
 toolchain and native-peer outputs are retained outside the repository and remain
 bound to the source identity printed by each run. Checked-in generated receipts
 do not silently advance when implementation or verification sources change.

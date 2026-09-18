@@ -3,9 +3,9 @@ defmodule Wotex.BLE.Software.Build do
   Builds the explicit BlueZ virtual-controller software fixture in a workspace.
 
   `run/1` is invoked by `mix wotex.software.build --workspace ABSOLUTE_PATH`
-  from a Wotex BLE source checkout. It requires `docker` and `cc` on the caller's
-  `PATH`, records both executable digests and hashes all fixture and package
-  inputs before workspace mutation. BlueZ, Hex and Rebar3 source archives arrive
+  from `packages/wotex-ble` in a repository checkout. It requires `docker` and
+  `cc` on the caller's `PATH`, records both executable digests and hashes all
+  fixture and package inputs before workspace mutation. BlueZ, Hex and Rebar3 source archives arrive
   over verified HTTPS and must match their pins.
 
   Three Linux arm64 images are built in order through the packaged command

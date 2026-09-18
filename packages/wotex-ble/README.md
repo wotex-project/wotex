@@ -16,7 +16,7 @@
 
 ---
 
-This checkout is a `0.1.0-dev` development library. The public API remains
+This package is a `0.1.0-dev` development library. The public API remains
 unstable, and the ordered software profile is unfinished. Package metadata
 does not establish publication or release readiness.
 
@@ -24,19 +24,59 @@ Build handoff: [software implementation sequence](../../docs/packages/wotex-ble/
 
 ## Installation
 
-This development checkout is prepared as the `wotex_ble` Hex package but does
-not assert that a release has been published. A sibling-checkout consumer can
-select it explicitly:
+Wotex BLE 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_ble, path: "../wotex-ble"}]
+  [
+    {:wotex_ble, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_ble,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-ble",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_ble, path: "../wotex/packages/wotex-ble", override: true}
+```
+
+Path dependencies prove nothing about a released artifact.
 
 ## Accepted native target
 
@@ -51,12 +91,13 @@ backend remains. Complete public software-peer/stress evidence remains required.
 flow control and native ownership. Native value reports are admitted through a
 64-frame/1 MiB BEAM ledger and receive cumulative byte-exact credit only after
 their stream owner admits final receiver delivery; retirement consumes only the
-retired stream's pending records. On Linux, `mix wotex.native.build --workspace
-ABSOLUTE_PATH` builds the host, runtime guardian and pinned shared libdbus, audits
-their ELF dependencies and records `native-manifest.json`; see the
-[native build receipt](../../docs/packages/wotex-ble/provenance/native-build-v1.json). From a source
-checkout, `mix wotex.software.build` and `mix wotex.software.run` build and boot
-the BlueZ virtual-controller fixture once per BEAM lane; see the
+retired stream's pending records. On Linux, the explicit native build task
+(`wotex.ble.native.build`, see [Development](#development)) builds the host,
+runtime guardian and pinned shared libdbus, audits their ELF dependencies and
+records `native-manifest.json`; see the
+[native build receipt](../../docs/packages/wotex-ble/provenance/native-build-v1.json). The explicit
+software tasks `wotex.ble.software.build` and `wotex.ble.software.run` build and
+boot the BlueZ virtual-controller fixture once per BEAM lane; see the
 [software run receipt](../../docs/packages/wotex-ble/provenance/software-run-v3.json). Upstream SDK
 Python is build-time only, and the fixture's independent GATT peer uses Python
 only as a test peer.
@@ -72,7 +113,7 @@ GATT discovery, explicit Agent pairing, live health, typed reads, acknowledged
 writes, notification/indication subscriptions and bounded cleanup.
 
 The persistent backend requires the Linux host and runtime guardian built by
-`mix wotex.native.build` with their manifest SHA-256 digests, a running BlueZ
+the native build task, with their manifest SHA-256 digests, a running BlueZ
 service, an explicit local bus address and a selected peer.
 It does not install dependencies, start that service or power an adapter.
 `connection: :borrowed` leaves ordinary existing device connections intact;
@@ -146,15 +187,86 @@ See the [implemented profile](../../docs/packages/wotex-ble/specs/WBL.02-impleme
 
 ## Development
 
-Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
-checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
-Run `mix check` before commits. It checks formatting, compiles with warnings as
-errors, runs coverage as the sole ExUnit pass, audits dependencies and static
-contracts, builds documentation and verifies the unpacked Hex archive. This
-complete default gate is not conditional on a release profile.
-Optional interoperability suites fail if invoked without their required peer.
-No remote repository, published package or publication action is implied.
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```console
+mix pkg wotex-ble test test/wotex/ble/mapping_test.exs  # one test file
+mix check.fast --package wotex-ble                      # compile, format, Credo, tests
+mix pkg wotex-ble check --no-retry                      # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-ble`. It compiles with warnings as errors, checks the lock and
+unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`, Credo,
+Doctor, `mix docs --warnings-as-errors` (in the `docs` environment), tests with
+the 95% coverage floor (`mix coveralls`, the only ExUnit pass), Dialyzer and
+`git diff --check`, then runs `bin/check_archive.exs` and
+`bin/check_application_free.exs`. The archive check builds the `wotex_ble`
+archive without path dependencies, checks its contents and Hex dependency
+declarations and compiles the unpacked package out of tree; the second check
+proves that the package defines no Application callback.
+
+The ordinary test run needs a C11 compiler (`cc`) and a C++17 compiler (`c++`):
+the native component tests compile the scripted host, the runtime guardian and
+the command guardian from `priv/bluez/native/` and `test/native/`. Tests tagged
+`interop`, `hardware` or `software` are excluded; they need their peer or
+target and fail if selected without it. No test contacts a physical adapter by
+default.
+
+### Explicit lanes
+
+None of these runs in the gate. Each takes a disposable absolute workspace
+directory; a completed matching workspace is verified read-only, and an
+unrelated, locked or failed one is refused.
+
+Native build (Linux only, no cross compilation). It needs `cmake`, `ninja`,
+`pkg-config`, `cc`, `c++`, `readelf` and `xz` on `PATH`, the Expat development
+files for libdbus, and network access to download the pinned libdbus 1.16.2
+archive. It writes the host, runtime guardian, private-bus `dbus-daemon`,
+shared libdbus and `native-manifest.json`. `test/native/Dockerfile` defines the
+Debian 12 image used for the recorded runs (`BEAM_LANE=lower` or `upper`).
+
+```console
+mix wotex.native.build --package wotex-ble --workspace /absolute/disposable/dir
+mix pkg wotex-ble wotex.ble.native.build --workspace /absolute/disposable/dir
+```
+
+Native component lanes rerun the tests that compile component executables
+(`test/wotex/ble/native_{frame,credit,bytes,output,pages,reports,custody,guardian_startup,command}_test.exs`
+and the private-bus test) with `WOTEX_BLE_NATIVE_LANE=sanitizers` (ASan/UBSan)
+or `leak_audit` (LeakSanitizer, Linux only). The built-host and private-bus
+tests (tag `interop`) need a completed native workspace:
+
+```console
+WOTEX_BLE_NATIVE_LANE=sanitizers mix pkg wotex-ble test test/wotex/ble/native_frame_test.exs
+WOTEX_BLE_NATIVE_WORKSPACE=/absolute/disposable/dir \
+  mix pkg wotex-ble test --only interop test/interop/native_host_test.exs
+WOTEX_BLE_DBUS_SOURCE=/absolute/disposable/dir/sources/libdbus/dbus-1.16.2 \
+WOTEX_BLE_DBUS_BUILD=/absolute/disposable/dir/build/libdbus \
+  mix pkg wotex-ble test --only interop test/interop/native_bus_test.exs
+```
+
+BlueZ virtual-controller software lane. It needs Docker able to build and run
+`linux/arm64` images, `cc` for the command guardian, and network access for the
+pinned BlueZ, Hex and Rebar3 source archives. The build hashes the fixture
+assets in `test/interop/virtual/` and the sources of `packages/wotex`,
+`packages/wotex-runtime` and this package, builds the `Dockerfile.system`,
+`Dockerfile.bluez` and `Dockerfile.public` images and a 6 GiB guest disk. The
+run boots one QEMU guest per BEAM lane with two virtual LE controllers and runs
+the public BLE, Runtime and stress tests against the Mix-built host.
+
+```console
+mix pkg wotex-ble wotex.software.build --workspace /absolute/disposable/dir
+mix pkg wotex-ble wotex.software.run --workspace /absolute/disposable/dir
+```
+
+The hardware test (`test/interop/bluez_device_test.exs`, tag `hardware`) reads a
+selected Battery Level characteristic and needs `WOTEX_BLE_BUSCTL` and
+`WOTEX_BLE_CHARACTERISTIC_PATH`. Inside `packages/wotex-ble`, the task aliases
+`wotex.native.build`, `wotex.software.build` and `wotex.software.run` name the
+same qualified tasks.
 
 ## Software implementation contract
 

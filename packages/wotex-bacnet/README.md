@@ -16,24 +16,66 @@ Consumer-neutral BACnet interactions for W3C Web of Things consumers.
 
 ---
 
-This is a development checkout with an unstable public API. The ordered plan
-records the accepted software profile and its exact evidence boundary.
+This package is under development and its public API is unstable. The ordered
+plan records the accepted software profile and its exact evidence boundary.
 
 Build handoff: [software implementation sequence](../../docs/packages/wotex-bacnet/plans/software-implementation.md).
 
 ## Installation
 
-A local consumer can select this checkout explicitly:
+Wotex BACnet 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_bacnet, path: "../wotex-bacnet"}]
+  [
+    {:wotex_bacnet, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_bacnet,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-bacnet",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_bacnet, path: "../wotex/packages/wotex-bacnet", override: true}
+```
+
+Path dependencies prove nothing about a released artifact.
 
 ## Implemented profile
 
@@ -131,23 +173,54 @@ See [implemented profile](../../docs/packages/wotex-bacnet/specs/WBA.02-implemen
 
 ## Development
 
-Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
-checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex
-versions. `mix test` is the fast loop. The gate covers warnings-as-errors
-compilation, locked and unused dependency checks, `mix deps.audit`,
-`mix hex.audit`, formatting, strict Credo, Doctor, documentation with warnings
-as errors, coverage, Dialyzer, `bin/check_application_free.exs` and
-`bin/check_archive.exs`. Optional interoperability suites fail if invoked
-without their required peer. No published package or publication action is
-implied. The software peer tasks below remain separate from both the developer
-gate and archive evidence.
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
 
-The accepted software fixture entry points are
-`mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS`. They are specified work; the existing
-shell scripts exercise only the current read/write fixture. No production
-native executable build task is required for this BEAM client.
+```console
+mix pkg wotex-bacnet test test/wotex/bacnet/value_test.exs  # one test file
+mix check.fast --package wotex-bacnet                       # compile, format, Credo, tests
+mix pkg wotex-bacnet check --no-retry                       # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-bacnet`. It compiles with warnings as errors, checks the lock
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`, then runs `bin/check_archive.exs` and
+`bin/check_application_free.exs`. The archive check builds the exact `wotex`,
+`wotex_runtime` and `wotex_bacnet` archives from `packages/` without path
+dependencies and exercises an isolated reference consumer against them; the
+second check proves that the package defines no Application callback.
+
+The ordinary test run needs a POSIX C11 compiler (`cc`): the software-fixture
+command guardian in `test/interop/native/` is compiled and exercised by
+`test/software/command_test.exs`. Tests tagged `interop`, `software`,
+`hardware` or `peer_shutdown` are excluded; they need the independent peer and
+fail if selected without it.
+
+### Software peer lane
+
+The independent BACnet C-stack peer is an explicit lane, outside the gate and
+the archive evidence. Pass a disposable absolute directory outside
+`packages/wotex-bacnet`:
+
+```console
+mix pkg wotex-bacnet wotex.software.build --workspace /absolute/disposable/dir
+mix pkg wotex-bacnet wotex.software.run --workspace /absolute/disposable/dir
+```
+
+The build needs Docker, `cc` (or `$CC`), `curl` and network access. It
+verifies the locked BACstack Hex archive and the pinned C-stack source archive
+from `priv/fixtures/software-sources-v1.json`, builds normal and ASan/UBSan
+peers in a Linux image from `test/interop/cstack/Dockerfile.software` and
+writes a verified manifest into the workspace. The run needs Docker and that
+built workspace; it runs the shared and terminal-shutdown suites against both
+peers in owned containers and records cleanup receipts. The fully qualified
+task names are `wotex.bacnet.software.build` and `wotex.bacnet.software.run`;
+`test/interop/build_software.sh` and `run_software.sh` are thin delegates.
+No production native build exists for this BEAM client.
 
 ## Software implementation contract
 

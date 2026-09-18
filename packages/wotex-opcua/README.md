@@ -16,24 +16,68 @@ Consumer-neutral OPC Unified Architecture interactions for W3C Web of Things con
 
 ---
 
-This is a development checkout with an unstable public API. The ordered plan
-tracks the remaining software implementation and verification work.
+This package is under development and its public API is unstable. The ordered
+plan tracks the remaining software implementation and verification work.
 
 Build handoff: [software implementation sequence](../../docs/packages/wotex-opcua/plans/software-implementation.md).
 
 ## Installation
 
-A local consumer can select this checkout explicitly:
+Wotex OPC UA 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_opcua, path: "../wotex-opcua"}]
+  [
+    {:wotex_opcua, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_opcua,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-opcua",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_opcua, path: "../wotex/packages/wotex-opcua", override: true}
+```
+
+Path dependencies prove nothing about a released artifact. The native
+executable is not built on dependency load; a consumer builds it explicitly
+with the task described under [Development](#development).
 
 ## Implemented profile
 
@@ -67,12 +111,12 @@ asyncua is solely an independent software peer in this target.
 
 [WOP.13](../../docs/packages/wotex-opcua/specs/WOP.13-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
-`mix wotex.native.build --workspace ABS` builds the packaged native bootstrap
-from verified static SDK/OpenSSL sources and writes a content-bound receipt.
-The qualified task is `mix wotex.opcua.native.build`; the shorter name is this
-root project's alias. CMake 3.20+, a C11 compiler, make, Perl, Python 3, archive
-utilities and curl 8.4.0+ are explicit build prerequisites. Failed builds retain
-diagnostic files and require a fresh workspace.
+`mix wotex.opcua.native.build --workspace ABS` builds the packaged native
+bootstrap from verified static SDK/OpenSSL sources and writes a content-bound
+receipt; inside this package `mix wotex.native.build` is its alias. CMake 3.20+,
+a C11 compiler, make, Perl, Python 3, archive utilities and curl 8.4.0+ are
+explicit build prerequisites. Failed builds retain diagnostic files and require
+a fresh workspace.
 
 WOP-P00 accepts this source/build/bootstrap and process-custody boundary for the
 exact cohorts in executable evidence. The gate compiles and tests the portable
@@ -110,8 +154,9 @@ integer revisions and their lifetime through real SDK Sessions. That isolated
 test uses Security None and does not accept the secure production Session path.
 
 `mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build
-success does not establish a native Session or accept the native protocol profile.
+`mix wotex.software.run --workspace ABS` build and run the software acceptance
+lanes; WOP-P08 acceptance of the complete software profile remains open. Bootstrap
+build success does not establish a native Session or accept the native protocol profile.
 The mandatory `mix check` gate performs a fresh native build and receipt fault
 tests in an owned temporary workspace; ordinary `mix test` excludes that lane.
 
@@ -166,16 +211,83 @@ See [protocol and graduation contract](../../docs/packages/wotex-opcua/specs/WOP
 
 ## Development
 
-Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
-checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex
-versions. `mix test` is the fast loop. The default `mix check --no-retry` is the
-complete library gate: locked and unused dependencies, warnings-as-errors,
-formatting, strict static analysis, coverage as the only ExUnit pass, audits,
-documentation, Dialyzer, a fresh pinned native build/CTest, platform-applicable
-custody sanitizer lanes, archive inspection and the Application-free check.
-Optional interoperability suites fail if invoked without their required peer.
-No remote repository, published package or publication action is implied.
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```console
+mix pkg wotex-opcua test test/wotex/opcua/value_test.exs  # one test file
+mix check.fast --package wotex-opcua                      # compile, format, Credo, tests
+mix pkg wotex-opcua check --no-retry                      # full gate
+```
+
+The ordinary test run excludes the `interop`, `software`, `hardware` and
+`native_build` tags. It needs a C11 compiler (`cc`): the native client, JSON,
+custody, host and command tests compile first-party C from `priv/native/` and
+`test/native/`.
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-opcua`. It compiles with warnings as errors, checks the lock
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the coverage floor (`mix coveralls`), Dialyzer, the native custody
+check (`bin/check_native_custody.exs`), `mix hex.build` without path
+dependencies, the archive check (`bin/check_archive.exs`), the
+Application-free check (`bin/check_application_free.exs`) and
+`git diff --check`. Its coverage step sets `WOTEX_REQUIRE_NATIVE_BUILD=1`, so
+the gate also runs the `native_build` test: a fresh pinned native build with
+receipt reuse and tamper checks under `$TMPDIR/wotex-opcua-check`, which needs
+network access and the native build prerequisites below. On Linux the custody
+check compiles the process guardian with ASan/UBSan and runs WOP-G01 through
+WOP-G09 in strict and LeakSanitizer lanes; on other hosts it reports that those
+lanes do not apply. The archive check inspects the built `wotex_opcua` archive,
+rejects development and agent state, checks the Hex dependency declarations and
+compiles the packaged `lib` out of tree.
+
+### Native build lane
+
+The native executable build is explicit. Pass a disposable absolute directory
+that is new, empty or an already verified build workspace:
+
+```console
+mix wotex.native.build --package wotex-opcua --workspace /absolute/disposable/dir
+mix pkg wotex-opcua wotex.native.build --workspace /absolute/disposable/dir
+```
+
+Both run `wotex.opcua.native.build`. It downloads the OpenSSL and open62541
+archives pinned in `priv/fixtures/native-sources-v1.json`, verifies their
+digests, applies the reviewed SDK patch, builds static libraries, the
+`wotex_opcua_native` executable and the `wotex_opcua_custody` guardian, runs the
+native CTest step and writes the receipt `wotex-native-build.json`. It needs
+network access, `cc`, CMake 3.20+ with `ctest`, `make`, Perl, `python3` (the
+SDK code generator), `ar`, `ranlib`, `ld` and curl 8.4.0+, on Linux
+x86_64/aarch64 or macOS arm64. A reused workspace is verified again; a failed
+build keeps its diagnostic files and needs a new workspace.
+
+### Software acceptance lanes
+
+The independent-peer lanes are explicit and use a new or empty disposable
+absolute workspace:
+
+```console
+mix pkg wotex-opcua wotex.software.build --workspace /absolute/disposable/dir
+mix pkg wotex-opcua wotex.software.run --workspace /absolute/disposable/dir
+```
+
+The build runs the native build under `native/`, a Debug ASan/UBSan tree under
+`asan/` and a peer virtual environment under `peer/venv` installed with
+`--require-hashes` from `test/interop/requirements.lock` (asyncua), and records
+`software-build.json`. It needs the native build prerequisites plus `python3`
+with `venv` and access to PyPI. The run verifies that manifest, starts the
+independent asyncua secure peer (`test/interop/secure_peer.py`), runs the
+`interop` and `software` ExUnit lanes with `WOTEX_REQUIRE_SOFTWARE=1`, native and
+sanitizer CTest, `mix deps.audit` and `mix hex.audit`, stops the peer and writes
+`software-run.json`; any failed lane fails the task. Both need `python3`,
+`cmake`, `ctest` and `mix` on `PATH`. The fully qualified tasks are
+`wotex.opcua.software.build` and `wotex.opcua.software.run`. The `interop` and
+`software` tests read the `WOTEX_OPCUA_*` peer and executable paths that only
+this runner sets, so selecting them without it fails. The peer environment is
+test infrastructure; the runtime package runs no Python.
 
 ## Software implementation contract
 

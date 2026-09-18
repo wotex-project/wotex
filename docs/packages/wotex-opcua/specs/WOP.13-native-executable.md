@@ -274,7 +274,7 @@ a separate BEAM secure-channel implementation.
 
 ## WOP-X02 — Reproducible build and package boundary
 
-The declared root-project alias is `mix wotex.native.build --workspace ABS`.
+The declared package alias is `mix wotex.native.build --workspace ABS`.
 Its implementation task is `mix wotex.opcua.native.build --workspace ABS`
 (`Mix.Tasks.Wotex.Opcua.Native.Build`). Protocol archives use distinct task modules
 so a consumer can compile several protocol dependencies without module conflicts.
@@ -673,7 +673,7 @@ configuration, responses and cleanup evidence failures, never skips. Native
 audit inputs include SDK/OpenSSL source and shim/patch hashes, not just Mix.lock.
 `Wotex.OPCUA.Native.Software` implements both tasks
 (`mix wotex.opcua.software.build` and `mix wotex.opcua.software.run`, with the
-root aliases above) for a source checkout. Build runs the native workspace
+package aliases above) for a source checkout. Build runs the native workspace
 build and its CTest step, builds a Debug ASan/UBSan tree from that workspace's
 prefixes, and installs `test/interop/requirements.lock` into a peer virtual
 environment with `--require-hashes --no-deps`. It records the lock digest, the

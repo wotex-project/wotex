@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Wotex.Thread.Software.Run do
   Runs the Thread software acceptance lanes against a verified fixture workspace.
 
   Invoke `mix wotex.thread.software.run --workspace ABSOLUTE_PATH`, or use the
-  root-project alias `mix wotex.software.run --workspace ABSOLUTE_PATH`, after
+  package alias `mix wotex.software.run --workspace ABSOLUTE_PATH`, after
   `mix wotex.software.build` completed that workspace. The task requires Linux,
   never builds, and writes `software-run/result.json` on success or failure.
   """

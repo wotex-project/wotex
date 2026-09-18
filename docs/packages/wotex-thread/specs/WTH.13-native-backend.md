@@ -3,9 +3,9 @@ spec:
   id: WTH.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.5
+  version: 1.0.6
   owner: wotex-thread
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WTH.13 Native backend, build and IPC contract
@@ -38,7 +38,8 @@ The executable path is absolute, validated before startup, and executed directly
 with separate arguments. Native runtime libraries are declared in the build
 manifest; a missing or mismatched dependency fails startup.
 
-The generic entry points are Mix tasks:
+The generic entry points are Mix tasks. These package aliases of the
+`wotex.thread.*` tasks run inside `packages/wotex-thread`:
 
 ```sh
 mix wotex.native.build --workspace /absolute/disposable/native
@@ -46,7 +47,11 @@ mix wotex.software.build --workspace /absolute/disposable/software
 mix wotex.software.run --workspace /absolute/disposable/software
 ```
 
-They require exactly one `--workspace` argument. Unknown/duplicate options,
+From the repository root, the native build runs as
+`mix native.build --package wotex-thread --workspace /absolute/disposable/native`,
+which dispatches the same package task.
+
+The package tasks require exactly one `--workspace` argument. Unknown/duplicate options,
 relative paths, symlink workspaces and unrelated nonempty directories fail before
 mutation. Only a matching manifest permits reuse. Mix owns source download,
 hash verification, bounded process launch, result collection and cleanup. ExUnit

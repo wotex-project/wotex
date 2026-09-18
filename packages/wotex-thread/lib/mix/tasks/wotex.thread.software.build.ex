@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Wotex.Thread.Software.Build do
   Builds or verifies the Thread software fixtures in an explicit disposable workspace.
 
   Invoke `mix wotex.thread.software.build --workspace ABSOLUTE_PATH`, or use the
-  root-project alias `mix wotex.software.build --workspace ABSOLUTE_PATH`. The
+  package alias `mix wotex.software.build --workspace ABSOLUTE_PATH`. The
   task requires Linux and the repository test sources. It builds normal and
   sanitizer native hosts, the pinned simulation RCP and native test executables.
   No build, download or fixture starts while loading the library.

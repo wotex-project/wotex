@@ -27,7 +27,7 @@ prose but an unbounded machine-readable affected range. The
 applies finite default parsing limits.
 
 The current Hex registry snapshot reports no matching advisory for the locked
-dependency graph. The stale acknowledgement was removed: this repository has
+dependency graph. The stale acknowledgement was removed: this package has
 no ignored advisories. Its dependency-security tests retain a regression bound
 to the exact 3.1.1 Hex lock tuple, including outer checksum
 `c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6`,

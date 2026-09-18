@@ -72,6 +72,8 @@ defmodule Wotex.Matter.SoftwareFixture do
           "status" => "ready",
           "mode" => Atom.to_string(mode),
           "source_revision" => native["source_revision"],
+          "source_path" => native["source_path"],
+          "source_tree" => native["source_tree"],
           "source" => source,
           "sdk_revision" => SoftwareManifest.sdk_revision(),
           "sdk_archive_sha256" => SoftwareManifest.sdk_sha256(),

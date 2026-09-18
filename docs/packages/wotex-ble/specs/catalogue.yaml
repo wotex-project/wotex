@@ -48,7 +48,7 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.12"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WBL.12-wotex-integration.md"
     implementation_status: "planned"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]

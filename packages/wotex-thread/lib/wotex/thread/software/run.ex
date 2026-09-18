@@ -48,8 +48,8 @@ defmodule Wotex.Thread.Software.Run do
   @typedoc """
   The explicit outside world of one software run.
 
-  `platform` is the running operating system, `project_root` the checkout whose
-  suite and inventory are used, `build` the fixture-workspace verification,
+  `platform` is the running operating system, `project_root` the package
+  directory whose suite and inventory are used, `build` the fixture-workspace verification,
   `mix` the suite runner and `proc` the process table consulted for survivors.
   """
   @type environment :: %{

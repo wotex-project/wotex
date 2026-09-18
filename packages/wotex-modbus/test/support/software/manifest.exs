@@ -174,6 +174,28 @@ defmodule Wotex.Modbus.SoftwareManifest do
 
   def git_identity(_), do: fail(:invalid_git_identity)
 
+  # Parses `git rev-parse --show-prefix` run from the package root into the
+  # package path recorded in evidence and the `HEAD:<prefix>` name of its
+  # subtree. A package at the repository root has path `.` and subtree `HEAD:`.
+  @spec git_package(term()) :: {String.t(), String.t()}
+  def git_package({:ok, output, 0}) when is_binary(output) do
+    case String.split(output, "\n") do
+      ["", ""] ->
+        {".", "HEAD:"}
+
+      [prefix, ""] ->
+        unless String.ends_with?(prefix, "/") and safe_name?(prefix),
+          do: fail(:invalid_git_identity)
+
+        {String.trim_trailing(prefix, "/"), "HEAD:" <> prefix}
+
+      _ ->
+        fail(:invalid_git_identity)
+    end
+  end
+
+  def git_package(_), do: fail(:invalid_git_identity)
+
   defp safe_name?(name) when is_binary(name) do
     byte_size(name) in 1..4096 and Path.type(name) == :relative and
       not String.contains?(name, ["\\", <<0>>]) and

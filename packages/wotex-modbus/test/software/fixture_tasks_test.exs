@@ -159,6 +159,27 @@ defmodule Wotex.Modbus.FixtureTasksTest do
     end
   end
 
+  test "WMB-N03 clean-source Git metadata names the package path and its repository subtree" do
+    assert SoftwareManifest.git_package({:ok, "packages/wotex-modbus/\n", 0}) ==
+             {"packages/wotex-modbus", "HEAD:packages/wotex-modbus/"}
+
+    assert SoftwareManifest.git_package({:ok, "\n", 0}) == {".", "HEAD:"}
+
+    for invalid <- [
+          {:ok, "", 0},
+          {:ok, "packages/wotex-modbus\n", 0},
+          {:ok, "packages/wotex-modbus/\nextra/\n", 0},
+          {:ok, "../outside/\n", 0},
+          {:ok, "/absolute/\n", 0},
+          {:ok, "packages/wotex-modbus/\n", 128},
+          {:error, :command_deadline, :unverified}
+        ] do
+      assert_raise Mix.Error, "invalid_git_identity", fn ->
+        SoftwareManifest.git_package(invalid)
+      end
+    end
+  end
+
   test "WMB-N03 atomic evidence writes are complete and preserve an occupied temporary path",
        context do
     path = Path.join(context.directory, "result.json")

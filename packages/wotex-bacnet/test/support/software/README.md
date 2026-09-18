@@ -1,11 +1,12 @@
 # Software fixture source verification
 
 The explicit fixture tooling uses Elixir/OTP for source admission and evidence.
-From the BACnet source checkout, run
-`mix wotex.software.build --workspace /absolute/disposable/workspace`.
+From the repository root, run
+`mix pkg wotex-bacnet wotex.software.build --workspace /absolute/disposable/workspace`
+(or `mix wotex.software.build --workspace ...` inside `packages/wotex-bacnet`).
 The workspace must be empty or contain a matching verified build manifest.
 The fully qualified task is `wotex.bacnet.software.build`; the shorter name is
-an alias owned by this root project.
+an alias defined in this package's `mix.exs`.
 The [POSIX guardian](../../interop/native/README.md) owns its local commands.
 These test-support modules are loaded by the fixture workflow; BACnet runtime
 dependency loading never invokes them.

@@ -29,7 +29,7 @@ dependency audit, Hex packaging, unpacked out-of-tree compilation and the
 Application-free structural check. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
-waivers. See SECURITY.md and the dependency-security test.
+waivers. See the [security posture](../security.md) and the dependency-security test.
 
 ## Acceptance boundary
 

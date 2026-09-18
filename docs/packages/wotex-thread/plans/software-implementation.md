@@ -7,7 +7,7 @@ build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
-1. Read `CLAUDE.md` and matching repository rules/skills.
+1. Read the root and `packages/wotex-thread` `CLAUDE.md` and matching repository rules/skills.
 2. Read [WTH.00 — shared software rules](../specs/WTH.00-library-contract.md).
 3. Read [WTH.10 — exact target profile](../specs/WTH.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
 4. Read [WTH.11 — standalone API, preservation and concrete corpus](../specs/WTH.11-standalone-client-and-preservation.md).
@@ -191,12 +191,19 @@ convert a failed setup to an ExUnit skip. Existing hardware tests require separa
 explicit target configuration and are never selected by this runner.
 
 The build and run tasks are implemented for Linux; the recorded arm64 lanes are
-identified in executable evidence. Use this command contract:
+identified in executable evidence. Use this command contract inside
+`packages/wotex-thread`:
 
 ```sh
 mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
+
+From the repository root the same tasks run as
+`mix pkg wotex-thread wotex.software.build --workspace ...` and
+`mix pkg wotex-thread wotex.software.run --workspace ...`; the root
+`mix wotex.native.build --package wotex-thread --workspace ...` dispatches the
+native build.
 
 The runner executes `mix test --include interop --include software --exclude hardware`
 and all required native tests/audits from .10. Add `@tag :software` only to tests
@@ -208,10 +215,12 @@ separately in the results. Hardware absence is not a software test result.
 
 ## Verification and commit procedure
 
-Run focused tests while implementing a package, then run `mix check` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
+Run focused tests while implementing a package (`mix pkg wotex-thread test
+<files>` from the repository root), then run the package gate
+(`mix pkg wotex-thread check --no-retry`) before its local commit. The ordinary
+Hex dependency path is authoritative. Inside this repository,
+`WOTEX_PATH_DEPS=1 mix check --no-retry` selects the `wotex` and
+`wotex-runtime` packages under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
 C/C++ adapters run ASan/UBSan in the Linux fault lane.

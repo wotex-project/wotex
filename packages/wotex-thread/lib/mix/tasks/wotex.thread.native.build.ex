@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Wotex.Thread.Native.Build do
   Builds or verifies the Thread native host in an explicit disposable workspace.
 
   Invoke `mix wotex.thread.native.build --workspace ABSOLUTE_PATH`, or use the
-  root-project alias `mix wotex.native.build --workspace ABSOLUTE_PATH`. An optional
+  package alias `mix wotex.native.build --workspace ABSOLUTE_PATH`. An optional
   `--sanitizers` enables address and undefined-behavior instrumentation.
   No build or download occurs while loading the library.
   """

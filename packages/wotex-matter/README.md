@@ -16,7 +16,7 @@
 
 ---
 
-This checkout is a `0.1.0-dev` development baseline. The ordered software
+This package is a `0.1.0-dev` development baseline. The ordered software
 profile is implemented and accepted against the pinned SDK example peers. The
 public API remains unstable, and package metadata does not establish publication
 or release readiness. The Python factory adapter has since been removed;
@@ -27,19 +27,62 @@ Build handoff: [software implementation sequence](../../docs/packages/wotex-matt
 
 ## Installation
 
-This development checkout is prepared as the `wotex_matter` Hex package but
-does not assert that a release has been published. A sibling-checkout consumer
-can select it explicitly:
+Wotex Matter 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet, and package metadata does not assert that a release exists. Once one is,
+depend on it as usual; Hex resolves `wotex` and `wotex_runtime` from the
+package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_matter, path: "../wotex-matter"}]
+  [
+    {:wotex_matter, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_matter,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-matter",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_matter, path: "../wotex/packages/wotex-matter", override: true}
+```
+
+Path dependencies prove nothing about a released artifact. Dependency
+compilation never builds the native controller; build it with the explicit
+[native lane](#native-and-software-lanes).
 
 ## Accepted native target
 
@@ -57,31 +100,14 @@ The earlier Python factory adapter is removed; runtime controllers use the
 first-party native host.
 
 [WMA.13](../../docs/packages/wotex-matter/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. `mix run bin/check_p07_native.exs` rebuilds
-and tests the P07 host in a disposable pinned Linux environment.
-`mix wotex.native.build --workspace /absolute/empty/workspace` builds the normal
-and sanitizer controllers. `mix wotex.software.build` uses the same argument
-contract and adds the pinned lighting, all-clusters and bridge executables.
-The all-clusters and bridge peers include small test-only named-pipe controls
-for temperature/null and reachability inputs. The build verifies their exact
-upstream source hashes and records the extension and patched-source hashes.
-Both tasks run from this source project, verify downloads and advisories, run
-native unit tests, and record content-bound build manifests. Reuse requires
-matching source, artifacts and logs; a native-only workspace requires a fresh
-workspace for a software build. Docker, Git, curl, tar and the `kill` executable
-must be available.
-The explicit lighting, thermostat and bridge ExUnit workflows have passed in
-both Linux BEAM lanes; their exact cohorts are recorded in
+flow control and native ownership. The explicit
+[native and software lanes](#native-and-software-lanes) build the controller
+and the pinned SDK example peers. The lighting, thermostat and bridge ExUnit
+workflows have passed in both Linux BEAM lanes; their exact cohorts are
+recorded in
 [executable evidence](../../docs/packages/wotex-matter/provenance/executable-evidence.md).
-`mix wotex.software.run --workspace /absolute/disposable/workspace` verifies the
-software build and executes the required suite in separate current and minimum
-BEAM containers with owned fixture state, networks and cleanup. Passing command
-tests alone does not establish P09 acceptance. The accepted profile has complete
-two-lane peer, stress, resource-census and matrix receipts plus clean-source
-coverage, documentation, package-content and out-of-tree archive-compilation
-evidence. The default suite enforces the contract's 95% coverage floor. Exact
-receipts are recorded in executable evidence. Upstream SDK Python is used only
-while generating and building native SDK sources.
+Upstream SDK Python is used only while generating and building native SDK
+sources.
 
 ## Implemented profile
 
@@ -300,49 +326,116 @@ See [implemented profile](../../docs/packages/wotex-matter/specs/WMA.02-implemen
 
 ## Development
 
-Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
-checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses
-Hex versions. Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before commits. It
-checks formatting, compiles with warnings as errors, runs strict Credo, Doctor,
-documentation with warnings as errors, coverage, Dialyzer, the archive check
-and the Application-free check. Native lanes belong to explicit invocation.
-The separate `elixir bin/check_p01_native.exs` lane compiles and tests the P01
-descriptor/value unit on the pinned Linux x86_64 reference toolchain with and
-without AddressSanitizer and UndefinedBehaviorSanitizer.
-`elixir bin/check_p02_native.exs` separately verifies the pinned SDK source and
-gitlink inputs, then exercises the durable store under the same normal and
-sanitizer toolchains, including lock and crash-boundary behavior.
-`elixir bin/check_p02_advisories.exs` separately queries OSV for advisories
-against the four exact P02 source revisions; it is a live release check rather
-than a substitute for the content-pinned native lane.
-`WOTEX_PATH_DEPS=1 mix run bin/check_p03_native.exs` separately rebuilds the
-first-party controller from the exact SDK, gitlink, generator and tool inputs,
-then runs normal and sanitizer lifecycle, failure, load and cleanup checks.
-`WOTEX_PATH_DEPS=1 mix run bin/check_p04_native.exs` extends that lane with the
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```console
+mix pkg wotex-matter test test/wotex/matter/tlv_test.exs  # one test file
+mix check.fast --package wotex-matter                     # compile, format, Credo, tests
+mix pkg wotex-matter check --no-retry                     # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-matter`. It compiles with warnings as errors, checks the lock
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the 95% coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`, then runs `bin/check_archive.exs` and
+`bin/check_application_free.exs`. The archive check builds the exact
+`wotex_matter` archive with its Hex dependency identities, verifies that it
+ships the native sources, fixtures and software-case inventory but no
+documentation, governance or development files, and compiles the extracted
+package out of tree. The second check proves that the package defines no
+Application callback.
+
+The ordinary test run needs only a POSIX system (`/bin/sh`, `/bin/kill`); it
+builds no native code and needs no SDK or Docker. Tests tagged `interop`,
+`software` or `hardware` are excluded; they need the software fixture and fail
+if selected without it. P08 (`test/wotex/matter/runtime_stream_test.exs`) and
+P08a (`test/wotex/matter/runtime_integration_test.exs`) run in this ordinary
+suite. P08 exercises typed controller results, capability-backed Runtime
+frames, terminal cleanup, original-route cancellation and the explicit read
+health probe. P08a executes the checked-in Wotex integration corpus through
+public TD, ConsumedThing, Context, Result, Subscription and Retry APIs, plus
+negative selection and resource-ownership cases. Neither adds a native build
+surface.
+
+### Native and software lanes
+
+Native builds, the software-peer profile and the per-packet native checks run
+only when invoked explicitly; none belongs to the gate or to a bounded change.
+They need Docker able to run `linux/amd64` containers, `git`, `curl`, `tar` and
+`kill` on the host, and network access for the pinned connectedhomeip sources
+and OSV advisory queries. Every build runs inside a pinned Linux x86_64 image.
+
+The workspace tasks take one disposable absolute directory outside
+`packages/wotex-matter`, without `.` or `..` segments. It must be empty or hold
+a matching `workspace-manifest.json`; a `<workspace>.lock` directory beside it
+serialises use.
+
+```console
+mix wotex.native.build --package wotex-matter --workspace /absolute/disposable/dir
+mix pkg wotex-matter wotex.native.build --workspace /absolute/disposable/dir
+mix pkg wotex-matter wotex.software.build --workspace /absolute/disposable/dir
+mix pkg wotex-matter wotex.software.run --workspace /absolute/disposable/dir
+```
+
+The first two lines are equivalent. The native build verifies the pinned
+source archives and native advisories, builds the normal and sanitizer
+`wotex-matter-host` controllers, runs the native unit tests and records a
+content-bound build manifest. The software build uses the same argument
+contract and adds the pinned lighting, all-clusters and bridge executables. The
+all-clusters and bridge peers include small test-only named-pipe controls for
+temperature/null and reachability inputs; the build verifies their exact
+upstream source hashes and records the extension and patched-source hashes.
+Reuse requires matching source, artifacts and logs; a native-only workspace
+needs a fresh workspace for a software build.
+
+The run verifies that build and executes the required suite
+(`mix test --include interop --include software --exclude hardware` with
+`WOTEX_REQUIRE_SOFTWARE=1`) in separate current (Elixir 1.20.2/OTP 29.0.4) and
+minimum sanitizer (Elixir 1.18.4/OTP 27.3.4.15) BEAM containers with owned
+fixture state, networks and cleanup. Under `mix pkg` it mounts
+`packages/wotex` and `packages/wotex-runtime` and records the path-dependency
+mode. Passing command tests alone does not establish P09 acceptance. The
+accepted profile has complete two-lane peer, stress, resource-census and matrix
+receipts plus clean-source coverage, documentation, package-content and
+out-of-tree archive-compilation evidence; exact receipts are recorded in
+executable evidence. The fully qualified task names are
+`wotex.matter.native.build`, `wotex.matter.software.build` and
+`wotex.matter.software.run`.
+
+The per-packet native checks create their own temporary work directory, run in
+Docker and resolve sources from `packages/wotex-matter`:
+
+```console
+(cd packages/wotex-matter && elixir bin/check_p01_native.exs)
+(cd packages/wotex-matter && elixir bin/check_p02_native.exs)
+mix pkg wotex-matter run bin/check_p03_native.exs
+mix pkg wotex-matter run bin/check_p07_native.exs
+mix pkg wotex-matter run bin/check_p02_advisories.exs
+mix pkg wotex-matter run bin/check_p03_advisories.exs
+```
+
+`check_p01_native.exs` compiles and tests the P01 descriptor/value unit on the
+pinned Linux x86_64 reference toolchain with and without AddressSanitizer and
+UndefinedBehaviorSanitizer. `check_p02_native.exs` verifies the pinned SDK
+source and gitlink inputs, then exercises the durable store under the same
+normal and sanitizer toolchains, including lock and crash-boundary behavior.
+`check_p03_native.exs` rebuilds the first-party controller from the exact SDK,
+gitlink, generator and tool inputs, then runs normal and sanitizer lifecycle,
+failure, load and cleanup checks. `check_p04_native.exs` through
+`check_p07_native.exs` run the same lane for later packets: P04 adds the
 generated cluster bindings, Interaction Model implementation and focused
-normal/sanitizer interaction tests.
-`WOTEX_PATH_DEPS=1 mix run bin/check_p05_native.exs` additionally compiles the
-SDK subscription owner and runs focused normal/sanitizer lifecycle, credit,
-identity and retirement tests.
-`WOTEX_PATH_DEPS=1 mix run bin/check_p06_native.exs` extends that lane with
-bounded opt-in subscription recovery and delivery-generation tests.
-`WOTEX_PATH_DEPS=1 mix run bin/check_p07_native.exs` compiles the filtered
-commissioning, final CASE-probe, enhanced-window and typed ACL paths and runs
-their focused normal/sanitizer tests. The separately selected P07 interop test
+interaction tests; P05 the SDK subscription owner with lifecycle, credit,
+identity and retirement tests; P06 bounded opt-in subscription recovery and
+delivery-generation tests; P07 filtered commissioning, the final CASE probe,
+enhanced windows and typed ACL paths. The separately selected P07 interop test
 requires a real fixture file; the P09 runner builds and executes that fixture.
-P08 is covered by `test/wotex/matter/runtime_stream_test.exs` in the BEAM matrix.
-It exercises typed controller results, capability-backed Runtime frames,
-terminal cleanup, original-route cancellation and the explicit read health
-probe; it adds no native build surface.
-P08a is covered by `test/wotex/matter/runtime_integration_test.exs`. It executes
-the checked-in Wotex integration corpus through public TD, ConsumedThing,
-Context, Result, Subscription and Retry APIs, plus negative selection and
-resource-ownership cases. It also adds no native build surface.
-`WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
-live OSV audit. None of these native commands belongs to the routine gate.
-Optional interoperability suites fail if invoked without their required peer.
-No remote repository, published package or publication action is implied.
+The two advisory scripts are live OSV queries against the exact P02 and P03
+source revisions. They are release checks, not substitutes for the
+content-pinned native lanes.
 
 The native corpus runs all 17 cases in both BEAM toolchains. Its process-flow
 cases suspend the actual connection, stream owner or receiver while a separate

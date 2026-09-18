@@ -2,10 +2,11 @@ defmodule Wotex.BLE.Software.Fixture do
   @moduledoc """
   Describes the explicit BlueZ virtual-controller software fixture inputs.
 
-  The fixture is available only from a Wotex BLE source checkout with adjacent
-  `wotex` and `wotex-runtime` checkouts. `inputs/1` hashes every regular file in
-  `test/interop/virtual` and the `mix.exs`, `mix.lock`, `config`, `lib`, `priv`
-  and `test` trees of the three packages, recording each mode. Links and special
+  The fixture is available only from a repository checkout, where `wotex-ble`
+  and its sibling packages `wotex` and `wotex-runtime` sit side by side under
+  `packages/`. `inputs/1` hashes every regular file in `test/interop/virtual`
+  and the `mix.exs`, `mix.lock`, `config`, `lib`, `priv` and `test` trees of the
+  three packages, recording each mode. Links and special
   files fail. Build directories, dependencies, Python caches and PLTs are not
   inputs. The identity binds source content; it does not attest that any fixture
   image was built or executed.
@@ -25,7 +26,7 @@ defmodule Wotex.BLE.Software.Fixture do
   @spec packages() :: [String.t()]
   def packages, do: @packages
 
-  @doc "Hashes the fixture assets and package sources below an explicit checkout root."
+  @doc "Hashes the fixture assets and the sources of an explicit package root and its siblings."
   @spec inputs(term()) :: {:ok, inputs()} | {:error, :invalid_software_sources}
   def inputs(root) when is_binary(root) do
     with true <- Path.type(root) == :absolute,

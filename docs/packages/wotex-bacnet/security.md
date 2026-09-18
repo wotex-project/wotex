@@ -20,7 +20,7 @@ prose but an unbounded machine-readable affected range. The
 [3.1.1 implementation](https://github.com/ericmj/decimal/blob/v3.1.1/lib/decimal.ex)
 applies finite default parsing limits.
 
-This repository has no ignored advisories. Its dependency-security tests retain
+This package has no ignored advisories. Its dependency-security tests retain
 a regression bound
 to the exact 3.1.1 Hex lock tuple, including outer checksum
 `c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6`,

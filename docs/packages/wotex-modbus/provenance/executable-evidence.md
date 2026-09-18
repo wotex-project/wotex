@@ -42,6 +42,9 @@ outcomes with expected projections; a fixture ID alone is not acceptance.
 The developer gate is `WOTEX_PATH_DEPS=1 mix check --no-retry`, covering
 warnings-as-errors compilation, formatting and behavioral tests. Static checks,
 coverage, docs and the candidate-archive consumer run as explicit release lanes.
+That gate description and the receipts and gate results recorded here predate
+the full standard gate that `mix check` now runs, as described in
+[WMB.14](../specs/WMB.14-release-candidate-dossier.md).
 `bin/check_archive.exs` builds exact core, Runtime and Modbus archives, installs
 them through an isolated signed Hex registry alongside the exact locked public
 dependencies, verifies an all-Hex lock and archive digests, and executes direct

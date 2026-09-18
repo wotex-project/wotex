@@ -4,9 +4,9 @@ defmodule Mix.Tasks.Wotex.Ble.Software.Build do
   @moduledoc """
   Builds the explicit BlueZ virtual-controller software fixture.
 
-  Invoke `mix wotex.ble.software.build --workspace ABSOLUTE_PATH` from a Wotex
-  BLE source checkout; this repository also defines the root-project alias
-  `mix wotex.software.build`. The task accepts exactly one absolute workspace
+  Invoke `mix wotex.ble.software.build --workspace ABSOLUTE_PATH` from
+  `packages/wotex-ble` in a repository checkout; the package also defines the
+  alias `mix wotex.software.build`. The task accepts exactly one absolute workspace
   and runs only when explicitly invoked. See `Wotex.BLE.Software.Build` for
   its inputs, bounds and evidence contract.
   """

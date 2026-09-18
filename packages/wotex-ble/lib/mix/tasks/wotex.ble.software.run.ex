@@ -4,9 +4,9 @@ defmodule Mix.Tasks.Wotex.Ble.Software.Run do
   @moduledoc """
   Runs both BEAM software lanes from a built fixture workspace.
 
-  Invoke `mix wotex.ble.software.run --workspace ABSOLUTE_PATH` from a Wotex
-  BLE source checkout; this repository also defines the root-project alias
-  `mix wotex.software.run`. The task accepts exactly one absolute workspace
+  Invoke `mix wotex.ble.software.run --workspace ABSOLUTE_PATH` from
+  `packages/wotex-ble` in a repository checkout; the package also defines the
+  alias `mix wotex.software.run`. The task accepts exactly one absolute workspace
   and runs only when explicitly invoked. See `Wotex.BLE.Software.Run` for
   its inputs, bounds and evidence contract.
   """

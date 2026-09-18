@@ -65,7 +65,7 @@ security policy or complete OPC UA conformance/certification claim is made.
 
 ## Explicit native build tooling
 
-`mix wotex.opcua.native.build --workspace ABS` and the owning root alias
+`mix wotex.opcua.native.build --workspace ABS` and its package alias
 `mix wotex.native.build` build the native dependency/bootstrap executable.
 The build pins source digests, static SDK/OpenSSL options and tool identities;
 its completion receipt binds downloaded archives, static libraries, executable

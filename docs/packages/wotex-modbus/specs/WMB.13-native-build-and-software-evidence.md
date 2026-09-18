@@ -3,9 +3,9 @@ spec:
   id: WMB.13
   title: "Native peer build and software evidence"
   status: accepted
-  version: 1.3.0
+  version: 1.3.1
   owner: wotex-modbus
-  updated: 2026-09-14
+  updated: 2026-09-18
 ---
 
 # WMB.13 Native peer build and software evidence
@@ -97,11 +97,12 @@ foreground signal forwarding alone is not its oracle.
 
 ## WMB-N03 — Results and acceptance
 
-`result.json`, schema `wotex.modbus.software@2`, records source commit/tree and
-file hashes, dependency mode and exact dependency hashes, fixture/manifest and
-binary hashes, Elixir/OTP versions, exact argv, test seed, requirement/case IDs,
-test/peer exit codes, outcome, log hashes, stress measurements and owned-resource
-counts. No credentials, machine-specific source paths or raw process state enter
+`result.json`, schema `wotex.modbus.software@2`, records the repository commit,
+the package path and its subtree object at that commit, file hashes, dependency
+mode and exact dependency hashes, fixture/manifest and binary hashes, Elixir/OTP
+versions, exact argv, test seed, requirement/case IDs, test/peer exit codes,
+outcome, log hashes, stress measurements and owned-resource counts. No
+credentials, machine-specific source paths or raw process state enter
 publishable evidence. Failed setup and failed cleanup retain failure results.
 Stop-command exit status is recorded separately. A missing stop acknowledgment
 does not negate positive cleanup evidence: the peer must still exit zero,

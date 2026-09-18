@@ -212,7 +212,7 @@ excluded and 95.4% coverage.
 ## Software build and run tasks, 2026-09-17
 
 `Wotex.OPCUA.Native.Software` with `mix wotex.opcua.software.build` and
-`mix wotex.opcua.software.run` (root aliases `wotex.software.build` and
+`mix wotex.opcua.software.run` (package aliases `wotex.software.build` and
 `wotex.software.run`) implements the X06 fixture tasks for a source checkout.
 `test/interop/requirements.lock` pins the 13 peer distributions with every
 PyPI-published SHA-256 for their releases (168 hashes). A fresh venv installs it

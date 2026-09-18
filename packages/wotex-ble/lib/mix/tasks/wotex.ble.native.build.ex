@@ -4,8 +4,8 @@ defmodule Mix.Tasks.Wotex.Ble.Native.Build do
   @moduledoc """
   Builds the first-party native BlueZ SDK host in a disposable workspace.
 
-  Invoke `mix wotex.ble.native.build --workspace ABSOLUTE_PATH`. This repository
-  also defines the root-project alias `mix wotex.native.build`. The qualified
+  Invoke `mix wotex.ble.native.build --workspace ABSOLUTE_PATH`. The package
+  also defines the alias `mix wotex.native.build`. The qualified
   task name stays unique when a consumer compiles several Wotex protocol
   packages. The task accepts exactly one absolute `--workspace` argument and
   runs only when explicitly invoked. A completed matching workspace is verified

@@ -95,8 +95,9 @@ failed build keeps its lock and diagnostic logs and cannot be reused.
 
 ### Software fixture workspace
 
-`mix wotex.software.build` (qualified `mix wotex.ble.software.build`) runs from
-a Wotex BLE source checkout with adjacent `wotex` and `wotex-runtime` checkouts.
+`mix wotex.software.build` (qualified `mix wotex.ble.software.build`) runs in
+`packages/wotex-ble` of the WoTEx repository and reads the sibling
+`packages/wotex` and `packages/wotex-runtime` sources.
 It requires `docker` and `cc` on `PATH` and hashes every fixture asset and the
 `mix.exs`, `mix.lock`, `config`, `lib`, `priv` and `test` files of the three
 packages, with modes, before mutation. BlueZ, Hex 2.5.1 and Rebar3 3.27.0 source

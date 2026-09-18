@@ -3,7 +3,7 @@
 The native target uses libcoap 4.3.5, identified by the archive, ordered patch
 hashes and resulting source hashes in [source.json](source.json). Builds must
 verify all three stages; an unmodified upstream build is not this target.
-[WCO.13](../../docs/specs/WCO.13-native-build-and-software-evidence.md) owns the
+[WCO.13](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/specs/WCO.13-native-build-and-software-evidence.md) owns the
 Port, durable storage and build contract. `main.c`, `worker.c` and `exchange.c`
 implement the same-binary custody entry and the first production libcoap
 exchange slice. The Mix build task remains incomplete.
@@ -35,80 +35,80 @@ asserts exact ready/open/body/request/close envelopes, printable-ID escaping,
 live store locking, consumed-identity rejection and malformed-input teardown.
 `Dockerfile.json` compiles the cohort with ASan/UBSan on Linux and feeds a
 coalesced lifecycle trace through the internal worker entry. The
-[lifecycle receipt](../../docs/provenance/native-worker-lifecycle-v1.json) binds
+[lifecycle receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-lifecycle-v1.json) binds
 that preceding source cohort and its limits. The
-[exchange receipt](../../docs/provenance/native-worker-exchange-v1.json) binds a
+[exchange receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-exchange-v1.json) binds a
 same-stack protected GET and Block1 POST through the public custody entry on
 macOS and Linux. The subsequent
-[stream receipt](../../docs/provenance/native-worker-stream-v1.json) binds a
+[stream receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-stream-v1.json) binds a
 32,769-byte Block2 result and the immediately following Block1 POST. The Linux
 lane builds the patched static SDK plus the production adapter with ASan/UBSan
 and leak detection. The subsequent
-[Observe receipt](../../docs/provenance/native-worker-observe-v1.json) binds
+[Observe receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-observe-v1.json) binds
 protected registration, zero-credit retention, two inline reports, cumulative
 acknowledgment and token-matched cancellation. The following streamed-report
-[receipt](../../docs/provenance/native-worker-report-stream-v1.json) binds the
+[receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-report-stream-v1.json) binds the
 five credited frames of a 32,769-byte notification and
 cancellation with all five credits outstanding. The subsequent
-[renewal receipt](../../docs/provenance/native-worker-renewal-v1.json) binds
+[renewal receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-renewal-v1.json) binds
 same-token/new-MID renewal, the zero-Max-Age minimum interval and disabled-renewal
 stale cleanup. The following
-[observation-fault receipt](../../docs/provenance/native-worker-observation-faults-v1.json)
+[observation-fault receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-observation-faults-v1.json)
 binds negative, missing-Observe, changed-Content-Format and timeout renewal
 outcomes plus one latest Property report and terminal Event overlap at exhausted
 credit. These receipts do not accept notification freshness injection, live
 replay behavior, independent OSCORE interoperability or the final Mix-built
 executable.
 
-The [freshness receipt](../../docs/provenance/native-worker-freshness-v1.json)
+The [freshness receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-freshness-v1.json)
 binds the worker's native equal/older/half-range/128-second admission primitive,
 including stale metadata ordering, and a protected same-stack FFFFFF-to-zero
-Observe wrap. The [stale-notification receipt](../../docs/provenance/native-worker-stale-notification-v1.json)
+Observe wrap. The [stale-notification receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-stale-notification-v1.json)
 binds the same admission through the Mix-built helper: a captured authenticated
 notification relayed again after a newer one yields no value.
 
-The [renewal/cancel receipt](../../docs/provenance/native-worker-renewal-cancel-v1.json)
+The [renewal/cancel receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-renewal-cancel-v1.json)
 binds a protected cancellation admitted while renewal remains in flight. It
 executes the public-API original-route/token fallback, one distinct cancellation
 Message ID and exact deadline-driven local cleanup when no usable confirmation
 arrives. Its `timeout` came from libcoap's OSCORE send hold rather than the peer:
 under the send-hold patch the peer's response confirms that cancellation within
 the command deadline. The
-[intervening-response receipt](../../docs/provenance/native-worker-intervening-response-v1.json)
+[intervening-response receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-intervening-response-v1.json)
 binds a notification that reaches the worker between a renewal or cancellation
 and its response: it is neither a report nor cancellation success, and the
 pending exchange still completes.
 
-The [owner-cleanup receipt](../../docs/provenance/native-worker-owner-cleanup-v1.json)
+The [owner-cleanup receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-owner-cleanup-v1.json)
 binds abrupt public-custody owner EOF after a protected observation is
 established. Worker exit cleanup sends one original-route/token cancellation,
 the peer removes its observer and custody reaps the helper within C03. The
-[pending owner-loss receipt](../../docs/provenance/native-worker-pending-owner-loss-v1.json)
+[pending owner-loss receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-pending-owner-loss-v1.json)
 binds the same bound when owner EOF arrives while registration, renewal or
 cancellation still awaits the peer: exit cleanup sends exactly one cancellation
 for a registration or renewal and none after a pending cancellation.
 
-The [output-saturation receipt](../../docs/provenance/native-worker-output-saturation-v1.json)
+The [output-saturation receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-output-saturation-v1.json)
 binds an actual owner pipe filled to `EAGAIN`, fourteen protected 16 KiB
 notifications across two credit intervals, continued network progress and the
 same bounded owner-loss cleanup while report output is backpressured. The
 software run separately samples a suspended BEAM owner's Port mailbox at no more
 than eight report frames and delivers a terminal beside the full window.
 
-The [network-wait receipt](../../docs/provenance/native-worker-network-wait-v1.json)
+The [network-wait receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-network-wait-v1.json)
 binds readiness-driven exchange progress. The worker waits on libcoap's epoll
 descriptor and next timer, or passes its owner pipes to
 `coap_io_process_with_fds` on builds without epoll, and then collects exact owner
 descriptor events with a zero-timeout poll. Thirty-two sequential protected GET
 exchanges complete in less than one second.
 
-The [stale-traffic receipt](../../docs/provenance/native-worker-stale-traffic-v1.json)
+The [stale-traffic receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-stale-traffic-v1.json)
 binds random 8-byte initial tokens, discarded responses without a request
 association and a 20 ms exit window in which the best-effort cancellation's
 confirmable peer response is acknowledged before custody signals the worker. The
-[malformed-datagram receipt](../../docs/provenance/native-worker-malformed-datagram-v1.json)
+[malformed-datagram receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-malformed-datagram-v1.json)
 binds ignoring libcoap's discarded-datagram event instead of closing the exchange.
-The [notification-verification receipt](../../docs/provenance/native-worker-notification-verification-v1.json)
+The [notification-verification receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-worker-notification-verification-v1.json)
 binds discarding a notification that fails OSCORE processing without cancelling
 the observation. While a renewal or cancellation is pending, the same failure is
 also discarded, because the pending request refreshed libcoap's token association
@@ -130,7 +130,7 @@ The response-admission patch prevents plaintext nonempty responses from reaching
 an OSCORE application's response callback. It reports a finite protection error,
 including for an unauthenticated error response; its diagnostic text is not
 trusted. Empty ACK/RST preserve their transport-only meaning. The
-[protection receipt](../../docs/provenance/native-protection-v1.json) covers
+[protection receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-protection-v1.json) covers
 15 real UDP fault responses and ordinary UDP, empty-RST and protected positive
 controls. The protected
 peer uses the same pinned SDK and is labelled same-stack. The fixture reservation
@@ -168,7 +168,7 @@ with Linux ASan/UBSan, including leak detection. Its input context contains the
 verified archive as `source.tar.gz`, every ordered source patch and the native
 fixtures named by its COPY entries. The base image
 is pinned; package versions are recorded after installation, not claimed to be
-fixed by the image digest. [The receipt](../../docs/provenance/native-sequence-v1.json)
+fixed by the image digest. [The receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-sequence-v1.json)
 records exact test/source/artifact digests and the executed macOS/Linux lanes.
 It does not accept the remaining OSCORE helper, store, framing or Mix tasks.
 
@@ -192,7 +192,7 @@ crashes, SIGKILL, malformed state, capacity and exhaustion. Test-only fault hook
 interrupt the actual atomic-write stages; they are absent from the production
 object. `oscore_store_send_test.c` binds this store to the patched libcoap
 callback and asserts zero wire datagrams after every storage-failure stage.
-[The store receipt](../../docs/provenance/native-store-v1.json) identifies these
+[The store receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-store-v1.json) identifies these
 assertions and their source bytes. The production exchange adapter now binds
 this store to libcoap's sequence callback before protected transmission. Report
 streaming, live replay and the full OSCORE workflow remain separate implementation

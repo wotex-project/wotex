@@ -71,10 +71,12 @@ tar -xzf "$peer_workspace/libcoap.tar.gz" -C "$peer_workspace"
     -DENABLE_OSCORE=ON -DWARNING_TO_ERROR=ON -DCMAKE_BUILD_TYPE=Debug
 )
 cmake --build "$peer_workspace/build" --parallel 4
-WOTEX_PATH_DEPS=1 \
 WOTEX_COAP_LIBCOAP_SERVER="$peer_workspace/build/coap-server" \
-  mix test test/interop/dtls_pki_test.exs --include interop
+  mix pkg wotex-coap test test/interop/dtls_pki_test.exs --include interop
 ```
+
+Run the last command from the repository root; `mix pkg` sets
+`WOTEX_PATH_DEPS=1` inside `packages/wotex-coap`.
 
 The fixture requires an absolute executable path and a libcoap 4.3.5/OpenSSL
 version response, then prints the executable's SHA-256. Missing executables,
@@ -89,7 +91,8 @@ PUT echo, with an explicit matching PSK identity entry or supplied PKI material.
 
 Run the focused native/security tests on Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with separate build/dependency directories. The
-complete authoritative library gate remains `WOTEX_PATH_DEPS=1 mix check --no-retry`;
+complete authoritative library gate remains `mix pkg wotex-coap check --no-retry`
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-coap`);
 this explicit peer suite does not replace it. Existing OTP-peer tests additionally
 cover security input bounds, weak RSA admission, owner interruption and Runtime
 credential/stream ownership.

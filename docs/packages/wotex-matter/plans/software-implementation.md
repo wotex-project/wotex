@@ -278,10 +278,12 @@ path dependencies are identified separately from released Hex dependencies.
 
 ## Verification and commit procedure
 
-Run focused tests while implementing a package, then run `mix check` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
+Run focused tests while implementing a package
+(`mix pkg wotex-matter test <files>` from the repository root), then run
+`mix check` before its local commit. The ordinary Hex dependency path is
+authoritative. Inside this repository, `WOTEX_PATH_DEPS=1 mix check --no-retry`
+(what `mix pkg wotex-matter check --no-retry` runs) selects the sibling
+packages under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
 C/C++ adapters run ASan/UBSan in the Linux fault lane.

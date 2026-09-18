@@ -16,26 +16,69 @@
 
 ---
 
-This is a development checkout. The public API remains unstable, and the
+This package is under development. Its public API remains unstable, and the
 ordered software implementation plan is not complete.
 
 Build handoff: [software implementation sequence](../../docs/packages/wotex-coap/plans/software-implementation.md).
 
 ## Installation
 
-This development checkout is prepared as the `wotex_coap` Hex package but does
-not assert that a release has been published. A sibling-checkout consumer can
-select it explicitly:
+Wotex CoAP 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_coap, path: "../wotex-coap"}]
+  [
+    {:wotex_coap, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_coap,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-coap",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_coap, path: "../wotex/packages/wotex-coap", override: true}
+```
+
+Path dependencies prove nothing about a released artifact. The optional native
+OSCORE helper is never built by dependency compilation; the consumer supplies
+an explicitly built executable and manifest (see
+[Development](#development)).
 
 ## Implemented profile
 
@@ -135,7 +178,7 @@ receive queue is fabricated; `receive/2` fails explicitly. Native subscriptions
 return an exact owned handle after validating the initial complete representation.
 Callback names alone do not establish consumer behavioral parity.
 The consumer retains its implementation until differential scenarios and
-interoperability gates pass; migration is outside this repository.
+interoperability gates pass; migration is outside this package.
 
 See [implemented profile](../../docs/packages/wotex-coap/specs/WCO.02-implemented-profile.md),
 [primary sources](../../docs/packages/wotex-coap/provenance/primary-sources.md) and
@@ -143,18 +186,92 @@ See [implemented profile](../../docs/packages/wotex-coap/specs/WCO.02-implemente
 
 ## Development
 
-Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
-checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex versions.
-Plain `mix check --no-retry` is the complete library gate: locked dependencies,
-formatting, warnings-as-errors compilation, one coverage test run, strict static
-checks, dependency audits, documentation, application-boundary checks and an
-external archive build/compilation. The coverage floor is 95%. `mix test` is the
-fast development loop; no separate release profile enables additional checks.
-The archive and its digest remain in the printed system-temporary directory.
-Its compilation uses the tested dependency cohort, not released-artifact adoption.
-Optional interoperability suites fail if invoked without their required peer.
-No remote repository, published package or publication action is implied.
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```console
+mix pkg wotex-coap test test/wotex/coap/codec_test.exs  # one test file
+mix check.fast --package wotex-coap                     # compile, format, Credo, tests
+mix pkg wotex-coap check --no-retry                     # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-coap`. It compiles with warnings as errors, checks the lock and
+unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`, Credo,
+Doctor, `mix docs --warnings-as-errors` (in the `docs` environment), runs the
+default suite once with the 95% coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`, then runs `bin/check_archive.exs` and
+`bin/check_application_free.exs`. The archive check builds the `wotex_coap` Hex
+archive without path dependencies in a printed system-temporary directory,
+verifies its contents and released `wotex`/`wotex_runtime` requirements,
+compiles the unpacked sources out of tree against the tested dependency BEAM
+files and prints the archive SHA-256; that is not dependency-archive adoption.
+The application-free check proves that the package has no Application callback
+and that starting it and validating DTLS credentials start no OTP SSL
+supervisor.
+
+The default suite excludes the `interop` and `hardware` tags; every
+software-lane file is also tagged `interop`. It still needs a supported
+native-build host with the complete native toolchain described below:
+`test/wotex/coap/native_toolchain_test.exs` resolves it, and
+`native_worker_test.exs`, `native/custody_test.exs` and
+`native_build_command_test.exs` compile first-party native test executables
+with `cc` and `pkg-config` against OpenSSL development files. Interop suites
+fail rather than skip when selected without their peer.
+
+### Native build lane
+
+The OSCORE helper `wotex-coap-oscore` is built only on explicit request, in a
+disposable absolute workspace that is absent or empty (a completed workspace
+is re-verified read-only, never repaired):
+
+```console
+mix wotex.native.build --package wotex-coap --workspace /absolute/disposable/dir
+mix pkg wotex-coap wotex.native.build --workspace /absolute/disposable/dir
+```
+
+Both forms dispatch `wotex.coap.native.build`. Supported hosts are Linux
+x86-64/AArch64 and macOS AArch64. The build resolves and fingerprints a C11
+compiler (`cc` or `$CC`), CMake (`cmake` or `$CMAKE`), OpenSSL 3 (`openssl` on
+the `PATH` or `$OPENSSL_ROOT_DIR`), `curl`, `patch`, `pkg-config` and `ldd`
+(Linux) or `otool` (macOS). It downloads the pinned libcoap 4.3.5 archive,
+verifies it against `native/oscore/source.json`, applies the ordered patches in
+`native/oscore/patches/`, builds a static libcoap and the worker from
+`native/oscore/`, probes them and publishes `native-manifest.json` within a
+ten-minute deadline.
+
+### Software lane
+
+```console
+mix pkg wotex-coap wotex.software.build --workspace /absolute/disposable/dir
+mix pkg wotex-coap wotex.software.run --workspace /absolute/disposable/dir
+```
+
+The build needs the native-build tools plus a Java runtime (`java` or
+`$WOTEX_COAP_JAVA`) and network access. It builds the nested native helper, the
+libcoap `coap-server` peer and the native fault/vector executables (with
+ASan/UBSan on Linux), admits the pinned Eclipse Californium 3.14.0 plugtest
+server JAR by SHA-256, runs every vector and only then writes the manifest.
+The run verifies that workspace and runs the `interop`/`software` suites
+(libcoap UDP, PSK and PKI; same-stack OSCORE; Californium OSCORE; lifecycle
+stress; native corpus and Port saturation) with seed 0 under a five-minute
+deadline, and always writes a bounded `result.json`. Use the same
+`OPENSSL_ROOT_DIR` for build and run. A workspace is terminal after a run; use
+a fresh build for another run. `test/software/Dockerfile.linux` is the Linux
+environment for both commands, built once per supported runtime.
+
+### Sanitizer images
+
+`test/native/Dockerfile` (pinned libcoap with its patches, the store,
+sequence, protection, block-limit and worker-exchange harnesses),
+`test/native/Dockerfile.json` (JSON, frame, body, credit, command and a worker
+trace) and `test/native/Dockerfile.custody` (process custody) build Linux
+ASan/UBSan images with Docker. The JSON and custody images use
+`packages/wotex-coap` as their build context; `test/native/Dockerfile` needs a
+context assembled from `native/oscore/` sources and patches, the `test/native/`
+sources and the verified archive as `source.tar.gz`. The recorded invocations
+are in [executable evidence](../../docs/packages/wotex-coap/provenance/executable-evidence.md).
 
 ## Software implementation contract
 
@@ -231,8 +348,9 @@ saturation tests and 13 native-v1 corpus tests through the Mix-built helper. The
 47-test cohort before the saturation tests builds and runs in Linux containers on
 Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15 with sanitizer-built
 native vectors. `mix check`, including the Hex archive and out-of-tree compilation
-gate, passes from fresh clones of committed sources in Linux containers on both
-runtimes. The independent upstream-stack OSCORE cohort executes its five cases
+gate, passed from clean clones of the committed per-package sources in Linux
+containers on both runtimes; that clean-source receipt predates the move into
+this repository. The independent upstream-stack OSCORE cohort executes its five cases
 against Eclipse Californium 3.14.0 on macOS arm64; that archive is admitted by
 exact digest and run by a recorded Java runtime as a test peer only. Its renewed
 run receipt, its Linux lanes, Group OSCORE, context re-derivation and a second

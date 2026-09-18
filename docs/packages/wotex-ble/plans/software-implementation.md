@@ -181,10 +181,11 @@ separately in the results. Hardware absence is not a software test result.
 
 ## Verification and commit procedure
 
-Run focused tests while implementing a package, then run `mix check` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
+Run focused tests while implementing a package, then run the package gate before
+its local commit. The ordinary Hex dependency path is authoritative. In the WoTEx
+repository, `mix pkg wotex-ble check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-ble`) selects the
+sibling package sources under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
 C/C++ adapters run ASan/UBSan in the Linux fault lane.

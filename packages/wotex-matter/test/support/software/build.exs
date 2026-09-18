@@ -476,12 +476,12 @@ defmodule Wotex.Matter.SoftwareBuild do
       end
 
     identity = context.source_identity
+    revision = revision(context, identity)
 
-    %{
+    Map.merge(revision, %{
       "schema" => "wotex.native-build",
       "version" => 1,
       "package" => "wotex_matter",
-      "source_revision" => revision(context, identity),
       "source_files" => identity["source_files_sha256"],
       "peer_extensions" => extensions,
       "upstream_sources" =>
@@ -524,18 +524,79 @@ defmodule Wotex.Matter.SoftwareBuild do
         |> Map.new(fn path ->
           {Path.relative_to(path, context.workspace), SoftwareManifest.digest(path)}
         end)
-    }
+    })
   end
 
+  # The package normally lives in a repository holding several packages, so
+  # its revision is the enclosing repository commit plus the package path and
+  # the package subtree at that commit. Outside a Git checkout the source
+  # digest stands in for the revision.
   defp revision(context, identity) do
-    if File.exists?(Path.join(context.root, ".git")) do
-      context
-      |> host("source-revision", "git", ["rev-parse", "HEAD"])
-      |> String.trim()
-    else
-      "sha256:" <> identity["source_sha256"]
+    case repository_prefix(context) do
+      {:ok, prefix} ->
+        [commit, tree] =
+          context
+          |> host("source-revision", "git", ["rev-parse", "HEAD", "HEAD:" <> prefix])
+          |> object_names()
+
+        %{
+          "source_revision" => commit,
+          "source_path" => package_path(prefix),
+          "source_tree" => tree
+        }
+
+      :error ->
+        %{
+          "source_revision" => "sha256:" <> identity["source_sha256"],
+          "source_path" => nil,
+          "source_tree" => nil
+        }
     end
   end
+
+  # A missing Git executable or a source outside any work tree selects the
+  # digest fallback. The top level is an absolute machine path, so this probe
+  # keeps no log; only the package prefix inside the repository is used.
+  defp repository_prefix(context) do
+    arguments = ["rev-parse", "--show-toplevel", "--show-prefix"]
+    remaining = record_step(context, "source-repository", "git", arguments)
+
+    case SoftwareCommand.run("git", arguments, cd: context.root, timeout: remaining) do
+      {:ok, output} -> {:ok, prefix(output)}
+      {:error, reason} when reason in [:command_failed, :required_tool_missing] -> :error
+      {:error, reason} -> fail(reason)
+    end
+  end
+
+  defp prefix(output) do
+    case String.split(output, "\n") do
+      [toplevel, "", ""] when toplevel != "" ->
+        ""
+
+      [toplevel, prefix, ""] when toplevel != "" ->
+        if safe_prefix?(prefix), do: prefix, else: fail(:source_revision)
+
+      _ ->
+        fail(:source_revision)
+    end
+  end
+
+  defp safe_prefix?(prefix) do
+    String.ends_with?(prefix, "/") and Path.type(prefix) == :relative and
+      not String.contains?(prefix, ["\\", <<0>>]) and
+      Enum.all?(String.split(prefix, "/", trim: true), &(&1 not in [".", ".."]))
+  end
+
+  defp object_names(output) do
+    names = String.split(output, "\n", trim: true)
+
+    if length(names) == 2 and Enum.all?(names, &Regex.match?(~r/\A[0-9a-f]{40}\z/, &1)),
+      do: names,
+      else: fail(:source_revision)
+  end
+
+  defp package_path(""), do: "."
+  defp package_path(prefix), do: String.trim_trailing(prefix, "/")
 
   defp audit(context, sources, mode) do
     queries =
@@ -612,6 +673,16 @@ defmodule Wotex.Matter.SoftwareBuild do
   end
 
   defp host(context, id, executable, arguments) do
+    remaining = record_step(context, id, executable, arguments)
+
+    SoftwareCommand.run!(executable, arguments,
+      cd: context.root,
+      timeout: remaining,
+      log: Path.join(context.workspace, "logs/" <> id <> ".log")
+    )
+  end
+
+  defp record_step(context, id, executable, arguments) do
     remaining = context.deadline - System.monotonic_time(:millisecond)
     if remaining <= 0, do: fail(:software_build_timeout)
 
@@ -636,11 +707,7 @@ defmodule Wotex.Matter.SoftwareBuild do
       [:append]
     )
 
-    SoftwareCommand.run!(executable, arguments,
-      cd: context.root,
-      timeout: remaining,
-      log: Path.join(context.workspace, "logs/" <> id <> ".log")
-    )
+    remaining
   end
 
   defp cleanup_watcher(context) do

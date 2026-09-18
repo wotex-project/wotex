@@ -16,29 +16,65 @@
 
 ---
 
-This is a development checkout. The public API remains unstable; software
+This package is under development and its public API is unstable; software
 interoperability does not establish certification or a published release.
 
 ## Installation
 
-This development checkout is prepared as the `wotex_modbus` Hex package but
-does not assert that a release has been published. A sibling-checkout consumer
-can select it explicitly:
+Wotex Modbus 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_modbus, path: "../wotex-modbus"}]
+  [
+    {:wotex_modbus, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
-A separate release evidence lane builds exact core, Runtime and Modbus candidate
-archives and installs them into an isolated temporary consumer through a signed
-local Hex registry. That verifies package composition without claiming that any
-of those candidates has been published.
-The [release-candidate dossier](../../docs/packages/wotex-modbus/specs/WMB.14-release-candidate-dossier.md)
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_modbus,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-modbus",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_modbus, path: "../wotex/packages/wotex-modbus", override: true}
+```
+
+Path dependencies prove nothing about a released artifact. The
+[release-candidate dossier](../../docs/packages/wotex-modbus/specs/WMB.14-release-candidate-dossier.md)
 maps the reviewed API, dependencies, standards scope, legal/security boundary,
 verification commands and explicit nonclaims.
 
@@ -56,17 +92,69 @@ failure can therefore leave the physical effect unknown to the caller.
 
 ## Development
 
-Use Elixir 1.18 or newer and an appropriate OTP release. To use local Wotex core
-and Runtime checkouts, run `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. The developer gate covers
-warnings-as-errors compilation, formatting, dependency audits, strict Credo,
-Doctor, documentation with warnings as errors, coverage, Dialyzer, the
-Application-free check and the candidate archive check. Normal dependency
-resolution uses Hex versions. Software peers run as explicit release evidence.
-Optional interoperability suites run only on explicit invocation and must fail
-when their configured peer is missing or returns no response.
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
 
-See [delivery contract](../../docs/packages/wotex-modbus/plans/wotex-modbus-completion.md).
+```console
+mix pkg wotex-modbus test test/wotex/modbus/codec_test.exs  # one test file
+mix check.fast --package wotex-modbus                       # compile, format, Credo, tests
+mix pkg wotex-modbus check --no-retry                       # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-modbus`. It compiles with warnings as errors, checks the lock
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`, then runs `bin/check_archive.exs` and
+`bin/check_application_free.exs`. The archive check builds the exact `wotex`,
+`wotex_runtime` and `wotex_modbus` candidate archives from `packages/` without
+path dependencies, serves them with the locked public dependencies from an
+OS-temporary signed Hex registry, installs them into an isolated consumer that
+must lock only Hex entries, and exercises direct and Runtime Modbus exchanges
+against consumer-owned loopback peers. It prints the three archive digests and
+the consumer-lock digest; it does not publish anything. The second check proves
+that the package defines no Application callback.
+
+The ordinary test run needs a POSIX C11 compiler (`cc`): the software-fixture
+command guardian in `test/interop/native/` is compiled and exercised by
+`test/software/command_test.exs`. Tests tagged `interop`, `software` or
+`hardware` are excluded; they need the independent peer and fail if selected
+without it. See the [delivery contract](../../docs/packages/wotex-modbus/plans/wotex-modbus-completion.md).
+
+### Software peer lane
+
+The independent libmodbus peer is an explicit lane, outside the gate. Pass a
+disposable absolute directory outside `packages/wotex-modbus`, and run the lane
+once per supported toolchain:
+
+```console
+mix pkg wotex-modbus wotex.software.build --workspace /absolute/disposable/dir
+mix pkg wotex-modbus wotex.software.run --workspace /absolute/disposable/dir
+```
+
+The build needs Docker, `cc` (or `$CC`), `curl` and network access. It
+compiles the command guardian with the host compiler, downloads the pinned
+libmodbus 3.1.12 archive and verifies its SHA-256, builds an ASan/UBSan
+libmodbus peer in a pinned Linux image from `test/interop/libmodbus/Dockerfile`
+and writes a verified `peer-manifest.json`. The workspace must be empty or hold
+a matching manifest. The run needs Docker and that built workspace: it starts
+the peer in an owned read-only container on a loopback port, runs
+`mix test --include interop --include software --exclude hardware` against it
+and writes `result.json` with outcomes and cleanup results under a new
+`run-*` directory in the workspace. The fully qualified task names are
+`wotex.modbus.software.build` and `wotex.modbus.software.run`;
+`test/interop/build_software.sh` and `run_software.sh` are thin delegates.
+There is no production native build: protocol execution is BEAM TCP.
+
+The command guardian also has a Linux ASan/UBSan lane. From
+`packages/wotex-modbus`, with Docker:
+
+```console
+docker build --tag wotex-modbus-guardian test/interop/native
+docker run --rm wotex-modbus-guardian
+```
 
 ## Implemented profile
 
@@ -104,12 +192,8 @@ behavior, limits, failure transitions, acceptance scenarios and concrete fixture
 Executable tests cover the contract corpus, real Runtime interactions, strict
 stream correlation, bounded admission, and owner cleanup. The software fixture
 builds a pinned libmodbus peer and records commands, hashes, failures, cleanup,
-and the active toolchain. It requires Docker and runs once per selected toolchain:
-
-```sh
-mix wotex.software.build --workspace /absolute/disposable/workspace
-WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/workspace
-```
+and the active toolchain. It requires Docker and runs once per selected toolchain
+through the [software peer lane](#software-peer-lane).
 
 Required software peers are separate from physical-device tests. A specification
 or catalogue status alone is not execution evidence.

@@ -127,11 +127,12 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 
 [WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) is authoritative for the
 Mix tasks, native source pins, manifests, deadlines, cleanup and result schemas.
-The command contract is:
+The command contract, run from the repository root (`mix pkg` sets
+`WOTEX_PATH_DEPS=1` inside `packages/wotex-modbus`), is:
 
 ```sh
-mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
-WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
+mix pkg wotex-modbus wotex.software.build --workspace /absolute/disposable/fixture-workspace
+mix pkg wotex-modbus wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
 These commands execute the checked-in Mix implementation. Acceptance still
@@ -145,9 +146,10 @@ starts implicitly.
 ## Verification and commit procedure
 
 Run focused tests while implementing a package, then run `mix check --no-retry` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check --no-retry` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
+local commit. The ordinary Hex dependency path is authoritative. Inside this
+repository, `mix pkg wotex-modbus check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` in `packages/wotex-modbus`) selects the
+sibling packages under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
 C/C++ adapters run ASan/UBSan in the Linux fault lane.

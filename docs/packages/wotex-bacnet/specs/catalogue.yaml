@@ -48,7 +48,7 @@ specifications:
     executable_evidence: ["test/wotex/bacnet/service_boundary_test.exs", "test/wotex/bacnet/cov_test.exs", "test/wotex/bacnet/discovery_values_test.exs", "test/wotex/bacnet/discovery_window_test.exs", "test/wotex/bacnet/batch_test.exs", "test/wotex/bacnet/discovery_lifecycle_test.exs", "test/wotex/bacnet/standalone_contract_test.exs"]
     compatibility_classification: "Native helpers, original tagged values, bounded discovery and sequential Property batches have F01–F11 local bindings plus independent workflow and C09 stress evidence for the accepted cohort."
   - id: "WBA.12"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WBA.12-wotex-integration.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]

@@ -124,6 +124,27 @@ defmodule Wotex.BACnet.SourceManifestTest do
     end
   end
 
+  test "WBA-C09 WBA-V13 Git package identity names the package path and its repository subtree" do
+    assert SoftwareManifest.git_package({:ok, "packages/wotex-bacnet/\n", 0}) ==
+             {"packages/wotex-bacnet", "HEAD:packages/wotex-bacnet/"}
+
+    assert SoftwareManifest.git_package({:ok, "\n", 0}) == {".", "HEAD:"}
+
+    for invalid <- [
+          {:ok, "", 0},
+          {:ok, "packages/wotex-bacnet\n", 0},
+          {:ok, "packages/wotex-bacnet/\nextra/\n", 0},
+          {:ok, "../outside/\n", 0},
+          {:ok, "/absolute/\n", 0},
+          {:ok, "packages/wotex-bacnet/\n", 128},
+          {:error, :command_deadline, :unverified}
+        ] do
+      assert_raise Mix.Error, "invalid_git_identity", fn ->
+        SoftwareManifest.git_package(invalid)
+      end
+    end
+  end
+
   test "WBA-C09 WBA-V13 atomic receipts preserve an occupied temporary path", c do
     path = Path.join(c.directory, "result.json")
     assert :ok = SoftwareManifest.write(path, %{"status" => "failed"})

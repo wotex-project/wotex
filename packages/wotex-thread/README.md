@@ -16,26 +16,69 @@
 
 ---
 
-This is a development checkout. The public API remains unstable, and the
+This package is under development. The public API remains unstable, and the
 software implementation plan is not complete. Package publication is separate.
 
 Build handoff: [software implementation sequence](../../docs/packages/wotex-thread/plans/software-implementation.md).
 
 ## Installation
 
-This development checkout is prepared as the `wotex_thread` Hex package but
-does not assert that a release has been published. A sibling-checkout consumer
-can select it explicitly:
+Wotex Thread 0.1 requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_thread, path: "../wotex-thread"}]
+  [
+    {:wotex_thread, "~> 0.1"}
+  ]
 end
 ```
 
-Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
-and Runtime dependencies resolve from sibling checkouts. Published consumers
-should replace the path with the constraint of an available Hex release.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. This package's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_thread,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-thread",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_thread, path: "../wotex/packages/wotex-thread", override: true}
+```
+
+Path dependencies prove nothing about a released artifact. The native host is
+built only by the explicit Linux task described under
+[Development](#development); a package consumer does not receive the software
+fixtures.
 
 ## Accepted native target
 
@@ -47,11 +90,11 @@ native build is a Mix task. Active software tests use ExUnit. Dormant Python
 protocol/process drivers have been retired; their unexecuted cells remain open.
 
 [WTH.13](../../docs/packages/wotex-thread/specs/WTH.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. On Linux, `mix wotex.native.build --workspace ABS`
-builds the pinned host, `mix wotex.software.build --workspace ABS` adds a
-sanitizer host, the simulation RCP and native test executables, and
-`mix wotex.software.run --workspace ABS` executes the native tests and the
-required ExUnit software lanes against that manifest. Generic orchestration and
+flow control and native ownership. On Linux, the native build task builds the
+pinned host, the software build adds a sanitizer host, the simulation RCP and
+native test executables, and the software run executes the native tests and the
+required ExUnit software lanes against that manifest (commands under
+[Development](#development)). Generic orchestration and
 assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
 
 ## Implemented profile
@@ -120,22 +163,80 @@ See [protocol and graduation contract](../../docs/packages/wotex-thread/specs/WT
 
 ## Development
 
-Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
-checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses
-Hex versions. Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before commits. It
-checks formatting, compiles with warnings as errors, runs strict Credo, Doctor,
-documentation with warnings as errors, coverage, Dialyzer, the archive check
-and the Application-free check. Native builds belong to explicit invocation.
-`WOTEX_PATH_DEPS=1 mix run --no-start bin/check_native_advisories.exs` is the
-live native source advisory release check described in the
-[security policy](../../docs/packages/wotex-thread/security.md).
-Optional interoperability suites fail if invoked without their required peer.
-The software suite includes native OpenThread simulation tests for Dataset
-validation, formation, management callbacks and commissioner admission/cleanup,
-plus BEAM-to-SDK tests. These do not establish physical-radio interoperability
-or complete the remaining software-network and lifecycle requirements.
-No remote repository, published package or publication action is implied.
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```console
+mix pkg wotex-thread test test/wotex/thread/dataset_test.exs  # one test file
+mix check.fast --package wotex-thread                         # compile, format, Credo, tests
+mix pkg wotex-thread check --no-retry                         # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-thread`. It compiles with warnings as errors, checks the lock
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`, then runs `bin/check_archive.exs` and
+`bin/check_application_free.exs`. The archive check builds the exact `wotex`,
+`wotex_runtime` and `wotex_thread` archives from `packages/` without path
+dependencies and exercises an isolated reference consumer against them; the
+second check proves that the package defines no Application callback.
+
+The ordinary test run excludes the `interop`, `software` and `hardware` tags.
+It needs a C compiler at `/usr/bin/cc`, which compiles the build guardian, and
+`escript` from the Erlang installation for the injected SDK bridge peer. It
+builds no SDK and needs no external network or device.
+
+### Native build and software lanes
+
+The native host and its software fixtures run only when invoked explicitly,
+never for a bounded change. Each task takes exactly one `--workspace` argument:
+an absolute, non-symlink directory that is empty, or that holds a completed
+manifest which is verified and reused without rebuilding. Use a disposable
+directory outside `packages/wotex-thread`.
+
+```console
+mix pkg wotex-thread wotex.native.build --workspace /absolute/disposable/native
+mix pkg wotex-thread wotex.software.build --workspace /absolute/disposable/software
+mix pkg wotex-thread wotex.software.run --workspace /absolute/disposable/software
+```
+
+The root `mix wotex.native.build --package wotex-thread --workspace /absolute/disposable/native`
+dispatches the same native build; inside the package the short aliases
+`mix wotex.native.build`, `mix wotex.software.build` and
+`mix wotex.software.run` name `wotex.thread.native.build`,
+`wotex.thread.software.build` and `wotex.thread.software.run`.
+
+- The native build requires Linux and `cmake`, `ninja`, `cc`, `c++` and
+  `readelf` on `PATH`. It downloads the pinned OpenThread, Mbed TLS, Mbed TLS
+  framework and nlohmann/json sources from
+  `priv/openthread/dependencies.json` over HTTPS, verifies their SHA-256
+  digests, applies the reviewed SDK fixes and writes `native-manifest.json`.
+  `--sanitizers` adds AddressSanitizer and UndefinedBehaviorSanitizer
+  instrumentation.
+- The software build requires the same Linux toolchain and the checked-in
+  `test/native` sources. It builds a normal and a sanitizer host, the pinned
+  simulation RCP and the native test executables, and writes
+  `software-manifest.json`.
+- The software run requires Linux, `mix` on `PATH` and a completed software
+  workspace; it never builds. It runs the sanitizer native tests, then the full
+  suite with `--include interop --include software --exclude hardware` against
+  the normal host and the software and native-contract tests against the
+  sanitizer host, with `WOTEX_REQUIRE_SOFTWARE=1`. It writes
+  `software-run/result.json`; a run directory is terminal, so another run
+  needs a fresh software workspace.
+
+These lanes do not establish physical-radio interoperability or complete the
+remaining software-network and lifecycle requirements. The `hardware` test
+needs an existing `ot-daemon` socket:
+`WOTEX_THREAD_DAEMON_SOCKET=/run/openthread-wpan0.sock mix pkg wotex-thread test test/interop/daemon_device_test.exs --include hardware`.
+
+The live native source advisory release check queries OSV, NVD and GitHub and
+is described in the
+[security policy](../../docs/packages/wotex-thread/security.md):
+`mix pkg wotex-thread run --no-start bin/check_native_advisories.exs`.
 
 ## Software implementation contract
 

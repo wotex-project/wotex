@@ -534,12 +534,24 @@ defmodule Wotex.Modbus.SoftwareRun do
 
     clean = clean and Enum.all?(paths, &(&1 in tracked))
 
-    {commit, tree} =
-      if clean,
-        do: SoftwareManifest.git_identity(command.(["rev-parse", "HEAD", "HEAD^{tree}"])),
-        else: {nil, nil}
+    # The repository holds several packages: bind the repository commit, the
+    # package path inside it and that package's subtree, not the whole tree.
+    {commit, tree, package_path} =
+      if clean do
+        {package_path, subtree} =
+          SoftwareManifest.git_package(command.(["rev-parse", "--show-prefix"]))
 
-    Map.merge(identity, %{"source_commit" => commit, "source_tree" => tree})
+        {commit, tree} = SoftwareManifest.git_identity(command.(["rev-parse", "HEAD", subtree]))
+        {commit, tree, package_path}
+      else
+        {nil, nil, nil}
+      end
+
+    Map.merge(identity, %{
+      "source_commit" => commit,
+      "source_path" => package_path,
+      "source_tree" => tree
+    })
   end
 
   defp otp_version do

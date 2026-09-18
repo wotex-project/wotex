@@ -3,9 +3,9 @@ spec:
   id: WMA.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-matter
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WMA.12 Wotex integration and evidence contract
@@ -27,19 +27,20 @@ application callback exists.
 
 | Owner | Reused contract | This package's obligation |
 | --- | --- | --- |
-| Wotex core | WTX.01/02/03 version 1.1.0: ThingDescription, Form, DataSchema, security references, bounded JSON/extensions | Use public constructors/accessors; do not copy TD parsing, default-operation tables or JSON-LD fetching into the protocol |
-| Wotex Runtime | WRT.01 version 1.3.1: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
+| Wotex core | [WTX.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex/specs/WTX.01-thing-description.md) and [WTX.02](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex/specs/WTX.02-affordance-values.md) version 1.1.0, [WTX.03](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex/specs/WTX.03-errors-extensions-and-compatibility.md) version 1.3.0: ThingDescription, Form, DataSchema, security references, bounded JSON/extensions | Use public constructors/accessors; do not copy TD parsing, default-operation tables or JSON-LD fetching into the protocol |
+| Wotex Runtime | [WRT.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-runtime/specs/WRT.01-consumed-thing-runtime.md) version 1.4.0: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
 | This protocol | .00/.10/.11: native values, operation validation, backend, errors and cleanup | Revalidate inputs at I/O boundaries; SDK delegation does not transfer this obligation to consumer code |
-| Wotex Conformance | WCF.01 version 1.1.0: isolated artifact/vector/evidence contracts | Optional external report integration; no production dependency in either direction |
+| Wotex Conformance | [WCF.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/specs/WCF.01-conformance-runner.md) version 1.1.0: isolated artifact/vector/evidence contracts | Optional external report integration; no production dependency in either direction |
 | Wotex Lab | Explicit reference consumer and artifact adoption | May consume immutable public archives; a local protocol pass does not close Lab's claims |
 | Wotex Directory / Nx / Continuum | Discovery values / numerical conversion / inert exchange values | Consumer composition only; no dependency, automatic registration, persistence or canonical state promotion |
 
-Reference source identities for the checked-in contracts and public APIs:
-[core `e03ea9733e30`](https://github.com/wotex-project/wotex/blob/e03ea9733e30fb05caa1749dff62e57b3670be28/CLAUDE.md),
-[Runtime `6bf5c0db5024`](https://github.com/wotex-project/wotex-runtime/blob/6bf5c0db502499fb7ebc3705846039f9899e2b6b/docs/specs/WRT.01-consumed-thing-runtime.md),
-[HTTP `2513174d0784`](https://github.com/wotex-project/wotex-binding-http/blob/2513174d0784c635a99db1a950db0e6812f3aab7/CLAUDE.md) and
-[MQTT `ee1392412aa3`](https://github.com/wotex-project/wotex-binding-mqtt/blob/ee1392412aa37716dada585c8cede5efd6ccf0d3/docs/specs/catalogue.yaml).
-These commit references identify reviewed source, not a claim that it is published
+The reference review used the checked-in contracts and public APIs of the
+sibling packages in this repository at the specification versions in the table:
+the [core package contract](https://github.com/wotex-project/wotex/blob/main/packages/wotex/CLAUDE.md),
+[Runtime WRT.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-runtime/specs/WRT.01-consumed-thing-runtime.md),
+the [HTTP binding contract](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-http/CLAUDE.md) and
+the [MQTT binding catalogue](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/specs/catalogue.yaml).
+These references identify reviewed contracts, not a claim that they are published
 or a replacement for package-version constraints. HTTP/MQTT intentionally own
 bindings only; their no-client rule does not erase this package's native profile.
 
@@ -308,7 +309,7 @@ exact Elixir/OTP versions, command, result and cleanup counts. Repeat the minimu
 and current runtime matrix in .00. A path-dependency gate proves local integration;
 it does not prove released artifact adoption.
 
-[Wotex Conformance](https://github.com/wotex-project/wotex-conformance/blob/dd53f8052a5bb1bb358c70bfe3810e9aa631e9b3/docs/specs/WCF.01-conformance-runner.md)
+[Wotex Conformance WCF.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/specs/WCF.01-conformance-runner.md) version 1.1.0
 requires expectations to stay runner-side and subjects to stay outside its
 production dependencies. This corpus is a protocol-test interchange, not an
 already accepted WCF corpus. Its current document-operation normalization does

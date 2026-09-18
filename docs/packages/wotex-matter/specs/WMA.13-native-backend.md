@@ -3,9 +3,9 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.5
+  version: 1.0.6
   owner: wotex-matter
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WMA.13 Native backend, build and IPC contract
@@ -74,7 +74,10 @@ the report engine measured by the second phase. Counts, deadlines and controller
 resource assertions remain unchanged.
 
 `native-manifest.json` has schema `wotex.native-build`, version `1`, package,
-source_revision, source_files (relative path/SHA-256), upstream sources (URL,
+source_revision (the commit of the enclosing repository, or `sha256:` plus the
+source digest outside a Git checkout), source_path and source_tree (the package
+path in that repository and its subtree object at that commit, null outside a
+Git checkout), source_files (relative path/SHA-256), upstream sources (URL,
 commit/version, archive SHA-256), recursive SDK gitlink commits where applicable,
 toolchain (target triple, compiler/linker/generator versions and executable
 SHA-256), exact arguments/environment allowlist, build_features, binaries

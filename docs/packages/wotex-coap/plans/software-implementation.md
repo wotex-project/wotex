@@ -147,7 +147,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 ### WCO-P08b: Native Mix orchestration
 
 - Requirements: WCO-N01–N05 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
-- Change surface: unique `Mix.Tasks.Wotex.Coap.Software.Build` and `Mix.Tasks.Wotex.Coap.Software.Run` with root-project aliases `wotex.software.build` and `wotex.software.run`, test-only owned Port/process helpers, manifest/result projection. The native build uses `Mix.Tasks.Wotex.Coap.Native.Build` behind the `wotex.native.build` alias. Multiple protocol dependencies must not define duplicate task modules.
+- Change surface: unique `Mix.Tasks.Wotex.Coap.Software.Build` and `Mix.Tasks.Wotex.Coap.Software.Run` with package aliases `wotex.software.build` and `wotex.software.run` in `mix.exs`, test-only owned Port/process helpers, manifest/result projection. The native build uses `Mix.Tasks.Wotex.Coap.Native.Build` behind the `wotex.native.build` alias. Multiple protocol dependencies must not define duplicate task modules.
 - Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
 - Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
@@ -166,11 +166,12 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 [WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) is authoritative
 for the implemented build and software-run tasks, native source pins,
 manifests, deadlines, cleanup and result schemas.
-The command contract is:
+The command contract, from the repository root (`mix pkg` runs the package's
+aliases inside `packages/wotex-coap` with `WOTEX_PATH_DEPS=1`), is:
 
 ```sh
-mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
-WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
+mix pkg wotex-coap wotex.software.build --workspace /absolute/disposable/fixture-workspace
+mix pkg wotex-coap wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
 The build and run commands and their task tests pass on macOS arm64. The current
@@ -195,10 +196,12 @@ another run.
 
 ## Verification and commit procedure
 
-Run focused tests while implementing a package, then run `mix check --no-retry` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check --no-retry` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
+Run focused tests while implementing a package (`mix pkg wotex-coap test <files>`),
+then run the package gate before its local commit. The ordinary Hex dependency
+path is authoritative. In the WoTEx repository, `mix pkg wotex-coap check --no-retry`
+(equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-coap`)
+selects the sibling package sources under `packages/`; record which mode was
+used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
 C/C++ adapters run ASan/UBSan in the Linux fault lane.
