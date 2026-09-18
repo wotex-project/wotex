@@ -1,0 +1,28 @@
+{
+  "repository_url": "https://github.com/wotex-project/wotex",
+  "types": {
+    "build": {"hidden": true},
+    "chore": {"hidden": true},
+    "ci": {"hidden": true},
+    "style": {"hidden": true},
+    "test": {"hidden": true}
+  },
+  "packages": {
+    "packages/wotex": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-bacnet": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-binding-http": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-binding-mqtt": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-ble": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-coap": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-conformance": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-continuum": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-directory": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-lab": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-matter": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-modbus": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-nx": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-opcua": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-runtime": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-thread": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]}
+  }
+}

@@ -58,6 +58,7 @@ defmodule WotexWorkspace.MixProject do
     [
       {:yaml_elixir, "~> 2.11"},
       {:credo, "~> 1.7", only: :dev, runtime: false},
+      {:git_ops, "~> 2.12", only: :dev, runtime: false},
       {:ex_doc, "~> 0.38", only: :dev, runtime: false}
     ]
   end
