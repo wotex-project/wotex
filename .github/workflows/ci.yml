@@ -1,0 +1,237 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Space-separated package names, or 'all'"
+        default: all
+      native:
+        description: "Also run the native and software-profile lane"
+        type: boolean
+        default: false
+  schedule:
+    # Nightly native and software-profile lane over every native package.
+    - cron: "17 2 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MIX_ENV: dev
+  # The current lane is also the workspace toolchain.
+  CURRENT_ELIXIR: "1.20.2-otp-29"
+  CURRENT_OTP: "29.0.4"
+  MINIMUM_ELIXIR: "1.18.4-otp-27"
+  MINIMUM_OTP: "27.3.4.15"
+
+jobs:
+  affected:
+    name: Affected packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      packages: ${{ steps.select.outputs.packages }}
+      any: ${{ steps.select.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.CURRENT_ELIXIR }}
+          otp-version: ${{ env.CURRENT_OTP }}
+      - name: Workspace dependencies
+        run: mix deps.get --check-locked
+      - name: Select packages
+        id: select
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ github.event_name }}" in
+            workflow_dispatch)
+              requested="${{ github.event.inputs.packages }}"
+              if [ "$requested" = "all" ]; then
+                packages=$(mix wotex.affected --all --json)
+              else
+                packages=$(printf '%s\n' $requested | jq -R . | jq -sc .)
+              fi
+              ;;
+            schedule)
+              packages=$(mix wotex.affected --all --json)
+              ;;
+            pull_request)
+              packages=$(mix wotex.affected --base "origin/${{ github.base_ref }}" --json)
+              ;;
+            *)
+              packages=$(mix wotex.affected --base "${{ github.event.before }}" --json)
+              ;;
+          esac
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          if [ "$packages" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
+          echo "affected: $packages"
+
+  workspace:
+    name: Workspace checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: affected
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.CURRENT_ELIXIR }}
+          otp-version: ${{ env.CURRENT_OTP }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: workspace-${{ env.CURRENT_ELIXIR }}-${{ hashFiles('mix.lock') }}
+      - run: mix deps.get --check-locked
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix credo --strict
+      - run: mix test
+      - name: Family catalogue is current
+        run: mix wotex.catalogue --check
+      - name: Pinned native sources
+        run: mix wotex.native.sources
+      - name: Sibling API boundary
+        if: needs.affected.outputs.any == 'true'
+        run: mix wotex.boundary --all
+      - name: Governance files are shared
+        shell: bash
+        run: |
+          set -euo pipefail
+          stray=$(git ls-files packages | grep -E '/(CODE_OF_CONDUCT|CONTRIBUTING|GOVERNANCE|SECURITY|AGENTS)\.md$|/\.claude/|/\.github/|/docs/' || true)
+          if [ -n "$stray" ]; then echo "$stray"; echo "package-level copies of shared files found"; exit 1; fi
+          for f in packages/*/LICENSE; do cmp -s "$f" LICENSE || { echo "$f differs from the root LICENSE"; exit 1; }; done
+
+  check:
+    name: ${{ matrix.package }} (${{ matrix.lane }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    needs: affected
+    if: needs.affected.outputs.any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.affected.outputs.packages) }}
+        lane: [minimum, current]
+    env:
+      WOTEX_PATH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          if [ "${{ matrix.lane }}" = minimum ]; then
+            echo "elixir=${MINIMUM_ELIXIR}" >> "$GITHUB_OUTPUT"; echo "otp=${MINIMUM_OTP}" >> "$GITHUB_OUTPUT"
+          else
+            echo "elixir=${CURRENT_ELIXIR}" >> "$GITHUB_OUTPUT"; echo "otp=${CURRENT_OTP}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ steps.toolchain.outputs.elixir }}
+          otp-version: ${{ steps.toolchain.outputs.otp }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            packages/${{ matrix.package }}/deps
+            packages/${{ matrix.package }}/_build
+          key: ${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package)) }}
+      - name: Native toolchain
+        # OPC UA builds its pinned open62541 SDK inside the coverage step.
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev
+      - name: Dependencies
+        working-directory: packages/${{ matrix.package }}
+        run: mix deps.get --check-locked
+      - name: Package gate
+        working-directory: packages/${{ matrix.package }}
+        run: mix check --no-retry
+
+  archive:
+    name: Archives and consumers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    needs: [affected, check]
+    if: needs.affected.outputs.any == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.CURRENT_ELIXIR }}
+          otp-version: ${{ env.CURRENT_OTP }}
+      - run: mix deps.get --check-locked
+      - name: Package dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for p in $(echo '${{ needs.affected.outputs.packages }}' | jq -r '.[]'); do
+            (cd "packages/$p" && WOTEX_PATH_DEPS=1 mix deps.get --check-locked)
+          done
+      - name: Build and inspect archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=$(echo '${{ needs.affected.outputs.packages }}' | jq -r '.[] | "--package " + .' | tr '\n' ' ')
+          mix wotex.archive $args
+
+  native:
+    name: ${{ matrix.package }} native lane
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    needs: affected
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.native == 'true') ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'native'))
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [wotex-bacnet, wotex-ble, wotex-coap, wotex-matter, wotex-modbus, wotex-opcua, wotex-thread]
+    env:
+      WOTEX_PATH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.CURRENT_ELIXIR }}
+          otp-version: ${{ env.CURRENT_OTP }}
+      - name: Native toolchain
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev
+      - run: mix deps.get --check-locked
+      - name: Package dependencies
+        working-directory: packages/${{ matrix.package }}
+        run: mix deps.get --check-locked
+      - name: Native build
+        shell: bash
+        run: |
+          set -euo pipefail
+          task=$(yq -r '.packages["${{ matrix.package }}"].native_task // ""' tooling/packages.yaml)
+          if [ -n "$task" ]; then
+            mix wotex.native.build --package ${{ matrix.package }} --workspace "$RUNNER_TEMP/native-${{ matrix.package }}"
+          else
+            echo "no native build task for ${{ matrix.package }}"
+          fi
+      - name: Software profile
+        shell: bash
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          task=$(yq -r '.packages["${{ matrix.package }}"].software_task // ""' ../../tooling/packages.yaml)
+          if [ -n "$task" ]; then
+            mix "$task" --workspace "$RUNNER_TEMP/software-${{ matrix.package }}"
+          else
+            echo "no software profile task for ${{ matrix.package }}"
+          fi
+      - name: Upstream advisories
+        run: mix wotex.native.advisories
