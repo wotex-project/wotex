@@ -165,18 +165,18 @@ and [completion contract](../../docs/packages/wotex-continuum/plans/wotex-contin
 separate package verification from independent consumer, release and
 stable-API evidence. Normative WCT documents retain their single owners under
 `docs/packages/wotex-continuum/specs/` in the repository.
-The [WCT-C01 contract map](../../docs/packages/wotex-continuum/specs/WCT-C01-contract-map.md) indexes every
+The [WCT-C01 contract map](../../docs/packages/wotex-continuum/plans/WCT-C01-contract-map.md) indexes every
 field, default, null rule, error family, and lifecycle edge to executable
-evidence. The [WCT-C02 admission map](../../docs/packages/wotex-continuum/specs/WCT-C02-admission-map.md)
+evidence. The [WCT-C02 admission map](../../docs/packages/wotex-continuum/plans/WCT-C02-admission-map.md)
 records native UTF-8 parity and the intentional native-versus-decoder resource
-boundary. The [WCT-C03 schema agreement map](../../docs/packages/wotex-continuum/specs/WCT-C03-schema-agreement.md)
+boundary. The [WCT-C03 schema agreement map](../../docs/packages/wotex-continuum/plans/WCT-C03-schema-agreement.md)
 connects every registered kind and nested owner route to schemas,
 constructors, reconstruction, codecs, and published vectors.
-The [WCT-C04 archive-consumer proof](../../docs/packages/wotex-continuum/specs/WCT-C04-archive-consumer.md)
+The [WCT-C04 archive-consumer proof](../../docs/packages/wotex-continuum/plans/WCT-C04-archive-consumer.md)
 installs one exact candidate archive in two behavior-complete isolated Hex
 consumers and exercises the three WCT contracts without path or Git
 dependencies.
-The [WCT-C05 release-candidate dossier](../../docs/packages/wotex-continuum/specs/WCT-C05-release-dossier.md)
+The [WCT-C05 release-candidate dossier](../../docs/packages/wotex-continuum/plans/WCT-C05-release-dossier.md)
 separates package API from wire compatibility and records metadata, dependency,
 toolchain, public-content, standards, and nonclaim boundaries.
 

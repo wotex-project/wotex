@@ -1,6 +1,6 @@
-# RT-C05: Release evidence contract
+# WRT-C05: Release evidence contract
 
-Packet `RT-C05` defines the evidence required before `wotex_runtime 0.1.0` can
+Packet `WRT-C05` defines the evidence required before `wotex_runtime 0.1.0` can
 be considered a public release candidate. Publication remains a manual
 maintainer action.
 

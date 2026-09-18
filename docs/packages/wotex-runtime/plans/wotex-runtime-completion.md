@@ -1,6 +1,6 @@
 # Wotex Runtime completion contract
 
-Plan `RT-C@1.1.0` governs package `wotex_runtime 0.1.0`. It defines durable
+Plan `WRT-C@1.1.0` governs package `wotex_runtime 0.1.0`. It defines durable
 requirements, not mutable approval or progress. Requirement changes need review
 and a plan revision; historical Git content remains immutable. The normative
 catalogue is `docs/packages/wotex-runtime/specs/catalogue.yaml`.
@@ -24,19 +24,19 @@ dependency range. Package, specification and evidence versions are separate.
 
 | ID | Prerequisites | Deliverable | Acceptance |
 |---|---|---|---|
-| RT-C01 | WRT.01–03, core value contracts | Operation, value, error and ownership behavior review | Supported and unsupported operation families, admitted values, port errors and passive loading verified through public behavior |
-| RT-C02 | RT-C01 | [ConsumedThing/subscription hardening](../specs/RT-C02-runtime-hardening.md) | Raised/exited/malformed callbacks, result identity mismatch, invalid receiver/options, receiver death, concurrent stop, restart, forced kill and cleanup failure tested |
-| RT-C03 | RT-C01 | [ExposedThing boundary proof](../specs/RT-C03-exposed-thing-boundary.md) | Inbound Form/policy/schema checks assigned to consumer; invalid routing invokes no handler; concurrent callbacks and exception propagation proven |
-| RT-C04 | RT-C02, RT-C03 | [Independent reference consumer](../specs/RT-C04-reference-consumer.md) | Exact archives; zero/one/multiple subscriptions, shutdown budgets, explicit ports and aggregate negative cells |
-| RT-C05 | RT-C04 | [Release evidence dossier](../specs/RT-C05-release-evidence.md) | Package contents, dependency closure, docs, license/security and compatibility inputs are complete and internally consistent; gates evaluate the dossier separately |
-| RT-C06 | RT-C05 | [Stable API decision](../specs/RT-C06-stable-api.md) | Retained public fields/errors/defaults, compatibility vectors and migration notes; all claimed cells proven |
+| WRT-C01 | WRT.01–03, core value contracts | Operation, value, error and ownership behavior review | Supported and unsupported operation families, admitted values, port errors and passive loading verified through public behavior |
+| WRT-C02 | WRT-C01 | [ConsumedThing/subscription hardening](WRT-C02-runtime-hardening.md) | Raised/exited/malformed callbacks, result identity mismatch, invalid receiver/options, receiver death, concurrent stop, restart, forced kill and cleanup failure tested |
+| WRT-C03 | WRT-C01 | [ExposedThing boundary proof](WRT-C03-exposed-thing-boundary.md) | Inbound Form/policy/schema checks assigned to consumer; invalid routing invokes no handler; concurrent callbacks and exception propagation proven |
+| WRT-C04 | WRT-C02, WRT-C03 | [Independent reference consumer](WRT-C04-reference-consumer.md) | Exact archives; zero/one/multiple subscriptions, shutdown budgets, explicit ports and aggregate negative cells |
+| WRT-C05 | WRT-C04 | [Release evidence dossier](WRT-C05-release-evidence.md) | Package contents, dependency closure, docs, license/security and compatibility inputs are complete and internally consistent; gates evaluate the dossier separately |
+| WRT-C06 | WRT-C05 | [Stable API decision](WRT-C06-stable-api.md) | Retained public fields/errors/defaults, compatibility vectors and migration notes; all claimed cells proven |
 
-RT-C02 must specify bounds before implementation: request/metadata cardinality,
+WRT-C02 must specify bounds before implementation: request/metadata cardinality,
 Form/profile selection cost, callback budgets, mailbox overload and receiver
 behavior. Each bound needs threshold/over-threshold tests and allocation
 evidence. Consumer-owned limits must not be relabelled package guarantees.
 
-RT-C04 includes protocol bindings backed by external native SDK processes.
+WRT-C04 includes protocol bindings backed by external native SDK processes.
 Their owning specifications define executable admission, bounded IPC, SDK
 storage and protocol interoperability. Runtime integration proves the common
 owner and result boundary: callback-worker handoff, owner death during opening,
@@ -65,9 +65,9 @@ evidence remain explicit lanes recorded separately.
 |---|---|---|
 | `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`: compiler warnings, formatter, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer, boundary and archive checks; the repository-level gate and CI lanes discharge it; report failures | Independent dependency installation or integration |
 | `archive_consumer_green` | `bin/check_package.exs`, run by the repository-level gate and CI lanes: a separate minimal Mix consumer installs the exact archive and exercises one supported success plus typed error through public API, with no live source; a build without path overrides is recorded separately | Full lifecycle behavior |
-| `reference_consumer_green` | RT-C04 tests against that archive, explicit ports and real supervision | External protocol certification or production acceptance |
+| `reference_consumer_green` | WRT-C04 tests against that archive, explicit ports and real supervision | External protocol certification or production acceptance |
 | `public_release_candidate` | Prior gates, metadata/license/security, docs links, dependency installation and standards audit; no tracker/secret in archive | Publication permission or stable API |
-| `stable_api_candidate` | RT-C06 compatibility matrix; supported-cell ambiguity closed; advertised bounds/recovery evidenced | Compatibility forever or universal WoT conformance |
+| `stable_api_candidate` | WRT-C06 compatibility matrix; supported-cell ambiguity closed; advertised bounds/recovery evidenced | Compatibility forever or universal WoT conformance |
 
 Existing `bin/check_package.exs` compiles unpacked source against prebuilt core
 BEAMs; it does not alone prove independent dependency installation or complete
@@ -89,9 +89,9 @@ Broader claims need revision-specific assertions and positive/negative vectors.
 
 | Claim dimension | Current status | Promotion evidence |
 |---|---|---|
-| Value support | Runtime request/result/context/error and subscription values are covered by named repository tests | RT-C01/02 close every public value and malformed boundary |
+| Value support | Runtime request/result/context/error and subscription values are covered by named repository tests | WRT-C01/02 close every public value and malformed boundary |
 | Operation support | Only the exact WRT.01–03 operation cells are implemented | Positive/negative vectors per operation and admitted binding profile |
-| Independent interoperability | Not established | RT-C04 reference consumer against the exact archive |
+| Independent interoperability | Not established | WRT-C04 reference consumer against the exact archive |
 | Profile conformance | Not established | A separate revision-pinned profile assertion corpus |
 | External certification | None | External certification artifact; no internal gate substitutes for it |
 
@@ -99,21 +99,21 @@ Broader claims need revision-specific assertions and positive/negative vectors.
 
 | ID | Unsupported or unproven claim | Required closure / owner |
 |---|---|---|
-| RT-R01 | Hard bounds across nested terms, callback latency and all consumer/transport mailboxes | Consumer overload and binding contracts; Runtime only bounds its listed admissions and optional receiver-mailbox check |
-| RT-R02 | Credential isolation outside Runtime-normalized errors and telemetry, including opaque configuration and trusted consumer callback code | Consumer custody and execution boundary; Runtime is not a sandbox or secret-memory erasure mechanism |
-| RT-R03 | Identity correlation inside a binding's native or remote exchange | Binding contract and RT-C04 integration; Runtime rejects substituted request id or operation on its public transport-result boundary |
-| RT-R04 | Full selected inbound Form/schema validation | RT-C03 consumer-server contract, not current route lookup |
-| RT-R05 | Exactly-once delivery, remote cleanup or physical effect | Explicit nonclaim; consumer durable semantics |
-| RT-R06 | Clean registry installation/full platform range | RT-C05 dependency and runtime compatibility proof |
-| RT-R07 | Full Scripting API/WoT conformance | Out of declared scope; new contract required |
-| RT-R08 | Local notes excluded from distribution | Inspect every candidate archive and reject any `docs/` member, including local `docs/tasks/local/wotex-runtime/` state |
+| WRT-R01 | Hard bounds across nested terms, callback latency and all consumer/transport mailboxes | Consumer overload and binding contracts; Runtime only bounds its listed admissions and optional receiver-mailbox check |
+| WRT-R02 | Credential isolation outside Runtime-normalized errors and telemetry, including opaque configuration and trusted consumer callback code | Consumer custody and execution boundary; Runtime is not a sandbox or secret-memory erasure mechanism |
+| WRT-R03 | Identity correlation inside a binding's native or remote exchange | Binding contract and WRT-C04 integration; Runtime rejects substituted request id or operation on its public transport-result boundary |
+| WRT-R04 | Full selected inbound Form/schema validation | WRT-C03 consumer-server contract, not current route lookup |
+| WRT-R05 | Exactly-once delivery, remote cleanup or physical effect | Explicit nonclaim; consumer durable semantics |
+| WRT-R06 | Clean registry installation/full platform range | WRT-C05 dependency and runtime compatibility proof |
+| WRT-R07 | Full Scripting API/WoT conformance | Out of declared scope; new contract required |
+| WRT-R08 | Local notes excluded from distribution | Inspect every candidate archive and reject any `docs/` member, including local `docs/tasks/local/wotex-runtime/` state |
 
 ## Local completion memory
 
 Optional mutable state belongs only under the ignored root
 `docs/tasks/local/wotex-runtime/`, never in Git, catalogue, plans,
 specs, tests, package archives or ExDoc. Schema: `schema_version: "1.0.0"`, `package`,
-`source_commit`, `dependency_digests`, and `items` keyed by RT-C/RT-R IDs with
+`source_commit`, `dependency_digests`, and `items` keyed by WRT-C/WRT-R IDs with
 `state`, `evidence`, `limitations`, `next_action`. Evidence records name gate,
 command, result and artifact digest; unknown is not passed. No scheduler,
 worker claims or cross-repository authority belongs here.

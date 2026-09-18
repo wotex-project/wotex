@@ -1,6 +1,6 @@
-# RT-C02: Runtime hardening contract
+# WRT-C02: Runtime hardening contract
 
-Packet `RT-C02` defines the bounded ConsumedThing and subscription behavior
+Packet `WRT-C02` defines the bounded ConsumedThing and subscription behavior
 required by `docs/packages/wotex-runtime/plans/wotex-runtime-completion.md`.
 The evidence is executable package behavior. This document does not record a
 release-gate result or assign consumer and binding resource policy to Runtime.
@@ -74,7 +74,7 @@ callback-failure vectors are in `test/wotex/runtime/subscription_test.exs`.
 
 ## Qualifications
 
-RT-C02 establishes deterministic local mechanics and the public
+WRT-C02 establishes deterministic local mechanics and the public
 ConsumedThing/Transport correlation boundary. It does not establish callback
 latency, recursive allocation bounds, durable or exactly-once delivery, remote
 unsubscribe, binding-native correlation, transport interoperability, canonical

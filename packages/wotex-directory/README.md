@@ -219,12 +219,12 @@ the archives and consumer lock outside the repository.
 The explicit release runner writes an external `release-evidence.json`
 manifest after all checks succeed. It binds source and dependency inputs,
 runtime, commands, the exact archives, consumer lock and test outcome. The
-[claim and compatibility matrix](../../docs/packages/wotex-directory/specs/claim-compatibility-matrix.md)
+[claim and compatibility matrix](../../docs/packages/wotex-directory/plans/claim-compatibility-matrix.md)
 defines its schema and the reviewed 0.1.0 compatibility baseline. A dirty-tree
 run is qualified explicitly; neither a manifest nor a passing gate authorizes
 publication or establishes a stable API.
 
-The [repository port evidence contract](../../docs/packages/wotex-directory/specs/repository-port-evidence.md)
+The [repository port evidence contract](../../docs/packages/wotex-directory/plans/repository-port-evidence.md)
 defines the reusable adapter suite, its fixture interface, and the exact
 callback, authorization, isolation, pagination, expiry, and contention evidence.
 The adapters under `test/support/` are test consumers and are not packaged

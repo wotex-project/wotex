@@ -31,13 +31,13 @@ Relative links inside a package's documentation stay valid because
 | Package | Specification prefixes | Documentation |
 | --- | --- | --- |
 | `wotex` | `WTX` | [packages/wotex](packages/wotex) |
-| `wotex-runtime` | `WRT`, `RT-C` | [packages/wotex-runtime](packages/wotex-runtime) |
+| `wotex-runtime` | `WRT` | [packages/wotex-runtime](packages/wotex-runtime) |
 | `wotex-directory` | `WTD` | [packages/wotex-directory](packages/wotex-directory) |
 | `wotex-nx` | `WNX` | [packages/wotex-nx](packages/wotex-nx) |
-| `wotex-continuum` | `WCT`, `WCT-C` | [packages/wotex-continuum](packages/wotex-continuum) |
+| `wotex-continuum` | `WCT` | [packages/wotex-continuum](packages/wotex-continuum) |
 | `wotex-conformance` | `WCF` | [packages/wotex-conformance](packages/wotex-conformance) |
 | `wotex-binding-http` | `WBH` | [packages/wotex-binding-http](packages/wotex-binding-http) |
-| `wotex-binding-mqtt` | `WBM`, `WBM-C` | [packages/wotex-binding-mqtt](packages/wotex-binding-mqtt) |
+| `wotex-binding-mqtt` | `WBM` | [packages/wotex-binding-mqtt](packages/wotex-binding-mqtt) |
 | `wotex-bacnet` | `WBA` | [packages/wotex-bacnet](packages/wotex-bacnet) |
 | `wotex-ble` | `WBL` | [packages/wotex-ble](packages/wotex-ble) |
 | `wotex-coap` | `WCO` | [packages/wotex-coap](packages/wotex-coap) |

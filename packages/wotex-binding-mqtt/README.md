@@ -209,9 +209,9 @@ The 0.1 series implements the bounded mapping recorded in the
 [MQTT contract](../../docs/packages/wotex-binding-mqtt/specs/WBM.01-values-and-client-port.md) and
 [Runtime contract](../../docs/packages/wotex-binding-mqtt/specs/WBM.03-runtime-transport.md). Draft provenance is dated
 in the [dated draft provenance](../../docs/packages/wotex-binding-mqtt/provenance/mqtt-binding-draft-2026-07-01.md).
-The [client lifecycle proof](../../docs/packages/wotex-binding-mqtt/specs/WBM-C02-client-lifecycle.md) records the
+The [client lifecycle proof](../../docs/packages/wotex-binding-mqtt/plans/WBM-C02-client-lifecycle.md) records the
 consumer-owned timeout, handle, close-failure, concurrency, and restart boundary.
-The [limits and security proof](../../docs/packages/wotex-binding-mqtt/specs/WBM-C03-limits-security.md) records
+The [limits and security proof](../../docs/packages/wotex-binding-mqtt/plans/WBM-C03-limits-security.md) records
 exact value thresholds, filter cardinality, receiver overload, redaction, and
 the trusted-client authority boundary.
 The [exact archive consumer](../../docs/packages/wotex-binding-mqtt/reference-consumer-inventory.md) compiles one

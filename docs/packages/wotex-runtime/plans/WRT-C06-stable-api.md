@@ -1,6 +1,6 @@
-# RT-C06: Stable API candidate
+# WRT-C06: Stable API candidate
 
-Packet `RT-C06` records the `wotex_runtime 0.1.0` compatibility candidate. The
+Packet `WRT-C06` records the `wotex_runtime 0.1.0` compatibility candidate. The
 decision covers consumer-visible values, callback and delivery shapes,
 operation semantics, typed errors, limits, and lifecycle defaults. It does not
 freeze an exhaustive export list, private helper, complete struct layout,
@@ -45,7 +45,7 @@ material are excluded.
 
 The retained admission limits are 256 UTF-8 bytes for request identity, 64
 top-level entries for Context and Result metadata, 32 binding profiles, and 128
-Forms examined for one interaction. RT-C02 defines their scope and
+Forms examined for one interaction. WRT-C02 defines their scope and
 qualifications.
 
 Subscription child specifications default to `restart: :transient` and a
@@ -57,7 +57,7 @@ defaults to `nil`.
 ## Migration notes
 
 The candidate includes the pre-release admission tightening already recorded
-by WRT.01 and RT-C02:
+by WRT.01 and WRT-C02:
 
 - malformed, non-keyword, and improper option values return typed errors;
 - profile and Form scans stop at their admitted bounds;

@@ -106,11 +106,11 @@ defmodule WotexContinuum.MixProject do
       extras: [
         "README.md",
         Path.join(@docs_root, "plans/wotex-continuum-completion.md"),
-        Path.join(@docs_root, "specs/WCT-C01-contract-map.md"),
-        Path.join(@docs_root, "specs/WCT-C02-admission-map.md"),
-        Path.join(@docs_root, "specs/WCT-C03-schema-agreement.md"),
-        Path.join(@docs_root, "specs/WCT-C04-archive-consumer.md"),
-        Path.join(@docs_root, "specs/WCT-C05-release-dossier.md"),
+        Path.join(@docs_root, "plans/WCT-C01-contract-map.md"),
+        Path.join(@docs_root, "plans/WCT-C02-admission-map.md"),
+        Path.join(@docs_root, "plans/WCT-C03-schema-agreement.md"),
+        Path.join(@docs_root, "plans/WCT-C04-archive-consumer.md"),
+        Path.join(@docs_root, "plans/WCT-C05-release-dossier.md"),
         Path.join(@docs_root, "specs/WCT.01-manifest-context-capability.md"),
         Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
         Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
@@ -123,8 +123,8 @@ defmodule WotexContinuum.MixProject do
         {"NOTICE", title: "Notices"}
       ],
       groups_for_extras: [
+        "Verification maps": ~r/docs\/packages\/wotex-continuum\/plans\/WCT-C/,
         "Completion plans": ~r/docs\/packages\/wotex-continuum\/plans/,
-        "Verification maps": ~r/docs\/packages\/wotex-continuum\/specs\/WCT-C/,
         Specifications: ~r/docs\/packages\/wotex-continuum\/specs\/WCT\./,
         Security: ~r/docs\/packages\/wotex-continuum\/THREAT_MODEL/,
         Provenance: ~r/docs\/packages\/wotex-continuum\/provenance/,

@@ -1,6 +1,6 @@
-# RT-C04: Exact-archive reference consumer
+# WRT-C04: Exact-archive reference consumer
 
-Packet `RT-C04` verifies Runtime through a separate Mix consumer. The consumer
+Packet `WRT-C04` verifies Runtime through a separate Mix consumer. The consumer
 depends on unpacked contents from exact `wotex_runtime` and `wotex` archives. It
 does not compile either dependency from a live source checkout.
 

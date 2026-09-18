@@ -4,7 +4,7 @@ Specification: `WRT.01@1.4.0`. Package baseline: `wotex_runtime 0.1.0`.
 Implementation and evidence coverage are recorded in the catalogue and the
 package completion plan at
 `docs/packages/wotex-runtime/plans/wotex-runtime-completion.md`. The
-[RT-C02 hardening contract](RT-C02-runtime-hardening.md) records the admission,
+[WRT-C02 hardening contract](../plans/WRT-C02-runtime-hardening.md) records the admission,
 correlation, and lifecycle qualifications. Neither document is a gate result.
 
 ## Ownership
@@ -178,7 +178,7 @@ pre-release admission supersedes permissive malformed-input behavior; valid
 retry decisions and the no-scheduling boundary are unchanged.
 
 Current transport/credential exception
-propagation and callback-return correlation are covered by the RT-C02 vectors;
+propagation and callback-return correlation are covered by the WRT-C02 vectors;
 a tagged-error test is not an exception-isolation test.
 
 ## Subscription lifecycle and ownership

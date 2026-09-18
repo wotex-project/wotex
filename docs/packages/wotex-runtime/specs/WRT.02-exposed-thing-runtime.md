@@ -59,7 +59,7 @@ The implementation validates named-affordance existence, not a selected
 inbound protocol Form for `dispatch/5`. Thus an available handler is not proof
 of a Form operation declaration or authorization. The consumer server MUST
 validate its selected binding, operation access, schema and policy before
-dispatch. The [RT-C03 boundary contract](RT-C03-exposed-thing-boundary.md)
+dispatch. The [WRT-C03 boundary contract](../plans/WRT-C03-exposed-thing-boundary.md)
 records this division and its negative vectors. Route existence is not full
 inbound Thing Description validation.
 
@@ -94,7 +94,7 @@ metadata, handler error messages or public callback outcomes.
 
 `exposed_thing_test.exs` proves route/handler checks, no-callback negative
 routes, concurrent caller execution, forwarding and exception propagation;
-`library_contract_test.exs` proves the passive package boundary. RT-C04 adds
+`library_contract_test.exs` proves the passive package boundary. WRT-C04 adds
 independent consumer-server and archive evidence.
 No HTTP/MQTT server, endpoint, policy framework, canonical Property database or
 full WoT Scripting API implementation is implied. Handler-key changes, exception

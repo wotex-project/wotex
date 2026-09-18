@@ -570,14 +570,14 @@ minor version change. Once 1.0 is released:
 | Relative, absolute, retained, purged, and no-op expiry | registration and expiry tests |
 | Introduction isolation | Introduction test |
 | Deterministic redacted errors | error tests |
-| Six repository callbacks across independent test consumers | reusable repository contract suite; see the [repository port evidence contract](repository-port-evidence.md) |
+| Six repository callbacks across independent test consumers | reusable repository contract suite; see the [repository port evidence contract](../plans/repository-port-evidence.md) |
 | Context separation, atomic callback contention, and revision transitions | the same suite against separate Agent maps and an ETS compare-and-swap implementation |
-| Public-operation interleavings, interrupted callers, and commit acknowledgement loss | reusable public-operation contract suite against both test consumers; see the [repository port evidence contract](repository-port-evidence.md#public-operation-interleaving-evidence) |
+| Public-operation interleavings, interrupted callers, and commit acknowledgement loss | reusable public-operation contract suite against both test consumers; see the [repository port evidence contract](../plans/repository-port-evidence.md#public-operation-interleaving-evidence) |
 | Resumed listing across committed mutations and expiry-only drift | public-operation mutation matrix, multi-page expiry, empty continuation, and held page-snapshot scenarios |
 | Public archive contents and archive-only consumption | `mix package`: exact archives, locked isolated compilation, no application callback, public repository contract and positive/negative operation sequence |
-| Independent reference-consumer operations and explicit authority | five reference scenarios plus the repository and interleaving suites against both consumer implementations using the same exact archives; see the [repository port evidence contract](repository-port-evidence.md#independent-reference-consumer-evidence) |
-| Clause coverage, public compatibility and release-evidence inputs | [claim and compatibility matrix](claim-compatibility-matrix.md); behavioral compatibility tests in source and archive; explicit release-evidence manifest with source, runtime, lock and artifact digests |
-| Public package bytes and excluded local state | [package-exclusion acceptance](repository-port-evidence.md#package-exclusion-acceptance): one build in an external sentinel-bearing mirror, exact member hashes, absent sentinel paths/content, then consumption of that archive |
+| Independent reference-consumer operations and explicit authority | five reference scenarios plus the repository and interleaving suites against both consumer implementations using the same exact archives; see the [repository port evidence contract](../plans/repository-port-evidence.md#independent-reference-consumer-evidence) |
+| Clause coverage, public compatibility and release-evidence inputs | [claim and compatibility matrix](../plans/claim-compatibility-matrix.md); behavioral compatibility tests in source and archive; explicit release-evidence manifest with source, runtime, lock and artifact digests |
+| Public package bytes and excluded local state | [package-exclusion acceptance](../plans/repository-port-evidence.md#package-exclusion-acceptance): one build in an external sentinel-bearing mirror, exact member hashes, absent sentinel paths/content, then consumption of that archive |
 
 ## 12. Primary sources
 

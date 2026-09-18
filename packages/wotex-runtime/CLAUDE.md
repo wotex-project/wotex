@@ -48,10 +48,10 @@ in the root `CLAUDE.md`.
   result values, the stable error and fixed admission limits;
   `retry.ex`: pure retry classification; `telemetry.ex`: event names.
 - `bin/check_package.exs`: archive and minimal-consumer check;
-  `bin/check_reference_consumer.exs`: the RT-C04 reference consumer;
+  `bin/check_reference_consumer.exs`: the WRT-C04 reference consumer;
   `bin/check_boundary.exs`: the consumer-neutral source scan.
 - Specifications: `docs/packages/wotex-runtime/specs/` (WRT.01 to WRT.03 and
-  RT-C02 to RT-C06; `catalogue.yaml` owns status). Completion plan:
+  WRT-C02 to WRT-C06; `catalogue.yaml` owns status). Completion plan:
   `docs/packages/wotex-runtime/plans/wotex-runtime-completion.md`.
 - Test support in `test/support/`: `TDFactory` builds Thing Descriptions,
   `FakeTransport` and `FakeCredentials` implement the ports, `OpeningPort`
@@ -97,8 +97,8 @@ callback, list its callers with `mix refs Wotex.Runtime.Module fun` and the
 tests to run with `mix impact Wotex.Runtime.Module fun`.
 
 Explicit-only lanes, run from `packages/wotex-runtime` with an exact core
-archive: the RT-C04 reference consumer
+archive: the WRT-C04 reference consumer
 (`WOTEX_CORE_ARCHIVE=/absolute/path/wotex-0.1.0.tar elixir bin/check_reference_consumer.exs`)
-and the RT-C05 release-evidence commands listed in
-`docs/packages/wotex-runtime/specs/RT-C05-release-evidence.md`. There is no
+and the WRT-C05 release-evidence commands listed in
+`docs/packages/wotex-runtime/plans/WRT-C05-release-evidence.md`. There is no
 native build, software profile or container lane.

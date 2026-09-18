@@ -327,15 +327,15 @@ consumer against both unpacked archives.
 Two lanes run only when invoked explicitly, from `packages/wotex-runtime`,
 with an exact core archive:
 
-- [RT-C04](../../docs/packages/wotex-runtime/specs/RT-C04-reference-consumer.md),
+- [WRT-C04](../../docs/packages/wotex-runtime/plans/WRT-C04-reference-consumer.md),
   the exact-archive reference consumer:
   `WOTEX_CORE_ARCHIVE=/absolute/path/wotex-0.1.0.tar elixir bin/check_reference_consumer.exs`.
   It exercises Runtime under consumer-owned ports and supervision.
-- [RT-C05](../../docs/packages/wotex-runtime/specs/RT-C05-release-evidence.md),
+- [WRT-C05](../../docs/packages/wotex-runtime/plans/WRT-C05-release-evidence.md),
   the archive, documentation, analysis, audit and compatibility evidence used
   for release readiness.
 
-[RT-C06](../../docs/packages/wotex-runtime/specs/RT-C06-stable-api.md) records
+[WRT-C06](../../docs/packages/wotex-runtime/plans/WRT-C06-stable-api.md) records
 the candidate compatibility contract for consumer-visible values, callback
 shapes, errors, limits, and lifecycle defaults. This package has no native
 build, software profile or container lane.

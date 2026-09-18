@@ -1,6 +1,6 @@
-# RT-C03: ExposedThing boundary contract
+# WRT-C03: ExposedThing boundary contract
 
-Packet `RT-C03` defines the source-side boundary of
+Packet `WRT-C03` defines the source-side boundary of
 `Wotex.Runtime.ExposedThing`. It records Runtime-owned routing and
 consumer-owned request admission. It does not claim an inbound server,
 protocol interoperability, or a release-gate result.
@@ -65,5 +65,5 @@ both dispatch entries.
 
 The consumer owns callback supervision, error disclosure, deadlines,
 cancellation, memory and I/O budgets, and shutdown of in-flight callers.
-RT-C03 does not establish canonical Thing state, transactions, retries,
+WRT-C03 does not establish canonical Thing state, transactions, retries,
 idempotency, durable recovery, or physical effect.
