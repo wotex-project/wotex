@@ -93,6 +93,32 @@ defmodule Wotex.Matter.SubscriptionRecoveryTest do
     assert Enum.count(frames, &(&1["operation"] in ["write", "invoke"])) == 0
   end
 
+  test "WMA-V08 a report buffered before a completed recovery is discarded, not flushed" do
+    audit = temporary_path("early-recovered")
+    executable = native_fixture(audit, "early_recovered")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+
+    assert {:ok, %Subscription{} = subscription} =
+             Matter.subscribe(session, %{kind: :attribute, paths: [@path], resubscribe: true})
+
+    reference = subscription.reference
+
+    assert_receive {:wotex_matter, ^reference,
+                    {:status, :resubscribing, %{continuity: :lost, generation: 2, attempt: 1}}},
+                   1_000
+
+    assert_receive {:wotex_matter, ^reference,
+                    {:status, :resubscribed, %{continuity: :unknown, generation: 2, attempt: 1}}},
+                   1_000
+
+    # The retired first generation's report never follows its loss signal.
+    assert_receive {:wotex_matter, ^reference, {:ok, %{type: :i16, value: 2200}, _}}, 1_000
+    refute_receive {:wotex_matter, ^reference, _}, 50
+    assert :ok = Matter.unsubscribe(session, subscription)
+    assert :ok = Matter.disconnect(session)
+    assert Enum.count(audit_frames(audit), &(&1["event"] == "report_ack")) >= 1
+  end
+
   test "WMA-V08 recovery accepts at most five attempts then retires" do
     audit = temporary_path("exhausted")
     executable = native_fixture(audit, "exhausted")
@@ -211,6 +237,28 @@ defmodule Wotex.Matter.SubscriptionRecoveryTest do
       cond do
         String.contains?(line, ~s("event":"report_ack")) ->
           loop.(loop, subscription_id, generation, last)
+
+        mode == "early_recovered" and String.contains?(line, ~s("operation":"subscribe")) ->
+          [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
+          [_, current] = Regex.run(~r/"subscription_id":"([0-9a-f]{32})"/, line)
+          stream = ~s("session_generation":"#{session_generation}","subscription_id":"#{current}")
+          path = ~s("path":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0})
+
+          report = fn generation, sequence, value, intervals ->
+            ~s({"version":1,"event":"subscription_report",#{stream},"generation":#{generation},"report_sequence":#{sequence},"kind":"attribute","value":{"tag":"anonymous","type":"i16","value":#{value}},"metadata":{#{path},"data_version":9,"initial":true,"report_id":1,#{intervals}}})
+          end
+
+          # One write keeps the recovery frames ahead of the establishment flush.
+          IO.binwrite(Enum.map_join([
+            report.(1, 1, 2150, ~s("min_interval_s":1,"max_interval_s":60,"sdk_subscription_id":73)),
+            ~s({"version":1,"id":"#{id}","ok":true,"result":{"subscription_id":"#{current}","generation":1,"min_interval_s":1,"max_interval_s":60,"sdk_subscription_id":73}}),
+            ~s({"version":1,"event":"subscription_status",#{stream},"generation":2,"status":"resubscribing","continuity":"lost","attempt":1}),
+            ~s({"version":1,"event":"stream_retired",#{stream},"generation":1,"last_report_sequence":1}),
+            ~s({"version":1,"event":"subscription_status",#{stream},"generation":2,"status":"resubscribed","continuity":"unknown","attempt":1,"min_interval_s":3,"max_interval_s":30,"sdk_subscription_id":74}),
+            report.(2, 2, 2200, ~s("min_interval_s":3,"max_interval_s":30,"sdk_subscription_id":74))
+          ], &(&1 <> "\n")))
+
+          loop.(loop, current, 2, 2)
 
         String.contains?(line, ~s("operation":"subscribe")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)

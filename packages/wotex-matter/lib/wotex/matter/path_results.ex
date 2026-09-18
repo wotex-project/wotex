@@ -92,14 +92,14 @@ defmodule Wotex.Matter.PathResults do
              &Enum.any?(requested, fn request -> ReadPath.matches?(request, &1.path) end)
            ),
          true <- concrete_requests_present?(indexed, results) do
-      ordered =
-        Enum.flat_map(indexed, fn {_, index} ->
-          results
-          |> Enum.filter(&(owner_index(indexed, &1.path) == index))
-          |> Enum.sort_by(&path_key(&1.path))
-        end)
-
-      if length(ordered) == length(results), do: {:ok, ordered}, else: :error
+      # Each result has exactly one owner index and each index appears once, so
+      # this is a permutation of the results.
+      {:ok,
+       Enum.flat_map(indexed, fn {_, index} ->
+         results
+         |> Enum.filter(&(owner_index(indexed, &1.path) == index))
+         |> Enum.sort_by(&path_key(&1.path))
+       end)}
     else
       _ -> :error
     end

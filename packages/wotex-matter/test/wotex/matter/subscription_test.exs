@@ -1038,6 +1038,66 @@ defmodule Wotex.Matter.SubscriptionTest do
     assert :ok = Matter.disconnect(session)
   end
 
+  test "WMA-V09 an overflow during the establishment flush ends delivery of the buffered reports" do
+    for draining <- [false, true] do
+      audit = temporary_path("flush-overflow")
+      executable = native_fixture(audit, "early_reports")
+      assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+      receiver = flush_receiver(session.handle.pid, draining)
+      # Six queued messages leave room for two of the eight buffered reports.
+      for _ <- 1..6, do: send(receiver, :occupied)
+
+      request = %{
+        kind: :attribute,
+        paths: [@path],
+        min_interval_s: 1,
+        max_interval_s: 60,
+        queue_limit: 8,
+        resubscribe: false
+      }
+
+      assert {:ok, subscription} =
+               Native.subscribe_acknowledged(session.handle, request, receiver, 3_000)
+
+      reference = subscription.reference
+      assert eventually(fn -> Matter.unsubscribe(session, subscription) == :ok end)
+      assert Enum.count(audit_frames(audit), &(&1["operation"] == "unsubscribe")) == 1
+      send(receiver, :release)
+      assert_receive {:receiver_messages, messages}, 1_000
+      received = for {:wotex_matter, ^reference, message} <- messages, do: message
+      {deliveries, terminals} = Enum.split_with(received, &match?(%Native.Delivery{}, &1))
+      assert Enum.map(deliveries, & &1.sequence) == [1, 2]
+      assert [{:error, %Error{code: :receiver_overflow}}] = terminals
+      assert :ok = Matter.disconnect(session)
+    end
+  end
+
+  # A draining receiver empties its mailbox as soon as the terminal arrives, as a
+  # live consumer would, so a later delivery attempt would find room. Holding the
+  # connection only lets that drain finish before the flush continues.
+  defp flush_receiver(connection, draining) do
+    parent = self()
+
+    spawn(fn ->
+      drained =
+        if draining do
+          receive do
+            {:wotex_matter, _, {:error, _}} = terminal ->
+              :erlang.suspend_process(connection)
+              drained = drain([])
+              :erlang.resume_process(connection)
+              [terminal | drained]
+          end
+        else
+          []
+        end
+
+      receive do
+        :release -> send(parent, {:receiver_messages, drained ++ drain([])})
+      end
+    end)
+  end
+
   test "native terminal failure is delivered once and the retirement barrier closes the handle" do
     audit = temporary_path("terminal")
     executable = native_fixture(audit, "terminal")
@@ -1249,6 +1309,8 @@ defmodule Wotex.Matter.SubscriptionTest do
             end
             wait.(wait)
           end
+          # Reports before the reply wait in the establishment buffer.
+          if mode == "early_reports", do: for(sequence <- 1..8, do: attribute_report.(current, sequence, sequence, 7))
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"subscription_id":"#{current}","generation":1,"min_interval_s":2,"max_interval_s":45,"sdk_subscription_id":73}}))
           case mode do
             mode when mode in ["reports", "blocked_health", "wrong_tlv"] ->
@@ -1281,6 +1343,7 @@ defmodule Wotex.Matter.SubscriptionTest do
             if mode == "cancel_race_duplicate", do: IO.puts(terminal)
           end
           last = if mode in ["reports", "blocked_health", "owner_pause"], do: 2, else: if(mode in ["event", "null", "cancel_race", "cancel_race_duplicate"], do: 1, else: 0)
+          last = if mode == "early_reports", do: 8, else: last
           unless mode == "cancel_ack_only" do
             IO.puts(~s({"version":1,"event":"stream_retired","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"last_report_sequence":#{last}}))
           end

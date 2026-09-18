@@ -1874,15 +1874,32 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp flush_subscription(state, reference) do
     case Map.fetch(state.subscriptions, reference) do
-      {:ok, %{status: :active, buffered: buffered}} ->
+      {:ok, %{buffered: buffered}} ->
         state = put_in(state.subscriptions[reference].buffered, [])
 
         Enum.reduce(buffered, state, fn {delivery, sequence, bytes}, acc ->
-          deliver_report(acc, reference, delivery, sequence, bytes)
+          if deliverable?(acc, reference, sequence),
+            do: deliver_report(acc, reference, delivery, sequence, bytes),
+            else: acknowledge_report(acc, sequence, bytes)
         end)
 
       _ ->
         state
+    end
+  end
+
+  # A buffered report reaches its receiver only while the subscription is active
+  # and the report belongs to its current delivery generation. A cancellation,
+  # including an overflow earlier in the same flush, or a retired generation
+  # discards the report instead.
+  defp deliverable?(state, reference, sequence) do
+    case {state.subscriptions[reference], state.report_ledger.pending[sequence]} do
+      {%{status: :active, generation: generation},
+       %{stream: {^reference, stream_generation}, consumed: false}} ->
+        stream_generation == generation
+
+      _ ->
+        false
     end
   end
 
