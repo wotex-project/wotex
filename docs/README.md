@@ -18,7 +18,7 @@ subject through `Wotex.Lab.Documentation`.
 | `packages/<name>/security.md` | Package security posture. |
 | `packages/<name>/*.md` | Other package-level documents that are neither specification nor plan, such as the HTTP and MQTT bindings' inventories and baselines and the Continuum threat model. |
 | `catalogue.yaml` | The family catalogue, generated from every package catalogue by `mix wotex.catalogue`; never edited by hand. |
-| `architecture/` | Family-level architecture: the package graph, the repository layout, the import record. |
+| `architecture/` | Family-level architecture: the package graph and the repository layout. |
 | `decisions/` | Family-level decision records. |
 | `guides/` | Cross-package guides (consumers, transport authors, releases). |
 | `tasks/local/<name>/` | Ignored. Machine-local execution state only; never tracked or published. |
@@ -65,6 +65,5 @@ two roots this way.
 - [Development workflow](guides/development.md) — commands, validation tiers, Dexter, CI
 - [Decision 0001: one repository of independent packages](decisions/0001-one-repository-of-independent-packages.md)
 - [Package graph and boundaries](architecture/package-graph.md)
-- [Monorepo import record](architecture/monorepo-import.md)
 - [Consuming WoTEx packages](guides/consumer.md)
 - [Releasing a package](guides/release.md)

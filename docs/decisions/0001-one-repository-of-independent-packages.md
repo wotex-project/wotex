@@ -20,10 +20,6 @@ package under `docs/packages/<name>/`. Code never reads from `docs/`, with one
 exception recorded in the root `CLAUDE.md`: wotex-lab's documentation-backed
 development features read the documentation tree as their subject.
 
-The full history of every former package repository was imported linearly
-under its package directory; `docs/architecture/monorepo-import.md` records the
-source revisions and the commit maps.
-
 ## Rationale
 
 - The packages were changed together far more often than apart: before the

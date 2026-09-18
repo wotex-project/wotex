@@ -42,7 +42,7 @@ commit of this repository with `sparse: "packages/<name>"` until publication.
 ```text
 packages/<name>/        one Mix project per package: lib, test, priv, bin, mix.exs, README, CHANGELOG
 docs/packages/<name>/   that package's specifications, plans, decisions and provenance
-docs/architecture/      family-level architecture and the import record
+docs/architecture/      family-level architecture
 docs/tasks/local/       ignored; the only place for machine-local execution state
 tooling/                the package manifest (packages.yaml) and the one-time import scripts
 .claude/                shared agent rules and skills; package CLAUDE.md files stay package contracts

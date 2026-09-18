@@ -6,7 +6,6 @@
 | --- | --- |
 | `packages.yaml` | The package manifest: the dependency graph, lane metadata and the globs that select every package. |
 | `native/docker/` | The images of the native checks: `linux.Dockerfile` (Linux-only suites on another host), `matter-sdk.Dockerfile` (clang-tidy for the Matter SDK build), and the entry point and Mix wrapper of the Linux container (`suite.sh`, `bin/mix`). |
-| `import/` | The one-time monorepo import scripts and commit maps (see `docs/architecture/monorepo-import.md`). |
 
 The root Mix project (`mix.exs` at the repository root, app `:wotex_workspace`)
 implements the `mix wotex.*` tasks that read the manifest. It is not an
