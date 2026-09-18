@@ -898,7 +898,9 @@ SIGKILL and requires every process naming the peer's executable to end within
 five seconds; the preceding helper leaves the libcoap peer running. The software
 run now counts the live processes whose arguments name a workspace file after
 the suite, allowing the five-second cleanup, and fails the run when any remain
-or the process table cannot be read. All nine software-lane files, 57 tests,
+or the process table cannot be read. It never counts its own BEAM or that BEAM's
+ancestors, so a shell that started the run and names workspace files in its
+arguments is not taken for a peer. All nine software-lane files, 57 tests,
 pass on macOS arm64 against a fresh software build with no process naming the
 workspace afterwards; these runs used the lane files directly.
 

@@ -220,9 +220,13 @@ defmodule Wotex.CoAP.Software.Run do
 
   The software peers, their guardians and the native helper all run from
   workspace files, so after a suite a nonzero count for the workspace path
-  followed by `/` means one outlived its owner. The count is taken again every
-  100 ms until it is zero or `grace` milliseconds have passed, which lets a
-  guardian finish a cleanup it has started.
+  followed by `/` means one outlived its owner. The BEAM that counts and its
+  ancestors, up to and including process 1, are never counted: a peer is a
+  descendant or, once orphaned, a child of process 1, while a shell that started
+  the run, possibly as process 1 of a container, may name workspace files in its
+  own arguments. The count is taken again every 100 ms
+  until it is zero or `grace` milliseconds have passed, which lets a guardian
+  finish a cleanup it has started.
   """
   @spec processes_naming(String.t(), non_neg_integer()) ::
           {:ok, non_neg_integer()} | {:error, :process_table_unavailable}
@@ -232,8 +236,8 @@ defmodule Wotex.CoAP.Software.Run do
   end
 
   defp count_naming(path, deadline) do
-    with {:ok, arguments} <- process_arguments() do
-      count = Enum.count(arguments, &String.contains?(&1, path))
+    with {:ok, rows} <- process_table() do
+      count = naming(rows, path, String.to_integer(System.pid()))
 
       if count == 0 or System.monotonic_time(:millisecond) >= deadline do
         {:ok, count}
@@ -244,18 +248,52 @@ defmodule Wotex.CoAP.Software.Run do
     end
   end
 
-  # `ps` prints each process's full argument vector, unlimited in width, on
-  # macOS and on Linux with procps.
-  defp process_arguments do
+  @doc false
+  @spec naming([{pos_integer(), non_neg_integer(), String.t()}], String.t(), pos_integer()) ::
+          non_neg_integer()
+  def naming(rows, path, pid) do
+    parents = Map.new(rows, fn {process, parent, _} -> {process, parent} end)
+    excluded = ancestors(parents, pid, MapSet.new([pid]))
+
+    Enum.count(rows, fn {process, _, arguments} ->
+      not MapSet.member?(excluded, process) and String.contains?(arguments, path)
+    end)
+  end
+
+  defp ancestors(parents, pid, seen) do
+    case Map.fetch(parents, pid) do
+      {:ok, parent} when parent > 0 ->
+        if MapSet.member?(seen, parent),
+          do: seen,
+          else: ancestors(parents, parent, MapSet.put(seen, parent))
+
+      _ ->
+        seen
+    end
+  end
+
+  # `ps` prints each process's identity, parent and full argument vector,
+  # unlimited in width, on macOS and on Linux with procps.
+  defp process_table do
     with ps when is_binary(ps) <- Enum.find(["/bin/ps", "/usr/bin/ps"], &File.regular?/1),
          {output, 0} <-
-           System.cmd(ps, ["-A", "-ww", "-o", "args="],
+           System.cmd(ps, ["-A", "-ww", "-o", "pid=", "-o", "ppid=", "-o", "args="],
              stderr_to_stdout: true,
              env: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
            ) do
-      {:ok, String.split(output, "\n", trim: true)}
+      {:ok, Enum.flat_map(String.split(output, "\n", trim: true), &process_row/1)}
     else
       _ -> {:error, :process_table_unavailable}
+    end
+  end
+
+  defp process_row(line) do
+    case Regex.run(~r/\A\s*(\d+)\s+(\d+)\s?(.*)\z/, line) do
+      [_, process, parent, arguments] ->
+        [{String.to_integer(process), String.to_integer(parent), arguments}]
+
+      nil ->
+        []
     end
   end
 

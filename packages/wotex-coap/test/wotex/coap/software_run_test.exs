@@ -194,6 +194,30 @@ defmodule Wotex.CoAP.SoftwareRunTest do
     assert {:ok, 0} = Run.processes_naming(root <> "/", 0)
   end
 
+  test "WCO-N05 never counts the counting BEAM or its ancestors" do
+    rows = [
+      {1, 0, "/sbin/init"},
+      {10, 1, "sh -c mix wotex.software.run --workspace /ws; cp -r /ws/software-run /out"},
+      {11, 10, "beam.smp -- mix wotex.software.run --workspace /ws"},
+      {12, 11, "/ws/native/bin/build-command 600000 0 2000 /ws /ws/bin/coap-server"},
+      {13, 12, "/ws/bin/coap-server -A 127.0.0.1"},
+      {14, 1, "/ws/bin/coap-server -A 127.0.0.1"}
+    ]
+
+    assert Run.naming(rows, "/ws/", 11) == 3
+    assert Run.naming(rows, "/ws/", 14) == 3
+    assert Run.naming(Enum.take(rows, 3), "/ws/", 11) == 0
+
+    # In a container the shell that started the run is process 1 itself.
+    container = [
+      {1, 0, "sh -c mix wotex.software.run --workspace /ws; cp -r /ws/software-run /out"},
+      {7, 1, "beam.smp -- mix wotex.software.run --workspace /ws"},
+      {9, 1, "/ws/bin/coap-server -A 127.0.0.1"}
+    ]
+
+    assert Run.naming(container, "/ws/", 7) == 1
+  end
+
   test "WCO-N05 reports unavailable tools, outputs and source inputs", %{root: root} do
     Verifier.result({:ok, %{manifest: manifest(), reused: true}})
 

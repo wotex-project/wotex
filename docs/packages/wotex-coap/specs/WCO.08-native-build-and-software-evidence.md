@@ -675,7 +675,10 @@ native hashes, exact commands, seed, toolchain, native features, all scenario
 IDs, exit codes, outcomes, log hashes and final process/socket/session/context/
 subscription/store-lock counts. `cleanup.peer_processes_retained` is the number
 of live processes whose executable or arguments name a file in the run
-workspace, measured after the suite and its cleanup. A nonzero count fails the
+workspace, measured after the suite and its cleanup. The run's own BEAM and its
+ancestor processes up to and including process 1, such as a shell that started
+the run, are not counted; a peer is a descendant or, once orphaned, a child of
+process 1. A nonzero count fails the
 run, and the field is never written without that measurement. Failure evidence
 is retained; secrets and machine-specific source paths are excluded from
 publishable records.
