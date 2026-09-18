@@ -28,6 +28,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     root = Fixtures.tmp_dir(context)
     Fixtures.write!(root, "tooling/packages.yaml", @manifest)
     Fixtures.write!(root, "LICENSE", File.read!(Path.join(Workspace.root(), "LICENSE")))
+    Fixtures.write!(root, "git_ops.json", File.read!(Path.join(Workspace.root(), "git_ops.json")))
 
     for file <- [".check.exs", ".doctor.exs", ".formatter.exs", "coveralls.json"] do
       source = Path.join([Workspace.root(), "packages/wotex-coap", file])
@@ -45,7 +46,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     for relative <- ~w(
           packages/wotex-demo/mix.exs packages/wotex-demo/.check.exs
           packages/wotex-demo/.doctor.exs packages/wotex-demo/.formatter.exs
-          packages/wotex-demo/coveralls.json packages/wotex-demo/config/config.exs
+          packages/wotex-demo/coveralls.json
           packages/wotex-demo/CLAUDE.md packages/wotex-demo/README.md packages/wotex-demo/CHANGELOG.md
           packages/wotex-demo/LICENSE packages/wotex-demo/NOTICE packages/wotex-demo/lib/wotex/demo.ex
           packages/wotex-demo/test/test_helper.exs packages/wotex-demo/test/wotex/demo_test.exs
@@ -143,15 +144,25 @@ defmodule Wotex.Workspace.ScaffoldTest do
     refute mix_exs =~ "hex.publish"
 
     for script <-
-          ~w(mix.exs config/config.exs lib/wotex/demo.ex test/wotex/demo_test.exs bin/check_archive.exs
+          ~w(mix.exs lib/wotex/demo.ex test/wotex/demo_test.exs bin/check_archive.exs
              bin/check_application_free.exs bin/check_boundary.exs) do
       source = File.read!(Path.join([root, "packages/wotex-demo", script]))
       assert {:ok, _} = Code.string_to_quoted(source)
       assert IO.iodata_to_binary([Code.format_string!(source, line_length: 100), "\n"]) == source
     end
 
-    assert File.read!(Path.join(root, "packages/wotex-demo/config/config.exs")) =~
-             ~s|version_tag_prefix: "wotex-demo-v"|
+    # Releases come from the root git_ops.json; the package has no config/.
+    refute File.exists?(Path.join(root, "packages/wotex-demo/config"))
+    refute File.read!(Path.join(root, "packages/wotex-demo/mix.exs")) =~ ":git_ops"
+    assert "git_ops.json" in paths
+
+    assert {:ok, %{"packages" => %{"packages/wotex-demo" => release}}} =
+             JSON.decode(File.read!(Path.join(root, "git_ops.json")))
+
+    assert release == %{
+             "exclude_paths" => ["bench"],
+             "managed_files" => [%{"path" => "mix.exs", "type" => "mix"}]
+           }
 
     claude = File.read!(Path.join(root, "packages/wotex-demo/CLAUDE.md"))
     assert claude =~ ~r/\A# Wotex Demo package contract\n/

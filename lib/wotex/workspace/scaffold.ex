@@ -8,12 +8,14 @@ defmodule Wotex.Workspace.Scaffold do
       from `docs/packages/<name>/` with source links through `source_url/2`
       at the `<name>-v<version>` tag, the standard full gate (`.check.exs`)
       with archive, application-free and boundary scripts, a `CLAUDE.md`
-      package contract, a `README.md` with installation and development
-      sections and the `git_ops` release configuration;
+      package contract and a `README.md` with installation and development
+      sections;
     * `docs/packages/<name>/{specs,plans,provenance}/` with a catalogue
       skeleton and a completion contract, following the catalogue path
       convention of `docs/README.md`;
-    * the manifest entry in `tooling/packages.yaml`.
+    * the manifest entry in `tooling/packages.yaml` and the release entry in
+      the root `git_ops.json` (tags `<name>-v<version>`, the version in
+      `mix.exs`, `bench/` excluded).
 
   Templates come from the repository itself: `LICENSE` from the root and
   `.check.exs`, `.doctor.exs`, `.formatter.exs` and `coveralls.json` from
@@ -55,9 +57,9 @@ defmodule Wotex.Workspace.Scaffold do
       Enum.each(files, fn {relative, content} -> write(root, relative, content) end)
       append_manifest(manifest_path, name, depends_on)
 
-      case Manifest.load(manifest_path) do
-        {:ok, _} -> {:ok, ["tooling/packages.yaml" | Enum.map(files, &elem(&1, 0))]}
-        {:error, message} -> {:error, "manifest invalid after append: #{message}"}
+      with {:ok, _} <- manifest_after_append(manifest_path),
+           :ok <- append_release(Path.join(root, "git_ops.json"), name) do
+        {:ok, ["tooling/packages.yaml", "git_ops.json" | Enum.map(files, &elem(&1, 0))]}
       end
     end
   end
@@ -188,7 +190,6 @@ defmodule Wotex.Workspace.Scaffold do
       {"#{package}/.doctor.exs", templates.doctor},
       {"#{package}/.formatter.exs", templates.formatter},
       {"#{package}/coveralls.json", templates.coveralls},
-      {"#{package}/config/config.exs", elixir(config(), bindings)},
       {"#{package}/CLAUDE.md", render(claude_md(depends_on), bindings)},
       {"#{package}/README.md", align_comments(render(readme(), bindings))},
       {"#{package}/CHANGELOG.md", render(changelog(), bindings)},
@@ -211,6 +212,34 @@ defmodule Wotex.Workspace.Scaffold do
     path = Path.join(root, relative)
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, content)
+  end
+
+  defp manifest_after_append(path) do
+    case Manifest.load(path) do
+      {:ok, manifest} -> {:ok, manifest}
+      {:error, message} -> {:error, "manifest invalid after append: #{message}"}
+    end
+  end
+
+  # The end of the `packages` map and of the file.
+  @packages_end ~r/\n  }\n}\n?\z/
+
+  @release_entry ~s|{"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]}|
+
+  # Adds the package to the `packages` map of the root git_ops.json, one line
+  # per package as the file keeps them.
+  defp append_release(path, name) do
+    existing = File.read!(path)
+    entry = ~s|    "packages/#{name}": #{@release_entry}|
+
+    with {:ok, %{"packages" => packages}} when is_map(packages) <- JSON.decode(existing),
+         false <- Map.has_key?(packages, "packages/#{name}"),
+         true <- Regex.match?(@packages_end, existing) do
+      File.write!(path, Regex.replace(@packages_end, existing, ",\n#{entry}\n  }\n}\n"))
+    else
+      true -> {:error, "git_ops.json already releases packages/#{name}"}
+      _ -> {:error, "git_ops.json has no packages map ending the file"}
+    end
   end
 
   defp append_manifest(path, name, depends_on) do
@@ -294,7 +323,6 @@ defmodule Wotex.Workspace.Scaffold do
           {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
           {:ex_doc, "~> 0.40", only: [:dev, :test, :docs], runtime: false},
           {:excoveralls, "~> 0.18", only: :test},
-          {:git_ops, "~> 2.10", only: :dev, runtime: false},
           {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
         ]
       end
@@ -395,30 +423,6 @@ defmodule Wotex.Workspace.Scaffold do
             raise "WOTEX_PATH_DEPS must be unset or equal to 1"
         end
       end
-    """
-  end
-
-  defp config do
-    ~S"""
-    import Config
-
-    if config_env() == :dev do
-      config :git_ops,
-        mix_project: Mix.Project.get!(),
-        changelog_file: "CHANGELOG.md",
-        repository_url: "https://github.com/wotex-project/wotex",
-        version_tag_prefix: "@@name@@-v",
-        manage_mix_version?: true,
-        manage_readme_version: false,
-        github_handle_lookup?: false,
-        types: [
-          chore: [hidden?: true],
-          test: [hidden?: true],
-          ci: [hidden?: true],
-          build: [hidden?: true],
-          style: [hidden?: true]
-        ]
-    end
     """
   end
 
