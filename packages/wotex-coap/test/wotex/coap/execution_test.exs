@@ -276,6 +276,10 @@ defmodule Wotex.CoAP.ExecutionTest do
 
       operation = sent(adapter)
       task = :sys.get_state(owner).task
+      # Exit signals reach the owner and its task asynchronously after the
+      # session ends, so their ends are awaited rather than sampled.
+      owner_monitor = Process.monitor(owner)
+      task_monitor = Process.monitor(task)
       true = :erlang.suspend_process(task)
       true = :erlang.suspend_process(owner)
       options = if phase == :renewal, do: [{6, <<10>>}], else: [{23, <<16>>}]
@@ -288,8 +292,8 @@ defmodule Wotex.CoAP.ExecutionTest do
       assert_receive {:wotex_coap, ^reference, {:error, %Error{code: :timeout}}}
       assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
       assert Codec.option(sent(adapter), 6) == [<<1>>]
-      refute Process.alive?(owner)
-      refute Process.alive?(task)
+      assert_receive {:DOWN, ^owner_monitor, :process, ^owner, _}, 1000
+      assert_receive {:DOWN, ^task_monitor, :process, ^task, _}, 1000
       assert :ok = CoAP.disconnect(session)
       assert TestExecution.snapshot(clock).timers == %{}
       GenServer.stop(clock)
