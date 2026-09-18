@@ -41,7 +41,6 @@ defmodule WotexContinuum.MixProject do
       wotex_dependency(),
       {:jason, "~> 1.4.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
       {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

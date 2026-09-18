@@ -21,5 +21,27 @@ defmodule WotexWorkspace.PackageFilesTest do
     assert length(Path.wildcard(Path.join(root, "packages/*/LICENSE"))) == length(packages())
   end
 
+  test "git_ops.json releases every package with its tag, version and changelog" do
+    config = JSON.decode!(File.read!(Path.join(Workspace.root(), "git_ops.json")))
+
+    assert config["repository_url"] == "https://github.com/wotex-project/wotex"
+
+    assert Enum.sort(Map.keys(config["packages"])) ==
+             Enum.sort(Enum.map(packages(), &"packages/#{&1}"))
+
+    for {_, release} <- config["packages"] do
+      assert release == %{
+               "exclude_paths" => ["bench"],
+               "managed_files" => [%{"path" => "mix.exs", "type" => "mix"}]
+             }
+    end
+
+    # No package carries its own git_ops configuration or dependency.
+    for name <- packages() do
+      refute File.exists?(Path.join([Workspace.root(), "packages", name, "config/config.exs"])),
+             "packages/#{name}/config/config.exs"
+    end
+  end
+
   defp packages, do: Map.keys(Manifest.load!().packages)
 end

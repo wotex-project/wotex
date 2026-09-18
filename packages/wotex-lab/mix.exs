@@ -69,7 +69,6 @@ defmodule WotexLab.MixProject do
       {:bandit, "~> 1.12", only: :test},
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
       {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
