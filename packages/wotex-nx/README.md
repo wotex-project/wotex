@@ -185,8 +185,9 @@ The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-nx`. It compiles with warnings as errors, checks the lock and
 unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`, Credo,
 Doctor, `mix docs --warnings-as-errors` (in the `docs` environment), tests
-with the coverage floor (`mix coveralls`), Dialyzer and `git diff --check`,
-and then runs the archive check. `WOTEX_PATH_DEPS=1` selects the core package
+with the coverage floor (`mix coveralls`), Dialyzer, the numerical-boundary
+scan (`elixir bin/check_boundary.exs`) and `git diff --check`, and then runs
+the archive check. `WOTEX_PATH_DEPS=1` selects the core package
 from `packages/wotex` only in development, test and documentation
 environments; it is never valid in production and never changes package
 metadata.
@@ -197,12 +198,6 @@ unpacked Wotex Nx and core archives. Generated work stays in the
 operating-system temporary directory. The check builds the archive once from
 an external temporary mirror containing local and harness sentinels;
 source-byte identity and sentinel exclusion prove the package allowlist.
-
-The boundary scan is not part of the gate; run it from `packages/wotex-nx`:
-
-```sh
-elixir bin/check_boundary.exs
-```
 
 This package has no native build, software profile or container lane.
 

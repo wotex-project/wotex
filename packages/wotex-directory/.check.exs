@@ -16,6 +16,7 @@
     {:ex_unit, false},
     {:coverage, command: "mix coveralls", env: %{"MIX_ENV" => "test"}},
     {:dialyzer, command: "mix dialyzer"},
+    {:boundary, command: "elixir bin/check_boundary.exs"},
     {:archive,
      command: "mix run --no-start bin/check_archive.exs", deps: [coverage: [status: 0]]},
     {:application_free, command: "mix run --no-start bin/check_application_free.exs"},

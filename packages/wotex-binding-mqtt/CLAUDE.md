@@ -66,7 +66,7 @@ interaction mechanics. Repository-wide rules are in the root `CLAUDE.md`.
 The full gate alone is `mix pkg wotex-binding-mqtt check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside the package); it
 adds dependency audits, Doctor, docs, the coverage floor, Dialyzer, the
-exact-archive check and the application-free check. Run
+boundary scan, the exact-archive check and the application-free check. Run
 `mix dialyzer.pkg wotex-binding-mqtt` in tier 1 when a typespec, the client
 callbacks or an inferred return type changed.
 
@@ -94,7 +94,7 @@ API of `wotex` and `wotex-runtime`. Before changing a public function or a
 client callback, list callers with `mix refs Wotex.Binding.MQTT.Module fun` and
 the tests to run with `mix impact Wotex.Binding.MQTT.Module fun`.
 
-The boundary script is explicit-only: run `elixir bin/check_boundary.exs`
-inside `packages/wotex-binding-mqtt` before a commit that touches `lib/`,
-`test/` or `mix.exs`. No test needs a broker; this package has no native
-build, software profile, interop or container lane.
+The full gate runs the boundary scan; run it alone with
+`elixir bin/check_boundary.exs` inside `packages/wotex-binding-mqtt` after
+touching `lib/`, `test/` or `mix.exs`. No test needs a broker; this package has
+no native build, software profile, interop or container lane.

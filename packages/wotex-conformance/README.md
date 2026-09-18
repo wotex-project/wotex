@@ -193,8 +193,9 @@ The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-conformance`. It compiles with warnings as errors, checks the
 lock and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
 Credo, Doctor, `mix docs --warnings-as-errors`, tests with the coverage floor
-(`mix coveralls`), Dialyzer and `git diff --check`, and runs two package
-checks. The archive check (`mix run --no-start bin/check_archive.exs`) builds
+(`mix coveralls`), Dialyzer, the boundary scan (`elixir bin/check_boundary.exs`)
+over the source tree and `git diff --check`, and runs two package checks. The
+archive check (`mix run --no-start bin/check_archive.exs`) builds
 one Hex archive, rejects documentation, task and development paths, runs the
 boundary scan (`bin/check_boundary.exs`) over the unpacked archive, compiles
 it outside the source tree and runs the archive-only consumer and external

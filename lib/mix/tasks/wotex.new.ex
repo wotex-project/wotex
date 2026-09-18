@@ -2,10 +2,12 @@ defmodule Mix.Tasks.Wotex.New do
   @shortdoc "Scaffolds a new package under packages/ and docs/packages/"
 
   @moduledoc """
-  Scaffolds `packages/NAME` (a Mix project with the `WOTEX_PATH_DEPS`
-  sibling switch, the family's gate configuration and governance files),
-  `docs/packages/NAME/{specs,plans,provenance}` with a catalogue skeleton
-  and a manifest entry in `tooling/packages.yaml`.
+  Scaffolds `packages/NAME` (a Mix library with the `WOTEX_PATH_DEPS`
+  sibling switch, HexDocs extras and source links, the standard full gate
+  with archive, application-free and boundary scripts, a `CLAUDE.md` package
+  contract and a `README.md`), `docs/packages/NAME/{specs,plans,provenance}`
+  with a catalogue skeleton and a completion contract, and a manifest entry
+  in `tooling/packages.yaml`; then re-renders `docs/catalogue.yaml`.
 
       mix wotex.new NAME [--depends-on wotex,wotex-runtime]
 
@@ -15,6 +17,7 @@ defmodule Mix.Tasks.Wotex.New do
 
   use Mix.Task
 
+  alias Wotex.Workspace.Catalogue
   alias Wotex.Workspace.CLI
   alias Wotex.Workspace.Scaffold
 
@@ -27,11 +30,17 @@ defmodule Mix.Tasks.Wotex.New do
 
     case Scaffold.create(name, depends_on: opts[:depends_on]) do
       {:ok, paths} ->
-        Enum.each(paths, &Mix.shell().info("* created #{&1}"))
+        Enum.each(paths, &Mix.shell().info("* #{action(&1)} #{&1}"))
+        render_catalogue()
 
-        Mix.shell().info(
-          "scaffolded packages/#{name}; run its gate with WOTEX_PATH_DEPS=1 mix check"
-        )
+        Mix.shell().info("""
+        scaffolded packages/#{name}. Next:
+          mix pkg #{name} deps.get
+          mix pkg #{name} check --no-retry
+        and describe the package in its README.md, CLAUDE.md and mix.exs, the
+        package table of the root README.md and, with its specification
+        prefix, docs/README.md.\
+        """)
 
       {:error, message} ->
         CLI.fail(message)
@@ -58,5 +67,16 @@ defmodule Mix.Tasks.Wotex.New do
       |> Enum.map(&String.trim/1)
 
     {name, depends_on: depends_on}
+  end
+
+  defp action("tooling/packages.yaml"), do: "updated"
+  defp action(_path), do: "created"
+
+  defp render_catalogue do
+    case Catalogue.write() do
+      {:ok, _count, []} -> Mix.shell().info("* updated #{Catalogue.output()}")
+      {:ok, _count, problems} -> Enum.each(problems, &Mix.shell().error(elem(&1, 1)))
+      {:error, message} -> CLI.fail(message)
+    end
   end
 end

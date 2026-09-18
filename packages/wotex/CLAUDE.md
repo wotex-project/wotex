@@ -60,9 +60,9 @@ Repository-wide rules are in the root `CLAUDE.md`.
 
 The full gate alone is `mix pkg wotex check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex`); it adds
-dependency audits, Doctor, docs, the coverage floor, Dialyzer and the archive
-check. Run `mix dialyzer.pkg wotex` in tier 1 when a typespec or inferred
-return type changed.
+dependency audits, Doctor, docs, the coverage floor, Dialyzer, the boundary scan
+and the archive check. Run `mix dialyzer.pkg wotex` in tier 1 when a typespec or
+inferred return type changed.
 
 Tests by area, all under `test/wotex/`:
 

@@ -1,11 +1,13 @@
 # Linux lane for the reviewed-local Bubblewrap containment profile. Runs with
 # Elixir alone: `elixir bin/check_linux_containment.exs`. Requires Docker, the
 # pinned base images (pulled on first build) and network access for locked Hex
-# dependencies inside the lane. The Lab working tree's tracked files and each
-# clean source owner's HEAD are copied into a private workspace; nothing in the
-# checkouts is written. The container runs as the calling user with seccomp and
-# masked system paths relaxed only so Bubblewrap can create its unprivileged
-# namespaces; it is a test lane, not a hosting profile.
+# dependencies inside the lane. The Lab working tree's tracked files, its
+# tracked documentation tree and each clean source owner's HEAD are copied into
+# a private workspace laid out like the repository (`packages/<name>/`,
+# `docs/packages/wotex-lab/`); nothing in the checkouts is written. The
+# container runs as the calling user with seccomp and masked system paths
+# relaxed only so Bubblewrap can create its unprivileged namespaces; it is a
+# test lane, not a hosting profile.
 
 Code.require_file("support/child_environment.exs", __DIR__)
 
@@ -15,6 +17,9 @@ defmodule Wotex.Lab.Check.LinuxContainment do
   alias Wotex.Lab.Check.ChildEnvironment
 
   @prefix "wotex-lab-linux-containment-"
+  @package "packages/wotex-lab"
+  # Wotex.Lab.Documentation finds this tree two levels above the package.
+  @documentation "docs/packages/wotex-lab"
   @deadline_ms 3_600_000
   @tests ~w(test/wotex/lab/conformance_target_process_test.exs test/wotex/lab/conformance_test.exs)
 
@@ -73,7 +78,7 @@ defmodule Wotex.Lab.Check.LinuxContainment do
         "--security-opt=systempaths=unconfined",
         "--user=#{String.trim(uid)}:#{String.trim(gid)}",
         "--volume=#{work}:/work",
-        "--workdir=/work/wotex-lab",
+        "--workdir=/work/#{@package}",
         "--env=HOME=/work/lane-home",
         "--env=CARGO_HOME=/work/lane-home/.cargo",
         "--env=MIX_ENV=test",
@@ -101,13 +106,8 @@ defmodule Wotex.Lab.Check.LinuxContainment do
   end
 
   defp copy_sources!(root, work) do
-    {files, 0} = System.cmd("git", ["ls-files", "-z"], cd: root, env: ChildEnvironment.scrubbed())
-
-    for file <- String.split(files, <<0>>, trim: true), File.regular?(Path.join(root, file)) do
-      target = Path.join([work, "wotex-lab", file])
-      File.mkdir_p!(Path.dirname(target))
-      File.cp!(Path.join(root, file), target)
-    end
+    copy_tracked!(root, Path.join(work, @package))
+    copy_tracked!(Path.expand("../../" <> @documentation, root), Path.join(work, @documentation))
 
     index =
       root
@@ -132,10 +132,23 @@ defmodule Wotex.Lab.Check.LinuxContainment do
       dirty == "" || abort("source owner has uncommitted changes: #{directory}")
       archive = Path.join(work, directory <> ".tar")
       cmd!("git", ["archive", "--format=tar", "--output", archive, "HEAD"], cd: repo)
-      target = Path.join(work, directory)
+      target = Path.join([work, "packages", directory])
       File.mkdir_p!(target)
       :ok = :erl_tar.extract(String.to_charlist(archive), cwd: String.to_charlist(target))
       File.rm!(archive)
+    end
+  end
+
+  defp copy_tracked!(source, target) do
+    File.dir?(source) || abort("missing source tree: #{Path.basename(source)}")
+
+    {files, 0} =
+      System.cmd("git", ["ls-files", "-z"], cd: source, env: ChildEnvironment.scrubbed())
+
+    for file <- String.split(files, <<0>>, trim: true), File.regular?(Path.join(source, file)) do
+      destination = Path.join(target, file)
+      File.mkdir_p!(Path.dirname(destination))
+      File.cp!(Path.join(source, file), destination)
     end
   end
 

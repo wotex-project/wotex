@@ -84,9 +84,9 @@ implementation. Repository-wide rules are in the root `CLAUDE.md`.
 The full gate alone is `mix pkg wotex-conformance check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-conformance`); it adds dependency audits, Doctor, docs, the
-coverage floor, Dialyzer, the archive check (which also runs
-`bin/check_boundary.exs` over the unpacked archive and the archive-only
-consumer) and the application-free check. Run
+coverage floor, Dialyzer, the boundary scan over the source tree, the
+archive check (which also runs `bin/check_boundary.exs` over the unpacked
+archive and the archive-only consumer) and the application-free check. Run
 `mix dialyzer.pkg wotex-conformance` in tier 1 when a typespec, the
 `Wotex.Conformance.Target` callback or an inferred return type changed.
 

@@ -122,8 +122,7 @@ defmodule WotexBindingHTTP.MixProject do
       main: "readme",
       source_ref: "wotex-binding-http-v#{@version}",
       source_url: @source_url,
-      source_url_pattern:
-        "#{@source_url}/blob/wotex-binding-http-v#{@version}/packages/wotex-binding-http/%{path}#L%{line}",
+      source_url_pattern: &source_url/2,
       formatters: ["html", "epub", "markdown"],
       extras: [
         {"README.md", title: "Overview"},
@@ -164,6 +163,19 @@ defmodule WotexBindingHTTP.MixProject do
         "Runtime integration": [Wotex.Binding.HTTP.Transport]
       ]
     ]
+  end
+
+  # Links modules and the specification extras under the repository docs/
+  # tree to their repository paths at this package's release tag.
+  defp source_url(path, line) do
+    root = Path.expand("../..", __DIR__)
+
+    repository_path =
+      path
+      |> Path.expand(__DIR__)
+      |> Path.relative_to(root)
+
+    "#{@source_url}/blob/wotex-binding-http-v#{@version}/#{repository_path}#L#{line}"
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

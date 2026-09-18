@@ -238,19 +238,13 @@ The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-binding-mqtt`. It compiles with warnings as errors, checks the
 lock and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
 Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
-tests with the coverage floor (`mix coveralls`), Dialyzer and
-`git diff --check`. It then runs the exact-archive check
+tests with the coverage floor (`mix coveralls`), Dialyzer, the public
+boundary scan (`elixir bin/check_boundary.exs`) and `git diff --check`. It then
+runs the exact-archive check
 (`mix run --no-start bin/check_archive.exs`), which builds the `wotex`,
 `wotex_runtime` and `wotex_binding_mqtt` archives from `packages/` without
 path dependencies and runs an isolated reference consumer against them, and the
 application-free check (`mix run --no-start bin/check_application_free.exs`).
-
-The public boundary script is not part of the gate. Run it inside
-`packages/wotex-binding-mqtt`:
-
-```console
-elixir bin/check_boundary.exs
-```
 
 This package has no native build, software profile, interop or container lane;
 no test needs a broker. These commands do not invoke a release task, publish a

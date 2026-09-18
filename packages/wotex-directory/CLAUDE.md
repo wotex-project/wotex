@@ -89,7 +89,8 @@ identifier ports. Repository-wide rules are in the root `CLAUDE.md`.
 The full gate alone is `mix pkg wotex-directory check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-directory`); it adds dependency audits, Doctor, docs, the
-coverage floor, Dialyzer, the archive check with its archive-only
+coverage floor, Dialyzer, the boundary scan, the archive check with its
+archive-only
 repository-port suites, and the application-free check. Run
 `mix dialyzer.pkg wotex-directory` in tier 1 when a typespec, a port callback
 or an inferred return type changed.

@@ -30,8 +30,10 @@ git push origin main <name>-v<version>
 WOTEX_PATH_DEPS= MIX_ENV=prod mix hex.publish
 ```
 
-ExDoc links on HexDocs use `source_url_pattern` with the same tag and the
-`packages/<name>/` prefix, so source links resolve inside this repository.
+ExDoc links on HexDocs use the same tag: each package's `source_url/2`
+(its `source_url_pattern`) links modules under `packages/<name>/` and the
+specification extras under `docs/packages/<name>/`, so source links resolve
+inside this repository.
 
 ## After publishing
 

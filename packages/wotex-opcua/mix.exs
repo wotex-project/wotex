@@ -150,10 +150,22 @@ defmodule WotexOPCUA.MixProject do
       ],
       source_url: @source_url,
       source_ref: "wotex-opcua-v#{@version}",
-      source_url_pattern:
-        "#{@source_url}/blob/wotex-opcua-v#{@version}/packages/wotex-opcua/%{path}#L%{line}",
+      source_url_pattern: &source_url/2,
       formatters: ["html"]
     ]
+  end
+
+  # Links modules and the specification extras under the repository docs/
+  # tree to their repository paths at this package's release tag.
+  defp source_url(path, line) do
+    root = Path.expand("../..", __DIR__)
+
+    repository_path =
+      path
+      |> Path.expand(__DIR__)
+      |> Path.relative_to(root)
+
+    "#{@source_url}/blob/wotex-opcua-v#{@version}/#{repository_path}#L#{line}"
   end
 
   defp dialyzer do

@@ -182,7 +182,8 @@ The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 with warnings as errors, checks the lock and unused dependencies, formatting,
 `mix deps.audit` and `mix hex.audit`, strict Credo, Doctor,
 `mix docs --warnings-as-errors` (in `MIX_ENV=docs`), tests with the coverage
-floor (`mix coveralls`), Dialyzer, the package archive
+floor (`mix coveralls`), Dialyzer, the consumer-neutral source scan
+(`elixir bin/check_boundary.exs`), the package archive
 (`bin/check_archive.exs`), the application-free check
 (`bin/check_application_free.exs`) and `git diff --check`.
 

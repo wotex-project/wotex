@@ -9,7 +9,7 @@ defmodule Wotex.Lab.SourceCohortTest do
 
   @root Path.expand("../../..", __DIR__)
 
-  test "the everyday check configuration leaves the source guard to explicit refresh" do
+  test "the everyday check runs tests through coverage and leaves the source guard to explicit refresh" do
     previous = System.get_env("WOTEX_PATH_DEPS")
 
     on_exit(fn ->
@@ -24,10 +24,14 @@ defmodule Wotex.Lab.SourceCohortTest do
         else: System.delete_env("WOTEX_PATH_DEPS")
 
       {config, []} = Code.eval_file(Path.join(@root, ".check.exs"))
-      assert Keyword.fetch!(config, :tools)[:ex_unit] == [command: "mix test"]
-      refute Keyword.has_key?(config[:tools], :source_cohort)
+      tools = Keyword.fetch!(config, :tools)
+      assert tools[:ex_unit] == false
+      assert tools[:coverage] == [command: "mix coveralls", env: %{"MIX_ENV" => "test"}]
+      refute Keyword.has_key?(tools, :source_cohort)
     end
 
+    coveralls = Jason.decode!(File.read!(Path.join(@root, "coveralls.json")))
+    assert coveralls["coverage_options"]["minimum_coverage"] == 95
     assert File.regular?(Path.join(@root, "bin/check_source_cohort.exs"))
   end
 

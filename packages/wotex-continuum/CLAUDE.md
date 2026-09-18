@@ -57,7 +57,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
   vectors, shipped in the package. `test/support/json_schema_subset.ex`: the
   schema-keyword evaluator used by the schema tests.
 - `bin/check_archive.exs`: archive and isolated-consumer proof (WCT-C04/C05,
-  full gate); `bin/check_boundary.exs`: public-boundary scan (explicit).
+  full gate); `bin/check_boundary.exs`: public-boundary scan (full gate).
 - Specifications: `docs/packages/wotex-continuum/specs/` (WCT.01 to WCT.03
   and the WCT-C01 to WCT-C05 verification maps; `catalogue.yaml` owns status).
   Completion plan: `docs/packages/wotex-continuum/plans/wotex-continuum-completion.md`;
@@ -74,7 +74,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
 The full gate alone is `mix pkg wotex-continuum check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-continuum`); it adds dependency audits, Doctor, docs, the
-coverage floor, Dialyzer and the archive check. Run
+coverage floor, Dialyzer, the public boundary scan and the archive check. Run
 `mix dialyzer.pkg wotex-continuum` in tier 1 when a typespec or inferred
 return type changed.
 
@@ -103,6 +103,6 @@ the tests to run with `mix impact WotexContinuum.Module fun`. This package
 calls only the public API of `wotex` (`Wotex.ThingDescription`, `Wotex.JSON`,
 `Wotex.Error`).
 
-Run the public boundary scan before a commit: `elixir bin/check_boundary.exs`
-from `packages/wotex-continuum`. There is no native build, software profile or
-container lane.
+The full gate runs the public boundary scan; run it alone with
+`elixir bin/check_boundary.exs` from `packages/wotex-continuum`. There is no
+native build, software profile or container lane.

@@ -165,10 +165,22 @@ defmodule WotexDirectory.MixProject do
       ],
       source_ref: "wotex-directory-v#{@version}",
       source_url: @source_url,
-      source_url_pattern:
-        "#{@source_url}/blob/wotex-directory-v#{@version}/packages/wotex-directory/%{path}#L%{line}",
+      source_url_pattern: &source_url/2,
       formatters: ["html", "markdown", "epub"]
     ]
+  end
+
+  # Links modules and the specification extras under the repository docs/
+  # tree to their repository paths at this package's release tag.
+  defp source_url(path, line) do
+    root = Path.expand("../..", __DIR__)
+
+    repository_path =
+      path
+      |> Path.expand(__DIR__)
+      |> Path.relative_to(root)
+
+    "#{@source_url}/blob/wotex-directory-v#{@version}/#{repository_path}#L#{line}"
   end
 
   defp docs_path(relative),

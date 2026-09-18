@@ -48,7 +48,8 @@ tests.
 A package's full gate is its `.check.exs`, run by `mix check --no-retry`:
 locked dependencies, compilation, formatting, Credo, Doctor, dependency
 audits, ExDoc with warnings as errors, tests with the 95% coverage floor,
-Dialyzer, the archive check and, where present, the application-free check.
+Dialyzer, the archive check and, where present, the boundary scan
+(`bin/check_boundary.exs`) and the application-free check.
 
 ### Dialyzer
 
@@ -106,5 +107,12 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
 ## Adding a package
 
 `mix wotex.new <name> --depends-on wotex,wotex-runtime` scaffolds
-`packages/<name>/`, `docs/packages/<name>/` and the manifest entry, with the
-standard gate, `CLAUDE.md` template and WOTEX_PATH_DEPS switch.
+`packages/<name>/`, `docs/packages/<name>/{specs,plans,provenance}/` (with a
+catalogue skeleton and a completion contract) and the manifest entry, then
+re-renders `docs/catalogue.yaml`. The package gets the `WOTEX_PATH_DEPS`
+switch, HexDocs extras and source links at its release tag, the standard full
+gate with archive, application-free and boundary scripts, a `CLAUDE.md`
+package contract and a `README.md` with installation and development
+sections. Then run `mix pkg <name> deps.get` and
+`mix pkg <name> check --no-retry`, and add the package to the package tables
+of the root README and `docs/README.md`.

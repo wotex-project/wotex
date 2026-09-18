@@ -191,13 +191,8 @@ The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-continuum`. It compiles with warnings as errors, checks locked
 and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
 strict Credo, Doctor, documentation with warnings as errors, tests with the
-coverage floor (`mix coveralls`), Dialyzer, the archive check and
-`git diff --check`. The public boundary scan is not part of the gate; run it
-from `packages/wotex-continuum` before a commit:
-
-```sh
-elixir bin/check_boundary.exs
-```
+coverage floor (`mix coveralls`), Dialyzer, the public boundary scan
+(`elixir bin/check_boundary.exs`), the archive check and `git diff --check`.
 
 The archive check (`mix run --no-start bin/check_archive.exs`) builds one
 exact artifact and installs it through a signed temporary Hex registry in

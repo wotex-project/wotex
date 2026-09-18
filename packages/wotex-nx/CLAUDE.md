@@ -42,7 +42,7 @@ only numerical semantics. Repository-wide rules are in the root `CLAUDE.md`.
 - `lib/wotex/nx/unit_converter.ex`: the consumer unit-conversion port;
   `options.ex`: closed keyword options; `error.ex`: structured errors.
 - `bin/check_archive.exs`: archive and isolated-consumer check (full gate);
-  `bin/check_boundary.exs`: numerical-boundary source scan (explicit).
+  `bin/check_boundary.exs`: numerical-boundary source scan (full gate).
 - Specification: `docs/packages/wotex-nx/specs/WNX.01-observation-numerical-boundary.md`
   (`catalogue.yaml` owns status). Completion plan:
   `docs/packages/wotex-nx/plans/wotex-nx-completion.md`; decisions and the
@@ -60,9 +60,9 @@ only numerical semantics. Repository-wide rules are in the root `CLAUDE.md`.
 
 The full gate alone is `mix pkg wotex-nx check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-nx`); it adds
-dependency audits, Doctor, docs, the coverage floor, Dialyzer and the archive
-check. Run `mix dialyzer.pkg wotex-nx` in tier 1 when a typespec or inferred
-return type changed.
+dependency audits, Doctor, docs, the coverage floor, Dialyzer, the boundary scan
+and the archive check. Run `mix dialyzer.pkg wotex-nx` in tier 1 when a typespec
+or inferred return type changed.
 
 Tests by area, under `test/wotex/nx/` unless noted:
 
@@ -87,6 +87,6 @@ its callers with `mix refs Wotex.Nx.Module fun` and the tests to run with
 `mix impact Wotex.Nx.Module fun`. This package calls only the public API of
 `wotex` (`Wotex.DataSchema`).
 
-The boundary scan is explicit: `elixir bin/check_boundary.exs` from
-`packages/wotex-nx`. There is no native build, software profile or container
-lane.
+The full gate runs the boundary scan; run it alone with
+`elixir bin/check_boundary.exs` from `packages/wotex-nx`. There is no native
+build, software profile or container lane.

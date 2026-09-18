@@ -17,8 +17,8 @@ The full gate of one package is `mix pkg <name> check --no-retry`
 (`WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/<name>`). It covers
 locked dependencies, warnings-as-errors compilation, formatting, Credo strict,
 Doctor, dependency audits, ExDoc with warnings as errors, tests with the 95%
-coverage floor, Dialyzer, the archive check and, where present, the
-application-free check.
+coverage floor, Dialyzer, the archive check and, where present, the boundary
+scan (`bin/check_boundary.exs`) and the application-free check.
 
 For a completion or readiness claim, additionally confirm:
 

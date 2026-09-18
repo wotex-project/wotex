@@ -167,8 +167,20 @@ defmodule WotexLab.MixProject do
       ],
       source_ref: "wotex-lab-v#{@version}",
       source_url: @source_url,
-      source_url_pattern:
-        "#{@source_url}/blob/wotex-lab-v#{@version}/packages/wotex-lab/%{path}#L%{line}"
+      source_url_pattern: &source_url/2
     ]
+  end
+
+  # Links modules and the specification extras under the repository docs/
+  # tree to their repository paths at this package's release tag.
+  defp source_url(path, line) do
+    root = Path.expand("../..", __DIR__)
+
+    repository_path =
+      path
+      |> Path.expand(__DIR__)
+      |> Path.relative_to(root)
+
+    "#{@source_url}/blob/wotex-lab-v#{@version}/#{repository_path}#L#{line}"
   end
 end
