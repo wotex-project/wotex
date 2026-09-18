@@ -1,0 +1,44 @@
+# Formatting of first-party C and C++ sources (clang-format 22 or later; CI
+# pins 23). `mix native.lint` checks the lines a change touches against this
+# style; `mix native.lint --fix` applies it. Vendored and pinned files are
+# listed in .clang-format-ignore.
+#
+# The options were chosen by measuring the diff each candidate produces on the
+# existing sources (LLVM, Google and Chromium bases, then one option at a
+# time); LLVM with the overrides below produced the smallest diff. `.h` files
+# in this repository are C headers and `mix native.lint` formats them with the
+# C section; C++ headers use `.hpp`.
+---
+BasedOnStyle: LLVM
+# Include order can change meaning (feature macros, SDK prelude headers).
+SortIncludes: Never
+# The Elixir formatter's line_length. A limit of 90 changed about 4% fewer
+# lines in the measurement, but the existing code already runs to 100.
+ColumnLimit: 100
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Empty
+AlignEscapedNewlines: DontAlign
+ReflowComments: Never
+PenaltyBreakAssignment: 100
+PenaltyExcessCharacter: 100
+---
+Language: C
+IndentWidth: 4
+AllowShortFunctionsOnASingleLine: None
+AllowShortEnumsOnASingleLine: false
+BreakStringLiterals: false
+PenaltyBreakBeforeFirstCallParameter: 100
+---
+Language: Cpp
+AccessModifierOffset: -1
+AlignOperands: DontAlign
+AlignTrailingComments: false
+BreakTemplateDeclarations: Leave
+EmptyLineBeforeAccessModifier: Leave
+FixNamespaceComments: false
+LambdaBodyIndentation: OuterScope
+MaxEmptyLinesToKeep: 2
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyReturnTypeOnItsOwnLine: 1000
+...

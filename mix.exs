@@ -45,7 +45,10 @@ defmodule WotexWorkspace.MixProject do
       index: "wotex.index",
       "native.build": "wotex.native.build",
       "native.sources": "wotex.native.sources",
-      "native.advisories": "wotex.native.advisories"
+      "native.advisories": "wotex.native.advisories",
+      "native.lint": "wotex.native.lint",
+      "native.test": "wotex.native.test",
+      check: ["wotex.workspace", "wotex.check.affected"]
     ]
   end
 

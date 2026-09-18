@@ -9,11 +9,14 @@ defmodule Mix.Tasks.Wotex.Check.Fast do
     2. `mix format --check-formatted`
     3. `mix credo --strict`
     4. `mix test`
+    5. for a package with native code, `mix native.lint --package NAME` in the
+       repository root: clang-format on the changed C and C++ lines, rustfmt
+       and clippy
 
   stopping at the first failure, then prints a summary table. No Dialyzer,
-  documentation, audits, coverage floor or archive check; those run in the
-  full gate (`mix wotex.check`, `mix check.affected`). The root alias is
-  `mix check.fast`.
+  documentation, audits, coverage floor, archive check, clang-tidy or native
+  tests; those run in the full gate (`mix wotex.check`, `mix check.affected`).
+  The root alias is `mix check.fast`.
 
       mix wotex.check.fast [--package NAME]... [--base REF] [--all]
 
@@ -43,7 +46,7 @@ defmodule Mix.Tasks.Wotex.Check.Fast do
 
     {rows, failed?} =
       names
-      |> Enum.map(&Steps.target(&1, manifest, Steps.fast_gate()))
+      |> Enum.map(&Steps.target(&1, manifest, Steps.fast_gate(Manifest.fetch!(&1, manifest))))
       |> Steps.run()
 
     Mix.shell().info("\n" <> Report.table(rows))

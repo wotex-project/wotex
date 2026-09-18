@@ -14,6 +14,7 @@ defmodule Wotex.Workspace.Steps do
   and `fast_gate/0` the inner-loop subset.
   """
 
+  alias Wotex.Workspace
   alias Wotex.Workspace.CLI
   alias Wotex.Workspace.Manifest
   alias Wotex.Workspace.Report
@@ -54,10 +55,11 @@ defmodule Wotex.Workspace.Steps do
   @doc """
   The inner-loop gate of a package, in `MIX_ENV=test` so that compilation
   is shared with the test run: compile with warnings as errors, format
-  check, `credo --strict` and `mix test`.
+  check, `credo --strict` and `mix test`. For a package with native code
+  (`native: true`) it ends with `native_step/1`.
   """
-  @spec fast_gate() :: [step()]
-  def fast_gate do
+  @spec fast_gate(Manifest.Package.t() | nil) :: [step()]
+  def fast_gate(package \\ nil) do
     env = [mix_env: "test"]
 
     [
@@ -65,8 +67,22 @@ defmodule Wotex.Workspace.Steps do
       {"format", ["format", "--check-formatted"], env},
       {"credo", ["credo", "--strict"], env},
       {"test", ["test"], env}
-    ]
+    ] ++ native_steps(package)
   end
+
+  @doc """
+  The native step of the fast gate: `mix native.lint --package NAME` in the
+  repository root, which checks clang-format on the changed C and C++ lines
+  and runs rustfmt and clippy. clang-tidy and the native tests belong to the
+  full gate.
+  """
+  @spec native_step(String.t(), Path.t()) :: step()
+  def native_step(name, root \\ Workspace.root()) do
+    {"native", ["native.lint", "--package", name], [cd: root, path_deps: false]}
+  end
+
+  defp native_steps(%Manifest.Package{native: true, name: name}), do: [native_step(name)]
+  defp native_steps(_package), do: []
 
   @doc "A target for package `name`; `fields` are merged into its row."
   @spec target(String.t(), Manifest.t(), [step()], map()) :: target()

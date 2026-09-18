@@ -28,6 +28,10 @@ env:
   CURRENT_OTP: "29.0.4"
   MINIMUM_ELIXIR: "1.18.4-otp-27"
   MINIMUM_OTP: "27.3.4.15"
+  # Native formatting and static analysis use LLVM from apt.llvm.org, the
+  # major version .clang-format was measured with; Rust as rust-toolchain.toml.
+  LLVM_MAJOR: "23"
+  RUST_TOOLCHAIN: "1.97.1"
 
 jobs:
   affected:
@@ -105,6 +109,36 @@ jobs:
         run: mix docs.check
       - name: Pinned native sources
         run: mix wotex.native.sources
+      - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y "clang-format-${LLVM_MAJOR}"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - name: Native formatting and Rust
+        # clang-format on the C and C++ lines the change touches, rustfmt and
+        # clippy in every package, cargo test for the Rust crate. clang-tidy and
+        # the C and C++ native tests run in each package's gate.
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ github.event_name }}" in
+            pull_request) base="origin/${{ github.base_ref }}" ;;
+            push) base="${{ github.event.before }}" ;;
+            *) base="" ;;
+          esac
+          if [ -n "$base" ] && git rev-parse --verify --quiet "$base^{commit}" > /dev/null; then
+            mix native.lint --all --base "$base"
+          else
+            mix native.lint --all
+          fi
+          mix native.test --package wotex-lab
       - name: Sibling API boundary
         if: needs.affected.outputs.any == 'true'
         run: mix wotex.boundary --all
@@ -119,7 +153,8 @@ jobs:
   check:
     name: ${{ matrix.package }} (${{ matrix.lane }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Native packages build their SDKs in the gate (Matter's in Docker).
+    timeout-minutes: 75
     needs: affected
     if: needs.affected.outputs.any == 'true'
     strategy:
@@ -129,8 +164,13 @@ jobs:
         lane: [minimum, current]
     env:
       WOTEX_PATH_DEPS: "1"
+      # Build workspaces of the native_lint and native_test gate tools.
+      WOTEX_NATIVE_CACHE: ~/.cache/wotex-native
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The native format check compares with the merge base.
+          fetch-depth: 0
       - name: Toolchain
         id: toolchain
         shell: bash
@@ -151,8 +191,43 @@ jobs:
             packages/${{ matrix.package }}/_build
           key: ${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package)) }}
       - name: Native toolchain
-        # OPC UA builds its pinned open62541 SDK inside the coverage step.
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev
+        # OPC UA builds its pinned open62541 SDK inside the coverage step; the
+        # native_lint and native_test tools build the other packages' SDKs.
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev
+      - name: Native tools needed
+        # A native package runs native_format, native_lint and native_test on
+        # the current lane; the minimum lane skips them (lanes.minimum.skip).
+        id: native
+        shell: bash
+        run: |
+          native=$(yq -r '.packages["${{ matrix.package }}"].native // false' tooling/packages.yaml)
+          if [ "$native" = true ] && [ "${{ matrix.lane }}" = current ]; then echo "tools=true" >> "$GITHUB_OUTPUT"; else echo "tools=false" >> "$GITHUB_OUTPUT"; fi
+      - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format, clang-tidy)
+        if: steps.native.outputs.tools == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y "clang-format-${LLVM_MAJOR}" "clang-tidy-${LLVM_MAJOR}"
+      - if: steps.native.outputs.tools == 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - if: steps.native.outputs.tools == 'true' && matrix.package != 'wotex-matter'
+        # Keyed by the package's files, so a root or tooling change that re-runs
+        # an unchanged package reuses its native build. Matter's SDK workspace is
+        # several GB; its gate rebuilds it.
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/wotex-native/${{ matrix.package }}
+          key: native-${{ matrix.package }}-${{ hashFiles(format('packages/{0}/**', matrix.package), format('!packages/{0}/deps/**', matrix.package), format('!packages/{0}/_build/**', matrix.package), 'tooling/packages.yaml') }}
+      - name: Workspace dependencies
+        # The package gate's native tools run the root mix native.* tasks.
+        if: steps.native.outputs.tools == 'true'
+        run: mix deps.get --check-locked
       - name: Dependencies
         working-directory: packages/${{ matrix.package }}
         run: mix deps.get --check-locked
@@ -214,7 +289,7 @@ jobs:
           elixir-version: ${{ env.CURRENT_ELIXIR }}
           otp-version: ${{ env.CURRENT_OTP }}
       - name: Native toolchain
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev
       - run: mix deps.get --check-locked
       - name: Package dependencies
         working-directory: packages/${{ matrix.package }}
@@ -240,5 +315,34 @@ jobs:
           else
             echo "no software profile task for ${{ matrix.package }}"
           fi
+      - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format, clang-tidy)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y "clang-format-${LLVM_MAJOR}" "clang-tidy-${LLVM_MAJOR}"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - name: Native lint and tests
+        # clang-tidy and the native tests of every native_check suite. A suite
+        # whose build task is the package's native_task reuses the build above.
+        shell: bash
+        env:
+          WOTEX_NATIVE_CACHE: ${{ runner.temp }}/native-cache
+        run: |
+          set -euo pipefail
+          package="${{ matrix.package }}"
+          task=$(yq -r ".packages[\"$package\"].native_task // \"\"" tooling/packages.yaml)
+          suite=$(yq -r ".packages[\"$package\"].native_check[] | select(.build) | .build" tooling/packages.yaml)
+          workspace=()
+          if [ -n "$task" ] && [ "$suite" = "$task" ]; then
+            workspace=(--workspace "$RUNNER_TEMP/native-$package")
+          fi
+          mix native.lint --tidy --no-format --package "$package" "${workspace[@]}"
+          mix native.test --package "$package" "${workspace[@]}"
       - name: Upstream advisories
         run: mix wotex.native.advisories

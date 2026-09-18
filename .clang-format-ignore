@@ -1,0 +1,14 @@
+# C and C++ files that are not first-party: never formatted or linted.
+# clang-format reads this file; `mix native.lint` and `mix native.test` read it
+# to select first-party sources. One repository-relative glob per line; `*`
+# and `?` stay within a path segment, `**` spans segments.
+
+# Vendored upstream sources, pinned by digest (source.json,
+# native-sources-v1.json, dependencies.json).
+packages/wotex-coap/native/oscore/vendor/**
+packages/wotex-opcua/priv/native/vendor/**
+packages/wotex-ble/priv/bluez/native/vendor/**
+
+# Fragments spliced into pinned Matter SDK sources at an exact anchor; they
+# follow the SDK's style.
+packages/wotex-matter/test/support/software/*.inc

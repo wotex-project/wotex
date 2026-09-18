@@ -35,6 +35,18 @@ defmodule Wotex.Workspace.StepsTest do
            ]
   end
 
+  test "the fast gate of a native package ends with native.lint in the root" do
+    package = %Wotex.Workspace.Manifest.Package{name: "coap", app: "coap", native: true}
+    gate = Steps.fast_gate(package)
+    assert Enum.drop(gate, -1) == Steps.fast_gate()
+
+    assert List.last(gate) ==
+             {"native", ["native.lint", "--package", "coap"],
+              [cd: Wotex.Workspace.root(), path_deps: false]}
+
+    assert Steps.fast_gate(%{package | native: false}) == Steps.fast_gate()
+  end
+
   test "a target stops at its first failing step and halt stops the run" do
     manifest = Fixtures.manifest()
     targets = Enum.map(~w(core runtime http), &Steps.target(&1, manifest, Steps.fast_gate()))

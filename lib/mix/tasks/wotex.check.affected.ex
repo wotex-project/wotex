@@ -47,8 +47,13 @@ defmodule Mix.Tasks.Wotex.Check.Affected do
   @spec targets([{String.t(), :changed | :dependent}], Manifest.t()) :: [Steps.target()]
   def targets(marked, %Manifest{} = manifest) do
     Enum.map(marked, fn
-      {name, :changed} -> Steps.target(name, manifest, Steps.full_gate(), %{gate: "full"})
-      {name, :dependent} -> Steps.target(name, manifest, Steps.fast_gate(), %{gate: "fast"})
+      {name, :changed} ->
+        Steps.target(name, manifest, Steps.full_gate(), %{gate: "full"})
+
+      {name, :dependent} ->
+        Steps.target(name, manifest, Steps.fast_gate(Manifest.fetch!(name, manifest)), %{
+          gate: "fast"
+        })
     end)
   end
 end

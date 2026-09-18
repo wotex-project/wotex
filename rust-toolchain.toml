@@ -1,0 +1,6 @@
+# The Rust toolchain for the repository's crates (wotex-lab's containment
+# launcher); mise.toml pins the same version.
+[toolchain]
+channel = "1.97.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

@@ -26,6 +26,8 @@ defmodule Wotex.Workspace.Scaffold do
   alias Wotex.Workspace.Manifest
 
   @template_package "wotex-coap"
+  # The native tool block of a package gate, from its comment to `native_test`.
+  @native_tools ~r/\n    # First-party C, C\+\+ and Rust code.*\{:native_test,[^}]*\},/s
   @name_pattern ~r/^[a-z][a-z0-9-]*$/
   @line_length 100
   @boundary_tool ~s|    {:boundary, command: "elixir bin/check_boundary.exs"},\n|
@@ -86,12 +88,16 @@ defmodule Wotex.Workspace.Scaffold do
   end
 
   @doc """
-  The package gate: the template gate with the `{:boundary, ...}` tool
-  inserted before the archive tool. A template that already runs a boundary
-  tool is returned unchanged.
+  The package gate: the template gate without the template package's native
+  tools (`native_format`, `native_lint`, `native_test`; a package with native
+  code adds them together with its `native_check` suites) and with the
+  `{:boundary, ...}` tool inserted before the archive tool. A template that
+  already runs a boundary tool keeps it.
   """
   @spec gate(String.t()) :: {:ok, String.t()} | :error
   def gate(template) do
+    template = Regex.replace(@native_tools, template, "")
+
     cond do
       template =~ "{:boundary," -> {:ok, template}
       String.contains?(template, @archive_tool) -> {:ok, insert_boundary(template)}
@@ -477,7 +483,7 @@ defmodule Wotex.Workspace.Scaffold do
     | --- | --- |
     | 0 | `mix pkg @@name@@ test @@test_path@@`, or `mix impact @@namespace@@ version --run` |
     | 1 | `mix check.fast --package @@name@@` |
-    | 2 | `mix check.affected` (full gate here, fast gate in dependents) |
+    | 2 | `mix check` (full gate here, fast gate in dependents) |
 
     The full gate alone is `mix pkg @@name@@ check --no-retry` (equivalently
     `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/@@name@@`); it

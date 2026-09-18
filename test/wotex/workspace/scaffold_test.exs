@@ -63,11 +63,14 @@ defmodule Wotex.Workspace.ScaffoldTest do
                File.read!(Path.join(root, "packages/wotex-coap/#{file}"))
     end
 
-    # The standard full gate of the template package plus the boundary scan.
+    # The standard full gate of the template package, without its native
+    # tools, plus the boundary scan.
     gate = File.read!(Path.join(root, "packages/wotex-demo/.check.exs"))
     template = File.read!(Path.join(root, "packages/wotex-coap/.check.exs"))
     boundary = ~s|    {:boundary, command: "elixir bin/check_boundary.exs"},\n|
-    assert String.replace(gate, boundary, "") == template
+    native = ~r/\n    # First-party C.*\{:native_test,[^}]*\},/s
+    assert String.replace(gate, boundary, "") == Regex.replace(native, template, "")
+    refute gate =~ "native_"
     {config, _binding} = Code.eval_string(gate)
     tools = Keyword.fetch!(config, :tools)
     assert tools[:boundary] == [command: "elixir bin/check_boundary.exs"]
@@ -129,7 +132,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert claude =~ "\n## Working on this package\n"
     assert claude =~ "`mix pkg wotex-demo test test/wotex/demo_test.exs`"
     assert claude =~ "`mix check.fast --package wotex-demo`"
-    assert claude =~ "`mix check.affected`"
+    assert claude =~ "`mix check` (full gate here"
     assert claude =~ "`mix pkg wotex-demo check --no-retry`"
     assert claude =~ "It uses `wotex` and `wotex-runtime` only through their public"
 
@@ -181,6 +184,16 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert gate =~ ~s|    {:boundary, command: "elixir bin/check_boundary.exs"},\n    {:archive,|
     assert Scaffold.gate(gate) == {:ok, gate}
     assert Scaffold.gate("[tools: []]") == :error
+  end
+
+  test "leaves the template package's native tools out of a new gate" do
+    {:ok, gate} =
+      Scaffold.gate(File.read!(Path.join(Workspace.root(), "packages/wotex-coap/.check.exs")))
+
+    refute gate =~ "native_"
+    refute gate =~ "wotex-coap"
+    assert {config, []} = Code.eval_string(gate)
+    assert Keyword.has_key?(config[:tools], :boundary)
   end
 
   test "refuses an existing package, a bad name and unknown dependencies", %{root: root} do

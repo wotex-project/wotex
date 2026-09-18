@@ -9,6 +9,7 @@ defmodule Wotex.Workspace.Manifest do
   """
 
   alias Wotex.Workspace
+  alias Wotex.Workspace.NativeSuite
 
   defmodule Package do
     @moduledoc """
@@ -21,11 +22,20 @@ defmodule Wotex.Workspace.Manifest do
             depends_on: [String.t()],
             native: boolean(),
             native_task: String.t() | nil,
-            software_task: String.t() | nil
+            software_task: String.t() | nil,
+            native_check: [Wotex.Workspace.NativeSuite.t()]
           }
 
     @enforce_keys [:name, :app]
-    defstruct [:name, :app, depends_on: [], native: false, native_task: nil, software_task: nil]
+    defstruct [
+      :name,
+      :app,
+      depends_on: [],
+      native: false,
+      native_task: nil,
+      software_task: nil,
+      native_check: []
+    ]
   end
 
   @type lane :: %{elixir: String.t(), otp: String.t(), skip: [String.t()]}
@@ -212,7 +222,8 @@ defmodule Wotex.Workspace.Manifest do
          {:ok, native} <- parse_boolean(name, "native", Map.get(entry, "native", false)),
          {:ok, native_task} <- parse_task(name, "native_task", Map.get(entry, "native_task")),
          {:ok, software_task} <-
-           parse_task(name, "software_task", Map.get(entry, "software_task")) do
+           parse_task(name, "software_task", Map.get(entry, "software_task")),
+         {:ok, native_check} <- NativeSuite.parse_all(name, Map.get(entry, "native_check")) do
       {:ok,
        %Package{
          name: name,
@@ -220,7 +231,8 @@ defmodule Wotex.Workspace.Manifest do
          depends_on: depends_on,
          native: native,
          native_task: native_task,
-         software_task: software_task
+         software_task: software_task,
+         native_check: native_check
        }}
     end
   end

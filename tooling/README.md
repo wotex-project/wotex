@@ -21,10 +21,18 @@ that takes them.
 
 ## Toolchain and code index
 
-The root `mise.toml` pins Erlang/OTP, Elixir and Dexter. Its `erlang` and
-`elixir` versions equal `lanes.current` in `packages.yaml`; a workspace test
-asserts it, so change both together. Run `mise install` once, then
-`mix setup`.
+The root `mise.toml` pins Erlang/OTP, Elixir, Rust and Dexter. Its `erlang`
+and `elixir` versions equal `lanes.current` in `packages.yaml`, and its `rust`
+version equals the channel of `rust-toolchain.toml` (with rustfmt and
+clippy); workspace tests assert both, so change them together. Run
+`mise install` once, then `mix setup`. clang-format and clang-tidy (LLVM 22
+or later; CI pins 23) come from the system: `brew install llvm`, or the
+`clang-format-23` and `clang-tidy-23` packages from apt.llvm.org.
+
+The root `.clang-format`, `.clang-tidy` and `.clang-format-ignore` configure
+the native checks of every package (`mix native.lint`, `mix native.test`;
+see the development guide, "Native code"). A change to any of them, to
+`rust-toolchain.toml` or to `mise.toml` selects every package.
 
 Dexter's index lives in the ignored `.dexter/`. `mix index` builds it (`dexter
 init .`) or refreshes it (`dexter reindex`, changed files only); `--force`
@@ -44,15 +52,19 @@ and `test/` select nothing.
 
 | Tier | When | Command |
 | --- | --- | --- |
-| 0 | While editing | `mix pkg NAME test FILES` or `mix impact MODULE [FUN] --run` |
+| 0 | While editing | `mix pkg NAME test FILES` or `mix impact MODULE [FUN] --run`; `mix native.lint --package NAME` for C, C++ or Rust |
 | 1 | Change ready in one package | `mix check.fast --package NAME` |
-| 2 | Before a commit | `mix check.affected`: the full gate for changed packages, the fast gate for dependents |
+| 2 | Before a commit | `mix check`: `mix workspace`, then `mix check.affected` (the full gate for changed packages, the fast gate for dependents) |
 | 3 | CI, repository-wide changes, explicit request | `mix check.all`, native lanes |
 
 The fast gate runs `compile --warnings-as-errors`, `format
---check-formatted`, `credo --strict` and `test` with `MIX_ENV=test`, stopping
-at the first failure. Dialyzer runs in the full gate, or explicitly with `mix
-dialyzer.pkg NAME`.
+--check-formatted`, `credo --strict` and `test` with `MIX_ENV=test`, and for a
+package with native code `mix native.lint --package NAME` in the root,
+stopping at the first failure. Dialyzer, clang-tidy and the native tests run
+in the full gate: a native package's `.check.exs` runs the root `mix
+native.lint --no-clippy` (`native_format`), `mix native.lint --tidy
+--no-format` (`native_lint`) and `mix native.test` (`native_test`), so the
+full gate needs the root dependencies (`mix setup`).
 
 ## `packages.yaml`
 
@@ -95,6 +107,7 @@ packages:
 | `native` | `true` when the package builds or vendors native code. `mix native.sources` and `mix native.advisories` cover native packages only. |
 | `native_task` | The package's own build task, dispatched by `mix native.build --package NAME --workspace /abs/dir`. |
 | `software_task` | The package's own software-profile task, if any. The CI native lane runs it with `--workspace`; locally it runs only when invoked explicitly, e.g. `mix pkg NAME TASK --workspace /abs/dir`. |
+| `native_check` | Suites for `mix native.lint --tidy` and `mix native.test`: `suite` (name), `requires` (`linux`, `docker`), `build` (a package task run with `--workspace`), `prepare` (commands), `compile_commands` (databases the build or `prepare` wrote), `compile` (`files` globs and `flags` for files compiled outside a build system) and `test` (commands). Strings take the placeholders `{package}`, `{root}`, `{workspace}` and `{scratch}`; a flag `pkg-config:NAME` expands to `pkg-config --cflags NAME`. See `Wotex.Workspace.NativeSuite`. |
 
 `mix wotex.new NAME` appends a manifest entry; the manifest is validated
 whenever a task loads it.
@@ -113,9 +126,10 @@ whenever a task loads it.
 
 The result is always in topological order, so `mix wotex.check` runs a
 package after the packages it depends on. `--json` prints a flat list of
-names (CI reads it); `--detail` adds the marks. `mix check.fast`, `mix lint`
-and `mix format.all` default to the `changed` packages; `mix check.affected`
-and `mix test.affected` use both marks.
+names (CI reads it); `--detail` adds the marks. `mix check.fast`, `mix lint`,
+`mix format.all`, `mix native.lint` and `mix native.test` default to the
+`changed` packages; `mix check.affected` and `mix test.affected` use both
+marks.
 
 ## Documentation links
 

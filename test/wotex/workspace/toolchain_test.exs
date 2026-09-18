@@ -42,6 +42,23 @@ defmodule Wotex.Workspace.ToolchainTest do
     assert tools["aqua:remoteoss/dexter"] =~ ~r/^\d+\.\d+\.\d+$/
   end
 
+  test "mise.toml and rust-toolchain.toml pin one Rust toolchain with rustfmt and clippy" do
+    toolchain = File.read!(Path.join(Workspace.root(), "rust-toolchain.toml"))
+    assert [_, channel] = Regex.run(~r/^channel = "([^"]+)"$/m, toolchain)
+    assert channel =~ ~r/^\d+\.\d+\.\d+$/
+    assert mise_tools()["rust"] == channel
+    assert toolchain =~ ~r/^components = \["rustfmt", "clippy"\]$/m
+  end
+
+  test "the native toolchain configuration selects every package when it changes" do
+    select_all_on = Manifest.load!().select_all_on
+
+    for file <- ~w(rust-toolchain.toml .clang-format .clang-format-ignore .clang-tidy) do
+      assert File.regular?(Path.join(Workspace.root(), file))
+      assert file in select_all_on
+    end
+  end
+
   test "mise.toml replaces .tool-versions and selects every package when it changes" do
     refute File.exists?(Path.join(Workspace.root(), ".tool-versions"))
     assert "mise.toml" in Manifest.load!().select_all_on

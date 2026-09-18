@@ -8,17 +8,25 @@
 #   software profile runs only in the explicit native lane.
 # native_task: the package's own build task, dispatched by `mix native.build`.
 # software_task: the package's own software-profile run task, if any.
+# native_check: the suites that give clang-tidy compile commands for the
+#   package's first-party C and C++ and run its native tests (`mix native.lint
+#   --tidy`, `mix native.test`, the native_lint and native_test tools of the
+#   package gate); see Wotex.Workspace.NativeSuite for the keys and
+#   placeholders. Every first-party translation unit needs a compile command
+#   from some suite.
 schema_version: "1.0.0"
 # lanes: the toolchains CI runs every package gate on. `skip` names `mix check`
 #   tools a lane does not run (passed as `--except TOOL`). The minimum lane runs
 #   behaviour tools (compile, tests with coverage, archive and application-free
 #   checks); static analysis, whose results depend on the compiler and OTP
-#   version, runs on the current lane only.
+#   version, and the native tools, which do not depend on it, run on the
+#   current lane only.
 lanes:
   minimum:
     elixir: "1.18.4-otp-27"
     otp: "27.3.4.15"
-    skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface]
+    skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface,
+           native_format, native_lint, native_test]
   current:
     elixir: "1.20.2-otp-29"
     otp: "29.0.4"
@@ -26,6 +34,10 @@ select_all_on:
   - ".github/**"
   - "tooling/**"
   - "mise.toml"
+  - "rust-toolchain.toml"
+  - ".clang-format"
+  - ".clang-format-ignore"
+  - ".clang-tidy"
   - ".gitignore"
   - "mix.exs"
   - "mix.lock"
@@ -61,41 +73,182 @@ packages:
     depends_on: [wotex, wotex-runtime]
     native: true
     software_task: wotex.bacnet.software.run
+    native_check:
+      - suite: guardian
+        compile:
+          - files: ["test/interop/native/*.c"]
+            flags: [-std=c11]
+        test:
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, "{package}/test/interop/native/command.c", -o, "{scratch}/command"]
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, "{package}/test/interop/native/probe.c", -o, "{scratch}/probe"]
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, "{package}/test/interop/native/check.c", -o, "{scratch}/check"]
+          - run: ["{scratch}/check", "{scratch}/command", "{scratch}/probe"]
+            cd: "{scratch}"
+      - suite: cstack
+        requires: [docker]
+        build: wotex.bacnet.software.build
+        prepare:
+          - [tar, -xzf, "{workspace}/source.tar.gz", -C, "{scratch}"]
+        compile:
+          - files: ["test/interop/cstack/*.c"]
+            flags: [-std=c11, -D_DARWIN_C_SOURCE, "-I{scratch}/bacnet-stack-3603048350b8ba543ec76cf6aa8a232b3f4d442d/src", -DBACDL_BIP=1, -DMAX_COV_SUBSCRIPTIONS=16, -DMAX_COV_ADDRESSES=16, -DPRINT_ENABLED=0]
+        test:
+          - [sh, -c, "docker run --rm --entrypoint /normal/wotex-bacnet-peer \"$(cat '{workspace}/image.id')\" --self-test && docker run --rm --entrypoint /normal/wotex-bacnet-peer \"$(cat '{workspace}/image.id')\" --property-self-test"]
   wotex-ble:
     app: wotex_ble
     depends_on: [wotex, wotex-runtime]
     native: true
     native_task: wotex.ble.native.build
     software_task: wotex.ble.software.run
+    native_check:
+      - suite: portable
+        compile:
+          - files: [priv/bluez/native/build_command.c, priv/bluez/native/custody.c, "test/native/*.c", "test/interop/native/*.c"]
+            flags: [-std=c11]
+          - files: [test/native/bytes_test.cpp, test/native/credit_test.cpp, test/native/frame_test.cpp, test/native/output_test.cpp, test/native/pages_test.cpp, test/native/reports_test.cpp, test/native/scripted_host.cpp]
+            flags: [-std=c++17, "-I{package}/priv/bluez/native"]
+          - files: [test/native/flow_source.cpp]
+            flags: [-std=c++17, "-I{package}/priv/bluez/native", -DWOTEX_FLOW_CALLBACKS=4, -DWOTEX_FLOW_VALUE_BYTES=20]
+      - suite: libdbus
+        requires: [linux]
+        build: wotex.ble.native.build
+        compile:
+          - files: [priv/bluez/native/main.cpp, test/native/bus_test.cpp]
+            flags: [-std=c++17, "-I{package}/priv/bluez/native", "-I{workspace}/sources/libdbus/dbus-1.16.2", "-I{workspace}/build/libdbus"]
+        test:
+          - run: [mix, test, --only, interop, test/interop/native_bus_test.exs, test/interop/native_host_test.exs]
+            env:
+              MIX_ENV: test
+              WOTEX_PATH_DEPS: "1"
+              WOTEX_BLE_DBUS_SOURCE: "{workspace}/sources/libdbus/dbus-1.16.2"
+              WOTEX_BLE_DBUS_BUILD: "{workspace}/build/libdbus"
+              WOTEX_BLE_NATIVE_WORKSPACE: "{workspace}"
   wotex-coap:
     app: wotex_coap
     depends_on: [wotex, wotex-runtime]
     native: true
     native_task: wotex.coap.native.build
     software_task: wotex.coap.software.run
+    native_check:
+      # The software build compiles the helper against the pinned libcoap and
+      # builds and runs the twelve fault and vector executables; the headers
+      # it deletes afterwards are regenerated from its verified archive.
+      - suite: libcoap
+        build: wotex.coap.software.build
+        prepare:
+          - [tar, -xzf, "{workspace}/native/downloads/libcoap.tar.gz", -C, "{scratch}"]
+          - [cmake, -S, "{scratch}/libcoap-7cf7465b784baded4de183290c547d582becfd28", -B, "{scratch}/libcoap", -DENABLE_OSCORE=ON, -DENABLE_DTLS=ON, -DDTLS_BACKEND=openssl, -DBUILD_SHARED_LIBS=OFF, -DENABLE_DOCS=OFF, -DENABLE_EXAMPLES=OFF, -DENABLE_TESTS=OFF]
+        compile:
+          - files: ["native/oscore/*.c"]
+            flags: [-std=c11, -DWCO_WITH_LIBCOAP, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "-I{scratch}/libcoap/include", "-I{scratch}/libcoap-7cf7465b784baded4de183290c547d582becfd28/include", "pkg-config:openssl"]
+          - files: ["test/native/*.c"]
+            flags: [-std=c11, -DWCO_STORE_TEST, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "-I{scratch}/libcoap/include", "-I{scratch}/libcoap-7cf7465b784baded4de183290c547d582becfd28/include", "pkg-config:openssl"]
+        test:
+          - ["{workspace}/bin/faults/oscore-json"]
+          - ["{workspace}/bin/faults/oscore-frame"]
+          - ["{workspace}/bin/faults/oscore-body"]
+          - ["{workspace}/bin/faults/oscore-credit"]
+          - ["{workspace}/bin/faults/oscore-command"]
+          - ["{workspace}/bin/faults/oscore-identity"]
+          - ["{workspace}/bin/faults/oscore-store"]
+          - ["{workspace}/bin/faults/oscore-store-send"]
+          - ["{workspace}/bin/faults/oscore-sequence"]
+          - ["{workspace}/bin/faults/oscore-block-limit"]
+          - ["{workspace}/bin/faults/oscore-protection"]
+          - ["{workspace}/bin/faults/oscore-worker-exchange", "{workspace}/native/bin/wotex-coap-oscore"]
   wotex-matter:
     app: wotex_matter
     depends_on: [wotex, wotex-runtime]
     native: true
     native_task: wotex.matter.native.build
     software_task: wotex.matter.software.run
+    native_check:
+      - suite: value
+        prepare:
+          - [cmake, -S, "{package}/native", -B, "{scratch}/value", -DCMAKE_EXPORT_COMPILE_COMMANDS=ON]
+        compile_commands: ["{scratch}/value/compile_commands.json"]
+        test:
+          - [cmake, --build, "{scratch}/value", --parallel, "4"]
+          - [ctest, --test-dir, "{scratch}/value", --output-on-failure]
+      # The build compiles the SDK-bound sources in the pinned linux/amd64
+      # container and runs their CTest suite, normal and sanitized.
+      - suite: sdk
+        requires: [docker]
+        build: wotex.matter.native.build
   wotex-modbus:
     app: wotex_modbus
     depends_on: [wotex, wotex-runtime]
     native: true
     software_task: wotex.modbus.software.run
+    native_check:
+      - suite: guardian
+        compile:
+          - files: ["test/interop/native/*.c"]
+            flags: [-std=c11]
+        test:
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, "{package}/test/interop/native/command.c", -o, "{scratch}/command"]
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, "{package}/test/interop/native/probe.c", -o, "{scratch}/probe"]
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, "{package}/test/interop/native/check.c", -o, "{scratch}/check"]
+          - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, -Dsetpgid=wmb_fault_setpgid, "{package}/test/interop/native/command.c", "{package}/test/interop/native/group_fault.c", -o, "{scratch}/command-fault"]
+          - run: ["{scratch}/check", "{scratch}/command", "{scratch}/probe", "{scratch}/command-fault"]
+            cd: "{scratch}"
+      - suite: libmodbus
+        requires: [docker]
+        build: wotex.modbus.software.build
+        prepare:
+          - [tar, -xzf, "{workspace}/source.tar.gz", -C, "{scratch}"]
+          - [mkdir, -p, "{scratch}/include/modbus"]
+          - [cp, "{scratch}/libmodbus-9af6c16074df566551bca0a7c37443e48f216289/src/modbus.h", "{scratch}/libmodbus-9af6c16074df566551bca0a7c37443e48f216289/src/modbus-rtu.h", "{scratch}/libmodbus-9af6c16074df566551bca0a7c37443e48f216289/src/modbus-tcp.h", "{scratch}/include/modbus/"]
+          - run: [sed, -e, "s/@LIBMODBUS_VERSION_MAJOR@/3/;s/@LIBMODBUS_VERSION_MINOR@/1/;s/@LIBMODBUS_VERSION_MICRO@/12/;s/@LIBMODBUS_VERSION@/3.1.12/g", "{scratch}/libmodbus-9af6c16074df566551bca0a7c37443e48f216289/src/modbus-version.h.in"]
+            stdout: "{scratch}/include/modbus/modbus-version.h"
+        compile:
+          - files: [test/interop/libmodbus/server.c]
+            flags: [-std=c11, -D_POSIX_C_SOURCE=200809L, "-I{scratch}/include"]
   wotex-opcua:
     app: wotex_opcua
     depends_on: [wotex, wotex-runtime]
     native: true
     native_task: wotex.opcua.native.build
     software_task: wotex.opcua.software.run
+    native_check:
+      - suite: open62541
+        build: wotex.opcua.native.build
+        prepare:
+          - [cmake, -S, "{package}/priv/native", -B, "{scratch}/db", -DCMAKE_EXPORT_COMPILE_COMMANDS=ON, "-DWOTEX_SDK_PREFIX={workspace}/sdk-prefix", "-DWOTEX_OPENSSL_PREFIX={workspace}/openssl-prefix"]
+        compile_commands: ["{scratch}/db/compile_commands.json"]
+        compile:
+          - files: [priv/native/build_command.c, priv/native/sanitizer_options.c, "test/native/*.c"]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+        test:
+          - [ctest, --test-dir, "{workspace}/native-build", --output-on-failure]
   wotex-thread:
     app: wotex_thread
     depends_on: [wotex, wotex-runtime]
     native: true
     native_task: wotex.thread.native.build
     software_task: wotex.thread.software.run
+    native_check:
+      # The SDK-free protocol, storage, output, stream and flow tests.
+      - suite: protocol
+        prepare:
+          - [cmake, -S, "{package}/priv/openthread", -B, "{scratch}/tests", -DCMAKE_BUILD_TYPE=Debug, -DWOTEX_NATIVE_SANITIZERS=ON, "-DWOTEX_NATIVE_TEST_SOURCE={package}/test/native", -DCMAKE_EXPORT_COMPILE_COMMANDS=ON]
+        compile_commands: ["{scratch}/tests/compile_commands.json"]
+        compile:
+          - files: [priv/openthread/build_command.c, "test/fixtures/*.c"]
+            flags: [-std=c11]
+        test:
+          - [cmake, --build, "{scratch}/tests", --parallel, "4"]
+          - [ctest, --test-dir, "{scratch}/tests", --output-on-failure]
+      # The host and the tests that link the pinned OpenThread SDK (Linux).
+      - suite: openthread
+        requires: [linux]
+        build: wotex.thread.native.build
+        prepare:
+          - [cmake, -G, Ninja, -S, "{package}/priv/openthread", -B, "{scratch}/sdk", -DCMAKE_BUILD_TYPE=Debug, "-DWOTEX_OPENTHREAD_SOURCE={workspace}/sources/openthread/openthread-5c8c318627954c99cd1a957a290bbd4b1027d04b", "-DWOTEX_JSON_HEADER={workspace}/downloads/json.hpp", "-DWOTEX_NATIVE_TEST_SOURCE={package}/test/native", -DCMAKE_EXPORT_COMPILE_COMMANDS=ON]
+        compile_commands: ["{scratch}/sdk/compile_commands.json"]
+        test:
+          - [cmake, --build, "{scratch}/sdk", --parallel, "4", --target, wotex-thread-spinel-test, wotex-thread-dataset-seed, wotex-thread-flow-host]
+          - [ctest, --test-dir, "{scratch}/sdk", --output-on-failure, -R, SPINEL]
   wotex-lab:
     app: wotex_lab
     depends_on:

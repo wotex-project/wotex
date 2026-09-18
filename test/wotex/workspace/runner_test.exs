@@ -67,6 +67,11 @@ defmodule Wotex.Workspace.RunnerTest do
              ) == 3
 
       assert File.read!(Path.join(root, "probe.txt")) == "|dev"
+
+      # cd: runs the command in another directory than the target path.
+      File.rm!(Path.join(root, "probe.txt"))
+      assert Runner.run(Path.join(root, "missing"), ["env.probe"], cd: root, quiet: true) == 0
+      assert File.read!(Path.join(root, "probe.txt")) == "1|dev"
     end
   end
 

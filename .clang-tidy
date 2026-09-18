@@ -1,0 +1,87 @@
+# Bug-finding static analysis of first-party C and C++ (clang-tidy 22 or
+# later; CI pins 23). `mix native.lint --tidy` runs it with the compile
+# commands of each package's native build; vendored files
+# (.clang-format-ignore) are never analysed.
+#
+# Enabled: the Clang Static Analyzer, bugprone-*, performance-*,
+# portability-* and the CERT checks that are not aliases of those.
+# Disabled, each with its reason:
+#   bugprone-easily-swappable-parameters: a naming heuristic, not a defect.
+#   bugprone-assignment-in-if-condition, bugprone-assignment-in-selection-statement:
+#     `if ((x = f()))` and `while (a && (x = next()))` are deliberate; the
+#     builds use -Wall -Wextra -Werror, which require the extra parentheses.
+#   bugprone-signed-bitwise: POSIX flag and event constants (O_NONBLOCK,
+#     POLLIN) are int; every use is a flag mask.
+#   bugprone-narrowing-conversions, bugprone-implicit-widening-of-multiplication-result:
+#     fire on every size_t/int exchange with POSIX and SDK interfaces; bounds
+#     are checked explicitly and the sanitizer lanes catch overflow.
+#   clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling:
+#     asks for C11 Annex K (memcpy_s), which glibc does not provide.
+#   bugprone-multi-level-implicit-pointer-conversion: D-Bus
+#     (dbus_message_iter_get_basic, _append_basic) and qsort take the address
+#     of a pointer as void * by contract.
+#   bugprone-not-null-terminated-result: the C sources assemble frames in
+#     length-tracked buffers; copying a string's bytes without its NUL is
+#     deliberate there, and the sanitizer lanes catch over-reads.
+#   clang-analyzer-optin.taint.*: the process guardians exec their argv by
+#     design; taint analysis reports every such flow.
+#   bugprone-throwing-static-initialization: constant std::string and
+#     container tables can only fail with bad_alloc before main, which ends
+#     the process at start-up; there is no recovery to protect.
+#   performance-enum-size: a memory-layout preference, not a defect.
+#   performance-no-int-to-ptr: reports the uintptr_t round trip that passes
+#     const data to SDK functions taking non-const pointers.
+#   portability-avoid-pragma-once: a header-guard style preference.
+#   portability-restrict-system-includes: needs an allow-list; include policy
+#     is reviewed, not linted.
+# Options: feature-test macros, sanitizer hooks and GNU ld --wrap symbols
+# must use reserved names; `if (strcmp(a, b))` is accepted as "differs"
+# (explicitly wrong comparisons are still reported); an exception leaving
+# main ends the process with a failure status its owner observes; move
+# operations are left to performance-noexcept-move-constructor, so implicit
+# lambda moves that copy const captures are not reported.
+Checks: >-
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  portability-*,
+  cert-env33-c,
+  cert-err34-c,
+  cert-err52-cpp,
+  cert-err60-cpp,
+  cert-flp30-c,
+  cert-mem57-cpp,
+  cert-msc30-c,
+  cert-msc32-c,
+  cert-msc50-cpp,
+  cert-msc51-cpp,
+  cert-oop57-cpp,
+  cert-oop58-cpp,
+  cert-str34-c,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-assignment-in-if-condition,
+  -bugprone-assignment-in-selection-statement,
+  -bugprone-signed-bitwise,
+  -bugprone-narrowing-conversions,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -bugprone-not-null-terminated-result,
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -clang-analyzer-optin.taint.*,
+  -bugprone-throwing-static-initialization,
+  -performance-enum-size,
+  -performance-no-int-to-ptr,
+  -portability-avoid-pragma-once,
+  -portability-restrict-system-includes
+CheckOptions:
+  bugprone-reserved-identifier.AllowedIdentifiers: "^_POSIX_C_SOURCE$;^_XOPEN_SOURCE$;^_DEFAULT_SOURCE$;^_GNU_SOURCE$;^_DARWIN_C_SOURCE$;^__asan_default_options$;^__real_;^__wrap_"
+  bugprone-exception-escape.CheckMain: false
+  bugprone-exception-escape.CheckMoveMemberFunctions: false
+  bugprone-suspicious-string-compare.WarnOnImplicitComparison: false
+WarningsAsErrors: "*"
+# First-party headers only (mix native.lint narrows this to the repository's
+# packages/); SDK and system headers are excluded, and so are vendored ones.
+HeaderFilterRegex: "/packages/[^/]+/"
+ExcludeHeaderFilterRegex: "/vendor/"
+FormatStyle: none

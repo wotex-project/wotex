@@ -120,6 +120,71 @@ defmodule Mix.Tasks.Wotex.OptionsTest do
       end
     end
 
+    test "lint takes the selection switches, --fix, --tidy, --no-format and --no-clippy" do
+      assert Mix.Tasks.Wotex.Native.Lint.parse_args(~w(--all --base main --fix)) ==
+               [all: true, base: "main", fix: true]
+
+      assert Mix.Tasks.Wotex.Native.Lint.parse_args(
+               ~w(--package wotex-opcua --tidy --no-format --no-clippy)
+             ) == [package: "wotex-opcua", tidy: true, format: false, clippy: false]
+
+      assert Mix.Tasks.Wotex.Native.Lint.parse_args(
+               ~w(--tidy --package wotex-opcua --workspace /tmp/ws)
+             ) == [tidy: true, package: "wotex-opcua", workspace: "/tmp/ws"]
+
+      assert_raise Mix.Error, ~r/--workspace needs --tidy/, fn ->
+        Mix.Tasks.Wotex.Native.Lint.parse_args(~w(--package wotex-opcua --workspace /tmp/ws))
+      end
+
+      assert_raise Mix.Error, ~r/absolute/, fn ->
+        Mix.Tasks.Wotex.Native.Lint.parse_args(~w(--tidy --package wotex-opcua --workspace ws))
+      end
+
+      assert_raise Mix.Error, ~r/exactly one --package/, fn ->
+        Mix.Tasks.Wotex.Native.Lint.parse_args(~w(--tidy --all --workspace /tmp/ws))
+      end
+
+      assert_raise Mix.Error, ~r/--fix applies formatting/, fn ->
+        Mix.Tasks.Wotex.Native.Lint.parse_args(~w(--fix --tidy))
+      end
+
+      assert_raise Mix.Error, fn -> Mix.Tasks.Wotex.Native.Lint.parse_args(~w(--lane current)) end
+    end
+
+    test "lint runs format and clippy by default and clang-tidy with --tidy" do
+      both = %{c_family: true, rust: true}
+      assert Mix.Tasks.Wotex.Native.Lint.steps(both, []) == ["clang-format", "rustfmt", "clippy"]
+
+      assert Mix.Tasks.Wotex.Native.Lint.steps(both, tidy: true, format: false) ==
+               ["clippy", "clang-tidy"]
+
+      assert Mix.Tasks.Wotex.Native.Lint.steps(%{c_family: true, rust: false}, clippy: false) ==
+               ["clang-format"]
+
+      assert Mix.Tasks.Wotex.Native.Lint.steps(%{c_family: false, rust: true}, tidy: true) ==
+               ["rustfmt", "clippy"]
+    end
+
+    test "test takes the selection switches and a workspace for one package" do
+      assert Mix.Tasks.Wotex.Native.Test.parse_args(~w(--package wotex-lab)) == [
+               package: "wotex-lab"
+             ]
+
+      assert Mix.Tasks.Wotex.Native.Test.parse_args(~w(--package wotex-opcua --workspace /tmp/ws)) ==
+               [package: "wotex-opcua", workspace: "/tmp/ws"]
+
+      assert_raise Mix.Error, ~r/exactly one --package/, fn ->
+        Mix.Tasks.Wotex.Native.Test.parse_args(~w(--workspace /tmp/ws))
+      end
+
+      assert_raise Mix.Error, ~r/absolute/, fn ->
+        Mix.Tasks.Wotex.Native.Test.parse_args(~w(--package p --workspace rel))
+      end
+
+      assert Mix.Tasks.Wotex.Native.Test.steps(["a/Cargo.toml"], ~w(portable sdk)) ==
+               ["cargo test", "suite portable", "suite sdk"]
+    end
+
     test "sources takes no options and advisories takes --offline" do
       assert Mix.Tasks.Wotex.Native.Sources.parse_args([]) == []
       assert_raise Mix.Error, fn -> Mix.Tasks.Wotex.Native.Sources.parse_args(~w(--offline)) end
@@ -328,8 +393,9 @@ defmodule Mix.Tasks.Wotex.OptionsTest do
   end
 
   @tasks ~w(affected check archive catalogue boundary native.build native.sources
-            native.advisories new setup index pkg def refs impact test.affected check.fast
-            check.affected check.all workspace format.all lint dialyzer docs docs.check)
+            native.advisories native.lint native.test new setup index pkg def refs impact
+            test.affected check.fast check.affected check.all workspace format.all lint
+            dialyzer docs docs.check)
 
   test "every task has a shortdoc and a moduledoc" do
     for task <- @tasks do
@@ -347,7 +413,7 @@ defmodule Mix.Tasks.Wotex.OptionsTest do
              Enum.sort(~w(setup affected pkg def refs impact test.affected check.fast
                           check.affected check.all workspace format.all lint dialyzer.pkg
                           docs.check docs.pkg index native.build native.sources
-                          native.advisories))
+                          native.advisories native.lint native.test check))
 
     for {name, tasks} <- aliases, task <- List.wrap(tasks) do
       [task_name | _args] = String.split(task)
