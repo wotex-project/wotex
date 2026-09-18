@@ -30,13 +30,13 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-bacnet/`;
 this document is a durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WBA.00](../specs/WBA.00-library-contract.md) and
-[WBA.10](../specs/WBA.10-software-contract.md), plus
-[WBA.11 standalone client and preservation](../specs/WBA.11-standalone-client-and-preservation.md). Follow the
+[WBA.01](../specs/WBA.01-library-contract.md) and
+[WBA.04](../specs/WBA.04-software-contract.md), plus
+[WBA.05 standalone client and preservation](../specs/WBA.05-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The [WBA.12 integration contract](../specs/WBA.12-wotex-integration.md) and
+The [WBA.06 integration contract](../specs/WBA.06-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.

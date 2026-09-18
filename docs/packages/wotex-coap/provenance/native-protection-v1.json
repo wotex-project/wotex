@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-protection-evidence@1",
-  "specification": "WCO.13@1.5.0",
+  "specification": "WCO.08@1.5.0",
   "scope": "Public native OSCORE response-admission rule; raw UDP faults and a protected same-stack peer, without production store or Port acceptance",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

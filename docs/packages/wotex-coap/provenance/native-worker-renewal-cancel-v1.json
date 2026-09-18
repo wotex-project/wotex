@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-renewal-cancel-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Protected cancellation during an in-flight native Observe renewal, including finite deadline cleanup",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

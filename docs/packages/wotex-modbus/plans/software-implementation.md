@@ -9,14 +9,14 @@ ordered packages define acceptance, not a mutable tracker.
 ## Read before changing code
 
 1. Read `CLAUDE.md` and matching repository rules/skills.
-2. Read [WMB.00 — shared software rules](../specs/WMB.00-library-contract.md).
-3. Read [WMB.10 — exact target profile](../specs/WMB.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [WMB.11 — standalone APIs, preservation and exact fixtures](../specs/WMB.11-standalone-client-and-preservation.md).
+2. Read [WMB.01 — shared software rules](../specs/WMB.01-library-contract.md).
+3. Read [WMB.04 — exact target profile](../specs/WMB.04-software-contract.md), then the existing protocol/current-profile specifications linked there.
+4. Read [WMB.05 — standalone APIs, preservation and exact fixtures](../specs/WMB.05-standalone-client-and-preservation.md).
 5. Read [primary source pins and access limits](../provenance/primary-sources.md).
 6. Select the first work package below whose acceptance evidence is absent.
 
 Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WMB.12 — Wotex integration](../specs/WMB.12-wotex-integration.md) before choosing
+[WMB.06 — Wotex integration](../specs/WMB.06-wotex-integration.md) before choosing
 implementation work. The catalogue lists dependencies and distinguishes planned
 contracts from narrow implemented profiles. Source presence, fixture presence,
 passing tests and accepted work packages are separate facts.
@@ -120,12 +120,12 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Requirements: WMB-C01, WMB-C09, WMB-C10 and WMB-N03; all earlier packages are prerequisites.
 - Change surface: package identity, legal/security boundary, consumer-visible API behavior, CI/default-gate invocation and the release-candidate dossier; no production protocol behavior.
 - Acceptance: inspect declared package metadata and exercise documented public behavior; inspect the packaged README, CHANGELOG, LICENSE and NOTICE and the specification dossier published through HexDocs; require the NOTICE to identify this package; reconcile supported standards and dependency/toolchain claims with executable evidence; and keep publication, public-registry availability, stable-API, hardware, RTU, Modbus Security, certification and external-adoption claims explicit and absent.
-- Verification: focused behavioral tests, the modest `WOTEX_PATH_DEPS=1 mix check --no-retry`, explicit release checks, both candidate-archive toolchains and both WMB.13 software lanes. Archive and result digests remain execution outputs because embedding an archive digest in its own contents is self-referential.
+- Verification: focused behavioral tests, the modest `WOTEX_PATH_DEPS=1 mix check --no-retry`, explicit release checks, both candidate-archive toolchains and both WMB.07 software lanes. Archive and result digests remain execution outputs because embedding an archive digest in its own contents is self-referential.
 - Commit scope: public release-candidate classification and regression evidence.
 
 ## Reproducible software fixture contract
 
-[WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) is authoritative for the
+[WMB.07](../specs/WMB.07-native-build-and-software-evidence.md) is authoritative for the
 Mix tasks, native source pins, manifests, deadlines, cleanup and result schemas.
 The command contract, run from the repository root (`mix pkg` sets
 `WOTEX_PATH_DEPS=1` inside `packages/wotex-modbus`), is:

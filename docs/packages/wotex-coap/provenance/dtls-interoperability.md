@@ -102,6 +102,6 @@ The source basis is RFC 6347 (January 2012), RFC 5280 (May 2008), RFC 7252
 fixed cipher, offline revocation and exact identity policies in WCO-S05.
 [The pinned libcoap server manual](https://libcoap.net/doc/reference/4.3.5/man_coap-server.html)
 defines the peer options. Complete chain-depth fault expansion, independent
-secure Runtime overload/deadline faults, Linux sanitizer/stress evidence, OSCORE and WCO.13's
+secure Runtime overload/deadline faults, Linux sanitizer/stress evidence, OSCORE and WCO.08's
 build/run task acceptance remain separate obligations. Historical receipts retain
 their original source, command and narrower claims.

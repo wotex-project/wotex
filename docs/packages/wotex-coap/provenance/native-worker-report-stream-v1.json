@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-report-stream-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Production worker protected 32769-byte Observe notification streaming and cancellation with report credit outstanding",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

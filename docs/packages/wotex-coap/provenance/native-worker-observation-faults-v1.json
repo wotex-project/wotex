@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-observation-faults-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Production worker protected renewal faults and bounded Property/Event report overload through public custody",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

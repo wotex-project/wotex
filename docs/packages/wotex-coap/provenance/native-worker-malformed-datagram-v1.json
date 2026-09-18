@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-malformed-datagram-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Malformed datagrams discarded by libcoap cannot end an active protected exchange",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

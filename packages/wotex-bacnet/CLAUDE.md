@@ -50,8 +50,8 @@ Property truth. Repository-wide rules are in the root `CLAUDE.md`.
   Runtime observation; `error.ex`: structured errors and Runtime classes.
 - `lib/mix/tasks/`: the explicit software-peer tasks; `bin/`: the archive and
   application-free checks run by the gate.
-- Specifications: `docs/packages/wotex-bacnet/specs/` (WBA.00–WBA.02,
-  WBA.10–WBA.12; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-bacnet/specs/` (WBA.01–WBA.03,
+  WBA.04–WBA.06; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-bacnet/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, ingress and integration corpora, pinned
   software sources); test-only corpora in `test/fixtures/`.

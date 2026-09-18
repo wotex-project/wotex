@@ -62,7 +62,7 @@ library profile choices within RFC 7959's wider behavior.
 
 ## Standalone source authority
 
-WCO.11 makes native method, URI and discovery behavior explicit. RFC 6690
+WCO.06 makes native method, URI and discovery behavior explicit. RFC 6690
 sections 3.1–3.3 prohibit senders from repeating rt/if/sz; this package chooses
 strict rejection of those malformed descriptions. This differs from the
 first-occurrence receiver rules for rel/title/title* in

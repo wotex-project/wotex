@@ -29,15 +29,15 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-opcua/`; 
 durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WOP.00](../specs/WOP.00-library-contract.md) and
-[WOP.10](../specs/WOP.10-software-contract.md), plus
-[WOP.11 standalone client and preservation](../specs/WOP.11-standalone-client-and-preservation.md). Follow the
+[WOP.01](../specs/WOP.01-library-contract.md) and
+[WOP.04](../specs/WOP.04-software-contract.md), plus
+[WOP.05 standalone client and preservation](../specs/WOP.05-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The [WOP.12 integration contract](../specs/WOP.12-wotex-integration.md) and
+The [WOP.06 integration contract](../specs/WOP.06-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are mandatory.
-[WOP.13](../specs/WOP.13-native-executable.md) fixes the open62541 executable,
+[WOP.07](../specs/WOP.07-native-executable.md) fixes the open62541 executable,
 source digests, build tasks and native acceptance corpus. Python is an independent
 software peer and build-generator dependency only in the accepted target.
 The removed Python adapter did not satisfy that target. Acceptance

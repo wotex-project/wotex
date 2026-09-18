@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-custody-leak-audit-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "The eleven opaque-stream custody cases, including 200 short child launches, under Linux ASan/UBSan with leak detection and the named leak-audit instrumentation allowance",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

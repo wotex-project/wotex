@@ -1,6 +1,6 @@
 {
   "schema": "wotex.ble.native-sanitizer-evidence@1",
-  "specification": "WBL.13@1.0.19",
+  "specification": "WBL.07@1.0.19",
   "scope": "Native component, private-bus, SDK-host-process and custody executables compiled by ExUnit in the ordinary, ASan/UBSan and LeakSanitizer lanes",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

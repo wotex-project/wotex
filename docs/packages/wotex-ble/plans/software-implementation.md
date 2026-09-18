@@ -2,20 +2,20 @@
 
 This sequence defines acceptance of the native BlueZ GATT central profile.
 [Current implementation evidence](../provenance/executable-evidence.md) identifies
-implemented cells; [WBL.13](../specs/WBL.13-native-backend.md) owns native
+implemented cells; [WBL.07](../specs/WBL.07-native-backend.md) owns native
 build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
 1. Read `CLAUDE.md` and matching repository rules/skills.
-2. Read [WBL.00 — shared software rules](../specs/WBL.00-library-contract.md).
-3. Read [WBL.10 — exact target profile](../specs/WBL.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [WBL.11 — standalone API, preservation and concrete corpus](../specs/WBL.11-standalone-client-and-preservation.md).
+2. Read [WBL.01 — shared software rules](../specs/WBL.01-library-contract.md).
+3. Read [WBL.04 — exact target profile](../specs/WBL.04-software-contract.md), then the existing protocol/current-profile specifications linked there.
+4. Read [WBL.05 — standalone API, preservation and concrete corpus](../specs/WBL.05-standalone-client-and-preservation.md).
 5. Read [primary source pins and access limits](../provenance/primary-sources.md).
 6. Select the first work package below whose acceptance evidence is absent.
 
 Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WBL.12 — Wotex integration](../specs/WBL.12-wotex-integration.md) before choosing
+[WBL.06 — Wotex integration](../specs/WBL.06-wotex-integration.md) before choosing
 implementation work. The catalogue lists dependencies and distinguishes planned
 contracts from narrow implemented profiles. Source presence, fixture presence,
 passing baseline tests and accepted work packages are separate facts.
@@ -167,7 +167,7 @@ mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
-[WBL.13](../specs/WBL.13-native-backend.md) defines the implemented fixture
+[WBL.07](../specs/WBL.07-native-backend.md) defines the implemented fixture
 layers, per-lane guest boots and result criteria; the retired Python guest
 runner is not part of this contract.
 

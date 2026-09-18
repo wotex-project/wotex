@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-stream-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Production worker protected Block2 response streaming through public custody followed by a protected Block1 POST on the same session",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

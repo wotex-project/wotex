@@ -89,7 +89,7 @@ codecs, UA TCP framing, Property Form
 mapping and an explicitly selected partial `Open62541` client. It opens persistent or one-shot secure
 Sessions and performs typed Value Read/Write, Method Call and bounded child
 Browse through C without runtime Python. The former Python runtime adapter is
-removed; asyncua remains an independent test peer. WOP.02 and executable evidence bound
+removed; asyncua remains an independent test peer. WOP.03 and executable evidence bound
 its actual behavior. One-shot Read/Write/Call successes preserve the recorded
 result shapes. A persistent native Session can also return one
 complete page of seven-field typed references. The C owner now has a single
@@ -112,7 +112,7 @@ The pinned SDK owns secure-channel cryptography and service codecs; the package
 owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
 asyncua is solely an independent software peer in this target.
 
-[WOP.13](../../docs/packages/wotex-opcua/specs/WOP.13-native-executable.md) fixes source digests, security,
+[WOP.07](../../docs/packages/wotex-opcua/specs/WOP.07-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
 `mix native.build --package wotex-opcua --workspace ABS` from the repository
 root (inside the package, `mix wotex.opcua.native.build` or its alias
@@ -206,10 +206,10 @@ profile factories, typed arrays and DataValue metadata, persistent secure
 sessions, subscriptions, and complete Runtime validation remain specified work.
 Current result projection checks StatusCode envelopes and ByteString decoding;
 it does not validate every returned Variant type or payload. The strict media
-selector rejection required by WOP.12 has not yet been implemented.
+selector rejection required by WOP.06 has not yet been implemented.
 
-See [protocol and graduation contract](../../docs/packages/wotex-opcua/specs/WOP.01-protocol.md),
-[implemented profile](../../docs/packages/wotex-opcua/specs/WOP.02-implemented-profile.md),
+See [protocol and graduation contract](../../docs/packages/wotex-opcua/specs/WOP.02-protocol.md),
+[implemented profile](../../docs/packages/wotex-opcua/specs/WOP.03-implemented-profile.md),
 [primary sources](../../docs/packages/wotex-opcua/provenance/primary-sources.md) and
 [executable evidence](../../docs/packages/wotex-opcua/provenance/executable-evidence.md).
 
@@ -302,17 +302,17 @@ test infrastructure; the runtime package runs no Python.
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-opcua/plans/software-implementation.md)
-and [specification index](../../docs/packages/wotex-opcua/specs/WOP-index.md) define the remaining software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-opcua/specs) define the remaining software
 profile with exact behavior, limits, failure transitions and acceptance scenario families.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
-The [WOP.11 standalone client contract](../../docs/packages/wotex-opcua/specs/WOP.11-standalone-client-and-preservation.md)
+The [WOP.05 standalone client contract](../../docs/packages/wotex-opcua/specs/WOP.05-standalone-client-and-preservation.md)
 records required native APIs, preserved protocol assets and concrete specified
 fixtures. These cases are not passing evidence until executable bindings run.
 
 The [specification catalogue](../../docs/packages/wotex-opcua/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-opcua/specs/WOP.12-wotex-integration.md)
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-opcua/specs/WOP.06-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. These are target requirements; a passing baseline
 gate does not accept the unfinished software profile.

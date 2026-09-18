@@ -30,22 +30,22 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-matter/`;
 this document is a durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WMA.00](../specs/WMA.00-library-contract.md) and
-[WMA.10](../specs/WMA.10-software-contract.md). Follow the
+[WMA.01](../specs/WMA.01-library-contract.md) and
+[WMA.05](../specs/WMA.05-software-contract.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The mandatory target also includes [WMA.11 standalone API and preservation](../specs/WMA.11-standalone-client-and-preservation.md).
+The mandatory target also includes [WMA.06 standalone API and preservation](../specs/WMA.06-standalone-client-and-preservation.md).
 The ordered software plan assigns its N requirements and concrete F cases to
 implementation packages; parsed fixtures and scenario identifiers alone do not
 accept those packages.
 
-The [WMA.12 integration contract](../specs/WMA.12-wotex-integration.md) and
+The [WMA.07 integration contract](../specs/WMA.07-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
-The [WMA.13 native backend contract](../specs/WMA.13-native-backend.md)
+The [WMA.08 native backend contract](../specs/WMA.08-native-backend.md)
 requires a first-party compiled Port and Mix/ExUnit software tooling.
 Python is permitted only for required upstream build tools or an explicitly
 justified independent software peer. It is not part of production execution.

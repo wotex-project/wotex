@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-output-saturation-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Protected Observe progress and bounded owner-loss cleanup with an actually full operating-system output pipe and backpressured custody output",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

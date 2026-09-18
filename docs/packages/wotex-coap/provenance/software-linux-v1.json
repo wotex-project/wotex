@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.software-linux-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "mix wotex.software.build and mix wotex.software.run inside Linux arm64 containers on both required Elixir/OTP runtimes, with the Linux ASan/UBSan native vector build",
   "source_identity": {
     "kind": "git working tree copied into each container",

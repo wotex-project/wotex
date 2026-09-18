@@ -1,6 +1,6 @@
 {
   "schema": "wotex.ble.software-run-evidence@1",
-  "specification": "WBL.13@1.0.20",
+  "specification": "WBL.07@1.0.20",
   "scope": "Mix-built BlueZ 5.85 virtual-controller fixture running the public BLE and Runtime interoperability lanes against the Mix-built native host in both BEAM lanes",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

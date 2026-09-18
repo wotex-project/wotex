@@ -377,7 +377,7 @@ with the OR of that iteration's flags to every live stream; flags observed with
 no listener are discarded. A stream whose report cannot be queued receives one
 `stream_error` with `queue_overflow` followed by its barrier. `unsubscribe`
 writes the barrier before its null reply, and an unknown stream returns
-`subscription_not_found`. The WTH.13 State stream frames subsection defines each
+`subscription_not_found`. The WTH.07 State stream frames subsection defines each
 exact frame.
 
 `Wotex.Thread.OpenThread.Connection` validates every stream frame, registers
@@ -469,7 +469,7 @@ peer that had not replied by then was terminated, so a slow but correct close
 became forced termination, and under a concurrent lane the escript peer could be
 cut off mid-reply. That run's Elixir 1.20.2 arm64 lane returned
 `invalid_response` from one bridge disconnect and `cleanup_timeout` from the
-first sanitizer-host State connect. WTH.13 B02 gives the owner C03's 1000 ms
+first sanitizer-host State connect. WTH.07 B02 gives the owner C03's 1000 ms
 grace before termination, so SIGTERM now follows `close` after 700 ms; SIGKILL
 remains at 900 ms and the cleanup deadline at 1000 ms.
 
@@ -721,7 +721,7 @@ count an unexecuted case as evidence.
 
 ## Acceptance boundary
 
-[WTH.13](../specs/WTH.13-native-backend.md) defines the required native binary,
+[WTH.07](../specs/WTH.07-native-backend.md) defines the required native binary,
 Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus is
 specified and unexecuted. A passing current gate, a listed test path or a source
 hash cannot establish execution of that target. Each completed software run must

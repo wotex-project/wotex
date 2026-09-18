@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-command-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Structural admission of native C07 commands; no worker queue, body association, clock, filesystem, socket or SDK dispatch acceptance",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

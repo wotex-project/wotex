@@ -31,17 +31,17 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-coap/`; t
 durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WCO.00](../specs/WCO.00-library-contract.md) and
-[WCO.10](../specs/WCO.10-software-contract.md), plus the mandatory
-[WCO.11 standalone/preservation contract](../specs/WCO.11-standalone-client-and-preservation.md). Follow the
+[WCO.01](../specs/WCO.01-library-contract.md) and
+[WCO.05](../specs/WCO.05-software-contract.md), plus the mandatory
+[WCO.06 standalone/preservation contract](../specs/WCO.06-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The [WCO.12 integration contract](../specs/WCO.12-wotex-integration.md) and
+The [WCO.07 integration contract](../specs/WCO.07-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
-[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) defines native build and software
+[WCO.08](../specs/WCO.08-native-build-and-software-evidence.md) defines native build and software
 runner contracts. Mix/ExUnit owns orchestration; BEAM/OTP and the explicitly
 selected native SDK own protocol execution.

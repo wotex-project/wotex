@@ -76,7 +76,7 @@ For local development with the repository checked out next to your project:
 ```
 
 Path dependencies prove nothing about a released artifact. The
-[release-candidate dossier](../../docs/packages/wotex-modbus/specs/WMB.14-release-candidate-dossier.md)
+[release-candidate dossier](../../docs/packages/wotex-modbus/specs/WMB.08-release-candidate-dossier.md)
 maps the reviewed API, dependencies, standards scope, legal/security boundary,
 verification commands and explicit nonclaims.
 
@@ -104,8 +104,8 @@ end
 ```
 
 No RTU/serial, Modbus Security, built-in polling or physical certification is
-claimed. See [protocol contract](../../docs/packages/wotex-modbus/specs/WMB.01-protocol.md),
-[Form profile](../../docs/packages/wotex-modbus/specs/WMB.02-form-profile.md) and
+claimed. See [protocol contract](../../docs/packages/wotex-modbus/specs/WMB.02-protocol.md),
+[Form profile](../../docs/packages/wotex-modbus/specs/WMB.03-form-profile.md) and
 [independent interoperability](test/interop/README.md).
 
 ## Wotex contract
@@ -195,7 +195,7 @@ docker run --rm wotex-modbus-guardian
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-modbus/plans/software-implementation.md)
-and [specification index](../../docs/packages/wotex-modbus/specs/WMB-index.md) define the software profile's
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus/specs) define the software profile's
 behavior, limits, failure transitions, acceptance scenarios and concrete fixtures.
 Executable tests cover the contract corpus, real Runtime interactions, strict
 stream correlation, bounded admission, and owner cleanup. The software fixture
@@ -206,19 +206,19 @@ through the [software peer lane](#software-peer-lane).
 Required software peers are separate from physical-device tests. A specification
 or catalogue status alone is not execution evidence.
 
-The [standalone client contract](../../docs/packages/wotex-modbus/specs/WMB.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-modbus/specs/WMB.05-standalone-client-and-preservation.md)
 defines native workflows and feature-preservation obligations. Its concrete
 fixture corpus contains specified cases; execution results remain in provenance.
 
 The [specification catalogue](../../docs/packages/wotex-modbus/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-modbus/specs/WMB.12-wotex-integration.md)
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-modbus/specs/WMB.06-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. Re-run the checked-in software harness for the
 source revision under review; earlier results do not validate later changes.
 
 ## Native build and software orchestration
 
-[WMB.13](../../docs/packages/wotex-modbus/specs/WMB.13-native-build-and-software-evidence.md) defines
+[WMB.07](../../docs/packages/wotex-modbus/specs/WMB.07-native-build-and-software-evidence.md) defines
 the explicit `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` interfaces (package aliases; from the
 repository root run them through `mix pkg wotex-modbus`, as in Development).

@@ -101,7 +101,7 @@ onboarding material and typed operational ACL values.
 The earlier Python factory adapter is removed; runtime controllers use the
 first-party native host.
 
-[WMA.13](../../docs/packages/wotex-matter/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
+[WMA.08](../../docs/packages/wotex-matter/specs/WMA.08-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. The explicit
 [native and software lanes](#native-and-software-lanes) build the controller
 and the pinned SDK example peers. The lighting, thermostat and bridge ExUnit
@@ -179,7 +179,7 @@ oneshot_profile = Wotex.Matter.profile()
 
 Use `client: Wotex.Matter.Native` with the explicit native controller options
 below. Its C++ host owns SDK startup, secure fabric storage, attestation,
-sessions and per-path status validation. See the [client contract](../../docs/packages/wotex-matter/specs/WMA.03-sdk-client.md).
+sessions and per-path status validation. See the [client contract](../../docs/packages/wotex-matter/specs/WMA.04-sdk-client.md).
 Alternatively, supply a module implementing `Wotex.Matter.Client`; injected
 contract tests alone do not establish SDK or device interoperability. Failed
 writes/invokes retain unknown effect and are never retried by the library.
@@ -322,7 +322,7 @@ fail explicitly. Callback names alone do not establish consumer behavioral parit
 Compatibility requires concrete differential scenarios and independently observed
 software interactions for each advertised operation.
 
-See [implemented profile](../../docs/packages/wotex-matter/specs/WMA.02-implemented-profile.md),
+See [implemented profile](../../docs/packages/wotex-matter/specs/WMA.03-implemented-profile.md),
 [primary sources](../../docs/packages/wotex-matter/provenance/primary-sources.md) and
 [executable evidence](../../docs/packages/wotex-matter/provenance/executable-evidence.md).
 
@@ -466,11 +466,11 @@ subscriptions and commissioning windows.
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-matter/plans/software-implementation.md)
-and [specification index](../../docs/packages/wotex-matter/specs/WMA-index.md) define the implemented software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-matter/specs) define the implemented software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
 Required software peers are separate from physical-device tests.
 
-The [standalone client contract](../../docs/packages/wotex-matter/specs/WMA.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-matter/specs/WMA.06-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](priv/fixtures/contract-v1.json) is fully executed:
 the P01 pure cases run in the default suite, the WMA-F07 controller lifecycle
@@ -488,7 +488,7 @@ stream cleanup. Scenario tables and an unselected interop test alone are not
 executable acceptance evidence.
 
 The [specification catalogue](../../docs/packages/wotex-matter/specs/catalogue.yaml) distinguishes implemented
-profiles and their evidence. The [Wotex integration contract](../../docs/packages/wotex-matter/specs/WMA.12-wotex-integration.md)
+profiles and their evidence. The [Wotex integration contract](../../docs/packages/wotex-matter/specs/WMA.07-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. The P08a boundary, pinned software-peer matrix
 and isolated immutable-source package checks are executed.

@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-pending-owner-loss-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Owner EOF while a protected registration, renewal or cancellation awaits the peer, and removal of libcoap's OSCORE client send hold",
   "standard": {
     "name": "IETF Observing Resources in CoAP",

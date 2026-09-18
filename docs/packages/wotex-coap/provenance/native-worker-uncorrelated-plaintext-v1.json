@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-uncorrelated-plaintext-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Plaintext nonempty responses on an OSCORE session whose token no pending protected request used",
   "standard": {
     "name": "IETF OSCORE",

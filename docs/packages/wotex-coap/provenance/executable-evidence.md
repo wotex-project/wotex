@@ -346,7 +346,7 @@ pure BEAM receive boundary. It covers the 128 KiB JSON-line ceiling, duplicate
 members, integer bounds, exact ready identity and response correlation, canonical
 base64, the 32,768-byte inline threshold, resolved 1 MiB bodies, Message option
 rules and the finite native error vocabulary. A native `remote_response` failure
-projects its CoAP code byte into `details.code`, the WCO.11 result shape used by
+projects its CoAP code byte into `details.code`, the WCO.06 result shape used by
 the UDP and DTLS paths; a missing or out-of-range status fails as a protocol
 error. These tests exercise receiver-side
 outcomes corresponding to native-v1 F01, F02, F08 and F10–F13. They do not run a
@@ -599,7 +599,7 @@ missing peers/responses. The mandatory final software matrix is Elixir 1.18.4 /
 OTP 27.3.4.15 and Elixir 1.20.2 / OTP 29.0.4; the complete secure/stress matrix is
 not accepted by the cohorts above. Hardware and certification are separate.
 
-[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) defines explicit
+[WCO.08](../specs/WCO.08-native-build-and-software-evidence.md) defines explicit
 Mix builds/runs, native manifests, bounded Port framing and durable context
 rules. The [native build receipt](native-build-v1.json) records the implemented
 `mix wotex.native.build` path on macOS arm64: bounded pinned download, ordered

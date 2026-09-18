@@ -12,7 +12,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
 ## Invariants
 
 - Production protocol execution uses the first-party C/C++ Port specified in
-  WMA.13. Generic build/fixture orchestration and assertions use Mix/ExUnit.
+  WMA.08. Generic build/fixture orchestration and assertions use Mix/ExUnit.
   Python is limited to required upstream build tools or justified independent
   test peers.
 - Specifications state contracts declaratively; implementation status and
@@ -55,8 +55,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
 - `lib/mix/tasks/`: the explicit native and software tasks; `bin/`: the
   gate's archive and application-free checks plus the per-packet native and
   advisory lanes.
-- Specifications: `docs/packages/wotex-matter/specs/` (WMA.00–WMA.03,
-  WMA.10–WMA.13; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-matter/specs/` (WMA.01–WMA.04,
+  WMA.05–WMA.08; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-matter/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, native-port and integration corpora).
 - Test support: `test/support/` (scripted clients, Runtime credentials and

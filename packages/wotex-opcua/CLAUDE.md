@@ -55,8 +55,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
 - `priv/native/`: first-party C sources, CTest checks, the SDK patch, vendored
   yyjson and the native design notes (`runtime-guardian.md`, `json-codec.md`,
   `security.md`, `value-codec.md`).
-- Specifications: `docs/packages/wotex-opcua/specs/` (WOP.00–WOP.02,
-  WOP.10–WOP.13; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-opcua/specs/` (WOP.01–WOP.03,
+  WOP.04–WOP.07; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-opcua/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, integration, native contract, custody,
   JSON, ready and pinned native source corpora).

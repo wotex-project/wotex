@@ -2,7 +2,7 @@
 
 The selected SDK is connectedhomeip v1.6.0.0 commit
 `250a9e6c50ee2068107f3c4808b680f5f2925415`.
-[WMA.13](../specs/WMA.13-native-backend.md) pins the source archive, transitive
+[WMA.08](../specs/WMA.08-native-backend.md) pins the source archive, transitive
 source/build manifest and first-party C++ host. The full Matter 1.6 Core text is
 not available for clause-level review here. The contract is an SDK-derived
 controller profile; neither source review nor shared-SDK peers establish CSA
@@ -66,7 +66,7 @@ package/version fields for Python artifacts, as specified by the
 [OSV API](https://google.github.io/osv.dev/post-v1-query/).
 A Git tag query with a commit hash as its version is not commit evidence.
 
-WMA.13 fixes `chip_crypto="boringssl"`. Native dependency audit remains a
+WMA.08 fixes `chip_crypto="boringssl"`. Native dependency audit remains a
 required separate gate.
 
 P02's SDK-header compile also resolves the pinned gitlinks for
@@ -74,7 +74,7 @@ P02's SDK-header compile also resolves the pinned gitlinks for
 (archive SHA-256 `392f0a7f1c35cc3520d5f71faf37bfe4518e00ba0dc704068f4fbf6eba5427a5`)
 and `nestlabs/nlio` at `0e725502c2b17bb0a0c22ddd4bcaee9090c8fb5c`
 (archive SHA-256 `f7ffbc6fd3e9029c6aa558aec8f80819d1e9a8daba67633d512de23560147f34`).
-The P02 and P03 runners also verify nlohmann/json 3.11.3 at WMA.13's fixed
+The P02 and P03 runners also verify nlohmann/json 3.11.3 at WMA.08's fixed
 `9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6`
 header hash.
 
@@ -104,11 +104,11 @@ artifacts. They are absent from the runtime binary and Hex package.
 | [python-path](https://pypi.org/project/python-path/0.1.3/) | 0.1.3 | `b62d9aac1da4daee3f036ed088532cf8b68666d3aa103567dc22b6539316c8b3` |
 
 The finite registry and exact thermostat/light/bridge/temperature recipes are in
-[WMA.11](../specs/WMA.11-standalone-client-and-preservation.md), with pinned XML
+[WMA.06](../specs/WMA.06-standalone-client-and-preservation.md), with pinned XML
 sources. Native SDK generation uses the exact build-only artifacts listed above;
 no Python component is shipped or executes in the production controller.
 The former one-shot Python adapter has been replaced by the first-party native
-client documented in [WMA.03](../specs/WMA.03-sdk-client.md). Build-time SDK
+client documented in [WMA.04](../specs/WMA.04-sdk-client.md). Build-time SDK
 generation is the remaining first-party Python dependency.
 
 W3C [TD 1.1 Recommendation](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)

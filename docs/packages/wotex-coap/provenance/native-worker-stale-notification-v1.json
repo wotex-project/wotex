@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-stale-notification-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Authenticated stale notification injection through the manifest-verified Mix-built OSCORE helper and public native owner",
   "standard": {
     "name": "IETF Observing Resources in CoAP",

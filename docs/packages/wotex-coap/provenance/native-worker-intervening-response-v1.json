@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-intervening-response-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Protected notifications that arrive between a native Observe cancellation or Max-Age renewal and its response",
   "standard": {
     "name": "IETF OSCORE",

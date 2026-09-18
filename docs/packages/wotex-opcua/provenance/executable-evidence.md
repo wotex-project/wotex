@@ -55,7 +55,7 @@ Commands and results inside the container:
   lifecycle and stress files: 65 passed. The stress lane reported host memory
   2888/2888->2888 bytes and native RSS 16988/17064->21180 KiB.
 
-No timing case failed under translation. The native x86_64 host claim in WOP.13
+No timing case failed under translation. The native x86_64 host claim in WOP.07
 stays open; this cohort is labelled translation, not a native kernel.
 
 | Subject | SHA-256 |
@@ -122,7 +122,7 @@ within 1,000 ms); both pass on an idle host and no bound was changed.
 
 ## One-shot error parity, 2026-09-17
 
-WOP.10 S02 (1.1.3), WOP.11 N04 (1.1.14) and WOP.02 (2.0.13) now specify that only
+WOP.04 S02 (1.1.3), WOP.05 N04 (1.1.14) and WOP.03 (2.0.13) now specify that only
 successful results have a one-shot compatibility translation. A one-shot failure
 returns the same native Error code and effect, and so the same I04 class, as
 persistent mode. The Python adapter's bridge-specific codes (`exchange_failed`,
@@ -881,7 +881,7 @@ before I/O and call optional client callbacks; `Wotex.OPCUA.Subscription` is the
 opaque, Inspect-redacted handle. `Wotex.OPCUA.Open62541` admits subscriptions on
 persistent Sessions only. `Native.Frame` validates subscribe results and report
 lines exactly, and `Native.Host` routes reports to monitored receivers as
-recorded in WOP.13 X05.
+recorded in WOP.07 X05.
 
 `frame_test.exs` covers valid and malformed report, token and subscribe-result
 frames. `port_test.exs` covers normalization of subscription client returns.
@@ -942,7 +942,7 @@ reports after operation replies in each tick. `session_subscription.c`
 implements them over raw CreateSubscription, CreateMonitoredItems, Publish,
 Republish, DeleteMonitoredItems and DeleteSubscriptions services; the SDK's
 high-level subscription manager is not used. The contract is recorded in
-WOP.13 X05. The owner flushes each emitted envelope to its descriptor before
+WOP.07 X05. The owner flushes each emitted envelope to its descriptor before
 producing the next, so credited reports leave the bounded queue.
 
 `wotex_opcua_owner_check` binds WOP-X-F21 with an injected report producer:

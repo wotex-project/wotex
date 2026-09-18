@@ -1,6 +1,6 @@
 # Native typed value codec
 
-The C value codec converts the WOP.10/WOP.11 typed value subset between the
+The C value codec converts the WOP.04/WOP.05 typed value subset between the
 package's JSON interprocess representation and open62541 1.5.7 structures.
 Its functions perform no network operation and create no client or Session.
 Native request admission, secure services, receive-side SDK decoder limits and
@@ -26,7 +26,7 @@ The response writers borrow a validated SDK structure for the duration of the
 call and copy retained data into a separate bounded yyjson mutable-document
 pool. The caller discards the entire partial document after any failure.
 Serialized output, its LF delimiter, and the native owner's queued bytes require
-separate admission under WOP.13; a successful typed projection alone does not
+separate admission under WOP.07; a successful typed projection alone does not
 prove that a complete response fits the 131072-byte frame.
 
 `wop_value_translate_node_id` maps one concrete NodeId between two immutable

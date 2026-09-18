@@ -91,7 +91,7 @@ runtime dependency. The injected BEAM ownership peer is an Erlang escript; the
 native build is a Mix task. Active software tests use ExUnit. Dormant Python
 protocol/process drivers have been retired; their unexecuted cells remain open.
 
-[WTH.13](../../docs/packages/wotex-thread/specs/WTH.13-native-backend.md) fixes source/build pins, typed IPC,
+[WTH.07](../../docs/packages/wotex-thread/specs/WTH.07-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. On Linux, the native build task builds the
 pinned host, the software build adds a sanitizer host, the simulation RCP and
 native test executables, and the software run executes the native tests and the
@@ -158,8 +158,8 @@ explicitly. Callback names alone do not establish consumer behavioral parity.
 Compatibility requires concrete differential scenarios and independently observed
 software interactions for each advertised operation.
 
-See [protocol and graduation contract](../../docs/packages/wotex-thread/specs/WTH.01-protocol.md),
-[implemented profile](../../docs/packages/wotex-thread/specs/WTH.02-implemented-profile.md),
+See [protocol and graduation contract](../../docs/packages/wotex-thread/specs/WTH.02-protocol.md),
+[implemented profile](../../docs/packages/wotex-thread/specs/WTH.03-implemented-profile.md),
 [primary sources](../../docs/packages/wotex-thread/provenance/primary-sources.md) and
 [executable evidence](../../docs/packages/wotex-thread/provenance/executable-evidence.md).
 
@@ -251,18 +251,18 @@ is described in the
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-thread/plans/software-implementation.md)
-and [specification index](../../docs/packages/wotex-thread/specs/WTH-index.md) define the remaining software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-thread/specs) define the remaining software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
-The [standalone client contract](../../docs/packages/wotex-thread/specs/WTH.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-thread/specs/WTH.05-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](priv/fixtures/contract-v1.json) contains specified,
 unexecuted cases; the scenario tables alone are not executable acceptance evidence.
 
 The [specification catalogue](../../docs/packages/wotex-thread/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-thread/specs/WTH.12-wotex-integration.md)
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-thread/specs/WTH.06-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. These are target requirements; a passing baseline
 gate does not accept the unfinished software profile.

@@ -13,7 +13,7 @@ root `CLAUDE.md`.
 ## Invariants
 
 - Production protocol execution uses the first-party C/C++ Port specified in
-  WBL.13. Generic build/fixture orchestration and assertions use Mix/ExUnit.
+  WBL.07. Generic build/fixture orchestration and assertions use Mix/ExUnit.
   Python is limited to required upstream build tools or justified independent
   test peers.
 - Specifications state contracts declaratively; implementation status and
@@ -57,8 +57,8 @@ root `CLAUDE.md`.
 - `priv/bluez/native/`: the C++17 host, C11 runtime guardian and command
   guardian sources, the vendored JSON header and the libdbus pin
   (`dependencies.json`).
-- Specifications: `docs/packages/wotex-ble/specs/` (WBL.00–WBL.02,
-  WBL.10–WBL.13; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-ble/specs/` (WBL.01–WBL.03,
+  WBL.04–WBL.07; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-ble/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, custody, native-port and integration
   corpora).

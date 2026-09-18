@@ -46,7 +46,7 @@ as full-standard or BTL certification.
 
 The pinned package's `ClientHelper.who_is/3` accepts `low_limit`, `high_limit`,
 `apdu_destination`, `max` and `no_subscribe`. Omitting destination asks the Client
-for a broadcast address. The WBA.11 policy requires explicit configuration and
+for a broadcast address. The WBA.05 policy requires explicit configuration and
 an independently bounded operation owner; the helper's default destination and
 Task timing are not the public lifecycle contract. I-Am is an unconfirmed
 observation without a Who-Is transaction identifier. Sequential `read_properties`

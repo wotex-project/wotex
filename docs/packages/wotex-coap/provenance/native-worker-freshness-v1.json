@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-freshness-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Native Observe freshness admission and protected 24-bit wraparound through the production worker",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

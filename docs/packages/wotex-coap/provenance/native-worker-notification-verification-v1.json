@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-notification-verification-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Protected notifications that fail OSCORE processing are discarded without cancelling the observation; replayed and duplicate notifications deliver no second value",
   "standard": {
     "name": "IETF OSCORE",

@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-exchange-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Production worker unary libcoap OSCORE context, durable sender callback, protected same-stack GET and Block1 POST through public custody; inline responses only",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

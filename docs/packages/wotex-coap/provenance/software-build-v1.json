@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.software-build-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Explicit bounded macOS software build, peer and native-vector probes, manifest publication and read-only reuse",
   "source_identity": {
     "kind": "exact source-file SHA-256 in the manifest workspace identity; no source commit association asserted",

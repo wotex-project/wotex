@@ -2,57 +2,57 @@ schema_version: "1.1.0"
 package: "wotex_bacnet"
 completion_plan: "docs/plans/wotex-bacnet-completion.md"
 specifications:
-  - id: "WBA.00"
+  - id: "WBA.01"
     version: "1.1.1"
-    path: "docs/specs/WBA.00-library-contract.md"
+    path: "docs/specs/WBA.01-library-contract.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}]
     requires: []
     implementation_modules: []
     executable_evidence: [".check.exs", "bin/check_application_free.exs", "bin/check_archive.exs", "docs/provenance/executable-evidence.md"]
     compatibility_classification: "The native callback, ownership, structured-error and Runtime boundaries have local and independent executable contracts, including C09 stress. The claim is limited to the exact accepted software cohort; no publication, hardware, certification or full BACnet conformance follows."
-  - id: "WBA.01"
+  - id: "WBA.02"
     version: "1.1.0"
-    path: "docs/specs/WBA.01-protocol.md"
+    path: "docs/specs/WBA.02-protocol.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "selected BACnet/IP read/write integration; full ASHRAE standard access limited"}]
     requires: []
     implementation_modules: ["Wotex.BACnet.Address", "Wotex.BACnet.BACstack", "Wotex.BACnet.Client", "Wotex.BACnet.Error", "Wotex.BACnet.IPv4", "Wotex.BACnet.PortCall", "Wotex.BACnet.Session", "Wotex.BACnet.StackOwner", "Wotex.BACnet.Value", "Wotex.BACnet"]
     executable_evidence: ["test/wotex/bacnet/bacstack_test.exs", "test/wotex/bacnet/contract_test.exs", "test/wotex/bacnet/dependency_security_test.exs", "test/wotex/bacnet/ipv4_test.exs", "test/wotex/bacnet/mapping_test.exs", "test/wotex/bacnet/port_test.exs", "test/wotex/bacnet/value_test.exs"]
     compatibility_classification: "Selected BACnet/IP read/write and finite COV integration accepted with the later S/N/I software requirements; full ASHRAE standard access, BTL certification and complete BACnet conformance are not claimed."
-  - id: "WBA.02"
+  - id: "WBA.03"
     version: "1.1.0"
-    path: "docs/specs/WBA.02-implemented-profile.md"
+    path: "docs/specs/WBA.03-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "selected BACnet/IP read/write integration; full ASHRAE standard access limited"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
-    requires: ["WBA.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
+    requires: ["WBA.02", "wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.BACnet.Error", "Wotex.BACnet.Mapping", "Wotex.BACnet.Transport", "Wotex.BACnet.Value"]
     executable_evidence: ["test/wotex/bacnet/bacstack_test.exs", "test/wotex/bacnet/contract_test.exs", "test/wotex/bacnet/dependency_security_test.exs", "test/wotex/bacnet/ipv4_test.exs", "test/wotex/bacnet/mapping_test.exs", "test/wotex/bacnet/port_test.exs", "test/wotex/bacnet/value_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs"]
     compatibility_classification: "Implemented URI/scalar and Runtime Property profile, including verified borrowed COV ingress; no claim of full BACnet, certification or consumer parity."
-  - id: "WBA.10"
+  - id: "WBA.04"
     version: "1.1.1"
-    path: "docs/specs/WBA.10-software-contract.md"
+    path: "docs/specs/WBA.04-software-contract.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}]
-    requires: ["WBA.00", "WBA.01", "WBA.02"]
+    requires: ["WBA.01", "WBA.02", "WBA.03"]
     implementation_modules: ["Wotex.BACnet.Address", "Wotex.BACnet.BACstack", "Wotex.BACnet.Client", "Wotex.BACnet.Error", "Wotex.BACnet.IPv4", "Wotex.BACnet.PortCall", "Wotex.BACnet.Session", "Wotex.BACnet.StackOwner", "Wotex.BACnet.Value", "Wotex.BACnet", "Wotex.BACnet.IngressTransport", "Wotex.BACnet.IngressWindow", "Wotex.BACnet.IPv4Packet", "Wotex.BACnet.IPv4Interface", "Wotex.BACnet.StackClient"]
     executable_evidence: ["test/wotex/bacnet/service_boundary_test.exs", "test/wotex/bacnet/character_string_test.exs", "test/wotex/bacnet/stack_lifecycle_test.exs", "test/wotex/bacnet/stack_cov_test.exs", "test/wotex/bacnet/cov_lifecycle_test.exs", "test/wotex/bacnet/native_subscription_test.exs", "test/wotex/bacnet/runtime_stream_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs", "test/wotex/bacnet/ingress_window_test.exs", "test/wotex/bacnet/ipv4_packet_test.exs", "test/wotex/bacnet/ipv4_interface_test.exs"]
     compatibility_classification: "Typed services, COV, bounded owned UDP lifecycle, discovery, batch, release, Runtime observation, ACK loss, fault transitions and stress have local and pinned C-peer evidence for the exact accepted cohort."
-  - id: "WBA.11"
+  - id: "WBA.05"
     version: "1.1.1"
-    path: "docs/specs/WBA.11-standalone-client-and-preservation.md"
+    path: "docs/specs/WBA.05-standalone-client-and-preservation.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}]
-    requires: ["WBA.00", "WBA.10"]
+    requires: ["WBA.01", "WBA.04"]
     implementation_modules: ["Wotex.BACnet", "Wotex.BACnet.Batch", "Wotex.BACnet.Device", "Wotex.BACnet.NativeDiscovery", "Wotex.BACnet.DiscoveryOptions", "Wotex.BACnet.DiscoveryWindow", "Wotex.BACnet.DiscoveryOwner"]
     executable_evidence: ["test/wotex/bacnet/service_boundary_test.exs", "test/wotex/bacnet/cov_test.exs", "test/wotex/bacnet/discovery_values_test.exs", "test/wotex/bacnet/discovery_window_test.exs", "test/wotex/bacnet/batch_test.exs", "test/wotex/bacnet/discovery_lifecycle_test.exs", "test/wotex/bacnet/standalone_contract_test.exs"]
     compatibility_classification: "Native helpers, original tagged values, bounded discovery and sequential Property batches have F01–F11 local bindings plus independent workflow and C09 stress evidence for the accepted cohort."
-  - id: "WBA.12"
+  - id: "WBA.06"
     version: "1.1.1"
-    path: "docs/specs/WBA.12-wotex-integration.md"
+    path: "docs/specs/WBA.06-wotex-integration.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
-    requires: ["WBA.00", "WBA.10", "WBA.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
+    requires: ["WBA.01", "WBA.04", "WBA.05", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.BACnet", "Wotex.BACnet.Mapping", "Wotex.BACnet.Transport", "Wotex.BACnet.RuntimeRelay", "Wotex.BACnet.Error"]
     executable_evidence: ["test/wotex/bacnet/runtime_integration_test.exs", "test/wotex/bacnet/runtime_stream_test.exs", "test/wotex/bacnet/runtime_frame_test.exs", "test/wotex/bacnet/error_class_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs", "bin/check_archive.exs", "test/fixtures/archive_reference_consumer.exs"]
     compatibility_classification: "ConsumedThing requests, observations, metadata, I-F01–I-F07 projections and borrowed ingress admission have local and independent software evidence. WBA-A01–WBA-A04 add an exact-archive external consumer without claiming a published release or downstream parity."

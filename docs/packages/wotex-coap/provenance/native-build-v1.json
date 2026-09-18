@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-build-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Explicit bounded macOS native build, manifest publication, runtime binding and read-only reuse",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

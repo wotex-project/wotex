@@ -13,7 +13,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
 ## Invariants
 
 - Production protocol execution uses the first-party C/C++ Port specified in
-  WTH.13. Generic build/fixture orchestration and assertions use Mix/ExUnit.
+  WTH.07. Generic build/fixture orchestration and assertions use Mix/ExUnit.
   Python is limited to required upstream build tools or justified independent
   test peers.
 - Specifications state contracts declaratively; implementation status and
@@ -57,8 +57,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
   (`dependencies.json`); `priv/provenance/native-advisories.json`: native
   advisory reviews; `bin/`: the archive, application-free and native advisory
   checks.
-- Specifications: `docs/packages/wotex-thread/specs/` (WTH.00–WTH.02,
-  WTH.10–WTH.13; `catalogue.yaml` owns status). Plans, security policy and
+- Specifications: `docs/packages/wotex-thread/specs/` (WTH.01–WTH.03,
+  WTH.04–WTH.07; `catalogue.yaml` owns status). Plans, security policy and
   evidence: `docs/packages/wotex-thread/plans/`, `security.md` and
   `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, native-port and integration corpora);

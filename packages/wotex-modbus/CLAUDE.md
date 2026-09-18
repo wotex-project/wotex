@@ -47,8 +47,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
 - `lib/wotex/modbus/error.ex`: structured errors, effect and Runtime classes.
 - `lib/mix/tasks/`: the explicit software-peer tasks; `bin/`: the
   candidate-archive and application-free checks run by the gate.
-- Specifications: `docs/packages/wotex-modbus/specs/` (WMB.00–WMB.02,
-  WMB.10–WMB.14; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-modbus/specs/` (WMB.01–WMB.03,
+  WMB.04–WMB.08; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-modbus/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (the contract corpus and the integration corpus).
 - Test support: `test/support/` (loopback peer, contract and Runtime fixtures,

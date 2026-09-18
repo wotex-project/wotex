@@ -3,12 +3,12 @@
 The production architecture is Elixir/OTP with pinned BACstack codecs and an
 explicitly owned or borrowed BACnet/IP stack. Independent native C peers are
 software fixtures. No Python process, native executable or NIF supplies the
-production client. WBA.02 defines the implemented profile and
+production client. WBA.03 defines the implemented profile and
 [executable evidence](../provenance/executable-evidence.md) identifies the exact
 tested source, toolchains and cohorts.
 
-Read `CLAUDE.md`, the matching rules and skills, WBA.00, WBA.10, WBA.11,
-WBA.12, the source register and the catalogue before changing this profile.
+Read `CLAUDE.md`, the matching rules and skills, WBA.01, WBA.04, WBA.05,
+WBA.06, the source register and the catalogue before changing this profile.
 The packages below follow their dependency order. A changed package requires
 focused assertions, the complete local gate and every affected native or peer
 cohort.

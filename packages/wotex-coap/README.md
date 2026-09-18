@@ -161,7 +161,7 @@ its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 
 Capabilities expose these as `max_datagram_size` and `max_body_size`.
 The legacy `max_payload_size` key remains a 1152-byte datagram-limit alias,
 not the complete-body ceiling.
-See the [blockwise contract](../../docs/packages/wotex-coap/specs/WCO.03-blockwise.md) for configurable
+See the [blockwise contract](../../docs/packages/wotex-coap/specs/WCO.04-blockwise.md) for configurable
 block sizes, aggregate budgets and the atomic upload profile.
 
 ## Wotex contract
@@ -182,7 +182,7 @@ Callback names alone do not establish consumer behavioral parity.
 The consumer retains its implementation until differential scenarios and
 interoperability gates pass; migration is outside this package.
 
-See [implemented profile](../../docs/packages/wotex-coap/specs/WCO.02-implemented-profile.md),
+See [implemented profile](../../docs/packages/wotex-coap/specs/WCO.03-implemented-profile.md),
 [primary sources](../../docs/packages/wotex-coap/provenance/primary-sources.md) and
 [executable evidence](../../docs/packages/wotex-coap/provenance/executable-evidence.md).
 
@@ -284,25 +284,25 @@ are in [executable evidence](../../docs/packages/wotex-coap/provenance/executabl
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-coap/plans/software-implementation.md)
-and [specification index](../../docs/packages/wotex-coap/specs/WCO-index.md) define the remaining software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-coap/specs) define the remaining software
 profile with exact behavior, limits, failure transitions, acceptance scenarios
 and concrete fixtures.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
-The [standalone client contract](../../docs/packages/wotex-coap/specs/WCO.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-coap/specs/WCO.06-standalone-client-and-preservation.md)
 defines native workflows and feature-preservation obligations. Its concrete
 fixture corpus contains specified cases; execution results remain in provenance.
 
 The [specification catalogue](../../docs/packages/wotex-coap/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-coap/specs/WCO.12-wotex-integration.md)
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-coap/specs/WCO.07-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. These are target requirements; a passing baseline
 gate does not accept the unfinished software profile.
 
 ## Native build and software orchestration
 
-[WCO.13](../../docs/packages/wotex-coap/specs/WCO.13-native-build-and-software-evidence.md) defines
+[WCO.08](../../docs/packages/wotex-coap/specs/WCO.08-native-build-and-software-evidence.md) defines
 the implemented package tasks `wotex.native.build`, `wotex.software.build` and
 `wotex.software.run`, each taking `--workspace ABS`; from the repository root
 run `mix native.build --package wotex-coap --workspace ABS` and

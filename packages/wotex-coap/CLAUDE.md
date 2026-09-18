@@ -61,8 +61,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
 - `native/oscore/`: the C helper (worker, exchange, observation, custody,
   store), vendored yyjson, the libcoap source pin (`source.json`) and ordered
   patches.
-- Specifications: `docs/packages/wotex-coap/specs/` (WCO.00–WCO.03,
-  WCO.10–WCO.13; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-coap/specs/` (WCO.01–WCO.04,
+  WCO.05–WCO.08; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-coap/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, custody, native and integration
   corpora); DTLS PKI material in `test/fixtures/dtls_pki/`

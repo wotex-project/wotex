@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.software-run-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability plus same-stack OSCORE sessions through the Mix-built native helper, the WCO-C09 lifecycle stress lane for all four transports and native-v1 corpus cases through the same helper, with ExUnit-owned peers and bounded cleanup",
   "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=\"$SAME_ROOT_AS_BUILD\" mix wotex.software.run --workspace \"$ABSOLUTE_COMPLETED_SOFTWARE_WORKSPACE\"",
   "platform": {

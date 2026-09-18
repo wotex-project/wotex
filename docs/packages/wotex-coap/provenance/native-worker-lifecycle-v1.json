@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-lifecycle-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Same-binary native lifecycle through custody, durable open, bounded upload body, finite pre-network request failure and close; no libcoap exchange acceptance",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

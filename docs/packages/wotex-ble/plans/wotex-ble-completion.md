@@ -29,22 +29,22 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-ble/`; th
 durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WBL.00](../specs/WBL.00-library-contract.md) and
-[WBL.10](../specs/WBL.10-software-contract.md). Follow the
+[WBL.01](../specs/WBL.01-library-contract.md) and
+[WBL.04](../specs/WBL.04-software-contract.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The mandatory target also includes [WBL.11 standalone API and preservation](../specs/WBL.11-standalone-client-and-preservation.md).
+The mandatory target also includes [WBL.05 standalone API and preservation](../specs/WBL.05-standalone-client-and-preservation.md).
 The ordered software plan assigns its N requirements and concrete F cases to
 implementation packages; parsed fixtures and scenario identifiers alone do not
 accept those packages.
 
-The [WBL.12 integration contract](../specs/WBL.12-wotex-integration.md) and
+The [WBL.06 integration contract](../specs/WBL.06-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
-The [WBL.13 native backend contract](../specs/WBL.13-native-backend.md)
+The [WBL.07 native backend contract](../specs/WBL.07-native-backend.md)
 requires a first-party compiled Port and Mix/ExUnit software tooling.
 Python is permitted only for required upstream build tools or an explicitly
 justified independent software peer. It is not part of production execution.

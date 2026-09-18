@@ -30,22 +30,22 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-thread/`;
 this document is a durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WTH.00](../specs/WTH.00-library-contract.md) and
-[WTH.10](../specs/WTH.10-software-contract.md). Follow the
+[WTH.01](../specs/WTH.01-library-contract.md) and
+[WTH.04](../specs/WTH.04-software-contract.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The mandatory target also includes [WTH.11 standalone API and preservation](../specs/WTH.11-standalone-client-and-preservation.md).
+The mandatory target also includes [WTH.05 standalone API and preservation](../specs/WTH.05-standalone-client-and-preservation.md).
 The ordered software plan assigns its N requirements and concrete F cases to
 implementation packages; parsed fixtures and scenario identifiers alone do not
 accept those packages.
 
-The [WTH.12 integration contract](../specs/WTH.12-wotex-integration.md) and
+The [WTH.06 integration contract](../specs/WTH.06-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
-The [WTH.13 native backend contract](../specs/WTH.13-native-backend.md)
+The [WTH.07 native backend contract](../specs/WTH.07-native-backend.md)
 requires a first-party compiled Port and Mix/ExUnit software tooling.
 Python is permitted only for required upstream build tools or an explicitly
 justified independent software peer. It is not part of production execution.

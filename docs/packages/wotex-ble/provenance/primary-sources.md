@@ -2,7 +2,7 @@
 
 The selected software platform is BlueZ 5.85 commit
 `2123ab772fbe97d1369fc9e179ea87c3469cf98f`, with the libdbus 1.16.2 C API.
-[WBL.13](../specs/WBL.13-native-backend.md) records verified source archive hashes,
+[WBL.07](../specs/WBL.07-native-backend.md) records verified source archive hashes,
 compiler/runtime lanes and the separate permitted fixture dependencies.
 
 - [Bluetooth Core 6.3 ATT](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v6.3/out/en/host/attribute-protocol--att-.html)

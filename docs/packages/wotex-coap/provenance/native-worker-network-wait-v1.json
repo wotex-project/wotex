@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-network-wait-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Readiness-driven protected exchanges: the production worker waits on libcoap network readiness and timers together with its owner pipes",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

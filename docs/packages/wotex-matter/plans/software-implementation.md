@@ -2,20 +2,20 @@
 
 This sequence defines acceptance of the native Matter controller profile.
 [Current implementation evidence](../provenance/executable-evidence.md) identifies
-implemented cells; [WMA.13](../specs/WMA.13-native-backend.md) owns native
+implemented cells; [WMA.08](../specs/WMA.08-native-backend.md) owns native
 build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
 1. Read `CLAUDE.md` and matching repository rules/skills.
-2. Read [WMA.00 — shared software rules](../specs/WMA.00-library-contract.md).
-3. Read [WMA.10 — exact target profile](../specs/WMA.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [WMA.11 — standalone API, preservation and concrete corpus](../specs/WMA.11-standalone-client-and-preservation.md).
+2. Read [WMA.01 — shared software rules](../specs/WMA.01-library-contract.md).
+3. Read [WMA.05 — exact target profile](../specs/WMA.05-software-contract.md), then the existing protocol/current-profile specifications linked there.
+4. Read [WMA.06 — standalone API, preservation and concrete corpus](../specs/WMA.06-standalone-client-and-preservation.md).
 5. Read [primary source pins and access limits](../provenance/primary-sources.md).
 6. Select the first work package below whose acceptance evidence is absent.
 
 Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WMA.12 — Wotex integration](../specs/WMA.12-wotex-integration.md) before choosing
+[WMA.07 — Wotex integration](../specs/WMA.07-wotex-integration.md) before choosing
 implementation work. The catalogue lists dependencies and records implementation
 status. Source presence, fixture presence, passing baseline tests and accepted
 work packages are separate facts.

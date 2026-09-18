@@ -33,7 +33,7 @@ waivers. See the [security posture](../security.md) and the dependency-security 
 
 ## Acceptance boundary
 
-[WBL.13](../specs/WBL.13-native-backend.md) defines the required native binary,
+[WBL.07](../specs/WBL.07-native-backend.md) defines the required native binary,
 Mix/ExUnit tasks, exact version lanes and credit/resource tests. The executed
 component, startup and BEAM credit cases are identified below; unlisted native
 build and software-flow requirements remain open. A passing current gate,
@@ -274,7 +274,7 @@ executables pass against private daemons. The
 ExUnit test command
 guardian owns the daemon's process group and bounds command time/output/cleanup.
 The fixture does not open the host system or session bus. Exact libdbus source
-identity is specified in WBL.13; the selected fixture requires explicit source
+identity is specified in WBL.07; the selected fixture requires explicit source
 and build directories and rejects a runtime library version mismatch.
 
 The same fixture exercises source/path/signature-checked signal listeners,

@@ -39,7 +39,7 @@ The independent software fixture remains
 
 ## Standalone source authority
 
-WMB.11 preserves the eight named function helpers and float helpers already in
+WMB.05 preserves the eight named function helpers and float helpers already in
 the native API. Its exact wire examples were checked against the official
 Application Protocol V1.1b3 sections listed above. Typed engineering-value
 composition, strict map admission and the fixture oracle are library policy.

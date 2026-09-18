@@ -3,7 +3,7 @@
 The selected OpenThread SDK is v2026.09.0 commit
 `5c8c318627954c99cd1a957a290bbd4b1027d04b`. Exact archive, Mbed TLS/framework and
 source-fix hashes are in `priv/openthread/dependencies.json` and
-[WTH.13](../specs/WTH.13-native-backend.md). This is SDK-derived software behavior;
+[WTH.07](../specs/WTH.07-native-backend.md). This is SDK-derived software behavior;
 the complete Thread normative text is not reviewed and certification is not claimed.
 
 - [Dataset API](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/include/openthread/dataset.h)

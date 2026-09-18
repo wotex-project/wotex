@@ -17,7 +17,7 @@ separate authorities. Source inspection is not execution or certification.
 
 The exact [source manifest](../../../../packages/wotex-opcua/priv/fixtures/native-sources-v1.json) records
 observed SHA-256 for downloaded source archives. Source hashes prove byte
-identity, not successful compilation. WOP.13 defines all required build lanes.
+identity, not successful compilation. WOP.07 defines all required build lanes.
 
 - [open62541 1.5.7 client](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client.h): explicit lifecycle, noReconnect/noNewSession and client-local namespace mapping.
 - [Typed asynchronous service API](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client_highlevel_async.h): request ID/response callbacks and cancellation primitives. WOP uses bounded asynchronous services; synchronous Cancel does not satisfy the event-loop budget.
@@ -34,7 +34,7 @@ revision value. The source manifest now records one narrow, reproducible patch
 to retain that Double, expose it for an active Session and reset it on cleanup.
 The patch preserves upstream notices and changes neither signature verification
 nor policy selection. The real loopback SDK regression and remaining secure
-owner requirements are recorded in executable evidence and WOP.13.
+owner requirements are recorded in executable evidence and WOP.07.
 
 [Opex62541](https://opex62541.hexdocs.pm/introduction.html) already provides an
 Elixir/open62541 stdio Port architecture. At source

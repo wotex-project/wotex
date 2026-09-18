@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-owner-cleanup-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Best-effort protected Observe cancellation and bounded production-custody cleanup after abrupt owner EOF",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

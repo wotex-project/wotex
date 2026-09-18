@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-store-sequence-limit-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "native-v1 WCO-N-F07: a sender sequence of 2^40 through the patched SDK send path and the durable store",
   "standard": {
     "name": "IETF OSCORE",

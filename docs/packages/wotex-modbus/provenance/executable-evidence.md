@@ -21,7 +21,7 @@ invalid frames; the independent C peer is not presented as an injected simulator
 That cohort executed the Python version of `test/interop/run_software.sh`
 and ExUnit. The current shell entry point executes the Mix task. The native protocol peer is C; the
 production client is BEAM TCP. These results do not validate the
-[WMB.13 Mix tasks](../specs/WMB.13-native-build-and-software-evidence.md).
+[WMB.07 Mix tasks](../specs/WMB.07-native-build-and-software-evidence.md).
 
 ## Requirement evidence
 
@@ -44,7 +44,7 @@ warnings-as-errors compilation, formatting and behavioral tests. Static checks,
 coverage, docs and the candidate-archive consumer run as explicit release lanes.
 That gate description and the receipts and gate results recorded here predate
 the full standard gate that `mix check` now runs, as described in
-[WMB.14](../specs/WMB.14-release-candidate-dossier.md).
+[WMB.08](../specs/WMB.08-release-candidate-dossier.md).
 `bin/check_archive.exs` builds exact core, Runtime and Modbus archives, installs
 them through an isolated signed Hex registry alongside the exact locked public
 dependencies, verifies an all-Hex lock and archive digests, and executes direct
@@ -59,7 +59,7 @@ and lock digests. Relevant source changes require fresh software and archive
 evidence; a prior result cannot validate new code, package contents or tools.
 
 The eight-function client, standalone and Runtime contracts are implemented.
-WMB.13 Mix orchestration has committed-source task results on both toolchains at
+WMB.07 Mix orchestration has committed-source task results on both toolchains at
 its checked-in receipt revision. Separately retained P07 results cover the later
 hard whole-VM opening interruption assertion on both toolchains at `e016cac`.
 This evidence supplies neither a

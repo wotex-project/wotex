@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.native-worker-stale-traffic-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "Protected helper generations isolated from peer state left by an earlier client on a reused UDP endpoint",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

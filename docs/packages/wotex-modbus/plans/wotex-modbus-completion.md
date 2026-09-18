@@ -32,18 +32,18 @@ Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-modbus/`;
 this document is a durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
-[WMB.00](../specs/WMB.00-library-contract.md) and
-[WMB.10](../specs/WMB.10-software-contract.md), plus the mandatory
-[WMB.11 standalone/preservation contract](../specs/WMB.11-standalone-client-and-preservation.md). Follow the
+[WMB.01](../specs/WMB.01-library-contract.md) and
+[WMB.04](../specs/WMB.04-software-contract.md), plus the mandatory
+[WMB.05 standalone/preservation contract](../specs/WMB.05-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
 
-The [WMB.12 integration contract](../specs/WMB.12-wotex-integration.md) and
+The [WMB.06 integration contract](../specs/WMB.06-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
-[WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) defines native build and software
+[WMB.07](../specs/WMB.07-native-build-and-software-evidence.md) defines native build and software
 runner contracts. Mix/ExUnit owns orchestration; BEAM/OTP TCP owns protocol
 execution, and the libmodbus C peer is an independent test fixture.
 

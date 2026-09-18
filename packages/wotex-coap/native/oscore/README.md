@@ -3,7 +3,7 @@
 The native target uses libcoap 4.3.5, identified by the archive, ordered patch
 hashes and resulting source hashes in [source.json](source.json). Builds must
 verify all three stages; an unmodified upstream build is not this target.
-[WCO.13](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/specs/WCO.13-native-build-and-software-evidence.md) owns the
+[WCO.08](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/specs/WCO.08-native-build-and-software-evidence.md) owns the
 Port, durable storage and build contract. `main.c`, `worker.c` and `exchange.c`
 implement the same-binary custody entry and the first production libcoap
 exchange slice. The explicit Mix task `wotex.coap.native.build` builds and

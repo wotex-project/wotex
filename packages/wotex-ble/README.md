@@ -89,7 +89,7 @@ launches the SDK only through the guardian, and opens a fresh report-credit
 generation before the peer. Persistent mode requires that cohort; no interpreter
 backend remains. Complete public software-peer/stress evidence remains required.
 
-[WBL.13](../../docs/packages/wotex-ble/specs/WBL.13-native-backend.md) fixes source/build pins, typed IPC,
+[WBL.07](../../docs/packages/wotex-ble/specs/WBL.07-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. Native value reports are admitted through a
 64-frame/1 MiB BEAM ledger and receive cumulative byte-exact credit only after
 their stream owner admits final receiver delivery; retirement consumes only the
@@ -183,7 +183,7 @@ native value codec selectors. Every explicit contentType and Runtime credential
 is rejected before backend I/O. Runtime owns public stream identity; the relay
 releases its original session on owner loss or cancellation.
 
-See the [implemented profile](../../docs/packages/wotex-ble/specs/WBL.02-implemented-profile.md),
+See the [implemented profile](../../docs/packages/wotex-ble/specs/WBL.03-implemented-profile.md),
 [primary sources](../../docs/packages/wotex-ble/provenance/primary-sources.md) and
 [executable evidence](../../docs/packages/wotex-ble/provenance/executable-evidence.md).
 
@@ -281,19 +281,19 @@ same qualified tasks.
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-ble/plans/software-implementation.md)
-and [specification index](../../docs/packages/wotex-ble/specs/WBL-index.md) define the remaining software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-ble/specs) define the remaining software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
-The [standalone client contract](../../docs/packages/wotex-ble/specs/WBL.11-standalone-client-and-preservation.md)
+The [standalone client contract](../../docs/packages/wotex-ble/specs/WBL.05-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](priv/fixtures/contract-v1.json) contains specified
 inputs and outcomes. Executable tests cite the cases they implement; the corpus
 file and scenario tables alone do not establish acceptance of the whole profile.
 
 The [specification catalogue](../../docs/packages/wotex-ble/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-ble/specs/WBL.12-wotex-integration.md)
+profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-ble/specs/WBL.06-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. The implemented mapping and relay cover part of these requirements. A passing
 baseline gate does not accept the unfinished software-peer and stress profile.

@@ -1,6 +1,6 @@
 {
   "schema": "wotex.ble.native-build-evidence@1",
-  "specification": "WBL.13@1.0.19",
+  "specification": "WBL.07@1.0.19",
   "scope": "Explicit Mix native build of the first-party BlueZ SDK host, runtime guardian, pinned shared libdbus and private-bus fixture daemon in disposable Linux workspaces",
   "source_identity": {
     "kind": "exact source-file SHA-256; no source commit association asserted",

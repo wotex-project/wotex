@@ -1,6 +1,6 @@
 {
   "schema": "wotex.coap.clean-source-evidence@1",
-  "specification": "WCO.13@1.7.0",
+  "specification": "WCO.08@1.7.0",
   "scope": "mix check from fresh clones of committed sources, including the Hex archive and out-of-tree compilation gate, on both required Elixir/OTP runtimes",
   "source_identity": {
     "kind": "git clone --no-local of each committed HEAD inside the container; no working-tree copy",

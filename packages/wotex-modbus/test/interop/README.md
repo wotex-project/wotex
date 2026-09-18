@@ -22,7 +22,7 @@ and retain JSON outcomes and log hashes. Required setup, missing replies and
 unverified cleanup fail the run. Each supported toolchain needs a separate run.
 No Python executable is required.
 
-[WMB.13](../../../../docs/packages/wotex-modbus/specs/WMB.13-native-build-and-software-evidence.md) specifies
+[WMB.07](../../../../docs/packages/wotex-modbus/specs/WMB.07-native-build-and-software-evidence.md) specifies
 native ownership and acceptance. [Executable evidence](../../../../docs/packages/wotex-modbus/provenance/executable-evidence.md)
 binds completed runs to exact source identities. The native guardian owns Docker
 through create/start, and the task suite hard-kills a child BEAM VM during that

@@ -2,20 +2,20 @@
 
 This sequence defines acceptance of the native OpenThread host profile.
 [Current implementation evidence](../provenance/executable-evidence.md) identifies
-implemented cells; [WTH.13](../specs/WTH.13-native-backend.md) owns native
+implemented cells; [WTH.07](../specs/WTH.07-native-backend.md) owns native
 build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
 1. Read the root and `packages/wotex-thread` `CLAUDE.md` and matching repository rules/skills.
-2. Read [WTH.00 — shared software rules](../specs/WTH.00-library-contract.md).
-3. Read [WTH.10 — exact target profile](../specs/WTH.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [WTH.11 — standalone API, preservation and concrete corpus](../specs/WTH.11-standalone-client-and-preservation.md).
+2. Read [WTH.01 — shared software rules](../specs/WTH.01-library-contract.md).
+3. Read [WTH.04 — exact target profile](../specs/WTH.04-software-contract.md), then the existing protocol/current-profile specifications linked there.
+4. Read [WTH.05 — standalone API, preservation and concrete corpus](../specs/WTH.05-standalone-client-and-preservation.md).
 5. Read [primary source pins and access limits](../provenance/primary-sources.md).
 6. Select the first work package below whose acceptance evidence is absent.
 
 Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WTH.12 — Wotex integration](../specs/WTH.12-wotex-integration.md) before choosing
+[WTH.06 — Wotex integration](../specs/WTH.06-wotex-integration.md) before choosing
 implementation work. The catalogue lists dependencies and distinguishes planned
 contracts from narrow implemented profiles. Source presence, fixture presence,
 passing baseline tests and accepted work packages are separate facts.

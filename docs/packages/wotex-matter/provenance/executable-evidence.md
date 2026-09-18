@@ -24,7 +24,7 @@ The development package no longer contains `Wotex.Matter.SDK`, its Python
 bridge, or the Python bridge tests. `Wotex.Matter.Native` is the selected
 first-party controller for persistent and one-shot use. The removed factory
 option has no equivalent native credential-import contract; callers must
-provide the explicit existing-store or creation options in WMA.13. The generic
+provide the explicit existing-store or creation options in WMA.08. The generic
 `Client` injection boundary remains for consumers and tests. Upstream pinned
 SDK generation still uses Python at build time and is recorded separately.
 
@@ -163,7 +163,7 @@ envelope, element objects and child arrays require separate representation depth
 aggregate keys/values, collection size, duplicate keys, UTF-8, integer precision
 and encoded byte limits. The persistent-owner test rejects duplicate ready
 fields before returning a handle. These are the executable basis for the
-WMA.00/WMA.13 representation-depth correction.
+WMA.01/WMA.08 representation-depth correction.
 
 `WOTEX_PATH_DEPS=1 mix run bin/check_p07_native.exs` rebuilds both complete native
 controller variants with the uriparser 1.0.2 security override and passes all six
@@ -408,7 +408,7 @@ The current gate passes 125 checks with seven interop cases excluded; the
 35-case persistent/interaction/subscription suite passes on both required BEAM
 versions. Native C++ sources and the pinned binary identities are unchanged.
 
-WMA.11 version 1.1.0 named reads now validate the returned path and descriptor
+WMA.06 version 1.1.0 named reads now validate the returned path and descriptor
 against the requested attribute. WMA-C02 option validation rejects non-keyword
 lists before client entry, and event batch indexing validates each bounded
 entry/path without destructuring untrusted input. Duplicate normalized paths
@@ -442,7 +442,7 @@ controller usable. The default suite passes 114 checks with seven interop cases
 excluded. Coverage is 89.7% in this cohort; the required 95% release gate remains
 unsatisfied and its threshold and exclusions are unchanged.
 
-WMA.10 and WMA.11 version 1.1.1 specify complete bounded event history.
+WMA.05 and WMA.06 version 1.1.1 specify complete bounded event history.
 `StandaloneBoundaryTest` adds regressions for multiple reports on one event path,
 request-path grouping, ascending event numbers, explicit errors and empty filtered
 history. Duplicate fabric/node/event identities, conflicting per-path status,
@@ -572,7 +572,7 @@ in either Linux lane after the tests.
 | Thermostat | `80e8ed183ebee68ed7344de6eac6a936c15c2039117fc84be09de45984baa28a` | `0e0e8e566842b36a6722570528cbf9acf161e00e1a4c70221a46e078bb2775ff` |
 | Bridge | `3cf5c9ab3329195031bb04e45783c30b64d064adad71edb5b3996d879aab2885` | `dbb29de848dfd41cb6eed0a145373e13157b8dc51a42525a4b48ae67182592cb` |
 
-[WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
+[WMA.08](../specs/WMA.08-native-backend.md) defines the complete native binary,
 Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
 at their stated deterministic and native-compilation boundaries, and P08a is
 executed at its public Runtime/injected-port boundary. P09 still requires all

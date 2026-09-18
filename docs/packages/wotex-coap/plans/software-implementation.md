@@ -28,14 +28,14 @@ executed cohort and its limits. The ordered packages define acceptance.
 ## Read before changing code
 
 1. Read `CLAUDE.md` and matching repository rules/skills.
-2. Read [WCO.00 — shared software rules](../specs/WCO.00-library-contract.md).
-3. Read [WCO.10 — exact target profile](../specs/WCO.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [WCO.11 — standalone APIs, preservation and exact fixtures](../specs/WCO.11-standalone-client-and-preservation.md).
+2. Read [WCO.01 — shared software rules](../specs/WCO.01-library-contract.md).
+3. Read [WCO.05 — exact target profile](../specs/WCO.05-software-contract.md), then the existing protocol/current-profile specifications linked there.
+4. Read [WCO.06 — standalone APIs, preservation and exact fixtures](../specs/WCO.06-standalone-client-and-preservation.md).
 5. Read [primary source pins and access limits](../provenance/primary-sources.md).
 6. Select the first work package below whose acceptance evidence is absent.
 
 Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WCO.12 — Wotex integration](../specs/WCO.12-wotex-integration.md) before choosing
+[WCO.07 — Wotex integration](../specs/WCO.07-wotex-integration.md) before choosing
 implementation work. The catalogue lists dependencies and distinguishes planned
 contracts from narrow implemented profiles. Source presence, fixture presence,
 passing tests and accepted work packages are separate facts.
@@ -163,7 +163,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 
 ## Reproducible software fixture contract
 
-[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) is authoritative
+[WCO.08](../specs/WCO.08-native-build-and-software-evidence.md) is authoritative
 for the implemented build and software-run tasks, native source pins,
 manifests, deadlines, cleanup and result schemas.
 The command contract, from the repository root (`mix pkg` runs the package's
