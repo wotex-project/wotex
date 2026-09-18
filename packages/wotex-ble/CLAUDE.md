@@ -74,7 +74,17 @@ root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-ble test test/wotex/ble/<file>_test.exs`, or `mix impact Wotex.BLE.Module fun --run` |
 | 1 | `mix check.fast --package wotex-ble` |
-| 2 | `mix check.affected` (full gate here) |
+| 2 | `mix check` (full gate here) |
+
+Native code (`priv/bluez/native/`, `test/native/`, `test/interop/native/`):
+`mix native.lint --package wotex-ble` checks clang-format on the changed
+lines (`--fix` formats them). The full gate adds `native_lint` (clang-tidy;
+the D-Bus host and the bus test need the Linux libdbus build) and
+`native_test` (on Linux, `test/interop/native_bus_test.exs` and
+`native_host_test.exs` against that build; the other native tests run in
+the ExUnit suite). On another host the Linux suite fails with a message.
+`priv/bluez/native/vendor/` is never formatted or linted, and
+`native_custody_test.exs` pins the digest of `custody.c`.
 
 The full gate alone is `mix pkg wotex-ble check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-ble`); it adds

@@ -18,12 +18,19 @@ skill.
 | Find callers in every package | `mix refs Module [fun]` |
 | Tests that cover a change | `mix impact Module [fun]` (`--run` runs them) |
 | Run anything in a package | `mix pkg <name> <task> [args]`, e.g. `mix pkg wotex-coap test test/wotex/coap/blockwise_test.exs` |
-| Package ready | `mix check.fast --package <name>` |
-| Before a commit | `mix check.affected`, plus `mix workspace` when root files, `tooling/` or docs changed |
+| Package ready | `mix check.fast --package <name>` (includes `mix native.lint` for native packages) |
+| C, C++ or Rust changed | `mix native.lint --package <name>` (`--fix` formats); `--tidy` and `mix native.test --package <name>` before the commit |
+| Before a commit | `mix check` (root self-check, full gate of changed packages, fast gate of dependents) |
 | Repository-wide change only | `mix check.all` |
 
 - Never run every package's gate, Dialyzer across packages, or the native,
   software-profile, interop or containment lanes for a bounded change.
+- A package gate (`mix check` inside the package) formats, lints and tests
+  its first-party C, C++ and Rust code too: `native_format`, `native_lint`
+  (clang-tidy, clippy) and `native_test` run the root `mix native.lint` and
+  `mix native.test`, which build into a cached workspace outside the
+  repository. Format checks apply to changed lines; vendored and pinned files
+  (`.clang-format-ignore`) are never reformatted.
 - Run `mix dialyzer.pkg <name>` when a typespec, callback or inferred return
   type changed; otherwise the pre-commit gate runs Dialyzer for changed
   packages only.

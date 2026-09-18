@@ -56,7 +56,7 @@ supervision. Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-binding-http test test/wotex/binding/http/<file>_test.exs`, or `mix impact Wotex.Binding.HTTP.Transport request --run` |
 | 1 | `mix check.fast --package wotex-binding-http` |
-| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+| 2 | `mix check` (full gate here, fast gate in `wotex-lab`) |
 
 The full gate alone is `mix pkg wotex-binding-http check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside the package); it

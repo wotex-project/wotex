@@ -344,7 +344,12 @@ describes the workflow and validation tiers. Sibling packages resolve from
 mix pkg wotex-lab test test/wotex/lab/thermal_test.exs  # one test file
 mix check.fast --package wotex-lab                      # compile, format, Credo, tests
 mix pkg wotex-lab check --no-retry                      # full gate
+mix native.lint --package wotex-lab                     # cargo fmt --check, clippy
+mix native.test --package wotex-lab                     # cargo test
 ```
+
+The full gate also formats, lints and tests the Rust launcher (`cargo fmt`,
+clippy, `cargo test`); see [Native code](https://github.com/wotex-project/wotex/blob/main/docs/guides/development.md#native-code).
 
 The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-lab`. It runs warnings-as-errors compilation, locked and

@@ -69,7 +69,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-continuum test test/wotex_continuum/<file>_test.exs`, or `mix impact WotexContinuum.Codec decode --run` |
 | 1 | `mix check.fast --package wotex-continuum` |
-| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+| 2 | `mix check` (full gate here, fast gate in `wotex-lab`) |
 
 The full gate alone is `mix pkg wotex-continuum check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside

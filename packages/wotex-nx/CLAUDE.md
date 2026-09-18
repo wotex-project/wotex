@@ -56,7 +56,7 @@ only numerical semantics. Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-nx test test/wotex/nx/<file>_test.exs`, or `mix impact Wotex.Nx.Encoder encode --run` |
 | 1 | `mix check.fast --package wotex-nx` |
-| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+| 2 | `mix check` (full gate here, fast gate in `wotex-lab`) |
 
 The full gate alone is `mix pkg wotex-nx check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-nx`); it adds

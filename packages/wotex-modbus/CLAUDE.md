@@ -63,7 +63,14 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-modbus test test/wotex/modbus/<file>_test.exs`, or `mix impact Wotex.Modbus.Module fun --run` |
 | 1 | `mix check.fast --package wotex-modbus` |
-| 2 | `mix check.affected` (full gate here) |
+| 2 | `mix check` (full gate here) |
+
+Native code (`test/interop/native/`, `test/interop/libmodbus/server.c`): `mix
+native.lint --package wotex-modbus` checks clang-format on the changed lines
+(`--fix` formats them). The full gate adds `native_lint` (clang-tidy; the
+fixture server against the pinned libmodbus headers of
+`wotex.modbus.software.build`, which needs Docker) and `native_test` (the
+sanitized guardian check).
 
 The full gate alone is `mix pkg wotex-modbus check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-modbus`); it

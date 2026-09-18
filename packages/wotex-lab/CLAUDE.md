@@ -80,7 +80,12 @@ are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-lab test test/wotex/lab/<file>_test.exs`, or `mix impact Wotex.Lab.Runner start --run` |
 | 1 | `mix check.fast --package wotex-lab` |
-| 2 | `mix check.affected` (full gate here; Lab has no dependents) |
+| 2 | `mix check` (full gate here; Lab has no dependents) |
+
+Rust (`priv/conformance/native/`): `mix native.lint --package wotex-lab` runs
+`cargo fmt --check` and clippy with `-D warnings` (`--fix` formats); the full
+gate adds `native_test` (`cargo test --all-features --locked`). The toolchain
+is pinned in the root `rust-toolchain.toml` (`mise install`).
 
 The full gate alone is `mix pkg wotex-lab check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-lab`). Beyond

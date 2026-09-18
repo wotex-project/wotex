@@ -9,8 +9,8 @@ Run the gates proportional to the change (see the `monorepo-workflow` skill and
 `.claude/rules/affected-validation.md`), from the repository root:
 
 ```sh
-mix check.affected        # full gate for changed packages, fast gate for dependents
-mix workspace             # when root files, tooling/ or documentation changed
+mix check                 # mix workspace, then the full gate for changed packages
+                          # and the fast gate for dependents (mix check.affected)
 ```
 
 The full gate of one package is `mix pkg <name> check --no-retry`
@@ -18,7 +18,10 @@ The full gate of one package is `mix pkg <name> check --no-retry`
 locked dependencies, warnings-as-errors compilation, formatting, Credo strict,
 Doctor, dependency audits, ExDoc with warnings as errors, tests with the 95%
 coverage floor, Dialyzer, the archive check and, where present, the boundary
-scan (`bin/check_boundary.exs`) and the application-free check.
+scan (`bin/check_boundary.exs`) and the application-free check. A package with
+C, C++ or Rust code adds `native_format` (clang-format on changed lines,
+rustfmt), `native_lint` (clang-tidy, clippy) and `native_test` (its native
+tests); a suite that cannot run on the host fails with a message.
 
 For a completion or readiness claim, additionally confirm:
 

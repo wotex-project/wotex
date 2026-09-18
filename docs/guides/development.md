@@ -8,7 +8,7 @@ root [`CLAUDE.md`](../../CLAUDE.md).
 ## Setup
 
 ```sh
-mise install        # Erlang, Elixir and Dexter pinned in mise.toml
+mise install        # Erlang, Elixir, Rust and Dexter pinned in mise.toml
 mix setup           # dependencies for the root and every package, Dexter index
 ```
 
@@ -40,16 +40,21 @@ tests.
 
 | Tier | When | Command | Runs |
 | --- | --- | --- | --- |
-| 0 | While editing | `mix pkg <name> test <files>`, `mix impact Module fun --run` | The tests next to the change |
-| 1 | A package change is ready | `mix check.fast --package <name>` | Compile with warnings as errors, format check, Credo strict, the package's tests |
-| 2 | Before a commit | `mix check.affected` | The full gate for changed packages; the fast gate for their dependents |
+| 0 | While editing | `mix pkg <name> test <files>`, `mix impact Module fun --run`; `mix native.lint --package <name>` for C, C++ or Rust | The tests next to the change; native formatting and Rust lint |
+| 1 | A package change is ready | `mix check.fast --package <name>` | Compile with warnings as errors, format check, Credo strict, the package's tests and, for a package with native code, `mix native.lint` |
+| 2 | Before a commit | `mix check` | `mix workspace`, then the full gate for changed packages and the fast gate for their dependents (`mix check.affected`) |
 | 3 | Repository-wide change, CI, explicit request | `mix check.all` | Workspace checks and every package's full gate |
 
 A package's full gate is its `.check.exs`, run by `mix check --no-retry`:
 locked dependencies, compilation, formatting, Credo, Doctor, dependency
 audits, ExDoc with warnings as errors, tests with the 95% coverage floor,
 Dialyzer, the archive check and, where present, the boundary scan
-(`bin/check_boundary.exs`) and the application-free check.
+(`bin/check_boundary.exs`) and the application-free check. A package with
+native code adds `native_format`, `native_lint` and `native_test` (see
+[Native code](#native-code)), so a green gate means its Elixir and its C,
+C++ or Rust code are formatted, linted and tested. `mix check` at the root
+means the same for everything a change reaches; `mix check --base REF`
+passes the base to `check.affected`.
 
 ### Dialyzer
 
@@ -73,6 +78,55 @@ repository-wide Dialyzer run.
 
 `mix affected --detail` shows the selection and why.
 
+## Native code
+
+First-party C, C++ and Rust code is formatted, linted and tested like the
+Elixir code. Vendored and digest-pinned files are listed in
+`.clang-format-ignore` and are never formatted or analysed.
+
+| Step | C and C++ | Rust |
+| --- | --- | --- |
+| Format | clang-format with the root `.clang-format`, on changed lines | `cargo fmt --check` |
+| Lint | clang-tidy with the root `.clang-tidy` | `cargo clippy --all-targets --all-features --locked -- -D warnings` |
+| Test | the package's native tests (CTest, test executables, native ExUnit suites) | `cargo test --all-features --locked` |
+
+```sh
+mix native.lint --package wotex-coap          # format check on changed lines, rustfmt, clippy
+mix native.lint --fix --package wotex-coap    # apply clang-format to the changed lines, cargo fmt
+mix native.lint --tidy --package wotex-coap   # add clang-tidy (builds the native workspace)
+mix native.test --package wotex-coap          # native tests
+```
+
+- **Changed lines.** The C and C++ sources predate `.clang-format`, and
+  formatting them whole would rewrite about a fifth of their lines, so the
+  check applies to the lines a change touches since the merge base with
+  `origin/main` (or `--base REF`), and to new files in full. Lines older than
+  the commit that introduced `.clang-format` are not reported until a change
+  touches them. `.h` files are C headers and `.hpp` files C++ headers.
+- **Tools.** clang-format and clang-tidy 22 or later (CI pins LLVM 23):
+  `brew install llvm` on macOS; on Debian or Ubuntu the `clang-format-23`
+  and `clang-tidy-23` packages from apt.llvm.org. `CLANG_FORMAT` and
+  `CLANG_TIDY` name other executables. Rust comes from `rust-toolchain.toml`
+  (`mise install`).
+- **Suites.** Each native package declares `native_check` suites in
+  `tooling/packages.yaml`: the build task whose workspace provides SDK headers
+  and libraries, the compile commands clang-tidy uses, and the test commands.
+  Every first-party translation unit needs a compile command from some suite.
+- **Workspaces.** A suite's build runs in a cached workspace outside the
+  repository, `$WOTEX_NATIVE_CACHE` or `wotex-native` in the system temporary
+  directory, keyed by a digest of the package's files other than Markdown:
+  the first run builds, later runs of the same sources reuse it, and a
+  workspace the build task refuses is rebuilt. `--workspace /abs/dir` names
+  the build task's workspace instead, for example one built by
+  `mix native.build`.
+- **Host requirements.** A suite that needs Linux (the BlueZ D-Bus host and
+  the OpenThread SDK host) or Docker (the Matter SDK build, the BACnet and
+  Modbus peers) fails with a message on a host without it; nothing is
+  skipped silently.
+- **Findings.** clang-tidy findings fail the check. A false positive gets a
+  `NOLINTNEXTLINE(check)` or `NOLINTBEGIN`/`NOLINTEND` comment with the
+  reason; `.clang-tidy` lists each disabled check with its reason.
+
 ## Explicit lanes
 
 Native builds, software profiles, interop suites and containment lanes need
@@ -94,16 +148,21 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
 
 - **Affected**: `mix wotex.affected --json` selects packages.
 - **Workspace**: root compile, format, Credo, tests, catalogue drift, docs
-  links, native source pins, the sibling-API boundary, and shared-file and
-  LICENSE checks.
+  links, native source pins, `mix native.lint --all` (clang-format on the
+  changed lines of every package, rustfmt, clippy) with LLVM 23 from
+  apt.llvm.org and Rust 1.97.1, `cargo test` of the Rust crate, the
+  sibling-API boundary, and shared-file and LICENSE checks.
 - **Check**: every affected package's gate on two lanes, minimum
   (Elixir 1.18.4, OTP 27.3.4.15) and current (Elixir 1.20.2, OTP 29.0.4). The
   minimum lane skips static analysis whose results depend on the compiler
-  version (`lanes.minimum.skip` in `tooling/packages.yaml`); the current lane
-  runs everything.
+  version and the native tools (`lanes.minimum.skip` in
+  `tooling/packages.yaml`); the current lane runs everything, including
+  clang-tidy and the native tests, with native build workspaces cached per
+  package.
 - **Archive**: package archives and their consumers.
 - **Native**: the native and software-profile lanes, nightly, on dispatch, or
-  on pull requests labelled `native`.
+  on pull requests labelled `native`; after the native build it runs
+  `mix native.lint --tidy` and `mix native.test` against that build.
 
 ## Adding a package
 
@@ -116,4 +175,7 @@ gate with archive, application-free and boundary scripts, a `CLAUDE.md`
 package contract and a `README.md` with installation and development
 sections. Then run `mix pkg <name> deps.get` and
 `mix pkg <name> check --no-retry`, and add the package to the package tables
-of the root README and `docs/README.md`.
+of the root README and `docs/README.md`. A package that gains C, C++ or Rust
+code sets `native: true`, declares its `native_check` suites in
+`tooling/packages.yaml` and adds the `native_format`, `native_lint` and
+`native_test` tools of a native package's `.check.exs` to its own.

@@ -79,7 +79,7 @@ implementation. Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-conformance test test/wotex/conformance/<file>_test.exs`, or `mix impact Wotex.Conformance.Runner run --run` |
 | 1 | `mix check.fast --package wotex-conformance` |
-| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+| 2 | `mix check` (full gate here, fast gate in `wotex-lab`) |
 
 The full gate alone is `mix pkg wotex-conformance check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside

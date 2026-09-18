@@ -84,7 +84,7 @@ identifier ports. Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-directory test test/wotex/directory/<file>_test.exs`, or `mix impact Wotex.Directory register --run` |
 | 1 | `mix check.fast --package wotex-directory` |
-| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+| 2 | `mix check` (full gate here, fast gate in `wotex-lab`) |
 
 The full gate alone is `mix pkg wotex-directory check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside

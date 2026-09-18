@@ -61,7 +61,7 @@ interaction mechanics. Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-binding-mqtt test test/wotex/binding/mqtt/<file>_test.exs`, or `mix impact Wotex.Binding.MQTT.Mapping command --run` |
 | 1 | `mix check.fast --package wotex-binding-mqtt` |
-| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+| 2 | `mix check` (full gate here, fast gate in `wotex-lab`) |
 
 The full gate alone is `mix pkg wotex-binding-mqtt check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside the package); it

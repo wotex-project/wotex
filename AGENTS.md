@@ -12,8 +12,10 @@ Work from the repository root:
   not repository-wide text search.
 - Test what the change reaches: `mix pkg <name> test <files>` or
   `mix impact Module [fun] --run`.
-- `mix check.fast --package <name>` when a package is ready,
-  `mix check.affected` before a commit.
+- `mix check.fast --package <name>` when a package is ready, `mix check`
+  before a commit. For C, C++ or Rust changes, `mix native.lint --package
+  <name>` (`--fix` formats) while editing; the package gate adds clang-tidy
+  and the native tests.
 - Never run every package's gate or Dialyzer across packages for a bounded
   change, and never start native or interop lanes unless asked.
 

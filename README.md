@@ -46,6 +46,8 @@ docs/architecture/      family-level architecture and the import record
 docs/tasks/local/       ignored; the only place for machine-local execution state
 tooling/                the package manifest (packages.yaml) and the one-time import scripts
 .claude/                shared agent rules and skills; package CLAUDE.md files stay package contracts
+.clang-format, .clang-tidy, .clang-format-ignore, rust-toolchain.toml
+                        native formatting, static analysis, exclusions and the Rust toolchain
 ```
 
 `docs/` is for people. Code never reads from `docs/`: fixtures, schemas and
@@ -54,7 +56,7 @@ machine-read provenance live in each package's `priv/`.
 ## Working on a package
 
 ```sh
-mise install        # Erlang, Elixir and Dexter pinned in mise.toml
+mise install        # Erlang, Elixir, Rust and Dexter pinned in mise.toml
 mix setup           # dependencies for the root and every package, Dexter index
 ```
 
@@ -70,14 +72,18 @@ Validation is proportional to the change:
 | When | Command |
 | --- | --- |
 | While editing | `mix pkg <name> test <files>`, or `mix impact Module fun --run` |
+| C, C++ or Rust edited | `mix native.lint --package <name>` (`--fix` formats the changed lines) |
 | A package change is ready | `mix check.fast --package <name>` |
-| Before a commit | `mix check.affected` (full gate for changed packages, fast gate for dependents) |
+| Before a commit | `mix check` (root self-check, full gate for changed packages, fast gate for dependents) |
 | Repository-wide change only | `mix check.all` |
 
-`mise.toml` pins the current toolchain (Elixir 1.20.2, OTP 29.0.4); CI also
-verifies the declared minimum (Elixir 1.18.4, OTP 27.3.4.15). See the
-[development guide](docs/guides/development.md) for Dexter, Dialyzer, the
-explicit native lanes and CI.
+A package's full gate covers its native code: clang-format on changed lines,
+clang-tidy and the native tests for C and C++, rustfmt, clippy and `cargo
+test` for Rust. `mise.toml` pins the current toolchain (Elixir 1.20.2, OTP
+29.0.4, Rust 1.97.1); CI also verifies the declared minimum (Elixir 1.18.4,
+OTP 27.3.4.15) and pins LLVM 23 for clang-format and clang-tidy. See the
+[development guide](docs/guides/development.md) for Dexter, Dialyzer, native
+code, the explicit native lanes and CI.
 
 | Command | What it does |
 | --- | --- |
@@ -88,8 +94,9 @@ explicit native lanes and CI.
 | `mix refs MODULE [FUN]` | Dexter references, grouped by package and `lib`/`test`, repository-relative. Reindexes changed files first. |
 | `mix impact MODULE [FUN] [--run]` | The test files to run for a change: test files referencing the target plus test files referencing the modules that reference it (one hop), grouped by package; `--run` runs them per package. |
 | `mix test.affected [--base REF] [--package NAME]... [FILES...]` | Given repository-relative `FILES`, runs them in their packages; otherwise `mix test --stale` in the changed packages and their dependents. |
-| `mix check.fast [--package NAME]...` | Inner-loop gate for the selected (default: changed) packages: compile with warnings as errors, format check, `credo --strict`, `mix test`. |
-| `mix check.affected [--base REF]` | Pre-commit gate: the full `mix check --no-retry` for changed packages, `check.fast` for dependents. |
+| `mix check.fast [--package NAME]...` | Inner-loop gate for the selected (default: changed) packages: compile with warnings as errors, format check, `credo --strict`, `mix test`, and `mix native.lint` for packages with native code. |
+| `mix check [--base REF]` | Pre-commit gate: `mix workspace`, then `mix check.affected` (the arguments go to `check.affected`). |
+| `mix check.affected [--base REF]` | The full `mix check --no-retry` for changed packages, `check.fast` for dependents. |
 | `mix check.all` | CI-equivalent: workspace checks plus every package's full gate. Heavy; only for repository-wide changes or on explicit request. |
 | `mix workspace` | Root self-check: compile, format, credo, root tests, catalogue drift, documentation links, sibling-API boundary of changed packages. |
 | `mix format.all [--check] [--all]` | `mix format` in the root and every changed package (`--all`: every package). |
@@ -101,6 +108,8 @@ explicit native lanes and CI.
 | `mix native.build --package NAME --workspace /abs/dir` | Runs a package's native build task in a disposable absolute workspace. Explicit only. |
 | `mix native.sources` | Lists pinned native sources and verifies the digests of files present locally. |
 | `mix native.advisories [--offline]` | Queries OSV for advisories against the pinned native sources. |
+| `mix native.lint [--all] [--package NAME]... [--base REF] [--fix] [--tidy [--workspace /abs/dir]] [--no-format] [--no-clippy]` | First-party native code of the selected (default: changed) packages: clang-format on the C and C++ lines changed since the merge base (`--fix` applies it), rustfmt and clippy; `--tidy` adds clang-tidy with the compile commands of the package's native build. Vendored files (`.clang-format-ignore`) are skipped. Needs LLVM 22 or later (`brew install llvm`, or `clang-format-23`/`clang-tidy-23` from apt.llvm.org). |
+| `mix native.test [--all] [--package NAME]... [--workspace /abs/dir]` | Native tests of the selected packages: `cargo test`, CTest and the test executables of each `native_check` suite in `tooling/packages.yaml`, after its build task. |
 | `mix wotex.*` | The underlying tasks remain available: `wotex.affected`, `wotex.check`, `wotex.archive`, `wotex.boundary`, `wotex.catalogue`, `wotex.new` and one task per command above; `mix help wotex.<task>` documents each. |
 
 The default selection of `check`, `boundary` and `archive` is the affected

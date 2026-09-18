@@ -69,7 +69,17 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-matter test test/wotex/matter/<file>_test.exs`, or `mix impact Wotex.Matter.Module fun --run` |
 | 1 | `mix check.fast --package wotex-matter` |
-| 2 | `mix check.affected` (full gate here) |
+| 2 | `mix check` (full gate here) |
+
+Native code (`native/`, `test/native/`): `mix native.lint --package
+wotex-matter` checks clang-format on the changed lines (`--fix` formats
+them). The full gate adds `native_lint` and `native_test`: the SDK-free value
+library and its CTest build on the host; the SDK-bound sources build in the
+pinned linux/amd64 container (`wotex.matter.native.build`, Docker), which
+runs their CTest suite, normal and sanitized. clang-tidy has no compile
+commands for the SDK-bound translation units outside that container, so
+`native_lint` reports them as not analysed. The `.inc` peer fragments follow
+the SDK's style and are excluded.
 
 The full gate alone is `mix pkg wotex-matter check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-matter`); it

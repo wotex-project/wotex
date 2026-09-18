@@ -51,7 +51,7 @@ any package:
 - `spec-delivery` when implementing an accepted specification or changing
   public behavior, values, errors, compatibility, or a standards claim.
 - `quality-gates` before a commit, handoff, or completion claim (proportional
-  gates: `mix check.affected`, `mix workspace`).
+  gates: `mix check`).
 - `release-readiness` before an archive, release candidate, tag, or public
   compatibility claim.
 

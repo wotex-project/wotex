@@ -78,7 +78,16 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-coap test test/wotex/coap/<file>_test.exs`, or `mix impact Wotex.CoAP.Module fun --run` |
 | 1 | `mix check.fast --package wotex-coap` |
-| 2 | `mix check.affected` (full gate here) |
+| 2 | `mix check` (full gate here) |
+
+Native code (`native/oscore/`, `test/native/`): `mix native.lint --package
+wotex-coap` checks clang-format on the changed lines (`--fix` formats them).
+The full gate adds `native_lint` (clang-tidy with compile commands against
+the pinned libcoap headers) and `native_test` (the twelve fault and vector
+executables of `wotex.coap.software.build`, which needs Java); both build
+into a cached workspace outside the repository. `mix native.test --package
+wotex-coap` runs the tests alone. `native/oscore/vendor/` is never formatted
+or linted.
 
 The full gate alone is `mix pkg wotex-coap check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-coap`); it

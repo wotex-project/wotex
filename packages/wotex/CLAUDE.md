@@ -56,7 +56,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex test test/wotex/<file>_test.exs`, or `mix impact Wotex.ThingDescription parse --run` |
 | 1 | `mix check.fast --package wotex` |
-| 2 | `mix check.affected` (full gate here, fast gate in every dependent) |
+| 2 | `mix check` (full gate here, fast gate in every dependent) |
 
 The full gate alone is `mix pkg wotex check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex`); it adds

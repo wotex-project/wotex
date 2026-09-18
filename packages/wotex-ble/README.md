@@ -195,7 +195,13 @@ describes the workflow and validation tiers.
 mix pkg wotex-ble test test/wotex/ble/mapping_test.exs  # one test file
 mix check.fast --package wotex-ble                      # compile, format, Credo, tests
 mix pkg wotex-ble check --no-retry                      # full gate
+mix native.lint --package wotex-ble                     # clang-format on changed C/C++ lines
+mix native.test --package wotex-ble                     # native tests
 ```
+
+The full gate also checks the first-party C and C++ code: clang-format on the
+changed lines, clang-tidy and the native tests, built in a cached workspace
+outside the repository; see [Native code](https://github.com/wotex-project/wotex/blob/main/docs/guides/development.md#native-code).
 
 The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-ble`. It compiles with warnings as errors, checks the lock and

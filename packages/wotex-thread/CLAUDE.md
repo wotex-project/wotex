@@ -74,7 +74,14 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-thread test test/wotex/thread/<file>_test.exs`, or `mix impact Wotex.Thread.Module fun --run` |
 | 1 | `mix check.fast --package wotex-thread` |
-| 2 | `mix check.affected` (full gate here) |
+| 2 | `mix check` (full gate here) |
+
+Native code (`priv/openthread/`, `test/native/`, `test/fixtures/*.c`):
+`mix native.lint --package wotex-thread` checks clang-format on the changed
+lines (`--fix` formats them). The full gate adds `native_lint` (clang-tidy)
+and `native_test`: the SDK-free protocol tests (CTest) on any host and, on
+Linux, the OpenThread host build and the SDK-bound Spinel test; on another
+host the Linux suite fails with a message.
 
 The full gate alone is `mix pkg wotex-thread check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-thread`); it

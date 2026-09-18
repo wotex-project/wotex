@@ -71,7 +71,15 @@ Repository-wide rules are in the root `CLAUDE.md`.
 | --- | --- |
 | 0 | `mix pkg wotex-opcua test test/wotex/opcua/<file>_test.exs`, or `mix impact Wotex.OPCUA.Module fun --run` |
 | 1 | `mix check.fast --package wotex-opcua` |
-| 2 | `mix check.affected` (full gate here) |
+| 2 | `mix check` (full gate here) |
+
+Native code (`priv/native/`, `test/native/`): `mix native.lint --package
+wotex-opcua` checks clang-format on the changed lines (`--fix` formats them).
+The full gate adds `native_lint` (clang-tidy with the CMake compile commands
+against the pinned open62541 build) and `native_test` (that build's CTest
+suite), in a cached workspace outside the repository; `mix native.test
+--package wotex-opcua` runs the tests alone. `priv/native/vendor/` is never
+formatted or linted.
 
 The full gate alone is `mix pkg wotex-opcua check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-opcua`); it

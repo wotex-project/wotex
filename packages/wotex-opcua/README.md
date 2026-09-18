@@ -219,7 +219,13 @@ describes the workflow and validation tiers.
 mix pkg wotex-opcua test test/wotex/opcua/value_test.exs  # one test file
 mix check.fast --package wotex-opcua                      # compile, format, Credo, tests
 mix pkg wotex-opcua check --no-retry                      # full gate
+mix native.lint --package wotex-opcua                     # clang-format on changed C/C++ lines
+mix native.test --package wotex-opcua                     # native tests
 ```
+
+The full gate also checks the first-party C and C++ code: clang-format on the
+changed lines, clang-tidy and the native tests, built in a cached workspace
+outside the repository; see [Native code](https://github.com/wotex-project/wotex/blob/main/docs/guides/development.md#native-code).
 
 The ordinary test run excludes the `interop`, `software`, `hardware` and
 `native_build` tags. It needs a C11 compiler (`cc`): the native client, JSON,
