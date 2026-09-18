@@ -12,7 +12,8 @@ provenance live in each package's `priv/`.
 | `packages/<name>/plans/` | The package's versioned completion contract. |
 | `packages/<name>/decisions/` | Package-level decision records. |
 | `packages/<name>/provenance/` | Standards provenance, pinned sources and recorded evidence of the package. |
-| `packages/<name>/security.md` | Package security posture (where present). |
+| `packages/<name>/security.md` | Package security posture. |
+| `packages/<name>/*.md` | Other package-level documents that are neither specification nor plan, such as the HTTP and MQTT bindings' inventories and baselines and the Continuum threat model. |
 | `catalogue.yaml` | The family catalogue, generated from every package catalogue by `mix wotex.catalogue`; never edited by hand. |
 | `architecture/` | Family-level architecture: the package graph, the repository layout, the import record. |
 | `decisions/` | Family-level decision records. |
