@@ -47,6 +47,8 @@ defmodule WotexOPCUA.MixProject do
       {:stream_data, "~> 1.2", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -135,12 +137,14 @@ defmodule WotexOPCUA.MixProject do
           "priv/native/security.md",
           "priv/native/value-codec.md"
         ] ++
-          Path.wildcard("../../docs/packages/wotex-opcua/{specs,plans,provenance}/*.md"),
+          Path.wildcard("../../docs/packages/wotex-opcua/{specs,plans,provenance}/*.md") ++
+          Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         Native: ~r{^priv/native/},
         Specifications: ~r{/docs/packages/wotex-opcua/specs/},
         Plans: ~r{/docs/packages/wotex-opcua/plans/},
-        Provenance: ~r{/docs/packages/wotex-opcua/provenance/}
+        Provenance: ~r{/docs/packages/wotex-opcua/provenance/},
+        Benchmarks: ~r/bench\/output/
       ],
       source_url: @source_url,
       source_ref: "wotex-opcua-v#{@version}",
