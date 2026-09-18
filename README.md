@@ -3,6 +3,9 @@
 **W3C Web of Things for Elixir: values, runtime, directory, bindings, protocol
 adapters, conformance and a consumer laboratory, in one repository.**
 
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 This repository holds the WoTEx package family as independent Mix projects
 under `packages/`. It is not an umbrella project: every package has its own
 `mix.exs`, lock file, version and Hex package name, and is verified on its
