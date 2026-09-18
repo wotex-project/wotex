@@ -124,6 +124,7 @@ authorization or untrusted-input validation boundary.
 | `ConsumedThing.new/2` | validated TD, ordered profiles, explicit transport map and credential port | No process/network; rejects duplicate profile ids and missing callbacks; `consumed_thing_test.exs` |
 | `FormSelector.select/5` | TD, affordance type/name, exact operation, ordered profiles | Selection or typed absence; never credential resolution; `form_selector_test.exs` |
 | `Request.from_selection/3` | selection, context, input | Credential-free request retaining request identity/deadline; `value_test.exs` |
+| `ExecutionContext.new/2` | context, opaque credential or `nil` | Ephemeral pair for one immediate transport call; lets a transport implementation and its tests call the port directly; grants no authority |
 | `Result.new/4` | request identity, operation, payload, `:ok` or `:accepted` status, metadata | Protocol result only; protocol status detail lives in metadata; `value_test.exs` |
 | `Result.validate/1` | a Result returned by a transport | Rechecks identity, operation, status and metadata limits even for a forged struct |
 | `Limits.all/0`, `maximum/1` | the four fixed Runtime admission limits | Public, deterministic values; no environment lookup |

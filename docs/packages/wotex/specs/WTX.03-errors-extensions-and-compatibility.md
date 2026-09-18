@@ -20,7 +20,9 @@ those errors. Stable fields are:
   this field is not universally safe to log.
 
 Raising variants use the same exception value. Error messages are not a stable
-matching interface.
+matching interface. `Wotex.Error.new/5` is the public constructor of this
+value; sibling packages use it to report a failure at the `wotex` boundary or
+to translate one into their own error module.
 
 This five-field shape (`code`, `phase`, `path`, `message`, `details`) is the
 WoTEx family error convention. Sibling packages define their own error module

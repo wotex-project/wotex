@@ -32,7 +32,15 @@ defmodule Wotex.Error do
   @enforce_keys [:code, :phase, :message]
   defexception [:code, :phase, :message, path: "/", details: %{}]
 
-  @doc false
+  @doc """
+  Builds a typed error with an explicit code, phase, message, path and details.
+
+  This is the family's error constructor: sibling packages use it to report a
+  failure at the `wotex` boundary or to translate one into their own error
+  module. `path` defaults to the document root and `details` to an empty map.
+  The constructor does not sanitize or bound its arguments; callers keep
+  credentials and unbounded source documents out of `message` and `details`.
+  """
   @spec new(atom(), phase(), String.t(), String.t(), map()) :: t()
   def new(code, phase, message, path \\ "/", details \\ %{})
       when is_atom(code) and is_atom(phase) and is_binary(message) and is_binary(path) and

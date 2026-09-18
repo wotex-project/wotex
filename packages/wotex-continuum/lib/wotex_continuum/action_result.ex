@@ -60,9 +60,16 @@ defmodule WotexContinuum.ActionResult do
           extensions: map()
         }
 
+  @doc "Returns the `kind` discriminator that identifies an Action result on the wire."
+  @spec kind() :: String.t()
   @impl WotexContinuum.Value
   def kind, do: @kind
 
+  @doc """
+  Validates untrusted map input, or revalidates an already accepted struct,
+  into an Action result. See `c:WotexContinuum.Value.from_map/1`.
+  """
+  @spec from_map(map() | t()) :: {:ok, t()} | {:error, Error.t()}
   @impl WotexContinuum.Value
   def from_map(%__MODULE__{output_present?: false, output: nil} = value) do
     value
@@ -140,6 +147,11 @@ defmodule WotexContinuum.ActionResult do
   @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
   def new(data), do: from_map(data)
 
+  @doc """
+  Projects an accepted Action result onto its string-keyed wire map.
+  See `c:WotexContinuum.Value.to_map/1`.
+  """
+  @spec to_map(t()) :: map()
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)

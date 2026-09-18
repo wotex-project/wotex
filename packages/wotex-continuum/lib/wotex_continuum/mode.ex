@@ -31,6 +31,8 @@ defmodule WotexContinuum.Mode do
   @type connectivity :: :connected | :intermittent | :disconnected
   @type t :: %__MODULE__{deployment: deployment(), connectivity: connectivity(), extensions: map()}
 
+  @doc "Returns the `kind` discriminator that identifies a mode on the wire."
+  @spec kind() :: String.t()
   @impl WotexContinuum.Value
   def kind, do: @kind
 
@@ -42,6 +44,11 @@ defmodule WotexContinuum.Mode do
   @spec connectivity_states() :: nonempty_list(connectivity())
   def connectivity_states, do: @connectivity_states
 
+  @doc """
+  Validates untrusted map input, or revalidates an already accepted struct,
+  into a mode. See `c:WotexContinuum.Value.from_map/1`.
+  """
+  @spec from_map(map() | t()) :: {:ok, t()} | {:error, Error.t()}
   @impl WotexContinuum.Value
   def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
@@ -64,6 +71,11 @@ defmodule WotexContinuum.Mode do
   @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
   def new(data), do: from_map(data)
 
+  @doc """
+  Projects an accepted mode onto its string-keyed wire map.
+  See `c:WotexContinuum.Value.to_map/1`.
+  """
+  @spec to_map(t()) :: map()
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)

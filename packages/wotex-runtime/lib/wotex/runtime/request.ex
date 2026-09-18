@@ -41,7 +41,16 @@ defmodule Wotex.Runtime.Request do
   ]
   defstruct @enforce_keys
 
-  @doc false
+  @doc """
+  Builds the credential-free request for a selected Form.
+
+  The request copies the operation, affordance, Form, resolved href and
+  binding profile from `selection`, takes the request identity and deadline
+  from `context`, and carries `input` unchanged. Runtime calls it before every
+  transport exchange; a `Wotex.Runtime.Transport` implementation and its tests
+  use it to build the same request a consumer operation would send. No
+  credential is ever part of the value.
+  """
   @spec from_selection(Selection.t(), Context.t(), term()) :: t()
   def from_selection(%Selection{} = selection, %Context{} = context, input) do
     %__MODULE__{

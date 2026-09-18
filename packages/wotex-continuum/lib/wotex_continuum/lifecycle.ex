@@ -48,6 +48,8 @@ defmodule WotexContinuum.Lifecycle do
           extensions: map()
         }
 
+  @doc "Returns the `kind` discriminator that identifies a lifecycle state on the wire."
+  @spec kind() :: String.t()
   @impl WotexContinuum.Value
   def kind, do: @kind
 
@@ -55,6 +57,11 @@ defmodule WotexContinuum.Lifecycle do
   @spec states() :: nonempty_list(state())
   def states, do: @states
 
+  @doc """
+  Validates untrusted map input, or revalidates an already accepted struct,
+  into a lifecycle state. See `c:WotexContinuum.Value.from_map/1`.
+  """
+  @spec from_map(map() | t()) :: {:ok, t()} | {:error, Error.t()}
   @impl WotexContinuum.Value
   def from_map(%__MODULE__{} = value), do: from_map(Validation.struct_input(value, [:reason]))
 
@@ -110,6 +117,11 @@ defmodule WotexContinuum.Lifecycle do
   @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
   def new(data), do: from_map(data)
 
+  @doc """
+  Projects an accepted lifecycle state onto its string-keyed wire map.
+  See `c:WotexContinuum.Value.to_map/1`.
+  """
+  @spec to_map(t()) :: map()
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
