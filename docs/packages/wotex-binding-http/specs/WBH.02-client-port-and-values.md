@@ -1,6 +1,6 @@
 # WBH.02: Client port and HTTP values
 
-Specification `WBH.02@1.1.0`; package baseline `wotex_binding_http 0.1.0`.
+Specification `WBH.02@1.1.1`; package baseline `wotex_binding_http 0.1.0`.
 Requires `wotex_runtime:WRT.01`; WBH.01 owns operation mapping and WBH.03 streams.
 
 ## Client callbacks
@@ -116,7 +116,7 @@ Module names below are under `Wotex.Binding.HTTP`.
 | `Codec.encode/2`, `decode/2` | JSON term/binary and explicit positive byte limit; decoding delegates to `Wotex.JSON.decode/2` | Tagged failure without reflecting payload/codec exceptions; structural limits and duplicate members rejected before use |
 | `EmptyBody.new/0` | Explicit no-body marker | Distinct from an encoded JSON null |
 | `SSE.Event` / `Notification` | Framed event data, and the delivery metadata map (`event`, `id`, `retry`, `request_id`, `operation`) accompanying a decoded value | Client frames; binding adapts; no durable Event authority |
-| `Subscription.new/4`, `unwrap/1` | Opaque client handle bound to opening operation/configuration instance | No registry or connection owner; WBH.03 governs close |
+| `Subscription` handle | Opaque client handle bound to the opening operation and configuration instance; constructed and unwrapped only inside the binding | Consumers hold it and pass it back; no registry or connection owner; WBH.03 governs close |
 
 Configured defaults are `max_request_bytes: 1_048_576`,
 `max_response_bytes: 4_194_304`, `max_event_bytes: 1_048_576`,

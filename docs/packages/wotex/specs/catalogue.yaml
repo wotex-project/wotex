@@ -27,7 +27,7 @@ specifications:
     executable_evidence: ["test/wotex/value_test.exs", "test/wotex/admission_safety_test.exs"]
     compatibility_classification: "Existing 0.1 value API plus additive default-operation and affordance Form helpers; context-specific Form validation does not imply runtime support"
   - id: "WTX.03"
-    version: "1.2.0"
+    version: "1.3.0"
     path: "docs/specs/WTX.03-errors-extensions-and-compatibility.md"
     implementation_status: "implemented"
     standards:

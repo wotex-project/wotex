@@ -8,7 +8,7 @@ compatibility_decision:
   qualification: "consumer-visible values, callbacks, deliveries, errors, limits and lifecycle defaults for 0.1.0; no exhaustive export or struct-layout freeze"
 specifications:
   - id: "WRT.01"
-    version: "1.3.1"
+    version: "1.4.0"
     path: "docs/specs/WRT.01-consumed-thing-runtime.md"
     implementation_status: "implemented"
     standards:

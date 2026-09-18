@@ -1,7 +1,7 @@
 # WTX.03: Errors, extension preservation, and compatibility
 
 **Status**: Implemented development contract  
-**Specification version**: 1.2.0
+**Specification version**: 1.3.0
 
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.02

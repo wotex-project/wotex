@@ -18,7 +18,7 @@ specifications:
       - "test/wotex/binding/http/integration_test.exs"
     compatibility_classification: "nine-operation versioned HTTP profile; draft-derived choices remain explicit; pre-release seam correction maps status 202 to the neutral :accepted result and moves the HTTP status code into metadata.http.status"
   - id: "WBH.02"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WBH.02-client-port-and-values.md"
     implementation_status: "implemented"
     standards:
