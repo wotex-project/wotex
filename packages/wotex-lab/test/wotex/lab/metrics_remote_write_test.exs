@@ -167,12 +167,18 @@ defmodule Wotex.Lab.MetricsRemoteWriteTest do
   end
 
   test "snappy blocks round-trip through the independent decoder and refuse malformed input" do
+    # Fixed SHA-256 blocks with no repeated four-byte window: the encoder finds
+    # no copy, so the whole input is one literal run longer than 64 KiB.
+    incompressible =
+      for index <- 0..2_199, into: <<>>, do: :crypto.hash(:sha256, <<"snappy", index::32>>)
+
     inputs = [
       "",
       "a",
       "abcabcabcabcabcabcabcabcabcabc",
       String.duplicate(~s(wotex_lab_metric{profile="thermal"} 1\n), 700),
-      :crypto.strong_rand_bytes(70_000),
+      incompressible,
+      binary_part(incompressible, 0, 65_536),
       String.duplicate("x", 200_000),
       String.duplicate("0123456789", 100) <>
         String.duplicate("z", 70_000) <> String.duplicate("0123456789", 100)
@@ -186,6 +192,14 @@ defmodule Wotex.Lab.MetricsRemoteWriteTest do
     {:ok, block} = Snappy.compress(String.duplicate("x", 200_000))
     assert byte_size(block) < 20_000
 
+    # A literal element holds at most 64 KiB, so the run is split in two.
+    assert {:ok,
+            <<128, 166, 4, 61::6, 0::2, 65_535::little-16, first::binary-size(65_536), 61::6, 0::2,
+              4_863::little-16, second::binary-size(4_864)>>} =
+             Snappy.compress(incompressible)
+
+    assert first <> second == incompressible
+
     literal_only = <<3, 2::6, 0::2, "abc">>
     assert {:ok, "abc"} = Snappy.decompress(literal_only)
     copy_one = <<7, 2::6, 0::2, "abc", 0::3, 0::3, 1::2, 3>>
@@ -198,6 +212,11 @@ defmodule Wotex.Lab.MetricsRemoteWriteTest do
         String.duplicate("y", 100)::binary>>
 
     assert {:ok, "yyyyyyyyyy" <> _} = Snappy.decompress(long_literal)
+
+    # Foreign encoders may spend three or four bytes on a short literal length.
+    assert {:ok, "abc"} = Snappy.decompress(<<3, 62::6, 0::2, 2::little-24, "abc">>)
+    assert {:ok, "abc"} = Snappy.decompress(<<3, 63::6, 0::2, 2::little-32, "abc">>)
+    assert {:error, %Error{code: :malformed_block}} = Snappy.decompress(<<3, 2::6, 0::2, "ab">>)
 
     assert {:error, %Error{code: :malformed_block}} =
              Snappy.decompress(<<255, 255, 255, 255, 255, 255>>)

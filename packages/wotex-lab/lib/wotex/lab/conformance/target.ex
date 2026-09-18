@@ -11,7 +11,8 @@ defmodule Wotex.Lab.Conformance.Target do
   implement as `unsupported`.
 
   `respond/1` is the pure core so the same derivation is testable in-process;
-  `main/1` is the operating-system entry used through a port by the runner.
+  `main/1` is the operating-system entry used through a port by the runner,
+  and `serve/2` is its exchange over any I/O device.
   This is independent consumer evidence about the core package, not an
   independent WoT parser.
   """
@@ -55,28 +56,44 @@ defmodule Wotex.Lab.Conformance.Target do
   @doc """
   Runs the target as an operating-system process: `--archive <path>` then one request line on stdin.
 
-  The UTF-8 request and response pass through unchanged whatever locale the
-  host selects. Both are exchanged in the encoding standard I/O already has
-  rather than switching it: before OTP 28 a `-noshell` node decodes standard
-  input as soon as it arrives, with the encoding the locale selected at boot,
-  so a switch made here would not reach a request the runner wrote before the
-  target read it. A Latin-1 device maps each byte to one character and a
-  Unicode device decodes valid UTF-8 losslessly, so reading and writing in the
-  device's encoding returns the original bytes. A Unicode device that meets
-  invalid UTF-8 falls back to Latin-1; such a request is undecodable.
+  Standard I/O is switched to binary mode and served by `serve/2`; the node
+  halts with the status it returns. The UTF-8 request and response pass
+  through unchanged whatever locale the host selects.
   """
   @spec main([String.t()]) :: no_return()
   def main(args) do
     :ok = :io.setopts(:standard_io, binary: true)
-    unicode? = unicode_stdio?()
+    System.halt(serve(args, :standard_io))
+  end
 
-    case run(args, fn -> read_line(unicode?) end) do
+  @doc """
+  Serves one request line from a binary-mode I/O `device` and writes the response to it.
+
+  Returns the exit status `main/1` halts with: 0 after a response, otherwise
+  the `run/2` failure code. The line is read and the response written in the
+  encoding `device` already has rather than a switched one: before OTP 28 a
+  `-noshell` node decodes standard input as soon as it arrives, with the
+  encoding the locale selected at boot, so a switch made here would not reach
+  a request the runner wrote before the target read it. A Latin-1 device maps
+  each byte to one character and a Unicode device decodes valid UTF-8
+  losslessly, so reading and writing in the device's encoding returns the
+  original bytes. A Unicode device that meets invalid UTF-8 falls back to
+  Latin-1; such a request is undecodable.
+  """
+  @spec serve([String.t()], IO.device()) :: 0 | 11..14
+  def serve(args, device) do
+    unicode? = unicode?(device)
+
+    case run(args, fn -> read_line(device, unicode?) end) do
       {:ok, encoded} ->
-        if unicode?, do: IO.write(encoded <> "\n"), else: IO.binwrite(encoded <> "\n")
-        System.halt(0)
+        if unicode?,
+          do: IO.write(device, encoded <> "\n"),
+          else: IO.binwrite(device, encoded <> "\n")
+
+        0
 
       {:error, code} ->
-        System.halt(code)
+        code
     end
   end
 
@@ -103,18 +120,18 @@ defmodule Wotex.Lab.Conformance.Target do
 
   defp archive(_), do: {:error, 11}
 
-  defp unicode_stdio? do
-    case :io.getopts(:standard_io) do
+  defp unicode?(device) do
+    case :io.getopts(device) do
       options when is_list(options) -> :proplists.get_value(:encoding, options) in [:unicode, :utf8]
       _ -> false
     end
   end
 
-  defp read_line(false), do: IO.binread(:stdio, :line)
+  defp read_line(device, false), do: IO.binread(device, :line)
 
-  defp read_line(true) do
-    line = IO.read(:stdio, :line)
-    if unicode_stdio?(), do: line, else: {:error, :invalid_utf8}
+  defp read_line(device, true) do
+    line = IO.read(device, :line)
+    if unicode?(device), do: line, else: {:error, :invalid_utf8}
   end
 
   defp read_request(line) when is_binary(line) do

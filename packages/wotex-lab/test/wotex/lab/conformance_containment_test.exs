@@ -110,6 +110,92 @@ defmodule Wotex.Lab.ConformanceContainmentTest do
     assert {:error, 14} = Target.run(["--archive", context.archive], fn -> "{" end)
   end
 
+  test "serving a device exchanges UTF-8 bytes in the encoding the device already has",
+       context do
+    args = ["--archive", context.archive]
+
+    document = %{
+      "@context" => Wotex.td_context_1_1(),
+      "title" => "Väderstation ☀",
+      "security" => ["nosec_sc"],
+      "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}}
+    }
+
+    {:ok, line} =
+      Wotex.JSON.encode(%{
+        "claim" => %{"operation" => "thing_description.parse"},
+        "vector" => %{"id" => "utf8", "input" => %{"document" => document}}
+      })
+
+    # A Unicode device decodes the UTF-8 line into characters and a Latin-1
+    # device keeps one character per byte; both must yield the same bytes.
+    for encoding <- [:unicode, :latin1] do
+      {:ok, device} = StringIO.open(line <> "\n", encoding: encoding)
+      assert Target.serve(args, device) == 0
+      {:ok, {"", response}} = StringIO.close(device)
+      assert String.ends_with?(response, "\n")
+
+      assert {:ok, %{"vector_id" => "utf8", "actual" => %{"accepted" => true} = actual}} =
+               Wotex.JSON.decode(response)
+
+      assert actual["document"]["title"] == "Väderstation ☀"
+    end
+
+    {:ok, empty} = StringIO.open("")
+    assert Target.serve(args, empty) == 13
+    assert Target.serve([], empty) == 11
+    assert {:ok, {"", ""}} = StringIO.close(empty)
+
+    # A device that drops to Latin-1 while it reads met invalid UTF-8, so the
+    # line it returns is not the bytes that were sent, even though it decodes.
+    falling_back = scripted_device(line <> "\n", :falls_back)
+    assert Target.serve(args, falling_back) == 14
+    refute_received {:written, _}
+
+    # A device without options is served as bytes.
+    opaque = scripted_device(line <> "\n", :no_options)
+    assert Target.serve(args, opaque) == 0
+    assert_received {:written, response}
+    assert {:ok, %{"actual" => %{"document" => served}}} = Wotex.JSON.decode(response)
+    assert served["title"] == "Väderstation ☀"
+  end
+
+  # A minimal I/O server. With `:falls_back` its encoding drops from Unicode to
+  # Latin-1 when it hands out a line, as a `-noshell` standard input does on
+  # invalid UTF-8; with `:no_options` it does not answer `getopts`.
+  defp scripted_device(line, behaviour) do
+    test = self()
+    encoding = if behaviour == :falls_back, do: :unicode, else: :no_options
+    spawn_link(fn -> scripted(test, line, encoding) end)
+  end
+
+  defp scripted(test, line, encoding) do
+    receive do
+      {:io_request, from, reply_as, request} ->
+        {reply, encoding} =
+          case request do
+            :getopts when encoding == :no_options ->
+              {{:error, :enotsup}, encoding}
+
+            :getopts ->
+              {[binary: true, encoding: encoding], encoding}
+
+            {:get_line, :unicode, _} ->
+              {line, :latin1}
+
+            {:get_line, :latin1, _} ->
+              {line, encoding}
+
+            {:put_chars, _, chars} ->
+              send(test, {:written, IO.iodata_to_binary(chars)})
+              {:ok, encoding}
+          end
+
+        send(from, {:io_reply, reply_as, reply})
+        scripted(test, line, encoding)
+    end
+  end
+
   test "the host profile is path-free evidence for inherited resource and network limits",
        context do
     result =

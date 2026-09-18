@@ -121,7 +121,9 @@ defmodule Wotex.Lab.KernelContainmentTest do
 
     for runtime <- [
           %{context.runtime | executable: "relative"},
+          %{context.runtime | executable: :runtime},
           %{context.runtime | executable: loop},
+          %{context.runtime | executable: context.home},
           %{context.runtime | executable: context.archive},
           %{context.runtime | digest: "sha256:ABC"},
           Map.put(context.runtime, :extra, true),
@@ -147,6 +149,7 @@ defmodule Wotex.Lab.KernelContainmentTest do
           ["/bin/target"],
           ["/bin/target", "{subject_archive}", "{subject_archive}"],
           ["/bin/target", "--archive={subject_archive}"],
+          ["/bin/target", "{subject_archive}", "--archive={subject_archive}"],
           ["/bin/target", :atom, "{subject_archive}"],
           ["/bin/target", "{subject_archive}" | List.duplicate("x", 39)],
           :command
@@ -235,6 +238,7 @@ defmodule Wotex.Lab.KernelContainmentTest do
           [context.code, context.code],
           [Path.join(context.home, "missing")],
           [context.archive],
+          [:mount],
           List.duplicate(context.code, 17),
           :mounts
         ] do
@@ -310,6 +314,72 @@ defmodule Wotex.Lab.KernelContainmentTest do
 
     assert {:error, %Error{code: :invalid_runtime}} =
              KernelContainment.residue("relative", label, temporary_directory: context.home)
+  end
+
+  # The scripted runtime answers `ps` with the container ids listed in
+  # `$HOME/containers`, forgets them on `rm`, and records every argument vector.
+  test "release removes labelled containers through the runtime and verifies none remain",
+       context do
+    label = String.duplicate("b", 32)
+    File.write!(Path.join(context.home, "containers"), "c1\nc2\n")
+
+    runtime =
+      runtime_script(context.home, """
+      echo "$*" >> "$HOME/calls"
+      case "$1" in
+        ps) cat "$HOME/containers" ;;
+        rm) : > "$HOME/containers" ;;
+      esac
+      """)
+
+    opts = [temporary_directory: context.home]
+    assert {:ok, 2} = KernelContainment.residue(runtime, label, opts)
+    assert :ok = KernelContainment.release(runtime, label, opts)
+    assert {:ok, 0} = KernelContainment.residue(runtime, label, opts)
+    assert :ok = KernelContainment.release(runtime, label, opts)
+
+    ps = "ps --all --quiet --filter label=wotex.lab.containment=" <> label
+
+    assert String.split(File.read!(Path.join(context.home, "calls")), "\n", trim: true) ==
+             [ps, ps, "rm --force --volumes c1 c2", ps, ps, ps, ps]
+  end
+
+  test "a runtime that keeps containers, fails, floods or stays silent is a typed error",
+       context do
+    label = String.duplicate("c", 32)
+    opts = [temporary_directory: context.home]
+    File.write!(Path.join(context.home, "containers"), "c1\nc2\n")
+    stuck = runtime_script(context.home, ~s(if [ "$1" = ps ]; then cat "$HOME/containers"; fi\n))
+
+    assert {:error, %Error{code: :containment_residue, details: %{containers: 2}}} =
+             KernelContainment.release(stuck, label, opts)
+
+    failing = runtime_script(context.home, "exit 3\n")
+
+    assert {:error, %Error{code: :runtime_failed, details: %{status: 3}}} =
+             KernelContainment.residue(failing, label, opts)
+
+    assert {:error, %Error{code: :runtime_failed}} =
+             KernelContainment.release(failing, label, opts)
+
+    flooding = runtime_script(context.home, "head -c 1100000 /dev/zero\n")
+
+    assert {:error, %Error{code: :runtime_output_exceeded}} =
+             KernelContainment.residue(flooding, label, opts)
+
+    # The silent runtime waits for standard input, which stays open until the
+    # deadline closes the port, so it can only ever end by that deadline.
+    silent = runtime_script(context.home, "read -r _\n")
+
+    assert {:error, %Error{code: :runtime_timeout}} =
+             KernelContainment.residue(silent, label, [timeout_ms: 50] ++ opts)
+  end
+
+  defp runtime_script(home, body) do
+    path = Path.join(home, "runtime-#{System.unique_integer([:positive])}")
+    File.write!(path, "#!/bin/sh\n" <> body)
+    File.chmod!(path, 0o755)
+    path
   end
 
   defp digest(path),

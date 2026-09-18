@@ -412,8 +412,50 @@ defmodule Wotex.Lab.MetricsBridgeTest do
                url: "http://127.0.0.1:9/"
              })
 
+    assert {:error, %Error{code: :unsupported_credential}} =
+             ReqSink.write(request, {:basic, "user", "bad\r\npassword"}, %{
+               url: "http://127.0.0.1:9/"
+             })
+
+    for headers <- [List.duplicate({"x-test", "v"}, 33), [:header]] do
+      assert {:error, %Error{code: :invalid_sink_request}} =
+               ReqSink.write(%{body: "x", headers: headers}, nil, %{url: "http://127.0.0.1:9/"})
+    end
+
     assert {:error, %Error{code: :transport_failed, class: :unavailable}} =
              ReqSink.write(request, {:basic, "u", "p"}, %{url: "http://127.0.0.1:9/"})
+  end
+
+  test "the Req sink cuts an oversized reply body and reports a silent server as a timeout" do
+    request = %{body: "bounded", headers: [{"content-type", "application/x-protobuf"}]}
+    body = String.duplicate("e", 5_000)
+    reply = "HTTP/1.1 400 Bad Request\r\ncontent-length: 5000\r\n\r\n" <> body
+
+    assert {:ok, %{status: 400, body: cut}} =
+             ReqSink.write(request, nil, %{url: raw_server(reply), max_response_bytes: 16})
+
+    assert byte_size(cut) <= 16
+
+    # The silent server accepts and reads but never answers, so only the
+    # sink's own receive timeout can end the write.
+    assert {:error, %Error{code: :timeout, class: :timeout}} =
+             ReqSink.write(request, nil, %{url: raw_server(nil), receive_timeout: 50})
+  end
+
+  # A loopback listener that reads the first request and sends `reply`, or
+  # nothing, then holds the connection open until the test ends.
+  defp raw_server(reply) do
+    {:ok, listener} = :gen_tcp.listen(0, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, port} = :inet.port(listener)
+
+    spawn_link(fn ->
+      {:ok, socket} = :gen_tcp.accept(listener)
+      {:ok, _} = :gen_tcp.recv(socket, 0)
+      if reply, do: :ok = :gen_tcp.send(socket, reply)
+      Process.sleep(:infinity)
+    end)
+
+    "http://127.0.0.1:#{port}/v1/prometheus/write"
   end
 
   test "sink verifies local TLS and refuses unpinned hosted destinations" do
