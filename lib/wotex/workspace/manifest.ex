@@ -28,7 +28,7 @@ defmodule Wotex.Workspace.Manifest do
     defstruct [:name, :app, depends_on: [], native: false, native_task: nil, software_task: nil]
   end
 
-  @type lane :: %{elixir: String.t(), otp: String.t()}
+  @type lane :: %{elixir: String.t(), otp: String.t(), skip: [String.t()]}
 
   @type t :: %__MODULE__{
           path: Path.t() | nil,
@@ -260,9 +260,15 @@ defmodule Wotex.Workspace.Manifest do
 
   defp parse_lanes(lanes) when is_map(lanes) do
     Enum.reduce_while(lanes, {:ok, %{}}, fn
-      {name, %{"elixir" => elixir, "otp" => otp}}, {:ok, acc}
+      {name, %{"elixir" => elixir, "otp" => otp} = lane}, {:ok, acc}
       when is_binary(name) and is_binary(elixir) and is_binary(otp) ->
-        {:cont, {:ok, Map.put(acc, name, %{elixir: elixir, otp: otp})}}
+        case parse_skip(Map.get(lane, "skip", [])) do
+          {:ok, skip} ->
+            {:cont, {:ok, Map.put(acc, name, %{elixir: elixir, otp: otp, skip: skip})}}
+
+          :error ->
+            {:halt, {:error, "lane #{inspect(name)}: skip must list tool names"}}
+        end
 
       {name, _other}, _acc ->
         {:halt, {:error, "lane #{inspect(name)} must declare elixir and otp"}}
@@ -270,6 +276,12 @@ defmodule Wotex.Workspace.Manifest do
   end
 
   defp parse_lanes(_other), do: {:error, "lanes must be a mapping"}
+
+  defp parse_skip(skip) when is_list(skip) do
+    if Enum.all?(skip, &is_binary/1), do: {:ok, skip}, else: :error
+  end
+
+  defp parse_skip(_other), do: :error
 
   defp parse_globs(globs) when is_list(globs) do
     if Enum.all?(globs, &is_binary/1),

@@ -12,8 +12,11 @@ defmodule Mix.Tasks.Wotex.Check do
     * `--all`: every package, announced as `running the gate of N packages`;
     * `--package NAME`: the named packages (repeatable);
     * `--base REF`: the comparison base for the affected set;
-    * `--lane NAME`: informational; prints the lane's toolchain and warns
-      when the running Elixir differs. CI selects the toolchain;
+    * `--lane NAME`: prints the lane's toolchain, warns when the running
+      Elixir differs (CI selects the toolchain) and passes `--except TOOL`
+      for every tool the lane skips in `tooling/packages.yaml`. The minimum
+      lane runs behaviour tools only; static analysis runs on the current
+      lane;
     * `--env ENV`: export `MIX_ENV=ENV` to the gate commands.
 
   Never run `--all` for a one-package change; see the root `CLAUDE.md`.
@@ -34,7 +37,7 @@ defmodule Mix.Tasks.Wotex.Check do
     opts = parse_args(args)
     manifest = Manifest.load!()
     names = CLI.select!(manifest, opts)
-    report_lane(opts[:lane], manifest)
+    skip = report_lane(opts[:lane], manifest)
 
     cond do
       opts[:all] -> Mix.shell().info("running the gate of #{length(names)} packages")
@@ -42,7 +45,7 @@ defmodule Mix.Tasks.Wotex.Check do
       true -> Mix.shell().info("running the gate of #{Enum.join(names, ", ")}")
     end
 
-    {rows, failed?} = run_gates(names, manifest, opts[:env])
+    {rows, failed?} = run_gates(names, manifest, opts[:env], skip)
     Mix.shell().info("\n" <> Report.table(rows))
     if failed?, do: CLI.fail("gate failed")
     :ok
@@ -60,13 +63,20 @@ defmodule Mix.Tasks.Wotex.Check do
     opts
   end
 
+  @doc "The gate commands for one package, skipping the given `mix check` tools."
+  @spec commands([String.t()]) :: [{String.t(), [String.t()]}]
+  def commands(skip \\ []) do
+    except = Enum.flat_map(skip, &["--except", &1])
+    [{"deps.get", ["deps.get", "--check-locked"]}, {"check", ["check", "--no-retry" | except]}]
+  end
+
   @doc "Runs the gate commands of one package directory; `\"ok\"` on success."
-  @spec gate(Path.t(), String.t() | nil) :: String.t()
-  def gate(path, env) do
+  @spec gate(Path.t(), String.t() | nil, [String.t()]) :: String.t()
+  def gate(path, env, skip \\ []) do
     runner_opts = if env, do: [mix_env: env], else: []
 
     Enum.reduce_while(
-      [{"deps.get", ["deps.get", "--check-locked"]}, {"check", ["check", "--no-retry"]}],
+      commands(skip),
       "ok",
       fn {label, command}, _acc ->
         case Runner.run(path, command, runner_opts) do
@@ -77,11 +87,11 @@ defmodule Mix.Tasks.Wotex.Check do
     )
   end
 
-  defp run_gates(names, manifest, env) do
+  defp run_gates(names, manifest, env, skip) do
     {rows, failed?} =
       Enum.reduce_while(names, {[], false}, fn name, {rows, _failed?} ->
         path = Manifest.absolute_path(name, manifest)
-        {result, seconds} = CLI.timed(fn -> gate(path, env) end)
+        {result, seconds} = CLI.timed(fn -> gate(path, env, skip) end)
         rows = [%{package: name, result: result, seconds: seconds} | rows]
         if result == "ok", do: {:cont, {rows, false}}, else: {:halt, {rows, true}}
       end)
@@ -89,12 +99,13 @@ defmodule Mix.Tasks.Wotex.Check do
     {Enum.reverse(rows), failed?}
   end
 
-  defp report_lane(nil, _manifest), do: :ok
+  defp report_lane(nil, _manifest), do: []
 
   defp report_lane(name, manifest) do
     case Manifest.lane(name, manifest) do
-      {:ok, %{elixir: elixir, otp: otp}} ->
+      {:ok, %{elixir: elixir, otp: otp, skip: skip}} ->
         Mix.shell().info("lane #{name}: elixir #{elixir}, otp #{otp}")
+        if skip != [], do: Mix.shell().info("lane #{name} skips: #{Enum.join(skip, ", ")}")
         [expected | _] = String.split(elixir, "-")
 
         if expected != System.version() do
@@ -103,6 +114,8 @@ defmodule Mix.Tasks.Wotex.Check do
               "lane #{name} expects #{elixir}. CI selects the toolchain."
           )
         end
+
+        skip
 
       :error ->
         CLI.fail("the manifest declares no lane #{inspect(name)}")

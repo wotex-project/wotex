@@ -17,8 +17,10 @@ defmodule Wotex.Workspace.ManifestTest do
     test "keeps lanes and select_all_on" do
       manifest = Fixtures.manifest()
 
-      assert {:ok, %{elixir: "1.18.4-otp-27", otp: "27.3.4.15"}} =
+      assert {:ok, %{elixir: "1.18.4-otp-27", otp: "27.3.4.15", skip: ["formatter", "dialyzer"]}} =
                Manifest.lane("minimum", manifest)
+
+      assert {:ok, %{skip: []}} = Manifest.lane("current", manifest)
 
       assert Manifest.lane("nightly", manifest) == :error
       assert "mix.exs" in manifest.select_all_on
@@ -82,6 +84,16 @@ defmodule Wotex.Workspace.ManifestTest do
                })
 
       assert message =~ ~s(lane "x" must declare elixir and otp)
+    end
+
+    test "rejects a lane skip that is not a list of tool names" do
+      assert {:error, message} =
+               Manifest.from_map(%{
+                 "packages" => %{"a" => %{"app" => "a"}},
+                 "lanes" => %{"x" => %{"elixir" => "1", "otp" => "2", "skip" => [1]}}
+               })
+
+      assert message =~ ~s(lane "x": skip must list tool names)
     end
   end
 

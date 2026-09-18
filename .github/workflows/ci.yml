@@ -156,7 +156,12 @@ jobs:
         run: mix deps.get --check-locked
       - name: Package gate
         working-directory: packages/${{ matrix.package }}
-        run: mix check --no-retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The lane's skip list keeps static analysis on the current lane only.
+          except=$(yq -r '.lanes["${{ matrix.lane }}"].skip // [] | .[] | "--except " + .' ../../tooling/packages.yaml | tr '\n' ' ')
+          mix check --no-retry $except
 
   archive:
     name: Archives and consumers

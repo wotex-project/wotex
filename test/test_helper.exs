@@ -6,7 +6,11 @@ defmodule WotexWorkspace.Fixtures do
   @manifest %{
     "schema_version" => "1.0.0",
     "lanes" => %{
-      "minimum" => %{"elixir" => "1.18.4-otp-27", "otp" => "27.3.4.15"},
+      "minimum" => %{
+        "elixir" => "1.18.4-otp-27",
+        "otp" => "27.3.4.15",
+        "skip" => ["formatter", "dialyzer"]
+      },
       "current" => %{"elixir" => "1.20.2-otp-29", "otp" => "29.0.4"}
     },
     "select_all_on" => [".github/**", "tooling/**", ".tool-versions", "mix.exs", "lib/**"],

@@ -8,11 +8,20 @@
 #   software profile runs only in the explicit native lane.
 # native_task: the package's own build task, dispatched by `mix wotex.native.build`.
 # software_task: the package's own software-profile run task, if any.
-# lanes: toolchain lanes the package's gate runs on in CI.
 schema_version: "1.0.0"
+# lanes: the toolchains CI runs every package gate on. `skip` names `mix check`
+#   tools a lane does not run (passed as `--except TOOL`). The minimum lane runs
+#   behaviour tools (compile, tests with coverage, archive and application-free
+#   checks); static analysis, whose results depend on the compiler and OTP
+#   version, runs on the current lane only.
 lanes:
-  minimum: { elixir: "1.18.4-otp-27", otp: "27.3.4.15" }
-  current: { elixir: "1.20.2-otp-29", otp: "29.0.4" }
+  minimum:
+    elixir: "1.18.4-otp-27"
+    otp: "27.3.4.15"
+    skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface]
+  current:
+    elixir: "1.20.2-otp-29"
+    otp: "29.0.4"
 select_all_on:
   - ".github/**"
   - "tooling/**"

@@ -49,6 +49,18 @@ defmodule Mix.Tasks.Wotex.OptionsTest do
         Mix.Tasks.Wotex.Check.parse_args(~w(--lane nightly))
       end
     end
+
+    test "passes a lane's skipped tools to mix check" do
+      assert Mix.Tasks.Wotex.Check.commands() == [
+               {"deps.get", ["deps.get", "--check-locked"]},
+               {"check", ["check", "--no-retry"]}
+             ]
+
+      assert Mix.Tasks.Wotex.Check.commands(["formatter", "dialyzer"]) == [
+               {"deps.get", ["deps.get", "--check-locked"]},
+               {"check", ["check", "--no-retry", "--except", "formatter", "--except", "dialyzer"]}
+             ]
+    end
   end
 
   describe "wotex.archive" do
