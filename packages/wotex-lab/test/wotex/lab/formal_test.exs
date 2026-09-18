@@ -12,6 +12,7 @@ defmodule Wotex.Lab.FormalTest do
 
   describe "model catalogue" do
     test "the checked-in model matches its manifest digest and names every variant" do
+      assert :thermal_control_v1 in Model.ids()
       assert {:ok, model} = Model.fetch(:thermal_control_v1)
       assert {:ok, ^model} = Model.verify(model)
       assert model.modules.safe == "SAFE-THERMAL"

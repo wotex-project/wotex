@@ -459,6 +459,8 @@ defmodule Wotex.Lab.ContinuumTest do
              )
 
     assert {:error, _} = FaultSchedule.new(drop: [0])
+    assert {:ok, %FaultSchedule{version: version}} = FaultSchedule.new()
+    assert version == FaultSchedule.version()
   end
 
   defp bearer_credentials do

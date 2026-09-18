@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_coap.svg)](https://hex.pm/packages/wotex_coap)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_coap)
-[![CI](https://github.com/wotex-project/wotex-coap/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-coap/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-coap/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-coap)
-[![License](https://img.shields.io/hexpm/l/wotex_coap.svg)](https://github.com/wotex-project/wotex-coap/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_coap.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-coap/LICENSE)
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·

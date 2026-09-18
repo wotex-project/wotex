@@ -152,8 +152,9 @@ defmodule Wotex.Lab.Check.Contracts do
     end)
 
     # Relative links may cross between the package and its documentation
-    # tree, so every target is checked against both.
-    ["README.md", "CONTRIBUTING.md" | Path.wildcard(Path.join(docs, "**/*.md"))]
+    # tree, so every target is checked against both. Governance files live at
+    # the repository root and are not package-owned.
+    ["README.md" | Path.wildcard(Path.join(docs, "**/*.md"))]
     |> Enum.each(fn path ->
       ~r/\]\(([^)]+)\)/
       |> Regex.scan(File.read!(path))

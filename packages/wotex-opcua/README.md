@@ -4,9 +4,8 @@ Consumer-neutral OPC Unified Architecture interactions for W3C Web of Things con
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_opcua.svg)](https://hex.pm/packages/wotex_opcua)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_opcua)
-[![CI](https://github.com/wotex-project/wotex-opcua/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-opcua/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-opcua/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-opcua)
-[![License](https://img.shields.io/hexpm/l/wotex_opcua.svg)](https://github.com/wotex-project/wotex-opcua/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_opcua.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-opcua/LICENSE)
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·

@@ -1,5 +1,16 @@
 # Wotex BLE completion contract
 
+Plan version: 1.1.0. Package baseline: 0.1.0.
+
+Revision 1.1.0 records the monorepo layout without changing any obligation.
+Documentation now lives under `docs/packages/wotex-ble/`. Package archives no
+longer ship Markdown documentation, governance files or agent files;
+specifications are published through HexDocs. Fixtures and machine-read
+provenance ship under `priv/`. The repository-level gate
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-ble`) and the CI
+lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
+`wotex-ble-v<version>`.
+
 Graduate this library independently. Acceptance requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension
 preservation, structured errors, explicit OTP ownership and cleanup, neutral
@@ -12,7 +23,7 @@ A compatibility adapter exposes `capabilities/0`, `connect/1`, `send/2`,
 Wire acknowledgements never establish application truth. Unsupported operations
 return an explicit error or the documented optional `:not_supported` sentinel.
 
-Consumer policy, deployment and publication are outside this repository.
+Consumer policy, deployment and publication are outside this package.
 The source, specifications and evidence contain no consumer-specific metadata.
 
 ## Evidence rules
@@ -23,7 +34,7 @@ Hardware tests require explicit target configuration; default tests never
 contact a physical target. An injected response simulator proves adapter contracts only. Real upstream
 software stacks using virtual controllers/radios can prove the explicitly
 labelled software interoperability cells; they do not prove physical RF behavior.
-Mutable audit notes remain in ignored `docs/tasks/local/`; this document is a
+Mutable audit notes remain in the ignored root `docs/tasks/local/wotex-ble/`; this document is a
 durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in

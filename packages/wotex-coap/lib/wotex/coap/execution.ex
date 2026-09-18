@@ -9,12 +9,34 @@ defmodule Wotex.CoAP.Execution do
   transfer worker, and is inherited only by that owner's child work.
   """
 
+  @typedoc """
+  The execution context of an owner: the system default or an explicitly
+  selected implementation with its own state.
+  """
   @type context :: :system | {module(), term()}
+
+  @doc "Returns the current protocol time in milliseconds for the given state."
   @callback now_ms(term()) :: integer()
+
+  @doc """
+  Schedules `event` to be delivered to `pid` after `delay` milliseconds and
+  returns the timer reference.
+  """
   @callback schedule(term(), pid(), term(), non_neg_integer()) :: reference()
+
+  @doc """
+  Cancels a scheduled timer and returns its remaining time, or `false` when it
+  has already fired or is unknown.
+  """
   @callback cancel(term(), reference()) :: non_neg_integer() | false
+
+  @doc "Returns the initial CoAP message identifier for a new connection."
   @callback initial_mid(term()) :: 0..65_535
+
+  @doc "Returns a fresh CoAP token."
   @callback token(term()) :: binary()
+
+  @doc "Returns the message identifier to use, given the proposed next value."
   @callback message_id(term(), 0..65_535) :: 0..65_535
 
   @doc false

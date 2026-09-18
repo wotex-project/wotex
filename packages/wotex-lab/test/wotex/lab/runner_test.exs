@@ -640,6 +640,30 @@ defmodule Wotex.Lab.RunnerTest do
     assert worker_status.errors["worker"].code == :component_killed
   end
 
+  test "worker exits outside the callback are classified without secrets", context do
+    {:ok, host} = host(context, budgets: %{wall_ms: 2_000})
+
+    expected = [
+      {{:shutdown, "secret-sentinel"}, :component_stopped},
+      {{%RuntimeError{message: "secret-sentinel"}, []}, :component_raised},
+      {{{:nocatch, "secret-sentinel"}, []}, :component_threw},
+      {{:injected, "secret-sentinel"}, :component_exited}
+    ]
+
+    for {reason, code} <- expected do
+      {:ok, sleeping} = definition([step("worker", "room.util", "sleep", 1_000)])
+      {:ok, sleeping_scenario} = scenario(sleeping)
+      assert {:ok, run} = Runner.start(sleeping_scenario, sleeping, host)
+      assert eventually(fn -> Runner.status(run).phase == :running end)
+      {_, _, worker} = :sys.get_state(run).worker
+      Process.exit(worker, reason)
+      assert {:ok, status} = Runner.await(run)
+      assert status.outcome == :fail
+      assert status.errors["worker"].code == code
+      refute inspect(status.errors) =~ "secret-sentinel"
+    end
+  end
+
   test "await timeout, coordinator death and unusable work roots still clean children", context do
     {:ok, host} = host(context, budgets: %{wall_ms: 2_000})
 

@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_lab.svg)](https://hex.pm/packages/wotex_lab)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_lab)
-[![CI](https://github.com/wotex-project/wotex-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-lab/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-lab/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-lab)
-[![License](https://img.shields.io/hexpm/l/wotex_lab.svg)](https://github.com/wotex-project/wotex-lab/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_lab.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-lab/LICENSE)
 
 [Foundation](#run-the-foundation) ·
 [Cookbooks](#cookbooks) ·
@@ -363,11 +362,14 @@ content-bound evidence; wider upstream and release programmes remain partial. No
 materials inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
 
-`mix check` runs warnings-as-errors compilation, formatting, and the default
-contract test suite. Source-cohort snapshots, external services, native tools,
-and cookbook execution are opt-in integration checks; set
-`WOTEX_LAB_INTEGRATION=1` when intentionally refreshing that evidence. Separate
-release gates do not claim registry publication, OCI runtime, hosted or hardware evidence. See
+`mix check` runs warnings-as-errors compilation, locked and unused dependency
+checks, formatting, strict Credo, Doctor, Dialyzer, dependency audits, ExDoc,
+tests with 95% line coverage, the contract, graph, API-surface, host-source and
+boundary scripts and package content inspection. Source-cohort snapshots,
+external services, native tools, and cookbook execution are opt-in integration
+checks; set `WOTEX_LAB_INTEGRATION=1` when intentionally refreshing that
+evidence. Separate release gates do not claim registry publication, OCI
+runtime, hosted or hardware evidence. See
 [WLB.08](../../docs/packages/wotex-lab/specs/WLB.08-distribution-and-compatibility.md) for the stronger
 release gates.
 

@@ -123,7 +123,7 @@ defmodule WotexLab.MixProject do
     [
       setup: ["deps.get", "deps.compile"],
       "test.cover": ["coveralls"],
-      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=prod mix hex.build"
     ]
   end
 

@@ -4,9 +4,8 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_ble.svg)](https://hex.pm/packages/wotex_ble)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_ble)
-[![CI](https://github.com/wotex-project/wotex-ble/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-ble/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/wotex-project/wotex-ble/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-ble)
-[![License](https://img.shields.io/hexpm/l/wotex_ble.svg)](https://github.com/wotex-project/wotex-ble/blob/main/LICENSE)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![License](https://img.shields.io/hexpm/l/wotex_ble.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-ble/LICENSE)
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·

@@ -1,14 +1,23 @@
 # Wotex Lab completion contract
 
-Plan version: 1.3.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.4.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
 tracker. All work packages below belong to the accepted programme. Dependencies
 express what evidence must exist before a claim can be accepted; they do not
-defer or waive obligations. The requested repository foundation implements a
+defer or waive obligations. The requested package foundation implements a
 bounded subset without claiming the programme is complete. Changing an accepted
 obligation requires a new plan version and compatibility explanation.
+
+Revision 1.4.0 records the monorepo layout without changing any obligation.
+Documentation now lives under `docs/packages/wotex-lab/`. Package archives no
+longer ship Markdown documentation, governance files or agent files;
+specifications are published through HexDocs. Fixtures and machine-read
+provenance ship under `priv/`. The repository-level gate
+(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-lab`) and the CI
+lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
+`wotex-lab-v<version>`.
 
 Version 1.1 adds concrete metrics/AI and native-workbench obligations (C12/C13),
 including foundation design tokens, and strengthens transport/security seam
@@ -83,7 +92,7 @@ remain unsatisfied evidence prerequisites. They do not permit a fake pass,
 visibility change, publication, or a weaker clone-free definition.
 
 No local tracker, coordinator state, worker attempt or consumer filesystem path
-belongs in a published package. Package allowlists exclude `docs/tasks/local/`.
+belongs in a published package. Package allowlists exclude the root `docs/tasks/local/wotex-lab/`.
 Unpublished source results are labeled source results. Hosted mutations are
 disposable and explicit; physical device authorization is outside the baseline.
 

@@ -40,6 +40,64 @@ defmodule Wotex.Lab.HttpDestinationTest do
              )
   end
 
+  test "admission refuses malformed input and reserved documentation ranges" do
+    public = resolver(inet: [{93, 184, 216, 34}], inet6: [])
+
+    assert {:error, :destination_not_admitted} = Destination.admit(:nope, hosted_config(public))
+    assert {:error, :destination_not_admitted} = Destination.admit("https://example.com", nil)
+
+    for uri <- [
+          "ftp://example.com/value",
+          "https://user@example.com/value",
+          "https:///value",
+          "example.com/value"
+        ] do
+      assert {:error, :destination_not_admitted} = Destination.admit(uri, hosted_config(public))
+    end
+
+    assert {:error, :destination_not_admitted} =
+             Destination.admit(
+               "https://example.com/value",
+               %{hosted_config(public) | audience: nil}
+             )
+
+    assert {:error, :destination_not_admitted} =
+             Destination.admit(
+               "https://example.com/value",
+               %{hosted_config(public) | audience: "https://example.com/base"}
+             )
+
+    partial = fn
+      _, :inet -> {:ok, [{93, 184, 216, 34}]}
+      _, :inet6 -> {:error, :nxdomain}
+    end
+
+    assert {:ok, %{peer: {93, 184, 216, 34}}} =
+             Destination.admit("https://example.com/value", hosted_config(partial))
+
+    failed = fn _, _ -> {:error, :nxdomain} end
+
+    assert {:error, :destination_not_admitted} =
+             Destination.admit("https://example.com/value", hosted_config(failed))
+
+    refute Destination.public_address?("8.8.8.8")
+    refute Destination.public_address?({8, 8, 8})
+
+    for address <- [
+          {198, 18, 0, 1},
+          {198, 19, 255, 254},
+          {198, 51, 100, 7},
+          {192, 0, 2, 7},
+          {203, 0, 113, 7},
+          {0, 0, 0, 0, 0, 0xFFFF, 0xC0A8, 0x0001},
+          {0x2001, 0x0DB8, 0, 0, 0, 0, 0, 1},
+          {256, 0, 0, 1},
+          {0x10000, 0, 0, 0, 0, 0, 0, 1}
+        ] do
+      refute Destination.public_address?(address)
+    end
+  end
+
   test "the hosted profile binds audience, HTTPS identity and the resolved peer" do
     public = resolver(inet: [{93, 184, 216, 34}], inet6: [])
 
