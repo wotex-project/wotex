@@ -179,7 +179,7 @@ specifications:
       - "test/wotex/lab/wlb05_evidence_manifest_test.exs"
     compatibility_classification: WLB.05 is implemented with independent ETS/SQLite algorithms, authenticated per-source Continuum admission and one-effect smart-room policy races; artifact adoption remains a separate axis.
   - id: WLB.06
-    version: "1.7.0"
+    version: "1.7.1"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
     implementation_status: implemented
     evidence_status: complete

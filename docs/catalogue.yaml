@@ -208,7 +208,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.05-directory-continuum-and-smart-room.md"
       - id: "WLB.06"
-        version: "1.7.0"
+        version: "1.7.1"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.06-evidence-conformance-and-observability.md"
       - id: "WLB.07"

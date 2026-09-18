@@ -38,6 +38,22 @@ defmodule Wotex.Lab.ConformanceTargetProcessTest do
     end
   end
 
+  test "the process entry rejects a request that is not UTF-8 under any locale",
+       %{tmp_dir: tmp_dir} do
+    archive = Path.join(tmp_dir, "subject.tar")
+    File.write!(archive, "archive")
+
+    line =
+      ~s({"claim":{"operation":"thing_description.parse"},"vector":{"id":"latin1",) <>
+        ~s("input":{"document":{"title":"V\xE4derstation"}}}})
+
+    refute String.valid?(line)
+
+    for locale <- ["C", "C.UTF-8", "en_US.UTF-8"] do
+      assert {14, ""} = run_target(archive, line, locale)
+    end
+  end
+
   defp run_target(archive, line, locale) do
     erl = Path.join([to_string(:code.root_dir()), "bin", "erl"])
 

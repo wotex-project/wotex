@@ -55,16 +55,24 @@ defmodule Wotex.Lab.Conformance.Target do
   @doc """
   Runs the target as an operating-system process: `--archive <path>` then one request line on stdin.
 
-  Standard input and output are switched to byte mode first, so the UTF-8
-  request and response pass through unchanged whatever locale the host selects.
+  The UTF-8 request and response pass through unchanged whatever locale the
+  host selects. Both are exchanged in the encoding standard I/O already has
+  rather than switching it: before OTP 28 a `-noshell` node decodes standard
+  input as soon as it arrives, with the encoding the locale selected at boot,
+  so a switch made here would not reach a request the runner wrote before the
+  target read it. A Latin-1 device maps each byte to one character and a
+  Unicode device decodes valid UTF-8 losslessly, so reading and writing in the
+  device's encoding returns the original bytes. A Unicode device that meets
+  invalid UTF-8 falls back to Latin-1; such a request is undecodable.
   """
   @spec main([String.t()]) :: no_return()
   def main(args) do
-    :ok = :io.setopts(:standard_io, binary: true, encoding: :latin1)
+    :ok = :io.setopts(:standard_io, binary: true)
+    unicode? = unicode_stdio?()
 
-    case run(args, fn -> IO.binread(:stdio, :line) end) do
+    case run(args, fn -> read_line(unicode?) end) do
       {:ok, encoded} ->
-        IO.binwrite(encoded <> "\n")
+        if unicode?, do: IO.write(encoded <> "\n"), else: IO.binwrite(encoded <> "\n")
         System.halt(0)
 
       {:error, code} ->
@@ -75,9 +83,10 @@ defmodule Wotex.Lab.Conformance.Target do
   @doc """
   Performs one target exchange without touching the operating system process.
 
-  `read_line` supplies the request line. Failures map to the documented exit
-  codes: 11 missing archive argument, 12 unreadable archive, 13 end of input,
-  14 undecodable request.
+  `read_line` supplies the request line, `:eof` or `{:error, reason}`.
+  Failures map to the documented exit codes: 11 missing archive argument,
+  12 unreadable archive, 13 end of input, 14 undecodable request, including
+  `{:error, :invalid_utf8}` for input that is not UTF-8.
   """
   @spec run([String.t()], (-> binary() | :eof | {:error, term()})) ::
           {:ok, binary()} | {:error, 11..14}
@@ -94,12 +103,28 @@ defmodule Wotex.Lab.Conformance.Target do
 
   defp archive(_), do: {:error, 11}
 
+  defp unicode_stdio? do
+    case :io.getopts(:standard_io) do
+      options when is_list(options) -> :proplists.get_value(:encoding, options) in [:unicode, :utf8]
+      _ -> false
+    end
+  end
+
+  defp read_line(false), do: IO.binread(:stdio, :line)
+
+  defp read_line(true) do
+    line = IO.read(:stdio, :line)
+    if unicode_stdio?(), do: line, else: {:error, :invalid_utf8}
+  end
+
   defp read_request(line) when is_binary(line) do
     case JSON.decode(line) do
       {:ok, request} when is_map(request) -> {:ok, request}
       _ -> {:error, 14}
     end
   end
+
+  defp read_request({:error, :invalid_utf8}), do: {:error, 14}
 
   defp read_request(_), do: {:error, 13}
 

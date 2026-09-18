@@ -29,25 +29,36 @@ defmodule Wotex.Lab.MetricsBridgeTest do
   defp credential,
     do: %{reference: "export-ref", lookup: fn "export-ref" -> {:ok, {:bearer, @secret}} end}
 
+  # `await/4` observes a bridge for this many polls of `@poll_ms`.
+  @poll_ms 10
+  @await_polls 300
+
+  # The export deadline is wall time, so it keeps running while other async
+  # tests stall the VM: loading the EXLA NIF pauses every scheduler for 150 to
+  # 300 ms with a warm file cache, and right after a rebuild, loading the HTTP
+  # client for the first export waited over a second behind a cold native
+  # library. A test that waits for the sink's verdict must never have the
+  # deadline decide instead while it waits, so the default deadline is the
+  # whole observation window. Tests of the deadline pass a shorter one.
   defp bridge(opts) do
     defaults = [
       id: System.unique_integer([:positive]),
       scrape: fn -> {:ok, @exposition} end,
       backoff_ms: 10,
       max_backoff_ms: 50,
-      deadline_ms: 1_000
+      deadline_ms: @poll_ms * @await_polls
     ]
 
     start_supervised!({GreptimeBridge, Keyword.merge(defaults, opts)})
   end
 
-  defp await(bridge, key, value, attempts \\ 300) do
+  defp await(bridge, key, value, attempts \\ @await_polls) do
     stats = GreptimeBridge.stats(bridge)
 
     cond do
       Map.get(stats, key) == value -> stats
       attempts == 0 -> flunk("expected #{key} == #{inspect(value)}, got #{inspect(stats)}")
-      true -> Process.sleep(10) && await(bridge, key, value, attempts - 1)
+      true -> Process.sleep(@poll_ms) && await(bridge, key, value, attempts - 1)
     end
   end
 

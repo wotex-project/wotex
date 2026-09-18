@@ -102,6 +102,10 @@ defmodule Wotex.Lab.ConformanceContainmentTest do
              Target.run(["--archive", Path.join(context.home, "missing")], fn -> request end)
 
     assert {:error, 13} = Target.run(["--archive", context.archive], fn -> :eof end)
+
+    assert {:error, 14} =
+             Target.run(["--archive", context.archive], fn -> {:error, :invalid_utf8} end)
+
     assert {:error, 14} = Target.run(["--archive", context.archive], fn -> "[not an object]" end)
     assert {:error, 14} = Target.run(["--archive", context.archive], fn -> "{" end)
   end
