@@ -47,6 +47,8 @@ defmodule WotexBindingHTTP.MixProject do
       {:jason, "~> 1.4"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:doctest_formatter, "~> 0.4", only: [:dev, :test], runtime: false},
@@ -122,30 +124,32 @@ defmodule WotexBindingHTTP.MixProject do
       source_url: @source_url,
       source_url_pattern: &source_url/2,
       formatters: ["html", "epub", "markdown"],
-      extras: [
-        {"README.md", title: "Overview"},
-        {"CHANGELOG.md", title: "Changelog"},
-        {"LICENSE", title: "License"},
-        {"NOTICE", title: "Notices"},
-        {doc("security.md"), title: "Security"},
-        {doc("client-lifecycle-inventory.md"), title: "Client lifecycle inventory"},
-        {doc("http-operation-inventory.md"), title: "HTTP operation inventory"},
-        {doc("limits-security-inventory.md"), title: "Limits and security inventory"},
-        {doc("reference-consumer-inventory.md"), title: "Archive reference consumer"},
-        {doc("release-candidate-inventory.md"), title: "Release-candidate inventory"},
-        {doc("standards-baseline.md"), title: "Standards baseline"},
-        {doc("runtime-baseline.md"), title: "Runtime baseline"},
-        {doc("plans/wotex-binding-http-completion.md"), title: "Completion Contract"},
-        {doc("specs/WBH.01-http-transport.md"), title: "HTTP transport"},
-        {doc("specs/WBH.02-client-port-and-values.md"), title: "Client port and values"},
-        {doc("specs/WBH.03-sse-subscriptions.md"), title: "SSE subscriptions"}
-      ],
+      extras:
+        [
+          {"README.md", title: "Overview"},
+          {"CHANGELOG.md", title: "Changelog"},
+          {"LICENSE", title: "License"},
+          {"NOTICE", title: "Notices"},
+          {doc("security.md"), title: "Security"},
+          {doc("client-lifecycle-inventory.md"), title: "Client lifecycle inventory"},
+          {doc("http-operation-inventory.md"), title: "HTTP operation inventory"},
+          {doc("limits-security-inventory.md"), title: "Limits and security inventory"},
+          {doc("reference-consumer-inventory.md"), title: "Archive reference consumer"},
+          {doc("release-candidate-inventory.md"), title: "Release-candidate inventory"},
+          {doc("standards-baseline.md"), title: "Standards baseline"},
+          {doc("runtime-baseline.md"), title: "Runtime baseline"},
+          {doc("plans/wotex-binding-http-completion.md"), title: "Completion Contract"},
+          {doc("specs/WBH.01-http-transport.md"), title: "HTTP transport"},
+          {doc("specs/WBH.02-client-port-and-values.md"), title: "Client port and values"},
+          {doc("specs/WBH.03-sse-subscriptions.md"), title: "SSE subscriptions"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-binding-http\/plans/,
         Security: ~r/docs\/packages\/wotex-binding-http\/security/,
         "Normative package specifications": ~r/docs\/packages\/wotex-binding-http\/specs/,
         "Contract evidence":
-          ~r/docs\/packages\/wotex-binding-http\/((client-lifecycle|http-operation|limits-security|reference-consumer|release-candidate)-inventory|(standards|runtime)-baseline)/
+          ~r/docs\/packages\/wotex-binding-http\/((client-lifecycle|http-operation|limits-security|reference-consumer|release-candidate)-inventory|(standards|runtime)-baseline)/,
+        Benchmarks: ~r/bench\/output/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Binding.HTTP, Wotex.Binding.HTTP.Client],
