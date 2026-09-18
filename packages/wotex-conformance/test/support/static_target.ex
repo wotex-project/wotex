@@ -5,10 +5,10 @@ defmodule Wotex.Conformance.StaticTarget do
 
   alias Wotex.Conformance.Target.Response
 
-  @impl true
+  @impl Wotex.Conformance.Target
   def artifact_path(%{artifact_path: path}), do: {:ok, path}
 
-  @impl true
+  @impl Wotex.Conformance.Target
   def invoke(%{actual: actual, owner: owner}, request) do
     send(owner, {:target_request, request})
 

@@ -55,7 +55,7 @@ defmodule Wotex.Conformance.JSONSchema do
   # same schema object, so it is applied here rather than keyword by keyword.
   defp additional(%{"additionalProperties" => schema} = parent, value, path, registry)
        when is_map(value) do
-    declared = parent |> Map.get("properties", %{}) |> Map.keys()
+    declared = Map.keys(Map.get(parent, "properties", %{}))
 
     value
     |> Map.drop(declared)

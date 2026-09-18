@@ -38,22 +38,20 @@ defmodule Wotex.Conformance.Environment do
 
   defp reject_sensitive_keys(value, path) when is_map(value) do
     Enum.reduce_while(value, :ok, fn {key, entry}, :ok ->
-      cond do
-        Regex.match?(@sensitive_key, key) ->
-          {:halt,
-           {:error,
-            Error.new(
-              :sensitive_environment_key,
-              :environment,
-              "environment contains a sensitive key",
-              path: Enum.reverse([key | path])
-            )}}
-
-        true ->
-          case reject_sensitive_keys(entry, [key | path]) do
-            :ok -> {:cont, :ok}
-            {:error, error} -> {:halt, {:error, error}}
-          end
+      if Regex.match?(@sensitive_key, key) do
+        {:halt,
+         {:error,
+          Error.new(
+            :sensitive_environment_key,
+            :environment,
+            "environment contains a sensitive key",
+            path: Enum.reverse([key | path])
+          )}}
+      else
+        case reject_sensitive_keys(entry, [key | path]) do
+          :ok -> {:cont, :ok}
+          {:error, error} -> {:halt, {:error, error}}
+        end
       end
     end)
   end

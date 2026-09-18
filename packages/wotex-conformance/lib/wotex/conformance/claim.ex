@@ -167,7 +167,7 @@ defmodule Wotex.Conformance.Claim do
       end
     end)
     |> then(fn
-      {:ok, entries} -> {:ok, entries |> Enum.uniq() |> Enum.sort()}
+      {:ok, entries} -> {:ok, Enum.sort(Enum.uniq(entries))}
       {:error, error} -> {:error, error}
     end)
   end

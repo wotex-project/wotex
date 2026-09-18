@@ -136,10 +136,10 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
-  defp walk(_, path, depth, remaining, %{max_depth: max_depth}) when depth > max_depth do
+  defp walk(_, reversed_path, depth, remaining, %{max_depth: max_depth}) when depth > max_depth do
     {:error,
      Error.new(:limit_exceeded, :limits, "JSON value exceeds its nesting limit",
-       path: path,
+       path: Enum.reverse(reversed_path),
        details: %{"max_depth" => max_depth, "remaining_nodes" => remaining}
      )}
   end
@@ -149,27 +149,32 @@ defmodule Wotex.Conformance.Value do
     consume(remaining)
   end
 
-  defp walk(value, path, _, remaining, _) when is_float(value) do
+  defp walk(value, reversed_path, _, remaining, _) when is_float(value) do
     case Jason.encode(value) do
       {:ok, _} ->
         consume(remaining)
 
       {:error, _} ->
-        {:error, Error.new(:invalid_number, :value, "JSON numbers must be finite", path: path)}
+        {:error,
+         Error.new(:invalid_number, :value, "JSON numbers must be finite",
+           path: Enum.reverse(reversed_path)
+         )}
     end
   end
 
-  defp walk(value, path, _, remaining, %{max_string_bytes: max_bytes})
+  defp walk(value, reversed_path, _, remaining, %{max_string_bytes: max_bytes})
        when is_binary(value) do
     cond do
       not String.valid?(value) ->
         {:error,
-         Error.new(:invalid_encoding, :value, "JSON strings must be valid UTF-8", path: path)}
+         Error.new(:invalid_encoding, :value, "JSON strings must be valid UTF-8",
+           path: Enum.reverse(reversed_path)
+         )}
 
       byte_size(value) > max_bytes ->
         {:error,
          Error.new(:limit_exceeded, :limits, "JSON string exceeds its byte limit",
-           path: path,
+           path: Enum.reverse(reversed_path),
            details: %{"max_string_bytes" => max_bytes}
          )}
 
@@ -178,13 +183,13 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
-  defp walk(value, path, depth, remaining, limits) when is_list(value) do
-    with :ok <- within_collection(length(value), path, limits),
+  defp walk(value, reversed_path, depth, remaining, limits) when is_list(value) do
+    with :ok <- within_collection(length(value), reversed_path, limits),
          {:ok, remaining} <- consume(remaining) do
       value
       |> Enum.with_index()
       |> Enum.reduce_while({:ok, remaining}, fn {entry, index}, {:ok, left} ->
-        case walk(entry, path ++ [index], depth + 1, left, limits) do
+        case walk(entry, [index | reversed_path], depth + 1, left, limits) do
           {:ok, next} -> {:cont, {:ok, next}}
           {:error, error} -> {:halt, {:error, error}}
         end
@@ -192,14 +197,15 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
-  defp walk(value, path, depth, remaining, limits) when is_map(value) and not is_struct(value) do
-    with :ok <- within_collection(map_size(value), path, limits),
+  defp walk(value, reversed_path, depth, remaining, limits)
+       when is_map(value) and not is_struct(value) do
+    with :ok <- within_collection(map_size(value), reversed_path, limits),
          {:ok, remaining} <- consume(remaining) do
       value
       |> Enum.sort_by(fn {key, _} -> if is_binary(key), do: key, else: inspect(key) end)
       |> Enum.reduce_while({:ok, remaining}, fn
         {key, entry}, {:ok, left} when is_binary(key) ->
-          case walk(entry, path ++ [key], depth + 1, left, limits) do
+          case walk(entry, [key | reversed_path], depth + 1, left, limits) do
             {:ok, next} -> {:cont, {:ok, next}}
             {:error, error} -> {:halt, {:error, error}}
           end
@@ -207,19 +213,25 @@ defmodule Wotex.Conformance.Value do
         {_, _}, _ ->
           {:halt,
            {:error,
-            Error.new(:invalid_map_key, :value, "JSON object keys must be strings", path: path)}}
+            Error.new(:invalid_map_key, :value, "JSON object keys must be strings",
+              path: Enum.reverse(reversed_path)
+            )}}
       end)
     end
   end
 
-  defp walk(_, path, _, _, _) do
-    {:error, Error.new(:invalid_type, :value, "value is not JSON-compatible", path: path)}
+  defp walk(_, reversed_path, _, _, _) do
+    {:error,
+     Error.new(:invalid_type, :value, "value is not JSON-compatible",
+       path: Enum.reverse(reversed_path)
+     )}
   end
 
-  defp within_collection(size, path, %{max_collection_size: max_size}) when size > max_size do
+  defp within_collection(size, reversed_path, %{max_collection_size: max_size})
+       when size > max_size do
     {:error,
      Error.new(:limit_exceeded, :limits, "JSON collection exceeds its member limit",
-       path: path,
+       path: Enum.reverse(reversed_path),
        details: %{"max_collection_size" => max_size}
      )}
   end

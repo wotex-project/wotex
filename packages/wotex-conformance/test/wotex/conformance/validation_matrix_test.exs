@@ -622,7 +622,13 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     File.cp_r!(corpus_source(), root)
 
     path = Path.join(root, "manifest.json")
-    manifest = path |> File.read!() |> Jason.decode!() |> transform.()
+
+    manifest =
+      path
+      |> File.read!()
+      |> Jason.decode!()
+      |> transform.()
+
     File.write!(path, Jason.encode!(manifest))
 
     assert_error(Corpus.load(root), expected_code)

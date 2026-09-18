@@ -244,7 +244,7 @@ defmodule Wotex.Conformance.Corpus do
 
     case File.ls(directory) do
       {:ok, filenames} ->
-        undeclared = filenames |> MapSet.new() |> MapSet.difference(expected)
+        undeclared = MapSet.difference(MapSet.new(filenames), expected)
 
         if MapSet.size(undeclared) == 0 do
           :ok

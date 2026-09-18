@@ -17,14 +17,14 @@ defmodule Wotex.Conformance.BoundaryTest do
 
     production =
       Enum.reject(dependencies, fn dependency ->
-        options = dependency |> Tuple.to_list() |> List.last()
+        options = List.last(Tuple.to_list(dependency))
         is_list(options) and Keyword.has_key?(options, :only)
       end)
 
     assert Enum.map(production, &elem(&1, 0)) == [:jason]
 
     refute Enum.any?(dependencies, fn dependency ->
-             options = dependency |> Tuple.to_list() |> List.last()
+             options = List.last(Tuple.to_list(dependency))
 
              is_list(options) and
                (Keyword.has_key?(options, :path) or Keyword.has_key?(options, :git))

@@ -37,7 +37,11 @@ defmodule ExternalTargetFixture do
 
   defp respond("partial_sleep") do
     IO.binwrite(~s({"protocol":))
-    "TARGET_SLEEP_MS" |> System.get_env("100") |> String.to_integer() |> Process.sleep()
+
+    "TARGET_SLEEP_MS"
+    |> System.get_env("100")
+    |> String.to_integer()
+    |> Process.sleep()
   end
 
   defp respond("oversized") do
@@ -52,8 +56,14 @@ defmodule ExternalTargetFixture do
   end
 
   defp respond("sleep") do
-    "TARGET_SLEEP_MS" |> System.get_env("100") |> String.to_integer() |> Process.sleep()
-    request() |> observed_response() |> emit()
+    "TARGET_SLEEP_MS"
+    |> System.get_env("100")
+    |> String.to_integer()
+    |> Process.sleep()
+
+    request()
+    |> observed_response()
+    |> emit()
   end
 
   defp respond("wrong_vector") do
@@ -88,7 +98,9 @@ defmodule ExternalTargetFixture do
   end
 
   defp respond("pass") do
-    request() |> observed_response() |> emit()
+    request()
+    |> observed_response()
+    |> emit()
   end
 
   defp archive_path(["--archive", path]), do: path
@@ -317,9 +329,17 @@ defmodule ExternalTargetFixture do
 
   defp member(_, _), do: :error
 
-  defp unescape(segment), do: segment |> String.replace("~1", "/") |> String.replace("~0", "~")
+  defp unescape(segment) do
+    segment
+    |> String.replace("~1", "/")
+    |> String.replace("~0", "~")
+  end
 
-  defp segment(name), do: name |> String.replace("~", "~0") |> String.replace("/", "~1")
+  defp segment(name) do
+    name
+    |> String.replace("~", "~0")
+    |> String.replace("/", "~1")
+  end
 
   defp error(code, phase, path), do: %{"code" => code, "phase" => phase, "path" => path}
 

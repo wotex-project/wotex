@@ -3,8 +3,7 @@ defmodule Wotex.Conformance.ArtifactTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Conformance.Artifact
-  alias Wotex.Conformance.TestFixtures
+  alias Wotex.Conformance.{Artifact, TestFixtures}
 
   setup do
     {root, archive, digest} = TestFixtures.subject_archive!()

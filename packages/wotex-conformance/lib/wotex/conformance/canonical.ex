@@ -32,7 +32,7 @@ defmodule Wotex.Conformance.Canonical do
   @spec encode(Value.json_value()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value) do
     with {:ok, validated} <- Value.validate(value) do
-      {:ok, validated |> encode_value() |> IO.iodata_to_binary()}
+      {:ok, IO.iodata_to_binary(encode_value(validated))}
     end
   rescue
     Jason.EncodeError ->
@@ -71,7 +71,12 @@ defmodule Wotex.Conformance.Canonical do
   defp encode_value(value) when is_binary(value), do: Jason.encode_to_iodata!(value)
 
   defp encode_value(value) when is_list(value) do
-    ["[", value |> Enum.map(&encode_value/1) |> Enum.intersperse(","), "]"]
+    entries =
+      value
+      |> Enum.map(&encode_value/1)
+      |> Enum.intersperse(",")
+
+    ["[", entries, "]"]
   end
 
   defp encode_value(value) when is_map(value) do

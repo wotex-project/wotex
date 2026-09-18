@@ -52,6 +52,8 @@ defmodule Wotex.Conformance.Pointer do
   defp escape(segment) when is_integer(segment), do: Integer.to_string(segment)
 
   defp escape(segment) when is_binary(segment) do
-    segment |> String.replace("~", "~0") |> String.replace("/", "~1")
+    segment
+    |> String.replace("~", "~0")
+    |> String.replace("/", "~1")
   end
 end

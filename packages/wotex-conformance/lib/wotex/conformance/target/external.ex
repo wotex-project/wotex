@@ -109,9 +109,8 @@ defmodule Wotex.Conformance.Target.External do
       with {:ok, encoded} <- Canonical.encode(request),
            {:ok, vector_id} <- request_vector_id(request),
            {:ok, output} <- exchange(target, encoded, deadline),
-           {:ok, decoded} <- decode_response(output),
-           {:ok, response} <- Response.from_map(decoded, vector_id) do
-        {:ok, response}
+           {:ok, decoded} <- decode_response(output) do
+        Response.from_map(decoded, vector_id)
       end
 
     duration_us =
@@ -292,7 +291,10 @@ defmodule Wotex.Conformance.Target.External do
   end
 
   defp scrubbed_environment(environment) do
-    unset = System.get_env() |> Map.keys() |> Enum.map(&{String.to_charlist(&1), false})
+    unset =
+      System.get_env()
+      |> Map.keys()
+      |> Enum.map(&{String.to_charlist(&1), false})
 
     supplied =
       Enum.map(environment, fn {key, value} ->
@@ -317,12 +319,10 @@ defmodule Wotex.Conformance.Target.External do
   end
 
   defp send_request(port, encoded) do
-    case Port.command(port, [encoded, "\n"], [:nosuspend]) do
-      true ->
-        :ok
-
-      false ->
-        {:error, Error.new(:target_write_failed, :target, "target request could not be written")}
+    if Port.command(port, [encoded, "\n"], [:nosuspend]) do
+      :ok
+    else
+      {:error, Error.new(:target_write_failed, :target, "target request could not be written")}
     end
   rescue
     ArgumentError ->
@@ -350,7 +350,7 @@ defmodule Wotex.Conformance.Target.External do
         end
 
       {^port, {:exit_status, 0}} ->
-        {:ok, chunks |> Enum.reverse() |> IO.iodata_to_binary()}
+        {:ok, IO.iodata_to_binary(Enum.reverse(chunks))}
 
       {^port, {:exit_status, _}} ->
         {:error, Error.new(:target_exit_nonzero, :target, "external target exited unsuccessfully")}

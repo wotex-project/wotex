@@ -118,7 +118,7 @@ defmodule Wotex.Conformance.Target.Response do
       end
     end)
     |> then(fn
-      {:ok, valid} -> {:ok, valid |> Enum.uniq() |> Enum.sort()}
+      {:ok, valid} -> {:ok, Enum.sort(Enum.uniq(valid))}
       {:error, error} -> {:error, error}
     end)
   end

@@ -14,7 +14,7 @@ defmodule Wotex.Conformance.SchemaTest do
       "../../../priv/schemas/*.schema.json"
       |> Path.expand(__DIR__)
       |> Path.wildcard()
-      |> Enum.map(&(&1 |> File.read!() |> Jason.decode!()))
+      |> Enum.map(&read_json!/1)
 
     %{schemas: schemas, registry: JSONSchema.registry(schemas)}
   end
@@ -31,7 +31,7 @@ defmodule Wotex.Conformance.SchemaTest do
 
   test "every bundled vector, claim, and observation matches its schema mirror", context do
     for path <- vector_files() do
-      vector = path |> File.read!() |> Jason.decode!()
+      vector = read_json!(path)
 
       assert :ok = validate(context, "vector-1.0", vector), "invalid vector: #{path}"
       assert :ok = validate(context, "claim-1.0", vector["claim"]), "invalid claim: #{path}"
@@ -58,7 +58,12 @@ defmodule Wotex.Conformance.SchemaTest do
 
   test "a produced report, its results, and its subject match their schema mirrors", context do
     report = report!()
-    encoded = report |> Report.to_map() |> Jason.encode!() |> Jason.decode!()
+
+    encoded =
+      report
+      |> Report.to_map()
+      |> Jason.encode!()
+      |> Jason.decode!()
 
     assert :ok = validate(context, "report-1.0", encoded)
     assert :ok = validate(context, "subject-1.0", encoded["subject"])
@@ -80,7 +85,7 @@ defmodule Wotex.Conformance.SchemaTest do
         "environment" => %{"runtime" => "otp-28"}
       })
 
-    encoded = request |> Jason.encode!() |> Jason.decode!()
+    encoded = Jason.decode!(Jason.encode!(request))
     assert :ok = validate(context, "target-request-1.0", encoded)
     refute Map.has_key?(encoded["vector"], "expectation")
     assert encoded["vector"]["input"]["projection"] == vector.input["projection"]
@@ -106,7 +111,7 @@ defmodule Wotex.Conformance.SchemaTest do
   end
 
   test "the schema mirrors reject the values their constructors reject", context do
-    vector = vector_files() |> hd() |> File.read!() |> Jason.decode!()
+    vector = read_json!(hd(vector_files()))
 
     invalid = [
       {"vector-1.0", Map.put(vector, "unexpected", true)},
@@ -131,7 +136,7 @@ defmodule Wotex.Conformance.SchemaTest do
   end
 
   test "a rejected vector expectation is also rejected by its constructor" do
-    vector = vector_files() |> hd() |> File.read!() |> Jason.decode!()
+    vector = read_json!(hd(vector_files()))
 
     assert {:error, %{code: :invalid_observation}} =
              Vector.from_map(put_in(vector, ["expectation", "value"], %{"accepted" => true}))
@@ -155,6 +160,8 @@ defmodule Wotex.Conformance.SchemaTest do
     |> Enum.reject(&(Path.basename(&1) == "manifest.json"))
     |> Enum.sort()
   end
+
+  defp read_json!(path), do: Jason.decode!(File.read!(path))
 
   defp report! do
     {root, archive, digest} = TestFixtures.subject_archive!()

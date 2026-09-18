@@ -111,7 +111,7 @@ defmodule Wotex.Conformance.Report do
 
   @doc "Encodes a report using the project canonical JSON form."
   @spec encode(t()) :: {:ok, binary()} | {:error, Error.t()}
-  def encode(%__MODULE__{} = report), do: report |> to_map() |> Canonical.encode()
+  def encode(%__MODULE__{} = report), do: Canonical.encode(to_map(report))
 
   defp validate_digest(digest) do
     if Canonical.valid_digest?(digest) do
@@ -137,7 +137,7 @@ defmodule Wotex.Conformance.Report do
       not Enum.all?(results, &match?(%Result{}, &1)) ->
         {:error, Error.new(:invalid_type, :report, "results must contain result values")}
 
-      results |> Enum.map(& &1.vector_id) |> duplicate?() ->
+      duplicate?(Enum.map(results, & &1.vector_id)) ->
         {:error,
          Error.new(:duplicate_vector_result, :report, "results contain duplicate vector IDs")}
 

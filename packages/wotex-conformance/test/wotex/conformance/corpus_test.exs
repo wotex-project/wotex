@@ -39,7 +39,9 @@ defmodule Wotex.Conformance.CorpusTest do
     path = Path.join(root, "minimal-thing-description.json")
 
     modified =
-      path |> File.read!() |> String.replace("Minimal Thing", "Changed Thing", global: false)
+      path
+      |> File.read!()
+      |> String.replace("Minimal Thing", "Changed Thing", global: false)
 
     File.write!(path, modified)
 
@@ -53,7 +55,7 @@ defmodule Wotex.Conformance.CorpusTest do
     on_exit(fn -> File.rm_rf!(root) end)
 
     path = Path.join(root, "manifest.json")
-    manifest = path |> File.read!() |> Jason.decode!()
+    manifest = Jason.decode!(File.read!(path))
     [first | rest] = manifest["vectors"]
     changed = Map.put(first, "file", "../outside.json")
     File.write!(path, Jason.encode!(Map.put(manifest, "vectors", [changed | rest])))

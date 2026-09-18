@@ -53,11 +53,13 @@ defmodule ArchiveConsumerFixture do
       end)
 
     :ok = load_application(:jason)
-    dependency_version = :jason |> Application.spec(:vsn) |> to_string()
+    dependency_version = to_string(Application.spec(:jason, :vsn))
 
-    IO.puts("archive consumer outcomes: #{format_results(results)}")
-    IO.puts("archive consumer corpus: #{corpus.id}@#{corpus.revision} #{corpus.digest}")
-    IO.puts("archive consumer runtime: #{runtime()} jason-#{dependency_version}")
+    IO.write([
+      "archive consumer outcomes: #{format_results(results)}\n",
+      "archive consumer corpus: #{corpus.id}@#{corpus.revision} #{corpus.digest}\n",
+      "archive consumer runtime: #{runtime()} jason-#{dependency_version}\n"
+    ])
   end
 
   defp target!(configuration, mode, options) do
@@ -97,7 +99,7 @@ defmodule ArchiveConsumerFixture do
 
     forbidden_paths =
       :code.get_path()
-      |> Enum.map(&(&1 |> to_string() |> Path.expand()))
+      |> Enum.map(&Path.expand(to_string(&1)))
       |> Enum.filter(&within?(&1, forbidden))
 
     unless forbidden_paths == [] do
@@ -172,7 +174,7 @@ defmodule ArchiveConsumerFixture do
   end
 
   defp abort(message) do
-    IO.puts(:stderr, message)
+    IO.write(:stderr, [message, "\n"])
     System.halt(1)
   end
 end
