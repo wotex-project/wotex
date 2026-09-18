@@ -47,6 +47,8 @@ defmodule WotexBindingMQTT.MixProject do
       {:jason, "~> 1.4"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -121,30 +123,32 @@ defmodule WotexBindingMQTT.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        {"README.md", title: "Overview"},
-        {doc("plans/wotex-binding-mqtt-completion.md"), title: "Completion Contract"},
-        {doc("specs/WBM.01-values-and-client-port.md"), title: "Values and client port"},
-        {doc("specs/WBM.02-form-mapping.md"), title: "Form mapping"},
-        {doc("specs/WBM.03-runtime-transport.md"), title: "Runtime transport"},
-        {doc("plans/WBM-C01-operation-inventory.md"), title: "Operation inventory"},
-        {doc("plans/WBM-C02-client-lifecycle.md"), title: "Client lifecycle proof"},
-        {doc("plans/WBM-C03-limits-security.md"), title: "Limits and security"},
-        {doc("reference-consumer-inventory.md"), title: "Archive reference consumer"},
-        {doc("release-candidate-inventory.md"), title: "Release candidate"},
-        {doc("runtime-baseline.md"), title: "Runtime baseline"},
-        {doc("provenance/mqtt-binding-draft-2026-07-01.md"), title: "MQTT binding draft"},
-        {doc("provenance/mqtt-primary-sources.md"), title: "MQTT primary sources"},
-        {doc("provenance/wot-binding-registry-2025-11-04.md"), title: "Binding Registry status"},
-        {"CHANGELOG.md", title: "Changelog"},
-        {"../../docs/packages/wotex-binding-mqtt/security.md", title: "Security"},
-        {"LICENSE", title: "License"},
-        {"NOTICE", title: "Notices"}
-      ],
+      extras:
+        [
+          {"README.md", title: "Overview"},
+          {doc("plans/wotex-binding-mqtt-completion.md"), title: "Completion Contract"},
+          {doc("specs/WBM.01-values-and-client-port.md"), title: "Values and client port"},
+          {doc("specs/WBM.02-form-mapping.md"), title: "Form mapping"},
+          {doc("specs/WBM.03-runtime-transport.md"), title: "Runtime transport"},
+          {doc("plans/WBM-C01-operation-inventory.md"), title: "Operation inventory"},
+          {doc("plans/WBM-C02-client-lifecycle.md"), title: "Client lifecycle proof"},
+          {doc("plans/WBM-C03-limits-security.md"), title: "Limits and security"},
+          {doc("reference-consumer-inventory.md"), title: "Archive reference consumer"},
+          {doc("release-candidate-inventory.md"), title: "Release candidate"},
+          {doc("runtime-baseline.md"), title: "Runtime baseline"},
+          {doc("provenance/mqtt-binding-draft-2026-07-01.md"), title: "MQTT binding draft"},
+          {doc("provenance/mqtt-primary-sources.md"), title: "MQTT primary sources"},
+          {doc("provenance/wot-binding-registry-2025-11-04.md"), title: "Binding Registry status"},
+          {"CHANGELOG.md", title: "Changelog"},
+          {"../../docs/packages/wotex-binding-mqtt/security.md", title: "Security"},
+          {"LICENSE", title: "License"},
+          {"NOTICE", title: "Notices"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-binding-mqtt\/plans/,
         "Library specifications": ~r/docs\/packages\/wotex-binding-mqtt\/specs/,
         Provenance: ~r/docs\/packages\/wotex-binding-mqtt\/provenance/,
+        Benchmarks: ~r/bench\/output/,
         Reference: ~r/CHANGELOG|security|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
