@@ -138,7 +138,11 @@ defmodule Wotex.Matter.SoftwareControlPumpTest do
     try do
       operation.(port)
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 end

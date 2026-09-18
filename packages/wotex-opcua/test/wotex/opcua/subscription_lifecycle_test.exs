@@ -137,7 +137,14 @@ defmodule Wotex.OPCUA.SubscriptionLifecycleTest do
           {:args, [Integer.to_string(port_number), context.directory]}
         ])
 
-      on_exit(fn -> if Port.info(port), do: Port.close(port) end)
+      on_exit(fn ->
+        try do
+          Port.close(port)
+        rescue
+          ArgumentError -> :ok
+        end
+      end)
+
       await_line(port, "READY ", 5000)
 
       open =

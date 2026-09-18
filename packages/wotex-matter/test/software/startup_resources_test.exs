@@ -123,7 +123,12 @@ defmodule Wotex.Matter.NativeStartupResourcesTest do
     try do
       operation.(port, child)
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
+
       assert gone?(port, child, now() + 1_000)
     end
   end

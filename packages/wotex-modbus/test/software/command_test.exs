@@ -365,7 +365,12 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
       {^port, {:exit_status, code}} -> {IO.iodata_to_binary(Enum.reverse(output)), code}
     after
       max(deadline - System.monotonic_time(:millisecond), 0) ->
-        if Port.info(port), do: Port.close(port)
+        try do
+          Port.close(port)
+        rescue
+          ArgumentError -> :ok
+        end
+
         flunk("native fixture command exceeded its test deadline")
     end
   end

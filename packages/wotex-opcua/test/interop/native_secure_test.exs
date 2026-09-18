@@ -33,7 +33,14 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
     parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config), "native-open.json")))
     port = Port.open({:spawn_executable, executable}, [:binary, :exit_status])
-    on_exit(fn -> if Port.info(port), do: Port.close(port) end)
+
+    on_exit(fn ->
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
+    end)
 
     {ready_line, <<>>} = line(port, <<>>)
     assert {:ok, %Ready{} = ready} = Ready.decode(ready_line)

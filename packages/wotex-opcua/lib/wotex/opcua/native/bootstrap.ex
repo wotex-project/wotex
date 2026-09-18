@@ -59,7 +59,7 @@ defmodule Wotex.OPCUA.Native.Bootstrap do
     try do
       collect(port, <<>>, System.monotonic_time(:millisecond) + 20_000)
     after
-      if Port.info(port), do: Port.close(port)
+      close_if_open(port)
     end
   rescue
     _ in [ArgumentError, ErlangError] ->
@@ -89,4 +89,13 @@ defmodule Wotex.OPCUA.Native.Bootstrap do
 
   defp failed(bytes),
     do: {:error, :bootstrap_failed, %{output: bytes, descendant_cleanup: :unverified}}
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
+  end
 end

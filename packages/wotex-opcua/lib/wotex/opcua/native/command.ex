@@ -109,7 +109,7 @@ defmodule Wotex.OPCUA.Native.Command do
     try do
       collect(port, [], 0, step.output_bytes, deadline)
     after
-      if Port.info(port), do: Port.close(port)
+      close_if_open(port)
     end
   rescue
     _ in [ArgumentError, ErlangError] -> failure(:command_setup_failed, <<>>, nil)
@@ -145,4 +145,13 @@ defmodule Wotex.OPCUA.Native.Command do
   defp finish(0, bytes), do: {:ok, %{output: bytes, exit_status: 0}}
   defp finish(code, bytes), do: failure(Map.get(@codes, code, :command_failed), bytes, code)
   defp failure(code, bytes, status), do: {:error, code, %{output: bytes, exit_status: status}}
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
+  end
 end

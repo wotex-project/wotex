@@ -298,7 +298,13 @@ defmodule Wotex.BACnet.SoftwareRun do
       Process.delete(state_key)
       Process.delete({__MODULE__, :cid, context.lane})
       Process.delete({__MODULE__, :peer_exit, peer})
-      if Port.info(peer), do: Port.close(peer)
+
+      try do
+        Port.close(peer)
+      rescue
+        ArgumentError -> :ok
+      end
+
       if watcher = Process.delete({__MODULE__, :watcher, peer}), do: send(watcher, :cleanup)
     end
   end
@@ -362,7 +368,11 @@ defmodule Wotex.BACnet.SoftwareRun do
     })
   rescue
     _ ->
-      if Port.info(peer), do: Port.close(peer)
+      try do
+        Port.close(peer)
+      rescue
+        ArgumentError -> :ok
+      end
 
       Map.merge(evidence, %{
         "status" => "failed",

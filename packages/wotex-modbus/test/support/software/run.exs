@@ -105,7 +105,12 @@ defmodule Wotex.Modbus.SoftwareRun do
         if port = Process.delete({__MODULE__, :opening_port}) do
           Process.delete({__MODULE__, :watcher, port})
           Process.delete({__MODULE__, :ready_deadline, port})
-          if Port.info(port), do: Port.close(port)
+
+          try do
+            Port.close(port)
+          rescue
+            ArgumentError -> :ok
+          end
         end
 
         send(watcher, :cleanup)
@@ -256,7 +261,13 @@ defmodule Wotex.Modbus.SoftwareRun do
         )
     after
       Process.delete(state_key)
-      if Port.info(peer), do: Port.close(peer)
+
+      try do
+        Port.close(peer)
+      rescue
+        ArgumentError -> :ok
+      end
+
       if watcher = Process.delete({__MODULE__, :watcher, peer}), do: send(watcher, :cleanup)
     end
   end
@@ -319,7 +330,11 @@ defmodule Wotex.Modbus.SoftwareRun do
     })
   rescue
     _ ->
-      if Port.info(peer), do: Port.close(peer)
+      try do
+        Port.close(peer)
+      rescue
+        ArgumentError -> :ok
+      end
 
       Map.merge(evidence, %{
         "status" => "failed",

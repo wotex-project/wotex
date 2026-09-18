@@ -126,7 +126,7 @@ defmodule Wotex.CoAP.Native.BuildCommand do
   end
 
   defp close(port) do
-    if Port.info(port), do: Port.close(port)
+    close_if_open(port)
   rescue
     _ in [ArgumentError, ErlangError] -> :ok
   end
@@ -169,4 +169,13 @@ defmodule Wotex.CoAP.Native.BuildCommand do
   end
 
   defp arguments(_), do: :error
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
+  end
 end

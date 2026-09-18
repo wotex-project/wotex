@@ -14,7 +14,12 @@ defmodule Wotex.Modbus.SoftwareCommand do
         result
 
       error ->
-        if Port.info(port), do: Port.close(port)
+        try do
+          Port.close(port)
+        rescue
+          ArgumentError -> :ok
+        end
+
         error
     end
   end
@@ -99,7 +104,11 @@ defmodule Wotex.Modbus.SoftwareCommand do
         System.monotonic_time(:millisecond) + timeout
       )
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 

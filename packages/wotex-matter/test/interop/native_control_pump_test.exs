@@ -122,7 +122,12 @@ defmodule Wotex.Matter.NativeControlPumpInteropTest do
             late_replies: 0
           }
         after
-          if Port.info(port), do: Port.close(port)
+          try do
+            Port.close(port)
+          rescue
+            ArgumentError -> :ok
+          end
+
           assert gone?(port, child, System.monotonic_time(:millisecond) + 1_000)
         end
       end

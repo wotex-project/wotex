@@ -14,7 +14,12 @@ defmodule Wotex.BACnet.SoftwareCommand do
         result
 
       error ->
-        if Port.info(port), do: Port.close(port)
+        try do
+          Port.close(port)
+        rescue
+          ArgumentError -> :ok
+        end
+
         error
     end
   end
@@ -102,7 +107,11 @@ defmodule Wotex.BACnet.SoftwareCommand do
     try do
       poll(port, timeout, limit, initial)
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 

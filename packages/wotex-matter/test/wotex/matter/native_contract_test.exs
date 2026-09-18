@@ -87,7 +87,11 @@ defmodule Wotex.Matter.NativeContractTest do
       observation = %{"frame" => Jason.decode!(bytes), "owned_processes_after_grace" => remaining}
       assert observation == item["expectation"]["value"]
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 
@@ -241,7 +245,11 @@ defmodule Wotex.Matter.NativeContractTest do
           observed = Map.put(state.snapshot, "terminal", state.terminal)
           assert observed == item["expectation"]["value"], item["id"]
         after
-          if Port.info(port), do: Port.close(port)
+          try do
+            Port.close(port)
+          rescue
+            ArgumentError -> :ok
+          end
         end
       end
     after

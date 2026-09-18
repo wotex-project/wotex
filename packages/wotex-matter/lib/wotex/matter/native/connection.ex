@@ -2093,7 +2093,7 @@ defmodule Wotex.Matter.Native.Connection do
           stderr_to_stdout: true
         )
 
-        if Port.info(port), do: Port.close(port)
+        close_if_open(port)
         await_port_closed(port, deadline)
 
       nil ->
@@ -2168,5 +2168,14 @@ defmodule Wotex.Matter.Native.Connection do
       %{count: 1},
       %{kind: kind, result: result}
     )
+  end
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
   end
 end

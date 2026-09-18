@@ -764,7 +764,7 @@ defmodule Wotex.CoAP.Native.Connection do
         {:ok, port, os_pid}
 
       _ ->
-        if Port.info(port), do: Port.close(port)
+        close_if_open(port)
         failure(:native_unavailable)
     end
   rescue
@@ -1926,12 +1926,12 @@ defmodule Wotex.CoAP.Native.Connection do
 
     case await_port(port, native_deadline) do
       :closed ->
-        if Port.info(port), do: Port.close(port)
+        close_if_open(port)
         await_port(port, deadline)
 
       :timeout ->
         signal(os_pid, "-KILL")
-        if Port.info(port), do: Port.close(port)
+        close_if_open(port)
         await_port(port, deadline)
     end
   rescue
@@ -2065,4 +2065,13 @@ defmodule Wotex.CoAP.Native.Connection do
 
   defp now, do: System.monotonic_time(:millisecond)
   defp failure(code), do: {:error, Error.new(code)}
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
+  end
 end

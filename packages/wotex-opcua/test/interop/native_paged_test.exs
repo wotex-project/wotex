@@ -25,7 +25,14 @@ defmodule Wotex.OPCUA.NativePagedInteropTest do
         {:args, [Integer.to_string(port_number), fixture]}
       ])
 
-    on_exit(fn -> if Port.info(port), do: Port.close(port) end)
+    on_exit(fn ->
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
+    end)
+
     assert 2 = await_ready(port, System.monotonic_time(:millisecond) + 5000)
 
     digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end

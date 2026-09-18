@@ -345,7 +345,11 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
       refute_receive {^port, {:exit_status, _}}, 50
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 
@@ -376,7 +380,11 @@ defmodule Wotex.OPCUA.Native.BuildTest do
       assert_receive {^port, {:exit_status, 70}}, 5_000
       refute_receive {^port, {:data, _}}, 50
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 end
