@@ -5,8 +5,10 @@ defmodule Wotex.Workspace.ModuleSpans do
 
   `defmodule` and `defprotocol` blocks are recognised, including nested
   ones (`defmodule Inner` inside `Outer` is `Outer.Inner`) and
-  `__MODULE__.Inner` names. The analysis is syntactic: a module defined by
-  a macro or inside a `quote` is attributed to the enclosing module.
+  `__MODULE__.Inner` names. The analysis is syntactic: a module that a macro
+  generates has no span of its own, and a module with a computed name (for
+  example `unquote(name)`) is attributed to the enclosing module. A literally
+  named `defmodule` inside a `quote` is nested like any other.
   """
 
   @type span :: %{module: String.t(), first: pos_integer(), last: pos_integer()}

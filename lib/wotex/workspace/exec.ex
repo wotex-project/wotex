@@ -37,7 +37,12 @@ defmodule Wotex.Workspace.Exec do
   @doc "A one-line description: `packages/x: A=1 cmake -S ...`."
   @spec describe(Path.t(), [String.t()], [{String.t(), String.t() | nil}]) :: String.t()
   def describe(cd, argv, env) do
-    exports = Enum.map(env, fn {name, value} -> "#{name}=#{value}" end)
+    exports =
+      Enum.map(env, fn
+        {name, nil} -> "-u #{name}"
+        {name, value} -> "#{name}=#{value}"
+      end)
+
     "#{Workspace.relative(cd)}: #{Enum.join(exports ++ argv, " ")}"
   end
 
