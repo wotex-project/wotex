@@ -100,6 +100,35 @@ defmodule Wotex.Workspace.NativeToolsTest do
     assert message =~ "clang-format not found; install LLVM 22 or later"
   end
 
+  test "finds clang and clang++ beside the clang-tidy found" do
+    tidy = %{
+      tool: :clang_tidy,
+      path: "/usr/lib/llvm-23/bin/clang-tidy",
+      version: "23.1.1",
+      major: 23
+    }
+
+    opts =
+      opts(%{
+        files: ~w(/usr/lib/llvm-23/bin/clang /usr/lib/llvm-23/bin/clang++),
+        versions: %{
+          "/usr/lib/llvm-23/bin/clang++" => "Ubuntu clang version 23.1.2 (1)\nTarget: x\n"
+        }
+      })
+
+    assert NativeTools.compilers(tidy, opts) ==
+             {:ok,
+              %{
+                cc: "/usr/lib/llvm-23/bin/clang",
+                cxx: "/usr/lib/llvm-23/bin/clang++",
+                version: "Ubuntu clang version 23.1.2 (1)"
+              }}
+
+    assert {:error, message} = NativeTools.compilers(tidy, opts(%{}))
+    assert message =~ "clang and clang++ not found in /usr/lib/llvm-23/bin, beside clang-tidy 23"
+    assert message =~ "`apt install clang-23`"
+  end
+
   test "names and variables" do
     assert NativeTools.minimum_major() == 22
     assert NativeTools.name(:clang_tidy) == "clang-tidy"

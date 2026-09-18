@@ -77,4 +77,6 @@ defmodule WotexWorkspace.Fixtures do
   end
 end
 
-ExUnit.start()
+# The real `cargo bench` test fetches and compiles criterion; run it with
+# `mix test --include criterion`.
+ExUnit.start(exclude: [:criterion])

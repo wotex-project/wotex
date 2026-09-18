@@ -5,7 +5,8 @@
 | Path | Contents |
 | --- | --- |
 | `packages.yaml` | The package manifest: the dependency graph, lane metadata and the globs that select every package. |
-| `native/docker/` | The images of the native checks: `linux.Dockerfile` (Linux-only suites on another host), `matter-sdk.Dockerfile` (clang-tidy for the Matter SDK build), and the entry point and Mix wrapper of the Linux container (`suite.sh`, `bin/mix`). |
+| `native/docker/` | The images of the native checks: `linux.Dockerfile` (Linux-only suites and benchmarks on another host), `matter-sdk.Dockerfile` (clang-tidy for the Matter SDK build), and the entry point and Mix wrapper of the Linux container (`suite.sh`, `bin/mix`). |
+| `native/nanobench/` | nanobench 4.6.0 (MIT), the single-header C++ benchmark library of `mix native.bench`: `nanobench.h`, its `LICENSE` and `source.json`, which pins the upstream commit and the SHA-256 of each file. `mix native.sources` verifies the digests and `mix native.advisories` queries OSV for the pin; `.clang-format-ignore` excludes the directory. |
 
 The root Mix project (`mix.exs` at the repository root, app `:wotex_workspace`)
 implements the `mix wotex.*` tasks that read the manifest. It is not an
@@ -27,7 +28,9 @@ version equals the channel of `rust-toolchain.toml` (with rustfmt and
 clippy); workspace tests assert both, so change them together. Run
 `mise install` once, then `mix setup`. clang-format and clang-tidy (LLVM 22
 or later; CI pins 23) come from the system: `brew install llvm`, or the
-`clang-format-23` and `clang-tidy-23` packages from apt.llvm.org. The images
+`clang-format-23` and `clang-tidy-23` packages from apt.llvm.org.
+`mix native.bench` compiles with the `clang` and `clang++` in the directory
+of that clang-tidy (`clang-23` from apt.llvm.org). The images
 in `native/docker/` pin their base images by digest and install the same
 LLVM major; the Linux image carries the current lane's Elixir and OTP.
 Workspace tests assert that these pins agree with `packages.yaml`,
@@ -70,6 +73,10 @@ native.lint --no-clippy` (`native_format`), `mix native.lint --tidy
 --no-format` (`native_lint`) and `mix native.test` (`native_test`), so the
 full gate needs the root dependencies (`mix setup`).
 
+Benchmarks are outside the tiers: `mix bench --package NAME` (Elixir) and
+`mix native.bench --package NAME` (C, C++ and Rust) run only when invoked,
+and each writes its Markdown reports to the package's `bench/output/`.
+
 ## `packages.yaml`
 
 An excerpt:
@@ -111,7 +118,8 @@ packages:
 | `native` | `true` when the package builds or vendors native code. `mix native.sources` and `mix native.advisories` cover native packages only. |
 | `native_task` | The package's own build task, dispatched by `mix native.build --package NAME --workspace /abs/dir`. |
 | `software_task` | The package's own software-profile task, if any. The CI native lane runs it with `--workspace`; locally it runs only when invoked explicitly, e.g. `mix pkg NAME TASK --workspace /abs/dir`. |
-| `native_check` | Suites for `mix native.lint --tidy` and `mix native.test`: `suite` (name), `requires` (`linux`, `docker`), `build` (a package task run with `--workspace`), `prepare` (commands), `compile_commands` (databases the build or `prepare` wrote), `compile` (`files` globs and `flags` for files compiled outside a build system), `test` (commands) and `container` (`dockerfile`, `platform`, `volumes`: run `prepare`, `test` and clang-tidy in that image). Strings take the placeholders `{package}`, `{root}`, `{workspace}` and `{scratch}`; a flag `pkg-config:NAME` expands to `pkg-config --cflags NAME`. On a host that is not Linux, a suite that requires only `linux` runs in the Linux container (`native/docker/linux.Dockerfile`) when Docker is available. See `Wotex.Workspace.NativeSuite` and `Wotex.Workspace.NativeContainer`. |
+| `native_check` | Suites for `mix native.lint --tidy` and `mix native.test`: `suite` (name), `requires` (`linux`, `docker`, `tun`), `build` (a package task run with `--workspace`), `prepare` (commands), `compile_commands` (databases the build or `prepare` wrote), `compile` (`files` globs and `flags` for files compiled outside a build system), `test` (commands) and `container` (`dockerfile`, `platform`, `volumes`: run `prepare`, `test` and clang-tidy in that image). Strings take the placeholders `{package}`, `{root}`, `{workspace}` and `{scratch}`; a flag `pkg-config:NAME` expands to `pkg-config --cflags NAME`. On a host that is not Linux, a suite that requires only `linux` (optionally with `tun`, a tun device and `CAP_NET_ADMIN`, which the container is given) runs in the Linux container (`native/docker/linux.Dockerfile`) when Docker is available. See `Wotex.Workspace.NativeSuite` and `Wotex.Workspace.NativeContainer`. |
+| `native_bench` | Benchmarks for `mix native.bench`, each reported in `bench/output/native-<id>.md` of the package: `bench` (the id: lowercase letters, digits and underscores), `kind`, `title` and `description` (the report's heading and first paragraph), `requires` and `env` (the environment of the benchmark process), and for `nanobench` also `compile` (`files` globs and `flags`) and `link` (linker flags). The kind fixes the source: `nanobench` a C++ driver `bench/native/<id>.cpp`, which `compile` must match, built with the package sources `compile` names and the vendored nanobench; `criterion` a Cargo crate `bench/native/<id>/` with a committed `Cargo.lock`, run with `cargo bench`; `elixir` a script `bench/native/<id>_bench.exs`, run with `mix run` after the package's `native_task` built `--workspace` (the package must declare one). Strings take the `native_check` placeholders, `{workspace}` in the `elixir` kind only; `pkg-config:NAME` expands to `--cflags` in `compile` and to `--libs` in `link`. A `nanobench` or `elixir` benchmark that requires only Linux, optionally with `tun`, runs in the Linux container on another host; the container has no Rust toolchain. Each driver also gives clang-tidy its compile commands, as the compile-only suite `bench-<id>`. The package must be `native: true`. See `Wotex.Workspace.NativeBench` and `Wotex.Workspace.NativeBenchRunner`. |
 
 `mix wotex.new NAME` appends a manifest entry; the manifest is validated
 whenever a task loads it.

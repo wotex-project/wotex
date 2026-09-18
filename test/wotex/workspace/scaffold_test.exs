@@ -49,6 +49,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
           packages/wotex-demo/CLAUDE.md packages/wotex-demo/README.md packages/wotex-demo/CHANGELOG.md
           packages/wotex-demo/LICENSE packages/wotex-demo/NOTICE packages/wotex-demo/lib/wotex/demo.ex
           packages/wotex-demo/test/test_helper.exs packages/wotex-demo/test/wotex/demo_test.exs
+          packages/wotex-demo/bench/version_bench.exs
           packages/wotex-demo/bin/check_archive.exs packages/wotex-demo/bin/check_application_free.exs
           packages/wotex-demo/bin/check_boundary.exs
           docs/packages/wotex-demo/specs/catalogue.yaml docs/packages/wotex-demo/plans/wotex-demo-completion.md
@@ -62,6 +63,16 @@ defmodule Wotex.Workspace.ScaffoldTest do
       assert File.read!(Path.join(root, "packages/wotex-demo/#{file}")) ==
                File.read!(Path.join(root, "packages/wotex-coap/#{file}"))
     end
+
+    # Benchmarks: Benchee in dev, a starter script and the reports in the docs.
+    mix_exs = File.read!(Path.join(root, "packages/wotex-demo/mix.exs"))
+    assert mix_exs =~ ~s|{:benchee, "~> 1.5", only: :dev, runtime: false}|
+    assert mix_exs =~ ~s|{:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false}|
+    assert mix_exs =~ ~s|Path.wildcard("bench/output/*.md")|
+    bench = File.read!(Path.join(root, "packages/wotex-demo/bench/version_bench.exs"))
+    assert bench =~ ~s|file: "bench/output/version.md"|
+    assert bench =~ "Wotex.Demo.version()"
+    assert {:ok, _} = Code.string_to_quoted(bench)
 
     # The changelog is the release tooling's initial file, with no entries.
     changelog = File.read!(Path.join(root, "packages/wotex-demo/CHANGELOG.md"))

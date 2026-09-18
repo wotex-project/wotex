@@ -15,9 +15,12 @@ defmodule Mix.Tasks.Wotex.Native.Suite do
   commands. `--workspace` names the build task's workspace instead of the
   cached one (`Wotex.Workspace.NativeCache`).
 
-  The Linux container of the native checks runs this task for a suite that
-  requires Linux (`Wotex.Workspace.NativeContainer`); `mix native.lint
-  --tidy` and `mix native.test` run every suite of a package.
+  The suites are the package's `native_check` suites and the compile-only
+  suites of its `nanobench` drivers (`bench-<id>`,
+  `Wotex.Workspace.NativeCheck.suites/1`). The Linux container of the native
+  checks runs this task for a suite that requires Linux
+  (`Wotex.Workspace.NativeContainer`); `mix native.lint --tidy` and
+  `mix native.test` run every suite of a package.
   """
 
   use Mix.Task
@@ -53,7 +56,7 @@ defmodule Mix.Tasks.Wotex.Native.Suite do
       end
 
     suite =
-      Enum.find(context.suites, &(&1.name == opts[:suite])) ||
+      Enum.find(NativeCheck.suites(context), &(&1.name == opts[:suite])) ||
         CLI.fail("package #{package} has no native_check suite #{inspect(opts[:suite])}")
 
     check = [workspace: opts[:workspace]]

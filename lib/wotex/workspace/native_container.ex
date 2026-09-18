@@ -15,10 +15,11 @@ defmodule Wotex.Workspace.NativeContainer do
   ## The Linux container
 
   On a host that is not Linux, a suite that requires only Linux runs in a
-  container of `tooling/native/docker/linux.Dockerfile` (`linux_suite/4`):
-  the repository is mounted read-only and the native cache writable, both
-  at their host paths, and `tooling/native/docker/suite.sh` runs
-  `mix wotex.native.suite` for the suite. Mix keeps each project's
+  container of `tooling/native/docker/linux.Dockerfile` (`linux_suite/4`),
+  and so does a benchmark (`linux_task/5`): the repository is mounted
+  read-only and the native cache writable, both at their host paths, and
+  `tooling/native/docker/suite.sh` runs `mix wotex.native.suite` for the
+  suite, or `mix wotex.native.bench` for the benchmark. Mix keeps each project's
   dependencies and build output in `<cache>/linux-container/mix`
   (`tooling/native/docker/bin/mix`). The host fetches the Hex dependencies
   of the root project and of the package into that directory first (Hex
@@ -138,25 +139,22 @@ defmodule Wotex.Workspace.NativeContainer do
   @spec linux_suite(map(), NativeSuite.t(), :tidy | :test, keyword()) ::
           :ok | :error | {:analysed, MapSet.t(Path.t()), :ok | :error}
   def linux_suite(context, suite, mode, opts) do
-    label = "#{context.name} suite #{suite.name}"
-
-    case image(context.root, @linux_dockerfile, nil) do
-      {:ok, image} ->
-        run_linux(context, suite, mode, opts, image)
-
-      {:error, message} ->
-        Mix.shell().error("#{label}: #{message}")
-        :error
-    end
-  end
-
-  defp run_linux(context, suite, mode, opts, image) do
     root = NativeCache.real_path(context.root)
-    cache = context.cache
 
-    case fetch_dependencies(context, root, cache) do
-      :ok ->
-        run_linux(context, suite, mode, opts, image, root)
+    result =
+      Path.join(NativeCache.suite_dir(context.cache, context.name, suite), "linux-result.json")
+
+    File.mkdir_p!(Path.dirname(result))
+    File.rm(result)
+    covered = Keyword.get(opts, :covered, MapSet.new())
+    args = linux_args(context, suite, mode, covered, result, root)
+
+    case linux_task(context, "suite #{suite.name}", "wotex.native.suite", args,
+           workspace: Keyword.get(opts, :workspace),
+           requires: suite.requires
+         ) do
+      {:ok, status} ->
+        linux_outcome(context, suite, mode, status, result, root)
 
       {:error, message} ->
         Mix.shell().error("#{context.name} suite #{suite.name}: #{message}")
@@ -164,32 +162,58 @@ defmodule Wotex.Workspace.NativeContainer do
     end
   end
 
-  defp run_linux(context, suite, mode, opts, image, root) do
-    cache = context.cache
-    result = Path.join(NativeCache.suite_dir(cache, context.name, suite), "linux-result.json")
-    File.mkdir_p!(Path.dirname(result))
-    File.rm(result)
-    workspace = Keyword.get(opts, :workspace)
+  @doc """
+  Runs the root task `task` for the package of `context` in the Linux
+  container, as `mix TASK --package NAME ARGS...`, and returns the
+  container's exit status. With `workspace:` the workspace is mounted
+  writable and passed as `--workspace`. `label` (for example `"suite
+  libdbus"`) names the run in messages and in the container's name. Fails
+  when the image or the Mix dependencies cannot be prepared.
+  """
+  @spec linux_task(map(), String.t(), String.t(), [String.t()], keyword()) ::
+          {:ok, non_neg_integer()} | {:error, String.t()}
+  def linux_task(context, label, task, args, opts \\ []) do
+    root = NativeCache.real_path(context.root)
 
-    args =
-      linux_args(context, suite, mode, Keyword.get(opts, :covered, MapSet.new()), result, root) ++
-        if(workspace, do: ["--workspace", workspace], else: [])
+    with {:ok, image} <- image(context.root, @linux_dockerfile, nil),
+         :ok <- fetch_dependencies(context, root, context.cache) do
+      {:ok,
+       run_linux(context, label, [task | args], image, root,
+         workspace: Keyword.get(opts, :workspace),
+         requires: Keyword.get(opts, :requires, [])
+       )}
+    end
+  end
+
+  @doc """
+  The extra `docker run` options a requirement list needs in the Linux
+  container: `tun` adds the tun device and `CAP_NET_ADMIN`.
+  """
+  @spec run_options([String.t()]) :: [String.t()]
+  def run_options(requires) do
+    if "tun" in requires, do: ["--cap-add", "NET_ADMIN", "--device", "/dev/net/tun"], else: []
+  end
+
+  defp run_linux(context, label, args, image, root, opts) do
+    workspace = Keyword.fetch!(opts, :workspace)
+    cache = context.cache
+    args = args ++ if(workspace, do: ["--workspace", workspace], else: [])
 
     mounts =
       [{root, root, :readonly}, {cache, cache, :writable}] ++
         if(workspace, do: [{workspace, workspace, :writable}], else: [])
 
-    name = "wotex-native-#{context.name}-#{suite.name}-#{random()}"
+    name = "wotex-native-#{context.name}-#{String.replace(label, " ", "-")}-#{random()}"
 
     argv =
       ["docker", "run", "--rm", "--init", "--name", name, "--workdir", root] ++
         Enum.flat_map(mounts, &mount_args/1) ++
         Enum.flat_map(linux_env(root, cache), fn {key, value} -> ["--env", "#{key}=#{value}"] end) ++
+        run_options(Keyword.fetch!(opts, :requires)) ++
         [image, "sh", Path.join(root, @entry), context.name | args]
 
-    Mix.shell().info("==> #{context.name} suite #{suite.name}: in the Linux container #{image}")
-    status = with_cleanup(name, fn -> Exec.run(argv, cd: root, env: tool_env(), quiet: true) end)
-    linux_outcome(context, suite, mode, status, result, root)
+    Mix.shell().info("==> #{context.name} #{label}: in the Linux container #{image}")
+    with_cleanup(name, fn -> Exec.run(argv, cd: root, env: tool_env(), quiet: true) end)
   end
 
   # Fetches the Hex dependencies of the root project and of the package into

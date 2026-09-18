@@ -45,6 +45,9 @@ tests.
 | 2 | Before a commit | `mix check` | `mix workspace`, then the full gate for changed packages and the fast gate for their dependents (`mix check.affected`) |
 | 3 | Repository-wide change, CI, explicit request | `mix check.all` | Workspace checks and every package's full gate |
 
+Benchmarks are outside the tiers and run only when invoked; see
+[Benchmarks](#benchmarks).
+
 A package's full gate is its `.check.exs`, run by `mix check --no-retry`:
 locked dependencies, compilation, formatting, Credo, Doctor, dependency
 audits, ExDoc with warnings as errors, tests with the 95% coverage floor,
@@ -158,6 +161,59 @@ mix native.test --package wotex-coap          # native tests
 - **Findings.** clang-tidy findings fail the check. A false positive gets a
   `NOLINTNEXTLINE(check)` or `NOLINTBEGIN`/`NOLINTEND` comment with the
   reason; `.clang-tidy` lists each disabled check with its reason.
+
+### Benchmarks
+
+`mix bench` runs a package's Elixir benchmarks (`bench/*_bench.exs`) and
+`mix native.bench` its C, C++ and Rust benchmarks, which the package declares
+under `native_bench` in `tooling/packages.yaml`. No gate runs either. Each
+benchmark writes one Markdown report to the package's `bench/output/`, which
+its HexDocs include: the title, a description, the system and toolchain, and
+the results.
+
+```sh
+mix bench --package wotex                               # Elixir, bench/output/<topic>.md
+mix native.bench --package wotex-opcua                  # C, C++, Rust: bench/output/native-<id>.md
+mix native.bench --package <name> --bench <id>          # one benchmark
+mix native.bench --package <name> --workspace /tmp/wotex-native-<name>   # adds the Elixir benchmarks over the native build
+```
+
+- **nanobench.** A C++ driver, `bench/native/<id>.cpp`, includes
+  `<nanobench.h>`, measures with `ankerl::nanobench::Bench` and prints
+  nanobench's Markdown tables to standard output; first-party C headers are
+  included inside `extern "C"`. The benchmark's `compile` rules name the
+  driver and the package sources it links, each with its flags; the runner
+  adds `-O2 -DNDEBUG`, compiles nanobench's implementation itself (a driver
+  does not define `ANKERL_NANOBENCH_IMPLEMENT`) and uses the `clang` and
+  `clang++` beside the clang-tidy of the native checks, so the benchmarks
+  and the static analysis share one LLVM. nanobench 4.6.0 is vendored in
+  `tooling/native/nanobench/`, pinned by commit and SHA-256 in its
+  `source.json` and verified before every build. The driver is first-party
+  code: clang-format checks it, and clang-tidy analyses it with the
+  benchmark's flags (the compile-only suite `bench-<id>`).
+- **criterion.** A crate `bench/native/<id>/`, separate from the shipped
+  crate so that the shipped manifest and lock stay unchanged, reaches the
+  shipped code through a path dependency on its library target (or, for a
+  binary-only crate, by including its modules with `#[path]`), commits its
+  own `Cargo.lock` and declares `harness = false` benchmarks.
+  `cargo bench --benches --locked` runs them with the native cache's target
+  directory and a fresh `CRITERION_HOME`; the report tabulates criterion's
+  mean, median and standard deviation, and the throughput a benchmark
+  declares. rustfmt and clippy check the crate with the package's others.
+- **Elixir over the native build.** A script `bench/native/<id>_bench.exs`
+  runs with `mix run` in `dev` after the package's `native_task` built the
+  `--workspace`, with the benchmark's `env` (the `native_check` placeholders,
+  `{workspace}` included) and `WOTEX_BENCH_OUTPUT`, `WOTEX_BENCH_TITLE` and
+  `WOTEX_BENCH_DESCRIPTION`. The script writes the report itself, for example
+  with Benchee's Markdown formatter (`file:` the output path, `title:` `"# "`
+  and the title). Without `--workspace` these benchmarks are skipped, and
+  `mix native.bench` says so.
+- **Where they run.** As for the suites: a benchmark that requires only
+  Linux runs in the Linux container on another host with Docker, and its
+  report records that container's system; the container has no Rust
+  toolchain, so a criterion benchmark that requires Linux needs a Linux
+  host. Build products and scratch files live in the native cache, below
+  `<cache>/<package>/bench/<id>`.
 
 ## Explicit lanes
 

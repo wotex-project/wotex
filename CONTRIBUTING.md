@@ -12,7 +12,7 @@ under `docs/packages/<name>/specs/`. Read both before changing a package.
 | `docs/packages/<name>/` | The package's specifications (`specs/` with its `catalogue.yaml`), plans, decisions and provenance |
 | `docs/architecture/`, `docs/guides/` | Family architecture and cross-package guides |
 | `docs/tasks/local/` | Ignored; the only place for machine-local execution state |
-| `tooling/` | The package manifest (`packages.yaml`) and the images of the native checks |
+| `tooling/` | The package manifest (`packages.yaml`), the images of the native checks and the vendored nanobench of the native benchmarks |
 | `.claude/` | Shared agent rules and skills; each `packages/<name>/CLAUDE.md` stays that package's contract |
 | `.clang-format`, `.clang-tidy`, `.clang-format-ignore`, `rust-toolchain.toml` | Native formatting, static analysis, exclusions and the Rust toolchain |
 
@@ -46,6 +46,7 @@ Validation is proportional to the change:
 | A package change is ready | `mix check.fast --package <name>` |
 | Before a commit | `mix check` (root self-check, full gate for changed packages, fast gate for dependents) |
 | Repository-wide change only | `mix check.all` |
+| Performance-relevant change, explicit only | `mix bench --package <name>`; `mix native.bench --package <name>` for C, C++ or Rust |
 
 A package's full gate covers its native code: clang-format on changed lines,
 clang-tidy and the native tests for C and C++, rustfmt, clippy and `cargo
@@ -54,6 +55,9 @@ test` for Rust. `mise.toml` pins the current toolchain (Elixir 1.20.2, OTP
 OTP 27.3.4.15) and pins LLVM 23 for clang-format and clang-tidy. See the
 [development guide](docs/guides/development.md) for Dexter, Dialyzer, native
 code, the explicit native lanes and CI.
+
+Benchmarks are not part of any gate. They write Markdown reports to the
+package's `bench/output/`, which its HexDocs include.
 
 The full gate of one package is `mix pkg <name> check --no-retry`, the same
 as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/<name>`. Add tests
@@ -86,6 +90,8 @@ beside the package tests, not in repository-level tooling.
 | `mix native.advisories [--offline]` | Queries OSV for advisories against the pinned native sources. |
 | `mix native.lint [--all] [--package NAME]... [--base REF] [--fix] [--tidy [--workspace /abs/dir]] [--no-format] [--no-clippy]` | First-party native code of the selected (default: changed) packages: clang-format on the C and C++ lines changed since the merge base (`--fix` applies it), rustfmt and clippy; `--tidy` adds clang-tidy with the compile commands of the package's native build. Vendored files (`.clang-format-ignore`) are skipped. Needs LLVM 22 or later (`brew install llvm`, or `clang-format-23`/`clang-tidy-23` from apt.llvm.org). |
 | `mix native.test [--all] [--package NAME]... [--workspace /abs/dir]` | Native tests of the selected packages: `cargo test`, CTest and the test executables of each `native_check` suite in `tooling/packages.yaml`, after its build task. |
+| `mix bench [--package NAME]... [--base REF] [--all]` | Elixir benchmarks of the selected (default: changed) packages: each `bench/*_bench.exs` with `mix run` in `dev`, writing `bench/output/<topic>.md`. Explicit only. |
+| `mix native.bench --package NAME [--bench ID]... [--workspace /abs/dir]` | C, C++ and Rust benchmarks of one package, declared under `native_bench` in `tooling/packages.yaml`: nanobench drivers built with the LLVM of the native checks, criterion crates with `cargo bench`, and Elixir scripts over the package's native build, which need `--workspace` and are skipped without it. Writes `bench/output/native-<id>.md`. Explicit only. |
 | `mix wotex.*` | The underlying tasks remain available: `wotex.affected`, `wotex.check`, `wotex.archive`, `wotex.boundary`, `wotex.catalogue`, `wotex.new` and one task per command above; `mix help wotex.<task>` documents each. |
 
 The default selection of `check`, `boundary` and `archive` is the affected

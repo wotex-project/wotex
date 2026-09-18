@@ -8,6 +8,14 @@ defmodule Wotex.Workspace.NativeContainerTest do
   alias Wotex.Workspace.NativeContainer
   alias WotexWorkspace.Fixtures
 
+  test "gives the Linux container a tun device only when a requirement asks for one" do
+    assert NativeContainer.run_options(["linux"]) == []
+    assert NativeContainer.run_options([]) == []
+
+    assert NativeContainer.run_options(["linux", "tun"]) ==
+             ["--cap-add", "NET_ADMIN", "--device", "/dev/net/tun"]
+  end
+
   test "tags an image by its Dockerfile and platform", context do
     root = Fixtures.tmp_dir(context)
     Fixtures.write!(root, "tooling/native/docker/sdk.Dockerfile", "FROM scratch\n")
@@ -103,6 +111,10 @@ defmodule Wotex.Workspace.NativeContainerTest do
     assert env["HEX_HOME"] == "/c/linux-container/hex"
     assert String.starts_with?(env["PATH"], "/r/tooling/native/docker/bin:")
     assert {env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_VALUE_0"]} == {"safe.directory", "*"}
+
+    # The entry point runs the root task it is given for the package.
+    entry = File.read!(Path.join(Workspace.root(), "tooling/native/docker/suite.sh"))
+    assert entry =~ ~s(exec mix "$task" --package "$package" "$@")
 
     # The wrapper and the entry point run from the read-only mount.
     for script <- ~w(tooling/native/docker/bin/mix tooling/native/docker/suite.sh) do

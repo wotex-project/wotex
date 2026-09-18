@@ -48,6 +48,8 @@ defmodule WotexWorkspace.MixProject do
       "native.advisories": "wotex.native.advisories",
       "native.lint": "wotex.native.lint",
       "native.test": "wotex.native.test",
+      "native.bench": "wotex.native.bench",
+      bench: "wotex.bench",
       check: ["wotex.workspace", "wotex.check.affected"]
     ]
   end

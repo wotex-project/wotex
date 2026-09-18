@@ -110,6 +110,30 @@ defmodule Wotex.Workspace.NativeSuiteTest do
     end
   end
 
+  test "shares its parsing of requires, compile, env and placeholders" do
+    assert NativeSuite.parse_requires("w", ["linux"]) == {:ok, ["linux"]}
+    assert {:error, "w: unknown requirement(s) mac"} = NativeSuite.parse_requires("w", ["mac"])
+
+    assert NativeSuite.parse_compile("w", [%{"files" => ["a.c"], "flags" => ["-O2"]}]) ==
+             {:ok, [%{files: ["a.c"], flags: ["-O2"]}]}
+
+    assert {:error, "w: compile must be a list"} = NativeSuite.parse_compile("w", %{})
+    assert NativeSuite.parse_env("w", %{"B" => "2", "A" => "1"}) == {:ok, [{"A", "1"}, {"B", "2"}]}
+    assert {:error, "w: env must be a mapping"} = NativeSuite.parse_env("w", [])
+    assert {:error, "w: env must map names to strings"} = NativeSuite.parse_env("w", %{"A" => 1})
+
+    assert {:error, "w: link must be a list of strings"} =
+             NativeSuite.parse_strings("w", "link", [1])
+
+    assert :ok = NativeSuite.known_keys("w", %{"a" => 1}, ["a"])
+
+    assert {:error, "w: unknown key(s) b, c"} =
+             NativeSuite.known_keys("w", %{"c" => 1, "b" => 2}, [])
+
+    assert NativeSuite.placeholders_in(["{root}/{package}", "-I{root}", "x"]) == ["root", "package"]
+    assert NativeSuite.placeholders() == ~w(package root workspace scratch)
+  end
+
   test "expands placeholders and leaves unknown braces alone" do
     values = %{
       "package" => "/r/packages/p",
@@ -141,7 +165,7 @@ defmodule Wotex.Workspace.NativeSuiteTest do
     end
 
     assert Manifest.fetch!("wotex-lab", manifest).native_check == []
-    assert NativeSuite.requirements() == ~w(linux docker)
+    assert NativeSuite.requirements() == ~w(linux docker tun)
 
     # Every suite container is built from a Dockerfile of tooling/native/docker.
     for package <- Manifest.packages(manifest),

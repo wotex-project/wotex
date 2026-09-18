@@ -15,6 +15,11 @@ defmodule Wotex.Workspace.NativeTools do
   was measured with) format every first-party source identically; 21
   differs on one construct, 20 on several, and 18 and 19 cannot read the
   configuration. A missing or too old tool fails with an install hint.
+
+  `compilers/2` finds the C and C++ compilers of the same LLVM for the
+  benchmarks (`mix native.bench`): `clang` and `clang++` in the directory
+  of the clang-tidy found here, with links resolved, which is LLVM's own
+  `bin` directory (a Homebrew cellar or `/usr/lib/llvm-<major>/bin`).
   """
 
   @minimum_major 22
@@ -24,6 +29,9 @@ defmodule Wotex.Workspace.NativeTools do
   @type tool :: :clang_format | :clang_tidy
 
   @type found :: %{tool: tool(), path: Path.t(), version: String.t(), major: pos_integer()}
+
+  @typedoc "The C and C++ compilers of an LLVM installation and the C++ compiler's version line."
+  @type compilers :: %{cc: Path.t(), cxx: Path.t(), version: String.t()}
 
   @typedoc """
   Replaceable effects (tests): `env` reads a variable, `find` resolves a
@@ -123,6 +131,39 @@ defmodule Wotex.Workspace.NativeTools do
     "install LLVM #{@minimum_major} or later: `brew install llvm` on macOS; on Debian or Ubuntu " <>
       "`apt install #{name(tool)}` when the distribution ships #{@minimum_major}+, else " <>
       "`apt install #{name(tool)}-23` from https://apt.llvm.org; or set #{variable(tool)} to the executable"
+  end
+
+  @doc """
+  The `clang` and `clang++` beside `found` (a clang-tidy or clang-format
+  from `find/2`), with the first line of `clang++ --version`. `exists?` and
+  `version` replace the file and process checks in tests.
+  """
+  @spec compilers(found(), [option()]) :: {:ok, compilers()} | {:error, String.t()}
+  def compilers(%{path: path, major: major}, opts \\ []) do
+    exists? = Keyword.get(opts, :exists?, &File.regular?/1)
+    version = Keyword.get(opts, :version, &version_output/1)
+    dir = Path.dirname(real_path(path))
+    cc = Path.join(dir, "clang")
+    cxx = Path.join(dir, "clang++")
+
+    with true <- exists?.(cc) and exists?.(cxx),
+         {:ok, output} <- version.(cxx) do
+      [line | _] = String.split(output, "\n")
+      {:ok, %{cc: cc, cxx: cxx, version: String.trim(line)}}
+    else
+      _ ->
+        {:error,
+         "clang and clang++ not found in #{dir}, beside #{Path.basename(path)} #{major}; " <>
+           "install the compiler of the same LLVM: `brew install llvm` on macOS, " <>
+           "`apt install clang-#{major}` from https://apt.llvm.org on Debian or Ubuntu"}
+    end
+  end
+
+  defp real_path(path) do
+    case File.read_link(path) do
+      {:ok, target} -> real_path(Path.expand(target, Path.dirname(path)))
+      {:error, _} -> path
+    end
   end
 
   defp identify(tool, path, version) do

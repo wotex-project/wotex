@@ -20,11 +20,14 @@ skill.
 | Run anything in a package | `mix pkg <name> <task> [args]`, e.g. `mix pkg wotex-coap test test/wotex/coap/blockwise_test.exs` |
 | Package ready | `mix check.fast --package <name>` (includes `mix native.lint` for native packages) |
 | C, C++ or Rust changed | `mix native.lint --package <name>` (`--fix` formats); `--tidy` and `mix native.test --package <name>` before the commit |
+| Benchmarks (explicit only) | `mix bench --package <name>`; `mix native.bench --package <name>` for C, C++ and Rust (`--workspace /abs/dir` adds the Elixir benchmarks over the native build) |
 | Before a commit | `mix check` (root self-check, full gate of changed packages, fast gate of dependents) |
 | Repository-wide change only | `mix check.all` |
 
 - Never run every package's gate, Dialyzer across packages, or the native,
   software-profile, interop or containment lanes for a bounded change.
+  Benchmarks run only on request; reports land in the package's
+  `bench/output/`.
 - A package gate (`mix check` inside the package) formats, lints and tests
   its first-party C, C++ and Rust code too: `native_format`, `native_lint`
   (clang-tidy, clippy) and `native_test` run the root `mix native.lint` and

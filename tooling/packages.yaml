@@ -16,6 +16,13 @@
 #   from some suite. On a host that is not Linux, a suite that requires Linux
 #   runs in the Linux container (tooling/native/docker/linux.Dockerfile) when
 #   Docker is available.
+# native_bench: the package's C, C++ and Rust benchmarks (`mix native.bench`):
+#   nanobench drivers (bench/native/<id>.cpp), criterion crates
+#   (bench/native/<id>/) and Elixir scripts over the native build
+#   (bench/native/<id>_bench.exs), each reported in bench/output/native-<id>.md;
+#   see Wotex.Workspace.NativeBench for the keys. Placeholders and requires
+#   follow native_check; each nanobench driver also gets a compile-only
+#   clang-tidy suite, bench-<id>.
 # hosts: applications inside the package directory with their own mix.exs and
 #   lock (`path`, relative to the package) and the environment their commands
 #   need (`env`). `mix setup` fetches their dependencies; `mix check.fast`
@@ -106,6 +113,46 @@ packages:
             flags: [-std=c11, -D_DARWIN_C_SOURCE, "-I{scratch}/bacnet-stack-3603048350b8ba543ec76cf6aa8a232b3f4d442d/src", -DBACDL_BIP=1, -DMAX_COV_SUBSCRIPTIONS=16, -DMAX_COV_ADDRESSES=16, -DPRINT_ENABLED=0]
         test:
           - [sh, -c, "docker run --rm --entrypoint /normal/wotex-bacnet-peer \"$(cat '{workspace}/image.id')\" --self-test && docker run --rm --entrypoint /normal/wotex-bacnet-peer \"$(cat '{workspace}/image.id')\" --property-self-test"]
+    # The production client is Elixir (no native_task), so there are no
+    # elixir-kind benchmarks; the C-stack peer itself needs the pinned stack
+    # sources and is not benchmarked.
+    native_bench:
+      - bench: command_guardian
+        kind: nanobench
+        title: Fixture command guardian
+        description: >-
+          The POSIX command guardian of the BACnet software lane
+          (`test/interop/native/command.c`), compiled with its `main` renamed and run
+          in a forked child with an owner-liveness pipe as standard input and a pipe
+          to the driver as standard output, as the Mix owner runs the executable
+          (the guardian's own `exec` is not measured). The guarded command is the
+          driver re-executed in a child mode that exits at once or writes 1 MiB; each
+          row collects the output to EOF and checks both exit statuses and the byte
+          count, and the rows without the guardian spawn the same command directly
+          as the baseline. The unit is one command. The lease row takes and releases
+          the advisory fixture lock (`command --lock`) in the benchmark's scratch
+          directory; its unit is one lease.
+        env:
+          WOTEX_BENCH_SCRATCH: "{scratch}"
+        compile:
+          - files: [bench/native/command_guardian.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror]
+          - files: [test/interop/native/command.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -Dmain=wotex_bacnet_command_main]
+      - bench: peer_control
+        kind: nanobench
+        title: C-stack peer control parser
+        description: >-
+          The control-command parser of the independent BACnet C-stack software peer
+          (`test/interop/cstack/control.c`), the part of the peer that compiles
+          without the pinned BACnet stack: `peer_parse` on the control datagrams the
+          software runner sends (`stats`, `fault` and `quit` with a nonce), accepted
+          and rejected. The unit is one command.
+        compile:
+          - files: [bench/native/peer_control.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/test/interop/cstack"]
+          - files: [test/interop/cstack/control.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/test/interop/cstack"]
   wotex-ble:
     app: wotex_ble
     depends_on: [wotex, wotex-runtime]
@@ -135,6 +182,177 @@ packages:
               WOTEX_BLE_DBUS_SOURCE: "{workspace}/sources/libdbus/dbus-1.16.2"
               WOTEX_BLE_DBUS_BUILD: "{workspace}/build/libdbus"
               WOTEX_BLE_NATIVE_WORKSPACE: "{workspace}"
+    # The components that compile without libdbus, then the SDK paths through
+    # the public API, which need the software lane's private bus, BlueZ,
+    # virtual controllers and GATT peer on a Linux host.
+    native_bench:
+      - bench: frame
+        kind: nanobench
+        title: Protocol-v1 framing and bounded JSON
+        description: >-
+          Protocol-v1 framing of the native host (`priv/bluez/native/frame.hpp`):
+          the bounded parse of one request line (health, read, a write carrying
+          a 512-byte value, and a line of the 131,072-byte maximum), the
+          rejection of an array beyond the 1,024-entry bound, and the host's
+          admission path for 256 pipelined requests: 8 KiB reads through the
+          incremental line decoder, the bounded parse and the dispatch-sequence
+          check. The unit is one line.
+        compile:
+          - files: [bench/native/frame.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: bytes
+        kind: nanobench
+        title: Attribute byte envelopes
+        description: >-
+          Attribute byte envelopes (`priv/bluez/native/bytes.hpp`): canonical
+          base64 decoding of a byte envelope into attribute bytes within the
+          512-byte ATT bound, and encoding of attribute bytes into an envelope,
+          for 20-byte (default ATT MTU), 244-byte (LE Data Length Extension) and
+          512-byte (ATT maximum) values. The unit is one value.
+        compile:
+          - files: [bench/native/bytes.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: output
+        kind: nanobench
+        title: Bounded serialization and native output
+        description: >-
+          Bounded serialization and nonblocking output
+          (`priv/bluez/native/output.hpp`): validation and encoding of a value
+          report envelope carrying a 20-byte or a 512-byte value, and admission
+          followed by a flush through `write(2)` to `/dev/null` of 64 read
+          replies, each into its reserved slot, and of 64 report frames. The
+          unit is one frame.
+        compile:
+          - files: [bench/native/output.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: credit
+        kind: nanobench
+        title: Cumulative report credit
+        description: >-
+          Cumulative report credit (`priv/bluez/native/credit.hpp`): reservation
+          of 320-byte reports and the validated `report_ack` frame that returns
+          their credit, for one stream filling its 16-report window and for 64
+          streams with one report each, and the credit lifecycle of one stream
+          (open, reserve, retire, acknowledge). The unit is one report, or one
+          stream.
+        compile:
+          - files: [bench/native/credit.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: report_queue
+        kind: nanobench
+        title: Unsent-report queue
+        description: >-
+          The unsent-report queue (`priv/bluez/native/report_queue.hpp`)
+          holding 20-byte values charged 320 bytes each: admission of 64
+          reports and a drain that dispatches them all, on one stream and on 8
+          streams; a drain in which 4 of 8 streams lack credit, whose reports
+          are then discarded; and admission of 64 reports on one stream
+          followed by its discard, the path of a silenced stream. The unit is
+          one report.
+        compile:
+          - files: [bench/native/report_queue.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: pages
+        kind: nanobench
+        title: Discovery pages
+        description: >-
+          Discovery paging (`priv/bluez/native/pages.hpp`): parsing of the page
+          request and construction of the bounded page reply, which re-encodes
+          the reply after each added characteristic to stay within the frame
+          bound, for a 16-characteristic snapshot in one page, the first
+          64-entry page of 256 characteristics with a new cursor, and a walk of
+          the 1,024-characteristic maximum in 16 pages. Each snapshot is a new
+          discovery generation; cursor tokens come from a counter instead of
+          the host's OS random source. The unit is one page.
+        compile:
+          - files: [bench/native/pages.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: reports
+        kind: nanobench
+        title: Native report path
+        description: >-
+          The native report path (`priv/bluez/native/reports.hpp` over the
+          credit, queue, output, byte-envelope and error-value components):
+          publication of value callbacks, a flush through `write(2)` to
+          `/dev/null` and the owner's cumulative acknowledgement, for 16 reports
+          of 20 or 512 bytes that fit one stream's credit window and for 64
+          reports of 20 bytes that exceed it, so that 48 wait in the queue and
+          drain as four acknowledgements return credit; and opening and
+          retiring a subscription, with or without a terminal error control.
+          The unit is one report, or one subscription.
+        compile:
+          - files: [bench/native/reports.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic, "-I{package}/priv/bluez/native"]
+      - bench: custody
+        kind: nanobench
+        title: Runtime guardian relay and sessions
+        description: >-
+          The runtime guardian (`priv/bluez/native/custody.c`) with the BLE
+          profile's limits (500 ms cleanup, 131,072 input and 65,536 output
+          bytes): the round trip of a 256-byte line and of a 64 KiB burst from
+          the owner through the guardian to an echoing SDK child (`/bin/cat`)
+          and back, and whole sessions: start, SDK exit and reap
+          (`/usr/bin/true`), and start, owner EOF and teardown (`/bin/cat`). The
+          driver forks and runs the guardian's `main` in the child, so the
+          guardian's own `exec` is not measured; the SDK child's is.
+        env:
+          WOTEX_BLE_BENCH_SCRATCH: "{scratch}"
+        compile:
+          - files: [bench/native/custody.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic]
+          - files: [priv/bluez/native/custody.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -Dmain=wbl_custody_main]
+      - bench: command_guardian
+        kind: nanobench
+        title: Build command guardian
+        description: >-
+          The build and fixture command guardian
+          (`priv/bluez/native/build_command.c`) with the native build's limits
+          (600 s, 16 MiB of output, 5,000 ms cleanup): running `/usr/bin/true`
+          in its own process group, and forwarding the 1 MiB output of
+          `/bin/cat` through the guardian's bounded queue to the owner. The
+          driver forks and runs the guardian's `main` in the child, so the
+          guardian's own `exec` is not measured; the command's is. The guardian
+          polls at most 10 ms at a time and observes the command's exit only
+          after a poll: when it reads the output's end before the exit is
+          observable, it waits out one poll interval, so the time per command
+          is bimodal and its median varies between runs.
+        env:
+          WOTEX_BLE_BENCH_SCRATCH: "{scratch}"
+        compile:
+          - files: [bench/native/command_guardian.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -pedantic]
+          - files: [priv/bluez/native/build_command.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -Dmain=wbl_command_main]
+      - bench: gatt_procedure
+        kind: elixir
+        title: GATT procedures through the native host
+        description: >-
+          GATT procedures through the public API on a persistent BlueZ session
+          (`Wotex.BLE.BlueZ` with the native host and runtime guardian of the
+          `--workspace` build) against the software lane's private D-Bus bus,
+          `bluetoothd`, two virtual controllers and GATT peer:
+          `Wotex.BLE.read/3` of a 2-byte value as bytes and as `uint16`, and an
+          acknowledged `Wotex.BLE.write/4` of that value. Needs a Linux host
+          running that environment (`WOTEX_BLE_SOFTWARE_CONFIG`).
+        requires: [linux]
+        env:
+          WOTEX_BLE_NATIVE_WORKSPACE: "{workspace}"
+      - bench: notification
+        kind: elixir
+        title: Notification round trips through the native host
+        description: >-
+          Notification and indication round trips through the public API on a
+          persistent BlueZ session against the software lane's private D-Bus
+          bus, `bluetoothd`, two virtual controllers and GATT peer: from the
+          request on the peer's control socket that emits a new value to the
+          subscriber's `{:wotex_ble, reference, {:ok, value, metadata}}`
+          message, across the virtual link, BlueZ, the native host, its runtime
+          guardian and the report credit window. Needs a Linux host running
+          that environment (`WOTEX_BLE_SOFTWARE_CONFIG`).
+        requires: [linux]
+        env:
+          WOTEX_BLE_NATIVE_WORKSPACE: "{workspace}"
   wotex-coap:
     app: wotex_coap
     depends_on: [wotex, wotex-runtime]
@@ -168,6 +386,135 @@ packages:
           - ["{workspace}/bin/faults/oscore-block-limit"]
           - ["{workspace}/bin/faults/oscore-protection"]
           - ["{workspace}/bin/faults/oscore-worker-exchange", "{workspace}/native/bin/wotex-coap-oscore"]
+    # The helper's SDK-free components (nanobench, built with the helper's
+    # flags against yyjson and OpenSSL), then the helper end to end through the
+    # public API against the software lane's libcoap peer (elixir), with
+    # single-datagram exchanges only (see bench/native/oscore_request_bench.exs).
+    native_bench:
+      - bench: oscore_command
+        kind: nanobench
+        title: OSCORE helper command input
+        description: >-
+          The native OSCORE helper's input path for one command line from its owner, as
+          the worker's `consume` runs it: LF framing (`native/oscore/frame.c`), parsing
+          into the fixed 2 MiB yyjson pool with its duplicate-member, depth and number
+          checks (`json.c`), decoding against the per-operation allowlists (`command.c`,
+          with `body.c` for byte envelopes), then erasure of the command and of the
+          parser pool. One line of each operation, sixteen coalesced lines delivered in
+          4 KiB reads, a line rejected for a duplicate member, and the pool erasure
+          alone, which runs twice for every line. The unit is one line.
+        compile:
+          - files: [bench/native/oscore_command.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "pkg-config:openssl"]
+          - files: [native/oscore/frame.c, native/oscore/json.c, native/oscore/command.c, native/oscore/body.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "pkg-config:openssl"]
+          - files: [native/oscore/vendor/yyjson/yyjson.c]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1]
+        link: ["pkg-config:openssl"]
+      - bench: oscore_body
+        kind: nanobench
+        title: OSCORE helper upload body
+        description: >-
+          The upload body of the native OSCORE helper (`native/oscore/body.c`): canonical
+          base64 validation and decoding of one 32 KiB byte envelope, and whole uploads
+          of 1 KiB, 64 KiB and 1 MiB (the limit) as the worker admits them:
+          `wco_body_begin` (allocation), one `wco_body_chunk` per chunk of at most
+          32 KiB, `wco_body_end` (SHA-256 verification), data access and
+          `wco_body_clear` (erasure). The unit is one decoded byte.
+        compile:
+          - files: [bench/native/oscore_body.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "pkg-config:openssl"]
+          - files: [native/oscore/json.c, native/oscore/body.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "pkg-config:openssl"]
+          - files: [native/oscore/vendor/yyjson/yyjson.c]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1]
+        link: ["pkg-config:openssl"]
+      - bench: oscore_report
+        kind: nanobench
+        title: OSCORE helper report credit and freshness
+        description: >-
+          Admission of Observe reports in the native OSCORE helper: the cumulative
+          report credit of one generation (`native/oscore/credit.c`), with eight reports
+          assigned, written and acknowledged per window and the exhausted window
+          checked, and the RFC 7641 freshness decision (`observation.c`) for the next
+          in-order notification, a replay, a 24-bit wraparound and a changed
+          Content-Format. The unit is one report.
+        compile:
+          - files: [bench/native/oscore_report.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/native/oscore"]
+          - files: [native/oscore/credit.c, native/oscore/observation.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/native/oscore"]
+      - bench: oscore_store
+        kind: nanobench
+        title: OSCORE context identity and store
+        description: >-
+          The durable OSCORE context store of the native helper: deriving the storage
+          identity of the RFC 8613 appendix C.1 client context
+          (`native/oscore/identity.c`: three HKDF-SHA-256 derivations and three SHA-256
+          digests through OpenSSL), consuming that identity in a new private store
+          directory (lock file, first registry write with `fsync(2)`, rename and
+          directory `fsync(2)`), and reserving the next sequence boundary, which
+          rewrites the registry the same way, in a store holding its own context only
+          and in one holding 1,024 contexts (`store.c`). The stores live below the
+          benchmark's scratch directory in the native cache, so the timings include
+          that filesystem's `fsync(2)`.
+        env:
+          WCO_BENCH_SCRATCH: "{scratch}"
+        compile:
+          - files: [bench/native/oscore_store.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/native/oscore", "pkg-config:openssl"]
+          - files: [native/oscore/identity.c, native/oscore/store.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/native/oscore", "pkg-config:openssl"]
+        link: ["pkg-config:openssl"]
+      - bench: oscore_custody
+        kind: nanobench
+        title: OSCORE helper process custody
+        description: >-
+          The process custody of the native OSCORE helper (`native/oscore/custody.c`),
+          started with the arguments `main.c` gives it (500 ms cleanup deadline, 256 KiB
+          queues) and the benchmark executable as an echo worker: one whole lifecycle
+          (guardian and worker start, one 256-byte line echoed, a `close` line, worker
+          exit and reap with exit status 0), the same lifecycle of the worker spawned
+          directly as the baseline, and round trips of 256-byte, 4 KiB and 32 KiB lines
+          from the owner through the guardian to a running worker and back. The
+          lifecycle rows include the forks and the worker's exec, and the guardian's
+          10 ms poll interval while it waits for the worker's exit.
+        compile:
+          - files: [bench/native/oscore_custody.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror]
+          - files: [native/oscore/custody.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror]
+      - bench: oscore_request
+        kind: elixir
+        title: Protected unary requests through the native helper
+        description: >-
+          `Wotex.CoAP.get/3` and `Wotex.CoAP.put/4` on one native OSCORE session (the
+          helper `wotex.coap.native.build` built, under custody) against libcoap
+          4.3.5's `coap-server` on loopback, built as the software lane builds its
+          same-stack peer (the workspace's verified archive and the lane's CMake
+          options) and started with the lane's OSCORE context and arguments, but
+          warnings-only logging: GETs of 64-byte and 512-byte representations and a
+          PUT of a 512-byte body, each request and response one datagram. Each call
+          returns after the helper has relayed the complete, verified response to
+          the session.
+        env:
+          WOTEX_COAP_BENCH_WORKSPACE: "{workspace}"
+          WOTEX_COAP_BENCH_SCRATCH: "{scratch}"
+      - bench: oscore_observe
+        kind: elixir
+        title: Protected Observe notifications through the native helper
+        description: >-
+          One native OSCORE observation (`Wotex.CoAP.subscribe/2`, the helper
+          `wotex.coap.native.build` built, under custody) of a dynamic resource on
+          libcoap 4.3.5's `coap-server` on loopback, built and started as for the
+          unary benchmark. Each iteration changes the resource with an unprotected
+          UDP PUT from a second session and waits until the subscription's receiver
+          holds the protected notification carrying the new 16-byte or 512-byte value:
+          the PUT exchange, the peer's notification, its OSCORE verification and
+          freshness check in the helper, report credit and the relay to the receiver.
+        env:
+          WOTEX_COAP_BENCH_WORKSPACE: "{workspace}"
+          WOTEX_COAP_BENCH_SCRATCH: "{scratch}"
   wotex-matter:
     app: wotex_matter
     depends_on: [wotex, wotex-runtime]
@@ -205,6 +552,115 @@ packages:
           - run: [ninja, -C, /work/cmake-normal, -t, compdb]
             stdout: "{scratch}/cmake.json"
         compile_commands: ["{scratch}/gn.json", "{scratch}/cmake.json"]
+    native_bench:
+      - bench: value_bounds
+        kind: nanobench
+        title: Matter value bounds
+        description: >-
+          The SDK-free checks the Matter controller host applies to every value
+          and request: descriptor lookup, conversion of SDK values to TLV elements
+          and their validation (`native/src/value.cpp`) for OnOff, a Thermostat
+          setpoint, a 12-cluster ServerList and a 64-endpoint PartsList;
+          validation of an Access Control List write of four entries with four
+          subjects and two targets each, and of a 64-path Descriptor read with
+          its response (`native/src/interaction.cpp`); and the commissioning
+          request and commissioning-window checks
+          (`native/src/commissioning.cpp`). The unit is one value or one
+          request.
+        compile:
+          - files: [bench/native/value_bounds.cpp, native/src/value.cpp, native/src/interaction.cpp, native/src/commissioning.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include"]
+      # The host benchmarks compile native/src/protocol.cpp, which includes
+      # nlohmann/json: bench/native/include/nlohmann/json.hpp includes the
+      # identical pinned header wotex-ble vendors.
+      - bench: host_requests
+        kind: nanobench
+        title: Matter host request dispatch
+        description: >-
+          `HostProtocol::ProcessLine` of the Matter controller host
+          (`native/src/protocol.cpp`) for one request line of each kind: the
+          bounded JSON parse, envelope, request-id and parameter validation, the
+          call into the controller backend and the encoded reply frame. The
+          requests are a health check, a read of OnOff, a batch read of the four
+          Descriptor attributes on four endpoints, writes of a Thermostat
+          setpoint and of a four-entry Access Control List, and an OnOff Toggle
+          invocation. A scripted backend answers as a node would, so the rows
+          measure the host's JSON and TLV handling around the SDK. The unit is
+          one request.
+        compile:
+          - files: [bench/native/host_requests.cpp, native/src/value.cpp, native/src/interaction.cpp, native/src/subscription.cpp, native/src/commissioning.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include"]
+          - files: [native/src/protocol.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include", "-I{package}/bench/native/include", "-isystem{root}/packages/wotex-ble/priv/bluez/native"]
+      - bench: host_session
+        kind: nanobench
+        title: Matter host session round trips
+        description: >-
+          Request round trips through a complete session of the Matter
+          controller host: `RunHost` (`native/src/protocol.cpp`) reads frames
+          from its input pipe through `BoundedInput`
+          (`native/include/wotex_matter/input.hpp`), dispatches them and hands
+          each reply to its bounded output writer thread, which writes it to the
+          output pipe. A second thread drives the session as the BEAM Port does,
+          one request at a time: it reads the ready frame, opens the controller,
+          sends 256 health checks, OnOff reads or Thermostat setpoint writes,
+          reading each reply before the next request, and closes. A scripted
+          backend answers the interactions. The unit is one request round trip;
+          the session set-up is amortised over its 256 requests.
+        compile:
+          - files: [bench/native/host_session.cpp, native/src/value.cpp, native/src/interaction.cpp, native/src/subscription.cpp, native/src/commissioning.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include"]
+          - files: [native/src/protocol.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include", "-I{package}/bench/native/include", "-isystem{root}/packages/wotex-ble/priv/bluez/native"]
+      - bench: report_flow
+        kind: nanobench
+        title: Matter subscription report flow
+        description: >-
+          Subscription reports in the Matter controller host, whose session
+          credit is 64 reports and 1 MiB and whose stream credit is 16 reports:
+          `ReportCreditManager` (`native/src/subscription.cpp`) transmitting a
+          full window of 64 reports over four streams and releasing it with one
+          acknowledgement, and 64 reports to one stream, of which 48 wait for
+          credit and are drained by acknowledgements; `SubscriptionBuffer`
+          assembling a subscription's initial report of four paths and 60
+          single-path changes; and the complete path through `HostProtocol`
+          (`native/src/protocol.cpp`): the controller's report callback, the
+          encoded `subscription_report` frame and credit accounting for 16
+          reports, then the `report_ack` line that returns their credit. The
+          unit is one report.
+        compile:
+          - files: [bench/native/report_flow.cpp, native/src/value.cpp, native/src/interaction.cpp, native/src/subscription.cpp, native/src/commissioning.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include"]
+          - files: [native/src/protocol.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/native/include", "-I{package}/bench/native/include", "-isystem{root}/packages/wotex-ble/priv/bluez/native"]
+      # --workspace must hold a software build (`mix pkg wotex-matter
+      # wotex.software.build --workspace DIR`): the native build alone has no
+      # peers. The script runs the measurement in the software lane's
+      # linux/amd64 container.
+      - bench: controller_peer
+        kind: elixir
+        title: Matter controller against the all-clusters peer
+        description: >-
+          The public `Wotex.Matter` API end to end against the pinned
+          connectedhomeip all-clusters example, commissioned on the network by
+          a persistent controller: the BEAM client, the Port, the first-party
+          controller host and the SDK controller, and the peer. The jobs read
+          OnOff, read the four Descriptor attributes of two endpoints in one
+          batch, discover the endpoints, write the Thermostat
+          OccupiedHeatingSetpoint, invoke the OnOff Toggle command, and invoke
+          Toggle and wait for the resulting OnOff subscription report. The
+          controller host and the peer are the x86_64 Linux builds of
+          `mix wotex.software.build`, so the benchmark runs in the software
+          lane's linux/amd64 hexpm/elixir container on a private Docker network;
+          on an arm64 host that container's user space is translated (Rosetta
+          under OrbStack), which slows the BEAM, the host and the peer alike.
+          The controller host writes the SDK's log to its standard error, here
+          a file, as it does in production; that cost is part of every
+          measurement.
+        requires: [docker]
+        env:
+          WOTEX_MATTER_BENCH_WORKSPACE: "{workspace}"
+          WOTEX_MATTER_BENCH_SCRATCH: "{scratch}"
   wotex-modbus:
     app: wotex_modbus
     depends_on: [wotex, wotex-runtime]
@@ -234,6 +690,32 @@ packages:
         compile:
           - files: [test/interop/libmodbus/server.c]
             flags: [-std=c11, -D_POSIX_C_SOURCE=200809L, "-I{scratch}/include"]
+    # The command guardian only: the libmodbus fixture server needs the SDK, and
+    # without a native_task the package has no elixir benchmarks.
+    native_bench:
+      - bench: command_guardian
+        kind: nanobench
+        title: Software-lane command guardian
+        description: >-
+          The command guardian of the software lane (`test/interop/native/command.c`,
+          linked with its `main` renamed), which runs one command in its own process
+          group under a deadline, a bound on its combined output and owner liveness on
+          standard input. Eight invalid argument vectors rejected in process (status
+          126); then, with the benchmark executable as the command, that command
+          spawned directly as the baseline and, with the guardian in a child process, a
+          command that exits at once, relays of 64 KiB and 1 MiB, 1 MiB stopped at a
+          64 KiB output bound (status 125), a waiting command stopped at a 20 ms
+          deadline (status 124), and the fixture lock acquired and released (`--lock`).
+          Each process row reads the output to its end and checks the exit status and
+          the byte count; it includes the forks and the command's exec, and the
+          guardian polls every 10 ms, which quantizes these rows.
+        env:
+          WMB_BENCH_SCRATCH: "{scratch}"
+        compile:
+          - files: [bench/native/command_guardian.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror]
+          - files: [test/interop/native/command.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -Dmain=wmb_command_main]
   wotex-opcua:
     app: wotex_opcua
     depends_on: [wotex, wotex-runtime]
@@ -251,6 +733,198 @@ packages:
             flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
         test:
           - [ctest, --test-dir, "{workspace}/native-build", --output-on-failure]
+    native_bench:
+      - bench: output_queue
+        kind: nanobench
+        title: Bounded output queue
+        description: >-
+          Admission of normal envelopes into the bounded output queue of the OPC UA
+          host (`priv/native/output.c`), and admission followed by a credited flush
+          through `write(2)` to `/dev/null`, for 256-byte and 4 KiB envelopes. The
+          unit is one envelope.
+        compile:
+          - files: [bench/native/output_queue.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/priv/native"]
+          - files: [priv/native/output.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -D_POSIX_C_SOURCE=200809L, "-I{package}/priv/native"]
+      - bench: json_codec
+        kind: nanobench
+        title: Strict JSON reader
+        description: >-
+          `wop_json_read` of the OPC UA host (`priv/native/json_codec.c` over the
+          vendored yyjson 0.12.0) on request frames the BEAM host writes: a Read, an
+          `open` carrying 2048-bit RSA credential envelopes, a Write of 1024 Doubles,
+          a Write of a 64 KiB ByteString and a request whose parameters hold 1024
+          keys, the container limit, at which the duplicate-key check compares every
+          key with each preceding one. Each parse uses one 2 MiB pool and releases
+          its document; the unit is one frame. The exact number readers
+          (`wop_json_double`, `wop_json_float`, `wop_json_int64`,
+          `wop_json_uint64`) run over the 1024 raw tokens of a parsed Double or
+          Int64 array; their unit is one token.
+        compile:
+          - files: [bench/native/json_codec.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/json_codec.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/vendor/yyjson/yyjson.c]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+      - bench: ipc
+        kind: nanobench
+        title: Input framing and envelope admission
+        description: >-
+          `priv/native/ipc.c` of the OPC UA host: `wop_ipc_feed` assembling
+          LF-terminated request lines: a Read from one read and from 64-byte reads, 16
+          Reads coalesced in one read, and a 7.4 KB Write of 1024 Doubles from one
+          read (unit: one line); and the closed shape checks applied to a
+          parsed line: the request envelope, the credit control and the `open`
+          parameters with 2048-bit RSA credential envelopes, whose base64 is checked
+          character by character (unit: one check).
+        compile:
+          - files: [bench/native/ipc.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/ipc.c, priv/native/json_codec.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/vendor/yyjson/yyjson.c]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+      - bench: owner
+        kind: nanobench
+        title: Process owner request cycle
+        description: >-
+          The process owner of the OPC UA host (`priv/native/owner.c` with the
+          output queue, input framing and JSON reader) on an open Session. A request
+          line is framed, parsed, admitted and prepared; the next tick dispatches it,
+          completes it and emits the reply through the credited output queue to a
+          nonblocking pipe; the driver reads each reply line and returns one credit
+          control for it, as the BEAM host does. Both input lines of a request, the
+          request and its credit, are parsed and the 2 MiB parser pool is erased
+          after each. The SDK is replaced by an in-process service that completes
+          every dispatched operation on the same tick and validates only the
+          parameter object, so the rows measure the owner's own work: a Read, a Write
+          of 1024 Doubles and 16 Reads coalesced in one input read. The unit is one
+          request.
+        compile:
+          - files: [bench/native/owner.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/owner.c, priv/native/output.c, priv/native/ipc.c, priv/native/json_codec.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -D_POSIX_C_SOURCE=200809L, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/vendor/yyjson/yyjson.c]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+      - bench: publish_sequence
+        kind: nanobench
+        title: Notification sequence state
+        description: >-
+          The per-subscription notification sequence state of the OPC UA host
+          (`priv/native/publish_sequence.c`): classification and recording of the
+          next data-change notification once the cache holds its 1024
+          sequence/digest pairs, duplicate detection of the latest and of the oldest
+          cached notification, recovery of a 100-message gap by ordered Republish
+          followed by delivery of the held notification, and the first 16
+          notifications of a new subscription. The unit is one notification.
+        compile:
+          - files: [bench/native/publish_sequence.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/priv/native"]
+          - files: [priv/native/publish_sequence.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/priv/native"]
+      - bench: subscription_rules
+        kind: nanobench
+        title: Subscription parameter rules
+        description: >-
+          `priv/native/subscription_rules.c` of the OPC UA host:
+          `wop_subscription_read` on the closed seven-key parameter map of a parsed
+          subscribe request, accepted and rejected for a lifetime below three
+          keepalives, and `wop_subscription_revision_valid` on server-revised
+          parameters. The unit is one check.
+        compile:
+          - files: [bench/native/subscription_rules.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/subscription_rules.c, priv/native/json_codec.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, "-I{package}/priv/native", -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+          - files: [priv/native/vendor/yyjson/yyjson.c]
+            flags: [-std=c11, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, -DYYJSON_DISABLE_FAST_FP_CONV=0, -DYYJSON_DISABLE_UTF8_VALIDATION=0]
+      - bench: custody
+        kind: nanobench
+        title: Runtime custody relay
+        description: >-
+          The runtime custody guardian of the OPC UA host (`priv/native/custody.c`),
+          which relays opaque bytes between the BEAM host and the SDK executable. It
+          is compiled with its `main` renamed and run in a forked child whose
+          standard input and output are pipes owned by the driver, as the BEAM Port
+          runs the executable, with the OPC UA profile's limits (500 ms cleanup,
+          131072-byte input and 65536-byte output queues); the guardian's own `exec`
+          is not measured. The guarded child is the driver re-executed as a line
+          echo standing in for the SDK host. The relay rows send a 256-byte or
+          16 KiB line and read it back on a running Session (unit: one round trip);
+          the lifecycle rows start the guardian and its child, make one round trip,
+          end the child with `quit` and check that custody exits with status 0 after
+          reaping it (unit: one session). The rows without custody talk to the same
+          echo process over plain pipes as the baseline.
+        compile:
+          - files: [bench/native/custody.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror]
+          - files: [priv/native/custody.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -Dmain=wotex_opcua_custody_main]
+      - bench: build_command
+        kind: nanobench
+        title: Build command guardian
+        description: >-
+          The POSIX command guardian of the explicit native build
+          (`priv/native/build_command.c`), through which
+          `Wotex.OPCUA.Native.Command` runs every recipe step. It is compiled with
+          its `main` renamed and run in a forked child with an owner-liveness pipe as
+          standard input and a pipe to the driver as standard output, as the Mix
+          owner runs the executable (the guardian's own `exec` is not measured). The
+          guarded command is the driver re-executed in a child mode that exits at
+          once or writes 1 MiB; each row collects the output to EOF and checks both
+          exit statuses and the byte count, and the rows without the guardian spawn
+          the same command directly as the baseline. The unit is one command.
+        compile:
+          - files: [bench/native/build_command.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Werror]
+          - files: [priv/native/build_command.c]
+            flags: [-std=c11, -Wall, -Wextra, -Werror, -Dmain=wotex_opcua_build_command_main]
+      - bench: session
+        kind: elixir
+        title: Persistent Session services
+        description: >-
+          End-to-end services through the public API of the package on one
+          persistent Session of `Wotex.OPCUA.Open62541` (Basic256Sha256,
+          SignAndEncrypt, anonymous user) with the executables of the native build,
+          against the same-stack open62541 peer the build also produces
+          (`priv/native/paged_peer.c`) on loopback, with disposable RSA 2048
+          credentials the script generates. Every call crosses the BEAM host, the
+          custody guardian, the native owner, the SDK, the secure channel and the
+          peer. The jobs are a Read of an Int32 Value; a Write of a Double, which the
+          peer rejects with BadUserAccessDenied because its Variables grant anonymous
+          users no write access, so it covers the whole request path without storing
+          a value; one Browse page (the peer returns one reference per page) and the
+          release of its continuation point; a Browse of three children in three
+          pages (Browse and two BrowseNext); and the creation and deletion of a
+          subscription with one Value MonitoredItem. Between iterations the peer
+          waits up to 20 ms on its standard input, and each request would wait for
+          that timeout; the script keeps one statistics request in flight on that
+          input, so the peer's loop turns continuously. Each job runs in a process
+          that opened its own Session; one measurement is one call.
+        env:
+          WOTEX_BENCH_WORKSPACE: "{workspace}"
+          WOTEX_BENCH_SCRATCH: "{scratch}"
+      - bench: notification
+        kind: elixir
+        title: Subscription notification round trip
+        description: >-
+          Data-change notifications on one persistent Session against the same-stack
+          open62541 peer, with the credentials, peer pacing and executables of the
+          Persistent Session services benchmark. The subscription has one Value
+          MonitoredItem on the peer's Double Variable `burst` with sampling interval
+          0, so the peer samples every write, and queue size 10. One measurement
+          asks the peer to write five consecutive values in one server iteration and
+          waits until the subscribing process has received the five notifications in
+          order and without overflow. The peer's SDK revises the requested 10 ms
+          publishing interval to its default minimum of 100 ms, so the wait for the
+          next publishing cycle dominates this time; the delivery-latency table at
+          the end isolates the path from the server's PublishTime to the subscriber.
+        env:
+          WOTEX_BENCH_WORKSPACE: "{workspace}"
+          WOTEX_BENCH_SCRATCH: "{scratch}"
   wotex-thread:
     app: wotex_thread
     depends_on: [wotex, wotex-runtime]
@@ -279,6 +953,112 @@ packages:
         test:
           - [cmake, --build, "{scratch}/sdk", --parallel, "4", --target, wotex-thread-spinel-test, wotex-thread-dataset-seed, wotex-thread-flow-host]
           - [ctest, --test-dir, "{scratch}/sdk", --output-on-failure, -R, SPINEL]
+    native_bench:
+      - bench: protocol_frames
+        kind: nanobench
+        title: Bridge frame parsing and encoding
+        description: >-
+          Bounded parsing of the owner's lines by the Thread host
+          (`priv/openthread/protocol.hpp`): `parse_line` followed by the exact
+          envelope checks of `request` for `inspect`, `subscribe_state` and
+          `management_active_set` requests (the last carrying the 80-byte active
+          Dataset of the contract fixture) and of `flow_control` for `flow_open`
+          and `report_ack` frames; the rejection of a request with a duplicate
+          key; and lines at the parser's limits, 4096 JSON values in 8 KiB and a
+          128 KiB string. The host parses each inbound line twice, in its guardian
+          and in its worker. Encoding of the host's `ready`, `success` (with a
+          State snapshot) and `failure` frames. The unit is one frame; each row
+          names the line's size.
+        compile:
+          - files: [bench/native/protocol_frames.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/priv/openthread", "-I{package}/bench/native/include", "-isystem{root}/packages/wotex-ble/priv/bluez/native"]
+      - bench: report_flow
+        kind: nanobench
+        title: State report credit
+        description: >-
+          The report credit of the Thread host (`priv/openthread/flow.hpp`):
+          credited submission of reports and their exact cumulative
+          acknowledgement, for 16 reports on one stream (the per-stream credit)
+          and 64 reports on four streams (the session credit); 64 reports on one
+          stream, of which 48 wait in the queue and are drained by four
+          acknowledgements; and the retirement, with its barrier, of one stream
+          holding 16 outstanding and 16 queued reports and of 64 streams holding
+          one report each, followed by the acknowledgement that releases them.
+          Reports are 212 encoded bytes, newline included, and the writers only
+          count them. The unit is one report, or one stream for retirement.
+        compile:
+          - files: [bench/native/report_flow.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/priv/openthread"]
+      - bench: output_lanes
+        kind: nanobench
+        title: Output lanes
+        description: >-
+          Admission of 64 report frames into the lane reservations of the Thread
+          host's output (`priv/openthread/output.hpp`), and admission followed by
+          a flush through `write(2)` to a non-blocking `/dev/null` of 64 report
+          frames and of 256 control frames (each lane's frame limit), of 192
+          reply, control and report frames interleaved in one output order, and
+          of 8 report frames of 128 KiB (the report lane's byte budget). The
+          other frames are 212 bytes, newline included. The unit is one frame.
+        compile:
+          - files: [bench/native/output_lanes.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/priv/openthread"]
+      - bench: state_streams
+        kind: nanobench
+        title: State report streams
+        description: >-
+          The State subscriptions of the Thread host
+          (`priv/openthread/streams.hpp` over the report credit of
+          `priv/openthread/flow.hpp`): one coalesced snapshot flush to one stream
+          and to 64 streams (the live-stream limit), each followed by the
+          acknowledgement of its reports; 64 flushes to one stream, of which 48
+          reports wait in the queue and are drained by four acknowledgements; and
+          the lifecycle of one subscription: opening, its initial report and
+          removal, or opening and five reports under a `queue_limit` of 2, whose
+          overflow ends the stream with a `stream_error` frame and its retirement
+          barrier. Reports carry a six-field State snapshot and are about 300
+          encoded bytes. The unit is one report, or one subscription for the
+          lifecycle.
+        compile:
+          - files: [bench/native/state_streams.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/priv/openthread", "-I{package}/bench/native/include", "-isystem{root}/packages/wotex-ble/priv/bluez/native"]
+      - bench: settings_storage
+        kind: nanobench
+        title: Settings storage lock
+        description: >-
+          The settings storage of the Thread host (`priv/openthread/storage.hpp`):
+          opening an existing owner-only directory and taking the exclusive
+          `flock(2)` lock of its lock file, the refusal of a second owner while
+          the lock is held, and the creation of a new directory with its lock
+          file, removed again within each operation. The directories are in the
+          benchmark's scratch directory in the native cache, on the file system
+          of the system temporary directory unless `WOTEX_NATIVE_CACHE` names
+          another. The unit is one open.
+        env:
+          WOTEX_THREAD_BENCH_STORAGE: "{scratch}/storage"
+        compile:
+          - files: [bench/native/settings_storage.cpp]
+            flags: [-std=c++17, -Wall, -Wextra, -Wpedantic, -Werror, "-I{package}/priv/openthread"]
+      # The native build is Linux-only and has no RCP: the script builds the
+      # software lane's simulation `ot-rcp` from the workspace's pinned
+      # OpenThread tree. The host creates a Thread network interface, so the
+      # process needs /dev/net/tun and CAP_NET_ADMIN.
+      - bench: host_rcp
+        kind: elixir
+        title: Thread host against the simulated RCP
+        description: >-
+          The public `Wotex.Thread` API end to end: the BEAM client, the Port,
+          the first-party OpenThread host of the native build and the pinned
+          OpenThread simulation RCP over Spinel, on a network the host formed
+          as leader with its commissioner active. The jobs inspect the State,
+          export and validate the Active Dataset, open a State subscription,
+          receive its initial report and close it, send a
+          `MGMT_ACTIVE_SET` with a newer Active Timestamp to the leader, and
+          add and remove one joiner admission.
+        requires: [linux, tun]
+        env:
+          WOTEX_THREAD_BENCH_WORKSPACE: "{workspace}"
+          WOTEX_THREAD_BENCH_SCRATCH: "{scratch}"
   wotex-lab:
     app: wotex_lab
     depends_on:

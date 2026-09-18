@@ -124,6 +124,52 @@ defmodule Wotex.Workspace.ManifestTest do
       end
     end
 
+    test "reads native benchmarks and checks them against the package" do
+      nanobench = %{
+        "bench" => "codec",
+        "kind" => "nanobench",
+        "title" => "Codec",
+        "description" => "Decoding.",
+        "compile" => [%{"files" => ["bench/native/codec.cpp"], "flags" => ["-std=c++17"]}]
+      }
+
+      elixir = %{"bench" => "sdk", "kind" => "elixir", "title" => "SDK", "description" => "D"}
+
+      map =
+        put_in(Fixtures.manifest_map(), ["packages", "coap", "native_bench"], [nanobench, elixir])
+
+      assert {:ok, manifest} = Manifest.from_map(map)
+
+      assert [%{id: "codec", kind: :nanobench}, %{id: "sdk", kind: :elixir}] =
+               Manifest.fetch!("coap", manifest).native_bench
+
+      assert Manifest.fetch!("core", manifest).native_bench == []
+
+      # A benchmark belongs to a native package.
+      map = put_in(Fixtures.manifest_map(), ["packages", "http", "native_bench"], [nanobench])
+      assert {:error, "package http: native_bench needs native: true"} = Manifest.from_map(map)
+
+      # The elixir kind runs after the package's native build task.
+      map = put_in(Fixtures.manifest_map(), ["packages", "lab", "native_bench"], [elixir])
+
+      assert {:error,
+              "package lab, native_bench sdk: the elixir kind needs the package's native_task"} =
+               Manifest.from_map(map)
+
+      # A driver's clang-tidy suite must not take a native_check suite's name.
+      map =
+        Fixtures.manifest_map()
+        |> put_in(["packages", "coap", "native_bench"], [nanobench])
+        |> put_in(["packages", "coap", "native_check"], [%{"suite" => "bench-codec"}])
+
+      assert {:error, message} = Manifest.from_map(map)
+      assert message =~ "native_check suite bench-codec takes its clang-tidy suite name"
+
+      map = put_in(Fixtures.manifest_map(), ["packages", "coap", "native_bench"], [%{}])
+      assert {:error, message} = Manifest.from_map(map)
+      assert message =~ "every native_bench entry needs a bench id"
+    end
+
     test "rejects a lane skip that is not a list of tool names" do
       assert {:error, message} =
                Manifest.from_map(%{

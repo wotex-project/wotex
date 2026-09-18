@@ -2,9 +2,11 @@ defmodule Mix.Tasks.Wotex.Native.Sources do
   @shortdoc "Lists pinned native sources and verifies local digests"
 
   @moduledoc """
-  For every native package, reads its pinned-source manifest when it has a
-  known shape (see `Wotex.Workspace.Native`), lists the upstream pins and
-  verifies the sha256 digest of every pinned file present locally.
+  For every native package, and for the repository's `tooling/` (the
+  vendored nanobench of `mix native.bench`), reads its pinned-source
+  manifest when it has a known shape (see `Wotex.Workspace.Native`), lists
+  the upstream pins and verifies the sha256 digest of every pinned file
+  present locally.
 
       mix wotex.native.sources
 

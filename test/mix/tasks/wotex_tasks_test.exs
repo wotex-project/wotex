@@ -27,7 +27,7 @@ defmodule Mix.Tasks.WotexTasksTest do
              Enum.sort(~w(setup affected pkg def refs impact test.affected check.fast
                           check.affected check.all workspace format.all lint dialyzer.pkg
                           docs.check docs.pkg index native.build native.sources
-                          native.advisories native.lint native.test check))
+                          native.advisories native.lint native.test native.bench bench check))
 
     for {name, tasks} <- aliases, task <- List.wrap(tasks) do
       [task_name | _] = String.split(task)

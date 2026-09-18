@@ -197,6 +197,7 @@ defmodule Wotex.Workspace.Scaffold do
       {"#{package}/#{bindings["lib_path"]}", elixir(library_module(), bindings)},
       {"#{package}/test/test_helper.exs", "ExUnit.start()\n"},
       {"#{package}/#{bindings["test_path"]}", elixir(test_module(), bindings)},
+      {"#{package}/bench/version_bench.exs", elixir(bench_script(), bindings)},
       {"#{package}/bin/check_archive.exs", elixir(check_archive(), bindings)},
       {"#{package}/bin/check_application_free.exs", elixir(check_application_free(), bindings)},
       {"#{package}/bin/check_boundary.exs", elixir(check_boundary(), bindings)},
@@ -285,6 +286,8 @@ defmodule Wotex.Workspace.Scaffold do
     """ <>
       siblings <>
       ~S"""
+          {:benchee, "~> 1.5", only: :dev, runtime: false},
+          {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
           {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
           {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
           {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
@@ -329,12 +332,14 @@ defmodule Wotex.Workspace.Scaffold do
             main: "readme",
             extras:
               ["README.md", "CHANGELOG.md"] ++
-                Path.wildcard("#{@docs}/{specs,plans,decisions,provenance}/*.md"),
+                Path.wildcard("#{@docs}/{specs,plans,decisions,provenance}/*.md") ++
+                Path.wildcard("bench/output/*.md"),
             groups_for_extras: [
               Specifications: ~r{docs/packages/@@name@@/specs/},
               "Completion contract": ~r{docs/packages/@@name@@/plans/},
               Decisions: ~r{docs/packages/@@name@@/decisions/},
-              Provenance: ~r{docs/packages/@@name@@/provenance/}
+              Provenance: ~r{docs/packages/@@name@@/provenance/},
+              Benchmarks: ~r{bench/output/}
             ],
             source_ref: "@@name@@-v#{@version}",
             source_url: @source_url,
@@ -628,6 +633,26 @@ defmodule Wotex.Workspace.Scaffold do
         assert @@namespace@@.version() == "0.1.0"
       end
     end
+    """
+  end
+
+  # A starter benchmark of the generated entry point; `mix bench` runs it and
+  # ExDoc includes its report.
+  defp bench_script do
+    ~S"""
+    Benchee.run(
+      %{"version/0" => fn -> "0.1.0" = @@namespace@@.version() end},
+      warmup: 1,
+      time: 3,
+      memory_time: 1,
+      formatters: [
+        Benchee.Formatters.Console,
+        {Benchee.Formatters.Markdown,
+         file: "bench/output/version.md",
+         title: "# @@title@@ entry point",
+         description: "`@@namespace@@.version/0`, the generated entry point."}
+      ]
+    )
     """
   end
 

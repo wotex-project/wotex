@@ -9,6 +9,10 @@ packages/wotex-coap/native/oscore/vendor/**
 packages/wotex-opcua/priv/native/vendor/**
 packages/wotex-ble/priv/bluez/native/vendor/**
 
+# nanobench, the benchmark library of mix native.bench, pinned by digest
+# (tooling/native/nanobench/source.json).
+tooling/native/nanobench/**
+
 # Fragments spliced into pinned Matter SDK sources at an exact anchor; they
 # follow the SDK's style.
 packages/wotex-matter/test/support/software/*.inc

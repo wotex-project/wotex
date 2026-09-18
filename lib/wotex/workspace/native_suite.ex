@@ -45,7 +45,7 @@ defmodule Wotex.Workspace.NativeSuite do
   expands to the output of `pkg-config --cflags NAME`.
   """
 
-  @requirements ~w(linux docker)
+  @requirements ~w(linux docker tun)
   @placeholders ~w(package root workspace scratch)
 
   @typedoc "A command: arguments, environment, working directory and optional stdout file."
@@ -116,12 +116,12 @@ defmodule Wotex.Workspace.NativeSuite do
     known = ~w(suite requires build prepare compile_commands compile test container)
 
     with :ok <- known_keys(where, entry, known),
-         {:ok, requires} <- requirements(where, Map.get(entry, "requires", [])),
+         {:ok, requires} <- parse_requires(where, Map.get(entry, "requires", [])),
          {:ok, build} <- build(where, Map.get(entry, "build")),
          {:ok, prepare} <- commands(where, "prepare", Map.get(entry, "prepare", [])),
          {:ok, databases} <-
            strings(where, "compile_commands", Map.get(entry, "compile_commands", [])),
-         {:ok, compile} <- compile(where, Map.get(entry, "compile", [])),
+         {:ok, compile} <- parse_compile(where, Map.get(entry, "compile", [])),
          {:ok, test} <- commands(where, "test", Map.get(entry, "test", [])),
          {:ok, container} <- container(where, requires, Map.get(entry, "container")),
          suite = %__MODULE__{
@@ -151,6 +151,57 @@ defmodule Wotex.Workspace.NativeSuite do
     Regex.replace(~r/\{([a-z]+)\}/, text, fn whole, name -> Map.get(values, name, whole) end)
   end
 
+  @doc "The placeholder names a string may use."
+  @spec placeholders() :: [String.t()]
+  def placeholders, do: @placeholders
+
+  @doc "The distinct placeholder names used in `strings`, in order of first use."
+  @spec placeholders_in([String.t()]) :: [String.t()]
+  def placeholders_in(strings) do
+    strings
+    |> Enum.flat_map(&Regex.scan(~r/\{([a-z]+)\}/, &1, capture: :all_but_first))
+    |> List.flatten()
+    |> Enum.uniq()
+  end
+
+  # Parsing helpers shared with `native_bench` entries (`Wotex.Workspace.NativeBench`).
+
+  @doc """
+  Checks that mapping `entry` has only `known` keys; `where` names the entry
+  in the error.
+  """
+  @spec known_keys(String.t(), map(), [String.t()]) :: :ok | {:error, String.t()}
+  def known_keys(where, entry, known) do
+    case Map.keys(entry) -- known do
+      [] -> :ok
+      unknown -> {:error, "#{where}: unknown key(s) #{Enum.join(Enum.sort(unknown), ", ")}"}
+    end
+  end
+
+  @doc "Parses a `requires` list: host requirements from `requirements/0`."
+  @spec parse_requires(String.t(), term()) :: {:ok, [String.t()]} | {:error, String.t()}
+  def parse_requires(where, list) do
+    with {:ok, list} <- strings(where, "requires", list) do
+      case list -- @requirements do
+        [] -> {:ok, list}
+        unknown -> {:error, "#{where}: unknown requirement(s) #{Enum.join(unknown, ", ")}"}
+      end
+    end
+  end
+
+  @doc "Parses a `compile` list: mappings of `files` (package-relative globs) and `flags`."
+  @spec parse_compile(String.t(), term()) :: {:ok, [compile()]} | {:error, String.t()}
+  def parse_compile(where, list) when is_list(list), do: collect(list, &compile_rule(where, &1))
+  def parse_compile(where, _), do: {:error, "#{where}: compile must be a list"}
+
+  @doc "Parses a list of non-empty strings under `key`."
+  @spec parse_strings(String.t(), String.t(), term()) :: {:ok, [String.t()]} | {:error, String.t()}
+  def parse_strings(where, key, list), do: strings(where, key, list)
+
+  @doc "Parses an `env` mapping of names to strings into sorted pairs."
+  @spec parse_env(String.t(), term()) :: {:ok, [{String.t(), String.t()}]} | {:error, String.t()}
+  def parse_env(where, map), do: env(where, nil, map)
+
   @doc "Expands every string of `command`."
   @spec expand_command(command(), %{String.t() => String.t()}) :: command()
   def expand_command(command, values) do
@@ -163,22 +214,6 @@ defmodule Wotex.Workspace.NativeSuite do
   end
 
   # Parsing
-
-  defp known_keys(where, entry, known) do
-    case Map.keys(entry) -- known do
-      [] -> :ok
-      unknown -> {:error, "#{where}: unknown key(s) #{Enum.join(Enum.sort(unknown), ", ")}"}
-    end
-  end
-
-  defp requirements(where, list) do
-    with {:ok, list} <- strings(where, "requires", list) do
-      case list -- @requirements do
-        [] -> {:ok, list}
-        unknown -> {:error, "#{where}: unknown requirement(s) #{Enum.join(unknown, ", ")}"}
-      end
-    end
-  end
 
   defp build(_, nil), do: {:ok, nil}
   defp build(_, task) when is_binary(task) and task != "", do: {:ok, task}
@@ -217,10 +252,13 @@ defmodule Wotex.Workspace.NativeSuite do
   defp env(where, key, map) when is_map(map) do
     if Enum.all?(map, fn {name, value} -> is_binary(name) and is_binary(value) end),
       do: {:ok, Enum.sort(map)},
-      else: {:error, "#{where}: #{key} env must map names to strings"}
+      else: {:error, "#{where}: #{env_key(key)} must map names to strings"}
   end
 
-  defp env(where, key, _), do: {:error, "#{where}: #{key} env must be a mapping"}
+  defp env(where, key, _), do: {:error, "#{where}: #{env_key(key)} must be a mapping"}
+
+  defp env_key(nil), do: "env"
+  defp env_key(key), do: "#{key} env"
 
   defp optional_string(_, _, _, nil), do: {:ok, nil}
 
@@ -264,9 +302,6 @@ defmodule Wotex.Workspace.NativeSuite do
     end
   end
 
-  defp compile(where, list) when is_list(list), do: collect(list, &compile_rule(where, &1))
-  defp compile(where, _), do: {:error, "#{where}: compile must be a list"}
-
   defp compile_rule(where, %{"files" => files, "flags" => flags} = entry) do
     with :ok <- known_keys("#{where}, compile", entry, ~w(files flags)),
          {:ok, [_ | _] = files} <- strings(where, "compile files", files),
@@ -304,13 +339,10 @@ defmodule Wotex.Workspace.NativeSuite do
         Enum.flat_map(suite.compile, & &1.flags) ++
         Enum.flat_map(suite.prepare ++ suite.test, &command_strings/1)
 
-    used =
-      strings
-      |> Enum.flat_map(&Regex.scan(~r/\{([a-z]+)\}/, &1, capture: :all_but_first))
-      |> List.flatten()
+    used = placeholders_in(strings)
 
     cond do
-      (unknown = Enum.uniq(used) -- @placeholders) != [] ->
+      (unknown = used -- @placeholders) != [] ->
         {:error, "#{where}: unknown placeholder(s) #{Enum.map_join(unknown, ", ", &"{#{&1}}")}"}
 
       "workspace" in used and is_nil(suite.build) ->

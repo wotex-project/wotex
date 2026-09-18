@@ -19,7 +19,9 @@ defmodule Wotex.Workspace.Native do
       `packages/wotex-matter`): one pin per archive, nothing local.
 
   A native package without a manifest of a known shape is reported as
-  `no manifest`; that is not a failure.
+  `no manifest`; that is not a failure. The repository's own pinned tools,
+  `tooling/native/**/source.json` of the same shape (nanobench, for
+  `mix native.bench`), follow as one report named `tooling`.
 
   `advisories/3` queries OSV for every pin. `build/4` dispatches a
   package's own `native_task` with an absolute workspace.
@@ -54,12 +56,18 @@ defmodule Wotex.Workspace.Native do
 
   @type advisory_result :: %{pin: pin(), result: {:ok, [vulnerability()]} | {:error, String.t()}}
 
-  @doc "One report per native package, sorted by package name."
+  @doc """
+  One report per native package, sorted by package name, then the report
+  of `tooling/` when it pins sources.
+  """
   @spec sources(Manifest.t(), Path.t()) :: [report()]
   def sources(%Manifest{} = manifest \\ Manifest.load!(), root \\ Workspace.root()) do
-    manifest
-    |> Manifest.native_packages()
-    |> Enum.map(&package_report(&1, root))
+    packages =
+      manifest
+      |> Manifest.native_packages()
+      |> Enum.map(&package_report(&1, root))
+
+    packages ++ tooling_report(root)
   end
 
   @doc "Whether no report failed."
@@ -164,6 +172,17 @@ defmodule Wotex.Workspace.Native do
       source_json_manifests(package_path, root) ++
         native_sources_manifest(package_path, root) ++ archives_manifest(package_path, root)
 
+    report(package.name, manifests, root)
+  end
+
+  defp tooling_report(root) do
+    case source_json_manifests(Path.join(root, "tooling"), root) do
+      [] -> []
+      manifests -> [report("tooling", manifests, root)]
+    end
+  end
+
+  defp report(name, manifests, root) do
     parts = Enum.map(manifests, &read_manifest(&1, root))
     problems = Enum.flat_map(parts, & &1.problems)
 
@@ -175,7 +194,7 @@ defmodule Wotex.Workspace.Native do
       end
 
     %{
-      package: package.name,
+      package: name,
       status: status,
       manifests: Enum.map(parts, & &1.manifest),
       pins: Enum.flat_map(parts, & &1.pins),

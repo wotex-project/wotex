@@ -11,7 +11,10 @@ defmodule Wotex.Workspace.NativeCheck do
     * `tidy/2`: clang-tidy with the root `.clang-tidy` on every first-party
       translation unit, using the compile commands of the package's
       `native_check` suites (`Wotex.Workspace.NativeSuite`). A translation
-      unit that no suite covers fails the check.
+      unit that no suite covers fails the check. The drivers of the
+      package's `nanobench` benchmarks (`Wotex.Workspace.NativeBench`) take
+      their compile commands from compile-only suites that follow the
+      `native_check` suites (`suites/1`).
     * `test/2`: each suite's build task and test commands.
 
   Suites run their build task in a cached workspace
@@ -33,6 +36,7 @@ defmodule Wotex.Workspace.NativeCheck do
   alias Wotex.Workspace.CompileDb
   alias Wotex.Workspace.Exec
   alias Wotex.Workspace.Manifest
+  alias Wotex.Workspace.NativeBench
   alias Wotex.Workspace.NativeCache
   alias Wotex.Workspace.NativeContainer
   alias Wotex.Workspace.NativeFiles
@@ -48,6 +52,7 @@ defmodule Wotex.Workspace.NativeCheck do
           dir: Path.t(),
           relative: Path.t(),
           suites: [NativeSuite.t()],
+          benches: [NativeBench.t()],
           files: [Path.t()],
           sources: [Path.t()],
           crates: [Path.t()],
@@ -80,6 +85,7 @@ defmodule Wotex.Workspace.NativeCheck do
          dir: Path.join(root, relative),
          relative: relative,
          suites: package.native_check,
+         benches: package.native_bench,
          files: found.files,
          sources: found.sources,
          crates: found.crates,
@@ -87,6 +93,15 @@ defmodule Wotex.Workspace.NativeCheck do
        }}
     end
   end
+
+  @doc """
+  The suites clang-tidy takes compile commands from: the package's
+  `native_check` suites, then one compile-only suite per `nanobench`
+  benchmark (`Wotex.Workspace.NativeBench.tidy_suites/1`).
+  """
+  @spec suites(context()) :: [NativeSuite.t()]
+  def suites(context),
+    do: context.suites ++ NativeBench.tidy_suites(Map.get(context, :benches, []))
 
   @doc "Whether the package has C or C++ sources, Rust crates."
   @spec kinds(context()) :: %{c_family: boolean(), rust: boolean()}
@@ -247,7 +262,8 @@ defmodule Wotex.Workspace.NativeCheck do
   defp tidy_suites(context, opts) do
     initial = %{entries: [], contained: MapSet.new(), ok?: true, failures: 0}
 
-    context.suites
+    context
+    |> suites()
     |> Enum.filter(&(&1.compile_commands != [] or &1.compile != []))
     |> Enum.reduce(initial, fn suite, state ->
       covered = MapSet.union(CompileDb.files(CompileDb.merge(state.entries)), state.contained)
@@ -308,27 +324,31 @@ defmodule Wotex.Workspace.NativeCheck do
   end
 
   @doc """
-  The host requirements of `suite` this host does not meet, each with the
-  reason. `probe` replaces the host checks in tests.
+  The host requirements of `suite` (a `native_check` suite or a
+  `native_bench` benchmark) this host does not meet, each with the reason.
+  `probe` replaces the host checks in tests.
   """
-  @spec unmet(NativeSuite.t(), (String.t() -> :ok | {:error, String.t()})) :: [String.t()]
-  def unmet(%NativeSuite{requires: requires}, probe \\ &probe/1) do
+  @spec unmet(NativeSuite.t() | NativeBench.t(), (String.t() -> :ok | {:error, String.t()})) ::
+          [String.t()]
+  def unmet(%{requires: requires}, probe \\ &probe/1) do
     for requirement <- requires, {:error, reason} <- [probe.(requirement)], do: reason
   end
 
   @doc """
   Where `suite` runs on this host: `:host` when its requirements are met;
-  `:linux_container` when it requires only Linux, this host is not Linux
-  and Docker is available; else `{:unmet, reasons}`, which name both ways
-  to run a Linux suite. `probe` replaces the host checks in tests.
+  `:linux_container` when it requires only Linux (and optionally a tun
+  device, which the container is given), this host is not Linux and Docker
+  is available; else `{:unmet, reasons}`, which name both ways to run a
+  Linux suite. `probe` replaces the host checks in tests.
   """
-  @spec placement(NativeSuite.t(), (String.t() -> :ok | {:error, String.t()})) :: placement()
-  def placement(%NativeSuite{} = suite, probe \\ &probe/1) do
-    case unmet(suite, probe) do
-      [] ->
+  @spec placement(NativeSuite.t() | NativeBench.t(), (String.t() -> :ok | {:error, String.t()})) ::
+          placement()
+  def placement(%{requires: requires} = suite, probe \\ &probe/1) do
+    case {unmet(suite, probe), container_only?(requires), probe.("linux")} do
+      {[], _, _} ->
         :host
 
-      [linux] when suite.requires == ["linux"] ->
+      {_, true, {:error, linux}} ->
         case probe.("docker") do
           :ok ->
             :linux_container
@@ -341,16 +361,25 @@ defmodule Wotex.Workspace.NativeCheck do
              ]}
         end
 
-      reasons ->
+      {reasons, _, _} ->
         {:unmet, reasons}
     end
   end
+
+  # A suite the Linux container can run: Linux, optionally with a tun device.
+  defp container_only?(requires), do: "linux" in requires and requires -- ["linux", "tun"] == []
 
   defp probe("linux") do
     case :os.type() do
       {:unix, :linux} -> :ok
       {_, os} -> {:error, "requires Linux (this host is #{os})"}
     end
+  end
+
+  defp probe("tun") do
+    if File.exists?("/dev/net/tun"),
+      do: :ok,
+      else: {:error, "requires a tun device (/dev/net/tun) and CAP_NET_ADMIN"}
   end
 
   defp probe("docker") do
@@ -588,16 +617,25 @@ defmodule Wotex.Workspace.NativeCheck do
         do: relative
   end
 
-  defp expand_flags(flags, values) do
+  @doc """
+  Expands the placeholders of `flags` with `values`; a flag
+  `pkg-config:NAME` becomes the output of `pkg-config --cflags NAME`, or of
+  `pkg-config --libs NAME` with `mode` `:libs`.
+  """
+  @spec expand_flags([String.t()], %{String.t() => String.t()}, :cflags | :libs) ::
+          {:ok, [String.t()]} | {:error, String.t()}
+  def expand_flags(flags, values, mode \\ :cflags) do
+    option = if mode == :libs, do: "--libs", else: "--cflags"
+
     flags
     |> Enum.reduce_while({:ok, []}, fn
       "pkg-config:" <> name, {:ok, acc} ->
-        case System.cmd("pkg-config", ["--cflags", name], env: tool_env(), stderr_to_stdout: true) do
+        case System.cmd("pkg-config", [option, name], env: tool_env(), stderr_to_stdout: true) do
           {output, 0} ->
             {:cont, {:ok, Enum.reverse(String.split(output), acc)}}
 
           {output, _} ->
-            {:halt, {:error, "pkg-config --cflags #{name} failed: #{String.trim(output)}"}}
+            {:halt, {:error, "pkg-config #{option} #{name} failed: #{String.trim(output)}"}}
         end
 
       flag, {:ok, acc} ->
@@ -802,8 +840,12 @@ defmodule Wotex.Workspace.NativeCheck do
     end
   end
 
-  # clang tools, pkg-config and Docker need no Mix or path-dependency settings of the caller.
-  defp tool_env, do: [{"MIX_ENV", nil}, {"WOTEX_PATH_DEPS", nil}]
+  @doc """
+  The environment of clang tools, compilers, pkg-config and Docker: no Mix
+  or path-dependency settings of the caller.
+  """
+  @spec tool_env() :: [{String.t(), nil}]
+  def tool_env, do: [{"MIX_ENV", nil}, {"WOTEX_PATH_DEPS", nil}]
 
   defp real(context, relative), do: NativeCache.real_path(Path.join(context.root, relative))
 

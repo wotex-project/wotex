@@ -159,6 +159,44 @@ defmodule Wotex.Workspace.NativeTest do
       bare = Enum.find(Native.sources(manifest, root), &(&1.package == "bare"))
       assert bare.status == :no_manifest
     end
+
+    test "reports the pins of tooling/ after the packages", %{root: root, manifest: manifest} do
+      refute Enum.any?(Native.sources(manifest, root), &(&1.package == "tooling"))
+
+      Fixtures.write!(root, "tooling/native/bench/bench.h", "header\n")
+
+      Fixtures.write!(
+        root,
+        "tooling/native/bench/source.json",
+        JSON.encode!(%{
+          "schema" => "wotex.tooling.bench-source@1",
+          "version" => "4.6.0",
+          "commit" => "b70",
+          "url" => "https://example.invalid/bench.h",
+          "sha256" => sha("header\n"),
+          "files" => %{"bench.h" => sha("header\n"), "LICENSE" => sha("MIT\n")}
+        })
+      )
+
+      reports = Native.sources(manifest, root)
+      assert List.last(reports).package == "tooling"
+      tooling = List.last(reports)
+      assert tooling.status == :ok
+      assert tooling.manifests == ["tooling/native/bench/source.json"]
+      assert [%{name: "bench", version: "4.6.0", commit: "b70"}] = tooling.pins
+      assert tooling.verified == ["tooling/native/bench/bench.h"]
+      assert tooling.absent == ["tooling/native/bench/LICENSE"]
+
+      Fixtures.write!(root, "tooling/native/bench/bench.h", "changed\n")
+      refute Native.sources_ok?(Native.sources(manifest, root))
+    end
+
+    test "the repository pins its vendored nanobench" do
+      tooling = Enum.find(Native.sources(), &(&1.package == "tooling"))
+      assert tooling.status == :ok
+      assert [%{name: "nanobench", version: "4.6.0"}] = tooling.pins
+      assert tooling.absent == []
+    end
   end
 
   describe "advisories/2" do

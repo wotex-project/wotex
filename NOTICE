@@ -7,3 +7,10 @@ its own NOTICE with the third-party attributions that apply to that package
 (for example the modified W3C Thing Description 1.1 JSON schema bundled by
 packages/wotex, whose origin and digest are recorded in
 docs/packages/wotex/provenance/w3c-td-schema-1.1.md).
+
+The repository tooling vendors nanobench 4.6.0
+(https://github.com/martinus/nanobench), Copyright (c) 2019-2023 Martin
+Leitner-Ankerl, under the MIT License in tooling/native/nanobench/LICENSE;
+tooling/native/nanobench/source.json records its commit and digests. It is
+compiled into the native benchmarks of `mix native.bench` and is not part of
+any package.

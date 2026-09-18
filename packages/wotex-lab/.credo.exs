@@ -6,7 +6,7 @@
     %{
       name: "default",
       files: %{
-        included: ["lib/", "test/", "bin/", "mix.exs"],
+        included: ["lib/", "test/", "bench/", "bin/", "mix.exs"],
         excluded: [~r"/_build/", ~r"/deps/"]
       },
       checks: %{extra: [{Credo.Check.Refactor.IoPuts, [files: %{excluded: ["bin/"]}]}]}

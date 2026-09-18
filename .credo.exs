@@ -2,7 +2,7 @@
   configs: [
     %{
       name: "default",
-      files: %{included: ["lib/", "test/"], excluded: [~r"/_build/", ~r"/deps/"]},
+      files: %{included: ["lib/", "test/", "bench/"], excluded: [~r"/_build/", ~r"/deps/"]},
       strict: true,
       parse_timeout: 5_000,
       color: true,

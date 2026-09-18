@@ -1,0 +1,12 @@
+{
+  "schema": "wotex.tooling.nanobench-source@1",
+  "version": "4.6.0",
+  "commit": "b709728dba4df0356d467abfb0ba20781a8031c0",
+  "url": "https://raw.githubusercontent.com/martinus/nanobench/b709728dba4df0356d467abfb0ba20781a8031c0/src/include/nanobench.h",
+  "sha256": "2cfcdd57044fd0ee11d1be2b5dc545781b05c36049613c0089a73b332afd8c4d",
+  "license": "MIT",
+  "files": {
+    "LICENSE": "2d95503b8a8578c5dc2d2f6ec31fb7e523f74c752005951492210879dc5c6a4f",
+    "nanobench.h": "2cfcdd57044fd0ee11d1be2b5dc545781b05c36049613c0089a73b332afd8c4d"
+  }
+}

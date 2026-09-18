@@ -3,6 +3,7 @@ defmodule Wotex.Workspace.NativeCheckTest do
 
   use ExUnit.Case, async: false
 
+  alias Wotex.Workspace.NativeBench
   alias Wotex.Workspace.NativeCache
   alias Wotex.Workspace.NativeCheck
   alias Wotex.Workspace.NativeSuite
@@ -83,6 +84,23 @@ defmodule Wotex.Workspace.NativeCheckTest do
     both = %NativeSuite{name: "peer", requires: ["linux", "docker"]}
     assert NativeCheck.placement(both, darwin) == {:unmet, ["requires Linux (this host is darwin)"]}
     assert NativeCheck.placement(both, linux) == :host
+
+    # A tun device is given to the container; a Linux host must provide one.
+    tun = %NativeSuite{name: "rcp", requires: ["linux", "tun"]}
+
+    no_tun = fn
+      "tun" -> {:error, "requires a tun device"}
+      _ -> :ok
+    end
+
+    darwin_no_tun = fn
+      "tun" -> {:error, "requires a tun device"}
+      other -> darwin.(other)
+    end
+
+    assert NativeCheck.placement(tun, darwin_no_tun) == :linux_container
+    assert NativeCheck.placement(tun, linux) == :host
+    assert NativeCheck.placement(tun, no_tun) == {:unmet, ["requires a tun device"]}
   end
 
   test "builds cargo arguments with the target directory in the cache", %{check: check} do
@@ -201,6 +219,56 @@ defmodule Wotex.Workspace.NativeCheckTest do
 
     assert Enum.map(entries, &Path.basename(&1["file"])) == ["a.c", "t.cpp"]
     assert Enum.all?(entries, &(("-I" <> scratch) in &1["arguments"]))
+  end
+
+  test "nanobench drivers take their compile commands from their benchmark", %{check: check} do
+    Fixtures.write!(check.root, "packages/p/bench/native/q.cpp", "int q;\n")
+    sources = Enum.concat(check.sources, ["packages/p/bench/native/q.cpp"])
+
+    bench = %NativeBench{
+      id: "q",
+      kind: :nanobench,
+      title: "Q",
+      description: "D",
+      compile: [
+        %{files: ["bench/native/q.cpp"], flags: ["-std=c++17", "-I{package}/native"]},
+        # Covered by the package's suite, which comes first.
+        %{files: ["native/a.c"], flags: ["-std=c11", "-DBENCH"]}
+      ]
+    }
+
+    suite = %NativeSuite{
+      name: "db",
+      compile: [%{files: ["native/*.c", "test/native/*.cpp"], flags: ["-std=c11"]}]
+    }
+
+    check = %{check | suites: [suite], sources: sources} |> Map.put(:benches, [bench])
+    assert Enum.map(NativeCheck.suites(check), & &1.name) == ["db", "bench-q"]
+    assert NativeCheck.suites(Map.delete(check, :benches)) == [suite]
+
+    fake = Fixtures.write!(check.root, "bin/fake-tidy", "#!/bin/sh\necho \"$1\" >> \"$0.args\"\n")
+    File.chmod!(fake, 0o755)
+    tool = %{tool: :clang_tidy, path: fake, version: "23", major: 23}
+
+    assert NativeCheck.tidy(check, tool: tool) == :ok
+
+    {:ok, entries} =
+      Wotex.Workspace.CompileDb.read(Path.join(check.cache, "p/tidy/compile_commands.json"))
+
+    by_file = Map.new(entries, &{Path.basename(&1["file"]), &1["arguments"]})
+
+    assert by_file["q.cpp"] |> Enum.take(6) ==
+             [
+               "c++",
+               "-O2",
+               "-DNDEBUG",
+               "-isystem#{check.root}/tooling/native/nanobench",
+               "-std=c++17",
+               "-I#{check.dir}/native"
+             ]
+
+    refute "-DBENCH" in by_file["a.c"]
+    assert "packages/p/bench/native/q.cpp" in String.split(File.read!(fake <> ".args"), "\n")
   end
 
   test "tidy_suite analyses one suite's units less the covered ones", %{check: check} do

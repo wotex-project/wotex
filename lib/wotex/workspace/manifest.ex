@@ -9,6 +9,7 @@ defmodule Wotex.Workspace.Manifest do
   """
 
   alias Wotex.Workspace
+  alias Wotex.Workspace.NativeBench
   alias Wotex.Workspace.NativeSuite
 
   defmodule Host do
@@ -39,6 +40,7 @@ defmodule Wotex.Workspace.Manifest do
             native_task: String.t() | nil,
             software_task: String.t() | nil,
             native_check: [Wotex.Workspace.NativeSuite.t()],
+            native_bench: [Wotex.Workspace.NativeBench.t()],
             hosts: [Wotex.Workspace.Manifest.Host.t()]
           }
 
@@ -51,6 +53,7 @@ defmodule Wotex.Workspace.Manifest do
       native_task: nil,
       software_task: nil,
       native_check: [],
+      native_bench: [],
       hosts: []
     ]
   end
@@ -241,22 +244,54 @@ defmodule Wotex.Workspace.Manifest do
          {:ok, software_task} <-
            parse_task(name, "software_task", Map.get(entry, "software_task")),
          {:ok, native_check} <- NativeSuite.parse_all(name, Map.get(entry, "native_check")),
-         {:ok, hosts} <- parse_hosts(name, Map.get(entry, "hosts", [])) do
-      {:ok,
-       %Package{
-         name: name,
-         app: app,
-         depends_on: depends_on,
-         native: native,
-         native_task: native_task,
-         software_task: software_task,
-         native_check: native_check,
-         hosts: hosts
-       }}
+         {:ok, native_bench} <- NativeBench.parse_all(name, Map.get(entry, "native_bench")),
+         {:ok, hosts} <- parse_hosts(name, Map.get(entry, "hosts", [])),
+         package = %Package{
+           name: name,
+           app: app,
+           depends_on: depends_on,
+           native: native,
+           native_task: native_task,
+           software_task: software_task,
+           native_check: native_check,
+           native_bench: native_bench,
+           hosts: hosts
+         },
+         :ok <- check_native_bench(package) do
+      {:ok, package}
     end
   end
 
   defp parse_package(name, _), do: {:error, "package #{inspect(name)} must be a mapping"}
+
+  # A benchmark belongs to a native package; the elixir kind runs after the
+  # package's native_task, and the clang-tidy suite of a nanobench driver
+  # must not take the name of a native_check suite.
+  defp check_native_bench(%Package{native_bench: []}), do: :ok
+
+  defp check_native_bench(%Package{native: false, name: name}),
+    do: {:error, "package #{name}: native_bench needs native: true"}
+
+  defp check_native_bench(%Package{} = package) do
+    suites = MapSet.new(package.native_check, & &1.name)
+
+    Enum.reduce_while(package.native_bench, :ok, fn bench, :ok ->
+      where = "package #{package.name}, native_bench #{bench.id}"
+
+      cond do
+        bench.kind == :elixir and is_nil(package.native_task) ->
+          {:halt, {:error, "#{where}: the elixir kind needs the package's native_task"}}
+
+        MapSet.member?(suites, NativeBench.suite_name(bench)) ->
+          {:halt,
+           {:error,
+            "#{where}: native_check suite #{NativeBench.suite_name(bench)} takes its clang-tidy suite name"}}
+
+        true ->
+          {:cont, :ok}
+      end
+    end)
+  end
 
   defp check_name(name) do
     if Regex.match?(@name_pattern, name),
