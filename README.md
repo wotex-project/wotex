@@ -71,6 +71,26 @@ Run the checks of the package you changed and of the packages that depend on
 it. A change in `wotex` or `wotex-runtime` affects every dependent package; a
 change in a protocol adapter affects only that package.
 
+The root Mix project (`:wotex_workspace`, not an umbrella, depending on no
+package) reads `tooling/packages.yaml` and drives the packages from the
+repository root through `mix wotex.*` tasks. Run `mix deps.get` once at the
+root; each task runs the package's own Mix project in a separate OS process.
+
+| Task | What it does |
+| --- | --- |
+| `mix wotex.affected [--base REF] [--docs] [--all] [--json]` | Packages affected by the changes since `REF` (default `origin/main`, `main`, then the root commit), in topological order; `--all` lists every package. |
+| `mix wotex.check [--all\|--package NAME...] [--base REF] [--lane minimum\|current] [--env ENV]` | `mix deps.get --check-locked` and `mix check --no-retry` in each selected package with `WOTEX_PATH_DEPS=1`; stops at the first failure and prints a summary. |
+| `mix wotex.boundary [--all\|--package NAME...]` | Sibling-API gate: reports references to a sibling's `@moduledoc false` module or `@doc false` function. |
+| `mix wotex.archive [--all\|--package NAME...]` | Builds each package's Hex archive without path dependencies and runs its `bin/check_archive.exs` or `bin/check_package.exs`. |
+| `mix wotex.catalogue [--check]` | Renders `docs/catalogue.yaml` from every package catalogue, or checks that it is current. |
+| `mix wotex.native.sources` | Lists pinned native sources and verifies the digests of files present locally. |
+| `mix wotex.native.advisories [--offline]` | Queries OSV for the pinned native sources. |
+| `mix wotex.native.build --package NAME --workspace /abs/dir` | Runs a package's native build task in a disposable absolute workspace. |
+| `mix wotex.new NAME [--depends-on a,b]` | Scaffolds `packages/NAME`, `docs/packages/NAME/` and the manifest entry. |
+
+The default selection of `check`, `boundary` and `archive` is the affected
+set. See [tooling/README.md](tooling/README.md) for the manifest format.
+
 ## Documentation
 
 - `docs/packages/<name>/specs/` holds the normative specifications and the

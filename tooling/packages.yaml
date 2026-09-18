@@ -1,0 +1,101 @@
+# WoTEx package manifest. The single source for the dependency graph that
+# `mix wotex.affected` and CI use, plus per-package lane metadata.
+#
+# depends_on: WoTEx packages this package requires (directly). Dependents are
+#   derived. A change in a package selects it and every transitive dependent.
+# app: OTP application name (Hex package name).
+# native: true when the package builds or vendors native code; its heavy
+#   software profile runs only in the explicit native lane.
+# native_task: the package's own build task, dispatched by `mix wotex.native.build`.
+# software_task: the package's own software-profile run task, if any.
+# lanes: toolchain lanes the package's gate runs on in CI.
+schema_version: "1.0.0"
+lanes:
+  minimum: { elixir: "1.18.4-otp-27", otp: "27.3.4.15" }
+  current: { elixir: "1.20.2-otp-29", otp: "29.0.4" }
+select_all_on:
+  - ".github/**"
+  - "tooling/**"
+  - ".tool-versions"
+  - ".gitignore"
+  - "mix.exs"
+  - "mix.lock"
+  - "lib/**"
+  - "test/**"
+packages:
+  wotex:
+    app: wotex
+    depends_on: []
+  wotex-runtime:
+    app: wotex_runtime
+    depends_on: [wotex]
+  wotex-directory:
+    app: wotex_directory
+    depends_on: [wotex]
+  wotex-nx:
+    app: wotex_nx
+    depends_on: [wotex]
+  wotex-continuum:
+    app: wotex_continuum
+    depends_on: [wotex]
+  wotex-conformance:
+    app: wotex_conformance
+    depends_on: []
+  wotex-binding-http:
+    app: wotex_binding_http
+    depends_on: [wotex, wotex-runtime]
+  wotex-binding-mqtt:
+    app: wotex_binding_mqtt
+    depends_on: [wotex, wotex-runtime]
+  wotex-bacnet:
+    app: wotex_bacnet
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    software_task: wotex.bacnet.software.run
+  wotex-ble:
+    app: wotex_ble
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    native_task: wotex.ble.native.build
+    software_task: wotex.ble.software.run
+  wotex-coap:
+    app: wotex_coap
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    native_task: wotex.coap.native.build
+    software_task: wotex.coap.software.run
+  wotex-matter:
+    app: wotex_matter
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    native_task: wotex.matter.native.build
+    software_task: wotex.matter.software.run
+  wotex-modbus:
+    app: wotex_modbus
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    software_task: wotex.modbus.software.run
+  wotex-opcua:
+    app: wotex_opcua
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    native_task: wotex.opcua.native.build
+    software_task: wotex.opcua.software.run
+  wotex-thread:
+    app: wotex_thread
+    depends_on: [wotex, wotex-runtime]
+    native: true
+    native_task: wotex.thread.native.build
+    software_task: wotex.thread.software.run
+  wotex-lab:
+    app: wotex_lab
+    depends_on:
+      - wotex
+      - wotex-nx
+      - wotex-runtime
+      - wotex-directory
+      - wotex-binding-http
+      - wotex-binding-mqtt
+      - wotex-continuum
+      - wotex-conformance
+    native: true

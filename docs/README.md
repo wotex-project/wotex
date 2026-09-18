@@ -59,3 +59,5 @@ two roots this way.
 
 - [Package graph and boundaries](architecture/package-graph.md)
 - [Monorepo import record](architecture/monorepo-import.md)
+- [Consuming WoTEx packages](guides/consumer.md)
+- [Releasing a package](guides/release.md)
