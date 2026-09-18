@@ -245,7 +245,15 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     File.chmod!(executable, 0o755)
     port = Port.open({:spawn_executable, executable}, [:binary, :exit_status, args: []])
     {:os_pid, os_pid} = Port.info(port, :os_pid)
-    on_exit(fn -> if Port.info(port), do: Port.close(port) end)
+
+    on_exit(fn ->
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
+    end)
+
     %{port: port, os_pid: os_pid, executable: executable}
   end
 

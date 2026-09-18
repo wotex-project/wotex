@@ -295,6 +295,15 @@ operation(Mode, State, Petition, Request, <<"get_dataset">>) ->
         _ -> reply(Request, #{<<"type">> => <<"bytes">>, <<"base64">> => <<"+gEA">>})
     end,
     {State, Petition, continue};
+operation("report_on_request", State, Petition, Request, <<"state">>) ->
+    %% The newest stream's next report precedes this reply, so a completed request
+    %% proves the connection has read that report.
+    case streams() of
+        [Stream | _] -> report(Stream, State, 4);
+        [] -> ok
+    end,
+    reply(Request, <<"disabled">>),
+    {State, Petition, continue};
 operation(Mode, State, Petition, Request, Operation) ->
     case Mode of
         "error" -> failure(Request, #{<<"code">> => <<"remote_error">>,

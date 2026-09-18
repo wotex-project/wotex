@@ -69,6 +69,25 @@ defmodule Wotex.Thread.DaemonTest do
     Task.await(task)
   end
 
+  test "a line beyond the packet size fails in the socket driver as response_limit" do
+    {path, task} =
+      peer(fn socket ->
+        assert {:ok, "state\n"} = :gen_tcp.recv(socket, 0, 1000)
+        :ok = :gen_tcp.send(socket, :binary.copy("x", 8193) <> "\n")
+        assert {:error, :closed} = :gen_tcp.recv(socket, 0, 1000)
+      end)
+
+    assert {:ok, handle} = Daemon.connect(socket_path: path)
+
+    # Line mode enforces packet_size only when the driver buffer is larger; with the OTP 27
+    # default of 1460 bytes the driver hands over the line in pieces instead. A larger buffer
+    # makes the driver refuse the line with :emsgsize whatever the release default.
+    assert :ok = :inet.setopts(handle.socket, buffer: 16_384)
+    assert {:error, %{code: :response_limit}} = Daemon.request(handle, %{type: :state}, 1000)
+    assert {:error, %{code: :transport_closed}} = Daemon.request(handle, %{type: :state}, 1000)
+    Task.await(task)
+  end
+
   test "remote errors and premature closure are distinct failures" do
     {error_path, error_task} =
       peer(fn socket ->

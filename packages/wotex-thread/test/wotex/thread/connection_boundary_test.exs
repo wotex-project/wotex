@@ -214,6 +214,92 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
     assert :ok = Thread.disconnect(session)
   end
 
+  test "WTH-C05 a stream owner exit ends its live stream with owner_down", context do
+    assert {:ok, session} = Thread.connect(context.options)
+    connection = session.handle.pid
+    observe_close(connection)
+    assert {:ok, subscription} = Thread.subscribe(session, %{type: :state})
+    reference = subscription.reference
+
+    # The fixture sends only the initial report, so the stream stays active until the
+    # connection handles the owner's :DOWN.
+    assert_receive {:wotex_thread, ^reference, {:ok, %State{}, %{changed_flags: 0}}}
+    [record] = Map.values(:sys.get_state(connection).subscriptions)
+    Process.exit(record.owner, :kill)
+
+    assert_receive {:wotex_thread, ^reference, {:error, %Error{code: :owner_down}}}, 2000
+    assert_receive {:subscription_close, :owner_down}, 2000
+    assert_receive {:subscription_close, :ok}, 2000
+    refute_received {:wotex_thread, ^reference, _}
+    assert :ok = Thread.unsubscribe(session, subscription)
+
+    assert Enum.map(requests(context), & &1["operation"]) ==
+             ["open", "subscribe_state", "unsubscribe"]
+
+    assert {:ok, %State{}} = Thread.inspect_state(session, [])
+    assert :ok = Thread.disconnect(session)
+  end
+
+  test "WTH-C05 a receiver exit after delivery cancels its live stream", context do
+    assert {:ok, session} = Thread.connect(context.options)
+    connection = session.handle.pid
+    observe_close(connection)
+    parent = self()
+    receiver = spawn(fn -> forward(parent) end)
+    assert {:ok, subscription} = Thread.subscribe(session, %{type: :state, receiver: receiver})
+    reference = subscription.reference
+
+    # Once the only fixture report is delivered, nothing but the receiver's :DOWN can end
+    # the stream; its cancellation retires the stream without a terminal delivery.
+    assert_receive {:forwarded, {:wotex_thread, ^reference, {:ok, %State{}, _}}}
+    Process.exit(receiver, :kill)
+    assert_receive {:subscription_close, result}, 2000
+    assert result == :ok
+    assert :ok = Thread.unsubscribe(session, subscription)
+
+    assert Enum.map(requests(context), & &1["operation"]) ==
+             ["open", "subscribe_state", "unsubscribe"]
+
+    assert {:ok, %State{}} = Thread.inspect_state(session, [])
+    assert :ok = Thread.disconnect(session)
+  end
+
+  test "WTH-C05 an admission handled after its receiver exited ends the stream", context do
+    mode(context, "report_on_request")
+    assert {:ok, session} = Thread.connect(context.options)
+    connection = session.handle.pid
+    observe_close(connection)
+    parent = self()
+    receiver = spawn(fn -> forward(parent) end)
+    assert {:ok, subscription} = Thread.subscribe(session, %{type: :state, receiver: receiver})
+    reference = subscription.reference
+    assert_receive {:forwarded, {:wotex_thread, ^reference, {:ok, %State{}, _}}}
+    [record] = Map.values(:sys.get_state(connection).subscriptions)
+
+    # The fixture writes the next report ahead of this reply, so the suspended owner holds
+    # it once the request returns.
+    :ok = :sys.suspend(record.owner)
+    assert {:ok, "disabled"} = OpenThread.request(session.handle, %{type: :state}, 1000)
+
+    # The owner admits against a live receiver while the connection is suspended; the
+    # receiver then exits, so its :DOWN is queued behind that admission.
+    :ok = :sys.suspend(connection)
+    :ok = :sys.resume(record.owner)
+    _ = :sys.get_state(record.owner)
+    monitor = Process.monitor(receiver)
+    Process.exit(receiver, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^receiver, :killed}
+    :ok = :sys.resume(connection)
+
+    # The admission finds no receiver queue, so the stream ends before its :DOWN is handled.
+    assert_receive {:subscription_close, :receiver_overflow}, 2000
+    assert_receive {:subscription_close, :ok}, 2000
+    assert :ok = Thread.unsubscribe(session, subscription)
+    assert Enum.count(requests(context), &(&1["operation"] == "unsubscribe")) == 1
+    assert {:ok, %State{}} = Thread.inspect_state(session, [])
+    assert :ok = Thread.disconnect(session)
+  end
+
   for mode <- ~w(bad_json truncated large) do
     test "WTH-C07 a #{mode} reply closes the generation before any typed result", context do
       mode(context, unquote(mode))
@@ -296,6 +382,33 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
 
     assert {:error, %Error{code: :invalid_transport_return}} =
              Thread.send(session, %{type: :state})
+  end
+
+  @doc false
+  @spec forward_close(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          {pid(), pid()}
+        ) :: {:subscription_close, term()} | nil
+  def forward_close(_, _, metadata, {parent, connection}) do
+    # Subscription telemetry is global; forward only the observed connection's events.
+    if self() == connection, do: send(parent, {:subscription_close, metadata.result})
+  end
+
+  defp observe_close(connection) do
+    handler = "boundary-close-#{System.unique_integer([:positive])}"
+    event = [:wotex, :thread, :subscription, :close]
+    :ok = :telemetry.attach(handler, event, &__MODULE__.forward_close/4, {self(), connection})
+    on_exit(fn -> :telemetry.detach(handler) end)
+  end
+
+  defp forward(parent) do
+    receive do
+      message ->
+        send(parent, {:forwarded, message})
+        forward(parent)
+    end
   end
 
   defp mode(context, mode), do: File.write!(Path.join(context.directory, "mode"), mode)
