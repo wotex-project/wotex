@@ -153,4 +153,21 @@ defmodule Wotex.Workspace.LinksTest do
     {_output, 0} = System.cmd("git", ["add", "README.md", "docs/guide.md"], cd: root, env: [])
     assert Links.tracked_markdown(root) == {:ok, ["README.md", "docs/guide.md"]}
   end
+
+  test "machine_paths/2 reports user homes and system temporary directories", %{root: root} do
+    Fixtures.write!(root, "docs/run.md", """
+    Built in `/absolute/disposable/workspace` and `packages/wotex/priv`.
+    Recorded in /private/tmp/run-1/out and `/Users/someone/code`.
+    Also /home/builder/cache, /var/folders/x1/T/tmp and /private/var/log.
+    Not /usr/local/bin, /var/lib/wotex or /tmp/generic.
+    """)
+
+    assert Links.machine_paths(root, ["docs/run.md", "docs/absent.md"]) == [
+             {"docs/run.md", 2, "/private/tmp/run-1/out"},
+             {"docs/run.md", 2, "/Users/someone/code"},
+             {"docs/run.md", 3, "/home/builder/cache"},
+             {"docs/run.md", 3, "/var/folders/x1/T/tmp"},
+             {"docs/run.md", 3, "/private/var/log"}
+           ]
+  end
 end

@@ -19,6 +19,9 @@ defmodule Mix.Tasks.Wotex.Docs.Check do
 
   Other URLs and anchor-only targets are skipped; anchors are stripped and
   not checked. See `Wotex.Workspace.Links`.
+
+  Absolute machine paths (a user home or a system temporary directory) in
+  tracked Markdown are reported as `file:line: machine path PATH`.
   """
 
   use Mix.Task
@@ -34,7 +37,7 @@ defmodule Mix.Tasks.Wotex.Docs.Check do
     CLI.parse_options(args, [])
 
     problems =
-      Enum.reject([links(), catalogue()], &(&1 == :ok))
+      Enum.reject([links(), machine_paths(), catalogue()], &(&1 == :ok))
 
     if problems != [], do: CLI.fail("documentation check failed")
     :ok
@@ -65,6 +68,30 @@ defmodule Mix.Tasks.Wotex.Docs.Check do
       {:error, message} ->
         Mix.shell().error(message)
         :error
+    end
+  end
+
+  @doc """
+  Reports absolute machine paths (a user home or a system temporary
+  directory) in tracked Markdown; see `Wotex.Workspace.Links.machine_paths/2`.
+  """
+  @spec machine_paths(Path.t()) :: :ok | :error
+  def machine_paths(root \\ Workspace.root()) do
+    with {:ok, files} <- Links.tracked_markdown(root),
+         [_ | _] = found <- Links.machine_paths(root, files) do
+      Enum.each(found, fn {file, line, path} ->
+        Mix.shell().error("#{file}:#{line}: machine path #{path}")
+      end)
+
+      Mix.shell().error(
+        "#{length(found)} machine path(s); use a repository-relative path " <>
+          "or a placeholder such as /absolute/disposable/workspace"
+      )
+
+      :error
+    else
+      [] -> :ok
+      {:error, message} -> Mix.shell().error(message) && :error
     end
   end
 

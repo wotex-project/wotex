@@ -43,6 +43,7 @@ defmodule Wotex.Workspace.Links do
   @repository_url ~r{^https://github\.com/wotex-project/wotex/(?:blob|tree)/main(?:/|$)}
   @scheme ~r/^[a-zA-Z][a-zA-Z0-9+.-]*:/
   @fence ~r/^\s{0,3}(```|~~~)/
+  @machine_path ~r{(?:/Users/[A-Za-z]|/home/[a-z][a-z0-9_-]*/|/private/(?:tmp|var)/|/var/folders/)[^\s`"')\]]*}
 
   @doc "The Markdown files Git tracks below `root` (`git ls-files '*.md'`)."
   @spec tracked_markdown(Path.t()) :: {:ok, [Path.t()]} | {:error, String.t()}
@@ -74,6 +75,36 @@ defmodule Wotex.Workspace.Links do
           []
       end
     end)
+  end
+
+  @doc """
+  Absolute machine paths in the repository-relative Markdown `files` below
+  `root`, as `{file, line, path}`. Tracked documentation names paths
+  relative to the repository or uses a placeholder such as
+  `/absolute/disposable/workspace`; a user home or a system temporary
+  directory (`/Users/…`, `/home/<user>/…`, `/private/tmp/…`,
+  `/private/var/…`, `/var/folders/…`) identifies one machine.
+  """
+  @spec machine_paths(Path.t(), [Path.t()]) :: [{Path.t(), pos_integer(), String.t()}]
+  def machine_paths(root, files) do
+    Enum.flat_map(files, fn file ->
+      case File.read(Path.join(root, file)) do
+        {:ok, text} ->
+          text
+          |> String.split("\n")
+          |> Enum.with_index(1)
+          |> Enum.flat_map(&line_machine_paths(file, &1))
+
+        {:error, _reason} ->
+          []
+      end
+    end)
+  end
+
+  # Sentence punctuation after a path is not part of it.
+  defp line_machine_paths(file, {line, number}) do
+    for [path] <- Regex.scan(@machine_path, line),
+        do: {file, number, String.replace(path, ~r/[.,;:]+$/, "")}
   end
 
   @doc """

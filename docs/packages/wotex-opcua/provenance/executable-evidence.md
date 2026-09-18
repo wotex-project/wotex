@@ -229,7 +229,7 @@ tasks reject a missing or relative workspace argument.
 
 Real run on macOS arm64 (Elixir 1.20.2 / OTP 29, Homebrew Python 3.14.7):
 `WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace
-/private/tmp/wotex-opcua-agent/software` completed. The native build CTest step
+/absolute/disposable/workspace` completed. The native build CTest step
 passed, and the recorded peer distributions include asyncua 2.0.1.
 `WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace` on the same workspace
 passed every lane:
