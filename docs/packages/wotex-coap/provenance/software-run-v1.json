@@ -1,7 +1,7 @@
 {
   "schema": "wotex.coap.software-run-evidence@1",
-  "specification": "WCO.08@1.7.0",
-  "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability plus same-stack OSCORE sessions through the Mix-built native helper, the WCO-C09 lifecycle stress lane for all four transports and native-v1 corpus cases through the same helper, with ExUnit-owned peers and bounded cleanup",
+  "specification": "WCO.08@1.9.2",
+  "scope": "Manifest-verified macOS independent libcoap UDP, PSK and PKI interoperability, same-stack OSCORE sessions through the Mix-built native helper, independent upstream-stack OSCORE against Eclipse Californium, the WCO-C09 lifecycle stress lane for all four transports, native-v1 corpus and saturation cases through the same helper, and owner-loss reaping of guarded peers, with a measured retained-process count",
   "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=\"$SAME_ROOT_AS_BUILD\" mix wotex.software.run --workspace \"$ABSOLUTE_COMPLETED_SOFTWARE_WORKSPACE\"",
   "platform": {
     "os_version": [
@@ -17,44 +17,70 @@
   "upstream": {
     "backend": "libcoap",
     "commit": "7cf7465b784baded4de183290c547d582becfd28",
-    "native_helper_sha256": "9ae51a5899ad7215c57e6d178f75635e7e7cf08e5dd505a9fcf088fec631c240",
-    "peer_executable_sha256": "f6a460689e8e53bd35dbf470b36d1a37f28376de4c8b5c8028a8a6d63884df28",
+    "native_helper_sha256": "7e53008bee177abc9d835a087b1f39e87b5e68b6d4ab054e7c2072efe3e9088a",
+    "peer_executable_sha256": "4b4e657dbe2dca7837e986f0dfc5eb1b8eac60baea5487ea6cfc572fffa75632",
     "version": "4.3.5"
   },
+  "independent_peer": {
+    "name": "cf-plugtest-server",
+    "stack": "Eclipse Californium",
+    "sha256": "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5",
+    "runtime": {
+      "path": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "sha256": "d7ab2ea6a7e731a8a2cee7d722046c9f7d8c5f184cd769b9954a392592337770",
+      "version": "openjdk version \"21.0.12.1\" 2026-08-18"
+    }
+  },
   "source_identity": {
-    "aggregate_sha256": "b954708997ec06253946e10eff7b098a6923587f16f1b40bf00b38b79ca8df33",
-    "kind": "aggregate source SHA-256 from sorted relative paths and bytes; no source commit association asserted",
+    "aggregate_sha256": "80acbc38b47ad5ce9e7eb2def2bf9c30a79c42a73737d6b6e73caaa54af96f83",
+    "commit": "160bcc380f5b926f843e12b9a968e4b0c79fccb2",
+    "kind": "aggregate source SHA-256 from sorted relative paths and bytes; the package sources equal the named commit",
     "selected_files": {
-      "docs/specs/fixtures/native-v1.json": "d2d7b3b0de52f93aca94d5f745ee4d3e332964383da7ec034f4fc31305d70436",
-      "lib/mix/tasks/wotex.coap.software.run.ex": "0d9a2324dc36139f200efaf1609bbf31df3191387d0ce3acdf5bf2d8782c6ef8",
-      "lib/wotex/coap/software/run.ex": "64be6f2a03921a43f288dbfe904fb4fe53731d9c396ee78de7b754e08f3c35c8",
-      "mix.exs": "bf8e1cab6c097fde6f57bba0c0ee05b713910528b024cd04b10a752a3478f41b",
-      "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5",
+      "lib/mix/tasks/wotex.coap.software.run.ex": "b76ff7e2cdfb24e60d7d6900520254479877d32743e590daa29c86bd6baf9d1d",
+      "lib/wotex/coap/software/run.ex": "54b58eb1c4ebdee4f6112e79e32429ebda6cb959b691fe3d15e45b6aecf2894d",
+      "mix.exs": "3bb71f32dd336bff82016a4776c97c08c40683f349f965ee51be026707455309",
+      "mix.lock": "5587e496f99613689e1c59386d11a5e7198969d0f03d5b1391ff712c9a9188d0",
+      "priv/fixtures/native-v1.json": "d2d7b3b0de52f93aca94d5f745ee4d3e332964383da7ec034f4fc31305d70436",
       "test/fixtures/dtls_pki/manifest.json": "55efbe5822d3bf3de81fe16fb7e224b84ff3bebb7f9075fd9a65422f133fd08d",
       "test/interop/dtls_pki_test.exs": "904dc82410941ed7e29a67f7518c13db09005bc49a7a9c1b587f935021dc8b24",
       "test/interop/dtls_test.exs": "01a4fe710e24cb98868c266659d3e9c817e2c8e36a4e2a63eb39c6fb7f3ac184",
       "test/interop/libcoap_test.exs": "dec95bf3e905bf57526836e0db40ab6955559494b26541ef4cf28f9a84f17d49",
       "test/interop/oscore_test.exs": "ca7d8b5dd9824dd567c7ab041db2e37d3292616231770f56b01b6f7da4a15936",
+      "test/software/independent_oscore_test.exs": "69afa637b26441cc1c5f851c8ce48e969f6565878781bb5ab50358dd6d185d00",
       "test/software/lifecycle_stress_test.exs": "e40fdbbdc1b4d5120915cafc28fee670e07104e6641271cfcc72a06a4bd062fb",
-      "test/software/native_corpus_test.exs": "94524ab4d5e22edb5a124040e327374c32a42fd206c8a9b6432c7d7fb7bda8e6",
+      "test/software/native_corpus_test.exs": "89182700d45f55287bc283b75f81b524c3461245cf28a684a1c138cfbb4ab506",
       "test/software/native_saturation_test.exs": "69934b7057e9c328ccb3be41e67d1e79bdc8f59797dc5bfe8033a8927c3bbcdd",
+      "test/software/peer_guardian_test.exs": "10c639a004480a1752d638cb55e206adc9751ce9d5473818aa8140326cf39eb0",
+      "test/support/californium_peer.ex": "85fa0a71436b5a896b8bd59dd4a06fa746a71fa78ef4224f4a5c53dc9748324a",
+      "test/support/contract_fixture.ex": "e525e0d98a4cbbd3c7d3f6c6f4501944b55a8f590febcac51b572271bed22a37",
+      "test/support/datagram.ex": "0bda995b56df8defed262c841cefc07a007461c27d13ded94ce826853b734beb",
       "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
-      "test/support/libcoap_peer.ex": "361f280b66191d2d0fdb8f0417e4461b7d924781ce1874434a9f1895833052ea",
+      "test/support/error_transport.ex": "7fb741c8dd8968e856eea4214d2f306d205f7d4bd9e606ab3ab610c25a5ac43b",
+      "test/support/execution.ex": "c16dbc12f96d10289e1000c324696856499306cedd383c7ec65c958b656444b0",
+      "test/support/libcoap_peer.ex": "03d4ccb811148d403bcaf99480fbb82687eef71a83fdf84d169edf6a66eb0aca",
+      "test/support/native_runtime_fixture.ex": "c0d466eb27558db5e6c3057e0fba397b06d154bd774657a50cf80daabd4a8d2d",
+      "test/support/observation_trace.ex": "4d23be592771e98d473ba2cfb801147d575df526701386f9c6beefc00414e6f5",
       "test/support/oscore.ex": "24e4466d88aecfffaa657035862694bbf0eb6ab6d13330a20fdf4b41d619c20c",
       "test/support/oscore_peer.ex": "10b51818282f546b3b09961fc755e6b780f786d6888d7e7f7cc64baf4535754b",
+      "test/support/oscore_relay.ex": "ce8130efcbad61dbcf15b9d91c8ea4500093af241094c72c458a0f7137b227f8",
+      "test/support/peer_process.ex": "d8670e52f4e94439c307ad33b48959a0cb832f62be69e35908b65b75144d8644",
+      "test/support/runtime_capture.ex": "efb2e846f1e8e955956263db4d6cc8d0c746b96c1b6e87c7faef06521a4a2fc0",
+      "test/support/runtime_credentials.ex": "912ef50eaa005b786b9092da12a739d4196a0d834bd24761f67002aea21564fa",
+      "test/support/runtime_dtls_peer.ex": "e867de2fa23e50defa743f5d4a2dd331f7143abc5b899941c97019bbd75b43f8",
+      "test/support/runtime_security_credentials.ex": "8d0f267fe1edd083de390e52f6c3e23d6c13cd650b0406cb77f9896fd472c095",
       "test/test_helper.exs": "575578ae4f12e6e41336ad856bccd8db4bcf9e741764bbc1d6f2bf9ac110f1d1",
-      "test/wotex/coap/software_run_test.exs": "38532dbc1189333657dd9711ed4394641606f285cd4f7dbe8876a72200934088"
+      "test/wotex/coap/software_run_test.exs": "f10b3145bd119f0f9474fef761078d890056369e9f680f734aa68e870e70da37"
     }
   },
   "build_identity": {
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "d4ff5fd4438138485c7bb0d93fd06a25964743e7042f91f3895d71ebf2047b9e",
-    "nested_native_manifest_sha256": "448fb5cefbc0a26528194234b36162eae27148d91c5982ed83fca51bc06b0280"
+    "manifest_sha256": "606b459067a34f9a1c0be007dc3b1cd3f37fe6eec2eb6c71202fcbe7c37680db",
+    "nested_native_manifest_sha256": "4d0a60a716eb394f32447a31b906c299f55c2544cad125af0ee96989072c5247"
   },
-  "result_sha256": "49eacd8f708fc116a13bab81dab2a9c67a43fc34449650ddc80fd76bdd1d02cd",
+  "result_sha256": "fd9e33c2f62ca401c4f0e46b922c22b85e1dcd3d0d509ca630c993a1c9c66935",
   "result": {
     "cleanup": {
-      "assertion_source": "interop peer owners plus build-command process-group cleanup",
+      "assertion_source": "process table after the suite for peer processes; interop peer owners for ports, sessions, contexts, subscriptions and store locks",
       "command_process_groups_retained": 0,
       "peer_processes_retained": 0,
       "session_context_subscription_store_locks_retained": 0,
@@ -67,9 +93,11 @@
       "test/interop/dtls_test.exs",
       "test/interop/dtls_pki_test.exs",
       "test/interop/oscore_test.exs",
+      "test/software/independent_oscore_test.exs",
       "test/software/lifecycle_stress_test.exs",
       "test/software/native_corpus_test.exs",
       "test/software/native_saturation_test.exs",
+      "test/software/peer_guardian_test.exs",
       "--include",
       "interop",
       "--include",
@@ -80,13 +108,43 @@
       "0"
     ],
     "dependency_hashes": {
-      "mix.lock": "3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5"
+      "mix.lock": "5587e496f99613689e1c59386d11a5e7198969d0f03d5b1391ff712c9a9188d0"
     },
-    "elapsed_ms": 49649,
+    "elapsed_ms": 59774,
     "exit_status": 0,
     "failure": null,
     "fixture_hashes": {
       "dtls_pki_manifest": "55efbe5822d3bf3de81fe16fb7e224b84ff3bebb7f9075fd9a65422f133fd08d"
+    },
+    "independent_peer": {
+      "name": "cf-plugtest-server",
+      "path": "bin/cf-plugtest-server.jar",
+      "runtime": {
+        "path": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
+        "sha256": "d7ab2ea6a7e731a8a2cee7d722046c9f7d8c5f184cd769b9954a392592337770",
+        "version": "openjdk version \"21.0.12.1\" 2026-08-18"
+      },
+      "sha256": "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5",
+      "stack": "Eclipse Californium",
+      "steps": [
+        {
+          "elapsed_ms": 700,
+          "exit_status": 0,
+          "id": "independent-peer-download",
+          "log": "logs/independent-peer-download.log",
+          "output_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "elapsed_ms": 75,
+          "exit_status": 0,
+          "id": "independent-peer-probe",
+          "log": "logs/independent-peer-probe.log",
+          "output_bytes": 167,
+          "output_sha256": "da6bb29c482c0fd5ea827d1eecfcf573d88175541589705d776142562e788e18"
+        }
+      ],
+      "version": "3.14.0"
     },
     "native_features": {
       "dtls": true,
@@ -94,8 +152,8 @@
       "version": true
     },
     "native_hashes": {
-      "coap-server": "f6a460689e8e53bd35dbf470b36d1a37f28376de4c8b5c8028a8a6d63884df28",
-      "wotex-coap-oscore": "9ae51a5899ad7215c57e6d178f75635e7e7cf08e5dd505a9fcf088fec631c240"
+      "coap-server": "4b4e657dbe2dca7837e986f0dfc5eb1b8eac60baea5487ea6cfc572fffa75632",
+      "wotex-coap-oscore": "7e53008bee177abc9d835a087b1f39e87b5e68b6d4ab054e7c2072efe3e9088a"
     },
     "scenario_ids": [
       "WCO-C03",
@@ -114,6 +172,8 @@
       "WCO-S05",
       "WCO-S06",
       "WCO-V02",
+      "WCO-V04",
+      "WCO-V05",
       "WCO-V09",
       "WCO-V12",
       "WCO-V13",
@@ -121,17 +181,17 @@
     ],
     "schema": "wotex.coap.software@1",
     "seed": 0,
-    "source_sha256": "b954708997ec06253946e10eff7b098a6923587f16f1b40bf00b38b79ca8df33",
+    "source_sha256": "80acbc38b47ad5ce9e7eb2def2bf9c30a79c42a73737d6b6e73caaa54af96f83",
     "status": "passed",
     "test_log": {
-      "bytes": 4206,
+      "bytes": 4503,
       "path": "tests.log",
-      "sha256": "258619dd756e6e23b1a6a51d76ae6826ce9b4e33e7d836e90f06369ca6c29875"
+      "sha256": "889f44daefff148dfb89ba640f90bd6cb4b55fc0e7ad0c8d0b6f924ae57816bb"
     },
     "toolchain": "Erlang/OTP 29 [erts-17.0.4] [source] [64-bit] [smp:18:18] [ds:18:18:10] [async-threads:1] [jit]\n\nElixir 1.20.2 (compiled with Erlang/OTP 29)\n",
     "tests": {
-      "failed": 0,
-      "passed": 50
+      "passed": 57,
+      "failed": 0
     }
   },
   "stack_labels": {
@@ -141,35 +201,37 @@
     "test/interop/oscore_test.exs": "same-stack libcoap OSCORE peer and Mix-built native helper",
     "test/software/lifecycle_stress_test.exs": "independent libcoap UDP, PSK and PKI peers plus the same-stack OSCORE peer, one case per transport and phase group, with an ExUnit raw UDP fault peer",
     "test/software/native_corpus_test.exs": "Mix-built native helper against a test-owned UDP socket and an ExUnit-owned RFC 8613 endpoint independent of libcoap",
-    "test/software/native_saturation_test.exs": "Mix-built native helper behind the public native owner against an ExUnit-owned RFC 8613 endpoint independent of libcoap"
+    "test/software/native_saturation_test.exs": "Mix-built native helper behind the public native owner against an ExUnit-owned RFC 8613 endpoint independent of libcoap",
+    "test/software/independent_oscore_test.exs": "independent upstream-stack Eclipse Californium 3.14.0 plugtest server and the Mix-built native helper",
+    "test/software/peer_guardian_test.exs": "child BEAM owning an independent libcoap peer or the Californium peer through the guarded test helpers"
   },
   "resource_trends": {
     "udp": {
       "beam_total_bytes": [
-        78989555,
-        79491619
+        81135485,
+        81616933
       ]
     },
     "dtls_psk": {
       "beam_total_bytes": [
-        78716411,
-        79339587
+        81316245,
+        81870541
       ]
     },
     "dtls_pki": {
       "beam_total_bytes": [
-        80846155,
-        81406979
+        83618370,
+        84132066
       ]
     },
     "oscore": {
       "beam_total_bytes": [
-        81138155,
-        81216259
+        82992058,
+        82906874
       ],
       "helper_rss_kib": [
-        1936,
-        1936
+        1920,
+        1920
       ]
     },
     "kind": "BEAM :erlang.memory(:total) bytes and helper RSS KiB sampled every 100 of 1000 sequential operations; reported, not asserted"
@@ -177,7 +239,7 @@
   "assertions": [
     "The task verifies an existing completed software-build manifest and never builds a missing workspace",
     "The checked-in native guardian bounds the exact tagged ExUnit command to 300 seconds, 16 MiB of output and five seconds of process-group cleanup",
-    "Each UDP, PSK, PKI and OSCORE test owns and closes its libcoap peer, selected adjacent ports and credential workspace",
+    "Each UDP, PSK, PKI and OSCORE test owns and closes its libcoap peer, selected adjacent ports and credential workspace; every libcoap and Californium peer runs under the workspace's native command guardian with output bound 0, so its process group ends when the owning test BEAM's pipe closes",
     "Fifteen independent unary, Block1/Block2, Observe, Runtime, authentication, certificate and DTLS-record cases pass with seed zero",
     "Twelve same-stack OSCORE cases pass through the manifest-verified Mix-built helper and the public native owner",
     "Relayed OSCORE-optioned and plaintext responses with unused tokens cannot end the active protected GET",
@@ -192,28 +254,27 @@
     "Receiver death terminates the native owner within 1100 ms, reaps the helper and removes the peer observer",
     "Owner death while a protected request is pending terminates the native owner within 1100 ms, reaps the helper and returns effect none to the caller",
     "A real ConsumedThing readproperty call selects the coap_oscore profile, dispatches through the production helper and decodes the protected JSON value",
+    "Five cases against the independent upstream-stack Eclipse Californium 3.14.0 plugtest server, admitted by archive SHA-256 0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5 and run by OpenJDK 21.0.12.1, pass: protected GET/POST/PUT/DELETE with the protected POST's Location-Path, protected discovery, a 1,280-byte Block2 body and an exact Block1 readback, three ordered notifications that stop after cancellation, a relayed duplicate protected response answered once, and a one-bit ciphertext change in a notification that is discarded while the observation continues",
     "For UDP, DTLS PSK, DTLS PKI and OSCORE, 1000 sequential PUT/GET operations return the exact latest value on one session",
     "Thirty-two concurrent callers each receive the representation of their own resource",
     "With the owner suspended, 96 callers produce exactly 64 successful responses and 32 busy failures with effect none",
     "One hundred open/close cycles, 100 Observe/cancel cycles with a fresh change each and 100 receiver-death cycles return owner ports and processes to baseline within 1000 ms; peer debug records count one created and one removed subscription per cycle; each OSCORE helper process is gone",
     "A suspended receiver with max_queue_length 2 ends the observation with one receiver_overflow terminal error and no more than two delivered values",
     "A 3-second peer delay ends a 1500 ms operation with timeout and effect none; a raw UDP fault peer ends UDP and OSCORE requests with timeout and DTLS connects with an error of effect none; a closed peer ends a request with timeout or connection_closed; every case returns resources to baseline",
-    "The passing result records zero retained command groups, peer processes, UDP ports and session/context/subscription/store locks",
+    "After the suite the run counts the live processes, other than its own BEAM and that BEAM's ancestors, whose arguments name a workspace file and finds none; the passing result also records zero retained command groups, UDP ports and session/context/subscription/store locks from the peer owners' assertions",
     "The tracked first-party source and packaged test harness contain no Python",
     "Five native-v1 observe commands with an absent, null, 0, \"true\" or {} renew close the helper generation with a nonzero exit, no reply and no datagram to the open peer, while renew false sends the protected registration",
     "A closed OSCORE context reopened in a second helper generation returns fresh_context_required, leaves the registry bytes unchanged and sends no datagram",
     "Against an ExUnit-owned RFC 8613 endpoint independent of libcoap, native-v1 F21 establishes a protected observation whose report carries Observe 9 after the credit reply, F22 ignores a notification protected for the registration during cancellation and confirms the cancel with result null, and F23 returns invalid_observation_response for a registration answered without Observe",
     "Native-v1 F05 ends an Event subscription with overlapping_event_report after eight credited reports and one pending report, F09 grants no report for replayed or regressing credit and keeps report 13 queued until fresh credit, and F24 emits one observation_failed terminal for two authenticated 4.04 notifications",
     "A suspended native owner holds at most eight report frames and one in-flight credit reply in its mailbox, still receives a terminal through the reserved control slot with the report window full, and a killed suspended owner leaves the helper to cancel the observation and exit within 1100 ms",
-    "Native-v1 F15 writes a 32,768-byte registration report inline and a 32,769-byte protected Block2 notification as begin, two chunks, end and report with two credits unused"
+    "Native-v1 F15 writes a 32,768-byte registration report inline and a 32,769-byte protected Block2 notification as begin, two chunks, end and report with two credits unused",
+    "A child BEAM that owns a libcoap peer or the independent peer through the test helpers is killed with SIGKILL, and every process naming the peer's executable ends within five seconds"
   ],
   "unaccepted": [
-    "Independent-stack OSCORE interoperability",
-    "Owner loss during pending Observe registration, renewal or cancellation, and live replay-window injection through the software run",
-    "Actual BEAM Port-mailbox sampling and reserved-control delivery with both channels saturated",
-    "The complete native-v1 corpus through the production helper",
-    "A Linux AddressSanitizer and UndefinedBehaviorSanitizer software-run lane",
-    "The Elixir 1.18.4 / OTP 27.3.4.15 lane and complete committed-source/package matrix",
+    "Group OSCORE, OSCORE context re-derivation and a second independent OSCORE stack",
+    "Live replay-window injection through the software run",
+    "A diagnosis of the intermittent PKI Runtime unary timeout recorded on 2026-09-17, which did not recur",
     "Hardware and publication"
   ]
 }

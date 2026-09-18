@@ -3,7 +3,7 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.2
+  version: 1.9.3
   owner: wotex-coap
   updated: 2026-09-19
 ---
@@ -723,18 +723,16 @@ open/close cycles, 100 Observe/cancel cycles, 100 receiver-termination cycles,
 Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
-committed-source/package gates. The current software-run receipt accepts only its
-15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 8-test
-stress cohort, 2-test saturation cohort and 13-test native corpus cohort. The
-50-test run passes on macOS arm64; the 47-test run of the preceding commit passes
-inside Linux arm64 containers on both required runtimes, whose builds compile the
-native vectors with ASan/UBSan. From fresh clones of committed sources, `mix check`
-passes on both required runtimes as an unprivileged user, including the Hex archive
-and out-of-tree compilation gate, and both runtimes produce the byte-identical
-archive. The independent upstream-stack OSCORE cohort executes its five cases
-against Californium 3.14.0 on macOS arm64 through the manifest-bound helper;
-its renewed full-run receipt and its Linux lanes remain open, and Group OSCORE,
-context re-derivation and a second independent stack remain unaccepted. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
+committed-source/package gates. The current software-run receipt accepts its
+15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort, 5-test
+independent Californium OSCORE cohort, 8-test stress cohort, 2-test saturation
+cohort, 13-test native corpus cohort and 2-test peer guardian cohort. The 57-test
+run passes on macOS arm64 and inside Linux arm64 containers on both required
+runtimes, whose builds compile the native vectors with ASan/UBSan. The
+committed-source `mix check` receipt, including the Hex archive and out-of-tree
+compilation gate, predates the move into this repository and must be run again.
+Group OSCORE, context re-derivation and a second independent stack remain
+unaccepted. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 
 The [native corpus](../../../../packages/wotex-coap/priv/fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute

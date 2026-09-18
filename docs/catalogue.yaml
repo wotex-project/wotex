@@ -128,7 +128,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-coap/specs/WCO.02-protocol.md"
       - id: "WCO.03"
-        version: "1.5.0"
+        version: "1.5.1"
         implementation_status: "implemented"
         path: "docs/packages/wotex-coap/specs/WCO.03-implemented-profile.md"
       - id: "WCO.04"
@@ -148,7 +148,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-coap/specs/WCO.07-wotex-integration.md"
       - id: "WCO.08"
-        version: "1.9.2"
+        version: "1.9.3"
         implementation_status: "partial"
         path: "docs/packages/wotex-coap/specs/WCO.08-native-build-and-software-evidence.md"
   wotex-conformance:

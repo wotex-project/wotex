@@ -3,9 +3,9 @@ spec:
   id: WCO.03
   title: "Implemented CoAP profile"
   status: accepted
-  version: 1.5.0
+  version: 1.5.1
   owner: wotex-coap
-  updated: 2026-09-18
+  updated: 2026-09-19
 ---
 
 # WCO.03 Implemented CoAP profile
@@ -89,9 +89,9 @@ explicit `coap` session uses the native OSCORE owner of
 discovery and Observe exchanges, and a `:coap_oscore` Runtime route dispatches
 ConsumedThing unary and Observe calls through the same owner. OSCORE's C Port
 owns one libcoap engine; the UDP and OTP DTLS paths need no native helper.
-The OSCORE software evidence and its open acceptance items (the renewed
-upstream-stack run receipt and Linux lanes, Group OSCORE, context
-re-derivation) belong to .10, .12 and .13.
+The OSCORE software evidence and its open acceptance items (Group OSCORE,
+context re-derivation and a second independent stack) belong to .10, .12 and
+.13.
 
 ## Evidence and compatibility
 
