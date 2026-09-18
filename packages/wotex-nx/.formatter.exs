@@ -1,4 +1,4 @@
 [
-  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}", "bin/*.exs"],
+  inputs: ["{mix,.formatter}.exs", "{bench,config,lib,test}/**/*.{ex,exs}", "bin/*.exs"],
   line_length: 100
 ]

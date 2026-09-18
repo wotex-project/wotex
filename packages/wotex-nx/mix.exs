@@ -41,6 +41,8 @@ defmodule WotexNx.MixProject do
       {:nx, "~> 0.13.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -109,21 +111,23 @@ defmodule WotexNx.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        "README.md",
-        docs_path("plans/wotex-nx-completion.md"),
-        docs_path("specs/WNX.01-observation-numerical-boundary.md"),
-        docs_path("decisions/0001-caller-owned-execution.md"),
-        docs_path("decisions/0002-batch-and-output-contract.md"),
-        docs_path("provenance/standards-and-dependencies.md"),
-        docs_path("provenance/runtime-backend-cohort.md"),
-        "../../docs/packages/wotex-nx/security.md"
-      ],
+      extras:
+        [
+          "README.md",
+          docs_path("plans/wotex-nx-completion.md"),
+          docs_path("specs/WNX.01-observation-numerical-boundary.md"),
+          docs_path("decisions/0001-caller-owned-execution.md"),
+          docs_path("decisions/0002-batch-and-output-contract.md"),
+          docs_path("provenance/standards-and-dependencies.md"),
+          docs_path("provenance/runtime-backend-cohort.md"),
+          "../../docs/packages/wotex-nx/security.md"
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-nx\/plans/,
         Specifications: ~r/docs\/packages\/wotex-nx\/specs/,
         Decisions: ~r/docs\/packages\/wotex-nx\/decisions/,
         Provenance: ~r/docs\/packages\/wotex-nx\/provenance/,
+        Benchmarks: ~r/bench\/output/,
         Project: ~r/security\.md/
       ],
       groups_for_modules: [
