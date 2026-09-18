@@ -1,0 +1,20 @@
+# Criterion benchmarks of the containment launcher in
+# `priv/conformance/native`, run by `mix native.bench --package wotex-lab`.
+# The launcher has binary targets only, so the benchmark includes its
+# in-process modules by path instead of depending on the crate; the shipped
+# crate, its sources and its Cargo.lock stay unchanged. libc carries the
+# launcher's pin.
+[package]
+name = "wotex-contained-exec-bench"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[dev-dependencies]
+criterion = { version = "=0.8.2", default-features = false, features = ["cargo_bench_support"] }
+libc = "=0.2.189"
+
+[[bench]]
+name = "contained_exec"
+harness = false

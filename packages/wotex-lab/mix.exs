@@ -70,6 +70,8 @@ defmodule WotexLab.MixProject do
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -158,12 +160,14 @@ defmodule WotexLab.MixProject do
           {"LICENSE", [title: "License"]},
           {"NOTICE", [title: "Notices"]}
         ] ++
-          Path.wildcard("#{@docs}/{specs,plans,decisions,provenance}/*.md"),
+          Path.wildcard("#{@docs}/{specs,plans,decisions,provenance}/*.md") ++
+          Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         Specifications: ~r/wotex-lab\/specs/,
         "Completion contract": ~r/wotex-lab\/plans/,
         Decisions: ~r/wotex-lab\/decisions/,
-        Provenance: ~r/wotex-lab\/provenance/
+        Provenance: ~r/wotex-lab\/provenance/,
+        Benchmarks: ~r/bench\/output/
       ],
       source_ref: "wotex-lab-v#{@version}",
       source_url: @source_url,

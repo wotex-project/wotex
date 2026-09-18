@@ -1071,6 +1071,26 @@ packages:
       - wotex-continuum
       - wotex-conformance
     native: true
+    native_bench:
+      # A crate of its own: the launcher has binary targets only, so the
+      # benchmark includes its config.rs and accounting.rs by path.
+      - bench: contained_exec
+        kind: criterion
+        title: Containment launcher admission and accounting
+        description: >-
+          The in-process work of the containment launcher
+          (`priv/conformance/native`, `wotex-contained-exec`), without a
+          contained child: parsing and budget admission of the argument vector
+          of the default containment profile, of the largest admitted command
+          (29 elements of 4 KiB) and of a memory budget above the ceiling
+          (`config.rs`);
+          selection of the contained process tree (root, process group,
+          descendants that left the group, reparented descendants retained from
+          an earlier tick, one reused PID) from synthetic host process tables of
+          512, 4,096 and 65,535 rows, the largest table the launcher admits; and
+          one observation of this host's process table, the enumeration each
+          10 ms supervision tick performs (`accounting.rs`: libproc on macOS,
+          `/proc` on Linux).
     # The reference hosts; the Nerves host builds for the host target, never
     # the rpi4 firmware.
     hosts:
