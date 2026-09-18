@@ -10,7 +10,7 @@ defmodule WotexLabNerves.Application do
   use Application
 
   @impl Application
-  def start(_type, _args) do
+  def start(_, _) do
     children = [
       Wotex.Lab.child_spec(
         id: "nerves-rpi4",

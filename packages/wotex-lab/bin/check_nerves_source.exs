@@ -2,6 +2,8 @@ defmodule Wotex.Lab.Check.NervesSource do
   @moduledoc false
 
   @files ~w(
+    .check.exs
+    .credo.exs
     .formatter.exs
     .gitignore
     README.md

@@ -9,13 +9,12 @@ defmodule WotexLabNerves.Smoke do
   records that hardware boot was not run.
   """
 
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.Runtime.{Loopback, NoSec}
   alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Examples.Thermal
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result}
-  alias Wotex.ThingDescription
 
   @fixture "priv/fixtures/thermal/thing-description.json"
   @source_root Path.expand("../..", __DIR__)
@@ -28,18 +27,18 @@ defmodule WotexLabNerves.Smoke do
   ]
   @source_tree_digest (case Digest.tree(@source_root, @source_files) do
                          {:ok, digest} -> digest
-                         {:error, _error} -> raise "Nerves source cohort cannot be digested"
+                         {:error, _} -> raise "Nerves source cohort cannot be digested"
                        end)
   @lock_digest (case Digest.file(Path.join(@source_root, "mix.lock")) do
                   {:ok, digest} -> digest
-                  {:error, _error} -> raise "Nerves lock cannot be digested"
+                  {:error, _} -> raise "Nerves lock cannot be digested"
                 end)
   @archives Mix.Dep.Lock.read()
             |> Map.new(fn
-              {name, {:hex, _app, _version, checksum, _build, _deps, _repo, _inner}} ->
+              {name, {:hex, _, _, checksum, _, _, _, _}} ->
                 {name, "sha256:" <> checksum}
 
-              {name, _other} ->
+              {name, _} ->
                 {name, :missing}
             end)
 

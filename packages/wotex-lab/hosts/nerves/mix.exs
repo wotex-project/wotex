@@ -4,6 +4,7 @@ defmodule WotexLabNerves.MixProject do
   @app :wotex_lab_nerves
   @version "0.1.0"
 
+  @spec project() :: keyword()
   def project do
     [
       app: @app,
@@ -15,8 +16,10 @@ defmodule WotexLabNerves.MixProject do
     ]
   end
 
-  def cli, do: [preferred_targets: [run: :host, test: :host]]
+  @spec cli() :: keyword()
+  def cli, do: [preferred_envs: [check: :test], preferred_targets: [run: :host, test: :host]]
 
+  @spec application() :: keyword()
   def application do
     [
       extra_applications: [:logger, :runtime_tools],
@@ -33,7 +36,9 @@ defmodule WotexLabNerves.MixProject do
       wotex_dependency(:wotex, "wotex"),
       wotex_dependency(:wotex_nx, "wotex-nx"),
       wotex_dependency(:wotex_runtime, "wotex-runtime"),
-      wotex_dependency(:wotex_lab, "wotex-lab")
+      wotex_dependency(:wotex_lab, "wotex-lab"),
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -50,7 +55,7 @@ defmodule WotexLabNerves.MixProject do
           raise "WOTEX_PATH_DEPS is allowed only in development or test"
         end
 
-      _value ->
+      _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end

@@ -13,6 +13,12 @@ WOTEX_PATH_DEPS=1 MIX_TARGET=host mix deps.get
 WOTEX_PATH_DEPS=1 MIX_TARGET=host mix test
 ```
 
+Its gate, `WOTEX_PATH_DEPS=1 MIX_TARGET=host mix check --no-retry`, checks the
+locked and unused dependencies, compiles with warnings as errors and runs the
+format check, strict Credo and the host test (`.check.exs`). It needs no
+Nerves toolchain. The Lab's full gate (`mix pkg wotex-lab check --no-retry`)
+runs it as its `nerves_host` tool.
+
 An rpi4 source build requires the operator-installed Nerves host prerequisites,
 including the `nerves_bootstrap` archive and `fwup`:
 
