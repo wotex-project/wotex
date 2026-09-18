@@ -3,10 +3,13 @@ defmodule Mix.Tasks.Wotex.Matter.Native.Build do
   @moduledoc """
   Builds or verifies the first-party Matter controller in an explicit workspace.
 
-  Invoke `mix wotex.native.build --workspace /absolute/disposable/workspace`
-  from the Wotex Matter source checkout. The task validates its root project and
-  checked-in runner before invoking Docker. Loading the library never invokes
-  this task or starts a native process.
+  Invoke `mix wotex.matter.native.build --workspace /absolute/disposable/workspace`
+  inside `packages/wotex-matter`, whose `mix.exs` aliases it as
+  `mix wotex.native.build`; from the repository root run
+  `mix native.build --package wotex-matter --workspace /absolute/disposable/workspace`.
+  The task validates that it runs in the `wotex_matter` project and that its
+  checked-in runner exists before invoking Docker. Loading the library never
+  invokes this task or starts a native process.
   """
 
   use Mix.Task

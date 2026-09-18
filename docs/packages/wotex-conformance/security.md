@@ -10,8 +10,11 @@ advisory is issued after a fix and affected-version assessment are ready.
 
 ## Supported versions
 
-No stable version is currently published. The default branch receives security
-fixes, but source availability is not a support commitment.
+No version is published yet. Security fixes land on the default branch, and
+each release states the release lines it supports. The supported toolchains
+are Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir 1.20.2 with
+Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
 
 ## Security boundary
 

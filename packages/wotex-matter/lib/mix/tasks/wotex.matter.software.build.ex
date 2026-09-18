@@ -3,10 +3,13 @@ defmodule Mix.Tasks.Wotex.Matter.Software.Build do
   @moduledoc """
   Builds or verifies the Matter software fixture in an explicit workspace.
 
-  Invoke `mix wotex.software.build --workspace /absolute/disposable/workspace`
-  from the Wotex Matter source checkout. The task builds the first-party native
-  controller and the pinned Linux no-BLE lighting, all-clusters and bridge peers.
-  Missing tools, changed inputs and incomplete workspaces are task failures.
+  Invoke `mix wotex.matter.software.build --workspace /absolute/disposable/workspace`
+  inside `packages/wotex-matter` (alias `mix wotex.software.build`); from the
+  repository root run
+  `mix pkg wotex-matter wotex.software.build --workspace /absolute/disposable/workspace`.
+  The task builds the first-party native controller and the pinned Linux no-BLE
+  lighting, all-clusters and bridge peers. Missing tools, changed inputs and
+  incomplete workspaces are task failures.
   """
 
   use Mix.Task

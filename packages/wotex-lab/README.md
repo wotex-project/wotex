@@ -37,10 +37,12 @@ is an unspecified backlog item or an advertised working feature.
 
 ## Installation
 
-Requires Elixir 1.18+ and OTP 27+. No version of Lab or of the WoTEx packages
-it uses is published on Hex yet; the source cohort was inspected on
-2026-09-08, when the Hex API returned no WoTEx package. Once Lab is
-published, depend on it as usual:
+Wotex Lab 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
+1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
+No version of Lab or of the WoTEx packages it uses is published on Hex yet; the
+source cohort was inspected on 2026-09-08, when the Hex API returned no WoTEx
+package. Once Lab is published, depend on it as usual:
 
 ```elixir
 def deps do

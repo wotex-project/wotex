@@ -2,9 +2,11 @@
 
 ## Supported versions
 
-Before the first stable release, the current development line receives security
-updates. After stable release, the latest stable minor line and explicitly
-listed long-lived lines are supported.
+No version is published yet. Security fixes land on the default branch, and
+each release states the release lines it supports. The supported toolchains
+are Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir 1.20.2 with
+Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
 
 ## Reporting
 

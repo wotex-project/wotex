@@ -142,10 +142,11 @@ mix pkg wotex-ble wotex.software.run --workspace /absolute/disposable/dir
 ```
 
 `test/interop/native_bus_test.exs` additionally needs `WOTEX_BLE_DBUS_SOURCE`
-and `WOTEX_BLE_DBUS_BUILD` from a native workspace; `bluez_test.exs`,
-`bluez_runtime_test.exs` and `test/software/` run only inside the software
-lane; `bluez_device_test.exs` (tag `hardware`) needs `WOTEX_BLE_BUSCTL` and
-`WOTEX_BLE_CHARACTERISTIC_PATH`. Apply the shared
+and `WOTEX_BLE_DBUS_BUILD` from a native workspace;
+`test/interop/bluez_test.exs`, `test/interop/bluez_runtime_test.exs` and
+`test/software/` run only inside the software lane;
+`test/interop/bluez_device_test.exs` (tag `hardware`) needs
+`WOTEX_BLE_BUSCTL` and `WOTEX_BLE_CHARACTERISTIC_PATH`. Apply the shared
 `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility
 claims.

@@ -69,11 +69,14 @@ skill.
   and `NOTICE` and, only where the package's shipped Mix tasks need them, its
   native sources and the test assets those tasks run (today native sources in
   wotex-ble, wotex-coap, wotex-matter, wotex-opcua and wotex-thread, test
-  assets in wotex-coap and wotex-matter). The package's archive check
-  (`bin/check_archive.exs`, or `bin/check_package.exs`) is the authority for
-  its exact contents. Archives never ship Markdown documentation, governance
-  files, agent files or check scripts; notes inside a shipped native source
-  tree are part of that tree. Specifications reach consumers through HexDocs.
+  assets in wotex-coap and wotex-matter). wotex-lab also ships the Rust source
+  of its containment launcher (`priv/conformance/native/`), which a consumer
+  of the containment profile builds and pins itself; the archive carries no
+  launcher binary. The package's archive check (`bin/check_archive.exs`, or
+  `bin/check_package.exs`) is the authority for its exact contents. Archives
+  never ship Markdown documentation, governance files, agent files or check
+  scripts; notes inside a shipped native source tree are part of that tree.
+  Specifications reach consumers through HexDocs.
 
 ## Naming and neutrality
 

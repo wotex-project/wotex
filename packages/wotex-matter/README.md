@@ -16,7 +16,7 @@
 
 ---
 
-This package is a `0.1.0-dev` development baseline. The ordered software
+This package is a `0.1.0` development baseline. The ordered software
 profile is implemented and accepted against the pinned SDK example peers. The
 public API remains unstable, and package metadata does not establish publication
 or release readiness. The Python factory adapter has since been removed;
@@ -27,10 +27,12 @@ Build handoff: [software implementation sequence](../../docs/packages/wotex-matt
 
 ## Installation
 
-Wotex Matter 0.1 requires Elixir 1.18 or later. No version is published on Hex
-yet, and package metadata does not assert that a release exists. Once one is,
-depend on it as usual; Hex resolves `wotex` and `wotex_runtime` from the
-package's own requirements:
+Wotex Matter 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
+Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
+No version is published on Hex yet, and package metadata does not assert that a
+release exists. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
@@ -490,3 +492,9 @@ profiles and their evidence. The [Wotex integration contract](../../docs/package
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. The P08a boundary, pinned software-peer matrix
 and isolated immutable-source package checks are executed.
+
+## License
+
+Wotex Matter is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-matter/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-matter/NOTICE).

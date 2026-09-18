@@ -122,7 +122,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Requirements: WCO-S06; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WCO-V13, WCO-V15.
 - Change surface: caller-selected C bridge, versioned framing, explicit libcoap adapter.
-- Test destinations: `test/wotex/coap/oscore_bridge_test.exs`, `test/native/oscore_vectors.c`.
+- Test destinations: `test/wotex/coap/security_oscore_test.exs`, `test/wotex/coap/native_connection_test.exs`, `test/wotex/coap/native_wire_test.exs`, `test/native/oscore_worker_exchange_test.c` (protected request, Observe and blockwise through the libcoap worker), `test/native/oscore_protection_test.c` (authenticated-response admission), `test/wotex/coap/test_oscore_vectors_test.exs` (RFC 8613 Appendix C vectors) and `test/interop/oscore_test.exs`.
 - Done when: Map request/Observe/blockwise through one libcoap exchange engine; RFC 8613 known-answer and authenticated-failure vectors pass.
 - Suggested local commit: `feat: define and implement the optional oscore bridge boundary`.
 
@@ -131,7 +131,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Requirements: WCO-S06; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WCO-V13, WCO-V14.
 - Change surface: exclusive context registry and libcoap sequence-save callback.
-- Test destinations: `test/native/oscore_store_test.c`, `test/interop/oscore_restart_test.exs`.
+- Test destinations: `test/native/oscore_store_test.c`, `test/native/oscore_store_send_test.c`, `test/native/oscore_sequence_test.c`, `test/native/oscore_identity_test.c`, `test/wotex/coap/native_worker_test.exs` (live lock and consumed identity), `test/software/native_corpus_test.exs` (WCO-N-F06: a closed context cannot reopen) and `test/interop/oscore_test.exs` (replayed and stale protected notifications).
 - Done when: Durable pre-use state, sequence bounds and single-process-generation context policy prevent unsafe reopen, nonce reuse and replay acceptance.
 - Suggested local commit: `feat: enforce durable oscore context and replay rules`.
 
@@ -140,7 +140,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Requirements: WCO-I01, WCO-I02, WCO-I03, WCO-I04, WCO-I05, WCO-I06; all previous native/profile packages are dependencies.
 - Concrete cases: every `WCO-I-Fxx` case in `priv/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
 - Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
-- Test destinations: `test/wotex/coap/runtime_integration_test.exs` and explicit test-only credential/client ports.
+- Test destinations: `test/wotex/coap/profile_test.exs` (WCO-I-F01 and the profile cells), `test/wotex/coap/runtime_error_test.exs` (WCO-I-F02–F07 and the I04 table), `test/wotex/coap/runtime_stream_test.exs`, `test/wotex/coap/runtime_owner_test.exs`, `test/wotex/coap/runtime_dtls_test.exs` and `test/wotex/coap/runtime_oscore_test.exs`, with explicit test-only credential/client ports.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
 - Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
 
@@ -149,7 +149,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Requirements: WCO-N01–N05 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
 - Change surface: unique `Mix.Tasks.Wotex.Coap.Software.Build` and `Mix.Tasks.Wotex.Coap.Software.Run` with package aliases `wotex.software.build` and `wotex.software.run` in `mix.exs`, test-only owned Port/process helpers, manifest/result projection. The native build uses `Mix.Tasks.Wotex.Coap.Native.Build` behind the `wotex.native.build` alias. Multiple protocol dependencies must not define duplicate task modules.
 - Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
-- Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
+- Tests: `test/wotex/coap/software_build_test.exs` and `test/wotex/coap/software_run_test.exs`, the native build tests (`native_build_test.exs`, `native_build_command_test.exs`, `native_workspace_test.exs`, `native_archive_test.exs`, `native_toolchain_test.exs`) plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
 
 ### WCO-P09: Prove all coap software transport profiles

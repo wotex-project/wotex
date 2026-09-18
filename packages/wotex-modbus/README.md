@@ -8,10 +8,10 @@
 [![License](https://img.shields.io/hexpm/l/wotex_modbus.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-modbus/LICENSE)
 
 [Installation](#installation) ·
-[Ownership](#ownership) ·
-[Development](#development) ·
 [Implemented profile](#implemented-profile) ·
 [Quick start](#quick-start) ·
+[Wotex contract](#wotex-contract) ·
+[Development](#development) ·
 [Software contract](#software-implementation-contract)
 
 ---
@@ -21,9 +21,11 @@ interoperability does not establish certification or a published release.
 
 ## Installation
 
-Wotex Modbus 0.1 requires Elixir 1.18 or later. No version is published on Hex
-yet. Once one is, depend on it as usual; Hex resolves `wotex` and
-`wotex_runtime` from the package's own requirements:
+Wotex Modbus 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
+Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
+No version is published on Hex yet. Once one is, depend on it as usual; Hex
+resolves `wotex` and `wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
@@ -78,7 +80,35 @@ Path dependencies prove nothing about a released artifact. The
 maps the reviewed API, dependencies, standards scope, legal/security boundary,
 verification commands and explicit nonclaims.
 
-## Ownership
+## Implemented profile
+
+Classic Modbus TCP functions 1, 2, 3, 4, 5, 6, 15 and 16; strict MBAP/response
+validation; integer/float register conversion; explicit socket ownership;
+WoT Forms and Runtime requests; neutral compatibility callbacks.
+
+`Wotex.Modbus.profile/0` supplies the native TCP Runtime profile. Admission is
+bounded to 64 requests per connection, with one active exchange and a deadline
+that includes queue time. An unsent rejected request has no write effect;
+a transmitted write with an uncertain outcome reports `effect: :unknown` and
+cannot be classified as retryable.
+
+## Quick start
+
+```elixir
+{:ok, session} = Wotex.Modbus.connect(host: "127.0.0.1", port: 1502, unit_id: 1)
+try do
+  Wotex.Modbus.read_holding_registers(session, 0, 2)
+after
+  Wotex.Modbus.disconnect(session)
+end
+```
+
+No RTU/serial, Modbus Security, built-in polling or physical certification is
+claimed. See [protocol contract](../../docs/packages/wotex-modbus/specs/WMB.01-protocol.md),
+[Form profile](../../docs/packages/wotex-modbus/specs/WMB.02-form-profile.md) and
+[independent interoperability](test/interop/README.md).
+
+## Wotex contract
 
 Values, validation and Form mapping belong here. The consumer owns credentials,
 policy, supervision and the interpretation of protocol acknowledgements.
@@ -161,34 +191,6 @@ The command guardian also has a Linux ASan/UBSan lane. From
 docker build --tag wotex-modbus-guardian test/interop/native
 docker run --rm wotex-modbus-guardian
 ```
-
-## Implemented profile
-
-Classic Modbus TCP functions 1, 2, 3, 4, 5, 6, 15 and 16; strict MBAP/response
-validation; integer/float register conversion; explicit socket ownership;
-WoT Forms and Runtime requests; neutral compatibility callbacks.
-
-`Wotex.Modbus.profile/0` supplies the native TCP Runtime profile. Admission is
-bounded to 64 requests per connection, with one active exchange and a deadline
-that includes queue time. An unsent rejected request has no write effect;
-a transmitted write with an uncertain outcome reports `effect: :unknown` and
-cannot be classified as retryable.
-
-## Quick start
-
-```elixir
-{:ok, session} = Wotex.Modbus.connect(host: "127.0.0.1", port: 1502, unit_id: 1)
-try do
-  Wotex.Modbus.read_holding_registers(session, 0, 2)
-after
-  Wotex.Modbus.disconnect(session)
-end
-```
-
-No RTU/serial, Modbus Security, built-in polling or physical certification is
-claimed. See [protocol contract](../../docs/packages/wotex-modbus/specs/WMB.01-protocol.md),
-[Form profile](../../docs/packages/wotex-modbus/specs/WMB.02-form-profile.md) and
-[independent interoperability](test/interop/README.md).
 
 ## Software implementation contract
 

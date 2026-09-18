@@ -3,8 +3,10 @@ defmodule Mix.Tasks.Wotex.Bacnet.Software.Run do
   @moduledoc """
   Runs the BACnet software acceptance suite against its verified native peer.
 
-  Invoke `mix wotex.software.run --workspace /absolute/disposable/workspace`
-  from the BACnet source checkout after the explicit fixture build. The runner
+  Invoke `mix pkg wotex-bacnet wotex.bacnet.software.run --workspace /absolute/disposable/workspace`
+  from the repository root, or `mix wotex.bacnet.software.run` inside
+  `packages/wotex-bacnet` with `WOTEX_PATH_DEPS=1`, after the explicit fixture
+  build; the package also defines the alias `mix wotex.software.run`. The runner
   owns the disposable peer, test process, finite command budgets and evidence
   directory. Missing fixtures and cleanup failures are task failures.
 

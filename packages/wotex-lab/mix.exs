@@ -139,6 +139,7 @@ defmodule WotexLab.MixProject do
         "GitHub" => @source_url,
         "Project" => "https://wotex.io",
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-lab/CHANGELOG.md",
+        "Documentation" => "https://hexdocs.pm/wotex_lab",
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-lab"
       },
       # Tarballs ship no Markdown documentation; specifications reach
@@ -155,6 +156,7 @@ defmodule WotexLab.MixProject do
         [
           "README.md",
           "../../docs/packages/wotex-lab/security.md",
+          {"CHANGELOG.md", [title: "Changelog"]},
           {"LICENSE", [title: "License"]},
           {"NOTICE", [title: "Notices"]}
         ] ++

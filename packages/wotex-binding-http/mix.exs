@@ -129,6 +129,7 @@ defmodule WotexBindingHTTP.MixProject do
         {"CHANGELOG.md", title: "Changelog"},
         {"LICENSE", title: "License"},
         {"NOTICE", title: "Notices"},
+        {doc("security.md"), title: "Security"},
         {doc("client-lifecycle-inventory.md"), title: "Client lifecycle inventory"},
         {doc("http-operation-inventory.md"), title: "HTTP operation inventory"},
         {doc("limits-security-inventory.md"), title: "Limits and security inventory"},
@@ -143,6 +144,7 @@ defmodule WotexBindingHTTP.MixProject do
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-binding-http\/plans/,
+        Security: ~r/docs\/packages\/wotex-binding-http\/security/,
         "Normative package specifications": ~r/docs\/packages\/wotex-binding-http\/specs/,
         "Contract evidence":
           ~r/docs\/packages\/wotex-binding-http\/((client-lifecycle|http-operation|limits-security|reference-consumer|release-candidate)-inventory|(standards|runtime)-baseline)/

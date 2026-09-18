@@ -117,14 +117,15 @@ defmodule WotexConformance.MixProject do
         {doc("provenance/package-inputs.md"), title: "Package inputs"},
         {doc("provenance/runtime-compatibility.md"), title: "Runtime compatibility"},
         {"CHANGELOG.md", title: "Changelog"},
-        {"LICENSE", title: "License"}
+        {"LICENSE", title: "License"},
+        {"NOTICE", title: "Notices"}
       ],
       groups_for_extras: [
         "Completion plans": ~r|docs/packages/wotex-conformance/plans/|,
         Specifications: ~r|docs/packages/wotex-conformance/specs/|,
         Decisions: ~r|docs/packages/wotex-conformance/decisions/|,
         Provenance: ~r|docs/packages/wotex-conformance/provenance/|,
-        Reference: ~r/CHANGELOG|security|CONTRIBUTING|GOVERNANCE|LICENSE/
+        Reference: ~r/CHANGELOG|security|LICENSE|NOTICE/
       ],
       groups_for_modules: [
         Contracts: [

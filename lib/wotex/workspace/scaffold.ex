@@ -529,8 +529,10 @@ defmodule Wotex.Workspace.Scaffold do
 
     ## Installation
 
-    @@title@@ requires Elixir 1.18 or later. No version is published on Hex
-    yet. Once one is, depend on it as usual:
+    @@title@@ 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
+    1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+    in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
+    No version is published on Hex yet. Once one is, depend on it as usual:
 
     ```elixir
     def deps do

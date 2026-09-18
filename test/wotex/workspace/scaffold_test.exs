@@ -176,6 +176,35 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert claude =~ "It depends on no sibling package."
   end
 
+  test "every package README and a new package state one toolchain policy from the lanes",
+       %{root: root} do
+    assert {:ok, _paths} = Scaffold.create("wotex-demo", root: root, depends_on: ["wotex"])
+
+    policy = fn readme, title ->
+      flat = Enum.join(String.split(readme), " ")
+      pattern = ~r/#{Regex.escape(title)} 0\.1 supports .*?packages\.yaml\)\./
+      assert [sentence] = Regex.run(pattern, flat), "#{title} states no toolchain policy"
+      String.replace_prefix(sentence, title, "")
+    end
+
+    expected = policy.(File.read!(Path.join(root, "packages/wotex-demo/README.md")), "Wotex Demo")
+
+    for {name, version} <- [{"minimum", "1.18.4"}, {"current", "1.20.2"}] do
+      assert {:ok, lane} = Manifest.lane(name)
+      assert String.starts_with?(lane.elixir, version <> "-otp-")
+      assert expected =~ "Elixir #{version} with Erlang/OTP #{lane.otp}"
+    end
+
+    readmes = Path.wildcard(Path.join(Workspace.root(), "packages/*/README.md"))
+    assert length(readmes) == map_size(Manifest.load!().packages)
+
+    for path <- readmes do
+      readme = File.read!(path)
+      ["# " <> title | _] = String.split(readme, "\n", parts: 2)
+      assert policy.(readme, title) == expected, path
+    end
+  end
+
   test "adds the boundary scan to the template gate once" do
     template =
       "[\n  tools: [\n    {:archive, command: \"a\"},\n    {:diff, command: \"d\"}\n  ]\n]\n"

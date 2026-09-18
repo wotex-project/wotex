@@ -11,7 +11,7 @@ defmodule Wotex.Matter.Error do
 
   `new/3` is shared by path validation, TLV conversion, Form mapping, Runtime
   transport, and client adapters. Consumers can make policy decisions from
-  structured fields rather than parsing Python, SDK, or exception text.
+  structured fields rather than parsing SDK or exception text.
   The constructor stores its arguments without sanitizing or sizing them.
   Library call sites and client implementations must enforce the diagnostic
   contract. Details must not contain fabric credentials, private keys, opaque

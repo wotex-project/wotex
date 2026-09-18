@@ -3,7 +3,7 @@ spec:
   id: WCO.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.1
+  version: 1.2.0
   owner: wotex-coap
   updated: 2026-09-18
 ---
@@ -248,10 +248,17 @@ The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
 The full I04 table requires malformed/unclassified and default mutation cases.
 
-Add `test/wotex/coap/runtime_integration_test.exs`, exercising real core and
-Runtime public APIs with an explicitly selected deterministic protocol peer/port.
-Record each I requirement and concrete case ID in its assertion name. Do not
-construct forged Request structs as the only integration proof. Cover:
+The integration tests exercise real core and Runtime public APIs with an
+explicitly selected deterministic protocol peer/port. Items 1 and 2 execute in
+`test/wotex/coap/profile_test.exs`, item 3 in
+`test/wotex/coap/runtime_error_test.exs`, item 4 in
+`test/wotex/coap/runtime_stream_test.exs`, `runtime_owner_test.exs` and
+`runtime_dtls_test.exs`, the secure profiles in `runtime_dtls_test.exs` and
+`runtime_oscore_test.exs`, and item 5's software-peer repetition in
+`test/interop/dtls_pki_test.exs` and `test/interop/oscore_test.exs`; there is no
+separate Runtime integration test file. Each assertion name records its I
+requirement and concrete case ID. Do not construct forged Request structs as the
+only integration proof. Cover:
 
 1. Real TD construction, contextual defaults and two Form choices; use two
    explicit profiles when supported, otherwise test the unsupported second mode; exact resolved href, target, command and unchanged extensions.

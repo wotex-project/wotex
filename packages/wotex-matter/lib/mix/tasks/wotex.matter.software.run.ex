@@ -3,7 +3,9 @@ defmodule Mix.Tasks.Wotex.Matter.Software.Run do
   @moduledoc """
   Runs the Matter software acceptance suite from a verified explicit workspace.
 
-  Invoke `mix wotex.software.run --workspace /absolute/disposable/workspace`
+  Invoke `mix wotex.matter.software.run --workspace /absolute/disposable/workspace`
+  (alias `mix wotex.software.run`; from the repository root
+  `mix pkg wotex-matter wotex.software.run --workspace /absolute/disposable/workspace`)
   after the software build. The runner owns its controller and peer processes,
   finite test budgets, result files and cleanup. A missing fixture, failed
   assertion or unverified cleanup is a task failure.

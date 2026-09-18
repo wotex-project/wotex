@@ -16,7 +16,7 @@
 
 ---
 
-This package is a `0.1.0-dev` development library. The public API remains
+This package is a 0.1.0 development library. The public API remains
 unstable, and the ordered software profile is unfinished. Package metadata
 does not establish publication or release readiness.
 
@@ -24,9 +24,11 @@ Build handoff: [software implementation sequence](../../docs/packages/wotex-ble/
 
 ## Installation
 
-Wotex BLE 0.1 requires Elixir 1.18 or later. No version is published on Hex
-yet. Once one is, depend on it as usual; Hex resolves `wotex` and
-`wotex_runtime` from the package's own requirements:
+Wotex BLE 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through Elixir
+1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
+No version is published on Hex yet. Once one is, depend on it as usual; Hex
+resolves `wotex` and `wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
@@ -295,3 +297,9 @@ profiles from planned contracts. The [Wotex integration contract](../../docs/pac
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. The implemented mapping and relay cover part of these requirements. A passing
 baseline gate does not accept the unfinished software-peer and stress profile.
+
+## License
+
+Wotex BLE is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-ble/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-ble/NOTICE).
