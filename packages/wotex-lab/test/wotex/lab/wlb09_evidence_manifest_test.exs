@@ -3,11 +3,11 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
   alias Wotex.Lab.Evidence.{Digest, Record}
-  alias Wotex.Lab.Test.SourceTree
   alias Wotex.Lab.Formal.Model
+  alias Wotex.Lab.Test.SourceTree
+
+  @moduletag :integration
 
   @record_keys ~w(broken_variants cookbook_checks deadline_ms descendants excluded_count
                   max_depth max_output_bytes pools ports processes reachable_states run_ms

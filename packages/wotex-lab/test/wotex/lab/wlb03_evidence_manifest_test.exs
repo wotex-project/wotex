@@ -3,10 +3,10 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
   alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Test.SourceTree
+
+  @moduletag :integration
 
   @record_keys ~w(deadline_ms device_tensors effects excluded_count max_samples
                   max_schedule_entries required_lanes run_ms servings test_count tolerance_ppm)a
@@ -47,7 +47,7 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
     path = Path.join(root, "priv/provenance/WLB.03-evidence.json")
-    assert {:ok, map} = path |> File.read!() |> Wotex.JSON.decode()
+    assert {:ok, map} = Wotex.JSON.decode(File.read!(path))
     assert {:ok, record} = Record.from_map(map)
 
     assert record.scenario_id == "WLB.03-nx-experiments"

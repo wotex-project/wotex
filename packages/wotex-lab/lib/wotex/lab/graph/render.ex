@@ -252,7 +252,7 @@ defmodule Wotex.Lab.Graph.Render do
 
     lines = ["#{subject} a wl:#{type_name(node["type"])} ;" | properties]
 
-    (lines |> Enum.join("\n") |> String.replace_suffix(" ;", "")) <> " .\n"
+    String.replace_suffix(Enum.join(lines, "\n"), " ;", "") <> " .\n"
   end
 
   defp turtle_property(key, value) when is_list(value) do

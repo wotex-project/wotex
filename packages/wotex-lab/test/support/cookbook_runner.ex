@@ -66,7 +66,11 @@ defmodule Wotex.Lab.Test.CookbookRunner do
   def install_cell?(cell), do: String.starts_with?(String.trim_leading(cell), "Mix.install(")
 
   defp evaluate(file, source, timeout, opts) do
-    cells = source |> Cookbook.cells() |> Enum.reject(&install_cell?/1)
+    cells =
+      source
+      |> Cookbook.cells()
+      |> Enum.reject(&install_cell?/1)
+
     seed = Keyword.get(opts, :binding, [])
     caller = self()
     ref = make_ref()

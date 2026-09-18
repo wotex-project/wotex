@@ -45,8 +45,12 @@ defmodule Wotex.Lab.BenchmarkTest do
         result
       end)
 
-    dimensions = results |> Enum.flat_map(&Map.keys(&1["dimensions"])) |> Enum.sort()
-    assert dimensions == Benchmark.dimensions() |> Enum.map(&Atom.to_string/1) |> Enum.sort()
+    dimensions =
+      results
+      |> Enum.flat_map(&Map.keys(&1["dimensions"]))
+      |> Enum.sort()
+
+    assert dimensions == Enum.sort(Enum.map(Benchmark.dimensions(), &Atom.to_string/1))
   end
 
   test "only a dedicated, identified cohort may evaluate a p95 threshold" do
@@ -124,7 +128,7 @@ defmodule Wotex.Lab.BenchmarkTest do
              Benchmark.run(
                "duplicates",
                fn -> :ok end,
-               options(%{bytes: 1}) ++ [samples: 2]
+               [{:samples, 2} | options(%{bytes: 1})]
              )
 
     assert {:error, %Error{code: :invalid_options}} =

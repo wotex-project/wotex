@@ -13,10 +13,9 @@ defmodule Wotex.Lab.Metrics.Dataset do
   convert it to a tensor, select a training split or mutate the live history.
   """
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Metrics.{History, Query}
-  alias Wotex.Lab.Options
 
   @schema_version "1.0.0"
   @options [:experiment]
@@ -249,7 +248,7 @@ defmodule Wotex.Lab.Metrics.Dataset do
   end
 
   defp pairs(map),
-    do: map |> Enum.sort() |> Enum.map(fn {key, value} -> [to_string(key), value] end)
+    do: Enum.map(Enum.sort(map), fn {key, value} -> [to_string(key), value] end)
 
   defp stringify(%{} = map),
     do: Map.new(map, fn {key, value} -> {to_string(key), stringify(value)} end)

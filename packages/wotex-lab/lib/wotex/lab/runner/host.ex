@@ -89,7 +89,7 @@ defmodule Wotex.Lab.Runner.Host do
 
   @doc "Capabilities the host can serve."
   @spec capabilities(t()) :: [String.t()]
-  def capabilities(%__MODULE__{modules: modules}), do: modules |> Map.keys() |> Enum.sort()
+  def capabilities(%__MODULE__{modules: modules}), do: Enum.sort(Map.keys(modules))
 
   @doc false
   @spec revalidate(term()) :: {:ok, t()} | {:error, Error.t()}
@@ -124,13 +124,15 @@ defmodule Wotex.Lab.Runner.Host do
   defp modules(entries, dependency_versions) when is_list(entries) and length(entries) <= 256 do
     initial = {%{}, %{}, MapSet.new()}
 
-    Enum.reduce_while(entries, {:ok, initial}, fn entry, {:ok, acc} ->
-      case add_module(entry, acc, dependency_versions) do
-        {:ok, next} -> {:cont, {:ok, next}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    added =
+      Enum.reduce_while(entries, {:ok, initial}, fn entry, {:ok, acc} ->
+        case add_module(entry, acc, dependency_versions) do
+          {:ok, next} -> {:cont, {:ok, next}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    case added do
       {:ok, {modules, configs, _}} -> {:ok, modules, configs}
       {:error, error} -> {:error, error}
     end

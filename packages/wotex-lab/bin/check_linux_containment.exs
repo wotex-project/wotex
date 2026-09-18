@@ -7,13 +7,18 @@
 # masked system paths relaxed only so Bubblewrap can create its unprivileged
 # namespaces; it is a test lane, not a hosting profile.
 
+Code.require_file("support/child_environment.exs", __DIR__)
+
 defmodule Wotex.Lab.Check.LinuxContainment do
   @moduledoc false
+
+  alias Wotex.Lab.Check.ChildEnvironment
 
   @prefix "wotex-lab-linux-containment-"
   @deadline_ms 3_600_000
   @tests ~w(test/wotex/lab/conformance_target_process_test.exs test/wotex/lab/conformance_test.exs)
 
+  @spec run() :: true
   def run do
     docker = System.find_executable("docker") || abort("docker is required for the Linux lane")
     root = Path.expand("..", __DIR__)
@@ -26,7 +31,11 @@ defmodule Wotex.Lab.Check.LinuxContainment do
       try do
         lane(docker, root, dockerfile, tag, work, name)
       after
-        System.cmd(docker, ["rm", "--force", name], stderr_to_stdout: true)
+        System.cmd(docker, ["rm", "--force", name],
+          env: ChildEnvironment.scrubbed(),
+          stderr_to_stdout: true
+        )
+
         remove!(work)
       end
 
@@ -37,10 +46,15 @@ defmodule Wotex.Lab.Check.LinuxContainment do
     copy_sources!(root, work)
     File.mkdir_p!(Path.join(work, "lane-home"))
     cmd!(docker, ["build", "--quiet", "--tag", tag, Path.dirname(dockerfile)])
-    {image, 0} = System.cmd(docker, ["image", "inspect", "--format", "{{.Id}}", tag])
+
+    {image, 0} =
+      System.cmd(docker, ["image", "inspect", "--format", "{{.Id}}", tag],
+        env: ChildEnvironment.scrubbed()
+      )
+
     packages = versions!(docker, tag)
-    {uid, 0} = System.cmd("id", ["-u"])
-    {gid, 0} = System.cmd("id", ["-g"])
+    {uid, 0} = System.cmd("id", ["-u"], env: ChildEnvironment.cleared())
+    {gid, 0} = System.cmd("id", ["-g"], env: ChildEnvironment.cleared())
 
     script =
       "mix local.hex --force && mix local.rebar --force && mix deps.get && " <>
@@ -87,7 +101,7 @@ defmodule Wotex.Lab.Check.LinuxContainment do
   end
 
   defp copy_sources!(root, work) do
-    {files, 0} = System.cmd("git", ["ls-files", "-z"], cd: root)
+    {files, 0} = System.cmd("git", ["ls-files", "-z"], cd: root, env: ChildEnvironment.scrubbed())
 
     for file <- String.split(files, <<0>>, trim: true), File.regular?(Path.join(root, file)) do
       target = Path.join([work, "wotex-lab", file])
@@ -95,13 +109,24 @@ defmodule Wotex.Lab.Check.LinuxContainment do
       File.cp!(Path.join(root, file), target)
     end
 
-    index = root |> Path.join("priv/provenance/source-index.json") |> File.read!() |> JSON.decode!()
+    index =
+      root
+      |> Path.join("priv/provenance/source-index.json")
+      |> File.read!()
+      |> JSON.decode!()
 
     for package <- index["packages"] do
-      directory = package["repository"] |> String.split("/") |> List.last()
+      directory =
+        package["repository"]
+        |> String.split("/")
+        |> List.last()
+
       Regex.match?(~r/\Awotex(?:-[a-z]+)*\z/, directory) || abort("unexpected source owner")
       repo = Path.join(Path.dirname(root), directory)
-      {dirty, 0} = System.cmd("git", ["status", "--porcelain"], cd: repo)
+
+      {dirty, 0} =
+        System.cmd("git", ["status", "--porcelain"], cd: repo, env: ChildEnvironment.scrubbed())
+
       dirty == "" || abort("source owner has uncommitted changes: #{directory}")
       archive = Path.join(work, directory <> ".tar")
       cmd!("git", ["archive", "--format=tar", "--output", archive, "HEAD"], cd: repo)
@@ -114,15 +139,19 @@ defmodule Wotex.Lab.Check.LinuxContainment do
 
   defp versions!(docker, tag) do
     {output, 0} =
-      System.cmd(docker, [
-        "run",
-        "--rm",
-        "--pull=never",
-        tag,
-        "sh",
-        "-c",
-        "dpkg-query -W -f='${Package}=${Version} ' bubblewrap gcc libc6; rustc --version | cut -d' ' -f1-2 | tr ' ' '='"
-      ])
+      System.cmd(
+        docker,
+        [
+          "run",
+          "--rm",
+          "--pull=never",
+          tag,
+          "sh",
+          "-c",
+          "dpkg-query -W -f='${Package}=${Version} ' bubblewrap gcc libc6; rustc --version | cut -d' ' -f1-2 | tr ' ' '='"
+        ],
+        env: ChildEnvironment.scrubbed()
+      )
 
     String.trim(output)
   end
@@ -150,7 +179,9 @@ defmodule Wotex.Lab.Check.LinuxContainment do
   end
 
   defp cmd!(executable, args, opts \\ []) do
-    case System.cmd(executable, args, [stderr_to_stdout: true] ++ opts) do
+    options = [env: ChildEnvironment.scrubbed(), stderr_to_stdout: true] ++ opts
+
+    case System.cmd(executable, args, options) do
       {_, 0} -> :ok
       {output, status} -> abort("#{Path.basename(executable)} failed with #{status}:\n#{output}")
     end

@@ -18,9 +18,9 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     The repository state handed to the directory is this process's pid.
     """
 
-    use GenServer
-
     @behaviour Wotex.Directory.Repository
+
+    use GenServer
 
     alias Wotex.Directory.{Cursor, Entry, Page, Query, Registration}
     alias Wotex.Lab.Telemetry
@@ -105,7 +105,12 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
 
     def handle_call({:insert, entry, context}, _, state) do
       if :ets.insert_new(state.table, {entry.identifier, Entry.for_storage(entry)}) do
-        {:reply, {:ok, entry}, state |> advance() |> count(:insert, context)}
+        state =
+          state
+          |> advance()
+          |> count(:insert, context)
+
+        {:reply, {:ok, entry}, state}
       else
         {:reply, {:error, :already_exists}, count(state, :insert, context)}
       end
@@ -125,7 +130,12 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
             {:ok, entry}
         end
 
-      {:reply, result, state |> advance_if(match?({:ok, _}, result)) |> count(:replace, context)}
+      state =
+        state
+        |> advance_if(match?({:ok, _}, result))
+        |> count(:replace, context)
+
+      {:reply, result, state}
     end
 
     def handle_call({:delete, identifier, expected_version, context}, _, state) do
@@ -142,7 +152,12 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
             :ok
         end
 
-      {:reply, result, state |> advance_if(result == :ok) |> count(:delete, context)}
+      state =
+        state
+        |> advance_if(result == :ok)
+        |> count(:delete, context)
+
+      {:reply, result, state}
     end
 
     def handle_call({:list, query, cursor, active_at, context}, _, state) do
@@ -159,7 +174,12 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
 
       returned = Enum.map(due, &expire(&1, state.table, strategy))
 
-      {:reply, {:ok, returned}, state |> advance_if(due != []) |> count(:expire_due, context)}
+      state =
+        state
+        |> advance_if(due != [])
+        |> count(:expire_due, context)
+
+      {:reply, {:ok, returned}, state}
     end
 
     def handle_call(:stats, _, state) do

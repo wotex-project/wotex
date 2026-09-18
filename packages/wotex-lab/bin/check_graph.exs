@@ -3,12 +3,16 @@
 # `mix run --no-start bin/check_graph.exs`. No network access; the source
 # revision comes from the local checkout and is only used to build URLs.
 
+Code.require_file("support/child_environment.exs", __DIR__)
+
 defmodule Wotex.Lab.Check.Graph do
   @moduledoc false
 
+  alias Wotex.Lab.Check.ChildEnvironment
   alias Wotex.Lab.{Documentation, Graph}
   alias Wotex.Lab.Graph.{Interfaces, Render}
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
@@ -69,14 +73,14 @@ defmodule Wotex.Lab.Check.Graph do
     decoded["kind"] || abort("#{key} lacks a kind")
   end
 
-  defp validate(:manifest_jsonld, content, _graph) do
+  defp validate(:manifest_jsonld, content, _) do
     decoded = json!(content, :manifest_jsonld)
     context = decoded["@context"]
     (is_map(context) and context["@version"] == 1.1) || abort("jsonld must declare a 1.1 @context")
     is_list(decoded["@graph"]) || abort("jsonld lacks @graph")
   end
 
-  defp validate(:ecosystem_ttl, content, _graph) do
+  defp validate(:ecosystem_ttl, content, _) do
     case Render.check_turtle(content) do
       :ok -> :ok
       {:error, reason} -> abort("turtle check failed: " <> inspect(reason))
@@ -89,7 +93,7 @@ defmodule Wotex.Lab.Check.Graph do
     Enum.each(lines, &json!(&1, :docs_index))
   end
 
-  defp validate(:openapi, content, _graph) do
+  defp validate(:openapi, content, _) do
     decoded = json!(content, :openapi)
     decoded["openapi"] == Interfaces.openapi_version() || abort("openapi dialect drift")
     decoded["openapi"] == "3.2.0" || abort("openapi must declare 3.2.0")
@@ -127,13 +131,16 @@ defmodule Wotex.Lab.Check.Graph do
   end
 
   defp revision!(root) do
-    case System.cmd("git", ["-C", root, "rev-parse", "HEAD"], stderr_to_stdout: true) do
+    case System.cmd("git", ["-C", root, "rev-parse", "HEAD"],
+           env: ChildEnvironment.scrubbed(),
+           stderr_to_stdout: true
+         ) do
       {output, 0} ->
         revision = String.trim(output)
         Regex.match?(~r/\A[0-9a-f]{40}\z/, revision) || abort("unusable source revision")
         revision
 
-      {_output, _status} ->
+      {_, _} ->
         abort("the graph check needs the local source revision; run it inside the checkout")
     end
   rescue

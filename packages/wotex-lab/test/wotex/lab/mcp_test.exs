@@ -3,13 +3,12 @@ defmodule Wotex.Lab.MCPTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.Runtime.StaticRef
   alias Wotex.Lab.Error
   alias Wotex.Lab.MCP.Plug, as: MCPPlug
   alias Wotex.Lab.MCP.{Resources, Seams, Server, Stdio, Tools}
   alias Wotex.Lab.Reference.Thing
-  alias Wotex.ThingDescription
 
   @token "mcp-write-token-0123456789abcdef"
   @valid ~s({"@context":"https://www.w3.org/2022/wot/td/v1.1","id":"urn:wotex:lab:mcp:1","title":"MCP","security":["nosec_sc"],"securityDefinitions":{"nosec_sc":{"scheme":"nosec"}},"properties":{"temperature":{"type":"number","forms":[{"href":"loopback://mcp/temperature"}]}}})
@@ -368,7 +367,11 @@ defmodule Wotex.Lab.MCPTest do
     final = Stdio.run(state, input, output, max_line_bytes: 256)
     assert final.calls == 1 and final.initialized
     {_, written} = StringIO.contents(output)
-    replies = written |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+
+    replies =
+      written
+      |> String.split("\n", trim: true)
+      |> Enum.map(&Jason.decode!/1)
 
     assert [
              %{"id" => 1, "result" => _},

@@ -111,7 +111,7 @@ defmodule Wotex.Lab.SupervisorTest do
     assert Lab.child_spec(id: "named").id == {Lab.Supervisor, "named"}
     Supervisor.stop(lab)
 
-    atom_name = :"lab_test_#{System.unique_integer([:positive])}"
+    atom_name = :wotex_lab_test_atom_named
     assert {:ok, atom_lab} = Lab.start_link(id: "atom-named", name: atom_name)
     assert Process.whereis(atom_name) == atom_lab
     Supervisor.stop(atom_lab)
@@ -123,7 +123,7 @@ defmodule Wotex.Lab.SupervisorTest do
   end
 
   test "caller-owned Registry registration scopes names without creating Lab globals" do
-    registry = Module.concat(__MODULE__, Registry)
+    registry = __MODULE__.Registry
     start_supervised!({Registry, keys: :unique, name: registry})
     name = {:via, Registry, {registry, "room"}}
     lab = start_supervised!({Lab, id: "registered", name: name})

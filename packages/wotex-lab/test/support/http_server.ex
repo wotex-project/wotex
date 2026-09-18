@@ -87,7 +87,9 @@ defmodule Wotex.Lab.Test.HttpServer do
 
   @impl Plug
   def call(conn, controller) do
-    conn |> assign(:controller, controller) |> super(controller)
+    conn
+    |> assign(:controller, controller)
+    |> super(controller)
   end
 
   get "/properties/temperature" do
@@ -104,11 +106,15 @@ defmodule Wotex.Lab.Test.HttpServer do
   end
 
   get "/properties/redirect" do
-    conn |> put_resp_header("location", "/properties/temperature") |> send_resp(302, "")
+    conn
+    |> put_resp_header("location", "/properties/temperature")
+    |> send_resp(302, "")
   end
 
   get "/properties/html" do
-    conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>21</b>")
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_resp(200, "<b>21</b>")
   end
 
   put "/properties/target" do
@@ -148,7 +154,9 @@ defmodule Wotex.Lab.Test.HttpServer do
   end
 
   get "/properties/temperature/observe-wrong-type" do
-    conn |> put_resp_content_type("application/json") |> send_resp(200, "[]")
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, "[]")
   end
 
   match _ do
@@ -177,6 +185,8 @@ defmodule Wotex.Lab.Test.HttpServer do
   end
 
   defp json(conn, status, body) do
-    conn |> put_resp_content_type("application/json") |> send_resp(status, body)
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(status, body)
   end
 end

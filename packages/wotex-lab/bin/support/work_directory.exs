@@ -8,6 +8,8 @@ defmodule Wotex.Lab.Check.WorkDirectory do
     reference: ".archive-check.reference-"
   }
 
+  @spec create!(Path.t(), :package | :archive_consumer | :workbench_archive | :reference) ::
+          Path.t()
   def create!(root, kind) do
     root = Path.expand(root)
     prefix = Map.fetch!(@prefixes, kind)

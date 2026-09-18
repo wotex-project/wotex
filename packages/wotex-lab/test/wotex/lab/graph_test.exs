@@ -17,7 +17,10 @@ defmodule Wotex.Lab.GraphTest do
     catalogue = YamlElixir.read_from_file!(Path.join(@docs, "specs/catalogue.yaml"))
 
     index =
-      @root |> Path.join("priv/provenance/source-index.json") |> File.read!() |> JSON.decode!()
+      @root
+      |> Path.join("priv/provenance/source-index.json")
+      |> File.read!()
+      |> JSON.decode!()
 
     {:ok, graph} = generate(catalogue)
     %{catalogue: catalogue, index: index, graph: graph}
@@ -125,7 +128,12 @@ defmodule Wotex.Lab.GraphTest do
     assert formal_seam["status"] == "implemented" and
              formal_seam["module"] == "Wotex.Lab.Formal.Profile"
 
-    kinds = graph["documents"] |> Enum.map(& &1["kind"]) |> Enum.uniq() |> Enum.sort()
+    kinds =
+      graph["documents"]
+      |> Enum.map(& &1["kind"])
+      |> Enum.uniq()
+      |> Enum.sort()
+
     assert kinds == ~w(completion_plan cookbook decision provenance readme specification)
     assert Enum.all?(graph["documents"], &(&1["sha256"] =~ @hex and &1["title"] != "untitled"))
   end
@@ -206,7 +214,7 @@ defmodule Wotex.Lab.GraphTest do
       assert %{"$ref" => "#/components/parameters/IdempotencyKey"} in operation["parameters"]
       assert operation["responses"]["429"]["headers"]["Retry-After"]
       [schema] = Map.values(operation["requestBody"]["content"])
-      name = schema["schema"]["$ref"] |> String.split("/") |> List.last()
+      name = List.last(String.split(schema["schema"]["$ref"], "/"))
       assert decoded["components"]["schemas"][name]["additionalProperties"] == false
       assert "deadline_ms" in decoded["components"]["schemas"][name]["required"]
     end
@@ -220,7 +228,7 @@ defmodule Wotex.Lab.GraphTest do
     request = decoded["components"]["schemas"]["MetricQueryRequest"]
     assert request["additionalProperties"] == false
 
-    assert request["properties"] |> Map.keys() |> Enum.sort() ==
+    assert Enum.sort(Map.keys(request["properties"])) ==
              Enum.sort(
                ~w(schema_version metric aggregation filters quantile start_at end_at step_ms)
              )
@@ -360,7 +368,7 @@ defmodule Wotex.Lab.GraphTest do
     [adapter | adapters] = Descriptors.adapters()
 
     assert {:error, %Error{code: :duplicate_id, details: %{id: "scenario:parse-td"}}} =
-             generate(catalogue, scenarios: scenarios ++ [first])
+             generate(catalogue, scenarios: [first | scenarios])
 
     assert {:error, %Error{code: :unresolved_id, details: %{id: "adapter:ghost"}}} =
              generate(catalogue, scenarios: [%{first | adapters: ["ghost"]} | tl(scenarios)])

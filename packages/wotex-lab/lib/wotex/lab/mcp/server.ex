@@ -123,10 +123,14 @@ defmodule Wotex.Lab.MCP.Server do
     end
   end
 
-  def handle(state, %{"jsonrpc" => "2.0", "id" => id}) when not is_nil(id),
+  def handle(state, %{"jsonrpc" => "2.0", "id" => nil}), do: invalid_request(state)
+
+  def handle(state, %{"jsonrpc" => "2.0", "id" => id}),
     do: {error(id, -32_600, "request needs a method"), state}
 
-  def handle(state, _),
+  def handle(state, _), do: invalid_request(state)
+
+  defp invalid_request(state),
     do: {error(nil, -32_600, "message is not a JSON-RPC 2.0 request"), state}
 
   defp notification(state, "notifications/initialized", _), do: %{state | initialized: true}
@@ -192,7 +196,7 @@ defmodule Wotex.Lab.MCP.Server do
     do: {error(id, -32_601, "method not found: #{String.slice(method, 0, 64)}"), state}
 
   defp account(state, id, payload) do
-    bytes = payload |> :erlang.term_to_binary() |> byte_size()
+    bytes = byte_size(:erlang.term_to_binary(payload))
 
     if state.output_bytes + bytes > state.max_output_bytes,
       do: {error(id, -32_000, "session output quota exhausted"), state},

@@ -33,8 +33,16 @@ if Code.ensure_loaded?(Explorer.DataFrame) do
     end
 
     defp execute(source, query) do
-      frame = source.rows |> columns() |> DF.new(backend: Explorer.PolarsBackend, dtypes: @dtypes)
-      filtered = frame |> DF.lazy() |> select(query.series) |> range(query.from, query.to)
+      frame =
+        source.rows
+        |> columns()
+        |> DF.new(backend: Explorer.PolarsBackend, dtypes: @dtypes)
+
+      filtered =
+        frame
+        |> DF.lazy()
+        |> select(query.series)
+        |> range(query.from, query.to)
 
       summary =
         filtered
@@ -44,9 +52,18 @@ if Code.ensure_loaded?(Explorer.DataFrame) do
         |> DF.to_rows()
 
       total = Enum.sum(Enum.map(summary, &(&1["observed"] + &1["missing"] + &1["nonfinite"])))
-      preview = filtered |> DF.head(query.limit) |> DF.collect() |> DF.to_rows()
+
+      preview =
+        filtered
+        |> DF.head(query.limit)
+        |> DF.collect()
+        |> DF.to_rows()
+
       # Source admission caps all plot rows at eight series of 2,000 points.
-      points = filtered |> DF.collect() |> DF.to_rows()
+      points =
+        filtered
+        |> DF.collect()
+        |> DF.to_rows()
 
       {:ok,
        %{
@@ -102,9 +119,16 @@ if Code.ensure_loaded?(Explorer.DataFrame) do
     defp summary(frame) do
       [
         observed: S.count(frame["value"]),
-        missing: frame["state"] |> S.equal("missing") |> S.cast(:s64) |> S.sum(),
+        missing:
+          frame["state"]
+          |> S.equal("missing")
+          |> S.cast(:s64)
+          |> S.sum(),
         nonfinite:
-          frame["state"] |> S.in(["nan", "infinity", "neg_infinity"]) |> S.cast(:s64) |> S.sum(),
+          frame["state"]
+          |> S.in(["nan", "infinity", "neg_infinity"])
+          |> S.cast(:s64)
+          |> S.sum(),
         mean: S.mean(frame["value"]),
         minimum: S.min(frame["value"]),
         maximum: S.max(frame["value"])

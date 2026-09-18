@@ -8,17 +8,19 @@
 Code.require_file("support/reference_summary.exs", __DIR__)
 Code.require_file("support/reference_inputs.exs", __DIR__)
 Code.require_file("support/work_directory.exs", __DIR__)
+Code.require_file("support/child_environment.exs", __DIR__)
 
 defmodule Wotex.Lab.Check.ReferenceConsumer do
   @moduledoc false
 
-  alias Wotex.Lab.Check.{ReferenceInputs, ReferenceSummary}
+  alias Wotex.Lab.Check.{ChildEnvironment, ReferenceInputs, ReferenceSummary}
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @deadline_ms 1_800_000
   @images %{broker: "eclipse-mosquitto:2", greptime: "greptime/greptimedb:v1.1.4"}
   @seed 1
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
@@ -81,24 +83,40 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
 
   defp docker? do
     case System.find_executable("docker") do
-      nil -> false
-      _path -> match?({_out, 0}, System.cmd("docker", ["info"], stderr_to_stdout: true))
+      nil ->
+        false
+
+      _ ->
+        match?(
+          {_out, 0},
+          System.cmd("docker", ["info"], env: ChildEnvironment.scrubbed(), stderr_to_stdout: true)
+        )
     end
   end
 
   defp source_cohort? do
-    case System.cmd("elixir", ["bin/check_source_cohort.exs"], stderr_to_stdout: true) do
-      {_output, 0} ->
+    case System.cmd("elixir", ["bin/check_source_cohort.exs"],
+           env: ChildEnvironment.scrubbed(),
+           stderr_to_stdout: true
+         ) do
+      {_, 0} ->
         true
 
-      {output, _status} ->
+      {output, _} ->
         IO.puts(:stderr, output)
         false
     end
   end
 
-  defp image?(image),
-    do: match?({_out, 0}, System.cmd("docker", ["image", "inspect", image], stderr_to_stdout: true))
+  defp image?(image) do
+    match?(
+      {_out, 0},
+      System.cmd("docker", ["image", "inspect", image],
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
+    )
+  end
 
   defp maude_path do
     case System.get_env("WOTEX_LAB_MAUDE") do
@@ -114,7 +132,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     {summary_valid?, counts} =
       case summary do
         {:ok, counts} -> {true, counts}
-        {:error, _reason} -> {false, %{tests: 0, failures: 0, excluded: 0}}
+        {:error, _} -> {false, %{tests: 0, failures: 0, excluded: 0}}
       end
 
     lane_assertions =
@@ -139,7 +157,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
         budgets: %{deadline_ms: @deadline_ms},
         inputs:
           ["workspace:WOTEX_PATH_DEPS"] ++
-            Enum.map(@images, fn {_lane, image} -> "image:" <> image end),
+            Enum.map(@images, fn {_, image} -> "image:" <> image end),
         assertions: [
           %{id: "WLB-C10:reference-consumer:suite", status: suite_status(passed?)},
           %{id: "WLB-C10:reference-consumer:unchanged-source", status: suite_status(unchanged?)},
@@ -171,14 +189,18 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
   end
 
   defp suite_status(true), do: :pass
-  defp suite_status(_status), do: :fail
+  defp suite_status(_), do: :fail
 
   defp version, do: Mix.Project.config()[:version]
 
   defp revision(root) do
-    case System.cmd("git", ["rev-parse", "HEAD"], cd: root, stderr_to_stdout: true) do
+    case System.cmd("git", ["rev-parse", "HEAD"],
+           cd: root,
+           env: ChildEnvironment.scrubbed(),
+           stderr_to_stdout: true
+         ) do
       {sha, 0} -> String.trim(sha)
-      _other -> "unknown"
+      _ -> "unknown"
     end
   end
 

@@ -111,18 +111,20 @@ defmodule Wotex.Lab.Metrics.Exposition do
     do: {:error, error(:oversized, "", "exposition exceeds #{max_bytes} bytes")}
 
   defp lines(text) do
-    text
-    |> String.split("\n")
-    |> Enum.with_index(1)
-    |> Enum.reduce_while({:ok, %{}, []}, fn {line, number}, {:ok, types, samples} ->
-      case parse_line(String.trim(line), number) do
-        :skip -> {:cont, {:ok, types, samples}}
-        {:type, name, type} -> {:cont, {:ok, Map.put(types, name, type), samples}}
-        {:sample, sample} -> {:cont, {:ok, types, [sample | samples]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    parsed =
+      text
+      |> String.split("\n")
+      |> Enum.with_index(1)
+      |> Enum.reduce_while({:ok, %{}, []}, fn {line, number}, {:ok, types, samples} ->
+        case parse_line(String.trim(line), number) do
+          :skip -> {:cont, {:ok, types, samples}}
+          {:type, name, type} -> {:cont, {:ok, Map.put(types, name, type), samples}}
+          {:sample, sample} -> {:cont, {:ok, types, [sample | samples]}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    case parsed do
       {:ok, types, samples} -> {:ok, types, Enum.reverse(samples)}
       error -> error
     end
@@ -190,7 +192,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
   end
 
   defp quoted("\"" <> rest, acc, _),
-    do: {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary(), rest}
+    do: {:ok, IO.iodata_to_binary(Enum.reverse(acc)), rest}
 
   defp quoted("\\\\" <> rest, acc, number), do: quoted(rest, ["\\" | acc], number)
   defp quoted("\\\"" <> rest, acc, number), do: quoted(rest, ["\"" | acc], number)
@@ -242,15 +244,16 @@ defmodule Wotex.Lab.Metrics.Exposition do
   end
 
   defp assemble(types, samples) do
-    samples
-    |> Enum.reduce_while({:ok, %{}, %{}}, fn sample, {:ok, scalars, histograms} ->
-      case classify(types, sample) do
-        {:scalar, type} -> put_scalar(scalars, histograms, sample, type)
-        {:histogram, base, part} -> put_part(scalars, histograms, sample, base, part)
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    grouped =
+      Enum.reduce_while(samples, {:ok, %{}, %{}}, fn sample, {:ok, scalars, histograms} ->
+        case classify(types, sample) do
+          {:scalar, type} -> put_scalar(scalars, histograms, sample, type)
+          {:histogram, base, part} -> put_part(scalars, histograms, sample, base, part)
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    case grouped do
       {:ok, scalars, histograms} -> build(scalars, histograms)
       error -> error
     end

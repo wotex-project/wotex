@@ -24,9 +24,9 @@ defmodule Wotex.Lab.Documentation do
   """
   @spec directory(Path.t()) :: {:ok, Path.t()} | :error
   def directory(root) when is_binary(root) do
-    [Path.join(root, "docs"), Path.expand("../../docs/packages/#{@package}", root)]
-    |> Enum.find(&File.dir?(Path.join(&1, "specs")))
-    |> case do
+    candidates = [Path.join(root, "docs"), Path.expand("../../docs/packages/#{@package}", root)]
+
+    case Enum.find(candidates, &File.dir?(Path.join(&1, "specs"))) do
       nil -> :error
       directory -> {:ok, directory}
     end

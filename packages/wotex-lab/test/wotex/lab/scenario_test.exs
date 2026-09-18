@@ -36,7 +36,7 @@ defmodule Wotex.Lab.ScenarioTest do
   end
 
   test "closed unique options reject malformed input and hidden execution fields" do
-    for opts <- [nil, %{}, [:invalid], [id: "a", id: "b"], @valid ++ [module: System]] do
+    for opts <- [nil, %{}, [:invalid], [id: "a", id: "b"], Keyword.merge(@valid, module: System)] do
       assert {:error, %Error{code: :invalid_options, phase: :construction}} = Scenario.new(opts)
     end
   end
@@ -88,7 +88,7 @@ defmodule Wotex.Lab.ScenarioTest do
   end
 
   test "invalid configuration is not echoed in errors" do
-    assert {:error, error} = Scenario.new(@valid ++ [credential: "secret-sentinel"])
+    assert {:error, error} = Scenario.new(Keyword.merge(@valid, credential: "secret-sentinel"))
     refute inspect(error) =~ "secret-sentinel"
   end
 end

@@ -12,8 +12,7 @@ defmodule Wotex.Lab.Analytics.Query do
   descriptor.
   """
 
-  alias Wotex.Lab.Error
-  alias Wotex.Lab.Options
+  alias Wotex.Lab.{Error, Options}
 
   @defaults %{series: nil, from: nil, to: nil, limit: 100}
   @type t :: %{

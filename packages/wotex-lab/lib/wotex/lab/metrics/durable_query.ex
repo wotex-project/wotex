@@ -284,7 +284,7 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
   defp freshness([], _), do: nil
 
   defp freshness(points, end_ms) do
-    latest = points |> Enum.map(& &1.t) |> Enum.max()
+    latest = Enum.max(Enum.map(points, & &1.t))
     %{latest_ms: latest, age_ms: end_ms - latest}
   end
 

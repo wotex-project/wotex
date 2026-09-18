@@ -18,9 +18,8 @@ defmodule Wotex.Lab.Metrics.Query do
   for the rest. A `histogram_quantile` aggregation needs `:quantile`.
   """
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.Catalogue
-  alias Wotex.Lab.Options
 
   @schema_version "1.0.0"
   @aggregations [:last, :sum, :min, :max, :avg, :increase, :rate, :histogram_quantile]
@@ -106,7 +105,11 @@ defmodule Wotex.Lab.Metrics.Query do
   @doc "Revalidates a descriptor at an execution boundary; a struct is not admission."
   @spec validate(term()) :: {:ok, t()} | {:error, Error.t()}
   def validate(%__MODULE__{schema_version: @schema_version} = query) do
-    query |> Map.from_struct() |> Map.delete(:schema_version) |> Map.to_list() |> new()
+    query
+    |> Map.from_struct()
+    |> Map.delete(:schema_version)
+    |> Map.to_list()
+    |> new()
   rescue
     _ -> {:error, error(:invalid_query, "query descriptor is not admitted")}
   end
@@ -141,7 +144,7 @@ defmodule Wotex.Lab.Metrics.Query do
         query.scope.session,
         Atom.to_string(query.metric),
         Atom.to_string(query.aggregation),
-        query.filters |> Enum.sort() |> Enum.map(fn {k, v} -> "#{k}=#{v}" end),
+        Enum.map(Enum.sort(query.filters), fn {k, v} -> "#{k}=#{v}" end),
         inspect(query.quantile),
         DateTime.to_iso8601(query.start_at),
         DateTime.to_iso8601(query.end_at),

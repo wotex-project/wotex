@@ -15,9 +15,8 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
 
   alias Wotex.DataSchema
   alias Wotex.Lab.Error, as: LabError
-  alias Wotex.Lab.Options
+  alias Wotex.Lab.{Options, Telemetry}
   alias Wotex.Lab.Simulators.Thermal
-  alias Wotex.Lab.Telemetry
 
   alias Wotex.Nx.{
     Decoder,
@@ -78,14 +77,15 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
   @doc "Builds observations from simulator samples for the lane's Thing and affordance."
   @spec observations([Thermal.sample()]) :: {:ok, [Observation.t()]} | {:error, term()}
   def observations(samples) do
-    samples
-    |> Enum.reduce_while({:ok, []}, fn sample, {:ok, acc} ->
-      case observation(sample) do
-        {:ok, observation} -> {:cont, {:ok, [observation | acc]}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
+    reduced =
+      Enum.reduce_while(samples, {:ok, []}, fn sample, {:ok, acc} ->
+        case observation(sample) do
+          {:ok, observation} -> {:cont, {:ok, [observation | acc]}}
+          error -> {:halt, error}
+        end
+      end)
+
+    case reduced do
       {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
       error -> error
     end

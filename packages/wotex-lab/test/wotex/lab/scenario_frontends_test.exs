@@ -3,10 +3,9 @@ defmodule Wotex.Lab.ScenarioFrontendsTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Scenario}
   alias Wotex.Lab.Graph.Descriptors
   alias Wotex.Lab.MCP.Server
-  alias Wotex.Lab.Scenario
   alias Wotex.Lab.Test.CookbookRunner
 
   setup do

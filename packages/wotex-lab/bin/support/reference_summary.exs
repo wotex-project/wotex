@@ -1,9 +1,14 @@
 defmodule Wotex.Lab.Check.ReferenceSummary do
   @moduledoc false
 
+  @type summary ::
+          {:ok, %{tests: pos_integer(), failures: non_neg_integer(), excluded: non_neg_integer()}}
+          | {:error, :invalid_summary}
+
   # Parse exactly one complete terminal ExUnit summary, not arbitrary numbers
   # or a prefix embedded in diagnostic output. An exit code alone is no proof
   # that ExUnit ran any tests.
+  @spec parse(term()) :: summary()
   def parse(output) when is_binary(output) and byte_size(output) <= 8_388_608 do
     summaries =
       Regex.scan(
@@ -13,15 +18,21 @@ defmodule Wotex.Lab.Check.ReferenceSummary do
       )
 
     case summaries do
-      [fields] -> fields |> pad() |> decode()
-      _missing_or_ambiguous -> {:error, :invalid_summary}
+      [fields] ->
+        fields
+        |> pad()
+        |> decode()
+
+      _ ->
+        {:error, :invalid_summary}
     end
   end
 
-  def parse(_output), do: {:error, :invalid_summary}
+  def parse(_), do: {:error, :invalid_summary}
 
+  @spec successful?(integer(), summary()) :: boolean()
   def successful?(0, {:ok, %{tests: tests, failures: 0}}) when tests > 0, do: true
-  def successful?(_status, _summary), do: false
+  def successful?(_, _), do: false
 
   defp pad(fields), do: fields ++ List.duplicate("", 6 - length(fields))
 
@@ -37,7 +48,7 @@ defmodule Wotex.Lab.Check.ReferenceSummary do
        when total > 0 and failed >= 0 and failed <= total and excluded >= 0,
        do: {:ok, %{tests: total, failures: failed, excluded: excluded}}
 
-  defp admit(_total, _failed, _excluded), do: {:error, :invalid_summary}
+  defp admit(_, _, _), do: {:error, :invalid_summary}
 
   defp integer(""), do: 0
   defp integer(value), do: String.to_integer(value)

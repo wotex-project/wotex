@@ -18,9 +18,8 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     @behaviour Wotex.Runtime.Transport
 
     alias Wotex.Lab.Adapters.Runtime.Loopback.Session
-    alias Wotex.Lab.Error
+    alias Wotex.Lab.{Error, Telemetry}
     alias Wotex.Lab.Reference.Thing
-    alias Wotex.Lab.Telemetry
     alias Wotex.Runtime.{ExecutionContext, Request}
 
     @impl Wotex.Runtime.Transport

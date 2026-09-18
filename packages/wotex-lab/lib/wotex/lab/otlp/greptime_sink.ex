@@ -82,15 +82,17 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
 
   defp resolve(lookup) do
     case lookup.() do
-      {:ok, credential} when not is_nil(credential) ->
-        {:ok, credential}
-
-      _ ->
-        {:error,
-         Error.new(:credential_unavailable, :export, "OTLP credential is unavailable",
-           class: :unavailable
-         )}
+      {:ok, nil} -> credential_unavailable()
+      {:ok, credential} -> {:ok, credential}
+      _ -> credential_unavailable()
     end
+  end
+
+  defp credential_unavailable do
+    {:error,
+     Error.new(:credential_unavailable, :export, "OTLP credential is unavailable",
+       class: :unavailable
+     )}
   end
 
   defp database_ok(nil), do: :ok

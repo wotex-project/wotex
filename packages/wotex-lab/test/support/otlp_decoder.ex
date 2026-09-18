@@ -22,68 +22,79 @@ defmodule Wotex.Lab.Test.OtlpDecoder do
   defp request(body, record) do
     [{1, 2, resource_records}] = fields(body)
 
-    Enum.reduce(fields(resource_records), %{resource: nil, scope: nil, records: []}, fn
-      {1, 2, resource}, acc ->
-        %{acc | resource: for({1, 2, kv} <- fields(resource), do: kv(kv))}
+    initial = %{resource: nil, scope: nil, records: []}
 
-      {2, 2, scoped}, acc ->
-        Enum.reduce(fields(scoped), acc, fn
-          {1, 2, scope}, inner ->
-            %{
-              inner
-              | scope:
-                  Map.new(fields(scope), fn
-                    {1, 2, name} -> {:name, name}
-                    {2, 2, v} -> {:version, v}
-                  end)
-            }
+    request =
+      Enum.reduce(fields(resource_records), initial, fn
+        {1, 2, resource}, acc ->
+          %{acc | resource: for({1, 2, kv} <- fields(resource), do: kv(kv))}
 
-          {2, 2, item}, inner ->
-            %{inner | records: inner.records ++ [record.(item)]}
-        end)
-    end)
+        {2, 2, scoped}, acc ->
+          Enum.reduce(fields(scoped), acc, fn
+            {1, 2, scope}, inner ->
+              %{
+                inner
+                | scope:
+                    Map.new(fields(scope), fn
+                      {1, 2, name} -> {:name, name}
+                      {2, 2, v} -> {:version, v}
+                    end)
+              }
+
+            {2, 2, item}, inner ->
+              %{inner | records: [record.(item) | inner.records]}
+          end)
+      end)
+
+    %{request | records: Enum.reverse(request.records)}
   end
 
   defp span(bytes) do
-    Enum.reduce(fields(bytes), %{attributes: [], unknown: []}, fn
-      {1, 2, id}, acc -> Map.put(acc, :trace_id, id)
-      {2, 2, id}, acc -> Map.put(acc, :span_id, id)
-      {5, 2, name}, acc -> Map.put(acc, :name, name)
-      {6, 0, kind}, acc -> Map.put(acc, :kind, kind)
-      {7, 1, start}, acc -> Map.put(acc, :start_ns, start)
-      {8, 1, stop}, acc -> Map.put(acc, :end_ns, stop)
-      {9, 2, kv}, acc -> %{acc | attributes: acc.attributes ++ [kv(kv)]}
-      {15, 2, status}, acc -> Map.put(acc, :status, for({3, 0, code} <- fields(status), do: code))
-      other, acc -> %{acc | unknown: [other | acc.unknown]}
-    end)
+    span =
+      Enum.reduce(fields(bytes), %{attributes: [], unknown: []}, fn
+        {1, 2, id}, acc -> Map.put(acc, :trace_id, id)
+        {2, 2, id}, acc -> Map.put(acc, :span_id, id)
+        {5, 2, name}, acc -> Map.put(acc, :name, name)
+        {6, 0, kind}, acc -> Map.put(acc, :kind, kind)
+        {7, 1, start}, acc -> Map.put(acc, :start_ns, start)
+        {8, 1, stop}, acc -> Map.put(acc, :end_ns, stop)
+        {9, 2, kv}, acc -> %{acc | attributes: [kv(kv) | acc.attributes]}
+        {15, 2, status}, acc -> Map.put(acc, :status, for({3, 0, code} <- fields(status), do: code))
+        other, acc -> %{acc | unknown: [other | acc.unknown]}
+      end)
+
+    %{span | attributes: Enum.reverse(span.attributes)}
   end
 
   defp log(bytes) do
-    Enum.reduce(fields(bytes), %{attributes: [], unknown: []}, fn
-      {1, 1, time}, acc ->
-        Map.put(acc, :time_ns, time)
+    log =
+      Enum.reduce(fields(bytes), %{attributes: [], unknown: []}, fn
+        {1, 1, time}, acc ->
+          Map.put(acc, :time_ns, time)
 
-      {2, 0, number}, acc ->
-        Map.put(acc, :severity_number, number)
+        {2, 0, number}, acc ->
+          Map.put(acc, :severity_number, number)
 
-      {3, 2, text}, acc ->
-        Map.put(acc, :severity_text, text)
+        {3, 2, text}, acc ->
+          Map.put(acc, :severity_text, text)
 
-      {5, 2, body}, acc ->
-        Map.put(acc, :body, for({1, 2, value} <- fields(body), do: value) |> hd())
+        {5, 2, body}, acc ->
+          Map.put(acc, :body, for({1, 2, value} <- fields(body), do: value) |> hd())
 
-      {6, 2, kv}, acc ->
-        %{acc | attributes: acc.attributes ++ [kv(kv)]}
+        {6, 2, kv}, acc ->
+          %{acc | attributes: [kv(kv) | acc.attributes]}
 
-      {11, 1, observed}, acc ->
-        Map.put(acc, :observed_ns, observed)
+        {11, 1, observed}, acc ->
+          Map.put(acc, :observed_ns, observed)
 
-      {12, 2, name}, acc ->
-        Map.put(acc, :event_name, name)
+        {12, 2, name}, acc ->
+          Map.put(acc, :event_name, name)
 
-      other, acc ->
-        %{acc | unknown: [other | acc.unknown]}
-    end)
+        other, acc ->
+          %{acc | unknown: [other | acc.unknown]}
+      end)
+
+    %{log | attributes: Enum.reverse(log.attributes)}
   end
 
   defp kv(bytes) do

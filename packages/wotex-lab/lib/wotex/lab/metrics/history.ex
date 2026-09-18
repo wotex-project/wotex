@@ -47,10 +47,8 @@ defmodule Wotex.Lab.Metrics.History do
 
   use GenServer
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Options, Telemetry}
   alias Wotex.Lab.Metrics.{Catalogue, Query, Snapshot}
-  alias Wotex.Lab.Options
-  alias Wotex.Lab.Telemetry
 
   @default_snapshots 120
   @max_snapshots 10_000
@@ -545,7 +543,7 @@ defmodule Wotex.Lab.Metrics.History do
     series.type == metric.type and length(series.labels) == map_size(labels) and
       Enum.all?(series.labels, fn {key, value} -> value in Map.get(labels, key, []) end) and
       (metric.type != :histogram or
-         Enum.map(series.sample.buckets, &elem(&1, 0)) == metric.buckets ++ [:infinity])
+         Enum.map(series.sample.buckets, &elem(&1, 0)) == Enum.concat(metric.buckets, [:infinity]))
   end
 
   defp work(estimate, query) do
@@ -557,8 +555,7 @@ defmodule Wotex.Lab.Metrics.History do
   defp freshness([], _), do: nil
 
   defp freshness(rows, end_ms) do
-    latest =
-      rows |> Enum.map(fn {_, snapshot, _} -> snapshot.wall_time_ms end) |> Enum.max()
+    latest = Enum.max(Enum.map(rows, fn {_, snapshot, _} -> snapshot.wall_time_ms end))
 
     %{latest_ms: latest, age_ms: end_ms - latest}
   end
@@ -591,7 +588,7 @@ defmodule Wotex.Lab.Metrics.History do
          previous}
       end)
 
-    {Enum.reverse(points), markers |> Enum.uniq() |> Enum.sort_by(& &1.t)}
+    {Enum.reverse(points), Enum.sort_by(Enum.uniq(markers), & &1.t)}
   end
 
   defp windows(rows, labels, name, start, step, deadline) do
@@ -627,7 +624,12 @@ defmodule Wotex.Lab.Metrics.History do
 
   defp aggregate(%Query{aggregation: aggregation}, _, samples, previous, t)
        when aggregation in [:last, :sum, :min, :max, :avg] do
-    values = samples |> Map.values() |> List.flatten() |> Enum.map(&elem(&1, 1))
+    values =
+      samples
+      |> Map.values()
+      |> List.flatten()
+      |> Enum.map(&elem(&1, 1))
+
     numeric = for %{value: value} <- values, is_number(value), do: value
     stale = Enum.any?(values, &(&1.value == :stale))
     markers = if stale, do: [%{t: t, kind: :stale}], else: []
@@ -743,7 +745,7 @@ defmodule Wotex.Lab.Metrics.History do
 
   # Prometheus-style interpolation over bucket deltas; +Inf yields the last finite bound.
   defp quantile(deltas, q) do
-    total = deltas |> List.last() |> elem(1)
+    total = elem(List.last(deltas), 1)
 
     if total <= 0 do
       nil

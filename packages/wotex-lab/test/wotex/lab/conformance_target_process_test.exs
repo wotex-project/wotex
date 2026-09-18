@@ -34,7 +34,7 @@ defmodule Wotex.Lab.ConformanceTargetProcessTest do
                 "vector_id" => "utf8",
                 "outcome" => "observed",
                 "actual" => %{"accepted" => true, "document" => %{"/title" => "Väderstation ☀"}}
-              }} = output |> String.trim_trailing() |> Wotex.JSON.decode()
+              }} = Wotex.JSON.decode(String.trim_trailing(output))
     end
   end
 

@@ -6,12 +6,12 @@
 Code.require_file("support/work_directory.exs", __DIR__)
 Code.require_file("support/archive_repository.exs", __DIR__)
 Code.require_file("support/release_review.exs", __DIR__)
+Code.require_file("support/child_environment.exs", __DIR__)
 
 defmodule Wotex.Lab.Check.WorkbenchArchive do
   @moduledoc false
 
-  alias Wotex.Lab.Check.ArchiveRepository
-  alias Wotex.Lab.Check.ReleaseReview
+  alias Wotex.Lab.Check.{ArchiveRepository, ChildEnvironment, ReleaseReview}
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @packages [
@@ -31,10 +31,11 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
              hosts/workbench/mix_tasks/**/* hosts/workbench/priv/static/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
              bin/check_workbench_archive.exs bin/support/archive_repository.exs
-             bin/support/release_review.exs
+             bin/support/child_environment.exs bin/support/release_review.exs
              bin/support/work_directory.exs priv/provenance/workbench-bom.cdx.json
              priv/provenance/wotex-lab-api.json)
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("..", __DIR__)
     host_source = Path.join(root, "hosts/workbench")
@@ -63,9 +64,10 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     try do
       bin = ArchiveRepository.restricted_path!(work)
 
-      env =
-        ArchiveRepository.environment(work, port, bin) ++
-          [{"RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH", Path.join(work, "native_cache")}]
+      env = [
+        {"RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH", Path.join(work, "native_cache")}
+        | ArchiveRepository.environment(work, port, bin)
+      ]
 
       run!(consumer, env, ["deps.get", "--only", "prod"], "Workbench dependency resolution")
       tree = run!(consumer, env, ["deps.tree", "--only", "prod"], "Workbench dependency graph")
@@ -95,6 +97,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     {output, status} =
       System.cmd("tar", ["-cf", archive | @source_entries],
         cd: host_source,
+        env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
 
@@ -136,7 +139,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     Enum.map(@native_packages, fn package ->
       version =
         case Map.fetch!(lock, package) do
-          {:hex, _package, version, _checksum, _managers, _deps, "hexpm", _outer_checksum} ->
+          {:hex, _, version, _, _, _, "hexpm", _} ->
             version
 
           other ->
@@ -194,7 +197,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
     names = MapSet.new(resolved, & &1.name)
 
-    Enum.each(@packages, fn {app, _directory} ->
+    Enum.each(@packages, fn {app, _} ->
       name = Atom.to_string(app)
       MapSet.member?(names, name) || abort("Workbench closure omitted #{name}")
     end)
@@ -208,7 +211,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     |> Enum.drop(1)
     |> Enum.map(fn line ->
       case Regex.run(~r/([a-z][a-z0-9_]*)\s+(?:==|~>|>=|<=|>|<|\d)/, line) do
-        [_line, name] -> name
+        [_, name] -> name
         nil -> abort("Workbench dependency tree line is malformed: #{inspect(line)}")
       end
     end)
@@ -260,7 +263,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     status == 0 || abort("Workbench release smoke failed (#{status}):\n#{output}")
 
     case Regex.run(~r/WORKBENCH_ARCHIVE_CHECKS (\S+)/, output) do
-      [_line, encoded] ->
+      [_, encoded] ->
         encoded
         |> String.split(",")
         |> Map.new(fn pair ->
@@ -268,7 +271,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
           {key, value == "true"}
         end)
         |> tap(fn checks ->
-          Enum.all?(checks, fn {_key, passed?} -> passed? end) ||
+          Enum.all?(checks, fn {_, passed?} -> passed? end) ||
             abort("Workbench release checks failed: #{inspect(checks)}")
         end)
 

@@ -3,11 +3,11 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
   alias Wotex.Conformance.Corpus
   alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Test.SourceTree
+
+  @moduletag :integration
 
   @record_keys ~w(cpu_seconds deadline_ms max_output_bytes memory_bytes processes samples
                   run_ms excluded_count test_count thing_description_vectors thing_model_vectors

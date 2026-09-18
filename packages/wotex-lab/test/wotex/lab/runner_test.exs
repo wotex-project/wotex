@@ -4,10 +4,8 @@ defmodule Wotex.Lab.RunnerTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Lab
-  alias Wotex.Lab.Error
-  alias Wotex.Lab.Runner
+  alias Wotex.Lab.{Error, Runner, Scenario}
   alias Wotex.Lab.Runner.{Budgets, Definition, Host, Recording}
-  alias Wotex.Lab.Scenario
 
   alias Wotex.Lab.Test.{
     AlternateComponent,
@@ -803,7 +801,11 @@ defmodule Wotex.Lab.RunnerTest do
   end
 
   defp definition(steps, opts \\ []) do
-    capabilities = steps |> Enum.map(& &1["capability"]) |> Enum.filter(&is_binary/1) |> Enum.uniq()
+    capabilities =
+      steps
+      |> Enum.map(& &1["capability"])
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
 
     Definition.new(
       id: Keyword.get(opts, :id, "room-run"),

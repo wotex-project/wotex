@@ -9,16 +9,18 @@ Code.require_file("support/archive_repository.exs", __DIR__)
 defmodule Wotex.Lab.Check.ArchiveConsumer do
   @moduledoc false
 
-  alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Check.ArchiveRepository
+  alias Wotex.Lab.Evidence.{Digest, Record}
 
   @base_packages [{:wotex, "wotex"}, {:wotex_nx, "wotex-nx"}, {:wotex_lab, "wotex-lab"}]
   @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt axon polaris exla fine xla explorer aws_signature table table_rex kino kino_explorer)a
   @cohort ~w(lib/**/* priv/fixtures/**/* priv/provenance/**/*
              bin/check_archive_consumer.exs bin/support/archive_repository.exs
-             bin/support/work_directory.exs mix.exs mix.lock)
+             bin/support/child_environment.exs bin/support/work_directory.exs
+             mix.exs mix.lock)
   @deadline_ms 900_000
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
@@ -173,7 +175,7 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
     output = run!(consumer, env, ["run", "smoke.exs"], "archive consumer smoke")
 
     case Regex.run(~r/ARCHIVE_CONSUMER_CHECKS (\S+)/, output) do
-      [_line, checks] ->
+      [_, checks] ->
         checks
         |> String.split(",")
         |> Map.new(fn pair ->
@@ -181,7 +183,7 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
           {key, value == "true"}
         end)
         |> tap(fn map ->
-          Enum.all?(map, fn {_key, ok?} -> ok? end) ||
+          Enum.all?(map, fn {_, ok?} -> ok? end) ||
             abort("archive consumer checks failed: #{inspect(map)}")
         end)
 

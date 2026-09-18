@@ -24,12 +24,21 @@ defmodule Wotex.Lab.Check.ProvisionMaude do
        "72ed1ca87e3b3d0dfc6ee1436baf154bf04c45ff97d521bec040c5e8dfc8f92c"}
   }
 
+  @spec run([String.t()]) :: :ok
   def run(argv) do
-    target = argv |> List.first() |> Kernel.||("tmp/maude") |> Path.expand()
+    target =
+      argv
+      |> List.first()
+      |> Kernel.||("tmp/maude")
+      |> Path.expand()
+
     {family, os} = :os.type()
 
     arch =
-      :erlang.system_info(:system_architecture) |> List.to_string() |> String.split("-") |> hd()
+      :erlang.system_info(:system_architecture)
+      |> List.to_string()
+      |> String.split("-")
+      |> hd()
 
     {file, digest} =
       Map.get(@archives, {family, os, arch}) ||
@@ -48,15 +57,15 @@ defmodule Wotex.Lab.Check.ProvisionMaude do
       abort("digest mismatch: expected #{digest}, got #{actual}; nothing was unpacked")
 
     File.mkdir_p!(target)
-    {:ok, _files} = :zip.extract(bytes, cwd: String.to_charlist(target))
+    {:ok, _} = :zip.extract(bytes, cwd: String.to_charlist(target))
     executable = Path.join(target, "maude")
     File.chmod!(executable, 0o755)
     IO.puts("verified and unpacked: export WOTEX_LAB_MAUDE=#{executable}")
   end
 
   defp fetch(url) do
-    {:ok, _apps} = Application.ensure_all_started(:inets)
-    {:ok, _apps} = Application.ensure_all_started(:ssl)
+    {:ok, _} = Application.ensure_all_started(:inets)
+    {:ok, _} = Application.ensure_all_started(:ssl)
 
     ssl = [
       verify: :verify_peer,
@@ -71,7 +80,7 @@ defmodule Wotex.Lab.Check.ProvisionMaude do
            [ssl: ssl, timeout: 120_000, autoredirect: true],
            body_format: :binary
          ) do
-      {:ok, {{_version, 200, _reason}, _headers, body}} -> body
+      {:ok, {{_, 200, _}, _, body}} -> body
       other -> abort("download failed: #{inspect(other, limit: 10)}")
     end
   end

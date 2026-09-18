@@ -3,9 +3,8 @@ defmodule Wotex.Lab.MetricsCatalogueTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Telemetry}
   alias Wotex.Lab.Metrics.Catalogue
-  alias Wotex.Lab.Telemetry
 
   @groups ~w(scenario transport directory continuum nx conformance formal exporter query)a
   @forbidden ~w(thing_id run_id topic url prompt principal error reason_text scenario_id)a

@@ -3,7 +3,7 @@ defmodule Wotex.Lab.LoopbackTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.Runtime.{Loopback, NoSec, StaticRef}
   alias Wotex.Lab.Reference.Thing
 
@@ -19,8 +19,6 @@ defmodule Wotex.Lab.LoopbackTest do
     Retry,
     Subscription
   }
-
-  alias Wotex.ThingDescription
 
   @secret "room-token-7f3a"
 
@@ -328,12 +326,18 @@ defmodule Wotex.Lab.LoopbackTest do
   end
 
   @doc false
+  @spec forward_telemetry(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          pid()
+        ) :: {:telemetry, :telemetry.event_name(), :telemetry.event_metadata()}
   def forward_telemetry(event, _, metadata, parent),
     do: send(parent, {:telemetry, event, metadata})
 
   defp fixture do
     path = Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json")
-    {:ok, td} = path |> File.read!() |> ThingDescription.parse()
+    {:ok, td} = ThingDescription.parse(File.read!(path))
     td
   end
 

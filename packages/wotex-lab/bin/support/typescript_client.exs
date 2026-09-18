@@ -5,6 +5,7 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
   @max_response_bytes 1_048_576
   @max_request_bytes 4_096
 
+  @spec render(map(), String.t()) :: %{String.t() => String.t()}
   def render(openapi, license) when is_map(openapi) and is_binary(license) do
     validate!(openapi)
     version = get_in(openapi, ["info", "version"])
@@ -25,7 +26,7 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
 
     operations =
       openapi["paths"]
-      |> Enum.flat_map(fn {_path, methods} -> Enum.map(methods, fn {_method, op} -> op end) end)
+      |> Enum.flat_map(fn {_, methods} -> Enum.map(methods, fn {_, op} -> op end) end)
       |> Enum.map(& &1["operationId"])
       |> Enum.sort()
 
@@ -55,7 +56,13 @@ defmodule Wotex.Lab.Check.TypeScriptClient do
     }
 
     Enum.each(expected, fn {name, fields} ->
-      actual = schemas |> Map.fetch!(name) |> Map.fetch!("properties") |> Map.keys() |> Enum.sort()
+      actual =
+        schemas
+        |> Map.fetch!(name)
+        |> Map.fetch!("properties")
+        |> Map.keys()
+        |> Enum.sort()
+
       actual == Enum.sort(fields) || raise "#{name} schema drift"
     end)
 

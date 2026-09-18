@@ -3,10 +3,10 @@ defmodule Wotex.Lab.WLB05EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
   alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Test.SourceTree
+
+  @moduletag :integration
 
   @record_keys ~w(capacity deadline_ms max_expiry_batch_limit max_page_limit max_rows
                   run_ms broker_enabled excluded_count test_count)a

@@ -113,17 +113,19 @@ defmodule Wotex.Lab.Metrics.Retention do
   @doc "Parses a GreptimeDB humantime TTL, such as `7days` or `2h 30m`, into seconds."
   @spec seconds(term()) :: {:ok, pos_integer()} | {:error, Error.t()}
   def seconds(text) when is_binary(text) and byte_size(text) in 1..128 do
-    text
-    |> String.split(" ", trim: true)
-    |> Enum.reduce_while({:ok, 0}, fn part, {:ok, total} ->
-      with [_, count, unit] <- Regex.run(~r/\A([0-9]{1,6})([a-z]+)\z/, part),
-           {:ok, factor} <- Map.fetch(@units, unit) do
-        {:cont, {:ok, total + String.to_integer(count) * factor}}
-      else
-        _ -> {:halt, unverified()}
-      end
-    end)
-    |> case do
+    parsed =
+      text
+      |> String.split(" ", trim: true)
+      |> Enum.reduce_while({:ok, 0}, fn part, {:ok, total} ->
+        with [_, count, unit] <- Regex.run(~r/\A([0-9]{1,6})([a-z]+)\z/, part),
+             {:ok, factor} <- Map.fetch(@units, unit) do
+          {:cont, {:ok, total + String.to_integer(count) * factor}}
+        else
+          _ -> {:halt, unverified()}
+        end
+      end)
+
+    case parsed do
       {:ok, total} when total > 0 -> {:ok, total}
       _ -> unverified()
     end

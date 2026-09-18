@@ -51,7 +51,7 @@ defmodule Wotex.Lab.MqttSampleAdmissionTest do
              SampleAdmission.admit(21.5, sample_opts(boot_id: ""))
 
     assert {:error, %Error{code: :invalid_options}} =
-             SampleAdmission.admit(21.5, sample_opts() ++ [secret: "not-admitted"])
+             SampleAdmission.admit(21.5, sample_opts(secret: "not-admitted"))
   end
 
   defp sample_opts(overrides \\ []) do

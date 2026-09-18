@@ -90,9 +90,12 @@ defmodule Wotex.Lab.MetricsRetentionTest do
     assert {:ok, %{database: "lab", ttl: "90d", seconds: 7_776_000}} =
              Retention.provision(plan, executor)
 
-    for statement <- Retention.statements(plan) ++ [Retention.verification(plan)] do
+    for statement <- Retention.statements(plan) do
       assert_received {:sql, ^statement}
     end
+
+    verification = Retention.verification(plan)
+    assert_received {:sql, ^verification}
   end
 
   test "refusals, unavailable answers, missing options and TTL drift fail closed" do

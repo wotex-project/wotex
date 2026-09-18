@@ -12,12 +12,12 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
 
   use ExUnit.Case, async: false
 
-  @moduletag :container
-  @moduletag timeout: 300_000
-
   alias Wotex.Conformance.{Corpus, Report, Runner, Subject}
   alias Wotex.Conformance.Target.External
   alias Wotex.Lab.Conformance.KernelContainment
+
+  @moduletag :container
+  @moduletag timeout: 300_000
 
   @image "hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da"
   @erl "/usr/local/lib/erlang/bin/erl"
@@ -60,7 +60,10 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
       home: home,
       tmp: tmp,
       paths: paths,
-      mounts: paths |> Enum.map(&(&1 |> Path.dirname() |> Path.dirname())) |> Enum.uniq()
+      mounts:
+        paths
+        |> Enum.map(&Path.dirname(Path.dirname(&1)))
+        |> Enum.uniq()
     }
   end
 
@@ -136,7 +139,7 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
     assert {0, output, label} =
              timed("isolation", fn -> probe(context, code, [canary, mount], []) end)
 
-    assert {:ok, tokens, _} = output |> String.to_charlist() |> :erl_scan.string()
+    assert {:ok, tokens, _} = :erl_scan.string(String.to_charlist(output))
     assert {:ok, {nets, connect, read, etc, host, tmp, status}} = :erl_parse.parse_term(tokens)
     assert nets == [~c"lo"]
     assert connect == :denied
@@ -175,7 +178,7 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
     """
 
     assert {0, output, process_label} = probe(context, processes, [], processes: 32)
-    assert {:ok, tokens, _} = output |> String.to_charlist() |> :erl_scan.string()
+    assert {:ok, tokens, _} = :erl_scan.string(String.to_charlist(output))
     assert {:ok, {{spawned, reason}, ~c"32"}} = :erl_parse.parse_term(tokens)
     assert spawned in 1..31
     assert reason in [:eagain, :system_limit, :emfile]
@@ -234,12 +237,13 @@ defmodule Wotex.Lab.KernelContainmentLaneTest do
   defp timed(name, fun) do
     started = System.monotonic_time(:millisecond)
     result = fun.()
-    IO.puts("kernel-lane #{name}_ms=#{System.monotonic_time(:millisecond) - started}")
+    Mix.shell().info("kernel-lane #{name}_ms=#{System.monotonic_time(:millisecond) - started}")
     result
   end
 
   defp probe(context, code, extra, opts) do
-    command = [@erl | @beam] ++ ["-eval", code, "-extra"] ++ extra ++ ["{subject_archive}"]
+    command =
+      Enum.concat([[@erl | @beam], ["-eval", code, "-extra"], extra, ["{subject_archive}"]])
 
     {:ok, %{target: target, label: label}} =
       KernelContainment.external_map(

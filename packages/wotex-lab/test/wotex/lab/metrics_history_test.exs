@@ -74,7 +74,10 @@ defmodule Wotex.Lab.MetricsHistoryTest do
     {:ok, _} = History.put(history, snapshot(1, generation: 1))
     {:ok, _} = History.put(history, snapshot(2, generation: 1))
 
-    flags = history |> History.snapshots() |> Enum.map(&{&1.snapshot.sequence, &1.gap, &1.reset})
+    flags =
+      history
+      |> History.snapshots()
+      |> Enum.map(&{&1.snapshot.sequence, &1.gap, &1.reset})
 
     assert flags == [
              {1, false, false},
@@ -149,7 +152,7 @@ defmodule Wotex.Lab.MetricsHistoryTest do
     assert {:error, %Error{code: :invalid_options}} = History.start_link(durable: true)
     assert %{id: {History, :h}, restart: :transient} = History.child_spec(id: :h)
 
-    {:ok, named} = History.start_link(name: :"history-#{System.unique_integer([:positive])}")
+    {:ok, named} = History.start_link(name: :wotex_lab_test_named_history)
     assert History.stats(named).max_snapshots == 120
     :ok = GenServer.stop(named)
   end

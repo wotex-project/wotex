@@ -438,7 +438,7 @@ defmodule Wotex.Lab.Cookbook do
 
   defp collect_cell(line, {cells, lines}) do
     if String.trim_trailing(line) == "```" do
-      {[lines |> Enum.reverse() |> Enum.join("\n") | cells], nil}
+      {[Enum.join(Enum.reverse(lines), "\n") | cells], nil}
     else
       {cells, [line | lines]}
     end

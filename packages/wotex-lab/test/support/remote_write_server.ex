@@ -31,7 +31,7 @@ defmodule Wotex.Lab.Test.RemoteWriteServer do
   end
 
   @spec requests(pid()) :: [map()]
-  def requests(controller), do: controller |> Agent.get(& &1.requests) |> Enum.reverse()
+  def requests(controller), do: Enum.reverse(Agent.get(controller, & &1.requests))
 
   @spec await_requests(pid(), pos_integer(), pos_integer()) :: [map()]
   def await_requests(controller, count, attempts \\ 200) do
@@ -52,8 +52,11 @@ defmodule Wotex.Lab.Test.RemoteWriteServer do
   def init(opts), do: opts
 
   @impl Plug
-  def call(conn, {:controller, controller} = opts),
-    do: conn |> assign(:controller, controller) |> super(opts)
+  def call(conn, {:controller, controller} = opts) do
+    conn
+    |> assign(:controller, controller)
+    |> super(opts)
+  end
 
   post "/v1/prometheus/write" do
     controller = conn.assigns.controller

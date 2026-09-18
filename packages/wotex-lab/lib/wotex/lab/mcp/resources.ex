@@ -16,11 +16,9 @@ defmodule Wotex.Lab.MCP.Resources do
   Description. Nothing is fetched from the network and nothing is executed.
   """
 
-  alias Wotex.Lab.DesignSystem
-  alias Wotex.Lab.Documentation
+  alias Wotex.Lab.{DesignSystem, Documentation, Scenario}
   alias Wotex.Lab.MCP.Seams
   alias Wotex.Lab.Reference.Thing
-  alias Wotex.Lab.Scenario
   alias Wotex.ThingDescription
 
   @max_file_bytes 1_048_576
@@ -176,7 +174,7 @@ defmodule Wotex.Lab.MCP.Resources do
   end
 
   defp reference_thing({_, pid, :worker, [Thing]}) when is_pid(pid),
-    do: [{pid |> Thing.thing_description() |> ThingDescription.id(), pid}]
+    do: [{ThingDescription.id(Thing.thing_description(pid)), pid}]
 
   defp reference_thing(_), do: []
 end

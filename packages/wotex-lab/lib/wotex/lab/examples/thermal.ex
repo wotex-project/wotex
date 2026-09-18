@@ -15,12 +15,12 @@ defmodule Wotex.Lab.Examples.Thermal do
 
   import Nx.Defn
 
-  @max_rows 2
-
   alias Wotex.{DataSchema, ThingDescription}
   alias Wotex.Lab.Adapters.Nx.UnitConverter
   alias Wotex.Lab.{Error, Options, Telemetry}
   alias Wotex.Nx.{Decoder, Encoded, Encoder, Feature, Observation, OutputSchema, Row, Schema}
+
+  @max_rows 2
 
   @doc "Runs the checked-in thermal fixture and returns the TD, encoded batch and inert proposal."
   @spec run(keyword()) :: {:ok, map()} | {:error, term()}
@@ -130,16 +130,17 @@ defmodule Wotex.Lab.Examples.Thermal do
   defp rows(thing_id) do
     observations = [{"thermal-1", 0, 293.15}, {"thermal-2", 1_000, 295.15}]
 
-    observations
-    |> Enum.reduce_while({:ok, []}, fn {id, time, value}, {:ok, rows} ->
-      with {:ok, observation} <- observation(thing_id, id, time, value),
-           {:ok, row} <- Row.new(time, %{"temperature" => observation}) do
-        {:cont, {:ok, [row | rows]}}
-      else
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
+    reduced =
+      Enum.reduce_while(observations, {:ok, []}, fn {id, time, value}, {:ok, rows} ->
+        with {:ok, observation} <- observation(thing_id, id, time, value),
+             {:ok, row} <- Row.new(time, %{"temperature" => observation}) do
+          {:cont, {:ok, [row | rows]}}
+        else
+          error -> {:halt, error}
+        end
+      end)
+
+    case reduced do
       {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
       error -> error
     end

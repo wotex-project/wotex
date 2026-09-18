@@ -8,6 +8,7 @@ defmodule Wotex.Lab.Check.Boundary do
   @machine_path ~r/([\/]Users[\/]|[\/]home[\/])/
   @excluded ~w(.git deps _build doc cover tmp)
 
+  @spec run() :: :ok
   def run do
     activation = scan(source_files(["lib/**/*.{ex,exs}", "mix.exs"]), @activation)
 
@@ -28,14 +29,16 @@ defmodule Wotex.Lab.Check.Boundary do
     IO.puts("boundary: explicit composition and consumer-neutral source")
   end
 
-  defp source_files(patterns),
-    do: patterns |> Enum.flat_map(&Path.wildcard/1) |> Enum.filter(&File.regular?/1)
+  defp source_files(patterns) do
+    patterns
+    |> Enum.flat_map(&Path.wildcard/1)
+    |> Enum.filter(&File.regular?/1)
+  end
 
   defp publishable_files do
     "**/*"
     |> Path.wildcard(match_dot: true)
-    |> Enum.reject(&excluded?/1)
-    |> Enum.filter(&File.regular?/1)
+    |> Enum.filter(&(not excluded?(&1) and File.regular?(&1)))
   end
 
   defp excluded?(path) do
@@ -48,7 +51,7 @@ defmodule Wotex.Lab.Check.Boundary do
       file
       |> File.stream!()
       |> Stream.with_index(1)
-      |> Enum.filter(fn {line, _number} -> Regex.match?(regex, line) end)
+      |> Enum.filter(fn {line, _} -> Regex.match?(regex, line) end)
       |> Enum.map(fn {line, number} -> "#{file}:#{number}:#{String.trim_trailing(line)}" end)
     end)
   end

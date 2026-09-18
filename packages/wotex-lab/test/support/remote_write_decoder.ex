@@ -27,10 +27,13 @@ defmodule Wotex.Lab.Test.RemoteWriteDecoder do
   end
 
   defp timeseries(bytes) do
-    Enum.reduce(fields(bytes), %{labels: [], samples: []}, fn
-      {1, 2, label}, acc -> %{acc | labels: acc.labels ++ [label(label)]}
-      {2, 2, sample}, acc -> %{acc | samples: acc.samples ++ [sample(sample)]}
-    end)
+    series =
+      Enum.reduce(fields(bytes), %{labels: [], samples: []}, fn
+        {1, 2, label}, acc -> %{acc | labels: [label(label) | acc.labels]}
+        {2, 2, sample}, acc -> %{acc | samples: [sample(sample) | acc.samples]}
+      end)
+
+    %{labels: Enum.reverse(series.labels), samples: Enum.reverse(series.samples)}
   end
 
   defp label(bytes) do

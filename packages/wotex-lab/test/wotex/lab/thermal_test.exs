@@ -73,7 +73,7 @@ defmodule Wotex.Lab.ThermalTest do
 
   test "the fixture manifest is executable and caller backend selection is restored" do
     path = Application.app_dir(:wotex_lab, "priv/fixtures/thermal/manifest.json")
-    manifest = path |> File.read!() |> :json.decode()
+    manifest = :json.decode(File.read!(path))
     expected = manifest["expected_proposal"]
 
     Nx.with_default_backend(CallerBackend, fn ->

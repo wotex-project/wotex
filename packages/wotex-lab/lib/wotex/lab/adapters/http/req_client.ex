@@ -64,7 +64,9 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
           ] ++ connection(config, destination, budget)
 
         Telemetry.span(:http, :request, %{operation: method, profile: :http}, fn ->
-          options |> Req.request() |> finite_response()
+          options
+          |> Req.request()
+          |> finite_response()
         end)
       end
     end

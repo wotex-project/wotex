@@ -16,10 +16,9 @@ defmodule Wotex.Lab.Runner do
   """
 
   alias Wotex.Lab
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Scenario}
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Runner.{Attempt, Definition, Host, Recording}
-  alias Wotex.Lab.Scenario
 
   @type run :: pid()
 

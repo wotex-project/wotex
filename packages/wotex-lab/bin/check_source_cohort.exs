@@ -13,13 +13,23 @@ defmodule Wotex.Lab.Check.SourceCohort do
                mix.exs mix.lock README.md CLAUDE.md)
   @documentation_patterns ~w(specs/**/* plans/**/* decisions/**/*)
 
+  @spec run([String.t()]) :: :ok
   def run(argv) do
     root = Path.expand("..", __DIR__)
-    index = root |> Path.join("priv/provenance/source-index.json") |> File.read!() |> JSON.decode!()
+
+    index =
+      root
+      |> Path.join("priv/provenance/source-index.json")
+      |> File.read!()
+      |> JSON.decode!()
 
     entries =
       Enum.map(index["packages"], fn package ->
-        directory = package["repository"] |> String.split("/") |> List.last()
+        directory =
+          package["repository"]
+          |> String.split("/")
+          |> List.last()
+
         Regex.match?(~r/\Awotex(?:-[a-z]+)*\z/, directory) || abort("unexpected source owner")
         repo = Path.join(Path.dirname(root), directory)
         File.dir?(repo) || abort("missing source owner: #{directory}")
@@ -65,7 +75,10 @@ defmodule Wotex.Lab.Check.SourceCohort do
 
       [] ->
         expected =
-          root |> Path.join("priv/provenance/source-cohort.json") |> File.read!() |> JSON.decode!()
+          root
+          |> Path.join("priv/provenance/source-cohort.json")
+          |> File.read!()
+          |> JSON.decode!()
 
         actual == expected ||
           abort(
@@ -76,7 +89,7 @@ defmodule Wotex.Lab.Check.SourceCohort do
           "source cohort: #{length(entries)} owners match recorded content; no readiness promotion"
         )
 
-      _other ->
+      _ ->
         abort("usage: elixir bin/check_source_cohort.exs [--print]")
     end
   end
@@ -97,16 +110,14 @@ defmodule Wotex.Lab.Check.SourceCohort do
 
   # Hand-laid JSON keeping the committed cohort member order.
   defp pretty(actual) do
-    patterns = actual["patterns"] |> Enum.map(&"    #{JSON.encode!(&1)}") |> Enum.join(",\n")
+    patterns = Enum.map_join(actual["patterns"], ",\n", &"    #{JSON.encode!(&1)}")
 
     packages =
-      actual["packages"]
-      |> Enum.map(fn package ->
+      Enum.map_join(actual["packages"], ",\n", fn package ->
         "    {\n      \"package\": #{JSON.encode!(package["package"])},\n" <>
           "      \"files\": #{package["files"]},\n" <>
           "      \"sha256\": #{JSON.encode!(package["sha256"])}\n    }"
       end)
-      |> Enum.join(",\n")
 
     "{\n  \"schema_version\": #{JSON.encode!(actual["schema_version"])},\n" <>
       "  \"kind\": #{JSON.encode!(actual["kind"])},\n" <>

@@ -193,7 +193,7 @@ defmodule Wotex.Lab.MCP.Tools do
     text(state, %{
       "code" => String.slice(code, 0, 64),
       "phase" => String.slice(phase, 0, 32),
-      "path" => args |> Map.get("path", "/") |> to_string() |> String.slice(0, 256),
+      "path" => String.slice(to_string(Map.get(args, "path", "/")), 0, 256),
       "explanation" => explanation,
       "guidance" =>
         "Match on code, phase and path; messages may improve without notice and are not a contract."
@@ -205,8 +205,7 @@ defmodule Wotex.Lab.MCP.Tools do
       case state.instance do
         pid when is_pid(pid) ->
           Enum.map(Resources.reference_things(pid), fn {id, thing} ->
-            document =
-              thing |> Thing.thing_description() |> ThingDescription.to_map()
+            document = ThingDescription.to_map(Thing.thing_description(thing))
 
             %{
               "id" => id,
@@ -594,7 +593,7 @@ defmodule Wotex.Lab.MCP.Tools do
   defp json_value(value) when is_list(value), do: Enum.map(value, &json_value/1)
   defp json_value(value) when is_boolean(value) or is_nil(value), do: value
   defp json_value(value) when is_atom(value), do: Atom.to_string(value)
-  defp json_value(value) when is_tuple(value), do: value |> Tuple.to_list() |> json_value()
+  defp json_value(value) when is_tuple(value), do: json_value(Tuple.to_list(value))
   defp json_value(value), do: value
 
   defp json_key(key) when is_atom(key), do: Atom.to_string(key)

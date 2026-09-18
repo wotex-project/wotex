@@ -307,7 +307,7 @@ defmodule Wotex.Lab.Runner.Definition do
 
   defp capabilities(capabilities, steps)
        when is_list(capabilities) and length(capabilities) in 1..64 do
-    used = steps |> Enum.map(& &1.capability) |> Enum.uniq()
+    used = Enum.uniq(Enum.map(steps, & &1.capability))
 
     cond do
       not Enum.all?(capabilities, &Options.identifier?/1) or Enum.uniq(capabilities) != capabilities ->

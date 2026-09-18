@@ -174,7 +174,12 @@ defmodule Wotex.Lab.MCPJobsTest do
   end
 
   defp running_worker(owner) do
-    [worker] = owner |> :sys.get_state() |> Map.fetch!(:workers) |> Map.keys()
+    [worker] =
+      owner
+      |> :sys.get_state()
+      |> Map.fetch!(:workers)
+      |> Map.keys()
+
     worker
   end
 

@@ -58,7 +58,7 @@ defmodule Wotex.Lab.Metrics.ReqSink do
           into: &collect(&1, &2, config.max_response_bytes)
         ] ++ connection(config, destination)
 
-      options |> Req.request() |> classify()
+      classify(Req.request(options))
     end
   end
 

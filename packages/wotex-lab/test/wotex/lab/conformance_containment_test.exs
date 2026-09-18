@@ -225,7 +225,7 @@ defmodule Wotex.Lab.ConformanceContainmentTest do
           [1, "{subject_archive}"],
           [String.duplicate("x", 4_097), "{subject_archive}"],
           ["{subject_archive}", "{subject_archive}"],
-          List.duplicate("argument", 28) ++ ["{subject_archive}"]
+          Enum.reverse(["{subject_archive}" | List.duplicate("argument", 28)])
         ] do
       assert {:error, %Error{code: :invalid_arguments}} =
                Containment.external_map(context.probe, args, context.archive, context.home)

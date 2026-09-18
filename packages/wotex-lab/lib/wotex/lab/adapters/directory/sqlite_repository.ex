@@ -63,9 +63,9 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     The repository state handed to the directory is this process's pid.
     """
 
-    use GenServer
-
     @behaviour Wotex.Directory.Repository
+
+    use GenServer
 
     alias Exqlite.Sqlite3
     alias Wotex.Directory.{Cursor, Entry, Page, Query, Registration}
@@ -363,7 +363,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     defp insert_reason(reason), do: reason
 
     defp replace_work(connection, entry, expected_version) do
-      params = entry_params(entry) ++ [expected_version]
+      params = Enum.concat(entry_params(entry), [expected_version])
 
       case mutate(connection, @replace_sql, params) do
         {:ok, 1} -> advance_revision(connection, {:ok, entry})
@@ -505,13 +505,15 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     end
 
     defp decode_entries(rows) do
-      Enum.reduce_while(rows, {:ok, []}, fn row, {:ok, acc} ->
-        case decode_entry(row) do
-          {:ok, entry} -> {:cont, {:ok, [entry | acc]}}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end)
-      |> case do
+      decoded =
+        Enum.reduce_while(rows, {:ok, []}, fn row, {:ok, acc} ->
+          case decode_entry(row) do
+            {:ok, entry} -> {:cont, {:ok, [entry | acc]}}
+            {:error, reason} -> {:halt, {:error, reason}}
+          end
+        end)
+
+      case decoded do
         {:ok, entries} -> {:ok, Enum.reverse(entries)}
         {:error, reason} -> {:error, reason}
       end

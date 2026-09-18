@@ -1,6 +1,7 @@
 Code.require_file("support/typescript_client.exs", __DIR__)
+Code.require_file("support/child_environment.exs", __DIR__)
 
-alias Wotex.Lab.Check.TypeScriptClient
+alias Wotex.Lab.Check.{ChildEnvironment, TypeScriptClient}
 alias Wotex.Lab.{Documentation, Graph}
 alias Wotex.Lab.Graph.Interfaces
 
@@ -8,7 +9,13 @@ root = Path.expand("..", __DIR__)
 target = Path.join(root, "clients/typescript")
 {:ok, catalogue_path} = Documentation.resolve(root, "docs/specs/catalogue.yaml")
 catalogue = YamlElixir.read_from_file!(catalogue_path)
-{revision, 0} = System.cmd("git", ["-C", root, "rev-parse", "HEAD"], stderr_to_stdout: true)
+
+{revision, 0} =
+  System.cmd("git", ["-C", root, "rev-parse", "HEAD"],
+    env: ChildEnvironment.scrubbed(),
+    stderr_to_stdout: true
+  )
+
 {:ok, graph} = Graph.generate(catalogue: catalogue, revision: String.trim(revision), root: root)
 files = TypeScriptClient.render(Interfaces.openapi(graph), File.read!(Path.join(root, "LICENSE")))
 
@@ -28,10 +35,19 @@ case System.argv() do
       File.read(path) == {:ok, expected} || raise "generated client drift: #{relative}"
     end)
 
-    {_, 0} = System.cmd("node", ["--test"], cd: target, into: IO.stream())
+    {_, 0} =
+      System.cmd("node", ["--test"],
+        cd: target,
+        env: ChildEnvironment.scrubbed(),
+        into: IO.stream()
+      )
 
     {pack, 0} =
-      System.cmd("npm", ["pack", "--dry-run", "--json"], cd: target, stderr_to_stdout: true)
+      System.cmd("npm", ["pack", "--dry-run", "--json"],
+        cd: target,
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
 
     [%{"files" => packed}] = Jason.decode!(pack)
     names = MapSet.new(packed, & &1["path"])
@@ -42,6 +58,6 @@ case System.argv() do
 
     IO.puts("typescript client: generated sources, node tests and npm archive pass")
 
-  _other ->
+  _ ->
     raise "usage: mix run --no-start bin/generate_typescript_client.exs --check|--write"
 end

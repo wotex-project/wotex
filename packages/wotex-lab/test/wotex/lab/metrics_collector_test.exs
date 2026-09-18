@@ -3,14 +3,13 @@ defmodule Wotex.Lab.MetricsCollectorTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
   alias Wotex.Lab.Error
   alias Wotex.Lab.Examples.Thermal
   alias Wotex.Lab.Metrics.{Collector, Snapshot}
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
-  alias Wotex.ThingDescription
 
   @credential "secret-credential-2b7c"
   @payload "payload-sentinel-91ee"
@@ -258,7 +257,7 @@ defmodule Wotex.Lab.MetricsCollectorTest do
     :ok = GenServer.stop(first)
 
     assert %{id: {Collector, :named}, restart: :transient} = Collector.child_spec(id: :named)
-    {:ok, named} = Collector.start_link(name: :"collector-#{System.unique_integer([:positive])}")
+    {:ok, named} = Collector.start_link(name: :wotex_lab_test_named_collector)
     :ok = GenServer.stop(named)
   end
 

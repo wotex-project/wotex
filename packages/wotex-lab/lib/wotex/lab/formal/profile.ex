@@ -32,10 +32,9 @@ if Code.ensure_loaded?(ExMaude.Pool) do
     profile has no access to any Thing or policy.
     """
 
-    alias Wotex.Lab.Error
+    alias Wotex.Lab.{Error, Telemetry}
     alias Wotex.Lab.Evidence.Digest
     alias Wotex.Lab.Formal.{Abstraction, Model, Result, Search, Serializer}
-    alias Wotex.Lab.Telemetry
 
     @default_limits %{
       max_depth: 100,
@@ -51,6 +50,9 @@ if Code.ensure_loaded?(ExMaude.Pool) do
     }
     @version_timeout_ms 5_000
     @reap_grace_ms 1_000
+    # Variables whose names carry a credential by convention (Hex, GitHub, the
+    # workbench bearer tokens and secret key base); no child process needs them.
+    @credential_variable ~r/TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|CREDENTIAL/
 
     @type t :: %__MODULE__{
             model: Model.t(),
@@ -260,7 +262,13 @@ if Code.ensure_loaded?(ExMaude.Pool) do
     def stop(%__MODULE__{}, pool, terminate, opts \\ [])
         when is_pid(pool) and is_function(terminate, 0) do
       grace = Keyword.get(opts, :grace_ms, 200)
-      workers = pool |> linked() |> Enum.flat_map(&linked/1) |> Enum.filter(&Process.alive?/1)
+
+      workers =
+        pool
+        |> linked()
+        |> Enum.flat_map(&linked/1)
+        |> Enum.filter(&Process.alive?/1)
+
       os_pids = Enum.flat_map(workers, &os_pids/1)
       terminate.()
       Process.sleep(grace)
@@ -286,15 +294,26 @@ if Code.ensure_loaded?(ExMaude.Pool) do
     defp kill_alive(os_pids) do
       os_pids
       |> Enum.filter(fn os_pid ->
-        match?(
-          {_out, 0},
-          System.cmd("kill", ["-0", Integer.to_string(os_pid)], stderr_to_stdout: true)
-        )
+        match?({_out, 0}, signal(os_pid, "-0"))
       end)
-      |> Enum.map(fn os_pid ->
-        System.cmd("kill", ["-KILL", Integer.to_string(os_pid)], stderr_to_stdout: true)
-      end)
+      |> Enum.map(&signal(&1, "-KILL"))
       |> length()
+    end
+
+    # `kill` needs nothing from the environment, so the child inherits none of it.
+    defp signal(os_pid, signal) do
+      System.cmd("kill", [signal, Integer.to_string(os_pid)],
+        env: cleared_environment(),
+        stderr_to_stdout: true
+      )
+    end
+
+    defp cleared_environment, do: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
+
+    # The engine probe keeps the operator's toolchain environment (paths,
+    # locale, library locations) but never a credential.
+    defp scrubbed_environment do
+      for {name, _} <- System.get_env(), Regex.match?(@credential_variable, name), do: {name, nil}
     end
 
     defp module(model, variant) do
@@ -398,7 +417,13 @@ if Code.ensure_loaded?(ExMaude.Pool) do
     end
 
     defp engine_version(binary) do
-      task = Task.async(fn -> System.cmd(binary, ["--version"], stderr_to_stdout: true) end)
+      task =
+        Task.async(fn ->
+          System.cmd(binary, ["--version"],
+            env: scrubbed_environment(),
+            stderr_to_stdout: true
+          )
+        end)
 
       case Task.yield(task, @version_timeout_ms) || Task.shutdown(task, :brutal_kill) do
         {:ok, {output, 0}} ->

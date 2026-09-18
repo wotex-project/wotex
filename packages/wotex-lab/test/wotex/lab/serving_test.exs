@@ -59,7 +59,7 @@ defmodule Wotex.Lab.ServingTest do
         end)
       end
 
-    assert tasks |> Enum.map(&Task.await/1) |> Enum.sort() == [{0, [21.0]}, {1, [23.0]}]
+    assert Enum.sort(Enum.map(tasks, &Task.await/1)) == [{0, [21.0]}, {1, [23.0]}]
 
     timeout_flush = Task.async(fn -> Nx.Serving.batched_run(name, one_row.(0)) end)
     assert {:ok, result} = Task.yield(timeout_flush, 1_000)

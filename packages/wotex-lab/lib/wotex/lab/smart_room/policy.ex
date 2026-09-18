@@ -14,8 +14,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
 
   use GenServer
 
-  alias Wotex.Lab.Error
-  alias Wotex.Lab.Telemetry
+  alias Wotex.Lab.{Error, Telemetry}
   alias Wotex.Nx.ActionProposal
 
   @type decision :: %{
@@ -162,7 +161,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
   def handle_call(:records, _, state) do
     {:reply,
      %{
-       decisions: state.order |> Enum.reverse() |> Enum.map(&state.decisions[&1]),
+       decisions: Enum.map(Enum.reverse(state.order), &state.decisions[&1]),
        refusals: Enum.reverse(state.refusals)
      }, state}
   end

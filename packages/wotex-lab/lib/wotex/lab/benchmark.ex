@@ -211,7 +211,11 @@ defmodule Wotex.Lab.Benchmark do
   end
 
   defp result(id, dimensions, identity, samples, warmup, shared, threshold, observations) do
-    durations = observations |> Enum.map(& &1.duration_ns) |> Enum.sort()
+    durations =
+      observations
+      |> Enum.map(& &1.duration_ns)
+      |> Enum.sort()
+
     memories = Enum.map(observations, & &1.memory_bytes)
     p95 = percentile(durations, 95)
 

@@ -44,9 +44,8 @@ defmodule Wotex.Lab.Metrics.Collector do
 
   use GenServer
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.{Catalogue, Snapshot}
-  alias Wotex.Lab.Options
 
   @default_budget 256
   @max_budget 4_096
@@ -384,7 +383,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   defp histogram(metric, row) do
     count = length(metric.buckets)
     counts = for position <- 1..(count + 1), do: elem(row, position)
-    les = Enum.map(metric.buckets, &Snapshot.number/1) ++ [:infinity]
+    les = Enum.concat(Enum.map(metric.buckets, &Snapshot.number/1), [:infinity])
     sum = elem(row, count + 2)
 
     %{

@@ -66,15 +66,14 @@ defmodule Wotex.Lab.Otlp.Events do
        Atom.to_string(Catalogue.dimension_value(:profile, event, metadata, %{}))}
     ]
 
-    attributes =
+    kind_attributes =
       if kind == :exception,
-        do:
-          base ++
-            [
-              {"wotex.lab.kind",
-               Atom.to_string(Catalogue.dimension_value(:kind, event, metadata, %{}))}
-            ],
-        else: base
+        do: [
+          {"wotex.lab.kind", Atom.to_string(Catalogue.dimension_value(:kind, event, metadata, %{}))}
+        ],
+        else: []
+
+    attributes = base ++ kind_attributes
 
     span = %{
       trace_id: trace_id,

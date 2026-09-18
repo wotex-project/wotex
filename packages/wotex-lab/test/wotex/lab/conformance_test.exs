@@ -3,12 +3,12 @@ defmodule Wotex.Lab.ConformanceTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
-  alias Wotex.Conformance.{Corpus, Report, Runner, Subject}
+  alias Wotex.Conformance.{Corpus, Report, Runner, Subject, Target}
   alias Wotex.Conformance.Target.External
   alias Wotex.Lab.Conformance.Containment
-  alias Wotex.Lab.Test.NativeContainment
+  alias Wotex.Lab.Test.{ChildEnvironment, NativeContainment}
+
+  @moduletag :integration
 
   @generated_at ~U[2026-09-07 12:00:00Z]
 
@@ -151,7 +151,7 @@ defmodule Wotex.Lab.ConformanceTest do
       "vector" => %{"id" => "containment", "input" => %{}}
     }
 
-    assert {:ok, response, _} = External.invoke(external, request)
+    assert {:ok, response, _} = Target.invoke({External, external}, request)
 
     assert response.actual == %{
              "network" => "denied",
@@ -191,11 +191,15 @@ defmodule Wotex.Lab.ConformanceTest do
       "vector" => %{"id" => "descendant", "input" => %{}}
     }
 
-    assert {:error, error, _} = External.invoke(external, request)
+    assert {:error, error, _} = Target.invoke({External, external}, request)
     assert error.code == :target_exit_nonzero
     assert File.regular?(pid_file)
 
-    pid = pid_file |> File.read!() |> String.trim()
+    pid =
+      pid_file
+      |> File.read!()
+      |> String.trim()
+
     assert eventually_stopped?(pid, 20)
   end
 
@@ -224,7 +228,7 @@ defmodule Wotex.Lab.ConformanceTest do
         "vector" => %{"id" => id, "input" => %{}}
       }
 
-      assert {:error, error, duration} = External.invoke(external, request)
+      assert {:error, error, duration} = Target.invoke({External, external}, request)
       assert error.code == :target_exit_nonzero
       assert duration < 4_000_000
     end
@@ -285,7 +289,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
       assert {:ok, external} = External.from_map(config)
       request = %{"claim" => %{"operation" => "probe"}, "vector" => %{"id" => mode, "input" => %{}}}
-      assert {:ok, _, _} = External.invoke(external, request)
+      assert {:ok, _, _} = Target.invoke({External, external}, request)
       assert eventually_stopped?(File.read!(pid_file), 40)
       refute Enum.any?(File.ls!(context.home), &String.starts_with?(&1, "run-"))
     end
@@ -307,7 +311,7 @@ defmodule Wotex.Lab.ConformanceTest do
         "vector" => %{"id" => id, "input" => %{}}
       }
 
-      assert {:error, error, _} = External.invoke(external, request)
+      assert {:error, error, _} = Target.invoke({External, external}, request)
       assert error.code == expected_code
     end
   end
@@ -326,7 +330,7 @@ defmodule Wotex.Lab.ConformanceTest do
             "vector" => %{"id" => id, "input" => %{}}
           }
 
-          {id, External.invoke(external, request)}
+          {id, Target.invoke({External, external}, request)}
         end,
         max_concurrency: 12,
         ordered: false,
@@ -416,7 +420,10 @@ defmodule Wotex.Lab.ConformanceTest do
   defp process_alive?(identity) do
     case String.split(identity, "@", parts: 2) do
       [pid] ->
-        match?({_output, 0}, System.cmd("kill", ["-0", pid], stderr_to_stdout: true))
+        match?(
+          {_output, 0},
+          System.cmd("kill", ["-0", pid], env: ChildEnvironment.cleared(), stderr_to_stdout: true)
+        )
 
       [_, namespace] ->
         true = File.dir?("/proc")

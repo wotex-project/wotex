@@ -3,9 +3,8 @@ defmodule Wotex.Lab.OtlpExporterTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Telemetry}
   alias Wotex.Lab.Otlp.{Exporter, GreptimeSink}
-  alias Wotex.Lab.Telemetry
   alias Wotex.Lab.Test.OtlpDecoder
 
   @ok_response {:ok, %{status: 200, body: ""}}

@@ -214,7 +214,8 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
              ["ps", "--all", "--quiet", "--filter", "label=" <> @label_key <> "=" <> label],
              opts
            ) do
-      {:ok, output |> String.split("\n", trim: true) |> length()}
+      lines = String.split(output, "\n", trim: true)
+      {:ok, length(lines)}
     end
   end
 
@@ -556,12 +557,16 @@ defmodule Wotex.Lab.Conformance.KernelContainment do
   defp network_arg(:none), do: "--network=none"
   defp network_arg({:internal, name}), do: "--network=" <> name
 
-  defp cpus(millis),
-    do:
-      "#{div(millis, 1_000)}.#{millis |> rem(1_000) |> Integer.to_string() |> String.pad_leading(3, "0")}"
+  defp cpus(millis), do: "#{div(millis, 1_000)}.#{millis_fraction(millis)}"
 
-  defp seconds(ms),
-    do: "#{div(ms, 1_000)}.#{ms |> rem(1_000) |> Integer.to_string() |> String.pad_leading(3, "0")}"
+  defp seconds(ms), do: "#{div(ms, 1_000)}.#{millis_fraction(ms)}"
+
+  defp millis_fraction(millis) do
+    millis
+    |> rem(1_000)
+    |> Integer.to_string()
+    |> String.pad_leading(3, "0")
+  end
 
   defp evidence(limits, runtime_digest, image, host_mounts, network) do
     %{

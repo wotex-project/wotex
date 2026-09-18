@@ -121,8 +121,8 @@ defmodule Wotex.Lab.Telemetry do
   @doc "Derives a short non-reversible reference for a Thing id."
   @spec thing_ref(String.t()) :: String.t()
   def thing_ref(thing_id) when is_binary(thing_id) do
-    "thing:" <>
-      (:crypto.hash(:sha256, thing_id) |> Base.encode16(case: :lower) |> binary_part(0, 16))
+    digest = Base.encode16(:crypto.hash(:sha256, thing_id), case: :lower)
+    "thing:" <> binary_part(digest, 0, 16)
   end
 
   defp stop(component, operation, start, metadata) do

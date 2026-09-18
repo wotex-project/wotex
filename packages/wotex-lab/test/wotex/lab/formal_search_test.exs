@@ -50,11 +50,11 @@ defmodule Wotex.Lab.FormalSearchTest do
 
     execute = fn command, remaining ->
       Agent.get_and_update(log, fn %{replies: [reply | rest], commands: commands} ->
-        {reply, %{replies: rest, commands: commands ++ [{command, remaining}]}}
+        {reply, %{replies: rest, commands: [{command, remaining} | commands]}}
       end)
     end
 
-    {execute, fn -> Agent.get(log, & &1.commands) end}
+    {execute, fn -> Agent.get(log, &Enum.reverse(&1.commands)) end}
   end
 
   test "a bounded no-solution answer becomes verified only through a terminating complete search" do

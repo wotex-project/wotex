@@ -59,7 +59,7 @@ defmodule Wotex.Lab.Runner.Budgets do
 
   @doc "Merges overrides into the defaults and enforces positivity and ceilings."
   @spec new(map() | keyword()) :: {:ok, t()} | {:error, Error.t()}
-  def new(overrides) when is_list(overrides), do: overrides |> Map.new() |> new()
+  def new(overrides) when is_list(overrides), do: new(Map.new(overrides))
 
   def new(overrides) when is_map(overrides) do
     case Map.keys(overrides) -- Map.keys(@defaults) do

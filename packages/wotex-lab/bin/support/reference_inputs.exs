@@ -16,5 +16,6 @@ defmodule Wotex.Lab.Check.ReferenceInputs do
                bin/support/work_directory.exs .check.exs .formatter.exs mix.exs mix.lock
                README.md LICENSE NOTICE CHANGELOG.md SECURITY.md CONTRIBUTING.md)
 
+  @spec digest(Path.t()) :: {:ok, String.t()} | {:error, File.posix()}
   def digest(root), do: Digest.tree(root, @patterns)
 end

@@ -3,12 +3,12 @@ defmodule Wotex.Lab.GreptimeOtlpTest do
 
   use ExUnit.Case, async: false
 
-  @moduletag :greptime
-
   alias Wotex.Lab.Metrics.Retention
   alias Wotex.Lab.Otlp.{Exporter, GreptimeSink}
   alias Wotex.Lab.Telemetry
   alias Wotex.Lab.Test.Greptime
+
+  @moduletag :greptime
 
   test "spans and exception logs land in a provisioned database on the pinned server" do
     greptime = Greptime.start()

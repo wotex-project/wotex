@@ -1,6 +1,18 @@
+Code.require_file("child_environment.exs", __DIR__)
+
 defmodule Wotex.Lab.Check.ArchiveRepository do
   @moduledoc false
 
+  alias Wotex.Lab.Check.ChildEnvironment
+
+  @type archive :: %{
+          name: String.t(),
+          version: String.t(),
+          path: Path.t(),
+          origin: :built | :hex_cache
+        }
+
+  @spec build_archives!(Path.t(), [{atom(), String.t()}], Path.t()) :: [archive()]
   def build_archives!(root, packages, tarballs) do
     Enum.map(packages, fn {app, directory} ->
       dir = Path.expand("../#{directory}", root)
@@ -23,7 +35,11 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
           stderr_to_stdout: true
         )
 
-      version = version |> String.split("\n") |> List.last() |> String.trim()
+      version =
+        version
+        |> String.split("\n")
+        |> List.last()
+        |> String.trim()
 
       Regex.match?(~r/\A\d+\.\d+\.\d+\z/, version) ||
         abort("cannot read #{app} version: #{version}")
@@ -45,6 +61,7 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
 
   # Public dependencies are admitted only at exact locked versions from the
   # local Hex cache. No package is fetched from the network by this step.
+  @spec copy_public_archives!([Path.t()], Path.t(), MapSet.t(String.t())) :: [archive()]
   def copy_public_archives!(lock_paths, tarballs, excluded_names \\ MapSet.new()) do
     cache = Path.join([hex_home(), "packages", "hexpm"])
 
@@ -54,43 +71,22 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
       |> read_lock!()
       |> Enum.flat_map(fn
         {name, entry} when is_tuple(entry) and elem(entry, 0) == :hex ->
-          version = elem(entry, 2)
+          copy_locked_archive!(cache, tarballs, excluded_names, name, elem(entry, 2))
 
-          if MapSet.member?(excluded_names, Atom.to_string(name)) do
-            []
-          else
-            file = "#{name}-#{version}.tar"
-            source = Path.join(cache, file)
-
-            if File.regular?(source) do
-              target = Path.join(tarballs, file)
-              File.cp!(source, target)
-
-              [
-                %{
-                  name: Atom.to_string(name),
-                  version: version,
-                  path: target,
-                  origin: :hex_cache
-                }
-              ]
-            else
-              abort("locked archive is absent from the local Hex cache: #{file}")
-            end
-          end
-
-        _other ->
+        _ ->
           []
       end)
     end)
     |> Enum.uniq_by(&{&1.name, &1.version})
   end
 
+  @spec read_lock!(Path.t()) :: map()
   def read_lock!(path) do
-    {{lock, _binding}, _diagnostics} = Code.with_diagnostics(fn -> Code.eval_file(path) end)
+    {{lock, _}, _} = Code.with_diagnostics(fn -> Code.eval_file(path) end)
     lock
   end
 
+  @spec build_registry!(Path.t(), Path.t()) :: Path.t()
   def build_registry!(work, tarballs) do
     public = Path.join(work, "public")
     key = Path.join(work, "registry_key.pem")
@@ -109,6 +105,7 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
 
     {log, status} =
       System.cmd("mix", ["hex.registry", "build", public, "--name=hexpm", "--private-key=#{key}"],
+        env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
 
@@ -116,8 +113,9 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
     public
   end
 
+  @spec serve!(Path.t(), Path.t()) :: {pid(), :inet.port_number()}
   def serve!(work, public) do
-    {:ok, _apps} = Application.ensure_all_started(:inets)
+    {:ok, _} = Application.ensure_all_started(:inets)
 
     {:ok, httpd} =
       :inets.start(:httpd,
@@ -129,20 +127,24 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
         mime_types: [{~c"tar", ~c"application/octet-stream"}]
       )
 
-    port = httpd |> :httpd.info() |> Keyword.fetch!(:port)
+    port =
+      httpd
+      |> :httpd.info()
+      |> Keyword.fetch!(:port)
+
     {httpd, port}
   end
 
   # Every executable on the current PATH except Git is linked into one private
   # directory. Dependency resolution, compilation and execution all use it.
+  @spec restricted_path!(Path.t()) :: Path.t()
   def restricted_path!(work) do
     bin = Path.join(work, "bin")
     File.mkdir_p!(bin)
 
     System.get_env("PATH", "")
     |> String.split(":", trim: true)
-    |> Enum.filter(&File.dir?/1)
-    |> Enum.reject(&Regex.match?(~r{/erts-\d}, &1))
+    |> Enum.filter(&(File.dir?(&1) and not Regex.match?(~r{/erts-\d}, &1)))
     |> Enum.each(fn dir ->
       dir
       |> File.ls!()
@@ -161,6 +163,8 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
     bin
   end
 
+  @spec environment(Path.t(), :inet.port_number(), Path.t(), String.t()) ::
+          [{String.t(), String.t() | nil}]
   def environment(work, port, bin, mix_env \\ "prod") do
     [
       {"PATH", bin},
@@ -174,6 +178,13 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
     ]
   end
 
+  @spec run!(
+          Path.t(),
+          [{String.t(), String.t() | nil}],
+          [String.t()],
+          String.t(),
+          non_neg_integer()
+        ) :: String.t()
   def run!(directory, env, args, label, deadline_ms) do
     task =
       Task.async(fn ->
@@ -187,10 +198,31 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
     end
   end
 
+  @spec revision(Path.t()) :: String.t()
   def revision(root) do
-    case System.cmd("git", ["rev-parse", "HEAD"], cd: root, stderr_to_stdout: true) do
+    result =
+      System.cmd("git", ["rev-parse", "HEAD"],
+        cd: root,
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
+
+    case result do
       {sha, 0} -> String.trim(sha)
-      _other -> "unknown"
+      _ -> "unknown"
+    end
+  end
+
+  defp copy_locked_archive!(cache, tarballs, excluded_names, name, version) do
+    if MapSet.member?(excluded_names, Atom.to_string(name)) do
+      []
+    else
+      file = "#{name}-#{version}.tar"
+      source = Path.join(cache, file)
+      File.regular?(source) || abort("locked archive is absent from the local Hex cache: #{file}")
+      target = Path.join(tarballs, file)
+      File.cp!(source, target)
+      [%{name: Atom.to_string(name), version: version, path: target, origin: :hex_cache}]
     end
   end
 
@@ -200,7 +232,7 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
     case File.stat(path) do
       {:ok, %File.Stat{type: :regular, mode: mode}} -> Bitwise.band(mode, 0o111) != 0
       {:ok, %File.Stat{type: :symlink}} -> File.regular?(path)
-      _other -> false
+      _ -> false
     end
   end
 

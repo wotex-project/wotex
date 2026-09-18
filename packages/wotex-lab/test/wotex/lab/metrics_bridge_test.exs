@@ -372,7 +372,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
       GreptimeBridge.start_link(
         scrape: scrape,
         sink: sink,
-        name: :"bridge-#{System.unique_integer([:positive])}"
+        name: :wotex_lab_test_named_bridge
       )
 
     :ok = GenServer.stop(named)

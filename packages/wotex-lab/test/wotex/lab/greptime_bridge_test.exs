@@ -3,8 +3,6 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
 
   use ExUnit.Case, async: false
 
-  @moduletag :greptime
-
   alias Wotex.Lab
   alias Wotex.Lab.Examples.Thermal
 
@@ -19,6 +17,8 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
   }
 
   alias Wotex.Lab.Test.Greptime
+
+  @moduletag :greptime
 
   @labels [
     {"backend_class", "binary"},

@@ -3,9 +3,7 @@ defmodule Wotex.Lab.CookbookCatalogueTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab.Cookbook
-  alias Wotex.Lab.Documentation
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Cookbook, Documentation, Error}
 
   # The notebook catalogue and Livebook source parsing need no cohort, broker
   # or notebook execution; those runs stay in `Wotex.Lab.CookbookTest` behind

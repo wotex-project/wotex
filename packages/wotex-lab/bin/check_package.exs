@@ -18,6 +18,7 @@ defmodule Wotex.Lab.Check.Package do
   # docs or tasks tree and no development tooling may enter it.
   @excluded ~r{\A(?:docs|tasks|deps|_build|test|bin|\.git|\.claude)(?:/|\z)}
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)

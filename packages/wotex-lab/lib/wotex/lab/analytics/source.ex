@@ -51,12 +51,14 @@ defmodule Wotex.Lab.Analytics.Source do
   def new(_), do: error(:invalid_analysis_source)
 
   defp validate_series(series) do
-    Enum.reduce_while(series, MapSet.new(), fn series, names ->
-      if valid_series?(series) and not MapSet.member?(names, series.name),
-        do: {:cont, MapSet.put(names, series.name)},
-        else: {:halt, error(:invalid_analysis_source)}
-    end)
-    |> case do
+    names_or_error =
+      Enum.reduce_while(series, MapSet.new(), fn series, names ->
+        if valid_series?(series) and not MapSet.member?(names, series.name),
+          do: {:cont, MapSet.put(names, series.name)},
+          else: {:halt, error(:invalid_analysis_source)}
+      end)
+
+    case names_or_error do
       %MapSet{} -> :ok
       error -> error
     end

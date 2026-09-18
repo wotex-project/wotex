@@ -142,7 +142,7 @@ defmodule Wotex.Lab.Otlp.Exporter do
   @impl GenServer
   def handle_call(:flush, from, state) do
     state = %{state | waiting: [from | state.waiting]}
-    {:noreply, state |> export() |> reply_waiting()}
+    {:noreply, reply_waiting(export(state))}
   end
 
   def handle_call(:stats, _, state), do: {:reply, stats_view(state), state}
@@ -174,14 +174,14 @@ defmodule Wotex.Lab.Otlp.Exporter do
   def handle_info({:otlp_result, pid, result}, %{in_flight: %{pid: pid} = flight} = state) do
     Process.demonitor(flight.monitor, [:flush])
     Process.cancel_timer(flight.timer)
-    {:noreply, state |> settle(flight, result) |> export() |> reply_waiting()}
+    {:noreply, reply_waiting(export(settle(state, flight, result)))}
   end
 
   def handle_info({:otlp_deadline, monitor}, %{in_flight: %{monitor: monitor} = flight} = state) do
     Process.demonitor(monitor, [:flush])
     Process.exit(flight.pid, :kill)
     error = Error.new(:export_deadline, :export, "OTLP export exceeded its deadline")
-    {:noreply, state |> settle(flight, {:error, error}) |> export() |> reply_waiting()}
+    {:noreply, reply_waiting(export(settle(state, flight, {:error, error})))}
   end
 
   def handle_info(
@@ -190,7 +190,7 @@ defmodule Wotex.Lab.Otlp.Exporter do
       ) do
     Process.cancel_timer(flight.timer)
     error = Error.new(:export_crashed, :export, "OTLP export process exited")
-    {:noreply, state |> settle(flight, {:error, error}) |> export() |> reply_waiting()}
+    {:noreply, reply_waiting(export(settle(state, flight, {:error, error})))}
   end
 
   def handle_info(_, state), do: {:noreply, state}
@@ -250,7 +250,9 @@ defmodule Wotex.Lab.Otlp.Exporter do
         %{state | in_flight: flight}
 
       {:error, error} ->
-        state |> update_count(signal, :failed, count) |> Map.put(:last_error, error.code)
+        state
+        |> update_count(signal, :failed, count)
+        |> Map.put(:last_error, error.code)
     end
   end
 
@@ -290,7 +292,9 @@ defmodule Wotex.Lab.Otlp.Exporter do
         |> Map.put(:last_error, :rejected_status)
 
       {:error, %Error{code: code}} ->
-        state |> update_count(flight.signal, :failed, flight.count) |> Map.put(:last_error, code)
+        state
+        |> update_count(flight.signal, :failed, flight.count)
+        |> Map.put(:last_error, code)
 
       _ ->
         state

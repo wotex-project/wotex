@@ -77,7 +77,7 @@ defmodule Wotex.Lab.Supervisor do
   def stop_child(_, _, _),
     do: {:error, Error.new(:unknown_role, :composition, "role must be things or sessions")}
 
-  @impl true
+  @impl Supervisor
   def init(opts) do
     children =
       for role <- [:things, :sessions] do

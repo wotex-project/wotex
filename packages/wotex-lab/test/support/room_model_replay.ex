@@ -1,9 +1,13 @@
 defmodule Wotex.Lab.Test.RoomModelReplay do
   @moduledoc false
 
+  alias Wotex.Lab.Experiments.RoomModel
+  alias Wotex.Lab.Simulators.Thermal
+
   # Restore only artifacts produced by these tests, never caller-supplied bytes.
   # Rebuild the declared six-column input via public Nx/Axon APIs, independently
   # of RoomModel's private training and prediction helpers.
+  @spec predict(RoomModel.result(), [Thermal.sample()]) :: float()
   def predict(result, [first, second]) do
     Nx.with_default_backend(Nx.BinaryBackend, fn ->
       %Axon.ModelState{} = state = Nx.deserialize(result.parameters, [:safe])

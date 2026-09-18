@@ -91,7 +91,7 @@ defmodule Wotex.Lab.MCP.Jobs do
 
   @impl GenServer
   def handle_call(:workloads, _, state),
-    do: {:reply, state.workloads |> Map.keys() |> Enum.sort(), state}
+    do: {:reply, Enum.sort(Map.keys(state.workloads)), state}
 
   def handle_call({:start, session, workload, samples}, _, state) do
     with :ok <- session_key(session),
@@ -129,9 +129,8 @@ defmodule Wotex.Lab.MCP.Jobs do
   end
 
   def handle_call({:close, session}, _, state) do
-    with :ok <- session_key(session) do
-      {:reply, :ok, drop_session(state, session)}
-    else
+    case session_key(session) do
+      :ok -> {:reply, :ok, drop_session(state, session)}
       {:error, _} = error -> {:reply, error, state}
     end
   end
@@ -203,7 +202,7 @@ defmodule Wotex.Lab.MCP.Jobs do
     entry = %{
       entry
       | jobs: Map.put(entry.jobs, job, record),
-        order: entry.order ++ [job],
+        order: [job | entry.order],
         admitted: entry.admitted + 1
     }
 
@@ -217,29 +216,34 @@ defmodule Wotex.Lab.MCP.Jobs do
   end
 
   defp finish(state, session, job, status, fields) do
-    with %{jobs: %{^job => %{status: "running", worker: worker} = record}} = entry <-
-           Map.get(state.sessions, session) do
-      {_, _, monitor, timer} = Map.fetch!(state.workers, worker)
-      Process.demonitor(monitor, [:flush])
-      Process.cancel_timer(timer)
-      Process.exit(worker, :kill)
-      flush_result(worker)
-      record = %{record | status: status, fields: fields, worker: nil}
-      entry = retain(%{entry | jobs: Map.put(entry.jobs, job, record)}, state.max_retained)
+    case Map.get(state.sessions, session) do
+      %{jobs: %{^job => %{status: "running", worker: worker} = record}} = entry ->
+        {_, _, monitor, timer} = Map.fetch!(state.workers, worker)
+        Process.demonitor(monitor, [:flush])
+        Process.cancel_timer(timer)
+        Process.exit(worker, :kill)
+        flush_result(worker)
+        record = %{record | status: status, fields: fields, worker: nil}
+        entry = retain(%{entry | jobs: Map.put(entry.jobs, job, record)}, state.max_retained)
 
-      %{
+        %{
+          state
+          | sessions: Map.put(state.sessions, session, entry),
+            workers: Map.delete(state.workers, worker)
+        }
+
+      _ ->
         state
-        | sessions: Map.put(state.sessions, session, entry),
-          workers: Map.delete(state.workers, worker)
-      }
-    else
-      _ -> state
     end
   end
 
+  # `order` lists job identifiers newest first, so the terminal jobs beyond the
+  # first `limit` are the oldest ones.
   defp retain(entry, limit) do
-    terminal = Enum.filter(entry.order, &(entry.jobs[&1].status != "running"))
-    evicted = Enum.take(terminal, max(length(terminal) - limit, 0))
+    evicted =
+      entry.order
+      |> Enum.filter(&(entry.jobs[&1].status != "running"))
+      |> Enum.drop(limit)
 
     %{
       entry

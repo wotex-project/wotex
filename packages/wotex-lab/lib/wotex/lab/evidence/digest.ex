@@ -30,19 +30,21 @@ defmodule Wotex.Lab.Evidence.Digest do
       |> Enum.uniq()
       |> Enum.sort()
 
-    Enum.reduce_while(files, {:ok, :crypto.hash_init(:sha256)}, fn file, {:ok, acc} ->
-      case File.read(file) do
-        {:ok, content} ->
-          relative = Path.relative_to(file, root)
-          line = relative <> <<0>> <> bytes(content) <> "\n"
-          {:cont, {:ok, :crypto.hash_update(acc, line)}}
+    hashed =
+      Enum.reduce_while(files, {:ok, :crypto.hash_init(:sha256)}, fn file, {:ok, acc} ->
+        case File.read(file) do
+          {:ok, content} ->
+            relative = Path.relative_to(file, root)
+            line = relative <> <<0>> <> bytes(content) <> "\n"
+            {:cont, {:ok, :crypto.hash_update(acc, line)}}
 
-        {:error, reason} ->
-          {:halt, {:error, reason}}
-      end
-    end)
-    |> case do
-      {:ok, acc} -> {:ok, "sha256:" <> (acc |> :crypto.hash_final() |> Base.encode16(case: :lower))}
+          {:error, reason} ->
+            {:halt, {:error, reason}}
+        end
+      end)
+
+    case hashed do
+      {:ok, acc} -> {:ok, "sha256:" <> Base.encode16(:crypto.hash_final(acc), case: :lower)}
       {:error, reason} -> {:error, reason}
     end
   end

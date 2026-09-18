@@ -81,7 +81,7 @@ defmodule Wotex.Lab.Metrics.RemoteWrite do
          raw_bytes: byte_size(raw),
          bytes: byte_size(body),
          series: length(series),
-         samples: series |> Enum.map(&length(&1.samples)) |> Enum.sum(),
+         samples: Enum.sum(Enum.map(series, &length(&1.samples))),
          headers: headers()
        }}
     end
@@ -117,18 +117,20 @@ defmodule Wotex.Lab.Metrics.RemoteWrite do
   defp label?(_), do: false
 
   defp timeseries(snapshots, extra) do
-    snapshots
-    |> Enum.sort_by(& &1.wall_time_ms)
-    |> Enum.flat_map(fn snapshot ->
-      Enum.flat_map(snapshot.series, &expand(&1, snapshot.wall_time_ms))
-    end)
-    |> Enum.reduce_while({:ok, %{}}, fn {labels, sample}, {:ok, acc} ->
-      case merge(labels, extra) do
-        {:ok, merged} -> {:cont, {:ok, Map.update(acc, merged, [sample], &[sample | &1])}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
+    grouped =
+      snapshots
+      |> Enum.sort_by(& &1.wall_time_ms)
+      |> Enum.flat_map(fn snapshot ->
+        Enum.flat_map(snapshot.series, &expand(&1, snapshot.wall_time_ms))
+      end)
+      |> Enum.reduce_while({:ok, %{}}, fn {labels, sample}, {:ok, acc} ->
+        case merge(labels, extra) do
+          {:ok, merged} -> {:cont, {:ok, Map.update(acc, merged, [sample], &[sample | &1])}}
+          error -> {:halt, error}
+        end
+      end)
+
+    case grouped do
       {:ok, grouped} -> ordered(grouped)
       error -> error
     end
@@ -165,19 +167,21 @@ defmodule Wotex.Lab.Metrics.RemoteWrite do
   end
 
   defp ordered(grouped) do
-    grouped
-    |> Enum.sort()
-    |> Enum.reduce_while({:ok, []}, fn {labels, samples}, {:ok, acc} ->
-      samples = Enum.sort_by(samples, &elem(&1, 0))
-      timestamps = Enum.map(samples, &elem(&1, 0))
+    series =
+      grouped
+      |> Enum.sort()
+      |> Enum.reduce_while({:ok, []}, fn {labels, samples}, {:ok, acc} ->
+        samples = Enum.sort_by(samples, &elem(&1, 0))
+        timestamps = Enum.map(samples, &elem(&1, 0))
 
-      if timestamps == Enum.uniq(timestamps),
-        do: {:cont, {:ok, [%{labels: labels, samples: samples} | acc]}},
-        else:
-          {:halt,
-           {:error, Error.new(:unordered_samples, :remote_write, "a series repeats a timestamp")}}
-    end)
-    |> case do
+        if timestamps == Enum.uniq(timestamps),
+          do: {:cont, {:ok, [%{labels: labels, samples: samples} | acc]}},
+          else:
+            {:halt,
+             {:error, Error.new(:unordered_samples, :remote_write, "a series repeats a timestamp")}}
+      end)
+
+    case series do
       {:ok, acc} -> {:ok, Enum.reverse(acc)}
       error -> error
     end

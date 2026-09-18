@@ -29,6 +29,7 @@ defmodule Wotex.Lab.Check.NervesSource do
     "WOTEX_PATH_DEPS=1 " <> "MIX_ENV=prod"
   ]
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("../hosts/nerves", __DIR__)
     actual = source_files(root)

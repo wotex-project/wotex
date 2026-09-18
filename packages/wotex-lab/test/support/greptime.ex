@@ -13,6 +13,8 @@ defmodule Wotex.Lab.Test.Greptime do
   # `otlp_rows/3` and `table_ttl/3` are fixed reads of the default OTLP trace
   # and log tables and of a table's TTL option.
 
+  alias Wotex.Lab.Test.ChildEnvironment
+
   @image "greptime/greptimedb:v1.1.4"
   @identifier ~r/\A[a-zA-Z_][a-zA-Z0-9_]*\z/
   @value ~r/\A[a-zA-Z0-9_.:+-]*\z/
@@ -43,7 +45,10 @@ defmodule Wotex.Lab.Test.Greptime do
   @spec halt(String.t()) :: :ok
   def halt(container) do
     _ =
-      System.cmd("docker", ["rm", "--force", "--volumes", container], stderr_to_stdout: true)
+      System.cmd("docker", ["rm", "--force", "--volumes", container],
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
 
     :ok
   end
@@ -196,20 +201,33 @@ defmodule Wotex.Lab.Test.Greptime do
           @image
         ] ++
           ["standalone", "start", "--http-addr", "0.0.0.0:4000"],
+        env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
 
-    output |> String.trim() |> String.split("\n") |> List.last()
+    output
+    |> String.trim()
+    |> String.split("\n")
+    |> List.last()
   end
 
   defp mapped_port(container, 0), do: raise("GreptimeDB #{container} published no mapped port")
 
   defp mapped_port(container, attempts) do
-    case System.cmd("docker", ["port", container, "4000"], stderr_to_stdout: true) do
+    case System.cmd("docker", ["port", container, "4000"],
+           env: ChildEnvironment.scrubbed(),
+           stderr_to_stdout: true
+         ) do
       {output, 0} ->
         case String.split(String.trim(output), "\n", trim: true) do
-          [] -> retry_port(container, attempts)
-          [mapping | _] -> mapping |> String.split(":") |> List.last() |> String.to_integer()
+          [] ->
+            retry_port(container, attempts)
+
+          [mapping | _] ->
+            mapping
+            |> String.split(":")
+            |> List.last()
+            |> String.to_integer()
         end
 
       {_, _} ->

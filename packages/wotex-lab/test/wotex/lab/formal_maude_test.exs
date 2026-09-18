@@ -11,6 +11,7 @@ defmodule Wotex.Lab.FormalMaudeTest do
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Formal.{Abstraction, Profile, Replay, Result, Serializer}
   alias Wotex.Lab.SmartRoom.Policy
+  alias Wotex.Lab.Test.ChildEnvironment
 
   @moduletag :maude
   @moduletag timeout: 120_000
@@ -158,8 +159,15 @@ defmodule Wotex.Lab.FormalMaudeTest do
 
   defp running(binary) do
     # Anchored so the shell that carries the path in its own command line is not counted.
-    {ps, _} = System.cmd("pgrep", ["-f", "^" <> Regex.escape(binary)], stderr_to_stdout: true)
-    ps |> String.split("\n", trim: true) |> length()
+    {ps, _} =
+      System.cmd("pgrep", ["-f", "^" <> Regex.escape(binary)],
+        env: ChildEnvironment.cleared(),
+        stderr_to_stdout: true
+      )
+
+    ps
+    |> String.split("\n", trim: true)
+    |> length()
   end
 
   test "two profiles with their own pools verify concurrently and in isolation", %{

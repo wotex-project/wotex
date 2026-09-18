@@ -89,7 +89,7 @@ defmodule Wotex.Lab.Evidence.Record do
 
   @doc "Builds a validated record from keyword or map fields."
   @spec new(keyword() | map()) :: {:ok, t()} | {:error, Error.t()}
-  def new(fields) when is_list(fields), do: fields |> Map.new() |> new()
+  def new(fields) when is_list(fields), do: new(Map.new(fields))
 
   def new(fields) when is_map(fields) do
     with :ok <- required(fields),
@@ -177,12 +177,11 @@ defmodule Wotex.Lab.Evidence.Record do
       "inputs" => record.inputs,
       "assertions" =>
         Enum.map(record.assertions, &%{"id" => &1.id, "status" => Atom.to_string(&1.status)}),
-      "outcomes" => record.outcomes |> string_keys() |> Map.new(fn {k, v} -> {k, plain(v)} end),
+      "outcomes" => plain_values(record.outcomes),
       "durations" => string_keys(record.durations),
       "cleanup" => %{
         "status" => Atom.to_string(record.cleanup.status),
-        "details" =>
-          record.cleanup.details |> string_keys() |> Map.new(fn {k, v} -> {k, plain(v)} end)
+        "details" => plain_values(record.cleanup.details)
       }
     }
   end
@@ -476,6 +475,8 @@ defmodule Wotex.Lab.Evidence.Record do
     do: Atom.to_string(value)
 
   defp plain(value), do: value
+
+  defp plain_values(map), do: Map.new(string_keys(map), fn {key, value} -> {key, plain(value)} end)
 
   defp string_keys(map) when is_map(map),
     do: Map.new(map, fn {key, value} -> {to_string(key), value} end)

@@ -3,6 +3,7 @@ defmodule Wotex.Lab.Check.NativeContainment do
 
   @prefix "wotex-lab-native-check-"
 
+  @spec run() :: true
   def run do
     cargo = System.find_executable("cargo") || abort("cargo is required for native containment")
     manifest = Path.expand("../priv/conformance/native/Cargo.toml", __DIR__)
@@ -52,7 +53,7 @@ defmodule Wotex.Lab.Check.NativeContainment do
       File.rm_rf!(path)
       :ok
     else
-      _unsafe -> raise "refusing to remove an unowned native containment target"
+      _ -> raise "refusing to remove an unowned native containment target"
     end
   end
 

@@ -157,18 +157,21 @@ defmodule Wotex.Lab.Graph do
   @doc "Writes every representation under `directory` using its endpoint path; returns the files."
   @spec write(map(), Path.t()) :: {:ok, [Path.t()]} | {:error, Error.t()}
   def write(graph, directory) when is_binary(directory) do
-    Enum.reduce_while(@representations, {:ok, []}, fn {key, path}, {:ok, written} ->
-      file = Path.join(directory, String.trim_leading(path, "/"))
+    written =
+      Enum.reduce_while(@representations, {:ok, []}, fn {key, path}, {:ok, written} ->
+        file = Path.join(directory, String.trim_leading(path, "/"))
 
-      with {:ok, content} <- render(graph, key),
-           :ok <- File.mkdir_p(Path.dirname(file)),
-           :ok <- File.write(file, content) do
-        {:cont, {:ok, written ++ [file]}}
-      else
-        {:error, %Error{} = error} -> {:halt, {:error, error}}
-        {:error, reason} -> {:halt, {:error, Error.new(:write_failed, :render, inspect(reason))}}
-      end
-    end)
+        with {:ok, content} <- render(graph, key),
+             :ok <- File.mkdir_p(Path.dirname(file)),
+             :ok <- File.write(file, content) do
+          {:cont, {:ok, [file | written]}}
+        else
+          {:error, %Error{} = error} -> {:halt, {:error, error}}
+          {:error, reason} -> {:halt, {:error, Error.new(:write_failed, :render, inspect(reason))}}
+        end
+      end)
+
+    with {:ok, files} <- written, do: {:ok, Enum.reverse(files)}
   end
 
   @doc "Answers an ownership question from the graph with resolved package, spec, seam, source and fixture ids."
@@ -221,7 +224,11 @@ defmodule Wotex.Lab.Graph do
     cookbooks = Enum.map(inputs.cookbooks, &cookbook(&1, inputs))
     evidence_overlays = evidence_overlays(specifications, cookbooks)
     questions = Enum.map(Descriptors.questions(), &question/1)
-    lab_status = specifications |> Enum.find(&(&1["id"] == "WLB.07")) |> status_axes()
+
+    lab_status =
+      specifications
+      |> Enum.find(&(&1["id"] == "WLB.07"))
+      |> status_axes()
 
     nodes =
       Enum.map([lab | upstream], &node_of("package", &1)) ++
@@ -535,12 +542,14 @@ defmodule Wotex.Lab.Graph do
   defp edges(specifications, seams, adapters, scenarios, cookbooks, evidence_overlays, fixtures) do
     spec_edges =
       Enum.flat_map(specifications, fn spec ->
-        Enum.map(spec["requires"] || [], &edge("spec:" <> spec["id"], "spec:" <> &1, "requires")) ++
+        Enum.concat([
+          Enum.map(spec["requires"] || [], &edge("spec:" <> spec["id"], "spec:" <> &1, "requires")),
           Enum.map(
             spec["completion_items"] || [],
             &edge("spec:" <> spec["id"], "completion:" <> &1, "delivers")
-          ) ++
+          ),
           [edge("spec:" <> spec["id"], "package:" <> spec["package"], "owned_by")]
+        ])
       end)
 
     seam_edges =
@@ -577,14 +586,15 @@ defmodule Wotex.Lab.Graph do
 
     cookbook_edges =
       Enum.flat_map(cookbooks, fn cookbook ->
-        Enum.map(
-          cookbook["specs"],
-          &edge("cookbook:" <> cookbook["id"], "spec:" <> &1, "evidences")
-        ) ++
+        Enum.concat([
+          Enum.map(
+            cookbook["specs"],
+            &edge("cookbook:" <> cookbook["id"], "spec:" <> &1, "evidences")
+          ),
           Enum.map(
             cookbook["completion_ids"],
             &edge("cookbook:" <> cookbook["id"], "completion:" <> &1, "evidences")
-          ) ++
+          ),
           Enum.map(
             cookbook["upstream"],
             &edge(
@@ -592,8 +602,9 @@ defmodule Wotex.Lab.Graph do
               "completion:" <> upstream_completion(&1),
               "supplies"
             )
-          ) ++
+          ),
           [edge("cookbook:" <> cookbook["id"], "scenario:" <> cookbook["id"], "runs")]
+        ])
       end)
 
     evidence_overlay_edges =
@@ -616,12 +627,17 @@ defmodule Wotex.Lab.Graph do
 
     fixture_edges =
       Enum.flat_map(fixtures, fn fixture ->
-        Enum.map(fixture["seams"], &edge("fixture:" <> fixture["id"], "seam:" <> &1, "exercises")) ++
+        Enum.concat([
+          Enum.map(
+            fixture["seams"],
+            &edge("fixture:" <> fixture["id"], "seam:" <> &1, "exercises")
+          ),
           Enum.map(
             fixture["specs"],
             &edge("fixture:" <> fixture["id"], "spec:" <> spec_ref(&1), "evidences")
-          ) ++
+          ),
           [edge("fixture:" <> fixture["id"], "scenario:" <> fixture["scenario"], "used_by")]
+        ])
       end)
 
     spec_edges ++
@@ -707,20 +723,24 @@ defmodule Wotex.Lab.Graph do
         Enum.map(graph["cookbooks"], & &1["path"]) ++
         Enum.flat_map(graph["fixtures"], &[&1["input_path"], &1["expected_output_path"]])
 
-    referenced
-    |> Enum.filter(&(&1 not in Enum.map(graph["documents"], fn document -> document["path"] end)))
-    |> Enum.find(fn path -> not local_file?(root, path) end)
-    |> case do
+    missing =
+      referenced
+      |> Enum.filter(&(&1 not in Enum.map(graph["documents"], fn document -> document["path"] end)))
+      |> Enum.find(fn path -> not local_file?(root, path) end)
+
+    case missing do
       nil -> :ok
       path -> {:error, reject(:unresolved_path, "graph references a missing file", %{path: path})}
     end
   end
 
   defp callbacks(graph) do
-    graph["seams"]
-    |> Enum.filter(&(&1["status"] == "implemented"))
-    |> Enum.find_value(&unresolved_callback/1)
-    |> case do
+    unresolved =
+      graph["seams"]
+      |> Enum.filter(&(&1["status"] == "implemented"))
+      |> Enum.find_value(&unresolved_callback/1)
+
+    case unresolved do
       nil ->
         :ok
 
@@ -736,9 +756,7 @@ defmodule Wotex.Lab.Graph do
   defp ownership(graph) do
     seams = Map.new(graph["seams"], &{&1["id"], &1["ownership"]})
 
-    graph["adapters"]
-    |> Enum.find(fn adapter -> Map.get(seams, adapter["seam"]) != adapter["ownership"] end)
-    |> case do
+    case Enum.find(graph["adapters"], &(Map.get(seams, &1["seam"]) != &1["ownership"])) do
       nil ->
         :ok
 
@@ -769,12 +787,14 @@ defmodule Wotex.Lab.Graph do
 
     graph = Map.merge(scenario_graph, step_graph)
 
-    graph
-    |> Map.keys()
-    |> Enum.reduce_while({:ok, MapSet.new()}, fn id, {:ok, visited} ->
-      continue(visit(id, [], graph, visited))
-    end)
-    |> case do
+    visited =
+      graph
+      |> Map.keys()
+      |> Enum.reduce_while({:ok, MapSet.new()}, fn id, {:ok, visited} ->
+        continue(visit(id, [], graph, visited))
+      end)
+
+    case visited do
       {:ok, _} ->
         :ok
 
@@ -792,12 +812,14 @@ defmodule Wotex.Lab.Graph do
   end
 
   defp visit_children(id, stack, graph, visited) do
-    graph
-    |> Map.get(id, [])
-    |> Enum.reduce_while({:ok, visited}, fn next, {:ok, acc} ->
-      continue(visit(next, [id | stack], graph, acc))
-    end)
-    |> case do
+    children =
+      graph
+      |> Map.get(id, [])
+      |> Enum.reduce_while({:ok, visited}, fn next, {:ok, acc} ->
+        continue(visit(next, [id | stack], graph, acc))
+      end)
+
+    case children do
       {:ok, acc} -> {:ok, MapSet.put(acc, id)}
       {:cycle, path} -> {:cycle, path}
     end
@@ -849,16 +871,19 @@ defmodule Wotex.Lab.Graph do
   end
 
   defp fixtures(root) do
-    root
-    |> Path.join("priv/fixtures/*/manifest.json")
-    |> Path.wildcard()
-    |> Enum.sort()
-    |> Enum.reduce_while({:ok, []}, fn path, {:ok, acc} ->
-      case fixture(root, path) do
-        {:ok, fixture} -> {:cont, {:ok, acc ++ [fixture]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
+    loaded =
+      root
+      |> Path.join("priv/fixtures/*/manifest.json")
+      |> Path.wildcard()
+      |> Enum.sort()
+      |> Enum.reduce_while({:ok, []}, fn path, {:ok, acc} ->
+        case fixture(root, path) do
+          {:ok, fixture} -> {:cont, {:ok, [fixture | acc]}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    with {:ok, reversed} <- loaded, do: {:ok, Enum.reverse(reversed)}
   end
 
   defp fixture(root, path) do
@@ -974,7 +999,9 @@ defmodule Wotex.Lab.Graph do
         _ -> type <> ":" <> map["id"]
       end
 
-    map |> Map.put("id", id) |> Map.put("type", type)
+    map
+    |> Map.put("id", id)
+    |> Map.put("type", type)
   end
 
   defp node(graph, id) do
@@ -1040,7 +1067,9 @@ defmodule Wotex.Lab.Graph do
 
   defp read_json(root, path) do
     with {:ok, content} <- read_file(root, path) do
-      content |> JSON.decode() |> wrap(path)
+      content
+      |> JSON.decode()
+      |> wrap(path)
     end
   end
 

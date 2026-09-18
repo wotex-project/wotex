@@ -6,6 +6,7 @@ defmodule Wotex.Lab.Check.ReleaseReview do
              telemetry_metrics prom_ex beamlens phoenix phoenix_html phoenix_live_view
              phoenix_pubsub bandit jason req)
 
+  @spec bom!(Path.t(), [map()], [map()]) :: map()
   def bom!(consumer, resolved, admitted) do
     lock = Wotex.Lab.Check.ArchiveRepository.read_lock!(Path.join(consumer, "mix.lock"))
     active = MapSet.new(resolved, & &1.name)
@@ -77,6 +78,7 @@ defmodule Wotex.Lab.Check.ReleaseReview do
     bom
   end
 
+  @spec encode!(map()) :: String.t()
   def encode!(bom), do: JSON.encode!(bom) <> "\n"
 
   defp validate!(bom) do
@@ -109,22 +111,26 @@ defmodule Wotex.Lab.Check.ReleaseReview do
     entry = Enum.find_value(lock, fn {app, value} -> if Atom.to_string(app) == name, do: value end)
 
     case entry do
-      {:hex, _app, _version, _checksum, _managers, dependencies, "hexpm", _outer} ->
+      {:hex, _, _, _, _, dependencies, "hexpm", _} ->
         dependencies
-        |> Enum.map(fn {app, _requirement, _options} -> Atom.to_string(app) end)
+        |> Enum.map(fn {app, _, _} -> Atom.to_string(app) end)
         |> Enum.filter(&MapSet.member?(active, &1))
         |> Enum.map(&Map.fetch!(refs, &1))
         |> Enum.uniq()
         |> Enum.sort()
 
-      _other ->
+      _ ->
         []
     end
   end
 
-  defp direct_refs(refs), do: @direct |> Enum.map(&Map.fetch!(refs, &1)) |> Enum.sort()
+  defp direct_refs(refs) do
+    @direct
+    |> Enum.map(&Map.fetch!(refs, &1))
+    |> Enum.sort()
+  end
 
-  defp hashes(%{origin: :built}, _digest), do: []
+  defp hashes(%{origin: :built}, _), do: []
 
   defp hashes(%{origin: :hex_cache}, "sha256:" <> digest),
     do: [%{"alg" => "SHA-256", "content" => digest}]
@@ -156,7 +162,7 @@ defmodule Wotex.Lab.Check.ReleaseReview do
 
       case Enum.find_value(terms, fn
              {"licenses", values} -> values
-             _other -> nil
+             _ -> nil
            end) do
         values when is_list(values) and values != [] ->
           Enum.map(values, fn value ->
@@ -168,7 +174,7 @@ defmodule Wotex.Lab.Check.ReleaseReview do
             license
           end)
 
-        _missing ->
+        _ ->
           abort("archive #{Path.basename(archive)} has no declared license")
       end
     after

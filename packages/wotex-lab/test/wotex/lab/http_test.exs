@@ -8,13 +8,12 @@ defmodule Wotex.Lab.HttpTest do
   alias Wotex.Binding.HTTP.Response, as: HTTPResponse
   alias Wotex.Binding.HTTP.SSE.Event
   alias Wotex.Binding.HTTP.Subscription, as: HTTPSubscription
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.HTTP.ReqClient
   alias Wotex.Lab.Adapters.HTTP.SSE.Parser
   alias Wotex.Lab.Adapters.Runtime.StaticRef
   alias Wotex.Lab.Test.HttpServer
   alias Wotex.Runtime.{ConsumedThing, Context, Error, Result, Subscription}
-  alias Wotex.ThingDescription
 
   @token "room-token-7f3a"
 
@@ -34,6 +33,12 @@ defmodule Wotex.Lab.HttpTest do
   end
 
   @doc false
+  @spec subscription_opened(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          pid()
+        ) :: :ok | {:runtime_subscription_opened, pid()}
   def subscription_opened(_, _, %{request_id: "http-stop"}, receiver),
     do: send(receiver, {:runtime_subscription_opened, self()})
 
@@ -238,8 +243,8 @@ defmodule Wotex.Lab.HttpTest do
 
     assert_receive {:runtime_subscription_opened, ^pid}, 2_000
 
-    {ReqClient, session, _, _} =
-      HTTPSubscription.unwrap(:sys.get_state(pid).handle)
+    %HTTPSubscription{client_module: ReqClient, client_handle: session} =
+      :sys.get_state(pid).handle
 
     assert Process.alive?(session)
     assert :ok = Subscription.stop(pid)

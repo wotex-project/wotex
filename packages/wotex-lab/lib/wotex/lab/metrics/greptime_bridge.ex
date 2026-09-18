@@ -38,10 +38,8 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
 
   use GenServer
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Options, Telemetry}
   alias Wotex.Lab.Metrics.{Exposition, History, RemoteWrite, Snapshot}
-  alias Wotex.Lab.Options
-  alias Wotex.Lab.Telemetry
 
   @options ~w(id scrape sink credential history interval_ms queue_limit deadline_ms max_attempts
     backoff_ms max_backoff_ms labels instance_slot profile restart name)a
@@ -144,20 +142,20 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   def handle_info({:export_result, pid, result}, %{in_flight: %{pid: pid} = flight} = state) do
     Process.demonitor(flight.ref, [:flush])
     Process.cancel_timer(flight.timer)
-    {:noreply, state |> Map.put(:in_flight, nil) |> settle(flight.item, result)}
+    {:noreply, settle(Map.put(state, :in_flight, nil), flight.item, result)}
   end
 
   def handle_info({:export_deadline, ref}, %{in_flight: %{ref: ref} = flight} = state) do
     Process.demonitor(ref, [:flush])
     Process.exit(flight.pid, :kill)
     error = Error.new(:export_deadline, :export, "export exceeded its deadline", class: :timeout)
-    {:noreply, state |> Map.put(:in_flight, nil) |> settle(flight.item, {:error, error})}
+    {:noreply, settle(Map.put(state, :in_flight, nil), flight.item, {:error, error})}
   end
 
   def handle_info({:DOWN, ref, :process, _, _}, %{in_flight: %{ref: ref} = flight} = state) do
     Process.cancel_timer(flight.timer)
     error = Error.new(:export_crashed, :export, "export process exited", class: :unavailable)
-    {:noreply, state |> Map.put(:in_flight, nil) |> settle(flight.item, {:error, error})}
+    {:noreply, settle(Map.put(state, :in_flight, nil), flight.item, {:error, error})}
   end
 
   def handle_info(_, state), do: {:noreply, state}
@@ -218,7 +216,11 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
         {{:ok, %{sequence: sequence, queue_depth: state.depth}}, export(state)}
 
       {:error, error} ->
-        state = state |> count(:rejected) |> Map.put(:last_error, redact(error))
+        state =
+          state
+          |> count(:rejected)
+          |> Map.put(:last_error, redact(error))
+
         {{:error, error}, state}
     end
   end
@@ -278,8 +280,13 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
 
   defp record(state, snapshot) do
     case History.put(state.history, snapshot) do
-      {:ok, _} -> state
-      {:error, error} -> state |> count(:history_failures) |> Map.put(:last_error, redact(error))
+      {:ok, _} ->
+        state
+
+      {:error, error} ->
+        state
+        |> count(:history_failures)
+        |> Map.put(:last_error, redact(error))
     end
   catch
     :exit, _ -> count(state, :history_failures)
@@ -360,7 +367,11 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
     case classify(result) do
       {:ok, bytes} ->
         Telemetry.event(:metrics, :export, %{bytes: bytes}, %{profile: state.config.profile})
-        state |> count(:exported) |> count(:bytes, bytes) |> export()
+
+        state
+        |> count(:exported)
+        |> count(:bytes, bytes)
+        |> export()
 
       {:retry, error, retry_after} ->
         retry(state, item, error, retry_after)
@@ -369,10 +380,16 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
         retry(count(state, :ambiguous), item, error, nil)
 
       {:reject, error} ->
-        state |> count(:rejected_permanent) |> Map.put(:last_error, redact(error)) |> export()
+        state
+        |> count(:rejected_permanent)
+        |> Map.put(:last_error, redact(error))
+        |> export()
 
       {:fail, error} ->
-        state |> count(:failed) |> Map.put(:last_error, redact(error)) |> export()
+        state
+        |> count(:failed)
+        |> Map.put(:last_error, redact(error))
+        |> export()
     end
   end
 
@@ -400,7 +417,7 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
 
     if item.attempts >= state.config.max_attempts do
       Telemetry.event(:metrics, :export, %{dropped: 1}, %{profile: state.config.profile})
-      state |> count(:dropped_exhausted) |> export()
+      export(count(state, :dropped_exhausted))
     else
       delay = backoff(state.config, item.attempts, retry_after)
       timer = Process.send_after(self(), :retry, delay)

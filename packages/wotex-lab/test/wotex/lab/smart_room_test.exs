@@ -3,13 +3,10 @@ defmodule Wotex.Lab.SmartRoomTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Binding.HTTP
-  alias Wotex.Binding.MQTT
+  alias Wotex.Binding.{HTTP, MQTT}
   alias Wotex.Binding.MQTT.{Transport, TransportConfig}
-  alias Wotex.DataSchema
-  alias Wotex.Directory
+  alias Wotex.{DataSchema, Directory, Lab, ThingDescription}
   alias Wotex.Directory.{Context, Service}
-  alias Wotex.Lab
   alias Wotex.Lab.Adapters.Directory.{Authorization, Clock, EtsRepository, Identifier}
   alias Wotex.Lab.Adapters.HTTP.ReqClient
   alias Wotex.Lab.Adapters.MQTT.EmqttClient
@@ -21,7 +18,6 @@ defmodule Wotex.Lab.SmartRoomTest do
   alias Wotex.Lab.Test.{ContinuumFixtures, HttpServer, MqttBroker, MqttServer}
   alias Wotex.Nx.{ActionProposal, Decoder, Observation, OutputSchema}
   alias Wotex.Runtime.{BindingProfile, Result}
-  alias Wotex.ThingDescription
 
   @epoch ~U[2026-09-08 12:00:00Z]
   @token "room-token-7f3a"
@@ -466,7 +462,7 @@ defmodule Wotex.Lab.SmartRoomTest do
   @tag timeout: 60_000
   test "the same room runs against a disposable broker", %{run_opts: opts, meter_id: meter_id} do
     assert {:ok, run} = Scenario.run(Keyword.put(opts, :meter_id, meter_id))
-    assert run.power_observation |> Observation.to_map() |> Map.fetch!(:value) == 2500
+    assert Map.fetch!(Observation.to_map(run.power_observation), :value) == 2500
     assert_in_delta run.effect, 20.5, 0.0001
   end
 

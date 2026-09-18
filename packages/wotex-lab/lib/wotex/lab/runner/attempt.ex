@@ -23,15 +23,15 @@ defmodule Wotex.Lab.Runner.Attempt do
   use GenServer
 
   alias Wotex.Lab
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Scenario}
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Runner.{Definition, Recording}
-  alias Wotex.Lab.Scenario
 
   @phases [:admitted, :starting, :running, :stopping, :terminal]
   @forced_stop_ms 1_000
 
   @doc false
+  @spec child_spec(keyword()) :: Supervisor.child_spec()
   def child_spec(opts) do
     %{
       id: {__MODULE__, Keyword.fetch!(opts, :attempt_id)},
@@ -42,6 +42,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   end
 
   @doc false
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
 
   @doc "The current phase, outcome and counters."
@@ -151,7 +152,7 @@ defmodule Wotex.Lab.Runner.Attempt do
       ) do
     if step_id == worker_step_id do
       Process.demonitor(ref, [:flush])
-      {:noreply, state |> record_step(step_id, result) |> next_step()}
+      {:noreply, next_step(record_step(state, step_id, result))}
     else
       {:noreply, state}
     end
@@ -163,7 +164,7 @@ defmodule Wotex.Lab.Runner.Attempt do
         {:DOWN, ref, :process, _, reason},
         %{phase: :running, worker: {ref, step_id, _}} = state
       ) do
-    {:noreply, state |> record_step(step_id, {:error, crash(reason)}) |> next_step()}
+    {:noreply, next_step(record_step(state, step_id, {:error, crash(reason)}))}
   end
 
   def handle_info({:DOWN, ref, :process, _, _}, %{observer_monitor: ref} = state)
@@ -494,7 +495,7 @@ defmodule Wotex.Lab.Runner.Attempt do
     cleanup_result = cleanup(state)
     {outcome, reason} = settle(state, cleanup_result, outcome, reason)
     state = %{state | outcome: outcome, reason: reason, cleanup: cleanup_result, children: %{}}
-    state = state |> phase(:terminal) |> notify({:terminal, outcome})
+    state = notify(phase(state, :terminal), {:terminal, outcome})
     Enum.each(state.waiters, &send(&1, {:wotex_lab_run_done, self(), status_map(state)}))
     %{state | waiters: []}
   end

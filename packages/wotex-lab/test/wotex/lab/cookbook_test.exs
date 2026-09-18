@@ -3,8 +3,7 @@ defmodule Wotex.Lab.CookbookTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Lab.Cookbook
-  alias Wotex.Lab.Documentation
+  alias Wotex.Lab.{Cookbook, Documentation}
   alias Wotex.Lab.Test.{CookbookRunner, MqttBroker}
 
   @moduletag :integration
@@ -18,12 +17,23 @@ defmodule Wotex.Lab.CookbookTest do
 
   setup_all do
     catalogue = YamlElixir.read_from_file!(Path.join(@docs, "specs/catalogue.yaml"))
-    source = @root |> Path.join(catalogue["source_index"]) |> File.read!() |> JSON.decode!()
+
+    source =
+      @root
+      |> Path.join(catalogue["source_index"])
+      |> File.read!()
+      |> JSON.decode!()
+
     specs = catalogue["specifications"]
+
+    completion_ids =
+      specs
+      |> Enum.flat_map(& &1["completion_items"])
+      |> Enum.uniq()
 
     %{
       spec_ids: Enum.map(specs, & &1["id"]),
-      completion_ids: specs |> Enum.flat_map(& &1["completion_items"]) |> Enum.uniq(),
+      completion_ids: completion_ids,
       upstream_ids: Enum.flat_map(source["packages"], & &1["completion_ids"])
     }
   end

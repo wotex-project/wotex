@@ -437,7 +437,7 @@ defmodule Wotex.Lab.Graph.Descriptors do
       capabilities: Keyword.fetch!(opts, :capabilities),
       requires: Keyword.get(opts, :requires, []),
       adapters: Keyword.fetch!(opts, :adapters),
-      steps: opts |> Keyword.fetch!(:steps) |> chain()
+      steps: chain(Keyword.fetch!(opts, :steps))
     }
   end
 

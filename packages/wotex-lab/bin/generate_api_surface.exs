@@ -7,6 +7,7 @@ defmodule Wotex.Lab.Check.ApiSurface do
 
   @ignored [__info__: 1, module_info: 0, module_info: 1]
 
+  @spec run([String.t()]) :: :ok
   def run(args) do
     root = Path.expand("..", __DIR__)
     output = Path.join(root, "priv/provenance/wotex-lab-api.json")
@@ -24,7 +25,7 @@ defmodule Wotex.Lab.Check.ApiSurface do
         File.write!(output, bytes)
         IO.puts("public API: wrote #{output}")
 
-      _other ->
+      _ ->
         abort("usage: mix run --no-start bin/generate_api_surface.exs --check|--write")
     end
   end
@@ -42,7 +43,10 @@ defmodule Wotex.Lab.Check.ApiSurface do
       "version" => to_string(Application.spec(:wotex_lab, :vsn)),
       "compatibility_status" => "pre-1.0-review-baseline",
       "modules" =>
-        modules |> Enum.reject(&support_module?/1) |> Enum.sort() |> Enum.map(&module_surface/1)
+        modules
+        |> Enum.reject(&support_module?/1)
+        |> Enum.sort()
+        |> Enum.map(&module_surface/1)
     }
   end
 

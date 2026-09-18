@@ -27,12 +27,10 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) and
 
     import Nx.Defn
 
-    alias Wotex.{DataSchema, ThingDescription}
-    alias Wotex.Directory
+    alias Wotex.{DataSchema, Directory, ThingDescription}
     alias Wotex.Lab.Continuum.{Channel, Wire}
-    alias Wotex.Lab.Error
+    alias Wotex.Lab.{Error, Telemetry}
     alias Wotex.Lab.SmartRoom.Policy
-    alias Wotex.Lab.Telemetry
 
     alias Wotex.Nx.{
       ActionProposal,
@@ -181,14 +179,17 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) and
     end
 
     defp exchange(opts, observations) do
-      observations
-      |> Enum.reject(&is_nil/1)
-      |> Enum.reduce_while({:ok, []}, fn observation, {:ok, acc} ->
-        case exchange_one(opts, observation) do
-          {:ok, delivery} -> {:cont, {:ok, acc ++ [delivery]}}
-          {:error, error} -> {:halt, {:error, error}}
-        end
-      end)
+      exchanged =
+        observations
+        |> Enum.reject(&is_nil/1)
+        |> Enum.reduce_while({:ok, []}, fn observation, {:ok, acc} ->
+          case exchange_one(opts, observation) do
+            {:ok, delivery} -> {:cont, {:ok, [delivery | acc]}}
+            {:error, error} -> {:halt, {:error, error}}
+          end
+        end)
+
+      with {:ok, deliveries} <- exchanged, do: {:ok, Enum.reverse(deliveries)}
     end
 
     defp exchange_one(opts, observation) do

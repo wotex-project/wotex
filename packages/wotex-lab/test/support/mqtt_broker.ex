@@ -12,6 +12,8 @@ defmodule Wotex.Lab.Test.MqttBroker do
   # that connects in that window exits with `{:shutdown, :closed}` and takes the
   # test process with it.
 
+  alias Wotex.Lab.Test.ChildEnvironment
+
   @image "eclipse-mosquitto:2"
   @loopback ~c"127.0.0.1"
 
@@ -50,14 +52,22 @@ defmodule Wotex.Lab.Test.MqttBroker do
   @spec halt(String.t()) :: :ok
   def halt(container) do
     _ =
-      System.cmd("docker", ["rm", "--force", "--volumes", container], stderr_to_stdout: true)
+      System.cmd("docker", ["rm", "--force", "--volumes", container],
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
 
     :ok
   end
 
   @spec stop(String.t()) :: :ok
   def stop(container) do
-    _ = System.cmd("docker", ["stop", "--time", "2", container], stderr_to_stdout: true)
+    _ =
+      System.cmd("docker", ["stop", "--time", "2", container],
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
+
     :ok
   end
 
@@ -156,6 +166,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
         "docker",
         ["run", "--rm", "--volume", directory <> ":/work", @image] ++
           ["mosquitto_passwd", "-b"] ++ create ++ ["/work/passwd", user, password],
+        env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
   end
@@ -222,6 +233,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
         "docker",
         ["run", "--detach", "--rm", "--publish", "127.0.0.1::#{listener}"] ++
           ["--volume", directory <> ":/mosquitto/config:ro", @image],
+        env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
 
@@ -233,12 +245,19 @@ defmodule Wotex.Lab.Test.MqttBroker do
 
   defp mapped_port(container, listener, attempts) do
     case System.cmd("docker", ["port", container, Integer.to_string(listener)],
+           env: ChildEnvironment.scrubbed(),
            stderr_to_stdout: true
          ) do
       {output, 0} ->
         case String.split(String.trim(output), "\n", trim: true) do
-          [] -> retry_port(container, listener, attempts)
-          [mapping | _] -> mapping |> String.split(":") |> List.last() |> String.to_integer()
+          [] ->
+            retry_port(container, listener, attempts)
+
+          [mapping | _] ->
+            mapping
+            |> String.split(":")
+            |> List.last()
+            |> String.to_integer()
         end
 
       {_, _} ->

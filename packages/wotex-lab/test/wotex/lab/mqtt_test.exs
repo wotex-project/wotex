@@ -35,6 +35,12 @@ defmodule Wotex.Lab.MqttTest do
   end
 
   @doc false
+  @spec subscription_opened(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          pid()
+        ) :: :ok | {:runtime_subscription_opened, pid()}
   def subscription_opened(_, _, %{request_id: "mqtt-scripted"}, receiver),
     do: send(receiver, {:runtime_subscription_opened, self()})
 

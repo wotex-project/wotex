@@ -3,9 +3,8 @@ defmodule Wotex.Lab.AnalyticsTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab.Analytics
+  alias Wotex.Lab.{Analytics, Error}
   alias Wotex.Lab.Analytics.{Query, Source}
-  alias Wotex.Lab.Error
 
   test "native summaries distinguish observed zero, missing and each nonfinite state" do
     backend = Nx.default_backend()
@@ -95,7 +94,14 @@ defmodule Wotex.Lab.AnalyticsTest do
   test "source identity binds metadata, order, values and missing state without map order" do
     source = series([{0, nil}, {1, 2}])
     assert {:ok, original} = Source.new([source])
-    assert {:ok, ^original} = Source.new([source |> Map.to_list() |> Enum.reverse() |> Map.new()])
+
+    reordered =
+      source
+      |> Map.to_list()
+      |> Enum.reverse()
+      |> Map.new()
+
+    assert {:ok, ^original} = Source.new([reordered])
 
     for changed <- [
           Map.put(source, :unit, "K"),

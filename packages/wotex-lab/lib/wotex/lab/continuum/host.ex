@@ -119,7 +119,11 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
          observations: state.observations,
          dispatches: state.dispatches,
          results: Enum.reverse(state.results),
-         manifests: state.manifests |> Map.keys() |> Enum.map(fn {_, id} -> id end) |> Enum.sort(),
+         manifests:
+           state.manifests
+           |> Map.keys()
+           |> Enum.map(fn {_, id} -> id end)
+           |> Enum.sort(),
          manifest_sources:
            state.manifests
            |> Map.keys()

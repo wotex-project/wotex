@@ -153,7 +153,10 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     defp dispatch(%{data: []} = state), do: {:ok, nil, reset(state)}
 
     defp dispatch(state) do
-      data = state.data |> Enum.reverse() |> Enum.join("\n")
+      data =
+        state.data
+        |> Enum.reverse()
+        |> Enum.join("\n")
 
       if String.valid?(data) do
         case Event.new(data, event: blank_to_nil(state.event), id: state.id, retry: state.retry) do

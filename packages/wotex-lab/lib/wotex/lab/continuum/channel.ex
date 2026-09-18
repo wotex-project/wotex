@@ -26,8 +26,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     use GenServer
 
     alias Wotex.Lab.Continuum.FaultSchedule
-    alias Wotex.Lab.Error
-    alias Wotex.Lab.Telemetry
+    alias Wotex.Lab.{Error, Telemetry}
     alias WotexContinuum.{Codec, Delivery}
 
     @doc false
@@ -172,7 +171,11 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
             order: [delivery_id | state.order]
         }
 
-        state = state |> transmit(delivery_id) |> release_holds(sequence)
+        state =
+          state
+          |> transmit(delivery_id)
+          |> release_holds(sequence)
+
         {:reply, {:ok, delivery(state.items[delivery_id])}, state}
       else
         {:error, error} ->
@@ -190,7 +193,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     end
 
     def handle_call(:deliveries, _, state) do
-      {:reply, state.order |> Enum.reverse() |> Enum.map(&delivery(state.items[&1])), state}
+      {:reply, Enum.map(Enum.reverse(state.order), &delivery(state.items[&1])), state}
     end
 
     def handle_call(:disconnect, _, state), do: {:reply, :ok, %{state | connected?: false}}

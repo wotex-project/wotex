@@ -3,10 +3,10 @@ defmodule Wotex.Lab.EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
   alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Test.SourceTree
+
+  @moduletag :integration
 
   @record_keys ~w(deadline_ms max_inflight max_payload_bytes max_response_bytes
                   maximum_packet_size receive_maximum run_ms broker_enabled test_count)a

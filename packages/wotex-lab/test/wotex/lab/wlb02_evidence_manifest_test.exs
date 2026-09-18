@@ -3,11 +3,11 @@ defmodule Wotex.Lab.WLB02EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :integration
-
   alias Wotex.Lab.Evidence.{Digest, Record}
-  alias Wotex.Lab.Test.SourceTree
   alias Wotex.Lab.Runner.Budgets
+  alias Wotex.Lab.Test.SourceTree
+
+  @moduletag :integration
 
   @record_keys ~w(children_per_role cleanup_ms ingress_bytes max_steps queued_deliveries
                   reconnect_attempts wall_ms admitted_scenarios children frontends run_ms
@@ -62,7 +62,7 @@ defmodule Wotex.Lab.WLB02EvidenceManifestTest do
     root = Path.expand("../../..", __DIR__)
     assert Enum.all?(@record_keys, &is_atom/1)
     path = Path.join(root, "priv/provenance/WLB.02-evidence.json")
-    assert {:ok, map} = path |> File.read!() |> Wotex.JSON.decode()
+    assert {:ok, map} = Wotex.JSON.decode(File.read!(path))
     assert {:ok, record} = Record.from_map(map)
 
     assert record.scenario_id == "WLB.02-scenarios-and-reference-components"

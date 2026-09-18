@@ -16,6 +16,7 @@ defmodule WotexLab.MixProject do
   @source_url "https://github.com/wotex-project/wotex"
   @docs Path.expand("../../docs/packages/wotex-lab", __DIR__)
 
+  @spec project() :: keyword()
   def project do
     [
       app: :wotex_lab,
@@ -39,8 +40,10 @@ defmodule WotexLab.MixProject do
     ]
   end
 
+  @spec application() :: keyword()
   def application, do: [extra_applications: [:logger]]
 
+  @spec cli() :: keyword()
   def cli do
     [preferred_envs: [check: :test, coveralls: :test, "test.cover": :test]]
   end

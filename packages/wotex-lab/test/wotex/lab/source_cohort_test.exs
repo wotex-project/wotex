@@ -3,6 +3,8 @@ defmodule Wotex.Lab.SourceCohortTest do
 
   use ExUnit.Case, async: false
 
+  alias Wotex.Lab.Test.ChildEnvironment
+
   @moduletag :integration
 
   @root Path.expand("../../..", __DIR__)
@@ -59,7 +61,13 @@ defmodule Wotex.Lab.SourceCohortTest do
     File.write!(Path.join(provenance, "source-index.json"), Jason.encode!(%{packages: packages}))
     executable = System.find_executable("elixir")
     assert is_binary(executable)
-    assert {json, 0} = System.cmd(executable, [script, "--print"], stderr_to_stdout: true)
+
+    assert {json, 0} =
+             System.cmd(executable, [script, "--print"],
+               env: ChildEnvironment.scrubbed(),
+               stderr_to_stdout: true
+             )
+
     cohort = Jason.decode!(json)
     file_digest = Base.encode16(:crypto.hash(:sha256, value), case: :lower)
     tree_digest = :crypto.hash(:sha256, "lib/value.ex\0" <> file_digest <> "\n")
@@ -67,23 +75,46 @@ defmodule Wotex.Lab.SourceCohortTest do
     assert Enum.all?(cohort["packages"], &(&1["files"] == 1 and &1["sha256"] == expected))
     record = Path.join(provenance, "source-cohort.json")
     File.write!(record, json)
-    assert {_, 0} = System.cmd(executable, [script], stderr_to_stdout: true)
+
+    assert {_, 0} =
+             System.cmd(executable, [script],
+               env: ChildEnvironment.scrubbed(),
+               stderr_to_stdout: true
+             )
 
     source = Path.join(workspace, "wotex/lib/value.ex")
     File.write!(source, value <> "changed\n")
-    assert {message, 1} = System.cmd(executable, [script], stderr_to_stdout: true)
+
+    assert {message, 1} =
+             System.cmd(executable, [script],
+               env: ChildEnvironment.scrubbed(),
+               stderr_to_stdout: true
+             )
+
     assert message =~ "workspace source drift"
     assert File.read!(record) == json
     File.write!(source, value)
 
     owner = Path.join(workspace, "wotex-runtime")
     File.rename!(owner, owner <> ".held")
-    assert {message, 1} = System.cmd(executable, [script], stderr_to_stdout: true)
+
+    assert {message, 1} =
+             System.cmd(executable, [script],
+               env: ChildEnvironment.scrubbed(),
+               stderr_to_stdout: true
+             )
+
     assert message =~ "missing source owner"
     File.rename!(owner <> ".held", owner)
 
     File.ln_s!(source, Path.join(owner, "lib/link.ex"))
-    assert {message, 1} = System.cmd(executable, [script], stderr_to_stdout: true)
+
+    assert {message, 1} =
+             System.cmd(executable, [script],
+               env: ChildEnvironment.scrubbed(),
+               stderr_to_stdout: true
+             )
+
     assert message =~ "symlink in source cohort"
     assert File.read!(record) == json
   end

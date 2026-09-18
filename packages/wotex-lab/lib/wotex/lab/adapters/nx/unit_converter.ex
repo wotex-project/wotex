@@ -19,7 +19,7 @@ defmodule Wotex.Lab.Adapters.Nx.UnitConverter do
   @behaviour Wotex.Nx.UnitConverter
 
   @doc "Converts a numeric temperature with empty reference configuration."
-  @impl true
+  @impl Wotex.Nx.UnitConverter
   @spec convert(term(), String.t(), String.t(), Wotex.DataSchema.t(), term()) ::
           {:ok, number()} | {:error, :unsupported_conversion}
   def convert(value, "K", "Cel", %Wotex.DataSchema{}, []) when is_number(value),

@@ -3,10 +3,10 @@ defmodule Wotex.Lab.GreptimeDurableQueryTest do
 
   use ExUnit.Case, async: false
 
-  @moduletag :greptime
-
   alias Wotex.Lab.Metrics.{Collector, DurableQuery, History, Query, RemoteWrite, ReqSink}
   alias Wotex.Lab.Test.Greptime
+
+  @moduletag :greptime
 
   @t0 1_700_000_000_000
   @instance "durable-lab"

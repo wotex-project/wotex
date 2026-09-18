@@ -7,6 +7,7 @@ defmodule Wotex.Lab.Check.Contracts do
 
   alias Wotex.Lab.Documentation
 
+  @spec run() :: :ok
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
@@ -20,10 +21,20 @@ defmodule Wotex.Lab.Check.Contracts do
     catalogue = YamlElixir.read_from_file!(Path.join(docs, "specs/catalogue.yaml"))
     local_file!(catalogue["completion_plan"])
     local_file!(catalogue["source_index"])
-    source = catalogue["source_index"] |> File.read!() |> JSON.decode!()
+
+    source =
+      catalogue["source_index"]
+      |> File.read!()
+      |> JSON.decode!()
+
     check!(source["kind"] == "source_inspection_snapshot", "source snapshot mislabeled")
     local_file!(catalogue["source_cohort"])
-    cohort = catalogue["source_cohort"] |> File.read!() |> JSON.decode!()
+
+    cohort =
+      catalogue["source_cohort"]
+      |> File.read!()
+      |> JSON.decode!()
+
     check!(cohort["kind"] == "workspace_content_cohort", "source cohort mislabeled")
 
     check!(
@@ -130,12 +141,15 @@ defmodule Wotex.Lab.Check.Contracts do
     end)
 
     graph = Map.new(specs, fn spec -> {spec["id"], Enum.filter(spec["requires"], &(&1 in ids))} end)
-    Enum.reduce(ids, MapSet.new(), &visit(&1, [], graph, &2))
+    check_acyclic!(ids, graph)
 
     seams = source["seams"]
 
     check!(
-      seams |> Enum.map(& &1["id"]) |> Enum.uniq() |> length() == length(seams),
+      seams
+      |> Enum.map(& &1["id"])
+      |> Enum.uniq()
+      |> length() == length(seams),
       "duplicate seam ID"
     )
 
@@ -161,7 +175,7 @@ defmodule Wotex.Lab.Check.Contracts do
       |> Enum.map(&Enum.at(&1, 1))
       |> Enum.reject(&Regex.match?(~r/\A(?:https?:|mailto:|#)/, &1))
       |> Enum.each(fn target ->
-        [file | _fragment] = String.split(target, "#")
+        [file | _] = String.split(target, "#")
         candidate = Path.expand(file, Path.dirname(path))
 
         check!(
@@ -173,7 +187,11 @@ defmodule Wotex.Lab.Check.Contracts do
     end)
 
     Enum.each(Path.wildcard("priv/fixtures/**/manifest.json"), fn path ->
-      fixture = path |> File.read!() |> JSON.decode!()
+      fixture =
+        path
+        |> File.read!()
+        |> JSON.decode!()
+
       input = Path.join(Path.dirname(path), fixture["input"])
       local_file!(input)
       digest = :crypto.hash(:sha256, File.read!(input)) |> Base.encode16(case: :lower)
@@ -184,6 +202,12 @@ defmodule Wotex.Lab.Check.Contracts do
       "contracts: #{length(specs)} specs, #{length(completion_ids)} work packages, " <>
         "#{length(source["packages"])} source owners, #{length(seams)} seams"
     )
+  end
+
+  # Every requirement edge is walked once; `visit/4` halts on a cycle, so the
+  # visited set is the traversal's proof, not an input to later checks.
+  defp check_acyclic!(ids, graph) do
+    Enum.reduce(ids, MapSet.new(), &visit(&1, [], graph, &2))
   end
 
   defp visit(id, stack, graph, visited) do
@@ -213,9 +237,9 @@ defmodule Wotex.Lab.Check.Contracts do
     candidate
   end
 
-  defp check!(true, _message), do: :ok
+  defp check!(true, _), do: :ok
 
-  defp check!(_false, message) do
+  defp check!(_, message) do
     IO.puts(:stderr, message)
     System.halt(1)
   end

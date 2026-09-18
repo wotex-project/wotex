@@ -23,8 +23,7 @@ defmodule Wotex.Lab.Metrics.Catalogue do
   host work and is not part of the base library.
   """
 
-  alias Wotex.Lab.Error
-  alias Wotex.Lab.Telemetry
+  alias Wotex.Lab.{Error, Telemetry}
 
   @version "1.0.0"
   @prefix "wotex_lab_"

@@ -162,15 +162,17 @@ defmodule Wotex.Lab.Metrics.Snapshot do
   defp counters(_), do: {:error, error(:invalid_counters, "/counters", "counters must be a map")}
 
   defp series(list) when is_list(list) and length(list) <= @max_series do
-    list
-    |> Enum.with_index()
-    |> Enum.reduce_while({:ok, []}, fn {series, index}, {:ok, acc} ->
-      case one_series(series, "/series/#{index}") do
-        {:ok, series} -> {:cont, {:ok, [series | acc]}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
+    validated =
+      list
+      |> Enum.with_index()
+      |> Enum.reduce_while({:ok, []}, fn {series, index}, {:ok, acc} ->
+        case one_series(series, "/series/#{index}") do
+          {:ok, series} -> {:cont, {:ok, [series | acc]}}
+          error -> {:halt, error}
+        end
+      end)
+
+    case validated do
       {:ok, acc} -> unique(Enum.sort_by(acc, &{&1.name, &1.labels}))
       error -> error
     end

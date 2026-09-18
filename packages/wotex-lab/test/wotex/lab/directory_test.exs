@@ -4,9 +4,8 @@ defmodule Wotex.Lab.DirectoryTest do
   use ExUnit.Case, async: true
 
   alias Exqlite.Sqlite3
-  alias Wotex.Directory
+  alias Wotex.{Directory, Lab, ThingDescription}
   alias Wotex.Directory.{Context, Error, Event, Expiry, Mutation, Page, Query, Service}
-  alias Wotex.Lab
 
   alias Wotex.Lab.Adapters.Directory.{
     Authorization,
@@ -15,8 +14,6 @@ defmodule Wotex.Lab.DirectoryTest do
     Identifier,
     SqliteRepository
   }
-
-  alias Wotex.ThingDescription
 
   @start ~U[2026-09-07 12:00:00Z]
   @stores [:ets, :sqlite]

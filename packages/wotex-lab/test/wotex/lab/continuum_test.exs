@@ -3,14 +3,13 @@ defmodule Wotex.Lab.ContinuumTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
   alias Wotex.Lab.Continuum.{Channel, FaultSchedule, Host, Wire}
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Lab.Test.ContinuumFixtures, as: Fixtures
   alias Wotex.Nx.{Decoder, Observation, OutputSchema}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Error, Result}
-  alias Wotex.ThingDescription
   alias WotexContinuum.{ActionIntent, ActionResult, Codec, Delivery, Lifecycle, ObservationProposal}
 
   @epoch ~U[2026-09-08 10:00:00Z]
@@ -469,7 +468,7 @@ defmodule Wotex.Lab.ContinuumTest do
 
   defp fixture do
     path = Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json")
-    {:ok, td} = path |> File.read!() |> ThingDescription.parse()
+    {:ok, td} = ThingDescription.parse(File.read!(path))
     td
   end
 

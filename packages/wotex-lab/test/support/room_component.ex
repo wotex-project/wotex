@@ -76,6 +76,7 @@ defmodule Wotex.Lab.Test.RoomComponent do
       "dependencies" => %{"wotex_runtime" => "0.1.0"}
     }
 
+  @spec broken_start() :: {:error, :component_refused}
   def broken_start, do: {:error, :component_refused}
 
   @impl Wotex.Lab.Component
@@ -107,7 +108,7 @@ defmodule Wotex.Lab.Test.RoomComponent do
 
   def execute("echo", input, _), do: {:ok, input}
   def execute("seed", _, context), do: {:ok, context.seed}
-  def execute("sum", _, context), do: {:ok, context.results |> Map.values() |> Enum.sum()}
+  def execute("sum", _, context), do: {:ok, Enum.sum(Map.values(context.results))}
 
   def execute("sleep", ms, _) when is_integer(ms) do
     Process.sleep(ms)
@@ -176,6 +177,7 @@ defmodule Wotex.Lab.Test.RoomComponent do
     }
   end
 
+  @spec start_stubborn(pid() | nil) :: {:ok, pid()}
   def start_stubborn(receiver) do
     {:ok,
      spawn_link(fn ->

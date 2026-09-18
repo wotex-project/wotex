@@ -3,14 +3,13 @@ defmodule Wotex.Lab.TelemetryTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Lab
+  alias Wotex.{Lab, ThingDescription}
   alias Wotex.Lab.Adapters.Directory.EtsRepository
   alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
   alias Wotex.Lab.Examples.{Thermal, WindowAnomaly}
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Lab.Telemetry
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
-  alias Wotex.ThingDescription
 
   @credential "secret-credential-9f1e"
   @payload "payload-sentinel-77aa"
@@ -211,6 +210,15 @@ defmodule Wotex.Lab.TelemetryTest do
   end
 
   @doc false
+  @spec handle_event(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          pid()
+        ) ::
+          {:span, :telemetry.event_name(), :telemetry.event_measurements(),
+           :telemetry.event_metadata()}
+          | nil
   def handle_event(event, measurements, metadata, test) do
     # Other async modules emit the same global events; forward only this test's.
     related = [self() | Process.get(:"$callers", [])] ++ Process.get(:"$ancestors", [])
@@ -218,6 +226,12 @@ defmodule Wotex.Lab.TelemetryTest do
   end
 
   @doc false
+  @spec raise_event(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          term()
+        ) :: no_return()
   def raise_event(_, _, _, _), do: raise("exporter down")
 
   defp flush(acc) do

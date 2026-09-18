@@ -14,6 +14,8 @@ defmodule Wotex.Lab.Simulators.Thermal do
   value, the way a failing sensor does. All values are synthetic Celsius.
   """
 
+  alias Wotex.Lab.{Error, Options}
+
   @version "1.0.0"
   @lcg_multiplier 6_364_136_223_846_793_005
   @lcg_increment 1_442_695_040_888_963_407
@@ -21,8 +23,6 @@ defmodule Wotex.Lab.Simulators.Thermal do
   @max_samples 4_096
   @max_schedule_entries 256
   @options [:ambient, :count, :coupling, :glitches, :heater, :initial, :noise, :seed, :start, :step]
-
-  alias Wotex.Lab.{Error, Options}
 
   @type sample :: %{
           index: non_neg_integer(),

@@ -2,8 +2,13 @@ defmodule Wotex.Lab.Test.NativeContainment do
   @moduledoc false
 
   alias Wotex.Lab.Evidence.Digest
+  alias Wotex.Lab.Test.ChildEnvironment
 
   @doc false
+  @spec build!() :: %{
+          launcher: %{executable: Path.t(), digest: String.t()},
+          probe: Path.t()
+        }
   def build! do
     root = Path.expand("../..", __DIR__)
     manifest = Path.join(root, "priv/conformance/native/Cargo.toml")
@@ -18,7 +23,11 @@ defmodule Wotex.Lab.Test.NativeContainment do
     ]
 
     Enum.each(commands, fn args ->
-      case System.cmd("cargo", args, cd: root, stderr_to_stdout: true) do
+      case System.cmd("cargo", args,
+             cd: root,
+             env: ChildEnvironment.scrubbed(),
+             stderr_to_stdout: true
+           ) do
         {_, 0} -> :ok
         {output, _} -> raise "native containment build/test failed:\n#{output}"
       end

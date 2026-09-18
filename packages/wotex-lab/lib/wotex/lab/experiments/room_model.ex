@@ -192,11 +192,19 @@ if Code.ensure_loaded?(Axon) do
       normalized_predictions =
         Axon.predict(model, model_state, test_inputs, compiler: config.compiler)
 
-      predictions = normalized_predictions |> Nx.multiply(deviation) |> Nx.add(mean)
-      truth = test_targets |> Nx.multiply(deviation) |> Nx.add(mean)
+      predictions =
+        normalized_predictions
+        |> Nx.multiply(deviation)
+        |> Nx.add(mean)
+
+      truth =
+        test_targets
+        |> Nx.multiply(deviation)
+        |> Nx.add(mean)
+
       persistence = persistence_tensor(held_out_windows)
       metrics = metrics(predictions, truth, persistence)
-      parameters = model_state |> Nx.serialize() |> IO.iodata_to_binary()
+      parameters = IO.iodata_to_binary(Nx.serialize(model_state))
       latest = Enum.take(held_out, -2)
 
       prediction_value =
@@ -211,7 +219,7 @@ if Code.ensure_loaded?(Axon) do
         |> Nx.to_flat_list()
         |> hd()
 
-      last_at = held_out |> List.last() |> Map.fetch!(:observed_at)
+      last_at = Map.fetch!(List.last(held_out), :observed_at)
       {:ok, prediction} = decode_prediction(prediction_value, last_at, simulation.manifest["step"])
 
       split = %{
@@ -411,7 +419,7 @@ if Code.ensure_loaded?(Axon) do
 
     defp cohort do
       for app <- [:wotex_lab, :wotex_nx, :nx, :axon], into: %{} do
-        {Atom.to_string(app), app |> Application.spec(:vsn) |> List.to_string()}
+        {Atom.to_string(app), List.to_string(Application.spec(app, :vsn))}
       end
     end
   end

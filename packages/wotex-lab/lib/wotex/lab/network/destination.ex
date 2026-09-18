@@ -66,7 +66,7 @@ defmodule Wotex.Lab.Network.Destination do
     with :ok <- audience_matches(uri, config.audience),
          {:ok, addresses} <- resolve(uri.host, config.resolver),
          true <- addresses != [] and Enum.all?(addresses, &public_address?/1),
-         peer <- addresses |> Enum.sort() |> hd(),
+         peer <- hd(Enum.sort(addresses)),
          {:ok, host} <- address_string(peer) do
       pinned = %{uri | host: host}
 
@@ -155,20 +155,27 @@ defmodule Wotex.Lab.Network.Destination do
   defp reserved_ipv4?({100, second, _, _}) when second in 64..127, do: true
   defp reserved_ipv4?({169, 254, _, _}), do: true
   defp reserved_ipv4?({172, second, _, _}) when second in 16..31, do: true
+  # 192.0.0.0/16 is refused as a whole. It covers the special-purpose
+  # 192.0.0.0/24 and TEST-NET-1 192.0.2.0/24; 192.168.0.0/16 is private.
   defp reserved_ipv4?({192, second, _, _}) when second in [0, 168], do: true
   defp reserved_ipv4?({198, second, _, _}) when second in 18..19, do: true
   defp reserved_ipv4?({198, 51, 100, _}), do: true
-  defp reserved_ipv4?({192, 0, 2, _}), do: true
   defp reserved_ipv4?({203, 0, 113, _}), do: true
   defp reserved_ipv4?(address), do: not :inet.is_ip_address(address)
 
   defp reserved_ipv6?({0, 0, 0, 0, 0, 0, 0, tail}) when tail in [0, 1], do: true
   defp reserved_ipv6?({0, 0, 0, 0, 0, 0xFFFF, _, _}), do: true
 
-  defp reserved_ipv6?({first, _, _, _, _, _, _, _})
-       when Bitwise.bsr(first, 9) in [0b1111110, 0b1111111],
-       do: true
+  # Unique local addresses, fc00::/7.
+  defp reserved_ipv6?({first, _, _, _, _, _, _, _}) when Bitwise.bsr(first, 9) == 0b1111110,
+    do: true
 
+  # fe00::/8: the IETF-reserved fe00::/9, link-local fe80::/10 and the
+  # site-local fec0::/10 that RFC 3879 deprecated.
+  defp reserved_ipv6?({first, _, _, _, _, _, _, _}) when Bitwise.bsr(first, 8) == 0xFE,
+    do: true
+
+  # Multicast, ff00::/8.
   defp reserved_ipv6?({first, _, _, _, _, _, _, _}) when Bitwise.bsr(first, 8) == 0xFF,
     do: true
 
