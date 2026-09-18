@@ -44,6 +44,8 @@ defmodule Wotex.MixProject do
       {:jason, "~> 1.4"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -85,27 +87,29 @@ defmodule Wotex.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        {"README.md", title: "Overview"},
-        {docs_path("plans/wotex-completion.md"), title: "Completion Contract"},
-        {docs_path("specs/WTX.01-thing-description.md"), title: "Thing Description"},
-        {docs_path("specs/WTX.02-affordance-values.md"), title: "Affordance Values"},
-        {docs_path("specs/WTX.03-errors-extensions-and-compatibility.md"),
-         title: "Errors, Extensions, and Compatibility"},
-        {docs_path("specs/WTX.04-thing-model.md"), title: "Thing Model"},
-        {docs_path("provenance/w3c-td-schema-1.1.md"), title: "TD 1.1 Schema Provenance"},
-        {docs_path("provenance/w3c-tm-schema-1.1.md"), title: "Thing Model Schema Provenance"},
-        {docs_path("provenance/reference-corpus.md"), title: "Reference Corpus Evidence"},
-        {docs_path("provenance/release-evidence.md"), title: "Release Evidence Boundary"},
-        {"CHANGELOG.md", title: "Changelog"},
-        {"../../docs/packages/wotex/security.md", title: "Security"},
-        {"NOTICE", title: "Third-party Notices"},
-        {"LICENSE", title: "License"}
-      ],
+      extras:
+        [
+          {"README.md", title: "Overview"},
+          {docs_path("plans/wotex-completion.md"), title: "Completion Contract"},
+          {docs_path("specs/WTX.01-thing-description.md"), title: "Thing Description"},
+          {docs_path("specs/WTX.02-affordance-values.md"), title: "Affordance Values"},
+          {docs_path("specs/WTX.03-errors-extensions-and-compatibility.md"),
+           title: "Errors, Extensions, and Compatibility"},
+          {docs_path("specs/WTX.04-thing-model.md"), title: "Thing Model"},
+          {docs_path("provenance/w3c-td-schema-1.1.md"), title: "TD 1.1 Schema Provenance"},
+          {docs_path("provenance/w3c-tm-schema-1.1.md"), title: "Thing Model Schema Provenance"},
+          {docs_path("provenance/reference-corpus.md"), title: "Reference Corpus Evidence"},
+          {docs_path("provenance/release-evidence.md"), title: "Release Evidence Boundary"},
+          {"CHANGELOG.md", title: "Changelog"},
+          {"../../docs/packages/wotex/security.md", title: "Security"},
+          {"NOTICE", title: "Third-party Notices"},
+          {"LICENSE", title: "License"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex\/plans/,
         "Normative specifications": ~r/docs\/packages\/wotex\/specs/,
         Provenance: ~r/docs\/packages\/wotex\/provenance/,
+        Benchmarks: ~r/bench\/output/,
         Reference: ~r/CHANGELOG|security|CONTRIBUTING|NOTICE|LICENSE/
       ],
       groups_for_modules: [
