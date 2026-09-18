@@ -575,13 +575,16 @@ defmodule Wotex.Workspace.Scaffold do
     end)
   end
 
+  # The file `mix git_ops.release --initial` writes; the release tooling adds
+  # every entry below the marker.
   defp changelog do
     ~S"""
-    # Changelog
+    # Change Log
 
-    All notable changes to `@@name@@` are recorded here by the release tooling.
+    All notable changes to this project will be documented in this file.
+    See [Conventional Commits](Https://conventionalcommits.org) for commit guidelines.
 
-    ## Unreleased
+    <!-- changelog -->
     """
   end
 

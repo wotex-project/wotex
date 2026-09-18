@@ -63,6 +63,11 @@ defmodule Wotex.Workspace.ScaffoldTest do
                File.read!(Path.join(root, "packages/wotex-coap/#{file}"))
     end
 
+    # The changelog is the release tooling's initial file, with no entries.
+    changelog = File.read!(Path.join(root, "packages/wotex-demo/CHANGELOG.md"))
+    assert changelog =~ "\n<!-- changelog -->\n"
+    refute changelog =~ ~r/^## /m
+
     # Credo configuration is inherited from the repository root.
     refute File.exists?(Path.join(root, "packages/wotex-demo/.credo.exs"))
 
