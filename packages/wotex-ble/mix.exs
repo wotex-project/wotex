@@ -132,11 +132,9 @@ defmodule WotexBLE.MixProject do
         [
           "README.md",
           "CHANGELOG.md",
-          Path.expand("../../docs/packages/wotex-ble/security.md", __DIR__)
+          "../../docs/packages/wotex-ble/security.md"
         ] ++
-          Path.wildcard(
-            Path.expand("../../docs/packages/wotex-ble/{specs,plans,provenance}/*.md", __DIR__)
-          ),
+          Path.wildcard("../../docs/packages/wotex-ble/{specs,plans,provenance}/*.md"),
       source_url: @source_url,
       source_ref: "wotex-ble-v#{@version}",
       source_url_pattern: &source_url/2,

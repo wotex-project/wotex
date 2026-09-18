@@ -113,7 +113,7 @@ defmodule WotexRuntime.MixProject do
         {docs_path("specs/WRT.02-exposed-thing-runtime.md"), title: "ExposedThing Runtime"},
         {docs_path("specs/WRT.03-thing-level-interactions.md"), title: "Thing-level Interactions"},
         {"CHANGELOG.md", title: "Changelog"},
-        {Path.expand("../../docs/packages/wotex-runtime/security.md", __DIR__), title: "Security"},
+        {"../../docs/packages/wotex-runtime/security.md", title: "Security"},
         {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
@@ -159,7 +159,7 @@ defmodule WotexRuntime.MixProject do
   end
 
   defp docs_path(relative),
-    do: Path.expand("../../docs/packages/wotex-runtime/#{relative}", __DIR__)
+    do: "../../docs/packages/wotex-runtime/#{relative}"
 
   defp dialyzer do
     [

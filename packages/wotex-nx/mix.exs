@@ -121,7 +121,7 @@ defmodule WotexNx.MixProject do
         docs_path("decisions/0002-batch-and-output-contract.md"),
         docs_path("provenance/standards-and-dependencies.md"),
         docs_path("provenance/runtime-backend-cohort.md"),
-        Path.expand("../../docs/packages/wotex-nx/security.md", __DIR__)
+        "../../docs/packages/wotex-nx/security.md"
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-nx\/plans/,
@@ -169,7 +169,7 @@ defmodule WotexNx.MixProject do
   end
 
   defp docs_path(relative),
-    do: Path.expand("../../docs/packages/wotex-nx/#{relative}", __DIR__)
+    do: "../../docs/packages/wotex-nx/#{relative}"
 
   defp dialyzer do
     [

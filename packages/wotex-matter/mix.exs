@@ -132,11 +132,9 @@ defmodule WotexMatter.MixProject do
         [
           "README.md",
           "CHANGELOG.md",
-          Path.expand("../../docs/packages/wotex-matter/security.md", __DIR__)
+          "../../docs/packages/wotex-matter/security.md"
         ] ++
-          Path.wildcard(
-            Path.expand("../../docs/packages/wotex-matter/{specs,plans,provenance}/*.md", __DIR__)
-          ),
+          Path.wildcard("../../docs/packages/wotex-matter/{specs,plans,provenance}/*.md"),
       groups_for_extras: [
         Specifications: ~r{/docs/packages/wotex-matter/specs/},
         Plans: ~r{/docs/packages/wotex-matter/plans/},

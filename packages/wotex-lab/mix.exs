@@ -14,7 +14,7 @@ defmodule WotexLab.MixProject do
     "EEF-CVE-2026-43971"
   ]
   @source_url "https://github.com/wotex-project/wotex"
-  @docs Path.expand("../../docs/packages/wotex-lab", __DIR__)
+  @docs "../../docs/packages/wotex-lab"
 
   @spec project() :: keyword()
   def project do
@@ -154,7 +154,7 @@ defmodule WotexLab.MixProject do
       extras:
         [
           "README.md",
-          Path.expand("../../docs/packages/wotex-lab/security.md", __DIR__),
+          "../../docs/packages/wotex-lab/security.md",
           {"LICENSE", [title: "License"]},
           {"NOTICE", [title: "Notices"]}
         ] ++

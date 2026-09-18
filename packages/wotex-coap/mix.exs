@@ -136,11 +136,9 @@ defmodule WotexCoAP.MixProject do
         [
           "README.md",
           "CHANGELOG.md",
-          Path.expand("../../docs/packages/wotex-coap/security.md", __DIR__)
+          "../../docs/packages/wotex-coap/security.md"
         ] ++
-          Path.wildcard(
-            Path.expand("../../docs/packages/wotex-coap/{specs,plans,provenance}/*.md", __DIR__)
-          ),
+          Path.wildcard("../../docs/packages/wotex-coap/{specs,plans,provenance}/*.md"),
       source_url: @source_url,
       source_ref: "wotex-coap-v#{@version}",
       source_url_pattern: &source_url/2,

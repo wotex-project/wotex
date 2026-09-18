@@ -3,7 +3,7 @@ defmodule WotexBindingHTTP.MixProject do
 
   @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex"
-  @docs_root Path.expand("../../docs/packages/wotex-binding-http", __DIR__)
+  @docs_root "../../docs/packages/wotex-binding-http"
 
   def project do
     [

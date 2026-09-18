@@ -124,8 +124,7 @@ defmodule WotexDirectory.MixProject do
         {docs_path("decisions/0002-listing-and-expiry.md"), title: "Listing and expiry"},
         {docs_path("provenance/w3c-sources.md"), title: "W3C sources"},
         {"CHANGELOG.md", title: "Changelog"},
-        {Path.expand("../../docs/packages/wotex-directory/security.md", __DIR__),
-         title: "Security"},
+        {"../../docs/packages/wotex-directory/security.md", title: "Security"},
         {"LICENSE", title: "License"}
       ],
       groups_for_extras: [
@@ -184,7 +183,7 @@ defmodule WotexDirectory.MixProject do
   end
 
   defp docs_path(relative),
-    do: Path.expand("../../docs/packages/wotex-directory/#{relative}", __DIR__)
+    do: "../../docs/packages/wotex-directory/#{relative}"
 
   defp dialyzer do
     [

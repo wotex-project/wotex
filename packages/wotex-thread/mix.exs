@@ -131,11 +131,9 @@ defmodule WotexThread.MixProject do
         [
           "README.md",
           "CHANGELOG.md",
-          Path.expand("../../docs/packages/wotex-thread/security.md", __DIR__)
+          "../../docs/packages/wotex-thread/security.md"
         ] ++
-          Path.wildcard(
-            Path.expand("../../docs/packages/wotex-thread/{specs,plans,provenance}/*.md", __DIR__)
-          ),
+          Path.wildcard("../../docs/packages/wotex-thread/{specs,plans,provenance}/*.md"),
       source_url: @source_url,
       source_ref: "wotex-thread-v#{@version}",
       source_url_pattern: &source_url/2,

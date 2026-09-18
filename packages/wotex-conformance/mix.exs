@@ -3,7 +3,7 @@ defmodule WotexConformance.MixProject do
 
   @source_url "https://github.com/wotex-project/wotex"
   @version "0.1.0"
-  @docs_root Path.expand("../../docs/packages/wotex-conformance", __DIR__)
+  @docs_root "../../docs/packages/wotex-conformance"
 
   def project do
     [
@@ -103,8 +103,7 @@ defmodule WotexConformance.MixProject do
       extras: [
         {"README.md", title: "Overview"},
         {doc("plans/wotex-conformance-completion.md"), title: "Completion Contract"},
-        {Path.expand("../../docs/packages/wotex-conformance/security.md", __DIR__),
-         title: "Security"},
+        {"../../docs/packages/wotex-conformance/security.md", title: "Security"},
         {doc("specs/WCF.01-conformance-runner.md"), title: "Conformance runner"},
         {doc("decisions/0001-external-target-isolation.md"), title: "External target isolation"},
         {doc("decisions/0002-evidence-digests.md"), title: "Evidence digests"},

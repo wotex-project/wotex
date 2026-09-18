@@ -3,7 +3,7 @@ defmodule WotexContinuum.MixProject do
 
   @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex"
-  @docs_root Path.expand("../../docs/packages/wotex-continuum", __DIR__)
+  @docs_root "../../docs/packages/wotex-continuum"
 
   def project do
     [
@@ -114,7 +114,7 @@ defmodule WotexContinuum.MixProject do
         Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
         Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
         Path.join(@docs_root, "THREAT_MODEL.md"),
-        Path.expand("../../docs/packages/wotex-continuum/security.md", __DIR__)
+        "../../docs/packages/wotex-continuum/security.md"
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-continuum\/plans/,

@@ -101,7 +101,7 @@ defmodule Wotex.MixProject do
         {docs_path("provenance/reference-corpus.md"), title: "Reference Corpus Evidence"},
         {docs_path("provenance/release-evidence.md"), title: "Release Evidence Boundary"},
         {"CHANGELOG.md", title: "Changelog"},
-        {Path.expand("../../docs/packages/wotex/security.md", __DIR__), title: "Security"},
+        {"../../docs/packages/wotex/security.md", title: "Security"},
         {"NOTICE", title: "Third-party Notices"},
         {"LICENSE", title: "License"}
       ],
@@ -146,7 +146,7 @@ defmodule Wotex.MixProject do
     "#{@source_url}/blob/wotex-v#{@version}/#{repository_path}#L#{line}"
   end
 
-  defp docs_path(relative), do: Path.expand("../../docs/packages/wotex/#{relative}", __DIR__)
+  defp docs_path(relative), do: "../../docs/packages/wotex/#{relative}"
 
   defp dialyzer do
     [

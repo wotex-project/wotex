@@ -3,7 +3,7 @@ defmodule WotexBindingMQTT.MixProject do
 
   @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex"
-  @docs_root Path.expand("../../docs/packages/wotex-binding-mqtt", __DIR__)
+  @docs_root "../../docs/packages/wotex-binding-mqtt"
 
   def project do
     [
@@ -140,8 +140,7 @@ defmodule WotexBindingMQTT.MixProject do
         {doc("provenance/mqtt-primary-sources.md"), title: "MQTT primary sources"},
         {doc("provenance/wot-binding-registry-2025-11-04.md"), title: "Binding Registry status"},
         {"CHANGELOG.md", title: "Changelog"},
-        {Path.expand("../../docs/packages/wotex-binding-mqtt/security.md", __DIR__),
-         title: "Security"},
+        {"../../docs/packages/wotex-binding-mqtt/security.md", title: "Security"},
         {"LICENSE", title: "License"},
         {"NOTICE", title: "Notices"}
       ],

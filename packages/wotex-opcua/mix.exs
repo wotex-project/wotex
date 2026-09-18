@@ -133,15 +133,13 @@ defmodule WotexOPCUA.MixProject do
         [
           "README.md",
           "CHANGELOG.md",
-          Path.expand("../../docs/packages/wotex-opcua/security.md", __DIR__),
+          "../../docs/packages/wotex-opcua/security.md",
           "priv/native/runtime-guardian.md",
           "priv/native/json-codec.md",
           "priv/native/security.md",
           "priv/native/value-codec.md"
         ] ++
-          Path.wildcard(
-            Path.expand("../../docs/packages/wotex-opcua/{specs,plans,provenance}/*.md", __DIR__)
-          ),
+          Path.wildcard("../../docs/packages/wotex-opcua/{specs,plans,provenance}/*.md"),
       groups_for_extras: [
         Native: ~r{^priv/native/},
         Specifications: ~r{/docs/packages/wotex-opcua/specs/},
