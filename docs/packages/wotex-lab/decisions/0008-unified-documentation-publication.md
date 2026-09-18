@@ -7,9 +7,12 @@ with the Phoenix Assets LiveView adapter. The Workbench and public static site
 consume one projected site generation. Static publication does not use a
 second Astro, mdBook, GitBook, or application-specific template tree.
 
-Each source repository is extracted separately. Lab imports the resulting
-versioned artifacts and applies one Wotex taxonomy. This keeps package locks and
-runtime dependencies isolated while preserving exact source provenance.
+Each package, and each documentation-only source, is extracted separately,
+from one commit of the repository. Lab imports the resulting versioned
+artifacts and applies one Wotex taxonomy. This keeps package locks and runtime
+dependencies isolated while preserving exact source provenance. (Amended for
+the monorepo with WLB.12 0.2.0; the packages were separate repositories when
+this decision was taken.)
 
 ## Rationale
 

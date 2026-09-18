@@ -28,7 +28,7 @@ packages:
     catalogue: "docs/packages/wotex-bacnet/specs/catalogue.yaml"
     specifications:
       - id: "WBA.00"
-        version: "1.1.0"
+        version: "1.1.1"
         implementation_status: "implemented"
         path: "docs/packages/wotex-bacnet/specs/WBA.00-library-contract.md"
       - id: "WBA.01"
@@ -88,7 +88,7 @@ packages:
     catalogue: "docs/packages/wotex-ble/specs/catalogue.yaml"
     specifications:
       - id: "WBL.00"
-        version: "1.1.0"
+        version: "1.1.1"
         implementation_status: "partial"
         path: "docs/packages/wotex-ble/specs/WBL.00-library-contract.md"
       - id: "WBL.01"
@@ -120,7 +120,7 @@ packages:
     catalogue: "docs/packages/wotex-coap/specs/catalogue.yaml"
     specifications:
       - id: "WCO.00"
-        version: "1.1.0"
+        version: "1.1.1"
         implementation_status: "partial"
         path: "docs/packages/wotex-coap/specs/WCO.00-library-contract.md"
       - id: "WCO.01"
@@ -128,7 +128,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-coap/specs/WCO.01-protocol.md"
       - id: "WCO.02"
-        version: "1.4.0"
+        version: "1.5.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-coap/specs/WCO.02-implemented-profile.md"
       - id: "WCO.03"
@@ -232,7 +232,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-lab/specs/WLB.11-workbench-and-design-system.md"
       - id: "WLB.12"
-        version: "0.1.0"
+        version: "0.2.0"
         implementation_status: "planned"
         path: "docs/packages/wotex-lab/specs/WLB.12-unified-documentation.md"
   wotex-matter:
@@ -240,7 +240,7 @@ packages:
     catalogue: "docs/packages/wotex-matter/specs/catalogue.yaml"
     specifications:
       - id: "WMA.00"
-        version: "1.1.1"
+        version: "1.1.2"
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.00-library-contract.md"
       - id: "WMA.01"
@@ -260,7 +260,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.10-software-contract.md"
       - id: "WMA.11"
-        version: "1.1.2"
+        version: "1.2.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.11-standalone-client-and-preservation.md"
       - id: "WMA.12"
@@ -268,7 +268,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.12-wotex-integration.md"
       - id: "WMA.13"
-        version: "1.0.6"
+        version: "1.0.7"
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.13-native-backend.md"
   wotex-modbus:
@@ -276,7 +276,7 @@ packages:
     catalogue: "docs/packages/wotex-modbus/specs/catalogue.yaml"
     specifications:
       - id: "WMB.00"
-        version: "1.1.0"
+        version: "1.1.1"
         implementation_status: "implemented"
         path: "docs/packages/wotex-modbus/specs/WMB.00-library-contract.md"
       - id: "WMB.01"
@@ -320,7 +320,7 @@ packages:
     catalogue: "docs/packages/wotex-opcua/specs/catalogue.yaml"
     specifications:
       - id: "WOP.00"
-        version: "1.1.0"
+        version: "1.1.1"
         implementation_status: "partial"
         path: "docs/packages/wotex-opcua/specs/WOP.00-library-contract.md"
       - id: "WOP.01"
@@ -368,7 +368,7 @@ packages:
     catalogue: "docs/packages/wotex-thread/specs/catalogue.yaml"
     specifications:
       - id: "WTH.00"
-        version: "1.1.0"
+        version: "1.1.1"
         implementation_status: "partial"
         path: "docs/packages/wotex-thread/specs/WTH.00-library-contract.md"
       - id: "WTH.01"

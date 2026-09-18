@@ -51,7 +51,9 @@ tooling/                the package manifest (packages.yaml) and the one-time im
 ```
 
 `docs/` is for people. Code never reads from `docs/`: fixtures, schemas and
-machine-read provenance live in each package's `priv/`.
+machine-read provenance live in each package's `priv/`. The one exception is
+wotex-lab's knowledge graph and MCP resources, which read the documentation
+tree as their subject (see `CLAUDE.md`).
 
 ## Working on a package
 

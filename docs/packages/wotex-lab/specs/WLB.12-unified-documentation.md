@@ -1,15 +1,29 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.1.0. Contract: accepted. Implementation status:
+Specification version: 0.2.0. Contract: accepted. Implementation status:
 planned. Evidence status: missing. Adoption status: no_reference.
+
+Revision 0.2.0 moves the planned cohort from one repository per package to
+this repository. One commit supplies the sixteen packages under `packages/`,
+each still extracted in isolation with its own lock, and the single
+documentation tree under `docs/` with its root index; `wotex-dot` stays the one
+separate documentation-only source. A package's documentation roots are
+`packages/<name>/` and `docs/packages/<name>/`, the roots its HexDocs already
+publish from, and HexDocs stays each package's reference. A default-branch
+push replaces cross-repository dispatch, and the machine-read cohort file
+moves to Lab's `priv/`, because it is Lab data and code does not read
+`docs/`. Status and the remaining obligations are unchanged.
 
 ## Purpose
 
 Wotex Lab owns one documentation catalogue for the complete Wotex ecosystem.
 The Workbench serves it as public LiveView pages, and the documentation build
-exports the same corpus and presentation as a static site. Repository Markdown,
+exports the same corpus and presentation as a static site. Package Markdown,
 module documentation, Livebooks, specifications, and machine-readable API
-descriptions remain authoritative in their owning repositories.
+descriptions remain authoritative where they are maintained: package sources
+under `packages/<name>/`, specifications, plans, decisions and provenance under
+`docs/packages/<name>/`, family documents under `docs/`, and project governance
+in `wotex-dot`.
 
 The aggregate is generated. Maintainers do not copy source documents into Lab,
 rewrite the same guide for a second site, or maintain navigation separately in
@@ -20,12 +34,13 @@ Assets' PHA.01 LiveView/static renderer contract. Lab owns only Wotex source
 membership, taxonomy, branding, public routes, release profiles, and deployment
 evidence.
 
-## Repository cohort
+## Source cohort
 
-The catalogue has an explicit allowlist. A directory name beginning with
-`wotex` does not grant membership.
+The catalogue has an explicit allowlist of sources taken from one commit of
+this repository, plus the separate `wotex-dot` source. A directory under
+`packages/` or a name beginning with `wotex` does not grant membership.
 
-| Area | Repository |
+| Area | Source |
 | --- | --- |
 | Core model | `wotex` |
 | Runtime | `wotex-runtime` |
@@ -35,31 +50,38 @@ The catalogue has an explicit allowlist. A directory name beginning with
 | Numerical computing | `wotex-nx` |
 | Conformance | `wotex-conformance` |
 | Laboratory | `wotex-lab` |
+| Family documentation | `docs/` outside `docs/packages/`: the root index `docs/README.md`, architecture, decisions and guides |
 | Project governance | `wotex-dot` |
 
-`docs/documentation/cohort.json` describes each member with repository ID,
-title, source URL, source kind, package name when present, documentation roots,
-default branch for the rolling profile, exact revision and tree digest for a
-pinned profile, license, build command, and expected DocShell artifact digest.
-Unknown keys and repositories fail validation.
+Every row except the last two names a package under `packages/`.
+`packages/wotex-lab/priv/documentation/cohort.json` describes each member with
+source ID, title, repository URL and path, source kind, Hex package name when
+present, documentation roots, default branch for the rolling profile, exact
+revision and tree digest for a pinned profile, license, build command, and
+expected DocShell artifact digest. A package's documentation roots are its
+directory `packages/<name>/` and `docs/packages/<name>/` (`specs/`, `plans/`,
+`decisions/`, `provenance/` and package-level documents); its tree digest
+covers those paths at the recorded revision. Unknown keys and sources fail
+validation.
 
-`wotex-dot` is a documentation-only source. It has no Mix application and is
-collected through the same Markdown extractor with an empty module set.
+The family documentation tree and `wotex-dot` are documentation-only sources.
+They have no Mix application and are collected through the same Markdown
+extractor with an empty module set.
 
 ## Source generation
 
-Each repository is extracted in an isolated work directory with its own lock
-and toolchain. A Mix repository runs `mix doc_shell.build --no-start` against
-its compiled documentation chunks and allowlisted document roots. A
-documentation-only repository runs the DocShell build API from the collector
-without starting an application.
+Each package is extracted in an isolated work directory with its own lock and
+toolchain lane. A package runs `mix doc_shell.build --no-start` in
+`packages/<name>/` against its compiled documentation chunks and its
+allowlisted document roots. A documentation-only source runs the DocShell build
+API from the collector without starting an application.
 
-Every Mix repository declares DocShell as a build-only dependency for its
-development, test and documentation environments and supplies a site-ready
-collection identity. `collection.json` binds its exact revision/tree digest,
-repository-relative sources, extracted module documentation and artifact
-content digest. The central builder does not inject code or configuration into
-a source checkout.
+Every package declares DocShell as a build-only dependency for its `dev`,
+`test` and `docs` environments and supplies a site-ready collection identity.
+`collection.json` binds the exact repository revision and the source's tree
+digest, repository-relative sources, extracted module documentation and
+artifact content digest. The central builder does not inject code or
+configuration into a package or a source checkout.
 
 The collector never adds the protocol packages as production dependencies of
 `wotex_lab` or the Workbench. It does not load all applications into one BEAM
@@ -69,9 +91,11 @@ runtime dependency closure that none of the libraries supports.
 An extracted collection includes:
 
 - public module and member documentation;
-- `README.md` and allowlisted guides;
-- `docs/specs/`, `docs/decisions/`, and public implementation plans;
-- public provenance and standards notes;
+- the package `README.md`, allowlisted package-level documents and family
+  guides;
+- `docs/packages/<name>/specs/`, `decisions/` and `plans/`, and the family
+  decisions under `docs/decisions/`;
+- public provenance and standards notes under `docs/packages/<name>/provenance/`;
 - runnable `.livemd` notebooks;
 - generated OpenAPI or other admitted interface documents; and
 - release notes as history content, outside the primary task-oriented
@@ -82,10 +106,10 @@ machine paths, and files outside the allowlist never enter a collection.
 `docs/tasks/local/` is excluded before parsing and remains excluded from every
 manifest and package.
 
-Every source document retains repository, exact revision, source-relative
-path, content digest, license, and an immutable source URL. An edit link targets
-the configured editable branch only when the page profile permits it; source
-identity still names the exact rendered revision.
+Every source document retains source ID, exact repository revision,
+repository-relative path, content digest, license, and an immutable source
+URL. An edit link targets the configured editable branch only when the page
+profile permits it; source identity still names the exact rendered revision.
 
 ## Build profiles and freshness
 
@@ -93,20 +117,21 @@ The documentation builder supports two profiles:
 
 1. `release` reads exact revisions and digests committed in the cohort file.
    The resulting built-in documentation is coherent with that Lab release.
-2. `rolling` resolves the allowed repositories' configured default-branch heads
-   once at the start of an automated build, records those immutable revisions,
-   checks out exactly those revisions, and writes the resolved cohort into the
-   site manifest. It never reads a moving branch after resolution.
+2. `rolling` resolves the configured default-branch heads of this repository
+   and `wotex-dot` once at the start of an automated build, records those
+   immutable revisions, checks out exactly those revisions, and writes the
+   resolved cohort into the site manifest. It never reads a moving branch after
+   resolution.
 
-Repository dispatch events trigger the rolling build after an accepted source
-change. A scheduled reconciliation catches missed events. Cross-repository
-dispatch credentials and Pages settings are operator-managed repository
+A default-branch push that changes a cohort source triggers the rolling build.
+A scheduled reconciliation catches missed triggers and changes to `wotex-dot`.
+Pages settings and any deployment credential are operator-managed repository
 configuration. They are not stored in source. If a source cannot be resolved,
 extracted, validated, or rendered, publication stops and the last complete site
 remains deployed.
 
 “Current” means the exact cohort disclosed by the site, not an unrecorded mix
-of repository heads. The site exposes cohort digest, generation time, source
+of package states or branch heads. The site exposes cohort digest, generation time, source
 revision, and profile. A rolling site reports when a later known build failed;
 it does not silently label the retained cohort as newly generated.
 
@@ -139,16 +164,16 @@ Specifications and evidence
 Project and contribution
 ```
 
-Repository names remain visible as provenance and search filters. They do not
-form seventeen unrelated top-level documentation sites. Each protocol section
+Package and source names remain visible as provenance and search filters.
+They do not form one unrelated top-level documentation site per package. Each protocol section
 places its overview, addressing, WoT Form mapping, lifecycle, structured
 errors, examples, interoperability profile, API reference, specifications, and
 evidence in a consistent order.
 
 Navigation rules live in one Lab projector. A source page can supply title,
 description, ordering, tags, status, locale, audience, sidebar label, and
-visibility metadata. It cannot place another repository into the cohort or
-override an unrelated section.
+visibility metadata. It cannot place another package or source into the
+cohort or override an unrelated section.
 
 ## Routes and links
 
@@ -182,9 +207,10 @@ standards links remain external and identify their source revision where the
 owning specification requires it.
 
 Legacy package documentation URLs may redirect to canonical aggregate routes
-only through an explicit, tested redirect map. HexDocs remains an automatically
-published package reference and fallback; Wotex READMEs use the aggregate site
-as their primary documentation link when the public site is available.
+only through an explicit, tested redirect map. HexDocs remains each package's
+automatically published reference and fallback, and `docs/README.md` remains
+the in-repository index; Wotex READMEs use the aggregate site as their primary
+documentation link when the public site is available.
 
 ## LiveView and static presentation
 
@@ -217,7 +243,7 @@ script, analytics, or search service.
 
 One search corpus covers guide pages, headings, module/member documentation,
 specifications, decisions, evidence summaries, notebooks, and API operations.
-Results can be filtered by repository/package, section, document kind,
+Results can be filtered by package or source, section, document kind,
 protocol, version, locale, status, and audience. The browser performs ordinary
 search without a server or account.
 
@@ -280,8 +306,8 @@ content or documentation dependencies.
 
 | ID | Requirement |
 | --- | --- |
-| WLB-S12-01 | Maintain one explicit allowlist and taxonomy for every Wotex repository and documentation-only project source. |
-| WLB-S12-02 | Require each source repository to expose a site-ready DocShell build and generate every corpus in isolation without adding protocol packages to Lab's production dependency graph. |
+| WLB-S12-01 | Maintain one explicit allowlist and taxonomy for every Wotex package, the family documentation tree and the documentation-only project source. |
+| WLB-S12-02 | Require each package to expose a site-ready DocShell build and generate every corpus in isolation without adding protocol packages to Lab's production dependency graph. |
 | WLB-S12-03 | Bind every page and site generation to exact source revisions, tree/content digests, package versions, paths, and licenses. |
 | WLB-S12-04 | Generate one validated navigation, route, link, search, machine-interface, and provenance model for the whole cohort. |
 | WLB-S12-05 | Serve public inert `/docs` LiveView routes without allocating Lab runtime state or requiring optional operational services. |
@@ -289,23 +315,23 @@ content or documentation dependencies.
 | WLB-S12-07 | Provide the specified modern documentation capabilities, responsive behavior, accessibility target, and no-JavaScript fallbacks. |
 | WLB-S12-08 | Support pinned release and automatically resolved rolling profiles without publishing a partial or undisclosed cohort. |
 | WLB-S12-09 | Build and validate a provider-neutral static artifact and qualify GitHub Pages deployment with no paid service dependency. |
-| WLB-S12-10 | Keep source documents authoritative in their repositories and reject copied, private, unallowlisted, unresolved, or stale aggregate inputs. |
+| WLB-S12-10 | Keep source documents authoritative where they are maintained and reject copied, private, unallowlisted, unresolved, or stale aggregate inputs. |
 
 ## Executable vectors
 
 | ID | Evidence |
 | --- | --- |
-| WLB-V12-01 | The catalogue includes every repository in the accepted cohort exactly once and rejects a glob-discovered or unknown source. |
-| WLB-V12-02 | Every Mix repository and `wotex-dot` emits a valid isolated DocShell collection with exact revision/tree/artifact digests. |
-| WLB-V12-03 | A dependency conflict between two source repositories does not affect collection because their builds use separate work directories and BEAM instances. |
+| WLB-V12-01 | The catalogue includes every source in the accepted cohort exactly once and rejects a glob-discovered or unknown source, including an unlisted directory under `packages/`. |
+| WLB-V12-02 | Every package, the family documentation tree and `wotex-dot` emit a valid isolated DocShell collection with exact revision/tree/artifact digests. |
+| WLB-V12-03 | A dependency conflict between two packages does not affect collection because their builds use separate work directories and BEAM instances. |
 | WLB-V12-04 | All admitted Markdown, modules, members, notebooks, specifications, decisions, provenance and APIs appear once or have an explicit exclusion. |
-| WLB-V12-05 | Cross-repository links, anchors, assets, canonical routes, source links and edit links resolve at `/docs` and a configured Pages subpath. |
+| WLB-V12-05 | Cross-package links (between `packages/` and `docs/`), anchors, assets, canonical routes, source links and edit links resolve at `/docs` and a configured Pages subpath. |
 | WLB-V12-06 | LiveView and static pages share cohort/page digests, visible text, navigation, headings, links, search records and accessible names. |
 | WLB-V12-07 | The shared Pagefind index finds fixed guide, module member, protocol, specification, evidence, notebook and API-operation queries, applies every declared filter, and lazy-loads index chunks in both hosts. |
 | WLB-V12-08 | Browser tests cover keyboard search/navigation, mobile/desktop layouts, 400% zoom, themes, reduced motion, left-to-right/right-to-left, JavaScript disabled and 404 behavior. |
 | WLB-V12-09 | Static output has no remote runtime asset or hosted-service call, obeys bundle budgets, and works with network blocked. |
 | WLB-V12-10 | A failed source, extraction, validation, render, link, accessibility, asset-budget or deployment preflight leaves the prior published artifact intact. |
-| WLB-V12-11 | The release profile reproduces its payload from the committed cohort; the rolling profile records one resolved immutable cohort and detects a missed dispatch by reconciliation. |
+| WLB-V12-11 | The release profile reproduces its payload from the committed cohort; the rolling profile records one resolved immutable cohort and detects a missed trigger by reconciliation. |
 | WLB-V12-12 | A fresh Workbench release serves built-in docs with Git unavailable and no source checkout; a fresh static archive serves from a local HTTP server. |
 
 ## Evidence boundary

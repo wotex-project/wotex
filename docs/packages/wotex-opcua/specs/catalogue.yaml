@@ -3,7 +3,7 @@ package: "wotex_opcua"
 completion_plan: "docs/plans/wotex-opcua-completion.md"
 specifications:
   - id: "WOP.00"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WOP.00-library-contract.md"
     implementation_status: "partial"
     standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Native target requirements; exact source digests are in WOP.13 and native-sources-v1.json; no native acceptance evidence"}]

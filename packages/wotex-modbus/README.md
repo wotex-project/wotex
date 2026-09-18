@@ -218,7 +218,9 @@ source revision under review; earlier results do not validate later changes.
 
 [WMB.13](../../docs/packages/wotex-modbus/specs/WMB.13-native-build-and-software-evidence.md) defines
 the explicit `mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS` interfaces. Protocol execution remains
+`mix wotex.software.run --workspace ABS` interfaces (package aliases; from the
+repository root run them through `mix pkg wotex-modbus`, as in Development).
+Protocol execution remains
 BEAM TCP with a C libmodbus test peer.
 The Mix tasks build and verify manifests, run the independent peer and record
 actual ExUnit outcomes and cleanup results. Full task acceptance requires fresh
@@ -226,3 +228,9 @@ results on both supported toolchains. A native owner-liveness guardian covers th
 whole Docker create/start interval, including whole-VM loss, while exact CID and
 random-label checks constrain cleanup to the owned peer. Shell compatibility
 entry points execute the Mix tasks; no Python build/test orchestrator is required.
+
+## License
+
+Wotex Modbus is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-modbus/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-modbus/NOTICE).

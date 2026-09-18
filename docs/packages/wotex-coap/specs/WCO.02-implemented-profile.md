@@ -3,9 +3,9 @@ spec:
   id: WCO.02
   title: "Implemented CoAP profile"
   status: accepted
-  version: 1.4.0
+  version: 1.5.0
   owner: wotex-coap
-  updated: 2026-09-15
+  updated: 2026-09-18
 ---
 
 # WCO.02 Implemented CoAP profile
@@ -58,11 +58,13 @@ resolution or network access. Parser limits count encoded bytes and scanned
 attributes, including first-occurrence duplicates that are not retained.
 
 Native `coaps` uses DTLS 1.2 with explicit PSK or PKI credentials and no UDP
-fallback. Runtime exposes credential-free UDP and authenticated DTLS cells.
-`profile/0` and `profile(:udp)` expose the unary `:coap` profile;
-`profile(:udp_observe)` exposes the seven-operation `:coap_observe` profile.
-`profile(:dtls)` exposes the seven-operation `:coaps` profile. All use the
-three documented media types. Other profile modes are unsupported.
+fallback. Runtime exposes credential-free UDP, authenticated DTLS and
+authenticated OSCORE cells. `profile/0` and `profile(:udp)` expose the unary
+`:coap` profile; `profile(:udp_observe)` exposes the seven-operation
+`:coap_observe` profile. `profile(:dtls)` exposes the seven-operation `:coaps`
+profile, and `profile(:oscore)` the seven-operation `:coap_oscore` profile on
+the `coap` scheme. All use the three documented media types. Every other mode
+returns `:unsupported_profile`.
 Property and Event streams decode complete representations through the same
 media policy. JSON null, false, zero and empty collections remain distinct;
 text requires UTF-8, while octet streams preserve arbitrary bytes. Stream metadata
@@ -71,18 +73,25 @@ Max-Age across Block2 completion. Malformed representation payloads are decoding
 errors, not empty values or fabricated transport-loss events.
 Transport validates the exact profile and Runtime context before acquisition;
 decode and cleanup cannot turn an expired request into success. Error.class
-retains conservative retry decisions through Runtime. For DTLS unary requests,
-exactly one typed Security value is supplied through either the immediate
-ExecutionContext credential or the transport `security:` option. Configured
+retains conservative retry decisions through Runtime. For DTLS and OSCORE unary
+requests, exactly one typed Security value is supplied through either the
+immediate ExecutionContext credential or the transport `security:` option. Configured
 and immediate credentials together fail as ambiguous. Subscriptions require
 configured `security:` and a nil immediate credential; the handle contains no
-secret or execution context. UDP rejects either credential source. Security
-validation and matching the Form scheme to the selected profile precede socket
-acquisition. `Security.new/1` implements the pure fixed-suite OSCORE credential
-shape and limits, including redaction and optional ID Context normalization.
-It performs no filesystem access and does not make OSCORE an admitted transport.
-OSCORE sessions remain planned under .10/.12/.13. OSCORE's C Port owns one
-libcoap engine; no native helper is needed for the existing UDP or OTP DTLS paths.
+secret or execution context. Plain UDP rejects either credential source.
+Security validation and matching the Form scheme to the selected profile precede
+socket acquisition. `Security.new/1` implements the pure fixed-suite OSCORE
+credential shape and limits, including redaction and optional ID Context
+normalization; it performs no filesystem access, and a credential alone selects
+no transport. With an OSCORE credential and a verified `native_backend`, an
+explicit `coap` session uses the native OSCORE owner of
+[WCO.13](WCO.13-native-build-and-software-evidence.md) for unary,
+discovery and Observe exchanges, and a `:coap_oscore` Runtime route dispatches
+ConsumedThing unary and Observe calls through the same owner. OSCORE's C Port
+owns one libcoap engine; the UDP and OTP DTLS paths need no native helper.
+The OSCORE software evidence and its open acceptance items (the renewed
+upstream-stack run receipt and Linux lanes, Group OSCORE, context
+re-derivation) belong to .10, .12 and .13.
 
 ## Evidence and compatibility
 

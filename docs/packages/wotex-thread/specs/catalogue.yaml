@@ -3,7 +3,7 @@ package: "wotex_thread"
 completion_plan: "docs/plans/wotex-thread-completion.md"
 specifications:
   - id: "WTH.00"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WTH.00-library-contract.md"
     implementation_status: "partial"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]

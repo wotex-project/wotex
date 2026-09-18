@@ -3,9 +3,9 @@ spec:
   id: WCO.00
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-coap
-  updated: 2026-09-09
+  updated: 2026-09-18
 ---
 
 # WCO.00 Software implementation rules
@@ -16,8 +16,8 @@ Read this file with [WCO.10](WCO.10-software-contract.md),
 [standalone client preservation](WCO.11-standalone-client-and-preservation.md),
 [Wotex integration](WCO.12-wotex-integration.md), and the existing
 protocol specifications, and [the implementation sequence](../plans/software-implementation.md).
-`CLAUDE.md` governs repository boundaries. Exact protocol requirements come from
-the revisions in [primary sources](../provenance/primary-sources.md); limits and
+The root and package `CLAUDE.md` files govern repository boundaries. Exact
+protocol requirements come from the revisions in [primary sources](../provenance/primary-sources.md); limits and
 API choices labelled **library policy** are deliberate local constraints.
 
 ## WCO-C01 — Scope, API and compatibility
@@ -266,20 +266,26 @@ software lane can be reported as a pass.
 ## WCO-C10 — Commits and completion
 
 Implement one work package from the plan, its tests, docs and provenance as one
-reviewable change. Run `mix check` before every local commit. Preserve the 95%
-coverage floor; neither coverage alone nor an injected mock is interoperability
-proof. Native dependency audits are additional to the Elixir gate. Keep exact
-source pins and review any changed dependency/advisory instead of ignoring it.
+reviewable change. Run `mix check` from the repository root before every local
+commit; it runs this package's full gate, `mix pkg wotex-coap check --no-retry`,
+when the package changed. Preserve the 95% coverage floor; neither coverage
+alone nor an injected mock is interoperability proof. Native dependency audits
+are additional to the Elixir gate. Keep exact source pins and review any changed
+dependency/advisory instead of ignoring it.
 
 Before calling the software profile complete: all requirement vectors pass; all
 required software lanes run; public capability claims match implementations;
 README/current-profile documents match behavior; vector SHA-256 identities are
-current; the declared minimum-version matrix passes; and a clean committed-source
-archive passes `mix check` and out-of-tree package compilation. Include native
-bridge assets explicitly in the package allowlist, excluding build caches,
-credentials, sockets, PLTs, fixture state and downloaded SDKs.
+current; the declared minimum-version matrix passes; and, from clean committed
+source, the package gate `mix pkg wotex-coap check --no-retry` passes, including
+its archive check and out-of-tree package compilation. Include native bridge
+assets explicitly in the package allowlist only where the package's shipped Mix
+tasks need them (root `CLAUDE.md`), excluding build caches, credentials,
+sockets, PLTs, fixture state and downloaded SDKs.
 
-Use the required author and committer identity from `CLAUDE.md`. Do not configure
-remotes, push, tag, publish, change repository visibility or edit consumers.
-Keep transient run logs and exploratory patches in ignored local work files.
+Commit with the identity already configured by the contributor, as the root
+`CLAUDE.md` requires, and never record an agent, tool or bot as author,
+committer or co-author. Do not configure remotes, push, tag, publish, change
+repository visibility or edit consumers. Keep transient run logs and
+exploratory patches in the ignored `docs/tasks/local/wotex-coap/`.
 The checked-in plan is an acceptance contract, not a worker coordinator.

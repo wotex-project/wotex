@@ -3,7 +3,7 @@ package: "wotex_modbus"
 completion_plan: "docs/plans/wotex-modbus-completion.md"
 specifications:
   - id: "WMB.00"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WMB.00-library-contract.md"
     implementation_status: "implemented"
     standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Revision-pinned software contract; implementation and evidence scope are specified separately."}]

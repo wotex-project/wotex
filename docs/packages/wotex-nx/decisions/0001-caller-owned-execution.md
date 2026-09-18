@@ -1,5 +1,7 @@
 # Decision 0001: caller-owned numerical execution
 
+Status: accepted
+
 ## Decision
 
 `wotex_nx` is a normal library. Loading it starts no process. It does not own a

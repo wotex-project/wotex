@@ -1,6 +1,6 @@
 # Wotex OPC UA
 
-Consumer-neutral OPC Unified Architecture interactions for W3C Web of Things consumers.
+**Consumer-neutral OPC Unified Architecture interactions for W3C Web of Things consumers.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_opcua.svg)](https://hex.pm/packages/wotex_opcua)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_opcua)
@@ -9,6 +9,7 @@ Consumer-neutral OPC Unified Architecture interactions for W3C Web of Things con
 
 [Installation](#installation) ·
 [Implemented profile](#implemented-profile) ·
+[Native software contract](#native-software-contract) ·
 [Quick start](#quick-start) ·
 [Wotex contract](#wotex-contract) ·
 [Development](#development) ·
@@ -111,9 +112,10 @@ asyncua is solely an independent software peer in this target.
 
 [WOP.13](../../docs/packages/wotex-opcua/specs/WOP.13-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
-`mix wotex.opcua.native.build --workspace ABS` builds the packaged native
-bootstrap from verified static SDK/OpenSSL sources and writes a content-bound
-receipt; inside this package `mix wotex.native.build` is its alias. CMake 3.20+,
+`mix native.build --package wotex-opcua --workspace ABS` from the repository
+root (inside the package, `mix wotex.opcua.native.build` or its alias
+`mix wotex.native.build`) builds the packaged native bootstrap from verified
+static SDK/OpenSSL sources and writes a content-bound receipt. CMake 3.20+,
 a C11 compiler, make, Perl, Python 3, archive utilities and curl 8.4.0+ are
 explicit build prerequisites. Failed builds retain diagnostic files and require
 a fresh workspace.
@@ -153,8 +155,8 @@ revised Session timeout. A separate C loopback test verifies fractional and
 integer revisions and their lifetime through real SDK Sessions. That isolated
 test uses Security None and does not accept the secure production Session path.
 
-`mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS` build and run the software acceptance
+`mix pkg wotex-opcua wotex.software.build --workspace ABS` and
+`mix pkg wotex-opcua wotex.software.run --workspace ABS` build and run the software acceptance
 lanes; WOP-P08 acceptance of the complete software profile remains open. Bootstrap
 build success does not establish a native Session or accept the native protocol profile.
 The mandatory `mix check` gate performs a fresh native build and receipt fault
@@ -312,3 +314,9 @@ profiles from planned contracts. The [Wotex integration contract](../../docs/pac
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. These are target requirements; a passing baseline
 gate does not accept the unfinished software profile.
+
+## License
+
+Wotex OPC UA is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-opcua/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-opcua/NOTICE).

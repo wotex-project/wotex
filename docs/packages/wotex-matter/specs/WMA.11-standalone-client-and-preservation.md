@@ -3,9 +3,9 @@ spec:
   id: WMA.11
   title: "Standalone controller and cluster workflows"
   status: accepted
-  version: 1.1.2
+  version: 1.2.0
   owner: wotex-matter
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WMA.11 Standalone controller and cluster workflows
@@ -143,10 +143,15 @@ accurately; factory contract tests alone cannot accept P09.
 
 ## WMA-N04 — Concrete corpus and executable acceptance
 
-[contract-v1.json](../../../../packages/wotex-matter/priv/fixtures/contract-v1.json) is fixture format `1.0.0` with
-status `partially_executed`. P01 binds WMA-F01–F06, WMA-F10 and WMA-F12 to
-public operations in `test/wotex/matter/path_value_test.exs`; later lifecycle
-cases remain unexecuted. The broader Vxx rows in .10 are scenario families.
+[contract-v1.json](../../../../packages/wotex-matter/priv/fixtures/contract-v1.json) is fixture format `1.0.0`,
+and all twelve cases execute. P01 binds the pure cases WMA-F01–F06, WMA-F10
+and WMA-F12 to public operations in `test/wotex/matter/path_value_test.exs`.
+The lifecycle cases run with their owning packages: WMA-F07 (wrong fabric) in
+the P03 native lane (`bin/check_p03_native.exs`), WMA-F11 with P04 in
+`test/wotex/matter/interaction_test.exs`, WMA-F08 with P05 in
+`test/wotex/matter/subscription_test.exs` and WMA-F09 with P06 in
+`test/wotex/matter/subscription_recovery_test.exs`. The broader Vxx rows in
+.10 are scenario families.
 Neither a scenario row nor parseable JSON counts as an executed test. All Vxx
 alternatives and boundaries still need tests.
 
@@ -171,10 +176,10 @@ The runner must inspect real owner state and recorded backend calls to produce
 that observation; it must not reproduce the expected state machine inside the
 assertion. The trace is an injected contract test, not interoperability evidence.
 
-Add `test/wotex/matter/contract_fixture_test.exs` during P01 and bind each pure
-case as its API becomes available; add lifecycle cases in their owning package.
-A case without an implementation remains explicitly unexecuted and prevents
-accepting its package. Do not check in an always-skipped test or count an ID in
+Each case is bound to an executable test named above, in the test file or
+native lane of its owning package; there is no separate contract-fixture test
+file. A case without an implementation remains explicitly unexecuted and
+prevents accepting its package. Do not check in an always-skipped test or count an ID in
 a comment as proof. Final evidence records case ID, fixture SHA-256, executable
 test path, command, source revision and result. The selected runner must fail on
 unknown fixture format/operation, missing assertion, mismatched output or absent

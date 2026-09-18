@@ -308,7 +308,8 @@ unsplit provenance and never start training implicitly. The accepted host
 composes custom PromEx panels, bounded history,
 the self-scraper/remote-write bridge and an explicitly activated trusted-local
 BeamLens skill/provider profile with owner-bound browser presentation.
-Shared-tenant BeamLens and the MCP gateway remain planned host work. No ELK,
+Isolated hosted-tenant BeamLens and public HTTP query bindings remain planned
+host work. No ELK,
 mandatory Prometheus
 server or separate collector. GreptimeDB is local/self-hosted, not embedded in
 the BEAM. Prompt results cite measurements and cannot invoke Actions. Plain
@@ -363,9 +364,10 @@ scripts, package content inspection (`bin/check_package.exs`) and
 `git diff --check`. It needs no container runtime, Maude or Rust toolchain:
 the lanes below are excluded unless their switch is set.
 
-The same gate checks the deterministic CycloneDX 1.7 production SBOM at
-`priv/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
-Lab exports, behaviours, struct keys and typespecs in
+The explicit Workbench archive lane (`bin/check_workbench_archive.exs`)
+checks the deterministic CycloneDX 1.7 production SBOM at
+`priv/provenance/workbench-bom.cdx.json`. The full gate's API-surface check
+records Lab exports, behaviours, struct keys and typespecs in
 `priv/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
 These are release-review inputs, not a stable-API or public-candidate claim.
 
@@ -388,6 +390,8 @@ when asked, inside `packages/wotex-lab`.
 | Reference consumer | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_reference_consumer.exs` | runs the lanes this machine supports, records the rest as `not_run` |
 | Base archive consumer | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive_consumer.exs` | public dependencies in the local Hex cache |
 | Workbench archive | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_workbench_archive.exs` | public dependencies and platform precompiled archives in the local Hex cache |
+| TypeScript client drift, Node tests, npm archive shape | `WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs --check` | Node and npm |
+| Workbench OCI source shape | `elixir bin/check_oci_source.exs` (`WOTEX_LAB_OCI_CHECK=1` adds Docker's build-graph check) | Docker only for the build-graph check |
 
 The full conformance source suite requires Rust/Cargo 1.85+ with rustfmt and
 Clippy, plus Darwin `sandbox-exec` or an admitted Linux Bubblewrap environment.
@@ -444,7 +448,8 @@ their own directories with their own `README.md`: `hosts/workbench/` (the
 Phoenix LiveView Workbench, gate `WOTEX_PATH_DEPS=1 mix check --no-retry`) and
 `hosts/nerves/` (Raspberry Pi 4 firmware source). The generated TypeScript
 client in `clients/typescript/` is written by
-`WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs`.
+`WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs --write`
+(`--check` runs the drift, Node test and `npm pack --dry-run` check).
 
 ## License
 

@@ -3,7 +3,7 @@ package: "wotex_matter"
 completion_plan: "docs/plans/wotex-matter-completion.md"
 specifications:
   - id: "WMA.00"
-    version: "1.1.1"
+    version: "1.1.2"
     path: "docs/specs/WMA.00-library-contract.md"
     implementation_status: "implemented"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "C01-C10 are implemented for the finite software profile defined by WMA.10-WMA.13; physical-device validation and certification are separate"}]
@@ -48,7 +48,7 @@ specifications:
     executable_evidence: ["priv/fixtures/wotex-integration-v1.json", "test/wotex/matter/commissioning_test.exs", "test/wotex/matter/interaction_test.exs", "test/wotex/matter/path_value_test.exs", "test/wotex/matter/persistent_bridge_test.exs", "test/wotex/matter/runtime_integration_test.exs", "test/wotex/matter/runtime_stream_test.exs", "test/wotex/matter/subscription_recovery_test.exs", "test/wotex/matter/subscription_test.exs", "test/native/commissioning_test.cpp", "test/native/value_test.cpp", "test/native/storage_test.cpp", "test/native/controller_test.cpp", "test/native/interaction_test.cpp", "test/native/subscription_test.cpp", "bin/check_p01_native.exs", "bin/check_p02_native.exs", "bin/check_p02_advisories.exs", "bin/check_p03_native.exs", "bin/check_p03_advisories.exs", "bin/check_p04_native.exs", "bin/check_p05_native.exs", "bin/check_p06_native.exs", "bin/check_p07_native.exs"]
     compatibility_classification: "P01 executes the pure path, TLV, descriptor, report, catalogue and batch-result layer, including WMA-F01–F06, WMA-F10 and WMA-F12. P02 implements durable storage. P03 implements controller ownership and WMA-F07. P04 implements native interactions, discovery and WMA-F11. P05 and P06 implement bounded subscription delivery, terminal loss and recovery. P07 implements commissioning, windows and ACLs. P08/P08a implement Runtime projection and the public ConsumedThing matrix. P09 executes the complete pinned-peer, negative-security, restart, stress, resource, matrix and archive acceptance gates."
   - id: "WMA.11"
-    version: "1.1.2"
+    version: "1.2.0"
     path: "docs/specs/WMA.11-standalone-client-and-preservation.md"
     implementation_status: "implemented"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "All WMA-F01-WMA-F12 standalone cases execute at their specified pure, native or pinned-peer boundary"}]
@@ -66,7 +66,7 @@ specifications:
     executable_evidence: ["priv/fixtures/wotex-integration-v1.json", "test/wotex/matter/contract_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/runtime_integration_test.exs", "test/wotex/matter/runtime_stream_test.exs", "test/interop/native_oneshot_test.exs", "bin/check_archive.exs"]
     compatibility_classification: "P08 implements typed controller result projection and private Runtime stream relay. P08a executes WMA-I01–I06 through public core/Runtime APIs: exact profiles, strict selection and credentials, deadlines, classified failures/retries, result identity/metadata bounds and Runtime-owned streams with original-route cleanup. P09 adds pinned software-peer execution and immutable-source package/archive acceptance."
   - id: "WMA.13"
-    version: "1.0.6"
+    version: "1.0.7"
     path: "docs/specs/WMA.13-native-backend.md"
     implementation_status: "implemented"
     standards: [{"name": "Native Matter controller", "revision": "Exact source hashes and build profile in .13", "claim": "First-party controller, normal/sanitizer builds and pinned software-peer profile are accepted"}]

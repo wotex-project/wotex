@@ -2,7 +2,10 @@
 
 Everything a person reads about the WoTEx package family lives here. Code
 never reads from this tree; fixtures, schemas, vectors and machine-read
-provenance live in each package's `priv/`.
+provenance live in each package's `priv/`. The one exception, recorded in the
+root `CLAUDE.md`, is wotex-lab's documentation-backed development features
+(the knowledge graph and its MCP resources), which read this tree as their
+subject through `Wotex.Lab.Documentation`.
 
 ## Layout
 

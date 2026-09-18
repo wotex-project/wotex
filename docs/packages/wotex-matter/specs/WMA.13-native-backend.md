@@ -3,7 +3,7 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.6
+  version: 1.0.7
   owner: wotex-matter
   updated: 2026-09-18
 ---
@@ -235,8 +235,9 @@ or pure flow test alone cannot satisfy these process tests.
 ## WMA-B03 — Concrete native acceptance
 
 [The native corpus](../../../../packages/wotex-matter/priv/fixtures/native-port-v1.json) has format
-`wotex.native-contract`, version `1.0.0`, and `specified_unexecuted` status.
-It supplements the .11 value/lifecycle and .12 Runtime corpora. Every case names
+`wotex.native-contract` and version `1.0.0`. All 17 cases execute in
+`test/wotex/matter/native_contract_test.exs` (tagged `:software`) on both
+required BEAM lanes. It supplements the .11 value/lifecycle and .12 Runtime corpora. Every case names
 an operation, exact input and exact normalized expectation. `line_utf8` includes
 the terminating newline when one is required. `parse_request` calls the shared
 production frame/request validator without SDK I/O and projects either

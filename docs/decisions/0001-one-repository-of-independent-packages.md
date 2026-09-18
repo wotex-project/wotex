@@ -16,7 +16,9 @@ when `WOTEX_PATH_DEPS=1` is set in `dev`, `test` or `docs`; unset, every
 package declares Hex requirements.
 
 Documentation for people lives in one tree, `docs/`, with one directory per
-package under `docs/packages/<name>/`. Code never reads from `docs/`.
+package under `docs/packages/<name>/`. Code never reads from `docs/`, with one
+exception recorded in the root `CLAUDE.md`: wotex-lab's documentation-backed
+development features read the documentation tree as their subject.
 
 The full history of every former package repository was imported linearly
 under its package directory; `docs/architecture/monorepo-import.md` records the
@@ -43,8 +45,12 @@ source revisions and the commit maps.
   (`mix impact`). CI runs every package on the minimum and current toolchain
   lanes.
 - Hex packages cannot include files outside their directory, so archives ship
-  code, `priv/`, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`;
-  specifications are published through HexDocs.
+  code, `priv/`, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE` and, only
+  where a package's shipped Mix tasks need them, its native sources and the
+  test assets those tasks run. Each package's archive check is the authority
+  for its exact contents. Archives never ship Markdown documentation,
+  governance files, agent files or check scripts; specifications are
+  published through HexDocs.
 - Consumers outside the repository depend on published packages, or on one
   commit of this repository with `sparse: "packages/<name>"` until
   publication (`docs/guides/consumer.md`).

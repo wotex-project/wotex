@@ -3,7 +3,7 @@ package: "wotex_coap"
 completion_plan: "docs/plans/wotex-coap-completion.md"
 specifications:
   - id: "WCO.00"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WCO.00-library-contract.md"
     implementation_status: "partial"
     standards: [{"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05; CoAP binding draft ef00e4d208c9f1ecc0eb7274ce3e90a7fc3bafc3", "claim": "Wotex Form/operation subset; no W3C conformance claim"}]
@@ -21,14 +21,14 @@ specifications:
     executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs"]
     compatibility_classification: "Implemented bounded UDP message/exchange and Observe rules, strict malformed-frame handling and whole-body transfers. No RFC 8974 extended tokens or RFC 8613 OSCORE acceptance is implied."
   - id: "WCO.02"
-    version: "1.4.0"
+    version: "1.5.0"
     path: "docs/specs/WCO.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06", "claim": "UDP framing, correlation and bounded confirmable exchanges"}, {"name": "IETF CoAP Observe", "revision": "RFC 7641 2015-09", "claim": "Registration, freshness, renewal, cancellation and bounded reports"}, {"name": "IETF CoAP blockwise", "revision": "RFC 7959 2016-08; RFC 9175 2022-02 section 3", "claim": "Bounded whole-body Block1/Block2 with Request-Tag; no general Echo or extended-token claim"}, {"name": "IETF CoRE Link Format", "revision": "RFC 6690 2012-08; RFC 5988 2010-10", "claim": "Bounded discovery grammar and preserved link attributes"}, {"name": "IETF DTLS and PKIX", "revision": "RFC 6347 2012-01; RFC 5280 2008-05", "claim": "OTP DTLS 1.2 PSK/PKI with the explicit S05 cipher and offline trust policy"}, {"name": "IETF OSCORE", "revision": "RFC 8613 2019-07", "claim": "Pure fixed-suite credential value only; no OSCORE transport claim"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05; CoAP binding draft ef00e4d208c9f1ecc0eb7274ce3e90a7fc3bafc3", "claim": "Wotex Form/operation subset; no W3C conformance claim"}]
     requires: ["WCO.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.CoAP.Error", "Wotex.CoAP.Mapping", "Wotex.CoAP.Security", "Wotex.CoAP.Transport"]
-    executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs", "test/wotex/coap/security_oscore_test.exs"]
-    compatibility_classification: "Implemented baseline profile: UDP/DTLS Form mapping and Runtime unary/stream operations, OTP DTLS PSK/PKI, Observe and discovery. test/interop/dtls_pki_test.exs covers independent libcoap native and Runtime PSK/PKI operations, Observe, authentication faults and record replay. Pure fixed-suite OSCORE credential construction is implemented without store access; the OSCORE transport and complete secure stress matrix are outside this evidence."
+    executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs", "test/wotex/coap/security_oscore_test.exs", "test/wotex/coap/profile_test.exs", "test/wotex/coap/runtime_oscore_test.exs"]
+    compatibility_classification: "Implemented baseline profile: UDP/DTLS Form mapping and Runtime unary/stream operations, OTP DTLS PSK/PKI, Observe and discovery. test/interop/dtls_pki_test.exs covers independent libcoap native and Runtime PSK/PKI operations, Observe, authentication faults and record replay. Pure fixed-suite OSCORE credential construction is implemented without store access. The admitted profile modes, including profile(:oscore), are asserted in profile_test.exs, and the OSCORE Runtime unary and Observe routes through the native owner in runtime_oscore_test.exs; the OSCORE transport evidence and the complete secure stress matrix belong to WCO.12 and WCO.13."
   - id: "WCO.03"
     version: "1.0.0"
     path: "docs/specs/WCO.03-blockwise.md"

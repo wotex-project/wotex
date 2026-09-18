@@ -193,8 +193,9 @@ C/C++ adapters run ASan/UBSan in the Linux fault lane.
 After each package, update the current-profile/README capability claims only for
 behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
-explicit. Use the author and committer required by `CLAUDE.md`; never configure
-remotes, push, tag, publish, change visibility or edit a consumer.
+explicit. Commit with the identity already configured by the contributor, as the
+root `CLAUDE.md` requires; never configure remotes, push, tag, publish, change
+visibility or edit a consumer.
 
 The final package accepts every .11 standalone, .12 integration and .13 native requirement,
 then runs the full .00 C09 matrix, all .10 scenarios, .11/.13 concrete cases and software

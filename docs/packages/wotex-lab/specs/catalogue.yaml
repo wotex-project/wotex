@@ -535,7 +535,7 @@ specifications:
       - "hosts/workbench/bin/check_boundary.exs"
     compatibility_classification: Additive reference-host behaviour; host CSS lets stacked grid items shrink below chart and table min-content widths, and digests wrap. PromptComposer gains an optional disclosure attribute, AnswerBlock renders sources without a destination as text, and each session room now owns an attributed collector and bounded history, Room.history/1 returns its binding and the explicit load_history event charts saved panels from that history, while MetricPanel gains an optional value_visible attribute. The separately selected Grafana lane imports the unchanged catalogue dashboard export and executes every panel target. The pre-1.0 reference host replaces its internal Vega/browser-hook chart path with the existing closed Elixir geometry and server-rendered HEEx/SVG; Explorer remains optional analysis and pan/zoom is not claimed. It also retains an explicitly activated trusted-local investigation UI. Base Lab consumers keep inert tokens and scoped CSS without Phoenix, Explorer or BeamLens.
   - id: WLB.12
-    version: "0.1.0"
+    version: "0.2.0"
     path: docs/specs/WLB.12-unified-documentation.md
     implementation_status: planned
     evidence_status: missing

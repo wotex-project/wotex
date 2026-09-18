@@ -1,5 +1,7 @@
 # Decision 0002: heterogeneous feature batches and inert output
 
+Status: accepted
+
 ## Decision
 
 A schema may contain features with different fixed shapes and dtypes. Therefore

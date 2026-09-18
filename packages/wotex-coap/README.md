@@ -301,9 +301,11 @@ gate does not accept the unfinished software profile.
 ## Native build and software orchestration
 
 [WCO.13](../../docs/packages/wotex-coap/specs/WCO.13-native-build-and-software-evidence.md) defines
-the implemented `mix wotex.native.build --workspace ABS` and
-`mix wotex.software.build --workspace ABS` interfaces plus the implemented
-`mix wotex.software.run --workspace ABS` interface. The run task verifies an
+the implemented package tasks `wotex.native.build`, `wotex.software.build` and
+`wotex.software.run`, each taking `--workspace ABS`; from the repository root
+run `mix native.build --package wotex-coap --workspace ABS` and
+`mix pkg wotex-coap wotex.software.build|wotex.software.run --workspace ABS`.
+The run task verifies an
 existing build and executes the current independent libcoap UDP, PSK and PKI
 interop suite, same-stack OSCORE sessions through the Mix-built helper and an
 independent upstream-stack OSCORE cohort against a pinned Eclipse Californium
@@ -361,3 +363,9 @@ against Eclipse Californium 3.14.0 on macOS arm64; that archive is admitted by
 exact digest and run by a recorded Java runtime as a test peer only. Its renewed
 run receipt, its Linux lanes, Group OSCORE, context re-derivation and a second
 independent stack remain open acceptance work.
+
+## License
+
+Wotex CoAP is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-coap/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-coap/NOTICE).

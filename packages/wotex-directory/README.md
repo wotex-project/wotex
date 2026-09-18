@@ -229,5 +229,10 @@ The adapters under `test/support/` are test consumers and are not packaged
 production storage implementations.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
-[security policy](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-directory/security.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
+[security policy](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-directory/security.md).
+
+## License
+
+Wotex Directory is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-directory/LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-directory/NOTICE).

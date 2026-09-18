@@ -33,6 +33,11 @@ are in the root `CLAUDE.md`.
   items or authorize edits to their catalogues.
 - Publish only consumer-neutral fixtures and allowlisted documentation. No
   secrets, coordination daemons or shared execution trackers.
+- Lab holds the one exception to the root rule that code never reads `docs/`:
+  its documentation-backed development features (the knowledge graph and its
+  MCP resources) read `docs/packages/wotex-lab/` as their subject, only
+  through `Wotex.Lab.Documentation`, and report it unavailable in a released
+  archive. Everything else Lab reads lives in `priv/`; add no other reader.
 - `priv/provenance/source-index.json` is a historical snapshot: never move its
   statuses or digests to current sibling state. `source-cohort.json` and the
   `WLB.0x-evidence.json` records change only by re-running their evidence.
@@ -71,8 +76,10 @@ are in the root `CLAUDE.md`.
   and remote-write harnesses, the native helper builder, the cookbook runner.
 - Specifications: `docs/packages/wotex-lab/specs/` (WLB.01 to WLB.12;
   `catalogue.yaml` owns status). Plans, decisions and provenance reviews sit
-  beside them. Lab code reads this tree: `bin/check_contracts.exs` checks spec
-  headings, versions and links, and the graph digests every document.
+  beside them. The graph digests every document; `bin/check_graph.exs`,
+  `bin/check_contracts.exs` (spec headings, versions and links) and
+  `bin/generate_typescript_client.exs` reach the tree through
+  `Wotex.Lab.Documentation` too.
 
 ## Working on this package
 

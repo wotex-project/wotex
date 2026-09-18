@@ -53,7 +53,11 @@ skill.
   toolchain and must match the current lane.
 - `docs/` is for people. Code never reads from `docs/`. Fixtures, schemas,
   vectors and machine-read provenance live in `packages/<name>/priv/` or
-  `test/support/`.
+  `test/support/`. The one exception is wotex-lab's documentation-backed
+  development features (the knowledge graph and its MCP resources): they read
+  the documentation tree as their subject, only through
+  `Wotex.Lab.Documentation`, and report it unavailable in a released archive.
+  No other package code may read `docs/`.
 - `docs/packages/<name>/` mirrors the package it documents: `specs/` (with
   `catalogue.yaml` as the normative status owner), `plans/`, `decisions/`,
   `provenance/`. `docs/catalogue.yaml` is generated (`mix wotex.catalogue`);
@@ -61,9 +65,15 @@ skill.
 - Machine-local execution state (trackers, progress notes, patches, receipts
   in progress) lives only in the ignored `docs/tasks/local/<name>/`. It never
   enters Git, package archives or generated documentation.
-- Hex tarballs ship code, `priv/`, `README.md`, `CHANGELOG.md`, `LICENSE` and
-  `NOTICE`. They do not ship Markdown documentation, governance files, agent
-  files or check scripts; specifications reach consumers through HexDocs.
+- Package archives ship code, `priv/`, `README.md`, `CHANGELOG.md`, `LICENSE`
+  and `NOTICE` and, only where the package's shipped Mix tasks need them, its
+  native sources and the test assets those tasks run (today native sources in
+  wotex-ble, wotex-coap, wotex-matter, wotex-opcua and wotex-thread, test
+  assets in wotex-coap and wotex-matter). The package's archive check
+  (`bin/check_archive.exs`, or `bin/check_package.exs`) is the authority for
+  its exact contents. Archives never ship Markdown documentation, governance
+  files, agent files or check scripts; notes inside a shipped native source
+  tree are part of that tree. Specifications reach consumers through HexDocs.
 
 ## Naming and neutrality
 

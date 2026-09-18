@@ -1,6 +1,6 @@
 # Wotex BACnet
 
-Consumer-neutral BACnet interactions for W3C Web of Things consumers.
+**Consumer-neutral BACnet interactions for W3C Web of Things consumers.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_bacnet.svg)](https://hex.pm/packages/wotex_bacnet)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_bacnet)
@@ -247,3 +247,9 @@ software profiles from separately scoped nonclaims. The [Wotex integration contr
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. It does not claim publication, hardware, BTL or
 full BACnet conformance, or downstream consumer parity.
+
+## License
+
+Wotex BACnet is released under Apache-2.0. See
+[LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-bacnet/LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-bacnet/NOTICE).
