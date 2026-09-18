@@ -172,6 +172,17 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
                     coap_pdu_set_code(response, COAP_RESPONSE_CODE_BAD_REQUEST);
                     return;
                 }
+                /* 2.31 Continue and class 3 codes are neither a successful
+                 * renewal nor a remote error status. */
+                if (renewal_fault == 6) {
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE(231));
+                    return;
+                }
+                if (renewal_fault == 7) {
+                    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): libcoap enumerates no class 3 code; the peer sends the reserved 3.00 on purpose
+                    coap_pdu_set_code(response, COAP_RESPONSE_CODE(300));
+                    return;
+                }
                 if (renewal_fault == 2) {
                     coap_resource_set_get_observable(resource, 0);
                     assert(coap_remove_option(response, COAP_OPTION_OBSERVE));
@@ -1863,6 +1874,8 @@ int main(int argc, char **argv) {
     renewal_fault_observation(argv[1], 3,
                               "{\"code\":\"representation_changed\"}");
     renewal_fault_observation(argv[1], 4, "{\"code\":\"timeout\"}");
+    renewal_fault_observation(argv[1], 6, "{\"code\":\"invalid_response\"}");
+    renewal_fault_observation(argv[1], 7, "{\"code\":\"invalid_response\"}");
     renewal_cancel_observation(argv[1]);
     intervening_cancel_observation(argv[1], 1);
     intervening_cancel_observation(argv[1], 0);

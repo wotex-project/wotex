@@ -870,6 +870,18 @@ sends a plaintext response with an unused token and requires no delivery and no
 protection event; it fails against the nine-patch SDK. The fifteen correlated
 plaintext variants still report exactly one protection failure each.
 
+The [native worker renewal-code receipt](native-worker-renewal-codes-v1.json)
+binds the next source cohort. The worker reported `remote_response` with the
+numeric status for every renewal code outside 2.00–2.30, so a protected renewal
+answered with 2.31 Continue ended the observation as a remote error with status
+95. It now reserves `remote_response` for class 4 and 5 codes (128–191), as it
+already did for unary and registration responses, and ends a renewal answered
+with 2.31 or a class 3 code with `invalid_response`. Two new renewal-fault
+cases send 2.31 and 3.00 through public custody against the same-stack peer;
+both pass on macOS and on Linux with ASan/UBSan and leak detection, and the 2.31
+case fails against the preceding helper. The four earlier renewal faults keep
+their codes.
+
 The independent upstream-stack OSCORE cohort in
 `test/software/independent_oscore_test.exs` drives the manifest-bound helper
 against `org.eclipse.californium:cf-plugtest-server` 3.14.0, admitted by exact

@@ -1,0 +1,89 @@
+{
+  "schema": "wotex.coap.native-worker-renewal-codes-evidence@1",
+  "specification": "WCO.08@1.9.0",
+  "scope": "Production worker classification of protected Observe renewal responses whose code is neither 2.00-2.30 nor a class 4 or 5 error",
+  "standard": {
+    "name": "IETF CoAP",
+    "revision": "RFC 7252 2014-06; RFC 7959 2016-08",
+    "sections": ["5.9", "12.1.2", "2.9.1"],
+    "summary": "Class 3 response codes are reserved and 2.31 Continue answers only a Block1 request, so neither completes a GET Observe renewal nor carries a remote error status"
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "43c59c98329f57558aa6114768b8c844664939f79b0ada5301e5dbba92923eac",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "6699ad337d8dbfc6cefa205ff55cd5fc532993b0e6283706bed09ef556fd57ec",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "1ef8f927c5d774b6b456ac9d28e9694fdb51995cb7b1fd53fe49ce895e95a37b",
+      "native/oscore/exchange.h": "7d003af6f3b3fe585f6960c9ac5f72d07260ee5a34807a8fdbc7228f285584ab",
+      "native/oscore/observation.c": "f09c27e0f61b770bd95803fc9cd9fc5f4a8303786f31b699cb22b088bce4215b",
+      "native/oscore/observation.h": "734f13203346323ffff1966dc24f51afb7cd7644d9a694bc13289dd874af2ef1",
+      "lib/wotex/coap/native/wire.ex": "32bc193ef4735744f0655b4b06169164dc8d047c9fb1f4ceb20ca30d98c8ba78",
+      "test/native/oscore_worker_exchange_test.c": "9105e92025e14a47478d825071088de432e0ad37a4158ed07710a5c713a02508",
+      "test/native/Dockerfile": "f2ebd96aeb29cc86a3dcb7d3e5e25574d4d064c6543e9352dede3628743b7f9d"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 10
+  },
+  "requirements": ["WCO-V08", "WCO-N02"],
+  "defect": {
+    "observed": "A protected renewal answered with 2.31 Continue ended the observation with remote_response and status 95",
+    "cause": "The worker reported remote_response with the numeric status for every renewal code outside 2.00-2.30, class 3 codes included, while unary and registration responses already reserved remote_response for codes 128-191"
+  },
+  "assertions": [
+    "A protected renewal answered with 2.31 Continue emits the terminal error invalid_response without a status",
+    "A protected renewal answered with 3.00 emits the terminal error invalid_response without a status",
+    "Both terminal envelopes arrive within 3.5 s of the Max-Age-zero report, and the worker exits cleanly",
+    "The existing renewal faults still emit remote_response with status 128, invalid_observation_response, representation_changed and timeout",
+    "The BEAM wire decoder already admits invalid_response as a terminal subscription error"
+  ],
+  "negative_control": {
+    "worker_sha256": "ed07d8aee41fd04e2399ad5e67c8dde29ce26d341df2911826ac8367be0730cb",
+    "platform": "Linux arm64, ASan/UBSan",
+    "result": "failed",
+    "observed": "The 2.31 case emitted {\"code\":\"remote_response\",\"status\":95} where invalid_response is required"
+  },
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "command": "mix native.test --package wotex-coap",
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "809eda55c52b15949a88c31a94857867f3a63a57d2fe4aa0b4e26e42e2e7f7c2",
+      "peer_sha256": "d432bd73e52095cbadd770f2b9115b03e4f647d5e335d4e9cec1a6f14d7335d3",
+      "static_library_sha256": "1db850935e4ed473a0c6b2e5920a94744a967d7472a092c13631aa69b678066c",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "image": "sha256:5be9f5fb250fbca6c2b7166b5359bca8f25e93a4eb2fb31dddb870d2ea16a996",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "618b9fd75f279957ca2701f84da27cf9960d8475b94f2180af67381670b11dcf",
+      "peer_sha256": "4cfc76224dd709a560d983071625d4879d87c5c0a8ca0a546959189e8b41fc69",
+      "static_library_sha256": "8a6908c4d734645bad60936eb5baecc889de79884ab8a38c28e14ad7958ca1aa",
+      "artifact_log_sha256": "5dcb78840aa2dcfa89be29db0e8465dd7602c6b19ad01bcbbc66284d24d8edeb",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Renewal codes from an independent upstream OSCORE stack",
+    "Unary and registration responses with 2.31 or class 3 codes, which already end with invalid_response and have no protected same-stack case here"
+  ]
+}

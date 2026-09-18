@@ -742,8 +742,9 @@ static int observation_response(struct worker *worker,
             (renewal && !worker->observation.renewing))
             return 0;
         if (renewal && (message->code < 64 || message->code > 94))
-            return terminal_observation_status(worker, "remote_response", 1,
-                                               message->code);
+            return message->code >= 128 && message->code <= 191
+                       ? terminal_observation_status(worker, "remote_response", 1, message->code)
+                       : terminal_observation(worker, "invalid_response");
         if (!prepare_report(message, &pending)) {
             clear_report(&pending);
             return terminal_observation(worker,
