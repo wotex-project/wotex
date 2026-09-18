@@ -195,8 +195,7 @@ defmodule Wotex.BACnet.DiscoveryFixtureTest do
     {owner, peer, clock, token, monitor} = start(default_window(), send_result: :unexpected)
     assert_receive {:discovery_peer_send, ^peer, _}
     assert_receive {:discovery_result, ^owner, ^token, {:error, %Error{code: :transport_error}}}
-    assert_receive {:DOWN, ^monitor, :process, ^owner, reason}
-    assert reason in [:normal, :noproc]
+    assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}
     assert DiscoveryClock.timers(clock) == 0
 
     {owner, peer, clock, token, monitor} = start(default_window())
@@ -250,19 +249,27 @@ defmodule Wotex.BACnet.DiscoveryFixtureTest do
     peer = start_supervised!(child)
     token = make_ref()
 
-    {:ok, owner} =
-      DiscoveryOwner.start_link(%{
-        client: peer,
-        session: self(),
-        from: {self(), make_ref()},
-        token: token,
-        window: window,
-        clock: fn -> DiscoveryClock.now(clock) end,
-        schedule: fn pid, message, delay -> DiscoveryClock.schedule(clock, pid, message, delay) end,
-        cancel_timer: fn ref -> DiscoveryClock.cancel(clock, ref) end
-      })
+    # The owner can finish before `start_link/1` returns to this process, so
+    # the monitor is created atomically with the process.
+    {:ok, {owner, monitor}} =
+      :gen_server.start_monitor(
+        DiscoveryOwner,
+        %{
+          client: peer,
+          session: self(),
+          from: {self(), make_ref()},
+          token: token,
+          window: window,
+          clock: fn -> DiscoveryClock.now(clock) end,
+          schedule: fn pid, message, delay ->
+            DiscoveryClock.schedule(clock, pid, message, delay)
+          end,
+          cancel_timer: fn ref -> DiscoveryClock.cancel(clock, ref) end
+        },
+        []
+      )
 
-    {owner, peer, clock, token, Process.monitor(owner)}
+    {owner, peer, clock, token, monitor}
   end
 
   defp deliver(owner, peer, %{"event" => "i_am", "device" => device}) do
