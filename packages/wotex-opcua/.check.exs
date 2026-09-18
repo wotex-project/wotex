@@ -22,6 +22,19 @@
        "WOTEX_NATIVE_BUILD_WORKSPACE" => Path.join(System.tmp_dir!(), "wotex-opcua-check")
      }},
     {:dialyzer, command: "mix dialyzer"},
+    # First-party C, C++ and Rust code through the root tasks (see
+    # tooling/packages.yaml): changed-line formatting, static analysis and the
+    # native tests, which build into a cached workspace outside the repository.
+    {:native_format,
+     command: "mix native.lint --no-clippy --package wotex-opcua",
+     cd: "../..",
+     fix: "mix native.lint --fix --no-clippy --package wotex-opcua"},
+    {:native_lint,
+     command: "mix native.lint --tidy --no-format --package wotex-opcua",
+     cd: "../..",
+     deps: [:native_format]},
+    {:native_test,
+     command: "mix native.test --package wotex-opcua", cd: "../..", deps: [:native_lint]},
     {:native_custody, command: "mix run --no-start bin/check_native_custody.exs"},
     {:package, command: "env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"},
     {:archive, command: "mix run --no-start bin/check_archive.exs", deps: [coverage: [status: 0]]},

@@ -16,6 +16,19 @@
     {:ex_unit, false},
     {:coverage, command: "mix coveralls", env: %{"MIX_ENV" => "test"}},
     {:dialyzer, command: "mix dialyzer"},
+    # First-party C, C++ and Rust code through the root tasks (see
+    # tooling/packages.yaml): changed-line formatting, static analysis and the
+    # native tests, which build into a cached workspace outside the repository.
+    {:native_format,
+     command: "mix native.lint --no-clippy --package wotex-ble",
+     cd: "../..",
+     fix: "mix native.lint --fix --no-clippy --package wotex-ble"},
+    {:native_lint,
+     command: "mix native.lint --tidy --no-format --package wotex-ble",
+     cd: "../..",
+     deps: [:native_format]},
+    {:native_test,
+     command: "mix native.test --package wotex-ble", cd: "../..", deps: [:native_lint]},
     {:archive, command: "mix run --no-start bin/check_archive.exs", deps: [coverage: [status: 0]]},
     {:application_free, command: "mix run --no-start bin/check_application_free.exs"},
     {:diff, command: "git diff --check"},
