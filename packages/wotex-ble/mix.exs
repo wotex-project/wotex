@@ -48,6 +48,8 @@ defmodule WotexBLE.MixProject do
       {:stream_data, "~> 1.2", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -131,7 +133,9 @@ defmodule WotexBLE.MixProject do
           "CHANGELOG.md",
           "../../docs/packages/wotex-ble/security.md"
         ] ++
-          Path.wildcard("../../docs/packages/wotex-ble/{specs,plans,provenance}/*.md"),
+          Path.wildcard("../../docs/packages/wotex-ble/{specs,plans,provenance}/*.md") ++
+          Path.wildcard("bench/output/*.md"),
+      groups_for_extras: [Benchmarks: ~r/bench\/output/],
       source_url: @source_url,
       source_ref: "wotex-ble-v#{@version}",
       source_url_pattern: &source_url/2,
