@@ -56,19 +56,6 @@ defmodule Wotex.Thread.DaemonTest do
     assert {:error, _} = Address.validate_message(%{type: :dataset_set})
   end
 
-  test "packet and aggregate limits close oversized daemon responses" do
-    {path, task} =
-      peer(fn socket ->
-        assert {:ok, _} = :gen_tcp.recv(socket, 0, 1000)
-        :ok = :gen_tcp.send(socket, :binary.copy("x", 8193) <> "\n")
-        assert {:error, :closed} = :gen_tcp.recv(socket, 0, 1000)
-      end)
-
-    assert {:ok, handle} = Daemon.connect(socket_path: path)
-    assert {:error, %{code: :response_limit}} = Daemon.request(handle, %{type: :state}, 1000)
-    Task.await(task)
-  end
-
   test "a line beyond the packet size fails in the socket driver as response_limit" do
     {path, task} =
       peer(fn socket ->
