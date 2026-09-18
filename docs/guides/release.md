@@ -15,19 +15,26 @@ Automated agents never tag, push or publish.
 
 ## Steps
 
-From `packages/<name>`:
+`git_ops.json` at the repository root configures git_ops for every package:
+tags `<name>-v<version>`, the package's own `CHANGELOG.md`, the `@version` in
+its `mix.exs`, and only the commits that touch the package outside `bench/`.
+From the repository root:
 
 ```sh
-mix git_ops.release            # first release: mix git_ops.release --override 0.1.0
+git tag <name>-v0.0.0 <first commit of the package>   # once, before its first release
+mix git_ops.release --no-major                        # every package with releasable commits
 ```
 
-`git_ops` is configured per package (`config/config.exs`) with
-`version_tag_prefix: "<name>-v"`, so the tag is `<name>-v<version>` and only
-that package's version and changelog move. Then:
+git_ops reads each package's current version from its tags, so a package's
+first release starts from a `0.0.0` tag; its feature commits then make it
+`0.1.0`, and the changelog lists every feature and fix since that commit.
+`--no-major` keeps a package below 1.0 if its history has a breaking commit.
+Each released package gets its own version, changelog entry and tag. Then,
+for each released package:
 
 ```sh
 git push origin main <name>-v<version>
-env -u WOTEX_PATH_DEPS MIX_ENV=prod mix hex.publish
+(cd packages/<name> && env -u WOTEX_PATH_DEPS MIX_ENV=prod mix hex.publish)
 ```
 
 ExDoc links on HexDocs use the same tag: each package's `source_url/2`

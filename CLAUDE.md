@@ -110,9 +110,11 @@ skill.
 ## Release metadata
 
 Each package keeps its own `CHANGELOG.md` and version. Changelogs are
-maintained only by the release tooling; never edit them directly. Tags use the
-form `<package>-v<version>`. Only the human maintainer prepares or publishes a
-release; automated agents never invoke a release task.
+maintained only by the release tooling; never edit them directly. The release
+tooling is configured once, in the root `git_ops.json`; packages carry no
+release configuration. Tags use the form `<package>-v<version>`. Only the
+human maintainer prepares or publishes a release; automated agents never
+invoke a release task.
 
 ## Git authority
 

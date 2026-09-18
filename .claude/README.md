@@ -17,7 +17,7 @@ Family-wide rules apply to every package under `packages/`:
 | `affected-validation.md` | `packages/**`, root `lib/**`, `test/**`, `tooling/**`, `mix.exs` — which tests and gates to run |
 | `wot-terminology.md` | `packages/**`, `docs/packages/**` |
 | `elixir-library.md` | `packages/**/lib/**/*.ex`, `packages/**/test/**/*.exs`, `packages/**/mix.exs` |
-| `release-management.md` | `packages/**/CHANGELOG.md`, `mix.exs`, `README.md`, `config/config.exs` |
+| `release-management.md` | `packages/**/CHANGELOG.md`, `mix.exs`, `README.md`; root `git_ops.json` |
 
 Package-scoped rules are stored flat as `<package>--<rule>.md` and load only
 for `packages/<package>/**` (and `docs/packages/<package>/**` where the rule
