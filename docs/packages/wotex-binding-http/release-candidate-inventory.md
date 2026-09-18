@@ -9,7 +9,7 @@ and exact-archive commands in the README provide its executable evidence.
 
 | Vector | Candidate assertion |
 |---|---|
-| WBH-P01 | Mix project and Hex metadata have the exact application/package name, version, description, Elixir requirement, source/homepage links, maintainer, license and public documentation links |
+| WBH-P01 | Mix project and Hex metadata have the exact application/package name, version, description, Elixir requirement, source and homepage URLs, maintainer, license and exactly three package links: GitHub, Changelog and Specifications |
 | WBH-P02 | `LICENSE` and `NOTICE` are present in the package allowlist and retain the Apache-2.0 identity and copyright; the package security policy, published through HexDocs, retains the private disclosure address and dependency-audit policy |
 | WBH-P03 | The package allowlist contains the public source, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`; specifications, plans and evidence documents reach consumers through HexDocs; exact archive inspection rejects Markdown documentation, repository automation, QA configuration, tests, build products, local task state and development instructions |
 | WBH-P04 | Exact archive metadata names `wotex ~> 0.1.0`, `wotex_runtime ~> 0.1.0`, and `jason ~> 1.4` as Hex requirements and rejects Git, path, or environment-selected release dependencies |
