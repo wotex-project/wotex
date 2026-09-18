@@ -8,7 +8,7 @@ paths:
 
 The WCT specifications live in `docs/packages/wotex-continuum/specs/`; their
 schemas and vectors live in `packages/wotex-continuum/priv/schemas/` and
-`packages/wotex-continuum/test/vectors/`.
+`packages/wotex-continuum/priv/vectors/`.
 
 - WCT.01, WCT.02, and WCT.03 each have one normative owner file.
 - Use MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY deliberately.

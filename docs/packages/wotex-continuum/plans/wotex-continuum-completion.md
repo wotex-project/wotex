@@ -1,6 +1,6 @@
 # Wotex Continuum completion contract
 
-Plan version: 1.2.0. Package baseline: 0.1.0. Wire schema: 2.0.0.
+Plan version: 1.2.1. Package baseline: 0.1.0. Wire schema: 2.0.0.
 The single [catalogue](../specs/catalogue.yaml) points to normative WCT owners
 under `docs/packages/wotex-continuum/specs/`; it does not duplicate them.
 
@@ -9,11 +9,14 @@ changing any obligation. Documentation now lives under
 `docs/packages/wotex-continuum/`. Package archives no longer ship Markdown
 documentation, governance files or agent files; specifications are published
 through HexDocs. Fixtures and machine-read provenance ship under `priv/` (this
-package's schemas are `priv/schemas/`; its packaged vectors stay under
-`test/vectors/` as WCT-C04 records). The package gate
+package's schemas are `priv/schemas/` and its packaged vectors
+`priv/vectors/`). The package gate
 `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-continuum`,
 and the package's CI lane now discharge `repository_green` and
 `archive_consumer_green`. Tags use `wotex-continuum-v<version>`.
+
+Revision 1.2.1 moves the packaged vectors from `test/vectors/` to
+`priv/vectors/`, so the archive carries no test tree; no obligation changes.
 
 This tracked document is a versioned acceptance baseline, not a mutable work
 tracker. An accepted baseline is immutable in meaning; changed obligations need

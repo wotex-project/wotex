@@ -2,7 +2,7 @@
 
 Status: Accepted
 
-Specification version: 2.0.0
+Specification version: 2.0.1
 
 Wire schema version: 2.0.0
 
@@ -232,11 +232,11 @@ schema digest but does not change accepted values or canonical bytes.
 Normative JSON Schema: `priv/schemas/wct-01.schema.json`. The bytes are
 embedded at compile time and returned by `WotexContinuum.Schema`.
 
-Valid vectors: `test/vectors/valid/wct-01-*.json`.
+Valid vectors: `priv/vectors/valid/wct-01-*.json`.
 
-Invalid vectors: `test/vectors/invalid/wct-01-*.json`.
+Invalid vectors: `priv/vectors/invalid/wct-01-*.json`.
 
-Canonical vectors: `test/vectors/canonical/wct-01-*.json`. Every registered kind
+Canonical vectors: `priv/vectors/canonical/wct-01-*.json`. Every registered kind
 has at least one canonical vector, and a test asserts that coverage. A vector
 carries the prefix of the specification that owns its kind.
 

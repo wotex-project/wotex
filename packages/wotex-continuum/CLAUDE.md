@@ -32,7 +32,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
   sibling in-memory values is documentation, not a dependency. External
   dependencies must be small, justified, and included in provenance review.
 - Public wire changes update the owning WCT specification, `priv/schemas/`,
-  `test/vectors/`, tests, implementation and compatibility classification
+  `priv/vectors/`, tests, implementation and compatibility classification
   atomically. Package version and wire-schema version stay independent.
 - Credentials and non-public fixtures stay out of source, tests, package
   contents and generated documentation. Synthetic examples use `example` names
@@ -53,7 +53,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
   decoding (delegated to `Wotex.JSON.decode/2`) and deterministic encoding;
   `schema.ex` embeds `priv/schemas/wct-0{1,2,3}.schema.json`; `error.ex`:
   typed errors with JSON Pointer paths.
-- `test/vectors/{canonical,valid,invalid,compatibility}/`: executable wire
+- `priv/vectors/{canonical,valid,invalid,compatibility}/`: executable wire
   vectors, shipped in the package. `test/support/json_schema_subset.ex`: the
   schema-keyword evaluator used by the schema tests.
 - `bin/check_archive.exs`: archive and isolated-consumer proof (WCT-C04/C05,

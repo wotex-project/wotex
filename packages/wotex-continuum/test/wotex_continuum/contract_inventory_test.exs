@@ -25,7 +25,7 @@ defmodule WotexContinuum.ContractInventoryTest do
     ObservationProposal
   }
 
-  @vectors Path.expand("../vectors", __DIR__)
+  @vectors Path.expand("../../priv/vectors", __DIR__)
 
   @contracts %{
     "action_intent" => %{

@@ -24,7 +24,7 @@ registry is built.
 | Consumer | Exact archive behavior |
 | --- | --- |
 | Contract consumer | Constructs a manifest and capability declarations, evaluates compatible and missing-capability outcomes, validates observation and Action Thing identifiers against a caller-supplied Wotex Thing Description, and canonical-round-trips the manifest, observation, Action intent, and successful Action result with extensions. |
-| Reference consumer | Runs every packaged valid, canonical, invalid, and compatibility vector; asserts exact invalid code, phase, and path; validates a packaged Action intent against a supplied Thing Description; canonical-round-trips failure and `unknown` Action results; and applies a same-time lifecycle transition while preserving extensions and incrementing generation. |
+| Reference consumer | Runs every packaged valid, canonical, invalid, and compatibility vector under `priv/vectors/`; asserts exact invalid code, phase, and path; validates a packaged Action intent against a supplied Thing Description; canonical-round-trips failure and `unknown` Action results; and applies a same-time lifecycle transition while preserving extensions and incrementing generation. |
 | Floor consumer | Repeats the contract consumer with the direct Jason dependency fixed to the declared 1.4.5 floor. The core transitive cohort remains exact and separately qualified by WCT-C05. |
 | All consumers | Resolve only Hex lock entries, download bytes whose SHA-256 equals the one archive built by the check, compile with warnings as errors, load no checkout BEAM, and require no network service, process coordinator, clock, database, or privileged resource in the examples. |
 

@@ -3,7 +3,7 @@ package: "wotex_continuum"
 completion_plan: "docs/plans/wotex-continuum-completion.md"
 specifications:
   - id: "WCT.01"
-    version: "2.0.0"
+    version: "2.0.1"
     path: docs/specs/WCT.01-manifest-context-capability.md
     implementation_status: "implemented"
     standards:
@@ -15,7 +15,7 @@ specifications:
     executable_evidence: ["test/wotex_continuum/vector_test.exs", "test/wotex_continuum/codec_test.exs", "test/wotex_continuum/validation_test.exs", "test/wotex_continuum/property_contract_test.exs", "test/wotex_continuum/library_contract_test.exs", "test/wotex_continuum/schema_conformance_test.exs", "test/wotex_continuum/schema_agreement_test.exs", "test/wotex_continuum/dependency_security_test.exs", "test/wotex_continuum/release_contract_test.exs"]
     compatibility_classification: "Wire 2.0.0, incompatible with wire 1.0.0: the execution_context kind is renamed execution_scope and error paths are RFC 6901 JSON Pointer strings; source admission is delegated to the core bounded decoder; canonical vectors, full used-keyword schema agreement, and candidate-archive consumers are proved locally; public-registry availability and cross-vendor adoption are nonclaims"
   - id: "WCT.02"
-    version: "2.0.0"
+    version: "2.0.1"
     path: docs/specs/WCT.02-exchange-values.md
     implementation_status: "implemented"
     standards:
@@ -27,7 +27,7 @@ specifications:
     executable_evidence: ["test/wotex_continuum/value_state_test.exs", "test/wotex_continuum/thing_reference_test.exs", "test/wotex_continuum/vector_test.exs", "test/wotex_continuum/schema_conformance_test.exs", "test/wotex_continuum/schema_agreement_test.exs", "test/wotex_continuum/release_contract_test.exs"]
     compatibility_classification: "Wire 2.0.0, incompatible with wire 1.0.0 through the renamed nested scope kind; inherits WCT.01 boundary limitations; the sibling wire mapping is documentation, not a dependency; no dispatch, deduplication or evidence-authenticity guarantee"
   - id: "WCT.03"
-    version: "2.0.0"
+    version: "2.0.1"
     path: docs/specs/WCT.03-mode-lifecycle-exit.md
     implementation_status: "implemented"
     standards: []

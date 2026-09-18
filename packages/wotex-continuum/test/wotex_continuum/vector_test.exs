@@ -5,7 +5,16 @@ defmodule WotexContinuum.VectorTest do
 
   alias WotexContinuum.{Capability, Codec, Compatibility, Error}
 
-  @vectors Path.expand("../vectors", __DIR__)
+  @vectors Path.expand("../../priv/vectors", __DIR__)
+
+  test "the packaged vector set ships under priv/vectors" do
+    count = fn directory -> length(Path.wildcard(Path.join([@vectors, directory, "*.json"]))) end
+
+    assert count.("valid") == 13
+    assert count.("canonical") == 13
+    assert count.("invalid") >= 19
+    assert count.("compatibility") == 2
+  end
 
   test "every valid vector decodes and round-trips through canonical bytes" do
     for path <- Path.wildcard(Path.join([@vectors, "valid", "*.json"])) do

@@ -19,9 +19,9 @@ defmodule WotexContinuum.CheckArchive do
     "priv/schemas/wct-01.schema.json",
     "priv/schemas/wct-02.schema.json",
     "priv/schemas/wct-03.schema.json",
-    "test/vectors/canonical/wct-01-manifest.json",
-    "test/vectors/canonical/wct-02-observation.json",
-    "test/vectors/canonical/wct-03-lifecycle.json"
+    "priv/vectors/canonical/wct-01-manifest.json",
+    "priv/vectors/canonical/wct-02-observation.json",
+    "priv/vectors/canonical/wct-03-lifecycle.json"
   ]
 
   @absent [
@@ -46,8 +46,7 @@ defmodule WotexContinuum.CheckArchive do
     "priv/plts",
     "provenance",
     "specs",
-    "test/support",
-    "test/wotex_continuum"
+    "test"
   ]
 
   # Markdown documentation reaches consumers through HexDocs; no `docs/` tree
@@ -255,7 +254,7 @@ defmodule WotexContinuum.CheckArchive do
     }
 
     test "every packaged vector executes from the exact dependency extraction" do
-      vector_root = Path.join(dependency_root(), "test/vectors")
+      vector_root = Path.join(dependency_root(), "priv/vectors")
 
       valid = Path.wildcard(Path.join([vector_root, "valid", "*.json"]))
       canonical = Path.wildcard(Path.join([vector_root, "canonical", "*.json"]))
@@ -319,7 +318,7 @@ defmodule WotexContinuum.CheckArchive do
       context = scope("2026-09-02T10:00:04Z")
       action_vector =
         dependency_root()
-        |> Path.join("test/vectors/valid/wct-02-action-intent.json")
+        |> Path.join("priv/vectors/valid/wct-02-action-intent.json")
         |> File.read!()
 
       assert {:ok, intent} = Codec.decode(action_vector)
@@ -885,7 +884,7 @@ defmodule WotexContinuum.CheckArchive do
     IO.puts("core candidate archive sha256: #{digest(core_archive)}")
     IO.puts("source lock sha256: #{digest(Path.join(source_root, "mix.lock"))}")
     IO.puts("schema set sha256: #{tree_digest(Path.join(unpacked, "priv/schemas"))}")
-    IO.puts("vector set sha256: #{tree_digest(Path.join(unpacked, "test/vectors"))}")
+    IO.puts("vector set sha256: #{tree_digest(Path.join(unpacked, "priv/vectors"))}")
 
     IO.puts(
       "package version: #{@package_version}; wire version: #{WotexContinuum.schema_version()}"

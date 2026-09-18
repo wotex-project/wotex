@@ -45,7 +45,7 @@ defmodule WotexContinuum.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:doctest_formatter, "~> 0.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
@@ -95,7 +95,7 @@ defmodule WotexContinuum.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(lib priv/schemas test/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
+        ~w(lib priv/schemas priv/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
     ]
   end
 
@@ -114,14 +114,20 @@ defmodule WotexContinuum.MixProject do
         Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
         Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
         Path.join(@docs_root, "THREAT_MODEL.md"),
-        "../../docs/packages/wotex-continuum/security.md"
+        "../../docs/packages/wotex-continuum/security.md",
+        Path.join(@docs_root, "provenance/SOURCES.md"),
+        Path.join(@docs_root, "provenance/DEPENDENCIES.md"),
+        {"CHANGELOG.md", title: "Changelog"},
+        {"LICENSE", title: "License"},
+        {"NOTICE", title: "Notices"}
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-continuum\/plans/,
         "Verification maps": ~r/docs\/packages\/wotex-continuum\/specs\/WCT-C/,
         Specifications: ~r/docs\/packages\/wotex-continuum\/specs\/WCT\./,
         Security: ~r/docs\/packages\/wotex-continuum\/THREAT_MODEL/,
-        Project: ~r/(security|GOVERNANCE)\.md/
+        Provenance: ~r/docs\/packages\/wotex-continuum\/provenance/,
+        Project: ~r/(security\.md|CHANGELOG\.md|LICENSE|NOTICE)$/
       ],
       groups_for_modules: [
         "Public API": [

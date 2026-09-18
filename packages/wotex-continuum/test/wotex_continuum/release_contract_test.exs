@@ -32,7 +32,8 @@ defmodule WotexContinuum.ReleaseContractTest do
 
     assert Enum.member?(package[:files], "lib")
     assert Enum.member?(package[:files], "priv/schemas")
-    assert Enum.member?(package[:files], "test/vectors")
+    assert Enum.member?(package[:files], "priv/vectors")
+    refute Enum.any?(package[:files], &String.starts_with?(&1, "test"))
 
     # Markdown documentation reaches consumers through HexDocs, not the archive.
     refute Enum.any?(package[:files], &String.starts_with?(&1, "docs"))

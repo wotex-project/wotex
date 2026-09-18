@@ -5,7 +5,7 @@ defmodule WotexContinuum.SchemaConformanceTest do
 
   alias WotexContinuum.{Codec, JSONSchemaSubset, Schema}
 
-  @vectors Path.expand("../vectors", __DIR__)
+  @vectors Path.expand("../../priv/vectors", __DIR__)
 
   @documents %{
     "WCT.01" => "wct-01.schema.json",

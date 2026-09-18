@@ -25,7 +25,7 @@ defmodule WotexContinuum.PropertyContractTest do
   end
 
   test "every registered vector preserves its value module contract" do
-    vector_root = Path.expand("../vectors/valid", __DIR__)
+    vector_root = Path.expand("../../priv/vectors/valid", __DIR__)
 
     for path <- Path.wildcard(Path.join(vector_root, "*.json")) do
       input =
