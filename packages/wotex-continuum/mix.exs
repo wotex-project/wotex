@@ -42,6 +42,8 @@ defmodule WotexContinuum.MixProject do
       {:jason, "~> 1.4.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -103,31 +105,33 @@ defmodule WotexContinuum.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        "README.md",
-        Path.join(@docs_root, "plans/wotex-continuum-completion.md"),
-        Path.join(@docs_root, "plans/WCT-C01-contract-map.md"),
-        Path.join(@docs_root, "plans/WCT-C02-admission-map.md"),
-        Path.join(@docs_root, "plans/WCT-C03-schema-agreement.md"),
-        Path.join(@docs_root, "plans/WCT-C04-archive-consumer.md"),
-        Path.join(@docs_root, "plans/WCT-C05-release-dossier.md"),
-        Path.join(@docs_root, "specs/WCT.01-manifest-context-capability.md"),
-        Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
-        Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
-        Path.join(@docs_root, "THREAT_MODEL.md"),
-        "../../docs/packages/wotex-continuum/security.md",
-        Path.join(@docs_root, "provenance/SOURCES.md"),
-        Path.join(@docs_root, "provenance/DEPENDENCIES.md"),
-        {"CHANGELOG.md", title: "Changelog"},
-        {"LICENSE", title: "License"},
-        {"NOTICE", title: "Notices"}
-      ],
+      extras:
+        [
+          "README.md",
+          Path.join(@docs_root, "plans/wotex-continuum-completion.md"),
+          Path.join(@docs_root, "plans/WCT-C01-contract-map.md"),
+          Path.join(@docs_root, "plans/WCT-C02-admission-map.md"),
+          Path.join(@docs_root, "plans/WCT-C03-schema-agreement.md"),
+          Path.join(@docs_root, "plans/WCT-C04-archive-consumer.md"),
+          Path.join(@docs_root, "plans/WCT-C05-release-dossier.md"),
+          Path.join(@docs_root, "specs/WCT.01-manifest-context-capability.md"),
+          Path.join(@docs_root, "specs/WCT.02-exchange-values.md"),
+          Path.join(@docs_root, "specs/WCT.03-mode-lifecycle-exit.md"),
+          Path.join(@docs_root, "THREAT_MODEL.md"),
+          "../../docs/packages/wotex-continuum/security.md",
+          Path.join(@docs_root, "provenance/SOURCES.md"),
+          Path.join(@docs_root, "provenance/DEPENDENCIES.md"),
+          {"CHANGELOG.md", title: "Changelog"},
+          {"LICENSE", title: "License"},
+          {"NOTICE", title: "Notices"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Verification maps": ~r/docs\/packages\/wotex-continuum\/plans\/WCT-C/,
         "Completion plans": ~r/docs\/packages\/wotex-continuum\/plans/,
         Specifications: ~r/docs\/packages\/wotex-continuum\/specs\/WCT\./,
         Security: ~r/docs\/packages\/wotex-continuum\/THREAT_MODEL/,
         Provenance: ~r/docs\/packages\/wotex-continuum\/provenance/,
+        Benchmarks: ~r/bench\/output/,
         Project: ~r/(security\.md|CHANGELOG\.md|LICENSE|NOTICE)$/
       ],
       groups_for_modules: [
