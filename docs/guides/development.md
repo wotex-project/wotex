@@ -49,10 +49,12 @@ A package's full gate is its `.check.exs`, run by `mix check --no-retry`:
 locked dependencies, compilation, formatting, Credo, Doctor, dependency
 audits, ExDoc with warnings as errors, tests with the 95% coverage floor,
 Dialyzer, the archive check and, where present, the boundary scan
-(`bin/check_boundary.exs`) and the application-free check. A package with
-native code adds `native_format`, `native_lint` and `native_test` (see
-[Native code](#native-code)), so a green gate means its Elixir and its C,
-C++ or Rust code are formatted, linted and tested. `mix check` at the root
+(`bin/check_boundary.exs`) and the application-free check. wotex-lab's gate
+also runs the complete gates of its reference hosts, `hosts/workbench` and
+`hosts/nerves` (host target), separate Mix projects with their own locks. A
+package with native code adds `native_format`, `native_lint` and
+`native_test` (see [Native code](#native-code)), so a green gate means its
+Elixir and its C, C++ or Rust code are formatted, linted and tested. `mix check` at the root
 means the same for everything a change reaches; `mix check --base REF`
 passes the base to `check.affected`.
 
@@ -181,10 +183,10 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
 - **Check**: every affected package's gate on each lane of
   `tooling/packages.yaml`, minimum (Elixir 1.18.4, OTP 27.3.4.15) and current
   (Elixir 1.20.2, OTP 29.0.4). The minimum lane skips static analysis whose
-  results depend on the compiler version and the native tools
-  (`lanes.minimum.skip`); the current lane runs everything, including
-  clang-tidy and the native tests, with native build workspaces cached per
-  package. The runners are Linux, so the Linux suites run natively; Matter's
+  results depend on the compiler version, the native tools and wotex-lab's
+  host gates (`lanes.minimum.skip`); the current lane runs everything,
+  including clang-tidy and the native tests, with native build workspaces
+  cached per package. The runners are Linux, so the Linux suites run natively; Matter's
   SDK build and its clang-tidy run in Docker.
 - **Archive**: package archives and their consumers.
 - **Native**: the native and software-profile lanes of every native package

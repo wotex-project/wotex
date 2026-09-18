@@ -96,9 +96,14 @@ is pinned in the root `rust-toolchain.toml` (`mise install`).
 
 The full gate alone is `mix pkg wotex-lab check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-lab`). Beyond
-tier 1 it runs the audits, Doctor, docs, the 95% coverage floor, Dialyzer and
+tier 1 it runs the audits, Doctor, docs, the 95% coverage floor, Dialyzer,
 the contract, graph, API-surface, Nerves-source, boundary and package-content
-scripts. Run `mix dialyzer.pkg wotex-lab` in tier 1 when a typespec or
+scripts, and the reference hosts' own gates: `workbench` (`mix check` in
+`hosts/workbench/`) and `nerves_host` (`mix check` in `hosts/nerves/` with
+`MIX_TARGET=host`). A host change is ready when
+`mix pkg wotex-lab check --no-retry --only workbench` (or
+`--only nerves_host`) passes; host Credo follows this package's
+`.credo.exs`. Run `mix dialyzer.pkg wotex-lab` in tier 1 when a typespec or
 inferred return type changed. If Dialyzer reports `call_to_missing` for a
 sibling function after a sibling change, delete `priv/plts/dialyxir.plt*` and
 rerun.
@@ -146,6 +151,6 @@ execution, evidence manifests, source cohort), `WOTEX_LAB_BROKER=1`,
 `elixir bin/check_linux_containment.exs`,
 `elixir bin/check_source_cohort.exs`, and
 `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_reference_consumer.exs`,
-`bin/check_archive_consumer.exs` and `bin/check_workbench_archive.exs`. The
-Workbench host has its own gate: `WOTEX_PATH_DEPS=1 mix check --no-retry` in
-`hosts/workbench/`.
+`bin/check_archive_consumer.exs` and `bin/check_workbench_archive.exs`, and
+the Nerves rpi4 firmware build (`MIX_TARGET=rpi4 mix firmware`, which needs
+the Nerves toolchain, `nerves_bootstrap` and `fwup`).

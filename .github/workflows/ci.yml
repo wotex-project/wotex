@@ -219,10 +219,14 @@ jobs:
           otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains)[matrix.lane].otp }}
       - uses: actions/cache@v4
         with:
+          # hosts/* holds reference hosts: separate Mix projects with their own
+          # locks that a package's gate runs. Most packages have none.
           path: |
             packages/${{ matrix.package }}/deps
             packages/${{ matrix.package }}/_build
-          key: ${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package)) }}
+            packages/${{ matrix.package }}/hosts/*/deps
+            packages/${{ matrix.package }}/hosts/*/_build
+          key: ${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
       - name: Native toolchain
         # OPC UA builds its pinned open62541 SDK inside the coverage step; the
         # native_lint and native_test tools build the other packages' SDKs.

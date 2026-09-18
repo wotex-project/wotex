@@ -22,13 +22,14 @@ schema_version: "1.0.0"
 #   behaviour tools (compile, tests with coverage, archive and application-free
 #   checks); static analysis, whose results depend on the compiler and OTP
 #   version, and the native tools, which do not depend on it, run on the
-#   current lane only.
+#   current lane only. So do wotex-lab's reference host gates (workbench,
+#   nerves_host), each a complete gate that includes formatting and linting.
 lanes:
   minimum:
     elixir: "1.18.4-otp-27"
     otp: "27.3.4.15"
     skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface,
-           native_format, native_lint, native_test]
+           native_format, native_lint, native_test, workbench, nerves_host]
   current:
     elixir: "1.20.2-otp-29"
     otp: "29.0.4"

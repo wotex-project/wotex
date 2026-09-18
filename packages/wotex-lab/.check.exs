@@ -34,6 +34,15 @@
     {:api_surface, command: "mix run --no-start bin/generate_api_surface.exs --check"},
     {:nerves_source, command: "elixir bin/check_nerves_source.exs"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
+    # The reference hosts are separate Mix projects with their own gates and
+    # locks; they inherit WOTEX_PATH_DEPS=1 from this gate. The Workbench's
+    # `check` alias fetches its dependencies first; the Nerves host runs its
+    # host cohort (MIX_TARGET=host) and never needs the rpi4 toolchain.
+    {:workbench, command: "mix check --no-retry", cd: "hosts/workbench"},
+    {:nerves_host,
+     command: "mix do deps.get --check-locked + check --no-retry",
+     cd: "hosts/nerves",
+     env: %{"MIX_TARGET" => "host"}},
     {:package, command: "mix run --no-start bin/check_package.exs", deps: [coverage: [status: 0]]},
     {:diff, command: "git diff --check"},
     {:gettext, false},

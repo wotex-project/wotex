@@ -363,8 +363,14 @@ contract (`bin/check_contracts.exs`), graph (`bin/check_graph.exs`),
 API-surface (`bin/generate_api_surface.exs --check`), Nerves-host source
 (`bin/check_nerves_source.exs`) and boundary (`bin/check_boundary.exs`)
 scripts, package content inspection (`bin/check_package.exs`) and
-`git diff --check`. It needs no container runtime, Maude or Rust toolchain:
-the lanes below are excluded unless their switch is set.
+`git diff --check`. It also runs the complete gates of both reference hosts:
+the Workbench's own `mix check` (locked and unused dependencies, compilation,
+formatting, strict Credo, audits, Dialyzer, Doctor, docs, tests with its 90%
+coverage floor and its boundary scan) and the Nerves host cohort with
+`MIX_TARGET=host` (locked and unused dependencies, compilation, formatting,
+strict Credo and its test). It needs no container runtime, Maude, Node, Rust
+or Nerves toolchain: the lanes below are excluded unless their switch is set,
+and the rpi4 firmware build stays with the Nerves host's README.
 
 The explicit Workbench archive lane (`bin/check_workbench_archive.exs`)
 checks the deterministic CycloneDX 1.7 production SBOM at
@@ -448,7 +454,10 @@ and repository visibility are maintainer-owned.
 The reference hosts are separate Mix projects inside this package, run from
 their own directories with their own `README.md`: `hosts/workbench/` (the
 Phoenix LiveView Workbench, gate `WOTEX_PATH_DEPS=1 mix check --no-retry`) and
-`hosts/nerves/` (Raspberry Pi 4 firmware source). The generated TypeScript
+`hosts/nerves/` (Raspberry Pi 4 firmware source, host-cohort gate
+`WOTEX_PATH_DEPS=1 MIX_TARGET=host mix check --no-retry`). The full gate runs
+both as its `workbench` and `nerves_host` tools;
+`mix pkg wotex-lab check --no-retry --only workbench` runs one alone. The generated TypeScript
 client in `clients/typescript/` is written by
 `WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs --write`
 (`--check` runs the drift, Node test and `npm pack --dry-run` check).
