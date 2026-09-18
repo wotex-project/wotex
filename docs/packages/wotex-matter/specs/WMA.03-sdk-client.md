@@ -3,9 +3,9 @@ spec:
   id: WMA.03
   title: "Explicit native SDK client"
   status: accepted
-  version: 2.0.0
+  version: 2.0.1
   owner: wotex-matter
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WMA.03 Explicit native SDK client
@@ -23,7 +23,12 @@ trust and executable options described in WMA.13. `lifecycle: :persistent`
 owns one controller until disconnect. `lifecycle: :oneshot` requires an existing
 store and stored authority; its passive handle starts a fresh native controller
 for each concrete read, write or invoke and closes it before returning. It
-cannot commission, discover, subscribe or create credentials. Both modes
+cannot commission, discover, subscribe or create credentials. Every controller
+holds its store's exclusive lock while it runs, so operations on one store
+never overlap. A one-shot operation whose controller cannot take the lock,
+because another one-shot operation or a persistent controller holds it, fails
+with `storage_open_failed` before any request reaches the peer; it is neither
+queued nor retried. Both modes
 enforce exact fabric identity, finite deadlines, bounded framed IPC and
 structured errors. Neither mode retries a write or invoke after an unknown
 effect, and neither falls back to another backend.

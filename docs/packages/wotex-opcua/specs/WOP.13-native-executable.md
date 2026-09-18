@@ -3,9 +3,9 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.35
+  version: 1.1.36
   owner: wotex-opcua
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WOP.13 Native OPC UA executable and software acceptance
@@ -347,9 +347,9 @@ read/write/subscription/cancel/EOF and package smoke tests. No hardware is neede
 
 The final archive includes SDK-host and runtime-guardian C sources, reviewed patches, the source manifest,
 Mix tasks and protocol schemas. It excludes built executables, downloads,
-credentials, PLTs and fixture state. An isolated archive consumer builds the
-helper explicitly, removes Python from the runtime PATH, and performs the
-native secure workflow. The test records all child executable identities and
+credentials, PLTs and fixture state. An isolated archive consumer, with the
+exact dependency archives of WOP.12 I06, builds the helper explicitly, removes
+Python from the runtime PATH, and performs the native secure workflow. The test records all child executable identities and
 proves no runtime Python process, shell or compiler is invoked. The SDK and
 OpenSSL notices accompany the build output. No ABI-stable binary is inferred
 from the Hex package version.
@@ -664,13 +664,17 @@ remain required in addition to the concrete corpus.
 Required fixture tasks are `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS`. They use X02's workspace admission and
 manifest rules. Build includes the production helper, the independent asyncua
-peer and same-stack C precision/fault peer. Python packages are pinned from the
+peer, the second independent peer of WOP.10 and the same-stack C precision/fault
+peer. Python packages are pinned from the
 fixture lock with downloaded wheel/sdist hashes recorded and checked; the test
 peer environment is not a runtime package asset. Run selects
 `mix test --include interop --include software --exclude hardware`, CTest,
 ASan/UBSan and dependency audits. `WOTEX_REQUIRE_SOFTWARE=1` makes missing tools,
-configuration, responses and cleanup evidence failures, never skips. Native
-audit inputs include SDK/OpenSSL source and shim/patch hashes, not just Mix.lock.
+configuration, responses and cleanup evidence failures, never skips. The audits
+are the Mix dependency and Hex audits, `pip-audit` from a hash-pinned
+installation over `test/interop/requirements.lock`, and a native audit whose
+inputs include SDK/OpenSSL source and shim/patch hashes, not just Mix.lock. Each
+audit is a recorded lane whose failure fails the run.
 `Wotex.OPCUA.Native.Software` implements both tasks
 (`mix wotex.opcua.software.build` and `mix wotex.opcua.software.run`, with the
 package aliases above) for a source checkout. Build runs the native workspace
@@ -681,8 +685,8 @@ installed distributions and five executable digests. Run re-verifies that
 manifest. It starts the peer with a finite readiness deadline and runs the
 ExUnit lane with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, and the
 Mix dependency and Hex audits. It stops the peer and records each lane's status
-and log digest; any failed lane fails the task. The peer audit (`pip-audit`) and
-the SDK/OpenSSL source-hash audit are not part of these tasks.
+and log digest; any failed lane fails the task. These tasks omit the second
+independent peer and the `pip-audit` and native source audits required above.
 
 The driver owns disposable ports, processes, keys and state; readiness has a
 finite deadline and every exit closes only manifest-owned resources. Evidence

@@ -1,10 +1,6 @@
 # Wotex CoAP completion contract
 
-Plan version: 1.1.1. Package baseline: 0.1.0.
-
-Revision 1.1.1 names, in the ordered implementation sequence, the test files
-that execute WCO-P07, WCO-P08, WCO-P08a and WCO-P08b in place of destinations
-that were never created; no obligation changes.
+Plan version: 1.2.0. Package baseline: 0.1.0.
 
 Graduate this library independently. Acceptance requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension

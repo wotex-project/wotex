@@ -188,7 +188,10 @@ repository, `mix pkg wotex-ble check --no-retry` (equivalently
 sibling package sources under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
-C/C++ adapters run ASan/UBSan in the Linux fault lane.
+C/C++ adapters run ASan/UBSan in the Linux fault lane. Run Linux container lanes
+and the clean-source package gate as an unprivileged user. Root bypasses the
+file-permission denials asserted by `test/wotex/ble/native_source_test.exs` and
+`test/wotex/ble/native_build_test.exs`, so their results under root are invalid.
 
 After each package, update the current-profile/README capability claims only for
 behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)

@@ -3,7 +3,7 @@ spec:
   id: WOP.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.7
+  version: 1.1.8
   owner: wotex-opcua
   updated: 2026-09-18
 ---
@@ -300,11 +300,15 @@ construct forged Request structs as the only integration proof. Cover:
    establish protocol evidence. Injected-port success is labelled accordingly.
 
 For final acceptance, run from an immutable package archive and isolated consumer
-project with public core/Runtime dependency versions, not an accidental shared
-build. Record the subject, dependency, fixture and adapter SHA-256 identities,
-exact Elixir/OTP versions, command, result and cleanup counts. Repeat the minimum
-and current runtime matrix in .00. A path-dependency gate proves local integration;
-it does not prove released artifact adoption.
+project, not an accidental shared build. As in wotex-runtime RT-C04, the consumer
+depends on exact `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one
+recorded commit of this repository, at versions that satisfy this package's
+`mix.exs` requirements, and compiles no dependency from a source checkout.
+Record the subject, dependency, fixture and adapter SHA-256 identities,
+exact Elixir/OTP versions, command, result and cleanup counts, and state that
+registry publication is not asserted. Repeat the minimum and current runtime
+matrix in .00. A path-dependency gate proves local integration only; neither it
+nor this exact-archive run proves released artifact adoption.
 
 [Wotex Conformance WCF.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/specs/WCF.01-conformance-runner.md) version 1.1.0
 requires expectations to stay runner-side and subjects to stay outside its

@@ -3,9 +3,9 @@ spec:
   id: WOP.10
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.3
+  version: 1.1.4
   owner: wotex-opcua
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WOP.10 Complete secure OPC UA client software profile
@@ -282,10 +282,16 @@ probe-required error. A successful TCP connection alone is not healthy UA servic
 | WOP-V15 | C09 stress, concurrent calls, admission overflow and version matrix | Correlation and owned/native resource baseline restored |
 
 The independent wire peer is asyncua 2.0.1 with the complete pinned fixture
-environment from WOP.13. The native C peer uses the same open62541 pin as the
-client and is labelled same-stack. It supplies exact 100 ns values, controlled
-Publish/revision faults and resource counters that the Python peer cannot
-represent faithfully. Both peers expose disposable scalar/array variables,
-typed methods and explicit users/certificate identities. Security fault tests
-use controlled certificates, clock inputs and a bounded byte proxy. Both lanes
-are required; neither peer substitutes for the other. No physical server is required.
+environment from WOP.13. That server implements neither BrowseNext nor the
+Cancel service. A second independent peer on the OPC Foundation UA-.NETStandard
+stack, pinned by an exact release, a .NET SDK container image digest and a
+`packages.lock.json`, supplies independent BrowseNext/release pagination with
+the server's live continuation-point count, and Cancel of a transmitted request
+with the server's cancellation count. The native C peer uses the same open62541
+pin as the client and is labelled same-stack. It supplies exact 100 ns values,
+controlled Publish/revision faults and resource counters that the Python peer
+cannot represent faithfully. The asyncua and C peers expose disposable
+scalar/array variables, typed methods and explicit users/certificate
+identities. Security fault tests
+use controlled certificates, clock inputs and a bounded byte proxy. All three
+lanes are required; no peer substitutes for another. No physical server is required.

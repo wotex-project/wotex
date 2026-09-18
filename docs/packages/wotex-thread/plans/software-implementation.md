@@ -106,12 +106,21 @@ remain explicitly unexecuted under P04; F09 executes in `native_contract_test.ex
 - Requirements: WTH-S04, WTH-N01, WTH-N02; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WTH-V05, WTH-V06, WTH-V07.
 - Change surface: form_network, set_enabled and management Active/Pending Set operations.
-- Test destinations: `test/native/management_test.c`, `test/wotex/thread/management_test.exs`.
+- Test destinations: `test/native/management_test.cpp`, `test/wotex/thread/management_test.exs`.
 - Done when: Formation requires empty owned state and explicit authorization; management completes on callback, reports acceptance separately from effectiveness and safely retires late contexts.
 - Suggested local commit: `feat: implement explicit formation and management callbacks`.
 
 - Concrete cases: WTH-F07, WTH-F08.
 - Standalone closure: Implement exact callback/unknown-effect results and retain timed-out callback context safely until SDK completion.
+
+WTH-F07 and WTH-F08 execute against the production native management owner,
+which holds both the request context and the SDK exchange context. The owner is
+SDK-independent code shared by the host and the native contract driver. The
+driver supplies scripted submit statuses, callbacks and a controllable clock,
+and reports the emitted frames, SDK call counts and live SDK contexts. ExUnit
+decodes each emitted frame through the production BEAM reply and effect
+classification to form the public projection. The escript bridge peer does not
+execute these cases.
 
 ### WTH-P05: Implement commissioner and joiner ownership
 

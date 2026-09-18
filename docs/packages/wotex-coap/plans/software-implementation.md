@@ -123,7 +123,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Acceptance scenarios: WCO-V13, WCO-V15.
 - Change surface: caller-selected C bridge, versioned framing, explicit libcoap adapter.
 - Test destinations: `test/wotex/coap/security_oscore_test.exs`, `test/wotex/coap/native_connection_test.exs`, `test/wotex/coap/native_wire_test.exs`, `test/native/oscore_worker_exchange_test.c` (protected request, Observe and blockwise through the libcoap worker), `test/native/oscore_protection_test.c` (authenticated-response admission), `test/wotex/coap/test_oscore_vectors_test.exs` (RFC 8613 Appendix C vectors) and `test/interop/oscore_test.exs`.
-- Done when: Map request/Observe/blockwise through one libcoap exchange engine; RFC 8613 known-answer and authenticated-failure vectors pass.
+- Done when: Map request/Observe/blockwise through one libcoap exchange engine; RFC 8613 known-answer and authenticated-failure vectors pass; the renewal-fault harness in `test/native/oscore_worker_exchange_test.c` ends renewals answered with 2.31 and 3.xx codes with `invalid_response` under WCO-N02.
 - Suggested local commit: `feat: define and implement the optional oscore bridge boundary`.
 
 ### WCO-P08: Enforce durable oscore context and replay rules
@@ -148,7 +148,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 
 - Requirements: WCO-N01–N05 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
 - Change surface: unique `Mix.Tasks.Wotex.Coap.Software.Build` and `Mix.Tasks.Wotex.Coap.Software.Run` with package aliases `wotex.software.build` and `wotex.software.run` in `mix.exs`, test-only owned Port/process helpers, manifest/result projection. The native build uses `Mix.Tasks.Wotex.Coap.Native.Build` behind the `wotex.native.build` alias. Multiple protocol dependencies must not define duplicate task modules.
-- Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
+- Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Killing the ExUnit BEAM while a case owns `coap-server` or the independent peer leaves no peer process after the harness cleanup, and `result.json` records the measured peer-process count required by WCO-N05. Existing results retain their original command and source identities.
 - Tests: `test/wotex/coap/software_build_test.exs` and `test/wotex/coap/software_run_test.exs`, the native build tests (`native_build_test.exs`, `native_build_command_test.exs`, `native_workspace_test.exs`, `native_archive_test.exs`, `native_toolchain_test.exs`) plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
 
@@ -158,7 +158,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Acceptance scenarios: WCO-V01, WCO-V02, WCO-V03, WCO-V04, WCO-V05, WCO-V06, WCO-V07, WCO-V08, WCO-V09, WCO-V10, WCO-V11, WCO-V12, WCO-V13, WCO-V14, WCO-V15.
 - Change surface: libcoap software fixtures and stress runner.
 - Test destinations: `test/interop/libcoap_test.exs`, `test/software/lifecycle_stress_test.exs`.
-- Done when: Plain UDP/Observe/blockwise, DTLS, explicitly labelled same-stack OSCORE and independent upstream-stack OSCORE lanes run; all required stress/matrix/archive checks pass; all .11 cases and remaining scenario expansions execute, with pure/injected/independent lanes labelled separately.
+- Done when: Plain UDP/Observe/blockwise, DTLS, explicitly labelled same-stack OSCORE and independent upstream-stack OSCORE lanes run; all required stress/matrix/archive checks pass; all .11 cases and remaining scenario expansions execute, with pure/injected/independent lanes labelled separately. The PKI Runtime unary matrix in `test/interop/dtls_pki_test.exs` (WCO-I03/I04) completes on a heavily loaded host: its intermittent `invokeaction` `timeout` at a load average above 10 is diagnosed and fixed within the unchanged 3,000 ms call budget and without a retry.
 - Suggested local commit: `test: prove all coap software transport profiles`.
 
 ## Reproducible software fixture contract

@@ -3,7 +3,7 @@ spec:
   id: WBL.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-ble
   updated: 2026-09-18
 ---
@@ -184,7 +184,10 @@ after native establishment. During opening it buffers at most 64 native reports;
 excess reports fail with receiver_overflow and cleanup. On binding, validate
 reference/generation/target before releasing those reports in order. Late,
 unrelated or canceled reports are discarded; no report can reopen the relay.
-In bound state use the C05 owner-queue check before forwarding. Frame values are
+In bound state use the C05 owner-queue check before forwarding. An establishment
+result that the Runtime owner has not yet received does not count toward that
+limit: with `max_queue_length: 1`, one report buffered during opening is
+forwarded and does not fail with `receiver_overflow`. Frame values are
 `{:value, value, metadata}` or `{:error, library_error}`; decode_frame/3 validates
 and applies the specified protocol conversion, returning the corresponding Runtime
 result. The relay has already validated native session identity; raw external

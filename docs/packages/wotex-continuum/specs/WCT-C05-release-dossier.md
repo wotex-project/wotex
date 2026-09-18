@@ -104,7 +104,10 @@ it does not claim every resolver outcome permitted by an upstream broad range.
 
 The package declares Elixir `~> 1.18`. Release-candidate evidence is pinned to
 Elixir 1.18.4 on OTP 27. The repository's CI compatibility lane is separate
-evidence and does not replace the exact local candidate toolchain.
+evidence and does not replace the exact local candidate toolchain. Evidence for
+one toolchain pair covers only that pair; it does not extend to another
+Elixir/OTP pair admitted by the requirement, another operating system, or
+another processor architecture.
 
 ## Public archive and legal/security review
 

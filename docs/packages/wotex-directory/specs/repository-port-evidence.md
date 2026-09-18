@@ -243,7 +243,9 @@ markers must be absent from both member contents and package metadata, including
 when a marker is copied into an allowed filename. The existing Hex-envelope,
 allowlist, dependency and authority checks remain required. The two isolated
 consumers compile and execute that exact verified archive; no second Directory
-archive is built for consumption.
+archive is built for consumption. This acceptance covers only archives that
+`mix hex.build` produces from the declared allowlist; any other packaging route
+requires its own exclusion evidence.
 
 The external `package_exclusion` evidence records all member hashes, sentinel
 paths and marker hashes, the single build and the successful comparisons.

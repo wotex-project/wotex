@@ -3,9 +3,9 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.22
+  version: 1.0.23
   owner: wotex-ble
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WBL.13 Native backend, build and IPC contract
@@ -48,7 +48,12 @@ CMake 3.25.1 applies to CMake targets, Ninja 1.11.1 to native builds. SDK-requir
 GN/generation tools use the immutable upstream lock entries and are recorded by
 actual executable SHA-256. Cross compilation requires an explicit target triple;
 an architecture mismatch fails before execution. Additional architectures are
-separate evidenced lanes. BEAM matrix: Elixir 1.18.4/OTP 27.3.4.15 and
+separate evidenced lanes. Reference-lane acceptance requires, for both BEAM
+lanes on Linux x86_64, the native build, the native component tests in the
+ordinary, ASan/UBSan and LeakSanitizer lanes, the private-bus host and bus tests,
+and the software run with an x86_64 guest. Each recorded result names its
+architecture and whether it executed natively or under binary translation.
+BEAM matrix: Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4. The software runner executes the native client and real
 Runtime calls in both lanes, independently of physical hardware.
 
@@ -108,7 +113,9 @@ the workspace path: `Dockerfile.system`, `Dockerfile.bluez` and
 lanes and runs `mix wotex.native.build`. It is exported to `rootfs.tar` and a
 6 GiB `rootfs.raw` guest disk. `software-manifest.json` binds inputs, tools,
 downloads, images, guest build evidence, the guest native manifest, logs and
-artifact digests; sources that change during the build fail it.
+artifact digests; sources that change during the build fail it. The arm64
+images and guest form an additional architecture lane; the x86_64 reference
+lane requires the same build and run with x86_64 images and guest.
 
 `mix wotex.software.run` verifies that manifest read-only and never builds. For
 each lane it creates a copy-on-write overlay and boots one QEMU TCG guest in an

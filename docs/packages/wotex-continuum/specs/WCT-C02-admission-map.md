@@ -85,9 +85,9 @@ decoding. Collection and node controls remain post-decode structural checks,
 as documented by WCT.01.
 
 These tests establish observable error ordering and the implementation's
-pre-flatten call order. They do not claim to measure total BEAM memory, bound
-caller allocations, or constrain memory retained after an accepted value is
-returned.
+pre-flatten call order; they do not measure total BEAM memory. The limits are
+admission bounds, not latency or peak-memory guarantees, and they do not bound
+caller allocations or memory retained after an accepted value is returned.
 
 ## Deliberate boundary
 

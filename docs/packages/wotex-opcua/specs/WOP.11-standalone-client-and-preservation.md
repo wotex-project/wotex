@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.15
+  version: 1.1.16
   owner: wotex-opcua
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.15**. Implementation status: **partial**.
+Specification version: **1.1.16**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -275,9 +275,10 @@ in observations. Equality with a deadline is expired. A deterministic lifecycle
 test is ownership/correlation evidence, not independent security interoperability.
 
 Required normal ExUnit bindings are at `test/wotex/opcua/standalone_contract_test.exs`,
-native executable bindings at `priv/native/browse_trace_check.c`, an independent
-asyncua fixture with enough children to force pages, and a same-stack C fixture
-with exact live-continuation counters. Each binding records N/S/V IDs, case ID and SHA-256 of corpus bytes.
+native executable bindings at `priv/native/browse_trace_check.c`, a fixture on
+the second independent peer of WOP.10 with enough children to force pages and
+its server's live continuation-point count, and a same-stack C fixture with
+exact live-continuation counters. Each binding records N/S/V IDs, case ID and SHA-256 of corpus bytes.
 JSON validation or ID presence alone cannot accept a work package. Require actual
 results and counters, including cancellation after page one, deadline between
 pages, lost next response, and a response requiring Session closure.

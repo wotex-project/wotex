@@ -3,9 +3,9 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.8.0
+  version: 1.9.0
   owner: wotex-coap
-  updated: 2026-09-17
+  updated: 2026-09-18
 ---
 
 # WCO.13 Native OSCORE owner, builds and software evidence
@@ -271,7 +271,11 @@ While an observation exists, including while its renewal or cancellation is
 pending, a message that fails decryption, lacks protection or fails OSCORE
 decoding is discarded and the observation continues, as RFC 8613 section 8.4.2
 requires for notifications. A pending renewal or cancellation then completes on
-its own response or deadline.
+its own response or deadline. The worker reports `remote_response` with the
+numeric status only for a class 4 or 5 response code (128..191), whether the
+response answers a unary request, an Observe registration or a renewal. Any
+other code outside 2.00–2.30 (64..94) ends that operation with
+`invalid_response`.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
@@ -627,6 +631,10 @@ native peers/ports/stores and runs ExUnit with `--include interop --include soft
 is 15 seconds, suite timeout 300 seconds, combined log bound 16 MiB and total
 harness cleanup five seconds. These harness limits do not extend C03 library
 deadlines. EOF, owner death and test failure stop only manifest-owned processes.
+Each peer process, `coap-server` and the Java runtime of the independent peer,
+runs under an owner-liveness guardian that terminates the peer's process group
+when the pipe from its owning test BEAM closes. An abrupt exit of that BEAM or
+an interrupted run therefore leaves no peer process after the harness cleanup.
 The implemented cohort runs `test/interop/libcoap_test.exs`,
 `test/interop/dtls_test.exs`, `test/interop/dtls_pki_test.exs`,
 `test/interop/oscore_test.exs` and `test/software/lifecycle_stress_test.exs`
@@ -652,8 +660,12 @@ software-build workspace.
 `result.json`, schema `wotex.coap.software@1`, records subject/dependency/fixture/
 native hashes, exact commands, seed, toolchain, native features, all scenario
 IDs, exit codes, outcomes, log hashes and final process/socket/session/context/
-subscription/store-lock counts. Failure evidence is retained; secrets and
-machine-specific source paths are excluded from publishable records.
+subscription/store-lock counts. `cleanup.peer_processes_retained` is the number
+of live processes whose executable or arguments name a file in the run
+workspace, measured after the suite and its cleanup. A nonzero count fails the
+run, and the field is never written without that measurement. Failure evidence
+is retained; secrets and machine-specific source paths are excluded from
+publishable records.
 UDP and DTLS peers are independent-stack; OSCORE libcoap peers are same-stack;
 the Eclipse Californium plugtest peer is independent upstream-stack for OSCORE;
 fault peers and contract injections are labelled separately.

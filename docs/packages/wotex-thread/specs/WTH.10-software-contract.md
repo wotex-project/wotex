@@ -3,9 +3,9 @@ spec:
   id: WTH.10
   title: "Complete OpenThread host-management software profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-thread
-  updated: 2026-09-09
+  updated: 2026-09-18
 ---
 
 # WTH.10 Complete OpenThread host-management software profile
@@ -215,6 +215,12 @@ owned by the SDK. Keep callback storage until callback or instance shutdown.
 Do not submit another update while the SDK still has the timed-out exchange
 active; return busy until it completes or close the owned instance. Never fall
 back to `ot-ctl dataset set` or a local setter for a production management update.
+
+The host returns `busy` and `invalid_dataset` for a management update only before
+submitting it to the SDK; the public Error has `effect: :none`. Expiry after
+submission returns the public code `:timeout` with `effect: :unknown` and
+`retryable: false`, whether the host or the BEAM owner observes the deadline
+first. The host's wire code for that expiry is `management_timeout`.
 
 ## WTH-S05 — Commissioner and Joiner
 
