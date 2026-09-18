@@ -275,7 +275,7 @@ in observations. Equality with a deadline is expired. A deterministic lifecycle
 test is ownership/correlation evidence, not independent security interoperability.
 
 Required normal ExUnit bindings are at `test/wotex/opcua/standalone_contract_test.exs`,
-native executable bindings at `test/native/browse_test.c`, an independent
+native executable bindings at `priv/native/browse_trace_check.c`, an independent
 asyncua fixture with enough children to force pages, and a same-stack C fixture
 with exact live-continuation counters. Each binding records N/S/V IDs, case ID and SHA-256 of corpus bytes.
 JSON validation or ID presence alone cannot accept a work package. Require actual

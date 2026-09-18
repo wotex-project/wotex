@@ -78,7 +78,8 @@ The documented `validate: false` staged-ingestion option bypasses the aggregate
 schema and semantic pass, not JSON-value or resource-limit admission. Such a
 value MUST NOT be presented as successfully validated against TD 1.1 until
 `validate/2` succeeds. API and release acceptance are separate gates in
-the package completion contract, `docs/plans/wotex-completion.md`.
+the package completion contract,
+`docs/packages/wotex/plans/wotex-completion.md`.
 
 ## Evidence
 

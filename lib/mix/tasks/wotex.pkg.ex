@@ -10,7 +10,7 @@ defmodule Mix.Tasks.Wotex.Pkg do
 
   Examples:
 
-      mix pkg wotex-coap test test/wotex/coap/block_test.exs
+      mix pkg wotex-coap test test/wotex/coap/blockwise_test.exs
       mix pkg wotex-runtime test --stale
       mix pkg wotex credo --strict
 

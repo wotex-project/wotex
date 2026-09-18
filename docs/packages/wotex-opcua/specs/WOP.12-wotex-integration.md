@@ -275,8 +275,7 @@ ConsumedThing. It then calls Retry with the input options. `retained_native_effe
 asserts whether Runtime's cause includes that field; it must be false. This
 classification test does not advertise support for the input WoT operation in
 a production profile; its test profile explicitly admits that one operation.
-Thus Thread can prove conservative mutation error classification without gaining
-a production writeproperty binding. The native error fields shown are stimuli,
+The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
 The full I04 table also needs malformed/unclassified and default mutation cases.
 

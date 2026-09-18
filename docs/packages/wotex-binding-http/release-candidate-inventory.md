@@ -16,7 +16,7 @@ and exact-archive commands in the README provide its executable evidence.
 | WBH-P05 | Dependency resolution checks the package lock without mutation, while the external archive consumer creates and rechecks its independent lock before its behavioral test pass |
 | WBH-P06 | Every relative Markdown link resolves inside the checkout, every catalogued specification/evidence file exists, ExDoc builds without warnings, and the dated standards wording retains its Profile/Registry/certification nonclaims |
 | WBH-P07 | The minimum CI lane in `tooling/packages.yaml` declares Elixir `1.18.4-otp-27` with OTP `27.3.4.15`; each executed compatibility lane records its actual runtime and dependency revisions |
-| WBH-P08 | The developer gate remains compile, format, and behavioral tests; audits, documentation, coverage, Dialyzer, boundary, archive, and diff checks run as explicit evidence |
+| WBH-P08 | The fast gate (`mix check.fast`) remains compile, format, Credo, and behavioral tests; the package gate adds audits, documentation, coverage, Dialyzer, boundary, archive, and diff checks |
 
 ## Publication-order boundary
 

@@ -22,8 +22,8 @@ handle is returned trigger one best-effort cleanup call.
 
 The vector names appear in `transport_test.exs`, `integration_test.exs`,
 `library_contract_test.exs`, and `client_lifecycle_inventory_test.exs` under
-`test/wotex/binding/http/`. The inventory test keeps this table and those names
-in sync and dynamically checks the no-package-owner path.
+`test/wotex/binding/http/`. `client_lifecycle_inventory_test.exs` dynamically
+checks the no-package-owner path.
 
 ## Pending establishment belongs to the supplied client
 

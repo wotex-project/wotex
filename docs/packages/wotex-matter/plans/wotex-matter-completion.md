@@ -24,7 +24,7 @@ A compatibility adapter exposes `capabilities/0`, `connect/1`, `send/2`,
 Wire acknowledgements never establish application truth. Unsupported operations
 return an explicit error or the documented optional `:not_supported` sentinel.
 
-Consumer policy, deployment and publication are outside this repository.
+Consumer policy, deployment and publication are outside this package.
 The source, specifications and evidence contain no consumer-specific metadata.
 
 ## Evidence rules

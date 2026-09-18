@@ -41,5 +41,5 @@ and cleanup state. The rpi4 boot assertion is `:not_run` on a host build.
 
 The checked-in target source and host test do not claim a prebuilt image,
 offline boot, physical reconnect or on-device result. Those require a released
-artifact and Raspberry Pi 4 evidence; the current local cross-build stops before
-firmware assembly when the host lacks `fwup`.
+artifact and Raspberry Pi 4 evidence; the current local cross-build reaches
+firmware assembly but cannot finish it when the host lacks `fwup`.

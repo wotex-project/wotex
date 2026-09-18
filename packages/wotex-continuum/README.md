@@ -8,11 +8,12 @@
 [![License](https://img.shields.io/hexpm/l/wotex_continuum.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-continuum/LICENSE)
 
 [Installation](#installation) ·
-[Quick Start](#quick-start) ·
+[Quick start](#quick-start) ·
 [Scope](#scope) ·
-[Wire Contract](#wire-contract) ·
+[Wire contract](#wire-contract) ·
 [Errors](#errors) ·
-[Development](#development)
+[Development](#development) ·
+[License](#license)
 
 ---
 
@@ -82,7 +83,7 @@ For local development with the repository checked out next to your project:
 {:wotex_continuum, path: "../wotex/packages/wotex-continuum", override: true}
 ```
 
-## Quick Start
+## Quick start
 
 ```elixir
 alias WotexContinuum.{ActionIntent, Codec, ExecutionScope, Mode}
@@ -126,7 +127,7 @@ recording belong to the consumer host.
 
 Thing Description parsing and validation belongs to Wotex core.
 
-## Wire Contract
+## Wire contract
 
 WCT.01, WCT.02, and WCT.03 define the public contract at wire schema 2.0.0.
 Every encoded value carries its independent `schema_version`; package version

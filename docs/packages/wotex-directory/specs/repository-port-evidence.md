@@ -154,16 +154,17 @@ The focused command is:
 WOTEX_PATH_DEPS=1 mix test test/wotex/directory/scoped_memory_repository_contract_test.exs test/wotex/directory/table_repository_contract_test.exs
 ```
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` runs the developer gate. The explicit
-release runner adds the archive and other candidate evidence. A path dependency
+`WOTEX_PATH_DEPS=1 mix check --no-retry` runs the package gate, including the
+archive check below. The explicit release runner repeats the candidate checks
+and writes the release-evidence manifest. A path dependency
 test run identifies only that source cohort. The suites establish the configured
 adapters' tested behavior; they do not provide Discovery certification or
 production storage.
 
 ### Archive-only consumer
 
-`WOTEX_PATH_DEPS=1 mix package` and the explicit release runner execute
-`bin/check_archive.exs`. The check builds exactly one Directory archive in a
+The package gate, `WOTEX_PATH_DEPS=1 mix package` and the explicit release
+runner execute `bin/check_archive.exs`. The check builds exactly one Directory archive in a
 new system temporary directory using the package mirror described below. It
 validates the Hex envelope checksum, package identity/version, declared files,
 the normal `wotex ~> 0.1.0`

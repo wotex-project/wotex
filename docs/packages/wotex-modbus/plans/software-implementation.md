@@ -101,7 +101,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 ### WMB-P06: Native Mix orchestration
 
 - Requirements: WMB-N01–N03 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
-- Change surface: root aliases to unique `Mix.Tasks.Wotex.Modbus.Software.Build` and `Mix.Tasks.Wotex.Modbus.Software.Run`, test-only owned Port/process helpers, manifest/result projection.
+- Change surface: package `mix.exs` aliases to unique `Mix.Tasks.Wotex.Modbus.Software.Build` and `Mix.Tasks.Wotex.Modbus.Software.Run`, test-only owned Port/process helpers, manifest/result projection.
 - Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
 - Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
@@ -119,7 +119,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 
 - Requirements: WMB-C01, WMB-C09, WMB-C10 and WMB-N03; all earlier packages are prerequisites.
 - Change surface: package identity, legal/security boundary, consumer-visible API behavior, CI/default-gate invocation and the release-candidate dossier; no production protocol behavior.
-- Acceptance: inspect declared package metadata and exercise documented public behavior; inspect the packaged README, LICENSE, NOTICE, SECURITY, governance and specification dossier; require the NOTICE to identify this package; reconcile supported standards and dependency/toolchain claims with executable evidence; and keep publication, public-registry availability, stable-API, hardware, RTU, Modbus Security, certification and external-adoption claims explicit and absent.
+- Acceptance: inspect declared package metadata and exercise documented public behavior; inspect the packaged README, CHANGELOG, LICENSE and NOTICE and the specification dossier published through HexDocs; require the NOTICE to identify this package; reconcile supported standards and dependency/toolchain claims with executable evidence; and keep publication, public-registry availability, stable-API, hardware, RTU, Modbus Security, certification and external-adoption claims explicit and absent.
 - Verification: focused behavioral tests, the modest `WOTEX_PATH_DEPS=1 mix check --no-retry`, explicit release checks, both candidate-archive toolchains and both WMB.13 software lanes. Archive and result digests remain execution outputs because embedding an archive digest in its own contents is self-referential.
 - Commit scope: public release-candidate classification and regression evidence.
 

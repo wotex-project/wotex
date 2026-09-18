@@ -10,7 +10,7 @@ changing any obligation. Documentation now lives under
 documentation, governance files or agent files; specifications are published
 through HexDocs. Fixtures and machine-read provenance ship under `priv/` (this
 package's schemas are `priv/schemas/`; its packaged vectors stay under
-`test/vectors/` as WCT-C04 records). The repository-level gate
+`test/vectors/` as WCT-C04 records). The package gate
 `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-continuum`,
 and the package's CI lane now discharge `repository_green` and
 `archive_consumer_green`. Tags use `wotex-continuum-v<version>`.
@@ -129,8 +129,8 @@ remote-commit requirement to support parallel workers.
 
 | Gate | Required evidence |
 | --- | --- |
-| `repository_green` | Exact source, lock and toolchain plus the repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry` run from `packages/wotex-continuum` and mirrored by the package's CI lane: warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, >=95% coverage, Dialyzer, the archive check and a whitespace diff; `bin/check_boundary.exs` covers the public boundary. A run with explicit development dependency selection proves only that named cohort. |
-| `archive_consumer_green` | WCT-C04's `bin/check_archive.exs`, run by the repository-level gate and the CI lane, builds one exact archive with released requirements, then installs it through a signed temporary Hex registry in independently isolated OS-temporary consumers. Their lockfiles contain only exact Hex dependencies, downloaded continuum bytes match the candidate archive, no checkout BEAM is loaded, and the public examples pass. WCT-C05 adds a direct Jason-floor consumer. The core package is represented by an exact candidate archive until it is publicly released; this is not public-registry availability evidence. |
+| `repository_green` | Exact source, lock and toolchain plus the package gate `WOTEX_PATH_DEPS=1 mix check --no-retry` run from `packages/wotex-continuum` and mirrored by the package's CI lane: warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, >=95% coverage, Dialyzer, the public boundary scan (`bin/check_boundary.exs`), the archive check and a whitespace diff. A run with explicit development dependency selection proves only that named cohort. |
+| `archive_consumer_green` | WCT-C04's `bin/check_archive.exs`, run by the package gate and the CI lane, builds one exact archive with released requirements, then installs it through a signed temporary Hex registry in independently isolated OS-temporary consumers. Their lockfiles contain only exact Hex dependencies, downloaded continuum bytes match the candidate archive, no checkout BEAM is loaded, and the public examples pass. WCT-C05 adds a direct Jason-floor consumer. The core package is represented by an exact candidate archive until it is publicly released; this is not public-registry availability evidence. |
 | `reference_consumer_green` | The second WCT-C04 consumer uses the same archive to execute all packaged vectors across the three WCT contracts, plus supplied TD checking, failures, unknown effects, lifecycle generation and extension round trips. This is consumer proof, not cross-vendor certification. |
 | `public_release_candidate` | All preceding gates, WCT-C03 agreement, reviewed threat model, public content, licenses/provenance, accurate claims and immutable candidate evidence. The maintainer alone may later publish. |
 | `stable_api_candidate` | WCT-C05 compatibility review of API and wire contracts independently, exact error/result/null/default/canonical-byte rules and upgrade/rejection vectors. A stable wire version does not automatically make package 0.1 APIs stable. |

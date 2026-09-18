@@ -3,8 +3,11 @@ defmodule Mix.Tasks.Wotex.Modbus.Software.Run do
   @moduledoc """
   Runs the Modbus software acceptance suite against its verified native peer.
 
-  Invoke `mix wotex.software.run --workspace /absolute/disposable/workspace`
-  from the Modbus source checkout after the explicit fixture build. The runner
+  Invoke `mix pkg wotex-modbus wotex.modbus.software.run --workspace
+  /absolute/disposable/workspace` from the repository root, or
+  `mix wotex.modbus.software.run` inside `packages/wotex-modbus` with
+  `WOTEX_PATH_DEPS=1`, after the explicit fixture build; the package also
+  defines the alias `mix wotex.software.run`. The runner
   owns the disposable peer, test process, finite command budgets and evidence
   directory. Missing fixtures and cleanup failures are task failures.
 

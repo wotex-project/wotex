@@ -7,10 +7,10 @@
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/hexpm/l/wotex_binding_mqtt.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/LICENSE)
 
-[Installation](#installation) · [Quick Start](#quick-start) ·
-[Form Mapping](#form-mapping) · [Client Port](#client-port) ·
-[Errors and Delivery](#errors-and-delivery) · [Boundary](#boundary) ·
-[Development](#development)
+[Installation](#installation) · [Quick start](#quick-start) ·
+[Form mapping](#form-mapping) · [Client port](#client-port) ·
+[Errors and delivery](#errors-and-delivery) · [Boundary](#boundary) ·
+[Development](#development) · [License](#license)
 
 ---
 
@@ -78,7 +78,7 @@ For local development with the repository checked out next to your project:
 Path dependencies prove nothing about a released artifact; no adjacent path is
 discovered implicitly.
 
-## Quick Start
+## Quick start
 
 ```elixir
 alias Wotex.Binding.MQTT
@@ -98,7 +98,7 @@ Loading the dependency starts nothing. The consumer starts and supervises its
 MQTT connection, then gives the transport an opaque reference in
 `client_config`.
 
-## Form Mapping
+## Form mapping
 
 Only `mqtt` and `mqtts` broker hrefs are accepted. Broker hrefs may contain a
 port and trailing slash, but never user information, a topic path, query, or
@@ -125,7 +125,7 @@ An explicit `mqv:controlPacket` must agree with this table. QoS accepts integer
 or string values `0`, `1`, and `2`. Topic Names reject wildcards; Topic Filters
 support valid `+`, `#`, and MQTT 5 shared-subscription syntax.
 
-## Client Port
+## Client port
 
 Implement four callbacks around the consumer's chosen client:
 
@@ -176,7 +176,7 @@ payload byte limit, and a bounded payload. The `Wotex.Runtime.ExecutionContext`
 is a separate ephemeral argument: adapters must not retain it, place credentials
 in configuration, or embed credentials in handles.
 
-## Errors and Delivery
+## Errors and delivery
 
 `Wotex.Binding.MQTT.Error` identifies the failing stage (`:broker`, `:command`,
 `:topic`, `:codec`, `:mapping`, `:configuration`, or `:client`) and a retry
@@ -251,6 +251,10 @@ no test needs a broker. These commands do not invoke a release task, publish a
 package, or mutate a remote.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
-[SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/security.md). Licensed under Apache-2.0; see
+the [security policy](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/security.md).
+
+## License
+
+Apache-2.0. See
 [LICENSE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/NOTICE).

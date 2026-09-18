@@ -11,6 +11,7 @@ provenance; software evidence does not establish a stable release.
 - [WMB.10 Complete Modbus TCP client software profile](WMB.10-software-contract.md)
 
 - [WMB.11 Standalone client and feature preservation](WMB.11-standalone-client-and-preservation.md)
+- [Concrete specified fixture corpus](../../../../packages/wotex-modbus/priv/fixtures/contract-v1.json) — the WMB.11 standalone cases
 
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 

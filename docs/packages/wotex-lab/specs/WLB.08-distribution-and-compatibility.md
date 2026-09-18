@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.5. Contract: accepted. Source status: the workspace
+Specification version: 0.9.6. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -59,7 +59,7 @@ independent artifact adoption. Dated follow-up decisions live in the seam review
 | Gate | Required proof |
 | --- | --- |
 | `foundation_green` | WLB.01, implemented WLB.02/WLB.03/WLB.11 surfaces; warnings-as-errors, format/Credo, >=95% lines, docs/Doctor, Dialyzer, audits, metadata/boundary/package checks |
-| `package_contents_green` | Exact built archive has public lib/spec/plan/decision/provenance/fixtures/license files; no trackers, credentials, deps, build output or private paths; production dependency metadata has no path/git refs |
+| `package_contents_green` | Exact built archive has public lib, `priv/` fixtures/models/cookbooks/containment source/provenance data, README, changelog and license files; no Markdown specification, plan, decision or provenance documents (they reach consumers through HexDocs), trackers, credentials, deps, build output or private paths; production dependency metadata has no path/git refs |
 | `archive_consumer_green` | Fresh unrelated Mix application, exact archive-only dependency closure, read-only admitted archives, Git absent from executable PATH during resolution/build/run; TD and Nx positive/negative cases |
 | `workbench_archive_green` | Fresh extracted Workbench source artifact, complete host dependency closure from admitted local/public archives, exact cached native-artifact digests, Git absent during resolution/build/release smoke, production compilation and executable release |
 | `reference_consumer_green` | WLB.02–WLB.07/WLB.09–WLB.12 complete scenarios against the same cohort; real transport, dual-store, metric/AI, workbench and documentation tests; independent target; exact ownership/effect boundary |
@@ -106,8 +106,9 @@ excluded cases; unsupported/ambiguous/oversized summaries fail closed. Its
 Source identity is checked before and after execution. The
 `bin/support/reference_inputs.exs` definition includes the harness, Elixir/test
 and native containment source, executable Livebooks, fixtures/models,
-configuration and the packaged spec/plan/decision/provenance documents. The
-historical source index and evidence manifests are inputs too; a changed,
+configuration and the package README, changelog and license files; the
+specification, plan, decision and provenance documents live outside the
+package and are not inputs. The historical source index and evidence manifests are inputs too; a changed,
 removed or newly added matching resource invalidates the digest. Generated
 builds, dependency caches, PLTs and retained attempt output are excluded.
 `reference_inputs_test.exs` exercises these content/name boundaries. This
@@ -248,13 +249,14 @@ firmware checksum/license dossier, offline boot, physical reconnect or recorded
 on-target smoke.
 
 Maude licensing, binary provenance and platform support follow WLB.09. The
-native containment distributions follow WLB.06 profile 2.0.0: ship reviewed
+native containment distributions follow WLB.06 profile 2.0.2: ship reviewed
 platform/architecture binaries with SHA-256, source/Cargo-lock identity,
 licenses, signing/provenance and no Python interpreter requirement. The package
 currently includes Rust sources, not precompiled binaries. Provisioning is
 explicit; the first tensor neither builds nor starts the helper. Source tests
-compile the feature-gated Rust probes separately. macOS source evidence and
-The WLB.06 Linux lane executes Bubblewrap integration in source. The WLB.06
+compile the feature-gated Rust probes separately. macOS source evidence is not
+proof of Linux Bubblewrap integration; the WLB.06 Linux lane executes that
+integration in source. The WLB.06
 kernel-isolated OCI profile carries hostile-target isolation in source; a hosted
 worker still owns runtime hardening, image provenance and lifecycle. Those
 profile and artifact obligations remain required.

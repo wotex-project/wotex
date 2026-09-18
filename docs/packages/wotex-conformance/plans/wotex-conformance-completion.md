@@ -10,7 +10,7 @@ changing any obligation. Documentation now lives under
 `docs/packages/wotex-conformance/`. Package archives no longer ship Markdown
 documentation, governance files or agent files; specifications are published
 through HexDocs. Fixtures and machine-read provenance ship under `priv/`. The
-repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
+package gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
 `packages/wotex-conformance`, and the package's CI lane now discharge
 `repository_green` and `archive_consumer_green`. Tags use
 `wotex-conformance-v<version>`.
@@ -70,8 +70,8 @@ retrieval, certification service, hardware harness or production SLA is implied.
 
 | Claim ID | Authority and current bounded evidence | Remaining / nonclaim |
 | --- | --- | --- |
-| WCF-CL01 | TD 1.1 Recommendation 2023-12-05; 14 bundled TD vectors | Not exhaustive TD semantics or normative assertion coverage |
-| WCF-CL02 | TD 1.1 section 9; 6 bundled Thing Model vectors | No derivation, remote reference resolution or complete Thing Model conformance |
+| WCF-CL01 | TD 1.1 Recommendation 2023-12-05; 16 bundled TD vectors (corpus revision 1.1.0) | Not exhaustive TD semantics or normative assertion coverage |
+| WCF-CL02 | TD 1.1 section 9; 8 bundled Thing Model vectors (corpus revision 1.1.0) | No derivation, remote reference resolution or complete Thing Model conformance |
 | WCF-CL03 | WCF.01 target protocol 1.0 and schema revision 1.0 | Cross-implementation interoperability needs independent target evidence |
 | WCF-CL04 | Sorted-key deterministic JSON and SHA-256 evidence | Not RFC 8785 JCS; byte stability is tied to the recorded encoder/runtime cohort |
 | WCF-CL05 | Discovery Recommendation 2023-12-05 is reserved provenance | No bundled Discovery corpus or Discovery conformance claim exists |
@@ -110,14 +110,14 @@ An independent target must not calculate expected answers using runner internals
 
 ## Gates and evidence
 
-- `repository_green`: the repository-level gate `WOTEX_PATH_DEPS=1 mix check
+- `repository_green`: the package gate `WOTEX_PATH_DEPS=1 mix check
   --no-retry`, run from `packages/wotex-conformance` (from the repository
   root: `mix pkg wotex-conformance check --no-retry`) and mirrored by the
   package's CI lane: clean-build warnings-as-errors compilation, locked and
   unused-dependency checks, format, dependency and Hex audits, strict Credo,
   Doctor, docs with warnings as errors, all tests with coverage, Dialyzer,
-  schema mirror checks, the archive and application-free checks and
-  `git diff --check`. Record exact commit/runtime/dependencies; incremental
+  schema mirror checks, the boundary scan, the archive and application-free
+  checks and `git diff --check`. Record exact commit/runtime/dependencies; incremental
   compilation is not clean proof.
 - `archive_consumer_green`: `bin/check_archive.exs`, run by the same gate and
   CI lane, builds and inspects one exact Hex archive, verifies license,

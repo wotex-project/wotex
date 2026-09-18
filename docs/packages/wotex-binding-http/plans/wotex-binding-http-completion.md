@@ -10,9 +10,9 @@ Revision 1.1.0 records the package's move into the `wotex` repository without
 changing any obligation. Documentation now lives under
 `docs/packages/wotex-binding-http/`. Package archives no longer ship Markdown
 documentation, governance files or agent files; specifications are published
-through HexDocs. Fixtures and machine-read provenance ship under `priv/`. The
-repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
-`packages/wotex-binding-http`, and the package's CI lane now discharge
+through HexDocs. This package has no fixtures or machine-read provenance, so
+it ships no `priv/`. The package gate `WOTEX_PATH_DEPS=1 mix check --no-retry`,
+run from `packages/wotex-binding-http`, and the package's CI lane now discharge
 `repository_green` and `archive_consumer_green`. Tags use
 `wotex-binding-http-v<version>`.
 
@@ -51,10 +51,10 @@ authorizes automated publication, tags or Git remote operations.
 
 | Gate | Evidence requirement | Nonclaim |
 |---|---|---|
-| `repository_green` | The repository-level gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-binding-http` and mirrored by the package's CI lane, passes warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, coverage, Dialyzer, the archive check and a whitespace diff | Not independent install or full protocol conformance |
+| `repository_green` | The package gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-binding-http` and mirrored by the package's CI lane, passes warnings-as-errors compilation, locked and unused-dependency checks, formatting, dependency and Hex audits, strict Credo, Doctor, docs with warnings as errors, coverage, Dialyzer, the public boundary scan, the archive check and a whitespace diff | Not independent install or full protocol conformance |
 | `archive_consumer_green` | `bin/check_archive.exs`, run by the same gate and CI lane, builds each exact archive once without path overrides, inspects and extracts those same bytes, then compiles a separate Mix consumer whose Wotex dependency, compile-source, BEAM and code paths exclude every live checkout | Not full lifecycle behavior |
 | `reference_consumer_green` | That external consumer exercises WBH-A01..A06 through public APIs, including a supplied client and consumer-owned Runtime supervisor | No production transport certification |
-| `public_release_candidate` | Previous gates (whose repository-level gate already carries the dependency audits, documentation, coverage and Dialyzer checks) plus boundary, package metadata/license/security, and claim review pass | Not registry availability, runtime matrix, or permission to publish |
+| `public_release_candidate` | Previous gates (whose package gate already carries the dependency audits, documentation, coverage, Dialyzer and boundary checks) plus package metadata/license/security and claim review pass | Not registry availability, runtime matrix, or permission to publish |
 | `stable_api_candidate` | Consumer-visible compatibility behavior and documented API changes receive review against WBH-C06 | Not a published release, serialized ABI, runtime matrix, or universal HTTP/WoT compliance |
 
 `mix pkg wotex-binding-http test` and

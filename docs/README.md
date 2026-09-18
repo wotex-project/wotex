@@ -13,6 +13,7 @@ provenance live in each package's `priv/`.
 | `packages/<name>/decisions/` | Package-level decision records. |
 | `packages/<name>/provenance/` | Standards provenance, pinned sources and recorded evidence of the package. |
 | `packages/<name>/security.md` | Package security posture (where present). |
+| `catalogue.yaml` | The family catalogue, generated from every package catalogue by `mix wotex.catalogue`; never edited by hand. |
 | `architecture/` | Family-level architecture: the package graph, the repository layout, the import record. |
 | `decisions/` | Family-level decision records. |
 | `guides/` | Cross-package guides (consumers, transport authors, releases). |
@@ -33,7 +34,7 @@ Relative links inside a package's documentation stay valid because
 | `wotex-continuum` | `WCT`, `WCT-C` | [packages/wotex-continuum](packages/wotex-continuum) |
 | `wotex-conformance` | `WCF` | [packages/wotex-conformance](packages/wotex-conformance) |
 | `wotex-binding-http` | `WBH` | [packages/wotex-binding-http](packages/wotex-binding-http) |
-| `wotex-binding-mqtt` | `WBM` | [packages/wotex-binding-mqtt](packages/wotex-binding-mqtt) |
+| `wotex-binding-mqtt` | `WBM`, `WBM-C` | [packages/wotex-binding-mqtt](packages/wotex-binding-mqtt) |
 | `wotex-bacnet` | `WBA` | [packages/wotex-bacnet](packages/wotex-bacnet) |
 | `wotex-ble` | `WBL` | [packages/wotex-ble](packages/wotex-ble) |
 | `wotex-coap` | `WCO` | [packages/wotex-coap](packages/wotex-coap) |

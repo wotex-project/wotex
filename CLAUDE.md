@@ -17,7 +17,7 @@ skill.
 | Find a definition | `mix def Module [fun]` |
 | Find callers in every package | `mix refs Module [fun]` |
 | Tests that cover a change | `mix impact Module [fun]` (`--run` runs them) |
-| Run anything in a package | `mix pkg <name> <task> [args]`, e.g. `mix pkg wotex-coap test test/wotex/coap/block_test.exs` |
+| Run anything in a package | `mix pkg <name> <task> [args]`, e.g. `mix pkg wotex-coap test test/wotex/coap/blockwise_test.exs` |
 | Package ready | `mix check.fast --package <name>` |
 | Before a commit | `mix check.affected`, plus `mix workspace` when root files, `tooling/` or docs changed |
 | Repository-wide change only | `mix check.all` |

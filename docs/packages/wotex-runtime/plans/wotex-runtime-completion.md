@@ -65,14 +65,14 @@ After cloning the repository and running `mix setup` at its root,
 `WOTEX_PATH_DEPS=1 mix check --no-retry` run from `packages/wotex-runtime`)
 is the default developer gate and the repository-level gate. It compiles with
 warnings as errors, checks formatting, dependency audits, Credo, Doctor,
-documentation, coverage, Dialyzer and the package archive. The fast loop is
-`mix pkg wotex-runtime test` and `mix check.fast --package wotex-runtime`.
-Reference-consumer and compatibility evidence remain explicit lanes recorded
-separately.
+documentation, coverage, Dialyzer, the boundary scan and the package archive.
+The fast loop is `mix pkg wotex-runtime test` and
+`mix check.fast --package wotex-runtime`. Reference-consumer and compatibility
+evidence remain explicit lanes recorded separately.
 
 | Gate | Required evidence | Does not establish |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`: compiler warnings, formatter, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer and archive checks; the repository-level gate and CI lanes discharge it; report failures | Independent dependency installation or integration |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`: compiler warnings, formatter, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer, boundary and archive checks; the repository-level gate and CI lanes discharge it; report failures | Independent dependency installation or integration |
 | `archive_consumer_green` | `bin/check_package.exs`, run by the repository-level gate and CI lanes: a separate minimal Mix consumer installs the exact archive and exercises one supported success plus typed error through public API, with no live source; a build without path overrides is recorded separately | Full lifecycle behavior |
 | `reference_consumer_green` | RT-C04 tests against that archive, explicit ports and real supervision | External protocol certification or production acceptance |
 | `public_release_candidate` | Prior gates, metadata/license/security, docs links, dependency installation and standards audit; no tracker/secret in archive | Publication permission or stable API |

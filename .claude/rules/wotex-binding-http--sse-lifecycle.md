@@ -6,8 +6,8 @@ paths:
 # SSE lifecycle rule (wotex-binding-http)
 
 Applies to the SSE and transport modules and their tests
-(`lib/**/*sse*.ex`, `lib/**/transport.ex`, `test/**/*sse*.exs`,
-`test/**/transport_test.exs` inside the package).
+(`lib/**/sse/*.ex`, `lib/**/subscription.ex`, `lib/**/notification.ex`,
+`lib/**/transport.ex` and `test/**/transport_test.exs` inside the package).
 
 Only `observeproperty` and `subscribeevent` Forms with `subprotocol: sse` open
 streams. The supplied client owns the connection and framing. The binding owns

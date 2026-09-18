@@ -134,10 +134,11 @@ Final close checks all six stack processes and its UDP socket. The JSON receipt
 records per-cycle elapsed cleanup, tracked BEAM heap/process memory and native
 peak RSS separately. It requires the explicit `WOTEX_BACNET_RESULTS_DIR`.
 
-The existing Dockerfile and shell entry points run the upstream read/write demo.
-They do not select this instrumented fixture or implement the required Mix
-workspace/manifest contract. Final WBA-P06 acceptance also needs the complete
-fault workflow and supported source/archive cohorts.
+The plain `Dockerfile` runs the upstream read/write demo server; it does not
+build this instrumented fixture and the software lane does not use it. The
+`build_software.sh` and `run_software.sh` entry points delegate to the Mix
+tasks, which build this fixture from `Dockerfile.software` under the verified
+workspace/manifest contract.
 
 ## Pending Runtime establishment
 

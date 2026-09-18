@@ -10,10 +10,11 @@ home, dependency directory, build directory, and lockfile.
 
 The core `wotex` package is not yet available from the public Hex registry.
 Until it is published, the check builds an exact core candidate archive from
-the development dependency selected by the outer repository gate. This source
-checkout is only an input to package construction. The temporary consumers
-resolve both Wotex packages as `:hex` lock entries through the signed candidate
-registry; they have no path or Git dependencies and assert that loaded BEAMs
+the development dependency (`packages/wotex`) selected by the outer package
+gate. This source checkout is only an input to package construction. The
+temporary consumers resolve both Wotex packages as `:hex` lock entries through
+the signed candidate registry; they have no path or Git dependencies and
+assert that loaded BEAMs
 come from their own build directories. Released `jason`, `ex_json_schema`, and
 `decimal` tarballs are fetched at the versions in the source lock before the
 registry is built.

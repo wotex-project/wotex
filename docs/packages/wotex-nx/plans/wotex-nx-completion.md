@@ -75,7 +75,8 @@ or implementation explicitly before advancing its gate; do not hide the case.
 - `repository_green`: `WOTEX_PATH_DEPS=1 mix check --no-retry` from
   `packages/wotex-nx` passes warnings-as-errors compilation, formatting,
   dependency audits, Credo, Doctor, documentation, behavioral tests with
-  coverage, Dialyzer, the archive check and `git diff --check`. The
+  coverage, Dialyzer, the boundary scan, the archive check and
+  `git diff --check`. The
   repository-level gate and CI lanes discharge it; record actual commands,
   coverage, and supported runtime.
 - `archive_consumer_green`: C03 passes through `bin/check_archive.exs`, run by

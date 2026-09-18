@@ -26,12 +26,13 @@ WOTEX_PATH_DEPS=1 mise exec erlang@27.3.4.15 elixir@1.18.4-otp-27 -- \
   mix check --no-retry
 ```
 
-The default gate compiles with warnings as errors, checks formatting, and runs
-the behavioral test suite. Candidate evidence also resolves the repository
-lock with `--check-locked` and runs strict Credo, dependency audits, Dialyzer,
-Doctor, documentation, coverage, public-boundary, and archive-consumer checks
-as explicit lanes. Release and publication commands are not part of these
-checks.
+It runs from `packages/wotex-continuum` (from the repository root:
+`mix pkg wotex-continuum check --no-retry`). The package gate compiles with
+warnings as errors, resolves the package lock with `--check-locked`, checks
+unused dependencies and formatting, and runs dependency audits, strict Credo,
+Doctor, documentation, the behavioral test suite with coverage, Dialyzer, the
+public-boundary scan, the archive-consumer check, and `git diff --check`.
+Release and publication commands are not part of these checks.
 
 ## Package and wire compatibility
 

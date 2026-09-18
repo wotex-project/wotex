@@ -23,8 +23,7 @@ whole-process memory boundary.
 | WBH-S13 | A nested client connection-process exit reason is reduced by Runtime to lifecycle status and never copied into a binding value or receiver delivery | WBH-S13-P |
 
 The vector names appear in `limits_security_test.exs` and
-`integration_test.exs` under `test/wotex/binding/http/`. The inventory test
-keeps this table and those names in sync.
+`integration_test.exs` under `test/wotex/binding/http/`.
 
 ## Exact package defaults and measurements
 

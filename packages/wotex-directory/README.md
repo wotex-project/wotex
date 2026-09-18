@@ -7,8 +7,8 @@
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/hexpm/l/wotex_directory.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-directory/LICENSE)
 
-[Installation](#installation) · [Quick Start](#quick-start) ·
-[Consumer Ports](#consumer-ports) · [Discovery Semantics](#discovery-semantics) ·
+[Installation](#installation) · [Quick start](#quick-start) ·
+[Consumer ports](#consumer-ports) · [Discovery semantics](#discovery-semantics) ·
 [Boundary](#boundary) · [Development](#development)
 
 ---
@@ -72,7 +72,7 @@ For local development with the repository checked out next to your project:
 {:wotex_directory, path: "../wotex/packages/wotex-directory", override: true}
 ```
 
-## Quick Start
+## Quick start
 
 This configuration sketch requires the caller-owned port modules, state,
 principal, and Thing Description values shown below.
@@ -98,7 +98,7 @@ context = Wotex.Directory.Context.new!(principal, repository: request_scope)
 `Wotex.Directory.Service` is immutable configuration, not a process. Keep it in
 consumer-owned state or pass it explicitly to request handlers.
 
-## Consumer Ports
+## Consumer ports
 
 Nine callbacks form the complete effect boundary:
 
@@ -124,7 +124,7 @@ Port state and returned failure reasons are opaque. Returned adapter failures
 become stable `Wotex.Directory.Error` values without retaining unknown reasons.
 Adapters must handle their own exceptions; the facade does not rescue them.
 
-## Discovery Semantics
+## Discovery semantics
 
 The 0.1 series targets the W3C WoT Discovery Recommendation dated 2023-12-05
 and Thing Description 1.1. Supported behavior is recorded in
@@ -229,5 +229,5 @@ The adapters under `test/support/` are test consumers and are not packaged
 production storage implementations.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
-[SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-directory/security.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
+[security policy](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-directory/security.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-directory/NOTICE).

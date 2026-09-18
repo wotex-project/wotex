@@ -43,7 +43,8 @@ source revisions and the commit maps.
   (`mix impact`). CI runs every package on the minimum and current toolchain
   lanes.
 - Hex packages cannot include files outside their directory, so archives ship
-  code and `priv/` only; specifications are published through HexDocs.
+  code, `priv/`, `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`;
+  specifications are published through HexDocs.
 - Consumers outside the repository depend on published packages, or on one
   commit of this repository with `sparse: "packages/<name>"` until
   publication (`docs/guides/consumer.md`).

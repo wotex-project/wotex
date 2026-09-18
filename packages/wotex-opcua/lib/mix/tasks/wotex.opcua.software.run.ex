@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Wotex.Opcua.Software.Run do
   Runs the interop, software stress, CTest, sanitizer and audit lanes.
 
   Invoke `mix wotex.opcua.software.run --workspace ABSOLUTE_PATH` after
-  `mix wotex.opcua.software.build`; the root project also supplies
+  `mix wotex.opcua.software.build`; the package project also supplies the alias
   `mix wotex.software.run`. See `Wotex.OPCUA.Native.Software.run/2` for the
   lanes, the peer lifecycle and the recorded report. Any failed lane fails the
   task.

@@ -90,8 +90,7 @@ The full gate alone is `mix pkg wotex-directory check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
 `packages/wotex-directory`); it adds dependency audits, Doctor, docs, the
 coverage floor, Dialyzer, the boundary scan, the archive check with its
-archive-only
-repository-port suites, and the application-free check. Run
+archive-only repository-port suites, and the application-free check. Run
 `mix dialyzer.pkg wotex-directory` in tier 1 when a typespec, a port callback
 or an inferred return type changed.
 
@@ -117,9 +116,9 @@ Tests by area, all under `test/wotex/directory/`:
   `evidence_contract_test.exs`, then the full gate for the archive check.
 
 `wotex-lab` is the only package that calls this package's public API: its
-directory adapters under `lib/wotex/lab/adapters/directory/` implement the
-repository, authorization, clock and identifier ports. Before changing a
-public function or port callback, list its callers with
+directory adapters under `packages/wotex-lab/lib/wotex/lab/adapters/directory/`
+implement the repository, authorization, clock and identifier ports. Before
+changing a public function or port callback, list its callers with
 `mix refs Wotex.Directory.Module fun` and the tests to run with
 `mix impact Wotex.Directory.Module fun`.
 

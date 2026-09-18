@@ -4,8 +4,9 @@ defmodule Mix.Tasks.Wotex.Opcua.Software.Build do
   @moduledoc """
   Builds the native, sanitizer and independent-peer lanes from a source checkout.
 
-  Invoke `mix wotex.opcua.software.build --workspace ABSOLUTE_PATH` from the
-  repository root; the root project also supplies `mix wotex.software.build`.
+  Invoke `mix wotex.opcua.software.build --workspace ABSOLUTE_PATH` inside the
+  package; its project also supplies the alias `mix wotex.software.build`, which
+  `mix pkg wotex-opcua wotex.software.build` runs from the repository root.
   The workspace must be new or empty. See `Wotex.OPCUA.Native.Software.build/2`
   for the recorded manifest. A package consumer without the checkout's test
   fixtures receives `software_fixtures_unavailable`.

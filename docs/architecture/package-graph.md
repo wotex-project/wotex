@@ -29,12 +29,12 @@ archives, not as path dependencies.
 
 | Changed package | Packages whose gate must run |
 | --- | --- |
-| `wotex` | every package |
+| `wotex` | every package except `wotex-conformance` |
 | `wotex-runtime` | both bindings, all seven protocol adapters, `wotex-lab` |
 | `wotex-directory`, `wotex-nx`, `wotex-continuum`, `wotex-conformance`, a binding | itself and `wotex-lab` |
 | a protocol adapter | itself only |
 | `wotex-lab` | itself only |
-| repository-level files (`tooling/`, `.github/`, root configuration) | every package |
+| repository-level files matching `select_all_on` in `tooling/packages.yaml` (`tooling/`, `.github/`, root `mix.exs`, `mix.lock`, `lib/`, `test/`, `mise.toml`, `.gitignore`) | every package |
 
 ## Boundaries between packages
 

@@ -153,7 +153,7 @@ C05's admission limit; that stream terminates instead of replenishing credits.
 This bounds library-originated messages; it does not claim ownership of unrelated
 messages sent to a consumer's shared mailbox. Process.info sampling alone is not
 native flow control. Runtime opening-worker/final-owner identity follows WRT.01
-1.3.1; partial native resources are owned before any blocking establishment wait.
+1.4.0; partial native resources are owned before any blocking establishment wait.
 
 Without credit, native callbacks enter a separately bounded queue of 64 reports
 and 1048576 encoded bytes. Thread coalesces only within one event-loop iteration under S06. Distinct

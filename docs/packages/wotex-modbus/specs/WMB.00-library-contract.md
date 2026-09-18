@@ -53,8 +53,8 @@ backend because a module happens to be loaded or an executable happens to exist.
 
 Every public boundary returns a library Error for malformed configuration,
 messages, addresses, subscription handles and forged structs. Programmer-supplied
-callback exceptions may propagate only where explicitly documented, such as the
-function passed to `with_connection/2`. Keyword options must be proper lists,
+callback exceptions may propagate only where explicitly documented. Keyword
+options must be proper lists,
 have unique atom keys and contain only the selected adapter's allowlist.
 Validate before spawning, opening a socket, reading credentials or sending bytes.
 Revalidate public structs at the final serialization boundary.

@@ -47,6 +47,6 @@ mechanics. Web Linking and Problem Details are transport-host responsibilities.
 ## Attribution and copied material
 
 No W3C schema, test suite, prose section, or code artifact is copied into this
-repository. The specification and implementation are original descriptions and
+package. The specification and implementation are original descriptions and
 mechanics based on the cited public standards. W3C document notices remain
 available at <https://www.w3.org/copyright/doc-license-2023/>.

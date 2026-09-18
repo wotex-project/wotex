@@ -13,8 +13,10 @@ Once a package is on hex.pm, depend on it as usual:
 {:wotex_runtime, "~> 0.1"}
 ```
 
-Publication order follows the package graph: `wotex` first, then
-`wotex_runtime`, then bindings and adapters. Nothing is published yet.
+Publication order follows the package graph: a package is published after
+every WoTEx package it depends on, so `wotex` comes first, then
+`wotex_runtime` and the other direct dependents of `wotex`, then bindings and
+adapters, and `wotex_lab` last. Nothing is published yet.
 
 ## Before publication: one repository commit
 

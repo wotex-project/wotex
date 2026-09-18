@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/hexpm/l/wotex_nx.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-nx/LICENSE)
 
 [Installation](#installation) ·
-[Quick Start](#quick-start) ·
+[Quick start](#quick-start) ·
 [Contract](#contract) ·
 [Errors](#errors) ·
 [Compatibility](#compatibility) ·
@@ -93,7 +93,7 @@ For local development with the repository checked out next to your project:
 Wotex observation, feature, prediction, anomaly, and Action-proposal values are
 package extension terms. They are not presented as W3C-defined structures.
 
-## Quick Start
+## Quick start
 
 ```elixir
 alias Wotex.DataSchema

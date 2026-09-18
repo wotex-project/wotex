@@ -11,7 +11,7 @@ Implementation readiness does not mean implementation or conformance is complete
 - [WBL.10 Complete BlueZ GATT central software profile](WBL.10-software-contract.md)
 
 - [WBL.11 Standalone client and protocol workflows](WBL.11-standalone-client-and-preservation.md)
-- [Concrete contract cases, specified and unexecuted](../../../../packages/wotex-ble/priv/fixtures/contract-v1.json)
+- [Concrete contract cases](../../../../packages/wotex-ble/priv/fixtures/contract-v1.json) — specified cases; only cases bound to executed tests are evidence
 
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 
@@ -20,4 +20,4 @@ Implementation readiness does not mean implementation or conformance is complete
 - [Concrete Wotex integration corpus](../../../../packages/wotex-ble/priv/fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
 
 - [WBL.13 Native backend, build and IPC contract](WBL.13-native-backend.md)
-- [Concrete native Port corpus](../../../../packages/wotex-ble/priv/fixtures/native-port-v1.json) — specified, unexecuted acceptance cases
+- [Concrete native Port corpus](../../../../packages/wotex-ble/priv/fixtures/native-port-v1.json) — specified acceptance cases; the catalogue identifies the executed ones

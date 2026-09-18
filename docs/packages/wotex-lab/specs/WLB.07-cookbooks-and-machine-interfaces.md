@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.9.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.9.1. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -151,12 +151,13 @@ and bounded retained output; read-oriented is not permission for unlimited work.
 version 2025-11-25, `Wotex.Lab.MCP.Stdio` the newline-delimited stdio
 transport and `Wotex.Lab.MCP.Plug` the Streamable HTTP transport behind the
 optional Plug requirement (origin allowlist, random `Mcp-Session-Id`,
-expiring sessions, body ceiling, no server push). Resources embed the
-catalogue, completion plan and provenance at compile time and expose fixture
-and model manifests, design tokens, the seam table, the admitted scenario
-descriptors of WLB.02 and the simulated Things of the session's explicit
-instance. Tools are `parse_td`, `parse_tm`,
-`explain_error`, `list_things`, `read_property`, `conformance_observe`,
+expiring sessions, body ceiling, no server push). Resources serve the
+source index, source cohort, fixture and model manifests from `priv/`, read
+the catalogue, completion plan and standards review from the documentation
+tree beside a source checkout (reported as unavailable in a compiled package),
+and expose design tokens, the seam table, the admitted scenario descriptors of
+WLB.02 and the simulated Things of the session's explicit instance. Tools are
+`parse_td`, `parse_tm`, `explain_error`, `list_things`, `read_property`, `conformance_observe`,
 `explain_seam` and `verify_control_model`; every call is bounded by per-call
 limits and per-session call and output quotas. `query_metrics` is listed only
 when the host builds the session with `metrics: %{history: pid, scope: map}`
@@ -323,6 +324,6 @@ The site and organisation profile MUST route by task: use/expose a Thing,
 numerical experiments, infrastructure and evidence. One page shows the package
 graph, ownership seams and actual readiness; run links exist only for admitted
 artifacts. Package README links point to the exact relevant Lab cookbook.
-Cross-repository/site publication is maintainer-owned and does not change Lab
+Cross-package/site publication is maintainer-owned and does not change Lab
 semantics. Every generated link and documented command must pass a deployed
 or artifact smoke check before being labeled available.

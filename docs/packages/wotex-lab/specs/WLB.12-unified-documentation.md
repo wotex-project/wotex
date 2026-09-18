@@ -1,7 +1,7 @@
 # WLB.12: Unified ecosystem documentation
 
 Specification version: 0.1.0. Contract: accepted. Implementation status:
-planned. Evidence status: none. Adoption status: not available.
+planned. Evidence status: missing. Adoption status: no_reference.
 
 ## Purpose
 

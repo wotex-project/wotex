@@ -1,6 +1,6 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.7.1. Contract: accepted. Source status: implemented.
+Specification version: 1.7.2. Contract: accepted. Source status: implemented.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
@@ -9,10 +9,11 @@ local targets. The native helper's sampled limits are not kernel enforcement;
 the separate kernel-isolated OCI profile carries the hostile whole-tree
 isolation obligation. A pinned Linux lane executes the reviewed-local profile's
 Bubblewrap path.
-The repository gate runs the locked Rust unit and lifecycle cohort with its
-feature-gated probes in a private, cleaned OS-temporary Cargo target. A passing
-repository gate includes those native results. Generated binaries and probe
-artifacts remain outside the package archive.
+The explicit native-containment lane (`elixir bin/check_native_containment.exs`)
+runs the locked Rust unit and lifecycle cohort with its feature-gated probes in
+a private, cleaned OS-temporary Cargo target. The package gate does not run it,
+so a passing package gate does not include those native results. Generated
+binaries and probe artifacts remain outside the package archive.
 
 ## Evidence record and maturity
 

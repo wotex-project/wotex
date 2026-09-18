@@ -13,13 +13,15 @@ is absent. Physical-radio testing is a separate optional lane.
 
 ## Mandatory local gate
 
-`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting and
-the default unit/property/ExUnit suite. For the native build change, `mix lint`
-(strict Credo and Dialyzer), `mix doctor`, `mix docs`, `mix hex.audit` and
-`mix deps.audit` also passed. `mix hex.build` passed with `WOTEX_PATH_DEPS`
-unset and included the Mix task, native C guardian and no generic Python
-builder. An unpacked out-of-tree package compile and the Application-free
-structural check remain separate release checks. Runtime path dependencies
+`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, locked and
+unused dependencies, formatting, dependency audits, strict Credo, Doctor,
+ExDoc, the default unit/property/ExUnit suite with the 95% coverage floor,
+Dialyzer, the exact-archive reference consumer (`bin/check_archive.exs`), the
+Application-free structural check and `git diff --check`. For the native build
+change, `mix lint` (strict Credo and Dialyzer), `mix doctor`, `mix docs`,
+`mix hex.audit` and `mix deps.audit` also passed. `mix hex.build` passed with
+`WOTEX_PATH_DEPS` unset and included the Mix task, native C guardian and no
+generic Python builder. Runtime path dependencies
 require the explicit switch; the archive preserves ordinary Hex dependency
 declarations.
 The pinned Decimal parser regression remains active; there are no advisory

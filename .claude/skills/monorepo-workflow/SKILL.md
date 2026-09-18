@@ -29,7 +29,7 @@ report real references, grouped by package and by `lib/` or `test/`.
 
 ## 3. Change and test (tier 0)
 
-- Run the tests next to the change: `mix pkg <name> test test/path_test.exs`.
+- Run the tests next to the change: `mix pkg <name> test test/<path>_test.exs`.
 - For a changed public function: `mix impact Module fun --run` runs the
   referencing tests in every package that uses it.
 - `mix pkg <name> <any mix task>` reaches anything inside a package.

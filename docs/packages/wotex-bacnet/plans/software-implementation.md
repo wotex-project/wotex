@@ -145,7 +145,8 @@ corpus digests, protocol observations and resource counts before and after
 cleanup. Heap/RSS observations are reported separately from owned resource
 counts.
 
-Archive contents include declared runtime and documentation sources. They
-exclude downloaded SDKs, fixture binaries, secrets, sockets, state, logs and
+Archive contents include declared runtime sources, `priv/fixtures/` and the
+README, changelog, license and notice files; specifications reach consumers
+through HexDocs. They exclude downloaded SDKs, fixture binaries, secrets, sockets, state, logs and
 PLTs. Repository visibility, remote operations, tags, publication, hardware and
 certification are outside this plan.

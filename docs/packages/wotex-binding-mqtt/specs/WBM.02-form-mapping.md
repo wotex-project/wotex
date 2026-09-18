@@ -50,9 +50,9 @@ or retry. WBM.01 owns value bounds; WBM-C03 proves the filter-cardinality and
 allocation boundary. `test/wotex/binding/mqtt/mapping_test.exs` tests explicit/default
 packets, target separation and rejected operations. Command/topic/QoS tests
 prove value boundaries. `test/wotex/binding/mqtt/operation_inventory_test.exs`
-binds positive and negative vectors for every table row, the exact Runtime
-supported/unsupported cells, and the revision/digests in the checked-in source
-manifest.
+binds positive and negative vectors for every table row and the exact Runtime
+supported/unsupported cells. The source revision and file digests are recorded
+provenance in the checked-in source manifest; no test reads them.
 
 A newer draft changing terms/defaults/retain semantics requires reviewed spec,
 package compatibility and consumer vectors. Historical provenance must not be

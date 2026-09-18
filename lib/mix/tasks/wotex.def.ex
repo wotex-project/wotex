@@ -60,7 +60,7 @@ defmodule Mix.Tasks.Wotex.Def do
 
   defp strip_arity(name), do: hd(String.split(name, "/"))
 
-  # `Wotex.Runtime.Request.from_selection/2` names a function: the last
+  # `Wotex.Runtime.Request.from_selection/3` names a function: the last
   # segment starts in lower case.
   defp split_target(target) do
     target = strip_arity(target)

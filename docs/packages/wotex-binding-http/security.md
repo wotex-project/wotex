@@ -21,5 +21,6 @@ arithmetic on a pathological value is executed.
 
 This evidence is not a general Decimal safety or whole-VM memory guarantee. Any
 dependency or advisory change requires a fresh review. A failed regression,
-changed lock, or audit finding blocks the explicit dependency-evidence lane.
-Never disable parsing limits for untrusted input.
+changed lock, or audit finding blocks the package gate (`mix check`), which runs
+`mix deps.audit` and `mix hex.audit`. Never disable parsing limits for
+untrusted input.

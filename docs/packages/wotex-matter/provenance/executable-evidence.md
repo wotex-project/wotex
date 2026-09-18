@@ -42,12 +42,15 @@ current-source release claim.
 
 ## Developer gate
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` runs warnings-as-errors compilation,
-formatting and the behavioral test suite. Runtime path dependencies require the
-explicit switch; the archive preserves ordinary Hex dependency declarations.
-Strict Credo, dependency audits, Dialyzer, Doctor, ExDoc, coverage, packaging,
-out-of-tree compilation, Application-free loading and native builds are
-separate release or packet evidence. The pinned Decimal parser regression
+`WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-matter` (what
+`mix pkg wotex-matter check --no-retry` runs from the repository root) runs the
+package `.check.exs`: locked and unused dependencies, warnings-as-errors
+compilation, formatting, dependency audits, strict Credo, Doctor, ExDoc, the
+behavioral test suite with the 95% coverage floor, Dialyzer, the archive and
+out-of-tree compilation check, the Application-free check and `git diff --check`.
+Runtime path dependencies require the explicit switch; the archive preserves
+ordinary Hex dependency declarations. Native builds and the software-peer lanes
+are separate release or packet evidence. The pinned Decimal parser regression
 remains active; there are no advisory waivers. See the
 [security policy](../security.md) and the dependency-security test.
 

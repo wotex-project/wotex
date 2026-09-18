@@ -139,7 +139,7 @@ attempt, worker coordinator or cross-repository scheduler to implement these IDs
 
 | Gate | Required evidence; never inferred from a preceding gate |
 | --- | --- |
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes from `packages/wotex` on the exact checkout: warnings-as-errors compilation, formatting, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer and archive checks. The repository-level gate and CI lanes discharge it. Record the source and toolchain used. |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes from `packages/wotex` on the exact checkout: warnings-as-errors compilation, formatting, dependency audit, Credo, Doctor, documentation, coverage, Dialyzer, boundary and archive checks. The repository-level gate and CI lanes discharge it. Record the source and toolchain used. |
 | `archive_consumer_green` | WTX-C03: `mix run --no-start bin/check_package.exs` (run by the repository-level gate and CI lanes) builds one archive, inspects and unpacks that artifact, compiles it without checkout BEAM files, and runs TD, TM, wrapper, helper, typed-error, and no-callback examples in an isolated minimal consumer. The command reports archive and resolved consumer-lock digests for the evidence receipt. |
 | `reference_consumer_green` | WTX-C04: consumer-neutral end-to-end value examples and explicitly scoped independent corpus evidence using the same archive. No unpublished local dependency assumed. |
 | `public_release_candidate` | All three preceding gates plus explicit documentation, dependency, static-analysis, archive, content, license, provenance, and security checks on an immutable candidate artifact. This is permission to evaluate, not to push, tag or publish. |

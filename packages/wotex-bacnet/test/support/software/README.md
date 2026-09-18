@@ -3,7 +3,8 @@
 The explicit fixture tooling uses Elixir/OTP for source admission and evidence.
 From the repository root, run
 `mix pkg wotex-bacnet wotex.software.build --workspace /absolute/disposable/workspace`
-(or `mix wotex.software.build --workspace ...` inside `packages/wotex-bacnet`).
+(or `WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace ...` inside
+`packages/wotex-bacnet`).
 The workspace must be empty or contain a matching verified build manifest.
 The fully qualified task is `wotex.bacnet.software.build`; the shorter name is
 an alias defined in this package's `mix.exs`.
@@ -12,7 +13,9 @@ These test-support modules are loaded by the fixture workflow; BACnet runtime
 dependency loading never invokes them.
 
 After a successful build, run
-`mix wotex.software.run --workspace /absolute/disposable/workspace`. The runner
+`mix pkg wotex-bacnet wotex.software.run --workspace /absolute/disposable/workspace`
+(or `WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace ...` inside
+`packages/wotex-bacnet`). The runner
 uses four separately owned containers: normal and sanitizer variants each run a
 shared suite and a terminal-shutdown suite. It binds required requirement/vector
 IDs to the ExUnit output, records native cleanup counters and sanitizer output,

@@ -3,8 +3,9 @@ defmodule Mix.Tasks.Wotex.Dialyzer do
 
   @moduledoc """
   Runs `mix dialyzer` inside `packages/NAME` with `WOTEX_PATH_DEPS=1`. The
-  package keeps its PLT in its own `priv/plts`. Further arguments are
-  passed to `mix dialyzer`. The root alias is `mix dialyzer.pkg`.
+  package keeps its own PLT: in `priv/plts` where its `mix.exs` sets
+  `plt_file`, otherwise under its `_build`. Further arguments are passed to
+  `mix dialyzer`. The root alias is `mix dialyzer.pkg`.
 
       mix wotex.dialyzer NAME [ARGS...]
 

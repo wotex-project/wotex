@@ -7,9 +7,10 @@
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/hexpm/l/wotex_conformance.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-conformance/LICENSE)
 
-[Installation](#installation) · [Evidence Model](#evidence-model) ·
-[Quick Start](#quick-start) · [External Target Protocol](#external-target-protocol) ·
-[Security Boundary](#security-boundary) · [Development](#development)
+[Installation](#installation) · [Evidence model](#evidence-model) ·
+[Quick start](#quick-start) · [External target protocol](#external-target-protocol) ·
+[Security boundary](#security-boundary) · [Development](#development) ·
+[License](#license)
 
 ---
 
@@ -61,7 +62,7 @@ For local development with the repository checked out next to your project:
 {:wotex_conformance, path: "../wotex/packages/wotex-conformance", override: true}
 ```
 
-## Evidence Model
+## Evidence model
 
 A report establishes only the exact tuple it records: claim and standards
 revision, vector digest, corpus digest, subject identity and archive digest,
@@ -81,7 +82,7 @@ expected and actual digests, not raw observations. An adapter derives its
 observation from the request alone, so a target that guesses by vector identity
 proves nothing.
 
-## Quick Start
+## Quick start
 
 ```elixir
 alias Wotex.Conformance.{Corpus, Runner, Subject}
@@ -119,7 +120,7 @@ implements.
 Use the digest of the actual archive; the zero digest above only demonstrates
 the required wire shape.
 
-## External Target Protocol
+## External target protocol
 
 `Wotex.Conformance.Target.External` starts one direct executable per selected
 vector—never a shell. It writes one canonical JSON request to standard input,
@@ -159,7 +160,7 @@ so an independent adapter derives the observation from the request alone and
 never needs the runner-owned expectation. A non-normalized observation is an
 `infrastructure_error`, not a `fail`.
 
-## Security Boundary
+## Security boundary
 
 Corpus loading rejects symbolic links, undeclared files, traversal, duplicate
 vector IDs, oversized inputs, and digest mismatches before invocation. Artifact
@@ -212,6 +213,9 @@ describes what enters the Hex archive; Markdown documentation reaches
 consumers through HexDocs.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md),
-[SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/security.md), and [GOVERNANCE.md](https://github.com/wotex-project/wotex/blob/main/GOVERNANCE.md). Licensed under
-Apache-2.0; see [LICENSE](LICENSE) and
+the [security policy](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/security.md), and [GOVERNANCE.md](https://github.com/wotex-project/wotex/blob/main/GOVERNANCE.md).
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex/blob/main/packages/wotex-conformance/NOTICE).

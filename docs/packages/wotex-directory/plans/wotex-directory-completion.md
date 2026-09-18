@@ -103,10 +103,11 @@ evidence after a relevant change requires rerunning affected gates.
 - `repository_green`: `WOTEX_PATH_DEPS=1 mix check --no-retry` from
   `packages/wotex-directory` passes with the declared supported runtime: format,
   warnings-as-errors compilation, dependency audits, strict Credo, Doctor, docs,
-  the entire package test suite with coverage, Dialyzer, the archive and
-  application-free checks and `git diff --check`. The repository-level gate and
-  CI lanes discharge it. Existing tests under `test/wotex/directory/` are the
-  starting evidence, not a substitute for C01/C02.
+  the entire package test suite with coverage, Dialyzer, the boundary scan, the
+  archive and application-free checks and `git diff --check`. The
+  repository-level gate and CI lanes discharge it. Existing tests under
+  `test/wotex/directory/` are the starting evidence, not a substitute for
+  C01/C02.
 - `archive_consumer_green`: C03 passes against the archive unpacked by
   `bin/check_archive.exs`, which the repository-level gate and CI lanes run;
   inspect metadata/dependencies, no Application callback, private/local files or

@@ -53,7 +53,8 @@ Dialyzer, the archive check and, where present, the boundary scan
 
 ### Dialyzer
 
-Each package keeps its own PLT under `priv/plts/` (ignored), so after the
+Each package keeps its own PLT (in `priv/plts/` where its `mix.exs` sets
+`plt_file`, otherwise under its `_build/`; both are ignored), so after the
 first build a package's Dialyzer run is incremental. Run it explicitly with
 `mix dialyzer.pkg <name>` when a typespec, callback or inferred return type
 changed; otherwise tier 2 runs it for changed packages only. There is no

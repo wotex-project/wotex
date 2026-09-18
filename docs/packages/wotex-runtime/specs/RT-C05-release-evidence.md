@@ -17,12 +17,13 @@ Under the sibling switch `WOTEX_PATH_DEPS=1` and with `WOTEX_CORE_ARCHIVE`
 unset, the checker builds the core archive from the declared `wotex` path
 dependency; this is how the package gate runs it.
 
-The checker builds and unpacks the Runtime archive, verifies required project,
-license, security, plan, specification, catalogue, and source content, and
-rejects local trackers, repository controls, tests, build products, generated
-documentation, and static-analysis state. These checks cover required and
-forbidden classes of content without treating the complete archive member list
-as a stable API.
+The checker builds and unpacks the Runtime archive, verifies the required
+project, readme, changelog, license and notice files, runs the consumer-neutral
+source scan over the unpacked source, and rejects `docs/` (specifications are
+published through HexDocs, not the archive), local trackers, repository
+controls, tests, build products, generated documentation, and static-analysis
+state. These checks cover required and forbidden classes of content without
+treating the complete archive member list as a stable API.
 
 The checker then creates a separate Mix consumer from the unpacked Runtime and
 core archives. It resolves and locks external dependencies, compiles with

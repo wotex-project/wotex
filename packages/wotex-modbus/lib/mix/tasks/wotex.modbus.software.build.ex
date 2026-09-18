@@ -3,8 +3,11 @@ defmodule Mix.Tasks.Wotex.Modbus.Software.Build do
   @moduledoc """
   Builds or verifies the independent Modbus software fixture in an explicit workspace.
 
-  Invoke `mix wotex.software.build --workspace /absolute/disposable/workspace`
-  from the Modbus source checkout. The task loads only the checked-in fixture
+  Invoke `mix pkg wotex-modbus wotex.modbus.software.build --workspace
+  /absolute/disposable/workspace` from the repository root, or
+  `mix wotex.modbus.software.build` inside `packages/wotex-modbus` with
+  `WOTEX_PATH_DEPS=1`; the package also defines the alias
+  `mix wotex.software.build`. The task loads only the checked-in fixture
   runner and rejects another project's application identity before acquisition.
   Native downloads, compiler invocation and Docker builds occur only through
   this explicit task; loading the dependency starts no fixture process.

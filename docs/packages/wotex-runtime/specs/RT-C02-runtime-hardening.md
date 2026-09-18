@@ -1,9 +1,9 @@
 # RT-C02: Runtime hardening contract
 
 Packet `RT-C02` defines the bounded ConsumedThing and subscription behavior
-required by `docs/plans/wotex-runtime-completion.md`. The evidence is executable
-package behavior. This document does not record a release-gate result or assign
-consumer and binding resource policy to Runtime.
+required by `docs/packages/wotex-runtime/plans/wotex-runtime-completion.md`.
+The evidence is executable package behavior. This document does not record a
+release-gate result or assign consumer and binding resource policy to Runtime.
 
 ## Admission bounds
 

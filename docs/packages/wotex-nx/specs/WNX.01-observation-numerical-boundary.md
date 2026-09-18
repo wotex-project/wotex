@@ -176,13 +176,13 @@ is the declared dependency cohort; broader backend/version claims require eviden
 | Exact decoder tensor admission, all inert kinds and anomaly comparisons | `test/wotex/nx/decoder_test.exs` |
 | No application callback and stable quality codes | `test/wotex/nx/library_contract_test.exs` |
 | Exact Nx/core archive metadata and contents, source-byte identity, local/harness sentinel exclusion, isolated compilation, minimal and independent reference roundtrips, explicit BinaryBackend/unit callback, layout/provenance/policy preservation and inert Action rejection | `bin/check_archive.exs` |
-| Exact runtime/dependency/backend cohort and independently cast floating-rounding vectors with no cross-backend equivalence claim | `docs/provenance/runtime-backend-cohort.md` and `bin/check_archive.exs` |
+| Exact runtime/dependency/backend cohort and independently cast floating-rounding vectors with no cross-backend equivalence claim | `docs/packages/wotex-nx/provenance/runtime-backend-cohort.md` and `bin/check_archive.exs` |
 
 Any change to the contracts above must add both accepted and rejected boundary
 examples to the owning tests. The archive check builds its exact inputs once,
 creates all generated consumer work under the operating-system temporary
 directory, and removes it after verification. Independent reference-consumer
-evidence follows `docs/plans/wotex-nx-completion.md`.
+evidence follows `docs/packages/wotex-nx/plans/wotex-nx-completion.md`.
 
 ### Public error matrix
 

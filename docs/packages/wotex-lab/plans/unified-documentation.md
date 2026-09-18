@@ -1,6 +1,6 @@
 # Unified documentation implementation plan
 
-This tracker implements
+This plan implements
 [WLB.12](../specs/WLB.12-unified-documentation.md) after DocShell DSH.01 and
 Phoenix Assets PHA.01 provide their accepted packages.
 

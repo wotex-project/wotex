@@ -30,5 +30,5 @@ not borrow a single-affordance mapping for aggregate or Action lifecycle work.
 
 `test/wotex/binding/mqtt/operation_inventory_test.exs` executes every positive
 row with default and explicit vocabulary, every packet/target mismatch, exact
-prefix handling, the exact Runtime profile set, all unsupported cells, and the
-pinned source manifest fields.
+prefix handling, the exact Runtime profile set, and all unsupported cells. The
+source manifest is recorded provenance; no test reads it.

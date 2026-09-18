@@ -13,10 +13,10 @@ and non-zero exit. They also verify that unrelated caller messages remain in the
 mailbox. Runner tests change a verified subject archive before execution and
 confirm that digest verification rejects it before the target writes its marker.
 
-Run the focused evidence with:
+Run the focused evidence from the repository root with:
 
 ```console
-mix test test/wotex/conformance/external_lifecycle_test.exs \
+mix pkg wotex-conformance test test/wotex/conformance/external_lifecycle_test.exs \
   test/wotex/conformance/runner_test.exs
 ```
 

@@ -31,8 +31,8 @@ isolated native unit tests, using a POSIX C11 compiler. The source contract in
 process-group cleanup; it does not claim adversarial descendant
 containment. The compiler identity belongs in the helper build manifest.
 
-The root project exposes these command names through aliases to the unique
-`Mix.Tasks.Wotex.Modbus.Software.Build` and `Mix.Tasks.Wotex.Modbus.Software.Run`
+The package project (`packages/wotex-modbus/mix.exs`) exposes these command
+names through aliases to the unique `Mix.Tasks.Wotex.Modbus.Software.Build` and `Mix.Tasks.Wotex.Modbus.Software.Run`
 modules. Loading several protocol dependencies cannot redefine a shared task
 module. Invocations require the Modbus source project and its test assets.
 The initial host C compiler is trusted bootstrap tooling: its direct Port has

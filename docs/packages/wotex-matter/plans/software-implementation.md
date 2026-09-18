@@ -204,11 +204,12 @@ facilities, missing responses, failed assertions or cleanup failure. Do not
 convert a failed setup to an ExUnit skip. Existing hardware tests require separate
 explicit target configuration and are never selected by this runner.
 
-Build and run the software fixture explicitly:
+Build and run the software fixture explicitly from the repository root (`mix pkg`
+runs the package aliases inside `packages/wotex-matter` with `WOTEX_PATH_DEPS=1`):
 
 ```sh
-mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
-mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
+mix pkg wotex-matter wotex.software.build --workspace /absolute/disposable/fixture-workspace
+mix pkg wotex-matter wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
 The runner executes `mix test --include interop --include software --exclude hardware`

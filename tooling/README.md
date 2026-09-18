@@ -56,15 +56,21 @@ dialyzer.pkg NAME`.
 
 ## `packages.yaml`
 
+An excerpt:
+
 ```yaml
 schema_version: "1.0.0"
 lanes:
-  minimum: { elixir: "1.18.4-otp-27", otp: "27.3.4.15" }
+  minimum:
+    elixir: "1.18.4-otp-27"
+    otp: "27.3.4.15"
+    skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface]
   current: { elixir: "1.20.2-otp-29", otp: "29.0.4" }
 select_all_on:
   - ".github/**"
   - "tooling/**"
   - "mix.exs"
+  - "lib/**"
 packages:
   wotex:
     app: wotex
@@ -81,13 +87,14 @@ packages:
 | --- | --- |
 | `schema_version` | Version of this file's format. |
 | `lanes.<name>.elixir`, `lanes.<name>.otp` | Toolchain lanes the package gates run on in CI. `mix wotex.check --lane NAME` prints a lane and warns when the running Elixir differs; CI selects the toolchain. |
+| `lanes.<name>.skip` | `mix check` tools the lane does not run; CI and `mix wotex.check --lane NAME` pass each as `--except TOOL`. The minimum lane skips static analysis whose results depend on the compiler and OTP version. |
 | `select_all_on` | Repository-relative globs (`**` spans directories, `*` stays within a segment). A changed path matching any of them selects every package. |
 | `packages.<name>` | One entry per directory under `packages/`. The key is the directory name. |
 | `app` | The OTP application and Hex package name. |
 | `depends_on` | The WoTEx packages this package requires directly. Dependents are derived; a change in a package selects it and every transitive dependent. The graph must be acyclic and every name must exist. |
 | `native` | `true` when the package builds or vendors native code. `mix native.sources` and `mix native.advisories` cover native packages only. |
 | `native_task` | The package's own build task, dispatched by `mix native.build --package NAME --workspace /abs/dir`. |
-| `software_task` | The package's own software-profile task, if any (informational; run explicitly inside the package). |
+| `software_task` | The package's own software-profile task, if any. The CI native lane runs it with `--workspace`; locally it runs only when invoked explicitly, e.g. `mix pkg NAME TASK --workspace /abs/dir`. |
 
 `mix wotex.new NAME` appends a manifest entry; the manifest is validated
 whenever a task loads it.
@@ -112,11 +119,19 @@ and `mix test.affected` use both marks.
 
 ## Documentation links
 
-`mix docs.check` reads every Markdown file Git tracks and checks each relative
-link (inline links, images and reference definitions, outside code) against
-the file system; anchors are stripped and not checked, and targets with a URL
-scheme are skipped. It reports `file:line: target` and also runs `mix
-wotex.catalogue --check`.
+`mix docs.check` reads every Markdown file Git tracks and checks each link
+(inline links, images and reference definitions, outside code):
+
+- a relative target must exist; anchors are stripped and not checked;
+- a `https://github.com/wotex-project/wotex/blob/main/...` (or
+  `/tree/main/...`) URL must name a path that exists in the working tree;
+- in `docs/packages/<name>/**` and `packages/<name>/README.md`, which HexDocs
+  publishes, a relative link to a `.md` file outside the package's two trees
+  is reported with the main-branch URL to use instead.
+
+Other URLs are skipped. It also reports absolute machine paths (a user home
+or a system temporary directory), prints each finding as `file:line: ...`
+and runs `mix wotex.catalogue --check`.
 
 ## Family catalogue
 

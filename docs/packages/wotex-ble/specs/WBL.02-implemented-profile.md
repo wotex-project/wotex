@@ -43,9 +43,10 @@ implemented. `connection: :borrowed` preserves ordinary borrowed links; pending
 Pair sender loss can separately cause BlueZ to disconnect the peer. Explicit
 pairing never authorizes removing bonds or registering a default Agent.
 
-The Mix-built host passes the 10 public BLE and Runtime cases against real BlueZ
-and virtual controllers in both BEAM lanes. Complete stress acceptance is not
-established by those results. The native backend preserves the domain API and
+The Mix-built host passes the 11 public BLE and Runtime tests and the 5 WBL-C09
+lifecycle stress tests against real BlueZ and virtual controllers in both BEAM
+lanes ([software run receipt](../provenance/software-run-v3.json)). The x86_64
+guest lane and final package gates are not established by those results. The native backend preserves the domain API and
 adds its exact backend identity and bounded credit protocol.
 
 ## Evidence and compatibility

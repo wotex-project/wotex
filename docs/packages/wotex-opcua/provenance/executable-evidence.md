@@ -9,16 +9,17 @@ certification is inferred from unit coverage.
 
 `WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting, strict
 Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
-dependency audit, Hex packaging, unpacked out-of-tree compilation and the
-Application-free structural check. The native build test is required by this
-gate: it downloads the pinned archives, executes the static build and CTest, and
+dependency audit, the native custody check, Hex packaging, unpacked out-of-tree
+compilation and the Application-free structural check. The native build test is
+required by this gate: it downloads the pinned archives, executes the static build and CTest, and
 checks receipt reuse/tampering in an owned temporary workspace. The gate requires
 CMake 3.20+, a C11 compiler, make, Perl, Python 3, archive utilities and curl 8.4.0+.
 `mix test` excludes this lane; selecting `native_build` without its explicit
 `WOTEX_NATIVE_BUILD_WORKSPACE` fails. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
-waivers. See SECURITY.md and the dependency-security test.
+waivers. See the [security policy](../security.md) and the dependency-security
+test.
 
 ## Linux x86_64 cohort under Rosetta, 2026-09-17
 

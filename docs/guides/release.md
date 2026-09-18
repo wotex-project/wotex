@@ -27,7 +27,7 @@ that package's version and changelog move. Then:
 
 ```sh
 git push origin main <name>-v<version>
-WOTEX_PATH_DEPS= MIX_ENV=prod mix hex.publish
+env -u WOTEX_PATH_DEPS MIX_ENV=prod mix hex.publish
 ```
 
 ExDoc links on HexDocs use the same tag: each package's `source_url/2`

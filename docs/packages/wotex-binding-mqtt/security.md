@@ -21,11 +21,11 @@ the reviewed loaded version. They require parse, cast and construction to
 reject the reported pathological exponent and prove the default exponent/digit
 thresholds. No arithmetic on the pathological value is executed.
 
-The explicit dependency-evidence lane runs `mix deps.audit` and `mix hex.audit`;
+The package gate (`mix check`) runs `mix deps.audit` and `mix hex.audit`;
 either audit failure blocks the candidate and requires review rather than a
 waiver.
 
 This is retained regression evidence, not a general Decimal safety or whole-VM
 memory guarantee. All advisories remain active. Any dependency or advisory
-change requires review. A failed regression or changed lock blocks the explicit
-dependency-evidence lane. Never disable parsing limits for untrusted input.
+change requires review. A failed regression or changed lock blocks the package
+gate. Never disable parsing limits for untrusted input.

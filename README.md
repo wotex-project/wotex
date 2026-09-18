@@ -44,7 +44,7 @@ packages/<name>/        one Mix project per package: lib, test, priv, bin, mix.e
 docs/packages/<name>/   that package's specifications, plans, decisions and provenance
 docs/architecture/      family-level architecture and the import record
 docs/tasks/local/       ignored; the only place for machine-local execution state
-tooling/                repository-level scripts (import, checks)
+tooling/                the package manifest (packages.yaml) and the one-time import scripts
 .claude/                shared agent rules and skills; package CLAUDE.md files stay package contracts
 ```
 
@@ -82,7 +82,7 @@ explicit native lanes and CI.
 | Command | What it does |
 | --- | --- |
 | `mix setup` | `deps.get` for the root and every package, then builds the Dexter index. |
-| `mix affected [--base REF] [--all] [--json] [--detail]` | Changed packages plus their transitive dependents, in dependency order; `--detail` marks each `changed` or `dependent`. |
+| `mix affected [--base REF] [--docs] [--all] [--json] [--detail]` | Changed packages plus their transitive dependents, in dependency order; `--docs` also selects a package whose `docs/packages/<name>/` changed; `--detail` marks each `changed` or `dependent`. |
 | `mix pkg NAME ARGS...` | Runs any Mix task inside `packages/NAME` with `WOTEX_PATH_DEPS=1`, e.g. `mix pkg wotex-coap test test/wotex/coap/codec_test.exs`. |
 | `mix def MODULE [FUN]` | Dexter lookup; prints the repository-relative `path:line`. |
 | `mix refs MODULE [FUN]` | Dexter references, grouped by package and `lib`/`test`, repository-relative. Reindexes changed files first. |
@@ -94,9 +94,9 @@ explicit native lanes and CI.
 | `mix workspace` | Root self-check: compile, format, credo, root tests, catalogue drift, documentation links, sibling-API boundary of changed packages. |
 | `mix format.all [--check] [--all]` | `mix format` in the root and every changed package (`--all`: every package). |
 | `mix lint [--package NAME]...` | `credo --strict` in the changed (or named) packages. |
-| `mix dialyzer.pkg NAME` | Dialyzer for one package (PLT cached in its `priv/plts`). Explicit only. |
-| `mix docs.check` | Relative-link check over every tracked Markdown file plus `mix wotex.catalogue --check`. |
-| `mix docs.pkg NAME` | Builds one package's HexDocs. |
+| `mix dialyzer.pkg NAME` | Dialyzer for one package (its PLT is cached per package: in `priv/plts/` where its `mix.exs` sets `plt_file`, otherwise under its `_build/`). Explicit only. |
+| `mix docs.check` | Link check over every tracked Markdown file (relative links, main-branch repository URLs, relative links HexDocs cannot resolve, absolute machine paths) plus `mix wotex.catalogue --check`. |
+| `mix docs.pkg NAME` | Builds one package's HexDocs, in `MIX_ENV=docs` where the package declares that environment. |
 | `mix index [--force]` | Builds or refreshes the Dexter index in `.dexter/`. |
 | `mix native.build --package NAME --workspace /abs/dir` | Runs a package's native build task in a disposable absolute workspace. Explicit only. |
 | `mix native.sources` | Lists pinned native sources and verifies the digests of files present locally. |
@@ -114,8 +114,8 @@ set. See [tooling/README.md](tooling/README.md) for the manifest format.
 - `docs/packages/<name>/plans/` holds the versioned completion contract.
 - `docs/packages/<name>/provenance/` holds standards provenance and recorded
   evidence.
-- Generated HexDocs for a package include its specifications; run
-  `WOTEX_PATH_DEPS=1 MIX_ENV=docs mix docs` inside the package.
+- Generated HexDocs for a package include its specifications; build them
+  with `mix docs.pkg <name>` from the repository root.
 
 ## Governance
 

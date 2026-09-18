@@ -46,8 +46,8 @@ suspended output consumers, exact descendant termination and malformed input.
 The freshly compiled guardian and producer execute one bounded ten-second
 initialization probe before the shorter fault deadlines begin. Failure of that
 probe fails setup; it is never retried. Production command limits are unchanged.
-These assertions cover the command guardian; the Mix build/run tasks and full
-P06 acceptance remain separate until their tests execute.
+These assertions cover the command guardian only; the Mix build/run tasks have
+their own task tests, and WMB-P06 acceptance is recorded in executable evidence.
 
 `command --lock ABSOLUTE_LOCK_FILE` obtains a nonblocking POSIX advisory write
 lock and emits `wotex_fixture_lock` followed by newline. Owner EOF, process exit

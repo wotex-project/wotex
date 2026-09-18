@@ -37,8 +37,9 @@ cohort evidence.
 The interactive analytics extension below adds acceptance obligations. Closed
 chart admission and mark-correct server SVG rendering have executable source
 evidence in `chart_contract_test.exs`. The separately invoked, optional
-`bin/check_chart_browser.cjs` source cohort checks real Chromium rendering,
-mark updates, exact analysis/chart/dashboard links, saved session arrangements,
+`hosts/workbench/bin/check_chart_browser.cjs` source cohort checks real
+Chromium rendering, mark updates, exact analysis/chart/dashboard links, saved
+session arrangements,
 keyboard disclosure and skip navigation, themes, mobile reflow, bounded
 downloads, reload/no-replay and session isolation. It also loads saved history
 panels from the keyboard and checks their charts, mobile reflow, reload without

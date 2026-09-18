@@ -591,4 +591,4 @@ minor version change. Once 1.0 is released:
 - RFC 8288, Web Linking: <https://www.rfc-editor.org/rfc/rfc8288>
 
 Retrieval and interpretation details are recorded in
-`docs/provenance/w3c-sources.md`.
+`docs/packages/wotex-directory/provenance/w3c-sources.md`.

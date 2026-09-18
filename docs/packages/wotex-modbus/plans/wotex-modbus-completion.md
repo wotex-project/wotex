@@ -53,8 +53,8 @@ requires both native protocol workflows and supported cells through public core/
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
 [WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) defines native build and software
-runner contracts. Mix/ExUnit owns orchestration; BEAM/OTP and the explicitly
-selected native SDK own protocol execution.
+runner contracts. Mix/ExUnit owns orchestration; BEAM/OTP TCP owns protocol
+execution, and the libmodbus C peer is an independent test fixture.
 
 The final WMB-P07 package cell installs exact core, Runtime and Modbus candidate
 archives through an isolated temporary Hex registry and exercises the public

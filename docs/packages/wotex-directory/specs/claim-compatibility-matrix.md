@@ -130,9 +130,12 @@ wire profiles require their own evidence. No publication is authorized.
 
 ## Release-evidence manifest
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` is the modest developer gate. It
-compiles with warnings as errors, checks formatting, and runs the behavioral
-suite. The explicit command
+`WOTEX_PATH_DEPS=1 mix check --no-retry` (inside `packages/wotex-directory`, or
+`mix pkg wotex-directory check --no-retry` from the repository root) is the
+package gate. It compiles with warnings as errors, checks the lock, formatting,
+dependency audits, Credo, Doctor and documentation, runs the behavioral suite
+with coverage, Dialyzer, the boundary scan, the archive and application-free
+checks and `git diff --check`. It writes no manifest. The explicit command
 `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_release_evidence.exs` runs the
 quality, audit, documentation, coverage, application, boundary and archive
 lanes and emits the release-evidence manifest. The archive lane executes both

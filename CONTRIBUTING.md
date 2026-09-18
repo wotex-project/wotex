@@ -10,16 +10,17 @@ W3C Web of Things terminology. A standards claim must identify the exact
 revision, operation, assumptions, fixture digest and result. Unsupported cells
 remain absent rather than documented as planned support.
 
-Run the changed package's gate before proposing a change, from inside its
-directory:
+Run the gates before proposing a change, from the repository root:
 
 ```sh
-cd packages/<name>
-WOTEX_PATH_DEPS=1 mix check --no-retry
+mix check.affected    # full gate for changed packages, fast gate for dependents
+mix workspace         # when root files, tooling/ or documentation changed
 ```
 
-Run the same gate in every package that depends on the one you changed. Add
-tests beside the package tests, not in repository-level tooling.
+The full gate of one package is `mix pkg <name> check --no-retry`, the same
+as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/<name>`. The
+[development guide](docs/guides/development.md) describes the validation
+tiers. Add tests beside the package tests, not in repository-level tooling.
 
 Do not add a database, application callback, hidden process, consumer-specific
 namespace, credential store, transport connection or physical-state authority
