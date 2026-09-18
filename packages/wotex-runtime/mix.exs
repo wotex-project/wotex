@@ -43,6 +43,8 @@ defmodule WotexRuntime.MixProject do
       {:telemetry, "~> 1.3"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -101,25 +103,28 @@ defmodule WotexRuntime.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        {"README.md", title: "Overview"},
-        {docs_path("plans/wotex-runtime-completion.md"), title: "Completion Contract"},
-        {docs_path("plans/WRT-C02-runtime-hardening.md"), title: "Runtime Hardening Contract"},
-        {docs_path("plans/WRT-C03-exposed-thing-boundary.md"),
-         title: "ExposedThing Boundary Contract"},
-        {docs_path("plans/WRT-C04-reference-consumer.md"), title: "Reference Consumer"},
-        {docs_path("plans/WRT-C05-release-evidence.md"), title: "Release Evidence"},
-        {docs_path("plans/WRT-C06-stable-api.md"), title: "Stable API Candidate"},
-        {docs_path("specs/WRT.01-consumed-thing-runtime.md"), title: "ConsumedThing Runtime"},
-        {docs_path("specs/WRT.02-exposed-thing-runtime.md"), title: "ExposedThing Runtime"},
-        {docs_path("specs/WRT.03-thing-level-interactions.md"), title: "Thing-level Interactions"},
-        {"CHANGELOG.md", title: "Changelog"},
-        {"../../docs/packages/wotex-runtime/security.md", title: "Security"},
-        {"LICENSE", title: "License"}
-      ],
+      extras:
+        [
+          {"README.md", title: "Overview"},
+          {docs_path("plans/wotex-runtime-completion.md"), title: "Completion Contract"},
+          {docs_path("plans/WRT-C02-runtime-hardening.md"), title: "Runtime Hardening Contract"},
+          {docs_path("plans/WRT-C03-exposed-thing-boundary.md"),
+           title: "ExposedThing Boundary Contract"},
+          {docs_path("plans/WRT-C04-reference-consumer.md"), title: "Reference Consumer"},
+          {docs_path("plans/WRT-C05-release-evidence.md"), title: "Release Evidence"},
+          {docs_path("plans/WRT-C06-stable-api.md"), title: "Stable API Candidate"},
+          {docs_path("specs/WRT.01-consumed-thing-runtime.md"), title: "ConsumedThing Runtime"},
+          {docs_path("specs/WRT.02-exposed-thing-runtime.md"), title: "ExposedThing Runtime"},
+          {docs_path("specs/WRT.03-thing-level-interactions.md"),
+           title: "Thing-level Interactions"},
+          {"CHANGELOG.md", title: "Changelog"},
+          {"../../docs/packages/wotex-runtime/security.md", title: "Security"},
+          {"LICENSE", title: "License"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r/docs\/packages\/wotex-runtime\/plans/,
         "Normative specifications": ~r/docs\/packages\/wotex-runtime\/specs/,
+        Benchmarks: ~r/bench\/output/,
         Reference: ~r/CHANGELOG|security|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
