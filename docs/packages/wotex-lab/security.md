@@ -32,6 +32,6 @@ native binary or model. Explicit child processes can execute consumer code.
 The default Nx example reads a packaged synthetic fixture and has no dispatch
 path. Its result must not be used as a physical-control safety assessment.
 
-Report suspected vulnerabilities privately to `hi@futhr.io`, including affected
+Report suspected vulnerabilities privately to `hello@wotex.io`, including affected
 version, minimal reproduction and impact. Avoid secrets or private device data.
 No stable API or production security certification is implied by version 0.1.0.

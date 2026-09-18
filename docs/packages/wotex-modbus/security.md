@@ -13,7 +13,7 @@ network security boundary. A generic TLS tunnel is not a Modbus Security
 implementation; Modbus Security is not implemented by this package.
 
 A timeout after sending a write means the effect may be unknown. No silent write
-retry is allowed. Report security issues privately to hi@futhr.io.
+retry is allowed. Report security issues privately to hello@wotex.io.
 
 ## Decimal parser regression
 

@@ -1,6 +1,6 @@
 # Security
 
-Report suspected vulnerabilities privately to `security@wotex.io`. Include the
+Report suspected vulnerabilities privately to `hello@wotex.io`. Include the
 affected version, impact, and a minimal reproduction. Do not include live
 credentials or target a system without authorization.
 

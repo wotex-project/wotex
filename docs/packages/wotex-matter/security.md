@@ -9,7 +9,7 @@ security modes fail before opening a connection. Do not log credentials,
 protocol payloads or private key material in errors or telemetry.
 
 A timeout after sending a write means the effect may be unknown. No silent write
-retry is allowed. Report security issues privately to hi@futhr.io.
+retry is allowed. Report security issues privately to hello@wotex.io.
 
 ## Decimal parser regression
 
