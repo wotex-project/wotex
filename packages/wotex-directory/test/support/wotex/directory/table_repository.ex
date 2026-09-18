@@ -12,7 +12,7 @@ defmodule Wotex.Directory.TableRepository do
     table
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def fetch(table, identifier, context) do
     {_, entries} = snapshot(table, context)
 
@@ -22,7 +22,7 @@ defmodule Wotex.Directory.TableRepository do
     end
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def insert(table, entry, context) do
     transaction(table, context, fn entries ->
       if List.keymember?(entries, entry.identifier, 0) do
@@ -33,7 +33,7 @@ defmodule Wotex.Directory.TableRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def replace(table, entry, expected_version, context) do
     transaction(table, context, fn entries ->
       case expected(entries, entry.identifier, expected_version) do
@@ -47,7 +47,7 @@ defmodule Wotex.Directory.TableRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def delete(table, identifier, expected_version, context) do
     transaction(table, context, fn entries ->
       case expected(entries, identifier, expected_version) do
@@ -57,7 +57,7 @@ defmodule Wotex.Directory.TableRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def list(table, query, cursor, active_at, context) do
     {generation, entries} = snapshot(table, context)
     revision = "table:" <> Integer.to_string(generation)
@@ -80,7 +80,7 @@ defmodule Wotex.Directory.TableRepository do
     end
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def expire_due(table, cutoff, limit, strategy, context) do
     transaction(table, context, fn entries ->
       due =

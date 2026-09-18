@@ -3,7 +3,7 @@ defmodule Wotex.Directory.ReferenceAuthorization do
 
   @behaviour Wotex.Directory.Authorization
 
-  @impl true
+  @impl Wotex.Directory.Authorization
   def authorize(%{observer: observer, policy: policy}, principal, operation, target, context) do
     arguments = [principal, operation, target, context]
     send(observer, {:reference_port, :authorize, self(), arguments})

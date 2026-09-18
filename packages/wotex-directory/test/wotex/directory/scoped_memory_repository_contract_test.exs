@@ -2,9 +2,9 @@ defmodule Wotex.Directory.ScopedMemoryRepositoryContractTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
-  use Wotex.Directory.RepositoryContract
-  use Wotex.Directory.PublicOperationContract
-  use Wotex.Directory.ReferenceConsumerContract
+  # Credo's PassAsyncInTestCases check crashes on a multi-module `use` without options.
+  use Wotex.Directory.{RepositoryContract, PublicOperationContract, ReferenceConsumerContract},
+      []
 
   alias Wotex.Directory.{MemoryRepository, ScopedMemoryRepository, TestIdentifier}
 

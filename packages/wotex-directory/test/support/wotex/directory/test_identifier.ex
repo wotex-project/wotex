@@ -6,7 +6,7 @@ defmodule Wotex.Directory.TestIdentifier do
   @spec start_link([term()]) :: Agent.on_start()
   def start_link(values), do: Agent.start_link(fn -> values end)
 
-  @impl true
+  @impl Wotex.Directory.Identifier
   def generate(agent) do
     Agent.get_and_update(agent, fn
       [value | rest] -> {normalize(value), rest}

@@ -57,7 +57,9 @@ defmodule Wotex.Directory.ServiceTest do
     options = valid_options()
 
     assert {:ok, service} =
-             options |> Keyword.put(:clock, {Wotex.Directory.Clock.System, nil}) |> Service.new()
+             options
+             |> Keyword.put(:clock, {Wotex.Directory.Clock.System, nil})
+             |> Service.new()
 
     assert service.clock == {Wotex.Directory.Clock.System, nil}
 
@@ -77,7 +79,9 @@ defmodule Wotex.Directory.ServiceTest do
     ]
 
     assert {:ok, service} =
-             options |> Keyword.put(:thing_description_options, limits) |> Service.new()
+             options
+             |> Keyword.put(:thing_description_options, limits)
+             |> Service.new()
 
     assert service.thing_description_options == limits
 
@@ -93,7 +97,10 @@ defmodule Wotex.Directory.ServiceTest do
                 code: :invalid_service,
                 phase: :configuration,
                 details: %{field: :thing_description_options}
-              }} = options |> Keyword.put(:thing_description_options, invalid) |> Service.new()
+              }} =
+               options
+               |> Keyword.put(:thing_description_options, invalid)
+               |> Service.new()
     end
   end
 

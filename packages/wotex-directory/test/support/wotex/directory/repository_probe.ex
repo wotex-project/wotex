@@ -3,25 +3,25 @@ defmodule Wotex.Directory.RepositoryProbe do
 
   @behaviour Wotex.Directory.Repository
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def fetch(state, identifier, context), do: invoke(state, :fetch, [identifier, context])
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def insert(state, entry, context), do: invoke(state, :insert, [entry, context])
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def replace(state, entry, version, context),
     do: invoke(state, :replace, [entry, version, context])
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def delete(state, identifier, version, context),
     do: invoke(state, :delete, [identifier, version, context])
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def list(state, query, cursor, active_at, context),
     do: invoke(state, :list, [query, cursor, active_at, context])
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def expire_due(state, cutoff, limit, strategy, context),
     do: invoke(state, :expire_due, [cutoff, limit, strategy, context])
 

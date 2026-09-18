@@ -3,10 +3,9 @@ defmodule Wotex.Directory.ReferenceConsumerContract do
 
   import ExUnit.Assertions
 
-  alias Wotex.Directory
+  alias Wotex.{Directory, ThingDescription}
   alias Wotex.Directory.{Context, Error, Event, Page, Query, RepositoryProbe, Service}
   alias Wotex.Directory.{ReferenceAuthorization, ReferenceClock, ReferenceIdentifier}
-  alias Wotex.ThingDescription
 
   @now ~U[2026-09-02 10:00:00Z]
   @id "urn:example:reference:1"

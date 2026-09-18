@@ -124,7 +124,9 @@ defmodule Wotex.Directory.ThingDescriptions do
   defp append_context(@discovery_context), do: @discovery_context
 
   defp append_context(contexts) when is_list(contexts) do
-    if @discovery_context in contexts, do: contexts, else: contexts ++ [@discovery_context]
+    if @discovery_context in contexts,
+      do: contexts,
+      else: List.insert_at(contexts, -1, @discovery_context)
   end
 
   defp append_context(context), do: [context, @discovery_context]

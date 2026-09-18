@@ -8,7 +8,9 @@ defmodule Wotex.Directory.MemoryRepository do
   @spec start_link(keyword()) :: Agent.on_start()
   def start_link(options \\ []) do
     entries =
-      options |> Keyword.get(:entries, []) |> Map.new(&{&1.identifier, Entry.for_storage(&1)})
+      options
+      |> Keyword.get(:entries, [])
+      |> Map.new(&{&1.identifier, Entry.for_storage(&1)})
 
     revision = Keyword.get(options, :revision, 0)
     Agent.start_link(fn -> %{entries: entries, revision: revision, calls: []} end)
@@ -18,12 +20,21 @@ defmodule Wotex.Directory.MemoryRepository do
   def snapshot(agent), do: Agent.get(agent, & &1)
 
   @spec entries(pid()) :: map()
-  def entries(agent), do: agent |> snapshot() |> Map.fetch!(:entries)
+  def entries(agent) do
+    agent
+    |> snapshot()
+    |> Map.fetch!(:entries)
+  end
 
   @spec calls(pid()) :: list()
-  def calls(agent), do: agent |> snapshot() |> Map.fetch!(:calls) |> Enum.reverse()
+  def calls(agent) do
+    agent
+    |> snapshot()
+    |> Map.fetch!(:calls)
+    |> Enum.reverse()
+  end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def fetch(agent, identifier, context) do
     Agent.get_and_update(agent, fn state ->
       result =
@@ -36,7 +47,7 @@ defmodule Wotex.Directory.MemoryRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def insert(agent, entry, context) do
     Agent.get_and_update(agent, fn state ->
       if Map.has_key?(state.entries, entry.identifier) do
@@ -53,7 +64,7 @@ defmodule Wotex.Directory.MemoryRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def replace(agent, entry, expected_version, context) do
     Agent.get_and_update(agent, fn state ->
       case Map.fetch(state.entries, entry.identifier) do
@@ -77,7 +88,7 @@ defmodule Wotex.Directory.MemoryRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def delete(agent, identifier, expected_version, context) do
     Agent.get_and_update(agent, fn state ->
       case Map.fetch(state.entries, identifier) do
@@ -99,14 +110,14 @@ defmodule Wotex.Directory.MemoryRepository do
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def list(agent, %Query{} = query, cursor, active_at, context) do
     Agent.get_and_update(agent, fn state ->
       {page(state, query, cursor, active_at), record(state, {:list, query, cursor, context})}
     end)
   end
 
-  @impl true
+  @impl Wotex.Directory.Repository
   def expire_due(agent, cutoff, limit, strategy, context) do
     Agent.get_and_update(agent, fn state ->
       due =

@@ -18,6 +18,6 @@ defmodule Wotex.Directory.Clock.System do
 
   @behaviour Wotex.Directory.Clock
 
-  @impl true
+  @impl Wotex.Directory.Clock
   def now(_), do: {:ok, DateTime.utc_now()}
 end

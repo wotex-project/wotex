@@ -3,7 +3,7 @@ defmodule Wotex.Directory.ReferenceClock do
 
   @behaviour Wotex.Directory.Clock
 
-  @impl true
+  @impl Wotex.Directory.Clock
   def now(%{observer: observer, result: result}) do
     send(observer, {:reference_port, :now, self(), []})
     result

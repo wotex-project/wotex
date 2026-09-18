@@ -47,9 +47,8 @@ defmodule Wotex.Directory.MergePatch do
          max_nodes <- Keyword.get(options, :max_nodes, 100_000),
          :ok <- validate_limit(max_depth),
          :ok <- validate_limit(max_nodes),
-         {:ok, _} <- validate_json(patch, "", 0, 0, max_depth, max_nodes),
-         {:ok, result} <- merge(target, patch, "", 0, max_depth) do
-      {:ok, result}
+         {:ok, _} <- validate_json(patch, "", 0, 0, max_depth, max_nodes) do
+      merge(target, patch, "", 0, max_depth)
     end
   end
 
@@ -91,11 +90,7 @@ defmodule Wotex.Directory.MergePatch do
        do: {:ok, nodes + 1}
 
   defp validate_json(value, _, _, nodes, _, _)
-       when is_integer(value),
-       do: {:ok, nodes + 1}
-
-  defp validate_json(value, _, _, nodes, _, _)
-       when is_float(value) and value == value,
+       when is_number(value),
        do: {:ok, nodes + 1}
 
   defp validate_json(values, path, depth, nodes, max_depth, max_nodes)
@@ -161,7 +156,9 @@ defmodule Wotex.Directory.MergePatch do
   defp pointer(path, key), do: path <> "/" <> escape(key)
 
   defp escape(key) do
-    key |> String.replace("~", "~0") |> String.replace("/", "~1")
+    key
+    |> String.replace("~", "~0")
+    |> String.replace("/", "~1")
   end
 
   defp invalid(path), do: refuse(path, :invalid_json_value)

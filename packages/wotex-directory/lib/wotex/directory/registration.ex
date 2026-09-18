@@ -235,11 +235,9 @@ defmodule Wotex.Directory.Registration do
   defp parse_datetime(_, operation), do: invalid(operation, "/registration/expires")
 
   defp expiry(now, ttl, _, operation) when is_integer(ttl) do
-    now
-    |> DateTime.to_unix(:second)
-    |> Kernel.+(ttl)
-    |> DateTime.from_unix(:second)
-    |> case do
+    seconds = DateTime.to_unix(now, :second) + ttl
+
+    case DateTime.from_unix(seconds, :second) do
       {:ok, expires} -> {:ok, expires}
       {:error, _} -> invalid(operation)
     end

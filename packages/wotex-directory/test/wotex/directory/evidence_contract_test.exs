@@ -39,7 +39,12 @@ defmodule Wotex.Directory.EvidenceContractTest do
 
   test "generated evidence stays external and records explicit check commands" do
     root = DirectoryEvidence.begin(compiler: [command: "mix compile --warnings-as-errors"])
-    inputs = root |> Path.join("inputs.etf") |> File.read!() |> :erlang.binary_to_term([:safe])
+
+    inputs =
+      root
+      |> Path.join("inputs.etf")
+      |> File.read!()
+      |> :erlang.binary_to_term([:safe])
 
     assert inputs["checks"] == %{
              "compiler" => %{

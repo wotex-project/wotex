@@ -3,7 +3,7 @@ defmodule Wotex.Directory.ReferenceIdentifier do
 
   @behaviour Wotex.Directory.Identifier
 
-  @impl true
+  @impl Wotex.Directory.Identifier
   def generate(%{observer: observer, next: next}) do
     send(observer, {:reference_port, :generate, self(), []})
     next.()
