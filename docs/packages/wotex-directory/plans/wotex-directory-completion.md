@@ -7,19 +7,6 @@ the listing continuation requirement after the WTD.01 1.1.0 keyset cursor
 decision and adds no work item. Implementation status in the catalogue
 describes WTD.01's bounded implementation, not release readiness.
 
-Revision 1.2.0 records the monorepo layout and adds no work item.
-Documentation now lives under `docs/packages/wotex-directory/`. Package
-archives no longer ship Markdown documentation, governance files or agent
-files; specifications are published through HexDocs. Fixtures and
-machine-read provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-directory`)
-and the CI lanes now discharge `repository_green` and
-`archive_consumer_green`. Tags use `wotex-directory-v<version>`.
-
-Revision 1.2.1 rewords the monorepo development procedure and the
-`archive_consumer_green` dependency wording for this repository's layout. No
-obligation, work item or gate changes.
-
 ## Ownership and implementation boundary
 
 WTD.01 and decisions 0001/0002 own the implementation contract. The package owns

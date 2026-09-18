@@ -6,16 +6,6 @@ status. Catalogue `docs/packages/wotex-binding-http/specs/catalogue.yaml` owns
 specification identities. Revision changes preserve historical Git evidence
 rather than rewriting it.
 
-Revision 1.1.0 records the package's move into the `wotex` repository without
-changing any obligation. Documentation now lives under
-`docs/packages/wotex-binding-http/`. Package archives no longer ship Markdown
-documentation, governance files or agent files; specifications are published
-through HexDocs. This package has no fixtures or machine-read provenance, so
-it ships no `priv/`. The package gate `WOTEX_PATH_DEPS=1 mix check --no-retry`,
-run from `packages/wotex-binding-http`, and the package's CI lane now discharge
-`repository_green` and `archive_consumer_green`. Tags use
-`wotex-binding-http-v<version>`.
-
 ## Boundary and compatibility
 
 HTTP owns message mapping, credential-free protocol values and framed SSE

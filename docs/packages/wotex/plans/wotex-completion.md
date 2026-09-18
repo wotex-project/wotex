@@ -15,15 +15,6 @@ The catalogue's `implementation_status` describes source coverage of a spec,
 not a passed release gate. No checkbox, green build or package version implies
 W3C certification, complete standards conformance or stable API admission.
 
-Revision 1.3.0 records the monorepo layout without changing any obligation.
-Documentation now lives under `docs/packages/wotex/`. Package archives no
-longer ship Markdown documentation, governance files or agent files;
-specifications are published through HexDocs. Fixtures and machine-read
-provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex`) and the CI
-lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
-`wotex-v<version>`.
-
 Revision 1.2.0 aligns this acceptance baseline with WTX.03 v1.2.0 and WTX-C02.
 Malformed option containers now return `invalid_options` from option-bearing
 admission, validation, and mutation operations. This is a pre-release safety

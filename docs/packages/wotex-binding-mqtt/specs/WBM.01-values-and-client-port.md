@@ -1,9 +1,7 @@
 # WBM.01: MQTT values and client port
 
 Specification `WBM.01@1.1.0`; package baseline `wotex_binding_mqtt 0.1.0`.
-Requires `wotex:WTX.02`, `wotex_runtime:WRT.01`. The document is named by its
-identifier; the 0.1.0 series is unreleased, so the former path carries no link
-debt. See the package [completion plan](../plans/wotex-binding-mqtt-completion.md)
+Requires `wotex:WTX.02`, `wotex_runtime:WRT.01`. See the package [completion plan](../plans/wotex-binding-mqtt-completion.md)
 for gates and remaining claims.
 
 ## Scope

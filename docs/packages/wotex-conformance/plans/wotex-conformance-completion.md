@@ -5,16 +5,6 @@ progress. Preserve work IDs; revisions that change scope require an explicit
 successor. Package 0.1.0, WCF.01 specification 1.1.0, corpus/schema revisions and
 target protocol 1.0 are distinct version axes.
 
-Revision 1.2.0 records the package's move into the `wotex` repository without
-changing any obligation. Documentation now lives under
-`docs/packages/wotex-conformance/`. Package archives no longer ship Markdown
-documentation, governance files or agent files; specifications are published
-through HexDocs. Fixtures and machine-read provenance ship under `priv/`. The
-package gate `WOTEX_PATH_DEPS=1 mix check --no-retry`, run from
-`packages/wotex-conformance`, and the package's CI lane now discharge
-`repository_green` and `archive_consumer_green`. Tags use
-`wotex-conformance-v<version>`.
-
 Revision 1.1.0 aligns this acceptance baseline with WCF.01 1.1.0 and accepted
 decision 0003's normalized-observation contract. It does not promote any
 interoperability, certification, runtime-cohort, or release claim.

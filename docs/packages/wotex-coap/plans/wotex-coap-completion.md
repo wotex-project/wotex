@@ -2,15 +2,6 @@
 
 Plan version: 1.1.1. Package baseline: 0.1.0.
 
-Revision 1.1.0 records the monorepo layout without changing any obligation.
-Documentation now lives under `docs/packages/wotex-coap/`. Package archives no
-longer ship Markdown documentation, governance files or agent files;
-specifications are published through HexDocs. Fixtures and machine-read
-provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-coap`) and the CI
-lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
-`wotex-coap-v<version>`.
-
 Revision 1.1.1 names, in the ordered implementation sequence, the test files
 that execute WCO-P07, WCO-P08, WCO-P08a and WCO-P08b in place of destinations
 that were never created; no obligation changes.

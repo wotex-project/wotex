@@ -6,16 +6,6 @@ approval. Catalogue `docs/packages/wotex-binding-mqtt/specs/catalogue.yaml`
 assigns WBM.01–03 identities, versions and evidence. Changes are reviewed
 revisions, not retroactive changes to historical evidence.
 
-Revision 1.1.0 records the package's move into the `wotex` repository without
-changing any obligation. Documentation now lives under
-`docs/packages/wotex-binding-mqtt/`. Package archives no longer ship Markdown
-documentation, governance files or agent files; specifications are published
-through HexDocs. This package has no fixtures or machine-read provenance, so
-it ships no `priv/`. The package gate `WOTEX_PATH_DEPS=1 mix check --no-retry`,
-run from `packages/wotex-binding-mqtt`, and the package's CI lane now discharge
-`repository_green` and `archive_consumer_green`. Tags use
-`wotex-binding-mqtt-v<version>`.
-
 ## Ownership and compatibility
 
 Wotex owns TD terminology/values, Runtime owns interaction selection and

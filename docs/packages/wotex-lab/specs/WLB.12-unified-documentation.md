@@ -3,17 +3,6 @@
 Specification version: 0.2.0. Contract: accepted. Implementation status:
 planned. Evidence status: missing. Adoption status: no_reference.
 
-Revision 0.2.0 moves the planned cohort from one repository per package to
-this repository. One commit supplies the sixteen packages under `packages/`,
-each still extracted in isolation with its own lock, and the single
-documentation tree under `docs/` with its root index; `wotex-dot` stays the one
-separate documentation-only source. A package's documentation roots are
-`packages/<name>/` and `docs/packages/<name>/`, the roots its HexDocs already
-publish from, and HexDocs stays each package's reference. A default-branch
-push replaces cross-repository dispatch, and the machine-read cohort file
-moves to Lab's `priv/`, because it is Lab data and code does not read
-`docs/`. Status and the remaining obligations are unchanged.
-
 ## Purpose
 
 Wotex Lab owns one documentation catalogue for the complete Wotex ecosystem.

@@ -5,15 +5,6 @@ requirements, not mutable approval or progress. Requirement changes need review
 and a plan revision; historical Git content remains immutable. The normative
 catalogue is `docs/packages/wotex-runtime/specs/catalogue.yaml`.
 
-Revision 1.1.0 records the monorepo layout without changing any obligation.
-Documentation now lives under `docs/packages/wotex-runtime/`. Package archives
-no longer ship Markdown documentation, governance files or agent files;
-specifications are published through HexDocs. Fixtures and machine-read
-provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-runtime`) and
-the CI lanes now discharge `repository_green` and `archive_consumer_green`.
-Tags use `wotex-runtime-v<version>`.
-
 ## Ownership and compatibility
 
 Wotex owns Web of Things values and terminology; Runtime owns only the listed

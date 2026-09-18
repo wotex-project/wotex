@@ -5,15 +5,6 @@ rolling completion state. Preserve IDs; scope changes require an explicit
 successor. Catalogue implementation status is about WNX.01, not production,
 release or stable-API admission.
 
-Revision 1.1.0 records the monorepo layout and adds no work item.
-Documentation now lives under `docs/packages/wotex-nx/`. Package archives no
-longer ship Markdown documentation, governance files or agent files;
-specifications are published through HexDocs. Fixtures and machine-read
-provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-nx`) and the
-CI lanes now discharge `repository_green` and `archive_consumer_green`. Tags
-use `wotex-nx-v<version>`.
-
 ## Implementation authority
 
 WNX.01 owns the closed constructors, Window/Encoder/Decoder operations, tagged

@@ -3,8 +3,7 @@
 The root `CLAUDE.md` is the repository-wide contract. Each
 `packages/<name>/CLAUDE.md` remains that package's contract and governs work
 inside the package. This directory holds the path-scoped rules and the
-repeatable workflows that were consolidated from the former per-package
-`.claude/` trees. Select the narrowest matching rule and skill automatically.
+repeatable workflows. Select the narrowest matching rule and skill automatically.
 
 ## Rules (`rules/`)
 

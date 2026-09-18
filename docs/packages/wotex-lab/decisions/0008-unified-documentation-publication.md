@@ -10,9 +10,7 @@ second Astro, mdBook, GitBook, or application-specific template tree.
 Each package, and each documentation-only source, is extracted separately,
 from one commit of the repository. Lab imports the resulting versioned
 artifacts and applies one Wotex taxonomy. This keeps package locks and runtime
-dependencies isolated while preserving exact source provenance. (Amended for
-the monorepo with WLB.12 0.2.0; the packages were separate repositories when
-this decision was taken.)
+dependencies isolated while preserving exact source provenance.
 
 ## Rationale
 

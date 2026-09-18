@@ -10,23 +10,6 @@ defer or waive obligations. The requested package foundation implements a
 bounded subset without claiming the programme is complete. Changing an accepted
 obligation requires a new plan version and compatibility explanation.
 
-Revision 1.4.2 states WLB-C14 for the WLB.12 0.2.0 cohort: the allowlisted
-packages and documentation sources of this repository and `wotex-dot`, not
-per-package repositories. Obligations are unchanged.
-
-Revision 1.4.1 names the owning packages, not per-package repositories, as
-the place where sibling obligations and repairs are resolved. Obligations are
-unchanged.
-
-Revision 1.4.0 records the monorepo layout without changing any obligation.
-Documentation now lives under `docs/packages/wotex-lab/`. Package archives no
-longer ship Markdown documentation, governance files or agent files;
-specifications are published through HexDocs. Fixtures and machine-read
-provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-lab`) and the CI
-lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
-`wotex-lab-v<version>`.
-
 Version 1.1 adds concrete metrics/AI and native-workbench obligations (C12/C13),
 including foundation design tokens, and strengthens transport/security seam
 evidence. Existing package APIs and accepted WoT semantics do not change.

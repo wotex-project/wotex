@@ -2,15 +2,6 @@
 
 Plan version: 1.1.0. Package baseline: 0.1.0.
 
-Revision 1.1.0 records the monorepo layout without changing any obligation.
-Documentation now lives under `docs/packages/wotex-opcua/`. Package archives no
-longer ship Markdown documentation, governance files or agent files;
-specifications are published through HexDocs. Fixtures and machine-read
-provenance ship under `priv/`. The repository-level gate
-(`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-opcua`) and the CI
-lanes now discharge `repository_green` and `archive_consumer_green`. Tags use
-`wotex-opcua-v<version>`.
-
 The independent library acceptance contract requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension
 preservation, structured errors, explicit OTP ownership and cleanup, neutral
