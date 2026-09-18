@@ -195,7 +195,7 @@ defmodule Wotex.Lab.Metrics.ReqSink do
     do: {:error, Error.new(:transport_failed, :export, "remote write failed", class: :unavailable)}
 
   defp connection(%{finch: name}, _) when is_atom(name) and not is_nil(name),
-    do: [finch: name]
+    do: [finch: [name: name]]
 
   defp connection(_, destination), do: [connect_options: destination.connect_options]
 end

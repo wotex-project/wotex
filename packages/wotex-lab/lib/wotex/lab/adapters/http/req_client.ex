@@ -191,7 +191,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       [connect_options: options]
     end
 
-    defp connection(%{finch: name}, _, _), do: [finch: name]
+    defp connection(%{finch: name}, _, _), do: [finch: [name: name]]
 
     defp flatten(headers) when is_map(headers),
       do: Enum.flat_map(headers, fn {name, values} -> Enum.map(List.wrap(values), &{name, &1}) end)
