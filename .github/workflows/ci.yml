@@ -23,21 +23,62 @@ concurrency:
 
 env:
   MIX_ENV: dev
-  # The current lane is also the workspace toolchain.
-  CURRENT_ELIXIR: "1.20.2-otp-29"
-  CURRENT_OTP: "29.0.4"
-  MINIMUM_ELIXIR: "1.18.4-otp-27"
-  MINIMUM_OTP: "27.3.4.15"
   # Native formatting and static analysis use LLVM from apt.llvm.org, the
-  # major version .clang-format was measured with; Rust as rust-toolchain.toml.
+  # major version .clang-format was measured with (the images in
+  # tooling/native/docker pin the same major).
   LLVM_MAJOR: "23"
-  RUST_TOOLCHAIN: "1.97.1"
 
 jobs:
+  manifest:
+    # tooling/packages.yaml is the single source of the toolchain lanes and of
+    # the native packages; rust-toolchain.toml pins Rust. Every job reads them
+    # from here.
+    name: Toolchains and native packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      lanes: ${{ steps.read.outputs.lanes }}
+      toolchains: ${{ steps.read.outputs.toolchains }}
+      native: ${{ steps.read.outputs.native }}
+      rust: ${{ steps.read.outputs.rust }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tooling/packages.yaml
+            rust-toolchain.toml
+          sparse-checkout-cone-mode: false
+      - name: Read tooling/packages.yaml and rust-toolchain.toml
+        id: read
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest=tooling/packages.yaml
+          # ["minimum","current"]
+          lanes=$(yq -o=json -I=0 '.lanes | keys' "$manifest")
+          # {"minimum":{"elixir":"...","otp":"..."},"current":{...}}
+          toolchains=$(yq -o=json -I=0 '.lanes | map_values({"elixir": .elixir, "otp": .otp})' "$manifest")
+          # The packages with native: true, in manifest order.
+          native=$(yq -o=json -I=0 '[.packages | to_entries | .[] | select(.value.native == true) | .key]' "$manifest")
+          rust=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)
+          for value in "$lanes" "$toolchains" "$native" "$rust"; do
+            if [ -z "$value" ] || [ "$value" = null ] || [ "$value" = "[]" ]; then
+              echo "could not read the lanes, native packages and Rust toolchain"; exit 1
+            fi
+          done
+          {
+            echo "lanes=$lanes"
+            echo "toolchains=$toolchains"
+            echo "native=$native"
+            echo "rust=$rust"
+          } >> "$GITHUB_OUTPUT"
+          echo "lanes: $lanes"; echo "toolchains: $toolchains"; echo "native: $native"; echo "rust: $rust"
+
   affected:
     name: Affected packages
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    needs: manifest
     outputs:
       packages: ${{ steps.select.outputs.packages }}
       any: ${{ steps.select.outputs.any }}
@@ -47,8 +88,9 @@ jobs:
           fetch-depth: 0
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: ${{ env.CURRENT_ELIXIR }}
-          otp-version: ${{ env.CURRENT_OTP }}
+          # The current lane is also the workspace toolchain.
+          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
+          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
       - name: Workspace dependencies
         run: mix deps.get --check-locked
       - name: Select packages
@@ -83,21 +125,21 @@ jobs:
     name: Workspace checks
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    needs: affected
+    needs: [manifest, affected]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: ${{ env.CURRENT_ELIXIR }}
-          otp-version: ${{ env.CURRENT_OTP }}
+          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
+          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
       - uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-          key: workspace-${{ env.CURRENT_ELIXIR }}-${{ hashFiles('mix.lock') }}
+          key: workspace-${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}-${{ hashFiles('mix.lock') }}
       - run: mix deps.get --check-locked
       - run: mix compile --warnings-as-errors
       - run: mix format --check-formatted
@@ -119,7 +161,7 @@ jobs:
           sudo apt-get install -y "clang-format-${LLVM_MAJOR}"
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          toolchain: ${{ needs.manifest.outputs.rust }}
           components: rustfmt, clippy
       - name: Native formatting and Rust
         # clang-format on the C and C++ lines the change touches, rustfmt and
@@ -155,13 +197,13 @@ jobs:
     runs-on: ubuntu-24.04
     # Native packages build their SDKs in the gate (Matter's in Docker).
     timeout-minutes: 75
-    needs: affected
+    needs: [manifest, affected]
     if: needs.affected.outputs.any == 'true'
     strategy:
       fail-fast: false
       matrix:
         package: ${{ fromJSON(needs.affected.outputs.packages) }}
-        lane: [minimum, current]
+        lane: ${{ fromJSON(needs.manifest.outputs.lanes) }}
     env:
       WOTEX_PATH_DEPS: "1"
       # Build workspaces of the native_lint and native_test gate tools.
@@ -171,19 +213,10 @@ jobs:
         with:
           # The native format check compares with the merge base.
           fetch-depth: 0
-      - name: Toolchain
-        id: toolchain
-        shell: bash
-        run: |
-          if [ "${{ matrix.lane }}" = minimum ]; then
-            echo "elixir=${MINIMUM_ELIXIR}" >> "$GITHUB_OUTPUT"; echo "otp=${MINIMUM_OTP}" >> "$GITHUB_OUTPUT"
-          else
-            echo "elixir=${CURRENT_ELIXIR}" >> "$GITHUB_OUTPUT"; echo "otp=${CURRENT_OTP}" >> "$GITHUB_OUTPUT"
-          fi
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: ${{ steps.toolchain.outputs.elixir }}
-          otp-version: ${{ steps.toolchain.outputs.otp }}
+          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains)[matrix.lane].elixir }}
+          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains)[matrix.lane].otp }}
       - uses: actions/cache@v4
         with:
           path: |
@@ -195,13 +228,18 @@ jobs:
         # native_lint and native_test tools build the other packages' SDKs.
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev
       - name: Native tools needed
-        # A native package runs native_format, native_lint and native_test on
-        # the current lane; the minimum lane skips them (lanes.minimum.skip).
+        # A native package runs native_format, native_lint and native_test
+        # unless its lane skips them (lanes.minimum.skip).
         id: native
         shell: bash
         run: |
-          native=$(yq -r '.packages["${{ matrix.package }}"].native // false' tooling/packages.yaml)
-          if [ "$native" = true ] && [ "${{ matrix.lane }}" = current ]; then echo "tools=true" >> "$GITHUB_OUTPUT"; else echo "tools=false" >> "$GITHUB_OUTPUT"; fi
+          set -euo pipefail
+          skipped=$(yq -r '.lanes["${{ matrix.lane }}"].skip // [] | contains(["native_lint"])' tooling/packages.yaml)
+          if [ "${{ contains(fromJSON(needs.manifest.outputs.native), matrix.package) }}" = true ] && [ "$skipped" = false ]; then
+            echo "tools=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tools=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format, clang-tidy)
         if: steps.native.outputs.tools == 'true'
         shell: bash
@@ -214,7 +252,7 @@ jobs:
       - if: steps.native.outputs.tools == 'true'
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          toolchain: ${{ needs.manifest.outputs.rust }}
           components: rustfmt, clippy
       - if: steps.native.outputs.tools == 'true' && matrix.package != 'wotex-matter'
         # Keyed by the package's files, so a root or tooling change that re-runs
@@ -244,14 +282,14 @@ jobs:
     name: Archives and consumers
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    needs: [affected, check]
+    needs: [manifest, affected, check]
     if: needs.affected.outputs.any == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: ${{ env.CURRENT_ELIXIR }}
-          otp-version: ${{ env.CURRENT_OTP }}
+          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
+          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
       - run: mix deps.get --check-locked
       - name: Package dependencies
         shell: bash
@@ -271,7 +309,7 @@ jobs:
     name: ${{ matrix.package }} native lane
     runs-on: ubuntu-24.04
     timeout-minutes: 180
-    needs: affected
+    needs: [manifest, affected]
     if: >-
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.native == 'true') ||
@@ -279,15 +317,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [wotex-bacnet, wotex-ble, wotex-coap, wotex-matter, wotex-modbus, wotex-opcua, wotex-thread]
+        package: ${{ fromJSON(needs.manifest.outputs.native) }}
     env:
       WOTEX_PATH_DEPS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: ${{ env.CURRENT_ELIXIR }}
-          otp-version: ${{ env.CURRENT_OTP }}
+          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
+          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
       - name: Native toolchain
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev
       - run: mix deps.get --check-locked
@@ -325,7 +363,7 @@ jobs:
           sudo apt-get install -y "clang-format-${LLVM_MAJOR}" "clang-tidy-${LLVM_MAJOR}"
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          toolchain: ${{ needs.manifest.outputs.rust }}
           components: rustfmt, clippy
       - name: Native lint and tests
         # clang-tidy and the native tests of every native_check suite. A suite

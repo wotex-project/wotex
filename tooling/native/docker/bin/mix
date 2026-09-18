@@ -1,0 +1,21 @@
+#!/bin/sh
+# Mix in the Linux container of the native checks (linux.Dockerfile). The
+# repository is mounted read-only, so the dependencies and build output of the
+# root project and of each package live below $WOTEX_MIX_STATE instead of
+# deps/ and _build/ in the project directory.
+set -eu
+dir=$(pwd -P)
+case "$dir" in
+  "$WOTEX_ROOT") project=root ;;
+  "$WOTEX_ROOT"/packages/*)
+    project=${dir#"$WOTEX_ROOT"/packages/}
+    project=${project%%/*}
+    ;;
+  *) project= ;;
+esac
+if [ -n "$project" ]; then
+  MIX_DEPS_PATH="$WOTEX_MIX_STATE/$project/deps"
+  MIX_BUILD_ROOT="$WOTEX_MIX_STATE/$project/_build"
+  export MIX_DEPS_PATH MIX_BUILD_ROOT
+fi
+exec /usr/local/bin/mix "$@"

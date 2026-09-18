@@ -22,6 +22,22 @@ defmodule Wotex.Workspace.NativeSuite do
   receives standard output). Commands run in the package directory unless
   `cd` says otherwise.
 
+  `container` runs a suite's `prepare` and `test` commands and clang-tidy in
+  a container, for a build whose compile commands name paths inside the
+  container that built it (the suite must require `docker`):
+
+      container:
+        dockerfile: tooling/native/docker/matter-sdk.Dockerfile  # image source (repository-relative)
+        platform: linux/amd64                                    # optional
+        volumes:                                                 # HOST:CONTAINER, mounted read-only
+          - "{workspace}:/work"
+          - "{package}:/src"
+
+  The container sees the volumes and the suite's scratch directory (at its
+  host path), all read-only, and has no network; a command's `stdout` file
+  is written on the host. Compile commands are mapped back to package files
+  through the volumes (`Wotex.Workspace.NativeContainer`).
+
   Strings may contain placeholders: `{package}` (the absolute package
   directory), `{root}` (the repository root), `{workspace}` (the `build`
   task's workspace, only when `build` is set) and `{scratch}` (a directory
@@ -43,6 +59,16 @@ defmodule Wotex.Workspace.NativeSuite do
   @typedoc "Compile flags for the package files matching `files` (globs relative to the package)."
   @type compile :: %{files: [String.t()], flags: [String.t()]}
 
+  @typedoc """
+  The container of a suite: the repository-relative Dockerfile of its image,
+  the optional platform and the `{host, container}` volume pairs.
+  """
+  @type container :: %{
+          dockerfile: String.t(),
+          platform: String.t() | nil,
+          volumes: [{String.t(), String.t()}]
+        }
+
   @type t :: %__MODULE__{
           name: String.t(),
           requires: [String.t()],
@@ -50,7 +76,8 @@ defmodule Wotex.Workspace.NativeSuite do
           prepare: [command()],
           compile_commands: [String.t()],
           compile: [compile()],
-          test: [command()]
+          test: [command()],
+          container: container() | nil
         }
 
   @enforce_keys [:name]
@@ -61,7 +88,8 @@ defmodule Wotex.Workspace.NativeSuite do
     prepare: [],
     compile_commands: [],
     compile: [],
-    test: []
+    test: [],
+    container: nil
   ]
 
   @doc "The host requirements a suite may declare."
@@ -85,7 +113,7 @@ defmodule Wotex.Workspace.NativeSuite do
   @spec parse(String.t(), term()) :: {:ok, t()} | {:error, String.t()}
   def parse(package, %{"suite" => name} = entry) when is_binary(name) and name != "" do
     where = "package #{package}, native_check suite #{name}"
-    known = ~w(suite requires build prepare compile_commands compile test)
+    known = ~w(suite requires build prepare compile_commands compile test container)
 
     with :ok <- known_keys(where, entry, known),
          {:ok, requires} <- requirements(where, Map.get(entry, "requires", [])),
@@ -95,6 +123,7 @@ defmodule Wotex.Workspace.NativeSuite do
            strings(where, "compile_commands", Map.get(entry, "compile_commands", [])),
          {:ok, compile} <- compile(where, Map.get(entry, "compile", [])),
          {:ok, test} <- commands(where, "test", Map.get(entry, "test", [])),
+         {:ok, container} <- container(where, requires, Map.get(entry, "container")),
          suite = %__MODULE__{
            name: name,
            requires: requires,
@@ -102,7 +131,8 @@ defmodule Wotex.Workspace.NativeSuite do
            prepare: prepare,
            compile_commands: databases,
            compile: compile,
-           test: test
+           test: test,
+           container: container
          },
          :ok <- check_placeholders(where, suite) do
       {:ok, suite}
@@ -200,6 +230,40 @@ defmodule Wotex.Workspace.NativeSuite do
   defp optional_string(where, key, field, _value),
     do: {:error, "#{where}: #{key} #{field} must be a string"}
 
+  defp container(_where, _requires, nil), do: {:ok, nil}
+
+  defp container(where, requires, %{"dockerfile" => dockerfile} = entry) do
+    where = "#{where}, container"
+
+    with :ok <- known_keys(where, entry, ~w(dockerfile platform volumes)),
+         :ok <- require_docker(where, requires),
+         {:ok, dockerfile} <- optional_string(where, "container", "dockerfile", dockerfile),
+         {:ok, platform} <- optional_string(where, "container", "platform", entry["platform"]),
+         {:ok, volumes} <- strings(where, "volumes", Map.get(entry, "volumes", [])),
+         {:ok, volumes} <- collect(volumes, &volume(where, &1)) do
+      {:ok, %{dockerfile: dockerfile, platform: platform, volumes: volumes}}
+    end
+  end
+
+  defp container(where, _requires, _other),
+    do: {:error, "#{where}: container must be a mapping with a dockerfile"}
+
+  defp require_docker(where, requires) do
+    if "docker" in requires,
+      do: :ok,
+      else: {:error, "#{where} needs requires: [docker]"}
+  end
+
+  defp volume(where, text) do
+    case String.split(text, ":") do
+      [host, "/" <> _ = container] when host != "" ->
+        {:ok, {host, String.trim_trailing(container, "/")}}
+
+      _other ->
+        {:error, "#{where}: volume #{inspect(text)} must be HOST:/absolute/container/path"}
+    end
+  end
+
   defp compile(where, list) when is_list(list), do: collect(list, &compile_rule(where, &1))
   defp compile(where, _other), do: {:error, "#{where}: compile must be a list"}
 
@@ -232,8 +296,11 @@ defmodule Wotex.Workspace.NativeSuite do
   defp reverse_collected(error), do: error
 
   defp check_placeholders(where, suite) do
+    volumes = if suite.container, do: Enum.map(suite.container.volumes, &elem(&1, 0)), else: []
+
     strings =
       suite.compile_commands ++
+        volumes ++
         Enum.flat_map(suite.compile, & &1.flags) ++
         Enum.flat_map(suite.prepare ++ suite.test, &command_strings/1)
 

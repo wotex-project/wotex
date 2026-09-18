@@ -13,7 +13,9 @@
 #   --tidy`, `mix native.test`, the native_lint and native_test tools of the
 #   package gate); see Wotex.Workspace.NativeSuite for the keys and
 #   placeholders. Every first-party translation unit needs a compile command
-#   from some suite.
+#   from some suite. On a host that is not Linux, a suite that requires Linux
+#   runs in the Linux container (tooling/native/docker/linux.Dockerfile) when
+#   Docker is available.
 schema_version: "1.0.0"
 # lanes: the toolchains CI runs every package gate on. `skip` names `mix check`
 #   tools a lane does not run (passed as `--except TOOL`). The minimum lane runs
@@ -171,10 +173,28 @@ packages:
           - [cmake, --build, "{scratch}/value", --parallel, "4"]
           - [ctest, --test-dir, "{scratch}/value", --output-on-failure]
       # The build compiles the SDK-bound sources in the pinned linux/amd64
-      # container and runs their CTest suite, normal and sanitized.
+      # container and runs their CTest suite, normal and sanitized. clang-tidy
+      # analyses them in that image (plus LLVM) on the compile commands ninja
+      # exports from the GN and CMake builds of the workspace; the package's
+      # own native/ directories are mounted over the copy the GN build compiled.
       - suite: sdk
         requires: [docker]
         build: wotex.matter.native.build
+        container:
+          dockerfile: tooling/native/docker/matter-sdk.Dockerfile
+          platform: linux/amd64
+          volumes:
+            - "{workspace}:/work"
+            - "{package}:/src"
+            - "{package}/native/src:/work/sdk/examples/wotex-matter-host/src"
+            - "{package}/native/include:/work/sdk/examples/wotex-matter-host/include"
+            - "{package}/native/testing:/work/sdk/examples/wotex-matter-host/testing"
+        prepare:
+          - run: [ninja, -C, /work/build, -t, compdb]
+            stdout: "{scratch}/gn.json"
+          - run: [ninja, -C, /work/cmake-normal, -t, compdb]
+            stdout: "{scratch}/cmake.json"
+        compile_commands: ["{scratch}/gn.json", "{scratch}/cmake.json"]
   wotex-modbus:
     app: wotex_modbus
     depends_on: [wotex, wotex-runtime]

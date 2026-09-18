@@ -64,6 +64,68 @@ defmodule Wotex.Workspace.ToolchainTest do
     assert "mise.toml" in Manifest.load!().select_all_on
   end
 
+  defp read(relative), do: File.read!(Path.join(Workspace.root(), relative))
+
+  defp llvm_major(text) do
+    [_, major] = Regex.run(~r/^\s*(?:ARG )?LLVM_MAJOR[=:] ?"?(\d+)"?$/m, text)
+    major
+  end
+
+  test "the Linux image of the native checks pins the current lane by digest" do
+    {:ok, current} = Manifest.lane("current", Manifest.load!())
+    dockerfile = read("tooling/native/docker/linux.Dockerfile")
+
+    assert [_, elixir, otp] =
+             Regex.run(
+               ~r|^FROM hexpm/elixir:(\d+\.\d+\.\d+)-erlang-([\d.]+)-ubuntu-noble-[\d.]+@sha256:[0-9a-f]{64}$|m,
+               dockerfile
+             )
+
+    [otp_major | _] = String.split(otp, ".")
+    assert current.elixir == "#{elixir}-otp-#{otp_major}"
+    assert current.otp == otp
+    assert dockerfile =~ "grep -q \"^Elixir #{String.replace(elixir, ".", "\\.")} \""
+    assert dockerfile =~ ~r/test "\$\(gcc -dumpversion \| cut -d\. -f1\)" = 13/
+  end
+
+  test "the native images install the LLVM major version CI installs" do
+    ci = llvm_major(read(".github/workflows/ci.yml"))
+
+    for dockerfile <- ~w(linux matter-sdk) do
+      assert llvm_major(read("tooling/native/docker/#{dockerfile}.Dockerfile")) == ci
+    end
+  end
+
+  test "the Matter clang-tidy image starts from the image the Matter SDK build runs in" do
+    [_, image] =
+      Regex.run(
+        ~r/@image "([^"]+)"/,
+        read("packages/wotex-matter/test/support/software/manifest.exs")
+      )
+
+    assert read("tooling/native/docker/matter-sdk.Dockerfile") =~ ~r/^FROM #{Regex.escape(image)}$/m
+  end
+
+  test "CI reads the lanes, the native packages and Rust instead of repeating them" do
+    ci = read(".github/workflows/ci.yml")
+    manifest = Manifest.load!()
+
+    for {_name, lane} <- manifest.lanes, version <- [lane.elixir, lane.otp] do
+      refute ci =~ version, "ci.yml repeats #{version} from tooling/packages.yaml"
+    end
+
+    for package <- Manifest.native_packages(manifest) do
+      refute ci =~ ~r/[\[ ,]#{package.name}[\], ]/, "ci.yml lists #{package.name}"
+    end
+
+    [_, channel] = Regex.run(~r/^channel = "([^"]+)"$/m, read("rust-toolchain.toml"))
+    refute ci =~ channel
+
+    assert ci =~ "lane: ${{ fromJSON(needs.manifest.outputs.lanes) }}"
+    assert ci =~ "package: ${{ fromJSON(needs.manifest.outputs.native) }}"
+    assert ci =~ "yq -o=json -I=0 '.lanes | keys' \"$manifest\""
+  end
+
   test "the Dexter index is ignored" do
     ignored = File.read!(Path.join(Workspace.root(), ".gitignore"))
     assert ".dexter/" in String.split(ignored, "\n")

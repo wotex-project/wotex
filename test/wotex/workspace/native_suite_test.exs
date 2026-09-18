@@ -75,6 +75,41 @@ defmodule Wotex.Workspace.NativeSuiteTest do
              NativeSuite.parse_all("p", [@suite, @suite])
   end
 
+  test "parses a container and requires docker for it" do
+    container = %{
+      "dockerfile" => "tooling/native/docker/sdk.Dockerfile",
+      "platform" => "linux/amd64",
+      "volumes" => ["{workspace}:/work", "{package}/native:/work/sdk/native/"]
+    }
+
+    entry = %{@suite | "requires" => ["docker"]} |> Map.put("container", container)
+    assert {:ok, suite} = NativeSuite.parse("p", entry)
+
+    assert suite.container == %{
+             dockerfile: "tooling/native/docker/sdk.Dockerfile",
+             platform: "linux/amd64",
+             volumes: [{"{workspace}", "/work"}, {"{package}/native", "/work/sdk/native"}]
+           }
+
+    assert {:ok, %{container: %{platform: nil, volumes: []}}} =
+             NativeSuite.parse("p", Map.put(entry, "container", %{"dockerfile" => "d"}))
+
+    assert {:ok, %{container: nil}} = NativeSuite.parse("p", @suite)
+
+    for {change, expected} <- [
+          {%{"requires" => ["linux"]}, "container needs requires: [docker]"},
+          {%{"container" => ["x"]}, "container must be a mapping with a dockerfile"},
+          {%{"container" => %{"dockerfile" => "d", "extra" => 1}}, "unknown key(s) extra"},
+          {%{"container" => %{"dockerfile" => "d", "volumes" => ["/a"]}},
+           ~s(volume "/a" must be HOST:/absolute/container/path)},
+          {%{"container" => %{"dockerfile" => "d", "volumes" => ["{x}:/a"]}},
+           "unknown placeholder(s) {x}"}
+        ] do
+      assert {:error, message} = NativeSuite.parse("p", Map.merge(entry, change))
+      assert message =~ expected
+    end
+  end
+
   test "expands placeholders and leaves unknown braces alone" do
     values = %{
       "package" => "/r/packages/p",
@@ -107,5 +142,12 @@ defmodule Wotex.Workspace.NativeSuiteTest do
 
     assert Manifest.fetch!("wotex-lab", manifest).native_check == []
     assert NativeSuite.requirements() == ~w(linux docker)
+
+    # Every suite container is built from a Dockerfile of tooling/native/docker.
+    for package <- Manifest.packages(manifest),
+        %{container: %{dockerfile: dockerfile}} <- package.native_check do
+      assert dockerfile =~ ~r{^tooling/native/docker/[a-z0-9-]+\.Dockerfile$}
+      assert File.regular?(Path.join(Wotex.Workspace.root(), dockerfile))
+    end
   end
 end

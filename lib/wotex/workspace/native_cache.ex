@@ -11,8 +11,9 @@ defmodule Wotex.Workspace.NativeCache do
   temporary directory, with symbolic links resolved (some build tasks refuse
   a workspace below a link, and macOS links `/var` to `/private/var`). `<key>`
   is `key/2`: a digest of every file of the package that Git tracks or does
-  not ignore, except Markdown (path and content), and of the suite
-  definition. Package build
+  not ignore, except Markdown (path and content), and of the suite's name
+  and build task; its other keys (compile and test commands, containers) do
+  not change what the build produces. Package build
   tasks reuse a workspace whose recorded inputs match and refuse any other,
   so the first run builds, later runs of the same sources reuse it, and a
   change selects a new workspace. Workspaces of older keys are removed after
@@ -50,13 +51,13 @@ defmodule Wotex.Workspace.NativeCache do
   def suite_dir(cache, package, %NativeSuite{name: name}), do: Path.join([cache, package, name])
 
   @doc """
-  The cache key of a suite: the first 16 hex digits of a SHA-256 over the
-  suite definition and every `{relative_path, content_digest}` of `files`
-  (absolute paths below `package_dir`).
+  The cache key of a suite's workspace: the first 16 hex digits of a
+  SHA-256 over the suite's name and build task and every `{relative_path,
+  content_digest}` of `digests`.
   """
   @spec key(NativeSuite.t(), [{Path.t(), binary()}]) :: String.t()
-  def key(%NativeSuite{} = suite, digests) do
-    material = :erlang.term_to_binary({Map.from_struct(suite), Enum.sort(digests)})
+  def key(%NativeSuite{name: name, build: build}, digests) do
+    material = :erlang.term_to_binary({name, build, Enum.sort(digests)})
     digest = Base.encode16(:crypto.hash(:sha256, material), case: :lower)
     binary_part(digest, 0, 16)
   end

@@ -25,6 +25,23 @@ defmodule Wotex.Workspace.NativeCacheTest do
       assert key =~ ~r/^[0-9a-f]{16}$/
       assert NativeCache.key(suite, Enum.reverse(digests)) == key
       refute NativeCache.key(%{suite | build: "other"}, digests) == key
+      refute NativeCache.key(%{suite | name: "other"}, digests) == key
+
+      # Compile and test commands and containers do not change what the build
+      # produces, so they keep the workspace.
+      container = %{dockerfile: "d", platform: nil, volumes: []}
+      command = %{run: ["true"], env: [], cd: nil, stdout: nil}
+
+      assert NativeCache.key(
+               %{
+                 suite
+                 | requires: ["docker"],
+                   container: container,
+                   prepare: [command],
+                   test: [command]
+               },
+               digests
+             ) == key
 
       File.write!(Path.join(package, "b.c"), "int changed;\n")
       refute NativeCache.key(suite, NativeCache.digests(files, package, root)) == key
