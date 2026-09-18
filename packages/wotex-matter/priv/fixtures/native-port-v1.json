@@ -2,7 +2,7 @@
   "format": "wotex.native-contract",
   "version": "1.0.0",
   "package": "wotex_matter",
-  "status": "specified_unexecuted",
+  "status": "executed",
   "normalization_spec": "../WMA.13-native-backend.md",
   "cases": [
     {

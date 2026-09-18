@@ -6,6 +6,19 @@ defmodule Wotex.Matter.NativeRequestTest do
   alias Wotex.Matter.Error
   alias Wotex.Matter.Native.{Request, Wire}
 
+  test "WMA-B03 the native corpus declares all seventeen cases executed" do
+    corpus =
+      "../../../priv/fixtures/native-port-v1.json"
+      |> Path.expand(__DIR__)
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert corpus["status"] == "executed"
+
+    assert Enum.map(corpus["cases"], & &1["id"]) ==
+             Enum.map(1..17, &("WMA-B-F" <> String.pad_leading(Integer.to_string(&1), 2, "0")))
+  end
+
   test "WMA-B02 escaped bytes include quotes and preserve the final newline reservation" do
     for value <- [
           String.duplicate("x", 131_069),

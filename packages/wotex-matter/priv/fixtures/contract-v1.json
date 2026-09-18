@@ -1,7 +1,7 @@
 {
   "format_version": "1.0.0",
   "package": "wotex_matter",
-  "status": "partially_executed",
+  "status": "executed",
   "normalization_spec": "../WMA.11-standalone-client-and-preservation.md",
   "cases": [
     {

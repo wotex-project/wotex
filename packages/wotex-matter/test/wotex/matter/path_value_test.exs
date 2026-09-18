@@ -25,6 +25,15 @@ defmodule Wotex.Matter.PathValueTest do
             |> Jason.decode!()
             |> Map.fetch!("cases")
 
+  test "WMA-N04 the corpus declares all twelve cases executed" do
+    corpus = Jason.decode!(File.read!(@fixture_path))
+
+    assert corpus["status"] == "executed"
+
+    assert Enum.map(corpus["cases"], & &1["id"]) ==
+             Enum.map(1..12, &("WMA-F" <> String.pad_leading(Integer.to_string(&1), 2, "0")))
+  end
+
   test "WMA-N04 executes the P01 pure corpus cases through their public operations" do
     cases = Map.new(@fixtures, &{Map.fetch!(&1, "id"), &1})
 
