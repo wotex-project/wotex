@@ -195,15 +195,25 @@ defmodule Wotex.BLE.BlueZ do
   end
 
   defp run(executable, args, timeout) do
-    port = Port.open({:spawn_executable, executable}, [:binary, :exit_status, args: args])
+    case open(executable, args) do
+      {:ok, port} ->
+        try do
+          collect(port, <<>>, System.monotonic_time(:millisecond) + timeout)
+        after
+          close_if_open(port)
+        end
 
-    try do
-      collect(port, <<>>, System.monotonic_time(:millisecond) + timeout)
-    after
-      if Port.info(port), do: Port.close(port)
+      :error ->
+        {:error, Error.new(:transport_unavailable)}
     end
+  end
+
+  # Only a command that cannot be started is an unavailable transport; the
+  # outcome of a started command is decided by `collect/3`.
+  defp open(executable, args) do
+    {:ok, Port.open({:spawn_executable, executable}, [:binary, :exit_status, args: args])}
   rescue
-    _ -> {:error, Error.new(:transport_unavailable)}
+    _ -> :error
   end
 
   defp collect(port, output, deadline) do
@@ -241,5 +251,14 @@ defmodule Wotex.BLE.BlueZ do
     else
       false
     end
+  end
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
   end
 end

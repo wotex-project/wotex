@@ -48,7 +48,7 @@ defmodule Wotex.BLE.Native.Bootstrap do
     try do
       collect(port, <<>>, System.monotonic_time(:millisecond) + 60_000)
     after
-      if Port.info(port), do: Port.close(port)
+      close_if_open(port)
     end
   rescue
     _ in [ArgumentError, ErlangError] -> {:error, :bootstrap_failed, result(<<>>)}
@@ -72,4 +72,13 @@ defmodule Wotex.BLE.Native.Bootstrap do
   end
 
   defp result(bytes), do: %{output: bytes, descendant_cleanup: :unverified}
+
+  # The child can exit between a liveness check and the close, so closing an
+  # already closed Port counts as closed.
+  defp close_if_open(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
+  end
 end

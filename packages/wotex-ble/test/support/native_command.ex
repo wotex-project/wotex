@@ -45,7 +45,11 @@ defmodule Wotex.BLE.NativeCommand do
         System.monotonic_time(:millisecond) + timeout
       )
     after
-      if Port.info(port), do: Port.close(port)
+      try do
+        Port.close(port)
+      rescue
+        ArgumentError -> :ok
+      end
     end
   end
 
