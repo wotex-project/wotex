@@ -339,7 +339,7 @@ accuracy and stable API admission are separate claims.
 ## Development
 
 Run commands from the repository root; the
-[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+[contributing guide](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md)
 describes the workflow and validation tiers. Sibling packages resolve from
 `packages/` through `WOTEX_PATH_DEPS=1`, which `mix pkg` sets.
 

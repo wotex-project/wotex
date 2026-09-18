@@ -265,7 +265,7 @@ The package also enforces these invariants:
 ## Development
 
 Run commands from the repository root; the
-[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+[contributing guide](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md)
 describes the workflow and validation tiers.
 
 ```console

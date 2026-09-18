@@ -14,8 +14,8 @@ a separate OS process with `WOTEX_PATH_DEPS=1`. `mix help wotex.affected`
 and the other `mix help wotex.*` pages document each task.
 
 The root `mix.exs` aliases give the tasks their short names (`mix setup`,
-`mix affected`, `mix impact`, `mix check.fast`, ...); the table in the root
-`README.md`, "Working on a package", is the command set. Mix appends an
+`mix affected`, `mix impact`, `mix check.fast`, ...); the table in
+`CONTRIBUTING.md`, "Command reference", is the command set. Mix appends an
 alias's arguments to its last task, so every alias ends in the `wotex.*` task
 that takes them.
 

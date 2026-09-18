@@ -183,7 +183,7 @@ define independently implementable work, acceptance gates and remaining claim
 obligations.
 
 Run commands from the repository root; the
-[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+[contributing guide](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md)
 describes the workflow and validation tiers.
 
 ```console

@@ -1,8 +1,8 @@
 # Development workflow
 
 This guide explains how to work on WoTEx packages without building or testing
-the whole repository. The command reference is in the root
-[README](../../README.md#working-on-a-package); the agent-facing summary is the
+the whole repository. The command reference is in
+[CONTRIBUTING.md](../../CONTRIBUTING.md#command-reference); the agent-facing summary is the
 root [`CLAUDE.md`](../../CLAUDE.md).
 
 ## Setup
