@@ -50,6 +50,8 @@ defmodule WotexConformance.MixProject do
       {:jason, "~> 1.4"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -98,31 +100,33 @@ defmodule WotexConformance.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        {"README.md", title: "Overview"},
-        {doc("plans/wotex-conformance-completion.md"), title: "Completion Contract"},
-        {"../../docs/packages/wotex-conformance/security.md", title: "Security"},
-        {doc("specs/WCF.01-conformance-runner.md"), title: "Conformance runner"},
-        {doc("decisions/0001-external-target-isolation.md"), title: "External target isolation"},
-        {doc("decisions/0002-evidence-digests.md"), title: "Evidence digests"},
-        {doc("decisions/0003-normalized-observations.md"), title: "Normalized observations"},
-        {doc("decisions/0004-discovery-corpus-boundary.md"), title: "Discovery corpus boundary"},
-        {doc("provenance/source.md"), title: "Source provenance"},
-        {doc("provenance/standards.md"), title: "Standards provenance"},
-        {doc("provenance/assertion-inventory.md"), title: "Assertion inventory"},
-        {doc("provenance/archive-consumer.md"), title: "Archive-only consumer"},
-        {doc("provenance/external-lifecycle.md"), title: "External target lifecycle"},
-        {doc("provenance/package-inputs.md"), title: "Package inputs"},
-        {doc("provenance/runtime-compatibility.md"), title: "Runtime compatibility"},
-        {"CHANGELOG.md", title: "Changelog"},
-        {"LICENSE", title: "License"},
-        {"NOTICE", title: "Notices"}
-      ],
+      extras:
+        [
+          {"README.md", title: "Overview"},
+          {doc("plans/wotex-conformance-completion.md"), title: "Completion Contract"},
+          {"../../docs/packages/wotex-conformance/security.md", title: "Security"},
+          {doc("specs/WCF.01-conformance-runner.md"), title: "Conformance runner"},
+          {doc("decisions/0001-external-target-isolation.md"), title: "External target isolation"},
+          {doc("decisions/0002-evidence-digests.md"), title: "Evidence digests"},
+          {doc("decisions/0003-normalized-observations.md"), title: "Normalized observations"},
+          {doc("decisions/0004-discovery-corpus-boundary.md"), title: "Discovery corpus boundary"},
+          {doc("provenance/source.md"), title: "Source provenance"},
+          {doc("provenance/standards.md"), title: "Standards provenance"},
+          {doc("provenance/assertion-inventory.md"), title: "Assertion inventory"},
+          {doc("provenance/archive-consumer.md"), title: "Archive-only consumer"},
+          {doc("provenance/external-lifecycle.md"), title: "External target lifecycle"},
+          {doc("provenance/package-inputs.md"), title: "Package inputs"},
+          {doc("provenance/runtime-compatibility.md"), title: "Runtime compatibility"},
+          {"CHANGELOG.md", title: "Changelog"},
+          {"LICENSE", title: "License"},
+          {"NOTICE", title: "Notices"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r|docs/packages/wotex-conformance/plans/|,
         Specifications: ~r|docs/packages/wotex-conformance/specs/|,
         Decisions: ~r|docs/packages/wotex-conformance/decisions/|,
         Provenance: ~r|docs/packages/wotex-conformance/provenance/|,
+        Benchmarks: ~r/bench\/output/,
         Reference: ~r/CHANGELOG|security|LICENSE|NOTICE/
       ],
       groups_for_modules: [
