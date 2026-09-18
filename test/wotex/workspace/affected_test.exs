@@ -35,7 +35,7 @@ defmodule Wotex.Workspace.AffectedTest do
       assert Affected.affected(m, ["lib/wotex/workspace.ex"]) == all
       assert Affected.affected(m, ["tooling/packages.yaml"]) == all
       assert Affected.affected(m, [".github/workflows/ci.yml"]) == all
-      assert Affected.affected(m, [".tool-versions"]) == all
+      assert Affected.affected(m, ["mise.toml"]) == all
       assert Affected.affected(m, ["packages/coap/lib/a.ex", "mix.exs"]) == all
     end
 
@@ -48,6 +48,53 @@ defmodule Wotex.Workspace.AffectedTest do
 
     test "leading ./ and whitespace are tolerated", %{manifest: m} do
       assert Affected.affected(m, ["./packages/coap/lib/a.ex\n"]) == ~w(coap)
+    end
+  end
+
+  describe "classify/3" do
+    test "marks directly changed packages and their dependents", %{manifest: m} do
+      assert Affected.classify(m, ["packages/runtime/lib/runtime.ex"]) == [
+               {"runtime", :changed},
+               {"coap", :dependent},
+               {"http", :dependent},
+               {"lab", :dependent}
+             ]
+    end
+
+    test "a package both changed and dependent is marked changed", %{manifest: m} do
+      paths = ["packages/core/lib/core.ex", "packages/http/lib/http.ex"]
+
+      assert Affected.classify(m, paths) == [
+               {"core", :changed},
+               {"runtime", :dependent},
+               {"coap", :dependent},
+               {"http", :changed},
+               {"lab", :dependent}
+             ]
+    end
+
+    test "a select_all_on match marks every package changed", %{manifest: m} do
+      assert Affected.classify(m, ["packages/coap/lib/a.ex", "tooling/packages.yaml"]) ==
+               Enum.map(~w(conformance core runtime coap http lab), &{&1, :changed})
+    end
+
+    test "documentation paths are marked only with docs: true", %{manifest: m} do
+      assert Affected.classify(m, ["docs/packages/http/specs/a.md"]) == []
+
+      assert Affected.classify(m, ["docs/packages/http/specs/a.md"], docs: true) ==
+               [{"http", :changed}, {"lab", :dependent}]
+    end
+
+    test "names/2 filters by mark and keeps the order", %{manifest: m} do
+      marked = Affected.classify(m, ["packages/runtime/lib/runtime.ex"])
+      assert Affected.names(marked) == ~w(runtime coap http lab)
+      assert Affected.names(marked, :changed) == ~w(runtime)
+      assert Affected.names(marked, :dependent) == ~w(coap http lab)
+    end
+
+    test "affected/3 is classify/3 without the marks", %{manifest: m} do
+      paths = ["packages/conformance/lib/c.ex", "packages/coap/lib/a.ex"]
+      assert Affected.affected(m, paths) == Affected.names(Affected.classify(m, paths))
     end
   end
 
@@ -69,8 +116,8 @@ defmodule Wotex.Workspace.AffectedTest do
     end
 
     test "literals are escaped and ? matches one character" do
-      assert Affected.glob_match?(".tool-versions", ".tool-versions")
-      refute Affected.glob_match?(".tool-versions", "xtool-versions")
+      assert Affected.glob_match?(".formatter.exs", ".formatter.exs")
+      refute Affected.glob_match?(".formatter.exs", "xformatter.exs")
       assert Affected.glob_match?("a?c", "abc")
       refute Affected.glob_match?("a?c", "a/c")
     end

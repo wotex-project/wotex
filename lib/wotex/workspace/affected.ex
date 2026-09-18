@@ -10,7 +10,10 @@ defmodule Wotex.Workspace.Affected do
     * a path matching a `select_all_on` glob selects every package;
     * every transitive dependent of a selected package is selected too.
 
-  The result is in the manifest's topological order.
+  The result is in the manifest's topological order. `classify/3` also marks
+  each package: `:changed` when a changed path selects it directly (a
+  `select_all_on` match marks every package `:changed`), `:dependent` when it
+  is selected only as a transitive dependent of a changed package.
   """
 
   alias Wotex.Workspace
@@ -18,27 +21,42 @@ defmodule Wotex.Workspace.Affected do
 
   @type option :: {:docs, boolean()}
 
+  @typedoc "Why a package is affected."
+  @type mark :: :changed | :dependent
+
   @doc """
   The affected package names for `changed_paths`, in topological order.
   """
   @spec affected(Manifest.t(), [Path.t()], [option()]) :: [String.t()]
   def affected(%Manifest{} = manifest, changed_paths, opts \\ []) do
-    docs? = Keyword.get(opts, :docs, false)
-    globs = manifest.select_all_on
+    manifest
+    |> classify(changed_paths, opts)
+    |> Enum.map(fn {name, _mark} -> name end)
+  end
 
-    selected =
-      changed_paths
-      |> Enum.map(&normalize/1)
-      |> Enum.reduce_while(MapSet.new(), fn path, selected ->
-        if select_all?(path, globs),
-          do: {:halt, :all},
-          else: {:cont, select_package(path, docs?, manifest, selected)}
-      end)
+  @doc """
+  The affected packages for `changed_paths` in topological order, each
+  marked `:changed` or `:dependent`.
+  """
+  @spec classify(Manifest.t(), [Path.t()], [option()]) :: [{String.t(), mark()}]
+  def classify(%Manifest{} = manifest, changed_paths, opts \\ []) do
+    case changed_packages(manifest, changed_paths, opts) do
+      :all ->
+        Enum.map(manifest.order, &{&1, :changed})
 
-    case selected do
-      :all -> manifest.order
-      selected -> Manifest.in_order(with_dependents(selected, manifest), manifest)
+      changed ->
+        selected = with_dependents(changed, manifest)
+
+        for name <- manifest.order, MapSet.member?(selected, name) do
+          {name, if(MapSet.member?(changed, name), do: :changed, else: :dependent)}
+        end
     end
+  end
+
+  @doc "The names of `marked` packages, restricted to `mark` unless it is `nil`."
+  @spec names([{String.t(), mark()}], mark() | nil) :: [String.t()]
+  def names(marked, mark \\ nil) do
+    for {name, package_mark} <- marked, mark in [nil, package_mark], do: name
   end
 
   @doc """
@@ -109,6 +127,19 @@ defmodule Wotex.Workspace.Affected do
 
       _other ->
         []
+    end)
+  end
+
+  defp changed_packages(manifest, changed_paths, opts) do
+    docs? = Keyword.get(opts, :docs, false)
+    globs = manifest.select_all_on
+
+    changed_paths
+    |> Enum.map(&normalize/1)
+    |> Enum.reduce_while(MapSet.new(), fn path, selected ->
+      if select_all?(path, globs),
+        do: {:halt, :all},
+        else: {:cont, select_package(path, docs?, manifest, selected)}
     end)
   end
 

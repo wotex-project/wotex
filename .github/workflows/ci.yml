@@ -99,8 +99,10 @@ jobs:
       - run: mix format --check-formatted
       - run: mix credo --strict
       - run: mix test
-      - name: Family catalogue is current
-        run: mix wotex.catalogue --check
+      - name: Documentation links and family catalogue
+        # Every relative link in tracked Markdown resolves and
+        # docs/catalogue.yaml is current (mix wotex.catalogue --check).
+        run: mix docs.check
       - name: Pinned native sources
         run: mix wotex.native.sources
       - name: Sibling API boundary

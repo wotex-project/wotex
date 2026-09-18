@@ -13,7 +13,7 @@ defmodule WotexWorkspace.Fixtures do
       },
       "current" => %{"elixir" => "1.20.2-otp-29", "otp" => "29.0.4"}
     },
-    "select_all_on" => [".github/**", "tooling/**", ".tool-versions", "mix.exs", "lib/**"],
+    "select_all_on" => [".github/**", "tooling/**", "mise.toml", "mix.exs", "lib/**"],
     "packages" => %{
       "core" => %{"app" => "core", "depends_on" => []},
       "runtime" => %{"app" => "runtime", "depends_on" => ["core"]},

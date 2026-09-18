@@ -3,18 +3,22 @@ defmodule Wotex.Workspace.Report do
   Plain-text summary tables for the workspace tasks.
   """
 
-  @type row :: %{package: String.t(), result: String.t(), seconds: number()}
+  @type row :: %{
+          optional(:package) => String.t(),
+          optional(:step) => String.t(),
+          optional(:gate) => String.t(),
+          result: String.t(),
+          seconds: number()
+        }
 
   @doc """
-  Renders `package | result | seconds` rows as an aligned table.
+  Renders rows as an aligned table. `columns` names the row keys to show, in
+  order; it defaults to `package | result | seconds`. A `:seconds` column is
+  formatted with one decimal.
   """
-  @spec table([row()]) :: String.t()
-  def table(rows) do
-    cells =
-      [
-        ["package", "result", "seconds"]
-        | Enum.map(rows, &[&1.package, &1.result, seconds(&1.seconds)])
-      ]
+  @spec table([row()], [atom()]) :: String.t()
+  def table(rows, columns \\ [:package, :result, :seconds]) do
+    cells = [Enum.map(columns, &Atom.to_string/1) | Enum.map(rows, &cells(&1, columns))]
 
     widths =
       cells
@@ -29,6 +33,13 @@ defmodule Wotex.Workspace.Report do
   @doc "Formats elapsed seconds with one decimal."
   @spec seconds(number()) :: String.t()
   def seconds(value), do: :erlang.float_to_binary(value / 1, decimals: 1)
+
+  defp cells(row, columns) do
+    Enum.map(columns, fn
+      :seconds -> seconds(row.seconds)
+      column -> to_string(Map.get(row, column, ""))
+    end)
+  end
 
   defp format_row(cells, widths) do
     cells

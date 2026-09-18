@@ -21,6 +21,8 @@ __pycache__/
 .wotex-thread-*/
 _site/
 tmp/
+# Dexter code index (mix index).
+.dexter/
 
 # Local execution state; never published.
 /docs/tasks/inbox.md

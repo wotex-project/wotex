@@ -27,7 +27,7 @@ defmodule Mix.Tasks.Wotex.Check do
   alias Wotex.Workspace.CLI
   alias Wotex.Workspace.Manifest
   alias Wotex.Workspace.Report
-  alias Wotex.Workspace.Runner
+  alias Wotex.Workspace.Steps
 
   @switches CLI.selection_switches() ++ [lane: :string, env: :string]
 
@@ -66,37 +66,24 @@ defmodule Mix.Tasks.Wotex.Check do
   @doc "The gate commands for one package, skipping the given `mix check` tools."
   @spec commands([String.t()]) :: [{String.t(), [String.t()]}]
   def commands(skip \\ []) do
-    except = Enum.flat_map(skip, &["--except", &1])
-    [{"deps.get", ["deps.get", "--check-locked"]}, {"check", ["check", "--no-retry" | except]}]
+    Enum.map(Steps.full_gate(skip), fn {label, args, _opts} -> {label, args} end)
   end
 
   @doc "Runs the gate commands of one package directory; `\"ok\"` on success."
   @spec gate(Path.t(), String.t() | nil, [String.t()]) :: String.t()
   def gate(path, env, skip \\ []) do
-    runner_opts = if env, do: [mix_env: env], else: []
+    Steps.run_steps(path, steps(env, skip))
+  end
 
-    Enum.reduce_while(
-      commands(skip),
-      "ok",
-      fn {label, command}, _acc ->
-        case Runner.run(path, command, runner_opts) do
-          0 -> {:cont, "ok"}
-          status -> {:halt, "#{label} failed (#{status})"}
-        end
-      end
-    )
+  defp steps(env, skip) do
+    runner_opts = if env, do: [mix_env: env], else: []
+    Enum.map(Steps.full_gate(skip), fn {label, args, _opts} -> {label, args, runner_opts} end)
   end
 
   defp run_gates(names, manifest, env, skip) do
-    {rows, failed?} =
-      Enum.reduce_while(names, {[], false}, fn name, {rows, _failed?} ->
-        path = Manifest.absolute_path(name, manifest)
-        {result, seconds} = CLI.timed(fn -> gate(path, env, skip) end)
-        rows = [%{package: name, result: result, seconds: seconds} | rows]
-        if result == "ok", do: {:cont, {rows, false}}, else: {:halt, {rows, true}}
-      end)
-
-    {Enum.reverse(rows), failed?}
+    names
+    |> Enum.map(&Steps.target(&1, manifest, steps(env, skip)))
+    |> Steps.run()
   end
 
   defp report_lane(nil, _manifest), do: []

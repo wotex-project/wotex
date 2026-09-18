@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Wotex.Native.Advisories do
       mix wotex.native.advisories [--offline]
 
   `--offline` performs no query and succeeds. The task fails on any
-  advisory or failed query.
+  advisory or failed query. The root alias is `mix native.advisories`.
   """
 
   use Mix.Task

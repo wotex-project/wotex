@@ -53,40 +53,55 @@ machine-read provenance live in each package's `priv/`.
 
 ## Working on a package
 
-Every package is verified from its own directory:
-
 ```sh
-cd packages/wotex-runtime
-WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix check --no-retry
+mise install        # Erlang, Elixir and Dexter pinned in mise.toml
+mix setup           # dependencies for the root and every package, Dexter index
 ```
 
-`WOTEX_PATH_DEPS=1` resolves sibling packages from `packages/` and is allowed
-only in the `dev`, `test` and `docs` environments. Unset, every package
-declares Hex requirements, which is what a published package will use. The
-root `.tool-versions` pins the current toolchain; the declared minimum
-(`elixir ~> 1.18`) is verified in CI.
+Every command runs from the repository root. The root Mix project
+(`:wotex_workspace`, not an umbrella, depending on no package) reads
+`tooling/packages.yaml` and runs each package in its own Mix process with
+`WOTEX_PATH_DEPS=1`, which resolves sibling packages from `packages/` (allowed
+in `dev`, `test` and `docs` only; unset, every package declares Hex
+requirements).
 
-Run the checks of the package you changed and of the packages that depend on
-it. A change in `wotex` or `wotex-runtime` affects every dependent package; a
-change in a protocol adapter affects only that package.
+Validation is proportional to the change:
 
-The root Mix project (`:wotex_workspace`, not an umbrella, depending on no
-package) reads `tooling/packages.yaml` and drives the packages from the
-repository root through `mix wotex.*` tasks. Run `mix deps.get` once at the
-root; each task runs the package's own Mix project in a separate OS process.
-
-| Task | What it does |
+| When | Command |
 | --- | --- |
-| `mix wotex.affected [--base REF] [--docs] [--all] [--json]` | Packages affected by the changes since `REF` (default `origin/main`, `main`, then the root commit), in topological order; `--all` lists every package. |
-| `mix wotex.check [--all\|--package NAME...] [--base REF] [--lane minimum\|current] [--env ENV]` | `mix deps.get --check-locked` and `mix check --no-retry` in each selected package with `WOTEX_PATH_DEPS=1`; stops at the first failure and prints a summary. |
-| `mix wotex.boundary [--all\|--package NAME...]` | Sibling-API gate: reports references to a sibling's `@moduledoc false` module or `@doc false` function. |
-| `mix wotex.archive [--all\|--package NAME...]` | Builds each package's Hex archive without path dependencies and runs its `bin/check_archive.exs` or `bin/check_package.exs`. |
-| `mix wotex.catalogue [--check]` | Renders `docs/catalogue.yaml` from every package catalogue, or checks that it is current. |
-| `mix wotex.native.sources` | Lists pinned native sources and verifies the digests of files present locally. |
-| `mix wotex.native.advisories [--offline]` | Queries OSV for the pinned native sources. |
-| `mix wotex.native.build --package NAME --workspace /abs/dir` | Runs a package's native build task in a disposable absolute workspace. |
-| `mix wotex.new NAME [--depends-on a,b]` | Scaffolds `packages/NAME`, `docs/packages/NAME/` and the manifest entry. |
+| While editing | `mix pkg <name> test <files>`, or `mix impact Module fun --run` |
+| A package change is ready | `mix check.fast --package <name>` |
+| Before a commit | `mix check.affected` (full gate for changed packages, fast gate for dependents) |
+| Repository-wide change only | `mix check.all` |
+
+`mise.toml` pins the current toolchain (Elixir 1.20.2, OTP 29.0.4); CI also
+verifies the declared minimum (Elixir 1.18.4, OTP 27.3.4.15). See the
+[development guide](docs/guides/development.md) for Dexter, Dialyzer, the
+explicit native lanes and CI.
+
+| Command | What it does |
+| --- | --- |
+| `mix setup` | `deps.get` for the root and every package, then builds the Dexter index. |
+| `mix affected [--base REF] [--all] [--json] [--detail]` | Changed packages plus their transitive dependents, in dependency order; `--detail` marks each `changed` or `dependent`. |
+| `mix pkg NAME ARGS...` | Runs any Mix task inside `packages/NAME` with `WOTEX_PATH_DEPS=1`, e.g. `mix pkg wotex-coap test test/wotex/coap/codec_test.exs`. |
+| `mix def MODULE [FUN]` | Dexter lookup; prints the repository-relative `path:line`. |
+| `mix refs MODULE [FUN]` | Dexter references, grouped by package and `lib`/`test`, repository-relative. Reindexes changed files first. |
+| `mix impact MODULE [FUN] [--run]` | The test files to run for a change: test files referencing the target plus test files referencing the modules that reference it (one hop), grouped by package; `--run` runs them per package. |
+| `mix test.affected [--base REF] [--package NAME]... [FILES...]` | Given repository-relative `FILES`, runs them in their packages; otherwise `mix test --stale` in the changed packages and their dependents. |
+| `mix check.fast [--package NAME]...` | Inner-loop gate for the selected (default: changed) packages: compile with warnings as errors, format check, `credo --strict`, `mix test`. |
+| `mix check.affected [--base REF]` | Pre-commit gate: the full `mix check --no-retry` for changed packages, `check.fast` for dependents. |
+| `mix check.all` | CI-equivalent: workspace checks plus every package's full gate. Heavy; only for repository-wide changes or on explicit request. |
+| `mix workspace` | Root self-check: compile, format, credo, root tests, catalogue drift, documentation links, sibling-API boundary of changed packages. |
+| `mix format.all [--check] [--all]` | `mix format` in the root and every changed package (`--all`: every package). |
+| `mix lint [--package NAME]...` | `credo --strict` in the changed (or named) packages. |
+| `mix dialyzer.pkg NAME` | Dialyzer for one package (PLT cached in its `priv/plts`). Explicit only. |
+| `mix docs.check` | Relative-link check over every tracked Markdown file plus `mix wotex.catalogue --check`. |
+| `mix docs.pkg NAME` | Builds one package's HexDocs. |
+| `mix index [--force]` | Builds or refreshes the Dexter index in `.dexter/`. |
+| `mix native.build --package NAME --workspace /abs/dir` | Runs a package's native build task in a disposable absolute workspace. Explicit only. |
+| `mix native.sources` | Lists pinned native sources and verifies the digests of files present locally. |
+| `mix native.advisories [--offline]` | Queries OSV for advisories against the pinned native sources. |
+| `mix wotex.*` | The underlying tasks remain available: `wotex.affected`, `wotex.check`, `wotex.archive`, `wotex.boundary`, `wotex.catalogue`, `wotex.new` and one task per command above; `mix help wotex.<task>` documents each. |
 
 The default selection of `check`, `boundary` and `archive` is the affected
 set. See [tooling/README.md](tooling/README.md) for the manifest format.

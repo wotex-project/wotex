@@ -1,12 +1,12 @@
 # WoTEx package manifest. The single source for the dependency graph that
-# `mix wotex.affected` and CI use, plus per-package lane metadata.
+# `mix affected` and CI use, plus per-package lane metadata.
 #
 # depends_on: WoTEx packages this package requires (directly). Dependents are
 #   derived. A change in a package selects it and every transitive dependent.
 # app: OTP application name (Hex package name).
 # native: true when the package builds or vendors native code; its heavy
 #   software profile runs only in the explicit native lane.
-# native_task: the package's own build task, dispatched by `mix wotex.native.build`.
+# native_task: the package's own build task, dispatched by `mix native.build`.
 # software_task: the package's own software-profile run task, if any.
 schema_version: "1.0.0"
 # lanes: the toolchains CI runs every package gate on. `skip` names `mix check`
@@ -25,7 +25,7 @@ lanes:
 select_all_on:
   - ".github/**"
   - "tooling/**"
-  - ".tool-versions"
+  - "mise.toml"
   - ".gitignore"
   - "mix.exs"
   - "mix.lock"

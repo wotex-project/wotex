@@ -10,7 +10,7 @@ defmodule Mix.Tasks.Wotex.Native.Sources do
 
   A package without a manifest of a known shape is reported as
   `no manifest`. The task fails on a digest mismatch or an unreadable
-  manifest.
+  manifest. The root alias is `mix native.sources`.
   """
 
   use Mix.Task

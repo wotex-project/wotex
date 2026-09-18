@@ -12,6 +12,7 @@ defmodule WotexWorkspace.MixProject do
       elixir: "~> 1.18",
       start_permanent: false,
       deps: deps(),
+      aliases: aliases(),
       elixirc_options: [warnings_as_errors: true],
       test_coverage: [ignore_modules: [~r/^Mix\.Tasks\./]]
     ]
@@ -19,6 +20,33 @@ defmodule WotexWorkspace.MixProject do
 
   def application do
     [extra_applications: [:inets, :ssl, :public_key, :crypto]]
+  end
+
+  # The root command set. Each alias names one `mix wotex.*` task (Mix
+  # appends an alias's arguments to its last task); see README.md.
+  defp aliases do
+    [
+      setup: ["deps.get", "wotex.setup"],
+      affected: "wotex.affected",
+      pkg: "wotex.pkg",
+      def: "wotex.def",
+      refs: "wotex.refs",
+      impact: "wotex.impact",
+      "test.affected": "wotex.test.affected",
+      "check.fast": "wotex.check.fast",
+      "check.affected": "wotex.check.affected",
+      "check.all": "wotex.check.all",
+      workspace: "wotex.workspace",
+      "format.all": "wotex.format.all",
+      lint: "wotex.lint",
+      "dialyzer.pkg": "wotex.dialyzer",
+      "docs.check": "wotex.docs.check",
+      "docs.pkg": "wotex.docs",
+      index: "wotex.index",
+      "native.build": "wotex.native.build",
+      "native.sources": "wotex.native.sources",
+      "native.advisories": "wotex.native.advisories"
+    ]
   end
 
   defp deps do

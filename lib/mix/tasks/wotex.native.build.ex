@@ -8,7 +8,9 @@ defmodule Mix.Tasks.Wotex.Native.Build do
       mix wotex.native.build --package NAME --workspace /abs/dir
 
   The workspace must be an absolute, disposable directory; a relative path
-  is refused. Native builds run only when invoked explicitly.
+  is refused. Native builds run only when invoked explicitly. The root
+  alias is `mix native.build` (inside some packages `mix wotex.native.build`
+  is the package's own alias).
   """
 
   use Mix.Task

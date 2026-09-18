@@ -13,6 +13,47 @@ umbrella and depends on no package; it runs each package's own Mix project in
 a separate OS process with `WOTEX_PATH_DEPS=1`. `mix help wotex.affected`
 and the other `mix help wotex.*` pages document each task.
 
+The root `mix.exs` aliases give the tasks their short names (`mix setup`,
+`mix affected`, `mix impact`, `mix check.fast`, ...); the table in the root
+`README.md`, "Working on a package", is the command set. Mix appends an
+alias's arguments to its last task, so every alias ends in the `wotex.*` task
+that takes them.
+
+## Toolchain and code index
+
+The root `mise.toml` pins Erlang/OTP, Elixir and Dexter. Its `erlang` and
+`elixir` versions equal `lanes.current` in `packages.yaml`; a workspace test
+asserts it, so change both together. Run `mise install` once, then
+`mix setup`.
+
+Dexter's index lives in the ignored `.dexter/`. `mix index` builds it (`dexter
+init .`) or refreshes it (`dexter reindex`, changed files only); `--force`
+rebuilds it. `mix def`, `mix refs` and `mix impact` refresh it before every
+query and print repository-relative paths. `mix impact MODULE [FUN]` selects:
+
+- test files that reference the target;
+- one hop away, test files that reference the module enclosing each library
+  or test-support reference (found by parsing that file);
+- `mix test --stale` for a package with library references, or the
+  definition, but no selected test file.
+
+References in `deps/`, `_build/`, root files and package files outside `lib/`
+and `test/` select nothing.
+
+## Validation tiers
+
+| Tier | When | Command |
+| --- | --- | --- |
+| 0 | While editing | `mix pkg NAME test FILES` or `mix impact MODULE [FUN] --run` |
+| 1 | Change ready in one package | `mix check.fast --package NAME` |
+| 2 | Before a commit | `mix check.affected`: the full gate for changed packages, the fast gate for dependents |
+| 3 | CI, repository-wide changes, explicit request | `mix check.all`, native lanes |
+
+The fast gate runs `compile --warnings-as-errors`, `format
+--check-formatted`, `credo --strict` and `test` with `MIX_ENV=test`, stopping
+at the first failure. Dialyzer runs in the full gate, or explicitly with `mix
+dialyzer.pkg NAME`.
+
 ## `packages.yaml`
 
 ```yaml
@@ -44,8 +85,8 @@ packages:
 | `packages.<name>` | One entry per directory under `packages/`. The key is the directory name. |
 | `app` | The OTP application and Hex package name. |
 | `depends_on` | The WoTEx packages this package requires directly. Dependents are derived; a change in a package selects it and every transitive dependent. The graph must be acyclic and every name must exist. |
-| `native` | `true` when the package builds or vendors native code. `mix wotex.native.sources` and `mix wotex.native.advisories` cover native packages only. |
-| `native_task` | The package's own build task, dispatched by `mix wotex.native.build --package NAME --workspace /abs/dir`. |
+| `native` | `true` when the package builds or vendors native code. `mix native.sources` and `mix native.advisories` cover native packages only. |
+| `native_task` | The package's own build task, dispatched by `mix native.build --package NAME --workspace /abs/dir`. |
 | `software_task` | The package's own software-profile task, if any (informational; run explicitly inside the package). |
 
 `mix wotex.new NAME` appends a manifest entry; the manifest is validated
@@ -56,13 +97,26 @@ whenever a task loads it.
 `mix wotex.affected` derives the changed paths from `git diff --name-only
 <base>...HEAD` plus the working tree, then applies these rules:
 
-- `packages/<name>/...` selects `<name>` and every transitive dependent;
+- `packages/<name>/...` selects `<name>` (marked `changed`) and every
+  transitive dependent (marked `dependent`);
 - `docs/packages/<name>/...` selects nothing (documentation only) unless
   `--docs` is given;
-- a path matching `select_all_on` selects every package.
+- a path matching `select_all_on` selects every package, each marked
+  `changed`.
 
 The result is always in topological order, so `mix wotex.check` runs a
-package after the packages it depends on.
+package after the packages it depends on. `--json` prints a flat list of
+names (CI reads it); `--detail` adds the marks. `mix check.fast`, `mix lint`
+and `mix format.all` default to the `changed` packages; `mix check.affected`
+and `mix test.affected` use both marks.
+
+## Documentation links
+
+`mix docs.check` reads every Markdown file Git tracks and checks each relative
+link (inline links, images and reference definitions, outside code) against
+the file system; anchors are stripped and not checked, and targets with a URL
+scheme are skipped. It reports `file:line: target` and also runs `mix
+wotex.catalogue --check`.
 
 ## Family catalogue
 
