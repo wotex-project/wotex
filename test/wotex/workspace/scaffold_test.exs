@@ -29,7 +29,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     Fixtures.write!(root, "tooling/packages.yaml", @manifest)
     Fixtures.write!(root, "LICENSE", File.read!(Path.join(Workspace.root(), "LICENSE")))
 
-    for file <- [".check.exs", ".credo.exs", ".doctor.exs", ".formatter.exs", "coveralls.json"] do
+    for file <- [".check.exs", ".doctor.exs", ".formatter.exs", "coveralls.json"] do
       source = Path.join([Workspace.root(), "packages/wotex-coap", file])
       Fixtures.write!(root, "packages/wotex-coap/#{file}", File.read!(source))
     end
@@ -43,7 +43,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
              Scaffold.create("wotex-demo", root: root, depends_on: ["wotex", "wotex-runtime"])
 
     for relative <- ~w(
-          packages/wotex-demo/mix.exs packages/wotex-demo/.check.exs packages/wotex-demo/.credo.exs
+          packages/wotex-demo/mix.exs packages/wotex-demo/.check.exs
           packages/wotex-demo/.doctor.exs packages/wotex-demo/.formatter.exs
           packages/wotex-demo/coveralls.json packages/wotex-demo/config/config.exs
           packages/wotex-demo/CLAUDE.md packages/wotex-demo/README.md packages/wotex-demo/CHANGELOG.md
@@ -58,10 +58,13 @@ defmodule Wotex.Workspace.ScaffoldTest do
       assert File.exists?(Path.join(root, relative)), "#{relative} not created"
     end
 
-    for file <- ~w(.credo.exs .doctor.exs .formatter.exs coveralls.json) do
+    for file <- ~w(.doctor.exs .formatter.exs coveralls.json) do
       assert File.read!(Path.join(root, "packages/wotex-demo/#{file}")) ==
                File.read!(Path.join(root, "packages/wotex-coap/#{file}"))
     end
+
+    # Credo configuration is inherited from the repository root.
+    refute File.exists?(Path.join(root, "packages/wotex-demo/.credo.exs"))
 
     # The standard full gate of the template package, without its native
     # tools, plus the boundary scan.

@@ -16,8 +16,8 @@ defmodule Wotex.Workspace.Scaffold do
     * the manifest entry in `tooling/packages.yaml`.
 
   Templates come from the repository itself: `LICENSE` from the root and
-  `.check.exs`, `.credo.exs`, `.doctor.exs`, `.formatter.exs` and
-  `coveralls.json` from `packages/wotex-coap`. The gate gains the
+  `.check.exs`, `.doctor.exs`, `.formatter.exs` and `coveralls.json` from
+  `packages/wotex-coap`. The package inherits the root `.credo.exs`. The gate gains the
   `{:boundary, ...}` tool for the scaffolded boundary scan. Generated Elixir
   files are formatted with the package formatter settings.
   """
@@ -142,7 +142,6 @@ defmodule Wotex.Workspace.Scaffold do
     sources = [
       license: "LICENSE",
       check: "packages/#{@template_package}/.check.exs",
-      credo: "packages/#{@template_package}/.credo.exs",
       doctor: "packages/#{@template_package}/.doctor.exs",
       formatter: "packages/#{@template_package}/.formatter.exs",
       coveralls: "packages/#{@template_package}/coveralls.json"
@@ -186,7 +185,6 @@ defmodule Wotex.Workspace.Scaffold do
     [
       {"#{package}/mix.exs", elixir(mix_exs(depends_on), bindings)},
       {"#{package}/.check.exs", templates.check},
-      {"#{package}/.credo.exs", templates.credo},
       {"#{package}/.doctor.exs", templates.doctor},
       {"#{package}/.formatter.exs", templates.formatter},
       {"#{package}/coveralls.json", templates.coveralls},
