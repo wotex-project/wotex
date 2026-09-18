@@ -617,12 +617,9 @@ defmodule WotexContinuum.CheckArchive do
     unless links == %{
              "Changelog" =>
                "https://github.com/wotex-project/wotex/blob/main/packages/wotex-continuum/CHANGELOG.md",
-             "Documentation" => "https://hexdocs.pm/wotex_continuum",
              "GitHub" => "https://github.com/wotex-project/wotex",
-             "Project" => "https://wotex.io",
              "Specifications" =>
-               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-continuum",
-             "W3C Web of Things" => "https://www.w3.org/WoT/"
+               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-continuum"
            } do
       violation("archive metadata does not declare the reviewed public links")
     end

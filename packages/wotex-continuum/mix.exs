@@ -59,7 +59,11 @@ defmodule WotexContinuum.MixProject do
         {:wotex, "~> 0.1"}
 
       "1" ->
-        {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
+        if Mix.env() in [:dev, :test, :docs] do
+          {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
+        else
+          raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
+        end
 
       _value ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
@@ -88,10 +92,7 @@ defmodule WotexContinuum.MixProject do
       links: %{
         "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-continuum/CHANGELOG.md",
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-continuum",
-        "Documentation" => "https://hexdocs.pm/wotex_continuum",
-        "Project" => "https://wotex.io",
-        "W3C Web of Things" => "https://www.w3.org/WoT/"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-continuum"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:

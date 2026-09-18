@@ -22,12 +22,9 @@ defmodule WotexContinuum.ReleaseContractTest do
     assert package[:links] == %{
              "Changelog" =>
                "https://github.com/wotex-project/wotex/blob/main/packages/wotex-continuum/CHANGELOG.md",
-             "Documentation" => "https://hexdocs.pm/wotex_continuum",
              "GitHub" => "https://github.com/wotex-project/wotex",
-             "Project" => "https://wotex.io",
              "Specifications" =>
-               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-continuum",
-             "W3C Web of Things" => "https://www.w3.org/WoT/"
+               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-continuum"
            }
 
     assert Enum.member?(package[:files], "lib")
@@ -39,5 +36,22 @@ defmodule WotexContinuum.ReleaseContractTest do
     refute Enum.any?(package[:files], &String.starts_with?(&1, "docs"))
     refute Enum.member?(package[:files], "specs")
     refute Enum.member?(package[:files], "provenance")
+  end
+
+  test "the workspace dependency switch is refused outside development, test and docs" do
+    project = Path.expand("../..", __DIR__)
+
+    for {env, message} <- [
+          {[{"WOTEX_PATH_DEPS", "1"}, {"MIX_ENV", "prod"}],
+           "WOTEX_PATH_DEPS is allowed only in development, test or docs"},
+          {[{"WOTEX_PATH_DEPS", "true"}, {"MIX_ENV", "test"}],
+           "WOTEX_PATH_DEPS must be unset or equal to 1"}
+        ] do
+      assert {output, status} =
+               System.cmd("mix", ["help"], cd: project, env: env, stderr_to_stdout: true)
+
+      assert status != 0
+      assert output =~ message
+    end
   end
 end
