@@ -15,6 +15,7 @@ Family-wide rules apply to every package under `packages/`:
 
 | Rule | Scope |
 | --- | --- |
+| `affected-validation.md` | `packages/**`, root `lib/**`, `test/**`, `tooling/**`, `mix.exs` — which tests and gates to run |
 | `wot-terminology.md` | `packages/**`, `docs/packages/**` |
 | `elixir-library.md` | `packages/**/lib/**/*.ex`, `packages/**/test/**/*.exs`, `packages/**/mix.exs` |
 | `release-management.md` | `packages/**/CHANGELOG.md`, `mix.exs`, `README.md`, `config/config.exs` |
@@ -42,11 +43,15 @@ than merged.
 Family-wide workflows, applied whenever their description matches a task in
 any package:
 
+- `monorepo-workflow` for every code change: locating code with Dexter
+  (`mix def`, `mix refs`, `mix impact`), running only the tests a change
+  reaches, and the tiered gates.
 - `research-register` for README, guide, and API documentation prose.
 - `unslop` as the final pass over persisted text.
 - `spec-delivery` when implementing an accepted specification or changing
   public behavior, values, errors, compatibility, or a standards claim.
-- `quality-gates` before a commit, handoff, or completion claim.
+- `quality-gates` before a commit, handoff, or completion claim (proportional
+  gates: `mix check.affected`, `mix workspace`).
 - `release-readiness` before an archive, release candidate, tag, or public
   compatibility claim.
 

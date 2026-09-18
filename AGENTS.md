@@ -1,20 +1,27 @@
-# Agent Instructions
+# Agent instructions
 
-Read and follow the root `CLAUDE.md` before any work, then the
-`packages/<name>/CLAUDE.md` of every package you touch. Apply matching rules
-under `.claude/rules/` and matching skills under `.claude/skills/`
-automatically.
+Read the root `CLAUDE.md` before any work, then the `packages/<name>/CLAUDE.md`
+of every package you touch. Apply matching rules under `.claude/rules/` and
+matching skills under `.claude/skills/`; the `monorepo-workflow` skill is the
+working loop for every code change.
 
-The checked-in contracts are authoritative. Keep machine-local memories,
-progress notes and consumer-specific details out of tracked files; the only
-place for them is the ignored `docs/tasks/local/<name>/`.
+Work from the repository root:
 
-Run the gate of the package you changed and of its dependents, from inside
-each package directory. Do not run every package's gate for a one-package
-change.
+- `mix setup` once.
+- Locate with `mix def Module [fun]` and `mix refs Module [fun]` (Dexter),
+  not repository-wide text search.
+- Test what the change reaches: `mix pkg <name> test <files>` or
+  `mix impact Module [fun] --run`.
+- `mix check.fast --package <name>` when a package is ready,
+  `mix check.affected` before a commit.
+- Never run every package's gate or Dialyzer across packages for a bounded
+  change, and never start native or interop lanes unless asked.
 
-Commit rules: GitOps/conventional prefix and a natural sentence; no
-specification or work-package identifiers; the contributor's configured
-identity; no agent, tool or bot as author, committer or co-author; no
+Keep machine-local notes and consumer-specific details out of tracked files;
+the only place for them is the ignored `docs/tasks/local/<name>/`.
+
+Commits use a GitOps/conventional prefix and a natural sentence, without
+specification or work-package identifiers, with the contributor's configured
+identity; no agent, tool or bot as author, committer or co-author and no
 "Generated with" attribution. Never add or change remotes, push, tag, publish
 or change visibility.

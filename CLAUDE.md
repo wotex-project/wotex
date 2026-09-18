@@ -1,26 +1,56 @@
-# WoTEx Repository Contract
+# WoTEx repository contract
 
-This repository holds the WoTEx package family. Each directory under
-`packages/` is an independent Mix project with its own contract in
-`packages/<name>/CLAUDE.md`; that file governs work inside the package. This
-file governs the repository as a whole and applies everywhere.
+This repository holds the WoTEx package family: 16 independent Mix projects
+under `packages/` and a root tooling project that drives them. Each
+`packages/<name>/CLAUDE.md` is that package's contract and governs work inside
+it. This file governs the repository as a whole and applies everywhere.
+
+## Working loop
+
+Every command runs from the repository root. Validation is proportional to the
+change; see `.claude/rules/affected-validation.md` and the `monorepo-workflow`
+skill.
+
+| Step | Command |
+| --- | --- |
+| Once | `mix setup` (dependencies for root and packages, Dexter index) |
+| Find a definition | `mix def Module [fun]` |
+| Find callers in every package | `mix refs Module [fun]` |
+| Tests that cover a change | `mix impact Module [fun]` (`--run` runs them) |
+| Run anything in a package | `mix pkg <name> <task> [args]`, e.g. `mix pkg wotex-coap test test/wotex/coap/block_test.exs` |
+| Package ready | `mix check.fast --package <name>` |
+| Before a commit | `mix check.affected`, plus `mix workspace` when root files, `tooling/` or docs changed |
+| Repository-wide change only | `mix check.all` |
+
+- Never run every package's gate, Dialyzer across packages, or the native,
+  software-profile, interop or containment lanes for a bounded change.
+- Run `mix dialyzer.pkg <name>` when a typespec, callback or inferred return
+  type changed; otherwise the pre-commit gate runs Dialyzer for changed
+  packages only.
+- Use `mix refs`/`mix impact` before changing a public function; other packages
+  may depend on it (`docs/architecture/package-graph.md`).
+- Inside a package the plain commands work too:
+  `WOTEX_PATH_DEPS=1 mix test`, `WOTEX_PATH_DEPS=1 mix check --no-retry`.
 
 ## Layout invariants
 
 - `packages/<name>/` is a normal Mix library or application. Never add an
   umbrella (`apps_path`), a root release, or a root project that depends on a
-  package.
+  package. The root project only runs package Mix processes.
 - Package directories keep their names; sibling path dependencies are
   `Path.expand("../<name>", __DIR__)` and resolve inside `packages/`.
-- `WOTEX_PATH_DEPS=1` is the only sibling switch, allowed in `dev`, `test`
-  and `docs`. Unset means Hex requirements. Never add another mechanism.
+- `WOTEX_PATH_DEPS=1` is the only sibling switch, allowed in `dev`, `test` and
+  `docs`. Unset means Hex requirements. Never add another mechanism.
+- `tooling/packages.yaml` is the single source of the package graph, the CI
+  toolchain lanes and each package's native tasks. `mise.toml` pins the local
+  toolchain and must match the current lane.
 - `docs/` is for people. Code never reads from `docs/`. Fixtures, schemas,
   vectors and machine-read provenance live in `packages/<name>/priv/` or
   `test/support/`.
 - `docs/packages/<name>/` mirrors the package it documents: `specs/` (with
   `catalogue.yaml` as the normative status owner), `plans/`, `decisions/`,
-  `provenance/`. Family-level documents live in `docs/architecture/`,
-  `docs/decisions/` and `docs/guides/`.
+  `provenance/`. `docs/catalogue.yaml` is generated (`mix wotex.catalogue`);
+  never edit it by hand.
 - Machine-local execution state (trackers, progress notes, patches, receipts
   in progress) lives only in the ignored `docs/tasks/local/<name>/`. It never
   enters Git, package archives or generated documentation.
@@ -40,29 +70,17 @@ file governs the repository as a whole and applies everywhere.
   repository are allowed; absolute machine paths are not.
 - A package uses only the public, documented API of a sibling package. Calling
   a sibling's `@moduledoc false` module or `@doc false` function is a boundary
-  violation even though it compiles.
-
-## Gates
-
-- Work inside `packages/<name>` and run that package's gate before a local
-  commit: `WOTEX_PATH_DEPS=1 mix check --no-retry`.
-- Then run the gate of every package that depends on the one you changed. A
-  change in `wotex` or `wotex-runtime` affects all dependents; a change in a
-  protocol adapter affects only that adapter.
-- Never run every package's gate for a one-package change. Native builds,
-  software profiles and container lanes run only when invoked explicitly with
-  a disposable absolute workspace.
-- Documentation-only changes need no build, but every relative link must
-  resolve.
+  violation even though it compiles; `mix wotex.boundary` rejects it.
 
 ## Specifications and evidence
 
 - Every standards claim pins the exact revision and executable evidence.
-- Completion plans are versioned contracts; a changed obligation needs a new
-  plan version. Execution status stays in `docs/tasks/local/`.
-- Recorded evidence names the source commit of this repository and the
-  package path. Evidence recorded before a move of the files it covers is
-  stale and must be re-run.
+- Specifications and completion plans are versioned contracts; a changed
+  obligation or public seam needs a new version, mirrored in the package
+  `catalogue.yaml`. Execution status stays in `docs/tasks/local/`.
+- Recorded evidence names the commit of this repository and the package path.
+  Evidence recorded before the files it covers moved or changed is stale and
+  must be re-run, never re-digested by hand.
 
 ## Release metadata
 
@@ -81,10 +99,10 @@ the identity already configured by the contributor. Never record an agent,
 tool or bot as author, committer or co-author, and never add "Generated with"
 or similar attribution.
 
-## External automation boundary
+## Automation boundary
 
-This repository exposes source, specifications, dependency contracts, vectors
-and deterministic verification commands. It does not own worker coordination,
-claims, leases, attempts, programme state, accepted outcomes or remote
-publication policy. Do not add a coordination daemon, graph database,
-shared-workspace application or tool-specific project metadata.
+Agent guidance is part of the repository: `CLAUDE.md` files, `AGENTS.md`,
+`.claude/` rules and skills, and the root `mix` commands. The repository does
+not own worker coordination, claims, leases, attempts, programme state,
+accepted outcomes or remote publication policy; do not add a coordination
+daemon, graph database, shared-workspace service or tracked execution state.

@@ -7,7 +7,7 @@ description: Validate the standalone wotex-binding-mqtt MQTT binding before hand
 
 Run from inside `packages/wotex-binding-mqtt/`.
 
-1. Run `WOTEX_PATH_DEPS=1 mix check`.
+1. Run `mix pkg wotex-binding-mqtt check --no-retry`.
 2. Confirm coverage is at least 90 percent and documentation has no warnings.
 3. Run `bin/check_boundary.exs`
    (`packages/wotex-binding-mqtt/bin/check_boundary.exs`) independently.
