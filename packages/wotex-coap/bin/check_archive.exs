@@ -4,6 +4,7 @@ defmodule Wotex.CoAP.Check.Archive do
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
   @packaged [
     "mix.exs",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md",
@@ -66,6 +67,7 @@ defmodule Wotex.CoAP.Check.Archive do
     extract!(Path.join(temporary, "contents.tar.gz"), package, [:compressed])
 
     Enum.each(@packaged, &packaged!(package, &1))
+    software_run!(package)
 
     development!(package)
     documentation!(package)
@@ -105,6 +107,12 @@ defmodule Wotex.CoAP.Check.Archive do
     unless File.exists?(Path.join(package, entry)) do
       violation("package contents are missing #{entry}")
     end
+  end
+
+  # The shipped `mix wotex.coap.software.run` executes and hashes these files
+  # from the package root, so an archive without one cannot run the lane.
+  defp software_run!(package) do
+    Enum.each(Wotex.CoAP.Software.Run.source_files(), &packaged!(package, &1))
   end
 
   defp development!(package) do

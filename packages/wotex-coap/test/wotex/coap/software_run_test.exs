@@ -232,6 +232,22 @@ defmodule Wotex.CoAP.SoftwareRunTest do
              "wotex.coap.software.run"
   end
 
+  test "WCO-N05 every file the software run executes or hashes ships in the package" do
+    root = Path.expand("../../..", __DIR__)
+    files = Mix.Project.config()[:package][:files]
+    sources = Run.source_files()
+
+    assert "test/software/independent_oscore_test.exs" in sources
+    assert "mix.lock" in sources
+
+    for source <- sources do
+      assert File.regular?(Path.join(root, source)), "#{source} is not a package file"
+
+      assert Enum.any?(files, &(source == &1 or String.starts_with?(source, &1 <> "/"))),
+             "package files omit #{source}"
+    end
+  end
+
   test "WCO-N01 software verification never builds a missing workspace", %{root: root} do
     missing = Path.join(root, "missing")
     assert {:error, :software_build_required} = Build.verify(missing)

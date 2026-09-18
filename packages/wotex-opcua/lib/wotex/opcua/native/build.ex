@@ -41,7 +41,10 @@ defmodule Wotex.OPCUA.Native.Build do
     value_codec.c value_codec.h value_check.c value_fault_check.c
     native_contract_check.c
     value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
-  @native_contract Path.expand("../../../../priv/fixtures/native-contract-v1.json", __DIR__)
+  @package_root Path.expand("../../../..", __DIR__)
+  @native_contract Path.join(@package_root, "priv/fixtures/native-contract-v1.json")
+  # Compiled by `Wotex.OPCUA.Native.Source` into `source_manifest_sha256`.
+  @source_manifest "priv/fixtures/native-sources-v1.json"
   @build_sources [
     Path.expand("../../../mix/tasks/wotex.opcua.native.build.ex", __DIR__)
     | Path.wildcard(Path.join(__DIR__, "*.ex"))
@@ -99,6 +102,18 @@ defmodule Wotex.OPCUA.Native.Build do
   end
 
   def arguments(_), do: {:error, :invalid_native_build_arguments}
+
+  # Every package file, relative to the package root, whose bytes the build
+  # identity covers. The package archive check requires exactly this set.
+  @doc false
+  @spec inputs() :: [String.t()]
+  def inputs do
+    native = Enum.map(@native_files, &Path.join("priv/native", &1))
+    build = Enum.map(@build_sources, &Path.relative_to(&1, @package_root))
+    contract = Path.relative_to(@native_contract, @package_root)
+
+    Enum.sort([contract, @source_manifest | native ++ build])
+  end
 
   defp identity(native, tools, recipe) do
     result =

@@ -2,47 +2,20 @@ defmodule Wotex.OPCUA.Check.Archive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
+  # The files the native build hashes are derived from the build itself; see
+  # native_build!/1.
   @packaged [
     "mix.exs",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md",
     "lib",
-    "priv/native/main.c",
-    "priv/native/CMakeLists.txt",
-    "priv/native/build_command.c",
-    "priv/native/custody.c",
-    "priv/native/custody_check.c",
-    "priv/native/native_contract_check.c",
-    "priv/native/patch-sdk.cmake",
-    "priv/native/sdk_revision_check.c",
-    "priv/native/security.c",
-    "priv/native/security.h",
-    "priv/native/security_check.c",
-    "priv/native/session_config.c",
-    "priv/native/session_config.h",
-    "priv/native/session_probe.c",
-    "priv/native/session_open.c",
-    "priv/native/session_open.h",
-    "priv/native/security.md",
-    "priv/native/runtime-guardian.md",
-    "priv/native/json_codec.c",
-    "priv/native/json_codec.h",
-    "priv/native/json-codec.md",
-    "priv/native/value_codec.c",
-    "priv/native/value_codec.h",
-    "priv/native/value-codec.md",
-    "priv/native/fixtures/value-v1.json",
-    "priv/native/vendor/yyjson/yyjson.c",
-    "priv/native/vendor/yyjson/yyjson.h",
-    "priv/native/vendor/yyjson/LICENSE",
     "priv/fixtures/contract-v1.json",
     "priv/fixtures/wotex-integration-v1.json",
     "priv/fixtures/native-json-v1.json",
-    "priv/fixtures/native-sources-v1.json",
     "priv/fixtures/native-ready-v1.json",
-    "priv/fixtures/custody-contract-v1.json",
-    "priv/fixtures/native-contract-v1.json"
+    "priv/fixtures/custody-contract-v1.json"
   ]
   @development ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|cover|coveralls\.json|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
@@ -90,6 +63,7 @@ defmodule Wotex.OPCUA.Check.Archive do
     extract!(Path.join(temporary, "contents.tar.gz"), package, [:compressed])
 
     Enum.each(@packaged, &packaged!(package, &1))
+    native_build!(package)
 
     development!(package)
     identities!(package)
@@ -126,6 +100,32 @@ defmodule Wotex.OPCUA.Check.Archive do
   defp packaged!(package, entry) do
     unless File.exists?(Path.join(package, entry)) do
       violation("package contents are missing #{entry}")
+    end
+  end
+
+  # The packaged `mix wotex.opcua.native.build` hashes these files into its
+  # build identity and fails when one is missing; a file under `priv/native/`
+  # outside that set could reach the build without being identified. The
+  # archive therefore carries exactly the hashed set.
+  defp native_build!(package) do
+    inputs = Wotex.OPCUA.Native.Build.inputs()
+    Enum.each(inputs, &packaged!(package, &1))
+
+    expected = Enum.filter(inputs, &String.starts_with?(&1, "priv/native/"))
+
+    shipped =
+      package
+      |> Path.join("priv/native/**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.filter(&File.regular?/1)
+      |> Enum.map(&Path.relative_to(&1, package))
+      |> Enum.sort()
+
+    unless shipped == expected do
+      violation(
+        "archive priv/native differs from the native build inputs; " <>
+          "unhashed: #{inspect(shipped -- expected)}, missing: #{inspect(expected -- shipped)}"
+      )
     end
   end
 

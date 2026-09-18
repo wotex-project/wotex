@@ -119,6 +119,13 @@ defmodule Wotex.Matter.SoftwareRunTest do
     end
   end
 
+  test "the package archive ships the lock the run copies into each lane's bootstrap" do
+    files = Mix.Project.config()[:package][:files]
+
+    assert "mix.lock" in files
+    assert File.regular?(Path.expand("../../../mix.lock", __DIR__))
+  end
+
   test "successful command exit cannot replace a matching passing lane receipt", context do
     build_receipt(context)
 

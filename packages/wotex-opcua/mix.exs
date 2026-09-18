@@ -7,7 +7,7 @@ defmodule WotexOPCUA.MixProject do
   def project do
     [
       app: :wotex_opcua,
-      name: "Wotex OPCUA",
+      name: "Wotex OPC UA",
       version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
@@ -103,7 +103,7 @@ defmodule WotexOPCUA.MixProject do
   end
 
   defp description do
-    "Consumer-neutral OPCUA protocol values, operations and Web of Things Form mapping"
+    "Consumer-neutral OPC UA protocol values, operations and Web of Things Form mapping"
   end
 
   defp package do

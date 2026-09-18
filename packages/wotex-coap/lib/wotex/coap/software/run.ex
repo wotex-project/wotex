@@ -75,6 +75,12 @@ defmodule Wotex.CoAP.Software.Run do
 
   def run(_, _, _), do: {:error, :invalid_software_run_workspace}
 
+  # The package archive check requires every one of these files, because a
+  # software run from an unpacked archive executes and hashes them.
+  @doc false
+  @spec source_files() :: [String.t()]
+  def source_files, do: Enum.map(@source_files, &Path.relative_to(&1, @project_root))
+
   defp validate_manifest(%{
          "schema" => "wotex.coap.native@1",
          "software_build" => %{

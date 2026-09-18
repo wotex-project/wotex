@@ -4,7 +4,10 @@ defmodule Wotex.Matter.Check.Archive do
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
   @packaged [
     "mix.exs",
+    # The shipped software run copies the lock into its dependency bootstrap.
+    "mix.lock",
     "config/config.exs",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md",

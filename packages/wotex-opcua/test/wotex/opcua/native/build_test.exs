@@ -46,6 +46,39 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert File.read!(Path.join(root, "preserve")) == "original"
   end
 
+  test "WOP-X02 the package ships exactly the files the build identity hashes" do
+    root = Path.expand("../../../..", __DIR__)
+    files = Mix.Project.config()[:package][:files]
+    inputs = Build.inputs()
+
+    for input <- ~w(priv/native/README.md priv/native/ipc.c priv/native/owner_check.c
+                    priv/fixtures/native-contract-v1.json lib/wotex/opcua/native/build.ex
+                    lib/mix/tasks/wotex.opcua.native.build.ex) do
+      assert input in inputs
+    end
+
+    manifest = Path.join(root, "priv/fixtures/native-sources-v1.json")
+    assert "priv/fixtures/native-sources-v1.json" in inputs
+    assert Workspace.digest(manifest) == {:ok, Source.manifest_digest()}
+
+    for input <- inputs do
+      assert File.regular?(Path.join(root, input)), "#{input} is not a package file"
+
+      assert Enum.any?(files, &(input == &1 or String.starts_with?(input, &1 <> "/"))),
+             "package files omit #{input}"
+    end
+
+    native =
+      root
+      |> Path.join("priv/native/**")
+      |> Path.wildcard(match_dot: true)
+      |> Enum.filter(&File.regular?/1)
+      |> Enum.map(&Path.relative_to(&1, root))
+      |> Enum.sort()
+
+    assert native == Enum.filter(inputs, &String.starts_with?(&1, "priv/native/"))
+  end
+
   @tag :native_build
   @tag timeout: 1_800_000
   test "WOP-X02 real pinned static build, native dependency test, verified reuse and tamper rejection" do
@@ -63,6 +96,12 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     receipt_path = Path.join(workspace, "wotex-native-build.json")
     receipt = Jason.decode!(File.read!(receipt_path))
     assert receipt["identity"]["source_manifest_sha256"] == Source.manifest_digest()
+
+    assert receipt["identity"]["native_sources"]
+           |> Map.keys()
+           |> Enum.map(&("priv/native/" <> &1))
+           |> Enum.sort() == Enum.filter(Build.inputs(), &String.starts_with?(&1, "priv/native/"))
+
     assert receipt["evidence"]["native_service_acceptance"] == false
     assert length(receipt["evidence"]["steps"]) == 11
     assert Enum.all?(receipt["evidence"]["steps"], &(&1["exit_status"] == 0))

@@ -4,6 +4,7 @@ defmodule Wotex.BLE.Check.Archive do
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
   @packaged [
     "mix.exs",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md",
