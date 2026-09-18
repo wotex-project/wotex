@@ -1,0 +1,76 @@
+{
+  "schema": "wotex.coap.native-worker-terminated-evidence@1",
+  "specification": "WCO.08@1.9.2",
+  "scope": "Production worker exit cancellation of an established observation when custody's termination signal arrives before the worker has observed owner EOF",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "43c59c98329f57558aa6114768b8c844664939f79b0ada5301e5dbba92923eac",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "10c05ac8089780c984b61c8f7cf8bedb45da2922092651b245746b6c2588d13c",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "test/native/oscore_worker_exchange_test.c": "c0644805189098d34ad28cf11bf85f23d9704c4e41cc0331875ae9e898275ba7",
+      "test/native/Dockerfile": "f2ebd96aeb29cc86a3dcb7d3e5e25574d4d064c6543e9352dede3628743b7f9d"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 10
+  },
+  "requirements": ["WCO-V15", "WCO-N02", "WCO-C09"],
+  "defect": {
+    "observed": "The Elixir 1.18.4 / OTP 27 Linux software lane on four CPUs failed one receiver-death cycle of the OSCORE lifecycle stress test: the libcoap peer recorded 152 created and 151 removed subscriptions and kept the observer for the two-second wait",
+    "cause": "Custody closes the worker's input on owner loss and sends SIGTERM 25 ms later. The worker kept the default SIGTERM action, so a worker the scheduler had not run within those 25 ms was terminated before it sent the exit cancellation"
+  },
+  "change": "The worker handles SIGTERM by ending its event loop with status 143, which custody maps to the same child status as termination by the signal. Exit cleanup still sends the one original-route/token cancellation and, once the signal has arrived, no longer waits for its response. Custody's SIGKILL at half its cleanup budget remains the bound.",
+  "assertions": [
+    "A worker that receives SIGTERM while its input is still open, with an established protected observation, sends exactly one token-matched cancellation to the same-stack peer",
+    "That worker exits with status 143 within 1,000 ms and the peer then has no observer to notify",
+    "Owner EOF without the signal still sends one cancellation and ends with custody's owner-loss status 127, and every other exchange case is unchanged"
+  ],
+  "negative_control": {
+    "worker_sha256": "6699ad337d8dbfc6cefa205ff55cd5fc532993b0e6283706bed09ef556fd57ec",
+    "platform": "Linux arm64, ASan/UBSan",
+    "result": "failed",
+    "observed": "The preceding worker ended on the signal without sending the cancellation: cancel_count was 0"
+  },
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "command": "mix native.test --package wotex-coap",
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "076a9e8b6d05f03549fab646ce4735a901787d01b925ccf2af1dae384f8fe036",
+      "peer_sha256": "5681052d9dd84d84019fe92e67f0e2038cb940694db2953da98d3829c7af6a39",
+      "static_library_sha256": "741ac3ea0d45aab7726e919dd580865ab98df141d631c57ffc3455a048aa07ef",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "image": "sha256:3f97e00cd42baad900cbc72dbeddac55709594ed2417041a9e1019414931a755",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "16aa90ea0dbbfa1db032efaaf1808c8c21ad23f126d877d6c7b3f818f2182d5a",
+      "peer_sha256": "063ccada8b034c6b09e1c1f266fd60776f8a919143929b1711d307b43e8d8e0a",
+      "static_library_sha256": "8a6908c4d734645bad60936eb5baecc889de79884ab8a38c28e14ad7958ca1aa",
+      "artifact_log_sha256": "89e16238927226f03acfd69237013d6f0d278ce0c71928c9e2a3521c5644b3c0",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Delivery of the sent cancellation when the peer or the network drops it; the observer then remains until the peer's own cleanup"
+  ]
+}

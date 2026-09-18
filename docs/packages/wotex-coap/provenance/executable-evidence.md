@@ -900,8 +900,20 @@ run now counts the live processes whose arguments name a workspace file after
 the suite, allowing the five-second cleanup, and fails the run when any remain
 or the process table cannot be read. All nine software-lane files, 57 tests,
 pass on macOS arm64 against a fresh software build with no process naming the
-workspace afterwards; these runs used the lane files directly, and a renewed
-terminal software-run receipt remains open.
+workspace afterwards; these runs used the lane files directly.
+
+The [native worker termination receipt](native-worker-terminated-v1.json) binds
+the next source cohort. On the Elixir 1.18.4 / OTP 27 Linux lane with four
+CPUs, one receiver-death cycle of the OSCORE lifecycle stress test left the
+peer's observer in place. Custody closes the worker's input on owner loss and
+sends SIGTERM 25 ms later, and the worker kept the default action for that
+signal, so a worker not yet scheduled was terminated before it sent its exit
+cancellation. The worker now ends its event loop on SIGTERM with status 143,
+still sends the one cancellation and skips only the wait for its response. A new
+case signals a worker that has an established protected observation while its
+input is still open; the peer receives exactly one cancellation and the worker
+exits with 143 on macOS and on Linux with ASan/UBSan and leak detection, while
+the preceding worker sends none.
 
 The independent upstream-stack OSCORE cohort in
 `test/software/independent_oscore_test.exs` drives the manifest-bound helper

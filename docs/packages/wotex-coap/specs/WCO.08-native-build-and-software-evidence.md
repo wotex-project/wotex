@@ -3,7 +3,7 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.1
+  version: 1.9.2
   owner: wotex-coap
   updated: 2026-09-19
 ---
@@ -267,6 +267,10 @@ counter with 8 random bytes. A response whose token has no request association
 cleanup services its best-effort cancellation for at most 20 ms,
 inside custody's 25 ms termination signal, so a peer's separate confirmable
 response is acknowledged rather than retransmitted toward a reused endpoint.
+The worker handles that SIGTERM by ending its event loop with status 143: a
+worker the scheduler has not run before the signal still sends the exit
+cancellation and then exits without servicing its response. Custody's SIGKILL
+at half its cleanup budget remains the bound.
 While an observation exists, including while its renewal or cancellation is
 pending, a message that fails decryption, lacks protection or fails OSCORE
 decoding is discarded and the observation continues, as RFC 8613 section 8.4.2

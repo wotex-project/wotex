@@ -19,6 +19,7 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +35,16 @@
 #define WCO_REVISION "7cf7465b784baded4de183290c547d582becfd28"
 #define WCO_RESPONSE_BODY_ID "response-body"
 #define WCO_REPORT_BODY_ID "report-body"
+#define WCO_TERMINATED 143
+
+/* Custody sends SIGTERM 25 ms after owner loss. A worker the scheduler has not
+ * run by then still sends its exit cancellation before it exits. */
+static volatile sig_atomic_t terminated = 0;
+
+static void on_terminate(int signal_number) {
+    (void)signal_number;
+    terminated = 1;
+}
 
 struct output_frame {
     size_t end;
@@ -1288,6 +1299,7 @@ static int run(struct worker *worker) {
     for (;;) {
         struct pollfd descriptors[2];
         int timeout = 50;
+        if (terminated) return WCO_TERMINATED;
         now = now_ms();
         if (now < 0 || (worker->output.count && now >= worker->output.frames[0].deadline))
             return 70;
@@ -1353,9 +1365,10 @@ static void cancel_observation_on_exit(struct worker *worker) {
     /* A peer may answer with an empty ACK and a separate CON response. Keep
      * servicing the exchange until that response is processed and ACKed, so
      * the peer does not retransmit it toward a later client that reuses this
-     * UDP endpoint. Custody signals the worker 25 ms after teardown begins. */
+     * UDP endpoint. Custody signals the worker 25 ms after teardown begins;
+     * after that signal the sent cancellation is left to the peer. */
     deadline = now_ms() + WCO_EXIT_CANCEL_MS;
-    while (wco_exchange_active(worker->exchange)) {
+    while (!terminated && wco_exchange_active(worker->exchange)) {
         int64_t now = now_ms();
         if (now < 0 || now >= deadline ||
             !wco_exchange_wait(worker->exchange, -1, -1, (int)(deadline - now)) ||
@@ -1365,7 +1378,12 @@ static void cancel_observation_on_exit(struct worker *worker) {
 
 int wco_worker_main(void) {
     struct worker worker;
+    struct sigaction action;
     int status = 70;
+    memset(&action, 0, sizeof(action));
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = on_terminate;
+    if (sigaction(SIGTERM, &action, NULL) < 0) return 70;
     memset(&worker, 0, sizeof(worker));
     wco_frame_init(&worker.frame);
     wco_body_init(&worker.body);

@@ -148,7 +148,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-coap/specs/WCO.07-wotex-integration.md"
       - id: "WCO.08"
-        version: "1.9.1"
+        version: "1.9.2"
         implementation_status: "partial"
         path: "docs/packages/wotex-coap/specs/WCO.08-native-build-and-software-evidence.md"
   wotex-conformance:
