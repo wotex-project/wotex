@@ -191,7 +191,7 @@ defmodule Wotex.Workspace.Impact do
            ModuleSpans.enclosing(source, entry.line, entry.file) do
       {:ok, module}
     else
-      _other -> :error
+      _ -> :error
     end
   end
 
@@ -215,7 +215,7 @@ defmodule Wotex.Workspace.Impact do
   defp packages(tests, library_entries, manifest) do
     by_package =
       tests
-      |> Enum.group_by(fn {package, _file, _via} -> package end, fn {_, file, via} ->
+      |> Enum.group_by(fn {package, _, _} -> package end, fn {_, file, via} ->
         {file, via}
       end)
       |> Map.new(fn {package, files} -> {package, merge_via(files)} end)

@@ -71,7 +71,7 @@ defmodule Wotex.Workspace.Links do
               problem = problem(root, file, target),
               do: %{file: file, line: line, target: target, problem: problem}
 
-        {:error, _reason} ->
+        {:error, _} ->
           []
       end
     end)
@@ -95,7 +95,7 @@ defmodule Wotex.Workspace.Links do
           |> Enum.with_index(1)
           |> Enum.flat_map(&line_machine_paths(file, &1))
 
-        {:error, _reason} ->
+        {:error, _} ->
           []
       end
     end)
@@ -156,9 +156,9 @@ defmodule Wotex.Workspace.Links do
   @spec published_package(Path.t()) :: String.t() | nil
   def published_package(file) do
     case Path.split(file) do
-      ["docs", "packages", package, _first | _rest] -> package
+      ["docs", "packages", package, _ | _] -> package
       ["packages", package, "README.md"] -> package
-      _other -> nil
+      _ -> nil
     end
   end
 
@@ -180,11 +180,11 @@ defmodule Wotex.Workspace.Links do
   defp line_links(line, number) do
     line = Regex.replace(~r/(`+).*?\1/, line, "")
 
-    inline = for [_match, target] <- Regex.scan(@inline, line), do: {number, target}
+    inline = for [_, target] <- Regex.scan(@inline, line), do: {number, target}
 
     definitions =
       case Regex.run(@definition, line) do
-        [_match, target] -> [{number, target}]
+        [_, target] -> [{number, target}]
         nil -> []
       end
 
@@ -219,13 +219,13 @@ defmodule Wotex.Workspace.Links do
     end
   end
 
-  defp relative(_file, ""), do: :skip
-  defp relative(_file, "/" <> path), do: {:relative, normalize(path)}
+  defp relative(_, ""), do: :skip
+  defp relative(_, "/" <> path), do: {:relative, normalize(path)}
   defp relative(file, path), do: {:relative, normalize(Path.join(Path.dirname(file), path))}
 
   # The path of a target: no `#anchor` or `?query`, percent-escapes decoded.
   defp path_part(target) do
-    [path | _fragment] = String.split(target, ["#", "?"], parts: 2)
+    [path | _] = String.split(target, ["#", "?"], parts: 2)
     decode(path)
   end
 

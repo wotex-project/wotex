@@ -110,7 +110,7 @@ defmodule Wotex.Workspace.ToolchainTest do
     ci = read(".github/workflows/ci.yml")
     manifest = Manifest.load!()
 
-    for {_name, lane} <- manifest.lanes, version <- [lane.elixir, lane.otp] do
+    for {_, lane} <- manifest.lanes, version <- [lane.elixir, lane.otp] do
       refute ci =~ version, "ci.yml repeats #{version} from tooling/packages.yaml"
     end
 

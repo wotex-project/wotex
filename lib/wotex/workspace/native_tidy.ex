@@ -58,7 +58,7 @@ defmodule Wotex.Workspace.NativeTidy do
   def run(units, opts) do
     results = Keyword.fetch!(opts, :results)
     material = Keyword.fetch!(opts, :material)
-    translate = Keyword.get(opts, :translate, fn _unit, text -> text end)
+    translate = Keyword.get(opts, :translate, fn _, text -> text end)
 
     keyed = Enum.map(units, &{&1, key(material, &1)})
     {reused, pending} = Enum.split_with(keyed, fn {unit, key} -> recorded?(results, unit, key) end)

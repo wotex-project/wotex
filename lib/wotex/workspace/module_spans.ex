@@ -49,7 +49,7 @@ defmodule Wotex.Workspace.ModuleSpans do
     end
   end
 
-  defp collect({kind, meta, [name, [{:do, body} | _rest]]}, parent, acc)
+  defp collect({kind, meta, [name, [{:do, body} | _]]}, parent, acc)
        when kind in [:defmodule, :defprotocol] do
     case module_name(name, parent) do
       nil ->
@@ -62,7 +62,7 @@ defmodule Wotex.Workspace.ModuleSpans do
     end
   end
 
-  defp collect({form, _meta, args}, parent, acc) when is_list(args) do
+  defp collect({form, _, args}, parent, acc) when is_list(args) do
     collect(args, parent, collect(form, parent, acc))
   end
 
@@ -71,14 +71,14 @@ defmodule Wotex.Workspace.ModuleSpans do
   defp collect(list, parent, acc) when is_list(list),
     do: Enum.reduce(list, acc, &collect(&1, parent, &2))
 
-  defp collect(_other, _parent, acc), do: acc
+  defp collect(_, _, acc), do: acc
 
-  defp module_name({:__aliases__, _meta, [{:__MODULE__, _, _} | rest]}, parent)
+  defp module_name({:__aliases__, _, [{:__MODULE__, _, _} | rest]}, parent)
        when is_binary(parent) do
     if Enum.all?(rest, &is_atom/1), do: join([parent | rest]), else: nil
   end
 
-  defp module_name({:__aliases__, _meta, parts}, parent) do
+  defp module_name({:__aliases__, _, parts}, parent) do
     if Enum.all?(parts, &is_atom/1) do
       name = join(parts)
 
@@ -90,10 +90,10 @@ defmodule Wotex.Workspace.ModuleSpans do
     end
   end
 
-  defp module_name(atom, _parent) when is_atom(atom) and atom not in [nil, true, false],
+  defp module_name(atom, _) when is_atom(atom) and atom not in [nil, true, false],
     do: String.replace_prefix(Atom.to_string(atom), "Elixir.", "")
 
-  defp module_name(_other, _parent), do: nil
+  defp module_name(_, _), do: nil
 
   defp join(parts), do: Enum.map_join(parts, ".", &to_string/1)
 
@@ -107,9 +107,9 @@ defmodule Wotex.Workspace.ModuleSpans do
   end
 
   defp max_line(ast, floor) do
-    {_ast, max} =
+    {_, max} =
       Macro.prewalk(ast, floor, fn
-        {_form, meta, _args} = node, max when is_list(meta) ->
+        {_, meta, _} = node, max when is_list(meta) ->
           {node, max(max, Keyword.get(meta, :line, max))}
 
         node, max ->

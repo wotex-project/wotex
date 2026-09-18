@@ -15,7 +15,7 @@
           {Credo.Check.Consistency.SpaceAroundOperators, []},
           {Credo.Check.Consistency.SpaceInParentheses, []},
           {Credo.Check.Consistency.TabsOrSpaces, []},
-          {Credo.Check.Consistency.UnusedVariableNames, false},
+          {Credo.Check.Consistency.UnusedVariableNames, [force: :anonymous]},
           {Credo.Check.Design.SkipTestWithoutComment, []},
           {Credo.Check.Design.TagFIXME, []},
           {Credo.Check.Design.TagTODO, []},

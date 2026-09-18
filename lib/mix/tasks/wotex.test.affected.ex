@@ -71,7 +71,7 @@ defmodule Mix.Tasks.Wotex.Test.Affected do
               do: {:ok, name, inside <> line},
               else: {:error, file}
 
-          {nil, _path} ->
+          {nil, _} ->
             {:error, file}
         end
       end)
@@ -110,7 +110,7 @@ defmodule Mix.Tasks.Wotex.Test.Affected do
 
   defp split_line(file) do
     case Regex.run(~r/^(.*?)((?::\d+)+)$/, file) do
-      [_file, path, line] -> {path, line}
+      [_, path, line] -> {path, line}
       nil -> {file, ""}
     end
   end

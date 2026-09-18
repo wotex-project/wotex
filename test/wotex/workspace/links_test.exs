@@ -149,8 +149,8 @@ defmodule Wotex.Workspace.LinksTest do
   end
 
   test "tracked_markdown/1 lists the Markdown files Git tracks", %{root: root} do
-    {_output, 0} = System.cmd("git", ["init", "-q"], cd: root, env: [])
-    {_output, 0} = System.cmd("git", ["add", "README.md", "docs/guide.md"], cd: root, env: [])
+    {_, 0} = System.cmd("git", ["init", "-q"], cd: root, env: [])
+    {_, 0} = System.cmd("git", ["add", "README.md", "docs/guide.md"], cd: root, env: [])
     assert Links.tracked_markdown(root) == {:ok, ["README.md", "docs/guide.md"]}
   end
 

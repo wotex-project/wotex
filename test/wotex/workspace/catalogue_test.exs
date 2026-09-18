@@ -113,10 +113,10 @@ defmodule Wotex.Workspace.CatalogueTest do
   test "reports specification paths that do not exist", %{root: root, manifest: manifest} do
     File.rm!(Path.join(root, "packages/alpha/priv/fixtures/contract-v1.json"))
 
-    assert {:ok, _entries, [{"alpha", message}]} = Catalogue.load(manifest, root)
+    assert {:ok, _, [{"alpha", message}]} = Catalogue.load(manifest, root)
     assert message =~ "ALP.02 path packages/alpha/priv/fixtures/contract-v1.json does not exist"
 
-    assert {:ok, 2, [_problem]} = Catalogue.write(manifest, root)
+    assert {:ok, 2, [_]} = Catalogue.write(manifest, root)
     assert {:error, message} = Catalogue.check(manifest, root)
     assert message =~ "does not exist"
   end
@@ -135,7 +135,7 @@ defmodule Wotex.Workspace.CatalogueTest do
 
     assert message =~ ~s(package "gamma" is neither "beta" nor "wotex_beta")
 
-    assert {:ok, _entry} =
+    assert {:ok, _} =
              Catalogue.parse("beta", "wotex_beta", %{"package" => "beta", "specifications" => []})
 
     assert {:error, message} =

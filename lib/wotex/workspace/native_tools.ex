@@ -130,17 +130,17 @@ defmodule Wotex.Workspace.NativeTools do
          {:ok, text, major} <- parse_version(output) do
       {:ok, %{tool: tool, path: path, version: text, major: major}}
     else
-      _other -> :error
+      _ -> :error
     end
   end
 
   defp version_output(path) do
     case System.cmd(path, ["--version"], env: [{"LC_ALL", "C"}], stderr_to_stdout: true) do
       {output, 0} -> {:ok, output}
-      _other -> :error
+      _ -> :error
     end
   rescue
-    _error in [ErlangError, ArgumentError] -> :error
+    _ in [ErlangError, ArgumentError] -> :error
   end
 
   defp missing_message(tool, []), do: "#{name(tool)} not found; #{install_hint(tool)}"

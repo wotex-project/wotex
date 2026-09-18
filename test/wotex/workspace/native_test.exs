@@ -172,7 +172,7 @@ defmodule Wotex.Workspace.NativeTest do
           query: fn
             %{name: "sdk"} -> {:ok, [%{id: "OSV-1", summary: "bad"}]}
             %{name: "y"} -> {:error, "boom"}
-            _pin -> {:ok, []}
+            _ -> {:ok, []}
           end
         )
 
@@ -180,7 +180,7 @@ defmodule Wotex.Workspace.NativeTest do
       assert %{result: {:ok, [%{id: "OSV-1"}]}} = Enum.find(results, &(&1.pin.name == "sdk"))
       assert %{result: {:error, "boom"}} = Enum.find(results, &(&1.pin.name == "y"))
 
-      clean = Native.advisories(reports, query: fn _pin -> {:ok, []} end)
+      clean = Native.advisories(reports, query: fn _ -> {:ok, []} end)
       assert Native.advisories_clean?(clean)
       assert Native.advisories(reports, offline: true) == []
     end

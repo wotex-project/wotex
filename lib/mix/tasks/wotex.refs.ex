@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Wotex.Refs do
   @doc "Parses `MODULE [FUN]`."
   @spec parse_args([String.t()]) :: {String.t(), String.t() | nil}
   def parse_args(args) do
-    {_opts, rest} = CLI.parse(args, [])
+    {_, rest} = CLI.parse(args, [])
     Def.target!(rest, "mix refs MODULE [FUN]")
   end
 end

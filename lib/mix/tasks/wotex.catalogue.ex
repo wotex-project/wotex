@@ -38,7 +38,7 @@ defmodule Mix.Tasks.Wotex.Catalogue do
 
         {:ok, count, problems} ->
           Mix.shell().info("rendered #{Catalogue.output()} with #{count} specifications")
-          Enum.each(problems, fn {_package, message} -> Mix.shell().error(message) end)
+          Enum.each(problems, fn {_, message} -> Mix.shell().error(message) end)
           CLI.fail("#{length(problems)} specification path(s) do not resolve")
 
         {:error, message} ->

@@ -58,7 +58,7 @@ defmodule Wotex.Workspace.Exec do
   end
 
   defp execute(path, args, cd, env, nil) do
-    {_stream, status} =
+    {_, status} =
       System.cmd(path, args, cd: cd, env: env, into: IO.stream(), stderr_to_stdout: true)
 
     status

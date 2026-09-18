@@ -15,7 +15,7 @@ defmodule Wotex.Workspace.StepsTest do
   defp recording_runner(failing) do
     test = self()
 
-    fn path, [task | _rest] = args, opts ->
+    fn path, [task | _] = args, opts ->
       send(test, {:ran, Path.basename(path), args, opts})
       if {Path.basename(path), task} in failing, do: 1, else: 0
     end
@@ -23,7 +23,7 @@ defmodule Wotex.Workspace.StepsTest do
 
   defp ran do
     receive do
-      {:ran, dir, args, _opts} -> [{dir, Enum.join(args, " ")} | ran()]
+      {:ran, dir, args, _} -> [{dir, Enum.join(args, " ")} | ran()]
     after
       0 -> []
     end
@@ -106,7 +106,7 @@ defmodule Wotex.Workspace.StepsTest do
 
     test = self()
 
-    runner = fn _path, args, opts ->
+    runner = fn _, args, opts ->
       send(test, {:ran_in, opts[:cd], args, opts[:env]})
       if args == ["credo", "--strict"] and opts[:cd] == "hosts/demo", do: 1, else: 0
     end
@@ -163,7 +163,7 @@ defmodule Wotex.Workspace.StepsTest do
     assert Enum.map(rows, & &1.result) == ["test failed (1)", "ok", "ok"]
     assert length(ran()) == 3
 
-    {_rows, failed?} = Steps.run(targets, halt: false, runner: recording_runner([]))
+    {_, failed?} = Steps.run(targets, halt: false, runner: recording_runner([]))
     refute failed?
   end
 
@@ -175,7 +175,7 @@ defmodule Wotex.Workspace.StepsTest do
     assert hd(targets).steps == Steps.full_gate()
     assert List.last(targets).steps == Steps.fast_gate()
 
-    {rows, _failed?} = Steps.run(targets, runner: recording_runner([]))
+    {rows, _} = Steps.run(targets, runner: recording_runner([]))
 
     assert Report.table(rows, [:package, :gate, :result]) == """
            package | gate | result

@@ -55,7 +55,7 @@ defmodule Wotex.Workspace.References do
   def split_package("packages/" <> rest) do
     case String.split(rest, "/", parts: 2) do
       [name, inside] when name != "" and inside != "" -> {name, inside}
-      _other -> {nil, "packages/" <> rest}
+      _ -> {nil, "packages/" <> rest}
     end
   end
 
@@ -75,7 +75,7 @@ defmodule Wotex.Workspace.References do
     groups =
       entries
       |> Enum.group_by(& &1.package)
-      |> Enum.sort_by(fn {package, _entries} ->
+      |> Enum.sort_by(fn {package, _} ->
         {if(package, do: Map.get(rank, package, last), else: last + 1), package || ""}
       end)
       |> Enum.map(fn {package, entries} -> {package, sort(entries)} end)

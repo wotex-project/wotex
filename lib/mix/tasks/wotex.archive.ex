@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Wotex.Archive do
     if names == [], do: Mix.shell().info("no affected packages")
 
     {rows, failed?} =
-      Enum.reduce_while(names, {[], false}, fn name, {rows, _failed?} ->
+      Enum.reduce_while(names, {[], false}, fn name, {rows, _} ->
         path = Manifest.absolute_path(name, manifest)
         {result, seconds} = CLI.timed(fn -> archive(path) end)
         rows = [%{package: name, result: result, seconds: seconds} | rows]

@@ -333,7 +333,7 @@ defmodule Wotex.Workspace.NativeCheck do
           :ok ->
             :linux_container
 
-          {:error, _reason} ->
+          {:error, _} ->
             {:unmet,
              [
                "#{linux} and no Docker daemon is running; run it on Linux, or start Docker " <>
@@ -349,20 +349,20 @@ defmodule Wotex.Workspace.NativeCheck do
   defp probe("linux") do
     case :os.type() do
       {:unix, :linux} -> :ok
-      {_family, os} -> {:error, "requires Linux (this host is #{os})"}
+      {_, os} -> {:error, "requires Linux (this host is #{os})"}
     end
   end
 
   defp probe("docker") do
     with docker when is_binary(docker) <- System.find_executable("docker"),
-         {_output, 0} <-
+         {_, 0} <-
            System.cmd(docker, ["info", "--format", "{{.ServerVersion}}"],
              env: tool_env(),
              stderr_to_stdout: true
            ) do
       :ok
     else
-      _other -> {:error, "requires a running Docker daemon"}
+      _ -> {:error, "requires a running Docker daemon"}
     end
   end
 
@@ -395,10 +395,10 @@ defmodule Wotex.Workspace.NativeCheck do
 
   # A suite with no test commands needs no prepared scratch directory in
   # `:test` mode.
-  defp run_prepared(context, suite, :test, _values, _opts) when suite.test == [],
+  defp run_prepared(context, suite, :test, _, _) when suite.test == [],
     do: run_tests(context, suite, nil, nil)
 
-  defp run_prepared(context, %NativeSuite{container: nil} = suite, mode, values, _opts) do
+  defp run_prepared(context, %NativeSuite{container: nil} = suite, mode, values, _) do
     with :ok <- prepare(context, suite, values) do
       case mode do
         :tidy -> compile_entries(context, suite, values)
@@ -475,7 +475,7 @@ defmodule Wotex.Workspace.NativeCheck do
         if cached?, do: NativeCache.prune(Path.dirname(workspace), Path.basename(workspace))
         {:ok, values}
 
-      _status when cached? and existed? ->
+      _ when cached? and existed? ->
         info("#{context.name}: the cached workspace #{workspace} did not verify; building it again")
         File.rm_rf!(workspace)
         File.rm_rf!(workspace <> ".lock")
@@ -491,7 +491,7 @@ defmodule Wotex.Workspace.NativeCheck do
     run_commands(context, suite.prepare, values, "prepare", nil)
   end
 
-  defp run_tests(context, suite, _values, _session) when suite.test == [] do
+  defp run_tests(context, suite, _, _) when suite.test == [] do
     if suite.build,
       do:
         info(
@@ -696,14 +696,14 @@ defmodule Wotex.Workspace.NativeCheck do
          true <- major >= NativeTools.minimum_major() do
       {:ok, %{version: version, major: major}}
     else
-      _other ->
+      _ ->
         {:error, "clang-tidy #{NativeTools.minimum_major()} or later not found in #{session.image}"}
     end
   end
 
   # Reporting and clang-tidy on this host
 
-  defp report_uncovered(_context, [], _failures), do: true
+  defp report_uncovered(_, [], _), do: true
 
   defp report_uncovered(context, uncovered, failures) do
     reason =
@@ -719,7 +719,7 @@ defmodule Wotex.Workspace.NativeCheck do
     false
   end
 
-  defp run_tidy(_context, _tool, _merged, _database_dir, []), do: true
+  defp run_tidy(_, _, _, _, []), do: true
 
   defp run_tidy(context, tool, merged, database_dir, units) do
     args =
@@ -798,7 +798,7 @@ defmodule Wotex.Workspace.NativeCheck do
            System.cmd(xcrun, ["--show-sdk-path"], env: tool_env(), stderr_to_stdout: true) do
       ["--extra-arg-before=-isysroot" <> String.trim(path)]
     else
-      _other -> []
+      _ -> []
     end
   end
 

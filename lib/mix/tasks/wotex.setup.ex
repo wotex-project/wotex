@@ -63,5 +63,5 @@ defmodule Mix.Tasks.Wotex.Setup do
 
   defp index_result(:ok), do: "ok"
   defp index_result(:skipped), do: "skipped"
-  defp index_result({:error, _message}), do: "failed"
+  defp index_result({:error, _}), do: "failed"
 end

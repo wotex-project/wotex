@@ -66,7 +66,7 @@ defmodule Mix.Tasks.Wotex.Check do
   @doc "The gate commands for one package, skipping the given `mix check` tools."
   @spec commands([String.t()]) :: [{String.t(), [String.t()]}]
   def commands(skip \\ []) do
-    Enum.map(Steps.full_gate(skip), fn {label, args, _opts} -> {label, args} end)
+    Enum.map(Steps.full_gate(skip), fn {label, args, _} -> {label, args} end)
   end
 
   @doc "Runs the gate commands of one package directory; `\"ok\"` on success."
@@ -77,7 +77,7 @@ defmodule Mix.Tasks.Wotex.Check do
 
   defp steps(env, skip) do
     runner_opts = if env, do: [mix_env: env], else: []
-    Enum.map(Steps.full_gate(skip), fn {label, args, _opts} -> {label, args, runner_opts} end)
+    Enum.map(Steps.full_gate(skip), fn {label, args, _} -> {label, args, runner_opts} end)
   end
 
   defp run_gates(names, manifest, env, skip) do
@@ -86,7 +86,7 @@ defmodule Mix.Tasks.Wotex.Check do
     |> Steps.run()
   end
 
-  defp report_lane(nil, _manifest), do: []
+  defp report_lane(nil, _), do: []
 
   defp report_lane(name, manifest) do
     case Manifest.lane(name, manifest) do

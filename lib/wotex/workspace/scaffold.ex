@@ -56,7 +56,7 @@ defmodule Wotex.Workspace.Scaffold do
       append_manifest(manifest_path, name, depends_on)
 
       case Manifest.load(manifest_path) do
-        {:ok, _manifest} -> {:ok, ["tooling/packages.yaml" | Enum.map(files, &elem(&1, 0))]}
+        {:ok, _} -> {:ok, ["tooling/packages.yaml" | Enum.map(files, &elem(&1, 0))]}
         {:error, message} -> {:error, "manifest invalid after append: #{message}"}
       end
     end
@@ -163,7 +163,7 @@ defmodule Wotex.Workspace.Scaffold do
     Enum.reduce_while(sources, {:ok, %{}}, fn {key, relative}, {:ok, acc} ->
       case File.read(Path.join(root, relative)) do
         {:ok, content} -> {:cont, {:ok, Map.put(acc, key, content)}}
-        {:error, _reason} -> {:halt, {:error, "template #{relative} is missing"}}
+        {:error, _} -> {:halt, {:error, "template #{relative} is missing"}}
       end
     end)
   end
@@ -572,7 +572,7 @@ defmodule Wotex.Workspace.Scaffold do
     Enum.map_join(lines, "\n", fn line ->
       case String.split(line, "@@#@@") do
         [command, comment] -> String.pad_trailing(command, width) <> "  # " <> comment
-        _other -> line
+        _ -> line
       end
     end)
   end

@@ -24,7 +24,7 @@ defmodule Wotex.Workspace do
   def relative(path, root \\ root()) do
     case Path.type(path) do
       :absolute -> Path.relative_to(path, root)
-      _other -> path
+      _ -> path
     end
   end
 end

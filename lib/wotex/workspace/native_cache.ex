@@ -87,7 +87,7 @@ defmodule Wotex.Workspace.NativeCache do
         |> Enum.reject(&(&1 in [keep, keep <> ".lock", "scratch"]))
         |> Enum.each(&File.rm_rf!(Path.join(suite_dir, &1)))
 
-      {:error, _reason} ->
+      {:error, _} ->
         :ok
     end
   end
@@ -119,7 +119,7 @@ defmodule Wotex.Workspace.NativeCache do
 
     case File.read_link(candidate) do
       {:ok, target} -> real_path(Path.expand(target, resolved))
-      {:error, _reason} -> candidate
+      {:error, _} -> candidate
     end
   end
 end

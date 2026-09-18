@@ -101,13 +101,13 @@ defmodule Wotex.Workspace.NativeSuite do
   or `nil`).
   """
   @spec parse_all(String.t(), term()) :: {:ok, [t()]} | {:error, String.t()}
-  def parse_all(_package, nil), do: {:ok, []}
+  def parse_all(_, nil), do: {:ok, []}
 
   def parse_all(package, suites) when is_list(suites) do
     with {:ok, parsed} <- collect(suites, &parse(package, &1)), do: check_unique(package, parsed)
   end
 
-  def parse_all(package, _other), do: {:error, "package #{package}: native_check must be a list"}
+  def parse_all(package, _), do: {:error, "package #{package}: native_check must be a list"}
 
   @doc "Parses one suite mapping."
   @spec parse(String.t(), term()) :: {:ok, t()} | {:error, String.t()}
@@ -139,7 +139,7 @@ defmodule Wotex.Workspace.NativeSuite do
     end
   end
 
-  def parse(package, _entry),
+  def parse(package, _),
     do: {:error, "package #{package}: every native_check entry needs a suite name"}
 
   @doc """
@@ -180,9 +180,9 @@ defmodule Wotex.Workspace.NativeSuite do
     end
   end
 
-  defp build(_where, nil), do: {:ok, nil}
-  defp build(_where, task) when is_binary(task) and task != "", do: {:ok, task}
-  defp build(where, _task), do: {:error, "#{where}: build must be a task name"}
+  defp build(_, nil), do: {:ok, nil}
+  defp build(_, task) when is_binary(task) and task != "", do: {:ok, task}
+  defp build(where, _), do: {:error, "#{where}: build must be a task name"}
 
   defp strings(where, key, list) when is_list(list) do
     if Enum.all?(list, &(is_binary(&1) and &1 != "")),
@@ -190,12 +190,12 @@ defmodule Wotex.Workspace.NativeSuite do
       else: {:error, "#{where}: #{key} must be a list of strings"}
   end
 
-  defp strings(where, key, _other), do: {:error, "#{where}: #{key} must be a list of strings"}
+  defp strings(where, key, _), do: {:error, "#{where}: #{key} must be a list of strings"}
 
   defp commands(where, key, list) when is_list(list),
     do: collect(list, &command(where, key, &1))
 
-  defp commands(where, key, _other), do: {:error, "#{where}: #{key} must be a list of commands"}
+  defp commands(where, key, _), do: {:error, "#{where}: #{key} must be a list of commands"}
 
   defp command(where, key, run) when is_list(run), do: command(where, key, %{"run" => run})
 
@@ -212,7 +212,7 @@ defmodule Wotex.Workspace.NativeSuite do
     end
   end
 
-  defp command(where, key, _other), do: {:error, "#{where}: #{key} entries must be commands"}
+  defp command(where, key, _), do: {:error, "#{where}: #{key} entries must be commands"}
 
   defp env(where, key, map) when is_map(map) do
     if Enum.all?(map, fn {name, value} -> is_binary(name) and is_binary(value) end),
@@ -220,17 +220,17 @@ defmodule Wotex.Workspace.NativeSuite do
       else: {:error, "#{where}: #{key} env must map names to strings"}
   end
 
-  defp env(where, key, _other), do: {:error, "#{where}: #{key} env must be a mapping"}
+  defp env(where, key, _), do: {:error, "#{where}: #{key} env must be a mapping"}
 
-  defp optional_string(_where, _key, _field, nil), do: {:ok, nil}
+  defp optional_string(_, _, _, nil), do: {:ok, nil}
 
-  defp optional_string(_where, _key, _field, value) when is_binary(value) and value != "",
+  defp optional_string(_, _, _, value) when is_binary(value) and value != "",
     do: {:ok, value}
 
-  defp optional_string(where, key, field, _value),
+  defp optional_string(where, key, field, _),
     do: {:error, "#{where}: #{key} #{field} must be a string"}
 
-  defp container(_where, _requires, nil), do: {:ok, nil}
+  defp container(_, _, nil), do: {:ok, nil}
 
   defp container(where, requires, %{"dockerfile" => dockerfile} = entry) do
     where = "#{where}, container"
@@ -245,7 +245,7 @@ defmodule Wotex.Workspace.NativeSuite do
     end
   end
 
-  defp container(where, _requires, _other),
+  defp container(where, _, _),
     do: {:error, "#{where}: container must be a mapping with a dockerfile"}
 
   defp require_docker(where, requires) do
@@ -259,13 +259,13 @@ defmodule Wotex.Workspace.NativeSuite do
       [host, "/" <> _ = container] when host != "" ->
         {:ok, {host, String.trim_trailing(container, "/")}}
 
-      _other ->
+      _ ->
         {:error, "#{where}: volume #{inspect(text)} must be HOST:/absolute/container/path"}
     end
   end
 
   defp compile(where, list) when is_list(list), do: collect(list, &compile_rule(where, &1))
-  defp compile(where, _other), do: {:error, "#{where}: compile must be a list"}
+  defp compile(where, _), do: {:error, "#{where}: compile must be a list"}
 
   defp compile_rule(where, %{"files" => files, "flags" => flags} = entry) do
     with :ok <- known_keys("#{where}, compile", entry, ~w(files flags)),
@@ -278,7 +278,7 @@ defmodule Wotex.Workspace.NativeSuite do
     end
   end
 
-  defp compile_rule(where, _entry), do: {:error, "#{where}: compile entries need files and flags"}
+  defp compile_rule(where, _), do: {:error, "#{where}: compile entries need files and flags"}
 
   # Maps `fun` over `list` and stops at the first error.
   defp collect(list, fun) do
@@ -333,7 +333,7 @@ defmodule Wotex.Workspace.NativeSuite do
       [] ->
         {:ok, suites}
 
-      [duplicate | _rest] ->
+      [duplicate | _] ->
         {:error, "package #{package}: duplicate native_check suite #{duplicate}"}
     end
   end

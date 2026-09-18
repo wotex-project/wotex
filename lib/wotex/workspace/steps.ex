@@ -88,7 +88,7 @@ defmodule Wotex.Workspace.Steps do
     end
   end
 
-  def host_steps(_package, _steps), do: []
+  def host_steps(_, _), do: []
 
   @doc """
   The native step of the fast gate: `mix native.lint --package NAME` in the
@@ -102,7 +102,7 @@ defmodule Wotex.Workspace.Steps do
   end
 
   defp native_steps(%Manifest.Package{native: true, name: name}), do: [native_step(name)]
-  defp native_steps(_package), do: []
+  defp native_steps(_), do: []
 
   @doc "A target for package `name`; `fields` are merged into its row."
   @spec target(String.t(), Manifest.t(), [step()], map()) :: target()
@@ -137,7 +137,7 @@ defmodule Wotex.Workspace.Steps do
   """
   @spec run_steps(Path.t(), [step()], runner()) :: String.t()
   def run_steps(path, steps, runner \\ &Runner.run/3) do
-    Enum.reduce_while(steps, "ok", fn {label, args, runner_opts}, _acc ->
+    Enum.reduce_while(steps, "ok", fn {label, args, runner_opts}, _ ->
       case runner.(path, args, runner_opts) do
         0 -> {:cont, "ok"}
         status -> {:halt, "#{label} failed (#{status})"}

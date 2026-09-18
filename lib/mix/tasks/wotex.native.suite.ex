@@ -118,7 +118,7 @@ defmodule Mix.Tasks.Wotex.Native.Suite do
     end
   end
 
-  defp write_result(nil, _root, _paths, _outcome), do: :ok
+  defp write_result(nil, _, _, _), do: :ok
 
   defp write_result(file, root, paths, outcome) do
     root = NativeCache.real_path(root)

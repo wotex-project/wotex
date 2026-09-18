@@ -60,7 +60,7 @@ defmodule Mix.Tasks.Wotex.Impact do
     {module, fun, opts}
   end
 
-  defp run_plan(%{packages: []}, _manifest), do: Mix.shell().info("nothing to run")
+  defp run_plan(%{packages: []}, _), do: Mix.shell().info("nothing to run")
 
   defp run_plan(plan, manifest) do
     {{rows, failed?}, seconds} =

@@ -40,14 +40,14 @@ defmodule Wotex.Workspace.ChangedLines do
     |> Enum.reduce({nil, %{}}, &parse_line/2)
     |> elem(1)
     |> Map.new(fn {path, ranges} -> {path, Enum.reverse(ranges)} end)
-    |> Map.reject(fn {_path, ranges} -> ranges == [] end)
+    |> Map.reject(fn {_, ranges} -> ranges == [] end)
   end
 
-  defp parse_line("+++ /dev/null", {_file, acc}), do: {nil, acc}
+  defp parse_line("+++ /dev/null", {_, acc}), do: {nil, acc}
 
-  defp parse_line("+++ b/" <> path, {_file, acc}), do: {path, Map.put_new(acc, path, [])}
+  defp parse_line("+++ b/" <> path, {_, acc}), do: {path, Map.put_new(acc, path, [])}
 
-  defp parse_line("@@ " <> _rest = line, {file, acc}) when is_binary(file) do
+  defp parse_line("@@ " <> _ = line, {file, acc}) when is_binary(file) do
     case Regex.run(@hunk, line) do
       [_, start, count] ->
         {file, add_range(acc, file, String.to_integer(start), String.to_integer(count))}
@@ -60,9 +60,9 @@ defmodule Wotex.Workspace.ChangedLines do
     end
   end
 
-  defp parse_line(_line, state), do: state
+  defp parse_line(_, state), do: state
 
-  defp add_range(acc, _file, _start, 0), do: acc
+  defp add_range(acc, _, _, 0), do: acc
 
   defp add_range(acc, file, start, count),
     do: Map.update!(acc, file, &[{start, start + count - 1} | &1])
@@ -75,7 +75,7 @@ defmodule Wotex.Workspace.ChangedLines do
   @spec ranges([Path.t()], String.t() | nil, Path.t()) :: {:ok, changes()} | {:error, String.t()}
   def ranges(paths, base \\ nil, root \\ Workspace.root())
 
-  def ranges([], _base, _root), do: {:ok, %{}}
+  def ranges([], _, _), do: {:ok, %{}}
 
   def ranges(paths, base, root) do
     with {:ok, base} <- resolve_base(base, root),
@@ -93,7 +93,7 @@ defmodule Wotex.Workspace.ChangedLines do
       changes =
         diff
         |> parse()
-        |> Map.filter(fn {path, _ranges} -> MapSet.member?(wanted, path) end)
+        |> Map.filter(fn {path, _} -> MapSet.member?(wanted, path) end)
         |> Map.merge(new)
 
       {:ok, changes}
@@ -108,7 +108,7 @@ defmodule Wotex.Workspace.ChangedLines do
     do: Enum.map(ranges, fn {first, last} -> "--lines=#{first}:#{last}" end)
 
   defp resolve_base(nil, root), do: Affected.default_base(root)
-  defp resolve_base(base, _root), do: {:ok, base}
+  defp resolve_base(base, _), do: {:ok, base}
 
   @doc """
   The commit a change is compared with: the merge base of `base` and `HEAD`,
@@ -122,21 +122,21 @@ defmodule Wotex.Workspace.ChangedLines do
     case git(["log", "--diff-filter=A", "--format=%H", "HEAD", "--", ".clang-format"], root) do
       {:ok, ""} -> "HEAD"
       {:ok, output} -> newer(merge_base, hd(String.split(output, "\n", trim: true)), root)
-      {:error, _message} -> merge_base
+      {:error, _} -> merge_base
     end
   end
 
   defp newer(merge_base, introduced, root) do
     case git(["merge-base", "--is-ancestor", merge_base, introduced], root) do
-      {:ok, _output} -> introduced
-      {:error, _message} -> merge_base
+      {:ok, _} -> introduced
+      {:error, _} -> merge_base
     end
   end
 
   defp merge_base(base, root) do
     case git(["merge-base", base, "HEAD"], root) do
       {:ok, output} -> String.trim(output)
-      {:error, _message} -> base
+      {:error, _} -> base
     end
   end
 

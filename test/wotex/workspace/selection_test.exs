@@ -75,7 +75,7 @@ defmodule Wotex.Workspace.SelectionTest do
 
   defp git!(root, args) do
     identity = ["-c", "user.name=test", "-c", "user.email=test@example.invalid"]
-    {_output, 0} = System.cmd("git", identity ++ args, cd: root, env: [], stderr_to_stdout: true)
+    {_, 0} = System.cmd("git", identity ++ args, cd: root, env: [], stderr_to_stdout: true)
     :ok
   end
 end

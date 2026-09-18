@@ -62,7 +62,7 @@ defmodule Mix.Tasks.Wotex.Affected do
 
       {false, true} ->
         width =
-          Enum.reduce(marked, 0, fn {name, _mark}, width -> max(width, String.length(name)) end)
+          Enum.reduce(marked, 0, fn {name, _}, width -> max(width, String.length(name)) end)
 
         Enum.map_join(marked, "\n", fn {name, mark} ->
           "#{String.pad_trailing(name, width)}  #{mark}"

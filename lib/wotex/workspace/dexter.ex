@@ -81,7 +81,7 @@ defmodule Wotex.Workspace.Dexter do
 
     if indexed?(root) do
       case run(["reindex"], opts) do
-        {:ok, _output} -> :ok
+        {:ok, _} -> :ok
         {:error, {status, output}} -> {:error, failure(["reindex"], status, output)}
         {:error, message} -> {:error, message}
       end
@@ -115,8 +115,8 @@ defmodule Wotex.Workspace.Dexter do
              into: IO.stream(),
              stderr_to_stdout: true
            ) do
-        {_stream, 0} -> :ok
-        {_stream, status} -> {:error, "dexter #{Enum.join(args, " ")} exited with #{status}"}
+        {_, 0} -> :ok
+        {_, status} -> {:error, "dexter #{Enum.join(args, " ")} exited with #{status}"}
       end
     end
   end
@@ -132,7 +132,7 @@ defmodule Wotex.Workspace.Dexter do
     |> String.split("\n", trim: true)
     |> Enum.flat_map(fn line ->
       case Regex.run(~r/^(.+):(\d+)$/, String.trim(line)) do
-        [_line, file, number] -> [%{file: relative(file, roots), line: String.to_integer(number)}]
+        [_, file, number] -> [%{file: relative(file, roots), line: String.to_integer(number)}]
         nil -> []
       end
     end)
@@ -149,7 +149,7 @@ defmodule Wotex.Workspace.Dexter do
       # `references` exits 1 when nothing refers to the target, `lookup
       # --strict` when there is no exact match.
       {:error, {1, ""}} -> {:ok, ""}
-      {:error, {1, "No references found" <> _rest}} -> {:ok, ""}
+      {:error, {1, "No references found" <> _}} -> {:ok, ""}
       {:error, {status, output}} -> {:error, failure(args, status, output)}
       {:error, message} -> {:error, message}
     end
@@ -183,7 +183,7 @@ defmodule Wotex.Workspace.Dexter do
 
     case System.cmd("pwd", ["-P"], cd: root, env: @env) do
       {canonical, 0} -> Enum.uniq([root, String.trim(canonical)])
-      _other -> [root]
+      _ -> [root]
     end
   end
 

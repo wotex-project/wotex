@@ -49,5 +49,5 @@ defmodule Mix.Tasks.Wotex.Format.All do
   def step(true), do: {"format", ["format", "--check-formatted"], []}
   def step(false), do: {"format", ["format"], []}
 
-  defp root_step({label, args, _opts}), do: {label, args, [path_deps: false]}
+  defp root_step({label, args, _}), do: {label, args, [path_deps: false]}
 end

@@ -24,7 +24,7 @@ defmodule Wotex.Workspace.CompileDb do
       {:ok, Enum.filter(entries, &valid?/1)}
     else
       {:error, reason} when is_atom(reason) -> {:error, "#{path}: #{:file.format_error(reason)}"}
-      _other -> {:error, "#{path}: not a compilation database"}
+      _ -> {:error, "#{path}: not a compilation database"}
     end
   end
 
@@ -67,7 +67,7 @@ defmodule Wotex.Workspace.CompileDb do
        when is_binary(file) and is_binary(directory),
        do: is_binary(entry["command"]) or is_list(entry["arguments"])
 
-  defp valid?(_entry), do: false
+  defp valid?(_), do: false
 
   defp real_file(%{"file" => file, "directory" => directory}),
     do: NativeCache.real_path(Path.expand(file, directory))

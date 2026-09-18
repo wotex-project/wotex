@@ -71,7 +71,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     native = ~r/\n    # First-party C.*\{:native_test,[^}]*\},/s
     assert String.replace(gate, boundary, "") == Regex.replace(native, template, "")
     refute gate =~ "native_"
-    {config, _binding} = Code.eval_string(gate)
+    {config, _} = Code.eval_string(gate)
     tools = Keyword.fetch!(config, :tools)
     assert tools[:boundary] == [command: "elixir bin/check_boundary.exs"]
     assert tools[:ex_unit] == false
@@ -87,7 +87,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert Manifest.topological_order(manifest) == ~w(wotex wotex-runtime wotex-demo)
 
     mix_exs = File.read!(Path.join(root, "packages/wotex-demo/mix.exs"))
-    assert {:ok, _ast} = Code.string_to_quoted(mix_exs)
+    assert {:ok, _} = Code.string_to_quoted(mix_exs)
     assert mix_exs =~ "defmodule Wotex.Demo.MixProject"
     assert mix_exs =~ "app: :wotex_demo"
     assert mix_exs =~ ~s|sibling(:wotex, "wotex")|
@@ -127,7 +127,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
           ~w(mix.exs config/config.exs lib/wotex/demo.ex test/wotex/demo_test.exs bin/check_archive.exs
              bin/check_application_free.exs bin/check_boundary.exs) do
       source = File.read!(Path.join([root, "packages/wotex-demo", script]))
-      assert {:ok, _ast} = Code.string_to_quoted(source)
+      assert {:ok, _} = Code.string_to_quoted(source)
       assert IO.iodata_to_binary([Code.format_string!(source, line_length: 100), "\n"]) == source
     end
 
@@ -170,9 +170,9 @@ defmodule Wotex.Workspace.ScaffoldTest do
   end
 
   test "omits the sibling switch from a package without siblings", %{root: root} do
-    assert {:ok, _paths} = Scaffold.create("wotex-solo", root: root, depends_on: [])
+    assert {:ok, _} = Scaffold.create("wotex-solo", root: root, depends_on: [])
     mix_exs = File.read!(Path.join(root, "packages/wotex-solo/mix.exs"))
-    assert {:ok, _ast} = Code.string_to_quoted(mix_exs)
+    assert {:ok, _} = Code.string_to_quoted(mix_exs)
     refute mix_exs =~ "sibling("
     claude = File.read!(Path.join(root, "packages/wotex-solo/CLAUDE.md"))
     assert claude =~ "It depends on no sibling package."
@@ -180,7 +180,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
 
   test "every package README and a new package state one toolchain policy from the lanes",
        %{root: root} do
-    assert {:ok, _paths} = Scaffold.create("wotex-demo", root: root, depends_on: ["wotex"])
+    assert {:ok, _} = Scaffold.create("wotex-demo", root: root, depends_on: ["wotex"])
 
     policy = fn readme, title ->
       flat = Enum.join(String.split(readme), " ")

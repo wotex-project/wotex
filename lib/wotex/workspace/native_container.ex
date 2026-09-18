@@ -121,7 +121,7 @@ defmodule Wotex.Workspace.NativeContainer do
 
         :ok
 
-      _other ->
+      _ ->
         :ok
     end
   end
@@ -210,7 +210,7 @@ defmodule Wotex.Workspace.NativeContainer do
              env: env,
              stderr_to_stdout: true
            ) do
-        {_output, 0} ->
+        {_, 0} ->
           {:cont, :ok}
 
         {output, status} ->
@@ -233,10 +233,10 @@ defmodule Wotex.Workspace.NativeContainer do
     ["--suite", suite.name, "--tidy", "--result", result] ++ excluded
   end
 
-  defp linux_args(_context, suite, :test, _covered, _result, _root),
+  defp linux_args(_, suite, :test, _, _, _),
     do: ["--suite", suite.name, "--test"]
 
-  defp linux_outcome(context, suite, :test, status, _result, _root) do
+  defp linux_outcome(context, suite, :test, status, _, _) do
     if status == 0 do
       :ok
     else
@@ -255,7 +255,7 @@ defmodule Wotex.Workspace.NativeContainer do
       paths = MapSet.new(analysed, &NativeCache.real_path(Path.join(root, &1)))
       {:analysed, paths, if(outcome == "ok" and status == 0, do: :ok, else: :error)}
     else
-      _other ->
+      _ ->
         Mix.shell().error(
           "#{context.name} suite #{suite.name}: the Linux container exited with status #{status} before clang-tidy ran"
         )
@@ -306,7 +306,7 @@ defmodule Wotex.Workspace.NativeContainer do
         Enum.flat_map(mounts, &mount_args/1) ++ [image, "sleep", Integer.to_string(@lifetime_s)]
 
     case docker(argv) do
-      {_id, 0} -> {:ok, %{name: name, image: image, volumes: volumes}}
+      {_, 0} -> {:ok, %{name: name, image: image, volumes: volumes}}
       {output, status} -> {:error, "docker run #{image} failed (#{status}): #{String.trim(output)}"}
     end
   end
@@ -345,11 +345,11 @@ defmodule Wotex.Workspace.NativeContainer do
   @spec to_host([{Path.t(), Path.t()}], Path.t()) :: Path.t() | nil
   def to_host(volumes, path) do
     matching =
-      Enum.filter(volumes, fn {_host, ctr} ->
+      Enum.filter(volumes, fn {_, ctr} ->
         path == ctr or String.starts_with?(path, ctr <> "/")
       end)
 
-    case Enum.max_by(matching, fn {_host, ctr} -> byte_size(ctr) end, fn -> nil end) do
+    case Enum.max_by(matching, fn {_, ctr} -> byte_size(ctr) end, fn -> nil end) do
       nil -> nil
       {host, ctr} -> host <> binary_part(path, byte_size(ctr), byte_size(path) - byte_size(ctr))
     end
@@ -388,7 +388,7 @@ defmodule Wotex.Workspace.NativeContainer do
         relative_ctr = if directory, do: Path.relative_to(ctr, directory, force: true)
         [{ctr, relative_host} | if(relative_ctr, do: [{relative_ctr, relative_host}], else: [])]
       end)
-      |> Enum.sort_by(fn {from, _to} -> -byte_size(from) end)
+      |> Enum.sort_by(fn {from, _} -> -byte_size(from) end)
 
     Enum.reduce(replacements, text, fn {from, to}, acc ->
       Regex.replace(~r/(^|[\s'"(\[])#{Regex.escape(from)}\//m, acc, "\\1#{to}/")
@@ -415,7 +415,7 @@ defmodule Wotex.Workspace.NativeContainer do
 
         receive do
           :done -> :ok
-          {:DOWN, ^monitor, :process, ^owner, _reason} -> docker(["rm", "--force", name])
+          {:DOWN, ^monitor, :process, ^owner, _} -> docker(["rm", "--force", name])
         end
       end)
 

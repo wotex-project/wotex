@@ -70,7 +70,7 @@ defmodule Wotex.Workspace.NativeFormat do
   """
   @spec hunks([{:eq | :del | :ins, [String.t()]}]) :: [{pos_integer(), [String.t()]}]
   def hunks(script) do
-    {_line, hunks, current} =
+    {_, hunks, current} =
       Enum.reduce(script, {1, [], nil}, fn
         {:eq, lines}, {line, hunks, current} ->
           {line + length(lines), flush(hunks, current), nil}
@@ -91,7 +91,7 @@ defmodule Wotex.Workspace.NativeFormat do
   end
 
   defp add(nil, line, sign, lines), do: {line, Enum.map(lines, &(sign <> &1))}
-  defp add({start, acc}, _line, sign, lines), do: {start, acc ++ Enum.map(lines, &(sign <> &1))}
+  defp add({start, acc}, _, sign, lines), do: {start, acc ++ Enum.map(lines, &(sign <> &1))}
 
   defp flush(hunks, nil), do: hunks
   defp flush(hunks, hunk), do: [hunk | hunks]

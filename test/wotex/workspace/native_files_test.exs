@@ -99,7 +99,7 @@ defmodule Wotex.Workspace.NativeFilesTest do
   end
 
   defp git!(root, args) do
-    {_output, 0} =
+    {_, 0} =
       System.cmd("git", args, cd: root, env: [{"GIT_CONFIG_NOSYSTEM", "1"}], stderr_to_stdout: true)
   end
 end

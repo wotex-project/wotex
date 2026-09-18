@@ -47,9 +47,9 @@ defmodule Mix.Tasks.Wotex.Workspace do
     opts = parse_args(args)
     manifest = Manifest.load!()
 
-    {root_rows, _failed?} =
+    {root_rows, _} =
       @root_steps
-      |> Enum.map(fn {label, _args, _opts} = step ->
+      |> Enum.map(fn {label, _, _} = step ->
         %{step: "root #{label}", path: Workspace.root(), steps: [step]}
       end)
       |> Steps.run(halt: false)

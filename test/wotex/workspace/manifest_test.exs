@@ -204,8 +204,8 @@ defmodule Wotex.Workspace.ManifestTest do
                   wotex-lab wotex-matter wotex-modbus wotex-opcua wotex-thread)
 
       assert Manifest.transitive_dependents("wotex-coap", manifest) == []
-      assert {:ok, _lane} = Manifest.lane("minimum", manifest)
-      assert {:ok, _lane} = Manifest.lane("current", manifest)
+      assert {:ok, _} = Manifest.lane("minimum", manifest)
+      assert {:ok, _} = Manifest.lane("current", manifest)
     end
 
     test "declares wotex-lab's reference hosts, each a Mix project in the package" do

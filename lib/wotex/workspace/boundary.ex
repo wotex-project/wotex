@@ -94,17 +94,17 @@ defmodule Wotex.Workspace.Boundary do
     module = String.replace_prefix(Path.basename(beam, ".beam"), "Elixir.", "")
 
     case Code.fetch_docs(beam) do
-      {:docs_v1, _anno, _language, _format, module_doc, metadata, docs} ->
+      {:docs_v1, _, _, _, module_doc, metadata, docs} ->
         hidden? = module_doc == :hidden or Map.get(metadata, :hidden) == true
 
         hidden_functions =
-          for {{kind, name, arity}, _anno, _signature, :hidden, _meta} <- docs,
+          for {{kind, name, arity}, _, _, :hidden, _} <- docs,
               kind in [:function, :macro],
               do: {name, arity}
 
         {module, hidden?, hidden_functions}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {module, false, []}
     end
   end
@@ -148,7 +148,7 @@ defmodule Wotex.Workspace.Boundary do
   def analyze(source, file, %Index{} = index) do
     case Code.string_to_quoted(source, file: file, columns: false) do
       {:ok, ast} ->
-        {_aliases, {_file, _index, findings}} = walk(ast, %{}, {file, index, []})
+        {_, {_, _, findings}} = walk(ast, %{}, {file, index, []})
         Enum.uniq(Enum.reverse(findings))
 
       {:error, {meta, message, token}} ->
@@ -183,7 +183,7 @@ defmodule Wotex.Workspace.Boundary do
   # and only flows between the statements of one block. The accumulator is
   # `{file, index, findings}`.
 
-  defp walk({:__block__, _meta, statements}, aliases, acc) do
+  defp walk({:__block__, _, statements}, aliases, acc) do
     Enum.reduce(statements, {aliases, acc}, fn statement, {aliases, acc} ->
       walk(statement, aliases, acc)
     end)
@@ -198,7 +198,7 @@ defmodule Wotex.Workspace.Boundary do
 
   # `left |> Mod.fun(args)` is analyzed as `Mod.fun(left, args)` so that the
   # arity matches the function actually called.
-  defp walk({:|>, _meta, [left, right]}, aliases, acc) do
+  defp walk({:|>, _, [left, right]}, aliases, acc) do
     piped =
       try do
         Macro.pipe(left, right, 0)
@@ -212,7 +212,7 @@ defmodule Wotex.Workspace.Boundary do
     end
   end
 
-  defp walk({{:., _dot, [target, fun]}, meta, args}, aliases, acc)
+  defp walk({{:., _, [target, fun]}, meta, args}, aliases, acc)
        when is_atom(fun) and is_list(args) do
     acc = check_call(target, fun, length(args), meta, aliases, acc)
     acc = if aliases_node?(target), do: acc, else: descend(target, aliases, acc)
@@ -223,7 +223,7 @@ defmodule Wotex.Workspace.Boundary do
     {aliases, check_module(parts, meta, aliases, acc)}
   end
 
-  defp walk({form, _meta, args}, aliases, acc) when is_list(args) do
+  defp walk({form, _, args}, aliases, acc) when is_list(args) do
     acc = descend(form, aliases, acc)
     {aliases, descend(args, aliases, acc)}
   end
@@ -236,10 +236,10 @@ defmodule Wotex.Workspace.Boundary do
     {aliases, Enum.reduce(list, acc, &descend(&1, aliases, &2))}
   end
 
-  defp walk(_literal, aliases, acc), do: {aliases, acc}
+  defp walk(_, aliases, acc), do: {aliases, acc}
 
   defp descend(node, aliases, acc) do
-    {_aliases, acc} = walk(node, aliases, acc)
+    {_, acc} = walk(node, aliases, acc)
     acc
   end
 
@@ -257,7 +257,7 @@ defmodule Wotex.Workspace.Boundary do
 
   # alias A.B.{C, D.E}
   defp register_alias(
-         [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children} | _rest],
+         [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children} | _],
          meta,
          aliases,
          acc
@@ -272,22 +272,22 @@ defmodule Wotex.Workspace.Boundary do
             resolved = resolved_base ++ parts
             {Map.put(aliases, List.last(parts), resolved), check_resolved(resolved, meta, acc)}
 
-          _other, state ->
+          _, state ->
             state
         end)
     end
   end
 
-  defp register_alias(_args, _meta, aliases, acc), do: {aliases, acc}
+  defp register_alias(_, _, aliases, acc), do: {aliases, acc}
 
   defp alias_name([opts | _], parts) when is_list(opts) do
     case Keyword.get(opts, :as) do
       {:__aliases__, _, [name]} when is_atom(name) -> name
-      _other -> List.last(parts)
+      _ -> List.last(parts)
     end
   end
 
-  defp alias_name(_rest, parts), do: List.last(parts)
+  defp alias_name(_, parts), do: List.last(parts)
 
   defp check_module(parts, meta, aliases, acc) do
     case resolve_parts(parts, aliases) do
@@ -343,21 +343,21 @@ defmodule Wotex.Workspace.Boundary do
     end
   end
 
-  defp check_call(_target, _fun, _arity, _meta, _aliases, acc), do: acc
+  defp check_call(_, _, _, _, _, acc), do: acc
 
   defp resolve_parts([first | rest], aliases) when is_atom(first) do
     Map.get(aliases, first, [first]) ++ rest
   end
 
-  defp resolve_parts(_parts, _aliases), do: nil
+  defp resolve_parts(_, _), do: nil
 
   defp aliases_node?({:__aliases__, _, _}), do: true
-  defp aliases_node?(_other), do: false
+  defp aliases_node?(_), do: false
 
   defp finding(file, meta, message), do: %{file: file, line: line(meta), message: message}
 
   defp line(meta) when is_list(meta), do: Keyword.get(meta, :line, 0)
-  defp line(_meta), do: 0
+  defp line(_), do: 0
 
   defp format_parse_error({prefix, suffix}, token), do: "#{prefix}#{token}#{suffix}"
   defp format_parse_error(message, token), do: "#{message}#{token}"

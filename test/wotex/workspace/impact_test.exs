@@ -151,12 +151,12 @@ defmodule Wotex.Workspace.ImpactTest do
     end
 
     test "a failing reference source fails the plan", context do
-      opts = Keyword.put(context.opts, :references, fn _module, _fun -> {:error, "boom"} end)
+      opts = Keyword.put(context.opts, :references, fn _, _ -> {:error, "boom"} end)
       assert Impact.plan("Core.Value", "new", context.manifest, opts) == {:error, "boom"}
 
       failing_hop = fn
         "Core.Value", "new" -> {:ok, [%{file: "packages/core/lib/core/value.ex", line: 7}]}
-        _module, _fun -> {:error, "hop failed"}
+        _, _ -> {:error, "hop failed"}
       end
 
       opts = Keyword.put(context.opts, :references, failing_hop)

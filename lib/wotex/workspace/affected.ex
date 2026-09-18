@@ -31,7 +31,7 @@ defmodule Wotex.Workspace.Affected do
   def affected(%Manifest{} = manifest, changed_paths, opts \\ []) do
     manifest
     |> classify(changed_paths, opts)
-    |> Enum.map(fn {name, _mark} -> name end)
+    |> Enum.map(fn {name, _} -> name end)
   end
 
   @doc """
@@ -119,13 +119,13 @@ defmodule Wotex.Workspace.Affected do
     output
     |> String.split("\n", trim: true)
     |> Enum.flat_map(fn
-      <<_status::binary-size(2), " ", rest::binary>> ->
+      <<_::binary-size(2), " ", rest::binary>> ->
         case String.split(rest, " -> ", parts: 2) do
-          [_old, new] -> [unquote_path(new)]
+          [_, new] -> [unquote_path(new)]
           [path] -> [unquote_path(path)]
         end
 
-      _other ->
+      _ ->
         []
     end)
   end
@@ -153,14 +153,14 @@ defmodule Wotex.Workspace.Affected do
     end
   end
 
-  defp package_of("packages/" <> rest, _docs?), do: first_segment(rest)
+  defp package_of("packages/" <> rest, _), do: first_segment(rest)
   defp package_of("docs/packages/" <> rest, true), do: first_segment(rest)
-  defp package_of(_path, _docs?), do: :none
+  defp package_of(_, _), do: :none
 
   defp first_segment(rest) do
     case String.split(rest, "/", parts: 2) do
-      [name, _more] when name != "" -> {:ok, name}
-      _other -> :none
+      [name, _] when name != "" -> {:ok, name}
+      _ -> :none
     end
   end
 
@@ -205,7 +205,7 @@ defmodule Wotex.Workspace.Affected do
   end
 
   defp resolve_base(nil, root), do: default_base(root)
-  defp resolve_base(base, _root), do: {:ok, base}
+  defp resolve_base(base, _), do: {:ok, base}
 
   defp ref?(ref, root) do
     match?({:ok, _}, git(["rev-parse", "--verify", "--quiet", "#{ref}^{commit}"], root))
@@ -215,7 +215,7 @@ defmodule Wotex.Workspace.Affected do
     case git(["rev-list", "--max-parents=0", "HEAD"], root) do
       {:ok, output} ->
         case String.split(output, "\n", trim: true) do
-          [first | _rest] -> {:ok, first}
+          [first | _] -> {:ok, first}
           [] -> {:error, "the repository has no commits"}
         end
 

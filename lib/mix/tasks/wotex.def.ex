@@ -54,7 +54,7 @@ defmodule Mix.Tasks.Wotex.Def do
     case rest do
       [module] -> split_target(module)
       [module, fun] -> {module, strip_arity(fun)}
-      _other -> Mix.raise("usage: " <> usage)
+      _ -> Mix.raise("usage: " <> usage)
     end
   end
 
@@ -69,7 +69,7 @@ defmodule Mix.Tasks.Wotex.Def do
       {[_ | _] = parts, [fun]} when fun != "" ->
         if fun =~ ~r/^[a-z_]/, do: {Enum.join(parts, "."), fun}, else: {target, nil}
 
-      _other ->
+      _ ->
         {target, nil}
     end
   end

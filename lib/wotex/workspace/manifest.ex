@@ -79,7 +79,7 @@ defmodule Wotex.Workspace.Manifest do
   def load(path \\ default_path()) do
     case YamlElixir.read_from_file(path) do
       {:ok, map} when is_map(map) -> from_map(map, path)
-      {:ok, _other} -> {:error, "#{path}: the manifest must be a mapping"}
+      {:ok, _} -> {:error, "#{path}: the manifest must be a mapping"}
       {:error, error} -> {:error, "#{path}: #{Exception.message(error)}"}
     end
   end
@@ -147,7 +147,7 @@ defmodule Wotex.Workspace.Manifest do
   @doc "Repository-relative path of a package directory: `packages/<name>`."
   @spec path(String.t(), t()) :: Path.t()
   def path(name, %__MODULE__{} = manifest \\ load!()) do
-    _package = fetch!(name, manifest)
+    _ = fetch!(name, manifest)
     "packages/#{name}"
   end
 
@@ -160,7 +160,7 @@ defmodule Wotex.Workspace.Manifest do
   @doc "Packages that depend directly on `name`, sorted by name."
   @spec dependents(String.t(), t()) :: [String.t()]
   def dependents(name, %__MODULE__{} = manifest \\ load!()) do
-    _package = fetch!(name, manifest)
+    _ = fetch!(name, manifest)
 
     manifest.packages
     |> Map.values()
@@ -175,7 +175,7 @@ defmodule Wotex.Workspace.Manifest do
   """
   @spec transitive_dependents(String.t(), t()) :: [String.t()]
   def transitive_dependents(name, %__MODULE__{} = manifest \\ load!()) do
-    _package = fetch!(name, manifest)
+    _ = fetch!(name, manifest)
     closure = close_over(MapSet.new([name]), &dependents(&1, manifest))
     Enum.filter(manifest.order, &(&1 != name and MapSet.member?(closure, &1)))
   end
@@ -186,7 +186,7 @@ defmodule Wotex.Workspace.Manifest do
   """
   @spec transitive_dependencies(String.t(), t()) :: [String.t()]
   def transitive_dependencies(name, %__MODULE__{} = manifest \\ load!()) do
-    _package = fetch!(name, manifest)
+    _ = fetch!(name, manifest)
     closure = close_over(MapSet.new([name]), &fetch!(&1, manifest).depends_on)
     Enum.filter(manifest.order, &(&1 != name and MapSet.member?(closure, &1)))
   end
@@ -230,7 +230,7 @@ defmodule Wotex.Workspace.Manifest do
     end)
   end
 
-  defp parse_packages(_other), do: {:error, "packages must be a non-empty mapping"}
+  defp parse_packages(_), do: {:error, "packages must be a non-empty mapping"}
 
   defp parse_package(name, entry) when is_binary(name) and is_map(entry) do
     with :ok <- check_name(name),
@@ -256,7 +256,7 @@ defmodule Wotex.Workspace.Manifest do
     end
   end
 
-  defp parse_package(name, _entry), do: {:error, "package #{inspect(name)} must be a mapping"}
+  defp parse_package(name, _), do: {:error, "package #{inspect(name)} must be a mapping"}
 
   defp check_name(name) do
     if Regex.match?(@name_pattern, name),
@@ -264,13 +264,13 @@ defmodule Wotex.Workspace.Manifest do
       else: {:error, "package name #{inspect(name)} is not lowercase-with-dashes"}
   end
 
-  defp parse_app(_name, app) when is_binary(app) and app != "" do
+  defp parse_app(_, app) when is_binary(app) and app != "" do
     if Regex.match?(~r/^[a-z][a-z0-9_]*$/, app),
       do: {:ok, app},
       else: {:error, "app #{inspect(app)} is not a valid OTP application name"}
   end
 
-  defp parse_app(name, _app), do: {:error, "package #{name}: app is required"}
+  defp parse_app(name, _), do: {:error, "package #{name}: app is required"}
 
   defp parse_depends_on(name, list) when is_list(list) do
     if Enum.all?(list, &is_binary/1) do
@@ -280,14 +280,14 @@ defmodule Wotex.Workspace.Manifest do
     end
   end
 
-  defp parse_depends_on(name, _other), do: {:error, "package #{name}: depends_on must be a list"}
+  defp parse_depends_on(name, _), do: {:error, "package #{name}: depends_on must be a list"}
 
-  defp parse_boolean(_name, _key, value) when is_boolean(value), do: {:ok, value}
-  defp parse_boolean(name, key, _value), do: {:error, "package #{name}: #{key} must be a boolean"}
+  defp parse_boolean(_, _, value) when is_boolean(value), do: {:ok, value}
+  defp parse_boolean(name, key, _), do: {:error, "package #{name}: #{key} must be a boolean"}
 
-  defp parse_task(_name, _key, nil), do: {:ok, nil}
-  defp parse_task(_name, _key, task) when is_binary(task) and task != "", do: {:ok, task}
-  defp parse_task(name, key, _task), do: {:error, "package #{name}: #{key} must be a task name"}
+  defp parse_task(_, _, nil), do: {:ok, nil}
+  defp parse_task(_, _, task) when is_binary(task) and task != "", do: {:ok, task}
+  defp parse_task(name, key, _), do: {:error, "package #{name}: #{key} must be a task name"}
 
   defp parse_hosts(name, hosts) when is_list(hosts) do
     parsed = Enum.map(hosts, &parse_host/1)
@@ -306,7 +306,7 @@ defmodule Wotex.Workspace.Manifest do
     end
   end
 
-  defp parse_hosts(name, _other), do: {:error, "package #{name}: hosts must be a list"}
+  defp parse_hosts(name, _), do: {:error, "package #{name}: hosts must be a list"}
 
   defp parse_host(%{"path" => path} = entry) when is_binary(path) do
     env = Map.get(entry, "env", %{})
@@ -317,11 +317,11 @@ defmodule Wotex.Workspace.Manifest do
          true <- Enum.all?(env, &env_pair?/1) do
       {:ok, %Host{path: path, env: Enum.sort(env)}}
     else
-      _invalid -> :error
+      _ -> :error
     end
   end
 
-  defp parse_host(_entry), do: :error
+  defp parse_host(_), do: :error
 
   defp relative_inside?(path) do
     segments = Path.split(path)
@@ -344,18 +344,18 @@ defmodule Wotex.Workspace.Manifest do
             {:halt, {:error, "lane #{inspect(name)}: skip must list tool names"}}
         end
 
-      {name, _other}, _acc ->
+      {name, _}, _ ->
         {:halt, {:error, "lane #{inspect(name)} must declare elixir and otp"}}
     end)
   end
 
-  defp parse_lanes(_other), do: {:error, "lanes must be a mapping"}
+  defp parse_lanes(_), do: {:error, "lanes must be a mapping"}
 
   defp parse_skip(skip) when is_list(skip) do
     if Enum.all?(skip, &is_binary/1), do: {:ok, skip}, else: :error
   end
 
-  defp parse_skip(_other), do: :error
+  defp parse_skip(_), do: :error
 
   defp parse_globs(globs) when is_list(globs) do
     if Enum.all?(globs, &is_binary/1),
@@ -363,7 +363,7 @@ defmodule Wotex.Workspace.Manifest do
       else: {:error, "select_all_on must list glob patterns"}
   end
 
-  defp parse_globs(_other), do: {:error, "select_all_on must be a list"}
+  defp parse_globs(_), do: {:error, "select_all_on must be a list"}
 
   defp check_dependencies(packages) do
     missing =
@@ -374,7 +374,7 @@ defmodule Wotex.Workspace.Manifest do
 
     case missing do
       [] -> :ok
-      [first | _rest] -> {:error, first}
+      [first | _] -> {:error, first}
     end
   end
 
@@ -388,7 +388,7 @@ defmodule Wotex.Workspace.Manifest do
 
     {order, remaining} = kahn(Enum.sort(ready), in_degree, dependents, [])
 
-    case Enum.filter(remaining, fn {_name, degree} -> degree > 0 end) do
+    case Enum.filter(remaining, fn {_, degree} -> degree > 0 end) do
       [] ->
         {:ok, Enum.reverse(order)}
 
@@ -406,7 +406,7 @@ defmodule Wotex.Workspace.Manifest do
     end)
   end
 
-  defp kahn([], in_degree, _dependents, order), do: {order, in_degree}
+  defp kahn([], in_degree, _, order), do: {order, in_degree}
 
   defp kahn([name | ready], in_degree, dependents, order) do
     {in_degree, released} =

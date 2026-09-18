@@ -66,7 +66,7 @@ defmodule Wotex.Workspace.NativeCheckTest do
       "docker" -> {:error, "requires a running Docker daemon"}
     end
 
-    linux = fn _requirement -> :ok end
+    linux = fn _ -> :ok end
     linux_only = %NativeSuite{name: "sdk", requires: ["linux"]}
 
     assert NativeCheck.placement(%NativeSuite{name: "x"}, no_docker) == :host

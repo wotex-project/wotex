@@ -107,7 +107,7 @@ defmodule Wotex.Workspace.Native do
   @doc "Queries OSV over HTTPS."
   @spec osv_query(pin()) :: {:ok, [vulnerability()]} | {:error, String.t()}
   def osv_query(pin) do
-    with {:ok, _apps} <- Application.ensure_all_started([:inets, :ssl]) do
+    with {:ok, _} <- Application.ensure_all_started([:inets, :ssl]) do
       request =
         {String.to_charlist(@osv_url), [], ~c"application/json", JSON.encode!(osv_body(pin))}
 
@@ -124,10 +124,10 @@ defmodule Wotex.Workspace.Native do
       ]
 
       case :httpc.request(:post, request, http_options, body_format: :binary) do
-        {:ok, {{_version, 200, _reason}, _headers, body}} ->
+        {:ok, {{_, 200, _}, _, body}} ->
           decode_vulnerabilities(body)
 
-        {:ok, {{_version, status, _reason}, _headers, body}} ->
+        {:ok, {{_, status, _}, _, body}} ->
           {:error, "OSV returned #{status}: #{body}"}
 
         {:error, reason} ->
@@ -214,11 +214,11 @@ defmodule Wotex.Workspace.Native do
       case read_json(absolute) do
         {:ok, %{"schema" => schema}} when is_binary(schema) ->
           case Regex.run(~r/^wotex\.[a-z0-9_]+\.([a-z0-9_-]+)-source@1$/, schema) do
-            [_schema, upstream] -> [{relative, absolute, {:source_json, upstream}}]
+            [_, upstream] -> [{relative, absolute, {:source_json, upstream}}]
             nil -> []
           end
 
-        _other ->
+        _ ->
           []
       end
     end)
@@ -234,7 +234,7 @@ defmodule Wotex.Workspace.Native do
            {:native_sources, Path.join(package_path, "priv/native")}}
         ]
 
-      _other ->
+      _ ->
         []
     end
   end
@@ -246,7 +246,7 @@ defmodule Wotex.Workspace.Native do
       {:ok, %{"archives" => archives}} when is_list(archives) ->
         [{Path.relative_to(absolute, root), absolute, :archives}]
 
-      _other ->
+      _ ->
         []
     end
   end
@@ -263,7 +263,7 @@ defmodule Wotex.Workspace.Native do
     {[pin], digests}
   end
 
-  defp extract({:native_sources, base}, json, relative, _absolute) do
+  defp extract({:native_sources, base}, json, relative, _) do
     sources = List.wrap(json["sources"]) ++ List.wrap(json["vendored_sources"])
 
     pins =
@@ -282,7 +282,7 @@ defmodule Wotex.Workspace.Native do
     {pins, entries(json["sdk_patches"], base) ++ entries(vendored_files, base)}
   end
 
-  defp extract(:archives, json, relative, _absolute) do
+  defp extract(:archives, json, relative, _) do
     pins =
       for %{"name" => name} = archive <- List.wrap(json["archives"]),
           do:
@@ -302,7 +302,7 @@ defmodule Wotex.Workspace.Native do
     %{name: name, version: version, commit: commit, url: url, sha256: sha256, manifest: manifest}
   end
 
-  defp entries(nil, _dir), do: []
+  defp entries(nil, _), do: []
 
   defp entries(list, dir) when is_list(list) do
     for %{"path" => path, "sha256" => sha256} <- list,
@@ -310,13 +310,13 @@ defmodule Wotex.Workspace.Native do
         do: {Path.join(dir, path), sha256}
   end
 
-  defp entries(_other, _dir), do: []
+  defp entries(_, _), do: []
 
   defp map_digests(map, dir) when is_map(map) do
     for {path, sha256} <- Enum.sort(map), is_binary(sha256), do: {Path.join(dir, path), sha256}
   end
 
-  defp map_digests(_other, _dir), do: []
+  defp map_digests(_, _), do: []
 
   defp verify(digests, root) do
     Enum.reduce(digests, {[], [], []}, fn {absolute, expected}, {verified, absent, problems} ->
@@ -356,7 +356,7 @@ defmodule Wotex.Workspace.Native do
       {:ok, %{}} ->
         {:ok, []}
 
-      _other ->
+      _ ->
         {:error, "OSV returned an unexpected body"}
     end
   end

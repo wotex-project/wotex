@@ -28,7 +28,7 @@ defmodule Wotex.Workspace.DexterTest do
              "mise" -> "/bin/mise"
            end) == {:ok, {"/bin/mise", ["x", "--", "dexter"]}}
 
-    assert {:error, message} = Dexter.command(fn _name -> nil end)
+    assert {:error, message} = Dexter.command(fn _ -> nil end)
     assert message =~ "mise install"
   end
 
@@ -78,7 +78,7 @@ defmodule Wotex.Workspace.DexterTest do
   test "reindex/1 requires an index", %{root: root} do
     File.rm!(Dexter.index_path(root))
     refute Dexter.indexed?(root)
-    assert {:error, message} = Dexter.reindex(root: root, finder: fn _name -> nil end)
+    assert {:error, message} = Dexter.reindex(root: root, finder: fn _ -> nil end)
     assert message =~ "no Dexter index at .dexter/dexter.db; run `mix index`"
   end
 end

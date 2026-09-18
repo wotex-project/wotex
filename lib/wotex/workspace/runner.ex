@@ -30,7 +30,7 @@ defmodule Wotex.Workspace.Runner do
     env = env(opts)
     unless Keyword.get(opts, :quiet, false), do: announce(path, args, env)
 
-    {_stream, status} =
+    {_, status} =
       System.cmd("mix", args, cd: path, env: env, into: IO.stream(), stderr_to_stdout: true)
 
     status

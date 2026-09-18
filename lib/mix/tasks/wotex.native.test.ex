@@ -83,7 +83,7 @@ defmodule Mix.Tasks.Wotex.Native.Test do
   @doc "The step labels for a package with `crates` and `suites` names."
   @spec steps([Path.t()], [String.t()]) :: [String.t()]
   def steps(crates, suites) do
-    Enum.map(crates, fn _crate -> "cargo test" end)
+    Enum.map(crates, fn _ -> "cargo test" end)
     |> Enum.uniq()
     |> Kernel.++(Enum.map(suites, &"suite #{&1}"))
   end

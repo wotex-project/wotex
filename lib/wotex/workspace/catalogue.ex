@@ -111,7 +111,7 @@ defmodule Wotex.Workspace.Catalogue do
 
       case File.read(path) do
         {:ok, ^expected} -> :ok
-        {:ok, _other} -> {:error, "#{@output} is stale; run `mix wotex.catalogue`"}
+        {:ok, _} -> {:error, "#{@output} is stale; run `mix wotex.catalogue`"}
         {:error, reason} -> {:error, "#{@output}: #{:file.format_error(reason)}"}
       end
     end
@@ -133,7 +133,7 @@ defmodule Wotex.Workspace.Catalogue do
   with OTP application `app` and returns its entry.
   """
   @spec parse(String.t(), String.t(), term()) :: {:ok, entry()} | {:error, String.t()}
-  def parse(name, app, %{"package" => package, "specifications" => specifications} = _map)
+  def parse(name, app, %{"package" => package, "specifications" => specifications} = _)
       when is_list(specifications) do
     with :ok <- check_package_field(name, app, package),
          {:ok, parsed} <- parse_specifications(name, specifications) do
@@ -147,10 +147,10 @@ defmodule Wotex.Workspace.Catalogue do
     end
   end
 
-  def parse(name, _app, map) when is_map(map),
+  def parse(name, _, map) when is_map(map),
     do: {:error, "#{catalogue_path(name)}: package and specifications are required"}
 
-  def parse(name, _app, _other), do: {:error, "#{catalogue_path(name)}: must be a mapping"}
+  def parse(name, _, _), do: {:error, "#{catalogue_path(name)}: must be a mapping"}
 
   defp load_package(package, root) do
     relative = catalogue_path(package.name)
@@ -213,7 +213,7 @@ defmodule Wotex.Workspace.Catalogue do
     end
   end
 
-  defp parse_specification(name, index, _spec),
+  defp parse_specification(name, index, _),
     do: {:error, "#{catalogue_path(name)}: specifications[#{index}] must be a mapping"}
 
   defp required_strings(name, index, spec, fields) do
@@ -222,7 +222,7 @@ defmodule Wotex.Workspace.Catalogue do
         value when is_binary(value) and value != "" ->
           {:cont, {:ok, Map.put(acc, field, value)}}
 
-        _other ->
+        _ ->
           {:halt,
            {:error,
             "#{catalogue_path(name)}: specifications[#{index}].#{field} must be a non-empty string"}}
@@ -230,7 +230,7 @@ defmodule Wotex.Workspace.Catalogue do
     end)
   end
 
-  defp check_status(_name, _id, status) when status in @statuses, do: :ok
+  defp check_status(_, _, status) when status in @statuses, do: :ok
 
   defp check_status(name, id, status),
     do:
@@ -242,7 +242,7 @@ defmodule Wotex.Workspace.Catalogue do
     duplicates =
       parsed
       |> Enum.frequencies_by(& &1.id)
-      |> Enum.filter(fn {_id, n} -> n > 1 end)
+      |> Enum.filter(fn {_, n} -> n > 1 end)
       |> Enum.map(&elem(&1, 0))
       |> Enum.sort()
 

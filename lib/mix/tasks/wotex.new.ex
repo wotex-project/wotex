@@ -57,7 +57,7 @@ defmodule Mix.Tasks.Wotex.New do
     name =
       case rest do
         [name] -> name
-        _other -> Mix.raise("usage: mix wotex.new NAME [--depends-on a,b]")
+        _ -> Mix.raise("usage: mix wotex.new NAME [--depends-on a,b]")
       end
 
     depends_on =
@@ -70,12 +70,12 @@ defmodule Mix.Tasks.Wotex.New do
   end
 
   defp action("tooling/packages.yaml"), do: "updated"
-  defp action(_path), do: "created"
+  defp action(_), do: "created"
 
   defp render_catalogue do
     case Catalogue.write() do
-      {:ok, _count, []} -> Mix.shell().info("* updated #{Catalogue.output()}")
-      {:ok, _count, problems} -> Enum.each(problems, &Mix.shell().error(elem(&1, 1)))
+      {:ok, _, []} -> Mix.shell().info("* updated #{Catalogue.output()}")
+      {:ok, _, problems} -> Enum.each(problems, &Mix.shell().error(elem(&1, 1)))
       {:error, message} -> CLI.fail(message)
     end
   end
