@@ -11,6 +11,7 @@ defmodule WotexLabWorkbench.Provenance do
   checkout says so through `source_mode/0`.
   """
 
+  alias Wotex.Lab.Documentation
   alias Wotex.Lab.Evidence.Digest
 
   @lab_path Mix.Project.deps_paths()[:wotex_lab]
@@ -27,16 +28,13 @@ defmodule WotexLabWorkbench.Provenance do
       {dependency.app, version}
     end)
 
-  # A source checkout keeps its specifications in the documentation tree
-  # (`docs/` beside mix.exs, or `docs/packages/wotex-lab/` in the monorepo);
-  # a Hex archive ships none and records no specification digests.
-  @docs_path Enum.find(
-               [
-                 Path.join(@lab_path, "docs"),
-                 Path.expand("../../docs/packages/wotex-lab", @lab_path)
-               ],
-               &File.dir?(Path.join(&1, "specs"))
-             )
+  # A source checkout keeps its specifications in the documentation tree, which
+  # only `Wotex.Lab.Documentation` locates; a Hex archive ships none and
+  # records no specification digests.
+  @docs_path (case Documentation.directory(@lab_path) do
+                {:ok, directory} -> directory
+                :error -> nil
+              end)
   @external_resource Path.join(@lab_path, "priv/provenance/source-cohort.json")
   @external_resource Path.join(@lab_path, "priv/provenance/source-index.json")
   @external_resource "mix.lock"
