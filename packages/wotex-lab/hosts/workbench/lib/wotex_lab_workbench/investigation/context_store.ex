@@ -55,28 +55,28 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
   def clear, do: GenServer.call(__MODULE__, :clear)
 
   @impl GenServer
-  def init(_opts), do: {:ok, empty()}
+  def init(_), do: {:ok, empty()}
 
   @impl GenServer
-  def handle_call({:put, current, baseline}, _from, _state) do
+  def handle_call({:put, current, baseline}, _, _) do
     case admit(current, baseline) do
       {:ok, admitted} -> {:reply, :ok, admitted}
       {:error, reason} -> {:reply, {:error, reason}, empty()}
     end
   end
 
-  def handle_call({:get, which}, _from, state) do
+  def handle_call({:get, which}, _, state) do
     result =
       case which do
         "current" -> one(state.current, state.current_digest)
         "baseline" -> one(state.baseline, state.baseline_digest)
-        _other -> %{available: false, reason: "unknown_run_selector"}
+        _ -> %{available: false, reason: "unknown_run_selector"}
       end
 
     {:reply, result, state}
   end
 
-  def handle_call(:compare, _from, state) do
+  def handle_call(:compare, _, state) do
     result = %{
       available: state.current != nil and state.baseline != nil,
       current: one(state.current, state.current_digest),
@@ -86,7 +86,7 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
     {:reply, result, state}
   end
 
-  def handle_call(:metadata, _from, state) do
+  def handle_call(:metadata, _, state) do
     result = %{
       current: metadata(state.current, state.current_digest),
       baseline: metadata(state.baseline, state.baseline_digest),
@@ -96,11 +96,11 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
     {:reply, result, state}
   end
 
-  def handle_call(:usage, _from, state) do
+  def handle_call(:usage, _, state) do
     {:reply, Map.take(state, [:context_bytes, :tool_calls]), state}
   end
 
-  def handle_call({:charge, value}, _from, state) do
+  def handle_call({:charge, value}, _, state) do
     state = %{state | tool_calls: state.tool_calls + 1}
 
     with {:ok, encoded} <- Jason.encode(value),
@@ -114,15 +114,15 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
 
       {:reply, value, state}
     else
-      _denied ->
+      _ ->
         {:reply, %{available: false, error: "callback_output_budget_exhausted"}, state}
     end
   end
 
   def handle_call(:evidence, _, state),
-    do: {:reply, state.evidence |> MapSet.to_list() |> Enum.sort(), state}
+    do: {:reply, Enum.sort(MapSet.to_list(state.evidence)), state}
 
-  def handle_call(:clear, _from, _state), do: {:reply, :ok, empty()}
+  def handle_call(:clear, _, _), do: {:reply, :ok, empty()}
 
   defp admit(current, baseline) do
     with {:ok, current, current_json} <- canonical(current),
@@ -150,7 +150,7 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
        }}
     else
       false -> {:error, :context_too_large}
-      _invalid -> {:error, :invalid_context}
+      _ -> {:error, :invalid_context}
     end
   end
 
@@ -163,19 +163,19 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
     end
   end
 
-  defp canonical(_value), do: {:error, :invalid_context}
+  defp canonical(_), do: {:error, :invalid_context}
 
-  defp one(nil, _digest), do: %{available: false, reason: "run_context_not_supplied"}
+  defp one(nil, _), do: %{available: false, reason: "run_context_not_supplied"}
   defp one(value, digest), do: %{available: true, digest: digest, summary: value}
 
   defp digest(json),
     do: "sha256:" <> (:crypto.hash(:sha256, json) |> Base.encode16(case: :lower))
 
-  defp metadata(nil, _digest), do: %{available: false}
-  defp metadata(_value, digest), do: %{available: true, digest: digest}
+  defp metadata(nil, _), do: %{available: false}
+  defp metadata(_, digest), do: %{available: true, digest: digest}
 
-  defp context_bytes(nil, _json), do: 0
-  defp context_bytes(_value, json), do: byte_size(json)
+  defp context_bytes(nil, _), do: 0
+  defp context_bytes(_, json), do: byte_size(json)
 
   defp empty do
     %{

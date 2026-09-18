@@ -262,7 +262,7 @@ defmodule WotexLabWorkbench.MetricsQueryListenerTest do
   end
 
   defp iso(offset_seconds),
-    do: DateTime.utc_now() |> DateTime.add(offset_seconds, :second) |> DateTime.to_iso8601()
+    do: DateTime.to_iso8601(DateTime.add(DateTime.utc_now(), offset_seconds, :second))
 
   defp sample do
     :telemetry.execute([:wotex, :lab, :nx, :encode, :stop], %{duration: 1_000}, %{

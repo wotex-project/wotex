@@ -57,21 +57,21 @@ defmodule WotexLabWorkbench.Observability.Sampler do
   end
 
   @impl GenServer
-  def handle_call(:sample, _from, state) do
+  def handle_call(:sample, _, state) do
     {result, state} = sample(state)
     {:reply, result, state}
   end
 
-  def handle_call(:stats, _from, state),
+  def handle_call(:stats, _, state),
     do: {:reply, Map.take(state, [:interval_ms, :sequence, :stored, :failures, :last_error]), state}
 
   @impl GenServer
-  def handle_info({:sample, token}, %{timer: {_timer, token}} = state) do
-    {_result, state} = sample(state)
+  def handle_info({:sample, token}, %{timer: {_, token}} = state) do
+    {_, state} = sample(state)
     {:noreply, schedule(state)}
   end
 
-  def handle_info(_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   defp schedule(state) do
     token = make_ref()
@@ -107,7 +107,7 @@ defmodule WotexLabWorkbench.Observability.Sampler do
       {:ok, snapshot, admission}
     end
   catch
-    :exit, _reason -> {:error, Error.new(:history_unavailable, :metrics, "history unavailable")}
+    :exit, _ -> {:error, Error.new(:history_unavailable, :metrics, "history unavailable")}
   end
 
   defp stale(snapshot, nil), do: {:ok, snapshot}

@@ -52,7 +52,7 @@ defmodule WotexLabWorkbench.Observability.Inspection do
       _ -> failure(:invalid_inspection)
     end
   catch
-    :exit, _reason -> failure(:inspection_unavailable)
+    :exit, _ -> failure(:inspection_unavailable)
   end
 
   @doc "The number of live scopes, without owner IDs or query data."
@@ -60,7 +60,7 @@ defmodule WotexLabWorkbench.Observability.Inspection do
   def count do
     GenServer.call(__MODULE__, :count)
   catch
-    :exit, _reason -> failure(:inspection_unavailable)
+    :exit, _ -> failure(:inspection_unavailable)
   end
 
   @impl GenServer
@@ -71,7 +71,7 @@ defmodule WotexLabWorkbench.Observability.Inspection do
   end
 
   @impl GenServer
-  def handle_call({:open, source, opts}, {owner, _tag}, state) do
+  def handle_call({:open, source, opts}, {owner, _}, state) do
     state = prune(state)
 
     with :ok <- capacity(state, owner),
@@ -80,11 +80,11 @@ defmodule WotexLabWorkbench.Observability.Inspection do
       entry = %{gateway: gateway, monitor: Process.monitor(gateway)}
       {:reply, {:ok, gateway}, put_in(state, [:owners, owner], entry)}
     else
-      {:error, _error} = denied -> {:reply, denied, state}
+      {:error, _} = denied -> {:reply, denied, state}
     end
   end
 
-  def handle_call(:count, _from, state) do
+  def handle_call(:count, _, state) do
     state = prune(state)
     {:reply, map_size(state.owners), state}
   end
@@ -94,14 +94,14 @@ defmodule WotexLabWorkbench.Observability.Inspection do
       when is_reference(monitor),
       do: {:stop, :normal, state}
 
-  def handle_info({:DOWN, _monitor, :process, _pid, _reason}, state),
+  def handle_info({:DOWN, _, :process, _, _}, state),
     do: {:noreply, prune(state)}
 
-  def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
+  def handle_info({:EXIT, _, _}, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, state) do
-    Enum.each(state.owners, fn {_owner, entry} -> stop(entry.gateway) end)
+  def terminate(_, state) do
+    Enum.each(state.owners, fn {_, entry} -> stop(entry.gateway) end)
     :ok
   end
 
@@ -115,7 +115,8 @@ defmodule WotexLabWorkbench.Observability.Inspection do
     end
   end
 
-  defp history_source(nil, durable) when not is_nil(durable), do: {:ok, nil}
+  defp history_source(nil, nil), do: failure(:history_unavailable)
+  defp history_source(nil, _), do: {:ok, nil}
 
   defp history_source(history, _) do
     case resolve(history) do
@@ -156,7 +157,7 @@ defmodule WotexLabWorkbench.Observability.Inspection do
 
   defp prune(state) do
     owners =
-      Map.reject(state.owners, fn {_owner, entry} ->
+      Map.reject(state.owners, fn {_, entry} ->
         if Process.alive?(entry.gateway) do
           false
         else
@@ -172,12 +173,12 @@ defmodule WotexLabWorkbench.Observability.Inspection do
     do: if(Process.alive?(pid), do: pid)
 
   defp resolve(name) when is_atom(name) and not is_nil(name), do: Process.whereis(name)
-  defp resolve(_other), do: nil
+  defp resolve(_), do: nil
 
   defp stop(gateway) do
     GenServer.stop(gateway, :normal, 1_000)
   catch
-    :exit, _reason -> Process.exit(gateway, :kill)
+    :exit, _ -> Process.exit(gateway, :kill)
   end
 
   defp failure(code),

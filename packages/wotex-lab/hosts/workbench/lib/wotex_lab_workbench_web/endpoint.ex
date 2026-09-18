@@ -55,5 +55,5 @@ defmodule WotexLabWorkbenchWeb.Endpoint do
   plug :session
   plug WotexLabWorkbenchWeb.Router
 
-  defp session(conn, _opts), do: Plug.Session.call(conn, Plug.Session.init(session_options()))
+  defp session(conn, _), do: Plug.Session.call(conn, Plug.Session.init(session_options()))
 end

@@ -9,8 +9,7 @@ defmodule WotexLabWorkbench.Insights do
   """
 
   alias Plug.Conn.Query
-  alias Wotex.Lab.Analytics
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Analytics, Error}
   alias WotexLabWorkbench.{Chart, Run}
 
   @doc "Analyzes an existing run without changing its parameters, evidence or effects."
@@ -31,11 +30,11 @@ defmodule WotexLabWorkbench.Insights do
       {:ok, result |> Map.merge(%{charts: charts, mark: mark, run_id: run.id})}
     else
       {:error, error} -> {:error, error}
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  def analyze(%Run{}, _params), do: invalid()
+  def analyze(%Run{}, _), do: invalid()
 
   @doc "Builds the exact same-origin path for an admitted analysis result."
   @spec path(map()) :: String.t()
@@ -53,21 +52,24 @@ defmodule WotexLabWorkbench.Insights do
   end
 
   defp charts(plots, mark) do
-    plots
-    |> Enum.group_by(& &1.unit)
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Enum.reduce_while({:ok, []}, fn {unit, series}, {:ok, charts} ->
-      case Chart.new(
-             title: "Run comparison (#{unit})",
-             mark: mark,
-             x: %{field: "time", title: "event time"},
-             y: %{field: "value", title: unit},
-             series: Enum.map(series, &Map.take(&1, [:name, :points]))
-           ) do
-        {:ok, chart} -> {:cont, {:ok, charts ++ [chart]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
+    charted =
+      plots
+      |> Enum.group_by(& &1.unit)
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.reduce_while({:ok, []}, fn {unit, series}, {:ok, charts} ->
+        case Chart.new(
+               title: "Run comparison (#{unit})",
+               mark: mark,
+               x: %{field: "time", title: "event time"},
+               y: %{field: "value", title: unit},
+               series: Enum.map(series, &Map.take(&1, [:name, :points]))
+             ) do
+          {:ok, chart} -> {:cont, {:ok, [chart | charts]}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    with {:ok, reversed} <- charted, do: {:ok, Enum.reverse(reversed)}
   end
 
   defp number(""), do: {:ok, nil}
@@ -75,11 +77,11 @@ defmodule WotexLabWorkbench.Insights do
   defp number(value) when is_binary(value) and byte_size(value) <= 64 do
     case Float.parse(value) do
       {number, ""} when abs(number) <= 1.0e100 -> {:ok, number}
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  defp number(_value), do: invalid()
+  defp number(_), do: invalid()
 
   defp encode_number(nil), do: ""
   defp encode_number(value), do: to_string(value)

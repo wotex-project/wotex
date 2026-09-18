@@ -59,7 +59,7 @@ defmodule WotexLabWorkbench.Formal do
     end
   end
 
-  def verify(_server, _property, _variant),
+  def verify(_, _, _),
     do: {:error, Error.new(:unknown_selection, :formal, "selection is not in the catalogue")}
 
   @impl GenServer
@@ -71,7 +71,7 @@ defmodule WotexLabWorkbench.Formal do
       binary ->
         with {:ok, digest} <- Digest.file(binary),
              {:ok, profile} <- Profile.new(pool: @pool, binary: binary, binary_digest: digest),
-             {:ok, _pool} <-
+             {:ok, _} <-
                Wotex.Lab.start_child(
                  Keyword.fetch!(opts, :lab),
                  :sessions,
@@ -85,10 +85,10 @@ defmodule WotexLabWorkbench.Formal do
   end
 
   @impl GenServer
-  def handle_call(:profile, _from, %{profile: nil} = state),
+  def handle_call(:profile, _, %{profile: nil} = state),
     do: {:reply, {:error, :unsupported}, state}
 
-  def handle_call(:profile, _from, state), do: {:reply, {:ok, state.profile}, state}
+  def handle_call(:profile, _, state), do: {:reply, {:ok, state.profile}, state}
 
   defp known(value, allowed) when is_binary(value) do
     case Enum.find(allowed, &(Atom.to_string(&1) == value)) do
@@ -97,6 +97,6 @@ defmodule WotexLabWorkbench.Formal do
     end
   end
 
-  defp known(_value, _allowed),
+  defp known(_, _),
     do: {:error, Error.new(:unknown_selection, :formal, "selection is not in the catalogue")}
 end

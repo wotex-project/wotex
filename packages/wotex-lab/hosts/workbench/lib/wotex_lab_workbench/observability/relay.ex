@@ -60,7 +60,7 @@ defmodule WotexLabWorkbench.Observability.Relay do
   def stats, do: GenServer.call(__MODULE__, :stats, 2_000)
 
   @impl GenServer
-  def handle_call(:stats, _from, state) do
+  def handle_call(:stats, _, state) do
     {:reply, Map.new(@counters, &{&1, :ets.lookup_element(state.table, &1, 2)}), state}
   end
 
@@ -74,13 +74,13 @@ defmodule WotexLabWorkbench.Observability.Relay do
 
     :ok
   catch
-    _kind, _reason ->
+    _, _ ->
       increment(config.table, :invalid_samples)
       :ok
   end
 
   @impl GenServer
-  def terminate(_reason, state), do: :telemetry.detach(state.handler)
+  def terminate(_, state), do: :telemetry.detach(state.handler)
 
   defp publish(metric, event, measurements, metadata, config) do
     with true <- selected?(metric, event, metadata, config.context),
@@ -93,7 +93,7 @@ defmodule WotexLabWorkbench.Observability.Relay do
       :telemetry.execute(Definitions.event(metric.id), %{value: value}, tags)
     else
       {:error, counter} -> increment(config.table, counter)
-      _not_selected -> :ok
+      _ -> :ok
     end
   end
 
@@ -103,7 +103,7 @@ defmodule WotexLabWorkbench.Observability.Relay do
     end)
   end
 
-  defp measurement(%{measurement: nil}, _measurements), do: {:ok, 1}
+  defp measurement(%{measurement: nil}, _), do: {:ok, 1}
 
   defp measurement(%{measurement: :duration}, %{duration: duration})
        when is_integer(duration) and duration >= 0 and duration <= 1.0e100 do
@@ -130,7 +130,7 @@ defmodule WotexLabWorkbench.Observability.Relay do
       value when is_integer(value) and value >= 0 and value <= 1.0e100 ->
         {:ok, value}
 
-      _invalid ->
+      _ ->
         {:error, :invalid_samples}
     end
   end
@@ -138,6 +138,6 @@ defmodule WotexLabWorkbench.Observability.Relay do
   defp increment(table, counter) do
     :ets.update_counter(table, counter, 1)
   catch
-    _kind, _reason -> :ok
+    _, _ -> :ok
   end
 end

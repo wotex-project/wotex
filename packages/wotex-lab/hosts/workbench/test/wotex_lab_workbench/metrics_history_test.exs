@@ -154,8 +154,8 @@ defmodule WotexLabWorkbench.MetricsHistoryTest do
 
   defp store_child(supervisor) do
     Enum.find_value(Supervisor.which_children(supervisor), fn
-      {_id, pid, :worker, [Store]} -> pid
-      _child -> nil
+      {_, pid, :worker, [Store]} -> pid
+      _ -> nil
     end)
   end
 

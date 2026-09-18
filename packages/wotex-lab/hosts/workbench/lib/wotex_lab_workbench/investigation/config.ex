@@ -58,10 +58,10 @@ defmodule WotexLabWorkbench.Investigation.Config do
       when host in ["127.0.0.1", "localhost", "::1"] and is_integer(port) ->
         true
 
-      _other ->
+      _ ->
         false
     end
   end
 
-  def loopback_url?(_url), do: false
+  def loopback_url?(_), do: false
 end

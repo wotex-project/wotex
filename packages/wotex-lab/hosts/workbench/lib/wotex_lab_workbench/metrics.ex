@@ -16,8 +16,7 @@ defmodule WotexLabWorkbench.Metrics do
 
   use GenServer
 
-  alias Wotex.Lab.Error
-  alias Wotex.Lab.Telemetry
+  alias Wotex.Lab.{Error, Telemetry}
 
   @prefix [:wotex, :lab]
   @components Telemetry.components()
@@ -64,7 +63,7 @@ defmodule WotexLabWorkbench.Metrics do
     end
   end
 
-  def query(_server, _opts),
+  def query(_, _),
     do: {:error, Error.new(:invalid_query, :metrics, "query options must be a keyword list")}
 
   @doc "Emits one host-owned, session-scoped measurement synchronously."
@@ -76,7 +75,7 @@ defmodule WotexLabWorkbench.Metrics do
     :telemetry.execute(
       @prefix ++ [component, operation, :measurement],
       Map.new(measurements, fn {key, value} -> {key, value} end),
-      metadata |> Map.take([:outcome, :profile]) |> Map.put(:scope, scope)
+      Map.put(Map.take(metadata, [:outcome, :profile]), :scope, scope)
     )
   end
 
@@ -119,7 +118,7 @@ defmodule WotexLabWorkbench.Metrics do
   end
 
   @impl GenServer
-  def handle_call({:query, filters}, _from, state) do
+  def handle_call({:query, filters}, _, state) do
     latest = :ets.lookup_element(state.table, :sequence, 2, 0)
 
     if latest == 0 do
@@ -132,7 +131,7 @@ defmodule WotexLabWorkbench.Metrics do
   end
 
   @impl GenServer
-  def terminate(_reason, state) do
+  def terminate(_, state) do
     :telemetry.detach(state.handler_id)
     :ok
   end
@@ -140,7 +139,13 @@ defmodule WotexLabWorkbench.Metrics do
   defp read(state, filters, latest) do
     now = System.system_time(:millisecond)
     window = Map.get(filters, :window_ms, 300_000)
-    limit = filters |> Map.get(:limit, @max_limit) |> min(@max_limit) |> max(1)
+
+    limit =
+      filters
+      |> Map.get(:limit, @max_limit)
+      |> min(@max_limit)
+      |> max(1)
+
     oldest_kept = max(latest - state.capacity + 1, 1)
 
     samples =
@@ -148,7 +153,7 @@ defmodule WotexLabWorkbench.Metrics do
       |> :ets.tab2list()
       |> Enum.flat_map(fn
         {slot, sample} when is_integer(slot) -> [sample]
-        _sequence -> []
+        _ -> []
       end)
       |> Enum.filter(&(&1.at >= now - window and matches?(&1, filters)))
       |> Enum.sort_by(& &1.sequence, :desc)
@@ -180,13 +185,13 @@ defmodule WotexLabWorkbench.Metrics do
     end)
   end
 
-  defp freshness([], _now), do: nil
+  defp freshness([], _), do: nil
   defp freshness(samples, now), do: now - Enum.max_by(samples, & &1.at).at
 
   defp duration(%{duration: native}) when is_integer(native),
     do: System.convert_time_unit(native, :native, :microsecond) / 1_000
 
-  defp duration(_measurements), do: nil
+  defp duration(_), do: nil
 
   defp write_sample(config, component, operation, event, measurements, metadata) do
     sequence = :ets.update_counter(config.table, :sequence, {2, 1}, {:sequence, 0})
@@ -247,7 +252,7 @@ defmodule WotexLabWorkbench.Metrics do
     end
   end
 
-  defp member_or_nil?(nil, _allowed), do: true
+  defp member_or_nil?(nil, _), do: true
   defp member_or_nil?(value, allowed), do: value in allowed
   defp scope_or_nil?(nil), do: true
   defp scope_or_nil?(value), do: is_binary(value) and byte_size(value) <= @max_scope_bytes
@@ -256,5 +261,5 @@ defmodule WotexLabWorkbench.Metrics do
   defp scope(%{scope: scope}) when is_binary(scope) and byte_size(scope) <= @max_scope_bytes,
     do: scope
 
-  defp scope(_metadata), do: nil
+  defp scope(_), do: nil
 end

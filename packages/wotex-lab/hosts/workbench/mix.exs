@@ -5,6 +5,7 @@ defmodule WotexLabWorkbench.MixProject do
 
   @version "0.1.0"
 
+  @spec project() :: keyword()
   def project do
     [
       app: :wotex_lab_workbench,
@@ -20,10 +21,12 @@ defmodule WotexLabWorkbench.MixProject do
     ]
   end
 
+  @spec application() :: keyword()
   def application do
     [mod: {WotexLabWorkbench.Application, []}, extra_applications: [:logger, :runtime_tools]]
   end
 
+  @spec cli() :: keyword()
   def cli do
     [preferred_envs: [check: :test, coveralls: :test, "test.cover": :test]]
   end
@@ -82,13 +85,13 @@ defmodule WotexLabWorkbench.MixProject do
           raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end
 
-      _value ->
+      _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_environment), do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp aliases do
     [

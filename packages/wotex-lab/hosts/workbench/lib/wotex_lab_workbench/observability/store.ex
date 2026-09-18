@@ -12,12 +12,12 @@ defmodule WotexLabWorkbench.Observability.Store do
   slots and tenant history are not inferred from browser metadata.
   """
 
-  use GenServer
   @behaviour PromEx.Storage
 
-  alias Wotex.Lab.Error
+  use GenServer
+
+  alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.{Catalogue, Exposition, Snapshot}
-  alias Wotex.Lab.Options
   alias WotexLabWorkbench.Observability.Definitions
 
   @counters [:dropped_series, :dropped_samples, :invalid_samples]
@@ -54,7 +54,7 @@ defmodule WotexLabWorkbench.Observability.Store do
   def scrape(name) do
     GenServer.call(name, :scrape, 2_000)
   catch
-    :exit, _reason -> :prom_ex_down
+    :exit, _ -> :prom_ex_down
   end
 
   @doc "Budget, capacity, drops and native-admission failures for this collector."
@@ -66,10 +66,10 @@ defmodule WotexLabWorkbench.Observability.Store do
   def receipt(server, text) when is_binary(text) and byte_size(text) <= @max_scrape do
     GenServer.call(server, {:receipt, :crypto.hash(:sha256, text)}, 2_000)
   catch
-    :exit, _reason -> {:error, Error.new(:collector_unavailable, :metrics, "collector unavailable")}
+    :exit, _ -> {:error, Error.new(:collector_unavailable, :metrics, "collector unavailable")}
   end
 
-  def receipt(_server, _text),
+  def receipt(_, _),
     do: {:error, Error.new(:invalid_scrape, :metrics, "scrape body exceeds its bound")}
 
   @impl GenServer
@@ -123,18 +123,18 @@ defmodule WotexLabWorkbench.Observability.Store do
         do: update(config.table, key, metric, value),
         else: increment(config.table, :dropped_samples)
     else
-      _invalid -> increment(config.table, :invalid_samples)
+      _ -> increment(config.table, :invalid_samples)
     end
 
     :ok
   catch
-    _kind, _reason ->
+    _, _ ->
       increment(config.table, :invalid_samples)
       :ok
   end
 
   @impl GenServer
-  def handle_call(:scrape, _from, state) do
+  def handle_call(:scrape, _, state) do
     sequence = state.sequence + 1
 
     fields = %{
@@ -153,25 +153,25 @@ defmodule WotexLabWorkbench.Observability.Store do
          true <- byte_size(text) <= @max_scrape do
       receipt = %{
         digest: :crypto.hash(:sha256, text),
-        fields: snapshot |> Map.from_struct() |> Map.delete(:series)
+        fields: Map.delete(Map.from_struct(snapshot), :series)
       }
 
       {:reply, text, %{state | sequence: sequence, receipt: receipt}}
     else
-      _invalid ->
+      _ ->
         {:reply, :prom_ex_down, %{state | scrape_failures: state.scrape_failures + 1, receipt: nil}}
     end
   end
 
-  def handle_call({:receipt, digest}, _from, %{receipt: %{digest: digest, fields: fields}} = state),
+  def handle_call({:receipt, digest}, _, %{receipt: %{digest: digest, fields: fields}} = state),
     do: {:reply, {:ok, fields}, state}
 
-  def handle_call({:receipt, _digest}, _from, state),
+  def handle_call({:receipt, _}, _, state),
     do:
       {:reply, {:error, Error.new(:scrape_superseded, :metrics, "scrape receipt unavailable")},
        state}
 
-  def handle_call(:stats, _from, state) do
+  def handle_call(:stats, _, state) do
     stats =
       Map.merge(counters(state.table), %{
         series_used: :ets.lookup_element(state.table, :used, 2),
@@ -186,7 +186,7 @@ defmodule WotexLabWorkbench.Observability.Store do
   end
 
   @impl GenServer
-  def terminate(_reason, state), do: :telemetry.detach(state.handler)
+  def terminate(_, state), do: :telemetry.detach(state.handler)
 
   defp labels(metric, metadata) when is_map(metadata) and map_size(metadata) <= 8 do
     enums = Catalogue.dimensions()
@@ -202,10 +202,10 @@ defmodule WotexLabWorkbench.Observability.Store do
     end
   end
 
-  defp labels(_metric, _metadata), do: :error
+  defp labels(_, _), do: :error
 
   defp value(%{type: :counter, measurement: nil}, %{value: 1}), do: {:ok, 1}
-  defp value(%{type: :counter, measurement: nil}, _measurements), do: :error
+  defp value(%{type: :counter, measurement: nil}, _), do: :error
 
   defp value(%{type: :gauge}, %{value: value}) when is_number(value) and abs(value) <= 1.0e100,
     do: {:ok, value}
@@ -213,10 +213,10 @@ defmodule WotexLabWorkbench.Observability.Store do
   defp value(%{type: :histogram, unit: :seconds}, %{value: value})
        when is_number(value) and value >= 0 and value <= 1.0e100, do: {:ok, round(value * @nanos)}
 
-  defp value(_metric, %{value: value}) when is_integer(value) and value >= 0 and value <= 1.0e100,
+  defp value(_, %{value: value}) when is_integer(value) and value >= 0 and value <= 1.0e100,
     do: {:ok, value}
 
-  defp value(_metric, _measurements), do: :error
+  defp value(_, _), do: :error
 
   defp reserve(table, key, metric) do
     if :ets.member(table, key) do
@@ -245,7 +245,7 @@ defmodule WotexLabWorkbench.Observability.Store do
   defp initial(key, %{type: :histogram, buckets: buckets}),
     do: List.to_tuple([key | List.duplicate(0, length(buckets) + 3)])
 
-  defp initial(key, _metric), do: {key, 0}
+  defp initial(key, _), do: {key, 0}
 
   defp update(table, key, %{type: :gauge}, value), do: :ets.insert(table, {key, value})
   defp update(table, key, %{type: :counter}, value), do: :ets.update_counter(table, key, {2, value})
@@ -259,7 +259,7 @@ defmodule WotexLabWorkbench.Observability.Store do
   end
 
   defp scale(value, :seconds), do: round(value * @nanos)
-  defp scale(value, _unit), do: value
+  defp scale(value, _), do: value
 
   defp series(state) do
     state.table
@@ -270,7 +270,7 @@ defmodule WotexLabWorkbench.Observability.Store do
           metric = state.metrics[id]
           [%{name: metric.name, type: metric.type, labels: labels, sample: sample(metric, row)}]
 
-        _counter ->
+        _ ->
           []
       end
     end)
@@ -282,19 +282,20 @@ defmodule WotexLabWorkbench.Observability.Store do
     sum = if metric.unit == :seconds, do: sum / @nanos, else: sum
 
     %{
-      buckets: Enum.zip(metric.buckets ++ [:infinity], Enum.map(1..(n + 1), &elem(row, &1))),
+      buckets:
+        Enum.zip(Enum.concat(metric.buckets, [:infinity]), Enum.map(1..(n + 1), &elem(row, &1))),
       sum: sum,
       count: elem(row, n + 3)
     }
   end
 
-  defp sample(_metric, row), do: %{value: elem(row, 1)}
+  defp sample(_, row), do: %{value: elem(row, 1)}
 
   defp counters(table), do: Map.new(@counters, &{&1, :ets.lookup_element(table, &1, 2)})
 
   defp increment(table, counter) do
     :ets.update_counter(table, counter, 1)
   catch
-    _kind, _reason -> :ok
+    _, _ -> :ok
   end
 end

@@ -66,7 +66,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
 
   @doc "Lists the admitted scenario descriptors."
   @spec scenarios(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def scenarios(conn, _params), do: reply(conn, 200, %{"scenarios" => Control.scenarios()})
+  def scenarios(conn, _), do: reply(conn, 200, %{"scenarios" => Control.scenarios()})
 
   @doc "Reads one admitted scenario descriptor."
   @spec scenario(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -86,7 +86,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
          {:ok, record} <- Control.fetch_evidence(room, record_id) do
       reply(conn, 200, record)
     else
-      {:ok, _session} ->
+      {:ok, _} ->
         error(conn, 404, api_error(:unknown_evidence, "evidence record is not retained"))
 
       {:error, %Error{code: :unknown_evidence} = reason} ->
@@ -105,7 +105,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
 
   @doc "Reads the versioned metric catalogue."
   @spec metrics_catalogue(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def metrics_catalogue(conn, _params), do: reply(conn, 200, Control.metrics_catalogue())
+  def metrics_catalogue(conn, _), do: reply(conn, 200, Control.metrics_catalogue())
 
   @doc "Answers one closed metric query descriptor from the caller's session room history."
   @spec query_metrics(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -168,10 +168,14 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   defp execute(conn, token, admitted, success) do
     with {:ok, %{room: room}} <- Sessions.admit(token, admitted.command),
          {:ok, mode, run} <- Control.mutate(room, admitted) do
-      conn |> put_replayed(mode) |> reply(success, run)
+      conn
+      |> put_replayed(mode)
+      |> reply(success, run)
     else
       {:error, mode, %Error{} = reason} ->
-        conn |> put_replayed(mode) |> failure(reason)
+        conn
+        |> put_replayed(mode)
+        |> failure(reason)
 
       {:error, %Error{code: :no_room}} ->
         error(conn, 404, api_error(:unknown_run, "run is not retained"))
@@ -189,7 +193,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
          :ok <- body_size(conn) do
       conn
     else
-      {:error, %Error{} = reason} -> conn |> failure(reason) |> halt()
+      {:error, %Error{} = reason} -> halt(failure(conn, reason))
     end
   end
 
@@ -199,7 +203,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
          :ok <- body_size(conn) do
       conn
     else
-      {:error, %Error{} = reason} -> conn |> failure(reason) |> halt()
+      {:error, %Error{} = reason} -> halt(failure(conn, reason))
     end
   end
 
@@ -256,7 +260,7 @@ defmodule WotexLabWorkbenchWeb.ControlController do
   defp bearer(conn) do
     case get_req_header(conn, "authorization") do
       ["Bearer " <> token] when byte_size(token) in 16..128 -> {:ok, token}
-      _missing_or_ambiguous -> {:error, :missing_bearer}
+      _ -> {:error, :missing_bearer}
     end
   end
 

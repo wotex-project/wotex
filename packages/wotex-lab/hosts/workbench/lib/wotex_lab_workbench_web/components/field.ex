@@ -24,18 +24,12 @@ defmodule WotexLabWorkbenchWeb.Components.Field do
   @doc "Renders a labelled control."
   @spec field(map()) :: Phoenix.LiveView.Rendered.t()
   def field(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :describedby,
-        [assigns.help && "#{assigns.id}-help", assigns.error && "#{assigns.id}-error"]
-        |> Enum.reject(&is_nil/1)
-        |> Enum.join(" ")
-        |> case do
-          "" -> nil
-          ids -> ids
-        end
-      )
+    describedby =
+      [assigns.help && "#{assigns.id}-help", assigns.error && "#{assigns.id}-error"]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(" ")
+
+    assigns = assign(assigns, :describedby, if(describedby != "", do: describedby))
 
     ~H"""
     <div class={["wl-field", @error && "wl-field-invalid"]}>

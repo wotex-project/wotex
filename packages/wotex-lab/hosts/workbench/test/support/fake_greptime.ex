@@ -53,6 +53,8 @@ defmodule WotexLabWorkbench.FakeGreptime do
         2_000 -> {500, "{}"}
       end
 
-    conn |> put_resp_content_type("application/json") |> send_resp(status, reply)
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(status, reply)
   end
 end

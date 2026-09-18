@@ -35,15 +35,15 @@ defmodule WotexLabWorkbench.Investigation.RunContext do
     |> Runs.plain()
   end
 
-  defp current_and_older([], _selected_id), do: {:error, :no_run}
+  defp current_and_older([], _), do: {:error, :no_run}
   defp current_and_older([current | older], nil), do: {:ok, current, older}
 
   defp current_and_older(runs, selected_id) when is_binary(selected_id) do
     case Enum.split_while(runs, &(&1.id != selected_id)) do
-      {_newer, [current | older]} -> {:ok, current, older}
-      {_newer, []} -> {:error, :no_run}
+      {_, [current | older]} -> {:ok, current, older}
+      {_, []} -> {:error, :no_run}
     end
   end
 
-  defp current_and_older(_runs, _selected_id), do: {:error, :no_run}
+  defp current_and_older(_, _), do: {:error, :no_run}
 end

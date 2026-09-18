@@ -10,7 +10,7 @@ defmodule WotexLabWorkbench.FormalTest do
     assert map_size(Formal.properties()) > 0
     assert :safe in Formal.variants()
 
-    {property, _description} = Enum.at(Formal.properties(), 0)
+    {property, _} = Enum.at(Formal.properties(), 0)
 
     assert {:ok, ^property, :safe} =
              Formal.admit(Atom.to_string(property), "safe")

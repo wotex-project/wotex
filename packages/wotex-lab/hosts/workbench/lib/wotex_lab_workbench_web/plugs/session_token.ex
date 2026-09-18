@@ -23,15 +23,15 @@ defmodule WotexLabWorkbenchWeb.Plugs.SessionToken do
   def init(opts), do: opts
 
   @impl Plug
-  def call(conn, _opts) do
+  def call(conn, _) do
     case get_session(conn, @key) do
       nil ->
         case Sessions.open() do
           {:ok, session} -> put_session(conn, @key, session.token)
-          {:error, _error} -> conn
+          {:error, _} -> conn
         end
 
-      _token ->
+      _ ->
         conn
     end
   end

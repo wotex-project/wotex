@@ -17,8 +17,8 @@ defmodule WotexLabWorkbenchWeb.Plugs.ContentSecurityPolicy do
   def init(opts), do: opts
 
   @impl Plug
-  def call(conn, _opts) do
-    nonce = 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+  def call(conn, _) do
+    nonce = Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
     socket = if(conn.scheme == :https, do: "wss", else: "ws") <> "://" <> host(conn)
 
     policy =
@@ -45,8 +45,8 @@ defmodule WotexLabWorkbenchWeb.Plugs.ContentSecurityPolicy do
 
   defp host(conn) do
     case get_req_header(conn, "host") do
-      [host | _rest] when byte_size(host) <= 255 -> admitted_host(host, conn.host)
-      _none -> conn.host
+      [host | _] when byte_size(host) <= 255 -> admitted_host(host, conn.host)
+      _ -> conn.host
     end
   end
 

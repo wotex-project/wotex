@@ -8,7 +8,7 @@ defmodule WotexLabWorkbenchWeb.ControlControllerTest do
   test "scenario and metric catalogue endpoints expose only inert bounded descriptors", %{
     conn: conn
   } do
-    scenarios = conn |> get("/api/v1/scenarios") |> json_response(200)
+    scenarios = json_response(get(conn, "/api/v1/scenarios"), 200)
     assert length(scenarios["scenarios"]) == 16
 
     assert scenarios["scenarios"] ==
@@ -38,7 +38,7 @@ defmodule WotexLabWorkbenchWeb.ControlControllerTest do
              |> get("/api/v1/scenarios/" <> String.duplicate("a", 129))
              |> json_response(400)
 
-    catalogue = conn |> recycle() |> get("/api/v1/metrics/catalogue") |> json_response(200)
+    catalogue = json_response(get(recycle(conn), "/api/v1/metrics/catalogue"), 200)
     assert catalogue["schema_version"] == "1.0.0"
     assert length(catalogue["metrics"]) > 10
 

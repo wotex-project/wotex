@@ -28,11 +28,11 @@ defmodule WotexLabWorkbench.Investigation.Status do
   def reset, do: put(idle())
 
   @impl GenServer
-  def init(_opts), do: {:ok, idle()}
+  def init(_), do: {:ok, idle()}
 
   @impl GenServer
-  def handle_call(:get, _from, state), do: {:reply, state, state}
-  def handle_call({:put, status}, _from, _state), do: {:reply, :ok, status}
+  def handle_call(:get, _, state), do: {:reply, state, state}
+  def handle_call({:put, status}, _, _), do: {:reply, :ok, status}
 
   defp idle,
     do: %{state: :idle, provider: nil, model: nil, reason: nil, completed_at: nil}

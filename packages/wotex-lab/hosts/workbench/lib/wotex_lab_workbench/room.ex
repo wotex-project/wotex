@@ -25,7 +25,7 @@ defmodule WotexLabWorkbench.Room do
 
   use GenServer
 
-  alias Wotex.Directory
+  alias Wotex.{Directory, ThingDescription}
   alias Wotex.Directory.{Context, Service}
   alias Wotex.Lab.Adapters.Directory.{Authorization, Clock, EtsRepository, Identifier}
   alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
@@ -37,9 +37,8 @@ defmodule WotexLabWorkbench.Room do
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing}
-  alias Wotex.ThingDescription
-  alias WotexLabWorkbench.{Evidence, Experiments, Formal, Metrics, Provenance, Run, Runs}
   alias WotexLabWorkbench.Control.Ledger
+  alias WotexLabWorkbench.{Evidence, Experiments, Formal, Metrics, Provenance, Run, Runs}
   alias WotexLabWorkbench.Runs.{SmartRoom, Thermal, WindowAnomaly}
 
   @max_runs 16
@@ -131,7 +130,7 @@ defmodule WotexLabWorkbench.Room do
   def approve(room, run_id, approval) when is_map(approval),
     do: GenServer.call(room, {:approve, run_id, approval}, @run_timeout)
 
-  def approve(_room, _run_id, _approval),
+  def approve(_, _, _),
     do: {:error, Error.new(:invalid_approval, :dispatch, "approval must be a field map")}
 
   @doc "The disposable Things with their TDs, transport and admission counters."
@@ -177,8 +176,8 @@ defmodule WotexLabWorkbench.Room do
     Process.put(:room_owned_local, [])
     lab = Keyword.fetch!(opts, :lab)
     epoch = DateTime.utc_now()
-    token = 16 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
-    instance = "room-" <> (8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower))
+    token = Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
+    instance = "room-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 
     with {:ok, things} <- start_things(lab, token),
          {:ok, repository} <- managed(lab, :things, {EtsRepository, id: :directory}),
@@ -240,6 +239,7 @@ defmodule WotexLabWorkbench.Room do
          runs: %{},
          order: [],
          sequence: 0,
+         # Newest first; readers restore insertion order.
          datasets: [],
          formal: [],
          extra_tds: [],
@@ -261,7 +261,7 @@ defmodule WotexLabWorkbench.Room do
   end
 
   @impl GenServer
-  def handle_call({:run, experiment_id, params}, _from, state) do
+  def handle_call({:run, experiment_id, params}, _, state) do
     with {:ok, experiment} <- Experiments.fetch(experiment_id),
          :ok <- no_pending_decision(state, experiment),
          :ok <- capacity(map_size(state.runs), @max_runs, :run_limit, "run capacity reached") do
@@ -315,7 +315,7 @@ defmodule WotexLabWorkbench.Room do
     end
   end
 
-  def handle_call(:runs, _from, state), do: {:reply, Enum.map(state.order, &state.runs[&1]), state}
+  def handle_call(:runs, _, state), do: {:reply, Enum.map(state.order, &state.runs[&1]), state}
 
   def handle_call(:history, _, state) do
     binding = %{
@@ -327,9 +327,9 @@ defmodule WotexLabWorkbench.Room do
     {:reply, {:ok, binding}, state}
   end
 
-  def handle_call({:fetch_run, id}, _from, state), do: {:reply, fetch_run_state(state, id), state}
+  def handle_call({:fetch_run, id}, _, state), do: {:reply, fetch_run_state(state, id), state}
 
-  def handle_call({:cancel, id}, _from, state) do
+  def handle_call({:cancel, id}, _, state) do
     case fetch_run_state(state, id) do
       {:ok, %Run{status: :awaiting_approval} = run} ->
         Policy.revoke(state.policy, run.decision["id"])
@@ -345,7 +345,7 @@ defmodule WotexLabWorkbench.Room do
     end
   end
 
-  def handle_call({:approve, id, approval}, _from, state) do
+  def handle_call({:approve, id, approval}, _, state) do
     with {:ok, %Run{status: :awaiting_approval} = run} <- fetch_run_state(state, id),
          {:ok, outcome} <- SmartRoom.dispatch(run, approval, state) do
       run = %{
@@ -355,7 +355,9 @@ defmodule WotexLabWorkbench.Room do
           effect: outcome.effect,
           assertions: Enum.map(run.assertions, &dispatched_assertion/1),
           summary:
-            run.summary ++ [{"Effect", "target read back as #{Runs.plain(outcome.effect)} Cel"}]
+            Enum.concat(run.summary, [
+              {"Effect", "target read back as #{Runs.plain(outcome.effect)} Cel"}
+            ])
       }
 
       run = with_record(run, state)
@@ -378,7 +380,7 @@ defmodule WotexLabWorkbench.Room do
     end
   end
 
-  def handle_call(:things, _from, state) do
+  def handle_call(:things, _, state) do
     listed =
       Enum.map(@things, fn %{key: key, scheme: scheme} ->
         thing = state.things[key]
@@ -396,7 +398,9 @@ defmodule WotexLabWorkbench.Room do
       end)
 
     extra =
-      Enum.map(state.extra_tds, fn document ->
+      state.extra_tds
+      |> Enum.reverse()
+      |> Enum.map(fn document ->
         %{
           key: "registered",
           id: document["id"],
@@ -412,7 +416,7 @@ defmodule WotexLabWorkbench.Room do
     {:reply, listed ++ extra, state}
   end
 
-  def handle_call({:read, key, name}, _from, state) when is_binary(key) and is_binary(name) do
+  def handle_call({:read, key, name}, _, state) when is_binary(key) and is_binary(name) do
     reply =
       with {:ok, thing} <-
              Map.fetch(state.things, key) |> known(:unknown_thing, "Thing is not in this room"),
@@ -441,12 +445,12 @@ defmodule WotexLabWorkbench.Room do
     {:reply, reply, state}
   end
 
-  def handle_call({:read, _key, _name}, _from, state),
+  def handle_call({:read, _, _}, _, state),
     do:
       {:reply, {:error, Error.new(:invalid_read, :things, "thing and property must be strings")},
        state}
 
-  def handle_call({:register, json}, _from, state)
+  def handle_call({:register, json}, _, state)
       when is_binary(json) and byte_size(json) <= @max_td_bytes do
     with :ok <-
            capacity(
@@ -456,22 +460,22 @@ defmodule WotexLabWorkbench.Room do
              "registered TD capacity reached"
            ),
          {:ok, td} <- ThingDescription.parse(json) |> td_error(),
-         {:ok, _mutation} <- Directory.register(state.service, td, state.context) |> td_error() do
+         {:ok, _} <- Directory.register(state.service, td, state.context) |> td_error() do
       document = ThingDescription.to_map(td)
-      {:reply, {:ok, document}, %{state | extra_tds: state.extra_tds ++ [document]}}
+      {:reply, {:ok, document}, %{state | extra_tds: [document | state.extra_tds]}}
     else
       {:error, error} -> {:reply, {:error, error}, state}
     end
   end
 
-  def handle_call({:register, _json}, _from, state),
+  def handle_call({:register, _}, _, state),
     do:
       {:reply,
        {:error,
         Error.new(:td_too_large, :things, "TD must be text of at most #{@max_td_bytes} bytes")},
        state}
 
-  def handle_call({:export, query}, _from, state) do
+  def handle_call({:export, query}, _, state) do
     with {:ok, query} <- dataset_query(query, state.id),
          :ok <-
            capacity(
@@ -480,20 +484,26 @@ defmodule WotexLabWorkbench.Room do
              :dataset_limit,
              "dataset capacity reached"
            ),
-         {:ok, live} <- query |> Metrics.query() |> unavailable() do
+         {:ok, live} <- unavailable(Metrics.query(query)) do
       rows =
         Enum.map(
           live.samples,
           &Map.take(&1, [:sequence, :at, :component, :operation, :event, :duration_ms, :outcome])
         )
 
-      encoded = rows |> Runs.plain() |> Jason.encode!()
+      encoded = Jason.encode!(Runs.plain(rows))
       digest = Digest.bytes(encoded)
+
+      recorded_query =
+        query
+        |> Map.new()
+        |> Map.delete(:scope)
+        |> Runs.plain()
 
       dataset = %{
         id: "dataset-#{length(state.datasets) + 1}",
         digest: digest,
-        query: query |> Map.new() |> Map.delete(:scope) |> Runs.plain(),
+        query: recorded_query,
         interval: live.interval,
         watermark: live.watermark,
         rows: length(rows),
@@ -505,13 +515,13 @@ defmodule WotexLabWorkbench.Room do
       }
 
       record_metric(state.id, :scenario, :encode, 0, :ok)
-      {:reply, {:ok, dataset}, %{state | datasets: state.datasets ++ [dataset]}}
+      {:reply, {:ok, dataset}, %{state | datasets: [dataset | state.datasets]}}
     else
       {:error, error} -> {:reply, {:error, error}, state}
     end
   end
 
-  def handle_call({:verify, property, variant}, _from, state) do
+  def handle_call({:verify, property, variant}, _, state) do
     with :ok <-
            capacity(
              length(state.formal),
@@ -521,19 +531,19 @@ defmodule WotexLabWorkbench.Room do
            ),
          {:ok, result} <- Formal.verify(property, variant) do
       record_metric(state.id, :scenario, :verification, 0, result.status)
-      {:reply, {:ok, result}, %{state | formal: state.formal ++ [result]}}
+      {:reply, {:ok, result}, %{state | formal: [result | state.formal]}}
     else
       {:error, reason} -> {:reply, {:error, reason}, state}
     end
   end
 
-  def handle_call(:snapshot, _from, state) do
+  def handle_call(:snapshot, _, state) do
     {:reply,
      %{
        id: state.id,
        runs: Enum.map(state.order, &state.runs[&1]),
-       datasets: state.datasets,
-       formal: state.formal,
+       datasets: Enum.reverse(state.datasets),
+       formal: Enum.reverse(state.formal),
        policy: Policy.records(state.policy),
        watermark: state.watermark,
        state_revision: state.state_revision,
@@ -545,8 +555,8 @@ defmodule WotexLabWorkbench.Room do
   end
 
   @impl GenServer
-  def handle_info({:wotex_continuum, "edge", delivery_id, _wire}, state) do
-    _ack = Channel.ack(state.channel, delivery_id)
+  def handle_info({:wotex_continuum, "edge", delivery_id, _}, state) do
+    _ = Channel.ack(state.channel, delivery_id)
     {:noreply, state}
   end
 
@@ -555,15 +565,15 @@ defmodule WotexLabWorkbench.Room do
     {:noreply, sample_history(state)}
   end
 
-  def handle_info({:EXIT, _pid, :normal}, state), do: {:noreply, state}
+  def handle_info({:EXIT, _, :normal}, state), do: {:noreply, state}
 
   def handle_info({:EXIT, pid, reason}, state),
     do: {:stop, {:linked_process_exit, pid, reason}, state}
 
-  def handle_info(_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, state) do
+  def terminate(_, state) do
     cleanup(state.lab, state.owned_local, state.owned_lab)
     :ok
   end
@@ -603,8 +613,8 @@ defmodule WotexLabWorkbench.Room do
   defp same_value?(left, right) when is_number(left) and is_number(right), do: left == right
   defp same_value?(left, right), do: left === right
 
-  defp execute(%{id: "thermal"}, params, _state), do: Thermal.run(params)
-  defp execute(%{id: "window_anomaly"}, params, _state), do: WindowAnomaly.run(params)
+  defp execute(%{id: "thermal"}, params, _), do: Thermal.run(params)
+  defp execute(%{id: "window_anomaly"}, params, _), do: WindowAnomaly.run(params)
   defp execute(%{id: "smart_room"}, params, state), do: SmartRoom.run(params, state)
 
   defp build_run(experiment, params, sequence, started, outcome) do
@@ -655,11 +665,11 @@ defmodule WotexLabWorkbench.Room do
   defp with_record(%Run{} = run, extras) when is_map_key(extras, :outcomes) do
     case Evidence.record(run, extras) do
       {:ok, record, digest} -> %{run | record: record, record_digest: digest}
-      {:error, _error} -> run
+      {:error, _} -> run
     end
   end
 
-  defp with_record(%Run{record: %{} = record} = run, _state) do
+  defp with_record(%Run{record: %{} = record} = run, _) do
     extras = %{
       outcomes: Map.merge(record.outcomes, %{decision: :dispatched, effect: run.effect}),
       inputs: record.inputs,
@@ -679,24 +689,24 @@ defmodule WotexLabWorkbench.Room do
     Map.fetch(state.runs, id) |> known(:unknown_run, "run is not in this room")
   end
 
-  defp fetch_run_state(_state, _id),
+  defp fetch_run_state(_, _),
     do: {:error, Error.new(:unknown_run, :room, "run is not in this room")}
 
-  defp known({:ok, value}, _code, _message), do: {:ok, value}
+  defp known({:ok, value}, _, _), do: {:ok, value}
   defp known(:error, code, message), do: {:error, Error.new(code, :room, message)}
 
-  defp capacity(current, max, _code, _message) when current < max, do: :ok
-  defp capacity(_current, _max, code, message), do: {:error, Error.new(code, :room, message)}
+  defp capacity(current, max, _, _) when current < max, do: :ok
+  defp capacity(_, _, code, message), do: {:error, Error.new(code, :room, message)}
 
   defp no_pending_decision(state, %{id: "smart_room"}) do
-    if Enum.any?(state.runs, fn {_id, run} -> run.status == :awaiting_approval end) do
+    if Enum.any?(state.runs, fn {_, run} -> run.status == :awaiting_approval end) do
       {:error, Error.new(:pending_decision, :room, "approve or cancel the pending decision first")}
     else
       :ok
     end
   end
 
-  defp no_pending_decision(_state, _experiment), do: :ok
+  defp no_pending_decision(_, _), do: :ok
 
   defp unavailable({:ok, live}), do: {:ok, live}
 
@@ -715,7 +725,7 @@ defmodule WotexLabWorkbench.Room do
     end
   end
 
-  defp dataset_query(_query, _scope),
+  defp dataset_query(_, _),
     do: {:error, Error.new(:invalid_query, :metrics, "query options must be a keyword list")}
 
   defp td_error({:ok, value}), do: {:ok, value}
@@ -740,7 +750,7 @@ defmodule WotexLabWorkbench.Room do
   defp error_code(%{code: code}) when is_atom(code), do: code
   defp error_code(code) when is_atom(code), do: code
   defp error_code(list) when is_list(list), do: :invalid
-  defp error_code(_other), do: :error
+  defp error_code(_), do: :error
 
   defp start_things(lab, token) do
     Enum.reduce_while(@things, {:ok, %{}}, fn spec, {:ok, acc} ->
@@ -834,9 +844,9 @@ defmodule WotexLabWorkbench.Room do
   end
 
   defp register_all(service, context, things) do
-    Enum.reduce_while(things, :ok, fn {_key, thing}, :ok ->
+    Enum.reduce_while(things, :ok, fn {_, thing}, :ok ->
       case Directory.register(service, thing.td, context) do
-        {:ok, _mutation} -> {:cont, :ok}
+        {:ok, _} -> {:cont, :ok}
         {:error, error} -> {:halt, {:error, error}}
       end
     end)
@@ -896,7 +906,7 @@ defmodule WotexLabWorkbench.Room do
   defp stop_local(pid) when is_pid(pid) do
     if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
   catch
-    :exit, _reason -> :ok
+    :exit, _ -> :ok
   end
 
   defp schedule_history, do: Process.send_after(self(), :sample_history, @history_interval_ms)

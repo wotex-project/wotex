@@ -115,7 +115,7 @@ defmodule WotexLabWorkbench.InvestigationCompletionControllerTest do
     assert call(loopback_conn(), valid_params()).status == 403
 
     {request, room} = activate_bridge()
-    for _call <- 1..8, do: assert(call(loopback_conn(), valid_params()).status == 200)
+    for _ <- 1..8, do: assert(call(loopback_conn(), valid_params()).status == 200)
     assert call(loopback_conn(), valid_params()).status == 403
 
     Process.exit(room, :kill)

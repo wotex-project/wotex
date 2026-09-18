@@ -26,21 +26,23 @@ defmodule WotexLabWorkbench.Observability.Capture do
       |> Map.merge(%{source: :exposition, series: parsed.series})
       |> Snapshot.new()
     else
-      {:error, _error} = error -> error
-      _unavailable -> unavailable()
+      {:error, _} = error -> error
+      _ -> unavailable()
     end
   catch
-    :exit, _reason -> unavailable()
+    :exit, _ -> unavailable()
   end
 
   defp store do
-    @promex
-    |> Supervisor.which_children()
-    |> Enum.find_value(fn
-      {_id, pid, :worker, [Store]} when is_pid(pid) -> {:ok, pid}
-      _child -> nil
-    end)
-    |> case do
+    found =
+      @promex
+      |> Supervisor.which_children()
+      |> Enum.find_value(fn
+        {_, pid, :worker, [Store]} when is_pid(pid) -> {:ok, pid}
+        _ -> nil
+      end)
+
+    case found do
       nil -> unavailable()
       found -> found
     end

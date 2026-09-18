@@ -3,7 +3,7 @@ defmodule WotexLabWorkbench.FakeCodexRunner do
 
   @doc false
   @spec complete([map()], keyword()) :: term()
-  def complete(_messages, _opts) do
+  def complete(_, _) do
     Application.get_env(
       :wotex_lab_workbench,
       :fake_codex_result,
@@ -28,7 +28,7 @@ defmodule WotexLabWorkbench.FakeOllamaRunner do
 
   @doc false
   @spec complete([map()], keyword()) :: term()
-  def complete(_messages, _opts) do
+  def complete(_, _) do
     Application.get_env(
       :wotex_lab_workbench,
       :fake_ollama_result,
@@ -54,7 +54,7 @@ defmodule WotexLabWorkbench.FakeInvestigationRunner do
 
   @doc false
   @spec run(pid(), String.t(), pos_integer()) :: term()
-  def run(_operator, prompt, _timeout) do
+  def run(_, prompt, _) do
     if owner = Application.get_env(:wotex_lab_workbench, :fake_investigation_owner) do
       send(owner, {:fake_investigation_started, self(), prompt})
 

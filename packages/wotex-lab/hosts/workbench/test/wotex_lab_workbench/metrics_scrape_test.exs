@@ -83,7 +83,7 @@ defmodule WotexLabWorkbench.MetricsScrapeTest do
 
     assert request(
              remote_ip: {203, 0, 113, 7},
-             headers: @auth ++ [{"x-forwarded-for", "127.0.0.1"}]
+             headers: [{"x-forwarded-for", "127.0.0.1"} | @auth]
            ).status == 403
 
     assert request(path: "/").status == 404
@@ -145,10 +145,10 @@ defmodule WotexLabWorkbench.MetricsScrapeTest do
 
   test "connection capacity is finite and stopping the listener closes idle clients" do
     listener = start_supervised!({Scrape, port: 0, token_digest: @digest})
-    {:ok, {_ip, port}} = ThousandIsland.listener_info(listener)
+    {:ok, {_, port}} = ThousandIsland.listener_info(listener)
 
     sockets =
-      for _index <- 1..8 do
+      for _ <- 1..8 do
         {:ok, socket} = :gen_tcp.connect({127, 0, 0, 1}, port, [:binary, active: false], 1_000)
         socket
       end
@@ -216,7 +216,7 @@ defmodule WotexLabWorkbench.MetricsScrapeTest do
       {:ok, chunk} when byte_size(bytes) + byte_size(chunk) <= 4_096 ->
         read_closed(socket, bytes <> chunk, deadline)
 
-      _other ->
+      _ ->
         flunk("bounded refusal did not close the connection")
     end
   end

@@ -130,7 +130,10 @@ defmodule WotexLabWorkbench.Observability.DurableReader do
   defp execute(transport, database, %{path: @path, params: params}) when is_list(params) do
     if Enum.map(params, &parameter/1) == @parameters do
       path = @path <> "?" <> URI.encode_query(db: database || "public")
-      transport |> post(path, params) |> verify_database(transport, database)
+
+      transport
+      |> post(path, params)
+      |> verify_database(transport, database)
     else
       {:error, :invalid_template}
     end

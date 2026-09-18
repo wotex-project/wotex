@@ -32,7 +32,7 @@ defmodule WotexLabWorkbench.Evidence do
              outcomes:
                extras
                |> Map.get(:outcomes, %{})
-               |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+               |> Enum.reject(fn {_, v} -> is_nil(v) end)
                |> Map.new(),
              durations: %{run_ms: run.duration_ms},
              cleanup: run.cleanup

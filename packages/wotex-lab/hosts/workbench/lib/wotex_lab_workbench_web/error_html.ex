@@ -12,5 +12,5 @@ defmodule WotexLabWorkbenchWeb.ErrorHTML do
 
   @doc "Renders the status phrase for any error template."
   @spec render(String.t(), map()) :: String.t()
-  def render(template, _assigns), do: Phoenix.Controller.status_message_from_template(template)
+  def render(template, _), do: Phoenix.Controller.status_message_from_template(template)
 end

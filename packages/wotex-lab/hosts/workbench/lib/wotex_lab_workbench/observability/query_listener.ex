@@ -40,9 +40,8 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
   import Plug.Conn
 
   alias Wotex.Lab.{Error, Options}
-  alias WotexLabWorkbench.Observability.OperatorTransport
   alias Wotex.Lab.Metrics.Gateway
-  alias WotexLabWorkbench.Observability.Inspection
+  alias WotexLabWorkbench.Observability.{Inspection, OperatorTransport}
 
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
   @max_body_bytes 8_192
@@ -322,7 +321,10 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
         "message" => message
       })
 
-    conn |> put_resp_content_type("application/json") |> send_resp(status, body) |> halt()
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(status, body)
+    |> halt()
   end
 
   defp flush(gateway) do
@@ -341,7 +343,7 @@ defmodule WotexLabWorkbench.Observability.QueryListener do
   defp json(value) when is_list(value), do: Enum.map(value, &json/1)
   defp json(value) when is_boolean(value) or is_nil(value), do: value
   defp json(value) when is_atom(value), do: Atom.to_string(value)
-  defp json(value) when is_tuple(value), do: value |> Tuple.to_list() |> json()
+  defp json(value) when is_tuple(value), do: json(Tuple.to_list(value))
   defp json(value), do: value
 
   defp json_key(key) when is_atom(key), do: Atom.to_string(key)

@@ -14,7 +14,7 @@ defmodule WotexLabWorkbenchWeb.HealthController do
 
   @doc "Returns 200 when the required host supervision tree is alive, otherwise 503."
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def show(conn, _params) do
+  def show(conn, _) do
     {status, body} =
       case Health.status() do
         :ok -> {200, %{"schema_version" => "1.0.0", "status" => "ok"}}

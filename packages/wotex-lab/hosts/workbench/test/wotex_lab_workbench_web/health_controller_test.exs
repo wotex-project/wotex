@@ -19,7 +19,7 @@ defmodule WotexLabWorkbenchWeb.HealthControllerTest do
     assert Health.status([]) == {:error, :unavailable}
     assert Health.status([__MODULE__.Missing]) == {:error, :unavailable}
 
-    name = Module.concat(__MODULE__, Probe)
+    name = __MODULE__.Probe
     pid = spawn(fn -> Process.sleep(:infinity) end)
     Process.register(pid, name)
     assert Health.status([name]) == :ok
@@ -69,12 +69,12 @@ defmodule WotexLabWorkbenchWeb.HealthControllerTest do
 
   defp health_server(response) do
     {:ok, listener} = :gen_tcp.listen(0, [:binary, active: false, reuseaddr: true])
-    {:ok, {_address, port}} = :inet.sockname(listener)
+    {:ok, {_, port}} = :inet.sockname(listener)
 
     server =
       Task.async(fn ->
         {:ok, socket} = :gen_tcp.accept(listener)
-        {:ok, _request} = :gen_tcp.recv(socket, 0, 1_000)
+        {:ok, _} = :gen_tcp.recv(socket, 0, 1_000)
         :ok = :gen_tcp.send(socket, response)
         :gen_tcp.close(socket)
         :gen_tcp.close(listener)

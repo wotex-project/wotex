@@ -65,7 +65,7 @@ defmodule WotexLabWorkbench.MetricsDurableTest do
     assert options[:profile] == :hosted
     assert options[:audience] == audience
     assert options[:bearer] == true
-    assert is_function(options |> Durable.child_options(nil) |> Keyword.fetch!(:sink), 2)
+    assert is_function(Keyword.fetch!(Durable.child_options(options, nil), :sink), 2)
 
     for {candidate, expected, bearer} <- [
           {String.replace(url, "https://", "http://"), audience, true},

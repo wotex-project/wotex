@@ -49,7 +49,7 @@ defmodule WotexLabWorkbenchWeb.DashboardTest do
   test "dashboard arrangements persist per session and exact links remain closed", %{conn: conn} do
     conn = get(conn, "/metrics")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _html} = live(recycle(conn), "/metrics")
+    {:ok, view, _} = live(recycle(conn), "/metrics")
 
     assert has_element?(view, ~s(#dashboard-selection input[value="nx_batch_rows"][checked]))
 
@@ -70,7 +70,7 @@ defmodule WotexLabWorkbenchWeb.DashboardTest do
           "selection" => "custom"
         })
 
-    assert {:ok, linked, _html} = live(recycle(conn), exact)
+    assert {:ok, linked, _} = live(recycle(conn), exact)
 
     assert has_element?(
              linked,

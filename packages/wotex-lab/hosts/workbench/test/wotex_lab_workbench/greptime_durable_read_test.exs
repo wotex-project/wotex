@@ -3,15 +3,15 @@ defmodule WotexLabWorkbench.GreptimeDurableReadTest do
 
   use ExUnit.Case, async: false
 
-  @moduletag :greptime
-  @moduletag timeout: 300_000
-
   alias Wotex.Lab.Error
   alias Wotex.Lab.Examples.Thermal
   alias Wotex.Lab.Metrics.{DurableQuery, GreptimeBridge, Request}
   alias WotexLabWorkbench.Observability.{Durable, DurableReader, Inspection, Provisioning}
   alias WotexLabWorkbench.Observability.QueryListener
   alias WotexLabWorkbench.Test.GreptimeReceiver
+
+  @moduletag :greptime
+  @moduletag timeout: 300_000
 
   @host WotexLabWorkbench.Observability.Supervisor
   @token "local-only-query-token-sentinel-with-32-bytes-min"
@@ -98,8 +98,8 @@ defmodule WotexLabWorkbench.GreptimeDurableReadTest do
       "schema_version" => "1.0.0",
       "metric" => metric,
       "aggregation" => aggregation,
-      "start_at" => start_at |> DateTime.from_unix!(:millisecond) |> DateTime.to_iso8601(),
-      "end_at" => end_at |> DateTime.from_unix!(:millisecond) |> DateTime.to_iso8601(),
+      "start_at" => DateTime.to_iso8601(DateTime.from_unix!(start_at, :millisecond)),
+      "end_at" => DateTime.to_iso8601(DateTime.from_unix!(end_at, :millisecond)),
       "step_ms" => 5_000
     }
   end

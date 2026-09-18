@@ -18,9 +18,8 @@ defmodule WotexLabWorkbench.Observability.Durable do
   writes to `public`, whose retention the Lab does not provision.
   """
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.{ReqSink, Retention}
-  alias Wotex.Lab.Options
   alias WotexLabWorkbench.Observability.Capture
 
   @credential_env "WOTEX_LAB_GREPTIME_TOKEN"
@@ -43,7 +42,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
     with :ok <- validate(options), do: {:ok, options}
   end
 
-  def configure(_url, _bearer), do: invalid()
+  def configure(_, _), do: invalid()
 
   @doc "Admits an authenticated HTTPS write endpoint with an exact audience and optional CA."
   @spec configure_hosted(term(), term(), term(), term()) ::
@@ -65,7 +64,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
     with :ok <- validate(options), do: {:ok, options}
   end
 
-  def configure_hosted(_url, _audience, _bearer, _tls_ca_certfile), do: invalid()
+  def configure_hosted(_, _, _, _), do: invalid()
 
   @doc "Selects the provisioned GreptimeDB database for admitted exporter options."
   @spec put_database(keyword(), term()) :: {:ok, keyword()} | {:error, Error.t()}
@@ -93,11 +92,11 @@ defmodule WotexLabWorkbench.Observability.Durable do
          true <- integer?(opts, :deadline_ms, 100, 60_000) do
       :ok
     else
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  def validate(_opts), do: invalid()
+  def validate(_), do: invalid()
 
   @doc "Builds the base bridge child options, optionally writing the same captures to local history."
   @spec child_options(keyword(), GenServer.server() | nil) :: keyword()
@@ -140,7 +139,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
     end
   end
 
-  def lookup_credential(_reference), do: :error
+  def lookup_credential(_), do: :error
 
   defp destination?(opts) do
     case Keyword.get(opts, :profile) do
@@ -154,7 +153,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
           valid_ca?(Keyword.get(opts, :tls_ca_certfile)) and
           hosted_write_url?(Keyword.get(opts, :url), Keyword.get(opts, :audience))
 
-      _other ->
+      _ ->
         false
     end
   end
@@ -194,12 +193,12 @@ defmodule WotexLabWorkbench.Observability.Durable do
        }} ->
         is_integer(port) and port in 1..65_535
 
-      _invalid ->
+      _ ->
         false
     end
   end
 
-  defp local_write_url?(_url), do: false
+  defp local_write_url?(_), do: false
 
   defp hosted_write_url?(url, audience)
        when is_binary(url) and byte_size(url) in 1..2_048 and is_binary(audience) and
@@ -211,11 +210,11 @@ defmodule WotexLabWorkbench.Observability.Durable do
          true <- origin(uri) == origin(expected) do
       true
     else
-      _invalid -> false
+      _ -> false
     end
   end
 
-  defp hosted_write_url?(_url, _audience), do: false
+  defp hosted_write_url?(_, _), do: false
 
   defp exact_hosted_write_uri?(%URI{
          scheme: "https",
@@ -228,7 +227,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
        }),
        do: is_binary(host) and byte_size(host) > 0 and (is_nil(port) or port in 1..65_535)
 
-  defp exact_hosted_write_uri?(_uri), do: false
+  defp exact_hosted_write_uri?(_), do: false
 
   defp origin_uri?(%URI{
          scheme: "https",
@@ -240,7 +239,7 @@ defmodule WotexLabWorkbench.Observability.Durable do
        }),
        do: is_binary(host) and byte_size(host) > 0 and path in [nil, "", "/"]
 
-  defp origin_uri?(_uri), do: false
+  defp origin_uri?(_), do: false
 
   defp origin(%URI{scheme: scheme, host: host, port: port}) do
     host = if String.contains?(host, ":"), do: "[#{host}]", else: host

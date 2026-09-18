@@ -3,19 +3,22 @@ defmodule WotexLabWorkbenchWeb.ComponentHarness do
 
   use Phoenix.Component
 
-  import WotexLabWorkbenchWeb.Components.AnswerBlock
-  import WotexLabWorkbenchWeb.Components.Button
-  import WotexLabWorkbenchWeb.Components.ContextHeader
-  import WotexLabWorkbenchWeb.Components.DataTable
-  import WotexLabWorkbenchWeb.Components.EmptyState
-  import WotexLabWorkbenchWeb.Components.EvidenceLink
-  import WotexLabWorkbenchWeb.Components.Field
-  import WotexLabWorkbenchWeb.Components.MetricPanel
-  import WotexLabWorkbenchWeb.Components.PromptComposer
-  import WotexLabWorkbenchWeb.Components.StatusBadge
-  import WotexLabWorkbenchWeb.Components.Tabs
+  import WotexLabWorkbenchWeb.Components.{
+    AnswerBlock,
+    Button,
+    ContextHeader,
+    DataTable,
+    EmptyState,
+    EvidenceLink,
+    Field,
+    MetricPanel,
+    PromptComposer,
+    StatusBadge,
+    Tabs
+  }
 
   @doc false
+  @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     assigns =
       assigns

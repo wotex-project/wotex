@@ -31,7 +31,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   def ask(prompt, opts \\ []) do
     GenServer.call(__MODULE__, {:ask, prompt, opts})
   catch
-    :exit, _reason -> {:error, :investigation_disabled}
+    :exit, _ -> {:error, :investigation_disabled}
   end
 
   @doc "Cancels the caller's active investigation."
@@ -39,17 +39,17 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   def cancel(reference) when is_reference(reference) do
     GenServer.call(__MODULE__, {:cancel, reference})
   catch
-    :exit, _reason -> {:error, :investigation_disabled}
+    :exit, _ -> {:error, :investigation_disabled}
   end
 
-  def cancel(_reference), do: {:error, :unknown_investigation}
+  def cancel(_), do: {:error, :unknown_investigation}
 
   @doc "Returns only bounded state/counters, never prompt or run data."
   @spec status() :: map() | {:error, atom()}
   def status do
     GenServer.call(__MODULE__, :status)
   catch
-    :exit, _reason -> {:error, :investigation_disabled}
+    :exit, _ -> {:error, :investigation_disabled}
   end
 
   @doc false
@@ -57,7 +57,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   def authorize_bridge(capability) do
     GenServer.call(__MODULE__, {:authorize_bridge, capability})
   catch
-    :exit, _reason -> {:error, :bridge_denied}
+    :exit, _ -> {:error, :bridge_denied}
   end
 
   @impl GenServer
@@ -89,11 +89,11 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   end
 
   @impl GenServer
-  def handle_call({:ask, _prompt, _opts}, _from, %{active: active} = state)
+  def handle_call({:ask, _, _}, _, %{active: active} = state)
       when active != nil,
       do: {:reply, {:error, :investigation_busy}, state}
 
-  def handle_call({:ask, prompt, opts}, {owner, _tag}, state) do
+  def handle_call({:ask, prompt, opts}, {owner, _}, state) do
     with :ok <- validate_prompt(prompt),
          :ok <- validate_options(opts),
          :ok <- ContextStore.put(Keyword.get(opts, :run), Keyword.get(opts, :baseline)),
@@ -138,7 +138,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     end
   end
 
-  def handle_call({:authorize_bridge, capability}, _from, %{active: active} = state) do
+  def handle_call({:authorize_bridge, capability}, _, %{active: active} = state) do
     if active != nil and active.bridge_calls < @max_bridge_calls and
          secure_match?(capability, state.bridge_capability) do
       active = %{active | bridge_calls: active.bridge_calls + 1}
@@ -148,7 +148,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     end
   end
 
-  def handle_call({:cancel, request}, {owner, _tag}, %{active: active} = state) do
+  def handle_call({:cancel, request}, {owner, _}, %{active: active} = state) do
     if active != nil and active.request == request and active.owner == owner do
       {:reply, :ok, finish(state, {:error, :investigation_cancelled}, :cancelled, true)}
     else
@@ -156,7 +156,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     end
   end
 
-  def handle_call(:status, _from, state) do
+  def handle_call(:status, _, state) do
     reply = %{
       running: state.active != nil,
       completed: state.completed,
@@ -182,32 +182,32 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     do: {:noreply, finish(state, {:error, :investigation_timeout}, :timed_out, true)}
 
   def handle_info(
-        {:DOWN, monitor, :process, _pid, _reason},
+        {:DOWN, monitor, :process, _, _},
         %{active: %{owner_monitor: monitor}} = state
       ),
       do: {:noreply, finish(state, {:error, :owner_down}, :cancelled, true, false)}
 
   def handle_info(
-        {:DOWN, monitor, :process, _pid, _reason},
+        {:DOWN, monitor, :process, _, _},
         %{active: %{room_monitor: monitor}} = state
       ),
       do: {:noreply, finish(state, {:error, :session_revoked}, :cancelled, true)}
 
   def handle_info(
-        {:DOWN, task_ref, :process, _pid, reason},
+        {:DOWN, task_ref, :process, _, reason},
         %{active: %{task: %Task{ref: task_ref}}} = state
       ),
       do:
         {:noreply,
          finish(state, {:error, {:investigation_failed, safe_reason(reason)}}, :completed, false)}
 
-  def handle_info(_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, %{active: nil}), do: ContextStore.clear()
+  def terminate(_, %{active: nil}), do: ContextStore.clear()
 
-  def terminate(_reason, state) do
-    _state = finish(state, {:error, :investigation_stopped}, :cancelled, true, false)
+  def terminate(_, state) do
+    _ = finish(state, {:error, :investigation_stopped}, :cancelled, true, false)
     :ok
   end
 
@@ -245,17 +245,17 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   defp increment(state, :cancelled), do: %{state | cancelled: state.cancelled + 1}
   defp increment(state, :timed_out), do: %{state | timed_out: state.timed_out + 1}
 
-  defp telemetry_outcome({:ok, _notifications}), do: :ok
+  defp telemetry_outcome({:ok, _}), do: :ok
   defp telemetry_outcome({:error, :investigation_timeout}), do: :timeout
 
   defp telemetry_outcome({:error, reason}) when reason in [:investigation_cancelled, :owner_down],
     do: :rejected
 
-  defp telemetry_outcome(_result), do: :error
+  defp telemetry_outcome(_), do: :error
 
   defp operator do
     case Registry.lookup(Beamlens.OperatorRegistry, Skill) do
-      [{pid, _value}] ->
+      [{pid, _}] ->
         if Beamlens.Operator.status(pid).running,
           do: {:error, :investigation_busy},
           else: {:ok, pid}
@@ -264,7 +264,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
         {:error, :investigation_unavailable}
     end
   catch
-    :exit, _reason -> {:error, :investigation_unavailable}
+    :exit, _ -> {:error, :investigation_unavailable}
   end
 
   defp validate_prompt(prompt)
@@ -272,7 +272,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     if String.trim(prompt) == "", do: {:error, :invalid_prompt}, else: :ok
   end
 
-  defp validate_prompt(_prompt), do: {:error, :invalid_prompt}
+  defp validate_prompt(_), do: {:error, :invalid_prompt}
 
   defp validate_options(opts) when is_list(opts) do
     keys = Keyword.keys(opts)
@@ -283,7 +283,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
        else: {:error, :invalid_context}
   end
 
-  defp validate_options(_opts), do: {:error, :invalid_context}
+  defp validate_options(_), do: {:error, :invalid_context}
 
   defp monitor_room(nil), do: {:ok, nil}
 
@@ -291,7 +291,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     if Process.alive?(room), do: {:ok, Process.monitor(room)}, else: {:error, :session_revoked}
   end
 
-  defp monitor_room(_room), do: {:error, :invalid_context}
+  defp monitor_room(_), do: {:error, :invalid_context}
   defp demonitor_room(nil), do: :ok
   defp demonitor_room(monitor), do: Process.demonitor(monitor, [:flush])
 
@@ -299,7 +299,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
        when is_binary(left) and is_binary(right) and byte_size(left) == byte_size(right),
        do: Plug.Crypto.secure_compare(left, right)
 
-  defp secure_match?(_left, _right), do: false
+  defp secure_match?(_, _), do: false
 
   defp normalize_result({:ok, notifications}),
     do: {:ok, %{notifications: Runs.plain(notifications)}}
@@ -310,5 +310,5 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   defp normalize_result(other), do: {:error, {:investigation_failed, safe_reason(other)}}
 
   defp safe_reason(reason) when is_atom(reason), do: reason
-  defp safe_reason(_reason), do: :provider_failure
+  defp safe_reason(_), do: :provider_failure
 end

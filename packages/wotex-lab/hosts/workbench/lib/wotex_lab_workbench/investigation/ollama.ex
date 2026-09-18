@@ -46,7 +46,7 @@ defmodule WotexLabWorkbench.Investigation.Ollama do
           content when is_binary(content) and content != "" ->
             {:ok, content, %{provider: :ollama, model: model}}
 
-          _invalid ->
+          _ ->
             {:error, :invalid_ollama_response}
         end
 
@@ -91,8 +91,8 @@ defmodule WotexLabWorkbench.Investigation.Ollama do
   end
 
   defp response_metadata({:ok, %{status: status}}), do: %{status: status}
-  defp response_metadata({:error, _reason}), do: %{status: :transport_error}
-  defp maybe_put(map, _key, nil), do: map
+  defp response_metadata({:error, _}), do: %{status: :transport_error}
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
   defp config!(key), do: Application.fetch_env!(@app, key)
 end

@@ -39,7 +39,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
         port = open_port(codex)
 
         try do
-          with {:ok, _result} <- request(port, 1, "initialize", initialize_params(), deadline),
+          with {:ok, _} <- request(port, 1, "initialize", initialize_params(), deadline),
                :ok <- notify(port, "initialized", %{}),
                {:ok, account_result} <-
                  request(port, 2, "account/read", %{refreshToken: false}, deadline),
@@ -53,7 +53,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
         end
     end
   rescue
-    _error -> {:error, :invalid_codex_response}
+    _ -> {:error, :invalid_codex_response}
   catch
     :exit, reason -> {:error, {:codex_port_exit, sanitize(reason)}}
   end
@@ -63,7 +63,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
     port = open_port(codex)
 
     try do
-      with {:ok, _result} <- request(port, 1, "initialize", initialize_params(), deadline),
+      with {:ok, _} <- request(port, 1, "initialize", initialize_params(), deadline),
            :ok <- notify(port, "initialized", %{}),
            {:ok, account_result} <-
              request(port, 2, "account/read", %{refreshToken: false}, deadline),
@@ -91,7 +91,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
            {:ok, inventory} <-
              request(port, 6, "mcpServerStatus/list", %{threadId: thread_id}, deadline),
            :ok <- check_inventory(inventory),
-           {:ok, _turn} <-
+           {:ok, _} <-
              request(port, 5, "turn/start", turn_params(thread_id, messages, opts), deadline),
            {:ok, content, usage} <- await_turn(port, thread_id, deadline) do
         {:ok, content,
@@ -107,7 +107,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
       if Port.info(port), do: Port.close(port)
     end
   rescue
-    _error -> {:error, :invalid_codex_response}
+    _ -> {:error, :invalid_codex_response}
   catch
     :exit, reason -> {:error, {:codex_port_exit, sanitize(reason)}}
   end
@@ -116,13 +116,13 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
     restrictions =
       Map.new(["mcp_servers", "plugins"], fn key ->
         entries = Map.get(config, key) || %{}
-        {key, Map.new(entries, fn {name, _value} -> {name, %{"enabled" => false}} end)}
+        {key, Map.new(entries, fn {name, _} -> {name, %{"enabled" => false}} end)}
       end)
 
     {:ok, restrictions}
   end
 
-  defp disabled_integrations(_payload), do: {:error, :invalid_codex_config}
+  defp disabled_integrations(_), do: {:error, :invalid_codex_config}
 
   defp check_inventory(%{"data" => entries} = inventory) when is_list(entries) do
     if is_nil(inventory["nextCursor"]) and Enum.all?(entries, &empty_capabilities?/1),
@@ -130,12 +130,12 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
       else: {:error, :diagnostic_tools_available}
   end
 
-  defp check_inventory(_payload), do: {:error, :invalid_codex_inventory}
+  defp check_inventory(_), do: {:error, :invalid_codex_inventory}
 
   defp empty_capabilities?(%{"tools" => tools, "resources" => [], "resourceTemplates" => []}),
     do: tools == %{}
 
-  defp empty_capabilities?(_entry), do: false
+  defp empty_capabilities?(_), do: false
 
   defp initialize_params do
     %{
@@ -260,7 +260,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
       {"turn/completed", true} ->
         {:completed, params["turn"] || %{}}
 
-      _other ->
+      _ ->
         :other
     end
   end
@@ -268,7 +268,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
   defp complete_turn(turn, content, usage) do
     case {turn["status"], content || final_message(turn)} do
       {"completed", answer} when is_binary(answer) and answer != "" -> {:ok, answer, usage}
-      _failure -> {:error, {:codex_turn_failed, sanitize(turn["error"] || turn["status"])}}
+      _ -> {:error, {:codex_turn_failed, sanitize(turn["error"] || turn["status"])}}
     end
   end
 
@@ -277,7 +277,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
 
     receive do
       {^port, {:data, {:eol, line}}} -> decode_line(line)
-      {^port, {:data, {:noeol, _line}}} -> {:error, :codex_response_line_too_long}
+      {^port, {:data, {:noeol, _}}} -> {:error, :codex_response_line_too_long}
       {^port, {:exit_status, status}} -> {:error, {:codex_exit_status, status}}
     after
       remaining -> {:error, :codex_timeout}
@@ -287,7 +287,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
   defp decode_line(line) do
     case Jason.decode(line) do
       {:ok, message} when is_map(message) -> {:ok, message}
-      _invalid -> {:error, :invalid_codex_response}
+      _ -> {:error, :invalid_codex_response}
     end
   end
 
@@ -299,7 +299,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
   def authorize_account(%{"account" => %{"type" => "apiKey"}}),
     do: {:error, :api_key_auth_refused}
 
-  def authorize_account(_payload), do: {:error, :chatgpt_login_required}
+  def authorize_account(_), do: {:error, :chatgpt_login_required}
 
   @doc "Rejects exhausted or unavailable ChatGPT-plan quota."
   @spec authorize_quota(map()) :: {:ok, map()} | {:error, atom()}
@@ -326,7 +326,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
     end
   end
 
-  def authorize_quota(_payload), do: {:error, :rate_limits_unavailable}
+  def authorize_quota(_), do: {:error, :rate_limits_unavailable}
 
   defp available_limit?(%{"primary" => primary} = limit) do
     available_window?(primary) and
@@ -334,14 +334,14 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
       is_nil(limit["rateLimitReachedType"]) and limit["spendControlReached"] != true
   end
 
-  defp available_limit?(_limit), do: false
+  defp available_limit?(_), do: false
   defp available_window?(%{"usedPercent" => used}), do: is_number(used) and used >= 0 and used < 100
-  defp available_window?(_window), do: false
+  defp available_window?(_), do: false
 
   defp thread_identity(%{"thread" => %{"id" => thread_id}} = result),
     do: {:ok, thread_id, result["model"] || "codex-default"}
 
-  defp thread_identity(_result), do: {:error, :invalid_thread_response}
+  defp thread_identity(_), do: {:error, :invalid_thread_response}
 
   defp format_messages(messages) do
     Enum.map_join(messages, "\n\n", fn message ->
@@ -368,11 +368,11 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
     |> Enum.reverse()
     |> Enum.find_value(fn
       %{"type" => "agentMessage", "text" => text} -> text
-      _item -> nil
+      _ -> nil
     end)
   end
 
-  defp final_message(_turn), do: nil
+  defp final_message(_), do: nil
   defp compact_usage(nil), do: nil
 
   defp compact_usage(usage) do
@@ -400,7 +400,7 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
   end
 
   defp executable(opts), do: Keyword.get(opts, :executable) || System.find_executable("codex")
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
   defp sanitize(value) when is_atom(value) or is_number(value) or is_binary(value), do: value
   defp sanitize(value), do: inspect(value, limit: 10, printable_limit: 500)

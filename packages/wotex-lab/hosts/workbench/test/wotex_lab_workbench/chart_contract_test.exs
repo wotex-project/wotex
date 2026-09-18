@@ -51,7 +51,7 @@ defmodule WotexLabWorkbench.ChartContractTest do
     assert {:error, %Error{code: :too_many_points}} =
              Chart.new(series: [%{name: "room", points: Enum.map(1..2_001, &{&1, 1})}])
 
-    assert {:ok, _chart} = Chart.new(series: [%{name: "flat", points: [{1.0e100, 1.0e100}]}])
+    assert {:ok, _} = Chart.new(series: [%{name: "flat", points: [{1.0e100, 1.0e100}]}])
     assert {:error, %Error{}} = Chart.new(title: <<255>>)
   end
 

@@ -35,7 +35,7 @@ defmodule WotexLabWorkbench.Preview do
   @spec tensor_summary(Encoded.t(), module()) :: map()
   def tensor_summary(encoded, backend) when is_atom(backend) do
     {values, masks, quality} = Encoded.template(encoded)
-    features = encoded |> Encoded.schema() |> Schema.features()
+    features = Schema.features(Encoded.schema(encoded))
     rows = Encoded.row_count(encoded)
     {realized_values, realized_masks, realized_quality} = realize(encoded)
     codes = Wotex.Nx.quality_codes()
@@ -44,7 +44,7 @@ defmodule WotexLabWorkbench.Preview do
       layout: Atom.to_string(Encoded.layout(encoded)),
       backend: inspect(backend),
       rows: rows,
-      feature_order: encoded |> Encoded.feature_order() |> Enum.take(@max_columns),
+      feature_order: Enum.take(Encoded.feature_order(encoded), @max_columns),
       preview_bounds: %{
         rows: min(rows, @max_rows),
         features: min(length(features), @max_columns),
@@ -59,14 +59,16 @@ defmodule WotexLabWorkbench.Preview do
         |> Enum.take(@max_columns)
         |> Enum.with_index()
         |> Enum.map(fn {feature, index} ->
+          flags = List.flatten(Enum.at(realized_masks, index))
+
           %{
             name: feature.name,
             dtype: dtype(elem(values, index)),
             shape: shape(elem(values, index)),
             mask_dtype: dtype(elem(masks, index)),
             unit: unit(feature),
-            observed: realized_masks |> Enum.at(index) |> List.flatten() |> Enum.count(&(&1 == 1)),
-            filled: realized_masks |> Enum.at(index) |> List.flatten() |> Enum.count(&(&1 == 0))
+            observed: Enum.count(flags, &(&1 == 1)),
+            filled: Enum.count(flags, &(&1 == 0))
           }
         end),
       quality: %{dtype: dtype(quality), shape: shape(quality), codes: codes},
@@ -132,7 +134,7 @@ defmodule WotexLabWorkbench.Preview do
     end
   end
 
-  def downsample(_points, _max), do: invalid_budget()
+  def downsample(_, _), do: invalid_budget()
 
   defp invalid_budget,
     do:
@@ -145,24 +147,24 @@ defmodule WotexLabWorkbench.Preview do
 
   defp bucket(chunk) do
     indexed = Enum.with_index(chunk)
-    {gaps, present} = Enum.split_with(indexed, fn {{_x, y}, _index} -> is_nil(y) end)
+    {gaps, present} = Enum.split_with(indexed, fn {{_, y}, _} -> is_nil(y) end)
 
     case present do
       [] ->
         [hd(chunk)]
 
-      _values ->
+      _ ->
         extrema = [
-          Enum.min_by(present, fn {{_x, y}, _i} -> y end),
-          Enum.max_by(present, fn {{_x, y}, _i} -> y end)
+          Enum.min_by(present, fn {{_, y}, _} -> y end),
+          Enum.max_by(present, fn {{_, y}, _} -> y end)
         ]
 
-        {first, last} = extrema |> Enum.map(&elem(&1, 1)) |> Enum.min_max()
+        {first, last} = Enum.min_max(Enum.map(extrema, &elem(&1, 1)))
 
         sentinels =
           gaps
-          |> Enum.group_by(fn {_point, i} -> gap_position(i, first, last) end)
-          |> Enum.map(fn {_position, values} -> hd(values) end)
+          |> Enum.group_by(fn {_, i} -> gap_position(i, first, last) end)
+          |> Enum.map(fn {_, values} -> hd(values) end)
 
         (extrema ++ sentinels)
         |> Enum.uniq()
@@ -171,29 +173,29 @@ defmodule WotexLabWorkbench.Preview do
     end
   end
 
-  defp gap_position(i, first, _last) when i < first, do: :before
-  defp gap_position(i, _first, last) when i > last, do: :after
-  defp gap_position(_i, _first, _last), do: :between
+  defp gap_position(i, first, _) when i < first, do: :before
+  defp gap_position(i, _, last) when i > last, do: :after
+  defp gap_position(_, _, _), do: :between
 
   defp finite({x, y}) when is_number(y), do: {x, y}
-  defp finite({x, _other}), do: {x, nil}
+  defp finite({x, _}), do: {x, nil}
 
   defp realize(encoded) do
-    {batch, _rest} = encoded |> Encoded.batch() |> Nx.Batch.split(@max_rows)
+    {batch, _} = Nx.Batch.split(Encoded.batch(encoded), @max_rows)
 
-    {_template, reversed} =
+    {_, reversed} =
       Nx.LazyContainer.traverse(batch, [], fn template, build, builders ->
         {template, [build | builders]}
       end)
 
-    count = encoded |> Encoded.feature_order() |> length()
-    {values, rest} = reversed |> Enum.reverse() |> Enum.split(count)
+    count = length(Encoded.feature_order(encoded))
+    {values, rest} = Enum.split(Enum.reverse(reversed), count)
     {masks, [quality]} = Enum.split(rest, count)
 
     {
-      values |> Enum.take(@max_columns) |> Enum.map(&column/1),
-      masks |> Enum.take(@max_columns) |> Enum.map(&column/1),
-      quality.() |> bounded_matrix() |> Nx.to_list()
+      Enum.map(Enum.take(values, @max_columns), &column/1),
+      Enum.map(Enum.take(masks, @max_columns), &column/1),
+      Nx.to_list(bounded_matrix(quality.()))
     }
   end
 
@@ -202,7 +204,7 @@ defmodule WotexLabWorkbench.Preview do
 
     if Nx.rank(tensor) == 1,
       do: Nx.to_list(tensor),
-      else: tensor |> bounded_matrix() |> Nx.to_list()
+      else: Nx.to_list(bounded_matrix(tensor))
   end
 
   defp bounded_matrix(tensor) do
@@ -221,8 +223,14 @@ defmodule WotexLabWorkbench.Preview do
           values
           |> Enum.with_index()
           |> Enum.map(fn {column, feature} ->
-            mask = masks |> Enum.at(feature) |> Enum.at(row)
-            code = quality |> Enum.at(row) |> List.wrap() |> Enum.at(feature)
+            mask = Enum.at(Enum.at(masks, feature), row)
+
+            code =
+              quality
+              |> Enum.at(row)
+              |> List.wrap()
+              |> Enum.at(feature)
+
             value = Enum.at(column, row)
 
             %{
@@ -244,24 +252,21 @@ defmodule WotexLabWorkbench.Preview do
       else: format(value)
   end
 
-  defp cell_text(value, _mask), do: format(value)
+  defp cell_text(value, _), do: format(value)
 
   defp dtype(%Nx.Tensor{} = tensor) do
     {kind, bits} = Nx.type(tensor)
     "#{kind}#{bits}"
   end
 
-  defp shape(%Nx.Tensor{} = tensor), do: tensor |> Nx.shape() |> Tuple.to_list()
+  defp shape(%Nx.Tensor{} = tensor), do: Tuple.to_list(Nx.shape(tensor))
 
   defp unit(%{data_schema: schema}) do
-    schema
-    |> Map.from_struct()
-    |> Map.get(:unit)
-    |> case do
+    case Map.get(Map.from_struct(schema), :unit) do
       nil -> Map.get(Wotex.DataSchema.to_map(schema), "unit", "none")
       unit -> unit
     end
   rescue
-    _error -> "none"
+    _ -> "none"
   end
 end

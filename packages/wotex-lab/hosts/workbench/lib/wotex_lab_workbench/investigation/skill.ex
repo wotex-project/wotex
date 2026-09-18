@@ -19,14 +19,14 @@ defmodule WotexLabWorkbench.Investigation.Skill do
     concurrent: 1
   }
 
-  @impl true
+  @impl Beamlens.Skill
   def title, do: "WoTEx Lab evidence"
 
-  @impl true
+  @impl Beamlens.Skill
   def description,
     do: "Bounded catalogue metrics and server-admitted current/baseline run summaries"
 
-  @impl true
+  @impl Beamlens.Skill
   def system_prompt do
     """
     You investigate a trusted local WoTEx Lab host using read-only, bounded
@@ -43,7 +43,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
     """
   end
 
-  @impl true
+  @impl Beamlens.Skill
   def snapshot do
     %{
       catalogue_version: Catalogue.version(),
@@ -52,7 +52,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
       run_context: ContextStore.metadata()
     }
   catch
-    :exit, _reason ->
+    :exit, _ ->
       %{
         catalogue_version: Catalogue.version(),
         metric_count: length(Catalogue.metrics()),
@@ -61,7 +61,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
       }
   end
 
-  @impl true
+  @impl Beamlens.Skill
   def callbacks do
     %{
       "lab_metric_catalogue" => &metric_catalogue/1,
@@ -71,7 +71,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
     }
   end
 
-  @impl true
+  @impl Beamlens.Skill
   def callback_docs do
     """
     ### lab_metric_catalogue(group)
@@ -141,7 +141,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
             {:error, error} -> failure(error.code)
           end
         after
-          _result = Gateway.revoke(gateway)
+          _ = Gateway.revoke(gateway)
         end
 
       {:error, error} ->
@@ -158,7 +158,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
         failure(error.code)
     after
       2_000 ->
-        _result = Gateway.cancel(gateway, reference)
+        _ = Gateway.cancel(gateway, reference)
         failure(:deadline_exceeded)
     end
   end
@@ -166,22 +166,24 @@ defmodule WotexLabWorkbench.Investigation.Skill do
   defp run_summary(which) do
     ContextStore.get(normalize_string(which, "")) |> bounded_output()
   catch
-    :exit, _reason -> %{available: false, reason: "context_store_unavailable"}
+    :exit, _ -> %{available: false, reason: "context_store_unavailable"}
   end
 
   defp compare_runs do
     ContextStore.compare() |> bounded_output()
   catch
-    :exit, _reason -> %{available: false, reason: "context_store_unavailable"}
+    :exit, _ -> %{available: false, reason: "context_store_unavailable"}
   end
 
   defp json_safe(value) do
-    value |> Jason.encode!() |> Jason.decode!()
+    value
+    |> Jason.encode!()
+    |> Jason.decode!()
   end
 
   defp bounded_output(value), do: ContextStore.charge(value)
 
   defp failure(code), do: %{available: false, error: Atom.to_string(code)}
-  defp normalize_string(value, _default) when is_binary(value), do: String.slice(value, 0, 128)
-  defp normalize_string(_value, default), do: default
+  defp normalize_string(value, _) when is_binary(value), do: String.slice(value, 0, 128)
+  defp normalize_string(_, default), do: default
 end

@@ -97,13 +97,13 @@ defmodule WotexLabWorkbench.Sessions do
   end
 
   @impl GenServer
-  def handle_call(:open, _from, state) do
+  def handle_call(:open, _, state) do
     if map_size(state.sessions) >= state.max_sessions do
       {:reply, {:error, Error.new(:session_limit, :session, "session capacity reached")}, state}
     else
       now = now_ms()
-      token = @token_bytes |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
-      id = 12 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+      token = Base.url_encode64(:crypto.strong_rand_bytes(@token_bytes), padding: false)
+      id = Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)
 
       session = %{
         id: "session-#{id}",
@@ -119,14 +119,14 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  def handle_call({:verify, token}, _from, state) do
+  def handle_call({:verify, token}, _, state) do
     case live(state, token) do
       {:ok, session, state} -> {:reply, {:ok, session}, state}
       {:error, error, state} -> {:reply, {:error, error}, state}
     end
   end
 
-  def handle_call({:admit, token, command}, _from, state) when command in @commands do
+  def handle_call({:admit, token, command}, _, state) when command in @commands do
     with {:ok, session, state} <- live(state, token),
          {:ok, session, state} <- room_for(state, session, command) do
       session = %{session | expires_at: now_ms() + state.ttl_ms}
@@ -136,11 +136,11 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  def handle_call({:admit, _token, _command}, _from, state) do
+  def handle_call({:admit, _, _}, _, state) do
     {:reply, {:error, Error.new(:unknown_command, :session, "command is not admitted")}, state}
   end
 
-  def handle_call({:theme, token, theme}, _from, state) do
+  def handle_call({:theme, token, theme}, _, state) do
     with {:ok, session, state} <- live(state, token),
          true <- theme in @themes do
       session = %{session | theme: theme}
@@ -154,7 +154,7 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  def handle_call({:dashboard, token, panel_ids}, _from, state) do
+  def handle_call({:dashboard, token, panel_ids}, _, state) do
     with {:ok, session, state} <- live(state, token),
          {:ok, panels} <- Panels.select(panel_ids) do
       session = %{session | dashboard_panels: Enum.map(panels, & &1.id)}
@@ -165,14 +165,14 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  def handle_call({:revoke, token}, _from, state) do
+  def handle_call({:revoke, token}, _, state) do
     case Map.fetch(state.sessions, token) do
       {:ok, session} -> {:reply, :ok, drop(state, session)}
       :error -> {:reply, {:error, unknown()}, state}
     end
   end
 
-  def handle_call(:count, _from, state), do: {:reply, map_size(state.sessions), state}
+  def handle_call(:count, _, state), do: {:reply, map_size(state.sessions), state}
 
   @impl GenServer
   def handle_info(:sweep, state) do
@@ -188,9 +188,9 @@ defmodule WotexLabWorkbench.Sessions do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, state) do
+  def handle_info({:DOWN, monitor, :process, _, _}, state) do
     case Map.pop(state.monitors, monitor) do
-      {nil, _monitors} ->
+      {nil, _} ->
         {:noreply, state}
 
       {token, monitors} ->
@@ -218,10 +218,10 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  defp live(state, _token),
+  defp live(state, _),
     do: {:error, Error.new(:invalid_token, :session, "session token is malformed"), state}
 
-  defp room_for(state, %{room: pid} = session, _command) when is_pid(pid),
+  defp room_for(state, %{room: pid} = session, _) when is_pid(pid),
     do: {:ok, session, state}
 
   defp room_for(state, session, command) when command in [:start_room, :run, :read, :verify] do
@@ -245,17 +245,17 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  defp room_for(state, _session, _command),
+  defp room_for(state, _, _),
     do: {:error, Error.new(:no_room, :session, "start a room first"), state}
 
   defp drop(state, session) do
     if is_pid(session.room) do
-      _result = Wotex.Lab.stop_child(state.lab, :sessions, session.room)
+      _ = Wotex.Lab.stop_child(state.lab, :sessions, session.room)
     end
 
     monitors =
       state.monitors
-      |> Enum.reject(fn {_monitor, token} -> token == session.token end)
+      |> Enum.reject(fn {_, token} -> token == session.token end)
       |> Map.new()
 
     %{state | sessions: Map.delete(state.sessions, session.token), monitors: monitors}
@@ -263,13 +263,13 @@ defmodule WotexLabWorkbench.Sessions do
 
   defp reason_code(%{code: code}) when is_atom(code), do: code
   defp reason_code(:max_children), do: :max_children
-  defp reason_code(_reason), do: :start_failed
+  defp reason_code(_), do: :start_failed
 
   defp validate_options(opts) when is_list(opts) do
     if Keyword.keyword?(opts), do: validate_keyword_options(opts), else: invalid_options()
   end
 
-  defp validate_options(_opts), do: invalid_options()
+  defp validate_options(_), do: invalid_options()
 
   defp validate_keyword_options(opts) do
     keys = Keyword.keys(opts)
@@ -296,7 +296,7 @@ defmodule WotexLabWorkbench.Sessions do
   defp valid_intervals?(ttl, sweep) when is_integer(ttl) and is_integer(sweep),
     do: ttl in 100..86_400_000 and sweep in 10..ttl
 
-  defp valid_intervals?(_ttl, _sweep), do: false
+  defp valid_intervals?(_, _), do: false
   defp integer_in?(value, range), do: is_integer(value) and value in range
 
   defp invalid_options,

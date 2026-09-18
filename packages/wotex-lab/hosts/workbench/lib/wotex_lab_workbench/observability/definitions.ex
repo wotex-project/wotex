@@ -37,9 +37,9 @@ defmodule WotexLabWorkbench.Observability.Definitions do
 
     case {metric.type, metric.measurement} do
       {:counter, nil} -> Metrics.counter(metric.name, opts)
-      {:counter, _measurement} -> Metrics.sum(metric.name, opts)
-      {:gauge, _measurement} -> Metrics.last_value(metric.name, opts)
-      {:histogram, _measurement} -> Metrics.distribution(metric.name, opts)
+      {:counter, _} -> Metrics.sum(metric.name, opts)
+      {:gauge, _} -> Metrics.last_value(metric.name, opts)
+      {:histogram, _} -> Metrics.distribution(metric.name, opts)
     end
   end
 

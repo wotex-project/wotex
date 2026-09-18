@@ -13,13 +13,12 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   channel and reads the simulated effect afterwards.
   """
 
-  alias Wotex.DataSchema
+  alias Wotex.{DataSchema, ThingDescription}
   alias Wotex.Lab.Continuum.{Channel, Wire}
   alias Wotex.Lab.Error
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
   alias Wotex.Nx.{ActionProposal, Decoder, Encoder, Feature, Observation, OutputSchema, Row, Schema}
   alias Wotex.Runtime.{ConsumedThing, Context}
-  alias Wotex.ThingDescription
   alias WotexLabWorkbench.{Preview, Runs}
 
   @backend Nx.BinaryBackend
@@ -127,7 +126,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
              room.scope,
              DateTime.add(room.epoch, now, :millisecond)
            ),
-         {:ok, _delivery} <- Channel.send_value(room.channel, "edge", "cloud", result),
+         {:ok, _} <- Channel.send_value(room.channel, "edge", "cloud", result),
          {:ok, effect} <- ConsumedThing.read_property(actuator, "target", context("effect", now)) do
       {:ok, %{dispatch: Runs.plain(outcome), effect: effect.payload}}
     else
@@ -142,7 +141,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     end
   end
 
-  def dispatch(_run, _approval, _room),
+  def dispatch(_, _, _),
     do: {:error, Error.new(:no_decision, :dispatch, "run has no granted decision")}
 
   defp match(decision, approval) do
@@ -186,26 +185,29 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     end
   end
 
-  defp meter(_room, false, _now), do: {:ok, nil}
+  defp meter(_, false, _), do: {:ok, nil}
 
   defp meter(room, true, now) do
     with {:ok, meter} <- fetch(room, :meter), do: observe(meter, "power", "W", now)
   end
 
   defp exchange(room, observations) do
-    observations
-    |> Enum.reject(&is_nil/1)
-    |> Enum.reduce_while({:ok, []}, fn observation, {:ok, acc} ->
-      with {:ok, proposal} <-
-             Wire.proposal_from_observation(observation, room.scope, room.epoch,
-               sequence: room.watermark
-             ),
-           {:ok, delivery} <- Channel.send_value(room.channel, "edge", "cloud", proposal) do
-        {:cont, {:ok, acc ++ [delivery]}}
-      else
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
+    delivered =
+      observations
+      |> Enum.reject(&is_nil/1)
+      |> Enum.reduce_while({:ok, []}, fn observation, {:ok, acc} ->
+        with {:ok, proposal} <-
+               Wire.proposal_from_observation(observation, room.scope, room.epoch,
+                 sequence: room.watermark
+               ),
+             {:ok, delivery} <- Channel.send_value(room.channel, "edge", "cloud", proposal) do
+          {:cont, {:ok, [delivery | acc]}}
+        else
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    with {:ok, reversed} <- delivered, do: {:ok, Enum.reverse(reversed)}
   end
 
   defp infer(actuator, temperature, power, params, now) do
@@ -281,7 +283,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     }
   end
 
-  defp decision_view({:error, _error}, _fields), do: nil
+  defp decision_view({:error, _}, _), do: nil
 
   defp decision_summary({:ok, decision}),
     do: [{"Decision", "#{decision.id} granted, awaiting explicit approval"}]
@@ -289,11 +291,11 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   defp decision_summary({:error, %Error{code: code}}),
     do: [{"Decision", "refused: #{code}"}]
 
-  defp decision_ok?({:ok, _decision}), do: true
-  defp decision_ok?({:error, _error}), do: false
-  defp decision_note({:ok, _decision}), do: "policy granted one decision"
+  defp decision_ok?({:ok, _}), do: true
+  defp decision_ok?({:error, _}), do: false
+  defp decision_note({:ok, _}), do: "policy granted one decision"
   defp decision_note({:error, %Error{code: code}}), do: "policy refused: #{code}"
-  defp decision_status({:ok, _decision}), do: :granted
+  defp decision_status({:ok, _}), do: :granted
   defp decision_status({:error, %Error{code: code}}), do: code
 
   defp context(label, now),

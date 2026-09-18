@@ -12,10 +12,7 @@ defmodule WotexLabWorkbenchWeb.Components.HistoryPanels do
 
   use Phoenix.Component
 
-  import WotexLabWorkbenchWeb.Components.Chart
-  import WotexLabWorkbenchWeb.Components.EmptyState
-  import WotexLabWorkbenchWeb.Components.Field
-  import WotexLabWorkbenchWeb.Components.MetricPanel
+  import WotexLabWorkbenchWeb.Components.{Chart, EmptyState, Field, MetricPanel}
 
   alias WotexLabWorkbench.HistoryPanels
 
@@ -117,6 +114,9 @@ defmodule WotexLabWorkbenchWeb.Components.HistoryPanels do
   defp step_seconds(history), do: div(history.step_ms, 1_000)
 
   defp format_time(ms) do
-    ms |> DateTime.from_unix!(:millisecond) |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+    ms
+    |> DateTime.from_unix!(:millisecond)
+    |> DateTime.truncate(:second)
+    |> DateTime.to_iso8601()
   end
 end

@@ -13,7 +13,9 @@ defmodule WotexLabWorkbench.Runs.WindowAnomaly do
   def run(params) do
     backend = Keyword.fetch!(params, :backend)
     lane = Keyword.take(params, [:seed, :count, :window_count, :threshold, :fill])
-    {outcome, elapsed} = Runs.measure(fn -> WindowAnomaly.run(lane ++ [backend: backend]) end)
+
+    {outcome, elapsed} =
+      Runs.measure(fn -> WindowAnomaly.run(Keyword.put(lane, :backend, backend)) end)
 
     with {:ok, result} <- outcome do
       tensor = Preview.tensor_summary(result.encoded, backend)

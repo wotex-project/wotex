@@ -22,7 +22,7 @@ defmodule WotexLabWorkbench.Provenance do
         case dependency.status do
           {:ok, value} when is_binary(value) -> value
           {:nomatchvsn, value} when is_binary(value) -> value
-          _other -> "unavailable"
+          _ -> "unavailable"
         end
 
       {dependency.app, version}
@@ -68,10 +68,10 @@ defmodule WotexLabWorkbench.Provenance do
                      wotex_binding_http wotex_binding_mqtt nx ex_maude phoenix phoenix_live_view)a,
                   fn name ->
                     case Map.get(@lock, name) do
-                      {:hex, _app, version, _inner, _tools, _deps, _repo, outer} ->
+                      {:hex, _, version, _, _, _, _, outer} ->
                         %{name: Atom.to_string(name), version: version, archive: "sha256:" <> outer}
 
-                      _path_or_absent ->
+                      _ ->
                         version = Map.get(dependency_versions, name, "absent")
 
                         %{name: Atom.to_string(name), version: version, archive: :missing}

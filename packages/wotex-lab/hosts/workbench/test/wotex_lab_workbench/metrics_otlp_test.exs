@@ -3,9 +3,8 @@ defmodule WotexLabWorkbench.MetricsOtlpTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Telemetry}
   alias Wotex.Lab.Otlp.Exporter
-  alias Wotex.Lab.Telemetry
   alias WotexLabWorkbench.FakeGreptime
   alias WotexLabWorkbench.Observability.Otlp
 

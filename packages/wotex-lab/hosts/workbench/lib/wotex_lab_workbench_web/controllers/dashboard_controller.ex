@@ -18,7 +18,7 @@ defmodule WotexLabWorkbenchWeb.DashboardController do
   @doc "Sends a bounded inert dashboard export for a verified workbench session."
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, params) do
-    with {:ok, _session} <- Sessions.verify(get_session(conn, SessionToken.key())),
+    with {:ok, _} <- Sessions.verify(get_session(conn, SessionToken.key())),
          true <-
            map_size(params) <= 2 and Enum.all?(Map.keys(params), &(&1 in ["panels", "selection"])),
          true <- Map.get(params, "selection") in [nil, "custom"],
@@ -35,7 +35,7 @@ defmodule WotexLabWorkbenchWeb.DashboardController do
       false ->
         send_resp(conn, 400, "unsupported dashboard parameter")
 
-      _denied ->
+      _ ->
         send_resp(conn, 403, "session denied")
     end
   end

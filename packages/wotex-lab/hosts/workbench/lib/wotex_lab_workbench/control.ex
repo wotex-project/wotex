@@ -30,10 +30,9 @@ defmodule WotexLabWorkbench.Control do
   before answering. The answer is JSON-compatible data with string keys.
   """
 
-  alias Wotex.Lab.Error
+  alias Wotex.Lab.{Error, Scenario}
   alias Wotex.Lab.Evidence.Record
   alias Wotex.Lab.Metrics.{Catalogue, Gateway}
-  alias Wotex.Lab.Scenario
   alias WotexLabWorkbench.{Experiments, Room, Run, Runs}
 
   @max_deadline_ms 30_000
@@ -82,19 +81,16 @@ defmodule WotexLabWorkbench.Control do
   def fetch_evidence(room, "sha256:" <> hex = digest)
       when is_pid(room) and byte_size(hex) == 64 do
     if hex =~ ~r/\A[0-9a-f]{64}\z/ do
-      room
-      |> Room.runs()
-      |> Enum.find(&(&1.record_digest == digest))
-      |> case do
+      case Enum.find(Room.runs(room), &(&1.record_digest == digest)) do
         %{record: %Record{} = record} -> {:ok, Record.to_map(record)}
-        _missing -> {:error, error(:unknown_evidence, "evidence record is not retained")}
+        _ -> {:error, error(:unknown_evidence, "evidence record is not retained")}
       end
     else
       {:error, error(:invalid_record_id, "record digest is malformed")}
     end
   end
 
-  def fetch_evidence(_room, _digest),
+  def fetch_evidence(_, _),
     do: {:error, error(:invalid_record_id, "record digest is malformed")}
 
   @doc "Projects a run into the bounded JSON-compatible map of the control API."
@@ -382,7 +378,7 @@ defmodule WotexLabWorkbench.Control do
   defp json(%DateTime{} = value), do: DateTime.to_iso8601(value)
   defp json(value) when is_map(value), do: Map.new(value, fn {k, v} -> {to_string(k), json(v)} end)
   defp json(value) when is_list(value), do: Enum.map(value, &json/1)
-  defp json(value) when is_tuple(value), do: value |> Tuple.to_list() |> json()
+  defp json(value) when is_tuple(value), do: json(Tuple.to_list(value))
   defp json(value) when is_boolean(value) or is_nil(value), do: value
   defp json(value) when is_atom(value), do: Atom.to_string(value)
   defp json(value), do: value

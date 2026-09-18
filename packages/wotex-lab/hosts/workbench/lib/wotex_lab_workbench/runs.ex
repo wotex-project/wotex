@@ -24,34 +24,37 @@ defmodule WotexLabWorkbench.Runs do
   @doc "Converts a value to a bounded, JSON-compatible form."
   @spec plain(term(), non_neg_integer()) :: term()
   def plain(value, depth \\ 0)
-  def plain(_value, depth) when depth > @max_plain_depth, do: "…"
+  def plain(_, depth) when depth > @max_plain_depth, do: "…"
 
-  def plain(%Nx.Tensor{} = tensor, _depth) do
-    tensor |> Nx.flatten() |> Nx.slice_along_axis(0, min(Nx.size(tensor), 32)) |> Nx.to_flat_list()
+  def plain(%Nx.Tensor{} = tensor, _) do
+    tensor
+    |> Nx.flatten()
+    |> Nx.slice_along_axis(0, min(Nx.size(tensor), 32))
+    |> Nx.to_flat_list()
   end
 
-  def plain(%DateTime{} = value, _depth), do: DateTime.to_iso8601(value)
-  def plain(%MapSet{} = value, depth), do: value |> MapSet.to_list() |> plain(depth + 1)
-  def plain(%_struct{} = value, depth), do: value |> Map.from_struct() |> plain(depth + 1)
+  def plain(%DateTime{} = value, _), do: DateTime.to_iso8601(value)
+  def plain(%MapSet{} = value, depth), do: plain(MapSet.to_list(value), depth + 1)
+  def plain(%_{} = value, depth), do: plain(Map.from_struct(value), depth + 1)
 
   def plain(value, depth) when is_map(value) do
     Map.new(value, fn {key, inner} -> {to_string(key), plain(inner, depth + 1)} end)
   end
 
   def plain(value, depth) when is_list(value),
-    do: value |> Enum.take(64) |> Enum.map(&plain(&1, depth + 1))
+    do: Enum.map(Enum.take(value, 64), &plain(&1, depth + 1))
 
-  def plain(value, _depth) when is_tuple(value),
-    do: value |> Tuple.to_list() |> Enum.map(&plain(&1, @max_plain_depth))
+  def plain(value, _) when is_tuple(value),
+    do: Enum.map(Tuple.to_list(value), &plain(&1, @max_plain_depth))
 
-  def plain(value, _depth) when is_atom(value) and not is_boolean(value) and not is_nil(value),
+  def plain(value, _) when is_atom(value) and not is_boolean(value) and not is_nil(value),
     do: Atom.to_string(value)
 
-  def plain(value, _depth)
+  def plain(value, _)
       when is_pid(value) or is_reference(value) or is_function(value) or is_port(value),
       do: "opaque"
 
-  def plain(value, _depth), do: value
+  def plain(value, _), do: value
 
   @doc "Builds one series per feature from a tensor preview; filled rows become gaps."
   @spec timeseries(map()) :: [map()]
@@ -59,7 +62,7 @@ defmodule WotexLabWorkbench.Runs do
     features
     |> Enum.with_index()
     |> Enum.map(fn {feature, index} ->
-      unit = tensor.features |> Enum.at(index) |> Map.get(:unit, "none")
+      unit = Map.get(Enum.at(tensor.features, index), :unit, "none")
 
       points =
         Enum.map(rows, fn row ->

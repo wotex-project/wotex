@@ -6,11 +6,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   alias Plug.Conn.Query
   alias WotexLabWorkbench.Observability.Supervisor, as: ObservabilitySupervisor
   alias WotexLabWorkbench.Sessions
-  alias WotexLabWorkbenchWeb.ComponentHarness
-  alias WotexLabWorkbenchWeb.Components
+  alias WotexLabWorkbenchWeb.{ComponentHarness, Components}
   alias WotexLabWorkbenchWeb.Components.Shell
-  alias WotexLabWorkbenchWeb.Plugs.ContentSecurityPolicy
-  alias WotexLabWorkbenchWeb.Plugs.SessionToken
+  alias WotexLabWorkbenchWeb.Plugs.{ContentSecurityPolicy, SessionToken}
 
   @beamlens_registry %{
     primary: "Test",
@@ -71,7 +69,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   test "a smart-room run needs the separate exact approval form", %{conn: conn} do
     conn = get(conn, "/")
-    {:ok, view, _html} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
 
     redirect =
@@ -99,7 +97,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   test "analysis is explicit, scope-owned and cannot mutate or replay its run", %{conn: conn} do
     conn = get(conn, "/")
-    {:ok, view, _html} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
     assert render_hook(view, "inspect_run", %{}) =~ "unknown_run"
 
@@ -109,9 +107,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         "params" => %{"backend" => "binary"}
       })
 
-    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
     refute has_element?(run_view, "#run-insights")
-    before = get(recycle(conn), "/evidence/report.json") |> json_response(200) |> Map.fetch!("runs")
+    before = Map.fetch!(evidence_report(conn), "runs")
 
     html = render_submit(element(run_view, "#run-analysis"), %{"mark" => "point"})
     assert html =~ "Explorer.PolarsBackend"
@@ -150,20 +148,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert refused_html =~ "invalid_analysis_query"
     refute has_element?(refused, "#run-insights")
 
-    after_runs =
-      get(recycle(conn), "/evidence/report.json") |> json_response(200) |> Map.fetch!("runs")
+    after_runs = Map.fetch!(evidence_report(conn), "runs")
 
     assert after_runs == before
-    {:ok, reloaded, _html} = live(recycle(conn), "/runs/run-1")
+    {:ok, reloaded, _} = live(recycle(conn), "/runs/run-1")
     refute has_element?(reloaded, "#run-insights")
-    {:ok, other, _html} = live(build_conn(), "/runs/run-1")
+    {:ok, other, _} = live(build_conn(), "/runs/run-1")
     refute has_element?(other, "#run-analysis")
     refute render_hook(other, "inspect_run", %{}) =~ "Explorer.PolarsBackend"
   end
 
   test "Things escape untrusted TD text and reports stay in the caller session", %{conn: conn} do
     conn = get(conn, "/things")
-    {:ok, view, _html} = live(recycle(conn), "/things")
+    {:ok, view, _} = live(recycle(conn), "/things")
     render_click(element(view, "button[phx-click='start_room']"))
 
     source =
@@ -207,7 +204,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert host_css =~ ~r/\.wl-stack > \* \{\s*min-width: 0;/
     refute host_css =~ "gradient"
 
-    {:ok, view, _html} = live(conn, "/evidence")
+    {:ok, view, _} = live(conn, "/evidence")
     render_click(element(view, "button[phx-click='start_room']"))
     html = render(view)
     assert html =~ "No investigation provider is configured"
@@ -237,7 +234,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     on_exit(fn -> Application.put_env(:wotex_lab_workbench, :beamlens_provider, provider) end)
 
     conn = get(conn, "/")
-    {:ok, view, _html} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
 
     redirect =
@@ -252,7 +249,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert has_element?(run_view, "#investigation-disclosure li", "node name, operating system")
     refute has_element?(run_view, "#investigation textarea[disabled]")
 
-    _html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Explain this run"})
+    _ = render_submit(element(run_view, "#investigation"), %{"prompt" => "Explain this run"})
     html = render_until(run_view, "Observed facts")
     assert html =~ "Observed facts"
     assert html =~ "Metric nx_duration_seconds increased (run summary sha256:"
@@ -271,7 +268,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   test "browser cancellation terminates the worker and clears its prompt context", %{conn: conn} do
     start_beamlens_tree(:block)
     conn = get(conn, "/")
-    {:ok, view, _html} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
 
     redirect =
@@ -280,12 +277,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         "params" => %{"backend" => "binary"}
       })
 
-    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
     html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
     assert html =~ "Cancel investigation"
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
 
-    _html = render_click(element(run_view, "button[phx-click='cancel_investigation']"))
+    _ = render_click(element(run_view, "button[phx-click='cancel_investigation']"))
     html = render_until(run_view, "context was cleared")
     assert html =~ "cancelled"
     assert html =~ "context was cleared"
@@ -296,7 +293,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     start_beamlens_tree(:block)
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _html} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
 
     redirect =
@@ -305,8 +302,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         "params" => %{"backend" => "binary"}
       })
 
-    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
-    _html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
+    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    _ = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
 
     assert :ok = Sessions.revoke(token)
@@ -368,8 +365,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   defp restore_env(key, nil), do: Application.delete_env(:wotex_lab_workbench, key)
   defp restore_env(key, value), do: Application.put_env(:wotex_lab_workbench, key, value)
 
+  defp evidence_report(conn), do: json_response(get(recycle(conn), "/evidence/report.json"), 200)
+
   defp render_until(view, expected, attempts \\ 50)
-  defp render_until(view, _expected, 0), do: render(view)
+  defp render_until(view, _, 0), do: render(view)
 
   defp render_until(view, expected, attempts) do
     html = render(view)
@@ -384,7 +383,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   test "unknown and stale browser sessions render denial rather than replacement", %{conn: conn} do
     conn = init_test_session(conn, %{SessionToken.key() => "forged"})
-    {:ok, _view, html} = live(conn, "/")
+    {:ok, _, html} = live(conn, "/")
     assert html =~ "Session denied"
     assert html =~ "unknown_session"
     assert html =~ "New session"
@@ -395,7 +394,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   } do
     conn = get(conn, "/")
     browser = recycle(conn)
-    {:ok, view, _html} = live(browser, "/")
+    {:ok, view, _} = live(browser, "/")
 
     html = render_click(element(view, "button[phx-click='toggle_sidebar']"))
     assert html =~ ~s(id="wl-sidebar") and html =~ ~s(hidden)
@@ -422,7 +421,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         }
       })
 
-    {:ok, _run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    {:ok, _, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
     assert html =~ "window_anomaly"
     assert html =~ "simulated temperature (Cel)"
     assert html =~ "Persistence prediction"
@@ -452,7 +451,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     {:ok, evidence, html} = live(recycle(conn), "/evidence")
     assert html =~ "Bounded session report"
 
-    {property, _description} = Enum.at(WotexLabWorkbench.Formal.properties(), 0)
+    {property, _} = Enum.at(WotexLabWorkbench.Formal.properties(), 0)
 
     html =
       render_submit(element(evidence, "#formal-verify"), %{
@@ -465,16 +464,16 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     html = render_submit(element(evidence, "#investigation"), %{"prompt" => "status?"})
     assert html =~ "No investigation provider is configured"
 
-    report = get(recycle(conn), "/evidence/report.json") |> json_response(200)
+    report = evidence_report(conn)
     assert [%{"rows" => rows}] = report["datasets"]
-    assert rows > 0 and report["runs"] |> hd() |> Map.fetch!("experiment") == "window_anomaly"
+    assert rows > 0 and Map.fetch!(hd(report["runs"]), "experiment") == "window_anomaly"
   end
 
   test "cancel, session reset, token overrides and hostile Host text have explicit outcomes", %{
     conn: conn
   } do
     conn = get(conn, "/")
-    {:ok, view, _html} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/")
     render_click(element(view, "button[phx-click='start_room']"))
 
     redirect =
@@ -483,7 +482,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         "params" => %{}
       })
 
-    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
     html = render_click(element(run_view, "button[phx-click='cancel']"))
     assert html =~ "cancelled"
     refute html =~ "Approve this simulated Action"

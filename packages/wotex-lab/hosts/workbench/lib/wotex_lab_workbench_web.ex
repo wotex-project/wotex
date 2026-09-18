@@ -16,6 +16,7 @@ defmodule WotexLabWorkbenchWeb do
   defmacro __using__(which) when is_atom(which), do: apply(__MODULE__, which, [])
 
   @doc false
+  @spec router() :: Macro.t()
   def router do
     quote do
       use Phoenix.Router, helpers: false
@@ -26,6 +27,7 @@ defmodule WotexLabWorkbenchWeb do
   end
 
   @doc false
+  @spec controller() :: Macro.t()
   def controller do
     quote do
       use Phoenix.Controller, formats: [:html, :json]
@@ -35,6 +37,7 @@ defmodule WotexLabWorkbenchWeb do
   end
 
   @doc false
+  @spec live_view() :: Macro.t()
   def live_view do
     quote do
       use Phoenix.LiveView, layout: {WotexLabWorkbenchWeb.Layouts, :app}
@@ -43,6 +46,7 @@ defmodule WotexLabWorkbenchWeb do
   end
 
   @doc false
+  @spec component() :: Macro.t()
   def component do
     quote do
       use Phoenix.Component
@@ -51,6 +55,7 @@ defmodule WotexLabWorkbenchWeb do
   end
 
   @doc false
+  @spec html() :: Macro.t()
   def html do
     quote do
       use Phoenix.Component

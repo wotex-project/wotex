@@ -102,14 +102,14 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
               is_binary(primary) and is_list(clients) and clients != [],
        do: :ok
 
-  defp beamlens_options(_opts),
+  defp beamlens_options(_),
     do: {:error, Error.new(:invalid_beamlens, :construction, "BeamLens options are invalid")}
 
   defp dependencies(false, beamlens) when beamlens != false,
     do:
       {:error, Error.new(:beamlens_requires_history, :construction, "BeamLens needs local history")}
 
-  defp dependencies(_history, _beamlens), do: :ok
+  defp dependencies(_, _), do: :ok
 
   defp query_options(false), do: :ok
   defp query_options(opts), do: QueryListener.validate(opts)
@@ -154,18 +154,18 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     ]
   end
 
-  defp history_children(false, _durable), do: []
+  defp history_children(false, _), do: []
 
   defp history_children(opts, durable) do
     history =
       Keyword.take(opts, [:max_snapshots, :max_bytes, :max_queries]) ++
         [id: :operator, name: __MODULE__.History, instance: "workbench", instance_slot: 0]
 
-    base = [{History, history}]
+    sampler = {Sampler, [history: __MODULE__.History] ++ Keyword.take(opts, [:interval_ms])}
 
     if durable == false,
-      do: base ++ [{Sampler, [history: __MODULE__.History] ++ Keyword.take(opts, [:interval_ms])}],
-      else: base
+      do: [{History, history}, sampler],
+      else: [{History, history}]
   end
 
   defp inspection_children(false, false), do: []
@@ -178,7 +178,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     [{Inspection, sources}]
   end
 
-  defp durable_children(false, _history), do: []
+  defp durable_children(false, _), do: []
 
   defp durable_children(opts, history) do
     history = if history == false, do: nil, else: __MODULE__.History

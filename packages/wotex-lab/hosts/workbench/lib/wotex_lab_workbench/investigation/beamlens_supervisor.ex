@@ -36,8 +36,8 @@ defmodule WotexLabWorkbench.Investigation.BeamlensSupervisor do
 
     Enum.each([Beamlens.Operator.Supervisor, Beamlens.Coordinator], fn child_id ->
       case Supervisor.restart_child(Beamlens.Supervisor, child_id) do
-        {:ok, _pid} -> :ok
-        {:ok, _pid, _info} -> :ok
+        {:ok, _} -> :ok
+        {:ok, _, _} -> :ok
         {:error, :running} -> :ok
         {:error, :not_found} -> :ok
       end
@@ -45,7 +45,7 @@ defmodule WotexLabWorkbench.Investigation.BeamlensSupervisor do
 
     :ok
   catch
-    :exit, _reason -> :ok
+    :exit, _ -> :ok
   end
 
   @impl Supervisor

@@ -10,9 +10,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   use WotexLabWorkbenchWeb, :live_view
 
+  import WotexLabWorkbenchWeb.Components.{HistoryPanels, Insights, MetricCatalogue}
+
   alias Plug.Conn.Query
-  alias Wotex.Lab.Error
-  alias Wotex.Lab.Telemetry
+  alias Wotex.Lab.{Error, Telemetry}
 
   alias WotexLabWorkbench.{
     Chart,
@@ -29,15 +30,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   }
 
   alias WotexLabWorkbench.Investigation.{Answer, Broker, Disclosure, Provider, RunContext}
-
-  import WotexLabWorkbenchWeb.Components.HistoryPanels
-  import WotexLabWorkbenchWeb.Components.Insights
-  import WotexLabWorkbenchWeb.Components.MetricCatalogue
   alias WotexLabWorkbenchWeb.Components.StatusBadge
   alias WotexLabWorkbenchWeb.Scope
 
   @impl Phoenix.LiveView
-  def mount(_params, _session, socket) do
+  def mount(_, _, socket) do
     socket =
       socket
       |> assign_new(:denied, fn -> nil end)
@@ -63,13 +60,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_params(params, _uri, socket) do
+  def handle_params(params, _, socket) do
     socket = cancel_investigation_on_navigation(socket)
     {:noreply, load_action(socket, socket.assigns.live_action, params)}
   end
 
   @impl Phoenix.LiveView
-  def handle_event("toggle_sidebar", _params, socket) do
+  def handle_event("toggle_sidebar", _, socket) do
     case Scope.verify(socket) do
       {:ok, scope} ->
         {:noreply,
@@ -93,7 +90,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  def handle_event("start_room", _params, socket) do
+  def handle_event("start_room", _, socket) do
     command(socket, :start_room, fn scope -> {:ok, scope, nil} end)
   end
 
@@ -107,19 +104,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end)
   end
 
-  def handle_event("run", _params, socket) do
+  def handle_event("run", _, socket) do
     reject_event(socket, Error.new(:invalid_parameters, :admission, "run form is malformed"))
   end
 
   def handle_event("cancel", %{"id" => id}, socket) do
     command(socket, :cancel, fn scope ->
-      with {:ok, _run} <- Room.cancel_run(scope.room, id), do: {:ok, scope, nil}
+      with {:ok, _} <- Room.cancel_run(scope.room, id), do: {:ok, scope, nil}
     end)
   end
 
   def handle_event("approve", %{"run_id" => id} = approval, socket) do
     command(socket, :approve, fn scope ->
-      with {:ok, _run} <- Room.approve(scope.room, id, approval), do: {:ok, scope, nil}
+      with {:ok, _} <- Room.approve(scope.room, id, approval), do: {:ok, scope, nil}
     end)
   end
 
@@ -133,7 +130,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   def handle_event("register_td", %{"thing_description" => source}, socket) do
     command(socket, :register, fn scope ->
-      with {:ok, _document} <- Room.register_td(scope.room, source), do: {:ok, scope, nil}
+      with {:ok, _} <- Room.register_td(scope.room, source), do: {:ok, scope, nil}
     end)
   end
 
@@ -184,13 +181,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  def handle_event("save_dashboard", _params, socket) do
+  def handle_event("save_dashboard", _, socket) do
     reject_event(socket, Error.new(:invalid_panels, :metrics, "select 1–16 metric panels"))
   end
 
-  def handle_event("export_dataset", _params, socket) do
+  def handle_event("export_dataset", _, socket) do
     command(socket, :export, fn scope ->
-      with {:ok, _dataset} <- Room.export_dataset(scope.room, scope: scope.session_id, limit: 2_000),
+      with {:ok, _} <- Room.export_dataset(scope.room, scope: scope.session_id, limit: 2_000),
            do: {:ok, scope, nil}
     end)
   end
@@ -203,7 +200,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         {:ok, scope, {:insights, insights}}
       else
         {:error, error} -> {:error, error}
-        _missing -> {:error, Error.new(:unknown_run, :analytics, "no run selected in this session")}
+        _ -> {:error, Error.new(:unknown_run, :analytics, "no run selected in this session")}
       end
     end)
   end
@@ -211,7 +208,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   def handle_event("verify", %{"property" => property, "variant" => variant}, socket) do
     command(socket, :verify, fn scope ->
       with {:ok, property, variant} <- Formal.admit(property, variant),
-           {:ok, _result} <- Room.verify(scope.room, property, variant) do
+           {:ok, _} <- Room.verify(scope.room, property, variant) do
         {:ok, scope, nil}
       else
         {:error, :unsupported} ->
@@ -248,11 +245,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  def handle_event("ask", _params, socket) do
+  def handle_event("ask", _, socket) do
     {:noreply, investigation_failure(socket, :invalid_prompt)}
   end
 
-  def handle_event("cancel_investigation", _params, socket) do
+  def handle_event("cancel_investigation", _, socket) do
     with {:ok, scope} <- Scope.admit(socket, :ask),
          %{state: :running, request: request} <- socket.assigns.investigation,
          :ok <- Broker.cancel(request) do
@@ -260,7 +257,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     else
       {:error, %Error{} = error} -> {:noreply, error_flash(socket, error)}
       {:error, reason} -> {:noreply, investigation_failure(socket, reason)}
-      _not_running -> {:noreply, investigation_failure(socket, :unknown_investigation)}
+      _ -> {:noreply, investigation_failure(socket, :unknown_investigation)}
     end
   end
 
@@ -271,10 +268,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       ) do
     answer = Answer.from_result(result, provider_status())
     investigation = %{state: :idle, request: nil, prompt: ""}
-    {:noreply, socket |> assign(:answer, answer) |> assign(:investigation, investigation)}
+    {:noreply, assign(socket, answer: answer, investigation: investigation)}
   end
 
-  def handle_info(_message, socket), do: {:noreply, socket}
+  def handle_info(_, socket), do: {:noreply, socket}
 
   @impl Phoenix.LiveView
   def render(assigns) do
@@ -405,7 +402,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp parameter_field(assigns) do
     parameter = assigns.parameter
-    options = Enum.map(parameter.options || [], fn {label, _value} -> {label, label} end)
+    options = Enum.map(parameter.options || [], fn {label, _} -> {label, label} end)
 
     assigns =
       assigns
@@ -681,7 +678,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp evidence_view(assigns) do
     properties = Enum.map(Formal.properties(), fn {id, text} -> {text, Atom.to_string(id)} end)
     variants = Enum.map(Formal.variants(), &{Atom.to_string(&1), Atom.to_string(&1)})
-    assigns = assigns |> assign(:properties, properties) |> assign(:variants, variants)
+    assigns = assign(assigns, properties: properties, variants: variants)
 
     ~H"""
     <header class="wl-page-header">
@@ -750,7 +747,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     with {:ok, scope} <- Scope.admit(socket, command),
          true <- is_pid(scope.room) and Process.alive?(scope.room),
          {:ok, scope, effect} <- fun.(scope) do
-      socket = socket |> assign(:scope, scope) |> refresh() |> apply_effect(effect)
+      socket =
+        socket
+        |> assign(:scope, scope)
+        |> refresh()
+        |> apply_effect(effect)
+
       {:noreply, socket}
     else
       false -> {:noreply, error_flash(socket, Error.new(:no_room, :session, "room is unavailable"))}
@@ -763,10 +765,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp apply_effect(socket, {:navigate, path}), do: push_navigate(socket, to: path)
 
   defp apply_effect(socket, {:history, history}),
-    do: socket |> assign(:history, history) |> assign(:history_range, history.range)
+    do: assign(socket, history: history, history_range: history.range)
 
   defp apply_effect(socket, {:insights, insights}),
-    do: socket |> assign(:insights, insights) |> assign(:charts, insights.charts)
+    do: assign(socket, insights: insights, charts: insights.charts)
 
   defp refresh(%{assigns: %{scope: %{room: room, session_id: session_id}}} = socket)
        when is_pid(room) do
@@ -807,7 +809,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   defp load_action(socket, :run, %{"id" => id} = params) do
-    socket = socket |> assign(:run_id, id) |> refresh() |> reload_run()
+    socket =
+      socket
+      |> assign(:run_id, id)
+      |> refresh()
+      |> reload_run()
 
     case params do
       %{} when map_size(params) == 1 ->
@@ -816,7 +822,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       %{"id" => ^id, "analysis" => analysis} when map_size(params) == 2 ->
         load_analysis(socket, analysis)
 
-      _other ->
+      _ ->
         error_flash(socket, Error.new(:invalid_analysis_query, :analytics, "run link is malformed"))
     end
   end
@@ -830,7 +836,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         %{"panels" => panel_ids, "selection" => "custom"} when map_size(params) == 2 ->
           with {:ok, panels} <- Panels.select(panel_ids), do: {:ok, Enum.map(panels, & &1.id)}
 
-        _other ->
+        _ ->
           {:error, Error.new(:invalid_panels, :metrics, "metric deep link is not admitted")}
       end
 
@@ -851,7 +857,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  defp load_action(socket, _action, _params), do: socket |> assign(:run_id, nil) |> refresh()
+  defp load_action(socket, _, _), do: refresh(assign(socket, :run_id, nil))
 
   defp dashboard_path(panel_ids) do
     "/metrics?" <> Query.encode(%{"panels" => panel_ids, "selection" => "custom"})
@@ -864,11 +870,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  defp load_analysis(socket, _params), do: socket
+  defp load_analysis(socket, _), do: socket
 
   defp chart_path(run, nil, index), do: "/runs/#{URI.encode(run.id)}#run-chart-#{index}"
 
-  defp chart_path(_run, insights, index),
+  defp chart_path(_, insights, index),
     do: Insights.path(insights) <> "#run-chart-#{index}"
 
   defp reload_run(%{assigns: %{run_id: id, scope: %{room: room}}} = socket)
@@ -877,14 +883,14 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, run} ->
         case socket.assigns.insights do
           %{run_id: run_id} = insights when run_id == run.id ->
-            socket |> assign(:run, run) |> assign(:charts, insights.charts)
+            assign(socket, run: run, charts: insights.charts)
 
-          _other ->
-            socket |> assign(:run, run) |> assign(:charts, charts(run)) |> assign(:insights, nil)
+          _ ->
+            assign(socket, run: run, charts: charts(run), insights: nil)
         end
 
-      {:error, _error} ->
-        socket |> assign(:run, nil) |> assign(:charts, []) |> assign(:insights, nil)
+      {:error, _} ->
+        assign(socket, run: nil, charts: [], insights: nil)
     end
   end
 
@@ -899,7 +905,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
              series: [%{name: series.name, points: series.points}]
            ) do
         {:ok, chart} -> [chart]
-        {:error, _error} -> []
+        {:error, _} -> []
       end
     end)
   end
@@ -913,7 +919,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp cancel_investigation_on_navigation(
          %{assigns: %{investigation: %{state: :running, request: request}}} = socket
        ) do
-    _result = Broker.cancel(request)
+    _ = Broker.cancel(request)
     socket
   end
 
@@ -923,11 +929,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     case Broker.status() do
       %{running: true} -> %{state: :busy, request: nil, prompt: ""}
       %{running: false} -> %{state: :idle, request: nil, prompt: ""}
-      _unavailable -> %{state: :disabled, request: nil, prompt: ""}
+      _ -> %{state: :disabled, request: nil, prompt: ""}
     end
   end
 
-  defp prompt_reason(%{state: :running}, _context?),
+  defp prompt_reason(%{state: :running}, _),
     do: "Read-only investigation running; leaving this view cancels its owner-bound worker."
 
   defp prompt_reason(%{state: :idle}, true),
@@ -936,22 +942,22 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp prompt_reason(%{state: :idle}, false),
     do: "Run an experiment before asking about its evidence."
 
-  defp prompt_reason(%{state: :busy}, _context?),
+  defp prompt_reason(%{state: :busy}, _),
     do: "Another trusted-local investigation is running; this host does not queue prompts."
 
-  defp prompt_reason(_investigation, _context?),
+  defp prompt_reason(_, _),
     do: "No investigation provider is configured."
 
   defp investigation_failure(socket, reason) do
     answer = Answer.from_result({:error, reason}, provider_status())
     investigation = investigation_state()
-    socket |> assign(:answer, answer) |> assign(:investigation, investigation)
+    assign(socket, answer: answer, investigation: investigation)
   end
 
   defp provider_status do
     Provider.status()
   catch
-    :exit, _reason -> %{}
+    :exit, _ -> %{}
   end
 
   defp metric_filters(params, scope) do
@@ -959,11 +965,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
          {:ok, operation} <- known(params["operation"], Telemetry.operations()) do
       {:ok,
        [scope: scope, component: component, operation: operation, limit: 2_000]
-       |> Enum.reject(fn {_key, value} -> is_nil(value) end)}
+       |> Enum.reject(fn {_, value} -> is_nil(value) end)}
     end
   end
 
-  defp known(value, _allowed) when value in [nil, ""], do: {:ok, nil}
+  defp known(value, _) when value in [nil, ""], do: {:ok, nil}
 
   defp known(value, allowed) when is_binary(value) do
     case Enum.find(allowed, &(Atom.to_string(&1) == value)) do
@@ -972,7 +978,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  defp known(_value, _allowed),
+  defp known(_, _),
     do: {:error, Error.new(:invalid_filter, :metrics, "metric filter is not admitted")}
 
   defp room_history(room) do
@@ -984,10 +990,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp safe(fun, fallback) do
     fun.()
   catch
-    :exit, _reason -> fallback
+    :exit, _ -> fallback
   end
 
-  defp context(_scope, %Run{} = run) do
+  defp context(_, %Run{} = run) do
     [
       {"run", run.id},
       {"source", run.source_mode},
@@ -1008,7 +1014,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp nav_item(action), do: action
 
   defp deny(socket, %Error{code: code}) do
-    socket |> assign(:scope, nil) |> assign(:denied, Atom.to_string(code))
+    assign(socket, scope: nil, denied: Atom.to_string(code))
   end
 
   defp error_flash(socket, %Error{} = error),
@@ -1019,7 +1025,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp reject_event(socket, error) do
     case Scope.verify(socket) do
-      {:ok, scope} -> {:noreply, socket |> assign(:scope, scope) |> error_flash(error)}
+      {:ok, scope} -> {:noreply, error_flash(assign(socket, :scope, scope), error)}
       {:error, denied} -> {:noreply, deny(socket, denied)}
     end
   end

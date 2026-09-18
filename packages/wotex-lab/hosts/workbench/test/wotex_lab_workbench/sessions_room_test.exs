@@ -113,7 +113,7 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
     assert {:ok, pending} = Room.start_run(session.room, experiment.id, params)
     assert {:ok, cancelled} = Room.cancel_run(session.room, pending.id)
     assert cancelled.status == :cancelled and cancelled.decision == nil
-    assert {:ok, _next} = Room.start_run(session.room, experiment.id, params)
+    assert {:ok, _} = Room.start_run(session.room, experiment.id, params)
   end
 
   test "Thing reads, inert registration, dataset export and reports stay bounded", %{
@@ -146,7 +146,7 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
 
     {:ok, experiment} = Experiments.fetch("thermal")
     {:ok, params} = Experiments.admit(experiment, %{})
-    assert {:ok, _run} = Room.start_run(session.room, experiment.id, params)
+    assert {:ok, _} = Room.start_run(session.room, experiment.id, params)
     assert {:ok, dataset} = Room.export_dataset(session.room, limit: 100)
     assert dataset.rows > 0 and dataset.rows <= 100
     assert String.starts_with?(dataset.digest, "sha256:")
@@ -272,7 +272,7 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
   end
 
   defp role_count(lab, role) do
-    {^role, pid, :supervisor, _modules} = List.keyfind(Supervisor.which_children(lab), role, 0)
+    {^role, pid, :supervisor, _} = List.keyfind(Supervisor.which_children(lab), role, 0)
     DynamicSupervisor.count_children(pid).active
   end
 

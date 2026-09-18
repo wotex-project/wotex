@@ -16,8 +16,8 @@ defmodule WotexLabWorkbench.ExperimentsTest do
       assert {:ok, values} = Experiments.admit(experiment, %{})
       assert length(values) == length(experiment.parameters)
 
-      assert Experiments.defaults(experiment) |> Map.keys() |> Enum.sort() ==
-               experiment.parameters |> Enum.map(& &1.name) |> Enum.sort()
+      assert Enum.sort(Map.keys(Experiments.defaults(experiment))) ==
+               Enum.sort(Enum.map(experiment.parameters, & &1.name))
     end
 
     assert {:error, %Error{code: :unknown_experiment}} = Experiments.fetch("unknown")

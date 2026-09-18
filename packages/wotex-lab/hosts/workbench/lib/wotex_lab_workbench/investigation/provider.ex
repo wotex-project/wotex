@@ -32,7 +32,7 @@ defmodule WotexLabWorkbench.Investigation.Provider do
     case config!(:beamlens_provider) do
       :codex_then_ollama -> codex_then_ollama(messages, opts)
       :ollama -> ollama_only(messages, opts)
-      _unselected -> {:error, :diagnostics_unavailable}
+      _ -> {:error, :diagnostics_unavailable}
     end
   end
 
@@ -108,7 +108,7 @@ defmodule WotexLabWorkbench.Investigation.Provider do
         :ollama ->
           {{:error, :provider_not_selected}, bounded_preflight(ollama_runner(), 2_000)}
 
-        _unselected ->
+        _ ->
           {{:error, :provider_not_selected}, {:error, :provider_not_selected}}
       end
 
@@ -155,7 +155,7 @@ defmodule WotexLabWorkbench.Investigation.Provider do
     {:ok, content, status}
   end
 
-  defp finish(:error, _content, _metadata, reason, started_at) do
+  defp finish(:error, _, _, reason, started_at) do
     status = %{
       state: :unavailable,
       provider: nil,
@@ -213,14 +213,18 @@ defmodule WotexLabWorkbench.Investigation.Provider do
   end
 
   defp publish(status) do
-    status = status |> Map.put_new(:completed_at, nil) |> Map.put(:request_id, inspect(self()))
+    status =
+      status
+      |> Map.put_new(:completed_at, nil)
+      |> Map.put(:request_id, inspect(self()))
+
     Status.put(status)
     Phoenix.PubSub.broadcast(WotexLabWorkbench.PubSub, @topic, {:investigation_provider, status})
     :ok
   rescue
-    _error -> :ok
+    _ -> :ok
   catch
-    :exit, _reason -> :ok
+    :exit, _ -> :ok
   end
 
   defp reason_label({codex, ollama}),

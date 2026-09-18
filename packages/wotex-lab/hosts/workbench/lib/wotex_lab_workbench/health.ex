@@ -35,17 +35,17 @@ defmodule WotexLabWorkbench.Health do
         :gen_tcp.close(socket)
         result
 
-      _unavailable ->
+      _ ->
         {:error, :unavailable}
     end
   end
 
-  def probe(_port), do: {:error, :unavailable}
+  def probe(_), do: {:error, :unavailable}
 
   defp configured_port do
     case Integer.parse(System.get_env("PORT") || "4000") do
       {port, ""} -> port
-      _invalid -> 0
+      _ -> 0
     end
   end
 
@@ -59,9 +59,12 @@ defmodule WotexLabWorkbench.Health do
          true <- String.starts_with?(response, "HTTP/1.1 200") do
       :ok
     else
-      _unavailable -> {:error, :unavailable}
+      _ -> {:error, :unavailable}
     end
   end
 
-  defp alive?(name), do: name |> Process.whereis() |> then(&(is_pid(&1) and Process.alive?(&1)))
+  defp alive?(name) do
+    pid = Process.whereis(name)
+    is_pid(pid) and Process.alive?(pid)
+  end
 end

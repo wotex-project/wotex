@@ -121,7 +121,7 @@ defmodule WotexLabWorkbench.TensorWindowTest do
       reference = :erlang.trace_delivered(self())
 
       receive do
-        {:trace_delivered, _pid, ^reference} -> :ok
+        {:trace_delivered, _, ^reference} -> :ok
       after
         1_000 -> flunk("trace delivery did not complete")
       end
@@ -143,7 +143,7 @@ defmodule WotexLabWorkbench.TensorWindowTest do
 
   defp collect_shapes(shapes) do
     receive do
-      {:trace, _pid, :call, {Nx, :to_list, [tensor]}} -> collect_shapes([Nx.shape(tensor) | shapes])
+      {:trace, _, :call, {Nx, :to_list, [tensor]}} -> collect_shapes([Nx.shape(tensor) | shapes])
       {:report, caller} -> send(caller, {:shapes, Enum.reverse(shapes)})
     end
   end

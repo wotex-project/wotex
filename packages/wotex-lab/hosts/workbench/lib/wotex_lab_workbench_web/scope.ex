@@ -8,7 +8,7 @@ defmodule WotexLabWorkbenchWeb.Scope do
   start a new session. `admit/2` repeats the check for every event.
   """
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias Wotex.Lab.Error
   alias WotexLabWorkbench.Sessions
@@ -25,7 +25,7 @@ defmodule WotexLabWorkbenchWeb.Scope do
   @doc false
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
-  def on_mount(:default, _params, session, socket) do
+  def on_mount(:default, _, session, socket) do
     token = Map.get(session, SessionToken.key())
 
     case Sessions.verify(token) do
@@ -33,7 +33,7 @@ defmodule WotexLabWorkbenchWeb.Scope do
         {:cont, assign(socket, :scope, scope(token, live))}
 
       {:error, %Error{code: code}} ->
-        {:cont, socket |> assign(:scope, nil) |> assign(:denied, Atom.to_string(code))}
+        {:cont, assign(socket, scope: nil, denied: Atom.to_string(code))}
     end
   end
 
@@ -43,7 +43,7 @@ defmodule WotexLabWorkbenchWeb.Scope do
     with {:ok, live} <- Sessions.admit(token, command), do: {:ok, scope(token, live)}
   end
 
-  def admit(_socket, _command), do: {:error, Error.new(:denied, :session, "no session scope")}
+  def admit(_, _), do: {:error, Error.new(:denied, :session, "no session scope")}
 
   @doc "Re-verifies a socket's session without admitting or starting a room command."
   @spec verify(Phoenix.LiveView.Socket.t()) :: {:ok, scope()} | {:error, Error.t()}
@@ -51,7 +51,7 @@ defmodule WotexLabWorkbenchWeb.Scope do
     with {:ok, live} <- Sessions.verify(token), do: {:ok, scope(token, live)}
   end
 
-  def verify(_socket), do: {:error, Error.new(:denied, :session, "no session scope")}
+  def verify(_), do: {:error, Error.new(:denied, :session, "no session scope")}
 
   defp scope(token, live),
     do: %{

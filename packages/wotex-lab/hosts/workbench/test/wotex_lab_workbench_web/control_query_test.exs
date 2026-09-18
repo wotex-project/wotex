@@ -27,7 +27,7 @@ defmodule WotexLabWorkbenchWeb.ControlQueryTest do
     {:ok, other_binding} = Room.history(other_room)
 
     filtered = Map.put(descriptor(), "filters", %{"profile" => "thermal"})
-    isolated = conn |> query(other.token, filtered) |> json_response(200)
+    isolated = json_response(query(conn, other.token, filtered), 200)
     assert isolated["instance"] == other_binding.scope.instance
     refute isolated["instance"] == binding.scope.instance
     assert isolated["points"] == []
@@ -36,12 +36,12 @@ defmodule WotexLabWorkbenchWeb.ControlQueryTest do
     on_exit(fn -> Sessions.revoke(bare.token) end)
 
     assert %{"code" => "unknown_history"} =
-             conn |> query(bare.token, descriptor()) |> json_response(404)
+             json_response(query(conn, bare.token, descriptor()), 404)
 
     assert %{"code" => "missing_bearer"} =
-             conn |> query(nil, descriptor()) |> json_response(401)
+             json_response(query(conn, nil, descriptor()), 401)
 
-    assert conn |> query(String.duplicate("f", 32), descriptor()) |> response(403)
+    assert response(query(conn, String.duplicate("f", 32), descriptor()), 403)
 
     for {body, status, code} <- [
           {Map.put(descriptor(), "scope", %{"instance" => other_binding.scope.instance}), 400,
@@ -51,7 +51,7 @@ defmodule WotexLabWorkbenchWeb.ControlQueryTest do
           {%{descriptor() | "start_at" => iso(-2 * 3_600_000)}, 400, "invalid_range"},
           {%{descriptor() | "aggregation" => "avg"}, 422, "unsupported_query"}
         ] do
-      assert %{"code" => ^code} = conn |> query(owner.token, body) |> json_response(status)
+      assert %{"code" => ^code} = json_response(query(conn, owner.token, body), status)
     end
   end
 
@@ -79,19 +79,19 @@ defmodule WotexLabWorkbenchWeb.ControlQueryTest do
     oversized = Map.put(descriptor(), "padding", String.duplicate("x", 4_200))
 
     assert %{"code" => "body_too_large"} =
-             conn |> query(owner.token, oversized) |> json_response(413)
+             json_response(query(conn, owner.token, oversized), 413)
 
     {:ok, %{history: history}} = Room.history(room)
     :ok = :sys.suspend(history)
 
     try do
       assert %{"code" => "deadline_exceeded"} =
-               conn |> query(owner.token, descriptor()) |> json_response(504)
+               json_response(query(conn, owner.token, descriptor()), 504)
     after
       :ok = :sys.resume(history)
     end
 
-    assert conn |> query(owner.token, descriptor()) |> json_response(200)
+    assert json_response(query(conn, owner.token, descriptor()), 200)
     assert Wotex.Lab.Metrics.History.stats(history).active_queries == 0
   end
 
@@ -119,11 +119,11 @@ defmodule WotexLabWorkbenchWeb.ControlQueryTest do
   defp iso(offset_ms) do
     now = System.system_time(:millisecond)
     aligned = div(now, 5_000) * 5_000 + offset_ms
-    aligned |> DateTime.from_unix!(:millisecond) |> DateTime.to_iso8601()
+    DateTime.to_iso8601(DateTime.from_unix!(aligned, :millisecond))
   end
 
   defp query(conn, token, body) do
-    conn = conn |> recycle() |> put_req_header("content-type", "application/json")
+    conn = put_req_header(recycle(conn), "content-type", "application/json")
     conn = if token, do: bearer(conn, token), else: conn
     post(conn, "/api/v1/metrics/query", Jason.encode!(body))
   end

@@ -72,7 +72,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
     assert coordinator.max_iterations == 8
     assert coordinator.skills == [Skill]
 
-    assert [{operator_pid, _value}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
+    assert [{operator_pid, _}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
     operator = :sys.get_state(operator_pid)
     assert operator.max_iterations == BeamlensSupervisor.max_iterations()
     assert operator.skill == Skill
@@ -99,7 +99,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
     catalogue = callbacks["lab_metric_catalogue"].("nx")
     assert catalogue.count > 0
     assert Enum.all?(catalogue.metrics, &(&1.group == "nx"))
-    assert {:ok, _json} = Jason.encode(catalogue)
+    assert {:ok, _} = Jason.encode(catalogue)
 
     assert :ok = ContextStore.put(%{id: "current", score: 2}, %{id: "baseline", score: 1})
 
@@ -114,7 +114,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
       outcome: :ok
     })
 
-    assert {:ok, _snapshot} = Sampler.sample_now()
+    assert {:ok, _} = Sampler.sample_now()
     answer = callbacks["lab_metric_query"].("nx_operations_total", "sum")
     assert answer["source"] == "ets_history"
     assert answer["instance"] == "workbench"
@@ -123,7 +123,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
     denied = callbacks["lab_metric_query"].("not_a_metric", "sum")
     assert denied == %{available: false, error: "invalid_request"}
 
-    for _index <- 1..3, do: callbacks["lab_metric_catalogue"].("all")
+    for _ <- 1..3, do: callbacks["lab_metric_catalogue"].("all")
 
     assert callbacks["lab_metric_catalogue"].("all") == %{
              available: false,
@@ -149,7 +149,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
 
     on_exit(fn -> :telemetry.detach(handler) end)
     coordinator_before = Process.whereis(Beamlens.Coordinator)
-    [{operator_before, _value}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
+    [{operator_before, _}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
 
     assert {:ok, request} = Broker.ask("explain the current run", run: %{id: "run-1"})
 
@@ -165,7 +165,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
     assert ContextStore.get("current") == %{available: false, reason: "run_context_not_supplied"}
 
     coordinator_after = Process.whereis(Beamlens.Coordinator)
-    [{operator_after, _value}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
+    [{operator_after, _}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
     refute coordinator_after == coordinator_before
     refute operator_after == operator_before
     assert Broker.status().cancelled == 1
@@ -324,7 +324,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
          plug: WotexLabWorkbenchWeb.Endpoint, ip: {127, 0, 0, 1}, port: 0, startup_log: false}
       )
 
-    {:ok, {_address, port}} = ThousandIsland.listener_info(bandit)
+    {:ok, {_, port}} = ThousandIsland.listener_info(bandit)
 
     registry =
       @registry

@@ -38,8 +38,8 @@ defmodule WotexLabWorkbench.Chart do
     width = Keyword.get(opts, :width, 640)
     height = Keyword.get(opts, :height, 280)
     pad = %{left: 64, right: 16, top: 16, bottom: 48}
-    xs = for %{points: points} <- chart.series, {x, _y} <- points, do: x
-    ys = for %{points: points} <- chart.series, {_x, y} <- points, is_number(y), do: y
+    xs = for %{points: points} <- chart.series, {x, _} <- points, do: x
+    ys = for %{points: points} <- chart.series, {_, y} <- points, is_number(y), do: y
     {x0, x1} = domain(xs)
     {y0, y1} = domain(if(chart.mark == "area", do: [0 | ys], else: ys))
     inner_w = width - pad.left - pad.right
@@ -61,14 +61,14 @@ defmodule WotexLabWorkbench.Chart do
     chunks =
       series.points
       |> Enum.chunk_by(&is_nil(elem(&1, 1)))
-      |> Enum.reject(fn [{_x, y} | _] -> is_nil(y) end)
+      |> Enum.reject(fn [{_, y} | _] -> is_nil(y) end)
 
     segments = Enum.map(chunks, &Enum.map_join(&1, " ", fn {x, y} -> pair(sx.(x), sy.(y)) end))
 
     areas =
       Enum.zip_with(chunks, segments, fn chunk, segment ->
-        {first, _y} = hd(chunk)
-        {last, _y} = List.last(chunk)
+        {first, _} = hd(chunk)
+        {last, _} = List.last(chunk)
         "#{pair(sx.(first), sy.(0))} #{segment} #{pair(sx.(last), sy.(0))}"
       end)
 

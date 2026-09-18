@@ -7,6 +7,7 @@ defmodule WotexLabWorkbench.Check.Boundary do
   @machine_path ~r{/(?:U)sers/|/(?:h)ome/}
   @excluded ~w(.git deps _build cover doc priv/plts)
 
+  @spec run() :: :ok
   def run do
     source = files(["lib/**/*.{ex,exs}", "config/*.{ex,exs}", "mix.exs"])
     refuse(scan(source, @unsafe), "implicit activation, atom creation or source dependency")
@@ -17,12 +18,14 @@ defmodule WotexLabWorkbench.Check.Boundary do
   defp publishable do
     "**/*"
     |> Path.wildcard(match_dot: true)
-    |> Enum.reject(&excluded?/1)
-    |> Enum.filter(&File.regular?/1)
+    |> Enum.filter(&(not excluded?(&1) and File.regular?(&1)))
   end
 
-  defp files(patterns),
-    do: patterns |> Enum.flat_map(&Path.wildcard/1) |> Enum.filter(&File.regular?/1)
+  defp files(patterns) do
+    patterns
+    |> Enum.flat_map(&Path.wildcard/1)
+    |> Enum.filter(&File.regular?/1)
+  end
 
   defp excluded?(path) do
     segments = Path.split(path)
@@ -38,12 +41,12 @@ defmodule WotexLabWorkbench.Check.Boundary do
       file
       |> File.stream!()
       |> Stream.with_index(1)
-      |> Enum.filter(fn {line, _number} -> Regex.match?(pattern, line) end)
+      |> Enum.filter(fn {line, _} -> Regex.match?(pattern, line) end)
       |> Enum.map(fn {line, number} -> "#{file}:#{number}:#{String.trim_trailing(line)}" end)
     end)
   end
 
-  defp refuse([], _message), do: :ok
+  defp refuse([], _), do: :ok
 
   defp refuse(hits, message) do
     Enum.each(hits, &IO.puts(:stderr, &1))

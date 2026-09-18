@@ -29,7 +29,7 @@ metrics_durable =
               System.get_env("WOTEX_LAB_GREPTIME_CA_CERTFILE")
             )
 
-          _other ->
+          _ ->
             {:error, :invalid_profile}
         end
 
@@ -47,7 +47,7 @@ metrics_durable =
 
       case configured do
         {:ok, options} -> options
-        {:error, _error} -> raise "GreptimeDB exporter configuration is invalid"
+        {:error, _} -> raise "GreptimeDB exporter configuration is invalid"
       end
   end
 
@@ -106,7 +106,7 @@ if beamlens_enabled do
       "ollama" ->
         :ollama
 
-      _other ->
+      _ ->
         raise "BeamLens requires WOTEX_LAB_BEAMLENS_PROVIDER=codex_then_ollama or ollama"
     end
 
@@ -161,7 +161,7 @@ if port = System.get_env("WOTEX_LAB_METRICS_PORT") do
     {:ok, options} ->
       config :wotex_lab_workbench, metrics_scrape: with_transport.(options, metrics_transport)
 
-    {:error, _invalid} ->
+    {:error, _} ->
       raise "metrics listener requires an admitted port and URL-safe token (43–128 characters)"
   end
 end

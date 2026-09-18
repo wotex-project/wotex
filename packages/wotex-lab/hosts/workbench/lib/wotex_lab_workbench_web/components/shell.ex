@@ -79,5 +79,5 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
 
   defp theme("light"), do: "light"
   defp theme("dark"), do: "dark"
-  defp theme(_system), do: nil
+  defp theme(_), do: nil
 end

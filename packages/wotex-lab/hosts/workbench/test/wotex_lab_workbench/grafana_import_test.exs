@@ -3,13 +3,13 @@ defmodule WotexLabWorkbench.GrafanaImportTest do
 
   use ExUnit.Case, async: false
 
-  @moduletag :grafana
-  @moduletag timeout: 600_000
-
   alias Wotex.Lab.Examples.Thermal
   alias Wotex.Lab.Metrics.{GreptimeBridge, History}
   alias WotexLabWorkbench.Observability.{Durable, Panels, Relay}
   alias WotexLabWorkbench.Test.GrafanaCohort
+
+  @moduletag :grafana
+  @moduletag timeout: 600_000
 
   @promex WotexLabWorkbench.Observability.PromEx
   @thermal ~w(scenario_operations_total scenario_duration_seconds nx_operations_total
@@ -58,7 +58,7 @@ defmodule WotexLabWorkbench.GrafanaImportTest do
       |> Enum.flat_map(fn {ids, index} ->
         folder = GrafanaCohort.create_folder(cohort, "WoTEx Lab import #{index}")
         {:ok, exported} = Panels.dashboard(ids)
-        downloaded = exported |> Jason.encode!() |> Jason.decode!()
+        downloaded = Jason.decode!(Jason.encode!(exported))
         response = GrafanaCohort.import(cohort, downloaded, datasource, folder)
 
         assert %{status: 200, body: %{"imported" => true, "uid" => uid}} = response,
@@ -110,7 +110,7 @@ defmodule WotexLabWorkbench.GrafanaImportTest do
     stored_values = gauge_values(history)
 
     for {%{type: :gauge} = descriptor, _, frames} <- results, frame <- frames do
-      labels = frame.labels |> Map.drop(["__name__", "instance"]) |> Enum.sort()
+      labels = Enum.sort(Map.drop(frame.labels, ["__name__", "instance"]))
       expected = Map.fetch!(stored_values, {descriptor.name, labels})
 
       assert Enum.all?(frame.values, fn value -> Enum.any?(expected, &(&1 == value)) end),

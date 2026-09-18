@@ -59,7 +59,7 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
     end
   end
 
-  def create(conn, _params), do: refuse(conn, :unprocessable_entity, "messages are not admitted")
+  def create(conn, _), do: refuse(conn, :unprocessable_entity, "messages are not admitted")
 
   defp admit_messages(messages)
        when is_list(messages) and length(messages) in 1..@max_messages do
@@ -68,14 +68,15 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
          true <- byte_size(encoded) <= @max_context_bytes do
       {:ok, normalized}
     else
-      _invalid -> {:error, :invalid_messages}
+      _ -> {:error, :invalid_messages}
     end
   end
 
-  defp admit_messages(_messages), do: {:error, :invalid_messages}
+  defp admit_messages(_), do: {:error, :invalid_messages}
 
   defp normalize_messages(messages) do
-    Enum.reduce_while(messages, {:ok, []}, fn
+    messages
+    |> Enum.reduce_while({:ok, []}, fn
       %{"role" => role, "content" => content}, {:ok, result}
       when role in ["system", "user", "assistant"] ->
         case normalize_content(content) do
@@ -83,53 +84,53 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
           :error -> {:halt, :error}
         end
 
-      _message, _result ->
+      _, _ ->
         {:halt, :error}
     end)
-    |> case do
-      {:ok, messages} -> {:ok, Enum.reverse(messages)}
-      :error -> :error
-    end
+    |> in_order()
   end
 
   defp normalize_content(content) when is_binary(content), do: {:ok, content}
 
   defp normalize_content(content) when is_list(content) and length(content) <= 32 do
-    Enum.reduce_while(content, {:ok, []}, fn
+    content
+    |> Enum.reduce_while({:ok, []}, fn
       %{"type" => "text", "text" => text}, {:ok, result} when is_binary(text) ->
         {:cont, {:ok, [%{"type" => "text", "text" => text} | result]}}
 
-      _block, _result ->
+      _, _ ->
         {:halt, :error}
     end)
-    |> case do
-      {:ok, blocks} -> {:ok, Enum.reverse(blocks)}
-      :error -> :error
-    end
+    |> in_order()
   end
 
-  defp normalize_content(_content), do: :error
+  defp normalize_content(_), do: :error
+
+  defp in_order({:ok, reversed}), do: {:ok, Enum.reverse(reversed)}
+  defp in_order(:error), do: :error
 
   defp output_schema(%{"type" => "json_schema", "json_schema" => %{"schema" => schema}})
        when is_map(schema),
        do: schema
 
-  defp output_schema(_format), do: nil
-  defp maybe_put(opts, _key, nil), do: opts
+  defp output_schema(_), do: nil
+  defp maybe_put(opts, _, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 
   defp loopback?({127, _, _, _}), do: true
   defp loopback?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
-  defp loopback?(_address), do: false
+  defp loopback?(_), do: false
 
   defp bearer(conn) do
     case Plug.Conn.get_req_header(conn, "authorization") do
       ["Bearer " <> capability] -> capability
-      _headers -> nil
+      _ -> nil
     end
   end
 
   defp refuse(conn, status, message) do
-    conn |> put_status(status) |> json(%{error: %{message: message}})
+    conn
+    |> put_status(status)
+    |> json(%{error: %{message: message}})
   end
 end

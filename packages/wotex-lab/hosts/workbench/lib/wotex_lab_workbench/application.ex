@@ -35,7 +35,7 @@ defmodule WotexLabWorkbench.Application do
   alias WotexLabWorkbench.Observability.Otlp
 
   @impl Application
-  def start(_type, _args) do
+  def start(_, _) do
     env = Application.get_all_env(:wotex_lab_workbench)
     lab = WotexLabWorkbench.lab()
 
@@ -59,7 +59,7 @@ defmodule WotexLabWorkbench.Application do
          {:ok, control} <- control(Keyword.get(env, :control_mutations, false)),
          {:ok, otlp} <- otlp(Keyword.get(env, :metrics_otlp, false)) do
       Supervisor.start_link(
-        observability ++ children ++ control ++ otlp ++ [WotexLabWorkbenchWeb.Endpoint],
+        Enum.concat([observability, children, control, otlp, [WotexLabWorkbenchWeb.Endpoint]]),
         strategy: :one_for_one,
         name: WotexLabWorkbench.Supervisor
       )
@@ -81,7 +81,7 @@ defmodule WotexLabWorkbench.Application do
          do: observability_children(promex?, history?, scrape, durable, beamlens?, env)
   end
 
-  defp observability_children(false, _history, _scrape, _durable, _beamlens, _env), do: {:ok, []}
+  defp observability_children(false, _, _, _, _, _), do: {:ok, []}
 
   defp observability_children(true, history?, scrape, durable, beamlens?, env) do
     history = if history?, do: Keyword.fetch!(env, :metrics_history_options), else: false
@@ -100,10 +100,10 @@ defmodule WotexLabWorkbench.Application do
     end
   end
 
-  defp observability_requirements(false, true, _scrape, _durable, _beamlens),
+  defp observability_requirements(false, true, _, _, _),
     do: {:error, :metrics_history_requires_promex}
 
-  defp observability_requirements(_promex, false, _scrape, _durable, true),
+  defp observability_requirements(_, false, _, _, true),
     do: {:error, :beamlens_requires_metrics_history}
 
   defp observability_requirements(false, false, scrape, false, false) when scrape != false,
@@ -112,7 +112,7 @@ defmodule WotexLabWorkbench.Application do
   defp observability_requirements(false, false, false, durable, false) when durable != false,
     do: {:error, :metrics_durable_requires_promex}
 
-  defp observability_requirements(_promex, _history, _scrape, _durable, _beamlens), do: :ok
+  defp observability_requirements(_, _, _, _, _), do: :ok
 
   defp durable_query_requirements(false, durable_query) when durable_query != false,
     do: {:error, :metrics_durable_query_requires_promex}
@@ -146,7 +146,7 @@ defmodule WotexLabWorkbench.Application do
   defp beamlens_options(true), do: InvestigationConfig.client_registry()
 
   @impl Application
-  def config_change(changed, _new, removed) do
+  def config_change(changed, _, removed) do
     WotexLabWorkbenchWeb.Endpoint.config_change(changed, removed)
     :ok
   end

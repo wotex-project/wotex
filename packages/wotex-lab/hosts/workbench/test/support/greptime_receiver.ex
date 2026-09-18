@@ -7,6 +7,8 @@ defmodule WotexLabWorkbench.Test.GreptimeReceiver do
   # memory and PID budgets and is removed in `on_exit`. The image is never
   # pulled by the lane.
 
+  alias WotexLabWorkbench.Test.ChildEnvironment
+
   @image "greptime/greptimedb:v1.1.4@sha256:9726587eac95d0360755254cd59a528dbf48abfdf268478aea6a644f62afe44c"
 
   @type t :: %{container: String.t(), base_url: String.t(), write_url: String.t()}
@@ -45,6 +47,7 @@ defmodule WotexLabWorkbench.Test.GreptimeReceiver do
           "--http-addr",
           "0.0.0.0:4000"
         ],
+        env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
 
@@ -56,16 +59,28 @@ defmodule WotexLabWorkbench.Test.GreptimeReceiver do
   @doc false
   @spec halt(String.t()) :: :ok
   def halt(container) do
-    _ = System.cmd("docker", ["rm", "--force", "--volumes", container], stderr_to_stdout: true)
+    _ =
+      System.cmd("docker", ["rm", "--force", "--volumes", container],
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
+
     :ok
   end
 
   defp mapped_port(container, 0), do: raise("#{container} published no mapped port")
 
   defp mapped_port(container, attempts) do
-    with {output, 0} <- System.cmd("docker", ["port", container, "4000"], stderr_to_stdout: true),
+    with {output, 0} <-
+           System.cmd("docker", ["port", container, "4000"],
+             env: ChildEnvironment.scrubbed(),
+             stderr_to_stdout: true
+           ),
          [mapping | _] <- String.split(String.trim(output), "\n", trim: true) do
-      mapping |> String.split(":") |> List.last() |> String.to_integer()
+      mapping
+      |> String.split(":")
+      |> List.last()
+      |> String.to_integer()
     else
       _ ->
         Process.sleep(100)

@@ -12,7 +12,7 @@ defmodule WotexLabWorkbenchWeb.SessionController do
 
   @doc "Clears the session and redirects to the workbench."
   @spec new(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def new(conn, _params) do
+  def new(conn, _) do
     conn
     |> configure_session(drop: true)
     |> redirect(to: "/")

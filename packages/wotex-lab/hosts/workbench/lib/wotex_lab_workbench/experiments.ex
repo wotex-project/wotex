@@ -247,23 +247,26 @@ defmodule WotexLabWorkbench.Experiments do
     end
   end
 
-  def fetch(_id),
+  def fetch(_),
     do: {:error, Error.new(:unknown_experiment, :admission, "experiment is not admitted")}
 
   @doc "Admits string parameters against the experiment's typed bounds."
   @spec admit(experiment(), map()) :: {:ok, keyword()} | {:error, Error.t()}
   def admit(experiment, params) when is_map(params) do
-    Enum.reduce_while(experiment.parameters, {:ok, []}, fn parameter, {:ok, acc} ->
-      raw = Map.get(params, parameter.name)
+    admitted =
+      Enum.reduce_while(experiment.parameters, {:ok, []}, fn parameter, {:ok, acc} ->
+        raw = Map.get(params, parameter.name)
 
-      case admit_value(parameter, raw) do
-        {:ok, value} -> {:cont, {:ok, acc ++ [{parameter.key, value}]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
+        case admit_value(parameter, raw) do
+          {:ok, value} -> {:cont, {:ok, [{parameter.key, value} | acc]}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    with {:ok, reversed} <- admitted, do: {:ok, Enum.reverse(reversed)}
   end
 
-  def admit(_experiment, _params),
+  def admit(_, _),
     do: {:error, Error.new(:invalid_parameters, :admission, "parameters must be a map")}
 
   @doc "The default parameter strings for a form."
@@ -275,7 +278,7 @@ defmodule WotexLabWorkbench.Experiments do
     raw = raw || to_string(parameter.default)
 
     case List.keyfind(options, raw, 0) do
-      {_label, value} -> {:ok, value}
+      {_, value} -> {:ok, value}
       nil -> reject(parameter)
     end
   end
@@ -283,28 +286,28 @@ defmodule WotexLabWorkbench.Experiments do
   defp admit_value(%{type: :integer} = parameter, raw) do
     case parse(raw, parameter.default, &Integer.parse/1) do
       {:ok, value} when value >= parameter.min and value <= parameter.max -> {:ok, value}
-      _other -> reject(parameter)
+      _ -> reject(parameter)
     end
   end
 
   defp admit_value(%{type: :float} = parameter, raw) do
     case parse(raw, parameter.default, &Float.parse/1) do
       {:ok, value} when value >= parameter.min and value <= parameter.max -> {:ok, value * 1.0}
-      _other -> reject(parameter)
+      _ -> reject(parameter)
     end
   end
 
-  defp parse(nil, default, _parser), do: {:ok, default}
-  defp parse("", default, _parser), do: {:ok, default}
+  defp parse(nil, default, _), do: {:ok, default}
+  defp parse("", default, _), do: {:ok, default}
 
-  defp parse(raw, _default, parser) when is_binary(raw) and byte_size(raw) <= 32 do
+  defp parse(raw, _, parser) when is_binary(raw) and byte_size(raw) <= 32 do
     case parser.(String.trim(raw)) do
       {value, ""} -> {:ok, value}
-      _other -> :error
+      _ -> :error
     end
   end
 
-  defp parse(_raw, _default, _parser), do: :error
+  defp parse(_, _, _), do: :error
 
   defp reject(parameter) do
     {:error,

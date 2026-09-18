@@ -30,7 +30,13 @@ defmodule WotexLabWorkbench.Investigation.Answer do
   def from_result({:ok, %{notifications: notifications} = result}, provider)
       when is_list(notifications) do
     notifications = Enum.take(notifications, @max_notifications)
-    recorded = result |> Map.get(:evidence, []) |> List.wrap() |> MapSet.new()
+
+    recorded =
+      result
+      |> Map.get(:evidence, [])
+      |> List.wrap()
+      |> MapSet.new()
+
     grouped = Enum.group_by(notifications, &grounding(&1, recorded))
     grounded = Map.get(grouped, :grounded, [])
 
@@ -61,7 +67,7 @@ defmodule WotexLabWorkbench.Investigation.Answer do
         answer(
           "complete",
           Enum.map(grounded, &fact/1),
-          grounded |> Enum.map(&field(&1, "hypothesis")) |> present_strings(),
+          present_strings(Enum.map(grounded, &field(&1, "hypothesis"))),
           missing_evidence(grounded) ++ withheld(grouped),
           "Review the cited evidence before making any separate policy decision.",
           sources(grounded),
@@ -84,13 +90,15 @@ defmodule WotexLabWorkbench.Investigation.Answer do
     )
   end
 
-  def from_result(_result, provider), do: from_result({:error, :provider_failure}, provider)
+  def from_result(_, provider), do: from_result({:error, :provider_failure}, provider)
 
   defp fact(notification) do
-    [field(notification, "context"), field(notification, "observation")]
-    |> present_strings()
-    |> Enum.join(" — ")
-    |> case do
+    fact =
+      [field(notification, "context"), field(notification, "observation")]
+      |> present_strings()
+      |> Enum.join(" — ")
+
+    case fact do
       "" -> "BeamLens emitted a finding without presentable factual text."
       text -> text
     end
@@ -166,7 +174,7 @@ defmodule WotexLabWorkbench.Investigation.Answer do
   defp snapshots(notification) do
     case field(notification, "snapshots") do
       snapshots when is_list(snapshots) -> Enum.take(snapshots, 16)
-      _other -> []
+      _ -> []
     end
   end
 
@@ -190,7 +198,7 @@ defmodule WotexLabWorkbench.Investigation.Answer do
       {"cancelled", "The session expired or was revoked and the investigation was terminated.",
        "Open a fresh session before submitting another question."}
 
-  defp failure(_reason),
+  defp failure(_),
     do:
       {"unavailable", "The investigation provider did not produce an admitted result.",
        "Check the disclosed provider state or inspect evidence directly."}
@@ -211,15 +219,15 @@ defmodule WotexLabWorkbench.Investigation.Answer do
   defp provider_label(%{provider: provider}) when provider in [:codex, :ollama],
     do: Atom.to_string(provider)
 
-  defp provider_label(_provider), do: "not reported"
+  defp provider_label(_), do: "not reported"
 
   defp model_label(%{model: model}) when is_binary(model), do: bounded_text(model)
-  defp model_label(_provider), do: "not reported"
+  defp model_label(_), do: "not reported"
 
   defp evidence_source, do: [%{label: "Bounded session evidence", href: "/evidence"}]
 
   defp field(map, key) when is_map(map), do: Map.get(map, key) || Map.get(map, @field_atoms[key])
-  defp field(_value, _key), do: nil
+  defp field(_, _), do: nil
 
   defp present_strings(values) do
     values

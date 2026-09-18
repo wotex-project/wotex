@@ -83,8 +83,8 @@ defmodule WotexLabWorkbench.ObservabilityTest do
 
     1..32
     |> Task.async_stream(
-      fn _index ->
-        for _sample <- 1..100 do
+      fn _ ->
+        for _ <- 1..100 do
           publish(counter, 1)
           publish(histogram, 0.001)
         end
@@ -92,7 +92,7 @@ defmodule WotexLabWorkbench.ObservabilityTest do
       max_concurrency: 32,
       timeout: 5_000
     )
-    |> Enum.each(&assert({:ok, _value} = &1))
+    |> Enum.each(&assert({:ok, _} = &1))
 
     assert %{series_used: 11, dropped_samples: 0, invalid_samples: 0} = Store.stats(store)
     assert {:ok, snapshot} = Exposition.parse(Store.scrape(store))
@@ -207,8 +207,8 @@ defmodule WotexLabWorkbench.ObservabilityTest do
 
   defp store_child(supervisor) do
     Enum.find_value(Supervisor.which_children(supervisor), fn
-      {_id, pid, :worker, [Store]} -> pid
-      _child -> nil
+      {_, pid, :worker, [Store]} -> pid
+      _ -> nil
     end)
   end
 end

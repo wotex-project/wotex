@@ -19,6 +19,6 @@ defmodule WotexLabWorkbench.DependencySecurityTest do
       end)
 
     on_exit(fn -> if Process.alive?(task.pid), do: Process.exit(task.pid, :kill) end)
-    assert {:ok, _result} = Task.yield(task, 1_000)
+    assert {:ok, _} = Task.yield(task, 1_000)
   end
 end

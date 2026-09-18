@@ -124,15 +124,17 @@ defmodule WotexLabWorkbench.Observability.OperatorTransport do
   defp address(_), do: invalid()
 
   defp ranges(text) when is_binary(text) and byte_size(text) in 1..1_024 do
-    text
-    |> String.split(",")
-    |> Enum.reduce_while({:ok, []}, fn entry, {:ok, acc} ->
-      case range(entry) do
-        {:ok, range} -> {:cont, {:ok, [range | acc]}}
-        :error -> {:halt, invalid()}
-      end
-    end)
-    |> case do
+    parsed =
+      text
+      |> String.split(",")
+      |> Enum.reduce_while({:ok, []}, fn entry, {:ok, acc} ->
+        case range(entry) do
+          {:ok, range} -> {:cont, {:ok, [range | acc]}}
+          :error -> {:halt, invalid()}
+        end
+      end)
+
+    case parsed do
       {:ok, ranges} when length(ranges) in 1..@max_ranges -> {:ok, Enum.reverse(ranges)}
       _ -> invalid()
     end
@@ -172,7 +174,7 @@ defmodule WotexLabWorkbench.Observability.OperatorTransport do
 
   defp inside?(_, _), do: false
 
-  defp binary(address, 32), do: address |> Tuple.to_list() |> :binary.list_to_bin()
+  defp binary(address, 32), do: :binary.list_to_bin(Tuple.to_list(address))
 
   defp binary(address, 128),
     do: for(part <- Tuple.to_list(address), into: <<>>, do: <<part::16>>)
@@ -180,7 +182,7 @@ defmodule WotexLabWorkbench.Observability.OperatorTransport do
   defp ip?({a, b, c, d}), do: Enum.all?([a, b, c, d], &(&1 in 0..255))
 
   defp ip?({_, _, _, _, _, _, _, _} = address),
-    do: address |> Tuple.to_list() |> Enum.all?(&(is_integer(&1) and &1 in 0..65_535))
+    do: Enum.all?(Tuple.to_list(address), &(is_integer(&1) and &1 in 0..65_535))
 
   defp ip?(_), do: false
 

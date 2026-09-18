@@ -183,7 +183,7 @@ defmodule WotexLabWorkbenchWeb.ControlMutationTest do
     assert second_id != run_id
     assert length(Room.runs(room)) == 2
 
-    read = conn |> bearer(owner.token) |> get("/api/v1/runs/" <> run_id) |> json_response(200)
+    read = json_response(get(bearer(conn, owner.token), "/api/v1/runs/" <> run_id), 200)
     assert read == run
 
     assert %{"schema_version" => "1.0.0"} =
@@ -193,12 +193,12 @@ defmodule WotexLabWorkbenchWeb.ControlMutationTest do
              |> json_response(200)
 
     assert %{"code" => "unknown_run"} =
-             conn |> bearer(stranger.token) |> get("/api/v1/runs/" <> run_id) |> json_response(404)
+             json_response(get(bearer(conn, stranger.token), "/api/v1/runs/" <> run_id), 404)
 
     assert {:ok, _} = Sessions.admit(stranger.token, :start_room)
 
     assert %{"code" => "unknown_run"} =
-             conn |> bearer(stranger.token) |> get("/api/v1/runs/" <> run_id) |> json_response(404)
+             json_response(get(bearer(conn, stranger.token), "/api/v1/runs/" <> run_id), 404)
 
     assert %{"code" => "unknown_run"} =
              conn
@@ -207,7 +207,7 @@ defmodule WotexLabWorkbenchWeb.ControlMutationTest do
              |> json_response(404)
 
     assert %{"code" => "missing_bearer"} =
-             conn |> recycle() |> get("/api/v1/runs/" <> run_id) |> json_response(401)
+             json_response(get(recycle(conn), "/api/v1/runs/" <> run_id), 401)
 
     assert %{"code" => "unknown_session"} =
              conn
@@ -230,7 +230,7 @@ defmodule WotexLabWorkbenchWeb.ControlMutationTest do
     approval = approval_body(decision)
 
     assert %{"code" => "unknown_run"} =
-             conn |> mutation(path, stranger.token, "foreign", approval) |> json_response(404)
+             json_response(mutation(conn, path, stranger.token, "foreign", approval), 404)
 
     for {field, value} <- [
           {"thing_id", "urn:wotex:lab:other"},
@@ -272,7 +272,7 @@ defmodule WotexLabWorkbenchWeb.ControlMutationTest do
     assert get_resp_header(replayed, "idempotent-replayed") == ["true"]
 
     assert %{"code" => "not_approvable"} =
-             conn |> mutation(path, owner.token, "approve-again", approval) |> json_response(409)
+             json_response(mutation(conn, path, owner.token, "approve-again", approval), 409)
 
     %{policy: %{decisions: [recorded]}} = Room.snapshot(room)
     assert recorded.status == :dispatched
@@ -504,7 +504,12 @@ defmodule WotexLabWorkbenchWeb.ControlMutationTest do
     }
 
   defp mutation(conn, path, token, key, body, headers \\ []) do
-    conn = recycle(conn) |> put_req_header("content-type", "application/json") |> bearer(token)
+    conn =
+      conn
+      |> recycle()
+      |> put_req_header("content-type", "application/json")
+      |> bearer(token)
+
     conn = if key, do: put_req_header(conn, "idempotency-key", key), else: conn
 
     headers

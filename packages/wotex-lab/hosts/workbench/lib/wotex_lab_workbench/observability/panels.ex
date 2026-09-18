@@ -40,7 +40,7 @@ defmodule WotexLabWorkbench.Observability.Panels do
     end
   end
 
-  def select(_ids), do: invalid()
+  def select(_), do: invalid()
 
   @doc "Generates inert Grafana classic dashboard JSON data, never uploading it."
   @spec dashboard(term()) :: {:ok, map()} | {:error, Error.t()}

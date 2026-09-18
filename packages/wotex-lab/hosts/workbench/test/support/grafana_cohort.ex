@@ -11,6 +11,8 @@ defmodule WotexLabWorkbench.Test.GrafanaCohort do
   # pulled by the lane. The helpers issue only the fixed API calls the import
   # cohort needs; no caller SQL is sent.
 
+  alias WotexLabWorkbench.Test.ChildEnvironment
+
   @greptime "greptime/greptimedb:v1.1.4@sha256:9726587eac95d0360755254cd59a528dbf48abfdf268478aea6a644f62afe44c"
   @grafana "grafana/grafana:13.2.2@sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0"
 
@@ -27,11 +29,11 @@ defmodule WotexLabWorkbench.Test.GrafanaCohort do
   @doc false
   @spec start() :: t()
   def start do
-    suffix = 6 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
+    suffix = Base.encode16(:crypto.strong_rand_bytes(6), case: :lower)
     network = "wotex-lab-grafana-" <> suffix
     greptime = "wotex-lab-greptime-" <> suffix
     grafana = "wotex-lab-grafana-ui-" <> suffix
-    password = 24 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+    password = Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
 
     ExUnit.Callbacks.on_exit(fn -> halt([grafana, greptime], network) end)
     docker!(["network", "create", "--label", "wotex-lab-lane=grafana", network])
@@ -42,8 +44,11 @@ defmodule WotexLabWorkbench.Test.GrafanaCohort do
     )
 
     docker!(
-      container_args(grafana, network, "3000") ++
-        Enum.flat_map(grafana_environment(password), &["--env", &1]) ++ [@grafana]
+      Enum.concat([
+        container_args(grafana, network, "3000"),
+        Enum.flat_map(grafana_environment(password), &["--env", &1]),
+        [@grafana]
+      ])
     )
 
     greptime_url = "http://127.0.0.1:#{mapped_port(greptime, "4000", 100)}"
@@ -65,8 +70,8 @@ defmodule WotexLabWorkbench.Test.GrafanaCohort do
   @doc false
   @spec halt([String.t()], String.t()) :: :ok
   def halt(containers, network) do
-    _ = System.cmd("docker", ["rm", "--force", "--volumes" | containers], stderr_to_stdout: true)
-    _ = System.cmd("docker", ["network", "rm", network], stderr_to_stdout: true)
+    _ = docker(["rm", "--force", "--volumes" | containers])
+    _ = docker(["network", "rm", network])
     :ok
   end
 
@@ -200,8 +205,11 @@ defmodule WotexLabWorkbench.Test.GrafanaCohort do
     ]
   end
 
+  defp docker(args),
+    do: System.cmd("docker", args, env: ChildEnvironment.scrubbed(), stderr_to_stdout: true)
+
   defp docker!(args) do
-    case System.cmd("docker", args, stderr_to_stdout: true) do
+    case docker(args) do
       {output, 0} -> output
       {output, status} -> raise "docker #{hd(args)} failed (#{status}): #{output}"
     end
@@ -210,9 +218,12 @@ defmodule WotexLabWorkbench.Test.GrafanaCohort do
   defp mapped_port(container, _, 0), do: raise("#{container} published no mapped port")
 
   defp mapped_port(container, port, attempts) do
-    with {output, 0} <- System.cmd("docker", ["port", container, port], stderr_to_stdout: true),
+    with {output, 0} <- docker(["port", container, port]),
          [mapping | _] <- String.split(String.trim(output), "\n", trim: true) do
-      mapping |> String.split(":") |> List.last() |> String.to_integer()
+      mapping
+      |> String.split(":")
+      |> List.last()
+      |> String.to_integer()
     else
       _ ->
         Process.sleep(100)

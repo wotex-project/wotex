@@ -44,5 +44,5 @@ defmodule WotexLabWorkbenchWeb.Components.StatusBadge do
       do: :warning
 
   def kind_for(status) when status in [:running, :loading, "running", "loading"], do: :info
-  def kind_for(_status), do: :neutral
+  def kind_for(_), do: :neutral
 end

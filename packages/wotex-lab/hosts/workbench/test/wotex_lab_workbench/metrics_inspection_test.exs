@@ -24,7 +24,7 @@ defmodule WotexLabWorkbench.MetricsInspectionTest do
       outcome: :ok
     })
 
-    assert {:ok, _sample} = Sampler.sample_now()
+    assert {:ok, _} = Sampler.sample_now()
     now = DateTime.utc_now()
 
     request = %{

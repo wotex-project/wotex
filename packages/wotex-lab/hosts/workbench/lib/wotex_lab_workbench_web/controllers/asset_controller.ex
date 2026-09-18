@@ -17,7 +17,7 @@ defmodule WotexLabWorkbenchWeb.AssetController do
 
   @doc "The generated stylesheet."
   @spec tokens(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def tokens(conn, _params) do
+  def tokens(conn, _) do
     overrides = Application.get_env(:wotex_lab_workbench, :token_overrides, %{})
 
     conn
@@ -29,7 +29,11 @@ defmodule WotexLabWorkbenchWeb.AssetController do
   @doc "Renders admitted overrides as a scoped CSS block; unknown names and unsafe values are dropped."
   @spec overrides_css(map()) :: String.t()
   def overrides_css(overrides) when is_map(overrides) do
-    known = DesignSystem.tokens() |> Map.values() |> Enum.flat_map(&Map.keys/1) |> MapSet.new()
+    known =
+      DesignSystem.tokens()
+      |> Map.values()
+      |> Enum.flat_map(&Map.keys/1)
+      |> MapSet.new()
 
     declarations =
       overrides

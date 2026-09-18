@@ -11,8 +11,7 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
 
   use Phoenix.Component
 
-  alias WotexLabWorkbench.Chart
-  alias WotexLabWorkbench.Preview
+  alias WotexLabWorkbench.{Chart, Preview}
 
   attr :id, :string, required: true
   attr :chart, :any, required: true

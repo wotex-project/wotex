@@ -17,6 +17,7 @@ defmodule WotexLabWorkbench.CheckRunner do
   ]
 
   @doc false
+  @spec run([String.t()]) :: :ok
   def run(args) do
     refuse_unknown_args(args)
     root = Path.expand("..", __DIR__)
@@ -24,7 +25,7 @@ defmodule WotexLabWorkbench.CheckRunner do
     Enum.each(@checks, fn {name, executable, command, environment} ->
       Mix.shell().info("=> running #{name}")
 
-      {_output, status} =
+      {_, status} =
         System.cmd(executable, command,
           cd: root,
           env: [{"MIX_ENV", environment}],

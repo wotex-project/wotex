@@ -202,14 +202,15 @@ defmodule WotexLabWorkbench.HistoryPanels do
   end
 
   defp query_panel(base, metric, label_sets, context) do
-    label_sets
-    |> Enum.reduce_while({[], []}, fn labels, {answers, _} ->
-      case query(metric, labels, context) do
-        {:ok, answer} -> {:cont, {[{labels, answer} | answers], []}}
-        {:error, %Error{code: code}} -> {:halt, {answers, [Atom.to_string(code)]}}
-      end
-    end)
-    |> case do
+    queried =
+      Enum.reduce_while(label_sets, {[], []}, fn labels, {answers, _} ->
+        case query(metric, labels, context) do
+          {:ok, answer} -> {:cont, {[{labels, answer} | answers], []}}
+          {:error, %Error{code: code}} -> {:halt, {answers, [Atom.to_string(code)]}}
+        end
+      end)
+
+    case queried do
       {_, ["budget_exhausted"]} ->
         %{base | status: :not_queried, error: "budget_exhausted"}
 

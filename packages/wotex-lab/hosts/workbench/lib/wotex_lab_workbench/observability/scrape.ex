@@ -22,8 +22,8 @@ defmodule WotexLabWorkbench.Observability.Scrape do
   import Plug.Conn
 
   alias Wotex.Lab.{Error, Options}
-  alias WotexLabWorkbench.Observability.OperatorTransport
   alias Wotex.Lab.Metrics.Exposition
+  alias WotexLabWorkbench.Observability.OperatorTransport
 
   @promex WotexLabWorkbench.Observability.PromEx
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
@@ -36,11 +36,11 @@ defmodule WotexLabWorkbench.Observability.Scrape do
          true <- port?(number) and token?(token) do
       {:ok, [port: number, token_digest: :crypto.hash(:sha256, token)]}
     else
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  def configure(_port, _token), do: invalid()
+  def configure(_, _), do: invalid()
 
   @doc "Validates closed listener options without opening a socket."
   @spec validate(keyword()) :: :ok | {:error, Error.t()}
@@ -52,7 +52,7 @@ defmodule WotexLabWorkbench.Observability.Scrape do
            Keyword.get(opts, :token_digest) do
       :ok
     else
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
@@ -143,7 +143,9 @@ defmodule WotexLabWorkbench.Observability.Scrape do
         reply(conn, 404, "Not Found\n")
 
       conn.method != "GET" ->
-        conn |> put_resp_header("allow", "GET") |> reply(405, "Method Not Allowed\n")
+        conn
+        |> put_resp_header("allow", "GET")
+        |> reply(405, "Method Not Allowed\n")
 
       not request?(conn) ->
         reply(conn, 400, "Bad Request\n")
@@ -165,7 +167,7 @@ defmodule WotexLabWorkbench.Observability.Scrape do
         Regex.match?(~r/\Abearer\z/i, scheme) and token?(token) and
           Plug.Crypto.secure_compare(:crypto.hash(:sha256, token), digest)
 
-      _invalid ->
+      _ ->
         false
     end
   end
@@ -178,7 +180,7 @@ defmodule WotexLabWorkbench.Observability.Scrape do
         |> send_resp(200, text)
         |> halt()
 
-      _unavailable ->
+      _ ->
         reply(conn, 503, "Service Unavailable\n")
     end
   end
@@ -186,11 +188,15 @@ defmodule WotexLabWorkbench.Observability.Scrape do
   defp metrics do
     PromEx.get_metrics(@promex)
   catch
-    :exit, _reason -> :prom_ex_down
+    :exit, _ -> :prom_ex_down
   end
 
-  defp reply(conn, status, body),
-    do: conn |> put_resp_content_type("text/plain") |> send_resp(status, body) |> halt()
+  defp reply(conn, status, body) do
+    conn
+    |> put_resp_content_type("text/plain")
+    |> send_resp(status, body)
+    |> halt()
+  end
 
   defp port?(port), do: is_integer(port) and (port == 0 or port in 1_024..65_535)
 
