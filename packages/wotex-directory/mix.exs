@@ -46,6 +46,8 @@ defmodule WotexDirectory.MixProject do
       wotex_dependency(),
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
+      {:benchee, "~> 1.5", only: :dev, runtime: false},
+      {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -112,24 +114,27 @@ defmodule WotexDirectory.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: [
-        {"README.md", title: "Overview"},
-        {docs_path("plans/wotex-directory-completion.md"), title: "Completion Contract"},
-        {docs_path("specs/WTD.01-directory-contract.md"), title: "Directory contract"},
-        {docs_path("plans/repository-port-evidence.md"), title: "Repository port evidence"},
-        {docs_path("plans/claim-compatibility-matrix.md"), title: "Claims and compatibility"},
-        {docs_path("decisions/0001-consumer-owned-runtime.md"), title: "Consumer-owned runtime"},
-        {docs_path("decisions/0002-listing-and-expiry.md"), title: "Listing and expiry"},
-        {docs_path("provenance/w3c-sources.md"), title: "W3C sources"},
-        {"CHANGELOG.md", title: "Changelog"},
-        {"../../docs/packages/wotex-directory/security.md", title: "Security"},
-        {"LICENSE", title: "License"}
-      ],
+      extras:
+        [
+          {"README.md", title: "Overview"},
+          {docs_path("plans/wotex-directory-completion.md"), title: "Completion Contract"},
+          {docs_path("specs/WTD.01-directory-contract.md"), title: "Directory contract"},
+          {docs_path("plans/repository-port-evidence.md"), title: "Repository port evidence"},
+          {docs_path("plans/claim-compatibility-matrix.md"), title: "Claims and compatibility"},
+          {docs_path("decisions/0001-consumer-owned-runtime.md"),
+           title: "Consumer-owned runtime"},
+          {docs_path("decisions/0002-listing-and-expiry.md"), title: "Listing and expiry"},
+          {docs_path("provenance/w3c-sources.md"), title: "W3C sources"},
+          {"CHANGELOG.md", title: "Changelog"},
+          {"../../docs/packages/wotex-directory/security.md", title: "Security"},
+          {"LICENSE", title: "License"}
+        ] ++ Path.wildcard("bench/output/*.md"),
       groups_for_extras: [
         "Completion plans": ~r|docs/packages/wotex-directory/plans/|,
         Specifications: ~r|docs/packages/wotex-directory/specs/|,
         Decisions: ~r|docs/packages/wotex-directory/decisions/|,
         Provenance: ~r|docs/packages/wotex-directory/provenance/|,
+        Benchmarks: ~r/bench\/output/,
         Reference: ~r/CHANGELOG|security|CONTRIBUTING|LICENSE/
       ],
       groups_for_modules: [
