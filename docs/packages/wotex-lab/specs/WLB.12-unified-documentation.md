@@ -39,7 +39,7 @@ this repository, plus the separate `wotex-dot` source. A directory under
 | Numerical computing | `wotex-nx` |
 | Conformance | `wotex-conformance` |
 | Laboratory | `wotex-lab` |
-| Family documentation | `docs/` outside `docs/packages/`: the root index `docs/README.md`, architecture, decisions and guides |
+| Family documentation | `docs/` outside `docs/packages/`: the root index `docs/README.md`, architecture and guides |
 | Project governance | `wotex-dot` |
 
 Every row except the last two names a package under `packages/`.
@@ -82,8 +82,7 @@ An extracted collection includes:
 - public module and member documentation;
 - the package `README.md`, allowlisted package-level documents and family
   guides;
-- `docs/packages/<name>/specs/`, `decisions/` and `plans/`, and the family
-  decisions under `docs/decisions/`;
+- `docs/packages/<name>/specs/`, `decisions/` and `plans/`;
 - public provenance and standards notes under `docs/packages/<name>/provenance/`;
 - runnable `.livemd` notebooks;
 - generated OpenAPI or other admitted interface documents; and
