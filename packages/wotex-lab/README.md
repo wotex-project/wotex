@@ -345,7 +345,7 @@ describes the workflow and validation tiers. Sibling packages resolve from
 
 ```sh
 mix pkg wotex-lab test test/wotex/lab/thermal_test.exs  # one test file
-mix check.fast --package wotex-lab                      # compile, format, Credo, tests
+mix check.fast --package wotex-lab                      # compile, format, Credo, tests; hosts too
 mix pkg wotex-lab check --no-retry                      # full gate
 mix native.lint --package wotex-lab                     # cargo fmt --check, clippy
 mix native.test --package wotex-lab                     # cargo test
@@ -457,7 +457,13 @@ Phoenix LiveView Workbench, gate `WOTEX_PATH_DEPS=1 mix check --no-retry`) and
 `hosts/nerves/` (Raspberry Pi 4 firmware source, host-cohort gate
 `WOTEX_PATH_DEPS=1 MIX_TARGET=host mix check --no-retry`). The full gate runs
 both as its `workbench` and `nerves_host` tools;
-`mix pkg wotex-lab check --no-retry --only workbench` runs one alone. The generated TypeScript
+`mix pkg wotex-lab check --no-retry --only workbench` runs one alone. The fast
+gate, `mix check.fast --package wotex-lab`, compiles, format-checks, lints and
+tests both hosts after the package. The full gate's `optional_deps` tool
+compiles the package without any optional dependency, with warnings as errors
+and in its own build path (`_build/no_optional_deps`), and
+`bin/check_optional_deps.exs` then proves that the features needing an absent
+dependency answer with typed errors. The generated TypeScript
 client in `clients/typescript/` is written by
 `WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs --write`
 (`--check` runs the drift, Node test and `npm pack --dry-run` check).

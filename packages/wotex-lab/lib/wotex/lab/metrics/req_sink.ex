@@ -43,22 +43,8 @@ defmodule Wotex.Lab.Metrics.ReqSink do
     with {:ok, config} <- normalize_config(config),
          {:ok, destination} <- destination(config),
          :ok <- validate_headers(headers),
-         {:ok, authorized} <- authorize(headers, credential),
-         :ok <- available() do
-      options =
-        [
-          method: :post,
-          url: destination.url,
-          headers: authorized,
-          body: body,
-          redirect: false,
-          retry: false,
-          decode_body: false,
-          receive_timeout: config.receive_timeout,
-          into: &collect(&1, &2, config.max_response_bytes)
-        ] ++ connection(config, destination)
-
-      classify(Req.request(options))
+         {:ok, authorized} <- authorize(headers, credential) do
+      request(config, destination, authorized, body)
     end
   end
 
@@ -166,36 +152,55 @@ defmodule Wotex.Lab.Metrics.ReqSink do
   defp unsupported_credential,
     do: {:error, Error.new(:unsupported_credential, :export, "credential shape is unsupported")}
 
-  defp available do
-    if Code.ensure_loaded?(Req),
-      do: :ok,
-      else: {:error, Error.new(:client_unavailable, :export, "Req is not available")}
+  # Req is optional: the exchange is compiled only when it is present, and a
+  # host without it gets `:client_unavailable` once the request is admitted.
+  if Code.ensure_loaded?(Req) do
+    defp request(config, destination, headers, body) do
+      options =
+        [
+          method: :post,
+          url: destination.url,
+          headers: headers,
+          body: body,
+          redirect: false,
+          retry: false,
+          decode_body: false,
+          receive_timeout: config.receive_timeout,
+          into: &collect(&1, &2, config.max_response_bytes)
+        ] ++ connection(config, destination)
+
+      classify(Req.request(options))
+    end
+
+    defp collect({:data, data}, {req, %{body: body} = resp}, limit) when is_binary(body) do
+      if byte_size(body) + byte_size(data) > limit,
+        do: {:halt, {req, %{resp | body: binary_part(body, 0, byte_size(body))}}},
+        else: {:cont, {req, %{resp | body: body <> data}}}
+    end
+
+    defp collect({:data, _}, acc, _), do: {:halt, acc}
+
+    defp classify({:ok, %{status: status, headers: headers} = response}) do
+      flattened =
+        Enum.flat_map(headers, fn {name, values} -> Enum.map(List.wrap(values), &{name, &1}) end)
+
+      body = if is_binary(response.body), do: response.body, else: ""
+      {:ok, %{status: status, headers: flattened, body: body}}
+    end
+
+    defp classify({:error, %{reason: :timeout}}),
+      do: {:error, Error.new(:timeout, :export, "remote write timed out", class: :timeout)}
+
+    defp classify({:error, _}),
+      do:
+        {:error, Error.new(:transport_failed, :export, "remote write failed", class: :unavailable)}
+
+    defp connection(%{finch: name}, _) when is_atom(name) and not is_nil(name),
+      do: [finch: [name: name]]
+
+    defp connection(_, destination), do: [connect_options: destination.connect_options]
+  else
+    defp request(_, _, _, _),
+      do: {:error, Error.new(:client_unavailable, :export, "Req is not available")}
   end
-
-  defp collect({:data, data}, {req, %{body: body} = resp}, limit) when is_binary(body) do
-    if byte_size(body) + byte_size(data) > limit,
-      do: {:halt, {req, %{resp | body: binary_part(body, 0, byte_size(body))}}},
-      else: {:cont, {req, %{resp | body: body <> data}}}
-  end
-
-  defp collect({:data, _}, acc, _), do: {:halt, acc}
-
-  defp classify({:ok, %{status: status, headers: headers} = response}) do
-    flattened =
-      Enum.flat_map(headers, fn {name, values} -> Enum.map(List.wrap(values), &{name, &1}) end)
-
-    body = if is_binary(response.body), do: response.body, else: ""
-    {:ok, %{status: status, headers: flattened, body: body}}
-  end
-
-  defp classify({:error, %{reason: :timeout}}),
-    do: {:error, Error.new(:timeout, :export, "remote write timed out", class: :timeout)}
-
-  defp classify({:error, _}),
-    do: {:error, Error.new(:transport_failed, :export, "remote write failed", class: :unavailable)}
-
-  defp connection(%{finch: name}, _) when is_atom(name) and not is_nil(name),
-    do: [finch: [name: name]]
-
-  defp connection(_, destination), do: [connect_options: destination.connect_options]
 end

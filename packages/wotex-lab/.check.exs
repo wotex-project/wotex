@@ -4,6 +4,22 @@
   skipped: false,
   tools: [
     {:compiler, command: "mix compile --warnings-as-errors"},
+    # Lab as a consumer without any optional dependency builds it (WLB.08):
+    # compiled without them, warnings as errors, in its own build path so the
+    # normal build is untouched; bin/check_optional_deps.exs then proves the
+    # modules behind those seams are absent and the features that need them
+    # answer with their typed errors. The docs environment has the production
+    # closure plus ExDoc, none of whose members needs an optional dependency.
+    # The build path is absolute: Elixir 1.18 hands MIX_BUILD_PATH unexpanded
+    # to rebar3, which runs in the dependency's directory.
+    {:optional_deps,
+     command:
+       "mix do compile --no-optional-deps --warnings-as-errors + " <>
+         "run --no-compile --no-deps-check bin/check_optional_deps.exs",
+     env: %{
+       "MIX_ENV" => "docs",
+       "MIX_BUILD_PATH" => Path.expand("_build/no_optional_deps", __DIR__)
+     }},
     {:deps_get, command: "mix deps.get --check-locked"},
     {:unused_deps, command: "mix deps.unlock --check-unused"},
     {:formatter, command: "mix format --check-formatted"},

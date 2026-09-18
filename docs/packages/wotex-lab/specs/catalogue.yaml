@@ -297,6 +297,7 @@ specifications:
       - "WotexLabNerves.Smoke"
     executable_evidence:
       - "bin/check_package.exs"
+      - "bin/check_optional_deps.exs"
       - "bin/check_boundary.exs"
       - "bin/check_contracts.exs"
       - "bin/check_source_cohort.exs"

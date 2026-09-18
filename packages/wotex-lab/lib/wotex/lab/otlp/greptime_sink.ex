@@ -67,15 +67,25 @@ defmodule Wotex.Lab.Otlp.GreptimeSink do
       if(signal == :traces, do: [{"x-greptime-pipeline-name", "greptime_trace_v1"}], else: []) ++
         if database, do: [{"x-greptime-db-name", database}], else: []
 
-    with {:ok, credential} <- resolve(credential),
-         {:ok, %{status: status, body: body}} <-
-           ReqSink.write(
-             %{request | headers: added ++ headers},
-             credential,
-             Map.put(transport, :url, url <> Map.fetch!(@paths, signal))
-           ) do
-      {:ok, %{status: status, body: body}}
+    with {:ok, credential} <- resolve(credential) do
+      exchange(
+        %{request | headers: added ++ headers},
+        credential,
+        Map.put(transport, :url, url <> Map.fetch!(@paths, signal))
+      )
     end
+  end
+
+  # Without the optional Req client `ReqSink.write/3` admits the request and
+  # answers `:client_unavailable`, which the sink passes on unchanged.
+  if Code.ensure_loaded?(Req) do
+    defp exchange(request, credential, transport) do
+      with {:ok, %{status: status, body: body}} <- ReqSink.write(request, credential, transport),
+           do: {:ok, %{status: status, body: body}}
+    end
+  else
+    defp exchange(request, credential, transport),
+      do: ReqSink.write(request, credential, transport)
   end
 
   defp resolve(nil), do: {:ok, nil}

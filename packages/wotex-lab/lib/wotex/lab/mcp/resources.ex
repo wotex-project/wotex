@@ -18,8 +18,6 @@ defmodule Wotex.Lab.MCP.Resources do
 
   alias Wotex.Lab.{DesignSystem, Documentation, Scenario}
   alias Wotex.Lab.MCP.Seams
-  alias Wotex.Lab.Reference.Thing
-  alias Wotex.ThingDescription
 
   @max_file_bytes 1_048_576
   @root Path.expand("../../../..", __DIR__)
@@ -123,27 +121,45 @@ defmodule Wotex.Lab.MCP.Resources do
 
   defp things(_), do: []
 
-  defp thing(state, "wotex-lab://things/" <> id) do
-    case fetch_thing(state, id) do
-      {:ok, pid} ->
-        {:ok, text} =
-          pid
-          |> Thing.thing_description()
-          |> ThingDescription.to_map()
-          |> Wotex.JSON.encode()
+  # Simulated Things are `Wotex.Lab.Reference.Thing` processes, compiled only
+  # with the optional runtime profile; without it an instance has none to list
+  # or read.
+  if Code.ensure_loaded?(Wotex.Runtime.Transport) do
+    alias Wotex.Lab.Reference.Thing
+    alias Wotex.ThingDescription
 
-        {:ok,
-         [
-           %{
-             "uri" => "wotex-lab://things/" <> id,
-             "mimeType" => "application/td+json",
-             "text" => text
-           }
-         ]}
+    defp reference_thing({_, pid, :worker, [Thing]}) when is_pid(pid),
+      do: [{ThingDescription.id(Thing.thing_description(pid)), pid}]
 
-      :error ->
-        {:error, -32_002, "no such simulated Thing in this instance"}
+    defp reference_thing(_), do: []
+
+    defp thing(state, "wotex-lab://things/" <> id) do
+      case fetch_thing(state, id) do
+        {:ok, pid} ->
+          {:ok, text} =
+            pid
+            |> Thing.thing_description()
+            |> ThingDescription.to_map()
+            |> Wotex.JSON.encode()
+
+          {:ok,
+           [
+             %{
+               "uri" => "wotex-lab://things/" <> id,
+               "mimeType" => "application/td+json",
+               "text" => text
+             }
+           ]}
+
+        :error ->
+          {:error, -32_002, "no such simulated Thing in this instance"}
+      end
     end
+  else
+    defp reference_thing(_), do: []
+
+    defp thing(_, "wotex-lab://things/" <> _),
+      do: {:error, -32_002, "no such simulated Thing in this instance"}
   end
 
   defp thing(_, _), do: {:error, -32_002, "unknown resource"}
@@ -172,9 +188,4 @@ defmodule Wotex.Lab.MCP.Resources do
         []
     end
   end
-
-  defp reference_thing({_, pid, :worker, [Thing]}) when is_pid(pid),
-    do: [{ThingDescription.id(Thing.thing_description(pid)), pid}]
-
-  defp reference_thing(_), do: []
 end

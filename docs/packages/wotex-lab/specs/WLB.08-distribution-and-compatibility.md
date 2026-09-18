@@ -35,7 +35,13 @@ finish without the operator-installed `fwup` prerequisite.
    and Exqlite as optional requirements and the conformance runner as a
    development and test dependency; every Lab module behind one of those seams
    is compiled only when its package is loaded, so the base closure is core,
-   Wotex Nx, Nx and telemetry.
+   Wotex Nx, Nx and telemetry. The package gate's `optional_deps` step proves
+   it on every run: it compiles Lab without any optional dependency, with
+   warnings as errors and in its own build path, and
+   `bin/check_optional_deps.exs` then checks that no module behind a seam was
+   compiled and that the remote-write and OTLP sinks answer
+   `:client_unavailable` and the MCP tools answer that the runtime or formal
+   profile is not part of the host.
 
 The dependency arrow points only from Lab to public packages. Unavailable
 artifacts fail the applicable gate. Do not silently switch to workspace mode,

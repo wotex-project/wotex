@@ -21,16 +21,17 @@ defmodule Wotex.Lab.MCP.Tools do
   only when the host opted into writes: it needs the host's write token, an
   idempotency key that is never accepted twice in a session, and a deadline,
   and it dispatches through the runtime against a simulated Thing of this
-  instance only. No tool fetches a URL, reads an arbitrary path, downloads a
-  model, accepts raw Maude text or returns a credential.
+  instance only. The write token is compared in constant time with OTP's
+  `:crypto`, so writes need no HTTP transport dependency. Without the optional
+  runtime profile an instance has no simulated Things: `list_things` lists
+  none, and `read_property` and `invoke_action` answer `-32601` because the
+  profile is not part of the host. No tool fetches a URL, reads an arbitrary
+  path, downloads a model, accepts raw Maude text or returns a credential.
   """
 
   alias Wotex.Lab.Conformance.Target
-  alias Wotex.Lab.Formal.{Abstraction, Model, Profile, Result, Serializer}
-  alias Wotex.Lab.MCP.{Jobs, Resources, Seams}
+  alias Wotex.Lab.MCP.{Jobs, Seams}
   alias Wotex.Lab.Metrics.{Gateway, Query}
-  alias Wotex.Lab.Reference.Thing
-  alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
   alias Wotex.{ThingDescription, ThingModel}
 
   @tool_names ~w(parse_td parse_tm explain_error list_things read_property conformance_observe explain_seam verify_control_model query_metrics start_benchmark benchmark_status cancel_benchmark invoke_action)
@@ -44,7 +45,6 @@ defmodule Wotex.Lab.MCP.Tools do
     concurrent: 1
   }
   @max_document_bytes 1_048_576
-  @max_deadline_ms 30_000
   @phases %{
     "parse" => "the bytes are not a JSON document within the admission limits",
     "value" => "the JSON value has the wrong shape for this member",
@@ -203,21 +203,8 @@ defmodule Wotex.Lab.MCP.Tools do
   def call(state, "list_things", _) do
     things =
       case state.instance do
-        pid when is_pid(pid) ->
-          Enum.map(Resources.reference_things(pid), fn {id, thing} ->
-            document = ThingDescription.to_map(Thing.thing_description(thing))
-
-            %{
-              "id" => id,
-              "title" => document["title"],
-              "properties" => Map.keys(document["properties"] || %{}),
-              "actions" => Map.keys(document["actions"] || %{}),
-              "transport" => "loopback"
-            }
-          end)
-
-        _ ->
-          []
+        pid when is_pid(pid) -> things(pid)
+        _ -> []
       end
 
     text(state, %{
@@ -227,40 +214,8 @@ defmodule Wotex.Lab.MCP.Tools do
   end
 
   def call(state, "read_property", %{"thing_id" => thing_id, "property" => property} = args)
-      when is_binary(thing_id) and is_binary(property) do
-    with {:ok, deadline} <- deadline(args),
-         {:ok, thing} <- thing(state, thing_id),
-         {:ok, consumed} <- consumed(state, thing),
-         {:ok, result} <-
-           ConsumedThing.read_property(
-             consumed,
-             property,
-             context("mcp-read", deadline)
-           ) do
-      text(state, %{
-        "thing_id" => thing_id,
-        "property" => property,
-        "value" => result.payload,
-        "status" => Atom.to_string(result.status)
-      })
-    else
-      {:error, code, message} ->
-        {:error, code, message}
-
-      {:error, %{code: code} = error} ->
-        text(
-          state,
-          %{
-            "error" => %{
-              "code" => Atom.to_string(code),
-              "phase" => phase(error),
-              "path" => Map.get(error, :path)
-            }
-          },
-          true
-        )
-    end
-  end
+      when is_binary(thing_id) and is_binary(property),
+      do: read(state, thing_id, property, args)
 
   def call(state, "conformance_observe", %{"operation" => operation, "document" => document} = args)
       when is_binary(operation) do
@@ -373,7 +328,7 @@ defmodule Wotex.Lab.MCP.Tools do
 
   defp authorize(state, token, key) do
     cond do
-      not Plug.Crypto.secure_compare(token, state.write_token || "") ->
+      not token_matches?(token, state.write_token) ->
         {:error, -32_001, "authorization refused"}
 
       byte_size(key) == 0 or byte_size(key) > 128 ->
@@ -386,6 +341,14 @@ defmodule Wotex.Lab.MCP.Tools do
         :ok
     end
   end
+
+  # OTP's constant-time comparison over SHA-256 digests: the session token's
+  # content and length stay hidden, and the write path needs no HTTP transport
+  # dependency, so stdio sessions authorize writes as well.
+  defp token_matches?(token, expected) when is_binary(expected),
+    do: :crypto.hash_equals(:crypto.hash(:sha256, token), :crypto.hash(:sha256, expected))
+
+  defp token_matches?(_, _), do: false
 
   defp parse(_, document, _, _) when byte_size(document) > @max_document_bytes,
     do: {:error, -32_602, "document exceeds #{@max_document_bytes} bytes"}
@@ -411,23 +374,112 @@ defmodule Wotex.Lab.MCP.Tools do
       "message" => Map.get(error, :message)
     }
 
-  defp phase(%{phase: phase}) when is_atom(phase), do: Atom.to_string(phase)
-
-  defp deadline(args) do
-    case Map.get(args, "deadline_ms", 5_000) do
-      ms when is_integer(ms) and ms > 0 and ms <= @max_deadline_ms -> {:ok, ms}
-      _ -> {:error, -32_602, "deadline_ms must be 1..#{@max_deadline_ms}"}
-    end
-  end
-
-  defp thing(state, thing_id) do
-    case Resources.fetch_thing(state, thing_id) do
-      {:ok, pid} -> {:ok, pid}
-      :error -> {:error, -32_002, "no such simulated Thing in this instance"}
-    end
-  end
-
+  # The simulated Things and every runtime call exist only when the host
+  # includes the optional runtime profile (`Wotex.Lab.Reference.Thing` is
+  # compiled behind the same seam). Without it `list_things` finds no Thing and
+  # `read_property` and `invoke_action` answer that the profile is absent.
   if Code.ensure_loaded?(Wotex.Runtime.ConsumedThing) do
+    alias Wotex.Lab.MCP.Resources
+    alias Wotex.Lab.Reference.Thing
+    alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context}
+
+    @max_deadline_ms 30_000
+
+    defp things(instance) do
+      Enum.map(Resources.reference_things(instance), fn {id, thing} ->
+        document = ThingDescription.to_map(Thing.thing_description(thing))
+
+        %{
+          "id" => id,
+          "title" => document["title"],
+          "properties" => Map.keys(document["properties"] || %{}),
+          "actions" => Map.keys(document["actions"] || %{}),
+          "transport" => "loopback"
+        }
+      end)
+    end
+
+    defp read(state, thing_id, property, args) do
+      with {:ok, deadline} <- deadline(args),
+           {:ok, thing} <- thing(state, thing_id),
+           {:ok, consumed} <- consumed(state, thing),
+           {:ok, result} <-
+             ConsumedThing.read_property(
+               consumed,
+               property,
+               context("mcp-read", deadline)
+             ) do
+        text(state, %{
+          "thing_id" => thing_id,
+          "property" => property,
+          "value" => result.payload,
+          "status" => Atom.to_string(result.status)
+        })
+      else
+        {:error, code, message} ->
+          {:error, code, message}
+
+        {:error, %{code: code} = error} ->
+          text(
+            state,
+            %{
+              "error" => %{
+                "code" => Atom.to_string(code),
+                "phase" => phase(error),
+                "path" => Map.get(error, :path)
+              }
+            },
+            true
+          )
+      end
+    end
+
+    defp invoke(state, thing_id, action, input, args) do
+      with {:ok, deadline} <- deadline(args),
+           {:ok, thing} <- thing(state, thing_id),
+           {:ok, consumed} <- consumed(state, thing),
+           {:ok, result} <-
+             ConsumedThing.invoke_action(
+               consumed,
+               action,
+               input,
+               context("mcp-invoke", deadline)
+             ) do
+        text(state, %{
+          "thing_id" => thing_id,
+          "action" => action,
+          "status" => Atom.to_string(result.status),
+          "output" => result.payload
+        })
+      else
+        {:error, code, message} when is_integer(code) ->
+          {:error, code, message}
+
+        {:error, %{code: code} = error} ->
+          text(
+            state,
+            %{"error" => %{"code" => Atom.to_string(code), "phase" => phase(error)}},
+            true
+          )
+      end
+    end
+
+    defp phase(%{phase: phase}) when is_atom(phase), do: Atom.to_string(phase)
+
+    defp deadline(args) do
+      case Map.get(args, "deadline_ms", 5_000) do
+        ms when is_integer(ms) and ms > 0 and ms <= @max_deadline_ms -> {:ok, ms}
+        _ -> {:error, -32_602, "deadline_ms must be 1..#{@max_deadline_ms}"}
+      end
+    end
+
+    defp thing(state, thing_id) do
+      case Resources.fetch_thing(state, thing_id) do
+        {:ok, pid} -> {:ok, pid}
+        :error -> {:error, -32_002, "no such simulated Thing in this instance"}
+      end
+    end
+
     defp consumed(state, thing) do
       td = Thing.thing_description(thing)
 
@@ -452,39 +504,19 @@ defmodule Wotex.Lab.MCP.Tools do
           deadline: System.monotonic_time(:millisecond) + deadline
         )
   else
-    defp consumed(_, _),
+    defp things(_), do: []
+
+    defp read(_, _, _, _), do: runtime_unavailable()
+
+    defp invoke(_, _, _, _, _), do: runtime_unavailable()
+
+    defp runtime_unavailable,
       do: {:error, -32_601, "the runtime profile is not part of this host"}
-
-    defp context(_, _), do: nil
-  end
-
-  defp invoke(state, thing_id, action, input, args) do
-    with {:ok, deadline} <- deadline(args),
-         {:ok, thing} <- thing(state, thing_id),
-         {:ok, consumed} <- consumed(state, thing),
-         {:ok, result} <-
-           ConsumedThing.invoke_action(
-             consumed,
-             action,
-             input,
-             context("mcp-invoke", deadline)
-           ) do
-      text(state, %{
-        "thing_id" => thing_id,
-        "action" => action,
-        "status" => Atom.to_string(result.status),
-        "output" => result.payload
-      })
-    else
-      {:error, code, message} when is_integer(code) ->
-        {:error, code, message}
-
-      {:error, %{code: code} = error} ->
-        text(state, %{"error" => %{"code" => Atom.to_string(code), "phase" => phase(error)}}, true)
-    end
   end
 
   if Code.ensure_loaded?(ExMaude.Pool) do
+    alias Wotex.Lab.Formal.{Abstraction, Model, Profile, Result, Serializer}
+
     defp verify(state, opts, variant, property) do
       variants = Map.new(Model.variants(), &{Atom.to_string(&1), &1})
 
@@ -512,6 +544,13 @@ defmodule Wotex.Lab.MCP.Tools do
           text(state, %{"status" => "unsupported", "reason" => Atom.to_string(code)}, true)
       end
     end
+
+    defp closed(table, value, field) do
+      case Map.fetch(table, value) do
+        {:ok, atom} -> {:ok, atom}
+        :error -> {:error, -32_602, "#{field} must be one of #{Enum.join(Map.keys(table), ", ")}"}
+      end
+    end
   else
     defp verify(state, _, _, _),
       do:
@@ -519,13 +558,6 @@ defmodule Wotex.Lab.MCP.Tools do
           "status" => "unsupported",
           "reason" => "the formal profile is not part of this host"
         })
-  end
-
-  defp closed(table, value, field) do
-    case Map.fetch(table, value) do
-      {:ok, atom} -> {:ok, atom}
-      :error -> {:error, -32_602, "#{field} must be one of #{Enum.join(Map.keys(table), ", ")}"}
-    end
   end
 
   defp query_metrics(state, history, scope, request) do
