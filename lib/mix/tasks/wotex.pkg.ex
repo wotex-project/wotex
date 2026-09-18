@@ -47,5 +47,6 @@ defmodule Mix.Tasks.Wotex.Pkg do
 
   def parse_args(_args), do: usage!()
 
+  @spec usage!() :: no_return()
   defp usage!, do: Mix.raise("usage: mix pkg NAME TASK [ARGS...]")
 end
