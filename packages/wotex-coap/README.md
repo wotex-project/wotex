@@ -309,10 +309,9 @@ saturation tests, 13 native-v1 corpus tests through the Mix-built helper and 2
 tests that kill a peer's owner and find no surviving peer. All 57 pass on macOS
 arm64 and in Linux containers on Elixir 1.20.2 / OTP 29 and Elixir 1.18.4 / OTP
 27 with sanitizer-built native vectors. The Californium archive is admitted by
-exact digest and run by a recorded Java runtime as a test peer only. `mix check`,
-including the Hex archive and out-of-tree compilation gate, passed from clean
-clones of the committed per-package sources in Linux containers on both
-runtimes; that clean-source receipt predates the move into this repository.
+exact digest and run by a recorded Java runtime as a test peer only. The package gate,
+including the Hex archive and out-of-tree compilation gate, passes from a clean
+clone of the committed repository in Linux containers on both runtimes.
 Group OSCORE, context re-derivation and a second independent stack remain open
 acceptance work.
 

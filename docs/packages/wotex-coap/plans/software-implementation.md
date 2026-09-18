@@ -188,8 +188,8 @@ macOS arm64, and the same two commands pass all 57 inside the
 must use the same `OPENSSL_ROOT_DIR` selection as its build. The independent
 upstream-stack OSCORE cohort runs its five cases against the pinned Eclipse
 Californium 3.14.0 plugtest archive, admitted by exact digest and run by a
-recorded Java runtime as a test peer only. The clean committed-source gate ran
-before the packages moved into this repository and must be run again from it. The historical Python-run receipt
+recorded Java runtime as a test peer only. The clean committed-source gate passes
+from a clone of this repository on both runtimes. The historical Python-run receipt
 retains its original source and command identity only. No build or peer starts
 implicitly. A run is terminal for its disposable workspace because retained
 `software-run` evidence prevents an accidental overwrite; use a fresh build for

@@ -3,7 +3,7 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.3
+  version: 1.9.4
   owner: wotex-coap
   updated: 2026-09-19
 ---
@@ -728,9 +728,10 @@ committed-source/package gates. The current software-run receipt accepts its
 independent Californium OSCORE cohort, 8-test stress cohort, 2-test saturation
 cohort, 13-test native corpus cohort and 2-test peer guardian cohort. The 57-test
 run passes on macOS arm64 and inside Linux arm64 containers on both required
-runtimes, whose builds compile the native vectors with ASan/UBSan. The
-committed-source `mix check` receipt, including the Hex archive and out-of-tree
-compilation gate, predates the move into this repository and must be run again.
+runtimes, whose builds compile the native vectors with ASan/UBSan. From a
+clone of committed sources, the package gate passes on both required runtimes as
+an unprivileged user, including the Hex archive and out-of-tree compilation
+gate, and both runtimes produce the byte-identical archive.
 Group OSCORE, context re-derivation and a second independent stack remain
 unaccepted. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
 

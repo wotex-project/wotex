@@ -955,18 +955,21 @@ therefore needs a lost confirmable request or response, whose first
 retransmission follows after 2 to 3 seconds, or a stall of the same order;
 neither was observed. The plan's obligation to diagnose and fix it stays open.
 
-The [clean-source receipt](clean-source-v1.json) runs `mix check` from `git clone
---no-local` copies of the committed wotex, wotex-runtime and wotex-coap HEADs in
-Linux arm64 containers, once on Elixir 1.18.4 / OTP 27 and once on Elixir 1.20.2 /
-OTP 29, as an unprivileged user under an init process. Every configured tool passes
-on both runtimes, coverage is 95.3%, the archive tool compiles the Hex package out
-of tree and both runtimes produce archive
-`92d3b5cf75031456f718ecc7791b557d2f0b3d7066f5f0699abf29f096ffe291`, and the clones
-stay clean. The matrix first found four defects on OTP 27, fixed in `65945eb`,
-`a109595`, `1f013a4` and `6edd61b`: two Dialyzer opacity findings, a coalesced
-duplicate-reply fixture race, a fixture helper slow to stop on SIGTERM, and coverage
-of 94.9%. A root-run container also let a mode-0 artifact test read its file, so
-the lane runs unprivileged.
+The [clean-source receipt](clean-source-v1.json) runs the package gate from a
+`git clone --no-local` of this repository's commit `d3de3dd2` in Linux arm64
+containers, once on Elixir 1.18.4 / OTP 27 and once on Elixir 1.20.2 / OTP 29, as
+an unprivileged user under an init process. The minimum lane runs the tools CI
+keeps there (compile, dependency checks, tests with coverage, the archive and
+application-free checks); the current lane runs every tool, including Credo,
+Dialyzer, ExDoc, clang-format, clang-tidy and the native tests. Coverage is 95.1%
+and 95.2%, the archive tool compiles the Hex package out of tree, both runtimes
+produce archive
+`1d3d3c37677a4539c50f4511fb8edbfc10c505a42d269b062c529c204578694f`, and the clones
+stay clean. An earlier run from the per-package repositories first found four
+defects on OTP 27: two Dialyzer opacity findings, a coalesced duplicate-reply
+fixture race, a fixture helper slow to stop on SIGTERM, and coverage of 94.9%. A
+root-run container also let a mode-0 artifact test read its file, so the lane
+runs unprivileged.
 
 The [custody leak-audit receipt](native-custody-leak-audit-v1.json) runs the eleven
 opaque-stream custody cases in the `test/native/Dockerfile.custody` image with
