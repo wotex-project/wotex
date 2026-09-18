@@ -159,7 +159,6 @@ defmodule Wotex.Matter.Transport do
         :readproperty -> controller_read(session, address, request)
         :writeproperty -> controller_write(session, address, request.input, request)
         :invokeaction -> controller_invoke(session, address, request.input, request)
-        _ -> {:error, Error.new(:unsupported_operation)}
       end
     end
   end

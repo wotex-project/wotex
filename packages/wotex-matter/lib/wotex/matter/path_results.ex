@@ -119,10 +119,10 @@ defmodule Wotex.Matter.PathResults do
         ReadPath.concrete?(request) and ReadPath.matches?(request, address)
       end)
 
-    case exact || Enum.find(indexed, fn {request, _} -> ReadPath.matches?(request, address) end) do
-      {_, index} -> index
-      nil -> nil
-    end
+    {_, index} =
+      exact || Enum.find(indexed, fn {request, _} -> ReadPath.matches?(request, address) end)
+
+    index
   end
 
   defp within_budget(results) do

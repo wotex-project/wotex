@@ -198,7 +198,6 @@ defmodule Wotex.Matter.Native.Wire do
   defp path_result(_, _), do: :error
   defp result_path?({:ok, %{path: actual}}, expected), do: actual == expected
   defp result_path?({:error, %Error{}}, _), do: true
-  defp result_path?(_, _), do: false
 
   defp attribute(%{"path" => path, "value" => value, "data_version" => version} = report)
        when map_size(report) == 3 and

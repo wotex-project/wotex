@@ -196,9 +196,6 @@ defmodule Wotex.Matter.Standalone do
 
       {:error, %Error{}} = error ->
         error
-
-      _ ->
-        {:error, Error.new(:invalid_transport_return) |> Error.with_effect(:unknown)}
     end
   end
 
@@ -655,9 +652,6 @@ defmodule Wotex.Matter.Standalone do
 
       %{result: {:error, %Error{} = error}} ->
         {:ok, {:error, error}}
-
-      _ ->
-        {:error, Error.new(:invalid_transport_return)}
     end
   end
 

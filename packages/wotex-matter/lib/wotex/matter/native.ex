@@ -258,7 +258,6 @@ defmodule Wotex.Matter.Native do
       false -> {:error, Error.new(:fabric_mismatch)}
       remaining when is_integer(remaining) -> {:error, Error.new(:timeout)}
       {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_handle)}
     end
   end
 

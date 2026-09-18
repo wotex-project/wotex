@@ -37,7 +37,5 @@ defmodule Wotex.BACnet.COVWire do
     end
   rescue
     _ -> {:error, Error.new(:transport_error)}
-  catch
-    :exit, _ -> {:error, Error.new(:connection_closed)}
   end
 end

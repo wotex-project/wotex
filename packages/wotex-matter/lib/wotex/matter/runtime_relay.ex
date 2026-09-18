@@ -145,9 +145,6 @@ defmodule Wotex.Matter.RuntimeRelay do
     {:reply, {:ok, %Handle{pid: self(), generation: state.generation}}, state}
   end
 
-  def handle_call(:handle, _, state),
-    do: {:reply, {:error, Error.new(:invalid_handle)}, state}
-
   def handle_call(
         {:decode, generation, token, value, request_id, operation, kind, address},
         {owner, _},
@@ -208,15 +205,11 @@ defmodule Wotex.Matter.RuntimeRelay do
           }
         } = state
       ) do
-    case delivery.value do
-      {:ok, value, metadata} ->
-        case project(value, metadata, state) do
-          {:ok, payload, projected} -> enqueue({:ok, payload, projected}, state, delivery)
-          {:error, %Error{} = error} -> terminate_stream(error, :transport_down, state)
-        end
+    {:ok, value, metadata} = delivery.value
 
-      other ->
-        handle_info({:wotex_matter, reference, other}, state)
+    case project(value, metadata, state) do
+      {:ok, payload, projected} -> enqueue({:ok, payload, projected}, state, delivery)
+      {:error, %Error{} = error} -> terminate_stream(error, :transport_down, state)
     end
   end
 
@@ -490,8 +483,6 @@ defmodule Wotex.Matter.RuntimeRelay do
   defp encode_delivery({:ok, value, metadata}), do: {:value, value, metadata}
 
   defp decode_delivery({:value, value, metadata}), do: {:ok, value, metadata}
-
-  defp close_resources(%{closed?: true} = state), do: {:ok, state}
 
   defp close_resources(state) do
     if is_reference(state.native_monitor),

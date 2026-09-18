@@ -110,12 +110,8 @@ defmodule Wotex.Matter.Descriptor do
           {:ok, term()} | {:error, Error.t()}
   def from_element(kind, path, operation, element) do
     with {:ok, descriptor} <- lookup(kind, path, operation),
-         {:ok, normalized} <- validate_element(kind, path, operation, element),
-         {:ok, value} <- extract(descriptor.schema, normalized) do
-      {:ok, value}
-    else
-      {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_value)}
+         {:ok, normalized} <- validate_element(kind, path, operation, element) do
+      extract(descriptor.schema, normalized)
     end
   end
 
@@ -348,8 +344,6 @@ defmodule Wotex.Matter.Descriptor do
 
   defp extract(:access_control_list, %{value: entries}),
     do: {:ok, Enum.map(entries, &extract_access_entry/1)}
-
-  defp extract(_, _), do: :error
 
   defp access_entry(%{privilege: privilege, auth_mode: auth_mode} = entry) do
     keys = Map.keys(entry)

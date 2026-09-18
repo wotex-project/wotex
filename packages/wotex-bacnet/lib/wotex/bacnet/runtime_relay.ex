@@ -169,12 +169,6 @@ defmodule Wotex.BACnet.RuntimeRelay do
       ),
       do: begin_close(state, error)
 
-  def handle_info(
-        {:runtime_subscribed, token, worker, _},
-        %{generation: token, worker: worker, phase: :opening} = state
-      ),
-      do: begin_close(state, {:error, Error.new(:invalid_transport_return)})
-
   def handle_info({:wotex_bacnet, reference, event}, %{phase: :opening} = state)
       when is_reference(reference) do
     if length(state.buffered) < 64,
@@ -313,9 +307,6 @@ defmodule Wotex.BACnet.RuntimeRelay do
         finish(next, :ok)
     end
   end
-
-  defp start_close_worker(%{close_worker: worker} = state) when is_pid(worker),
-    do: {:noreply, state}
 
   defp start_close_worker(state) do
     parent = self()

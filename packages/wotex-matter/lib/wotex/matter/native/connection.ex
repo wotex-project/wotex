@@ -329,23 +329,19 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp dispatch_call({:disconnect, generation}, _, state) do
-    if generation == state.generation do
-      case request_frame(state, "close", %{}, @cleanup_timeout) do
-        {:ok, nil, next_state} ->
-          case await_close_exit(next_state) do
-            :ok -> {:stop, :normal, {:ok, nil}, %{next_state | port: nil}}
-            {:error, error} -> {:stop, :normal, {:error, error}, next_state}
-          end
+  defp dispatch_call({:disconnect, generation}, _, %{generation: generation} = state) do
+    case request_frame(state, "close", %{}, @cleanup_timeout) do
+      {:ok, nil, next_state} ->
+        case await_close_exit(next_state) do
+          :ok -> {:stop, :normal, {:ok, nil}, %{next_state | port: nil}}
+          {:error, error} -> {:stop, :normal, {:error, error}, next_state}
+        end
 
-        {:ok, _, next_state} ->
-          {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
+      {:ok, _, next_state} ->
+        {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
 
-        {:error, error, next_state} ->
-          {:stop, :normal, {:error, error}, next_state}
-      end
-    else
-      {:reply, {:error, Error.new(:invalid_handle)}, state}
+      {:error, error, next_state} ->
+        {:stop, :normal, {:error, error}, next_state}
     end
   end
 
@@ -889,8 +885,6 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp remaining_budget({:unsubscribe, generation, subscription, timeout}, remaining),
     do: {:unsubscribe, generation, subscription, min(timeout, remaining)}
-
-  defp remaining_budget(message, _), do: message
 
   defp clear_call_deadline({:reply, reply, state}),
     do: {:reply, reply, Map.delete(state, :call_deadline)}
@@ -1481,9 +1475,6 @@ defmodule Wotex.Matter.Native.Connection do
     case Request.encode(frame) do
       {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
         Port.command(port, [encoded, ?\n], [:nosuspend])
-
-      _ ->
-        false
     end
   rescue
     _ -> false
@@ -1502,8 +1493,6 @@ defmodule Wotex.Matter.Native.Connection do
       _ ->
         {:error, :invalid_request}
     end
-  rescue
-    _ -> {:error, :transport_closed}
   end
 
   defp submit_request(port, encoded, lease) do
@@ -1889,9 +1878,7 @@ defmodule Wotex.Matter.Native.Connection do
         state = put_in(state.subscriptions[reference].buffered, [])
 
         Enum.reduce(buffered, state, fn {delivery, sequence, bytes}, acc ->
-          if Map.has_key?(acc.subscriptions, reference),
-            do: deliver_report(acc, reference, delivery, sequence, bytes),
-            else: acknowledge_report(acc, sequence, bytes)
+          deliver_report(acc, reference, delivery, sequence, bytes)
         end)
 
       _ ->

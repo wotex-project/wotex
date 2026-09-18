@@ -376,8 +376,6 @@ defmodule Wotex.BACnet.COVOwner do
     end
   end
 
-  defp control_result(state, _, _), do: close(state, Error.new(:invalid_transport_return))
-
   defp established(%{established: true} = state), do: {:noreply, state}
 
   defp established(state) do
@@ -478,7 +476,6 @@ defmodule Wotex.BACnet.COVOwner do
 
   defp cancel_result({:ok, :subscribed}), do: :ok
   defp cancel_result({:error, %Error{}} = result), do: result
-  defp cancel_result(_), do: {:error, Error.new(:invalid_transport_return)}
 
   defp stop_control(nil), do: :ok
 

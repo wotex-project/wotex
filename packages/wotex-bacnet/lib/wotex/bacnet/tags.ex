@@ -39,7 +39,7 @@ defmodule Wotex.BACnet.Tags do
   defp sequence(_, _, depth, _, _) when depth > 8, do: :error
   defp sequence(<<>>, nil, _, count, values), do: {:ok, Enum.reverse(values), <<>>, count}
 
-  defp sequence(bytes, closing, depth, count, values) when count <= 4096 do
+  defp sequence(bytes, closing, depth, count, values) do
     with {:ok, tag, context, length, rest} <- header(bytes) do
       cond do
         context == 1 and length == 7 and tag == closing -> {:ok, Enum.reverse(values), rest, count}
@@ -50,8 +50,6 @@ defmodule Wotex.BACnet.Tags do
       end
     end
   end
-
-  defp sequence(_, _, _, _, _), do: :error
 
   defp constructed(tag, rest, closing, depth, count, values) do
     with {:ok, children, rest, count} <- sequence(rest, tag, depth + 1, count + 1, []) do

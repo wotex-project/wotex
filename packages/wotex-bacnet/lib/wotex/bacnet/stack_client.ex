@@ -352,30 +352,26 @@ defmodule Wotex.BACnet.StackClient do
   defp receive_apdu(message, state), do: delegate(Client.handle_info(message, state.sdk), state)
 
   defp segment(bytes, source, id, {protocol, bvlc, npci, portal}, state) do
-    case APDU.decode(bytes) do
-      {:incomplete, incomplete} ->
-        case SegmentsStore.segment(
-               state.sdk.segments_store,
-               incomplete,
-               state.sdk.transport_mod,
-               portal,
-               source
-             ) do
-          {:ok, complete} ->
-            handle_info(
-              {:bacnet_transport, protocol, source, {:apdu, bvlc, npci, complete}, portal},
-              state
-            )
+    {:incomplete, incomplete} = APDU.decode(bytes)
 
-          :incomplete ->
-            {:noreply, state}
+    case SegmentsStore.segment(
+           state.sdk.segments_store,
+           incomplete,
+           state.sdk.transport_mod,
+           portal,
+           source
+         ) do
+      {:ok, complete} ->
+        handle_info(
+          {:bacnet_transport, protocol, source, {:apdu, bvlc, npci, complete}, portal},
+          state
+        )
 
-          {:error, _, _} ->
-            complete(source, id, {:error, Error.new(:segmented_response_error)}, state)
-        end
+      :incomplete ->
+        {:noreply, state}
 
-      _ ->
-        complete(source, id, {:error, Error.new(:invalid_response)}, state)
+      {:error, _, _} ->
+        complete(source, id, {:error, Error.new(:segmented_response_error)}, state)
     end
   end
 
