@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-X04 bounded output queue, credit and control-allowance assertions.
+ * Bounded output queue, credit and control-allowance assertions.
  */
 #include "output.h"
 

@@ -4,7 +4,7 @@
 
 #include "ipc.h"
 
-/* WOP-X04 output bounds. Normal envelopes wait in one bounded queue and spend
+/* Output bounds. Normal envelopes wait in one bounded queue and spend
  * owner-granted message/byte credit only when their first byte is written.
  * Ready and one terminal control share a separate aggregate allowance. */
 #define WOP_OUTPUT_FRAMES 64U

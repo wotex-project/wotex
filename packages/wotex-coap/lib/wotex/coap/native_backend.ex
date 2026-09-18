@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.NativeBackend do
   @moduledoc """
   Verifies an explicitly selected native OSCORE executable and build manifest.
 
-  `verify/1` accepts only the WCO-N02 `:native_backend` map. Both paths must
+  `verify/1` accepts only an exact `:native_backend` map. Both paths must
   identify ordinary files rather than symbolic links. The executable retains
   its existing permission bits and must already be executable. The manifest is
   bounded before reading, decoded with Wotex JSON limits, and bound to libcoap

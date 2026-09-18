@@ -4,7 +4,7 @@ defmodule Wotex.OPCUA.Native.Source do
 
   `fetch/1` returns the SDK or cryptographic library archive identity and its
   required extraction root. The identities are compiled from the packaged
-  WOP.13 source manifest; querying them performs no filesystem or network work.
+  source manifest; querying them performs no filesystem or network work.
   The build must verify the archive digest before using its contents. A source
   identity does not establish a successful build or admit a runtime capability.
 

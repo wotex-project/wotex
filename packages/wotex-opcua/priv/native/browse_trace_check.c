@@ -5,7 +5,7 @@
  * service requests the adapter builds and returns only scripted responses; the
  * runner supplies case input and never hands an expectation to the adapter.
  * The BEAM host role (release at the original deadline, cleanup after its
- * grace) is scripted by this runner, as WOP.11 N03/N04 define it.
+ * grace) is scripted by this runner.
  */
 #include "owner.h"
 #include "session_internal.h"
@@ -396,7 +396,7 @@ static int check_common(Trace *trace, yyjson_val *expected, bool session_open) {
     yyjson_val *renewals = yyjson_obj_get(expected, "deadline_renewals");
     if(renewals) {
         /* Paging must never widen the original browse budget. The release
-         * cleanup carries its own separate grace (WOP-N04) and is excluded. */
+         * cleanup carries its own separate grace and is excluded. */
         UA_UInt32 budget = 0;
         size_t widened = 0;
         for(size_t i = 0; i < trace->recorded; i++) {

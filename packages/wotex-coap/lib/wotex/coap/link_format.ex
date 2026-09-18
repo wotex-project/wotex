@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.LinkFormat do
   @moduledoc """
   Decodes bounded RFC 6690 (August 2012) resource descriptions without resolving targets.
 
-  Links preserve raw URI references and ordered attributes. D03's strict singleton
+  Links preserve raw URI references and ordered attributes. A strict singleton
   policy rejects ambiguous descriptions; RFC 5988 first-occurrence attributes
   retain their first value. No description initiates I/O or authorizes a target.
   """

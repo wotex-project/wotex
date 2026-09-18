@@ -79,9 +79,8 @@ defmodule WotexContinuum.Error do
   @doc """
   Translates a Wotex core error into the equivalent continuum error.
 
-  Core admission codes are mapped to the continuum vocabulary documented in
-  WCT.01; the JSON Pointer path is preserved and the original code is kept in
-  `details`.
+  Core admission codes are mapped to their continuum equivalents; the JSON
+  Pointer path is preserved and the original code is kept in `details`.
   """
   @spec from_core(Wotex.Error.t()) :: t()
   def from_core(%Wotex.Error{} = error) do

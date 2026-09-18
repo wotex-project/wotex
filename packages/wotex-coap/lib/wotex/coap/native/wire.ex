@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.Native.Wire do
   @moduledoc """
   Validates the bounded JSON-line boundary for the optional native OSCORE helper.
 
-  `line/1` and `frame/1` apply the WCO-C07 byte, depth, collection, node and
+  `line/1` and `frame/1` apply the helper's byte, depth, collection, node and
   integer-domain limits before an owner interprets a frame. `ready/1` binds the
   startup event to the pinned libcoap revision. `response/4` requires an exact
   request identity and operation-specific result envelope, converts canonical
@@ -80,7 +80,7 @@ defmodule Wotex.CoAP.Native.Wire do
 
   def line(_), do: failure()
 
-  @doc "Decodes one newline-free Port frame under the WCO-C07 resource limits."
+  @doc "Decodes one newline-free Port frame under the helper's resource limits."
   @spec frame(term()) :: {:ok, term()} | {:error, Error.t()}
   def frame(bytes) when is_binary(bytes) and byte_size(bytes) in 1..@maximum_frame_bytes do
     with true <- :binary.match(bytes, ["\n", "\r"]) == :nomatch,

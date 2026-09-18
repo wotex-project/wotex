@@ -33,9 +33,9 @@ defmodule Wotex.Matter.Native do
   pending native response terminates the owned native process and its generation;
   this abandons the pending interaction without claiming remote rollback.
 
-  P03 establishes controller ownership and liveness. P04 adds finite reads,
-  event reads, writes and invokes. P05 adds monitored attribute and event
-  subscriptions with native report credit and explicit cancellation. P07 adds
+  The native controller owns its process and liveness, and supports finite
+  reads, event reads, writes and invokes; monitored attribute and event
+  subscriptions with native report credit and explicit cancellation; and
   explicit on-network commissioning and enhanced commissioning windows.
   """
 

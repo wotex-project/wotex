@@ -7,7 +7,7 @@ defmodule WotexContinuum.Codec do
   size, copies strings out of the source binary, and rejects duplicate object
   members. Continuum validation then constructs the registered value from the
   decoded map. Core admission failures are returned as
-  `WotexContinuum.Error` values with the codes documented in WCT.01.
+  `WotexContinuum.Error` values with continuum error codes.
 
   `encode/2` accepts registered continuum values and can select canonical JSON
   for digest-bearing workflows. `decode/2` requires a top-level object with an

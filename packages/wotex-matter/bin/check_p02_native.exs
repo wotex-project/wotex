@@ -77,7 +77,7 @@ defmodule Wotex.Matter.Check.P02Native do
         )
 
       if status == 0 do
-        IO.puts("WMA-P02 durable storage lane passed")
+        IO.puts("durable storage lane passed")
         :ok
       else
         System.halt(status)

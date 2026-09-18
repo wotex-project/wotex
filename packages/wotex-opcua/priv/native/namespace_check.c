@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-X04 Session namespace projection with a reordered SDK-local table.
+ * Session namespace projection with a reordered SDK-local table.
  * The client is never connected; only its namespace table is populated.
  */
 #include "session_open.h"

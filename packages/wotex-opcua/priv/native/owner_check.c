@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-X03/X04 native owner traces through the production admission, dispatch,
+ * Native owner traces through the production admission, dispatch,
  * cancellation and output code with an explicitly injected service boundary.
  * The fake service records protocol requests; it never receives expectations.
  */
@@ -562,7 +562,7 @@ static int invalid_deadline(yyjson_val *fixture) {
     return 0;
 }
 
-/* Additional WOP-X03/X04 matrix cases outside the fixed corpus. */
+/* Additional owner matrix cases outside the fixed corpus. */
 static int matrix_splits_and_order(void) {
     const char *first = request("read-a", "read", read_parameters, 60000, INT64_MAX);
     char both[16384];

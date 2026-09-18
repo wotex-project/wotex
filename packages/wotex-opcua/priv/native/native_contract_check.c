@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-P01 driver for the exact native-contract-v1 value/parser/namespace cells.
+ * Driver for the exact native-contract-v1 value/parser/namespace cells.
  */
 #include "value_codec.h"
 #include <inttypes.h>

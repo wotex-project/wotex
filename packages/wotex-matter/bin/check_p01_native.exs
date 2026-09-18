@@ -49,7 +49,7 @@ defmodule Wotex.Matter.Check.P01Native do
         )
 
       if status == 0 do
-        IO.puts("WMA-P01 native value lane passed")
+        IO.puts("native value lane passed")
         :ok
       else
         System.halt(status)

@@ -4,7 +4,7 @@
 
 #include "output.h"
 
-/* WOP-X04 native process owner. It admits framed requests, keeps at most 64
+/* Native process owner. It admits framed requests, keeps at most 64
  * application operations, dispatches queued work in admission order on a
  * later tick and emits exactly one success or failure per admitted request.
  * The OPC UA SDK is reached only through WopService, so deterministic traces

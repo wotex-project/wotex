@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-X05 Publish sequence traces through the production sequence state.
+ * Publish sequence traces through the production sequence state.
  * Fixture digests derive only from the input payload identity.
  */
 #include "publish_sequence.h"

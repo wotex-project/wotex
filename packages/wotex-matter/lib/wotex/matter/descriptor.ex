@@ -7,8 +7,8 @@ defmodule Wotex.Matter.Descriptor do
   nullability, and admitted operations. Unknown paths fail explicitly and are
   never converted as generic JSON objects.
 
-  The registry covers the P01 value recipes. P04 uses the matching generated
-  C++ bindings for native SDK interactions.
+  The registry covers the value recipes; native SDK interactions use the
+  matching generated C++ bindings.
   """
 
   alias Wotex.Matter.{Address, Error, TLV}

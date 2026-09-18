@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-S04/X05 raw-service subscriptions: CreateSubscription and one Value
+ * Raw-service subscriptions: CreateSubscription and one Value
  * MonitoredItem per handle, an owner-driven Publish loop with validated
  * acknowledgements, ordered Republish recovery, lifetime loss detection and
  * explicit deletion. The SDK's high-level subscription manager is never used.

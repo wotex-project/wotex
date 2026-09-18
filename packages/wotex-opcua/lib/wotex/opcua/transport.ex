@@ -13,7 +13,7 @@ defmodule Wotex.OPCUA.Transport do
   credential. After the Form target matches `:target`, it starts one
   `Wotex.OPCUA.RuntimeRelay` for the Runtime owner pid. The relay opens its own
   Session with the remaining options and one Value MonitoredItem. The optional
-  `:subscription` map supplies S04 interval, queue, discard, keepalive and
+  `:subscription` map supplies the interval, queue, discard, keepalive and
   lifetime parameters, and `:max_queue_length` (default 1000, 1..10000) bounds
   the owner's queue. `subscribeevent` returns `unsupported_operation` without
   starting a process. `decode_frame/3` validates observation metadata and

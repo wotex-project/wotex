@@ -20,7 +20,7 @@ defmodule Wotex.Binding.HTTP.Error do
   | `:protocol` | codec, representation, handshake, or client-contract failure | no |
   | `:permanent` | configuration, Form, request, or other non-transient failure | no |
 
-  `WBH.02` fixes the complete status-to-class mapping. Construction and
+  The status-to-class mapping above is complete. Construction and
   validation failures use the non-retryable default `:permanent`; codec,
   representation, and client failures state their class explicitly.
   """

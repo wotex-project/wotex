@@ -2,7 +2,7 @@ defmodule Wotex.OPCUA.Open62541 do
   @moduledoc """
   Runs explicit OPC UA operations through the owned open62541 C executable.
 
-  `connect/1` validates the WOP.13 native configuration. Persistent mode opens
+  `connect/1` validates the native configuration. Persistent mode opens
   one secure Session and binds its temporary native host to the calling process.
   Any process may send Read, Write and Call through a persistent handle; the
   host admits at most 64 outstanding requests and monitors each caller. Browse

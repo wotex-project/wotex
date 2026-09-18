@@ -23,7 +23,7 @@ defmodule Wotex.CoAP.Check.ApplicationFree do
       crls: [fixture.("valid-crl.der")])
     :ok = Wotex.CoAP.Security.validate(pki)
     nil = Process.whereis(:ssl_sup)
-    IO.puts("WCO-C01 explicit SSL startup passed")
+    IO.puts("explicit SSL startup passed")
     """
 
     {output, status} = System.cmd("elixir", paths ++ ["-e", script], stderr_to_stdout: true)

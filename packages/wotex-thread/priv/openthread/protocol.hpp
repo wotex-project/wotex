@@ -102,8 +102,8 @@ inline Request request(const Json &value) {
           value.at("parameters"), value.at("timeout_ms").get<std::uint32_t>()};
 }
 
-// Owner-to-host control frames from WTH.13. Requests and these events share the
-// C07 line, depth and node limits; every field outside the exact allowlist fails.
+// Owner-to-host control frames. Requests and these events share the
+// line, depth and node limits; every field outside the exact allowlist fails.
 struct FlowControl {
   enum class Kind { flow_open, report_ack } kind;
   std::string session_generation;

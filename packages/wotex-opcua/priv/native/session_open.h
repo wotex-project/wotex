@@ -7,7 +7,7 @@
 #include "session_config.h"
 #include "subscription_rules.h"
 
-/* WOP-X04/X05 subscription bounds for one Session. */
+/* Subscription bounds for one Session. */
 #define WOP_SESSION_SUBSCRIPTIONS 32U
 #define WOP_SESSION_PUBLISH 4U
 #define WOP_SESSION_NOTIFICATIONS 64U
@@ -172,7 +172,7 @@ bool wop_session_browse_capture(WopSession *session, WopSessionOperation *operat
 bool wop_session_browse_admit(WopSession *session, WopSessionOperation *operation,
                               yyjson_val *parameters, bool release);
 
-/* WOP-X04 namespace projection for SDK values. The pinned SDK maps each decoded
+/* Namespace projection for SDK values. The pinned SDK maps each decoded
  * NodeId namespace index, including ExpandedNodeId and encoded ExtensionObject
  * type identities, from the server table into its client-local table and back
  * on encode; QualifiedName indexes are not mapped. `publish` converts a

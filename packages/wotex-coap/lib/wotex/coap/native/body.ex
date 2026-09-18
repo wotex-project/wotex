@@ -2,8 +2,8 @@ defmodule Wotex.CoAP.Native.Body do
   @moduledoc """
   Assembles one bounded native response body before public delivery.
 
-  `push/2` accepts the exact WCO-N03 begin, chunk and end event objects. Chunks
-  use the canonical WCO-C07 byte envelope, must begin at the next expected
+  `push/2` accepts the helper's exact begin, chunk and end event objects. Chunks
+  use the canonical byte envelope, must begin at the next expected
   offset and cannot exceed either 32,768 bytes or the declared body length.
   `take/2` releases the binary only after `body_end` verifies the declared
   length and lowercase SHA-256 digest.

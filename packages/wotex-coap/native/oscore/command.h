@@ -16,7 +16,7 @@ struct wco_command {
     yyjson_val *parameters;
 };
 
-/* Decode one already parsed C07 request. Every envelope/operation field has an
+/* Decode one already parsed request. Every envelope/operation field has an
  * exact allowlist and bounded type. This function opens no file/socket and does
  * not alter body, credit or SDK state. Parameters borrow the JSON pool: consume
  * or copy them before its next parse/reset/free. The returned ID is owned.

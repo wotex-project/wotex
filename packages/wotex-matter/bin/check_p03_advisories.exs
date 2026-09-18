@@ -70,7 +70,7 @@ defmodule Wotex.Matter.Check.P03Advisories do
       :ok
     else
       _ ->
-        IO.puts(:stderr, "P03 OSV advisory query failed or returned an advisory")
+        IO.puts(:stderr, "OSV advisory query failed or returned an advisory")
         System.halt(1)
     end
   end

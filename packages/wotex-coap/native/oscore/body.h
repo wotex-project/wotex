@@ -17,7 +17,7 @@ struct wco_body {
     int active, complete, failed;
 };
 
-/* These helpers validate the exact C07 byte envelope and canonical padded
+/* These helpers validate the exact byte envelope and canonical padded
  * base64. Decoded length is checked before writing any output. Capacity zero
  * accepts only empty data; nonempty output requires a valid caller buffer. */
 int wco_body_base64(yyjson_val *value, uint8_t *output, size_t capacity, size_t *length);

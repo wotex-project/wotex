@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* WOP-S04/X05 per-subscription notification sequence state. Sequence numbers
+/* Per-subscription notification sequence state. Sequence numbers
  * range over 1..2^32-1 and wrap to 1; keepalives never enter this state. The
  * cache retains at most 1024 accepted sequence/digest pairs. A gap of at most
  * 100 missing messages is recovered by Republish in order; any larger gap,

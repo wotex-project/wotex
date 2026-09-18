@@ -9,7 +9,7 @@ defmodule Wotex.CoAP.Software.Run do
   Eclipse Californium plugtest server, whose CoAP engine, OSCORE implementation
   and observation model are upstream of this repository, so its cases are
   cross-stack evidence. The lifecycle stress file repeats those transports
-  under the WCO-C09 load, lifecycle and forced-failure matrix. The native corpus
+  under a load, lifecycle and forced-failure matrix. The native corpus
   file drives native-v1 cases through the manifest-bound helper, and the
   saturation file samples a suspended native owner's Port mailbox. This runner
   invokes them through the native command guardian with one five-minute suite

@@ -8,9 +8,9 @@ defmodule Wotex.Matter.EndpointCatalogue do
   error. Entries are sorted by endpoint identifier. Construction rejects
   duplicate endpoints, duplicate children, self-reference, cycles, references
   to absent endpoints, and aggregate endpoint or cluster counts outside the
-  WMA.11 profile.
+  supported profile.
 
-  `Wotex.Matter.discover_endpoints/2` performs the P04 native discovery. This
+  `Wotex.Matter.discover_endpoints/2` performs native discovery. This
   value itself performs no network I/O and explicitly records that the separate
   Descriptor reads do not form an atomic snapshot.
   """

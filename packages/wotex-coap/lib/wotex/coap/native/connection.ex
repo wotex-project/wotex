@@ -16,7 +16,7 @@ defmodule Wotex.CoAP.Native.Connection do
   generation, while queued expiry prevents native submission. Native writes
   use `Port.command/3` with `:nosuspend`. Malformed, oversized, truncated,
   duplicate or otherwise unsolicited frames close the generation. Local cleanup
-  signals the exact Port process and remains within the WCO-C03 1,000 ms budget.
+  signals the exact Port process and remains within a 1,000 ms cleanup budget.
   An explicit outbound payload is uploaded through correlated begin/chunk/end
   commands under the call deadline before request submission. Unary responses
   may carry an inline payload or one correlated, bounded body event stream.

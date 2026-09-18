@@ -4,7 +4,7 @@ defmodule Wotex.CoAP.Native.Command do
 
   Successful commands receive monotonically increasing decimal identities that
   are never reused. Parameters are validated before identity allocation and are
-  projected to the exact WCO-N03 JSON objects. Optional wire fields are omitted
+  projected to the helper's exact JSON command objects. Optional wire fields are omitted
   when absent. The returned line contains one trailing LF and is ready for an
   already owned Port.
 

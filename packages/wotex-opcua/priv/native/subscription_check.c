@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * WOP-S04/X05 Session subscription processing with an unconnected SDK client.
+ * Session subscription processing with an unconnected SDK client.
  * Publish responses are placed in the Session inbox exactly as the SDK callback
  * would; production validation, sequencing and report projection run on them.
  */

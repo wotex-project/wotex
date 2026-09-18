@@ -159,7 +159,7 @@ defmodule Wotex.BLE.Check.Archive do
     end
   end
 
-  # WBL-B01: the production package carries no interpreter program or pin.
+  # The production package carries no interpreter program or pin.
   defp interpreters!(package) do
     files =
       package
