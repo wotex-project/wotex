@@ -147,12 +147,9 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   defp verify_binding_metadata!(metadata, :wotex_binding_mqtt, archive) do
     for value <- [
           "Immutable MQTT command mapping and caller-owned transport adaptation for W3C Web of Things",
-          "https://hexdocs.pm/wotex_binding_mqtt",
           "https://github.com/wotex-project/wotex",
           "https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-mqtt/CHANGELOG.md",
-          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-binding-mqtt",
-          "https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/",
-          "https://wotex.io"
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-binding-mqtt"
         ] do
       require_metadata!(metadata, value, archive)
     end

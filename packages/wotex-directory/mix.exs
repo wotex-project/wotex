@@ -101,10 +101,8 @@ defmodule WotexDirectory.MixProject do
       ],
       licenses: ["Apache-2.0"],
       links: %{
+        "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-directory/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_directory",
-        "Homepage" => "https://wotex.io",
-        "Source" => @source_url,
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-directory"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"]

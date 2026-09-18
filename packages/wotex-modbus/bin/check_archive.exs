@@ -488,13 +488,9 @@ defmodule Wotex.Modbus.Check.Archive do
     unless links == %{
              "Changelog" =>
                "https://github.com/wotex-project/wotex/blob/main/packages/wotex-modbus/CHANGELOG.md",
-             "Documentation" => "https://hexdocs.pm/wotex_modbus",
-             "Project" => "https://wotex.io",
-             "Source" => "https://github.com/wotex-project/wotex",
+             "GitHub" => "https://github.com/wotex-project/wotex",
              "Specifications" =>
-               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus",
-             "W3C Thing Description 1.1" =>
-               "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
+               "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus"
            } do
       violation("archive metadata does not declare the reviewed public links")
     end

@@ -111,13 +111,9 @@ defmodule WotexBACnet.MixProject do
       name: "wotex_bacnet",
       licenses: ["Apache-2.0"],
       links: %{
+        "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-bacnet/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_bacnet",
-        "Project" => "https://wotex.io",
-        "Source" => @source_url,
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-bacnet",
-        "W3C Thing Description 1.1" =>
-          "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-bacnet"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs priv/fixtures)

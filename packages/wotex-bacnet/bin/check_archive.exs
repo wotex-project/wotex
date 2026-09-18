@@ -174,11 +174,9 @@ defmodule Wotex.BACnet.Check.Archive do
   defp verify_package_metadata!(metadata, :wotex_bacnet, archive) do
     for value <- [
           "Consumer-neutral BACnet protocol values, operations and Web of Things Form mapping",
-          "https://hexdocs.pm/wotex_bacnet",
           "https://github.com/wotex-project/wotex",
-          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-bacnet",
-          "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
-          "https://wotex.io"
+          "https://github.com/wotex-project/wotex/blob/main/packages/wotex-bacnet/CHANGELOG.md",
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-bacnet"
         ] do
       require_metadata!(metadata, value, archive)
     end

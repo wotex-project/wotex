@@ -137,9 +137,7 @@ defmodule WotexLab.MixProject do
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       links: %{
         "GitHub" => @source_url,
-        "Project" => "https://wotex.io",
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-lab/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_lab",
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-lab"
       },
       # Tarballs ship no Markdown documentation; specifications reach

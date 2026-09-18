@@ -110,14 +110,9 @@ defmodule WotexMatter.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/packages/wotex-matter/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_matter",
         "GitHub" => @source_url,
-        "Project" => "https://wotex.io",
-        "Source" => @source_url,
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-matter",
-        "W3C Thing Description 1.1" =>
-          "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-matter/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-matter"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:

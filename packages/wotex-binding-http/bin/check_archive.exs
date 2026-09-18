@@ -150,12 +150,9 @@ defmodule WotexBindingHTTP.Check.Archive do
   defp verify_binding_metadata!(metadata, :wotex_binding_http, archive) do
     for value <- [
           "Caller-owned HTTP and Server-Sent Events binding for Wotex Runtime",
-          "https://hexdocs.pm/wotex_binding_http",
           "https://github.com/wotex-project/wotex",
           "https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-http/CHANGELOG.md",
-          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-binding-http",
-          "https://www.w3.org/WoT/",
-          "https://wotex.io"
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-binding-http"
         ] do
       require_metadata!(metadata, value, archive)
     end

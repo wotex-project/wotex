@@ -108,13 +108,9 @@ defmodule WotexBindingMQTT.MixProject do
       name: "wotex_binding_mqtt",
       licenses: ["Apache-2.0"],
       links: %{
+        "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-binding-mqtt/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_binding_mqtt",
-        "Project" => "https://wotex.io",
-        "Source" => @source_url,
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-mqtt",
-        "W3C WoT MQTT Binding" =>
-          "https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-mqtt"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)

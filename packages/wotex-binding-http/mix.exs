@@ -105,12 +105,9 @@ defmodule WotexBindingHTTP.MixProject do
       name: "wotex_binding_http",
       licenses: ["Apache-2.0"],
       links: %{
-        "Changelog" => "#{@source_url}/blob/main/packages/wotex-binding-http/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_binding_http",
         "GitHub" => @source_url,
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-http",
-        "Wotex" => "https://wotex.io",
-        "W3C Web of Things" => "https://www.w3.org/WoT/"
+        "Changelog" => "#{@source_url}/blob/main/packages/wotex-binding-http/CHANGELOG.md",
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-http"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)

@@ -75,10 +75,7 @@ defmodule Wotex.MixProject do
       links: %{
         "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex/CHANGELOG.md",
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex",
-        "Documentation" => "https://hexdocs.pm/wotex",
-        "Project" => "https://wotex.io",
-        "W3C Web of Things" => "https://www.w3.org/WoT/"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs priv/w3c)

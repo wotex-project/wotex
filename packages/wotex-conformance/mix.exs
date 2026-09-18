@@ -77,10 +77,8 @@ defmodule WotexConformance.MixProject do
       licenses: ["Apache-2.0"],
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       links: %{
+        "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-conformance/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_conformance",
-        "Project" => "https://wotex.io",
-        "Source" => @source_url,
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-conformance"
       },
       files: [

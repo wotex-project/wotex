@@ -328,9 +328,7 @@ defmodule Wotex.Workspace.Scaffold do
             links: %{
               "GitHub" => @source_url,
               "Changelog" => "#{@source_url}/blob/main/packages/@@name@@/CHANGELOG.md",
-              "Specifications" => "#{@source_url}/tree/main/docs/packages/@@name@@",
-              "Documentation" => "https://hexdocs.pm/@@app@@",
-              "Project" => "https://wotex.io"
+              "Specifications" => "#{@source_url}/tree/main/docs/packages/@@name@@"
             },
             files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LICENSE NOTICE)
           ]

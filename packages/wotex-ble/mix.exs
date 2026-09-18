@@ -111,13 +111,9 @@ defmodule WotexBLE.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{
+        "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-ble/CHANGELOG.md",
-        "Documentation" => "https://hexdocs.pm/wotex_ble",
-        "Project" => "https://wotex.io",
-        "Source" => @source_url,
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-ble",
-        "W3C Thing Description 1.1" =>
-          "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-ble"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:

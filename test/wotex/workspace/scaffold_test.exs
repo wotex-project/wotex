@@ -112,6 +112,10 @@ defmodule Wotex.Workspace.ScaffoldTest do
       assert mix_exs =~ ~s|"#{link}" =>|
     end
 
+    for link <- ["Documentation", "Project", "Source"] do
+      refute mix_exs =~ ~s|"#{link}" =>|
+    end
+
     refute mix_exs =~ "hex.publish"
 
     for script <-

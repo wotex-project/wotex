@@ -91,11 +91,7 @@ defmodule WotexNx.MixProject do
       links: %{
         "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-nx/CHANGELOG.md",
-        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-nx",
-        "Documentation" => "https://hexdocs.pm/wotex_nx",
-        "Project" => "https://wotex.io",
-        "W3C Web of Things" => "https://www.w3.org/WoT/",
-        "Nx" => "https://github.com/elixir-nx/nx"
+        "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-nx"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w[
