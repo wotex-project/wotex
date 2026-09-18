@@ -18,6 +18,9 @@
  * Explicit native-build command guardian derived from Wotex OPC UA. stdin is an owner-liveness pipe. The child
  * receives /dev/null stdin and its own process group. stdout is a bounded,
  * nonblocking combined stdout/stderr stream. No command text is interpreted.
+ * OUTPUT_BYTES 0 instead passes the child the guardian's own stdout, with
+ * stderr joined to it, unbounded and unrelayed; the guardian then supervises
+ * only the deadline and owner liveness. Software peers run this way.
  *
  * Usage: command TIMEOUT_MS OUTPUT_BYTES CLEANUP_MS CWD EXECUTABLE [ARG ...]
  * Exit: child's 0..123, 124 deadline, 125 output bound, 126 setup/protocol error,
@@ -205,10 +208,13 @@ int main(int argc, char **argv) {
     struct state state;
     struct sigaction action;
     sigset_t signal_mask;
-    int result;
-    if (argc < 6 || number(argv[1], 600000, &timeout) ||
-        number(argv[2], 16777216, &output) || number(argv[3], 5000, &cleanup) ||
-        argv[4][0] != '/' || argv[5][0] != '/') return 126;
+    int result, passthrough;
+    if (argc < 6) return 126;
+    passthrough = !strcmp(argv[2], "0");
+    output = 0;
+    if (number(argv[1], 600000, &timeout) || (!passthrough && number(argv[2], 16777216, &output)) ||
+        number(argv[3], 5000, &cleanup) || argv[4][0] != '/' || argv[5][0] != '/')
+        return 126;
     memset(&action, 0, sizeof(action));
     sigemptyset(&action.sa_mask);
     action.sa_handler = SIG_DFL;
@@ -241,8 +247,10 @@ int main(int argc, char **argv) {
         if (ready_size != 1 || ready != 'G' || getpgrp() != getpid()) _exit(126);
         if (chdir(argv[4])) _exit(126);
         null_input = open("/dev/null", O_RDONLY);
-        if (null_input < 0 || dup2(null_input, STDIN_FILENO) < 0 ||
-            dup2(pipes[1], STDOUT_FILENO) < 0 || dup2(pipes[1], STDERR_FILENO) < 0) _exit(126);
+        if (null_input < 0 || dup2(null_input, STDIN_FILENO) < 0) _exit(126);
+        if (passthrough ? dup2(STDOUT_FILENO, STDERR_FILENO) < 0
+                        : dup2(pipes[1], STDOUT_FILENO) < 0 || dup2(pipes[1], STDERR_FILENO) < 0)
+            _exit(126);
         close(null_input);
         close(pipes[0]);
         close(pipes[1]);
@@ -263,7 +271,9 @@ int main(int argc, char **argv) {
     state.cleanup_ms = (int64_t)cleanup;
     state.deadline = monotonic_ms() + (int64_t)timeout;
     /* The child cannot inspect resources or exec until the parent owns its group. */
-    if (nonblocking(STDIN_FILENO) || nonblocking(STDOUT_FILENO) || nonblocking(state.input)) {
+    /* A passthrough child shares stdout, which therefore stays blocking. */
+    if (nonblocking(STDIN_FILENO) || (!passthrough && nonblocking(STDOUT_FILENO)) ||
+        nonblocking(state.input)) {
         (void)kill(-state.child, SIGKILL);
         result = 126;
     } else {

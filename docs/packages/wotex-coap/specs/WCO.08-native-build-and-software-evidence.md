@@ -3,9 +3,9 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.0
+  version: 1.9.1
   owner: wotex-coap
-  updated: 2026-09-18
+  updated: 2026-09-19
 ---
 
 # WCO.08 Native OSCORE owner, builds and software evidence
@@ -635,10 +635,16 @@ Each peer process, `coap-server` and the Java runtime of the independent peer,
 runs under an owner-liveness guardian that terminates the peer's process group
 when the pipe from its owning test BEAM closes. An abrupt exit of that BEAM or
 an interrupted run therefore leaves no peer process after the harness cleanup.
+The guardian is the workspace's native command guardian with output bound 0:
+the peer writes its combined output to the owning BEAM's pipe directly, without
+the 16 MiB relay bound of build steps, because a debug-level libcoap peer logs
+every PDU and exceeds that bound on a 1 MiB OSCORE body.
 The implemented cohort runs `test/interop/libcoap_test.exs`,
 `test/interop/dtls_test.exs`, `test/interop/dtls_pki_test.exs`,
-`test/interop/oscore_test.exs` and `test/software/lifecycle_stress_test.exs`
-with seed zero. Fifteen tests cover independent
+`test/interop/oscore_test.exs`, `test/software/independent_oscore_test.exs`,
+`test/software/lifecycle_stress_test.exs`, `test/software/native_corpus_test.exs`,
+`test/software/native_saturation_test.exs` and
+`test/software/peer_guardian_test.exs` with seed zero. Fifteen tests cover independent
 libcoap UDP, PSK and PKI unary, Block1/Block2, Observe, Runtime and
 certificate/record-fault paths. Twelve same-stack tests drive the manifest-bound
 helper through the public native owner against the software-build `coap-server`
@@ -653,7 +659,10 @@ DTLS PSK, DTLS PKI and OSCORE through 1,000 sequential operations, 32 correlated
 concurrent callers, the exact 64-call admission bound, 100 open/close, 100
 Observe/cancel and 100 receiver-termination cycles, receiver overflow, and forced
 deadline, malformed-response and peer-close failures. Every completed cycle
-returns owner ports and processes to baseline within 1,000 ms. The run retains its result
+returns owner ports and processes to baseline within 1,000 ms. Two guardian
+tests start a libcoap peer and the independent peer from a child BEAM through
+the same peer helpers, kill that BEAM with SIGKILL and require every process
+that names the peer's executable to end within five seconds. The run retains its result
 directory on success or failure, so another run requires a fresh disposable
 software-build workspace.
 

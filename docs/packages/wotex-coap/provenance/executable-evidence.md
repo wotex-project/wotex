@@ -882,6 +882,27 @@ both pass on macOS and on Linux with ASan/UBSan and leak detection, and the 2.31
 case fails against the preceding helper. The four earlier renewal faults keep
 their codes.
 
+Software peers now run under the workspace's native command guardian with
+output bound 0, which passes the peer's output straight to its owning BEAM and
+ends the peer's process group when that BEAM's pipe closes. Before, a peer
+started with `start_supervised` outlived every test: ExUnit stops such children
+before `on_exit`, the peer owner does not trap exits, and libcoap ignores
+SIGPIPE, so `coap-server` kept running with parent PID 1 after its Port closed.
+A control run of `test/interop/oscore_test.exs` with the preceding helper left
+such an orphan. The guardian's 16 MiB relay bound first stopped the peer during
+the 1 MiB OSCORE body test; the pass-through mode removes that bound for peers
+only, and `native_build_command_test.exs` asserts 17,000,000 bytes of passed-
+through output and owner-loss reaping. `test/software/peer_guardian_test.exs`
+kills a child BEAM that owns a libcoap peer or the independent peer with
+SIGKILL and requires every process naming the peer's executable to end within
+five seconds; the preceding helper leaves the libcoap peer running. The software
+run now counts the live processes whose arguments name a workspace file after
+the suite, allowing the five-second cleanup, and fails the run when any remain
+or the process table cannot be read. All nine software-lane files, 57 tests,
+pass on macOS arm64 against a fresh software build with no process naming the
+workspace afterwards; these runs used the lane files directly, and a renewed
+terminal software-run receipt remains open.
+
 The independent upstream-stack OSCORE cohort in
 `test/software/independent_oscore_test.exs` drives the manifest-bound helper
 against `org.eclipse.californium:cf-plugtest-server` 3.14.0, admitted by exact

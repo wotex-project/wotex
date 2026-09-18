@@ -1,9 +1,12 @@
+Code.require_file("peer_process.ex", __DIR__)
+
 defmodule Wotex.CoAP.Test.LibcoapPeer do
   @moduledoc false
 
   use GenServer
   import ExUnit.Assertions
   alias Wotex.CoAP.Security
+  alias Wotex.CoAP.Test.PeerProcess
   @fixtures Path.expand("../fixtures/dtls_pki", __DIR__)
   @key "fixture-key-12345"
 
@@ -92,16 +95,7 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
       ] ++
         credentials(mode, certificate, workspace)
 
-    native =
-      Port.open({:spawn_executable, executable}, [
-        :binary,
-        :exit_status,
-        :stderr_to_stdout,
-        args: args,
-        env: Enum.map(clean_environment(), fn {name, nil} -> {String.to_charlist(name), false} end)
-      ])
-
-    {:os_pid, os_pid} = Port.info(native, :os_pid)
+    {native, os_pid} = PeerProcess.open(executable, args, workspace)
 
     {:ok,
      %{
@@ -201,7 +195,8 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
         env: clean_environment()
       )
 
-      await_exit(state.native, state.os_pid, System.monotonic_time(:millisecond) + 1000)
+      # The guardian stops the peer's group within its two-second cleanup grace.
+      await_exit(state.native, state.os_pid, System.monotonic_time(:millisecond) + 3000)
     end
 
     File.rm_rf!(state.workspace)
@@ -212,7 +207,7 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
     remaining = max(deadline - System.monotonic_time(:millisecond), 0)
 
     receive do
-      {^native, {:exit_status, status}} -> assert status == 0
+      {^native, {:exit_status, status}} -> assert status == PeerProcess.stopped_status()
       {^native, {:data, _}} -> await_exit(native, os_pid, deadline)
     after
       remaining ->

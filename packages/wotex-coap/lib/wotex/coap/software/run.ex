@@ -11,10 +11,16 @@ defmodule Wotex.CoAP.Software.Run do
   cross-stack evidence. The lifecycle stress file repeats those transports
   under a load, lifecycle and forced-failure matrix. The native corpus
   file drives native-v1 cases through the manifest-bound helper, and the
-  saturation file samples a suspended native owner's Port mailbox. This runner
-  invokes them through the native command guardian with one five-minute suite
-  deadline and a 16 MiB combined log bound.
-  It always writes a bounded `result.json` after command execution.
+  saturation file samples a suspended native owner's Port mailbox, and the
+  peer guardian file kills a BEAM that owns a peer. This runner invokes them
+  through the native command guardian with one five-minute suite deadline and a
+  16 MiB combined log bound; every peer runs under the same guardian with its
+  owning test BEAM as the owner.
+
+  After the suite, the runner counts the live processes whose arguments name a
+  file in the workspace, allowing the five-second harness cleanup for the count
+  to reach zero. A retained process, or a process table it cannot read, fails
+  the run. It always writes a bounded `result.json` after command execution.
   """
 
   alias Wotex.CoAP.Native.{Build, BuildOperations, Workspace}
@@ -24,7 +30,8 @@ defmodule Wotex.CoAP.Software.Run do
   @cases ~w(test/interop/libcoap_test.exs test/interop/dtls_test.exs
     test/interop/dtls_pki_test.exs test/interop/oscore_test.exs
     test/software/independent_oscore_test.exs test/software/lifecycle_stress_test.exs
-    test/software/native_corpus_test.exs test/software/native_saturation_test.exs)
+    test/software/native_corpus_test.exs test/software/native_saturation_test.exs
+    test/software/peer_guardian_test.exs)
   @arguments ["test" | @cases] ++
                ~w(--include interop --include software --exclude hardware --seed 0)
   @scenario_ids ~w(WCO-C03 WCO-C05 WCO-C07 WCO-C09 WCO-I02 WCO-I03 WCO-I04 WCO-I05 WCO-N03 WCO-N04
@@ -44,6 +51,7 @@ defmodule Wotex.CoAP.Software.Run do
   @maximum_result 1_048_576
   @timeout 300_000
   @output_limit 16_777_216
+  @cleanup 5_000
 
   for file <- @source_files, File.regular?(file), do: @external_resource(file)
 
@@ -54,15 +62,19 @@ defmodule Wotex.CoAP.Software.Run do
   def run(workspace), do: run(workspace, SoftwareBuild, BuildOperations)
 
   @doc false
-  @spec run(term(), module(), module()) :: {:ok, result()} | {:error, term()}
-  def run(workspace, verifier, operations)
-      when is_binary(workspace) and is_atom(verifier) and is_atom(operations) do
+  @spec run(term(), module(), module(), keyword()) :: {:ok, result()} | {:error, term()}
+  def run(workspace, verifier, operations, options \\ [])
+
+  def run(workspace, verifier, operations, options)
+      when is_binary(workspace) and is_atom(verifier) and is_atom(operations) and
+             is_list(options) do
     with {:ok, ^workspace} <- Build.arguments(["--workspace", workspace]),
          {:ok, %{manifest: manifest, reused: true}} <- verifier.verify(workspace),
          :ok <- validate_manifest(manifest),
          {:ok, tools} <- tools(),
          {:ok, output} <- output_directory(workspace),
-         evidence <- execute(workspace, output, manifest, tools, operations),
+         grace = Keyword.get(options, :cleanup_grace, @cleanup),
+         evidence <- execute(workspace, output, manifest, tools, operations, grace),
          {:ok, path} <- write_result(output, evidence) do
       if evidence["status"] == "passed",
         do: {:ok, %{evidence: evidence, path: path}},
@@ -73,7 +85,7 @@ defmodule Wotex.CoAP.Software.Run do
       {:error, {:software_run_setup, Exception.message(error)}}
   end
 
-  def run(_, _, _), do: {:error, :invalid_software_run_workspace}
+  def run(_, _, _, _), do: {:error, :invalid_software_run_workspace}
 
   # The package archive check requires every one of these files, because a
   # software run from an unpacked archive executes and hashes them.
@@ -129,7 +141,7 @@ defmodule Wotex.CoAP.Software.Run do
     end
   end
 
-  defp execute(workspace, output, manifest, tools, operations) do
+  defp execute(workspace, output, manifest, tools, operations, grace) do
     started = System.monotonic_time(:millisecond)
     guardian = Path.join(workspace, "native/bin/build-command")
     {:ok, source_hash} = source_hash(@source_files)
@@ -143,11 +155,13 @@ defmodule Wotex.CoAP.Software.Run do
       operations.command(guardian, tools.mix, @arguments, @project_root,
         timeout: @timeout,
         output: @output_limit,
-        cleanup: 5_000,
+        cleanup: @cleanup,
         env: environment(tools, workspace, manifest)
       )
 
     {status, failure, details} = command_result(command)
+    retained = processes_naming(workspace <> "/", grace)
+    {status, failure} = retained_result(status, failure, retained)
     log = Path.join(output, "tests.log")
     :ok = File.write(log, details.output, [:exclusive, :sync])
     {:ok, log_hash} = Workspace.digest(log)
@@ -178,11 +192,12 @@ defmodule Wotex.CoAP.Software.Run do
       "toolchain" => tools.toolchain,
       "cleanup" => %{
         "command_process_groups_retained" => 0,
-        "peer_processes_retained" => if(status == "passed", do: 0, else: nil),
+        "peer_processes_retained" => retained_count(retained),
         "udp_ports_retained" => if(status == "passed", do: 0, else: nil),
         "session_context_subscription_store_locks_retained" =>
           if(status == "passed", do: 0, else: nil),
-        "assertion_source" => "interop peer owners plus build-command process-group cleanup"
+        "assertion_source" =>
+          "process table after the suite for peer processes; interop peer owners for ports, sessions, contexts, subscriptions and store locks"
       }
     }
   end
@@ -191,6 +206,58 @@ defmodule Wotex.CoAP.Software.Run do
 
   defp command_result({:error, code, details}),
     do: {"failed", Atom.to_string(code), details}
+
+  defp retained_result(status, failure, {:ok, 0}), do: {status, failure}
+  defp retained_result("passed", _, {:ok, _}), do: {"failed", "peer_processes_retained"}
+  defp retained_result("passed", _, {:error, reason}), do: {"failed", Atom.to_string(reason)}
+  defp retained_result(status, failure, _), do: {status, failure}
+
+  defp retained_count({:ok, count}), do: count
+  defp retained_count(_), do: nil
+
+  @doc """
+  Counts the live processes whose argument vector contains `path`.
+
+  The software peers, their guardians and the native helper all run from
+  workspace files, so after a suite a nonzero count for the workspace path
+  followed by `/` means one outlived its owner. The count is taken again every
+  100 ms until it is zero or `grace` milliseconds have passed, which lets a
+  guardian finish a cleanup it has started.
+  """
+  @spec processes_naming(String.t(), non_neg_integer()) ::
+          {:ok, non_neg_integer()} | {:error, :process_table_unavailable}
+  def processes_naming(path, grace)
+      when is_binary(path) and path != "" and is_integer(grace) and grace >= 0 do
+    count_naming(path, System.monotonic_time(:millisecond) + grace)
+  end
+
+  defp count_naming(path, deadline) do
+    with {:ok, arguments} <- process_arguments() do
+      count = Enum.count(arguments, &String.contains?(&1, path))
+
+      if count == 0 or System.monotonic_time(:millisecond) >= deadline do
+        {:ok, count}
+      else
+        Process.sleep(100)
+        count_naming(path, deadline)
+      end
+    end
+  end
+
+  # `ps` prints each process's full argument vector, unlimited in width, on
+  # macOS and on Linux with procps.
+  defp process_arguments do
+    with ps when is_binary(ps) <- Enum.find(["/bin/ps", "/usr/bin/ps"], &File.regular?/1),
+         {output, 0} <-
+           System.cmd(ps, ["-A", "-ww", "-o", "args="],
+             stderr_to_stdout: true,
+             env: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
+           ) do
+      {:ok, String.split(output, "\n", trim: true)}
+    else
+      _ -> {:error, :process_table_unavailable}
+    end
+  end
 
   @doc false
   @spec source_hash([Path.t()]) :: {:ok, String.t()} | {:error, :software_source_unavailable}
@@ -243,7 +310,8 @@ defmodule Wotex.CoAP.Software.Run do
       "WOTEX_COAP_JAVA" => manifest["software_build"]["independent_peer"]["runtime"]["path"],
       "WOTEX_COAP_LIBCOAP_SERVER" => Path.join(workspace, "bin/coap-server"),
       "WOTEX_COAP_NATIVE_MANIFEST" => Path.join(workspace, "native/native-manifest.json"),
-      "WOTEX_COAP_NATIVE_WORKER" => Path.join(workspace, "native/bin/wotex-coap-oscore")
+      "WOTEX_COAP_NATIVE_WORKER" => Path.join(workspace, "native/bin/wotex-coap-oscore"),
+      "WOTEX_COAP_PEER_GUARDIAN" => Path.join(workspace, "native/bin/build-command")
     }
 
     safe =

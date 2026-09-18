@@ -1,3 +1,5 @@
+Code.require_file("peer_process.ex", __DIR__)
+
 defmodule Wotex.CoAP.Test.CaliforniumPeer do
   @moduledoc false
 
@@ -11,6 +13,7 @@ defmodule Wotex.CoAP.Test.CaliforniumPeer do
   use GenServer
   import ExUnit.Assertions
   alias Wotex.CoAP.Security
+  alias Wotex.CoAP.Test.PeerProcess
 
   @master_secret Base.decode16!("0102030405060708090A0B0C0D0E0F10")
   @master_salt Base.decode16!("9E7CA92223786340")
@@ -76,25 +79,12 @@ defmodule Wotex.CoAP.Test.CaliforniumPeer do
       "COAP.COAP_PORT=#{port}\nCOAP.COAP_SECURE_PORT=#{port + 1}\n"
     )
 
-    native =
-      Port.open({:spawn_executable, java}, [
-        :binary,
-        :exit_status,
-        :stderr_to_stdout,
-        cd: workspace,
-        args: [
-          "-jar",
-          archive,
-          "--no-tcp",
-          "--no-external",
-          "--no-ipv6",
-          "--notify-interval",
-          "1s"
-        ],
-        env: Enum.map(clean_environment(), fn {name, nil} -> {String.to_charlist(name), false} end)
-      ])
-
-    {:os_pid, os_pid} = Port.info(native, :os_pid)
+    {native, os_pid} =
+      PeerProcess.open(
+        java,
+        ["-jar", archive, "--no-tcp", "--no-external", "--no-ipv6", "--notify-interval", "1s"],
+        workspace
+      )
 
     {:ok,
      %{
@@ -178,7 +168,7 @@ defmodule Wotex.CoAP.Test.CaliforniumPeer do
     remaining = max(deadline - System.monotonic_time(:millisecond), 0)
 
     receive do
-      {^native, {:exit_status, _}} -> :ok
+      {^native, {:exit_status, status}} -> assert status == PeerProcess.stopped_status()
       {^native, {:data, _}} -> await_exit(native, os_pid, deadline)
     after
       remaining ->

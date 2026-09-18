@@ -88,6 +88,54 @@ defmodule Wotex.CoAP.Native.BuildCommandTest do
     assert output != ""
   end
 
+  @tag timeout: 10_000
+  test "WCO-N01 passes unbounded output through and reaps the group when its owner leaves",
+       context do
+    shell = System.find_executable("sh") || flunk("sh is required")
+
+    # 17,000,000 bytes exceed the 16 MiB relay bound; stderr joins stdout.
+    passthrough =
+      guardian(context, [
+        "10000",
+        "0",
+        "200",
+        context.root,
+        shell,
+        "-c",
+        "head -c 17000000 /dev/zero; echo done >&2"
+      ])
+
+    assert {output_size, 0} = drain(passthrough, 0)
+    assert output_size == 17_000_005
+
+    pid_file = Path.join(context.root, "passthrough.pid")
+
+    owned =
+      guardian(context, [
+        "10000",
+        "0",
+        "200",
+        context.root,
+        shell,
+        "-c",
+        "echo $$ > \"$1\"; trap '' TERM; while :; do sleep 1; done",
+        "sh",
+        pid_file
+      ])
+
+    pid = await_pid(pid_file, System.monotonic_time(:millisecond) + 2_000)
+
+    assert {_, 0} =
+             System.cmd("/bin/kill", ["-0", pid],
+               stderr_to_stdout: true,
+               env: cleared_environment()
+             )
+
+    # Closing the Port closes the guardian's stdin, as an exiting owner BEAM does.
+    Port.close(owned)
+    assert gone?(pid, System.monotonic_time(:millisecond) + 1_000)
+  end
+
   test "WCO-N01 rejects invalid command paths before spawning", context do
     assert {:error, :invalid_build_command, %{output: "", exit_status: 126}} =
              BuildCommand.run(context.guardian, "relative", [], context.root)
@@ -175,4 +223,50 @@ defmodule Wotex.CoAP.Native.BuildCommandTest do
 
     assert (System.monotonic_time(:millisecond) - started) in 20..1_000
   end
+
+  defp guardian(context, arguments) do
+    Port.open({:spawn_executable, context.guardian}, [
+      :binary,
+      :exit_status,
+      args: arguments
+    ])
+  end
+
+  defp drain(port, size) do
+    receive do
+      {^port, {:data, bytes}} -> drain(port, size + byte_size(bytes))
+      {^port, {:exit_status, status}} -> {size, status}
+    after
+      5_000 -> flunk("passthrough guardian produced no exit status")
+    end
+  end
+
+  defp await_pid(path, deadline) do
+    case File.read(path) do
+      {:ok, text} when text != "" ->
+        String.trim(text)
+
+      _ ->
+        if System.monotonic_time(:millisecond) >= deadline, do: flunk("no child pid")
+        Process.sleep(10)
+        await_pid(path, deadline)
+    end
+  end
+
+  defp gone?(pid, deadline) do
+    case System.cmd("/bin/kill", ["-0", pid], stderr_to_stdout: true, env: cleared_environment()) do
+      {_, 0} ->
+        if System.monotonic_time(:millisecond) < deadline do
+          Process.sleep(20)
+          gone?(pid, deadline)
+        else
+          false
+        end
+
+      _ ->
+        true
+    end
+  end
+
+  defp cleared_environment, do: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
 end

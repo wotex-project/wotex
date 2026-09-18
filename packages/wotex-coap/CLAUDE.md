@@ -68,7 +68,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
   corpora); DTLS PKI material in `test/fixtures/dtls_pki/`
   (`bin/generate_dtls_pki.exs` regenerates it).
 - Test support: `test/support/` (datagram and Runtime fixtures, libcoap,
-  OSCORE and Californium peers, DTLS record proxy); `test/native/` (C
+  OSCORE and Californium peers, which `peer_process.ex` starts under the
+  workspace's command guardian, DTLS record proxy); `test/native/` (C
   harnesses and sanitizer Dockerfiles); `test/interop/` and `test/software/`
   (explicit-lane suites).
 

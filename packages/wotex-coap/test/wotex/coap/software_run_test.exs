@@ -104,6 +104,7 @@ defmodule Wotex.CoAP.SoftwareRunTest do
     assert options[:cleanup] == 5_000
     assert {"MIX_ENV", "test"} in options[:env]
     assert {"WOTEX_COAP_LIBCOAP_SERVER", Path.join(root, "bin/coap-server")} in options[:env]
+    assert {"WOTEX_COAP_PEER_GUARDIAN", guardian} in options[:env]
 
     assert {"WOTEX_COAP_NATIVE_WORKER", Path.join(root, "native/bin/wotex-coap-oscore")} in options[
              :env
@@ -115,6 +116,7 @@ defmodule Wotex.CoAP.SoftwareRunTest do
 
     assert "test/interop/oscore_test.exs" in arguments
     assert "test/software/lifecycle_stress_test.exs" in arguments
+    assert "test/software/peer_guardian_test.exs" in arguments
     assert "WCO-C09" in evidence["scenario_ids"]
     assert "WCO-S06" in evidence["scenario_ids"] and "WCO-V13" in evidence["scenario_ids"]
 
@@ -149,8 +151,47 @@ defmodule Wotex.CoAP.SoftwareRunTest do
     result = Jason.decode!(File.read!(path))
     assert result["status"] == "failed"
     assert result["exit_status"] == 2
-    assert result["cleanup"]["peer_processes_retained"] == nil
+    assert result["cleanup"]["peer_processes_retained"] == 0
     assert File.read!(Path.join(root, "software-run/tests.log")) == "suite failed\n"
+  end
+
+  test "WCO-N05 fails a passing suite that leaves a process naming a workspace file", %{
+    root: root
+  } do
+    marker = Path.join(root, "bin/peer-marker")
+    File.mkdir_p!(Path.dirname(marker))
+    File.write!(marker, "")
+
+    # The trailing no-op keeps the shell from replacing itself with sleep, so
+    # its argument vector keeps naming the marker file.
+    peer = Port.open({:spawn_executable, "/bin/sh"}, args: ["-c", "sleep 30; :", marker])
+    {:os_pid, os_pid} = Port.info(peer, :os_pid)
+
+    on_exit(fn ->
+      System.cmd("/bin/kill", ["-KILL", Integer.to_string(os_pid)],
+        stderr_to_stdout: true,
+        env: cleared_environment()
+      )
+    end)
+
+    assert {:ok, 1} = Run.processes_naming(marker, 0)
+
+    Verifier.result({:ok, %{manifest: manifest(), reused: true}})
+    Operations.result({:ok, %{output: "15 tests passed\n", exit_status: 0}})
+
+    assert {:error, {:software_suite_failed, path, "peer_processes_retained"}} =
+             Run.run(root, Verifier, Operations, cleanup_grace: 200)
+
+    result = Jason.decode!(File.read!(path))
+    assert result["status"] == "failed"
+    assert result["exit_status"] == 0
+    assert result["cleanup"]["peer_processes_retained"] == 1
+
+    {_, 0} =
+      System.cmd("/bin/kill", ["-KILL", Integer.to_string(os_pid)], env: cleared_environment())
+
+    assert {:ok, 0} = Run.processes_naming(marker, 2_000)
+    assert {:ok, 0} = Run.processes_naming(root <> "/", 0)
   end
 
   test "WCO-N05 reports unavailable tools, outputs and source inputs", %{root: root} do
@@ -276,4 +317,6 @@ defmodule Wotex.CoAP.SoftwareRunTest do
       "workspace" => %{"artifacts" => %{}}
     }
   end
+
+  defp cleared_environment, do: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
 end
