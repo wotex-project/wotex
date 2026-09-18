@@ -125,7 +125,7 @@ evidence toward WNX-C01–C05 and WTX-C03/C04. It does not replace their native
 error matrices, archive gates or stable-API decisions. There is no W3C
 numerical profile, autonomous physical control or general model-serving claim.
 
-`docs/provenance/WLB.03-evidence.json` records the fixed-seed local cohort:
+`priv/provenance/WLB.03-evidence.json` records the fixed-seed local cohort:
 all six required lanes pass across 52 tests. Its three exclusions are the
 separately owned real-broker cases from WLB.04, not WLB.03 lanes. The record
 binds the thermal fixtures, exact source/lock cohort, Binary/Evaluator and EXLA

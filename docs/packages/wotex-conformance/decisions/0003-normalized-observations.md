@@ -15,7 +15,7 @@ target protocol exists to prevent.
 
 Early vectors also expected invented rejection identifiers. A code that no
 Thing Description or Thing Model implementation emits cannot classify a
-subject; it only measures agreement with this repository.
+subject; it only measures agreement with this package.
 
 ## Decision
 

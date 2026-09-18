@@ -65,6 +65,11 @@ defmodule Wotex.Lab.Check.Contracts do
       Enum.flat_map(source["packages"], fn package ->
         check!(Regex.match?(~r/\A[0-9a-f]{40}\z/, package["revision"]), "invalid source revision")
 
+        check!(
+          package["directory"] in [".", "packages/#{package["id"]}"],
+          "invalid source directory"
+        )
+
         Enum.each(~w(catalogue_sha256 completion_plan_sha256), fn key ->
           check!(Regex.match?(~r/\A[0-9a-f]{64}\z/, package[key]), "missing provenance digest")
         end)
@@ -156,7 +161,8 @@ defmodule Wotex.Lab.Check.Contracts do
     Enum.each(seams, fn seam ->
       package = Enum.find(source["packages"], &(&1["package"] == seam["package"]))
       check!(not is_nil(package) and seam["lab_spec"] in ids, "unresolved seam owner")
-      expected = "#{package["repository"]}/blob/#{package["revision"]}/#{seam["path"]}"
+      path = repository_path(package, seam["path"])
+      expected = "#{package["repository"]}/blob/#{package["revision"]}/#{path}"
       check!(seam["source_url"] == expected, "unpinned seam source")
 
       check!(
@@ -206,6 +212,10 @@ defmodule Wotex.Lab.Check.Contracts do
 
   # Every requirement edge is walked once; `visit/4` halts on a cycle, so the
   # visited set is the traversal's proof, not an input to later checks.
+  # A source index entry names where its package lived at its revision.
+  defp repository_path(%{"directory" => "."}, path), do: path
+  defp repository_path(%{"directory" => directory}, path), do: directory <> "/" <> path
+
   defp check_acyclic!(ids, graph) do
     Enum.reduce(ids, MapSet.new(), &visit(&1, [], graph, &2))
   end

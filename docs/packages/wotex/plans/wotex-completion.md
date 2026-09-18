@@ -145,10 +145,12 @@ attempt, worker coordinator or cross-repository scheduler to implement these IDs
 | `public_release_candidate` | All three preceding gates plus explicit documentation, dependency, static-analysis, archive, content, license, provenance, and security checks on an immutable candidate artifact. This is permission to evaluate, not to push, tag or publish. |
 | `stable_api_candidate` | WTX-C05 plus explicit review of every public function/result/error, compatibility policy and negative vectors. Version 0.1.0 and high coverage do not themselves promise stable API semantics. |
 
-Fresh checkout procedure: read the root `CLAUDE.md`, `packages/wotex/CLAUDE.md`,
-this plan and the owning WTX files; run `mix setup` from `packages/wotex`, use
-`mix test` for the fast loop, and run `WOTEX_PATH_DEPS=1 mix check --no-retry`
-before recording `repository_green`. Use README public
+Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
+`packages/wotex/CLAUDE.md`, this plan and the owning WTX files; run
+`mix setup` from the repository root, use `mix pkg wotex test` and
+`mix check.fast --package wotex` for the fast loop, and run
+`mix pkg wotex check --no-retry` (equivalently `WOTEX_PATH_DEPS=1 mix check
+--no-retry` from `packages/wotex`) before recording `repository_green`. Use README public
 examples for the consumer exercise. Check archive contents before claiming any
 public candidate. Record
 the exact source tree, package version, archive SHA-256, lock digest, schema

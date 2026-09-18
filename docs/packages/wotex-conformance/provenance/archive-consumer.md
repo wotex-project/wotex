@@ -23,11 +23,16 @@ or provenance. One selected vector exercises these runner classifications:
 | response after the configured deadline | `infrastructure_error` | `target_timeout` |
 | malformed response bytes | `infrastructure_error` | `invalid_target_json` |
 
-Run the proof with the repository's selected Elixir and Erlang/OTP versions:
+Run the proof with the repository's selected Elixir and Erlang/OTP versions
+(the root `mise.toml`) from `packages/wotex-conformance`:
 
 ```console
 mix run --no-start bin/check_archive.exs
 ```
+
+From the repository root the same command is
+`mix pkg wotex-conformance run --no-start bin/check_archive.exs`; the full
+package gate runs it as well.
 
 The command builds one exact archive into an OS-temporary directory and prints
 the verified corpus coordinates and SHA-256 digest of the archive it

@@ -1,41 +1,92 @@
-# Wotex Nx Package Contract
+# Wotex Nx package contract
 
-Wotex core owns W3C Web of Things values and terminology. This package inherits
-those values and owns only explicit numerical conversion semantics.
-Repository-wide rules are in the root `CLAUDE.md`.
+Wotex Nx (`packages/wotex-nx`, Hex `wotex_nx`) owns the explicit numerical
+conversion between Wotex values and Elixir Nx: typed observations, ordered
+features, deterministic temporal windows, lazy `Nx.Batch` encoding and
+decoding of numerical output into inert values. The core `wotex` package owns
+W3C Web of Things values and terminology; this package inherits them and adds
+only numerical semantics. Repository-wide rules are in the root `CLAUDE.md`.
 
-- Consumer, company and customer names stay out of source, tests, docs,
-  fixtures, history and metadata; say `consumer` or `consumer host`. Sibling
-  packages are referenced by package name; relative paths inside the
-  repository are allowed, absolute machine paths are not.
+## Invariants
+
 - No model fetching, training, selection, serving, agent routing, Action
   execution, authorization, canonical state, database, Repo, migration, Ash,
   Phoenix, Ecto, Oban, endpoint, application callback, or global registry.
-- Loading starts no process. Every operation is deterministic and caller-driven.
+- Loading starts no process. Every operation is deterministic and
+  caller-driven; the package never reads a clock.
 - All time, identity, window, unit, missing-value, dtype, shape, quality, and
-  output interpretations are explicit inputs.
+  output interpretations are explicit inputs. Silent coercion is forbidden.
 - Numerical output and Action proposals are inert values, never authority.
+- Observation, feature, prediction, anomaly and Action-proposal values are
+  package extension terms, never presented as W3C-defined structures.
+- Tensor layout, dtype, mask polarity (`1` observed), quality codes, temporal
+  selection and output meaning are public contract; changing them needs a
+  WNX.01 version and explicit compatibility review.
 - One module per `.ex`. Tests use `@moduledoc false` followed by a blank line.
-- `WOTEX_PATH_DEPS=1` is the sole local workspace dependency switch.
 
-Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-nx` before
-a local commit, then the gate of every dependent package. It compiles with
-warnings as errors, checks formatting, dependencies, Credo, Doctor, ex_doc,
-coverage, Dialyzer and the package archive.
+## Where things are
 
-## Documentation and local state
+- `lib/wotex/nx.ex`: entry point and stable quality codes.
+- `lib/wotex/nx/observation.ex`, `row.ex`: caller-supplied observations and
+  timestamped rows.
+- `lib/wotex/nx/feature.ex`, `schema.ex`: ordered features derived from a
+  `Wotex.DataSchema` and allocation limits; `numerical_schema.ex`,
+  `data_schema_validator.ex` and `data_schema_contract.ex` (hidden) map the
+  supported DataSchema subset.
+- `lib/wotex/nx/window.ex`: deterministic resampling and selection.
+- `lib/wotex/nx/encoder.ex`, `encoded.ex`, `encoded/lazy_container.ex`: rows to
+  a lazy `Nx.Batch`, masks and quality vectors.
+- `lib/wotex/nx/output_schema.ex`, `decoder.ex`: the accepted output contract
+  and decoding into `Observation`, `Prediction`, `Anomaly` or
+  `ActionProposal` (`prediction.ex`, `anomaly.ex`, `action_proposal.ex`).
+- `lib/wotex/nx/unit_converter.ex`: the consumer unit-conversion port;
+  `options.ex`: closed keyword options; `error.ex`: structured errors.
+- `bin/check_archive.exs`: archive and isolated-consumer check (full gate);
+  `bin/check_boundary.exs`: numerical-boundary source scan (explicit).
+- Specification: `docs/packages/wotex-nx/specs/WNX.01-observation-numerical-boundary.md`
+  (`catalogue.yaml` owns status). Completion plan:
+  `docs/packages/wotex-nx/plans/wotex-nx-completion.md`; decisions and the
+  runtime/backend cohort under `docs/packages/wotex-nx/`.
+- Test support: `test/support/factory.ex` (`Wotex.Nx.TestFactory`) and
+  `test/support/unit_converter.ex`. There are no fixture files.
 
-Specifications, the completion plan, decisions and provenance live under
-`docs/packages/wotex-nx/`; `docs/packages/wotex-nx/specs/catalogue.yaml` owns
-normative status. Machine-local execution records live only in the ignored
-root `docs/tasks/local/wotex-nx/`.
+## Working on this package
 
-## External automation boundary
+| Tier | Command |
+| --- | --- |
+| 0 | `mix pkg wotex-nx test test/wotex/nx/<file>_test.exs`, or `mix impact Wotex.Nx.Encoder encode --run` |
+| 1 | `mix check.fast --package wotex-nx` |
+| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
 
-This package exposes source, specifications, dependency contracts, vectors,
-and deterministic verification commands to external engineering automation. It
-does not own worker coordination, claims, leases, attempts, cross-package
-programme state, accepted outcomes, or remote publication policy. Do not add a
-coordination daemon, graph database, shared-workspace application, or
-tool-specific project metadata. External automation must adapt to this
-consumer-neutral package contract.
+The full gate alone is `mix pkg wotex-nx check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-nx`); it adds
+dependency audits, Doctor, docs, the coverage floor, Dialyzer and the archive
+check. Run `mix dialyzer.pkg wotex-nx` in tier 1 when a typespec or inferred
+return type changed.
+
+Tests by area, under `test/wotex/nx/` unless noted:
+
+- Observation, feature and schema construction, identity, bounds:
+  `observation_feature_schema_test.exs`.
+- Window order, ties, age, units, fill masks, quality, encoded batch and
+  accessors: `window_encoder_test.exs`; selection equivalence properties:
+  `window_selection_property_test.exs`.
+- Integer endpoints, normalization and dtype overflow, rounding:
+  `numerical_integrity_test.exs`; fixed shapes: `shape_property_test.exs`.
+- Decoder admission and inert output kinds: `decoder_test.exs`.
+- Closed options, forged structs and the public error matrix:
+  `contract_matrix_test.exs`.
+- No application callback and quality codes: `library_contract_test.exs`;
+  locked Decimal boundary: `dependency_security_test.exs`; doctests:
+  `test/documentation_test.exs`.
+- Archive contents, `mix.exs` `package` or the reference cohort: the full gate
+  (archive check).
+
+Only `wotex-lab` depends on Wotex Nx. Before changing a public function, list
+its callers with `mix refs Wotex.Nx.Module fun` and the tests to run with
+`mix impact Wotex.Nx.Module fun`. This package calls only the public API of
+`wotex` (`Wotex.DataSchema`).
+
+The boundary scan is explicit: `elixir bin/check_boundary.exs` from
+`packages/wotex-nx`. There is no native build, software profile or container
+lane.

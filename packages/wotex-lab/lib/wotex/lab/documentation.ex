@@ -3,12 +3,13 @@ defmodule Wotex.Lab.Documentation do
   Locates the documentation tree of a Lab source checkout.
 
   Catalogue paths that start with `docs/` name the package documentation
-  tree, not a directory beside `mix.exs`: in a standalone checkout that tree
-  is `docs/`, in the monorepo it is `docs/packages/wotex-lab/` two levels
-  above the package. The tree holds specifications, the completion plan,
-  decisions and provenance reviews for people; data that code reads lives in
-  `priv/`. A compiled package or an unpacked archive ships no documentation,
-  so the tree may be absent and callers must say so instead of failing.
+  tree, not a directory beside `mix.exs`: in the repository it is
+  `docs/packages/wotex-lab/` two levels above the package; a copied source
+  tree, such as a test fixture, may instead carry it as `docs/` beside
+  `mix.exs`. The tree holds specifications, the completion plan, decisions
+  and provenance reviews for people; data that code reads lives in `priv/`. A
+  compiled package or an unpacked archive ships no documentation, so the tree
+  may be absent and callers must say so instead of failing.
   """
 
   @package "wotex-lab"

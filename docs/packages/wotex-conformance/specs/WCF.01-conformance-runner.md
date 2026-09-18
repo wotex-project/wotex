@@ -461,7 +461,7 @@ trust, network egress, archive format safety, and external endpoint policy.
 
 ## Acceptance evidence
 
-The repository is standalone-green only when all of the following pass against
+The package is independently green only when all of the following pass against
 one commit and package archive:
 
 1. deterministic constructor, canonicalization, digest, corpus, result, and

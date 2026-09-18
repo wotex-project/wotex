@@ -43,20 +43,61 @@ testable HTTP meaning for Wotex interactions.
 
 ## Installation
 
-For a sibling-checkout consumer, select the package explicitly:
+Wotex HTTP Binding 0.1 requires Elixir 1.18 or later. No version is published
+on Hex yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
   [
-    {:wotex_binding_http, path: "../wotex-binding-http"}
+    {:wotex_binding_http, "~> 0.1"}
   ]
 end
 ```
 
-Package builds resolve `wotex ~> 0.1.0` and `wotex_runtime ~> 0.1.0` from Hex.
-Once a suitable release is available, replace the consumer's path dependency
-with its version constraint. Archive checks reject local path dependencies and
-agent files in the packaged source.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. The binding's `mix.exs` declares Hex
+requirements for `wotex` and `wotex_runtime`, so declare all three packages at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_binding_http,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-binding-http",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_binding_http, path: "../wotex/packages/wotex-binding-http", override: true}
+```
+
+Path dependencies prove nothing about a released artifact. The package's
+archive check rejects Git and path dependencies and agent files in the
+packaged source.
 
 ## Implement the client port
 
@@ -221,29 +262,40 @@ The package also enforces these invariants:
 
 ## Development
 
-Adjacent source checkouts can be selected explicitly for local development:
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
 
 ```console
-WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check --no-retry
+mix pkg wotex-binding-http test test/wotex/binding/http/form_test.exs  # one test file
+mix check.fast --package wotex-binding-http                            # compile, format, Credo, tests
+mix pkg wotex-binding-http check --no-retry                            # full gate
 ```
 
-`mix test` is the fast development loop. `mix check --no-retry` is the package
-gate: warnings-as-errors compilation, locked and unused-dependency checks,
-formatting, dependency and Hex audits, strict Credo, Doctor, documentation
-with warnings as errors, coverage, Dialyzer, the exact-archive check and
-whitespace. The public boundary script runs separately:
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-binding-http`. It compiles with warnings as errors, checks the
+lock and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`, and then runs the exact-archive check
+(`mix run --no-start bin/check_archive.exs`). That check builds the `wotex`,
+`wotex_runtime` and `wotex_binding_http` archives from `packages/` without
+path dependencies, inspects their contents and runs an isolated reference
+consumer against the unpacked artifacts.
+
+The public boundary script is not part of the gate. Run it inside
+`packages/wotex-binding-http`:
 
 ```console
-WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
+elixir bin/check_boundary.exs
 ```
 
-The reproducible local and CI evidence pair is the Elixir and Erlang/OTP
-cohort declared in the repository's root `.tool-versions`. The broader
-`elixir: "~> 1.18"` package requirement is not a tested runtime matrix. The
-core and Runtime packages used by the gate are the sibling packages in the
-same source tree.
+The local toolchain is the Elixir and Erlang/OTP pair pinned in the root
+`mise.toml`; CI also runs the gate on the minimum pair declared in
+`tooling/packages.yaml`. The broader `elixir: "~> 1.18"` package requirement is
+not a tested runtime matrix. The gate uses the `wotex` and `wotex-runtime`
+packages from the same commit. This package has no native build, software
+profile, interop or container lane.
 
 The boundary and exact-archive commands are focused proofs. The
 [public release-candidate inventory](../../docs/packages/wotex-binding-http/release-candidate-inventory.md)

@@ -147,7 +147,8 @@ credential within its audience. No global security policy is installed.
 
 ## Compatibility and proof
 
-`docs/client-lifecycle-inventory.md` and `docs/limits-security-inventory.md` map
+The [client lifecycle inventory](../client-lifecycle-inventory.md) and the
+[limits and security inventory](../limits-security-inventory.md) map
 the complete callback, lifecycle, limit, and security reviews to named vectors.
 `value_test.exs`, `error_test.exs`, `form_test.exs`, `transport_test.exs`,
 `client_lifecycle_inventory_test.exs`, `limits_security_test.exs` and

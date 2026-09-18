@@ -135,9 +135,13 @@ remote-commit requirement to support parallel workers.
 | `public_release_candidate` | All preceding gates, WCT-C03 agreement, reviewed threat model, public content, licenses/provenance, accurate claims and immutable candidate evidence. The maintainer alone may later publish. |
 | `stable_api_candidate` | WCT-C05 compatibility review of API and wire contracts independently, exact error/result/null/default/canonical-byte rules and upgrade/rejection vectors. A stable wire version does not automatically make package 0.1 APIs stable. |
 
-Fresh checkout: read the root and package `CLAUDE.md`, this plan and the
-catalogue's owning specs; from `packages/wotex-continuum` resolve the declared
-dependencies with `mix deps.get`, then run `mix check --no-retry`.
+Fresh checkout: clone the repository; read the root and package `CLAUDE.md`,
+this plan and the catalogue's owning specs; run `mix setup` from the
+repository root. The package gate is `mix pkg wotex-continuum check --no-retry`
+(equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` from
+`packages/wotex-continuum`) and selects the core package from `packages/wotex`.
+Resolving the declared dependencies without the switch (`mix deps.get` in
+`packages/wotex-continuum`) needs published packages.
 If a required package is not available, record the dependency-admission gap;
 do not silently convert fresh-checkout evidence to a local-path pass. The README
 development switch remains useful for implementation, but its exact dependency

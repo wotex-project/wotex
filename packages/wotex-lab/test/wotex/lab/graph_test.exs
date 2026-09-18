@@ -59,7 +59,11 @@ defmodule Wotex.Lab.GraphTest do
 
     lab = graph["package"]
     assert lab["revision"] == @revision
-    assert lab["source_url"] == "https://github.com/wotex-project/wotex-lab/tree/" <> @revision
+    assert lab["repository"] == "https://github.com/wotex-project/wotex"
+
+    assert lab["source_url"] ==
+             "https://github.com/wotex-project/wotex/tree/" <> @revision <> "/packages/wotex-lab"
+
     assert lab["artifact"] == %{"hex_observation" => "not_published", "archive_sha256" => nil}
     assert lab["source_digest"] =~ ~r/\Asha256:[0-9a-f]{64}\z/
     assert lab["completion_plan_sha256"] =~ @hex
@@ -68,7 +72,12 @@ defmodule Wotex.Lab.GraphTest do
     catalogue_wlb07 = Enum.find(catalogue["specifications"], &(&1["id"] == "WLB.07"))
     assert wlb07["implementation_status"] == catalogue_wlb07["implementation_status"]
     assert wlb07["evidence_status"] == catalogue_wlb07["evidence_status"]
-    assert wlb07["source_url"] =~ @revision and wlb07["sha256"] =~ @hex
+
+    assert wlb07["source_url"] ==
+             "https://github.com/wotex-project/wotex/blob/#{@revision}/docs/packages/wotex-lab/" <>
+               "specs/WLB.07-cookbooks-and-machine-interfaces.md"
+
+    assert wlb07["sha256"] =~ @hex
     assert graph["lab_status"]["implementation_status"] == catalogue_wlb07["implementation_status"]
 
     upstream = Enum.find(graph["specifications"], &(&1["id"] == "wotex:WTX.01"))
@@ -81,6 +90,13 @@ defmodule Wotex.Lab.GraphTest do
 
     assert upstream["source_url"] ==
              "#{wotex["repository"]}/blob/#{wotex["revision"]}/#{upstream["path"]}"
+
+    runtime = Enum.find(index["packages"], &(&1["package"] == "wotex_runtime"))
+    runtime_spec = Enum.find(graph["specifications"], &(&1["id"] == "wotex_runtime:WRT.01"))
+
+    assert runtime_spec["source_url"] ==
+             "https://github.com/wotex-project/wotex/blob/#{runtime["revision"]}/" <>
+               "packages/wotex-runtime/#{runtime_spec["path"]}"
 
     assert upstream["observed_on"] == index["observed_on"]
 
@@ -423,7 +439,7 @@ defmodule Wotex.Lab.GraphTest do
 
     # Copy source inputs only. Host docs/build output can change concurrently
     # and must never become part of this fixture's source snapshot. The
-    # documentation tree is copied beside mix.exs, the standalone layout.
+    # documentation tree is copied beside mix.exs, the copied-tree layout.
     for entry <-
           ~w(lib test bin clients hosts/workbench/lib hosts/workbench/test hosts/workbench/bin
              hosts/nerves/test
@@ -522,7 +538,7 @@ defmodule Wotex.Lab.GraphTest do
              &(&1.ownership in ["consumer-implements", "lab-owned"])
            )
 
-    assert Descriptors.repository() =~ "wotex-lab"
+    assert Descriptors.repository() == "https://github.com/wotex-project/wotex"
   end
 
   defp generate(catalogue, opts \\ []) do

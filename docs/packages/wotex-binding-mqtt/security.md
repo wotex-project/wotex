@@ -16,7 +16,7 @@ prose with an unbounded machine-readable affected range. The
 applies finite default parsing limits.
 
 The current Hex audit no longer matches that advisory to the lock, so this
-repository carries no advisory exception. Its dependency-security tests retain
+package carries no advisory exception. Its dependency-security tests retain
 the reviewed loaded version. They require parse, cast and construction to
 reject the reported pathological exponent and prove the default exponent/digit
 thresholds. No arithmetic on the pathological value is executed.

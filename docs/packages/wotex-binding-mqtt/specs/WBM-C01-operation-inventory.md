@@ -2,8 +2,9 @@
 
 This inventory binds the seven-operation package profile to the W3C MQTT
 binding repository snapshot recorded in
-`docs/provenance/mqtt-binding-source-manifest.json`. The snapshot is an
-Editor's Draft input, not a W3C conformance or registry-membership claim.
+`docs/packages/wotex-binding-mqtt/provenance/mqtt-binding-source-manifest.json`.
+The snapshot is an Editor's Draft input, not a W3C conformance or
+registry-membership claim.
 
 | WoT operation | MQTT packet | Exact Form target | Defaults and constraint |
 | --- | --- | --- | --- |

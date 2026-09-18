@@ -21,10 +21,12 @@ defmodule Wotex.Lab.Graph do
   `answer/2` resolves the WLB.07 ownership questions from the graph nodes.
 
   Catalogue paths that start with `docs/` name the package documentation tree
-  located by `Wotex.Lab.Documentation` (`docs/` beside `mix.exs` in a
-  standalone checkout, `docs/packages/wotex-lab/` in the monorepo); document
+  located by `Wotex.Lab.Documentation` (`docs/packages/wotex-lab/` in the
+  repository, or `docs/` beside `mix.exs` in a copied source tree); document
   nodes keep that `docs/<kind>/` form so specification and document
-  identifiers agree in both layouts.
+  identifiers agree in both layouts. Lab source URLs name the repository
+  paths at the given revision: `packages/wotex-lab/…` for package files and
+  `docs/packages/wotex-lab/…` for documentation.
   """
 
   alias Wotex.JSON
@@ -32,6 +34,8 @@ defmodule Wotex.Lab.Graph do
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Graph.{Descriptors, Interfaces, Render}
 
+  @lab_directory "packages/wotex-lab"
+  @lab_documentation "docs/packages/wotex-lab"
   @schema_version "1.0.0"
   @generator_version "1.0.0"
   @revision ~r/\A[0-9a-f]{40}\z/
@@ -296,7 +300,7 @@ defmodule Wotex.Lab.Graph do
       "version" => to_string(Application.spec(:wotex_lab, :vsn) || "0.0.0"),
       "repository" => Descriptors.repository(),
       "revision" => inputs.revision,
-      "source_url" => source_url(Descriptors.repository(), inputs.revision, nil),
+      "source_url" => lab_source_url(inputs.revision, nil),
       "source_digest" => inputs.source_digest,
       "catalogue" => inputs.catalogue["schema_version"],
       "completion_plan" => inputs.catalogue["completion_plan"],
@@ -315,7 +319,7 @@ defmodule Wotex.Lab.Graph do
       "name" => package["package"],
       "repository" => package["repository"],
       "revision" => package["revision"],
-      "source_url" => source_url(package["repository"], package["revision"], nil),
+      "source_url" => upstream_source_url(package, nil),
       "catalogue" => package["catalogue"],
       "catalogue_sha256" => package["catalogue_sha256"],
       "completion_plan" => package["completion_plan"],
@@ -338,7 +342,7 @@ defmodule Wotex.Lab.Graph do
         "version" => spec["version"],
         "path" => spec["path"],
         "sha256" => file_sha256(inputs.root, spec["path"]),
-        "source_url" => source_url(Descriptors.repository(), inputs.revision, spec["path"]),
+        "source_url" => lab_source_url(inputs.revision, spec["path"]),
         "implementation_status" => spec["implementation_status"],
         "evidence_status" => spec["evidence_status"],
         "adoption_status" => spec["adoption_status"],
@@ -362,7 +366,7 @@ defmodule Wotex.Lab.Graph do
           "package" => package["package"],
           "version" => spec["version"],
           "path" => spec["path"],
-          "source_url" => source_url(package["repository"], package["revision"], spec["path"]),
+          "source_url" => upstream_source_url(package, spec["path"]),
           "implementation_status" => spec["implementation_status"],
           "evidence_status" => Map.get(spec, "evidence_status", "not_reported"),
           "adoption_status" => Map.get(spec, "adoption_status", "not_reported"),
@@ -432,8 +436,7 @@ defmodule Wotex.Lab.Graph do
           "callbacks" => seam.callbacks,
           "ownership" => seam.ownership,
           "path" => seam.path,
-          "source_url" =>
-            seam.path && source_url(Descriptors.repository(), inputs.revision, seam.path),
+          "source_url" => seam.path && lab_source_url(inputs.revision, seam.path),
           "lab_spec" => seam.lab_spec,
           "status" => seam.status,
           "snapshot" => false
@@ -452,7 +455,7 @@ defmodule Wotex.Lab.Graph do
       "spec" => adapter.spec,
       "path" => adapter.path,
       "sha256" => file_sha256(inputs.root, adapter.path),
-      "source_url" => source_url(Descriptors.repository(), inputs.revision, adapter.path),
+      "source_url" => lab_source_url(inputs.revision, adapter.path),
       "status" => adapter.status
     }
   end
@@ -477,7 +480,7 @@ defmodule Wotex.Lab.Graph do
       "title" => entry.title,
       "path" => entry.path,
       "sha256" => file_sha256(inputs.root, entry.path),
-      "source_url" => source_url(Descriptors.repository(), inputs.revision, entry.path),
+      "source_url" => lab_source_url(inputs.revision, entry.path),
       "specs" => entry.specs,
       "completion_ids" => entry.completion_ids,
       "upstream" => entry.upstream,
@@ -964,7 +967,7 @@ defmodule Wotex.Lab.Graph do
           "title" => title(content),
           "sha256" => sha256(content),
           "bytes" => byte_size(content),
-          "source_url" => source_url(Descriptors.repository(), revision, relative)
+          "source_url" => lab_source_url(revision, relative)
         }
       end)
 
@@ -1116,8 +1119,33 @@ defmodule Wotex.Lab.Graph do
     end
   end
 
-  defp source_url(repository, revision, nil), do: repository <> "/tree/" <> revision
-  defp source_url(repository, revision, path), do: repository <> "/blob/" <> revision <> "/" <> path
+  # Source URLs name repository paths at the pinned revision. Lab catalogue
+  # paths `docs/…` live in the Lab documentation tree, every other Lab path in
+  # the package directory. An upstream index entry records where its package
+  # lived at its own revision (`directory`, `.` for the repository root).
+  defp lab_source_url(revision, nil),
+    do: source_url(Descriptors.repository(), revision, :tree, @lab_directory)
+
+  defp lab_source_url(revision, "docs/" <> path),
+    do: source_url(Descriptors.repository(), revision, :blob, @lab_documentation <> "/" <> path)
+
+  defp lab_source_url(revision, path),
+    do: source_url(Descriptors.repository(), revision, :blob, @lab_directory <> "/" <> path)
+
+  defp upstream_source_url(package, path) do
+    kind = if path, do: :blob, else: :tree
+    path = repository_path(Map.get(package, "directory", "."), path)
+    source_url(package["repository"], package["revision"], kind, path)
+  end
+
+  defp repository_path(".", path), do: path
+  defp repository_path(directory, nil), do: directory
+  defp repository_path(directory, path), do: directory <> "/" <> path
+
+  defp source_url(repository, revision, :tree, nil), do: repository <> "/tree/" <> revision
+
+  defp source_url(repository, revision, kind, path),
+    do: Enum.join([repository, kind, revision, path], "/")
 
   defp file_sha256(root, path) do
     with {:ok, file} <- local_file(root, path),

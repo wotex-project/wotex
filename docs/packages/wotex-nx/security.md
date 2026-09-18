@@ -19,12 +19,12 @@ prose with an unbounded machine-readable affected range. The
 applies finite default parsing limits.
 
 The current Hex audit no longer matches that advisory to the lock, so this
-repository carries no advisory exception. Its dependency-security tests retain
+package carries no advisory exception. Its dependency-security tests retain
 the reviewed loaded version. They require parse, cast and construction to
 reject the reported pathological exponent and prove the default exponent/digit
 thresholds. No arithmetic on the pathological value is executed.
 
 This is retained regression evidence, not a general Decimal safety or whole-VM
 memory guarantee. All advisories remain active. Any dependency or advisory
-change requires review. The explicit dependency-audit lane checks the resolved
-lock. Never disable parsing limits for untrusted input.
+change requires review. The package gate's dependency audits (`mix deps.audit`,
+`mix hex.audit`) check the resolved lock. Never disable parsing limits for untrusted input.

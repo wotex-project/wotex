@@ -43,14 +43,37 @@ distributed service without changing their meaning.
 
 ## Installation
 
-Wotex 0.1 requires Elixir 1.18 or later.
+Wotex 0.1 requires Elixir 1.18 or later. No version is published on Hex yet.
+Once one is, depend on it as usual:
 
 ```elixir
 def deps do
   [
-    {:wotex, "~> 0.1.0"}
+    {:wotex, "~> 0.1"}
   ]
 end
+```
+
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select the
+package directory with `sparse:`. Wotex depends on no other WoTEx package.
+When you also use packages built on it, declare every WoTEx package at the
+same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+{:wotex,
+ git: "https://github.com/wotex-project/wotex.git",
+ ref: "<commit>",
+ sparse: "packages/wotex",
+ override: true}
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true}
 ```
 
 ## Quick start
@@ -214,27 +237,31 @@ and [completion contract](../../docs/packages/wotex/plans/wotex-completion.md)
 define independently implementable work, acceptance gates and remaining claim
 obligations. Local execution tracking is not part of the published contract.
 
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
 ```bash
-mix setup
-mix test
-mix test.cover
-mix lint
-WOTEX_PATH_DEPS=1 mix check --no-retry
-mix docs
+mix pkg wotex test test/wotex/thing_description_test.exs  # one test file
+mix check.fast --package wotex                            # compile, format, Credo, tests
+mix pkg wotex check --no-retry                            # full gate
 ```
 
-`mix check` is the development gate, run from `packages/wotex` inside the
-[monorepo](https://github.com/wotex-project/wotex). It compiles with warnings
-as errors, checks formatting, dependencies, Credo, Doctor, ex_doc, coverage
-and Dialyzer, and runs the package archive check.
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex`. It compiles with warnings as errors, checks the lock and
+unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`, Credo,
+Doctor, `mix docs --warnings-as-errors`, tests with the coverage floor
+(`mix coveralls`), Dialyzer and `git diff --check`, and then runs the archive
+check.
 
-The explicit package check builds one archive, verifies its contents, and runs
-a temporary consumer against the unpacked artifact. The consumer exercises
-Thing Description, Thing Model, wrapper, helper, typed-error, and passive-load
-behavior and prints the archive and resolved consumer-lock digests.
-The [release evidence boundary](../../docs/packages/wotex/provenance/release-evidence.md)
+The archive check (`mix run --no-start bin/check_package.exs`) builds one
+archive, verifies its contents, and runs a temporary consumer against the
+unpacked artifact. The consumer exercises Thing Description, Thing Model,
+wrapper, helper, typed-error, and passive-load behavior and prints the archive
+and resolved consumer-lock digests. The
+[release evidence boundary](../../docs/packages/wotex/provenance/release-evidence.md)
 records the tested runtime and dependency cohorts and the limits of those
-results.
+results. This package has no native build, software profile or container lane.
 
 ## Contributing
 

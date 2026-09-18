@@ -1,10 +1,15 @@
-# Wotex Lab contract
+# Wotex Lab package contract
 
-This is an independent consumer laboratory for the WoTEx family, with Nx as
-the primary numerical adoption path. Dependencies point from Lab to public
-libraries. Do not copy private package implementations or change WoT meaning.
+Wotex Lab (`packages/wotex-lab`, Hex `wotex_lab`) is the family's consumer
+laboratory, with Nx as the primary numerical adoption path. It owns scenarios
+and their runner, reference adapters behind sibling ports, evidence records,
+the conformance target and containment profiles, the knowledge graph, MCP,
+metrics, cookbooks, and the Workbench and Nerves reference hosts. Dependencies
+point from Lab to public libraries; no package depends on Lab. Do not copy
+private package implementations or change WoT meaning. Repository-wide rules
+are in the root `CLAUDE.md`.
 
-Repository-wide rules are in the root `CLAUDE.md`.
+## Invariants
 
 - Loading Lab starts no Lab process. Consumers explicitly place its child spec.
 - Processes, stores and simulated effects belong to an explicit Lab instance.
@@ -18,21 +23,117 @@ Repository-wide rules are in the root `CLAUDE.md`.
   introspection, database connection or public metrics listener.
 - The workbench is neutral LiveView/HEEx with base semantic tokens. No mandatory
   UI framework, ELK stack or infrastructure dependency for the first tensor.
-- `WOTEX_PATH_DEPS=1` is the only workspace switch, restricted to dev/test/docs.
-  It never proves artifact adoption. Release paths use Hex or verified archives.
+- Workspace mode (`WOTEX_PATH_DEPS=1`) never proves artifact adoption. Release
+  paths use Hex or verified archives.
 - Specs and completion contracts describe the entire accepted programme; do not
   create a deferred backlog, TODO modules or fake successful adapters.
 - Distinguish implemented source, evidence coverage and artifact adoption.
   Unbuilt accepted contracts have `implementation_status: planned`.
 - Preserve sibling ownership. Evidence references do not close sibling work
   items or authorize edits to their catalogues.
-- Publish only consumer-neutral fixtures and allowlisted documentation.
-  Consumer, company and customer names stay out; sibling packages are
-  referenced by package name; relative paths inside the repository are allowed;
-  absolute machine paths are not. No secrets, coordination daemons or shared
-  execution trackers. The root `docs/tasks/local/wotex-lab/` is ignored and
-  excluded from packages.
+- Publish only consumer-neutral fixtures and allowlisted documentation. No
+  secrets, coordination daemons or shared execution trackers.
+- `priv/provenance/source-index.json` is a historical snapshot: never move its
+  statuses or digests to current sibling state. `source-cohort.json` and the
+  `WLB.0x-evidence.json` records change only by re-running their evidence.
+- `priv/provenance/wotex-lab-api.json` records the public surface. A changed
+  public function, struct or typespec needs
+  `mix pkg wotex-lab run --no-start bin/generate_api_surface.exs --write` and a
+  compatibility review.
 
-Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-lab` before a
-local commit, then the gate of every dependent package. Publication is
-maintainer-owned.
+## Where things are
+
+- `lib/wotex/lab.ex`, `supervisor.ex`, `options.ex`, `plugin.ex`,
+  `component.ex`: the explicit Lab instance, role supervisors and component
+  activation (WLB.01, WLB.02).
+- `scenario.ex`, `runner.ex`, `runner/`, `lib/mix/tasks/wotex.lab.scenarios.ex`:
+  admitted scenario descriptors and the bounded runner with replay (WLB.02).
+- `examples/`, `simulators/`, `experiments/`, `analytics.ex`, `analytics/`,
+  `benchmark.ex`: the Nx lanes and Explorer analysis (WLB.03).
+- `adapters/{runtime,http,mqtt,directory,nx}/`, `reference/thing.ex`,
+  `network/`: reference adapters and the simulated Thing host (WLB.04, WLB.05).
+- `continuum/`, `smart_room/`: the Continuum channel/host and the smart room
+  (WLB.05).
+- `evidence/`, `conformance/`, `telemetry.ex`: evidence records, the
+  conformance target and containment profiles (WLB.06).
+- `cookbook.ex`, `graph.ex`, `graph/`, `mcp/`, `documentation.ex`: cookbooks,
+  the knowledge graph and its representations, MCP (WLB.07).
+- `formal/`: the ex_maude verification profile (WLB.09). `metrics/`, `otlp/`:
+  collector, history, remote write and GreptimeDB (WLB.10).
+  `design_system.ex`: tokens (WLB.11).
+- `hosts/workbench/` and `hosts/nerves/`: separate Mix projects for the
+  reference hosts; `clients/typescript/`: the generated control client.
+- `priv/fixtures/<lane>/` (manifest with input digest), `priv/cookbooks/`,
+  `priv/models/`, `priv/conformance/native/` (Rust helper source),
+  `priv/provenance/` (evidence records, source index and cohort, SBOM, API
+  snapshot). `bin/`: gate and lane scripts; `bin/support/`: shared helpers.
+- `test/support/`: component fixtures, HTTP/MQTT servers, broker, GreptimeDB
+  and remote-write harnesses, the native helper builder, the cookbook runner.
+- Specifications: `docs/packages/wotex-lab/specs/` (WLB.01 to WLB.12;
+  `catalogue.yaml` owns status). Plans, decisions and provenance reviews sit
+  beside them. Lab code reads this tree: `bin/check_contracts.exs` checks spec
+  headings, versions and links, and the graph digests every document.
+
+## Working on this package
+
+| Tier | Command |
+| --- | --- |
+| 0 | `mix pkg wotex-lab test test/wotex/lab/<file>_test.exs`, or `mix impact Wotex.Lab.Runner start --run` |
+| 1 | `mix check.fast --package wotex-lab` |
+| 2 | `mix check.affected` (full gate here; Lab has no dependents) |
+
+The full gate alone is `mix pkg wotex-lab check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-lab`). Beyond
+tier 1 it runs the audits, Doctor, docs, the 95% coverage floor, Dialyzer and
+the contract, graph, API-surface, Nerves-source, boundary and package-content
+scripts. Run `mix dialyzer.pkg wotex-lab` in tier 1 when a typespec or
+inferred return type changed. If Dialyzer reports `call_to_missing` for a
+sibling function after a sibling change, delete `priv/plts/dialyxir.plt*` and
+rerun.
+
+Tests by area, all under `test/wotex/lab/`:
+
+- Instance, supervisors, options, errors: `library_contract_test.exs`,
+  `supervisor_test.exs`, `options_test.exs`, `error_test.exs`.
+- Scenarios and runner: `scenario_test.exs`, `runner_test.exs`,
+  `scenario_frontends_test.exs`.
+- Nx lanes: `thermal_test.exs`, `window_anomaly_test.exs`, `serving_test.exs`,
+  `room_model_test.exs`, `backend_cohort_test.exs`, `analytics_test.exs`,
+  `benchmark_test.exs`.
+- Adapters: `loopback_test.exs`, `http_test.exs`, `http_destination_test.exs`,
+  `network_destination_test.exs`, `mqtt_test.exs`,
+  `mqtt_sample_admission_test.exs`, `directory_test.exs`.
+- Continuum and smart room: `continuum_test.exs`, `smart_room_test.exs`.
+- Evidence, conformance, telemetry: `evidence_test.exs`,
+  `evidence_digest_errors_test.exs`, `conformance_containment_test.exs`,
+  `conformance_target_process_test.exs`, `kernel_containment_test.exs`,
+  `telemetry_test.exs`.
+- Graph, cookbooks, MCP: `graph_test.exs`, `cookbook_catalogue_test.exs`,
+  `cookbook_runner_test.exs`, `mcp_*_test.exs`; after editing the catalogue,
+  specs or descriptors also run
+  `mix pkg wotex-lab run --no-start bin/check_contracts.exs` and
+  `mix pkg wotex-lab run --no-start bin/check_graph.exs`.
+- Formal: `formal_test.exs`, `formal_search_test.exs`,
+  `mcp_formal_tool_test.exs`. Metrics: `metrics_*_test.exs`,
+  `otlp_*_test.exs`. Design system: `design_system_test.exs`.
+- Release tooling: `reference_inputs_test.exs`, `reference_summary_test.exs`,
+  `check_work_directory_test.exs`, `dependency_security_test.exs`.
+
+No package depends on Lab, so a Lab change needs only Lab's gate. Before
+changing a public function, still list its callers with
+`mix refs Wotex.Lab.Module fun`: the Workbench and Nerves hosts and the
+cookbooks call the Lab API. A sibling change reaches Lab through
+`mix impact` on the sibling's module.
+
+Explicit-only lanes, run inside `packages/wotex-lab` and only when asked (the
+README's Development section lists prerequisites): tagged suites behind
+`WOTEX_LAB_INTEGRATION=1` (conformance source suite with Rust, cookbook
+execution, evidence manifests, source cohort), `WOTEX_LAB_BROKER=1`,
+`WOTEX_LAB_GREPTIME=1`, `WOTEX_LAB_MAUDE=<path>` and `WOTEX_LAB_CONTAINER=1`;
+`elixir bin/check_native_containment.exs`,
+`elixir bin/check_linux_containment.exs`,
+`elixir bin/check_source_cohort.exs`, and
+`WOTEX_PATH_DEPS=1 mix run --no-start bin/check_reference_consumer.exs`,
+`bin/check_archive_consumer.exs` and `bin/check_workbench_archive.exs`. The
+Workbench host has its own gate: `WOTEX_PATH_DEPS=1 mix check --no-retry` in
+`hosts/workbench/`.

@@ -103,7 +103,7 @@ from every broken module, exercises depth bounds, output overflow, deadline
 expiry with engine reaping, pool removal and two concurrent pools.
 
 The exact source result is recorded in
-`docs/provenance/WLB.09-evidence.json`: Maude 3.5.1 was obtained through the
+`priv/provenance/WLB.09-evidence.json`: Maude 3.5.1 was obtained through the
 checked-in digest-verifying provisioner, its release archive and executable
 digests are separate inputs, and the engine-backed, pure-search, MCP and
 cookbook tests pass under a fixed seed. The executable remains outside the

@@ -17,7 +17,7 @@ RUN mix compile --warnings-as-errors && mix release
 FROM ${ELIXIR_IMAGE} AS runtime
 LABEL org.opencontainers.image.title="WoTEx Lab Workbench" \
       org.opencontainers.image.description="Explicit disposable WoTEx Lab reference host" \
-      org.opencontainers.image.source="https://github.com/wotex-project/wotex-lab" \
+      org.opencontainers.image.source="https://github.com/wotex-project/wotex" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 RUN groupadd --gid 65532 wotex && \

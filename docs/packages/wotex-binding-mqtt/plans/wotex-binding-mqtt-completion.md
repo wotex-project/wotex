@@ -114,3 +114,11 @@ Package inputs ship no Markdown documentation and structurally exclude
 `docs/tasks/local/`. Every candidate archive still proves the exclusion; ignore
 rules alone never count. A clean checkout needs neither tracker nor external
 automation service for local work.
+
+Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
+`packages/wotex-binding-mqtt/CLAUDE.md`, this plan and the owning WBM files;
+run `mix setup` from the repository root, use `mix pkg wotex-binding-mqtt test`
+and `mix check.fast --package wotex-binding-mqtt` for the fast loop, and run
+`mix pkg wotex-binding-mqtt check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-binding-mqtt`)
+before recording `repository_green`.

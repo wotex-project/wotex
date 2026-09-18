@@ -1,14 +1,14 @@
-# Wotex MQTT Binding Contract
+# Wotex MQTT Binding package contract
 
-Wotex core owns W3C Web of Things values and terminology. Wotex Runtime owns
-interaction mechanics. This package owns only the MQTT binding values, mapping,
-JSON payload boundary, and Runtime transport adapter. Repository-wide rules
-are in the root `CLAUDE.md`.
+Wotex MQTT Binding (`packages/wotex-binding-mqtt`, Hex `wotex_binding_mqtt`)
+owns only the MQTT binding values, the mapping of MQTT Forms to immutable
+commands, the JSON payload boundary, and the process-free
+`Wotex.Runtime.Transport` adapter around a consumer-supplied client port. Wotex
+core owns W3C Web of Things values and terminology; Wotex Runtime owns
+interaction mechanics. Repository-wide rules are in the root `CLAUDE.md`.
 
-- Keep every file consumer-neutral: consumer, company and customer names stay
-  out. Say `consumer` or `consumer host`. Sibling packages are referenced by
-  package name; relative paths inside the repository are allowed, absolute
-  machine paths are not.
+## Invariants
+
 - Do not add an OTP Application callback, process, supervisor, connection
   manager, MQTT client implementation, database, or framework dependency.
 - The consumer supplies the MQTT client port, its connection ownership, policy,
@@ -23,18 +23,78 @@ are in the root `CLAUDE.md`.
   remain works in progress at the documented observation date.
 - One module per `.ex` file. Public functions have docs and types. Test modules
   use `@moduledoc false` followed by a blank line.
-- `WOTEX_PATH_DEPS=1` is the only local source switch. Normal package identity
-  uses released `wotex` and `wotex_runtime` versions.
+- `bin/check_archive.exs` must keep rejecting Markdown documentation, agent
+  files and `docs/tasks/local/` in every archive; create no tracker beneath
+  publishable documentation.
 
-Run `WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-binding-mqtt`
-before a local commit, then the gate of every dependent package. Run
-`elixir bin/check_boundary.exs` for the public boundary.
+## Where things are
 
-## Local execution state
+- `lib/wotex/binding/mqtt.ex`: public entry and Runtime binding profile
+  (`profile/0`).
+- `lib/wotex/binding/mqtt/client.ex`: the consumer client behaviour
+  (`publish/3`, `read/4`, `subscribe/4`, `unsubscribe/4`), WBM.01.
+- `lib/wotex/binding/mqtt/mapping.ex`: Form and WoT operation to Control
+  Packet mapping and defaults, WBM.02.
+- `lib/wotex/binding/mqtt/transport.ex` and `transport_config.ex`: the Runtime
+  transport callbacks, retained reads, subscription open/close and
+  `decode_frame/3`, WBM.03.
+- `lib/wotex/binding/mqtt/{broker,command,delivery,topic,qos,json}.ex`:
+  immutable broker, command and delivery values, Topic Name/Filter and QoS
+  validation, bounded JSON, WBM.01.
+- `lib/wotex/binding/mqtt/error.ex`: the classified, credential-free error.
+- `bin/check_archive.exs`: three-archive build and reference consumer;
+  `bin/check_application_free.exs`: no application module;
+  `bin/check_boundary.exs`: the public-boundary scan.
+- Specifications: `docs/packages/wotex-binding-mqtt/specs/` (WBM.01 to WBM.03
+  and the WBM-C01 to WBM-C03 completion packets; `catalogue.yaml` owns status).
+  Completion plan, inventories and runtime baseline are in
+  `docs/packages/wotex-binding-mqtt/`; dated draft and source provenance in its
+  `provenance/`.
+- Test support in `test/support/`: `request_factory.ex` and `td_factory.ex`
+  (Runtime requests, Thing Descriptions), `fake_client.ex` and
+  `lifecycle_client.ex` (scripted client ports), `fake_credentials.ex`. There
+  are no fixture files.
 
-Mutable completion/audit trackers belong only under the ignored root
-`docs/tasks/local/wotex-binding-mqtt/` and must never enter Git, package
-archives or generated documentation. Durable specifications and the completion
-plan `docs/packages/wotex-binding-mqtt/plans/wotex-binding-mqtt-completion.md`
-remain tracked; do not create an optional tracker beneath publishable
-documentation. Package/archive checks must prove the tracker remains excluded.
+## Working on this package
+
+| Tier | Command |
+| --- | --- |
+| 0 | `mix pkg wotex-binding-mqtt test test/wotex/binding/mqtt/<file>_test.exs`, or `mix impact Wotex.Binding.MQTT.Mapping command --run` |
+| 1 | `mix check.fast --package wotex-binding-mqtt` |
+| 2 | `mix check.affected` (full gate here, fast gate in `wotex-lab`) |
+
+The full gate alone is `mix pkg wotex-binding-mqtt check --no-retry`
+(equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` inside the package); it
+adds dependency audits, Doctor, docs, the coverage floor, Dialyzer, the
+exact-archive check and the application-free check. Run
+`mix dialyzer.pkg wotex-binding-mqtt` in tier 1 when a typespec, the client
+callbacks or an inferred return type changed.
+
+Tests by area, all under `test/wotex/binding/mqtt/`:
+
+- Form mapping and the seven-row operation inventory (WBM-C01):
+  `mapping_test.exs`, `operation_inventory_test.exs`.
+- Values: `broker_test.exs`, `command_test.exs`, `delivery_test.exs`,
+  `topic_test.exs`, `qos_test.exs`, `json_test.exs`,
+  `transport_config_test.exs`.
+- Runtime transport, publish, retained read, failure normalization:
+  `transport_test.exs`; subscriptions through Runtime:
+  `runtime_subscription_test.exs`.
+- Client timeouts, handles, close failures, restart (WBM-C02):
+  `client_lifecycle_test.exs`.
+- Thresholds, filter cardinality, overload, redaction (WBM-C03):
+  `limits_security_test.exs`.
+- Profile and no application module: `library_contract_test.exs`; locked
+  Decimal boundary: `dependency_security_test.exs`.
+- Package contents or `mix.exs` `package`: the full gate (archive check).
+
+`wotex-lab` depends on this package (optionally) and implements its client
+port in `Wotex.Lab.Adapters.MQTT.EmqttClient`. This package calls the public
+API of `wotex` and `wotex-runtime`. Before changing a public function or a
+client callback, list callers with `mix refs Wotex.Binding.MQTT.Module fun` and
+the tests to run with `mix impact Wotex.Binding.MQTT.Module fun`.
+
+The boundary script is explicit-only: run `elixir bin/check_boundary.exs`
+inside `packages/wotex-binding-mqtt` before a commit that touches `lib/`,
+`test/` or `mix.exs`. No test needs a broker; this package has no native
+build, software profile, interop or container lane.

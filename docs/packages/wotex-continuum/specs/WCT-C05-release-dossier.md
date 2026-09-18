@@ -110,12 +110,13 @@ evidence and does not replace the exact local candidate toolchain.
 The archive check reads Hex `metadata.config` and requires the exact package
 name, application, version, description, links, Elixir requirement, Apache-2.0
 license, build tool, and runtime requirements. It requires the README, LICENSE,
-NOTICE, SECURITY, GOVERNANCE, threat model, dependency/source provenance,
-owning specifications, WCT-C01 through WCT-C05 maps, schemas, and public
-vectors. It rejects repository control files, repository-only tooling, local
-execution state, source checkouts, build output, coverage output, PLTs,
-executable verification scripts, and the internal test suite. Symlinks and
-embedded local source paths are rejected.
+NOTICE, CHANGELOG, schemas, and public vectors. It rejects Markdown
+documentation (specifications, verification maps, threat model and
+provenance reach consumers through HexDocs), governance and agent files,
+repository control files, repository-only tooling, local execution state,
+source checkouts, build output, coverage output, PLTs, executable verification
+scripts, and the internal test suite. Symlinks and embedded local source paths
+are rejected.
 
 The package has no application callback and starts no process. The default gate
 runs both Hex retirement and advisory audits without suppressions. The exact

@@ -34,8 +34,8 @@ preparation reproducible while allowing any consumer-selected Nx backend.
 
 ## Installation
 
-Wotex Nx requires Elixir 1.18 or later. After a compatible release is
-available, a consumer can declare the published package as follows.
+Wotex Nx requires Elixir 1.18 or later. No version is published on Hex yet.
+Once one is, depend on it as usual:
 
 ```elixir
 def deps do
@@ -43,6 +43,39 @@ def deps do
     {:wotex_nx, "~> 0.1"}
   ]
 end
+```
+
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. Wotex Nx needs the core `wotex` package, so
+declare both at the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_nx,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-nx",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_nx, path: "../wotex/packages/wotex-nx", override: true}
 ```
 
 ## Contract
@@ -133,31 +166,45 @@ contracts do not claim W3C certification or define a W3C numerical binding.
 
 ## Development
 
-A sibling checkout of `wotex` may be selected only in development, test, or
-documentation environments:
+The [specification](../../docs/packages/wotex-nx/specs/WNX.01-observation-numerical-boundary.md)
+and [completion contract](../../docs/packages/wotex-nx/plans/wotex-nx-completion.md)
+define the numerical contract, work packages and acceptance gates. Local
+execution tracking is not part of the published contract.
 
-```sh
-WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix check --no-retry
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```bash
+mix pkg wotex-nx test test/wotex/nx/window_encoder_test.exs  # one test file
+mix check.fast --package wotex-nx                            # compile, format, Credo, tests
+mix pkg wotex-nx check --no-retry                            # full gate
 ```
 
-`mix check`, run from `packages/wotex-nx` inside the
-[monorepo](https://github.com/wotex-project/wotex), is the development gate.
-It covers warnings-as-errors compilation, formatting, dependency audits,
-strict Credo, Doctor, documentation, coverage, Dialyzer, the archive lane
-(`bin/check_archive.exs`) and `git diff --check`. The boundary scan runs
-explicitly:
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-nx`. It compiles with warnings as errors, checks the lock and
+unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`, Credo,
+Doctor, `mix docs --warnings-as-errors` (in the `docs` environment), tests
+with the coverage floor (`mix coveralls`), Dialyzer and `git diff --check`,
+and then runs the archive check. `WOTEX_PATH_DEPS=1` selects the core package
+from `packages/wotex` only in development, test and documentation
+environments; it is never valid in production and never changes package
+metadata.
+
+The archive check (`mix run --no-start bin/check_archive.exs`) runs on the
+declared reference cohort. It compiles an isolated consumer from the exact
+unpacked Wotex Nx and core archives. Generated work stays in the
+operating-system temporary directory. The check builds the archive once from
+an external temporary mirror containing local and harness sentinels;
+source-byte identity and sentinel exclusion prove the package allowlist.
+
+The boundary scan is not part of the gate; run it from `packages/wotex-nx`:
 
 ```sh
-WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
+elixir bin/check_boundary.exs
 ```
 
-The archive lane runs on the declared reference cohort. It compiles an isolated
-consumer from the exact unpacked Wotex Nx and core archives. Generated work
-stays in the operating-system temporary directory. The lane builds the archive
-once from an external temporary mirror containing local and harness sentinels;
-source-byte identity and sentinel exclusion prove the package allowlist. The
-path switch is never valid in production and never changes package metadata.
+This package has no native build, software profile or container lane.
 
 ## License
 

@@ -33,8 +33,8 @@ consumer examples.
 
 ## Reproduction and evidence
 
-Use the pinned project toolchain and the explicit development core selection
-for the outer repository checkout:
+Use the pinned repository toolchain and the explicit development core
+selection, from `packages/wotex-continuum`:
 
 ```sh
 WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs

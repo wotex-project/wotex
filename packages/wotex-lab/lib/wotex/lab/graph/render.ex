@@ -135,7 +135,7 @@ defmodule Wotex.Lab.Graph.Render do
       graph["packages"]
       |> Enum.reject(&(&1["name"] == "wotex_lab"))
       |> Enum.map(fn upstream ->
-        "- [#{upstream["name"]}](#{upstream["repository"]}/tree/#{upstream["revision"]}): " <>
+        "- [#{upstream["name"]}](#{upstream["source_url"]}): " <>
           "source snapshot #{upstream["observed_on"]}; Hex #{upstream["artifact"]["hex_observation"]}"
       end)
 
@@ -170,9 +170,16 @@ defmodule Wotex.Lab.Graph.Render do
 
     ## Optional
 
-    - [Completion contract](#{package["source_url"]}/docs/plans/wotex-lab-completion.md): accepted work packages, not an execution tracker
+    - [Completion contract](#{document_url(graph, package["completion_plan"])}): accepted work packages, not an execution tracker
     - [Historical source baseline](#{package["source_url"]}/priv/provenance/source-index.json): immutable inspected revisions and their then-observed catalogue statuses
     """
+  end
+
+  defp document_url(graph, path) do
+    case Enum.find(graph["documents"] || [], &(&1["path"] == path)) do
+      %{"source_url" => url} -> url
+      nil -> graph["package"]["source_url"]
+    end
   end
 
   @doc "Encodes JSON-compatible data as deterministic block YAML."

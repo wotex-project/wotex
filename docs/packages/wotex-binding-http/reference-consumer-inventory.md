@@ -2,8 +2,8 @@
 
 WBH-C04 proves the release-shaped package boundary with a generated consumer
 outside every Wotex checkout. The executable authority is
-`bin/check_archive.exs`, invoked by the mandatory `archive` tool in the default
-repository gate.
+`bin/check_archive.exs`, invoked by the mandatory `archive` tool in the
+package gate (`mix pkg wotex-binding-http check --no-retry`).
 
 The checker builds the exact `wotex`, `wotex_runtime`, and
 `wotex_binding_http` archives once per invocation with `WOTEX_PATH_DEPS`

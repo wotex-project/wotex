@@ -30,10 +30,35 @@ clause, not invented codes.
 
 ## Installation
 
+`wotex_conformance` requires Elixir 1.18 or later. No version is published on
+Hex yet. Once one is, depend on it as usual:
+
 ```elixir
 def deps do
-  [{:wotex_conformance, "~> 0.1.0"}]
+  [{:wotex_conformance, "~> 0.1"}]
 end
+```
+
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select the
+package directory with `sparse:`. The package depends on no other WoTEx
+package. When you also use other WoTEx packages, declare every one of them at
+the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+{:wotex_conformance,
+ git: "https://github.com/wotex-project/wotex.git",
+ ref: "<commit>",
+ sparse: "packages/wotex-conformance",
+ override: true}
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex_conformance, path: "../wotex/packages/wotex-conformance", override: true}
 ```
 
 ## Evidence Model
@@ -149,19 +174,41 @@ loads a corpus, verifies an artifact, or runs an external target.
 
 ## Development
 
+The [specification catalogue](../../docs/packages/wotex-conformance/specs/catalogue.yaml)
+and [completion contract](../../docs/packages/wotex-conformance/plans/wotex-conformance-completion.md)
+define independently implementable work, acceptance gates and remaining claim
+obligations.
+
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
 ```console
-mix deps.get
-WOTEX_PATH_DEPS=1 mix check --no-retry
+mix pkg wotex-conformance test test/wotex/conformance/runner_test.exs  # one test file
+mix check.fast --package wotex-conformance                             # compile, format, Credo, tests
+mix pkg wotex-conformance check --no-retry                             # full gate
 ```
 
-`mix check --no-retry` is the package gate: warnings-as-errors compilation,
-locked and unused-dependency checks, formatting, dependency and Hex audits,
-strict Credo, Doctor, documentation with warnings as errors, coverage,
-Dialyzer, the archive and application-free checks, and whitespace. The
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-conformance`. It compiles with warnings as errors, checks the
+lock and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors`, tests with the coverage floor
+(`mix coveralls`), Dialyzer and `git diff --check`, and runs two package
+checks. The archive check (`mix run --no-start bin/check_archive.exs`) builds
+one Hex archive, rejects documentation, task and development paths, runs the
+boundary scan (`bin/check_boundary.exs`) over the unpacked archive, compiles
+it outside the source tree and runs the archive-only consumer and external
+target fixtures. The application-free check
+(`mix run --no-start bin/check_application_free.exs`) proves the package
+defines no application callback. This package has no native build, software
+profile or container lane.
+
+The
 [runtime compatibility evidence](../../docs/packages/wotex-conformance/provenance/runtime-compatibility.md)
 records the tested Elixir and Erlang/OTP cohorts and their limits. The
-[package input boundary](../../docs/packages/wotex-conformance/provenance/package-inputs.md) describes what
-enters the Hex archive; Markdown documentation reaches consumers through HexDocs.
+[package input boundary](../../docs/packages/wotex-conformance/provenance/package-inputs.md)
+describes what enters the Hex archive; Markdown documentation reaches
+consumers through HexDocs.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md),
 [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/security.md), and [GOVERNANCE.md](https://github.com/wotex-project/wotex/blob/main/GOVERNANCE.md). Licensed under

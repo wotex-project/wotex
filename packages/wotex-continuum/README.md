@@ -38,8 +38,8 @@ consumer.
 
 ## Installation
 
-Wotex Continuum requires Elixir 1.18 or later. After a compatible release is
-available, a consumer can declare the published package as follows.
+Wotex Continuum requires Elixir 1.18 or later. No version is published on Hex
+yet. Once one is, depend on it as usual:
 
 ```elixir
 def deps do
@@ -47,6 +47,39 @@ def deps do
     {:wotex_continuum, "~> 0.1"}
   ]
 end
+```
+
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. Wotex Continuum needs the core `wotex`
+package, so declare both at the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_continuum,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-continuum",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_continuum, path: "../wotex/packages/wotex-continuum", override: true}
 ```
 
 ## Quick Start
@@ -124,12 +157,11 @@ accepted struct.
 
 ## Development
 
-The [specification catalogue](../../docs/packages/wotex-continuum/specs/catalogue.yaml) and completion contract
-at `../../docs/packages/wotex-continuum/plans/wotex-continuum-completion.md`
+The [specification catalogue](../../docs/packages/wotex-continuum/specs/catalogue.yaml)
+and [completion contract](../../docs/packages/wotex-continuum/plans/wotex-continuum-completion.md)
 separate package verification from independent consumer, release and
-stable-API evidence.
-Normative WCT documents retain their single owners under
-`../../docs/packages/wotex-continuum/specs/`.
+stable-API evidence. Normative WCT documents retain their single owners under
+`docs/packages/wotex-continuum/specs/` in the repository.
 The [WCT-C01 contract map](../../docs/packages/wotex-continuum/specs/WCT-C01-contract-map.md) indexes every
 field, default, null rule, error family, and lifecycle edge to executable
 evidence. The [WCT-C02 admission map](../../docs/packages/wotex-continuum/specs/WCT-C02-admission-map.md)
@@ -145,41 +177,45 @@ The [WCT-C05 release-candidate dossier](../../docs/packages/wotex-continuum/spec
 separates package API from wire compatibility and records metadata, dependency,
 toolchain, public-content, standards, and nonclaim boundaries.
 
-```sh
-WOTEX_PATH_DEPS=1 mix deps.get --check-locked
-WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check --no-retry
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
+```bash
+mix pkg wotex-continuum test test/wotex_continuum/codec_test.exs  # one test file
+mix check.fast --package wotex-continuum                          # compile, format, Credo, tests
+mix pkg wotex-continuum check --no-retry                          # full gate
 ```
 
-The explicit switch also applies when Mix evaluates this library as a
-dependency under the `prod` dependency environment. Package construction
-unsets it and records the released `wotex` version requirement instead of a
-local path.
-
-`mix test` is the fast development loop. `mix check --no-retry` is the package
-gate: it compiles with warnings as errors, checks locked and unused
-dependencies, formatting, dependency and Hex audits, strict Credo, Doctor,
-documentation with warnings as errors, coverage, Dialyzer, the archive check
-and whitespace. The public boundary script runs separately:
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-continuum`. It compiles with warnings as errors, checks locked
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+strict Credo, Doctor, documentation with warnings as errors, tests with the
+coverage floor (`mix coveralls`), Dialyzer, the archive check and
+`git diff --check`. The public boundary scan is not part of the gate; run it
+from `packages/wotex-continuum` before a commit:
 
 ```sh
 elixir bin/check_boundary.exs
 ```
 
-The archive check builds one exact artifact and installs it through a signed
-temporary Hex registry in independent contract and reference consumers plus a
-separately isolated direct Jason-floor consumer. It asserts Hex-only exact
-locks, isolated BEAM paths, public examples, lifecycle and failure recovery,
-and every packaged vector.
+The archive check (`mix run --no-start bin/check_archive.exs`) builds one
+exact artifact and installs it through a signed temporary Hex registry in
+independent contract and reference consumers plus a separately isolated
+direct Jason-floor consumer. It asserts Hex-only exact locks, isolated BEAM
+paths, public examples, lifecycle and failure recovery, and every packaged
+vector. This package has no native build, software profile or container lane.
 
-The explicit path switch is a development mechanism, including when Mix
-evaluates dependencies in the `prod` environment. Without it, dependency
-selection uses the published package requirement; a nearby directory never
-changes dependency selection implicitly. A successful local-path check does
-not establish independent consumer installation against released dependencies.
+`WOTEX_PATH_DEPS=1` selects the core package from `packages/wotex`, including
+when Mix evaluates this library as a dependency under the `prod` dependency
+environment. Package construction unsets it and records the released `wotex`
+version requirement instead of a local path. Without it, dependency selection
+uses the published package requirement; a nearby directory never changes
+dependency selection implicitly. A successful local-path check does not
+establish independent consumer installation against released dependencies.
 
-See `../../docs/packages/wotex-continuum/specs/` for the normative contracts and
-`test/vectors/` for executable examples.
+The normative contracts are the WCT specifications linked above; `test/vectors/`
+holds the executable examples, which also ship in the package.
 
 ## License
 

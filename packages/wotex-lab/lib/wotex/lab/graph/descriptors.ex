@@ -11,7 +11,7 @@ defmodule Wotex.Lab.Graph.Descriptors do
   or the generator rejects the change as undeclared.
   """
 
-  @lab_repository "https://github.com/wotex-project/wotex-lab"
+  @lab_repository "https://github.com/wotex-project/wotex"
 
   @type scenario :: %{
           id: String.t(),
@@ -57,7 +57,11 @@ defmodule Wotex.Lab.Graph.Descriptors do
           statement: String.t()
         }
 
-  @doc "The canonical Lab repository URL used for revision-specific source links."
+  @doc """
+  The canonical URL of the repository that holds the Lab, used for
+  revision-specific source links. The Lab lives in `packages/wotex-lab/` and
+  its documentation in `docs/packages/wotex-lab/` of that repository.
+  """
   @spec repository() :: String.t()
   def repository, do: @lab_repository
 

@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.4. Contract: accepted. Source status: the workspace
+Specification version: 0.9.5. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -28,7 +28,7 @@ finish without the operator-installed `fwup` prerequisite.
 3. `released` uses published immutable Hex versions with recorded lock/checksum
    and archive digests. Base dependencies are core, Wotex Nx and Nx. Runtime,
    bindings, Directory, Continuum, conformance and heavyweight integration
-   dependencies belong to explicitly selected host profiles inside this repo.
+   dependencies belong to explicitly selected host profiles inside this package.
    The base package must not make brokers, SQLite, Maude, Axon, EXLA, Phoenix or
    an LLM necessary for the first tensor. Profiles share public Lab contracts.
    In source, `mix.exs` declares Runtime, both bindings, Directory, Continuum
@@ -44,9 +44,9 @@ claim source builds as published adoption, or change repository visibility.
 `elixir bin/check_source_cohort.exs` is a read-only workspace drift guard over the
 explicit source/spec/test/fixture cohort. It requires all source owners. It is
 an explicit evidence-refresh check run beside the `WOTEX_LAB_INTEGRATION=1`
-lanes, not part of the everyday `mix check` gate, which exercises sibling
-checkouts without binding them to content digests; package-only checks do not
-require sibling checkouts. Dirty content is covered by content digests;
+lanes, not part of the everyday `mix check` gate, which exercises the sibling
+packages in `packages/` without binding them to content digests; package-only
+checks do not require the sibling packages. Dirty content is covered by content digests;
 the historical revision snapshot is not relabeled. A changed hash requires
 review and renewed evidence, not automatic readiness promotion.
 WLB.04–06 and WLB.09 evidence digests include the reviewed content cohort;
@@ -79,7 +79,7 @@ Successful archive consumers delete only their own generated build/registry
 scratch material and retain their evidence; they do not erase earlier attempts.
 `bin/check_archive_consumer.exs` implements the `archive_consumer_green` gate
 for the base profile: it builds the core, Wotex Nx and Lab archives from the
-sibling checkouts without the workspace switch, admits public dependencies only
+sibling package directories without the workspace switch, admits public dependencies only
 at the versions in the Lab lock and only from the local Hex cache, builds a
 local Hex registry from those archives, serves it from OTP `httpd` on a
 loopback port, and drives a fresh Mix application through a PATH that links
@@ -137,7 +137,7 @@ evidence, so it does not pass `reference_consumer_green` or
 
 ## Release review artifacts
 
-`docs/provenance/workbench-bom.cdx.json` is a deterministic CycloneDX 1.7 SBOM
+`priv/provenance/workbench-bom.cdx.json` is a deterministic CycloneDX 1.7 SBOM
 for the exact active production tree resolved by `workbench_archive_green`.
 CycloneDX 1.7 was the current official version at the 2026-09-08 review; the
 official JSON schema is the reference representation. Every component records
@@ -149,7 +149,7 @@ separate gate evidence records those exact candidate archive digests. All
 dependency references must resolve inside the BOM and every direct host
 requirement must be present.
 
-`docs/provenance/wotex-lab-api.json` is the pre-1.0 public review baseline for
+`priv/provenance/wotex-lab-api.json` is the pre-1.0 public review baseline for
 the base Lab application. It records every application module's exported
 function/arity, declared behaviour, struct keys and retrievable typespec clauses.
 `bin/generate_api_surface.exs --check` fails on drift and requires an explicit

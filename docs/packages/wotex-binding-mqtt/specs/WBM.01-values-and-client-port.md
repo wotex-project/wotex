@@ -3,8 +3,8 @@
 Specification `WBM.01@1.1.0`; package baseline `wotex_binding_mqtt 0.1.0`.
 Requires `wotex:WTX.02`, `wotex_runtime:WRT.01`. The document is named by its
 identifier; the 0.1.0 series is unreleased, so the former path carries no link
-debt. See the repository completion plan at
-`docs/plans/wotex-binding-mqtt-completion.md` for gates and remaining claims.
+debt. See the package [completion plan](../plans/wotex-binding-mqtt-completion.md)
+for gates and remaining claims.
 
 ## Scope
 
@@ -155,8 +155,9 @@ establish authenticated source authority.
 ## Standards, evidence and compatibility
 
 OASIS MQTT 5.0 (2019-03-07) and 3.1.1 (2014-10-29) are the dated value baseline
-in `docs/provenance/mqtt-primary-sources.md`. This package implements no wire
-parser, QoS handshake, session expiry or acknowledgement/retransmission state.
+in the [MQTT primary sources](../provenance/mqtt-primary-sources.md). This
+package implements no wire parser, QoS handshake, session expiry or
+acknowledgement/retransmission state.
 MQTT 5 shared-subscription grammar is not MQTT 3.1.1 interoperability proof;
 the client must admit negotiated broker capabilities.
 

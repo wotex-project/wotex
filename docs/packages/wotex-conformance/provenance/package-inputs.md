@@ -1,29 +1,32 @@
-# Package documentation inputs
+# Package inputs
 
-`mix.exs` defines the Hex archive inputs with an explicit `files` allowlist.
-Publishable documentation enters the archive only through these directory
-roots:
+`mix.exs` defines the Hex archive inputs with an explicit `files` allowlist:
 
-- `docs/decisions`
-- `docs/plans`
-- `docs/provenance`
-- `docs/specs`
+- `lib`
+- `priv/schemas` and `priv/vectors`
+- `.formatter.exs`, `CHANGELOG.md`, `LICENSE`, `NOTICE`, `README.md` and
+  `mix.exs`
 
-The allowlist does not contain `docs/tasks` or one of its ancestors. Local
-execution records under `docs/tasks/local` therefore remain outside the
-archive even when those files exist while `mix hex.build` runs. Their Git
-ignore rule is repository hygiene; it is not the package exclusion mechanism.
+The archive ships no Markdown documentation, governance or agent files.
+Specifications, decisions and provenance live in this repository under
+`docs/packages/wotex-conformance/`, outside the package directory, and reach
+consumers through HexDocs. Local execution records live only in the ignored
+root `docs/tasks/local/wotex-conformance/`, also outside the package
+directory. Their Git ignore rule is repository hygiene; it is not the package
+exclusion mechanism.
 
-The WCF-C07 evidence lane places a sentinel under `docs/tasks/local`, builds
-the archive, reviews the archive listing, and runs:
+The WCF-C07 evidence lane places a sentinel under the root
+`docs/tasks/local/wotex-conformance/`, builds the archive, reviews the archive
+listing, and runs from `packages/wotex-conformance`:
 
 ```console
 mix run --no-start bin/check_archive.exs
 ```
 
-The checker rejects an archive containing `docs/tasks/local`, local Dialyzer
-state, Git state, dependencies, or build output. It also checks required
-package material and compiles the extracted library outside the source tree.
+The checker rejects an archive containing any `docs` or `tasks` path segment,
+local Dialyzer state, Git state, dependencies, or build output. It also checks
+required package material and compiles the extracted library outside the
+source tree.
 
 This boundary covers the candidate Hex archive produced from the recorded
 source and Mix configuration. It makes no claim about files copied by another

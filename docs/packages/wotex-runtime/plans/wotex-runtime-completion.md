@@ -60,11 +60,15 @@ Each gate records exact source/dependency tree or archive digest, command,
 configuration, vector identities, result and limitations. No gate requires an
 automated push, tag, release or registry publication.
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry`, run from `packages/wotex-runtime`,
+After cloning the repository and running `mix setup` at its root,
+`mix pkg wotex-runtime check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` run from `packages/wotex-runtime`)
 is the default developer gate and the repository-level gate. It compiles with
 warnings as errors, checks formatting, dependency audits, Credo, Doctor,
-documentation, coverage, Dialyzer and the package archive. Reference-consumer
-and compatibility evidence remain explicit lanes recorded separately.
+documentation, coverage, Dialyzer and the package archive. The fast loop is
+`mix pkg wotex-runtime test` and `mix check.fast --package wotex-runtime`.
+Reference-consumer and compatibility evidence remain explicit lanes recorded
+separately.
 
 | Gate | Required evidence | Does not establish |
 |---|---|---|

@@ -7,8 +7,8 @@ or credential custody is transferred.
 
 ## Dated standards baseline and operation matrix
 
-`docs/provenance/mqtt-binding-draft-2026-07-01.md` records the
-[WoT MQTT Binding](https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/)
+The [dated draft provenance](../provenance/mqtt-binding-draft-2026-07-01.md)
+records the [WoT MQTT Binding](https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/)
 Editor's Draft dated 2026-07-01, observed 2026-09-02. This is an engineering
 baseline, not a fresh maturity review or W3C conformance/endorsement claim.
 

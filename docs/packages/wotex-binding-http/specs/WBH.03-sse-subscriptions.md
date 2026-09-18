@@ -109,7 +109,8 @@ cursor persistence, event deduplication or bounded process mailbox; Runtime owns
 the optional receiver mailbox bound. The Living
 Standard is a client framing reference; draft WoT Profile use is not conformance.
 
-`docs/client-lifecycle-inventory.md`, `docs/limits-security-inventory.md`,
+The [client lifecycle inventory](../client-lifecycle-inventory.md), the
+[limits and security inventory](../limits-security-inventory.md),
 `client_lifecycle_inventory_test.exs`, `limits_security_test.exs`,
 `transport_test.exs` and `integration_test.exs` cover the open/event/close
 boundary, including exact event-byte thresholds, malformed handshakes, cleanup

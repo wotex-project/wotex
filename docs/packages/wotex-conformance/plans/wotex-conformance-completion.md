@@ -111,7 +111,8 @@ An independent target must not calculate expected answers using runner internals
 ## Gates and evidence
 
 - `repository_green`: the repository-level gate `WOTEX_PATH_DEPS=1 mix check
-  --no-retry`, run from `packages/wotex-conformance` and mirrored by the
+  --no-retry`, run from `packages/wotex-conformance` (from the repository
+  root: `mix pkg wotex-conformance check --no-retry`) and mirrored by the
   package's CI lane: clean-build warnings-as-errors compilation, locked and
   unused-dependency checks, format, dependency and Hex audits, strict Credo,
   Doctor, docs with warnings as errors, all tests with coverage, Dialyzer,
@@ -134,6 +135,13 @@ An independent target must not calculate expected answers using runner internals
 Evidence records commit, archive SHA-256, corpus/manifest digest, protocol,
 runtime and dependency cohort, commands and exit codes. Passing a different
 corpus or subject cannot discharge a claim for the selected artifact.
+
+Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
+`packages/wotex-conformance/CLAUDE.md`, this plan and WCF.01; run `mix setup`
+from the repository root, use `mix pkg wotex-conformance test` and
+`mix check.fast --package wotex-conformance` for the fast loop, and run
+`mix pkg wotex-conformance check --no-retry` before recording
+`repository_green` or `archive_consumer_green`.
 
 ## Local tracker contract
 

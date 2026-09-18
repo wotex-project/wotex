@@ -53,8 +53,10 @@ defmodule Wotex.Lab.SourceCohortTest do
         File.write!(Path.join(directory, "lib/value.ex"), value)
 
         %{
+          "id" => owner,
           "package" => String.replace(owner, "-", "_"),
-          "repository" => "https://github.com/wotex-project/" <> owner
+          "repository" => "https://github.com/wotex-project/wotex",
+          "directory" => "packages/" <> owner
         }
       end
 

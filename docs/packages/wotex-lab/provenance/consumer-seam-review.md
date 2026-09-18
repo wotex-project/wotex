@@ -62,6 +62,10 @@ green status or a “zero drift forever” assertion.
 
 ## Runtime and HTTP follow-up cohort
 
+This review predates the monorepo import. Owner revisions other than core's
+name commits of the former per-package repositories; they identify the
+reviewed trees and are not revisions of this repository.
+
 Review date: 2026-09-08. Runtime is reviewed through
 `c9c336a61e6b3cd8a1cd00f3ed7b52fb74a40aa6`, HTTP through
 `b9fd354cfd843daa3bdfab38c667234191e992a5`. The other six content cohorts are

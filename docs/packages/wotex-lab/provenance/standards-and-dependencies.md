@@ -1,10 +1,10 @@
 # Source and dependency baseline
 
-Observation date: 2026-09-07. The companion `source-index.json` is a checked-in
-inspection snapshot, not a generated release ecosystem manifest or a progress
-tracker. It records immutable repository revisions, catalogue/plan paths,
-observed source statuses and exact public behaviour source locations. All
-eight inspected WoTEx worktrees were clean. No private implementation or local
+Observation date: 2026-09-07. The companion `priv/provenance/source-index.json`
+is a checked-in inspection snapshot, not a generated release ecosystem
+manifest or a progress tracker. It records immutable repository revisions,
+catalogue/plan paths, observed source statuses and exact public behaviour
+source locations. All eight inspected WoTEx worktrees were clean. No private implementation or local
 filesystem path is a published input.
 
 That original revision snapshot remains historical. The follow-up
@@ -13,6 +13,25 @@ separate content-based cohort, which includes uncommitted input. It does not
 rewrite the original snapshot as though repairs existed at those commits.
 The [workbench/observability decision](../decisions/0003-native-workbench-and-observability.md)
 records the additional primary references and dependency boundaries.
+
+The snapshot names every revision in this repository. The core package was
+inspected at a commit of this repository from before the packages moved under
+`packages/`, so its `directory` is the repository root (`.`). The other seven
+were inspected in their former per-package repositories; after the import
+each entry names the commit of this repository whose `packages/<name>/`
+directory is byte-identical to the inspected tree, with `directory` set to
+that path. Statuses, paths and catalogue/plan digests are unchanged.
+
+| Package | Inspected revision | Revision in this repository |
+| --- | --- | --- |
+| `wotex` | `bb042182d3cb16e7ad47cd204881ecca8388281d` | same |
+| `wotex_runtime` | `63dac84c63ae621b8c383d78811b4322c45b35e3` | `bdfd244ed74ec3427a29adbbb713413a0fc68ed6` |
+| `wotex_binding_http` | `ceb76c68c493013ed29b89b3c0a5f5476f0c7fd7` | `5543238698294a4c9bb6b2aa2b13c4f5539e1ad4` |
+| `wotex_binding_mqtt` | `3b6239301e87c6fd1218910dddae509ea765792b` | `29fe3116f03bd6bc683a9418d33f63b61498a6c7` |
+| `wotex_directory` | `1607f98c8d1bf43579464cf25c5d1a52baae4bf2` | `dcb90c0660e6c7d4e3968959e129fd0cd3692f31` |
+| `wotex_continuum` | `d722d4d20ed13316e49d87fe0d0b8c286e920f68` | `3a0f933a8654c6bd976a210a8fd478f304ba5f72` |
+| `wotex_conformance` | `d7d2218bb5562cf21a73067473d42451691f4170` | `fd8bd121055343187fc6bd1fbafa2b410a816236` |
+| `wotex_nx` | `6050169f2699ac5b3a9c69f61c3e6fb1353c1e94` | `8955bb278c7a09122624c353938f2f226d232aed` |
 
 The WoTEx Hex API routes for `wotex`, `wotex_runtime`, `wotex_binding_http`,
 `wotex_binding_mqtt`, `wotex_directory`, `wotex_continuum`, `wotex_conformance`

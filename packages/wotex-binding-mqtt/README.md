@@ -25,19 +25,58 @@ and credential authority in one place.
 
 ## Installation
 
-For a sibling-checkout consumer, select the package explicitly:
+Wotex MQTT Binding 0.1 requires Elixir 1.18 or later. No version is published
+on Hex yet. Once one is, depend on it as usual; Hex resolves `wotex` and
+`wotex_runtime` from the package's own requirements:
 
 ```elixir
 def deps do
-  [{:wotex_binding_mqtt, path: "../wotex-binding-mqtt"}]
+  [{:wotex_binding_mqtt, "~> 0.1"}]
 end
 ```
 
-Package builds resolve `wotex ~> 0.1` and `wotex_runtime ~> 0.1`. Once a suitable
-release is available, replace the consumer's path dependency with its version
-constraint. For
-coordinated source development, `WOTEX_PATH_DEPS=1 mix deps.get` selects the
-sibling checkouts explicitly; no adjacent path is discovered implicitly.
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. The binding's `mix.exs` declares Hex
+requirements for `wotex ~> 0.1.0` and `wotex_runtime ~> 0.1.0`, so declare all
+three packages at the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+def deps do
+  [
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true},
+    {:wotex_runtime,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-runtime",
+     override: true},
+    {:wotex_binding_mqtt,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex-binding-mqtt",
+     override: true}
+  ]
+end
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true},
+{:wotex_binding_mqtt, path: "../wotex/packages/wotex-binding-mqtt", override: true}
+```
+
+Path dependencies prove nothing about a released artifact; no adjacent path is
+discovered implicitly.
 
 ## Quick Start
 
@@ -185,23 +224,37 @@ back-pressure, TLS material, and broker observability remain consumer concerns.
 
 ## Development
 
-```console
-WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix check --no-retry
-```
-
-`mix check --no-retry` is the package gate: warnings-as-errors compilation,
-locked and unused-dependency checks, formatting, dependency and Hex audits,
-strict Credo, Doctor, documentation with warnings as errors, coverage,
-Dialyzer, the exact-archive and application-free checks, and whitespace. The
-public boundary script runs separately:
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
 
 ```console
-WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
+mix pkg wotex-binding-mqtt test test/wotex/binding/mqtt/mapping_test.exs  # one test file
+mix check.fast --package wotex-binding-mqtt                               # compile, format, Credo, tests
+mix pkg wotex-binding-mqtt check --no-retry                               # full gate
 ```
 
-These commands do not invoke a release task, publish a package, or mutate a
-remote.
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-binding-mqtt`. It compiles with warnings as errors, checks the
+lock and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors` (in the `docs` environment),
+tests with the coverage floor (`mix coveralls`), Dialyzer and
+`git diff --check`. It then runs the exact-archive check
+(`mix run --no-start bin/check_archive.exs`), which builds the `wotex`,
+`wotex_runtime` and `wotex_binding_mqtt` archives from `packages/` without
+path dependencies and runs an isolated reference consumer against them, and the
+application-free check (`mix run --no-start bin/check_application_free.exs`).
+
+The public boundary script is not part of the gate. Run it inside
+`packages/wotex-binding-mqtt`:
+
+```console
+elixir bin/check_boundary.exs
+```
+
+This package has no native build, software profile, interop or container lane;
+no test needs a broker. These commands do not invoke a release task, publish a
+package, or mutate a remote.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](https://github.com/wotex-project/wotex/blob/main/CONTRIBUTING.md), and
 [SECURITY.md](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/security.md). Licensed under Apache-2.0; see

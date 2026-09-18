@@ -11,7 +11,7 @@ structured errors, public documentation and local quality gates.
 The base graph contains `wotex`, `wotex_nx` and `nx`. A deterministic thermal
 experiment gives Nx users a useful first result. Heavy network, serving,
 training, dashboard and formal dependencies belong to explicit host integration
-profiles in this repository. Their implementation is required by the programme;
+profiles in this package. Their implementation is required by the programme;
 activation is optional for consumers. There is no new forest of adapter repos.
 
 Lab has no application callback. Ordinary caller-supplied child specs own

@@ -22,7 +22,7 @@ Mix.install([
 The requirements above are published-artifact requirements. At the time this
 notebook was written none of the `wotex*` packages is published on Hex; the
 notebook is verified against the workspace source cohort recorded in
-`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+`priv/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
 which evaluates every Elixir cell below in order (skipping this install
 cell). `Mix.install/1` never points at a Git checkout. The subject archive
 is a tar of the loaded core `ebin` directory written under a temporary

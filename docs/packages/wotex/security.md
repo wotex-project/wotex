@@ -13,7 +13,7 @@ credential custody, transport security, persistence, and deployment policy.
 On 2026-09-08, `mix hex.audit` reports no matching advisory for the exact locked
 dependency set. The project therefore carries no advisory suppression. The
 [Decimal maintainer advisory](https://github.com/ericmj/decimal/security/advisories/GHSA-rhv4-8758-jx7v)
-identifies versions before 3.0.0 as affected; this repository locks Decimal
+identifies versions before 3.0.0 as affected; this package locks Decimal
 3.1.1.
 
 Dependency security tests retain a defense-in-depth boundary: they bind the

@@ -3,7 +3,7 @@
 Specification `WBH.01@1.1.0`; package baseline `wotex_binding_http 0.1.0`.
 Requires `WBH.02`, `wotex_runtime:WRT.01`. This is an implementation contract,
 not a completed standards or release claim; see
-the repository completion plan at `docs/plans/wotex-binding-http-completion.md`.
+the package [completion plan](../plans/wotex-binding-http-completion.md).
 
 ## Scope
 
@@ -121,14 +121,16 @@ classify physical-effect certainty.
 
 ## Standards and executable evidence
 
-`docs/standards-baseline.md` fixes TD 1.1 Recommendation 2023-12-05, HTTP
-Semantics RFC 9110, framing delegation RFC 9112, JSON RFC 8259, and explicitly
-draft-derived Profile mappings. `docs/http-operation-inventory.md` maps each
+The [standards baseline](../standards-baseline.md) fixes TD 1.1
+Recommendation 2023-12-05, HTTP Semantics RFC 9110, framing delegation
+RFC 9112, JSON RFC 8259, and explicitly draft-derived Profile mappings. The
+[HTTP operation inventory](../http-operation-inventory.md) maps each
 supported operation and the aggregate unsupported cell to its implementation
 source, exact authority, and named positive/negative vectors.
-`docs/limits-security-inventory.md`, `operation_inventory_test.exs`,
-`form_test.exs`, `transport_test.exs`, `limits_security_test.exs` and
-`integration_test.exs` under `test/wotex/binding/http/` prove the package subset.
+The [limits and security inventory](../limits-security-inventory.md),
+`operation_inventory_test.exs`, `form_test.exs`, `transport_test.exs`,
+`limits_security_test.exs` and `integration_test.exs` under
+`test/wotex/binding/http/` prove the package subset.
 Each new claim requires source revision, exact operation, preconditions,
 negative cells and named tests. A draft-derived GET/DELETE/SSE mapping remains
 package behavior, not W3C endorsement or registry membership.

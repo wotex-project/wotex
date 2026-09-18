@@ -6,7 +6,7 @@ receipt. Consumers keep run logs, commit-bound results, and orchestration state
 outside this repository. Revision 1.1.0 declares the cohort as the two
 repository CI lanes on which every package gate runs: the minimum lane
 (Elixir 1.18.4-otp-27, Erlang/OTP 27.3.4.15) and the current lane (Elixir
-1.20.2-otp-29, Erlang/OTP 29.0.4, the root `.tool-versions` pin). The archive
+1.20.2-otp-29, Erlang/OTP 29.0.4, the root `mise.toml` pin). The archive
 consumer accepts either lane and prints which one ran; the Nx release,
 backend, compiler and comparison policy are unchanged.
 

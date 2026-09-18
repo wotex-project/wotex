@@ -30,8 +30,8 @@ defmodule WotexLabWorkbench.MixProject do
 
   # The host consumes the Lab and the WoTEx profile packages as artifacts.
   # `WOTEX_PATH_DEPS=1` is the family's single development switch: it points
-  # at the sibling checkouts two directories up (the Lab root and its
-  # siblings) and is refused outside dev, test and docs. It never proves
+  # at the Lab package two directories up and its sibling packages in
+  # `packages/`, and is refused outside dev, test and docs. It never proves
   # artifact adoption; release paths use Hex requirements only.
   defp deps do
     [

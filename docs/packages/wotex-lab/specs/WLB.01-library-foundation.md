@@ -49,7 +49,7 @@ isolated role failure including a brutal kill of one role with the sibling's
 children untouched, and shutdown. `library_contract_test.exs` checks the
 application callback, package dependency direction and callable public surface.
 These are source checks; WLB.08 owns artifact and runtime-cohort evidence.
-`docs/provenance/WLB.01-evidence.json` binds the fixed-seed 12-test result to
+`priv/provenance/WLB.01-evidence.json` binds the fixed-seed 12-test result to
 the exact source, lock and API-review cohort and records zero surviving
 instances or children.
 

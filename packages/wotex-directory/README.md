@@ -31,16 +31,46 @@ that refused the request, an optional JSON Pointer `path`, a deterministic
 
 ## Installation
 
+Wotex Directory 0.1 requires Elixir 1.18 or later. No version is published on
+Hex yet. Once one is, depend on it as usual:
+
 ```elixir
 def deps do
-  [{:wotex_directory, "~> 0.1.0"}]
+  [{:wotex_directory, "~> 0.1"}]
 end
 ```
 
-The only production dependency is `wotex ~> 0.1.0`, which owns Thing Description
-values and validation. For coordinated source development, set
-`WOTEX_PATH_DEPS=1` before fetching dependencies to select the sibling checkout
-explicitly. Normal builds always resolve the Hex package.
+The only production dependency is `wotex ~> 0.1.0`, which owns Thing
+Description values and validation.
+
+Until publication, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. Declare Wotex Directory and `wotex` at the
+same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+{:wotex,
+ git: "https://github.com/wotex-project/wotex.git",
+ ref: @wotex_ref,
+ sparse: "packages/wotex",
+ override: true},
+{:wotex_directory,
+ git: "https://github.com/wotex-project/wotex.git",
+ ref: @wotex_ref,
+ sparse: "packages/wotex-directory",
+ override: true}
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_directory, path: "../wotex/packages/wotex-directory", override: true}
+```
 
 ## Quick Start
 
@@ -132,23 +162,34 @@ database, filesystem, endpoint, credential, or job.
 
 ## Development
 
+The [specification catalogue](../../docs/packages/wotex-directory/specs/catalogue.yaml)
+and [completion contract](../../docs/packages/wotex-directory/plans/wotex-directory-completion.md)
+define the work packages, gates and remaining claims. Local execution records
+are not part of the published contract.
+
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
+
 ```console
-WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check --no-retry
+mix pkg wotex-directory test test/wotex/directory/directory_test.exs  # one test file
+mix check.fast --package wotex-directory                              # compile, format, Credo, tests
+mix pkg wotex-directory check --no-retry                              # full gate
 ```
 
-`mix test` is the focused development loop. `mix check --no-retry`, run from
-`packages/wotex-directory` inside the
-[monorepo](https://github.com/wotex-project/wotex), is the development gate:
-it compiles with warnings as errors, checks formatting, dependency audits,
-strict Credo, Doctor, documentation, coverage, Dialyzer, the package archive,
-the application-free boundary, and `git diff --check`.
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-directory`, and runs in the `test` environment. It compiles
+with warnings as errors, checks the lock and unused dependencies, formatting,
+`mix deps.audit` and `mix hex.audit`, strict Credo, Doctor,
+`mix docs --warnings-as-errors` (in `MIX_ENV=docs`), tests with the coverage
+floor (`mix coveralls`), Dialyzer, the package archive
+(`bin/check_archive.exs`), the application-free check
+(`bin/check_application_free.exs`) and `git diff --check`.
 
 The external release-evidence manifest uses an explicit runner:
 
 ```console
-WOTEX_PATH_DEPS=1 mix run --no-start bin/check_release_evidence.exs
+mix pkg wotex-directory run --no-start bin/check_release_evidence.exs
 ```
 
 The runner resolves the locked dependency cohort and executes the same
@@ -161,13 +202,14 @@ the consumer lock cohort. This establishes archive-only interoperability for
 those configured consumers, not production adapter compatibility,
 certification or publication to Hex.
 
-`WOTEX_PATH_DEPS=1 mix package` runs that archive check on its own. The explicit
+`mix pkg wotex-directory package` (inside the package,
+`WOTEX_PATH_DEPS=1 mix package`) runs that archive check on its own. The explicit
 development switch selects the core source only for building its archive; it
 is cleared before both archive construction and consumer execution. To supply
 an existing core archive instead, set `WOTEX_CORE_ARCHIVE` to its absolute
 path. Set `WOTEX_DIRECTORY_ARCHIVE` as well to repeat the complete archive
 verification against an existing Directory artifact without rebuilding it.
-No neighboring checkout or previously compiled module is a fallback.
+No sibling package directory or previously compiled module is a fallback.
 Generated consumer files are temporary. The printed artifact directory retains
 the archives and consumer lock outside the repository.
 

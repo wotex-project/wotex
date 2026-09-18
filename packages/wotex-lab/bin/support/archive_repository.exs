@@ -16,7 +16,7 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
   def build_archives!(root, packages, tarballs) do
     Enum.map(packages, fn {app, directory} ->
       dir = Path.expand("../#{directory}", root)
-      File.dir?(dir) || abort("missing sibling checkout for #{app} at ../#{directory}")
+      File.dir?(dir) || abort("missing sibling package for #{app} at ../#{directory}")
       env = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
 
       {version, 0} =

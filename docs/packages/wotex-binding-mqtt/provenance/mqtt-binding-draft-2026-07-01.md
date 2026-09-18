@@ -7,7 +7,7 @@
 - Source status shown: W3C Editor's Draft, 01 July 2026
 - Document status: work in progress
 - Repository snapshot and file digests:
-  `docs/provenance/mqtt-binding-source-manifest.json`
+  `docs/packages/wotex-binding-mqtt/provenance/mqtt-binding-source-manifest.json`
 
 This package implements a conservative executable subset of that dated draft.
 It does not claim W3C conformance or imply W3C endorsement.

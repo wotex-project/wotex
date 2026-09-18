@@ -4,10 +4,11 @@
 defmodule Wotex.Lab.Check.SourceCohort do
   @moduledoc false
 
-  # Package patterns match beside the owner's mix.exs. Its specifications,
-  # plans and decisions live in the owner's documentation tree: `docs/` beside
-  # mix.exs in a standalone checkout, `docs/packages/<owner>/` two levels up in
-  # the monorepo. Both are recorded under the same `docs/<kind>/` names.
+  # Each owner is the package directory named by its index `id`, beside the
+  # Lab in `packages/`. Package patterns match beside the owner's mix.exs. Its
+  # specifications, plans and decisions live in the owner's documentation
+  # tree, `docs/packages/<owner>/` two levels up (or `docs/` beside mix.exs in
+  # a copied tree), and are recorded under the same `docs/<kind>/` names.
   @patterns ~w(lib/**/* test/**/* priv/w3c/**/* priv/schemas/**/* priv/vectors/**/*
                docs/specs/**/* specs/**/* docs/plans/**/* docs/decisions/**/*
                mix.exs mix.lock README.md CLAUDE.md)
@@ -25,12 +26,11 @@ defmodule Wotex.Lab.Check.SourceCohort do
 
     entries =
       Enum.map(index["packages"], fn package ->
-        directory =
-          package["repository"]
-          |> String.split("/")
-          |> List.last()
+        directory = package["id"]
 
-        Regex.match?(~r/\Awotex(?:-[a-z]+)*\z/, directory) || abort("unexpected source owner")
+        (is_binary(directory) and Regex.match?(~r/\Awotex(?:-[a-z]+)*\z/, directory)) ||
+          abort("unexpected source owner")
+
         repo = Path.join(Path.dirname(root), directory)
         File.dir?(repo) || abort("missing source owner: #{directory}")
 

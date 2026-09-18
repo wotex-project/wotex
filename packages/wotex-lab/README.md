@@ -7,11 +7,13 @@
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/hexpm/l/wotex_lab.svg)](https://github.com/wotex-project/wotex/blob/main/packages/wotex-lab/LICENSE)
 
+[Installation](#installation) ·
 [Foundation](#run-the-foundation) ·
 [Cookbooks](#cookbooks) ·
 [Process ownership](#own-the-processes-explicitly) ·
 [Architecture](#architecture) ·
 [Evidence and adoption](#source-evidence-and-adoption) ·
+[Development](#development) ·
 [License](#license)
 
 ---
@@ -24,7 +26,7 @@ Lab composes their public seams into inspectable experiments. For the Nx
 community, the entry point is a typed sensor observation becoming a numerical
 batch, a model result and an inert Action proposal with traceable provenance.
 
-This checkout supplies the library foundation, not the complete laboratory.
+This package supplies the library foundation, not the complete laboratory.
 The [specification catalogue](../../docs/packages/wotex-lab/specs/catalogue.yaml) and
 [completion contract](../../docs/packages/wotex-lab/plans/wotex-lab-completion.md) define the entire
 accepted programme, including network adapters, dual Directory stores,
@@ -33,17 +35,74 @@ PromEx/GreptimeDB/BeamLens, a lean LiveView workbench, hosted and embedded
 distribution. Each has a concrete acceptance gate. None
 is an unspecified backlog item or an advertised working feature.
 
-## Run the foundation
+## Installation
 
-Requires Elixir 1.18+ and OTP 27+. The source cohort was inspected on
-2026-09-08; the WoTEx dependencies were not available from Hex at that time.
-Use the same explicit development switch as the other libraries:
+Requires Elixir 1.18+ and OTP 27+. No version of Lab or of the WoTEx packages
+it uses is published on Hex yet; the source cohort was inspected on
+2026-09-08, when the Hex API returned no WoTEx package. Once Lab is
+published, depend on it as usual:
 
-```sh
-WOTEX_PATH_DEPS=1 mix setup
-WOTEX_PATH_DEPS=1 mix run -e 'IO.inspect(Wotex.Lab.Examples.Thermal.run())'
-WOTEX_PATH_DEPS=1 mix check --no-retry
+```elixir
+def deps do
+  [
+    {:wotex_lab, "~> 0.1"}
+  ]
+end
 ```
+
+That base requirement brings core, Wotex Nx, Nx and telemetry only. Runtime,
+the HTTP and MQTT bindings, Directory, Continuum, Exqlite, Axon, EXLA and
+Explorer are optional profile packages a host adds explicitly; the Lab modules
+behind each seam compile only when that package is present. The conformance
+runner is a development and test dependency of Lab, not a consumer
+requirement.
+
+Until publication, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. Declare Lab and every WoTEx package it needs
+at the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes. The base profile needs `wotex` and `wotex_nx`; add the profile
+packages your host selects (`wotex_runtime` is required by both bindings):
+
+```elixir
+@wotex_ref "<commit>"
+
+defp wotex(app, directory) do
+  {app,
+   git: "https://github.com/wotex-project/wotex.git",
+   ref: @wotex_ref,
+   sparse: "packages/#{directory}",
+   override: true}
+end
+
+def deps do
+  [
+    wotex(:wotex_lab, "wotex-lab"),
+    wotex(:wotex, "wotex"),
+    wotex(:wotex_nx, "wotex-nx"),
+    # Optional profile packages, only when the host selects them:
+    wotex(:wotex_runtime, "wotex-runtime"),
+    wotex(:wotex_binding_http, "wotex-binding-http"),
+    wotex(:wotex_binding_mqtt, "wotex-binding-mqtt"),
+    wotex(:wotex_directory, "wotex-directory"),
+    wotex(:wotex_continuum, "wotex-continuum")
+  ]
+end
+```
+
+For local development with the repository checked out next to your project,
+use path dependencies into `packages/`, for example:
+
+```elixir
+{:wotex_lab, path: "../wotex/packages/wotex-lab", override: true},
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_nx, path: "../wotex/packages/wotex-nx", override: true}
+```
+
+Path and Git dependencies are source evidence only; they do not satisfy the
+clone-free acceptance gate. Production rejects `WOTEX_PATH_DEPS` and uses Hex
+requirements.
 
 Ordinary numerical setup needs no native compiler: `exqlite` ships
 precompiled NIFs and `emqtt` is compiled without its QUIC transport, so its
@@ -52,112 +111,13 @@ msquic download or cmake run happens. A host that selects `emqtt` itself
 sets `BUILD_WITHOUT_QUIC=1` in its own build to keep that property; the
 published package cannot carry a build environment for a dependency.
 
-The full conformance source suite requires Rust/Cargo 1.85+ with rustfmt and
-Clippy, plus Darwin `sandbox-exec` or an admitted Linux Bubblewrap environment.
-It explicitly builds and checks the external Rust helper and feature-gated
-test probes. No Python interpreter is used. This is separate from compilation
-or first-tensor use of the base package. On a Docker host, the Linux lane runs
-the same suite through Bubblewrap in a pinned image:
+## Run the foundation
+
+From the repository root:
 
 ```sh
-elixir bin/check_linux_containment.exs
+mix pkg wotex-lab run -e 'IO.inspect(Wotex.Lab.Examples.Thermal.run())'
 ```
-
-For a reviewed local conformance target, provision the helper explicitly:
-
-```sh
-cargo build --locked --release --manifest-path priv/conformance/native/Cargo.toml --target-dir tmp/contained-exec --bin wotex-contained-exec
-```
-
-Record the resulting executable's reviewed SHA-256 and pass
-`launcher: %{executable: absolute_path, digest: expected_digest}` to
-`Wotex.Lab.Conformance.Containment.external_map/5`. The API verifies that
-descriptor; it never compiles, downloads or discovers a helper. The package
-includes source, not platform binaries. See the
-[native containment decision](../../docs/packages/wotex-lab/decisions/0006-native-containment-executable.md)
-for the sampled-limit, hostile-target and deprecated macOS sandbox limitations.
-
-An untrusted target needs `Wotex.Lab.Conformance.KernelContainment` instead: a
-digest-pinned OCI image run through an operator-provisioned container runtime
-with no network, a read-only root, hard cgroup memory and process limits and a
-PID-namespace deadline. It never pulls an image. The container lane runs both
-core corpora and the hostile probes against the pinned `hexpm/elixir` image:
-
-```sh
-WOTEX_PATH_DEPS=1 WOTEX_LAB_CONTAINER=1 mix test test/wotex/lab/kernel_containment_lane_test.exs
-```
-
-See the [kernel-isolated profile decision](../../docs/packages/wotex-lab/decisions/0009-kernel-isolated-conformance-profile.md)
-for its trusted runtime, kernel and image boundary.
-
-`mix check` needs no container runtime: the MQTT broker lane is tagged
-`:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Integration evidence
-is likewise excluded unless `WOTEX_LAB_INTEGRATION=1` is set. Run broker tests explicitly
-with Docker available and the `eclipse-mosquitto:2` image pullable; each test
-starts a disposable broker on an ephemeral loopback port, uses its own topic
-prefix and removes the container when the suite ends.
-
-```sh
-WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
-```
-
-The formal profile needs a Maude executable (GPL-2.0, not part of this
-package). `bin/provision_maude.exs` is the explicit way to get the pinned
-3.5.1 release: it downloads the archive for your platform, refuses any
-digest other than the recorded one, unpacks it under `tmp/maude` and prints
-the path. The tests tagged `:maude` run only when `WOTEX_LAB_MAUDE` names an
-executable. Run `mix check` with it set only when verifying that integration.
-The library itself never downloads or starts an engine.
-
-```sh
-elixir bin/provision_maude.exs
-WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=tmp/maude/maude mix check --no-retry
-```
-
-The GreptimeDB ingestion lane is tagged `:greptime` and excluded unless
-`WOTEX_LAB_GREPTIME=1` is set. It starts a disposable
-`greptime/greptimedb:v1.1.4` standalone container on an ephemeral loopback
-port, pushes real collector snapshots through the remote-write bridge, reads
-them back through the HTTP SQL API and removes the container when the test
-ends.
-
-```sh
-WOTEX_PATH_DEPS=1 WOTEX_LAB_GREPTIME=1 MIX_ENV=test mix test test/wotex/lab/greptime_bridge_test.exs
-```
-
-`mix run --no-start bin/check_reference_consumer.exs` runs every suite with
-the lanes that this machine can support and writes an evidence record that
-names which lanes ran; CI runs it with Docker and a provisioned Maude.
-
-Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
-local source evidence. It does not satisfy the clone-free acceptance gate.
-The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
-claim that package is published. That base requirement brings core,
-Wotex Nx, Nx and telemetry only. Runtime, the HTTP and MQTT bindings,
-Directory, Continuum, Exqlite, Axon, EXLA and Explorer are optional profile packages a
-host adds explicitly; the Lab modules behind each seam compile only when that
-package is present. The everyday `mix check` gate exercises library behavior
-against local sibling checkouts without binding them to commit hashes.
-Production rejects `WOTEX_PATH_DEPS` and uses Hex requirements. Archive-consumer
-and Workbench-release checks are explicit release-readiness work. Publication
-and repository visibility are maintainer-owned.
-
-The same gate checks the deterministic CycloneDX 1.7 production SBOM at
-`priv/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
-Lab exports, behaviours, struct keys and typespecs in
-`priv/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
-These are release-review inputs, not a stable-API or public-candidate claim.
-
-The Workbench explicitly selects Explorer 0.12.0 for read-only run inspection:
-inclusive range/series controls, unit-separated summaries and dynamically
-updated line/point/area charts. `Wotex.Lab.Analytics.analyze/2` is shared with
-the `window-anomaly` notebook. It bounds native input, materializes at most 100
-table rows, distinguishes missing/nonfinite values from observed zeros and
-returns source/query digests without changing the run evidence. Explorer uses
-Rust/Polars for dataframes; Nx remains the numerical layer and the chart
-renderer remains separate. The Workbench renders the bounded result as native
-server-owned HEEx/SVG, without Vega browser libraries or a required
-`kino_explorer` dependency.
 
 ```elixir
 {:ok, result} = Wotex.Lab.Examples.Thermal.run()
@@ -177,6 +137,17 @@ restores that setting. No server, downloaded model, broker or Maude binary is
 needed. The function is a transparent numerical baseline; it is not a trained
 controller or evidence of prediction accuracy. Read
 [`Thermal`](lib/wotex/lab/examples/thermal.ex) to see every public package call.
+
+The Workbench explicitly selects Explorer 0.12.0 for read-only run inspection:
+inclusive range/series controls, unit-separated summaries and dynamically
+updated line/point/area charts. `Wotex.Lab.Analytics.analyze/2` is shared with
+the `window-anomaly` notebook. It bounds native input, materializes at most 100
+table rows, distinguishes missing/nonfinite values from observed zeros and
+returns source/query digests without changing the run evidence. Explorer uses
+Rust/Polars for dataframes; Nx remains the numerical layer and the chart
+renderer remains separate. The Workbench renders the bounded result as native
+server-owned HEEx/SVG, without Vega browser libraries or a required
+`kino_explorer` dependency.
 
 ## Cookbooks
 
@@ -244,7 +215,7 @@ descriptors, one per cookbook. `mix wotex.lab.scenarios [ID]`, the MCP
 read that list, so they present identical descriptors:
 
 ```sh
-WOTEX_PATH_DEPS=1 mix wotex.lab.scenarios thermal-nx
+mix pkg wotex-lab wotex.lab.scenarios thermal-nx
 ```
 
 `Wotex.Lab.Runner` executes revision-pinned definitions through an explicit
@@ -362,16 +333,113 @@ content-bound evidence; wider upstream and release programmes remain partial. No
 materials inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
 
-`mix check` runs warnings-as-errors compilation, locked and unused dependency
-checks, formatting, strict Credo, Doctor, Dialyzer, dependency audits, ExDoc,
-tests with 95% line coverage, the contract, graph, API-surface, host-source and
-boundary scripts and package content inspection. Source-cohort snapshots,
-external services, native tools, and cookbook execution are opt-in integration
-checks; set `WOTEX_LAB_INTEGRATION=1` when intentionally refreshing that
-evidence. Separate release gates do not claim registry publication, OCI
-runtime, hosted or hardware evidence. See
-[WLB.08](../../docs/packages/wotex-lab/specs/WLB.08-distribution-and-compatibility.md) for the stronger
-release gates.
+## Development
+
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers. Sibling packages resolve from
+`packages/` through `WOTEX_PATH_DEPS=1`, which `mix pkg` sets.
+
+```sh
+mix pkg wotex-lab test test/wotex/lab/thermal_test.exs  # one test file
+mix check.fast --package wotex-lab                      # compile, format, Credo, tests
+mix pkg wotex-lab check --no-retry                      # full gate
+```
+
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-lab`. It runs warnings-as-errors compilation, locked and
+unused dependency checks, formatting, `mix deps.audit` (with the reviewed
+`.mix_audit.ignore`) and `mix hex.audit`, strict Credo, Doctor,
+`mix docs --warnings-as-errors`, tests with 95% line coverage, Dialyzer, the
+contract (`bin/check_contracts.exs`), graph (`bin/check_graph.exs`),
+API-surface (`bin/generate_api_surface.exs --check`), Nerves-host source
+(`bin/check_nerves_source.exs`) and boundary (`bin/check_boundary.exs`)
+scripts, package content inspection (`bin/check_package.exs`) and
+`git diff --check`. It needs no container runtime, Maude or Rust toolchain:
+the lanes below are excluded unless their switch is set.
+
+The same gate checks the deterministic CycloneDX 1.7 production SBOM at
+`priv/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
+Lab exports, behaviours, struct keys and typespecs in
+`priv/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
+These are release-review inputs, not a stable-API or public-candidate claim.
+
+### Explicit lanes
+
+These lanes are opt-in evidence work, not part of the full gate. Run them only
+when asked, inside `packages/wotex-lab`.
+
+| Lane | Command | Prerequisites |
+| --- | --- | --- |
+| Integration evidence, cookbook execution, source-cohort snapshots | `WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 mix test` | as for the conformance suite below |
+| Conformance source suite | `WOTEX_PATH_DEPS=1 WOTEX_LAB_INTEGRATION=1 mix test test/wotex/lab/conformance_test.exs` | Rust/Cargo 1.85+ with rustfmt and Clippy; Darwin `sandbox-exec` or Linux Bubblewrap |
+| MQTT broker (`:broker`) | `WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test` | Docker, `eclipse-mosquitto:2` pullable |
+| GreptimeDB ingestion (`:greptime`) | `WOTEX_PATH_DEPS=1 WOTEX_LAB_GREPTIME=1 mix test test/wotex/lab/greptime_bridge_test.exs` | Docker, `greptime/greptimedb:v1.1.4` |
+| Formal profile (`:maude`) | `elixir bin/provision_maude.exs`, then `WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=tmp/maude/maude mix check --no-retry` | network for the pinned Maude 3.5.1 download |
+| Kernel containment (`:container`) | `WOTEX_PATH_DEPS=1 WOTEX_LAB_CONTAINER=1 mix test test/wotex/lab/kernel_containment_lane_test.exs` | Docker with the pinned `hexpm/elixir` image already present locally |
+| Native containment helper tests | `elixir bin/check_native_containment.exs` | Rust/Cargo 1.85+ |
+| Linux Bubblewrap containment | `elixir bin/check_linux_containment.exs` | Docker; sibling package directories without uncommitted changes |
+| Source-cohort drift guard | `elixir bin/check_source_cohort.exs` | every source owner in `packages/` |
+| Reference consumer | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_reference_consumer.exs` | runs the lanes this machine supports, records the rest as `not_run` |
+| Base archive consumer | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive_consumer.exs` | public dependencies in the local Hex cache |
+| Workbench archive | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_workbench_archive.exs` | public dependencies and platform precompiled archives in the local Hex cache |
+
+The full conformance source suite requires Rust/Cargo 1.85+ with rustfmt and
+Clippy, plus Darwin `sandbox-exec` or an admitted Linux Bubblewrap environment.
+It explicitly builds and checks the external Rust helper and feature-gated
+test probes. No Python interpreter is used. This is separate from compilation
+or first-tensor use of the base package. On a Docker host, the Linux lane runs
+the same suite through Bubblewrap in a pinned image.
+
+For a reviewed local conformance target, provision the helper explicitly:
+
+```sh
+cargo build --locked --release --manifest-path priv/conformance/native/Cargo.toml --target-dir tmp/contained-exec --bin wotex-contained-exec
+```
+
+Record the resulting executable's reviewed SHA-256 and pass
+`launcher: %{executable: absolute_path, digest: expected_digest}` to
+`Wotex.Lab.Conformance.Containment.external_map/5`. The API verifies that
+descriptor; it never compiles, downloads or discovers a helper. The package
+includes source, not platform binaries. See the
+[native containment decision](../../docs/packages/wotex-lab/decisions/0006-native-containment-executable.md)
+for the sampled-limit, hostile-target and deprecated macOS sandbox limitations.
+
+An untrusted target needs `Wotex.Lab.Conformance.KernelContainment` instead: a
+digest-pinned OCI image run through an operator-provisioned container runtime
+with no network, a read-only root, hard cgroup memory and process limits and a
+PID-namespace deadline. It never pulls an image. The container lane runs both
+core corpora and the hostile probes against the pinned `hexpm/elixir` image.
+See the [kernel-isolated profile decision](../../docs/packages/wotex-lab/decisions/0009-kernel-isolated-conformance-profile.md)
+for its trusted runtime, kernel and image boundary.
+
+Each broker test starts a disposable broker on an ephemeral loopback port,
+uses its own topic prefix and removes the container when the suite ends. The
+GreptimeDB lane starts a disposable `greptime/greptimedb:v1.1.4` standalone
+container on an ephemeral loopback port, pushes real collector snapshots
+through the remote-write bridge, reads them back through the HTTP SQL API and
+removes the container when the test ends. The formal profile needs a Maude
+executable (GPL-2.0, not part of this package). `bin/provision_maude.exs` is
+the explicit way to get the pinned 3.5.1 release: it downloads the archive for
+your platform, refuses any digest other than the recorded one, unpacks it
+under `tmp/maude` and prints the path. The library itself never downloads or
+starts an engine.
+
+The reference-consumer script runs every suite with the lanes this machine can
+support and writes an evidence record that names which lanes ran. Archive
+consumer and Workbench archive runs are explicit release-readiness work; see
+[WLB.08](../../docs/packages/wotex-lab/specs/WLB.08-distribution-and-compatibility.md)
+for those gates. Source-cohort snapshots, external services, native tools and
+cookbook execution refresh evidence; separate release gates do not claim
+registry publication, OCI runtime, hosted or hardware evidence. Publication
+and repository visibility are maintainer-owned.
+
+The reference hosts are separate Mix projects inside this package, run from
+their own directories with their own `README.md`: `hosts/workbench/` (the
+Phoenix LiveView Workbench, gate `WOTEX_PATH_DEPS=1 mix check --no-retry`) and
+`hosts/nerves/` (Raspberry Pi 4 firmware source). The generated TypeScript
+client in `clients/typescript/` is written by
+`WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs`.
 
 ## License
 

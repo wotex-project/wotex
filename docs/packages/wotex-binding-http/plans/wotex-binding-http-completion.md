@@ -57,8 +57,10 @@ authorizes automated publication, tags or Git remote operations.
 | `public_release_candidate` | Previous gates (whose repository-level gate already carries the dependency audits, documentation, coverage and Dialyzer checks) plus boundary, package metadata/license/security, and claim review pass | Not registry availability, runtime matrix, or permission to publish |
 | `stable_api_candidate` | Consumer-visible compatibility behavior and documented API changes receive review against WBH-C06 | Not a published release, serialized ABI, runtime matrix, or universal HTTP/WoT compliance |
 
-`mix test` remains the fast loop. The archive helper supplies exact dependency
-reconstruction and reference-consumer semantics. Compatibility tests assert
+`mix pkg wotex-binding-http test` and
+`mix check.fast --package wotex-binding-http` remain the fast loop. The archive
+helper supplies exact dependency reconstruction and reference-consumer
+semantics. Compatibility tests assert
 observable mappings, callbacks, messages, defaults, limits, results, errors,
 redaction, and lifecycle behavior without enumerating every export, struct key,
 test name, documentation row, or developer-gate entry.
@@ -120,3 +122,11 @@ Package inputs ship no Markdown documentation and structurally exclude
 `docs/tasks/local/`. Every candidate archive still proves the exclusion; Git
 ignore alone never counts. A clean checkout requires no local tracker or
 external automation service to build, test or select a normative task.
+
+Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
+`packages/wotex-binding-http/CLAUDE.md`, this plan and the owning WBH files;
+run `mix setup` from the repository root, use `mix pkg wotex-binding-http test`
+and `mix check.fast --package wotex-binding-http` for the fast loop, and run
+`mix pkg wotex-binding-http check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-binding-http`)
+before recording `repository_green`.

@@ -1,6 +1,6 @@
 # Wotex Directory completion contract
 
-Plan `WTD-C`, revision `1.2.0`. This is a work-definition baseline, not a
+Plan `WTD-C`, revision `1.2.1`. This is a work-definition baseline, not a
 progress report. Preserve work IDs and accepted evidence requirements; change
 scope only through an explicit revision of this plan. Revision 1.1.0 restates
 the listing continuation requirement after the WTD.01 1.1.0 keyset cursor
@@ -15,6 +15,10 @@ machine-read provenance ship under `priv/`. The repository-level gate
 (`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-directory`)
 and the CI lanes now discharge `repository_green` and
 `archive_consumer_green`. Tags use `wotex-directory-v<version>`.
+
+Revision 1.2.1 rewords the monorepo development procedure and the
+`archive_consumer_green` dependency wording for this repository's layout. No
+obligation, work item or gate changes.
 
 ## Ownership and implementation boundary
 
@@ -106,7 +110,7 @@ evidence after a relevant change requires rerunning affected gates.
 - `archive_consumer_green`: C03 passes against the archive unpacked by
   `bin/check_archive.exs`, which the repository-level gate and CI lanes run;
   inspect metadata/dependencies, no Application callback, private/local files or
-  sibling checkout dependencies. The path-dependency development mode selects
+  path dependencies on sibling packages. The path-dependency development mode selects
   only the core source for building its archive and is forbidden as archive
   proof.
 - `reference_consumer_green`: C01/C02/C04 pass with an independently implemented
@@ -117,9 +121,14 @@ evidence after a relevant change requires rerunning affected gates.
   port, error and temporal compatibility review; no unresolved advertised claim
   or undocumented breaking behavior. It is not W3C certification.
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` is the package developer gate and
-the repository-level gate. The external release-evidence manifest is written
-separately through `mix run --no-start bin/check_release_evidence.exs`.
+Fresh checkout procedure: clone the repository and run `mix setup` from its
+root. `mix pkg wotex-directory test` and
+`mix check.fast --package wotex-directory` are the fast loop.
+`mix pkg wotex-directory check --no-retry` (equivalently
+`WOTEX_PATH_DEPS=1 mix check --no-retry` from `packages/wotex-directory`) is
+the package developer gate and the repository-level gate. The external
+release-evidence manifest is written separately through
+`mix pkg wotex-directory run --no-start bin/check_release_evidence.exs`.
 
 ## Local execution records
 

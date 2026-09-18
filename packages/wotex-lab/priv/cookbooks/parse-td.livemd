@@ -20,7 +20,7 @@ Mix.install([
 The requirement above is a published-artifact requirement. At the time this
 notebook was written none of the `wotex*` packages is published on Hex; the
 notebook is verified against the workspace source cohort recorded in
-`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+`priv/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
 which evaluates every Elixir cell below in order (skipping this install
 cell). `Mix.install/1` never points at a Git checkout; when the packages
 ship, this cell installs the same public API the tests exercised.
@@ -185,7 +185,7 @@ every value is `true`.
 
 `core.td` — `Wotex.ThingDescription.parse/2`, `from_map/2`, `to_map/1` and
 `encode/2` (package-implements). The seam is recorded with its revision
-pinned source URL in `docs/provenance/source-index.json`.
+pinned source URL in `priv/provenance/source-index.json`.
 
 ## Spec and completion IDs
 

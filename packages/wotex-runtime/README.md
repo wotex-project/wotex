@@ -37,14 +37,44 @@ than a second state or process model.
 
 ## Installation
 
-Wotex Runtime 0.1 requires Elixir 1.18 or later.
+Wotex Runtime 0.1 requires Elixir 1.18 or later. No version is published on
+Hex yet. Once one is, depend on it as usual; it brings `wotex` with it:
 
 ```elixir
 def deps do
   [
-    {:wotex_runtime, "~> 0.1.0"}
+    {:wotex_runtime, "~> 0.1"}
   ]
 end
+```
+
+Until then, depend on one commit of the
+[WoTEx repository](https://github.com/wotex-project/wotex) and select each
+package directory with `sparse:`. Declare Wotex Runtime and `wotex`, which it
+requires, at the same `ref` with `override: true`, as the
+[consumer guide](https://github.com/wotex-project/wotex/blob/main/docs/guides/consumer.md)
+describes:
+
+```elixir
+@wotex_ref "<commit>"
+
+{:wotex,
+ git: "https://github.com/wotex-project/wotex.git",
+ ref: @wotex_ref,
+ sparse: "packages/wotex",
+ override: true},
+{:wotex_runtime,
+ git: "https://github.com/wotex-project/wotex.git",
+ ref: @wotex_ref,
+ sparse: "packages/wotex-runtime",
+ override: true}
+```
+
+For local development with the repository checked out next to your project:
+
+```elixir
+{:wotex, path: "../wotex/packages/wotex", override: true},
+{:wotex_runtime, path: "../wotex/packages/wotex-runtime", override: true}
 ```
 
 ## Quick start
@@ -265,35 +295,46 @@ belongs in this package.
 
 ## Development
 
-During coordinated source development, point the runtime at a sibling Wotex
-checkout explicitly:
+The [specification catalogue](../../docs/packages/wotex-runtime/specs/catalogue.yaml)
+and [completion contract](../../docs/packages/wotex-runtime/plans/wotex-runtime-completion.md)
+define the work packages, evidence gates and remaining claim obligations.
+Local execution tracking is not part of the published contract.
+
+Run commands from the repository root; the
+[root README](https://github.com/wotex-project/wotex/blob/main/README.md)
+describes the workflow and validation tiers.
 
 ```bash
-WOTEX_PATH_DEPS=1 mix setup
-WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check --no-retry
-WOTEX_PATH_DEPS=1 mix docs
+mix pkg wotex-runtime test test/wotex/runtime/consumed_thing_test.exs  # one test file
+mix check.fast --package wotex-runtime                                 # compile, format, Credo, tests
+mix pkg wotex-runtime check --no-retry                                 # full gate
 ```
 
-`mix check` is the development gate, run from `packages/wotex-runtime` inside
-the [monorepo](https://github.com/wotex-project/wotex). It compiles with
-warnings as errors, checks formatting, dependencies, Credo, Doctor, ex_doc,
-coverage and Dialyzer, and runs the package archive check against a core
-archive built from the sibling `wotex` package. Reference-consumer and
-compatibility evidence remain explicit release-readiness work.
+The full gate is the same as `WOTEX_PATH_DEPS=1 mix check --no-retry` inside
+`packages/wotex-runtime`. It compiles with warnings as errors, checks the lock
+and unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`,
+Credo, Doctor, `mix docs --warnings-as-errors`, tests with the coverage floor
+(`mix coveralls`), Dialyzer and `git diff --check`, and then runs the archive
+check. The archive check (`mix run --no-start bin/check_package.exs`) builds
+the Runtime archive and, under `WOTEX_PATH_DEPS=1`, a core archive from
+`packages/wotex`, inspects the Runtime archive, and runs a separate minimal
+consumer against both unpacked archives.
 
-The exact-archive consumer lane is documented in
-[RT-C04](../../docs/packages/wotex-runtime/specs/RT-C04-reference-consumer.md).
-It requires an explicitly supplied core archive and exercises Runtime under
-consumer-owned ports and supervision.
+Two lanes run only when invoked explicitly, from `packages/wotex-runtime`,
+with an exact core archive:
 
-[RT-C05](../../docs/packages/wotex-runtime/specs/RT-C05-release-evidence.md)
-defines the separate archive, documentation, analysis, audit, and compatibility
-evidence used for release readiness.
+- [RT-C04](../../docs/packages/wotex-runtime/specs/RT-C04-reference-consumer.md),
+  the exact-archive reference consumer:
+  `WOTEX_CORE_ARCHIVE=/absolute/path/wotex-0.1.0.tar elixir bin/check_reference_consumer.exs`.
+  It exercises Runtime under consumer-owned ports and supervision.
+- [RT-C05](../../docs/packages/wotex-runtime/specs/RT-C05-release-evidence.md),
+  the archive, documentation, analysis, audit and compatibility evidence used
+  for release readiness.
 
 [RT-C06](../../docs/packages/wotex-runtime/specs/RT-C06-stable-api.md) records
 the candidate compatibility contract for consumer-visible values, callback
-shapes, errors, limits, and lifecycle defaults.
+shapes, errors, limits, and lifecycle defaults. This package has no native
+build, software profile or container lane.
 
 ## Contributing
 

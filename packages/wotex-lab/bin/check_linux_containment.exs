@@ -116,16 +116,18 @@ defmodule Wotex.Lab.Check.LinuxContainment do
       |> JSON.decode!()
 
     for package <- index["packages"] do
-      directory =
-        package["repository"]
-        |> String.split("/")
-        |> List.last()
+      directory = package["id"]
 
-      Regex.match?(~r/\Awotex(?:-[a-z]+)*\z/, directory) || abort("unexpected source owner")
+      (is_binary(directory) and Regex.match?(~r/\Awotex(?:-[a-z]+)*\z/, directory)) ||
+        abort("unexpected source owner")
+
       repo = Path.join(Path.dirname(root), directory)
 
       {dirty, 0} =
-        System.cmd("git", ["status", "--porcelain"], cd: repo, env: ChildEnvironment.scrubbed())
+        System.cmd("git", ["status", "--porcelain", "--", "."],
+          cd: repo,
+          env: ChildEnvironment.scrubbed()
+        )
 
       dirty == "" || abort("source owner has uncommitted changes: #{directory}")
       archive = Path.join(work, directory <> ".tar")

@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.4.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.4.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
@@ -9,6 +9,10 @@ express what evidence must exist before a claim can be accepted; they do not
 defer or waive obligations. The requested package foundation implements a
 bounded subset without claiming the programme is complete. Changing an accepted
 obligation requires a new plan version and compatibility explanation.
+
+Revision 1.4.1 names the owning packages, not per-package repositories, as
+the place where sibling obligations and repairs are resolved. Obligations are
+unchanged.
 
 Revision 1.4.0 records the monorepo layout without changing any obligation.
 Documentation now lives under `docs/packages/wotex-lab/`. Package archives no
@@ -60,7 +64,7 @@ C02–C14 completion. No placeholder module may claim to implement these items.
 Lab can expose failures and contribute independent consumer evidence. It cannot
 declare another package's partial implementation finished. Native hardening,
 exact schemas/errors, package release checks and API decisions stay in the
-owning repositories. The source index pins the inspected completion contract.
+owning packages. The source index pins the inspected completion contract.
 
 | Package | Lab evidence | Remaining owner obligations that still must be resolved |
 | --- | --- | --- |
@@ -79,7 +83,7 @@ success alone is insufficient. For a newly found package defect, reproduce it
 through public APIs, attach the exact source/artifact/input and failing outcome,
 and route the fix to that spec owner. No private API shim or silent capability
 reduction can conceal it. Authorized sibling repairs follow each owning
-repository's spec, regression-test and verification workflow.
+package's spec, regression-test and verification workflow.
 
 ## Independent acceptance
 

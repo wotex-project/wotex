@@ -33,11 +33,11 @@ execute an Action.
 
 ## Dependency audit and Decimal parser boundary
 
-The default repository gate runs `mix deps.audit` and `mix hex.audit` against
+The default package gate runs `mix deps.audit` and `mix hex.audit` against
 the exact locked dependency set. Any finding blocks the gate; the project
 carries no advisory suppression. The
 [Decimal maintainer advisory](https://github.com/ericmj/decimal/security/advisories/GHSA-rhv4-8758-jx7v)
-identifies versions before 3.0.0 as affected; this repository locks Decimal
+identifies versions before 3.0.0 as affected; this package locks Decimal
 3.1.1.
 
 Dependency security tests retain a defense-in-depth boundary: they bind the
