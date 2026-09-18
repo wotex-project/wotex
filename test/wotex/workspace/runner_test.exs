@@ -72,6 +72,22 @@ defmodule Wotex.Workspace.RunnerTest do
       File.rm!(Path.join(root, "probe.txt"))
       assert Runner.run(Path.join(root, "missing"), ["env.probe"], cd: root, quiet: true) == 0
       assert File.read!(Path.join(root, "probe.txt")) == "1|dev"
+
+      # A relative cd: is a directory inside the target path, such as a host.
+      File.rm!(Path.join(root, "probe.txt"))
+
+      assert Runner.run(Path.dirname(root), ["env.probe"], cd: Path.basename(root), quiet: true) ==
+               0
+
+      assert File.read!(Path.join(root, "probe.txt")) == "1|dev"
+    end
+
+    test "directory/2 resolves cd: against the target path" do
+      assert Runner.directory("/repo/packages/lab") == "/repo/packages/lab"
+      assert Runner.directory("/repo/packages/lab", cd: "/repo") == "/repo"
+
+      assert Runner.directory("/repo/packages/lab", cd: "hosts/nerves") ==
+               "/repo/packages/lab/hosts/nerves"
     end
   end
 

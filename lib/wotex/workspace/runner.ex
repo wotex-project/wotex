@@ -6,8 +6,9 @@ defmodule Wotex.Workspace.Runner do
   directory as working directory; package code is never loaded into this VM.
   `WOTEX_PATH_DEPS=1` is exported unless the caller passes
   `path_deps: false`, and `MIX_ENV` is exported when `mix_env:` is given.
-  `cd:` runs the command in another directory (a root task from a package
-  gate).
+  `cd:` runs the command in another directory: an absolute one (a root task
+  from a package gate) or one relative to the package directory (a host
+  application inside it).
   Output streams to the terminal; the exit status is returned.
   """
 
@@ -25,7 +26,7 @@ defmodule Wotex.Workspace.Runner do
   """
   @spec run(Path.t(), [String.t()], [option()]) :: non_neg_integer()
   def run(path, args, opts \\ []) when is_list(args) do
-    path = Keyword.get(opts, :cd, path)
+    path = directory(path, opts)
     env = env(opts)
     unless Keyword.get(opts, :quiet, false), do: announce(path, args, env)
 
@@ -33,6 +34,17 @@ defmodule Wotex.Workspace.Runner do
       System.cmd("mix", args, cd: path, env: env, into: IO.stream(), stderr_to_stdout: true)
 
     status
+  end
+
+  @doc """
+  The directory a command runs in: `cd:` expanded against `path`, or `path`.
+  """
+  @spec directory(Path.t(), [option()]) :: Path.t()
+  def directory(path, opts \\ []) do
+    case Keyword.get(opts, :cd) do
+      nil -> path
+      cd -> Path.expand(cd, path)
+    end
   end
 
   @doc """

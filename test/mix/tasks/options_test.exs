@@ -247,6 +247,20 @@ defmodule Mix.Tasks.Wotex.OptionsTest do
         Mix.Tasks.Wotex.Index.parse_args(~w(x))
       end
     end
+
+    test "setup fetches the dependencies of a package and then of each of its hosts" do
+      host = %Wotex.Workspace.Manifest.Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
+      package = %Wotex.Workspace.Manifest.Package{name: "lab", app: "lab", hosts: [host]}
+
+      assert Mix.Tasks.Wotex.Setup.deps_steps(%{package | hosts: []}) ==
+               [{"deps.get", ["deps.get"], []}]
+
+      assert Mix.Tasks.Wotex.Setup.deps_steps(package) == [
+               {"deps.get", ["deps.get"], []},
+               {"hosts/nerves deps.get", ["deps.get"],
+                [cd: "hosts/nerves", env: [{"MIX_TARGET", "host"}]]}
+             ]
+    end
   end
 
   describe "wotex.pkg, wotex.dialyzer and wotex.docs" do

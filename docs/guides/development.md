@@ -9,7 +9,7 @@ root [`CLAUDE.md`](../../CLAUDE.md).
 
 ```sh
 mise install        # Erlang, Elixir, Rust and Dexter pinned in mise.toml
-mix setup           # dependencies for the root and every package, Dexter index
+mix setup           # dependencies for the root, every package and its hosts, Dexter index
 ```
 
 The root project is a tooling project. It never loads package code; every
@@ -41,7 +41,7 @@ tests.
 | Tier | When | Command | Runs |
 | --- | --- | --- | --- |
 | 0 | While editing | `mix pkg <name> test <files>`, `mix impact Module fun --run`; `mix native.lint --package <name>` for C, C++ or Rust | The tests next to the change; native formatting and Rust lint |
-| 1 | A package change is ready | `mix check.fast --package <name>` | Compile with warnings as errors, format check, Credo strict, the package's tests and, for a package with native code, `mix native.lint` |
+| 1 | A package change is ready | `mix check.fast --package <name>` | Compile with warnings as errors, format check, Credo strict, the package's tests, for a package with native code `mix native.lint`, and for a package with host applications (`hosts:` in `tooling/packages.yaml`) the same compile, format, Credo and test steps in each host |
 | 2 | Before a commit | `mix check` | `mix workspace`, then the full gate for changed packages and the fast gate for their dependents (`mix check.affected`) |
 | 3 | Repository-wide change, CI, explicit request | `mix check.all` | Workspace checks and every package's full gate |
 
@@ -50,8 +50,16 @@ locked dependencies, compilation, formatting, Credo, Doctor, dependency
 audits, ExDoc with warnings as errors, tests with the 95% coverage floor,
 Dialyzer, the archive check and, where present, the boundary scan
 (`bin/check_boundary.exs`) and the application-free check. wotex-lab's gate
-also runs the complete gates of its reference hosts, `hosts/workbench` and
-`hosts/nerves` (host target), separate Mix projects with their own locks. A
+also compiles the package without its optional dependencies
+(`optional_deps`: `mix compile --no-optional-deps --warnings-as-errors` in
+`MIX_ENV=docs` and its own build path, `_build/no_optional_deps`, followed
+by `bin/check_optional_deps.exs`, which checks the typed errors of the
+features whose dependency is absent) and runs the complete gates of its
+reference hosts, `hosts/workbench` and `hosts/nerves` (host target), separate
+Mix projects with their own locks. The hosts are declared under `hosts:` in
+`tooling/packages.yaml`, so `mix setup` fetches their dependencies and
+`mix check.fast --package wotex-lab` compiles, format-checks, lints and tests
+them too. A
 package with native code adds `native_format`, `native_lint` and
 `native_test` (see [Native code](#native-code)), so a green gate means its
 Elixir and its C, C++ or Rust code are formatted, linted and tested. `mix check` at the root
@@ -184,7 +192,9 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
   `tooling/packages.yaml`, minimum (Elixir 1.18.4, OTP 27.3.4.15) and current
   (Elixir 1.20.2, OTP 29.0.4). The minimum lane skips static analysis whose
   results depend on the compiler version, the native tools and wotex-lab's
-  host gates (`lanes.minimum.skip`); the current lane runs everything,
+  host gates (`lanes.minimum.skip`): the hosts are applications built with the
+  current toolchain, and the minimum lane verifies library compatibility. It
+  still runs wotex-lab's `optional_deps` step. The current lane runs everything,
   including clang-tidy and the native tests, with native build workspaces
   cached per package. The runners are Linux, so the Linux suites run natively; Matter's
   SDK build and its clang-tidy run in Docker.
@@ -200,7 +210,9 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
 `packages/<name>/`, `docs/packages/<name>/{specs,plans,provenance}/` (with a
 catalogue skeleton and a completion contract) and the manifest entry, then
 re-renders `docs/catalogue.yaml`. The package gets the `WOTEX_PATH_DEPS`
-switch, HexDocs extras and source links at its release tag, the standard full
+switch (sibling path dependencies with `env: :dev`, refused outside
+development, test and docs), HexDocs extras and source links at its release
+tag, the standard full
 gate with archive, application-free and boundary scripts, a `CLAUDE.md`
 package contract and a `README.md` with installation and development
 sections. Then run `mix pkg <name> deps.get` and

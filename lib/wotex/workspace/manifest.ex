@@ -11,6 +11,21 @@ defmodule Wotex.Workspace.Manifest do
   alias Wotex.Workspace
   alias Wotex.Workspace.NativeSuite
 
+  defmodule Host do
+    @moduledoc """
+    One `hosts` entry of a package: an application inside the package
+    directory with its own `mix.exs` and lock, such as a reference host that
+    consumes the package. `path` is relative to the package directory and
+    `env` is the environment its commands need (for example
+    `MIX_TARGET=host`).
+    """
+
+    @type t :: %__MODULE__{path: Path.t(), env: [{String.t(), String.t()}]}
+
+    @enforce_keys [:path]
+    defstruct [:path, env: []]
+  end
+
   defmodule Package do
     @moduledoc """
     One `packages.<name>` entry of the manifest.
@@ -23,7 +38,8 @@ defmodule Wotex.Workspace.Manifest do
             native: boolean(),
             native_task: String.t() | nil,
             software_task: String.t() | nil,
-            native_check: [Wotex.Workspace.NativeSuite.t()]
+            native_check: [Wotex.Workspace.NativeSuite.t()],
+            hosts: [Wotex.Workspace.Manifest.Host.t()]
           }
 
     @enforce_keys [:name, :app]
@@ -34,7 +50,8 @@ defmodule Wotex.Workspace.Manifest do
       native: false,
       native_task: nil,
       software_task: nil,
-      native_check: []
+      native_check: [],
+      hosts: []
     ]
   end
 
@@ -223,7 +240,8 @@ defmodule Wotex.Workspace.Manifest do
          {:ok, native_task} <- parse_task(name, "native_task", Map.get(entry, "native_task")),
          {:ok, software_task} <-
            parse_task(name, "software_task", Map.get(entry, "software_task")),
-         {:ok, native_check} <- NativeSuite.parse_all(name, Map.get(entry, "native_check")) do
+         {:ok, native_check} <- NativeSuite.parse_all(name, Map.get(entry, "native_check")),
+         {:ok, hosts} <- parse_hosts(name, Map.get(entry, "hosts", [])) do
       {:ok,
        %Package{
          name: name,
@@ -232,7 +250,8 @@ defmodule Wotex.Workspace.Manifest do
          native: native,
          native_task: native_task,
          software_task: software_task,
-         native_check: native_check
+         native_check: native_check,
+         hosts: hosts
        }}
     end
   end
@@ -269,6 +288,49 @@ defmodule Wotex.Workspace.Manifest do
   defp parse_task(_name, _key, nil), do: {:ok, nil}
   defp parse_task(_name, _key, task) when is_binary(task) and task != "", do: {:ok, task}
   defp parse_task(name, key, _task), do: {:error, "package #{name}: #{key} must be a task name"}
+
+  defp parse_hosts(name, hosts) when is_list(hosts) do
+    parsed = Enum.map(hosts, &parse_host/1)
+
+    cond do
+      :error in parsed ->
+        {:error,
+         "package #{name}: every host needs a relative path inside the package " <>
+           "and may set env (NAME: value strings)"}
+
+      Enum.uniq_by(parsed, &elem(&1, 1).path) != parsed ->
+        {:error, "package #{name}: hosts must not repeat a path"}
+
+      true ->
+        {:ok, Enum.map(parsed, &elem(&1, 1))}
+    end
+  end
+
+  defp parse_hosts(name, _other), do: {:error, "package #{name}: hosts must be a list"}
+
+  defp parse_host(%{"path" => path} = entry) when is_binary(path) do
+    env = Map.get(entry, "env", %{})
+
+    with [] <- Map.keys(entry) -- ["path", "env"],
+         true <- relative_inside?(path),
+         true <- is_map(env),
+         true <- Enum.all?(env, &env_pair?/1) do
+      {:ok, %Host{path: path, env: Enum.sort(env)}}
+    else
+      _invalid -> :error
+    end
+  end
+
+  defp parse_host(_entry), do: :error
+
+  defp relative_inside?(path) do
+    segments = Path.split(path)
+
+    path != "" and Path.type(path) == :relative and ".." not in segments and "." not in segments
+  end
+
+  defp env_pair?({key, value}),
+    do: is_binary(key) and Regex.match?(~r/^[A-Z][A-Z0-9_]*$/, key) and is_binary(value)
 
   defp parse_lanes(lanes) when is_map(lanes) do
     Enum.reduce_while(lanes, {:ok, %{}}, fn

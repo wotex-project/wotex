@@ -16,6 +16,12 @@
 #   from some suite. On a host that is not Linux, a suite that requires Linux
 #   runs in the Linux container (tooling/native/docker/linux.Dockerfile) when
 #   Docker is available.
+# hosts: applications inside the package directory with their own mix.exs and
+#   lock (`path`, relative to the package) and the environment their commands
+#   need (`env`). `mix setup` fetches their dependencies; `mix check.fast`
+#   compiles, format-checks, lints and tests each one after the package, with
+#   WOTEX_PATH_DEPS=1 and MIX_ENV=test. The package's own gate (.check.exs)
+#   runs their complete gates.
 schema_version: "1.0.0"
 # lanes: the toolchains CI runs every package gate on. `skip` names `mix check`
 #   tools a lane does not run (passed as `--except TOOL`). The minimum lane runs
@@ -23,7 +29,10 @@ schema_version: "1.0.0"
 #   checks); static analysis, whose results depend on the compiler and OTP
 #   version, and the native tools, which do not depend on it, run on the
 #   current lane only. So do wotex-lab's reference host gates (workbench,
-#   nerves_host), each a complete gate that includes formatting and linting.
+#   nerves_host), each a complete gate that includes formatting and linting:
+#   the hosts are applications built with the current toolchain, and the
+#   minimum lane verifies library compatibility with the oldest supported
+#   Elixir and OTP.
 lanes:
   minimum:
     elixir: "1.18.4-otp-27"
@@ -282,3 +291,10 @@ packages:
       - wotex-continuum
       - wotex-conformance
     native: true
+    # The reference hosts; the Nerves host builds for the host target, never
+    # the rpi4 firmware.
+    hosts:
+      - path: hosts/workbench
+      - path: hosts/nerves
+        env:
+          MIX_TARGET: host

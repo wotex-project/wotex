@@ -56,19 +56,39 @@ defmodule Wotex.Workspace.Steps do
   The inner-loop gate of a package, in `MIX_ENV=test` so that compilation
   is shared with the test run: compile with warnings as errors, format
   check, `credo --strict` and `mix test`. For a package with native code
-  (`native: true`) it ends with `native_step/1`.
+  (`native: true`) `native_step/1` follows, and for a package with host
+  applications (`hosts:` in the manifest) the same four steps then run in
+  each host (`host_steps/2`).
   """
   @spec fast_gate(Manifest.Package.t() | nil) :: [step()]
   def fast_gate(package \\ nil) do
     env = [mix_env: "test"]
 
-    [
+    steps = [
       {"compile", ["compile", "--warnings-as-errors"], env},
       {"format", ["format", "--check-formatted"], env},
       {"credo", ["credo", "--strict"], env},
       {"test", ["test"], env}
-    ] ++ native_steps(package)
+    ]
+
+    steps ++ native_steps(package) ++ host_steps(package, steps)
   end
+
+  @doc """
+  `steps` repeated in every host application of `package`, in manifest
+  order: each runs in the host's directory (`cd:` relative to the package
+  directory) with the host's `env` added, and its label names the host, for
+  example `hosts/nerves credo`.
+  """
+  @spec host_steps(Manifest.Package.t() | nil, [step()]) :: [step()]
+  def host_steps(%Manifest.Package{hosts: hosts}, steps) do
+    for host <- hosts, {label, args, opts} <- steps do
+      env = Keyword.get(opts, :env, []) ++ host.env
+      {"#{host.path} #{label}", args, Keyword.merge(opts, cd: host.path, env: env)}
+    end
+  end
+
+  def host_steps(_package, _steps), do: []
 
   @doc """
   The native step of the fast gate: `mix native.lint --package NAME` in the

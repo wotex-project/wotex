@@ -96,7 +96,7 @@ code, the explicit native lanes and CI.
 | `mix refs MODULE [FUN]` | Dexter references, grouped by package and `lib`/`test`, repository-relative. Reindexes changed files first. |
 | `mix impact MODULE [FUN] [--run]` | The test files to run for a change: test files referencing the target plus test files referencing the modules that reference it (one hop), grouped by package; `--run` runs them per package. |
 | `mix test.affected [--base REF] [--package NAME]... [FILES...]` | Given repository-relative `FILES`, runs them in their packages; otherwise `mix test --stale` in the changed packages and their dependents. |
-| `mix check.fast [--package NAME]...` | Inner-loop gate for the selected (default: changed) packages: compile with warnings as errors, format check, `credo --strict`, `mix test`, and `mix native.lint` for packages with native code. |
+| `mix check.fast [--package NAME]...` | Inner-loop gate for the selected (default: changed) packages: compile with warnings as errors, format check, `credo --strict`, `mix test`, `mix native.lint` for packages with native code, and the same four Mix steps in each host application a package declares in `tooling/packages.yaml` (wotex-lab's Workbench and Nerves hosts). |
 | `mix check [--base REF]` | Pre-commit gate: `mix workspace`, then `mix check.affected` (the arguments go to `check.affected`). |
 | `mix check.affected [--base REF]` | The full `mix check --no-retry` for changed packages, `check.fast` for dependents. |
 | `mix check.all` | CI-equivalent: workspace checks plus every package's full gate. Heavy; only for repository-wide changes or on explicit request. |

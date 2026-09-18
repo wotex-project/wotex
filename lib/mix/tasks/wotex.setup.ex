@@ -2,9 +2,10 @@ defmodule Mix.Tasks.Wotex.Setup do
   @shortdoc "Fetches every package's dependencies and builds the Dexter index"
 
   @moduledoc """
-  Prepares a checkout: `mix deps.get` in every package directory (with
-  `WOTEX_PATH_DEPS=1`, in topological order), then the Dexter index (see
-  `mix wotex.index`).
+  Prepares a checkout: `mix deps.get` in every package directory and in
+  each of its host applications (`hosts:` in `tooling/packages.yaml`, with
+  the host's environment), with `WOTEX_PATH_DEPS=1` and in topological
+  order, then the Dexter index (see `mix wotex.index`).
 
       mix wotex.setup [--no-index]
 
@@ -31,7 +32,7 @@ defmodule Mix.Tasks.Wotex.Setup do
 
     {rows, failed?} =
       manifest.order
-      |> Enum.map(&Steps.target(&1, manifest, [{"deps.get", ["deps.get"], []}]))
+      |> Enum.map(&Steps.target(&1, manifest, deps_steps(Manifest.fetch!(&1, manifest))))
       |> Steps.run(halt: false)
 
     {index, seconds} =
@@ -52,6 +53,13 @@ defmodule Mix.Tasks.Wotex.Setup do
   @doc "Parses the task's options."
   @spec parse_args([String.t()]) :: keyword()
   def parse_args(args), do: CLI.parse_options(args, @switches)
+
+  @doc "`mix deps.get` in the package directory and then in each of its hosts."
+  @spec deps_steps(Manifest.Package.t()) :: [Steps.step()]
+  def deps_steps(package) do
+    steps = [{"deps.get", ["deps.get"], []}]
+    steps ++ Steps.host_steps(package, steps)
+  end
 
   defp index_result(:ok), do: "ok"
   defp index_result(:skipped), do: "skipped"

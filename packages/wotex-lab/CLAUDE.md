@@ -86,7 +86,7 @@ are in the root `CLAUDE.md`.
 | Tier | Command |
 | --- | --- |
 | 0 | `mix pkg wotex-lab test test/wotex/lab/<file>_test.exs`, or `mix impact Wotex.Lab.Runner start --run` |
-| 1 | `mix check.fast --package wotex-lab` |
+| 1 | `mix check.fast --package wotex-lab` (also compiles, formats, lints and tests both hosts) |
 | 2 | `mix check` (full gate here; Lab has no dependents) |
 
 Rust (`priv/conformance/native/`): `mix native.lint --package wotex-lab` runs
@@ -98,7 +98,9 @@ The full gate alone is `mix pkg wotex-lab check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-lab`). Beyond
 tier 1 it runs the audits, Doctor, docs, the 95% coverage floor, Dialyzer,
 the contract, graph, API-surface, Nerves-source, boundary and package-content
-scripts, and the reference hosts' own gates: `workbench` (`mix check` in
+scripts, `optional_deps` (compiles without the optional dependencies with
+warnings as errors and tests their typed fallbacks), and the reference hosts'
+own gates: `workbench` (`mix check` in
 `hosts/workbench/`) and `nerves_host` (`mix check` in `hosts/nerves/` with
 `MIX_TARGET=host`). A host change is ready when
 `mix pkg wotex-lab check --no-retry --only workbench` (or

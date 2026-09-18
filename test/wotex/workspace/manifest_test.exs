@@ -86,6 +86,44 @@ defmodule Wotex.Workspace.ManifestTest do
       assert message =~ ~s(lane "x" must declare elixir and otp)
     end
 
+    test "reads host applications with their environment" do
+      map =
+        put_in(Fixtures.manifest_map(), ["packages", "lab", "hosts"], [
+          %{"path" => "hosts/workbench"},
+          %{"path" => "hosts/nerves", "env" => %{"MIX_TARGET" => "host"}}
+        ])
+
+      assert {:ok, manifest} = Manifest.from_map(map)
+
+      assert Manifest.fetch!("lab", manifest).hosts == [
+               %Manifest.Host{path: "hosts/workbench", env: []},
+               %Manifest.Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
+             ]
+
+      assert Manifest.fetch!("core", manifest).hosts == []
+    end
+
+    test "rejects hosts outside the package or with a malformed environment" do
+      for hosts <- [
+            %{"path" => "hosts/x"},
+            [%{}],
+            [%{"path" => ""}],
+            [%{"path" => "/abs/host"}],
+            [%{"path" => "../other"}],
+            [%{"path" => "hosts/../../other"}],
+            [%{"path" => "./hosts/x"}],
+            [%{"path" => "hosts/x", "target" => "host"}],
+            [%{"path" => "hosts/x", "env" => ["MIX_TARGET"]}],
+            [%{"path" => "hosts/x", "env" => %{"mix_target" => "host"}}],
+            [%{"path" => "hosts/x", "env" => %{"MIX_TARGET" => 1}}],
+            [%{"path" => "hosts/x"}, %{"path" => "hosts/x"}]
+          ] do
+        map = put_in(Fixtures.manifest_map(), ["packages", "lab", "hosts"], hosts)
+        assert {:error, message} = Manifest.from_map(map), inspect(hosts)
+        assert message =~ ~r/^package lab: .*host/
+      end
+    end
+
     test "rejects a lane skip that is not a list of tool names" do
       assert {:error, message} =
                Manifest.from_map(%{
@@ -168,6 +206,30 @@ defmodule Wotex.Workspace.ManifestTest do
       assert Manifest.transitive_dependents("wotex-coap", manifest) == []
       assert {:ok, _lane} = Manifest.lane("minimum", manifest)
       assert {:ok, _lane} = Manifest.lane("current", manifest)
+    end
+
+    test "declares wotex-lab's reference hosts, each a Mix project in the package" do
+      manifest = Manifest.load!()
+      lab = Manifest.fetch!("wotex-lab", manifest)
+
+      assert lab.hosts == [
+               %Manifest.Host{path: "hosts/workbench", env: []},
+               %Manifest.Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
+             ]
+
+      for host <- lab.hosts do
+        assert File.regular?(
+                 Path.join([Manifest.absolute_path("wotex-lab", manifest), host.path, "mix.exs"])
+               )
+      end
+
+      assert for(package <- Manifest.packages(manifest), package.hosts != [], do: package.name) ==
+               ["wotex-lab"]
+
+      # The minimum lane skips the host gates: the hosts are applications
+      # built with the current toolchain.
+      assert {:ok, %{skip: skip}} = Manifest.lane("minimum", manifest)
+      assert "workbench" in skip and "nerves_host" in skip
     end
 
     test "load/1 reports a missing file" do

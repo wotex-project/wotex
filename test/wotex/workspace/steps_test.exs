@@ -4,6 +4,9 @@ defmodule Wotex.Workspace.StepsTest do
   use ExUnit.Case, async: true
 
   alias Mix.Tasks.Wotex.Check.Affected, as: CheckAffected
+  alias Wotex.Workspace.Manifest
+  alias Wotex.Workspace.Manifest.Host
+  alias Wotex.Workspace.Manifest.Package
   alias Wotex.Workspace.Report
   alias Wotex.Workspace.Steps
   alias WotexWorkspace.Fixtures
@@ -26,6 +29,15 @@ defmodule Wotex.Workspace.StepsTest do
     end
   end
 
+  # The directory (`cd:`), arguments and extra environment of every command.
+  defp received do
+    receive do
+      {:ran_in, cd, args, env} -> [{cd, args, env} | received()]
+    after
+      0 -> []
+    end
+  end
+
   test "the fast gate compiles, checks format, runs credo and tests in MIX_ENV=test" do
     assert Enum.map(Steps.fast_gate(), fn {label, args, opts} -> {label, args, opts} end) == [
              {"compile", ["compile", "--warnings-as-errors"], [mix_env: "test"]},
@@ -36,7 +48,7 @@ defmodule Wotex.Workspace.StepsTest do
   end
 
   test "the fast gate of a native package ends with native.lint in the root" do
-    package = %Wotex.Workspace.Manifest.Package{name: "coap", app: "coap", native: true}
+    package = %Package{name: "coap", app: "coap", native: true}
     gate = Steps.fast_gate(package)
     assert Enum.drop(gate, -1) == Steps.fast_gate()
 
@@ -45,6 +57,74 @@ defmodule Wotex.Workspace.StepsTest do
               [cd: Wotex.Workspace.root(), path_deps: false]}
 
     assert Steps.fast_gate(%{package | native: false}) == Steps.fast_gate()
+  end
+
+  test "the fast gate of a package with hosts repeats the Mix steps in each host" do
+    host = %Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
+
+    package = %Package{
+      name: "lab",
+      app: "lab",
+      native: true,
+      hosts: [%Host{path: "hosts/workbench"}, host]
+    }
+
+    gate = Steps.fast_gate(package)
+    {package_steps, host_steps} = Enum.split(gate, 5)
+    assert package_steps == Steps.fast_gate(%{package | hosts: []})
+    assert List.last(package_steps) == Steps.native_step("lab")
+
+    assert host_steps == [
+             {"hosts/workbench compile", ["compile", "--warnings-as-errors"],
+              [mix_env: "test", cd: "hosts/workbench", env: []]},
+             {"hosts/workbench format", ["format", "--check-formatted"],
+              [mix_env: "test", cd: "hosts/workbench", env: []]},
+             {"hosts/workbench credo", ["credo", "--strict"],
+              [mix_env: "test", cd: "hosts/workbench", env: []]},
+             {"hosts/workbench test", ["test"], [mix_env: "test", cd: "hosts/workbench", env: []]},
+             {"hosts/nerves compile", ["compile", "--warnings-as-errors"],
+              [mix_env: "test", cd: "hosts/nerves", env: [{"MIX_TARGET", "host"}]]},
+             {"hosts/nerves format", ["format", "--check-formatted"],
+              [mix_env: "test", cd: "hosts/nerves", env: [{"MIX_TARGET", "host"}]]},
+             {"hosts/nerves credo", ["credo", "--strict"],
+              [mix_env: "test", cd: "hosts/nerves", env: [{"MIX_TARGET", "host"}]]},
+             {"hosts/nerves test", ["test"],
+              [mix_env: "test", cd: "hosts/nerves", env: [{"MIX_TARGET", "host"}]]}
+           ]
+
+    assert Steps.host_steps(nil, Steps.fast_gate()) == []
+    assert Steps.host_steps(%{package | hosts: []}, Steps.fast_gate()) == []
+  end
+
+  test "a failing host step names the host and stops the package's target" do
+    manifest = Fixtures.manifest()
+
+    package = %{
+      Manifest.fetch!("http", manifest)
+      | hosts: [%Host{path: "hosts/demo", env: [{"X", "1"}]}]
+    }
+
+    test = self()
+
+    runner = fn _path, args, opts ->
+      send(test, {:ran_in, opts[:cd], args, opts[:env]})
+      if args == ["credo", "--strict"] and opts[:cd] == "hosts/demo", do: 1, else: 0
+    end
+
+    target = Steps.target("http", manifest, Steps.fast_gate(package))
+
+    assert {[%{package: "http", result: "hosts/demo credo failed (1)"}], true} =
+             Steps.run([target], runner: runner)
+
+    assert [
+             {nil, ["compile", "--warnings-as-errors"], nil},
+             {nil, ["format", "--check-formatted"], nil},
+             {nil, ["credo", "--strict"], nil},
+             {nil, ["test"], nil},
+             {"hosts/demo", ["compile", "--warnings-as-errors"], [{"X", "1"}]},
+             {"hosts/demo", ["format", "--check-formatted"], [{"X", "1"}]},
+             {"hosts/demo", ["credo", "--strict"], [{"X", "1"}]}
+           ] == received()
   end
 
   test "a target stops at its first failing step and halt stops the run" do

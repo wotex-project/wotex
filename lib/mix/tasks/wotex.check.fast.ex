@@ -12,6 +12,10 @@ defmodule Mix.Tasks.Wotex.Check.Fast do
     5. for a package with native code, `mix native.lint --package NAME` in the
        repository root: clang-format on the changed C and C++ lines, rustfmt
        and clippy
+    6. for a package with host applications (`hosts:` in
+       `tooling/packages.yaml`, such as wotex-lab's Workbench and Nerves
+       hosts), steps 1 to 4 in each host directory with the host's
+       environment (the Nerves host with `MIX_TARGET=host`)
 
   stopping at the first failure, then prints a summary table. No Dialyzer,
   documentation, audits, coverage floor, archive check, clang-tidy or native

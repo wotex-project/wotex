@@ -18,10 +18,12 @@ only what covers it.
 2. While editing, run only the tests that exercise the change:
    `mix pkg <package> test <files>` or `mix impact Module fun --run`.
 3. When one package's change is ready: `mix check.fast --package <package>`
-   (compile with warnings as errors, format, Credo strict, tests and, for a
-   package with native code, `mix native.lint`: clang-format on the changed C
-   and C++ lines, rustfmt and clippy). While editing C, C++ or Rust, run
-   `mix native.lint --package <package>` (`--fix` formats the changed lines).
+   (compile with warnings as errors, format, Credo strict, tests, the same
+   for any host applications the package declares in `tooling/packages.yaml`
+   and, for a package with native code, `mix native.lint`: clang-format on
+   the changed C and C++ lines, rustfmt and clippy). While editing C, C++ or
+   Rust, run `mix native.lint --package <package>` (`--fix` formats the
+   changed lines).
 4. Before a commit: `mix check` — `mix workspace`, then the full gate for
    changed packages and the fast gate for their dependents. A native
    package's full gate adds clang-tidy and its native tests (`mix native.lint
