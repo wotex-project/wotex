@@ -94,6 +94,11 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert mix_exs =~ ~s|sibling(:wotex_runtime, "wotex-runtime")|
     assert mix_exs =~ ~s|System.get_env("WOTEX_PATH_DEPS")|
     assert mix_exs =~ "if Mix.env() in [:dev, :test, :docs] do"
+
+    assert mix_exs =~
+             ~s|{app, path: Path.expand("../\#{directory}", __DIR__), env: :dev, override: true}|
+
+    assert mix_exs =~ ~s|raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"|
     assert mix_exs =~ ~s|package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"|
 
     assert mix_exs =~

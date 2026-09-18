@@ -45,7 +45,9 @@ skill.
   umbrella (`apps_path`), a root release, or a root project that depends on a
   package. The root project only runs package Mix processes.
 - Package directories keep their names; sibling path dependencies are
-  `Path.expand("../<name>", __DIR__)` and resolve inside `packages/`.
+  `{app, path: Path.expand("../<name>", __DIR__), env: :dev, override: true}`
+  and resolve inside `packages/`. `env: :dev` keeps a sibling's own
+  `WOTEX_PATH_DEPS` guard satisfied when it is built as a dependency.
 - `WOTEX_PATH_DEPS=1` is the only sibling switch, allowed in `dev`, `test` and
   `docs`. Unset means Hex requirements. Never add another mechanism.
 - `tooling/packages.yaml` is the single source of the package graph, the CI

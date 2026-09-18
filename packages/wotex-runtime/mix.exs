@@ -60,7 +60,11 @@ defmodule WotexRuntime.MixProject do
         {:wotex, "~> 0.1.0"}
 
       "1" ->
-        {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
+        if Mix.env() in [:dev, :test, :docs] do
+          {:wotex, path: Path.expand("../wotex", __DIR__), env: :dev, override: true}
+        else
+          raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
+        end
 
       _value ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"

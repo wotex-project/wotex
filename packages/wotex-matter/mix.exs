@@ -63,9 +63,9 @@ defmodule WotexMatter.MixProject do
 
       "1" ->
         if Mix.env() in [:dev, :test, :docs] do
-          {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
+          {:wotex, path: Path.expand("../wotex", __DIR__), env: :dev, override: true}
         else
-          raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
+          raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end
 
       _value ->
@@ -80,9 +80,10 @@ defmodule WotexMatter.MixProject do
 
       "1" ->
         if Mix.env() in [:dev, :test, :docs] do
-          {:wotex_runtime, path: Path.expand("../wotex-runtime", __DIR__), override: true}
+          {:wotex_runtime,
+           path: Path.expand("../wotex-runtime", __DIR__), env: :dev, override: true}
         else
-          raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
+          raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end
 
       _value ->

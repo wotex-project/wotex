@@ -382,7 +382,8 @@ defmodule Wotex.Workspace.Scaffold do
 
       # WOTEX_PATH_DEPS=1 is the only sibling switch and is allowed in the dev,
       # test and docs environments: unset means the Hex requirement, 1 means
-      # the sibling checkout under packages/.
+      # the sibling checkout under packages/, loaded in :dev so that its own
+      # switch guard accepts it.
       defp sibling(app, directory) do
         case System.get_env("WOTEX_PATH_DEPS") do
           nil ->
@@ -390,9 +391,9 @@ defmodule Wotex.Workspace.Scaffold do
 
           "1" ->
             if Mix.env() in [:dev, :test, :docs] do
-              {app, path: Path.expand("../#{directory}", __DIR__), override: true}
+              {app, path: Path.expand("../#{directory}", __DIR__), env: :dev, override: true}
             else
-              raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
+              raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
             end
 
           _value ->

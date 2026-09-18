@@ -48,11 +48,11 @@ defmodule WotexLabNerves.MixProject do
         {app, "~> 0.1.0"}
 
       "1" ->
-        if Mix.env() in [:dev, :test] do
+        if Mix.env() in [:dev, :test, :docs] do
           path = if directory == "wotex-lab", do: "../..", else: "../../../#{directory}"
           {app, path: Path.expand(path, __DIR__), env: :dev, override: true}
         else
-          raise "WOTEX_PATH_DEPS is allowed only in development or test"
+          raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end
 
       _ ->

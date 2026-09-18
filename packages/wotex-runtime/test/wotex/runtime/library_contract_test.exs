@@ -21,6 +21,20 @@ defmodule Wotex.Runtime.LibraryContractTest do
     assert unknown_output =~ "WOTEX_PATH_DEPS must be unset or equal to 1"
   end
 
+  test "the local dependency switch is refused outside development, test and docs" do
+    project = Path.expand("../../..", __DIR__)
+
+    assert {output, status} =
+             System.cmd("mix", ["help"],
+               cd: project,
+               env: [{"WOTEX_PATH_DEPS", "1"}, {"MIX_ENV", "prod"}],
+               stderr_to_stdout: true
+             )
+
+    assert status != 0
+    assert output =~ "WOTEX_PATH_DEPS is allowed only in development, test or docs"
+  end
+
   test "the exact supported operation vocabulary is stable" do
     assert Wotex.Runtime.operations() == [
              :readproperty,

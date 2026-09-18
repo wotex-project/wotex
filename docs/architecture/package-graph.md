@@ -43,7 +43,10 @@ archives, not as path dependencies.
   sibling's hidden module compiles but is a boundary violation.
 - Sibling dependencies are declared in `mix.exs` and resolved either from Hex
   (default) or, with `WOTEX_PATH_DEPS=1`, from `packages/<name>` for
-  development, test and documentation builds only.
+  development, test and documentation builds only. A sibling path dependency
+  declares `env: :dev`, so the sibling's own `mix.exs` is evaluated in `dev`
+  and its switch guard, which refuses every other environment with
+  "WOTEX_PATH_DEPS is allowed only in development, test or docs", accepts it.
 - Library packages start no process, read no application environment and
   perform no network or filesystem access on load. Long-lived work is returned
   to the consumer as child specifications.
