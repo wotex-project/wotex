@@ -4,8 +4,10 @@ defmodule Mix.Tasks.Wotex.Coap.Software.Run do
   @moduledoc """
   Verifies a completed software-build workspace and runs the owned interop suite.
 
-  Invoke `mix wotex.coap.software.run --workspace ABSOLUTE_PATH`; the root
-  project alias is `mix wotex.software.run`.
+  Invoke `mix wotex.coap.software.run --workspace ABSOLUTE_PATH` inside the
+  package, whose `mix.exs` aliases it as `mix wotex.software.run`. From the
+  repository root, run `mix pkg wotex-coap wotex.software.run --workspace
+  ABSOLUTE_PATH`.
   """
 
   use Mix.Task

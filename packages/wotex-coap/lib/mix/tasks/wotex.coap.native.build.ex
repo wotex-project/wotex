@@ -4,9 +4,11 @@ defmodule Mix.Tasks.Wotex.Coap.Native.Build do
   @moduledoc """
   Builds the pinned CoAP OSCORE executable in an explicit disposable workspace.
 
-  Invoke `mix wotex.coap.native.build --workspace ABSOLUTE_PATH`; this repository
-  also supplies the root-project alias `mix wotex.native.build`. The qualified
-  task module remains unique when several Wotex protocol packages are compiled.
+  Invoke `mix wotex.coap.native.build --workspace ABSOLUTE_PATH` inside the
+  package; its `mix.exs` also defines the alias `mix wotex.native.build`. From
+  the repository root, `mix native.build --package wotex-coap --workspace
+  ABSOLUTE_PATH` dispatches this task. The qualified task module remains unique
+  when several Wotex protocol packages are compiled.
   """
 
   use Mix.Task

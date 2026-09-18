@@ -40,8 +40,8 @@ retains credentials until SDK config deletion.
 `security_check.c` generates disposable RSA credentials entirely in C and tests
 valid, invalid and boundary cases at an explicit supplied time. The real executable
 also invokes preflight: shape-valid invalid DER returns `certificate_invalid`
-in the opening phase, before any network call. Preflight success still returns
-`unsupported_protocol` there. The separate `session_probe.c` activates a
-Basic256Sha256 anonymous Session and reads the NamespaceArray against the
-independent asyncua fixture. This is test evidence, not production P02/P03
+in the opening phase, before any network call. Preflight success proceeds to SDK
+configuration and secure Session activation in `session_open.c`. The separate
+`session_probe.c` activates a Basic256Sha256 anonymous Session and reads the
+NamespaceArray against the independent asyncua fixture. This is test evidence, not production P02/P03
 acceptance or the full policy/token matrix.

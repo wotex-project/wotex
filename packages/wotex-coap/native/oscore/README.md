@@ -6,7 +6,8 @@ verify all three stages; an unmodified upstream build is not this target.
 [WCO.13](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/specs/WCO.13-native-build-and-software-evidence.md) owns the
 Port, durable storage and build contract. `main.c`, `worker.c` and `exchange.c`
 implement the same-binary custody entry and the first production libcoap
-exchange slice. The Mix build task remains incomplete.
+exchange slice. The explicit Mix task `wotex.coap.native.build` builds and
+probes the helper.
 
 The public executable accepts only `--custody ABS_DIRECTORY`; custody executes
 that same absolute file with only the internal `--worker` argument. The worker
@@ -194,9 +195,8 @@ object. `oscore_store_send_test.c` binds this store to the patched libcoap
 callback and asserts zero wire datagrams after every storage-failure stage.
 [The store receipt](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/provenance/native-store-v1.json) identifies these
 assertions and their source bytes. The production exchange adapter now binds
-this store to libcoap's sequence callback before protected transmission. Report
-streaming, live replay and the full OSCORE workflow remain separate implementation
-obligations.
+this store to libcoap's sequence callback before protected transmission. Live
+replay and the full OSCORE workflow remain separate implementation obligations.
 
 The patches retain libcoap's source licensing; see
 [LICENSE.libcoap](LICENSE.libcoap) and the package [NOTICE](../../NOTICE).

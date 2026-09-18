@@ -4,10 +4,12 @@ defmodule Mix.Tasks.Wotex.Opcua.Native.Build do
   @moduledoc """
   Builds the pinned OPC UA native executable in an explicit disposable workspace.
 
-  Invoke `mix wotex.opcua.native.build --workspace ABSOLUTE_PATH`; this repository
-  also supplies the root-project alias `mix wotex.native.build`. The qualified
-  task module is unique to this dependency so a consumer can compile multiple
-  Wotex protocol packages without Mix task module conflicts.
+  Invoke `mix wotex.opcua.native.build --workspace ABSOLUTE_PATH` inside the
+  package; its project also supplies the alias `mix wotex.native.build`. From the
+  repository root, `mix native.build --package wotex-opcua --workspace ABSOLUTE_PATH`
+  dispatches the same task. The qualified task module is unique to this
+  dependency so a consumer can compile multiple Wotex protocol packages without
+  Mix task module conflicts.
 
   The task downloads only reviewed archives, verifies source and tool identities,
   runs bounded commands and writes a content-bound completion receipt. An existing

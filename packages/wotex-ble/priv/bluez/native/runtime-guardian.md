@@ -159,8 +159,10 @@ lane; its normal invocation has no additional exit allowance.
 
 ## Source identity
 
-The runtime implementation is the shared Wotex guardian at commit
-`ca2c4afc2fe8d4afa42b7621363c567da89ce288`, source SHA-256
+The runtime implementation is the shared Wotex guardian introduced as
+`packages/wotex-opcua/priv/native/custody.c` at commit
+`64a05c16f63792671343f94f89af5b7ab6b321b5` (`ca2c4afc2fe8d4afa42b7621363c567da89ce288`
+in the former per-package history), source SHA-256
 `d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2`.
 Its Apache-2.0 attribution is retained. The BLE fault driver uses package-specific
 case identifiers for the same pipe-level assertions. Source equivalence does not

@@ -50,7 +50,7 @@ exchange worker. The local lifecycle tests accept same-binary BEAM ownership and
 durable open/close, while actual CoAP traffic, saturation and exchange deadlines
 remain required.
 
-`docs/specs/fixtures/custody-v1.json` binds eleven exact pipe-level cases to
+`priv/fixtures/custody-v1.json` binds eleven exact pipe-level cases to
 `test/native/oscore_custody_test.c`. They cover byte-preserving duplex transfer,
 full input/output pipes, stopped workers, owner EOF/TERM, stderr failure, final
 output drain, failed drain, descriptor closure, unrelated group preservation and

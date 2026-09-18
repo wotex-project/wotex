@@ -4,8 +4,10 @@ defmodule Mix.Tasks.Wotex.Coap.Software.Build do
   @moduledoc """
   Builds the manifest-bound native helper and pinned upstream software peer.
 
-  Invoke `mix wotex.coap.software.build --workspace ABSOLUTE_PATH`; the root
-  project alias is `mix wotex.software.build`.
+  Invoke `mix wotex.coap.software.build --workspace ABSOLUTE_PATH` inside the
+  package, whose `mix.exs` aliases it as `mix wotex.software.build`. From the
+  repository root, run `mix pkg wotex-coap wotex.software.build --workspace
+  ABSOLUTE_PATH`.
   """
 
   use Mix.Task
