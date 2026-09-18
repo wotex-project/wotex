@@ -5,6 +5,11 @@
 
 namespace {
 
+// Whether processing a line produced a frame that contains `text`.
+bool FrameHas(const wotex::matter::ProcessResult &result, const std::string &text) {
+  return result.frame.has_value() && result.frame->find(text) != std::string::npos;
+}
+
 class CommissioningBackend final : public wotex::matter::ControllerBackend {
  public:
   wotex::matter::BackendResult Open(
@@ -89,8 +94,7 @@ void Open(wotex::matter::HostProtocol &protocol) {
       "\"session_generation\":\"0123456789abcdef0123456789abcdef\"}");
   assert(flow.keep_running && !flow.frame.has_value());
   auto opened = protocol.ProcessLine(OpenFrame());
-  assert(opened.keep_running &&
-         opened.frame->find("\"ok\":true") != std::string::npos);
+  assert(opened.keep_running && FrameHas(opened, "\"ok\":true"));
 }
 
 void TestPinAndRequestBounds() {
@@ -122,8 +126,7 @@ void TestFinalCommissionAndWindowResults() {
       "\"parameters\":{\"node_id\":9,\"setup_pin\":20202021,"
       "\"discriminator\":4095},\"timeout_ms\":60000}");
   assert(commissioned.keep_running);
-  assert(commissioned.frame->find("\"case\":\"established\"") !=
-         std::string::npos);
+  assert(FrameHas(commissioned, "\"case\":\"established\""));
   assert(backend.commissioning.node_id == 9U &&
          backend.commissioning.discriminator == 4095U &&
          backend.commissioning.timeout_ms == 60000U);
@@ -134,8 +137,8 @@ void TestFinalCommissionAndWindowResults() {
       "\"iteration_count\":1000,\"discriminator\":1234},"
       "\"timeout_ms\":5000}");
   assert(window.keep_running);
-  assert(window.frame->find("\"setup_pin\":20202021") != std::string::npos);
-  assert(window.frame->find("MT:Y.K9042C00KA0648G00") != std::string::npos);
+  assert(FrameHas(window, "\"setup_pin\":20202021"));
+  assert(FrameHas(window, "MT:Y.K9042C00KA0648G00"));
   assert(backend.window.timeout_s == 300U &&
          backend.window.iteration_count == 1000U);
 }
@@ -154,7 +157,7 @@ void TestInvalidInputsAndSdkFailures() {
         std::to_string(2U + backend.commissioning.node_id++) +
         "\",\"operation\":\"commission_on_network\",\"parameters\":" +
         parameters + ",\"timeout_ms\":1000}");
-    assert(rejected.frame->find("invalid_request") != std::string::npos);
+    assert(FrameHas(rejected, "invalid_request"));
   }
 
   backend.commissioning_failure = true;
@@ -162,10 +165,8 @@ void TestInvalidInputsAndSdkFailures() {
       "{\"version\":1,\"id\":\"5\",\"operation\":\"commission_on_network\","
       "\"parameters\":{\"node_id\":9,\"setup_pin\":20202021,"
       "\"discriminator\":1},\"timeout_ms\":1000}");
-  assert(failed.frame->find("\"sdk_status\":4045602817") !=
-         std::string::npos);
-  assert(failed.frame->find("\"effect\":\"unknown\"") !=
-         std::string::npos);
+  assert(FrameHas(failed, "\"sdk_status\":4045602817"));
+  assert(FrameHas(failed, "\"effect\":\"unknown\""));
 }
 
 void TestExpiredWindowAndOperationalAclDenial() {
@@ -179,18 +180,16 @@ void TestExpiredWindowAndOperationalAclDenial() {
       "\"parameters\":{\"node_id\":9,\"timeout_s\":180,"
       "\"iteration_count\":100000,\"discriminator\":0},"
       "\"timeout_ms\":5000}");
-  assert(expired.frame->find("window_failed") != std::string::npos);
-  assert(expired.frame->find("\"sdk_status\":4045602818") !=
-         std::string::npos);
-  assert(expired.frame->find("\"effect\":\"unknown\"") !=
-         std::string::npos);
+  assert(FrameHas(expired, "window_failed"));
+  assert(FrameHas(expired, "\"sdk_status\":4045602818"));
+  assert(FrameHas(expired, "\"effect\":\"unknown\""));
 
   auto denied = protocol.ProcessLine(
       "{\"version\":1,\"id\":\"3\",\"operation\":\"read\","
       "\"parameters\":{\"fabric_id\":1,\"node_id\":9,\"endpoint\":0,"
       "\"cluster\":31,\"member\":0},\"timeout_ms\":1000}");
-  assert(denied.frame->find("interaction_status") != std::string::npos);
-  assert(denied.frame->find("\"status\":126") != std::string::npos);
+  assert(FrameHas(denied, "interaction_status"));
+  assert(FrameHas(denied, "\"status\":126"));
 }
 
 void TestMalformedAcknowledgementEffect() {
@@ -205,8 +204,8 @@ void TestMalformedAcknowledgementEffect() {
       R"({"version":1,"id":"3","operation":"open_window","parameters":{"node_id":9,"timeout_s":180,"iteration_count":1000,"discriminator":1},"timeout_ms":5000})");
   for (const auto &result : {commission, window}) {
     assert(result.keep_running);
-    assert(result.frame->find("invalid_backend_result") != std::string::npos);
-    assert(result.frame->find(R"("effect":"unknown")") != std::string::npos);
+    assert(FrameHas(result, "invalid_backend_result"));
+    assert(FrameHas(result, R"("effect":"unknown")"));
   }
 }
 

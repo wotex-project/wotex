@@ -410,7 +410,7 @@ bool InteractionParameters(const std::string &operation, const Json &parameters,
       if (!Selector(path, operation == "read_paths", selector)) {
         return false;
       }
-      result.paths.push_back(std::move(selector));
+      result.paths.push_back(selector);
     }
   }
   result.fabric_id = result.paths.front().fabric_id;
@@ -487,7 +487,7 @@ bool SubscriptionParameters(const Json &parameters, std::uint32_t timeout_ms,
     if (!Selector(path, false, selector)) {
       return false;
     }
-    result.paths.push_back(std::move(selector));
+    result.paths.push_back(selector);
   }
   result.fabric_id = result.paths.front().fabric_id;
   result.node_id = result.paths.front().node_id;
@@ -618,20 +618,25 @@ Json SubscriptionFrame(const SubscriptionReport &report,
                 {"sdk_subscription_id", report.sdk_subscription_id}};
   Json value;
   std::string_view kind;
+  // The controller emits only reports SubscriptionBuffer admitted with
+  // valid_subscription_report, which carry the data of their kind.
   if (report.kind == SubscriptionKind::Attribute) {
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): an admitted attribute report
+    const AttributeData &attribute = *report.result.attribute;
     kind = "attribute";
-    value = ElementJson(report.result.attribute->value);
-    metadata["data_version"] = report.result.attribute->data_version
-        ? Json(*report.result.attribute->data_version) : Json(nullptr);
+    value = ElementJson(attribute.value);
+    metadata["data_version"] = attribute.data_version ? Json(*attribute.data_version)
+                                                      : Json(nullptr);
   } else {
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): an admitted event report
+    const EventData &event = *report.result.event;
     kind = "event";
-    value = ElementJson(report.result.event->value);
-    metadata["event_number"] = report.result.event->event_number;
-    metadata["priority"] = report.result.event->priority;
+    value = ElementJson(event.value);
+    metadata["event_number"] = event.event_number;
+    metadata["priority"] = event.priority;
     metadata["timestamp"] = {
-        {"kind", report.result.event->timestamp_kind == EventData::TimestampKind::Epoch
-                     ? "epoch" : "system"},
-        {"value", report.result.event->timestamp_value}};
+        {"kind", event.timestamp_kind == EventData::TimestampKind::Epoch ? "epoch" : "system"},
+        {"value", event.timestamp_value}};
   }
   return {{"version", kProtocolVersion},
           {"event", "subscription_report"},
@@ -656,6 +661,7 @@ std::optional<Json> InteractionJson(const InteractionRequest &request,
     if (response.results.size() != 1 || response.results[0].error) {
       return std::nullopt;
     }
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): a valid result without an error has its attribute
     return AttributeJson(*response.results[0].attribute);
   }
   if (request.kind == InteractionKind::ReadAttributes ||
@@ -668,6 +674,7 @@ std::optional<Json> InteractionJson(const InteractionRequest &request,
       } else if (path.attribute) {
         outcome = {{"ok", AttributeJson(*path.attribute)}};
       } else {
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access): a valid result has exactly one alternative
         outcome = {{"ok", EventJson(*path.event)}};
       }
       results.push_back({{"path", PathJson(path.path)},
@@ -676,6 +683,7 @@ std::optional<Json> InteractionJson(const InteractionRequest &request,
     return results;
   }
   if (request.kind == InteractionKind::Write) {
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): a valid write response names its path
     return Json{{"path", PathJson(*response.response_path)}, {"status", 0}};
   }
   return Json{{"path", response.response_path ? PathJson(*response.response_path)
@@ -861,6 +869,7 @@ class BoundedOutput final {
         written = static_cast<bool>(output_);
       } catch (const std::ios_base::failure &) {
         // Exception-enabled streams share the ordinary failed-write path.
+        written = false;
       }
 
       std::lock_guard<std::mutex> lock(mutex_);
@@ -1115,6 +1124,7 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
       return {true, BackendFailure(request, "invalid_backend_result")};
     }
     if (!response.ok) {
+      // NOLINTNEXTLINE(bugprone-unchecked-optional-access): a valid failed response has its error
       return {true, CommissioningFailure(request, *response.error)};
     }
     return {true,
@@ -1140,6 +1150,7 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
       return {true, BackendFailure(request, "invalid_backend_result")};
     }
     if (!response.ok) {
+      // NOLINTNEXTLINE(bugprone-unchecked-optional-access): a valid failed response has its error
       return {true, CommissioningFailure(request, *response.error)};
     }
     return {true,
@@ -1305,9 +1316,11 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
       }
       return {true, InteractionFailure(request, *response.error)};
     }
-    if (interaction.kind == InteractionKind::ReadAttribute &&
-        response.results.size() == 1 && response.results[0].error.has_value()) {
-      return {true, InteractionFailure(request, *response.results[0].error)};
+    if (interaction.kind == InteractionKind::ReadAttribute && response.results.size() == 1) {
+      const std::optional<InteractionError> &error = response.results[0].error;
+      if (error.has_value()) {
+        return {true, InteractionFailure(request, *error)};
+      }
     }
     std::optional<Json> result = InteractionJson(interaction, response);
     if (!result.has_value()) {

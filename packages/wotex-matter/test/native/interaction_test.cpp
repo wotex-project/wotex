@@ -7,6 +7,11 @@
 
 namespace {
 
+// Whether processing a line produced a frame that contains `text`.
+bool FrameHas(const wotex::matter::ProcessResult &result, const std::string &text) {
+  return result.frame.has_value() && result.frame->find(text) != std::string::npos;
+}
+
 using namespace wotex::matter;
 
 class RecordingBackend final : public ControllerBackend {
@@ -31,6 +36,12 @@ class RecordingBackend final : public ControllerBackend {
   bool open{false};
 };
 
+// The request the backend last received; the test fails when there is none.
+const InteractionRequest &Last(const RecordingBackend &backend) {
+  assert(backend.last.has_value());
+  return *backend.last;
+}
+
 std::string OpenFrame() {
   return R"({"version":1,"id":"1","operation":"open","parameters":{"lifecycle":"persistent","storage_path":"/tmp/store","storage_mode":"create_new","authority":"generate_root","vendor_id":65521,"fabric_id":1,"controller_node_id":2,"paa_trust_store":"/tmp/paa"},"timeout_ms":1000})";
 }
@@ -40,7 +51,7 @@ void Open(HostProtocol &protocol) {
       R"({"version":1,"event":"flow_open","session_generation":"0123456789abcdef0123456789abcdef"})")
              .keep_running);
   const auto opened = protocol.ProcessLine(OpenFrame());
-  assert(opened.keep_running && opened.frame->find(R"("ok":true)") != std::string::npos);
+  assert(opened.keep_running && FrameHas(opened, R"("ok":true)"));
 }
 
 ConcretePath Path(std::uint16_t endpoint, std::uint32_t cluster,
@@ -80,25 +91,25 @@ void TimedWriteAndLocalRejection() {
   backend.response.response_path = Path(1, 0x0201, 0x0012);
   auto written = protocol.ProcessLine(
       R"({"version":1,"id":"2","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":18,"value":{"tag":"anonymous","type":"i16","value":2000},"expected_data_version":4294967295,"timed_request_timeout_ms":60000},"timeout_ms":60000})");
-  assert(written.keep_running && written.frame->find(R"("status":0)") != std::string::npos);
-  assert(backend.interactions == 1 && backend.last->kind == InteractionKind::Write);
-  assert(backend.last->expected_data_version == 0xFFFFFFFFU);
-  assert(backend.last->timed_request_timeout_ms == 60000U);
-  assert(backend.last->timeout_ms == 60000U);
+  assert(written.keep_running && FrameHas(written, R"("status":0)"));
+  assert(backend.interactions == 1 && Last(backend).kind == InteractionKind::Write);
+  assert(Last(backend).expected_data_version == 0xFFFFFFFFU);
+  assert(Last(backend).timed_request_timeout_ms == 60000U);
+  assert(Last(backend).timeout_ms == 60000U);
 
   auto onoff = protocol.ProcessLine(
       R"({"version":1,"id":"3","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":6,"member":0,"value":{"tag":"anonymous","type":"boolean","value":true}},"timeout_ms":1000})");
-  assert(onoff.frame->find("invalid_request") != std::string::npos);
+  assert(FrameHas(onoff, "invalid_request"));
   assert(backend.interactions == 1);
 
   auto expired = protocol.ProcessLine(
       R"({"version":1,"id":"4","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":18,"value":{"tag":"anonymous","type":"i16","value":2000},"timed_request_timeout_ms":1001},"timeout_ms":1000})");
-  assert(expired.frame->find("invalid_request") != std::string::npos);
+  assert(FrameHas(expired, "invalid_request"));
   assert(backend.interactions == 1);
 
   auto tagged = protocol.ProcessLine(
       R"({"version":1,"id":"5","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":18,"value":{"tag":["context",0],"type":"i16","value":2000}},"timeout_ms":1000})");
-  assert(tagged.frame->find("invalid_request") != std::string::npos);
+  assert(FrameHas(tagged, "invalid_request"));
   assert(backend.interactions == 1);
 }
 
@@ -118,10 +129,10 @@ void AttributeStatusAndDataVersion() {
   auto read = protocol.ProcessLine(
       R"({"version":1,"id":"2","operation":"read_paths","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0},{"fabric_id":1,"node_id":3,"endpoint":2,"cluster":6,"member":0}]},"timeout_ms":1000})");
   assert(read.keep_running);
-  assert(read.frame->find(R"("data_version":0)") != std::string::npos);
-  assert(read.frame->find(R"("status":126)") != std::string::npos);
-  assert(read.frame->find(R"("cluster_status":128)") != std::string::npos);
-  assert(backend.last->kind == InteractionKind::ReadAttributes);
+  assert(FrameHas(read, R"("data_version":0)"));
+  assert(FrameHas(read, R"("status":126)"));
+  assert(FrameHas(read, R"("cluster_status":128)"));
+  assert(Last(backend).kind == InteractionKind::ReadAttributes);
 }
 
 void EventIdentityAndMinimumNumber() {
@@ -140,15 +151,15 @@ void EventIdentityAndMinimumNumber() {
   auto events = protocol.ProcessLine(
       R"({"version":1,"id":"2","operation":"read_events","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":2,"cluster":57,"member":3}],"min_event_number":0},"timeout_ms":1000})");
   assert(events.keep_running);
-  assert(events.frame->find(R"("event_number":18446744073709551615)") != std::string::npos);
-  assert(events.frame->find(R"("kind":"epoch")") != std::string::npos);
-  assert(events.frame->find(R"("priority":2)") != std::string::npos);
-  assert(backend.last->minimum_event_number == 0);
+  assert(FrameHas(events, R"("event_number":18446744073709551615)"));
+  assert(FrameHas(events, R"("kind":"epoch")"));
+  assert(FrameHas(events, R"("priority":2)"));
+  assert(Last(backend).minimum_event_number == 0);
   backend.response.results.clear();
   auto empty = protocol.ProcessLine(
       R"({"version":1,"id":"3","operation":"read_events","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":2,"cluster":57,"member":3}],"min_event_number":9},"timeout_ms":1000})");
   assert(empty.keep_running);
-  assert(empty.frame->find(R"("result":[])") != std::string::npos);
+  assert(FrameHas(empty, R"("result":[])"));
 }
 
 void MutationTimeoutCompletesOnce() {
@@ -176,11 +187,12 @@ void AccessControlWriteCrossesProtocolBoundary() {
       R"({"version":1,"id":"2","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":0,"cluster":31,"member":0,"value":{"tag":"anonymous","type":"array","value":[{"tag":"anonymous","type":"structure","value":[{"tag":["context",1],"type":"u8","value":5},{"tag":["context",2],"type":"u8","value":2},{"tag":["context",3],"type":"array","value":[{"tag":"anonymous","type":"u64","value":999999}]},{"tag":["context",4],"type":"null","value":null}]}]}},"timeout_ms":60000})");
 
   assert(written.keep_running);
-  assert(written.frame->find(R"("status":0)") != std::string::npos);
+  assert(FrameHas(written, R"("status":0)"));
   assert(backend.interactions == 1);
-  assert(backend.last->kind == InteractionKind::Write);
-  assert(backend.last->value->type == ElementType::Array);
-  assert(backend.last->value->children.size() == 1U);
+  const InteractionRequest &request = Last(backend);
+  assert(request.kind == InteractionKind::Write);
+  assert(request.value.has_value() && request.value->type == ElementType::Array);
+  assert(request.value->children.size() == 1U);
 }
 
 void MutationResponseIdentity() {
@@ -208,8 +220,8 @@ void MutationResponseIdentity() {
       const auto result = protocol.ProcessLine(frame);
       assert(backend.interactions == 1U);
       assert(result.keep_running);
-      assert(result.frame->find("invalid_backend_result") != std::string::npos);
-      assert(result.frame->find(R"("effect":"unknown")") != std::string::npos);
+      assert(FrameHas(result, "invalid_backend_result"));
+      assert(FrameHas(result, R"("effect":"unknown")"));
     }
   }
 
@@ -225,7 +237,9 @@ void MutationResponseIdentity() {
     if (mode == 0) { backend.response.response_path.reset(); }
     if (mode == 1) { backend.response.response_value.reset(); }
     if (mode == 2) { backend.response.response_value = I16(0); }
-    if (mode == 3) { backend.response.response_path->member = 0xFFFFU; }
+    if (mode == 3) {
+      backend.response.response_path = Path(1, 6, 0xFFFFU);
+    }
     if (mode == 5) {
       backend.response.response_path.reset();
       backend.response.response_value.reset();
@@ -234,10 +248,10 @@ void MutationResponseIdentity() {
         R"({"version":1,"id":"2","operation":"invoke","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":6,"member":1,"value":{"tag":"anonymous","type":"structure","value":[]}},"timeout_ms":1000})");
     assert(result.keep_running && backend.interactions == 1U);
     if (mode >= 4) {
-      assert(result.frame->find(R"("ok":true)") != std::string::npos);
+      assert(FrameHas(result, R"("ok":true)"));
     } else {
-      assert(result.frame->find("invalid_backend_result") != std::string::npos);
-      assert(result.frame->find(R"("effect":"unknown")") != std::string::npos);
+      assert(FrameHas(result, "invalid_backend_result"));
+      assert(FrameHas(result, R"("effect":"unknown")"));
     }
   }
 }
@@ -265,7 +279,7 @@ int main() {
         std::to_string(cluster) + R"(,"member":0}]},"timeout_ms":1000})");
     assert(response.keep_running);
     assert(backend.interactions == 1);
-    assert(backend.last->paths[0].cluster == cluster);
+    assert(Last(backend).paths[0].cluster == cluster);
   }
   for (const std::uint32_t cluster : {0x8000U, 0xFC00U, 0xFFFFU, 0x10000U,
                                       0x1FBFFU, 0x1FFFFU, 0xFFF50000U,
@@ -284,7 +298,7 @@ int main() {
         std::string(R"({"version":1,"id":"2","operation":"read_paths","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":)") +
         std::to_string(cluster) + R"(,"member":0}]},"timeout_ms":1000})");
     assert(response.keep_running);
-    assert(response.frame->find("invalid_request") != std::string::npos);
+    assert(FrameHas(response, "invalid_request"));
     assert(backend.interactions == 0);
   }
   TimedWriteAndLocalRejection();

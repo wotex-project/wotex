@@ -120,6 +120,7 @@ bool Configure() {
 
 class CallbackSource final : public ControllerBackend {
  public:
+  // NOLINTNEXTLINE(bugprone-exception-escape): probe.counts is always a JSON object, so Close cannot throw type_error; an allocation failure ends the probe process
   ~CallbackSource() override { Close(); }
 
   BackendResult Open(const NativeOpenOptions &options) override {

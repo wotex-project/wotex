@@ -70,6 +70,15 @@ bool SamePublicKey(const chip::Crypto::P256PublicKey &left,
       std::memcmp(left.ConstBytes(), right.ConstBytes(), left.Length()) == 0;
 }
 
+// The concrete path of a selector that names all three components. The backend
+// sees only requests the validators admitted: valid_interaction_request for
+// event reads, writes and invokes, valid_subscription_request for every
+// subscription path.
+ConcretePath AdmittedPath(const PathSelector &path) {
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the validators admit only concrete paths here
+  return {path.fabric_id, path.node_id, *path.endpoint, *path.cluster, *path.member};
+}
+
 ConcretePath NativePath(std::uint64_t fabric_id, std::uint64_t node_id,
                         const chip::app::ConcreteAttributePath &path) {
   return {fabric_id, node_id, path.mEndpointId, path.mClusterId,
@@ -968,8 +977,10 @@ class SdkControllerBackend::Impl final
     }
 
    private:
-    static void Opened(void *context, chip::NodeId device_id, CHIP_ERROR status,
-                       chip::SetupPayload payload) {
+    static void Opened(
+        void *context, chip::NodeId device_id, CHIP_ERROR status,
+        // NOLINTNEXTLINE(performance-unnecessary-value-param): the SDK's OnOpenCommissioningWindow callback type passes the payload by value
+        chip::SetupPayload payload) {
       auto *self = static_cast<PendingWindow *>(context);
       if (status != CHIP_NO_ERROR || device_id != self->request_.node_id ||
           payload.discriminator.IsShortDiscriminator()) {
@@ -1222,7 +1233,8 @@ class SdkControllerBackend::Impl final
       if (request_.kind == InteractionKind::ReadEvents) {
         event_paths_.reserve(request_.paths.size());
         for (const PathSelector &path : request_.paths) {
-          event_paths_.emplace_back(*path.endpoint, *path.cluster, *path.member);
+          const ConcretePath concrete = AdmittedPath(path);
+          event_paths_.emplace_back(concrete.endpoint, concrete.cluster, concrete.member);
         }
         params.mpEventPathParamsList = event_paths_.data();
         params.mEventPathParamsListSize = event_paths_.size();
@@ -1267,9 +1279,7 @@ class SdkControllerBackend::Impl final
           resource_testing::Object::WriteClient>(
           &exchange_manager, this, timed, false);
 
-      const PathSelector &path = request_.paths.front();
-      const ConcretePath concrete{request_.fabric_id, request_.node_id,
-                                  *path.endpoint, *path.cluster, *path.member};
+      const ConcretePath concrete = AdmittedPath(request_.paths.front());
       chip::Optional<chip::DataVersion> version;
       if (request_.expected_data_version) {
         version.SetValue(*request_.expected_data_version);
@@ -1280,6 +1290,7 @@ class SdkControllerBackend::Impl final
       write_buffer_.assign(kMaximumEncodedTlvBytes, 0);
       chip::TLV::TLVWriter writer;
       writer.Init(write_buffer_.data(), write_buffer_.size());
+      // NOLINTNEXTLINE(bugprone-unchecked-optional-access): valid_interaction_request admits a write only with its value
       ReturnErrorOnFailure(EncodeWriteValue(concrete, *request_.value, writer));
       ReturnErrorOnFailure(writer.Finalize());
       chip::TLV::TLVReader reader;
@@ -1298,10 +1309,9 @@ class SdkControllerBackend::Impl final
       command_sender_ = resource_testing::Make<chip::app::CommandSender,
           resource_testing::Object::CommandSender>(
           this, &exchange_manager, timed, false, false);
-      const PathSelector &path = request_.paths.front();
-      chip::app::CommandPathParams native(
-          *path.endpoint, *path.cluster, *path.member,
-          chip::app::CommandPathFlags::kEndpointIdValid);
+      const ConcretePath path = AdmittedPath(request_.paths.front());
+      chip::app::CommandPathParams native(path.endpoint, path.cluster, path.member,
+                                          chip::app::CommandPathFlags::kEndpointIdValid);
       chip::Optional<std::uint16_t> timed_value;
       if (request_.timed_request_timeout_ms) {
         timed_value.SetValue(*request_.timed_request_timeout_ms);
@@ -1309,14 +1319,11 @@ class SdkControllerBackend::Impl final
       chip::app::CommandSender::AddRequestDataParameters params(timed_value);
       CHIP_ERROR error = CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE;
       using namespace chip::app::Clusters::OnOff::Commands;
-      if (*path.cluster == chip::app::Clusters::OnOff::Id &&
-          *path.member == Off::Id) {
+      if (path.cluster == chip::app::Clusters::OnOff::Id && path.member == Off::Id) {
         error = command_sender_->AddRequestData(native, Off::Type{}, params);
-      } else if (*path.cluster == chip::app::Clusters::OnOff::Id &&
-                 *path.member == On::Id) {
+      } else if (path.cluster == chip::app::Clusters::OnOff::Id && path.member == On::Id) {
         error = command_sender_->AddRequestData(native, On::Type{}, params);
-      } else if (*path.cluster == chip::app::Clusters::OnOff::Id &&
-                 *path.member == Toggle::Id) {
+      } else if (path.cluster == chip::app::Clusters::OnOff::Id && path.member == Toggle::Id) {
         error = command_sender_->AddRequestData(native, Toggle::Type{}, params);
       }
       ReturnErrorOnFailure(error);
@@ -1454,7 +1461,7 @@ class SdkControllerBackend::Impl final
         AddMissingConcreteResults();
       }
       if (overall_error_) {
-        Publish({false, *overall_error_});
+        Publish({false, overall_error_});
       } else {
         InteractionResponse response;
         response.ok = true;
@@ -1470,7 +1477,7 @@ class SdkControllerBackend::Impl final
                                           std::nullopt, InteractionEffect::Unknown};
       }
       if (overall_error_) {
-        Publish({false, *overall_error_});
+        Publish({false, overall_error_});
       } else {
         InteractionResponse response;
         response.ok = true;
@@ -1507,10 +1514,10 @@ class SdkControllerBackend::Impl final
     }
 
     bool SameRequestedPath(const ConcretePath &path) const {
-      const PathSelector &expected = request_.paths.front();
-      return path.fabric_id == expected.fabric_id &&
-          path.node_id == expected.node_id && path.endpoint == *expected.endpoint &&
-          path.cluster == *expected.cluster && path.member == *expected.member;
+      const ConcretePath expected = AdmittedPath(request_.paths.front());
+      return path.fabric_id == expected.fabric_id && path.node_id == expected.node_id &&
+          path.endpoint == expected.endpoint && path.cluster == expected.cluster &&
+          path.member == expected.member;
     }
 
     void AppendResult(PathResult result) {
@@ -1651,7 +1658,7 @@ class SdkControllerBackend::Impl final
         buffer_.Activate();
         reports = buffer_.TakeReady();
       }
-      return Emit(std::move(reports));
+      return Emit(reports);
     }
 
     bool CancelAndWait(std::uint32_t timeout_ms) {
@@ -1725,15 +1732,16 @@ class SdkControllerBackend::Impl final
       if (request_.kind == SubscriptionKind::Attribute) {
         attribute_paths_.reserve(request_.paths.size());
         for (const PathSelector &path : request_.paths) {
-          attribute_paths_.emplace_back(*path.endpoint, *path.cluster,
-                                        *path.member);
+          const ConcretePath concrete = AdmittedPath(path);
+          attribute_paths_.emplace_back(concrete.endpoint, concrete.cluster, concrete.member);
         }
         params.mpAttributePathParamsList = attribute_paths_.data();
         params.mAttributePathParamsListSize = attribute_paths_.size();
       } else {
         event_paths_.reserve(request_.paths.size());
         for (const PathSelector &path : request_.paths) {
-          event_paths_.emplace_back(*path.endpoint, *path.cluster, *path.member);
+          const ConcretePath concrete = AdmittedPath(path);
+          event_paths_.emplace_back(concrete.endpoint, concrete.cluster, concrete.member);
         }
         params.mpEventPathParamsList = event_paths_.data();
         params.mEventPathParamsListSize = event_paths_.size();
@@ -1761,7 +1769,7 @@ class SdkControllerBackend::Impl final
         buffer_.EndReport();
         reports = buffer_.TakeReady();
       }
-      (void) Emit(std::move(reports));
+      (void)Emit(reports);
     }
 
     void OnAttributeData(const chip::app::ConcreteDataAttributePath &path,
@@ -1891,7 +1899,7 @@ class SdkControllerBackend::Impl final
           std::lock_guard<std::mutex> lock(mutex_);
           recovery_.Established();
         }
-        (void) Emit(std::move(reports));
+        (void)Emit(reports);
         return;
       }
 
@@ -1982,7 +1990,7 @@ class SdkControllerBackend::Impl final
       }
     }
 
-    bool Emit(std::vector<SubscriptionReport> reports) {
+    bool Emit(const std::vector<SubscriptionReport> &reports) {
       for (const SubscriptionReport &report : reports) {
         if (!owner_.EmitReport(report)) {
           ScheduleCancel();
@@ -1992,7 +2000,7 @@ class SdkControllerBackend::Impl final
       return true;
     }
 
-    void FailActive(InteractionError error) {
+    void FailActive(const InteractionError &error) {
       bool emit = false;
       std::uint64_t generation = 0;
       {

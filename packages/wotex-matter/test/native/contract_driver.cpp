@@ -66,10 +66,11 @@ int FlowSession(const std::string &configuration) {
       return 2;
     }
     const bool close = event["event"] == "close" && event.size() == 1;
+    if (!close && !terminal.is_null()) {
+      return 2;
+    }
     if (close) {
       // The final snapshot precedes a cooperative exit and sanitizer teardown.
-    } else if (!terminal.is_null()) {
-      return 2;
     } else if (event["event"] == "transmit") {
       if (event.size() != 3 || !event.contains("stream") || !event["stream"].is_string() ||
           !event.contains("bytes") || !Unsigned(event["bytes"], wotex::matter::kMaximumFrameBytes)) {

@@ -10,6 +10,11 @@
 
 namespace {
 
+// Whether processing a line produced a frame that contains `text`.
+bool FrameHas(const wotex::matter::ProcessResult &result, const std::string &text) {
+  return result.frame.has_value() && result.frame->find(text) != std::string::npos;
+}
+
 using namespace wotex::matter;
 
 constexpr char kSessionGeneration[] =
@@ -132,8 +137,7 @@ void Open(HostProtocol &protocol) {
   assert(protocol.ProcessLine(
       R"({"version":1,"event":"flow_open","session_generation":"0123456789abcdef0123456789abcdef"})")
              .keep_running);
-  assert(protocol.ProcessLine(OpenFrame()).frame->find(R"("ok":true)") !=
-         std::string::npos);
+  assert(FrameHas(protocol.ProcessLine(OpenFrame()), R"("ok":true)"));
 }
 
 void InitialReportsPreserveIdentityAndCancel() {
@@ -148,11 +152,14 @@ void InitialReportsPreserveIdentityAndCancel() {
   buffer.EndReport();
   auto reports = buffer.TakeReady();
   assert(reports.size() == 2);
-  assert(reports[0].result.attribute->value.signed_value == 2150);
-  assert(reports[1].result.attribute->value.signed_value == 2150);
+  const std::optional<AttributeData> &first = reports[0].result.attribute;
+  const std::optional<AttributeData> &second = reports[1].result.attribute;
+  assert(first.has_value() && second.has_value());
+  assert(first->value.signed_value == 2150);
+  assert(second->value.signed_value == 2150);
   assert(reports[0].report_id == 1 && reports[1].report_id == 2);
-  assert(reports[0].result.attribute->data_version == 7);
-  assert(reports[1].result.attribute->data_version == 8);
+  assert(first->data_version == 7);
+  assert(second->data_version == 8);
   assert(reports[0].min_interval_s == 2 && reports[0].max_interval_s == 45);
 
   buffer.Cancel();
@@ -235,7 +242,8 @@ void RecoveryGenerationResetsSnapshotIdentityButRetainsEventIdentity() {
   events.Activate();
   auto recovered_events = events.TakeReady();
   assert(recovered_events.size() == 1);
-  assert(recovered_events[0].result.event->event_number == 10);
+  const std::optional<EventData> &recovered = recovered_events[0].result.event;
+  assert(recovered.has_value() && recovered->event_number == 10);
   assert(recovered_events[0].generation == 2);
 }
 
@@ -376,12 +384,12 @@ void CancellationRacingRetirementUsesTheExistingBarrier() {
     const auto wrong_generation = protocol.ProcessLine(
         R"({"version":1,"id":"3","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":2},"timeout_ms":1000})");
     assert(wrong_generation.keep_running && wrong_generation.frame.has_value());
-    assert(wrong_generation.frame->find("invalid_subscription") != std::string::npos);
+    assert(FrameHas(wrong_generation, "invalid_subscription"));
     assert(backend.cancel_calls == 0);
     const auto cancelled = protocol.ProcessLine(
         R"({"version":1,"id":"4","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":1},"timeout_ms":1000})");
     assert(cancelled.keep_running && cancelled.frame.has_value());
-    assert(cancelled.frame->find(R"("result":null)") != std::string::npos);
+    assert(FrameHas(cancelled, R"("result":null)"));
     assert(frames.size() == 3);
     assert(frames[1].find("subscription_error") != std::string::npos);
     assert(frames[2].find("stream_retired") != std::string::npos);
@@ -394,7 +402,7 @@ void CancellationRacingRetirementUsesTheExistingBarrier() {
     const auto forgotten = protocol.ProcessLine(
         R"({"version":1,"id":"5","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":1},"timeout_ms":1000})");
     assert(forgotten.keep_running && forgotten.frame.has_value());
-    assert(forgotten.frame->find("invalid_subscription") != std::string::npos);
+    assert(FrameHas(forgotten, "invalid_subscription"));
     assert(frames.size() == 3);
     assert(backend.cancel_calls == (timing == 0 ? 0U : 1U));
     assert(protocol.healthy() && backend.open);
@@ -433,7 +441,7 @@ void ProtocolEstablishesBeforeDeliveryAndRetires() {
   auto subscribed = protocol.ProcessLine(
       R"({"version":1,"id":"2","operation":"subscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","kind":"attribute","paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0}],"min_interval_s":1,"max_interval_s":60,"resubscribe":true,"queue_limit":64},"timeout_ms":1000})");
   assert(subscribed.keep_running && subscribed.frame.has_value());
-  assert(subscribed.frame->find(R"("min_interval_s":2)") != std::string::npos);
+  assert(FrameHas(subscribed, R"("min_interval_s":2)"));
   assert(asynchronous.empty());
   assert(subscribed.activate_subscription.has_value());
   assert(protocol.ActivateSubscription(subscribed.activate_subscription->first,
@@ -494,8 +502,7 @@ void ProtocolEstablishesBeforeDeliveryAndRetires() {
 
   auto cancelled = protocol.ProcessLine(
       R"({"version":1,"id":"3","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":2},"timeout_ms":1000})");
-  assert(cancelled.keep_running && cancelled.frame->find(R"("ok":true)") !=
-         std::string::npos);
+  assert(cancelled.keep_running && FrameHas(cancelled, R"("ok":true)"));
   assert(asynchronous.size() == 8);
   assert(asynchronous.back().find(R"("event":"stream_retired")") !=
          std::string::npos);
@@ -660,7 +667,7 @@ void StreamOverflowPreservesHealthyGeneration() {
   assert(failures == 0 && protocol.healthy());
   const auto health = protocol.ProcessLine(
       R"({"version":1,"id":"3","operation":"health","parameters":{},"timeout_ms":1000})");
-  assert(health.keep_running && health.frame->find(R"("ok":true)") != std::string::npos);
+  assert(health.keep_running && FrameHas(health, R"("ok":true)"));
 }
 
 void InvalidSubscriptionNeverEntersBackend() {
@@ -669,7 +676,7 @@ void InvalidSubscriptionNeverEntersBackend() {
   Open(protocol);
   auto invalid = protocol.ProcessLine(
       R"({"version":1,"id":"2","operation":"subscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","kind":"attribute","paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0}],"min_interval_s":61,"max_interval_s":60,"resubscribe":false,"queue_limit":64},"timeout_ms":1000})");
-  assert(invalid.frame->find("invalid_request") != std::string::npos);
+  assert(FrameHas(invalid, "invalid_request"));
   assert(backend.subscribe_calls == 0);
 }
 

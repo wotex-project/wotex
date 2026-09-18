@@ -64,9 +64,11 @@ class ControllerBackend {
                                       InteractionEffect::None},
             0, 0, 0, 0, {}, {}};
   }
+  // NOLINTNEXTLINE(performance-unnecessary-value-param): sink parameters an overriding backend moves into place
   virtual void SetSubscriptionSinks(ReportSink, StatusSink, FailureSink) {}
   // Invoked only by a waiting operation on the host input thread. False asks
   // that operation to unwind; controller destruction follows on that thread.
+  // NOLINTNEXTLINE(performance-unnecessary-value-param): a sink parameter an overriding backend moves into place
   virtual void SetControlPump(std::function<bool()>) {}
   virtual SubscriptionResponse Subscribe(const SubscriptionRequest &) {
     SubscriptionResponse result;

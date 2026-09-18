@@ -15,6 +15,11 @@
 
 namespace {
 
+// Whether processing a line produced a frame that contains `text`.
+bool FrameHas(const wotex::matter::ProcessResult &result, const std::string &text) {
+  return result.frame.has_value() && result.frame->find(text) != std::string::npos;
+}
+
 class RecordingBackend final : public wotex::matter::ControllerBackend {
  public:
   wotex::matter::BackendResult Open(
@@ -210,19 +215,19 @@ void TestLifecycleAndFabricAdmission() {
   assert(flow.keep_running && !flow.frame.has_value());
 
   auto opened = protocol.ProcessLine(OpenFrame());
-  assert(opened.keep_running && opened.frame->find("\"ok\":true") != std::string::npos);
+  assert(opened.keep_running && FrameHas(opened, "\"ok\":true"));
   assert(backend.opens == 1 && backend.identity.fabric_id == 1);
 
   auto wrong_fabric = protocol.ProcessLine(
       "{\"version\":1,\"id\":\"2\",\"operation\":\"read\","
       "\"parameters\":{\"fabric_id\":2},\"timeout_ms\":1000}");
   assert(wrong_fabric.keep_running);
-  assert(wrong_fabric.frame->find("fabric_mismatch") != std::string::npos);
+  assert(FrameHas(wrong_fabric, "fabric_mismatch"));
 
   auto health = protocol.ProcessLine(
       "{\"version\":1,\"id\":\"3\",\"operation\":\"health\","
       "\"parameters\":{},\"timeout_ms\":1000}");
-  assert(health.frame->find("\"status\":\"ready\"") != std::string::npos);
+  assert(FrameHas(health, "\"status\":\"ready\""));
 
   auto closed = protocol.ProcessLine(
       "{\"version\":1,\"id\":\"4\",\"operation\":\"close\","
@@ -239,7 +244,7 @@ void TestStartupFailureAndEofCleanup() {
       "\"session_generation\":\"0123456789abcdef0123456789abcdef\"}").keep_running);
   auto result = failed.ProcessLine(OpenFrame());
   assert(!result.keep_running);
-  assert(result.frame->find("authority_invalid") != std::string::npos);
+  assert(FrameHas(result, "authority_invalid"));
 
   RecordingBackend eof_backend;
   std::istringstream input(
@@ -282,8 +287,8 @@ void TestRequestCounterAndReservedClose() {
     assert(!result.keep_running && backend.closes == 1 && !backend.open);
     assert(result.frame.has_value() == closing);
     if (closing) {
-      assert(result.frame->find(R"("id":"close")") != std::string::npos);
-      assert(result.frame->find(R"("result":null)") != std::string::npos);
+      assert(FrameHas(result, R"("id":"close")"));
+      assert(FrameHas(result, R"("result":null)"));
     }
   }
 }
@@ -313,6 +318,7 @@ void TestFailedOutputCleanup() {
       try {
         output.setstate(std::ios_base::badbit);
       } catch (const std::ios_base::failure &) {
+        assert(output.bad());
       }
       std::atomic<unsigned> failures{0};
       const int result = wotex::matter::RunHost(
