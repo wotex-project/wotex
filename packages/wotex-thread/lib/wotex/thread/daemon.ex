@@ -37,11 +37,15 @@ defmodule Wotex.Thread.Daemon do
     if keys -- [:socket_path, :timeout] == [] and length(keys) == MapSet.size(MapSet.new(keys)) and
          is_binary(path) and byte_size(path) in 1..100 and not String.contains?(path, <<0>>) and
          is_integer(timeout) and timeout in 1..60_000 do
+      # The driver checks a line against packet_size only while its buffer is larger;
+      # a smaller release default (1460 bytes on OTP 27) splits an oversized line into
+      # pieces instead of failing it with :emsgsize.
       options = [
         :binary,
         active: false,
         packet: :line,
         packet_size: @max_response,
+        buffer: @max_response + 1,
         send_timeout: timeout,
         send_timeout_close: true
       ]
@@ -235,7 +239,10 @@ defmodule Wotex.Thread.Daemon do
       {:error, :timeout} ->
         result
 
+      # A read-closed socket would report :enotconn to the next request; release it so later
+      # use reports the closure as :transport_closed.
       {:error, :closed} ->
+        :gen_tcp.close(socket)
         result
 
       {:ok, tail} when byte_size(bytes) + byte_size(tail) <= @max_response ->

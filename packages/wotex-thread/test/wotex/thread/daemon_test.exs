@@ -79,10 +79,11 @@ defmodule Wotex.Thread.DaemonTest do
 
     assert {:ok, handle} = Daemon.connect(socket_path: path)
 
-    # Line mode enforces packet_size only when the driver buffer is larger; with the OTP 27
-    # default of 1460 bytes the driver hands over the line in pieces instead. A larger buffer
-    # makes the driver refuse the line with :emsgsize whatever the release default.
-    assert :ok = :inet.setopts(handle.socket, buffer: 16_384)
+    # The driver refuses the line with :emsgsize only while its buffer exceeds packet_size.
+    assert {:ok, [buffer: buffer, packet_size: 8192]} =
+             :inet.getopts(handle.socket, [:buffer, :packet_size])
+
+    assert buffer > 8192
     assert {:error, %{code: :response_limit}} = Daemon.request(handle, %{type: :state}, 1000)
     assert {:error, %{code: :transport_closed}} = Daemon.request(handle, %{type: :state}, 1000)
     Task.await(task)

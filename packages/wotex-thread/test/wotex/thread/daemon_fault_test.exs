@@ -253,15 +253,36 @@ defmodule Wotex.Thread.DaemonFaultTest do
   end
 
   test "WTH-S02 WTH-V03 a complete response remains valid when the peer then closes" do
+    parent = self()
+
     {path, task} =
       peer(fn socket ->
         assert {:ok, "state\n"} = :gen_tcp.recv(socket, 0, 1000)
+        send(parent, :command_received)
+        assert_receive :respond, 1000
         :ok = :gen_tcp.send(socket, "leader\nDone\n")
+        :ok = :gen_tcp.shutdown(socket, :write)
+        send(parent, :peer_closed)
+        assert {:error, :closed} = :gen_tcp.recv(socket, 0, 1000)
       end)
 
-    assert {:ok, handle} = Daemon.connect(socket_path: path)
-    assert {:ok, "leader"} = Daemon.request(handle, %{type: :state}, 1000)
-    assert :ok = Daemon.disconnect(handle)
+    owner =
+      spawn_link(fn ->
+        {:ok, handle} = Daemon.connect(socket_path: path)
+        result = Daemon.request(handle, %{type: :state}, 5000)
+        closed = Daemon.request(handle, %{type: :state}, 1000)
+        send(parent, {:owner, result, closed, Daemon.disconnect(handle)})
+      end)
+
+    # The owner is held after its command until the peer has written the response and its
+    # close, so the read after the terminator always observes the close.
+    assert_receive :command_received, 1000
+    true = :erlang.suspend_process(owner)
+    send(task.pid, :respond)
+    assert_receive :peer_closed, 1000
+    true = :erlang.resume_process(owner)
+
+    assert_receive {:owner, {:ok, "leader"}, {:error, %{code: :transport_closed}}, :ok}, 5000
     Task.await(task)
   end
 
