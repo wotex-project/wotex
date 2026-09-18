@@ -73,6 +73,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       Enum.map(1..Limits.maximum(:binding_profiles), &%{profile | id: &1})
 
     transports = Map.new(profiles, &{&1.id, {FakeTransport, %{test_pid: self()}}})
+    over_limit = Enum.reverse([%{profile | id: :over} | Enum.reverse(profiles)])
 
     assert {:ok, _} =
              ConsumedThing.new(td,
@@ -83,14 +84,15 @@ defmodule Wotex.Runtime.ConsumedThingTest do
 
     assert {:error, %Error{code: :profile_limit_exceeded}} =
              ConsumedThing.new(td,
-               profiles: profiles ++ [%{profile | id: :over}],
+               profiles: over_limit,
                transports: transports,
                credentials: credentials
              )
 
+    # An improper tail after the first profile over the limit is never read.
     assert {:error, %Error{code: :profile_limit_exceeded}} =
              ConsumedThing.new(td,
-               profiles: profiles ++ [%{profile | id: :over} | :unread_tail],
+               profiles: over_limit ++ :unread_tail,
                transports: transports,
                credentials: credentials
              )

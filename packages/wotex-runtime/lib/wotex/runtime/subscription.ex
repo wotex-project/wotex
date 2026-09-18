@@ -339,8 +339,9 @@ defmodule Wotex.Runtime.Subscription do
              state.start_request.form,
              state.context,
              state
-           ),
-         {module, config} = state.transport do
+           ) do
+      {module, config} = state.transport
+
       module
       |> PortCall.invoke(
         :subscribe,

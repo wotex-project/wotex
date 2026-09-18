@@ -28,9 +28,8 @@ defmodule Wotex.Runtime.FormSelector do
     interaction = %{type: type, name: name, operation: operation}
 
     with :ok <- validate_operation(operation, type),
-         {:ok, affordance} <- fetch_affordance(document, type, name),
-         {:ok, selection} <- choose(document, affordance, interaction, profiles) do
-      {:ok, selection}
+         {:ok, affordance} <- fetch_affordance(document, type, name) do
+      choose(document, affordance, interaction, profiles)
     end
   end
 
@@ -45,9 +44,8 @@ defmodule Wotex.Runtime.FormSelector do
     document = ThingDescription.to_map(td)
     interaction = %{type: :thing, name: nil, operation: operation}
 
-    with :ok <- validate_operation(operation, :thing),
-         {:ok, selection} <- choose(document, document, interaction, profiles) do
-      {:ok, selection}
+    with :ok <- validate_operation(operation, :thing) do
+      choose(document, document, interaction, profiles)
     end
   end
 

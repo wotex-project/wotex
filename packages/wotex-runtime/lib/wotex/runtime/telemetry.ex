@@ -26,14 +26,16 @@ defmodule Wotex.Runtime.Telemetry do
   @doc false
   @spec span([atom()], map(), (-> {term(), map()})) :: term()
   def span(event, metadata, fun) when is_list(event) and is_map(metadata) do
+    # `Enum.reverse(reversed_event, [phase])` is `event ++ [phase]`.
+    reversed_event = Enum.reverse(event)
     started_at = System.monotonic_time()
-    execute(event ++ [:start], metadata)
+    execute(Enum.reverse(reversed_event, [:start]), metadata)
 
     try do
       {result, stop_metadata} = fun.()
 
       execute(
-        event ++ [:stop],
+        Enum.reverse(reversed_event, [:stop]),
         %{duration: System.monotonic_time() - started_at},
         stop_metadata
       )
@@ -42,7 +44,7 @@ defmodule Wotex.Runtime.Telemetry do
     catch
       kind, reason ->
         execute(
-          event ++ [:exception],
+          Enum.reverse(reversed_event, [:exception]),
           %{duration: System.monotonic_time() - started_at},
           Map.merge(metadata, %{kind: kind, code: :request_exception})
         )

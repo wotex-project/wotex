@@ -201,6 +201,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
     max_forms = Limits.maximum(:forms_per_interaction)
     profile = TDFactory.http_profile()
     profiles = Enum.map(1..max_profiles, &%{profile | id: &1})
+    over_limit = Enum.reverse([%{profile | id: :over} | Enum.reverse(profiles)])
     td = TDFactory.thing_description()
 
     assert {:ok, _} =
@@ -212,16 +213,17 @@ defmodule Wotex.Runtime.FormSelectorTest do
                :property,
                "temperature",
                :readproperty,
-               profiles ++ [%{profile | id: :over}]
+               over_limit
              )
 
+    # An improper tail after the first profile over the limit is never read.
     assert {:error, %Error{code: :profile_limit_exceeded}} =
              FormSelector.select(
                td,
                :property,
                "temperature",
                :readproperty,
-               profiles ++ [%{profile | id: :over} | :unread_tail]
+               over_limit ++ :unread_tail
              )
 
     assert {:error, %Error{code: :invalid_selection_input}} =

@@ -6,10 +6,12 @@ defmodule Wotex.Runtime.RetryTest do
   alias Wotex.Runtime.{Error, Retry}
 
   test "malformed, ambiguous and unknown retry options stop without raising" do
-    base = [attempt: 1, max_attempts: 2]
-
     for value <- [nil, :yes, 1, "true", [], %{}] do
-      assert Retry.decision(:readproperty, :timeout, base ++ [idempotent?: value]) == :stop
+      assert Retry.decision(:readproperty, :timeout,
+               attempt: 1,
+               max_attempts: 2,
+               idempotent?: value
+             ) == :stop
     end
 
     for opts <- [

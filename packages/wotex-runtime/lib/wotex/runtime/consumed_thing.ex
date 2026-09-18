@@ -273,9 +273,8 @@ defmodule Wotex.Runtime.ConsumedThing do
              {:ok, transport} <- transport_for(consumed, selection),
              request = Request.from_selection(selection, context, interaction.input),
              {:ok, execution_context} <-
-               resolve_credentials(consumed, selection, context, metadata),
-             {:ok, result} <- transport_request(transport, request, execution_context, metadata) do
-          {:ok, result}
+               resolve_credentials(consumed, selection, context, metadata) do
+          transport_request(transport, request, execution_context, metadata)
         end
 
       {outcome, Map.merge(metadata, outcome_metadata(outcome))}
@@ -704,24 +703,22 @@ defmodule Wotex.Runtime.ConsumedThing do
   end
 
   defp validate_transport_result(result, request) do
-    cond do
-      result.request_id != request.request_id or result.operation != request.operation ->
-        {:error,
-         Error.new(
-           :mismatched_transport_result,
-           :transport,
-           "transport result does not match the request",
-           %{
-             request_id: request.request_id,
-             operation: request.operation
-           }
-         )}
-
-      true ->
-        case Result.validate(result) do
-          :ok -> {:ok, result}
-          {:error, error} -> {:error, error}
-        end
+    if result.request_id != request.request_id or result.operation != request.operation do
+      {:error,
+       Error.new(
+         :mismatched_transport_result,
+         :transport,
+         "transport result does not match the request",
+         %{
+           request_id: request.request_id,
+           operation: request.operation
+         }
+       )}
+    else
+      case Result.validate(result) do
+        :ok -> {:ok, result}
+        {:error, error} -> {:error, error}
+      end
     end
   end
 end
