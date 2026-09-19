@@ -3,9 +3,9 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.51
+  version: 1.1.52
   owner: wotex-opcua
-  updated: 2026-09-19
+  updated: 2026-09-20
 ---
 
 # WOP.07 Native OPC UA executable and software acceptance
@@ -98,7 +98,11 @@ newly started peer and cleans up its subscription normally.
 It also exposes writable Int32 and Double arrays and a writable 2 × 3 Int16
 matrix. Public Runtime read/write/readback preserves their type, flat values,
 dimensions, extreme integers and negative zero, restores the original values
-and leaves only the test's baseline Session helpers.
+and leaves only the test's baseline Session helpers. The peer also returns the
+complete Runtime-supported scalar set, including exact DateTime ticks, Guid,
+raw ByteString, translated NodeId and StatusCode values. Those five special
+types also pass real observations and return all peer and relay resources to
+baseline on stop.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split

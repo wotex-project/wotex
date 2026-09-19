@@ -3,9 +3,9 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.13
+  version: 1.1.14
   owner: wotex-opcua
-  updated: 2026-09-19
+  updated: 2026-09-20
 ---
 
 # WOP.06 Wotex integration and evidence contract
@@ -47,9 +47,11 @@ Only an explicitly new Runtime child observes a replacement peer. An exact-archi
 the native secure workflow against the same-stack peer on both required
 runtimes (WOP.07 X-F48). The independent peer also roundtrips Int32 and Double
 arrays and a 2 × 3 Int16 matrix through a real ConsumedThing, preserving type,
-dimensions, extreme integers and negative zero before restoring every node.
-Broader independent value breadth and the remaining I03/I05/I06 cells are not
-accepted.
+dimensions, extreme integers and negative zero before restoring every node. It
+also returns every scalar accepted by `Value.native_result/1` through real
+ConsumedThing reads. DateTime, Guid, ByteString, NodeId and StatusCode pass
+real observations with exact values, metadata and cleanup. Broader independent
+array breadth and the remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 

@@ -17,8 +17,8 @@ use opcua::{
         ServerBuilder, ServerUserToken, ANONYMOUS_USER_TOKEN_ID,
     },
     types::{
-        Array, DataTypeId, MessageSecurityMode, NodeId, ObjectId, ObjectTypeId, StatusCode,
-        Variant, VariantScalarTypeId,
+        Array, ByteString, DataTypeId, DateTime, Guid, MessageSecurityMode, NodeId, ObjectId,
+        ObjectTypeId, StatusCode, Variant, VariantScalarTypeId,
     },
 };
 use tokio::io::AsyncReadExt;
@@ -386,6 +386,124 @@ fn populate(
             .insert(&mut *address_space)
         {
             return Err("cannot add writable Int16 matrix".to_owned());
+        }
+        let guid = "00112233-4455-6677-8899-aabbccddeeff"
+            .parse::<Guid>()
+            .map_err(|error| format!("cannot construct fixture Guid: {error}"))?;
+        let scalar_values = [
+            (
+                "null_value",
+                "NullValue",
+                DataTypeId::BaseDataType,
+                Variant::Empty,
+            ),
+            (
+                "boolean_value",
+                "BooleanValue",
+                DataTypeId::Boolean,
+                Variant::Boolean(true),
+            ),
+            (
+                "sbyte_value",
+                "SByteValue",
+                DataTypeId::SByte,
+                Variant::SByte(i8::MIN),
+            ),
+            (
+                "byte_value",
+                "ByteValue",
+                DataTypeId::Byte,
+                Variant::Byte(u8::MAX),
+            ),
+            (
+                "int16_value",
+                "Int16Value",
+                DataTypeId::Int16,
+                Variant::Int16(i16::MIN),
+            ),
+            (
+                "uint16_value",
+                "UInt16Value",
+                DataTypeId::UInt16,
+                Variant::UInt16(u16::MAX),
+            ),
+            (
+                "int32_value",
+                "Int32Value",
+                DataTypeId::Int32,
+                Variant::Int32(i32::MIN),
+            ),
+            (
+                "uint32_value",
+                "UInt32Value",
+                DataTypeId::UInt32,
+                Variant::UInt32(u32::MAX),
+            ),
+            (
+                "int64_value",
+                "Int64Value",
+                DataTypeId::Int64,
+                Variant::Int64(i64::MIN),
+            ),
+            (
+                "uint64_value",
+                "UInt64Value",
+                DataTypeId::UInt64,
+                Variant::UInt64(u64::MAX),
+            ),
+            (
+                "float_value",
+                "FloatValue",
+                DataTypeId::Float,
+                Variant::Float(-0.0_f32),
+            ),
+            (
+                "string_value",
+                "StringValue",
+                DataTypeId::String,
+                Variant::String("x\0é".into()),
+            ),
+            (
+                "datetime_value",
+                "DateTimeValue",
+                DataTypeId::DateTime,
+                Variant::DateTime(Box::new(DateTime::from(132_541_920_000_000_001_i64))),
+            ),
+            (
+                "guid_value",
+                "GuidValue",
+                DataTypeId::Guid,
+                Variant::Guid(Box::new(guid)),
+            ),
+            (
+                "bytestring_value",
+                "ByteStringValue",
+                DataTypeId::ByteString,
+                Variant::ByteString(ByteString::from(vec![0, 255, 1])),
+            ),
+            (
+                "nodeid_value",
+                "NodeIdValue",
+                DataTypeId::NodeId,
+                Variant::NodeId(Box::new(fixture.clone())),
+            ),
+            (
+                "status_code_value",
+                "StatusCodeValue",
+                DataTypeId::StatusCode,
+                Variant::StatusCode(StatusCode::from(0x4000_0000)),
+            ),
+        ];
+        for (identifier, name, data_type, scalar) in scalar_values {
+            let node = NodeId::new(namespace, identifier);
+            if !VariableBuilder::new(&node, name, name)
+                .data_type(data_type)
+                .value(scalar)
+                .component_of(fixture.clone())
+                .insert(&mut *address_space)
+            {
+                return Err(format!("cannot add {name}"));
+            }
         }
         if !MethodBuilder::new(&add, "Add", "Add")
             .component_of(fixture.clone())

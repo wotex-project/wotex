@@ -53,7 +53,7 @@ task/matrix receipt remains required for this source identity.
 | `priv/native/secure_peer.c` | `09f58e8bbd240c9f1bc9fcc17784e69214746986df8a0f656c1b28e7e000e184` |
 | `priv/native/patch-sdk.cmake` | `89ea5c1ca137a7afb8e6fc25a2fa3387c05950ef0b3cead118df80685b3f69ee` |
 
-## Second independent peer on async-opcua Rust, 2026-09-19
+## Second independent peer on async-opcua Rust, 2026-09-20
 
 The former independent peer is retired. `test/interop/rust_peer` is the second
 independent peer of WOP.04: a Rust server on async-opcua 0.19.0, built by Cargo
@@ -66,10 +66,11 @@ The peer reuses the compiled C peer's CA, CRL, application certificates and
 keys on Basic256Sha256, Aes128_Sha256_RsaOaep and
 Aes256_Sha256_RsaPss SignAndEncrypt endpoints. Each advertises anonymous,
 username and certificate user tokens. The peer serves a folder of 40 UInt32
-variables, a writable Double and a two-Double addition Method. Its fixture trust
-switch accepts the exact copied client leaf after async-opcua's certificate
-validation; it is not production trust policy. Methods report the server's own
-browse continuation, Cancel, subscription, MonitoredItem,
+variables, every scalar admitted by the Runtime native projection, writable
+numeric arrays and a two-Double addition Method. Its fixture trust switch
+accepts the exact copied client leaf after async-opcua's certificate validation;
+it is not production trust policy. Methods report the server's own browse
+continuation, Cancel, subscription, MonitoredItem,
 withheld-notification and Republish-request counts.
 `test/interop/rust_peer_test.exs` asserts through the public API that:
 
@@ -113,6 +114,11 @@ withheld-notification and Republish-request counts.
   and Double arrays and its 2 × 3 Int16 matrix. Runtime preserves the matrix's
   flat value order and dimensions, extreme Int32 values and negative zero, and
   the temporary request helpers return to the baseline (S01/S05 and I03); and
+- real ConsumedThing reads return exact Null, Boolean, every integer width,
+  negative-zero Float, String, DateTime, Guid, ByteString, NodeId and StatusCode
+  payloads after native Variant validation. DateTime, Guid, ByteString, NodeId
+  and StatusCode also pass through real observations; every stop restores peer
+  and local helper counts to the baseline (S01/S05 and I03/I05); and
 - an independent subscription delivers the initial and two fresh Double Values
   exactly once with sequence, client-handle, timestamp-resolution and overflow
   metadata. Double cancellation is idempotent, receiver death deletes only its
@@ -150,18 +156,18 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-31 independent-wire cases passed 31/31: the original three
+32 independent-wire cases passed 32/32: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
-nine negative security/fault cells, plus the Runtime profile/observation and
-typed-array cases and eight independent subscription/lifecycle cases. The
+nine negative security/fault cells, plus three Runtime profile/value cases and
+eight independent subscription/lifecycle cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `5c9ddb491652631c83b01c6f4ecb04573193d16cb9eab268680f425a4ae2d9fe` |
-| `test/interop/rust_peer/src/main.rs` | `674bd70aeede2b0b4d6b3c9f34060d52e449cc8b4a7ccea496af41e78f534ae0` |
+| `test/interop/rust_peer_test.exs` | `8749bf6fb44db212bbb682e3a3573f205de215e354d2ce8a4dabf48ecd23f9e1` |
+| `test/interop/rust_peer/src/main.rs` | `a1c5a5a2c17cd16f3aad53bc7b614828b6055029da43df3d95ff5d44f86da1d6` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
 | `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |

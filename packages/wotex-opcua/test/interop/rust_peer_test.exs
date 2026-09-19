@@ -865,6 +865,83 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert eventually(fn -> native_descendants() == baseline end)
   end
 
+  @tag rust_session: true
+  test "WOP-S01 WOP-S05 Runtime validates every supported scalar from the Rust peer", context do
+    baseline = native_descendants()
+    config = Keyword.put(context.options, :target, context.peer["endpoint"])
+    assert {:ok, runtime_context} = Context.new(request_id: "rust-runtime-scalars")
+
+    assert {:ok, %{"value" => %{"value" => double}}} =
+             Wotex.OPCUA.send(context.session, %{
+               type: :read,
+               node_id: context.node.("value")
+             })
+
+    scalars = [
+      {"null_value", "Null", nil},
+      {"boolean_value", "Boolean", true},
+      {"sbyte_value", "SByte", -128},
+      {"byte_value", "Byte", 255},
+      {"int16_value", "Int16", -32_768},
+      {"uint16_value", "UInt16", 65_535},
+      {"int32_value", "Int32", -2_147_483_648},
+      {"uint32_value", "UInt32", 4_294_967_295},
+      {"int64_value", "Int64", -9_223_372_036_854_775_808},
+      {"uint64_value", "UInt64", 18_446_744_073_709_551_615},
+      {"float_value", "Float", -0.0},
+      {"value", "Double", double},
+      {"string_value", "String", "x\0é"},
+      {"datetime_value", "DateTime", 132_541_920_000_000_001},
+      {"guid_value", "Guid", "00112233-4455-6677-8899-aabbccddeeff"},
+      {"bytestring_value", "ByteString", <<0, 255, 1>>},
+      {"nodeid_value", "NodeId", context.node.("fixture")},
+      {"status_code_value", "StatusCode", 0x4000_0000}
+    ]
+
+    for {identifier, type, expected} <- scalars do
+      consumed = runtime_scalar_consumer(context.peer, context.node.(identifier), config)
+
+      assert {:ok, %Result{payload: actual, metadata: %{opcua_type: ^type, status: 0}}} =
+               ConsumedThing.read_property(consumed, "sample", runtime_context)
+
+      assert actual == expected
+
+      if type == "Float" do
+        assert <<1::1, _::31>> = <<actual::float-32>>
+      end
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+
+    for {identifier, type, expected} <-
+          Enum.filter(scalars, fn {_, type, _} ->
+            type in ["DateTime", "Guid", "ByteString", "NodeId", "StatusCode"]
+          end) do
+      consumed = runtime_scalar_consumer(context.peer, context.node.(identifier), config)
+      id = {:rust_runtime_scalar, identifier}
+
+      assert {:ok, spec} =
+               ConsumedThing.observation_child_spec(consumed, "sample", runtime_context,
+                 id: id,
+                 receiver: self(),
+                 max_queue_length: 1000,
+                 overflow: :stop,
+                 restart: :temporary
+               )
+
+      owner = start_supervised!(spec, id: id)
+
+      assert_receive {:wotex_runtime, ^id, {:ok, actual, %{opcua_type: ^type, status: 0}}},
+                     5000
+
+      assert actual == expected
+      assert resources(context.session, context.node) == {1, 1}
+      assert :ok = Subscription.stop(owner)
+      assert eventually(fn -> resources(context.session, context.node) == {0, 0} end)
+      assert eventually(fn -> native_descendants() == baseline end)
+    end
+  end
+
   for {number, fault} <- [
         {39, "expired_leaf"},
         {40, "wrong_host"},
@@ -1079,6 +1156,41 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
           "samples" => %{
             "type" => "array",
             "forms" => [%{"href" => href, "op" => ["readproperty", "writeproperty"]}]
+          }
+        }
+      })
+
+    {:ok, profile} = Wotex.OPCUA.profile(:session)
+
+    {:ok, consumed} =
+      ConsumedThing.new(td,
+        profiles: [profile],
+        transports: %{opcua_session: {Transport, config}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    consumed
+  end
+
+  defp runtime_scalar_consumer(peer, node, config) do
+    href = peer["endpoint"] <> "?id=" <> URI.encode_www_form(node)
+
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "id" => "urn:example:opcua:rust-scalars",
+        "title" => "Rust scalars",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{
+          "sample" => %{
+            "observable" => true,
+            "forms" => [
+              %{
+                "href" => href,
+                "op" => ["readproperty", "observeproperty", "unobserveproperty"]
+              }
+            ]
           }
         }
       })

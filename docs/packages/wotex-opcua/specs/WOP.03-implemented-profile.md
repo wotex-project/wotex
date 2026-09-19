@@ -3,9 +3,9 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.21
+  version: 2.0.22
   owner: wotex-opcua
-  updated: 2026-09-19
+  updated: 2026-09-20
 ---
 
 # WOP.03 Implemented OPC UA profile
@@ -230,8 +230,12 @@ fixture and the same-stack peer check the native Runtime array Write/readback.
 The independent async-opcua Rust peer now also roundtrips writable Int32 and
 Double arrays plus a 2 × 3 Int16 matrix through a real ConsumedThing. Runtime
 preserves the flat matrix, dimensions, extreme integers and negative zero, and
-the test restores every fixture value. Broader wire-type coverage and the
-complete Runtime profile remain open.
+the test restores every fixture value. The peer also returns every scalar type
+accepted by the Runtime native projection: Null, Boolean, all integer widths,
+Float, Double, String, DateTime, Guid, ByteString, NodeId and StatusCode. The
+DateTime, Guid, ByteString, NodeId and StatusCode nodes also pass real Runtime
+observations and release their peer and local resources on stop. Broader
+independent array coverage and the complete Runtime profile remain open.
 The same peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
 and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.

@@ -5,10 +5,11 @@ independent of the production client's open62541 stack. It supplies Browse
 continuation, Cancel and Republish observations plus the positive X-F30 through
 X-F38 policy/token workflows asserted by `rust_peer_test.exs`. The fixture
 exposes all three required SignAndEncrypt policies,
-anonymous/username/certificate tokens, a writable Double, a typed addition
-Method, live resource counters and a counted next-notification fault. That
-fault either retains the withheld notification for Republish or discards it.
-This is not a general-purpose or production server profile.
+anonymous/username/certificate tokens, the full scalar set consumed by the
+Runtime adapter, writable numeric arrays, a typed addition Method, live
+resource counters and a counted next-notification fault. That fault either
+retains the withheld notification for Republish or discards it. This is not a
+general-purpose or production server profile.
 
 `Cargo.lock` fixes the dependency graph. The software build copies this whole
 directory to its explicit workspace, performs one locked fetch, and then builds

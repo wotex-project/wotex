@@ -3,9 +3,9 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.13
+  version: 1.1.14
   owner: wotex-opcua
-  updated: 2026-09-19
+  updated: 2026-09-20
 ---
 
 # WOP.04 Complete secure OPC UA client software profile
@@ -325,7 +325,10 @@ MonitoredItem and reap the additional native helpers. Terminating an isolated
 peer beneath that observation projects `connection_failed` as one unavailable
 Runtime error and one `transport_down`, stops the supervised owner, reaps the
 relay's native helpers and never reconnects. A replacement peer receives an
-observation only from an explicitly new Runtime child.
+observation only from an explicitly new Runtime child. The peer also supplies
+every scalar admitted by the Runtime native projection; exact scalar reads and
+selected DateTime, Guid, ByteString, NodeId and StatusCode observations pass
+complete validation and cleanup. Broader independent array cells remain.
 Security fault tests use controlled certificates, clock inputs and a bounded
 byte proxy. Same-stack and independent lanes are both required; neither
 substitutes for the other. No physical server is required.
