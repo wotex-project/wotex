@@ -37,7 +37,8 @@ defmodule Wotex.OPCUA.Native.Software do
   dependencies are those unpacked archives. It fetches the Hex dependencies,
   builds the native helper with the dependency's own `wotex.opcua.native.build`
   task, and runs the consumer's test with a `PATH` of the Elixir and Erlang
-  directories, a few POSIX utilities and `/bin`, so no Python is reachable. The
+  directories and a directory of links to a few POSIX utilities, so no Python
+  is reachable. The
   test opens a secure Session to the running peer, reads, writes, subscribes,
   receives the written value, cancels and closes through `Wotex.OPCUA`, finds no
   Python or shell process among its descendants while the Session runs and no
@@ -694,8 +695,10 @@ defmodule Wotex.OPCUA.Native.Software do
     File.write!(Path.join(project, "test/archive_consumer_test.exs"), @consumer_test)
   end
 
-  # The Elixir and Erlang executables, the POSIX utilities their launch
-  # scripts use, and /bin; no Python interpreter is reachable.
+  # The Elixir and Erlang executables and the POSIX utilities their launch
+  # scripts use, as links in a directory of their own; no Python interpreter is
+  # reachable. System directories are left out because on a merged-/usr system
+  # /bin also holds python3.
   defp python_free_path(tools, base) do
     utilities = Path.join(base, "bin")
     File.mkdir_p!(utilities)
@@ -712,7 +715,7 @@ defmodule Wotex.OPCUA.Native.Software do
         erl -> [Path.dirname(resolve(erl))]
       end
 
-    Enum.join(Enum.uniq([Path.dirname(resolve(tools.mix))] ++ erlang ++ [utilities, "/bin"]), ":")
+    Enum.join(Enum.uniq([Path.dirname(resolve(tools.mix)) | erlang] ++ [utilities]), ":")
   end
 
   defp resolve(path) do

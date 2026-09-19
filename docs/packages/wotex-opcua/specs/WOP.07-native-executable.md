@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.38
+  version: 1.1.39
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -701,8 +701,8 @@ the two named archives, and writes a consumer project whose only first-party
 dependencies are the three unpacked archives. The consumer fetches its Hex
 dependencies, builds the helper with the dependency's own
 `wotex.opcua.native.build` task and runs its test with a `PATH` of the Elixir
-and Erlang directories, a few POSIX utilities and `/bin`, from which no Python
-is reachable. The test loads every package from the consumer's build, opens a
+and Erlang directories and a directory of links to a few POSIX utilities, from
+which no Python is reachable. The test loads every package from the consumer's build, opens a
 secure Session to the running peer, reads, writes, subscribes and receives the
 written value, cancels and closes, finds no Python or shell process among its
 descendants while the Session runs and no helper process after it closes, and
