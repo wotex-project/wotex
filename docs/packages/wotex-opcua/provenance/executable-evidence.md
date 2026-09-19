@@ -21,6 +21,66 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## Software lanes on Linux for both runtimes, 2026-09-19
+
+`test/software/Dockerfile.linux` now records the Linux environment of the
+software tasks: the hexpm/elixir base image of each required runtime, pinned by
+digest, with the build tools, Python 3.11 with `venv`, and curl 8.14.1 from
+bookworm-backports. From commit `9d5a8267`, each container copied the `wotex`,
+`wotex-runtime` and `wotex-opcua` packages, built the two dependency archives
+with `mix hex.build` under Hex requirements, then ran `mix wotex.software.build`
+and `mix wotex.software.run` with those archives, both lanes concurrently on
+four CPUs each.
+
+The first runs found four defects, fixed in `565a2974`, `6a8c93dd` and
+`9d5a8267`:
+
+- On Python 3.11 the pip-audit environment lacked `typing_extensions`, which
+  cyclonedx-python-lib needs below Python 3.13. The audit lock now pins the
+  union of the dependency closures on Python 3.11 through 3.14.
+- The archive consumer's `PATH` included `/bin`, which on a merged-`/usr` system
+  also holds `python3`. It now holds only the Elixir and Erlang directories and
+  links to the POSIX utilities their launch scripts use.
+- The consumer read process names through `ps -o comm=`, which Linux truncates
+  to 15 bytes, and did not see the helper; it now takes the executable from the
+  full argument vector.
+- On Elixir 1.18.4 / OTP 27, peer loss sometimes ended a subscription with
+  `connection_failed` but no status: the next Publish submission failed before
+  the SDK reported the closed channel, and that failure dropped the SDK status.
+  The session now keeps the status of a failed Publish submission, so each
+  subscription ends with the Bad status either way.
+
+With those fixes every lane passed on both runtimes:
+
+| Lane | Elixir 1.20.2 / OTP 29 | Elixir 1.18.4 / OTP 27 |
+| --- | --- | --- |
+| ExUnit, interop and software | 440 passed (10 doctests, 4 properties, 426 tests), 1 excluded | 427 tests, 10 doctests, 4 properties, 0 failures, 1 excluded |
+| native CTest | 207/207 | 207/207 |
+| ASan/UBSan/LSan CTest | 216/216 | 216/216 |
+| Mix, Hex, pip and native source audits | clean | clean |
+| archive consumer (X-F48) | 6 operations, no Python, shell or remaining helper process | same |
+
+Both lanes built byte-identical archives, `wotex` 0.1.0
+`02312c38355c40e9f1cd25da06f5f459738206bdd6443d2decb3ac6f328e1435`,
+`wotex_runtime` 0.1.0
+`a9c105e824a465e7f778a5c8d21efdb95456408f87db5e043b3b7a2f7da5aac3` and
+`wotex_opcua` 0.1.0
+`f5e05fb3141484ae7db3fe525104d56f7cf49d1c38cec7472bf414a042fe4bc1`, and resolved
+the same consumer lock. A fresh macOS arm64 build and run of the same commit,
+Elixir 1.20.2 / OTP 29, passed all eight lanes with 440 ExUnit tests and 207/207
+in both CTest trees. Linux x86_64 did not run.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/software/Dockerfile.linux` | `5cf2b66d0f54509ebc30903de893acfbe013499e2bcfc4b6500bce5df2da7a02` |
+| current lane image | `sha256:ebbda062e529608a5aac19d0a17bc1cdf3435f61b81bcde566cc998c739edab6` |
+| minimum lane image | `sha256:c7c5958dd4708d51c651d01ba0420b3726c2727f4f7553bbc42e436a5f9f153f` |
+| current lane `software-run.json` | `f7f36203751dec11fb7ca1df032375fda975c157d1be1c0f8d7c453b1f9b0146` |
+| minimum lane `software-run.json` | `4251cd1c2cbba3abb757c089a9a7e40d7c61b5ad91fdad4bee03adbfd455fec9` |
+| Linux `archive-consumer.json` (both lanes) | `bf2f9ea957b0d5a3043e308b0128cd79366b5e685b3a3b1158543f034af9adf8` |
+| macOS `software-run.json` | `8ad16ccedf4d8626ad44a12d49deac936f0cbee28c636b105fa4e4d19ebf29e3` |
+| macOS `archive-consumer.json` | `74afa4207edef0bffbff1095f18c8d6510336e3f95c9e562a1258314b2f6e04b` |
+
 ## User token encryption algorithms, 2026-09-19
 
 The asyncua peer now records the `EncryptionAlgorithm` of every UserName token
@@ -36,7 +96,7 @@ Aes128_Sha256_RsaOaep and with
 `http://opcfoundation.org/UA/security/rsa-oaep-sha2-256` under
 Aes256_Sha256_RsaPss, as OPC 10000-7 assigns to those policies.
 `security_fault_test.exs` asserts all four cases. The software run on the
-workspace of the preceding section passed every lane, ExUnit with interop and
+workspace of the exact-archive consumer section passed every lane, ExUnit with interop and
 software 440 passed (10 doctests, 4 properties, 426 tests), 1 excluded.
 
 | Subject | SHA-256 |

@@ -3,7 +3,7 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.9
+  version: 1.1.10
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -37,9 +37,8 @@ profile projects persistent Read and Write results. WOP-I-F01 runs through the
 real ConsumedThing with a scripted client, and both production profiles read,
 write and observe against the independent peer. An exact-archive consumer of
 `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
-the native secure workflow against the independent peer on the current runtime
-(WOP.07 X-F48). The minimum runtime matrix and the remaining I03/I05/I06 cells
-are not accepted.
+the native secure workflow against the independent peer on both required
+runtimes (WOP.07 X-F48). The remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 
