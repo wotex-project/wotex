@@ -660,7 +660,9 @@ static void advance_recovery(WopSession *session, size_t index) {
     }
 }
 
-static bool send_publish(WopSession *session) {
+/* Returns the SDK status of the Publish submission, so a Session that has
+ * already lost its channel ends its subscriptions with that Bad status. */
+static UA_StatusCode send_publish(WopSession *session) {
     UA_SubscriptionAcknowledgement acks[WOP_SESSION_ACKS];
     size_t count = 0;
     double keepalive = 0;
@@ -686,12 +688,14 @@ static bool send_publish(WopSession *session) {
     request.requestHeader.timeoutHint = hint > 600000.0 ? 600000U : (UA_UInt32)hint;
     request.subscriptionAcknowledgements = count ? acks : NULL;
     request.subscriptionAcknowledgementsSize = count;
-    if(__UA_Client_AsyncService(session->client, &request, &UA_TYPES[UA_TYPES_PUBLISHREQUEST],
-           receive_publish, &UA_TYPES[UA_TYPES_PUBLISHRESPONSE], session, NULL) !=
-       UA_STATUSCODE_GOOD)
-        return false;
+    UA_StatusCode status = __UA_Client_AsyncService(session->client, &request,
+                                                    &UA_TYPES[UA_TYPES_PUBLISHREQUEST],
+                                                    receive_publish,
+                                                    &UA_TYPES[UA_TYPES_PUBLISHRESPONSE], session,
+                                                    NULL);
+    if (status != UA_STATUSCODE_GOOD) return status;
     session->publish_outstanding++;
-    return true;
+    return UA_STATUSCODE_GOOD;
 }
 
 bool wop_subscription_step(WopSession *session, WopFailure *failure) {
@@ -728,8 +732,9 @@ bool wop_subscription_step(WopSession *session, WopFailure *failure) {
     while(active && session->report_count == 0 && session->queued_frames == 0 &&
           session->publish_outstanding < WOP_SESSION_PUBLISH &&
           session->publish_outstanding < active) {
-        if(!send_publish(session)) {
-            wop_fail(failure, "connection_failed", "exchange", false);
+        UA_StatusCode status = send_publish(session);
+        if (status != UA_STATUSCODE_GOOD) {
+            wop_fail_status(failure, "connection_failed", "exchange", false, status);
             return false;
         }
     }
