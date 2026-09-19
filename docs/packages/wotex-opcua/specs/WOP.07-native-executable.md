@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.45
+  version: 1.1.46
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -75,6 +75,10 @@ The same independent peer also executes scalar Double read/write through both
 production Runtime profiles and Property observation through a real
 ConsumedThing child. Explicit stop and Runtime-owner death each return its
 subscription, MonitoredItem and additional native-process counts to zero.
+It also exposes writable Int32 and Double arrays and a writable 2 × 3 Int16
+matrix. Public Runtime read/write/readback preserves their type, flat values,
+dimensions, extreme integers and negative zero, restores the original values
+and leaves only the test's baseline Session helpers.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split
@@ -702,7 +706,8 @@ vendored, and the manifest records every project and patch digest, the Cargo
 version, the audit lock and installed audit distributions, and seven executable
 digests. Run re-verifies that manifest and the peer project. It starts the C
 peer and then the Rust peer, which reuses the C peer's CA, CRL and server certificate,
-serves a folder of 40 children and writable/method nodes on all three required
+serves a folder of 40 children, scalar/method nodes and three writable array
+nodes on all three required
 SignAndEncrypt policies with anonymous, username and certificate tokens,
 reports the server's live browse continuation points, Cancel count,
 subscriptions and MonitoredItems through methods, and stops when its standard

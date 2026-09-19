@@ -3,7 +3,7 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.11
+  version: 1.1.12
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -42,7 +42,10 @@ each delete the independent peer's subscription and MonitoredItem and reap the
 extra local helpers. An exact-archive consumer of
 `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
 the native secure workflow against the same-stack peer on both required
-runtimes (WOP.07 X-F48). Typed independent value breadth, injected peer loss and
+runtimes (WOP.07 X-F48). The independent peer also roundtrips Int32 and Double
+arrays and a 2 × 3 Int16 matrix through a real ConsumedThing, preserving type,
+dimensions, extreme integers and negative zero before restoring every node.
+Broader independent value breadth, injected peer loss and
 the remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values

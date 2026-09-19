@@ -16,7 +16,10 @@ use opcua::{
         node_manager::memory::{simple_node_manager, SimpleNodeManager},
         ServerBuilder, ServerUserToken, ANONYMOUS_USER_TOKEN_ID,
     },
-    types::{DataTypeId, MessageSecurityMode, NodeId, ObjectId, ObjectTypeId, StatusCode, Variant},
+    types::{
+        Array, DataTypeId, MessageSecurityMode, NodeId, ObjectId, ObjectTypeId, StatusCode,
+        Variant, VariantScalarTypeId,
+    },
 };
 use tokio::io::AsyncReadExt;
 
@@ -301,6 +304,9 @@ fn populate(
     let cancel_count = NodeId::new(namespace, "cancel_count");
     let resources = NodeId::new(namespace, "resources");
     let value = NodeId::new(namespace, "value");
+    let int_array = NodeId::new(namespace, "int_array");
+    let double_array = NodeId::new(namespace, "double_array");
+    let int16_matrix = NodeId::new(namespace, "int16_matrix");
     let add = NodeId::new(namespace, "add");
     let slow = NodeId::new(namespace, "slow");
 
@@ -340,6 +346,42 @@ fn populate(
             .insert(&mut *address_space)
         {
             return Err("cannot add writable value".to_owned());
+        }
+        if !VariableBuilder::new(&int_array, "IntArray", "IntArray")
+            .data_type(DataTypeId::Int32)
+            .value(vec![-2_147_483_648_i32, 0, 7])
+            .writable()
+            .component_of(fixture.clone())
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add writable Int32 array".to_owned());
+        }
+        if !VariableBuilder::new(&double_array, "DoubleArray", "DoubleArray")
+            .data_type(DataTypeId::Double)
+            .value(vec![1.5_f64, -0.0_f64])
+            .writable()
+            .component_of(fixture.clone())
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add writable Double array".to_owned());
+        }
+        let matrix = Array::new_multi(
+            VariantScalarTypeId::Int16,
+            [1_i16, 2, 3, 4, 5, 6]
+                .into_iter()
+                .map(Variant::Int16)
+                .collect::<Vec<_>>(),
+            vec![2, 3],
+        )
+        .map_err(|error| format!("cannot construct Int16 matrix: {error:?}"))?;
+        if !VariableBuilder::new(&int16_matrix, "Int16Matrix", "Int16Matrix")
+            .data_type(DataTypeId::Int16)
+            .value(matrix)
+            .writable()
+            .component_of(fixture.clone())
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add writable Int16 matrix".to_owned());
         }
         if !MethodBuilder::new(&add, "Add", "Add")
             .component_of(fixture.clone())

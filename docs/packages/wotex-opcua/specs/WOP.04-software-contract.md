@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.7
+  version: 1.1.8
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -260,6 +260,10 @@ Runtime credentials remain nil-only; the explicitly selected native adapter
 configuration owns security material for its session lifetime. Reject an
 uninterpreted ExecutionContext credential before I/O.
 Return typed arrays and metadata through Runtime only after complete validation.
+The independent async-opcua fixture supplies writable Int32 and Double arrays
+and a writable 2 × 3 Int16 matrix. Public Runtime read/write/readback preserves
+types, flat values, dimensions, extreme integers and negative zero and restores
+each node before teardown. This is bounded array evidence, not every S01 wire type.
 The facade provides `health_check/2` with a concrete read probe; `health_check/1` keeps its
 probe-required error. A successful TCP connection alone is not healthy UA service.
 

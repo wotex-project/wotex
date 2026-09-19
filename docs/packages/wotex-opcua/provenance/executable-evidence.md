@@ -101,7 +101,11 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
   write the peer's Double variable. A real observation reports the current and
   next wire values. Explicit stop and Runtime-owner death each return the peer's
   subscription and MonitoredItem counts and the extra guardian/native process
-  set to their baselines (I02/I05 and V13).
+  set to their baselines (I02/I05 and V13); and
+- a real ConsumedThing reads, writes, reads back and restores the peer's Int32
+  and Double arrays and its 2 × 3 Int16 matrix. Runtime preserves the matrix's
+  flat value order and dimensions, extreme Int32 values and negative zero, and
+  the temporary request helpers return to the baseline (S01/S05 and I03).
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
@@ -116,17 +120,18 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-22 independent-wire cases passed 22/22: the original three
+23 independent-wire cases passed 23/23: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
-nine negative security/fault cells, plus the Runtime profile/observation case. The
+nine negative security/fault cells, plus the Runtime profile/observation and
+typed-array cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `a3e97945fd7fef310947ccca53312e71b8d5bb92d04aab69af3f3dc744d9e177` |
-| `test/interop/rust_peer/src/main.rs` | `a3d50c79ea09b13bb02c17e226eb6ddd5904906e2a46389538efb955e65a97b4` |
+| `test/interop/rust_peer_test.exs` | `5d1242a21e3d496d41043f4940141e856bfba548c4578f954902c84cec343841` |
+| `test/interop/rust_peer/src/main.rs` | `089a81a1ac7dd76f219079e134afb5c31ed7137e8d9ba5e81c1988e3facda918` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
 | `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |
@@ -322,10 +327,13 @@ typed arrays are validated before any client I/O.
 ones through `Transport.decode_frame/3`. `runtime_integration_test.exs` reads a
 2 × 2 Int32 matrix and writes a Double array through a real `ConsumedThing`, and
 an out-of-range element fails the Read after the request and the Write before
-any client call. The asyncua peer gained writable Int32 and Double array
+any client call. The same-stack C peer exposes writable Int32 and Double array
 variables, and `native_secure_test.exs` reads, writes, reads back and restores
-both through the persistent native client under Basic256Sha256
-SignAndEncrypt, including `-0.0` and extreme Int32 and Double values.
+both through the persistent native client under Basic256Sha256 SignAndEncrypt.
+The independent async-opcua Rust peer now provides the same arrays plus a 2 × 3
+Int16 matrix. `rust_peer_test.exs` roundtrips and restores all three through a
+real ConsumedThing, preserving dimensions, `-0.0` and extreme Int32/Double
+values while temporary request helpers return to the baseline.
 
 A fresh `WOTEX_PATH_DEPS=1 mix wotex.software.build` on macOS arm64 (Elixir
 1.20.2 / OTP 29) and `mix wotex.software.run` on it passed every lane: ExUnit

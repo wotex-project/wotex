@@ -354,6 +354,56 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert eventually(fn -> native_descendants() == baseline end)
   end
 
+  @tag rust_session: true
+  test "WOP-S01 WOP-S05 Runtime arrays roundtrip against the independent Rust peer", context do
+    baseline = native_descendants()
+    config = Keyword.put(context.options, :target, context.peer["endpoint"])
+
+    for {identifier, type, original, written, dimensions} <- [
+          {"int_array", "Int32", [-2_147_483_648, 0, 7], [2_147_483_647, -1], nil},
+          {"double_array", "Double", [1.5, -0.0], [-0.0, 2.5e-300, 1.0e300], nil},
+          {"int16_matrix", "Int16", [1, 2, 3, 4, 5, 6], [6, 5, 4, 3, 2, 1], [2, 3]}
+        ] do
+      node = context.node.(identifier)
+      consumed = runtime_array_consumer(context.peer, node, config)
+      {:ok, runtime_context} = Context.new(request_id: "rust-runtime-#{identifier}")
+
+      assert {:ok, %Result{payload: ^original, metadata: metadata}} =
+               ConsumedThing.read_property(consumed, "samples", runtime_context)
+
+      assert metadata.opcua_type == type
+      assert metadata.status == 0
+      assert Map.get(metadata, :opcua_dimensions) == dimensions
+
+      input = %{"type" => type, "array" => true, "value" => written}
+      input = if dimensions, do: Map.put(input, "dimensions", dimensions), else: input
+
+      try do
+        assert {:ok, %Result{payload: nil, metadata: %{status: 0}}} =
+                 ConsumedThing.write_property(consumed, "samples", input, runtime_context)
+
+        assert {:ok, %Result{payload: ^written, metadata: projected}} =
+                 ConsumedThing.read_property(consumed, "samples", runtime_context)
+
+        assert projected.opcua_type == type
+        assert Map.get(projected, :opcua_dimensions) == dimensions
+
+        if type == "Double" do
+          [negative_zero | _] = written
+          assert <<1::1, _::63>> = <<negative_zero::float-64>>
+        end
+      after
+        restore = %{"type" => type, "array" => true, "value" => original}
+        restore = if dimensions, do: Map.put(restore, "dimensions", dimensions), else: restore
+
+        assert {:ok, %Result{payload: nil}} =
+                 ConsumedThing.write_property(consumed, "samples", restore, runtime_context)
+      end
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
   for {number, fault} <- [
         {39, "expired_leaf"},
         {40, "wrong_host"},
@@ -504,6 +554,36 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       )
 
     {session, oneshot}
+  end
+
+  defp runtime_array_consumer(peer, node, config) do
+    href = peer["endpoint"] <> "?id=" <> URI.encode_www_form(node)
+
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "id" => "urn:example:opcua:rust-arrays",
+        "title" => "Rust arrays",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{
+          "samples" => %{
+            "type" => "array",
+            "forms" => [%{"href" => href, "op" => ["readproperty", "writeproperty"]}]
+          }
+        }
+      })
+
+    {:ok, profile} = Wotex.OPCUA.profile(:session)
+
+    {:ok, consumed} =
+      ConsumedThing.new(td,
+        profiles: [profile],
+        transports: %{opcua_session: {Transport, config}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    consumed
   end
 
   defp fault_options(context, fault) do
