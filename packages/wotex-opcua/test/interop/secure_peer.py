@@ -165,6 +165,14 @@ async def main(directory, variant):
                                                          "ByteValue", b"seed",
                                                          ua.VariantType.ByteString)
     await byte_value.set_writable()
+    int_values = await server.nodes.objects.add_variable(ua.NodeId("int_values", namespace),
+                                                         "IntValues", [-2147483648, 0, 7],
+                                                         ua.VariantType.Int32)
+    await int_values.set_writable()
+    double_values = await server.nodes.objects.add_variable(ua.NodeId("double_values", namespace),
+                                                            "DoubleValues", [1.5, -0.0],
+                                                            ua.VariantType.Double)
+    await double_values.set_writable()
     node_value = await server.nodes.objects.add_variable(ua.NodeId("node_value", namespace),
                                                          "NodeValue", ua.NodeId("value", namespace),
                                                          ua.VariantType.NodeId)
@@ -298,6 +306,8 @@ async def main(directory, variant):
               "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string(),
               "byte_array_node_id": byte_values.nodeid.to_string(),
               "byte_node_id": byte_value.nodeid.to_string(),
+              "int_array_node_id": int_values.nodeid.to_string(),
+              "double_array_node_id": double_values.nodeid.to_string(),
               "node_value_id": node_value.nodeid.to_string(),
               "name_value_id": name_value.nodeid.to_string(),
               "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string(),

@@ -4,9 +4,9 @@ defmodule Wotex.OPCUA.Value do
 
   `encode/2` accepts a value with a supported OPC UA built-in type name. With
   a nil type argument, the value must be a map containing `type` and `value`.
-  The current flat-array Write path accepts an explicit typed ByteString
-  envelope with `array: true` and optional dimensions.
-  The value is validated through
+  An array Write takes an explicit typed envelope with `array: true`, a flat
+  element list or nil, and optional dimensions, for any of the scalar types
+  below. The value is validated through
   `Wotex.OPCUA.Binary`; byte strings are represented as Base64 for the JSON
   bridge. The module never infers a Variant type from an arbitrary Elixir value.
 
@@ -16,12 +16,19 @@ defmodule Wotex.OPCUA.Value do
   other returned types against their payloads; values without a StatusCode envelope
   pass through with empty metadata. Invalid status envelopes and malformed
   Base64 return `Wotex.OPCUA.Error`. `native_result/1` projects one native typed
-  DataValue map from an observation the same way: Bad status and an absent value
-  fail, a Variant without dimensions whose elements are null, Boolean, number,
-  string or ByteString becomes the payload, and metadata keeps the type, status
-  and any timestamps or picosecond fractions. Full typed result validation and
-  general DataValue projection remain target work. Conversion does not validate an
-  application DataSchema, perform unit conversion, or establish Property state.
+  DataValue map, from a persistent Read or an observation: Bad status and an
+  absent value fail, and a scalar or array Variant of a Null, Boolean, integer,
+  Float, Double, String, DateTime, Guid, ByteString, NodeId or StatusCode type
+  becomes the payload only after `Wotex.OPCUA.Binary.encode_variant/1` accepts
+  every element against its declared type, the element and byte limits and any
+  dimensions. ByteString elements become raw binaries and arrays stay flat.
+  Metadata keeps the type, status, `opcua_dimensions` of a multidimensional
+  array and any timestamps or picosecond fractions. Other types, such as
+  QualifiedName or ExtensionObject, an element that contradicts its declared
+  type and dimensions on a scalar fail with `:unsupported_type`; exceeded
+  limits fail with `:response_limit`. Conversion
+  does not validate an application DataSchema, perform unit conversion, or
+  establish Property state.
 
   ## Examples
 
@@ -54,7 +61,7 @@ defmodule Wotex.OPCUA.Value do
   @doc "Wraps a value in an explicitly named and validated Variant."
   @spec encode(term(), term()) :: {:ok, map()} | {:error, Error.t()}
   def encode(%{type: name, array: true, value: values} = typed, nil) do
-    with true <- name == "ByteString",
+    with {:ok, _} <- Map.fetch(@types, name),
          {:ok, _} <- Binary.encode_variant(typed) do
       payload =
         if name == "ByteString" and is_list(values),
@@ -129,16 +136,20 @@ defmodule Wotex.OPCUA.Value do
 
   def native_result(_), do: {:error, Error.new(:invalid_result)}
 
-  defp native_variant(
-         %{"type" => type, "array" => array, "value" => element} = variant,
-         status,
-         data_value
-       )
-       when is_binary(type) and is_boolean(array) and map_size(variant) == 3 do
-    with {:ok, legacy} <- legacy_element(element),
-         {:ok, payload} <- payload(type, legacy) do
+  @native_types ~w(Null Boolean SByte Byte Int16 UInt16 Int32 UInt32 Int64 UInt64 Float Double
+                   String DateTime Guid ByteString NodeId StatusCode)
+
+  defp native_variant(%{"type" => type, "array" => array} = variant, status, data_value)
+       when is_binary(type) and is_boolean(array) and is_map_key(variant, "value") do
+    with :ok <- native_type(type),
+         {:ok, dimensions} <- native_dimensions(variant),
+         {:ok, payload} <- native_payload(type, array, variant["value"]),
+         :ok <- validate_variant(type, array, payload, dimensions) do
+      base = %{opcua_type: type, status: status}
+      base = if dimensions, do: Map.put(base, :opcua_dimensions, dimensions), else: base
+
       metadata =
-        Enum.reduce(@timestamps, %{opcua_type: type, status: status}, fn {key, atom}, metadata ->
+        Enum.reduce(@timestamps, base, fn {key, atom}, metadata ->
           if Map.has_key?(data_value, key),
             do: Map.put(metadata, atom, data_value[key]),
             else: metadata
@@ -150,27 +161,61 @@ defmodule Wotex.OPCUA.Value do
 
   defp native_variant(_, _, _), do: {:error, Error.new(:unsupported_type)}
 
-  defp legacy_element(%{"type" => "bytes", "base64" => text} = envelope)
-       when map_size(envelope) == 2 and is_binary(text),
-       do: {:ok, %{"type" => "ByteString", "base64" => text}}
+  defp native_type(type) when type in @native_types, do: :ok
+  defp native_type(_), do: {:error, Error.new(:unsupported_type)}
 
-  defp legacy_element(values) when is_list(values) do
-    converted =
-      Enum.reduce_while(values, {:ok, []}, fn value, {:ok, converted} ->
-        case legacy_element(value) do
-          {:ok, item} -> {:cont, {:ok, [item | converted]}}
+  defp native_dimensions(variant) do
+    case Map.keys(variant) -- ["type", "array", "value"] do
+      [] -> {:ok, nil}
+      ["dimensions"] -> {:ok, variant["dimensions"]}
+      _ -> {:error, Error.new(:unsupported_type)}
+    end
+  end
+
+  defp native_payload(_, true, nil), do: {:ok, nil}
+
+  defp native_payload(type, true, values) when is_list(values) do
+    elements =
+      Enum.reduce_while(values, {:ok, []}, fn value, {:ok, elements} ->
+        case native_element(value) do
+          {:ok, element} -> {:cont, {:ok, [element | elements]}}
           error -> {:halt, error}
         end
       end)
 
-    with {:ok, items} <- converted, do: {:ok, Enum.reverse(items)}
+    with {:ok, elements} <- elements, do: payload(type, Enum.reverse(elements))
   end
 
-  defp legacy_element(value)
+  defp native_payload(type, false, value) do
+    with {:ok, element} <- native_element(value), do: payload(type, element)
+  end
+
+  defp native_payload(_, _, _), do: {:error, Error.new(:unsupported_type)}
+
+  # The bridge sends scalars as JSON values and byte strings as a closed
+  # base64 envelope; any other element shape is outside the projection.
+  defp native_element(%{"type" => "bytes", "base64" => text} = envelope)
+       when map_size(envelope) == 2 and is_binary(text),
+       do: {:ok, envelope}
+
+  defp native_element(value)
        when is_nil(value) or is_boolean(value) or is_number(value) or is_binary(value),
        do: {:ok, value}
 
-  defp legacy_element(_), do: {:error, Error.new(:unsupported_type)}
+  defp native_element(_), do: {:error, Error.new(:unsupported_type)}
+
+  # The pure codec checks each element against its type's width, the 64 KiB
+  # element and 1 MiB Variant budgets and the dimensions' element count.
+  defp validate_variant(type, array, payload, dimensions) do
+    variant = %{type: type, array: array, value: payload}
+    variant = if dimensions, do: Map.put(variant, :dimensions, dimensions), else: variant
+
+    case Binary.encode_variant(variant) do
+      {:ok, _} -> :ok
+      {:error, %Error{code: :response_limit}} = error -> error
+      {:error, _} -> {:error, Error.new(:unsupported_type)}
+    end
+  end
 
   defp payload("ByteString", values) when is_list(values) and length(values) <= 1024 do
     result =
@@ -198,12 +243,16 @@ defmodule Wotex.OPCUA.Value do
     do: {:error, Error.new(:response_limit)}
 
   defp payload("ByteString", value), do: byte_payload(value)
+
+  defp payload(_, values) when is_list(values) and length(values) > 1024,
+    do: {:error, Error.new(:response_limit)}
+
   defp payload(_, value), do: {:ok, value}
 
   defp byte_payload(nil), do: {:ok, nil}
 
-  defp byte_payload(%{"type" => "ByteString", "base64" => text} = envelope)
-       when map_size(envelope) == 2 and is_binary(text) do
+  defp byte_payload(%{"type" => kind, "base64" => text} = envelope)
+       when kind in ["ByteString", "bytes"] and map_size(envelope) == 2 and is_binary(text) do
     if byte_size(text) > 87_384 do
       {:error, Error.new(:response_limit)}
     else

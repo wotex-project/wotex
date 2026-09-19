@@ -42,6 +42,25 @@ defmodule Wotex.OPCUA.ValueTest do
       assert {:error, %{code: :variant_type_required}} = Value.encode(invalid, nil)
     end
 
+    for {typed, value} <- [
+          {%{type: "Int64", array: true, value: [-9_223_372_036_854_775_808, 0]},
+           [-9_223_372_036_854_775_808, 0]},
+          {%{"type" => "Boolean", "array" => true, "value" => [true, false]}, [true, false]},
+          {%{type: "String", array: true, value: ["a", nil], dimensions: [1, 2]}, ["a", nil]},
+          {%{type: "Float", array: true, value: nil}, nil}
+        ] do
+      assert {:ok, %{array: true, value: ^value}} = Value.encode(typed, nil)
+    end
+
+    for invalid <- [
+          %{type: "Byte", array: true, value: [256]},
+          %{type: "Double", array: true, value: [1]},
+          %{type: "Guid", array: true, value: ["72962b91-fa75-4ae6-8d28-b404dc7daf63"]},
+          %{type: "Int32", array: true, value: [1, 2], dimensions: [2]}
+        ] do
+      assert {:error, %{code: :variant_type_required}} = Value.encode(invalid, nil)
+    end
+
     assert {:error, _} = Value.encode(65_536, "UInt16")
     assert {:error, _} = Value.encode(1.5, nil)
 

@@ -212,6 +212,82 @@ defmodule Wotex.OPCUA.RuntimeIntegrationTest do
     end
   end
 
+  test "WOP-S05 session profile reads and writes validated typed arrays" do
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "title" => "Session arrays",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{
+          "samples" => %{"forms" => [%{"href" => @href, "op" => ["readproperty", "writeproperty"]}]}
+        }
+      })
+
+    {:ok, profile} = Wotex.OPCUA.profile(:session)
+    {:ok, context} = Context.new(request_id: "session-arrays")
+
+    consumed = fn reply ->
+      transport = [
+        client: TestScriptedClient,
+        target: "opc.tcp://127.0.0.1:4840/server",
+        reply: reply,
+        test: self()
+      ]
+
+      {:ok, consumed} =
+        ConsumedThing.new(td,
+          profiles: [profile],
+          transports: %{opcua_session: {TestRecordingTransport, transport}},
+          credentials: {TestNosecCredentials, nil}
+        )
+
+      consumed
+    end
+
+    matrix = %{
+      "has_value" => true,
+      "status" => 0,
+      "value" => %{
+        "type" => "Int32",
+        "array" => true,
+        "value" => [1, 2, 3, 4],
+        "dimensions" => [2, 2]
+      }
+    }
+
+    assert {:ok, %Wotex.Runtime.Result{payload: [1, 2, 3, 4], metadata: metadata}} =
+             ConsumedThing.read_property(consumed.(matrix), "samples", context)
+
+    assert metadata == %{opcua_type: "Int32", status: 0, opcua_dimensions: [2, 2]}
+    assert [:connect, {:request, %{type: :read}}, :disconnect] = scripted_messages([])
+
+    out_of_range = put_in(matrix["value"]["value"], [1, 2, 3, 2_147_483_648])
+
+    assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :unsupported_type}}}} =
+             ConsumedThing.read_property(consumed.(out_of_range), "samples", context)
+
+    assert [:connect, {:request, _}, :disconnect] = scripted_messages([])
+
+    array = %{"type" => "Double", "array" => true, "value" => [-0.0, 2.5]}
+
+    assert {:ok, %Wotex.Runtime.Result{payload: nil, metadata: %{status: 0}}} =
+             ConsumedThing.write_property(consumed.(%{"status" => 0}), "samples", array, context)
+
+    assert [:connect, {:request, %{type: :write, value: written}}, :disconnect] =
+             scripted_messages([])
+
+    assert written == %{type: "Double", array: true, value: [-0.0, 2.5]}
+
+    # An element outside its declared type fails before any client I/O.
+    invalid = %{"type" => "Byte", "array" => true, "value" => [255, 256]}
+
+    assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :variant_type_required}}}} =
+             ConsumedThing.write_property(consumed.(%{"status" => 0}), "samples", invalid, context)
+
+    assert [] = scripted_messages([])
+  end
+
   for number <- 2..7 do
     id = "WOP-I-F0#{number}"
 

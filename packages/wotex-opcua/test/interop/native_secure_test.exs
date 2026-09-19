@@ -675,6 +675,84 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     end
   end
 
+  test "Runtime typed array Forms return validated values through a persistent native Session" do
+    alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
+
+    config_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    peer = Jason.decode!(File.read!(config_path))
+    directory = Path.dirname(config_path)
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+    endpoint = peer["endpoint"]
+    assert {:ok, context} = Context.new(request_id: "native-array-interop")
+    execution = ExecutionContext.new(context, nil)
+
+    options = [
+      client: Wotex.OPCUA.Open62541,
+      target: endpoint,
+      executable: executable,
+      executable_digest: digest.(executable),
+      guardian: guardian,
+      guardian_digest: digest.(guardian),
+      endpoint: endpoint,
+      security_policy: :basic256sha256,
+      security_mode: :sign_and_encrypt,
+      client_uri: peer["client_uri"],
+      server_uri: peer["server_uri"],
+      certificate: peer["certificate"],
+      private_key: Path.join(directory, "client.key.der"),
+      server_certificate: peer["server_certificate"],
+      trust_certificate: Path.join(directory, "ca.der"),
+      crl: peer["crl"],
+      authentication: %{type: :anonymous}
+    ]
+
+    for {key, type, original, written} <- [
+          {"int_array_node_id", "Int32", [-2_147_483_648, 0, 7], [2_147_483_647, -1]},
+          {"double_array_node_id", "Double", [1.5, -0.0], [-0.0, 2.5e-300, 1.0e300]}
+        ] do
+      href = endpoint <> "?id=" <> URI.encode_www_form(peer[key])
+      assert {:ok, form} = Wotex.Form.new(%{"href" => href})
+
+      request = %Request{
+        operation: :readproperty,
+        affordance_type: :property,
+        affordance_name: key,
+        form: form,
+        resolved_href: href,
+        profile: nil,
+        request_id: "native-array-interop",
+        deadline: nil,
+        input: nil
+      }
+
+      read = fn -> Wotex.OPCUA.Transport.request(request, execution, options) end
+
+      write = fn values ->
+        Wotex.OPCUA.Transport.request(
+          %{
+            request
+            | operation: :writeproperty,
+              input: %{"type" => type, "array" => true, "value" => values}
+          },
+          execution,
+          options
+        )
+      end
+
+      assert {:ok, %Result{payload: ^original, metadata: %{opcua_type: ^type, status: 0}}} =
+               read.()
+
+      try do
+        assert {:ok, %Result{payload: nil, metadata: %{status: 0}}} = write.(written)
+        assert {:ok, %Result{payload: ^written, metadata: %{opcua_type: ^type}}} = read.()
+      after
+        assert {:ok, %Result{payload: nil}} = write.(original)
+      end
+    end
+  end
+
   test "the public native client reads, writes and calls through secure Sessions without Python" do
     peer_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
     peer = Jason.decode!(File.read!(peer_path))

@@ -420,6 +420,81 @@ defmodule Wotex.OPCUA.RuntimeStreamTest do
     assert :ignore = Transport.decode_frame({:status, :keepalive}, request, [])
   end
 
+  test "WOP-S05 decode_frame returns typed arrays only after complete validation", context do
+    request = context.request
+    guid = "72962b91-fa75-4ae6-8d28-b404dc7daf63"
+    bytes = %{"type" => "bytes", "base64" => Base.encode64(<<1, 2>>)}
+
+    variant = fn type, array, value ->
+      %{@double | "value" => %{"type" => type, "array" => array, "value" => value}}
+    end
+
+    dimensioned = fn type, value, dimensions ->
+      %{
+        @double
+        | "value" => %{
+            "type" => type,
+            "array" => true,
+            "value" => value,
+            "dimensions" => dimensions
+          }
+      }
+    end
+
+    for {value, payload, metadata} <- [
+          {variant.("Int32", true, [-2_147_483_648, 0, 2_147_483_647]),
+           [-2_147_483_648, 0, 2_147_483_647], %{opcua_type: "Int32"}},
+          {dimensioned.("Int16", [1, 2, 3, 4, 5, 6], [2, 3]), [1, 2, 3, 4, 5, 6],
+           %{opcua_type: "Int16", opcua_dimensions: [2, 3]}},
+          {variant.("UInt64", true, [0, 18_446_744_073_709_551_615]),
+           [0, 18_446_744_073_709_551_615], %{opcua_type: "UInt64"}},
+          {variant.("Double", true, [-0.0, 1.5]), [-0.0, 1.5], %{opcua_type: "Double"}},
+          {variant.("Boolean", true, [true, false]), [true, false], %{opcua_type: "Boolean"}},
+          {variant.("String", true, ["é", nil, ""]), ["é", nil, ""], %{opcua_type: "String"}},
+          {variant.("ByteString", true, [bytes, nil]), [<<1, 2>>, nil],
+           %{opcua_type: "ByteString"}},
+          {variant.("Byte", true, []), [], %{opcua_type: "Byte"}},
+          {variant.("Byte", true, nil), nil, %{opcua_type: "Byte"}},
+          {variant.("DateTime", false, 133_000_000_000_000_001), 133_000_000_000_000_001,
+           %{opcua_type: "DateTime"}},
+          {variant.("Guid", true, [guid]), [guid], %{opcua_type: "Guid"}},
+          {variant.("StatusCode", false, 0x4000_0000), 0x4000_0000, %{opcua_type: "StatusCode"}},
+          {variant.("NodeId", false, "ns=2;s=reading"), "ns=2;s=reading", %{opcua_type: "NodeId"}},
+          {variant.("Null", false, nil), nil, %{opcua_type: "Null"}}
+        ] do
+      assert {:ok, ^payload, projected} =
+               Transport.decode_frame({:value, value, @metadata}, request, [])
+
+      assert Map.take(projected, Map.keys(metadata)) == metadata
+      assert projected.status == 0 and projected.publish_time == 1001
+
+      assert Map.has_key?(projected, :opcua_dimensions) ==
+               Map.has_key?(metadata, :opcua_dimensions)
+    end
+
+    for {value, code} <- [
+          {variant.("Byte", true, [255, 256]), :unsupported_type},
+          {variant.("SByte", true, [-129]), :unsupported_type},
+          {variant.("Int32", true, [1.5]), :unsupported_type},
+          {variant.("Float", true, [1.0e39]), :unsupported_type},
+          {variant.("Double", true, [1]), :unsupported_type},
+          {variant.("Boolean", true, [1]), :unsupported_type},
+          {variant.("Guid", false, "not-a-guid"), :unsupported_type},
+          {variant.("NodeId", false, "not a node"), :unsupported_type},
+          {variant.("Int32", true, [bytes]), :unsupported_type},
+          {variant.("Int32", true, [[1]]), :unsupported_type},
+          {variant.("Null", true, nil), :unsupported_type},
+          {variant.("QualifiedName", false, %{"namespace" => 0, "name" => "x"}), :unsupported_type},
+          {dimensioned.("Int16", [1, 2, 3, 4], [3, 2]), :unsupported_type},
+          {dimensioned.("Int16", [1, 2], [2]), :unsupported_type},
+          {variant.("Int32", true, List.duplicate(0, 1025)), :response_limit},
+          {Map.put(@double, "value", %{"type" => "Int32", "array" => true}), :unsupported_type}
+        ] do
+      assert {:error, %Error{code: ^code}} =
+               Transport.decode_frame({:value, value, @metadata}, request, [])
+    end
+  end
+
   test "WOP-S05 unsubscribe validates handles and releases with any credential", context do
     %{request: request, execution: execution, config: config} = context
     {:ok, runtime_context} = Context.new(request_id: "observe-3")

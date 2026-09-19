@@ -21,6 +21,49 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## Typed arrays through Runtime, 2026-09-19
+
+`Wotex.OPCUA.Value.native_result/1`, which projects persistent native Reads and
+observations for Runtime, now returns a scalar or array Variant of a Null,
+Boolean, integer, Float, Double, String, DateTime, Guid, ByteString, NodeId or
+StatusCode type only after `Wotex.OPCUA.Binary.encode_variant/1` accepts every
+element against its declared type, the 1024-element, 64 KiB element and 1 MiB
+Variant budgets and any dimensions. Before, only ByteString elements were
+checked and other elements reached Runtime as sent. A multidimensional array
+stays a flat list and adds `opcua_dimensions` to the metadata. Malformed or
+out-of-range elements, dimensions on a scalar and unprojected types such as
+QualifiedName keep failing with `unsupported_type`; exceeded limits fail with
+`response_limit`. `Wotex.OPCUA.Value.encode/2` admits explicit array envelopes
+of every scalar type it supports, not only ByteString, so Runtime Writes of
+typed arrays are validated before any client I/O.
+
+`runtime_stream_test.exs` projects 14 valid typed frames and rejects 16 invalid
+ones through `Transport.decode_frame/3`. `runtime_integration_test.exs` reads a
+2 × 2 Int32 matrix and writes a Double array through a real `ConsumedThing`, and
+an out-of-range element fails the Read after the request and the Write before
+any client call. The asyncua peer gained writable Int32 and Double array
+variables, and `native_secure_test.exs` reads, writes, reads back and restores
+both through the persistent native client under Basic256Sha256
+SignAndEncrypt, including `-0.0` and extreme Int32 and Double values.
+
+A fresh `WOTEX_PATH_DEPS=1 mix wotex.software.build` on macOS arm64 (Elixir
+1.20.2 / OTP 29) and `mix wotex.software.run` on it passed every lane: ExUnit
+with interop and software 438 passed (10 doctests, 4 properties, 424 tests), 1
+excluded; native CTest 207/207; ASan/UBSan CTest 207/207; `mix deps.audit` and
+`mix hex.audit` clean. The package gate passes with 373 passed (10 doctests, 4
+properties, 359 tests), 66 optional tests excluded and 95.3% coverage.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/value.ex` | `fa44df7955a7fb9d06316822922b11574082f566284828697dbe4e5355766401` |
+| `test/wotex/opcua/value_test.exs` | `4d111dc4d6e098436363f3dadfe27dc2e7c6b4f880bc9cb80d228d73f566dc4c` |
+| `test/wotex/opcua/runtime_stream_test.exs` | `b41008f5e1f69646c06b8dcd6b60eaea883ca9ad2c78e6e6d95e6f9f231d86c2` |
+| `test/wotex/opcua/runtime_integration_test.exs` | `a1cf2eb7251a4c8e264ee3a4a0c10f8541d08a1c4fa9b565bb434c2201e46730` |
+| `test/interop/native_secure_test.exs` | `26d3c1f2d26d7f98693fbf6aa6e41ce5935e8d4aadd219a2b9ce79d06b03353c` |
+| `test/interop/secure_peer.py` | `cc11b0b9bd06e55a46c8b89ce38c86a7e37b776c39392749075c8d0e6e9b802d` |
+| `software-build.json` | `c1affa4d82cac57d10303bb350116c1d51714567f08a7b3bbece015746ca819b` |
+| `software-run.json` | `9a392d39016b89ae2b555adce511666197ac0156204a1d151bedc819f3e7845c` |
+
 ## Linux x86_64 cohort under Rosetta, 2026-09-17
 
 Source: commit `4b7e3bbb72d35b995623c3dfec704a400ba59f60`, copied without
