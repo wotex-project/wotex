@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.39
+  version: 1.1.40
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -684,9 +684,21 @@ build and its CTest step, builds a Debug ASan/UBSan tree from that workspace's
 prefixes, and installs `test/interop/requirements.lock` into a peer virtual
 environment and `test/interop/audit-requirements.lock` (pip-audit and its
 dependencies) into a separate audit environment, each with `--require-hashes
---no-deps`. It records both lock digests, the installed distributions and five
-executable digests. Run re-verifies that manifest. It starts the peer with a
-finite readiness deadline and runs the ExUnit lane with
+--no-deps`. It builds the second independent peer from
+`test/interop/dotnet_peer` (OPC Foundation UA-.NETStandard
+`OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.378.176 on .NET 10): `docker`
+pulls the .NET SDK image by digest, and containers from that image restore a
+workspace copy of the project with `dotnet restore --locked-mode`, which checks
+every NuGet package against its `packages.lock.json` content hash, and build it
+inside the workspace. It records both lock digests, the installed distributions, the SDK
+image, SDK version and peer project digests, and six executable digests. Run
+re-verifies that manifest and the peer project. It starts the asyncua peer and
+then the UA-.NETStandard peer, which runs in a container of the pinned image on
+the host network, reuses the asyncua peer's CA, CRL and server certificate,
+serves a folder of 40 children with a SignAndEncrypt Basic256Sha256 endpoint,
+reports the server's live browse continuation points and its Cancel count
+through methods, and stops when its standard input closes. Each peer has a
+finite readiness deadline. The run then executes the ExUnit lane with
 `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, the Mix dependency and
 Hex audits, `pip-audit --require-hashes --disable-pip` over the peer lock, and
 the native source audit. The native source audit requires the checkout's
@@ -708,9 +720,8 @@ written value, cancels and closes, finds no Python or shell process among its
 descendants while the Session runs and no helper process after it closes, and
 prints its observation. The lane compares that observation with the X-F48
 corpus expectation and records the archive, corpus and consumer lock digests in
-`archive-consumer.json`. The run stops the peer and records each lane's status
-and log digest; any failed lane fails the task. These tasks omit the second
-independent peer required above.
+`archive-consumer.json`. The run stops both peers and records each lane's
+status and log digest; any failed lane fails the task.
 
 The driver owns disposable ports, processes, keys and state; readiness has a
 finite deadline and every exit closes only manifest-owned resources. Evidence

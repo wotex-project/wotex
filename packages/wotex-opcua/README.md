@@ -241,15 +241,21 @@ The build runs the native build under `native/`, a Debug ASan/UBSan tree under
 `asan/`, a peer virtual environment under `peer/venv` from
 `test/interop/requirements.lock` (asyncua) and an audit environment under
 `audit/venv` from `test/interop/audit-requirements.lock` (pip-audit), both
-installed with `--require-hashes`, and records `software-build.json`. It needs
-the native build prerequisites plus `python3` with `venv` and access to PyPI.
-The run verifies that manifest, starts the independent asyncua secure peer
-(`test/interop/secure_peer.py`), runs the `interop` and `software` ExUnit lanes
+installed with `--require-hashes`. It builds the second independent peer, on the
+OPC Foundation UA-.NETStandard stack, from `test/interop/dotnet_peer` under
+`dotnet/` in containers of a .NET SDK image pinned by digest, restoring NuGet
+packages in locked mode from `packages.lock.json`, and records
+`software-build.json`. It needs the native build prerequisites, `python3` with
+`venv`, access to PyPI and NuGet, and a Docker engine that supports host
+networking. The run verifies that manifest, starts the independent asyncua
+secure peer (`test/interop/secure_peer.py`) and the UA-.NETStandard peer, which
+counts the server's live browse continuation points and its cancelled requests,
+runs the `interop` and `software` ExUnit lanes
 with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, `mix deps.audit`,
 `mix hex.audit`, `pip-audit` over the peer lock, an OSV query for the pinned
-native source commits and the exact-archive consumer, stops the peer and writes
-`software-run.json`; any failed lane fails the task. Both need `python3`,
-`cmake`, `ctest`, `mix` and `curl` on `PATH`. The fully qualified tasks are
+native source commits and the exact-archive consumer, stops both peers and
+writes `software-run.json`; any failed lane fails the task. Both need `python3`,
+`cmake`, `ctest`, `mix`, `curl` and `docker` on `PATH`. The fully qualified tasks are
 `wotex.opcua.software.build` and `wotex.opcua.software.run`. The `interop` and
 `software` tests read the `WOTEX_OPCUA_*` peer and executable paths that only
 this runner sets, so selecting them without it fails. The peer environment is

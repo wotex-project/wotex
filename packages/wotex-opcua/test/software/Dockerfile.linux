@@ -14,3 +14,9 @@ RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/s
  && rm -rf /var/lib/apt/lists/* \
  && curl --version | head -1
 RUN mix local.hex --force && mix local.rebar --force
+# The software tasks build and start the UA-.NETStandard peer through a Docker
+# engine. Run the lane container with the engine socket mounted, on the host
+# network, and with the workspace at the same absolute path as on the engine
+# host, so that the peer's bind mounts and loopback endpoint resolve alike.
+COPY --from=docker:29.4.0-cli@sha256:2efe7c8e806b35050def6ba1ba0ddad67b521a0a6d37f4910b3d88f11b495d03 \
+     /usr/local/bin/docker /usr/local/bin/docker

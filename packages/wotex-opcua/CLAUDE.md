@@ -62,8 +62,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
   JSON, ready and pinned native source corpora).
 - Test support: `test/support/` (scripted and streaming clients, recording and
   failure transports, credentials); `test/native/` (C probes and fixtures);
-  `test/interop/` (asyncua secure peer, its hash-pinned lock and the peer
-  suites).
+  `test/interop/` (asyncua secure peer, its hash-pinned lock, the
+  UA-.NETStandard peer project in `dotnet_peer/` and the peer suites).
 
 ## Working on this package
 
@@ -141,8 +141,10 @@ with `WOTEX_PATH_DEPS` unset; the run's archive consumer lane depends on them.
 The native build needs network access, `cc`, CMake 3.20+ with `ctest`, `make`,
 Perl, `python3`, `ar`, `ranlib`, `ld` and curl 8.4.0+ on Linux x86_64/aarch64
 or macOS arm64. The software build adds hash-pinned asyncua and pip-audit
-virtual environments (`python3 -m venv`, PyPI access) and an ASan/UBSan tree;
-the run starts the peer and runs the `interop`/`software` suites, native and
+virtual environments (`python3 -m venv`, PyPI access), an ASan/UBSan tree and
+the UA-.NETStandard peer, built with `docker` in a digest-pinned .NET SDK image
+from a locked NuGet restore; the run starts both peers (the .NET one in a
+host-network container) and runs the `interop`/`software` suites, native and
 sanitizer CTest, the Mix and Hex audits, `pip-audit` over the peer lock and the
 native source audit, which queries the OSV database with `curl`. Apply the shared
 `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
