@@ -3,9 +3,9 @@ spec:
   id: WOP.05
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.16
+  version: 1.1.17
   owner: wotex-opcua
-  updated: 2026-09-18
+  updated: 2026-09-19
 ---
 
 # WOP.05 Standalone OPC UA client and feature preservation
@@ -31,9 +31,12 @@ still closes the Session. An unconsumed continuation is released when its
 original browse deadline passes, without a caller action; a later `next/2` on
 that handle returns `deadline_exceeded` and `release/2` returns `:ok`. A failed
 automatic release closes the Session. A same-stack peer exercises two live
-continuations, BrowseNext and automatic release. Independent-peer BrowseNext and
-release remain open because the pinned asyncua 2.0.1 peer does not implement
-BrowseNext;
+continuations, BrowseNext and automatic release. The second independent peer of
+WOP.04, a UA-.NETStandard server with a 40-child folder, reports its own live
+continuation-point count: it follows each Browse, BrowseNext, explicit release,
+two concurrent chains, the `max_references` and `max_pages` failures and an
+expired browse deadline back to zero, and `all/3` and child-list Browse return
+the 40 children in server order. The rest of the N03/N04 boundary matrix remains;
 N03/N04 are not accepted. The native one-shot client now
 projects successful Read, Write and Call results into the recorded
 success shapes; error and full lifecycle compatibility remain open.

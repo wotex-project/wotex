@@ -47,8 +47,9 @@ complete page of seven-field typed references. The C owner now has a single
 local-token BrowseNext/release path. Persistent typed Browse exposes bound
 handles, `next`, `release` and bounded `all`; deterministic fixtures and a
 secure same-stack C peer exercise wire pagination. Child-list Browse collects
-pages on one persistent or one-shot Session. Independent-peer BrowseNext proof
-remains open. Complete compatibility
+pages on one persistent or one-shot Session. A second independent peer on the
+UA-.NETStandard stack confirms BrowseNext, release and Cancel with the server's
+own counts. Complete compatibility
 projection, subscriptions and lifecycle work remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
 selected native one-shot client. Runtime reads also decode validated flat

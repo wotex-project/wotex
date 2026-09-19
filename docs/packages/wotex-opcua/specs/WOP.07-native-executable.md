@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.40
+  version: 1.1.41
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -123,8 +123,10 @@ The child-list compatibility call now uses the same owner-bound page path to
 collect at most 256 local NodeIds on one persistent or temporary Session.
 Later invalid identity and Uncertain status release a live cursor; fixture
 tests pass for both lifecycle modes. The secure same-stack C peer confirms
-multi-page child collection over the wire in both modes. No independent
-BrowseNext peer exchange or release-counter evidence exists yet.
+multi-page child collection over the wire in both modes. The second independent
+peer (UA-.NETStandard) confirms BrowseNext, release and expiry release with the
+server's live continuation-point count, and that a timed-out or abandoned Call
+reaches the server's Cancel service.
 The native runtime uses an Elixir API and an explicitly owned open62541 C
 executable. Python is confined to the independent test peer and upstream build
 generators; the former public Python compatibility adapter has been removed.
