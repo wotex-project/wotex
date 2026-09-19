@@ -297,7 +297,7 @@ policy and conservative Session-close fallback are library choices.
 
 The pinned [open62541 client service API](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client_highlevel_async.h)
 provides typed asynchronous service calls. WOP.07 specifies the bounded owner
-around those calls and the independent asyncua peer.
+around those calls and the required same-stack and independent peer lanes.
 Pure encoding follows OPC 10000-6 1.05.07
 [Variant](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.16),
 [ExpandedNodeId](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.10) and

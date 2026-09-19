@@ -5,8 +5,8 @@
 // that reports how many transmitted requests the Cancel service found, and a
 // slow method a client can cancel.
 //
-// The fixture directory is the one the asyncua peer (secure_peer.py) wrote; the
-// peer reuses its CA, CRL and server certificate and writes dotnet-config.json
+// The fixture directory is the one the compiled C peer wrote; the peer reuses
+// its CA, CRL and server certificate and writes dotnet-config.json
 // there once it listens. It stops when its standard input reaches end of file.
 //
 // Usage: DotnetPeer FIXTURE_DIRECTORY CHILDREN

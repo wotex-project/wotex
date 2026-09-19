@@ -24,7 +24,7 @@ defmodule Wotex.OPCUA.Native.SourceTest do
       assert Regex.match?(~r/\A[0-9a-f]{40}\z/, source.commit)
     end
 
-    for value <- [nil, "openssl", :system, :asyncua, %{}, []] do
+    for value <- [nil, "openssl", :system, :peer, %{}, []] do
       assert Source.fetch(value) == {:error, :unsupported_native_source}
     end
   end

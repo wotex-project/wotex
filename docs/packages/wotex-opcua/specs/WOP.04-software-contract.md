@@ -29,9 +29,11 @@ No certification is claimed.
 
 The first-party `Wotex.OPCUA.Open62541` adapter owns an external C executable
 using open62541 1.5.7 and OpenSSL 3.5.8. WOP.07 fixes source digests, build flags,
-IPC, SDK integration and executable acceptance. Runtime operation requires no
-Python interpreter or Python packages. asyncua 2.0.1 remains an independent
-test peer for cross-stack interoperability.
+IPC, SDK integration and executable acceptance. Runtime operation and
+repository-owned peer execution require no Python interpreter or Python
+packages. The compiled C fixture peer is same-stack open62541 evidence; a
+separate admitted-language implementation is required for full cross-stack
+interoperability.
 
 The SDK owns UA TCP framing, secure-channel cryptography, token renewal, Session
 activation and service codecs. The native executable owns bounded service
@@ -278,20 +280,18 @@ probe-required error. A successful TCP connection alone is not healthy UA servic
 | WOP-V11 | Duplicate Publish/Republish, recoverable and unrecoverable gap, queue overflow | Dedup/recovery or explicit terminal/overflow evidence |
 | WOP-V12 | Receiver death, cancel failure, foreign/double cancel, server restart | Server subscription deletion or Session close; no silent reconnect |
 | WOP-V13 | Runtime Property observation, invalid Event/context/credential, extension | Correct mapping and original-route cleanup |
-| WOP-V14 | Independent asyncua secure read/write/Call/monitor, plus exact-tick C peer and security faults | Real asserted results for all secure profile cells |
+| WOP-V14 | Independent admitted-language secure read/write/Call/monitor, plus same-stack exact-tick/security-fault C peer | Real asserted results for all secure profile cells, with stack identity recorded |
 | WOP-V15 | C09 stress, concurrent calls, admission overflow and version matrix | Correlation and owned/native resource baseline restored |
 
-The independent wire peer is asyncua 2.0.1 with the complete pinned fixture
-environment from WOP.07. That server implements neither BrowseNext nor the
-Cancel service. A second independent peer on the OPC Foundation UA-.NETStandard
-stack, pinned by an exact release, a .NET SDK container image digest and a
-`packages.lock.json`, supplies independent BrowseNext/release pagination with
-the server's live continuation-point count, and Cancel of a transmitted request
-with the server's cancellation count. The native C peer uses the same open62541
-pin as the client and is labelled same-stack. It supplies exact 100 ns values,
-controlled Publish/revision faults and resource counters that the Python peer
-cannot represent faithfully. The asyncua and C peers expose disposable
-scalar/array variables, typed methods and explicit users/certificate
-identities. Security fault tests
-use controlled certificates, clock inputs and a bounded byte proxy. All three
-lanes are required; no peer substitutes for another. No physical server is required.
+The primary fixture peer is compiled C11 and uses the same pinned open62541 as
+the client. It is labelled same-stack and supplies the secure policy/token
+matrix, exact 100 ns values, controlled Publish/revision faults, resource
+counters, disposable scalar/array variables, typed methods and explicit
+users/certificate identities. It validates real wire behavior but cannot by
+itself satisfy WOP-V14's independent-stack requirement. An independently
+implemented admitted-language peer must supply that cross-stack matrix,
+BrowseNext/release pagination with the server's live continuation-point count,
+and Cancel of a transmitted request with the server's cancellation count.
+Security fault tests use controlled certificates, clock inputs and a bounded
+byte proxy. Same-stack and independent lanes are both required; neither
+substitutes for the other. No physical server is required.

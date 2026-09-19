@@ -89,9 +89,10 @@ SDK Sessions and verifies fractional, equal and lower requested revisions plus
 copy lifetime and post-close rejection. Security None is confined to that test
 binary; this is SDK metadata evidence, not secure production Session acceptance.
 The separate C-only Session probe uses the native configuration and verifier
-adapter against an independent asyncua peer. It proves Basic256Sha256 anonymous
-activation, the revised timeout and an explicit NamespaceArray read in that
-test binary. Production open/close then acquired the NamespaceArray
+adapter against the compiled same-stack C fixture peer. It proves
+Basic256Sha256 anonymous activation, the revised timeout and an explicit
+NamespaceArray read in that test binary, but not independent interoperability.
+Production open/close then acquired the NamespaceArray
 asynchronously and checked the server revision before service work was added.
 
 The native process now multiplexes up to 64 application operations behind one
@@ -172,9 +173,9 @@ A secure same-stack C peer limits the server to one reference per page and
 confirms typed BrowseNext, explicit release, `all/3`, and multi-page child-list
 projection in persistent and one-shot mode over the wire. The native release
 callback accepts exactly one empty Good result for its one continuation point.
-The independent asyncua peer does not implement BrowseNext, and no
-independent-peer continuation or release counter has been observed; WOP-N03/N04
-remain unaccepted.
+The same-stack peer does not provide independent continuation evidence;
+WOP-N03/N04 remain unaccepted until an admitted-language independent peer
+reports continuation and release counters.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent

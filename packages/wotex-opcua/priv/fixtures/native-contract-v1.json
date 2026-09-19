@@ -66,7 +66,7 @@
       "WOP-X-F47"
     ]
   },
-  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. The WOP-P04 partial binding executes F24 through F26 through the production Publish sequence state with runner-supplied Republish outcomes, F21 and F29 through the production owner with an injected report and deletion service, and F27 and F28 through Session subscription processing and revision rules with an unconnected SDK client. The WOP-P05 partial binding executes F23 through the Runtime transport subscribe callback and relay with an injected streaming client: a short-lived worker establishes the observation, exits normally, the final owner receives one notification and its death releases the relay. The WOP-P03 partial binding executes F39 through F47 against the independent asyncua peer; F30 through F38 execute read, write, readback, call, typed browse, subscribe, subscription cancellation and close for each policy and user token; the runner counts successful operations, reads the peer subscription count through its Resources method after cancellation, counts live continuations (the peer returns one complete page with no continuation point) and counts the host and native processes still alive after close. Live SDK service execution and later scenario families remain required.",
+  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. The WOP-P04 partial binding executes F24 through F26 through the production Publish sequence state with runner-supplied Republish outcomes, F21 and F29 through the production owner with an injected report and deletion service, and F27 and F28 through Session subscription processing and revision rules with an unconnected SDK client. The WOP-P05 partial binding executes F23 through the Runtime transport subscribe callback and relay with an injected streaming client: a short-lived worker establishes the observation, exits normally, the final owner receives one notification and its death releases the relay. The WOP-P03 partial binding executes F30 through F47 against the compiled same-stack open62541 C fixture peer. F30 through F38 execute read, write, readback, call, typed browse, subscribe, subscription cancellation and close for each policy and user token; the runner counts successful operations, reads the peer subscription count through its Resources method after cancellation, counts live continuations (the peer returns one complete page with no continuation point) and counts the host and native processes still alive after close. This validates the production client path but is not independent-stack interoperability evidence. Independent cross-stack execution and later scenario families remain required.",
   "cases": [
     {
       "id": "WOP-X-F01",
@@ -832,7 +832,7 @@
         "policy": "Basic256Sha256",
         "mode": "SignAndEncrypt",
         "user_token": "anonymous",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -865,7 +865,7 @@
         "policy": "Basic256Sha256",
         "mode": "SignAndEncrypt",
         "user_token": "username",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -898,7 +898,7 @@
         "policy": "Basic256Sha256",
         "mode": "SignAndEncrypt",
         "user_token": "certificate",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -931,7 +931,7 @@
         "policy": "Aes128_Sha256_RsaOaep",
         "mode": "SignAndEncrypt",
         "user_token": "anonymous",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -964,7 +964,7 @@
         "policy": "Aes128_Sha256_RsaOaep",
         "mode": "SignAndEncrypt",
         "user_token": "username",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -997,7 +997,7 @@
         "policy": "Aes128_Sha256_RsaOaep",
         "mode": "SignAndEncrypt",
         "user_token": "certificate",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -1030,7 +1030,7 @@
         "policy": "Aes256_Sha256_RsaPss",
         "mode": "SignAndEncrypt",
         "user_token": "anonymous",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -1063,7 +1063,7 @@
         "policy": "Aes256_Sha256_RsaPss",
         "mode": "SignAndEncrypt",
         "user_token": "username",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -1096,7 +1096,7 @@
         "policy": "Aes256_Sha256_RsaPss",
         "mode": "SignAndEncrypt",
         "user_token": "certificate",
-        "peer": "asyncua-2.0.1",
+        "peer": "open62541-c-peer-1",
         "operations": [
           "read",
           "write",
@@ -1127,7 +1127,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "expired_leaf",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1147,7 +1147,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "wrong_host",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1167,7 +1167,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "wrong_application_uri",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1187,7 +1187,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "untrusted_ca",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1207,7 +1207,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "revoked_leaf",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1227,7 +1227,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "expired_crl",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1247,7 +1247,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "mismatched_private_key",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1267,7 +1267,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "none_downgrade",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1287,7 +1287,7 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "unsupported_user_token",
-        "peer": "asyncua-2.0.1"
+        "peer": "open62541-c-peer-1"
       },
       "expectation": {
         "operator": "exact",

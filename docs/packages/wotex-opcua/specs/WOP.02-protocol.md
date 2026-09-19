@@ -47,7 +47,8 @@ Read/write Properties and monitored observations map to actual OPC UA services.
 Acceptance: NodeId and scalar/array roundtrips, malformed lengths, frame splits,
 correlation and replay rejection, wrong service/status, owner cleanup, namespace
 remapping, expired/untrusted/wrong-host/wrong-URI/revoked certificates and a
-pinned independent asyncua peer and same-stack open62541 precision/fault peer. A parser alone is not a secure
+pinned independent admitted-language peer plus the same-stack open62541
+security/precision/fault peer. A parser alone is not a secure
 client; a generic external port alone is not interoperability proof.
 
 ## Common library rules
@@ -61,5 +62,7 @@ transport is an error; never select simulation. Telemetry event prefixes are
 parity requires explicit differential scenarios; it is a separate claim.
 
 The accepted runtime uses the first-party open62541 native executable in WOP.07.
-Python belongs only to the independent software fixture. WOP.03 records the
-current implementation boundary and cannot satisfy native-target acceptance.
+Repository-owned runtime and peer code is Elixir, Rust, C or C++; Python is
+limited to required upstream build generation and isolated audit tooling.
+WOP.03 records the current implementation boundary and cannot satisfy
+native-target acceptance.

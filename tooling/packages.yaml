@@ -728,7 +728,7 @@ packages:
       - suite: open62541
         build: wotex.opcua.native.build
         prepare:
-          - [cmake, -S, "{package}/priv/native", -B, "{scratch}/db", -DCMAKE_EXPORT_COMPILE_COMMANDS=ON, "-DWOTEX_SDK_PREFIX={workspace}/sdk-prefix", "-DWOTEX_OPENSSL_PREFIX={workspace}/openssl-prefix"]
+          - [cmake, -S, "{package}/priv/native", -B, "{scratch}/db", -DCMAKE_EXPORT_COMPILE_COMMANDS=ON, "-DWOTEX_SDK_PREFIX={workspace}/sdk-prefix", "-DWOTEX_SDK_SOURCE={workspace}/sources/open62541/open62541-1.5.7", "-DWOTEX_SDK_BUILD={workspace}/sdk-build", "-DWOTEX_OPENSSL_PREFIX={workspace}/openssl-prefix"]
         compile_commands: ["{scratch}/db/compile_commands.json"]
         compile:
           - files: [priv/native/build_command.c, priv/native/sanitizer_options.c, "test/native/*.c"]

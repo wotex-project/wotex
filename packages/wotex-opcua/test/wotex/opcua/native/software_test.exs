@@ -10,11 +10,9 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
   case "$1 $2" in
     "-m venv") mkdir -p "$3/bin" && cp "$0" "$3/bin/python" && chmod 755 "$3/bin/python" ;;
     "-m pip")
-      if [ "$3" = freeze ]; then echo "sortedcontainers==2.4.0"; echo "asyncua==2.0.1"; fi ;;
+      if [ "$3" = freeze ]; then echo "pip-audit==2.9.0"; fi ;;
     "-m pip_audit") echo "No known vulnerabilities found" ;;
-    *)
-      echo "secure peer ready"
-      exec sleep 30 ;;
+    *) exit 2 ;;
   esac
   """
   @cmake """
@@ -61,8 +59,7 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     bin = Path.join(base, "bin")
 
     for file <-
-          ~w(test/interop/requirements.lock test/interop/audit-requirements.lock
-             test/interop/secure_peer.py priv/native/CMakeLists.txt
+          ~w(test/interop/audit-requirements.lock priv/native/CMakeLists.txt
              test/interop/dotnet_peer/DotnetPeer.csproj test/interop/dotnet_peer/Program.cs
              test/interop/dotnet_peer/nuget.config test/interop/dotnet_peer/packages.lock.json) do
       path = Path.join(root, file)
@@ -116,7 +113,7 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     }
   end
 
-  test "WOP-X06 build records peer distributions and executables, and run passes every lane",
+  test "WOP-X06 build records the native peer and executables, and run passes every lane",
        context do
     options = [
       root: context.root,
@@ -129,12 +126,12 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
 
     assert %{
              "format_version" => 1,
-             "peer_distributions" => ["asyncua==2.0.1", "sortedcontainers==2.4.0"],
-             "audit_distributions" => ["asyncua==2.0.1", "sortedcontainers==2.4.0"],
+             "audit_distributions" => ["pip-audit==2.9.0"],
              "artifacts" => artifacts
            } = manifest
 
-    assert map_size(artifacts) == 6
+    assert map_size(artifacts) == 7
+    assert is_binary(artifacts["secure_peer"])
 
     assert %{"sdk_version" => "10.0.401", "image" => image, "sources" => sources} =
              manifest["dotnet_peer"]
@@ -345,15 +342,15 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
                Keyword.put(options, :command, failing)
              )
 
-    peer_failing = fn _, arguments, _, log ->
+    audit_failing = fn _, arguments, _, log ->
       File.write!(log, "step")
       if arguments |> List.first() == "-m" and Enum.at(arguments, 1) == "pip", do: 3, else: 0
     end
 
-    assert {:error, {:software_step_failed, "peer_install", 3}} =
+    assert {:error, {:software_step_failed, "audit_install", 3}} =
              Software.build(
-               Path.join(context.base, "peer-failure"),
-               Keyword.put(options, :command, peer_failing)
+               Path.join(context.base, "audit-failure"),
+               Keyword.put(options, :command, audit_failing)
              )
 
     assert {:error, {:missing_software_artifact, _}} =
@@ -376,17 +373,22 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     ]
 
     assert {:ok, _} = Software.build(context.workspace, options)
-    python = Path.join(context.workspace, "peer/venv/bin/python")
-    File.write!(python, "#!/bin/sh\nexit 4\n")
+    peer = Path.join(context.workspace, "native/output/bin/wotex_opcua_secure_peer")
+    record_peer!(context.workspace, peer, "#!/bin/sh\nexit 4\n")
 
     assert {:error, {:software_peer_exited, 4}} = Software.run(context.workspace, options)
 
-    File.write!(python, "#!/bin/sh\necho starting\nexec sleep 30\n")
+    record_peer!(context.workspace, peer, "#!/bin/sh\necho starting\nexec sleep 30\n")
     silent = Keyword.put(options, :peer_deadline_ms, 100)
     assert {:error, :software_peer_not_ready} = Software.run(context.workspace, silent)
     refute File.exists?(Path.join(context.workspace, "software-run.json"))
 
-    File.write!(python, "#!/bin/sh\necho 'secure peer ready'\nexec sleep 30\n")
+    record_peer!(
+      context.workspace,
+      peer,
+      "#!/bin/sh\necho 'secure peer ready'\nexec sleep 30\n"
+    )
+
     docker = Path.join(context.base, "bin/docker-exiting")
     File.write!(docker, "#!/bin/sh\n[ \"$1\" = rm ] || echo \"$@\" > #{docker}.args\nexit 5\n")
     File.chmod!(docker, 0o755)
@@ -441,13 +443,30 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
 
   defp native_build(native) do
     for path <- ~w(output/bin/wotex_opcua_native output/bin/wotex_opcua_custody
-                   native-build/wotex_opcua_session_probe native-build/wotex_opcua_paged_peer) do
+                   native-build/wotex_opcua_session_probe native-build/wotex_opcua_paged_peer
+                   output/bin/wotex_opcua_secure_peer) do
       file = Path.join(native, path)
       File.mkdir_p!(Path.dirname(file))
-      File.write!(file, path)
+
+      if Path.basename(file) == "wotex_opcua_secure_peer" do
+        File.write!(file, "#!/bin/sh\necho 'secure peer ready'\nexec sleep 30\n")
+        File.chmod!(file, 0o755)
+      else
+        File.write!(file, path)
+      end
     end
 
     {:ok, %{}}
+  end
+
+  defp record_peer!(workspace, peer, contents) do
+    File.write!(peer, contents)
+
+    manifest_path = Path.join(workspace, "software-build.json")
+    manifest = Jason.decode!(File.read!(manifest_path))
+    digest = Base.encode16(:crypto.hash(:sha256, File.read!(peer)), case: :lower)
+    manifest = put_in(manifest, ["artifacts", "secure_peer"], digest)
+    File.write!(manifest_path, Jason.encode_to_iodata!(manifest))
   end
 
   # Writes the OSV answer where a curl call asks for its output and the template

@@ -173,9 +173,8 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
     end
   end
 
-  # asyncua 2.0.1 neither answers nor closes an OpenSecureChannel request that
-  # it cannot decrypt or that uses a policy it does not offer, so those two
-  # rejections end at the finite open deadline without a Session.
+  # A malformed encrypted handshake may be rejected by the peer, the native
+  # transport, or the finite open deadline, but it never reaches a Session.
   defp allowed_codes(fault) when fault in ["none_downgrade", "unpinned_server"],
     do: [:certificate_invalid, :connection_failed, :deadline_exceeded]
 
@@ -377,16 +376,15 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
   end
 
   defp variant(context, name, files) do
-    python = context.peer["executable"]
-    script = Path.expand("secure_peer.py", __DIR__)
+    peer = context.peer["executable"]
 
     port =
-      Port.open({:spawn_executable, python}, [
+      Port.open({:spawn_executable, peer}, [
         :binary,
         :exit_status,
         :stderr_to_stdout,
         {:line, 4096},
-        {:args, [script, context.directory, name]}
+        {:args, [context.directory, name]}
       ])
 
     await_ready(port, System.monotonic_time(:millisecond) + 15_000)

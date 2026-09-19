@@ -2,7 +2,7 @@ defmodule Wotex.OPCUA.Bench.NativeCredentials do
   @moduledoc false
 
   # Disposable credentials for the same-stack peer, with the profile that
-  # `test/interop/secure_peer.py` generates: one self-signed CA (RSA 2048,
+  # `priv/native/secure_peer.c` generates: one self-signed CA (RSA 2048,
   # certificate and CRL signing), a server and a client application certificate
   # issued by it (RSA 2048, SHA-256, the application URI, `localhost` and
   # 127.0.0.1 as subject alternative names, server or client authentication),

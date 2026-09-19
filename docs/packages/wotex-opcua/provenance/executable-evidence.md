@@ -21,6 +21,38 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## Compiled C secure fixture peer, 2026-09-19
+
+The repository-owned asyncua peer and its two dependency files are retired.
+`priv/native/secure_peer.c` is now built and installed as
+`wotex_opcua_secure_peer` by the content-bound native recipe. It generates the
+disposable CA, application/user certificates and CRLs with OpenSSL, exposes the
+same typed nodes and Methods, and runs the secure policy/token, fault,
+subscription and lifecycle cases without a Python peer process. The software
+build manifest records its executable digest and retains Python only for the
+upstream open62541 generator and the isolated pip-audit environment.
+
+The peer uses the same open62541 1.5.7 pin as the production client. Its results
+are therefore same-stack wire validation, not independent-stack evidence; the
+corresponding independent policy/token cells are reopened. The pinned SDK patch
+adds dormant server-only counters used by this fixture for deterministic
+Publish withholding/Republish, bad acknowledgement and failed deletion cases.
+Normal clients never set those counters.
+
+On macOS arm64 with Elixir 1.20.2 / OTP 29, a fresh native workspace compiled
+the peer and all production native targets, and all 207 native CTest cases
+passed. The eight non-.NET interop files then passed 59/59 cases against the C
+peer, including the nine policy/token cells, certificate and downgrade faults,
+ordered Republish recovery, unavailable-Republish loss, bad acknowledgements,
+failed deletion, lifecycle cleanup, paging, tampered traffic and Runtime
+streaming. The focused software-build harness passed 7/7 cases. A full software
+task/matrix receipt remains required for this source identity.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/secure_peer.c` | `09f58e8bbd240c9f1bc9fcc17784e69214746986df8a0f656c1b28e7e000e184` |
+| `priv/native/patch-sdk.cmake` | `89ea5c1ca137a7afb8e6fc25a2fa3387c05950ef0b3cead118df80685b3f69ee` |
+
 ## Second independent peer on UA-.NETStandard, 2026-09-19
 
 `test/interop/dotnet_peer` is the second independent peer of WOP.04: a server

@@ -2,13 +2,11 @@ defmodule Wotex.OPCUA.Native.Software do
   @moduledoc """
   Builds and runs the explicit software acceptance lanes from a source checkout.
 
-  `build/2` requires the checkout's peer lock, peer script and native sources.
+  `build/2` requires the checkout's native C peer and native sources.
   It builds the pinned native workspace under `WORKSPACE/native`, which runs the
   native CTest step, and a separate ASan/UBSan tree under `WORKSPACE/asan` from
-  that workspace's SDK and OpenSSL prefixes. It then creates a peer virtual
-  environment under `WORKSPACE/peer/venv` with
-  `pip install --require-hashes --no-deps` from `test/interop/requirements.lock`,
-  and a separate audit environment under `WORKSPACE/audit/venv` from
+  that workspace's SDK and OpenSSL prefixes. It creates an audit environment
+  under `WORKSPACE/audit/venv` from
   `test/interop/audit-requirements.lock` the same way. The second independent
   peer, on the OPC Foundation UA-.NETStandard stack, is built from
   `test/interop/dotnet_peer` copied to `WORKSPACE/dotnet/project`: `docker`
@@ -16,18 +14,18 @@ defmodule Wotex.OPCUA.Native.Software do
   the project with `dotnet restore --locked-mode`, which checks every NuGet
   package against the content hash in `packages.lock.json`, into
   `WORKSPACE/dotnet/packages` and build it into `WORKSPACE/dotnet/output`. It
-  records both lock digests, the installed distributions, the SDK image, SDK
+  records the audit lock digest, installed distributions, SDK image, SDK
   version and peer project digests, and every executable digest in
   `WORKSPACE/software-build.json`. A non-empty directory without that manifest
   is rejected.
 
   `run/2` verifies the manifest against the current locks, peer project and
-  executables. It starts the asyncua peer and then the UA-.NETStandard peer, in
-  a container of the pinned image on the host network that reuses the asyncua
-  peer's certificates and stops when its standard input closes, each with a
+  executables. It starts the compiled C peer and then the UA-.NETStandard peer, in
+  a container of the pinned image on the host network that reuses the C peer's
+  certificates and stops when its standard input closes, each with a
   finite readiness deadline. It then runs the
   interop and software ExUnit lanes with `WOTEX_REQUIRE_SOFTWARE=1`, native and
-  sanitizer CTest, `mix deps.audit`, `mix hex.audit`, `pip-audit` over the peer
+  sanitizer CTest, `mix deps.audit`, `mix hex.audit`, `pip-audit` over its own
   lock, and the native source audit. `pip-audit` runs from the audit environment
   with `--require-hashes --disable-pip`, so it neither installs nor resolves
   anything and exits nonzero on a known vulnerability. The native source audit
@@ -67,9 +65,7 @@ defmodule Wotex.OPCUA.Native.Software do
   @manifest "software-build.json"
   @report "software-run.json"
   @audit_report "native-audit.json"
-  @lock "test/interop/requirements.lock"
   @audit_lock "test/interop/audit-requirements.lock"
-  @peer "test/interop/secure_peer.py"
   @sources "priv/native/CMakeLists.txt"
   @native_sources "priv/fixtures/native-sources-v1.json"
   @osv "https://api.osv.dev/v1/querybatch"
@@ -220,6 +216,7 @@ defmodule Wotex.OPCUA.Native.Software do
     "guardian" => "native/output/bin/wotex_opcua_custody",
     "session_probe" => "native/native-build/wotex_opcua_session_probe",
     "paged_peer" => "native/native-build/wotex_opcua_paged_peer",
+    "secure_peer" => "native/output/bin/wotex_opcua_secure_peer",
     "sanitizer_native" => "asan/wotex_opcua_native",
     "dotnet_peer" => "dotnet/output/DotnetPeer.dll"
   }
@@ -238,7 +235,7 @@ defmodule Wotex.OPCUA.Native.Software do
          {:ok, root} <- fixtures(opts),
          {:ok, tools} <- tools(opts),
          :ok <- fresh(workspace) do
-      for directory <- ~w(native asan peer audit dotnet logs),
+      for directory <- ~w(native asan audit dotnet logs),
           do: File.mkdir_p!(Path.join(workspace, directory))
 
       command = Keyword.get(opts, :command, &command/4)
@@ -246,17 +243,13 @@ defmodule Wotex.OPCUA.Native.Software do
 
       with {:ok, _} <- Keyword.get(opts, :native_build, &Build.run/1).(native),
            :ok <- sanitizer(command, tools, root, workspace),
-           {:ok, freeze} <- environment(command, tools, root, workspace, "peer", @lock),
            {:ok, audit} <- environment(command, tools, root, workspace, "audit", @audit_lock),
            {:ok, dotnet} <- dotnet_peer(command, tools, root, workspace),
            {:ok, artifacts} <- artifacts(workspace),
-           {:ok, lock} <- Workspace.digest(Path.join(root, @lock)),
            {:ok, audit_lock} <- Workspace.digest(Path.join(root, @audit_lock)) do
         manifest = %{
           "format_version" => 1,
-          "lock_sha256" => lock,
           "audit_lock_sha256" => audit_lock,
-          "peer_distributions" => freeze,
           "audit_distributions" => audit,
           "dotnet_peer" => dotnet,
           "artifacts" => artifacts
@@ -286,7 +279,7 @@ defmodule Wotex.OPCUA.Native.Software do
       peer_directory = Path.join(workspace, "peer/run-#{System.unique_integer([:positive])}")
       File.mkdir_p!(peer_directory)
 
-      with_peer(fn -> start_peer(workspace, root, peer_directory, opts) end, &stop_peer/1, fn ->
+      with_peer(fn -> start_peer(workspace, peer_directory, opts) end, &stop_peer/1, fn ->
         with_peer(
           fn -> start_dotnet_peer(tools, workspace, peer_directory, opts) end,
           &stop_dotnet_peer(tools, &1),
@@ -339,7 +332,7 @@ defmodule Wotex.OPCUA.Native.Software do
          "--progress-spinner",
          "off",
          "-r",
-         Path.join(root, @lock)
+         Path.join(root, @audit_lock)
        ], root, []}
     ]
 
@@ -382,7 +375,7 @@ defmodule Wotex.OPCUA.Native.Software do
     root = Keyword.get(opts, :root, File.cwd!())
 
     required =
-      [@lock, @audit_lock, @peer, @sources, @native_sources] ++
+      [@audit_lock, @sources, @native_sources] ++
         Enum.map(@dotnet_files, &Path.join(@dotnet_project, &1))
 
     if Enum.all?(required, &File.regular?(Path.join(root, &1))),
@@ -430,6 +423,9 @@ defmodule Wotex.OPCUA.Native.Software do
       "-DCMAKE_BUILD_TYPE=Debug",
       "-DWOTEX_SANITIZERS=ON",
       "-DWOTEX_SDK_PREFIX=" <> Path.join(native, "sdk-prefix"),
+      "-DWOTEX_SDK_SOURCE=" <>
+        Path.join(native, "sources/open62541/open62541-1.5.7"),
+      "-DWOTEX_SDK_BUILD=" <> Path.join(native, "sdk-build"),
       "-DWOTEX_OPENSSL_PREFIX=" <> Path.join(native, "openssl-prefix")
     ]
 
@@ -919,12 +915,10 @@ defmodule Wotex.OPCUA.Native.Software do
          {:ok,
           %{
             "format_version" => 1,
-            "lock_sha256" => lock,
             "audit_lock_sha256" => audit_lock,
             "dotnet_peer" => %{"image" => @dotnet_image, "sources" => sources},
             "artifacts" => recorded
           } = manifest} <- Jason.decode(bytes),
-         {:ok, ^lock} <- Workspace.digest(Path.join(root, @lock)),
          {:ok, ^audit_lock} <- Workspace.digest(Path.join(root, @audit_lock)),
          {:ok, ^sources} <- dotnet_sources(root),
          {:ok, ^recorded} <- artifacts(workspace) do
@@ -934,18 +928,17 @@ defmodule Wotex.OPCUA.Native.Software do
     end
   end
 
-  defp start_peer(workspace, root, directory, opts) do
-    python = Path.join(workspace, "peer/venv/bin/python")
+  defp start_peer(workspace, directory, opts) do
+    peer = Path.join(workspace, Map.fetch!(@executables, "secure_peer"))
     deadline = System.monotonic_time(:millisecond) + Keyword.get(opts, :peer_deadline_ms, 30_000)
 
     port =
-      Port.open({:spawn_executable, python}, [
+      Port.open({:spawn_executable, peer}, [
         :binary,
         :exit_status,
         :stderr_to_stdout,
         {:line, 4096},
-        {:args, [Path.join(root, @peer), directory]},
-        {:cd, root}
+        {:args, [directory]}
       ])
 
     case await_peer(port, "secure peer ready", deadline) do

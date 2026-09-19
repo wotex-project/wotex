@@ -19,8 +19,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
   task, never on dependency load.
 - Pure values never consult application environment, clocks or random sources.
   Transport time, identifiers, deadlines and ports have explicit ownership.
-- The runtime package runs no Python. asyncua is only an independent software
-  peer, and Python is only the SDK code generator during the explicit build.
+- The runtime package and repository-owned peers run no Python. Python is only
+  the pinned SDK code generator and isolated audit tool during explicit builds.
 - Never fetch remote JSON-LD contexts. Preserve unknown Form extensions.
 - TD 1.1 is the baseline. Label binding drafts as drafts; a mapped Form proves
   neither authorization nor a physical effect.
@@ -62,8 +62,9 @@ Repository-wide rules are in the root `CLAUDE.md`.
   JSON, ready and pinned native source corpora).
 - Test support: `test/support/` (scripted and streaming clients, recording and
   failure transports, credentials); `test/native/` (C probes and fixtures);
-  `test/interop/` (asyncua secure peer, its hash-pinned lock, the
-  UA-.NETStandard peer project in `dotnet_peer/` and the peer suites).
+  `test/interop/` (peer suites and the UA-.NETStandard peer project in
+  `dotnet_peer/`). The compiled secure fixture peer is
+  `priv/native/secure_peer.c`.
 
 ## Working on this package
 
@@ -140,13 +141,13 @@ with `WOTEX_PATH_DEPS` unset; the run's archive consumer lane depends on them.
 
 The native build needs network access, `cc`, CMake 3.20+ with `ctest`, `make`,
 Perl, `python3`, `ar`, `ranlib`, `ld` and curl 8.4.0+ on Linux x86_64/aarch64
-or macOS arm64. The software build adds hash-pinned asyncua and pip-audit
-virtual environments (`python3 -m venv`, PyPI access), an ASan/UBSan tree and
-the UA-.NETStandard peer, built with `docker` in a digest-pinned .NET SDK image
-from a locked NuGet restore; the run starts both peers (the .NET one in a
-host-network container) and runs the `interop`/`software` suites, native and
-sanitizer CTest, the Mix and Hex audits, `pip-audit` over the peer lock and the
-native source audit, which queries the OSV database with `curl`. Apply the shared
+or macOS arm64. The software build adds a hash-pinned pip-audit environment
+(`python3 -m venv`, PyPI access), an ASan/UBSan tree, the compiled C fixture
+peer and the UA-.NETStandard peer, built with `docker` in a digest-pinned .NET
+SDK image from a locked NuGet restore; the run starts both peers (the .NET one
+in a host-network container) and runs the `interop`/`software` suites, native
+and sanitizer CTest, the Mix and Hex audits, `pip-audit` over its audit lock and
+the native source audit, which queries the OSV database with `curl`. Apply the shared
 `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility
 claims.

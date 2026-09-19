@@ -40,8 +40,8 @@ codecs, UA TCP framing, Property Form
 mapping and an explicitly selected partial `Open62541` client. It opens persistent or one-shot secure
 Sessions and performs typed Value Read/Write, Method Call and bounded child
 Browse through C without runtime Python. The former Python runtime adapter is
-removed; asyncua remains an independent test peer. WOP.03 and executable evidence bound
-its actual behavior. One-shot Read/Write/Call successes preserve the recorded
+removed, and the former Python test peer is replaced by a compiled C11 fixture
+peer. WOP.03 and executable evidence bound its actual behavior. One-shot Read/Write/Call successes preserve the recorded
 result shapes. A persistent native Session can also return one
 complete page of seven-field typed references. The C owner now has a single
 local-token BrowseNext/release path. Persistent typed Browse exposes bound
@@ -62,7 +62,9 @@ The accepted architecture is `Wotex.OPCUA.Open62541`: an Elixir API with an
 explicitly owned persistent open62541 C executable. Runtime requires no Python.
 The pinned SDK owns secure-channel cryptography and service codecs; the package
 owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
-asyncua is solely an independent software peer in this target.
+The C fixture peer exercises the full secure profile but shares open62541 with
+the production client, so it is not independent-stack evidence. The
+UA-.NETStandard peer remains independent for its narrower Browse/Cancel cells.
 
 [WOP.07](../../docs/packages/wotex-opcua/specs/WOP.07-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
@@ -229,7 +231,7 @@ build keeps its diagnostic files and needs a new workspace.
 
 ### Software acceptance lanes
 
-The independent-peer lanes are explicit and use a new or empty disposable
+The software-peer lanes are explicit and use a new or empty disposable
 absolute workspace:
 
 ```console
@@ -239,28 +241,27 @@ mix pkg wotex-opcua wotex.software.run --workspace /absolute/disposable/dir \
 ```
 
 The build runs the native build under `native/`, a Debug ASan/UBSan tree under
-`asan/`, a peer virtual environment under `peer/venv` from
-`test/interop/requirements.lock` (asyncua) and an audit environment under
-`audit/venv` from `test/interop/audit-requirements.lock` (pip-audit), both
-installed with `--require-hashes`. It builds the second independent peer, on the
+`asan/`, the compiled `wotex_opcua_secure_peer`, and an audit environment under
+`audit/venv` from `test/interop/audit-requirements.lock` (pip-audit), installed
+with `--require-hashes`. It builds the independent peer, on the
 OPC Foundation UA-.NETStandard stack, from `test/interop/dotnet_peer` under
 `dotnet/` in containers of a .NET SDK image pinned by digest, restoring NuGet
 packages in locked mode from `packages.lock.json`, and records
 `software-build.json`. It needs the native build prerequisites, `python3` with
 `venv`, access to PyPI and NuGet, and a Docker engine that supports host
-networking. The run verifies that manifest, starts the independent asyncua
-secure peer (`test/interop/secure_peer.py`) and the UA-.NETStandard peer, which
+networking. The run verifies that manifest, starts the compiled C secure peer
+and the UA-.NETStandard peer, which
 counts the server's live browse continuation points and its cancelled requests,
 runs the `interop` and `software` ExUnit lanes
 with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, `mix deps.audit`,
-`mix hex.audit`, `pip-audit` over the peer lock, an OSV query for the pinned
+`mix hex.audit`, `pip-audit` over the audit lock, an OSV query for the pinned
 native source commits and the exact-archive consumer, stops both peers and
 writes `software-run.json`; any failed lane fails the task. Both need `python3`,
 `cmake`, `ctest`, `mix`, `curl` and `docker` on `PATH`. The fully qualified tasks are
 `wotex.opcua.software.build` and `wotex.opcua.software.run`. The `interop` and
 `software` tests read the `WOTEX_OPCUA_*` peer and executable paths that only
-this runner sets, so selecting them without it fails. The peer environment is
-test infrastructure; the runtime package runs no Python.
+this runner sets, so selecting them without it fails. The audit environment is
+test infrastructure; the runtime package and repository-owned peers run no Python.
 
 ## Software implementation contract
 

@@ -1,6 +1,6 @@
 {
   "format": "wotex.native.sources",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "status": "source_admission_implemented",
   "runtime": "open62541",
   "sources": [
@@ -23,8 +23,8 @@
     {
       "id": "open62541-secure-discovery-v2",
       "path": "patch-sdk.cmake",
-      "sha256": "df1acabefca781711a34b546e4a3ded85af95a46110cf9b0978685fd340fad2a",
-      "purpose": "Preserve the received revisedSessionTimeout and expose it while a Session is active; start pinned endpoint discovery on the requested secure channel, reject endpoint URL/certificate substitution and ambiguous user-token policies.",
+      "sha256": "89ea5c1ca137a7afb8e6fc25a2fa3387c05950ef0b3cead118df80685b3f69ee",
+      "purpose": "Preserve the received revisedSessionTimeout and expose it while a Session is active; start pinned endpoint discovery on the requested secure channel, reject endpoint URL/certificate substitution and ambiguous user-token policies; add dormant deterministic subscription fault fields used only by the C fixture peer.",
       "modified_source_license": "MPL-2.0",
       "files": [
         {
@@ -41,6 +41,21 @@
           "path": "src/client/ua_client.c",
           "before_sha256": "0e7b362d2b99a153704ed96127414cffc17f5a9fdce21b92edead01a5d597202",
           "after_sha256": "9962d2c60ec5e4df050e6b068db54e759d88b32de9feefb5b6d66a207922aa05"
+        },
+        {
+          "path": "src/server/ua_server_internal.h",
+          "before_sha256": "1d2c93164231f9444c062d74534f18f7c0b48cf77479c1cfa572d49b62d99ff1",
+          "after_sha256": "e59e55a63c85e044e60bb1202fa0fe15c0f2952900c8f15c92ada12e841eb080"
+        },
+        {
+          "path": "src/server/ua_subscription.c",
+          "before_sha256": "28834708e94f2fd1c6f35a21f2738bc312aba16674857c1590da7204e0e8dfa7",
+          "after_sha256": "880375fb2cb853fb6ffe82ad9766e4a71a490c684093cf61452e613f75d72b61"
+        },
+        {
+          "path": "src/server/ua_services_subscription.c",
+          "before_sha256": "b0d6e8bc39bd6cac154e1be5f834a6ede134e6d1fe107e135580b439de9f294c",
+          "after_sha256": "76ffcfddf3b6ddee65d3804364a1c9b94923c98e6cd2561dd254cb28ac6bc218"
         }
       ]
     }
@@ -50,12 +65,12 @@
     "commit": "c45cb4d532615078fd7e03039ccb8eef5e629f76",
     "runtime_dependency": false
   },
-  "independent_peer": {
-    "name": "asyncua",
-    "version": "2.0.1",
-    "runtime_dependency": false,
-    "current_fixture_lock": "test/interop/requirements.txt",
-    "target_fixture_lock": "test/interop/requirements.txt"
+  "native_fixture_peer": {
+    "name": "open62541 secure C peer",
+    "version": "1",
+    "source": "priv/native/secure_peer.c",
+    "source_sha256": "09f58e8bbd240c9f1bc9fcc17784e69214746986df8a0f656c1b28e7e000e184",
+    "runtime_dependency": false
   },
   "vendored_sources": [
     {

@@ -92,6 +92,8 @@ defmodule Wotex.OPCUA.Native.Recipe do
 
     native_flags = [
       "-DWOTEX_SDK_PREFIX=" <> sdk_prefix,
+      "-DWOTEX_SDK_SOURCE=" <> sdk_source,
+      "-DWOTEX_SDK_BUILD=" <> sdk_build,
       "-DWOTEX_OPENSSL_PREFIX=" <> ssl_prefix,
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
       "-DCMAKE_C_COMPILER=" <> tools.cc,

@@ -50,10 +50,10 @@ unverified wrapper fork.
 OPC UA. Its published services table does not claim BrowseNext, Call or
 subscriptions. It does not satisfy this complete client profile as documented.
 
-## Independent peer and current evidence boundary
+## Peer and current evidence boundary
 
-[asyncua 2.0.1](https://github.com/FreeOpcUa/opcua-asyncio/tree/v2.0.1) supplies the
-independent Python software peer. Its
+[asyncua 2.0.1](https://github.com/FreeOpcUa/opcua-asyncio/tree/v2.0.1) supplied
+the retired independent Python software peer. Its
 [DateTime conversion](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/ua/uatypes.py)
 uses Python microsecond-resolution datetime and clamps extreme dates. Therefore
 its service observations do not prove exact native 100 ns timestamp handling.
@@ -61,11 +61,14 @@ Pure byte vectors and the C peer carry that evidence. Its
 [Node convenience code](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/node.py)
 accumulates Browse pages; the native target uses explicit bounded service calls.
 
-The former per-request Python runtime adapter has been removed. Its recorded
-same-stack tests are bounded historical evidence, not native runtime acceptance.
-The package has no Python runtime asset or dependency; pinned independent peer
-requirements now belong under `test/interop`. Existing pure fixture bytes verified with asyncua are source
-cross-checks, not proof of an implemented Wotex codec or native session.
+The former per-request Python runtime adapter and Python peer have been removed.
+Their recorded cohorts remain bounded historical evidence for those source
+identities. The current compiled C11 peer uses the pinned open62541 stack and is
+therefore same-stack evidence, not independent interoperability. The package
+has no Python runtime or peer asset; Python remains only in required upstream
+generation and isolated audit tooling. Existing pure fixture bytes verified
+with asyncua are source cross-checks, not proof of an implemented Wotex codec
+or native session.
 
 Direct-CA trust, exact certificate pins, terminal Session loss, deadlines,
 queue/credit ceilings, consuming continuation handles and conservative unknown

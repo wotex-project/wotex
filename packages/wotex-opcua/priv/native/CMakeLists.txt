@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(wotex_opcua_native VERSION 1.0.0 LANGUAGES C)
 
-if(NOT IS_ABSOLUTE "${WOTEX_SDK_PREFIX}" OR NOT IS_ABSOLUTE "${WOTEX_OPENSSL_PREFIX}")
-  message(FATAL_ERROR "Explicit absolute SDK and OpenSSL prefixes are required")
+if(NOT IS_ABSOLUTE "${WOTEX_SDK_PREFIX}" OR NOT IS_ABSOLUTE "${WOTEX_SDK_SOURCE}"
+    OR NOT IS_ABSOLUTE "${WOTEX_SDK_BUILD}"
+    OR NOT IS_ABSOLUTE "${WOTEX_OPENSSL_PREFIX}")
+  message(FATAL_ERROR "Explicit absolute SDK source, build, install and OpenSSL prefixes are required")
 endif()
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_ROOT_DIR "${WOTEX_OPENSSL_PREFIX}")
@@ -72,6 +74,16 @@ target_compile_options(wotex_opcua_json PRIVATE -Wall -Wextra -Werror)
 target_compile_definitions(wotex_opcua_json PUBLIC
   YYJSON_DISABLE_NON_STANDARD=1 YYJSON_DISABLE_UTILS=1 YYJSON_DISABLE_INCR_READER=1
   YYJSON_DISABLE_FAST_FP_CONV=0 YYJSON_DISABLE_UTF8_VALIDATION=0)
+add_executable(wotex_opcua_secure_peer secure_peer.c)
+target_compile_features(wotex_opcua_secure_peer PRIVATE c_std_11)
+target_compile_definitions(wotex_opcua_secure_peer PRIVATE _POSIX_C_SOURCE=200809L)
+target_compile_options(wotex_opcua_secure_peer PRIVATE -Wall -Wextra -Werror)
+target_include_directories(wotex_opcua_secure_peer PRIVATE
+  "${WOTEX_SDK_SOURCE}/src/server" "${WOTEX_SDK_SOURCE}/src"
+  "${WOTEX_SDK_SOURCE}/deps"
+  "${WOTEX_SDK_BUILD}/src_generated")
+target_link_libraries(wotex_opcua_secure_peer PRIVATE
+  wotex_opcua_json open62541::open62541 OpenSSL::Crypto)
 add_executable(wotex_opcua_json_check json_check.c)
 target_compile_features(wotex_opcua_json_check PRIVATE c_std_11)
 target_compile_options(wotex_opcua_json_check PRIVATE -Wall -Wextra -Werror)
@@ -129,7 +141,7 @@ if(WOTEX_SANITIZERS)
       wotex_opcua_security wotex_opcua_security_check wotex_opcua_session_probe
       wotex_opcua_browse_check wotex_opcua_browse_trace_check
       wotex_opcua_namespace_check wotex_opcua_subscription_check wotex_opcua_paged_peer
-      wotex_opcua_sdk_revision_check)
+      wotex_opcua_sdk_revision_check wotex_opcua_secure_peer)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
   endforeach()
@@ -243,5 +255,6 @@ foreach(number 01 02 03 04 05 06 07 08 09)
       "ASAN_OPTIONS=detect_leaks=1:abort_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
   endif()
 endforeach()
-install(TARGETS wotex_opcua_native wotex_opcua_custody RUNTIME DESTINATION bin)
+install(TARGETS wotex_opcua_native wotex_opcua_custody wotex_opcua_secure_peer
+  RUNTIME DESTINATION bin)
 install(FILES vendor/yyjson/LICENSE DESTINATION share/licenses/yyjson)

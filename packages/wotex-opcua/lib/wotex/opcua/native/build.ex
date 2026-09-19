@@ -37,7 +37,7 @@ defmodule Wotex.OPCUA.Native.Build do
     subscription_check.c
     security.c security.h security_check.c session_config.c session_config.h
     session_probe.c session_open.c session_open.h browse_check.c browse_trace_check.c namespace_check.c paged_peer.c
-    security.md patch-sdk.cmake sdk_revision_check.c
+    security.md patch-sdk.cmake sdk_revision_check.c secure_peer.c
     value_codec.c value_codec.h value_check.c value_fault_check.c
     native_contract_check.c
     value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
@@ -58,7 +58,8 @@ defmodule Wotex.OPCUA.Native.Build do
                 end)
   @artifacts ~w(bin/build-command downloads/open62541.tar.gz downloads/openssl.tar.gz
     openssl-prefix/lib/libssl.a openssl-prefix/lib/libcrypto.a sdk-prefix/lib/libopen62541.a
-    output/bin/wotex_opcua_native output/bin/wotex_opcua_custody output/share/licenses/yyjson/LICENSE) ++
+    output/bin/wotex_opcua_native output/bin/wotex_opcua_custody
+    output/bin/wotex_opcua_secure_peer output/share/licenses/yyjson/LICENSE) ++
                Enum.map(
                  ~w(ua_client.c ua_client_connect.c ua_client_internal.h),
                  &("sources/open62541/open62541-1.5.7/src/client/" <> &1)

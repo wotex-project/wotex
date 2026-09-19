@@ -17,6 +17,7 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
     assert List.last(steps).args == ["--install", "/isolated/workspace/native-build"]
 
     sdk = Enum.find(steps, &(&1.id == :sdk_configure))
+    native = Enum.find(steps, &(&1.id == :native_configure))
     assert Enum.at(steps, 3).id == :sdk_patch
 
     assert Enum.at(steps, 3).args == [
@@ -38,6 +39,8 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
         ] do
       assert flag in sdk.args
     end
+
+    assert "-DWOTEX_SDK_BUILD=/isolated/workspace/sdk-build" in native.args
 
     for step <- steps do
       assert step.timeout_ms == 600_000

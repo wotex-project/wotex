@@ -43,5 +43,5 @@ also invokes preflight: shape-valid invalid DER returns `certificate_invalid`
 in the opening phase, before any network call. Preflight success proceeds to SDK
 configuration and secure Session activation in `session_open.c`. The separate
 `session_probe.c` activates a Basic256Sha256 anonymous Session and reads the
-NamespaceArray against the independent asyncua fixture. This is test evidence, not production P02/P03
+NamespaceArray against the compiled same-stack C fixture. This is test evidence, not independent-stack P02/P03
 acceptance or the full policy/token matrix.

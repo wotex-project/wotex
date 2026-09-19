@@ -62,9 +62,10 @@ with any created Session removed by cooperative close or server timeout.
 Opening failures now carry the SDK connection status: user access, identity
 token and user signature rejections map to `authentication_failed`; certificate,
 security-check, policy and mode rejections map to `certificate_invalid`; other
-statuses are `connection_failed`. The independent asyncua peer executes the
+statuses are `connection_failed`. The compiled same-stack C peer executes the
 nine policy/token Session cells with Read, Write/readback, Call, Browse and close,
-and the X-F39..F47 rejection cells. X-F30..F38 now also subscribe, receive a
+and the X-F39..F47 rejection cells. This is real wire validation, not
+independent-stack evidence. X-F30..F38 also subscribe, receive a
 report and cancel the subscription, and are bound: the peer's subscription
 count after cancellation, the live continuation count and the host and native
 processes alive after close are all zero.
@@ -667,42 +668,41 @@ Required fixture tasks are `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS --core-archive ABS --runtime-archive ABS`,
 whose two archives are the exact `wotex` and `wotex_runtime` packages of WOP.06
 I06. They use X02's workspace admission and
-manifest rules. Build includes the production helper, the independent asyncua
-peer, the second independent peer of WOP.04 and the same-stack C precision/fault
-peer. Python packages are pinned from the
-fixture lock with downloaded wheel/sdist hashes recorded and checked; the test
-peer environment is not a runtime package asset. Run selects
+manifest rules. Build includes the production helper, the compiled C secure
+fixture peer and the second independent peer of WOP.04. Python packages are
+used only by the hash-pinned audit environment; the peer is a content-bound
+native artifact. Run selects
 `mix test --include interop --include software --exclude hardware`, CTest,
 ASan/UBSan and dependency audits. `WOTEX_REQUIRE_SOFTWARE=1` makes missing tools,
 configuration, responses and cleanup evidence failures, never skips. The audits
 are the Mix dependency and Hex audits, `pip-audit` from a hash-pinned
-installation over `test/interop/requirements.lock`, and a native audit whose
+installation over `test/interop/audit-requirements.lock`, and a native audit whose
 inputs include SDK/OpenSSL source and shim/patch hashes, not just Mix.lock. Each
 audit is a recorded lane whose failure fails the run.
 `Wotex.OPCUA.Native.Software` implements both tasks
 (`mix wotex.opcua.software.build` and `mix wotex.opcua.software.run`, with the
 package aliases above) for a source checkout. Build runs the native workspace
-build and its CTest step, builds a Debug ASan/UBSan tree from that workspace's
-prefixes, and installs `test/interop/requirements.lock` into a peer virtual
-environment and `test/interop/audit-requirements.lock` (pip-audit and its
-dependencies) into a separate audit environment, each with `--require-hashes
---no-deps`. It builds the second independent peer from
+build and its CTest step, including `wotex_opcua_secure_peer`, builds a Debug
+ASan/UBSan tree from that workspace's prefixes, and installs
+`test/interop/audit-requirements.lock` (pip-audit and its dependencies) into a
+separate audit environment with `--require-hashes --no-deps`. It builds the
+second independent peer from
 `test/interop/dotnet_peer` (OPC Foundation UA-.NETStandard
 `OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.378.176 on .NET 10): `docker`
 pulls the .NET SDK image by digest, and containers from that image restore a
 workspace copy of the project with `dotnet restore --locked-mode`, which checks
 every NuGet package against its `packages.lock.json` content hash, and build it
-inside the workspace. It records both lock digests, the installed distributions, the SDK
-image, SDK version and peer project digests, and six executable digests. Run
-re-verifies that manifest and the peer project. It starts the asyncua peer and
+inside the workspace. It records the audit lock digest, installed audit
+distributions, SDK image, SDK version, peer project digests and seven
+executable digests. Run re-verifies that manifest and the peer project. It starts the C peer and
 then the UA-.NETStandard peer, which runs in a container of the pinned image on
-the host network, reuses the asyncua peer's CA, CRL and server certificate,
+the host network, reuses the C peer's CA, CRL and server certificate,
 serves a folder of 40 children with a SignAndEncrypt Basic256Sha256 endpoint,
 reports the server's live browse continuation points and its Cancel count
 through methods, and stops when its standard input closes. Each peer has a
 finite readiness deadline. The run then executes the ExUnit lane with
 `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, the Mix dependency and
-Hex audits, `pip-audit --require-hashes --disable-pip` over the peer lock, and
+Hex audits, `pip-audit --require-hashes --disable-pip` over the audit lock, and
 the native source audit. The native source audit requires the checkout's
 `priv/fixtures/native-sources-v1.json` to be the manifest compiled into the
 build, asks the OSV database for advisories whose affected git ranges contain

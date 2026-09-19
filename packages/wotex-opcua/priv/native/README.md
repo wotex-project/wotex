@@ -16,9 +16,10 @@ or writes one Value attribute, calls one Method, or browses one bounded page
 asynchronously; other services remain unimplemented.
 `session_config.c` configures only the requested secure policy and user token,
 installs the exact peer verifier and rejects interactive private-key prompts.
-The uninstalled `session_probe.c` exercises that configuration against an
-independent asyncua secure peer, including its revised timeout and explicit
-NamespaceArray. The production owner independently exercises open/read/write/call/browse/close
+The uninstalled `session_probe.c` exercises that configuration against the
+compiled secure C fixture peer, including its revised timeout and explicit
+NamespaceArray. Because both use open62541, this is same-stack validation. The
+production owner exercises open/read/write/call/browse/close
 through the same SDK configuration.
 `security.c` adds explicit credential preflight before any network attempt.
 It owns bounded DER/PKCS#8 inputs, validates key pairs, direct-CA trust,
