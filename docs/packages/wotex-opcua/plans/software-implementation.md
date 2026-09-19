@@ -175,8 +175,9 @@ thresholds remain intact. No knowingly failing package is committed.
 
 `mix wotex.native.build --workspace ABS` supplies the production helper.
 `mix wotex.software.build --workspace ABS` builds pinned disposable peers.
-`mix wotex.software.run --workspace ABS` runs every required test, native audit
-and cleanup assertion under WOP-X06. Workspace source/toolchain/options/binary
+`mix wotex.software.run --workspace ABS --core-archive ABS --runtime-archive ABS`
+runs every required test, audit, archive consumer and cleanup assertion under
+WOP-X06. Workspace source/toolchain/options/binary
 manifests reject unrelated contents and stale reuse. No task starts hardware,
 configures a remote, publishes, tags or pushes.
 

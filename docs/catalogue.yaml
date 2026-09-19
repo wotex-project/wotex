@@ -344,7 +344,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-opcua/specs/WOP.06-wotex-integration.md"
       - id: "WOP.07"
-        version: "1.1.37"
+        version: "1.1.38"
         implementation_status: "partial"
         path: "docs/packages/wotex-opcua/specs/WOP.07-native-executable.md"
   wotex-runtime:

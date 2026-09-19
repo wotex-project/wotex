@@ -27,11 +27,28 @@ defmodule Wotex.OPCUA.Native.Software do
   affected git ranges contain the pinned open62541, OpenSSL and vendored yyjson
   commits, and writes `WORKSPACE/native-audit.json` with those sources, the SDK
   patch digests and every advisory identifier; any advisory fails the lane.
-  OSV matches only advisories that record git ranges. The run stops the peer it
-  started and writes `WORKSPACE/software-run.json` with each lane's exit status
-  and log digest. Any failed lane makes the run fail. The peer and audit
-  environments are test infrastructure; no Python process is part of the runtime
-  package. Loading this module performs no I/O.
+  OSV matches only advisories that record git ranges.
+
+  The `archive_consumer` lane is the isolated exact-archive consumer of X-F48.
+  The caller names the `wotex` and `wotex_runtime` archives with the
+  `:archives` option; the lane builds this package's archive with
+  `mix hex.build` under Hex requirements, unpacks all three under
+  `WORKSPACE/consumer` and writes a consumer project whose only first-party
+  dependencies are those unpacked archives. It fetches the Hex dependencies,
+  builds the native helper with the dependency's own `wotex.opcua.native.build`
+  task, and runs the consumer's test with a `PATH` of the Elixir and Erlang
+  directories, a few POSIX utilities and `/bin`, so no Python is reachable. The
+  test opens a secure Session to the running peer, reads, writes, subscribes,
+  receives the written value, cancels and closes through `Wotex.OPCUA`, finds no
+  Python or shell process among its descendants while the Session runs and no
+  descendant helper after it closes, and loads every package from the
+  consumer's build rather than this checkout. `WORKSPACE/archive-consumer.json`
+  records the three archive digests and the consumer lock digest.
+
+  The run stops the peer it started and writes `WORKSPACE/software-run.json`
+  with each lane's exit status and log digest. Any failed lane makes the run
+  fail. The peer and audit environments are test infrastructure; no Python
+  process is part of the runtime package. Loading this module performs no I/O.
   """
 
   alias Wotex.OPCUA.Native.{Build, Source, Workspace}
@@ -45,6 +62,141 @@ defmodule Wotex.OPCUA.Native.Software do
   @sources "priv/native/CMakeLists.txt"
   @native_sources "priv/fixtures/native-sources-v1.json"
   @osv "https://api.osv.dev/v1/querybatch"
+  @consumer_report "archive-consumer.json"
+  @contract "priv/fixtures/native-contract-v1.json"
+  @utilities ~w(dirname basename readlink uname sed tr cut head)
+
+  @consumer_test ~S"""
+  defmodule OPCUAArchiveConsumerTest do
+    use ExUnit.Case, async: false
+
+    @moduletag timeout: 180_000
+
+    test "WOP-X-F48 exact archives run the native secure workflow without Python" do
+      source_root = System.fetch_env!("WOTEX_OPCUA_SOURCE_ROOT")
+
+      for app <- [:wotex, :wotex_runtime, :wotex_opcua] do
+        assert :ok == Application.load(app) or
+                 {:error, {:already_loaded, app}} == Application.load(app)
+
+        assert Application.spec(app, :mod) in [nil, []]
+      end
+
+      for module <- [Wotex.ThingDescription, Wotex.Runtime, Wotex.OPCUA] do
+        beam = module |> :code.which() |> List.to_string()
+        assert String.contains?(beam, "/consumer/project/_build/")
+        refute String.contains?(beam, source_root <> "/")
+      end
+
+      assert System.find_executable("python3") == nil
+      assert System.find_executable("python") == nil
+
+      native = System.fetch_env!("WOTEX_OPCUA_CONSUMER_NATIVE")
+      config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+      peer = Jason.decode!(File.read!(config))
+      directory = Path.dirname(config)
+      executable = Path.join(native, "output/bin/wotex_opcua_native")
+      guardian = Path.join(native, "output/bin/wotex_opcua_custody")
+      digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+      node = peer["node_id"]
+
+      options = [
+        client: Wotex.OPCUA.Open62541,
+        executable: executable,
+        executable_digest: digest.(executable),
+        guardian: guardian,
+        guardian_digest: digest.(guardian),
+        endpoint: peer["endpoint"],
+        security_policy: :basic256sha256,
+        security_mode: :sign_and_encrypt,
+        client_uri: peer["client_uri"],
+        server_uri: peer["server_uri"],
+        certificate: peer["certificate"],
+        private_key: Path.join(directory, "client.key.der"),
+        server_certificate: peer["server_certificate"],
+        trust_certificate: Path.join(directory, "ca.der"),
+        crl: peer["crl"],
+        authentication: %{type: :anonymous}
+      ]
+
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+
+      write = fn value ->
+        Wotex.OPCUA.send(session, %{
+          type: :write,
+          node_id: node,
+          value: %{type: "Double", value: value}
+        })
+      end
+
+      assert {:ok, %{"value" => %{"type" => "Double", "value" => original}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node})
+
+      assert {:ok, %{"status" => 0}} = write.(22.75)
+
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node,
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => 22.75}}, _}}, 5000
+
+      running = descendants()
+      assert Enum.any?(running, &String.ends_with?(&1, "wotex_opcua_native"))
+      assert Enum.filter(running, &(python?(&1) or shell?(&1))) == []
+
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert {:ok, %{"status" => 0}} = write.(original)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert settled?(50)
+
+      IO.puts(
+        "WOP-X-F48 " <>
+          Jason.encode!(%{
+            operations_succeeded: 6,
+            runtime_python_processes: 0,
+            runtime_shell_processes: 0,
+            active_local_resources: 0
+          })
+      )
+    end
+
+    # The BEAM's own helpers and the sampling ps are not workload processes.
+    @ignored ~w(erl_child_setup inet_gethost ps)
+
+    defp descendants do
+      {output, 0} = System.cmd("/bin/ps", ["-A", "-o", "pid=", "-o", "ppid=", "-o", "comm="])
+
+      rows =
+        for line <- String.split(output, "
+  ", trim: true),
+            [pid, ppid, comm] <- [String.split(String.trim(line), ~r/\s+/, parts: 3)],
+            do: {String.to_integer(pid), String.to_integer(ppid), comm}
+
+      collect(rows, [String.to_integer(System.pid())], [])
+    end
+
+    defp collect(_, [], found), do: found
+
+    defp collect(rows, [parent | rest], found) do
+      children = for {pid, ^parent, comm} <- rows, do: {pid, comm}
+      named = for {_, comm} <- children, Path.basename(comm) not in @ignored, do: comm
+      collect(rows, rest ++ Enum.map(children, &elem(&1, 0)), found ++ named)
+    end
+
+    defp python?(comm), do: String.starts_with?(Path.basename(comm), "python")
+    defp shell?(comm), do: Path.basename(comm) in ~w(sh bash zsh dash ksh)
+
+    defp settled?(0), do: descendants() == []
+
+    defp settled?(attempts) do
+      descendants() == [] or (Process.sleep(100) == :ok and settled?(attempts - 1))
+    end
+  end
+  """
   @tools [:python, :cmake, :ctest, :mix, :curl]
   @executables %{
     "native" => "native/output/bin/wotex_opcua_native",
@@ -96,10 +248,17 @@ defmodule Wotex.OPCUA.Native.Software do
     end
   end
 
-  @doc "Runs every software lane against a verified build workspace."
+  @doc """
+  Runs every software lane against a verified build workspace.
+
+  Options are those of `build/2`, `:peer_deadline_ms`, and the required
+  `:archives`, a map naming the absolute `:core` (`wotex`) and `:runtime`
+  (`wotex_runtime`) archive files for the archive consumer lane.
+  """
   @spec run(term(), keyword()) :: {:ok, map()} | {:error, term()}
   def run(workspace, opts \\ []) do
     with {:ok, workspace} <- workspace(workspace),
+         {:ok, archives} <- archives(Keyword.get(opts, :archives)),
          {:ok, root} <- fixtures(opts),
          {:ok, tools} <- tools(opts),
          {:ok, manifest} <- verified(workspace, root) do
@@ -109,7 +268,7 @@ defmodule Wotex.OPCUA.Native.Software do
 
       with {:ok, peer} <- start_peer(workspace, root, peer_directory, opts) do
         try do
-          lanes(command, tools, root, workspace, manifest, peer_directory)
+          lanes(command, tools, root, workspace, manifest, peer_directory, archives)
         after
           stop_peer(peer)
         end
@@ -117,7 +276,7 @@ defmodule Wotex.OPCUA.Native.Software do
     end
   end
 
-  defp lanes(command, tools, root, workspace, manifest, peer_directory) do
+  defp lanes(command, tools, root, workspace, manifest, peer_directory, archives) do
     artifact = &Path.join(workspace, Map.fetch!(@executables, &1))
 
     env = [
@@ -162,6 +321,10 @@ defmodule Wotex.OPCUA.Native.Software do
         {name, %{"exit_status" => status, "log_sha256" => digest}}
       end)
       |> Map.put("native_audit", native_audit(command, tools, root, workspace))
+      |> Map.put(
+        "archive_consumer",
+        archive_consumer(command, tools, root, workspace, peer_directory, archives)
+      )
 
     report = %{
       "format_version" => 1,
@@ -388,6 +551,223 @@ defmodule Wotex.OPCUA.Native.Software do
   defp advisory(_, _), do: {:halt, :error}
 
   defp digest(bytes), do: Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
+
+  defp archives(%{core: core, runtime: runtime} = archives)
+       when map_size(archives) == 2 and is_binary(core) and is_binary(runtime) do
+    if Enum.all?([core, runtime], &(Path.type(&1) == :absolute and File.regular?(&1))),
+      do: {:ok, archives},
+      else: {:error, :software_archives_required}
+  end
+
+  defp archives(_), do: {:error, :software_archives_required}
+
+  defp archive_consumer(command, tools, root, workspace, peer_directory, archives) do
+    base = Path.join(workspace, "consumer")
+    File.rm_rf!(base)
+    File.mkdir_p!(base)
+    project = Path.join(base, "project")
+    opcua = Path.join(base, "wotex_opcua.tar")
+    unpacked = Map.new(~w(wotex wotex_runtime wotex_opcua), &{&1, Path.join(base, "deps/" <> &1)})
+    hex = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
+
+    consumer_env = [
+      {"WOTEX_PATH_DEPS", nil},
+      {"MIX_ENV", "test"},
+      {"MIX_BUILD_PATH", nil},
+      {"MIX_DEPS_PATH", nil},
+      {"ERL_LIBS", nil}
+    ]
+
+    test_env =
+      consumer_env ++
+        [
+          {"PATH", python_free_path(tools, base)},
+          {"WOTEX_OPCUA_SOURCE_ROOT", root},
+          {"WOTEX_OPCUA_CONSUMER_NATIVE", Path.join(base, "native")},
+          {"WOTEX_OPCUA_INTEROP_CONFIG", Path.join(peer_directory, "config.json")}
+        ]
+
+    steps = [
+      {"hex_build", tools.mix, ["hex.build", "--output", opcua], root, hex},
+      {"unpack", fn -> unpack(archives, opcua, unpacked) end},
+      {"project", fn -> consumer_project(project, unpacked) end},
+      {"deps_get", tools.mix, ["deps.get"], project, consumer_env},
+      {"native_build", tools.mix,
+       ["wotex.opcua.native.build", "--workspace", Path.join(base, "native")], project,
+       consumer_env},
+      {"test", tools.mix, ["test", "--warnings-as-errors"], project, test_env}
+    ]
+
+    status =
+      Enum.reduce_while(steps, 0, fn step, 0 ->
+        case consumer_step(command, workspace, step) do
+          0 -> {:cont, 0}
+          failed -> {:halt, failed}
+        end
+      end)
+
+    log = Path.join(workspace, "logs/archive_consumer.log")
+
+    File.write!(
+      log,
+      for step <- steps,
+          name = elem(step, 0),
+          path = consumer_log(workspace, name),
+          File.regular?(path) do
+        ["== #{name}\n", File.read!(path)]
+      end
+    )
+
+    status =
+      if status == 0,
+        do: consumer_report(workspace, root, archives, opcua, project),
+        else: status
+
+    {:ok, log_digest} = Workspace.digest(log)
+    %{"exit_status" => status, "log_sha256" => log_digest}
+  end
+
+  defp consumer_step(command, workspace, {name, executable, arguments, directory, env}) do
+    command.(executable, arguments, [cd: directory, env: env], consumer_log(workspace, name))
+  end
+
+  defp consumer_step(_, workspace, {name, function}) do
+    case function.() do
+      :ok ->
+        0
+
+      {:error, reason} ->
+        File.write!(consumer_log(workspace, name), "#{inspect(reason)}\n")
+        1
+    end
+  end
+
+  defp consumer_log(workspace, name), do: Path.join(workspace, "logs/archive_consumer_#{name}.log")
+
+  defp unpack(archives, opcua, unpacked) do
+    [{archives.core, "wotex"}, {archives.runtime, "wotex_runtime"}, {opcua, "wotex_opcua"}]
+    |> Enum.reduce_while(:ok, fn {archive, name}, :ok ->
+      destination = Map.fetch!(unpacked, name)
+      outer = destination <> "-outer"
+
+      with :ok <- File.mkdir_p(outer),
+           :ok <- File.mkdir_p(destination),
+           :ok <-
+             :erl_tar.extract(String.to_charlist(archive), [{:cwd, String.to_charlist(outer)}]),
+           :ok <-
+             :erl_tar.extract(
+               String.to_charlist(Path.join(outer, "contents.tar.gz")),
+               [:compressed, {:cwd, String.to_charlist(destination)}]
+             ) do
+        {:cont, :ok}
+      else
+        error -> {:halt, {:error, {:unpack_failed, name, error}}}
+      end
+    end)
+  end
+
+  defp consumer_project(project, unpacked) do
+    File.mkdir_p!(Path.join(project, "test"))
+
+    File.write!(Path.join(project, "mix.exs"), """
+    defmodule OPCUAArchiveConsumer.MixProject do
+      use Mix.Project
+
+      def project do
+        [
+          app: :opcua_archive_consumer,
+          version: "0.0.0",
+          elixir: "~> 1.18",
+          deps: [
+            {:wotex, path: #{inspect(unpacked["wotex"])}, override: true},
+            {:wotex_runtime, path: #{inspect(unpacked["wotex_runtime"])}, override: true},
+            {:wotex_opcua, path: #{inspect(unpacked["wotex_opcua"])}}
+          ]
+        ]
+      end
+
+      def application, do: [extra_applications: []]
+    end
+    """)
+
+    File.write!(Path.join(project, "test/test_helper.exs"), "ExUnit.start()\n")
+    File.write!(Path.join(project, "test/archive_consumer_test.exs"), @consumer_test)
+  end
+
+  # The Elixir and Erlang executables, the POSIX utilities their launch
+  # scripts use, and /bin; no Python interpreter is reachable.
+  defp python_free_path(tools, base) do
+    utilities = Path.join(base, "bin")
+    File.mkdir_p!(utilities)
+
+    for name <- @utilities, path = System.find_executable(name), is_binary(path) do
+      link = Path.join(utilities, name)
+      File.rm(link)
+      File.ln_s!(path, link)
+    end
+
+    erlang =
+      case System.find_executable("erl") do
+        nil -> []
+        erl -> [Path.dirname(resolve(erl))]
+      end
+
+    Enum.join(Enum.uniq([Path.dirname(resolve(tools.mix))] ++ erlang ++ [utilities, "/bin"]), ":")
+  end
+
+  defp resolve(path) do
+    case File.read_link(path) do
+      {:ok, target} -> resolve(Path.expand(target, Path.dirname(path)))
+      _ -> path
+    end
+  end
+
+  # The consumer only prints its observation; the expectation stays here, in
+  # the corpus case WOP-X-F48, and an unequal observation fails the lane.
+  defp consumer_report(workspace, root, archives, opcua, project) do
+    corpus = Path.join(root, @contract)
+
+    with {:ok, bytes} <- File.read(corpus),
+         {:ok, %{"cases" => cases}} <- Jason.decode(bytes),
+         %{"expectation" => %{"operator" => "exact", "value" => expected}} <-
+           Enum.find(cases, &(&1["id"] == "WOP-X-F48")),
+         [_, text] <-
+           Regex.run(~r/^WOP-X-F48 (\{.*\})$/m, File.read!(consumer_log(workspace, "test"))),
+         {:ok, ^expected} <- Jason.decode(text) do
+      report = %{
+        "format_version" => 1,
+        "case" => "WOP-X-F48",
+        "corpus_sha256" => digest(bytes),
+        "observation" => expected,
+        "archives" => %{
+          "wotex" => file_digest(archives.core),
+          "wotex_runtime" => file_digest(archives.runtime),
+          "wotex_opcua" => file_digest(opcua)
+        },
+        "consumer_lock_sha256" => file_digest(Path.join(project, "mix.lock")),
+        "registry_publication_asserted" => false
+      }
+
+      File.write!(Path.join(workspace, @consumer_report), Jason.encode_to_iodata!(report))
+      0
+    else
+      _ ->
+        File.write!(
+          Path.join(workspace, "logs/archive_consumer.log"),
+          "== report\nthe consumer observation does not equal WOP-X-F48\n",
+          [:append]
+        )
+
+        1
+    end
+  end
+
+  defp file_digest(path) do
+    case Workspace.digest(path) do
+      {:ok, digest} -> digest
+      _ -> nil
+    end
+  end
 
   defp run_steps(command, executable, steps, root, workspace) do
     Enum.reduce_while(steps, :ok, fn {name, arguments}, :ok ->

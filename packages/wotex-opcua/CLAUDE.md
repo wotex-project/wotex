@@ -130,8 +130,13 @@ absolute workspace (new or empty; the native build also reuses a verified one):
 ```console
 mix wotex.native.build --package wotex-opcua --workspace /absolute/disposable/dir
 mix pkg wotex-opcua wotex.software.build --workspace /absolute/disposable/dir
-mix pkg wotex-opcua wotex.software.run --workspace /absolute/disposable/dir
+mix pkg wotex-opcua wotex.software.run --workspace /absolute/disposable/dir \
+  --core-archive /absolute/wotex-0.1.0.tar --runtime-archive /absolute/wotex_runtime-0.1.0.tar
 ```
+
+The two archives are exact `wotex` and `wotex_runtime` packages from the same
+commit, for example `mix pkg wotex hex.build --output /absolute/wotex-0.1.0.tar`
+with `WOTEX_PATH_DEPS` unset; the run's archive consumer lane depends on them.
 
 The native build needs network access, `cc`, CMake 3.20+ with `ctest`, `make`,
 Perl, `python3`, `ar`, `ranlib`, `ld` and curl 8.4.0+ on Linux x86_64/aarch64

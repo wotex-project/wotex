@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.37
+  version: 1.1.38
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -662,7 +662,9 @@ requests it builds and answer them from a script without a socket. The full S/N/
 remain required in addition to the concrete corpus.
 
 Required fixture tasks are `mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS`. They use X02's workspace admission and
+`mix wotex.software.run --workspace ABS --core-archive ABS --runtime-archive ABS`,
+whose two archives are the exact `wotex` and `wotex_runtime` packages of WOP.06
+I06. They use X02's workspace admission and
 manifest rules. Build includes the production helper, the independent asyncua
 peer, the second independent peer of WOP.04 and the same-stack C precision/fault
 peer. Python packages are pinned from the
@@ -693,7 +695,20 @@ build, asks the OSV database for advisories whose affected git ranges contain
 the pinned open62541, OpenSSL and vendored yyjson commits, and records those
 sources, the SDK patch digests and every advisory identifier in
 `native-audit.json`; any advisory fails its lane. OSV matches only advisories
-that record git ranges. The run stops the peer and records each lane's status
+that record git ranges. The `archive_consumer` lane is X-F48: it builds this
+package's archive with `mix hex.build` under Hex requirements, unpacks it with
+the two named archives, and writes a consumer project whose only first-party
+dependencies are the three unpacked archives. The consumer fetches its Hex
+dependencies, builds the helper with the dependency's own
+`wotex.opcua.native.build` task and runs its test with a `PATH` of the Elixir
+and Erlang directories, a few POSIX utilities and `/bin`, from which no Python
+is reachable. The test loads every package from the consumer's build, opens a
+secure Session to the running peer, reads, writes, subscribes and receives the
+written value, cancels and closes, finds no Python or shell process among its
+descendants while the Session runs and no helper process after it closes, and
+prints its observation. The lane compares that observation with the X-F48
+corpus expectation and records the archive, corpus and consumer lock digests in
+`archive-consumer.json`. The run stops the peer and records each lane's status
 and log digest; any failed lane fails the task. These tasks omit the second
 independent peer required above.
 

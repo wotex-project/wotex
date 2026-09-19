@@ -4,11 +4,16 @@ defmodule Mix.Tasks.Wotex.Opcua.Software.Run do
   @moduledoc """
   Runs the interop, software stress, CTest, sanitizer and audit lanes.
 
-  Invoke `mix wotex.opcua.software.run --workspace ABSOLUTE_PATH` after
-  `mix wotex.opcua.software.build`; the package project also supplies the alias
-  `mix wotex.software.run`. See `Wotex.OPCUA.Native.Software.run/2` for the
-  lanes, the peer lifecycle and the recorded report. Any failed lane fails the
-  task.
+  Invoke
+
+      mix wotex.opcua.software.run --workspace ABSOLUTE_PATH \\
+        --core-archive ABSOLUTE_WOTEX_TAR --runtime-archive ABSOLUTE_WOTEX_RUNTIME_TAR
+
+  after `mix wotex.opcua.software.build`; the package project also supplies the
+  alias `mix wotex.software.run`. The two archives are the exact `wotex` and
+  `wotex_runtime` packages the archive consumer lane depends on. See
+  `Wotex.OPCUA.Native.Software.run/2` for the lanes, the peer lifecycle and the
+  recorded report. Any failed lane fails the task.
   """
 
   use Mix.Task
@@ -18,10 +23,24 @@ defmodule Mix.Tasks.Wotex.Opcua.Software.Run do
   @doc "Runs every software lane and reports the run report path."
   @spec run([String.t()]) :: :ok
   @impl Mix.Task
-  def run(["--workspace", workspace]) do
-    Mix.Task.run("compile")
+  def run(arguments) do
+    {options, rest, invalid} =
+      OptionParser.parse(arguments,
+        strict: [workspace: :string, core_archive: :string, runtime_archive: :string]
+      )
 
-    case Software.run(workspace) do
+    with [] <- rest ++ invalid,
+         [core_archive: core, runtime_archive: runtime, workspace: workspace] <-
+           Enum.sort(options) do
+      Mix.Task.run("compile")
+      report(workspace, Software.run(workspace, archives: %{core: core, runtime: runtime}))
+    else
+      _ -> usage()
+    end
+  end
+
+  defp report(workspace, result) do
+    case result do
       {:ok, _} ->
         Mix.shell().info("Software lanes passed: #{Path.join(workspace, "software-run.json")}")
 
@@ -30,5 +49,11 @@ defmodule Mix.Tasks.Wotex.Opcua.Software.Run do
     end
   end
 
-  def run(_), do: Mix.raise("usage: mix wotex.opcua.software.run --workspace ABSOLUTE_PATH")
+  @spec usage() :: no_return()
+  defp usage do
+    Mix.raise(
+      "usage: mix wotex.opcua.software.run --workspace ABSOLUTE_PATH " <>
+        "--core-archive ABSOLUTE_WOTEX_TAR --runtime-archive ABSOLUTE_WOTEX_RUNTIME_TAR"
+    )
+  end
 end

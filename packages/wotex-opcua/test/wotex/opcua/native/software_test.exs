@@ -33,6 +33,9 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
   exit 0
   """
   @native_sources Path.expand("../../../../priv/fixtures/native-sources-v1.json", __DIR__)
+  @contract Path.expand("../../../../priv/fixtures/native-contract-v1.json", __DIR__)
+  @observation ~s(WOP-X-F48 {"operations_succeeded":6,"runtime_python_processes":0,) <>
+                 ~s("runtime_shell_processes":0,"active_local_resources":0})
 
   setup do
     base =
@@ -52,12 +55,29 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     sources = Path.join(root, "priv/fixtures/native-sources-v1.json")
     File.mkdir_p!(Path.dirname(sources))
     File.cp!(@native_sources, sources)
+    File.cp!(@contract, Path.join(root, "priv/fixtures/native-contract-v1.json"))
 
     File.mkdir_p!(bin)
 
+    template = Path.join(base, "template.tar")
+    archive!(template)
+    core = Path.join(base, "wotex-0.1.0.tar")
+    runtime = Path.join(base, "wotex_runtime-0.1.0.tar")
+    File.cp!(template, core)
+    File.cp!(template, runtime)
+
+    # Answers `mix hex.build --output PATH` with the template archive.
+    mix = """
+    #!/bin/sh
+    if [ "$1" = "hex.build" ]; then cp #{template} "$3"; fi
+    if [ "$1" = "test" ]; then echo '#{@observation}'; fi
+    echo lane
+    exit 0
+    """
+
     tools =
       Map.new(
-        [python: @python, cmake: @cmake, ctest: @succeed, mix: @succeed, curl: @curl],
+        [python: @python, cmake: @cmake, ctest: @succeed, mix: mix, curl: @curl],
         fn {name, body} ->
           path = Path.join(bin, Atom.to_string(name))
           File.write!(path, body)
@@ -67,12 +87,26 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
       )
 
     on_exit(fn -> File.rm_rf!(base) end)
-    %{base: base, root: root, tools: tools, workspace: Path.join(base, "workspace")}
+
+    %{
+      base: base,
+      root: root,
+      tools: tools,
+      template: template,
+      archives: %{core: core, runtime: runtime},
+      workspace: Path.join(base, "workspace")
+    }
   end
 
   test "WOP-X06 build records peer distributions and executables, and run passes every lane",
        context do
-    options = [root: context.root, tools: context.tools, native_build: &native_build/1]
+    options = [
+      root: context.root,
+      tools: context.tools,
+      native_build: &native_build/1,
+      archives: context.archives
+    ]
+
     assert {:ok, manifest} = Software.build(context.workspace, options)
 
     assert %{
@@ -87,7 +121,8 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     assert {:ok, report} = Software.run(context.workspace, options)
 
     assert Enum.sort(Map.keys(report["lanes"])) ==
-             ~w(deps_audit hex_audit interop native_audit native_ctest pip_audit sanitizer_ctest)
+             ~w(archive_consumer deps_audit hex_audit interop native_audit native_ctest pip_audit
+                sanitizer_ctest)
 
     assert Enum.all?(report["lanes"], fn {_, lane} -> lane["exit_status"] == 0 end)
     assert File.regular?(Path.join(context.workspace, "software-run.json"))
@@ -106,19 +141,44 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
 
     assert [%{"id" => _, "sha256" => _} | _] = audit["sdk_patches"]
 
+    consumer = Jason.decode!(File.read!(Path.join(context.workspace, "archive-consumer.json")))
+    assert consumer["registry_publication_asserted"] == false
+    assert consumer["case"] == "WOP-X-F48"
+
+    assert consumer["observation"] == %{
+             "operations_succeeded" => 6,
+             "runtime_python_processes" => 0,
+             "runtime_shell_processes" => 0,
+             "active_local_resources" => 0
+           }
+
+    assert map_size(consumer["archives"]) == 3
+    project = Path.join(context.workspace, "consumer/project")
+    assert File.read!(Path.join(project, "mix.exs")) =~ "consumer/deps/wotex_opcua"
+    assert File.read!(Path.join(project, "test/archive_consumer_test.exs")) =~ "WOP-X-F48"
+
+    assert File.read!(Path.join(context.workspace, "logs/archive_consumer.log")) =~
+             "== native_build"
+
     assert {:error, :unrelated_software_workspace} =
              Software.build(context.workspace, options)
   end
 
   test "WOP-X06 a failed lane fails the run after recording the report", context do
-    options = [root: context.root, tools: context.tools, native_build: &native_build/1]
+    options = [
+      root: context.root,
+      tools: context.tools,
+      native_build: &native_build/1,
+      archives: context.archives
+    ]
+
     assert {:ok, _} = Software.build(context.workspace, options)
     parent = self()
 
     failing = fn _, arguments, command_options, log ->
       File.write!(log, "lane")
       send(parent, {:lane, arguments, command_options[:env]})
-      osv(arguments, ~s({"results":[{},{},{}]}))
+      outputs(arguments, ~s({"results":[{},{},{}]}), context.template, log)
       if arguments == ["deps.audit"], do: 2, else: 0
     end
 
@@ -132,14 +192,20 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
   end
 
   test "WOP-X06 the audits fail the run on a finding, a malformed answer or other pins", context do
-    options = [root: context.root, tools: context.tools, native_build: &native_build/1]
+    options = [
+      root: context.root,
+      tools: context.tools,
+      native_build: &native_build/1,
+      archives: context.archives
+    ]
+
     assert {:ok, _} = Software.build(context.workspace, options)
     report = Path.join(context.workspace, "software-run.json")
 
     answering = fn answer, pip_status ->
       fn _, arguments, _, log ->
         File.write!(log, "lane")
-        osv(arguments, answer)
+        outputs(arguments, answer, context.template, log)
         if "pip_audit" in arguments, do: pip_status, else: 0
       end
     end
@@ -166,6 +232,22 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
                )
     end
 
+    unequal = fn _, arguments, _, log ->
+      File.write!(log, "lane")
+      outputs(arguments, ~s({"results":[{},{},{}]}), context.template, log)
+
+      if arguments == ["test", "--warnings-as-errors"],
+        do: File.write!(log, String.replace(@observation, ":6,", ":5,"))
+
+      0
+    end
+
+    assert {:error, {:software_lanes_failed, ["archive_consumer"]}} =
+             Software.run(context.workspace, Keyword.put(options, :command, unequal))
+
+    assert File.read!(Path.join(context.workspace, "logs/archive_consumer.log")) =~
+             "does not equal WOP-X-F48"
+
     File.write!(Path.join(context.root, "priv/fixtures/native-sources-v1.json"), "{}")
 
     assert {:error, {:software_lanes_failed, ["native_audit"]}} =
@@ -179,7 +261,12 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
   end
 
   test "WOP-X06 invalid inputs and stale builds fail before running lanes", context do
-    options = [root: context.root, tools: context.tools, native_build: &native_build/1]
+    options = [
+      root: context.root,
+      tools: context.tools,
+      native_build: &native_build/1,
+      archives: context.archives
+    ]
 
     assert {:error, :invalid_software_workspace} = Software.build("relative", options)
     assert {:error, :invalid_software_workspace} = Software.run(:workspace, options)
@@ -235,7 +322,13 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
   end
 
   test "WOP-X06 a peer that exits or never becomes ready stops the run", context do
-    options = [root: context.root, tools: context.tools, native_build: &native_build/1]
+    options = [
+      root: context.root,
+      tools: context.tools,
+      native_build: &native_build/1,
+      archives: context.archives
+    ]
+
     assert {:ok, _} = Software.build(context.workspace, options)
     python = Path.join(context.workspace, "peer/venv/bin/python")
     File.write!(python, "#!/bin/sh\nexit 4\n")
@@ -248,13 +341,40 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     refute File.exists?(Path.join(context.workspace, "software-run.json"))
   end
 
-  test "WOP-X06 software tasks require one absolute workspace argument" do
-    for task <- [Mix.Tasks.Wotex.Opcua.Software.Build, Mix.Tasks.Wotex.Opcua.Software.Run] do
+  test "WOP-X06 software tasks require an absolute workspace and the run its archives",
+       context do
+    archives = [
+      "--core-archive",
+      context.archives.core,
+      "--runtime-archive",
+      context.archives.runtime
+    ]
+
+    for {task, extra} <- [
+          {Mix.Tasks.Wotex.Opcua.Software.Build, []},
+          {Mix.Tasks.Wotex.Opcua.Software.Run, archives}
+        ] do
       assert_raise Mix.Error, ~r/usage: mix wotex.opcua.software/, fn -> task.run([]) end
 
       assert_raise Mix.Error, ~r/invalid_software_workspace/, fn ->
-        task.run(["--workspace", "relative"])
+        task.run(["--workspace", "relative" | extra])
       end
+    end
+
+    assert_raise Mix.Error, ~r/usage: mix wotex.opcua.software.run/, fn ->
+      Mix.Tasks.Wotex.Opcua.Software.Run.run(["--workspace", context.workspace])
+    end
+
+    options = [root: context.root, tools: context.tools]
+
+    for archives <- [
+          nil,
+          %{core: "relative.tar", runtime: context.archives.runtime},
+          %{core: context.archives.core, runtime: "/missing/runtime.tar"},
+          %{core: context.archives.core}
+        ] do
+      assert {:error, :software_archives_required} =
+               Software.run(context.workspace, Keyword.put(options, :archives, archives))
     end
   end
 
@@ -269,11 +389,30 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     {:ok, %{}}
   end
 
-  # Writes the OSV answer where a curl call asks for its output.
-  defp osv(arguments, answer) do
+  # Writes the OSV answer where a curl call asks for its output and the template
+  # archive where `mix hex.build` does.
+  defp outputs(["hex.build", "--output", path], _, template, _), do: File.cp!(template, path)
+  defp outputs(["test", "--warnings-as-errors"], _, _, log), do: File.write!(log, @observation)
+
+  defp outputs(arguments, answer, _, _) do
     case Enum.drop_while(arguments, &(&1 != "--output")) do
       ["--output", path | _] -> File.write!(path, answer)
       _ -> :ok
     end
+  end
+
+  # A Hex-shaped archive: an outer tar holding contents.tar.gz.
+  defp archive!(path) do
+    directory = path <> "-parts"
+    File.mkdir_p!(directory)
+    inner = Path.join(directory, "contents.tar.gz")
+
+    :ok =
+      :erl_tar.create(String.to_charlist(inner), [{~c"mix.exs", "defmodule Fake do end\n"}], [
+        :compressed
+      ])
+
+    :ok =
+      :erl_tar.create(String.to_charlist(path), [{~c"contents.tar.gz", String.to_charlist(inner)}])
   end
 end
