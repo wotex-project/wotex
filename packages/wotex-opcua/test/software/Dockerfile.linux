@@ -1,0 +1,16 @@
+# Linux environment for mix wotex.software.build and mix wotex.software.run.
+# Build one image per required runtime:
+#   current: hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da
+#   minimum: hexpm/elixir@sha256:473f77ee88977dc8cc5d05fb91080a308be86be3fc27d50aef9a837d07c8268b
+# The native build requires curl 8.4.0 or later, which bookworm-backports
+# supplies; bookworm's own curl 7.88.1 is rejected.
+ARG BASE=hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da
+FROM ${BASE}
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/backports.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends build-essential cmake perl python3 python3-venv \
+      ca-certificates git procps rsync \
+ && apt-get install -y --no-install-recommends -t bookworm-backports curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl --version | head -1
+RUN mix local.hex --force && mix local.rebar --force
