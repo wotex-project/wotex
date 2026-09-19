@@ -340,7 +340,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-opcua/specs/WOP.05-standalone-client-and-preservation.md"
       - id: "WOP.06"
-        version: "1.1.8"
+        version: "1.1.9"
         implementation_status: "partial"
         path: "docs/packages/wotex-opcua/specs/WOP.06-wotex-integration.md"
       - id: "WOP.07"

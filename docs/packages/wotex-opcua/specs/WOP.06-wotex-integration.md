@@ -3,9 +3,9 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.8
+  version: 1.1.9
   owner: wotex-opcua
-  updated: 2026-09-18
+  updated: 2026-09-19
 ---
 
 # WOP.06 Wotex integration and evidence contract
@@ -35,8 +35,11 @@ and `Runtime.Retry`; Runtime's cause keeps no native effect. `profile/0` and
 with `contentType` fails `unsupported_content_type` before I/O, and the session
 profile projects persistent Read and Write results. WOP-I-F01 runs through the
 real ConsumedThing with a scripted client, and both production profiles read,
-write and observe against the independent peer. The archive consumer, the
-minimum runtime matrix and the remaining I03/I05/I06 cells are not accepted.
+write and observe against the independent peer. An exact-archive consumer of
+`wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
+the native secure workflow against the independent peer on the current runtime
+(WOP.07 X-F48). The minimum runtime matrix and the remaining I03/I05/I06 cells
+are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 

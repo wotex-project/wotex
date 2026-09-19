@@ -21,6 +21,47 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## Exact-archive consumer X-F48, 2026-09-19
+
+`mix wotex.software.run` now takes `--core-archive` and `--runtime-archive`
+and runs the `archive_consumer` lane of WOP.07. From commit `3fac372c`, the
+`wotex` and `wotex_runtime` archives were built with `mix hex.build` under
+Hex requirements; the lane built the `wotex_opcua` archive the same way,
+unpacked all three and compiled a consumer project whose only first-party
+dependencies are those unpacked archives. The consumer fetched jason,
+telemetry, ex_json_schema and decimal from Hex, built the helper with the
+dependency's `wotex.opcua.native.build` task, and ran its test with a `PATH`
+from which neither `python3` nor `python` resolves. Loaded from the consumer's
+build, not the checkout, and with no Application callback, it opened a
+Basic256Sha256 SignAndEncrypt Session to the asyncua peer, read, wrote,
+subscribed and received the written value, cancelled and closed through
+`Wotex.OPCUA`. While the Session ran, its descendants included the native
+helper and no Python or shell process; after close none remained. The lane
+compared the printed observation with the corpus expectation of X-F48:
+`operations_succeeded` 6, `runtime_python_processes` 0,
+`runtime_shell_processes` 0 and `active_local_resources` 0. Registry
+publication is not asserted.
+
+A fresh `wotex.software.build` and the run on it passed all eight lanes on
+macOS arm64 with Elixir 1.20.2 / OTP 29: ExUnit with interop and software 439
+passed (10 doctests, 4 properties, 425 tests), 1 excluded; native and ASan/UBSan
+CTest; the Mix, Hex, pip and native source audits; and the archive consumer.
+`software_test.exs` covers the lane with fake tools, an unequal observation
+and runs without, or with relative or missing, archives. The minimum runtime
+consumer run remains.
+
+| Subject | SHA-256 |
+| --- | --- |
+| archive `wotex-0.1.0.tar` | `fd2791d28a4e6f57c58f65e0d44d8a5ab4a2b6d71280e3a5a5cb2542913033a3` |
+| archive `wotex_runtime-0.1.0.tar` | `07bb4556c18f4472ad9c1c099106d4812042685a9e794f9dbe319b58ab8fa3d7` |
+| archive `wotex_opcua` (lane-built) | `3cfcac0964a5894dddbe3a2bcd6d5ca13e54b41631f8aa347467cd5e16068c8c` |
+| consumer `mix.lock` | `59f1bbf6bb317425a73eb88ce8f737b03dd9a9eecda141752f1474769f40fa1b` |
+| `priv/fixtures/native-contract-v1.json` | `e81f63e897fba024a64a2022f80ffdab6700170e62a450757be0cf192778f281` |
+| `software-build.json` | `8a43837f30c83a4ded1dc0a5ddf9d6ddf0448e8a2ce95be691d4701533d68cad` |
+| `software-run.json` | `27fb93ad457b710d6837eecbbda3ee3687cab9b71f02d28c7c86265ce928262f` |
+| `archive-consumer.json` | `d35117840a956f7ac77a7399b6b1b7f3adbb48634708422c319a930337ac4cb4` |
+| `native-audit.json` | `c5df548b56b0bb7f18fc7469f63b52b4475bda7fde45f9092f142d97f9c6399e` |
+
 ## Python and native source audits, 2026-09-19
 
 The software run now has the two audit lanes WOP.07 requires. The build
