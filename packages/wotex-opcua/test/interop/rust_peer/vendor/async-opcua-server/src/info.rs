@@ -93,6 +93,8 @@ pub struct ServerInfo {
     pub diagnostics: ServerDiagnostics,
     /// Number of live requests found by the Cancel service.
     pub(crate) cancel_count: AtomicU32,
+    /// Number of application service requests accepted by an active Session.
+    pub(crate) application_request_count: AtomicU32,
 }
 
 impl ServerInfo {
@@ -103,6 +105,16 @@ impl ServerInfo {
 
     pub(crate) fn record_cancelled_requests(&self, count: u32) {
         self.cancel_count.fetch_add(count, Ordering::Relaxed);
+    }
+
+    /// Get the number of application service requests accepted by active Sessions.
+    pub fn application_request_count(&self) -> u32 {
+        self.application_request_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_application_request(&self) {
+        self.application_request_count
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     /// Get the list of endpoints that match the provided filters.

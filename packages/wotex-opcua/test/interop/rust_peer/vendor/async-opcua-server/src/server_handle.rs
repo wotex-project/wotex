@@ -104,6 +104,11 @@ impl ServerHandle {
         self.info.cancel_count()
     }
 
+    /// Get the number of application service requests accepted by active Sessions.
+    pub fn application_request_count(&self) -> u32 {
+        self.info.application_request_count()
+    }
+
     /// Get the number of subscriptions currently owned by every session.
     pub fn subscription_count(&self) -> usize {
         self.subscriptions.subscription_count()

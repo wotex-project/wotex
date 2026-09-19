@@ -184,6 +184,7 @@ impl Server {
                 ..Default::default()
             },
             cancel_count: Default::default(),
+            application_request_count: Default::default(),
         };
 
         let certificate_store = Arc::new(RwLock::new(certificate_store));

@@ -211,6 +211,11 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
              List.keyfind(env, "WOTEX_OPCUA_RUST_CONFIG", 0)
 
     assert Path.basename(rust_config) == "rust-config.json"
+
+    assert {"WOTEX_OPCUA_RUST_EXECUTABLE", rust_executable} =
+             List.keyfind(env, "WOTEX_OPCUA_RUST_EXECUTABLE", 0)
+
+    assert Path.basename(rust_executable) == "wotex-opcua-rust-peer"
     report = Jason.decode!(File.read!(Path.join(context.workspace, "software-run.json")))
     assert report["lanes"]["deps_audit"]["exit_status"] == 2
   end

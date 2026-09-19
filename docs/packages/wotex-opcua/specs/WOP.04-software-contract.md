@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.5
+  version: 1.1.6
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -295,7 +295,10 @@ cancellation count, and all nine positive combinations of the three
 SignAndEncrypt policies and three user-token modes. Each positive combination
 executes Read, Write/readback, Call, Browse, subscribe/cancel and close and
 observes zero peer subscriptions, MonitoredItems and continuations after
-cleanup. Independent certificate-fault/rejection, advanced subscription and
+cleanup. It also executes X-F39..F47 against isolated variants for expired and
+wrong-host leaves, application URI, trust, CRL, key, Security None downgrade and
+unsupported-token faults. Each attempt fails with no Session, no live local
+helper and a peer-recorded zero application requests. Advanced subscription and
 remaining lifecycle cells are still required.
 Security fault tests use controlled certificates, clock inputs and a bounded
 byte proxy. Same-stack and independent lanes are both required; neither

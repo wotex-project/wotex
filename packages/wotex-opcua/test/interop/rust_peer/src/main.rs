@@ -27,6 +27,72 @@ const CERTIFICATE_TOKEN_ID: &str = "CERTIFICATE";
 const USERNAME: &str = "operator";
 const PASSWORD: &str = "correct horse";
 
+#[derive(Clone, Copy)]
+enum FixtureVariant {
+    Default,
+    ExpiredLeaf,
+    WrongHost,
+    WrongApplicationUri,
+    UntrustedCa,
+    RevokedLeaf,
+    ExpiredCrl,
+    MismatchedPrivateKey,
+    NoneDowngrade,
+    UnsupportedUserToken,
+}
+
+impl FixtureVariant {
+    fn parse(value: &str) -> Result<Self, String> {
+        match value {
+            "default" => Ok(Self::Default),
+            "expired_leaf" => Ok(Self::ExpiredLeaf),
+            "wrong_host" => Ok(Self::WrongHost),
+            "wrong_application_uri" => Ok(Self::WrongApplicationUri),
+            "untrusted_ca" => Ok(Self::UntrustedCa),
+            "revoked_leaf" => Ok(Self::RevokedLeaf),
+            "expired_crl" => Ok(Self::ExpiredCrl),
+            "mismatched_private_key" => Ok(Self::MismatchedPrivateKey),
+            "none_downgrade" => Ok(Self::NoneDowngrade),
+            "unsupported_user_token" => Ok(Self::UnsupportedUserToken),
+            _ => Err(format!("unsupported fixture variant: {value}")),
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::ExpiredLeaf => "expired_leaf",
+            Self::WrongHost => "wrong_host",
+            Self::WrongApplicationUri => "wrong_application_uri",
+            Self::UntrustedCa => "untrusted_ca",
+            Self::RevokedLeaf => "revoked_leaf",
+            Self::ExpiredCrl => "expired_crl",
+            Self::MismatchedPrivateKey => "mismatched_private_key",
+            Self::NoneDowngrade => "none_downgrade",
+            Self::UnsupportedUserToken => "unsupported_user_token",
+        }
+    }
+
+    fn certificate_stem(self) -> &'static str {
+        match self {
+            Self::ExpiredLeaf => "expired",
+            Self::WrongHost => "wronghost",
+            _ => "server",
+        }
+    }
+
+    fn config_name(self) -> String {
+        match self {
+            Self::Default => "rust-config.json".to_owned(),
+            _ => format!("rust-config-{}.json", self.name()),
+        }
+    }
+
+    fn result_name(self) -> String {
+        format!("rust-result-{}.json", self.name())
+    }
+}
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> ExitCode {
     match run().await {
@@ -44,8 +110,8 @@ async fn run() -> Result<(), String> {
         println!("wotex-opcua-rust-peer 1");
         return Ok(());
     }
-    if arguments.len() != 3 {
-        return Err("usage: wotex-opcua-rust-peer FIXTURE_DIRECTORY CHILDREN".to_owned());
+    if !(3..=4).contains(&arguments.len()) {
+        return Err("usage: wotex-opcua-rust-peer FIXTURE_DIRECTORY CHILDREN [VARIANT]".to_owned());
     }
     let fixture = PathBuf::from(&arguments[1]);
     let children = arguments[2]
@@ -54,9 +120,10 @@ async fn run() -> Result<(), String> {
     if !(1..=1000).contains(&children) {
         return Err("CHILDREN must be between 1 and 1000".to_owned());
     }
+    let variant = FixtureVariant::parse(arguments.get(3).map_or("default", String::as_str))?;
 
     let port = available_port()?;
-    let pki = prepare_pki(&fixture)?;
+    let pki = prepare_pki(&fixture, variant)?;
     let endpoint = format!("opc.tcp://127.0.0.1:{port}/fixture");
     let manager_builder = simple_node_manager(
         NamespaceMetadata {
@@ -71,7 +138,8 @@ async fn run() -> Result<(), String> {
         USERNAME_TOKEN_ID,
         CERTIFICATE_TOKEN_ID,
     ];
-    let (server, handle) = ServerBuilder::new()
+    let anonymous_token = [ANONYMOUS_USER_TOKEN_ID];
+    let mut builder = ServerBuilder::new()
         .application_name("Wotex async-opcua fixture")
         .application_uri(APPLICATION_URI)
         .product_uri("urn:wotex:async-opcua-fixture")
@@ -92,36 +160,59 @@ async fn run() -> Result<(), String> {
             CERTIFICATE_TOKEN_ID,
             ServerUserToken::x509("certificate", &user_certificate),
         )
-        .add_endpoint(
-            "basic256sha256",
-            (
-                "/fixture",
-                SecurityPolicy::Basic256Sha256,
-                MessageSecurityMode::SignAndEncrypt,
-                &token_ids as &[&str],
-            ),
-        )
-        .add_endpoint(
-            "aes128_sha256_rsaoaep",
-            (
-                "/fixture",
-                SecurityPolicy::Aes128Sha256RsaOaep,
-                MessageSecurityMode::SignAndEncrypt,
-                &token_ids as &[&str],
-            ),
-        )
-        .add_endpoint(
-            "aes256_sha256_rsapss",
-            (
-                "/fixture",
-                SecurityPolicy::Aes256Sha256RsaPss,
-                MessageSecurityMode::SignAndEncrypt,
-                &token_ids as &[&str],
-            ),
-        )
-        .default_endpoint("basic256sha256")
         .max_browse_continuation_points(16)
-        .with_node_manager(manager_builder)
+        .with_node_manager(manager_builder);
+
+    if matches!(variant, FixtureVariant::NoneDowngrade) {
+        builder = builder
+            .add_endpoint(
+                "none",
+                (
+                    "/fixture",
+                    SecurityPolicy::None,
+                    MessageSecurityMode::None,
+                    &anonymous_token as &[&str],
+                ),
+            )
+            .default_endpoint("none");
+    } else {
+        let endpoint_tokens = if matches!(variant, FixtureVariant::UnsupportedUserToken) {
+            &anonymous_token as &[&str]
+        } else {
+            &token_ids as &[&str]
+        };
+        builder = builder
+            .add_endpoint(
+                "basic256sha256",
+                (
+                    "/fixture",
+                    SecurityPolicy::Basic256Sha256,
+                    MessageSecurityMode::SignAndEncrypt,
+                    endpoint_tokens,
+                ),
+            )
+            .add_endpoint(
+                "aes128_sha256_rsaoaep",
+                (
+                    "/fixture",
+                    SecurityPolicy::Aes128Sha256RsaOaep,
+                    MessageSecurityMode::SignAndEncrypt,
+                    endpoint_tokens,
+                ),
+            )
+            .add_endpoint(
+                "aes256_sha256_rsapss",
+                (
+                    "/fixture",
+                    SecurityPolicy::Aes256Sha256RsaPss,
+                    MessageSecurityMode::SignAndEncrypt,
+                    endpoint_tokens,
+                ),
+            )
+            .default_endpoint("basic256sha256");
+    }
+
+    let (server, handle) = builder
         .build()
         .map_err(|error| format!("cannot build Rust peer: {error}"))?;
 
@@ -138,7 +229,7 @@ async fn run() -> Result<(), String> {
     let ready_fixture = fixture.clone();
     let ready_endpoint = endpoint.clone();
     let ready = tokio::spawn(async move {
-        let result = publish_config(&ready_fixture, &ready_endpoint, port, children).await;
+        let result = publish_config(&ready_fixture, &ready_endpoint, port, children, variant).await;
         if result.is_err() {
             ready_handle.cancel();
         }
@@ -156,6 +247,7 @@ async fn run() -> Result<(), String> {
         .await
         .map_err(|error| format!("readiness task failed: {error}"))?;
     ready_result?;
+    publish_result(&fixture, variant, handle.application_request_count())?;
     server_result
 }
 
@@ -166,14 +258,21 @@ fn available_port() -> Result<u16, String> {
         .map_err(|error| format!("cannot reserve fixture port: {error}"))
 }
 
-fn prepare_pki(fixture: &Path) -> Result<PathBuf, String> {
-    let pki = fixture.join("rust-pki");
+fn prepare_pki(fixture: &Path, variant: FixtureVariant) -> Result<PathBuf, String> {
+    let pki = fixture.join(format!("rust-pki-{}", variant.name()));
     for directory in ["own", "private", "trusted", "rejected"] {
         fs::create_dir_all(pki.join(directory))
             .map_err(|error| format!("cannot create Rust peer PKI: {error}"))?;
     }
-    copy(fixture.join("server.der"), pki.join("own/server.der"))?;
-    copy(fixture.join("server.pem"), pki.join("private/server.pem"))?;
+    let certificate = variant.certificate_stem();
+    copy(
+        fixture.join(format!("{certificate}.der")),
+        pki.join("own/server.der"),
+    )?;
+    copy(
+        fixture.join(format!("{certificate}.pem")),
+        pki.join("private/server.pem"),
+    )?;
     copy(fixture.join("client.der"), pki.join("trusted/client.der"))?;
     Ok(pki)
 }
@@ -371,6 +470,7 @@ async fn publish_config(
     endpoint: &str,
     port: u16,
     children: u32,
+    variant: FixtureVariant,
 ) -> Result<(), String> {
     for _ in 0..300 {
         if tokio::net::TcpStream::connect(("127.0.0.1", port))
@@ -406,7 +506,7 @@ async fn publish_config(
                 NAMESPACE_URI,
                 NAMESPACE_URI
             );
-            fs::write(fixture.join("rust-config.json"), config)
+            fs::write(fixture.join(variant.config_name()), config)
                 .map_err(|error| format!("cannot write Rust peer config: {error}"))?;
             println!("rust peer ready");
             return Ok(());
@@ -414,4 +514,16 @@ async fn publish_config(
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     Err("Rust peer did not start within 30 seconds".to_owned())
+}
+
+fn publish_result(
+    fixture: &Path,
+    variant: FixtureVariant,
+    application_requests: u32,
+) -> Result<(), String> {
+    fs::write(
+        fixture.join(variant.result_name()),
+        format!("{{\"application_requests\":{application_requests}}}"),
+    )
+    .map_err(|error| format!("cannot write Rust peer result: {error}"))
 }

@@ -39,7 +39,7 @@ The [WOP.06 integration contract](../specs/WOP.06-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are mandatory.
 [WOP.07](../specs/WOP.07-native-executable.md) fixes the open62541 executable,
 source digests, build tasks and native acceptance corpus. Repository-owned
-runtime and peer code is Elixir or C; Python remains only an upstream SDK
+runtime and peer code is Elixir, Rust or C; Python remains only an upstream SDK
 generator and isolated audit tool. The removed Python adapter and peer do not
 satisfy independent-stack acceptance. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime

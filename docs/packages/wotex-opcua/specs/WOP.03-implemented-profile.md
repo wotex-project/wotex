@@ -3,7 +3,7 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.13
+  version: 2.0.14
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -160,7 +160,11 @@ SignAndEncrypt policies and anonymous, username and certificate user tokens
 against the secure same-stack C peer. Rejected user credentials and unsupported token
 policies fail activation as `authentication_failed` with the numeric status;
 certificate and security rejections are `certificate_invalid`.
-Subscriptions and other policy/token interoperability remain open P02/P03 work.
+The independent async-opcua Rust peer executes the same nine policy/token
+cells with Read, Write/readback, Call, Browse, subscribe/cancel and close, then
+executes X-F39..F47 against isolated fault variants. Each rejection has no
+Session, no live local helper and a peer-recorded zero application requests.
+Advanced subscription and other lifecycle interoperability remain open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.

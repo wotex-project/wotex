@@ -195,6 +195,7 @@ impl MessageHandler {
         token: UserToken,
         request_id: u32,
     ) -> HandleMessageResult {
+        self.info.record_application_request();
         let data = RequestData {
             request_id,
             request_handle: message.request_handle(),

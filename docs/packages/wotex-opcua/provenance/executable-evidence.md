@@ -90,12 +90,18 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
 - every X-F30..F38 combination executes Read, Write/readback, typed Call,
   Browse, subscribe/report/cancel and close. After cancellation the server
   reports zero subscriptions, MonitoredItems and continuations, and after close
-  the monitored BEAM host, guardian and native client processes are gone.
+  the monitored BEAM host, guardian and native client processes are gone; and
+- every X-F39..F47 rejection starts an isolated named Rust peer variant. The
+  variants present the expired or wrong-host leaf, expose only Security None or
+  omit the requested username token as required; the remaining client-side
+  trust, URI, CRL and key faults use otherwise-normal secure endpoints. Each
+  connect fails with no effect before a Session, all local native helpers exit,
+  and the peer persists an application service-request count of zero.
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
 for active asynchronous requests; expose aggregate Cancel, continuation,
-subscription and MonitoredItem counts; advertise X.509 tokens with the
+application-request, subscription and MonitoredItem counts; advertise X.509 tokens with the
 endpoint's policy; preserve insertion order for reference buckets; and consume
 BrowseNext pages from the front. These are test-server capabilities, not
 production client code.
@@ -105,24 +111,28 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-twelve independent-wire cases passed 12/12: the original three
-continuation/Cancel cases and all nine positive policy/token workflows. The
+21 independent-wire cases passed 21/21: the original three
+continuation/Cancel cases, all nine positive policy/token workflows and all
+nine negative security/fault cells. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `c6a4d838e4136f0036f652da1ad65f44a8e07f386f6a80b4afca326978c828cb` |
-| `test/interop/rust_peer/src/main.rs` | `5e3766da878199aa13a6701b94f0791f892a4293b3f812b0a2ee4ff6c1556148` |
+| `test/interop/rust_peer_test.exs` | `875874cbbaa207e8e3328c7931a735eafc1ded166fda3244dfb17606a2f76b1f` |
+| `test/interop/rust_peer/src/main.rs` | `a3d50c79ea09b13bb02c17e226eb6ddd5904906e2a46389538efb955e65a97b4` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
 | `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |
-| `vendor/async-opcua-server/src/server_handle.rs` | `aaa0eef93e43cd05951e9254df914f1dbe0f7995949ddb221f957296d7729fd1` |
+| `vendor/async-opcua-server/src/info.rs` | `a89c5543d2e2f94467a29d074deb8c99696bdc9102e028ccbf157441728f881d` |
+| `vendor/async-opcua-server/src/server.rs` | `5259336ddbea57cf26bf4526a89a23465527a836c9f10628689ab93b633d057b` |
+| `vendor/async-opcua-server/src/server_handle.rs` | `f26428c887c711703e003408d09f6a10523761d0d5c91144c3f00686435c6da5` |
+| `vendor/async-opcua-server/src/session/message_handler.rs` | `3ddf711f5e6bd7e05dd231049a09821085b411331097975b658191d94dffa84a` |
 | `vendor/async-opcua-server/src/subscriptions/mod.rs` | `f123c5463aae1546f6f45e27d6021914490e8fc3148ad9d55d69c8aae4dedc98` |
 | `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `e9f8ee71fd5a1feac0417ee22782fc642a7bf2d5bcba09e667cac110acf2c9c0` |
 | `vendor/async-opcua-nodes/src/references.rs` | `71a4c5ac793bed375f3690b4a4d897b77c3d524150fd22adc0afe465f5331d00` |
-| `priv/fixtures/native-contract-v1.json` | `aaa4d3903bcfa49fcc8e393d8d0349f8c98b09df0adb0aad893f1516100c35bf` |
+| `priv/fixtures/native-contract-v1.json` | `c59b65b8de69ea34d1a6a8e237e7d65c202811bfb9bb920e554a704d925ebc1c` |
 | `test/software/Dockerfile.linux` | `84b45988d378cc40e612b10347e7951eff8bf9deec901be2133608a8f6b3cf2f` |
 
 ## Software lanes on Linux for both runtimes, 2026-09-19

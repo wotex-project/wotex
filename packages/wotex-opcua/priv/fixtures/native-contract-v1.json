@@ -66,7 +66,7 @@
       "WOP-X-F47"
     ]
   },
-  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. The WOP-P04 partial binding executes F24 through F26 through the production Publish sequence state with runner-supplied Republish outcomes, F21 and F29 through the production owner with an injected report and deletion service, and F27 and F28 through Session subscription processing and revision rules with an unconnected SDK client. The WOP-P05 partial binding executes F23 through the Runtime transport subscribe callback and relay with an injected streaming client: a short-lived worker establishes the observation, exits normally, the final owner receives one notification and its death releases the relay. The WOP-P03 partial binding executes F30 through F47 against the compiled same-stack open62541 C fixture peer. F30 through F38 additionally execute against the independent async-opcua Rust peer. Both runners perform read, write, readback, call, typed browse, subscribe, subscription cancellation and close for each policy and user token; count successful operations; read the peer subscription count after cancellation; count live continuations; and count the host and native processes still alive after close. Independent cross-stack rejection cells and later scenario families remain required.",
+  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. The WOP-P02 partial binding executes F17 through F20, F49, F50 and F52 through F55 through the production native owner, output queue and IPC parser with an explicitly injected service boundary. The WOP-P04 partial binding executes F24 through F26 through the production Publish sequence state with runner-supplied Republish outcomes, F21 and F29 through the production owner with an injected report and deletion service, and F27 and F28 through Session subscription processing and revision rules with an unconnected SDK client. The WOP-P05 partial binding executes F23 through the Runtime transport subscribe callback and relay with an injected streaming client: a short-lived worker establishes the observation, exits normally, the final owner receives one notification and its death releases the relay. The WOP-P03 partial binding executes F30 through F47 against both the compiled same-stack open62541 C fixture peer and the independent async-opcua Rust peer. For F30 through F38 both runners perform read, write, readback, call, typed browse, subscribe, subscription cancellation and close for each policy and user token; count successful operations; read the peer subscription count after cancellation; count live continuations; and count the host and native processes still alive after close. For F39 through F47 each independent attempt starts an isolated named Rust variant, fails before Session activation, records zero accepted application requests and leaves zero local native resources. Later scenario families remain required.",
   "cases": [
     {
       "id": "WOP-X-F01",
@@ -1136,7 +1136,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "expired_leaf",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1156,7 +1157,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "wrong_host",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1176,7 +1178,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "wrong_application_uri",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1196,7 +1199,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "untrusted_ca",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1216,7 +1220,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "revoked_leaf",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1236,7 +1241,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "expired_crl",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1256,7 +1262,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "mismatched_private_key",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1276,7 +1283,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "none_downgrade",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",
@@ -1296,7 +1304,8 @@
       "operation": "secure_peer_rejection",
       "input": {
         "fault": "unsupported_user_token",
-        "peer": "open62541-c-peer-1"
+        "peer": "open62541-c-peer-1",
+        "independent_peer": "async-opcua-rust-peer-1"
       },
       "expectation": {
         "operator": "exact",

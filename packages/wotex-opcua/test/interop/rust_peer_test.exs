@@ -18,7 +18,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
   # The second independent peer runs the async-opcua Rust server.
   # Its fixture methods report the server's own live browse continuation points
   # across every Session and the number of requests its Cancel service found.
-  setup do
+  setup context do
     peer = Jason.decode!(File.read!(System.fetch_env!("WOTEX_OPCUA_RUST_CONFIG")))
     fixture = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG") |> Path.dirname()
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
@@ -44,23 +44,28 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       authentication: %{type: :anonymous}
     ]
 
-    assert {:ok, session} = Wotex.OPCUA.connect(options)
-    on_exit(fn -> Wotex.OPCUA.disconnect(session) end)
+    base = %{peer: peer, fixture: fixture, options: options}
 
-    assert {:ok, %{"value" => %{"type" => "String", "array" => true, "value" => namespaces}}} =
-             Wotex.OPCUA.send(session, %{type: :read, node_id: "i=2255"})
+    if context[:rust_session] do
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      on_exit(fn -> Wotex.OPCUA.disconnect(session) end)
 
-    index = Enum.find_index(namespaces, &(&1 == peer["namespace_uri"]))
-    assert is_integer(index)
-    node = &Address.to_string(%Address{namespace: index, kind: :string, identifier: &1})
+      assert {:ok, %{"value" => %{"type" => "String", "array" => true, "value" => namespaces}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: "i=2255"})
 
-    %{session: session, peer: peer, node: node, fixture: fixture, options: options}
+      index = Enum.find_index(namespaces, &(&1 == peer["namespace_uri"]))
+      assert is_integer(index)
+      node = &Address.to_string(%Address{namespace: index, kind: :string, identifier: &1})
+      Map.merge(base, %{session: session, node: node})
+    else
+      base
+    end
   end
 
   for number <- 30..38 do
     id = "WOP-X-F#{number}"
 
-    @tag case: id, corpus_sha256: @corpus_sha256
+    @tag case: id, corpus_sha256: @corpus_sha256, rust_session: true
     test "#{id} executes every service against the independent Rust policy and token", context do
       %{"input" => input, "expectation" => %{"value" => expected}} =
         Map.fetch!(@cases, unquote(id))
@@ -152,6 +157,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     end
   end
 
+  @tag rust_session: true
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
        %{session: session, peer: peer, node: node} do
     paged = node.("paged")
@@ -206,6 +212,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert live.() == 0
   end
 
+  @tag rust_session: true
   test "WOP-N04 limit failures and an expired browse deadline release the server continuation",
        %{session: session, node: node} do
     paged = node.("paged")
@@ -229,6 +236,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert {:error, %Error{code: :deadline_exceeded}} = Browse.next(session, expiring)
   end
 
+  @tag rust_session: true
   test "WOP-C03 an expired or abandoned Call reaches the server's Cancel service",
        %{session: session, node: node} do
     cancelled = fn -> count(session, node, "cancel_count") end
@@ -254,6 +262,46 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
              Wotex.OPCUA.send(session, slow(node, 1))
 
     assert cancelled.() == before + 2
+  end
+
+  for {number, fault} <- [
+        {39, "expired_leaf"},
+        {40, "wrong_host"},
+        {41, "wrong_application_uri"},
+        {42, "untrusted_ca"},
+        {43, "revoked_leaf"},
+        {44, "expired_crl"},
+        {45, "mismatched_private_key"},
+        {46, "none_downgrade"},
+        {47, "unsupported_user_token"}
+      ] do
+    id = "WOP-X-F#{number}"
+
+    @tag case: id, corpus_sha256: @corpus_sha256
+    test "#{id} #{fault} rejects the independent Rust peer before application traffic", context do
+      %{"input" => input, "expectation" => %{"value" => expected}} =
+        Map.fetch!(@cases, unquote(id))
+
+      assert input["fault"] == unquote(fault)
+      assert input["independent_peer"] == "async-opcua-rust-peer-1"
+      {options, peer} = fault_options(context, unquote(fault))
+      began = System.monotonic_time(:millisecond)
+
+      try do
+        assert {:error, %Error{code: code, effect: :none}} =
+                 Wotex.OPCUA.connect(Keyword.put(options, :timeout, 2000))
+
+        assert System.monotonic_time(:millisecond) - began < 3000
+        assert code in allowed_codes(unquote(fault))
+        assert expected["authenticated"] == false
+        assert expected["active_local_resources"] == 0
+        assert eventually(fn -> native_descendants() == [] end)
+      after
+        stop_peer(peer)
+      end
+
+      assert expected["application_requests"] == peer_result(peer)["application_requests"]
+    end
   end
 
   defp count(session, node, method) do
@@ -317,6 +365,132 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       certificate: Path.join(context.fixture, "user.der"),
       private_key: Path.join(context.fixture, "user.key.der")
     }
+  end
+
+  defp fault_options(context, fault) do
+    directory = context.fixture
+    anonymous = %{type: :anonymous}
+    {peer, endpoint} = variant(context, fault)
+    options = Keyword.put(context.options, :endpoint, endpoint)
+
+    options =
+      case fault do
+        "expired_leaf" ->
+          Keyword.put(options, :server_certificate, Path.join(directory, "expired.der"))
+
+        "wrong_host" ->
+          Keyword.put(options, :server_certificate, Path.join(directory, "wronghost.der"))
+
+        "wrong_application_uri" ->
+          Keyword.put(options, :server_uri, "urn:wotex:fixture:other")
+
+        "untrusted_ca" ->
+          Keyword.put(options, :trust_certificate, Path.join(directory, "other-ca.der"))
+
+        "revoked_leaf" ->
+          Keyword.put(options, :crl, Path.join(directory, "revoked.crl"))
+
+        "expired_crl" ->
+          Keyword.put(options, :crl, Path.join(directory, "expired.crl"))
+
+        "mismatched_private_key" ->
+          Keyword.put(options, :private_key, Path.join(directory, "other.key.der"))
+
+        "unsupported_user_token" ->
+          Keyword.put(options, :authentication, token(context, "username"))
+
+        "none_downgrade" ->
+          Keyword.put(options, :authentication, anonymous)
+      end
+
+    {options, peer}
+  end
+
+  defp variant(context, name) do
+    executable = System.fetch_env!("WOTEX_OPCUA_RUST_EXECUTABLE")
+    config = Path.join(context.fixture, "rust-config-#{name}.json")
+    result = Path.join(context.fixture, "rust-result-#{name}.json")
+    File.rm(config)
+    File.rm(result)
+
+    port =
+      Port.open({:spawn_executable, executable}, [
+        :binary,
+        :exit_status,
+        :stderr_to_stdout,
+        {:line, 4096},
+        {:args, [context.fixture, Integer.to_string(context.peer["children"]), name]}
+      ])
+
+    {:os_pid, pid} = Port.info(port, :os_pid)
+    owned = %{port: port, pid: pid, result: result}
+    on_exit(fn -> stop_peer(owned) end)
+    await_ready(port, System.monotonic_time(:millisecond) + 15_000)
+    peer = Jason.decode!(File.read!(config))
+    {owned, peer["endpoint"]}
+  end
+
+  defp stop_peer(%{port: port, pid: pid}) do
+    if Port.info(port), do: Port.close(port)
+
+    unless eventually(fn -> not os_alive?(pid) end) do
+      System.cmd("/bin/kill", ["-TERM", Integer.to_string(pid)],
+        stderr_to_stdout: true,
+        env: [{"LC_ALL", "C"}]
+      )
+    end
+
+    assert eventually(fn -> not os_alive?(pid) end)
+  end
+
+  defp peer_result(%{result: result}) do
+    assert eventually(fn -> File.regular?(result) end)
+    Jason.decode!(File.read!(result))
+  end
+
+  defp await_ready(port, deadline) do
+    receive do
+      {^port, {:data, {:eol, "rust peer ready"}}} -> :ok
+      {^port, {:data, _}} -> await_ready(port, deadline)
+      {^port, {:exit_status, status}} -> flunk("Rust variant peer exited: #{status}")
+    after
+      max(deadline - System.monotonic_time(:millisecond), 0) ->
+        flunk("Rust variant peer did not become ready")
+    end
+  end
+
+  defp allowed_codes("none_downgrade"),
+    do: [:certificate_invalid, :authentication_failed, :connection_failed, :deadline_exceeded]
+
+  defp allowed_codes(_),
+    do: [:certificate_invalid, :authentication_failed, :connection_failed]
+
+  defp native_descendants do
+    {output, 0} =
+      System.cmd("/bin/ps", ["-A", "-o", "pid=", "-o", "ppid=", "-o", "args="],
+        env: [{"LC_ALL", "C"}]
+      )
+
+    rows =
+      for line <- String.split(output, "\n", trim: true),
+          [pid, ppid | arguments] <- [String.split(String.trim(line), ~r/\s+/)],
+          do: {String.to_integer(pid), String.to_integer(ppid), List.first(arguments, "")}
+
+    rows
+    |> descendants([String.to_integer(System.pid())], [])
+    |> Enum.filter(&(Path.basename(&1) in ["wotex_opcua_native", "wotex_opcua_custody"]))
+  end
+
+  defp descendants(_, [], found), do: found
+
+  defp descendants(rows, [parent | rest], found) do
+    children = for {pid, ^parent, executable} <- rows, do: {pid, executable}
+
+    descendants(
+      rows,
+      rest ++ Enum.map(children, &elem(&1, 0)),
+      found ++ Enum.map(children, &elem(&1, 1))
+    )
   end
 
   defp native_processes(host) do

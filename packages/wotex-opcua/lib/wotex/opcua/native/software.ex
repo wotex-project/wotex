@@ -300,6 +300,7 @@ defmodule Wotex.OPCUA.Native.Software do
       {"WOTEX_REQUIRE_SOFTWARE", "1"},
       {"WOTEX_OPCUA_INTEROP_CONFIG", Path.join(peer_directory, "config.json")},
       {"WOTEX_OPCUA_RUST_CONFIG", Path.join(peer_directory, "rust-config.json")},
+      {"WOTEX_OPCUA_RUST_EXECUTABLE", artifact.("rust_peer")},
       {"WOTEX_OPCUA_NATIVE_EXECUTABLE", artifact.("native")},
       {"WOTEX_OPCUA_NATIVE_GUARDIAN", artifact.("guardian")},
       {"WOTEX_OPCUA_NATIVE_PROBE", artifact.("session_probe")},
