@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.6
+  version: 1.1.7
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -299,7 +299,11 @@ cleanup. It also executes X-F39..F47 against isolated variants for expired and
 wrong-host leaves, application URI, trust, CRL, key, Security None downgrade and
 unsupported-token faults. Each attempt fails with no Session, no live local
 helper and a peer-recorded zero application requests. Advanced subscription and
-remaining lifecycle cells are still required.
+remaining lifecycle cells are still required. Through the real Runtime
+ConsumedThing boundary the same independent peer also executes scalar Double
+read/write in the session and one-shot profiles and Property observation;
+explicit stop and Runtime-owner death each delete its subscription and
+MonitoredItem and reap the additional native helpers.
 Security fault tests use controlled certificates, clock inputs and a bounded
 byte proxy. Same-stack and independent lanes are both required; neither
 substitutes for the other. No physical server is required.

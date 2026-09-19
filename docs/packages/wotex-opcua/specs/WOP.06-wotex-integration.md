@@ -3,7 +3,7 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.10
+  version: 1.1.11
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -35,10 +35,15 @@ and `Runtime.Retry`; Runtime's cause keeps no native effect. `profile/0` and
 with `contentType` fails `unsupported_content_type` before I/O, and the session
 profile projects persistent Read and Write results. WOP-I-F01 runs through the
 real ConsumedThing with a scripted client, and both production profiles read,
-write and observe against the same-stack peer. An exact-archive consumer of
+write and observe against the same-stack peer. The independent async-opcua Rust
+peer now executes both production profiles for scalar Double Read/Write and a
+real ConsumedThing Property observation. Explicit stop and Runtime-owner death
+each delete the independent peer's subscription and MonitoredItem and reap the
+extra local helpers. An exact-archive consumer of
 `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
 the native secure workflow against the same-stack peer on both required
-runtimes (WOP.07 X-F48). The remaining I03/I05/I06 cells are not accepted.
+runtimes (WOP.07 X-F48). Typed independent value breadth, injected peer loss and
+the remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 

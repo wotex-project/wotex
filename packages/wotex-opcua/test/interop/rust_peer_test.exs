@@ -3,7 +3,8 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.OPCUA.{Address, Browse, Error, Open62541}
+  alias Wotex.OPCUA.{Address, Browse, Error, Open62541, TestNosecCredentials, Transport}
+  alias Wotex.Runtime.{ConsumedThing, Context, Result, Subscription}
   @moduletag :interop
 
   @corpus "priv/fixtures/native-contract-v1.json"
@@ -264,6 +265,95 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert cancelled.() == before + 2
   end
 
+  @tag rust_session: true
+  test "WOP-I02 WOP-V13 Runtime profiles execute against the independent Rust peer", context do
+    node = context.node.("value")
+    baseline = native_descendants()
+    read = %{type: :read, node_id: node}
+    {:ok, %{"value" => %{"value" => original}}} = Wotex.OPCUA.send(context.session, read)
+
+    on_exit(fn ->
+      Wotex.OPCUA.send(context.session, %{
+        type: :write,
+        node_id: node,
+        value: %{type: "Double", value: original}
+      })
+    end)
+
+    config =
+      context.options ++
+        [
+          target: context.peer["endpoint"],
+          subscription: %{publishing_interval_ms: 50, sampling_interval_ms: 0}
+        ]
+
+    {session, oneshot} = runtime_consumers(context.peer, node, config)
+    {:ok, runtime_context} = Context.new(request_id: "rust-runtime")
+
+    assert {:ok, %Result{payload: ^original, metadata: %{opcua_type: "Double", status: 0}}} =
+             ConsumedThing.read_property(session, "reading", runtime_context)
+
+    assert eventually(fn -> native_descendants() == baseline end)
+
+    assert {:ok, %Result{payload: nil, metadata: %{status: 0}}} =
+             ConsumedThing.write_property(session, "reading", 44.5, runtime_context)
+
+    assert {:ok, %Result{payload: 44.5}} =
+             ConsumedThing.read_property(oneshot, "reading", runtime_context)
+
+    assert {:ok, %Result{payload: "written"}} =
+             ConsumedThing.write_property(oneshot, "reading", 45.5, runtime_context)
+
+    assert eventually(fn -> native_descendants() == baseline end)
+
+    assert {:ok, spec} =
+             ConsumedThing.observation_child_spec(session, "reading", runtime_context,
+               id: :rust_runtime,
+               receiver: self(),
+               restart: :temporary
+             )
+
+    owner = start_supervised!(spec, id: :rust_runtime)
+
+    assert_receive {:wotex_runtime, :rust_runtime,
+                    {:ok, 45.5,
+                     %{
+                       opcua_type: "Double",
+                       status: 0,
+                       datetime_resolution_ns: 100,
+                       raw_datetime_ticks_available: true
+                     }}},
+                   5000
+
+    assert resources(context.session, context.node) == {1, 1}
+
+    assert {:ok, %{"status" => 0}} =
+             Wotex.OPCUA.send(context.session, %{
+               type: :write,
+               node_id: node,
+               value: %{type: "Double", value: 46.5}
+             })
+
+    assert_receive {:wotex_runtime, :rust_runtime, {:ok, 46.5, %{opcua_type: "Double"}}}, 5000
+    assert :ok = Subscription.stop(owner)
+    assert eventually(fn -> resources(context.session, context.node) == {0, 0} end)
+    assert eventually(fn -> native_descendants() == baseline end)
+
+    assert {:ok, killed_spec} =
+             ConsumedThing.observation_child_spec(session, "reading", runtime_context,
+               id: :rust_runtime_killed,
+               receiver: self(),
+               restart: :temporary
+             )
+
+    killed = start_supervised!(killed_spec, id: :rust_runtime_killed)
+    assert_receive {:wotex_runtime, :rust_runtime_killed, {:ok, 46.5, _}}, 5000
+    assert resources(context.session, context.node) == {1, 1}
+    Process.exit(killed, :kill)
+    assert eventually(fn -> resources(context.session, context.node) == {0, 0} end)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
   for {number, fault} <- [
         {39, "expired_leaf"},
         {40, "wrong_host"},
@@ -365,6 +455,55 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       certificate: Path.join(context.fixture, "user.der"),
       private_key: Path.join(context.fixture, "user.key.der")
     }
+  end
+
+  defp runtime_consumers(peer, node, config) do
+    href = peer["endpoint"] <> "?id=" <> URI.encode_www_form(node)
+
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "id" => "urn:example:opcua:rust-peer",
+        "title" => "Rust peer",
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "security" => ["nosec_sc"],
+        "properties" => %{
+          "reading" => %{
+            "type" => "number",
+            "observable" => true,
+            "forms" => [
+              %{
+                "href" => href,
+                "op" => [
+                  "readproperty",
+                  "writeproperty",
+                  "observeproperty",
+                  "unobserveproperty"
+                ],
+                "wotex:variantType" => "Double"
+              }
+            ]
+          }
+        }
+      })
+
+    {:ok, session_profile} = Wotex.OPCUA.profile(:session)
+
+    {:ok, session} =
+      ConsumedThing.new(td,
+        profiles: [session_profile],
+        transports: %{opcua_session: {Transport, config}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    {:ok, oneshot} =
+      ConsumedThing.new(td,
+        profiles: [Wotex.OPCUA.profile()],
+        transports: %{opcua: {Transport, Keyword.put(config, :lifecycle, :oneshot)}},
+        credentials: {TestNosecCredentials, nil}
+      )
+
+    {session, oneshot}
   end
 
   defp fault_options(context, fault) do
@@ -478,7 +617,10 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
 
     rows
     |> descendants([String.to_integer(System.pid())], [])
-    |> Enum.filter(&(Path.basename(&1) in ["wotex_opcua_native", "wotex_opcua_custody"]))
+    |> Enum.filter(fn {_, executable} ->
+      Path.basename(executable) in ["wotex_opcua_native", "wotex_opcua_custody"]
+    end)
+    |> Enum.map(&elem(&1, 0))
   end
 
   defp descendants(_, [], found), do: found
@@ -489,7 +631,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     descendants(
       rows,
       rest ++ Enum.map(children, &elem(&1, 0)),
-      found ++ Enum.map(children, &elem(&1, 1))
+      found ++ children
     )
   end
 

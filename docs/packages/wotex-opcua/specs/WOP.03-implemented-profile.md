@@ -3,7 +3,7 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.14
+  version: 2.0.15
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -192,8 +192,11 @@ One-shot failures are not translated: they return the same native Error code,
 effect and Runtime class as persistent mode (WOP.04 S02). The Python adapter's
 bridge-specific error codes were retired with that adapter.
 The same-stack Basic256Sha256 anonymous peer passes read, write/readback,
-Call, Browse and one-shot result projection. This is an explicitly selected
-partial native client, not a complete compatibility or Runtime projection.
+Call, Browse and one-shot result projection. The independent async-opcua Rust
+peer now also passes both Runtime profiles for Double read/write and a real
+ConsumedThing Property observation. Explicit stop and Runtime-owner death each
+return its subscription, MonitoredItem and extra local helper counts to zero.
+This remains a partial native client, not a complete compatibility or Runtime projection.
 The Runtime Transport now converts a Form-mapped ByteString's validated base64
 payload back to raw bytes only for the native client, before its typed Write.
 One same-stack secure-peer Form Write/readback/restore proves byte identity;

@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.44
+  version: 1.1.45
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -71,6 +71,10 @@ MonitoredItem counts after cancellation, live continuation counts and host and
 native processes alive after close are all zero. Each independent X-F39..F47
 attempt uses an isolated Rust peer variant, fails before Session activation,
 leaves no local native process and records zero application requests in the peer.
+The same independent peer also executes scalar Double read/write through both
+production Runtime profiles and Property observation through a real
+ConsumedThing child. Explicit stop and Runtime-owner death each return its
+subscription, MonitoredItem and additional native-process counts to zero.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split

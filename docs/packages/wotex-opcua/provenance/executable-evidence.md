@@ -90,13 +90,18 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
 - every X-F30..F38 combination executes Read, Write/readback, typed Call,
   Browse, subscribe/report/cancel and close. After cancellation the server
   reports zero subscriptions, MonitoredItems and continuations, and after close
-  the monitored BEAM host, guardian and native client processes are gone; and
+  the monitored BEAM host, guardian and native client processes are gone;
 - every X-F39..F47 rejection starts an isolated named Rust peer variant. The
   variants present the expired or wrong-host leaf, expose only Security None or
   omit the requested username token as required; the remaining client-side
   trust, URI, CRL and key faults use otherwise-normal secure endpoints. Each
   connect fails with no effect before a Session, all local native helpers exit,
-  and the peer persists an application service-request count of zero.
+  and the peer persists an application service-request count of zero; and
+- the session and one-shot Runtime profiles use a real ConsumedThing to read and
+  write the peer's Double variable. A real observation reports the current and
+  next wire values. Explicit stop and Runtime-owner death each return the peer's
+  subscription and MonitoredItem counts and the extra guardian/native process
+  set to their baselines (I02/I05 and V13).
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
@@ -111,16 +116,16 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-21 independent-wire cases passed 21/21: the original three
+22 independent-wire cases passed 22/22: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
-nine negative security/fault cells. The
+nine negative security/fault cells, plus the Runtime profile/observation case. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `875874cbbaa207e8e3328c7931a735eafc1ded166fda3244dfb17606a2f76b1f` |
+| `test/interop/rust_peer_test.exs` | `a3e97945fd7fef310947ccca53312e71b8d5bb92d04aab69af3f3dc744d9e177` |
 | `test/interop/rust_peer/src/main.rs` | `a3d50c79ea09b13bb02c17e226eb6ddd5904906e2a46389538efb955e65a97b4` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
