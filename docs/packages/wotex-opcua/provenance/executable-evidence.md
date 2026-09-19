@@ -21,6 +21,43 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## Python and native source audits, 2026-09-19
+
+The software run now has the two audit lanes WOP.07 requires. The build
+installs `test/interop/audit-requirements.lock`, which pins pip-audit 2.10.1
+and its 26 dependencies with every PyPI-published SHA-256 of each release (355
+hashes), into its own virtual environment with `--require-hashes --no-deps`,
+and records that lock's digest and the installed distributions beside the peer
+lock. The `pip_audit` lane runs `python -m pip_audit --require-hashes
+--disable-pip` over `test/interop/requirements.lock`, so it installs and
+resolves nothing and fails on any known vulnerability. The `native_audit` lane
+requires the checkout's `priv/fixtures/native-sources-v1.json` to be the
+manifest compiled into the build, sends one OSV batch query
+(`https://api.osv.dev/v1/querybatch`, through `curl`) with the pinned
+open62541 1.5.7, OpenSSL 3.5.8 and yyjson 0.12.0 commits, and writes
+`native-audit.json` with the sources, the SDK patch digests and the advisory
+identifiers for each commit. A transport error, a malformed answer or any
+advisory fails the lane. OSV matches only advisories that record git ranges:
+queried the same way, OpenSSL 3.0.0 returns 70 advisories, OpenSSL 3.5.0 48 and
+open62541 1.4.0 7, while all three pinned commits return none.
+
+`software_test.exs` covers a clean run with both lanes, a vulnerable OSV answer
+and a failing pip-audit together, three malformed answers, a source manifest
+that differs from the built pins and a changed audit lock that makes the build
+stale. A fresh build and run on macOS arm64 passed all seven lanes; ExUnit with
+interop and software: 439 passed (10 doctests, 4 properties, 425 tests), 1 excluded.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/software.ex` | `c08e1dc3b5b12105645a96a376015fd10a8e449ffe89955d9c4b2c202f3b57e8` |
+| `test/wotex/opcua/native/software_test.exs` | `b242a679a11500bd814a6949aa34735469fde84a96b139d085e4ab3ceeea94bd` |
+| `test/interop/audit-requirements.lock` | `bbeacfc0b42b31fd47816d991061d029fa2c41f0cde9515c5c20e215e9055ff1` |
+| `test/interop/audit-requirements.txt` | `11f0b5130d268f9cce6e8364d139044aeb0beeb55b3ba9da79f021e72e720e02` |
+| `priv/fixtures/native-sources-v1.json` | `01d214e07b75fe98c61d158772000974a2fe9ef10036fc69ec3aa9543fb88fc3` |
+| `software-build.json` | `747894a31f38d75f81e115cf4d4346710b5d5e43151c5ea53ef0afbd40027158` |
+| `software-run.json` | `21cdaeb329d998057808a0bcae3e1002deb2a3befe973d11800effa8e22485ba` |
+| `native-audit.json` | `c5df548b56b0bb7f18fc7469f63b52b4475bda7fde45f9092f142d97f9c6399e` |
+
 ## Typed arrays through Runtime, 2026-09-19
 
 `Wotex.OPCUA.Value.native_result/1`, which projects persistent native Reads and
@@ -2252,8 +2289,8 @@ The first-party Python adapter and its interop test have since been removed.
 The independent peer remains in `test/interop/secure_peer.py`, with its pinned
 test-only dependencies in `test/interop/requirements.txt`. The fixture generates
 disposable credentials outside the repository. The Elixir gate does not install
-Python dependencies; audit the optional peer environment separately with
-`pip-audit --disable-pip --no-deps -r test/interop/requirements.txt`.
+Python dependencies; the software run audits the peer lock with `pip-audit`
+from its own hash-pinned environment.
 
 Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.

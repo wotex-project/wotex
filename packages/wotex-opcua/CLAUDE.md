@@ -135,10 +135,11 @@ mix pkg wotex-opcua wotex.software.run --workspace /absolute/disposable/dir
 
 The native build needs network access, `cc`, CMake 3.20+ with `ctest`, `make`,
 Perl, `python3`, `ar`, `ranlib`, `ld` and curl 8.4.0+ on Linux x86_64/aarch64
-or macOS arm64. The software build adds a hash-pinned asyncua virtual
-environment (`python3 -m venv`, PyPI access) and an ASan/UBSan tree; the run
-starts the peer and runs the `interop`/`software` suites, native and sanitizer
-CTest and the dependency audits. Apply the shared
+or macOS arm64. The software build adds hash-pinned asyncua and pip-audit
+virtual environments (`python3 -m venv`, PyPI access) and an ASan/UBSan tree;
+the run starts the peer and runs the `interop`/`software` suites, native and
+sanitizer CTest, the Mix and Hex audits, `pip-audit` over the peer lock and the
+native source audit, which queries the OSV database with `curl`. Apply the shared
 `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility
 claims.

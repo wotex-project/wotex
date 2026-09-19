@@ -3,9 +3,9 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.36
+  version: 1.1.37
   owner: wotex-opcua
-  updated: 2026-09-18
+  updated: 2026-09-19
 ---
 
 # WOP.07 Native OPC UA executable and software acceptance
@@ -680,13 +680,22 @@ audit is a recorded lane whose failure fails the run.
 package aliases above) for a source checkout. Build runs the native workspace
 build and its CTest step, builds a Debug ASan/UBSan tree from that workspace's
 prefixes, and installs `test/interop/requirements.lock` into a peer virtual
-environment with `--require-hashes --no-deps`. It records the lock digest, the
-installed distributions and five executable digests. Run re-verifies that
-manifest. It starts the peer with a finite readiness deadline and runs the
-ExUnit lane with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, and the
-Mix dependency and Hex audits. It stops the peer and records each lane's status
+environment and `test/interop/audit-requirements.lock` (pip-audit and its
+dependencies) into a separate audit environment, each with `--require-hashes
+--no-deps`. It records both lock digests, the installed distributions and five
+executable digests. Run re-verifies that manifest. It starts the peer with a
+finite readiness deadline and runs the ExUnit lane with
+`WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, the Mix dependency and
+Hex audits, `pip-audit --require-hashes --disable-pip` over the peer lock, and
+the native source audit. The native source audit requires the checkout's
+`priv/fixtures/native-sources-v1.json` to be the manifest compiled into the
+build, asks the OSV database for advisories whose affected git ranges contain
+the pinned open62541, OpenSSL and vendored yyjson commits, and records those
+sources, the SDK patch digests and every advisory identifier in
+`native-audit.json`; any advisory fails its lane. OSV matches only advisories
+that record git ranges. The run stops the peer and records each lane's status
 and log digest; any failed lane fails the task. These tasks omit the second
-independent peer and the `pip-audit` and native source audits required above.
+independent peer required above.
 
 The driver owns disposable ports, processes, keys and state; readiness has a
 finite deadline and every exit closes only manifest-owned resources. Evidence
