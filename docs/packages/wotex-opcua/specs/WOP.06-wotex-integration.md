@@ -3,7 +3,7 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.12
+  version: 1.1.13
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -39,14 +39,17 @@ write and observe against the same-stack peer. The independent async-opcua Rust
 peer now executes both production profiles for scalar Double Read/Write and a
 real ConsumedThing Property observation. Explicit stop and Runtime-owner death
 each delete the independent peer's subscription and MonitoredItem and reap the
-extra local helpers. An exact-archive consumer of
+extra local helpers. Terminating an isolated peer beneath the observation emits
+one classified unavailable Runtime error and one `transport_down`, stops the
+supervised owner, reaps the relay's native helpers and performs no reconnect.
+Only an explicitly new Runtime child observes a replacement peer. An exact-archive consumer of
 `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
 the native secure workflow against the same-stack peer on both required
 runtimes (WOP.07 X-F48). The independent peer also roundtrips Int32 and Double
 arrays and a 2 × 3 Int16 matrix through a real ConsumedThing, preserving type,
 dimensions, extreme integers and negative zero before restoring every node.
-Broader independent value breadth, injected peer loss and
-the remaining I03/I05/I06 cells are not accepted.
+Broader independent value breadth and the remaining I03/I05/I06 cells are not
+accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 

@@ -102,7 +102,13 @@ withheld-notification and Republish-request counts.
   write the peer's Double variable. A real observation reports the current and
   next wire values. Explicit stop and Runtime-owner death each return the peer's
   subscription and MonitoredItem counts and the extra guardian/native process
-  set to their baselines (I02/I05 and V13); and
+  set to their baselines. A separate isolated peer then terminates beneath a
+  real Runtime observation. The receiver gets one `undecodable_frame` whose
+  retained cause is the unavailable `connection_failed`, followed by one
+  `transport_down`; the supervised owner and relay helpers exit without
+  reconnect or replay. A new peer serves an observation only after an explicit
+  fresh Runtime child is started, and its resources return to zero on stop
+  (I02/I05 and V13); and
 - a real ConsumedThing reads, writes, reads back and restores the peer's Int32
   and Double arrays and its 2 × 3 Int16 matrix. Runtime preserves the matrix's
   flat value order and dimensions, extreme Int32 values and negative zero, and
@@ -144,17 +150,17 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-30 independent-wire cases passed 30/30: the original three
+31 independent-wire cases passed 31/31: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
 nine negative security/fault cells, plus the Runtime profile/observation and
-typed-array cases and seven independent subscription/lifecycle cases. The
+typed-array cases and eight independent subscription/lifecycle cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `282689c88a7ea7c3519d33ef763b5e0f8154cdd0e7530e075f2420fe0c9d6591` |
+| `test/interop/rust_peer_test.exs` | `5c9ddb491652631c83b01c6f4ecb04573193d16cb9eab268680f425a4ae2d9fe` |
 | `test/interop/rust_peer/src/main.rs` | `674bd70aeede2b0b4d6b3c9f34060d52e449cc8b4a7ccea496af41e78f534ae0` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |

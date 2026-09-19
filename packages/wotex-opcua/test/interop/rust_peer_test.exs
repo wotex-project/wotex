@@ -515,6 +515,110 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert eventually(fn -> native_descendants() == baseline end)
   end
 
+  test "WOP-I05 WOP-V13 Runtime observation ends once when the independent peer is lost",
+       context do
+    baseline = native_descendants()
+    {peer, endpoint} = variant(context, "server_loss")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, observer} = Wotex.OPCUA.connect(options)
+    node = node_resolver(observer, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = observer
+    host_monitor = Process.monitor(host)
+
+    config =
+      options ++
+        [
+          target: endpoint,
+          subscription: %{publishing_interval_ms: 50, sampling_interval_ms: 0}
+        ]
+
+    runtime_peer = Map.put(context.peer, "endpoint", endpoint)
+    {consumed, _} = runtime_consumers(runtime_peer, node.("value"), config)
+    {:ok, runtime_context} = Context.new(request_id: "rust-runtime-loss")
+
+    assert {:ok, spec} =
+             ConsumedThing.observation_child_spec(consumed, "reading", runtime_context,
+               id: :rust_runtime_loss,
+               receiver: self(),
+               max_queue_length: 1000,
+               overflow: :stop,
+               restart: :temporary
+             )
+
+    owner = start_supervised!(spec, id: :rust_runtime_loss)
+    owner_monitor = Process.monitor(owner)
+
+    assert_receive {:wotex_runtime, :rust_runtime_loss, {:ok, _, %{opcua_type: "Double"}}},
+                   5000
+
+    assert resources(observer, node) == {1, 1}
+    stop_peer(peer)
+
+    assert_receive {:wotex_runtime, :rust_runtime_loss,
+                    {:error,
+                     %Wotex.Runtime.Error{
+                       code: :undecodable_frame,
+                       phase: :subscription,
+                       class: :unavailable,
+                       details: %{
+                         cause: %{
+                           module: Wotex.OPCUA.Error,
+                           code: :connection_failed,
+                           class: :unavailable
+                         }
+                       }
+                     }}},
+                   10_000
+
+    assert_receive {:wotex_runtime, :rust_runtime_loss, {:status, :transport_down}}, 1000
+    assert_receive {:DOWN, ^owner_monitor, :process, ^owner, {:shutdown, :transport_down}}, 1000
+    assert_receive {:DOWN, ^host_monitor, :process, ^host, _}, 5000
+    refute_receive {:wotex_runtime, :rust_runtime_loss, _}, 300
+    assert eventually(fn -> native_descendants() == baseline end)
+
+    {restarted, restarted_endpoint} = variant(context, "server_loss")
+    restarted_options = Keyword.put(context.options, :endpoint, restarted_endpoint)
+    assert {:ok, restarted_observer} = Wotex.OPCUA.connect(restarted_options)
+    restarted_node = node_resolver(restarted_observer, context.peer["namespace_uri"])
+
+    restarted_config =
+      restarted_options ++
+        [
+          target: restarted_endpoint,
+          subscription: %{publishing_interval_ms: 50, sampling_interval_ms: 0}
+        ]
+
+    restarted_peer = Map.put(context.peer, "endpoint", restarted_endpoint)
+
+    {restarted_consumed, _} =
+      runtime_consumers(restarted_peer, restarted_node.("value"), restarted_config)
+
+    assert {:ok, restarted_spec} =
+             ConsumedThing.observation_child_spec(
+               restarted_consumed,
+               "reading",
+               runtime_context,
+               id: :rust_runtime_loss_restarted,
+               receiver: self(),
+               max_queue_length: 1000,
+               overflow: :stop,
+               restart: :temporary
+             )
+
+    restarted_owner = start_supervised!(restarted_spec, id: :rust_runtime_loss_restarted)
+
+    assert_receive {:wotex_runtime, :rust_runtime_loss_restarted,
+                    {:ok, _, %{opcua_type: "Double"}}},
+                   5000
+
+    assert resources(restarted_observer, restarted_node) == {1, 1}
+    assert :ok = Subscription.stop(restarted_owner)
+    assert eventually(fn -> resources(restarted_observer, restarted_node) == {0, 0} end)
+    assert :ok = Wotex.OPCUA.disconnect(restarted_observer)
+    stop_peer(restarted)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
   @tag rust_session: true
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
        %{session: session, peer: peer, node: node} do

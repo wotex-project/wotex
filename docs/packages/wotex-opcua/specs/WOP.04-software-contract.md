@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.12
+  version: 1.1.13
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -321,7 +321,11 @@ cells are still required. Through the real Runtime
 ConsumedThing boundary the same independent peer also executes scalar Double
 read/write in the session and one-shot profiles and Property observation;
 explicit stop and Runtime-owner death each delete its subscription and
-MonitoredItem and reap the additional native helpers.
+MonitoredItem and reap the additional native helpers. Terminating an isolated
+peer beneath that observation projects `connection_failed` as one unavailable
+Runtime error and one `transport_down`, stops the supervised owner, reaps the
+relay's native helpers and never reconnects. A replacement peer receives an
+observation only from an explicitly new Runtime child.
 Security fault tests use controlled certificates, clock inputs and a bounded
 byte proxy. Same-stack and independent lanes are both required; neither
 substitutes for the other. No physical server is required.

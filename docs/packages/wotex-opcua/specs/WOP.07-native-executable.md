@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.50
+  version: 1.1.51
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -91,6 +91,10 @@ The same independent peer also executes scalar Double read/write through both
 production Runtime profiles and Property observation through a real
 ConsumedThing child. Explicit stop and Runtime-owner death each return its
 subscription, MonitoredItem and additional native-process counts to zero.
+Terminating an isolated peer beneath that child emits one classified Runtime
+error and one `transport_down`, stops the observation owner and reaps every
+relay helper without reconnect or replay. An explicitly fresh child observes a
+newly started peer and cleans up its subscription normally.
 It also exposes writable Int32 and Double arrays and a writable 2 × 3 Int16
 matrix. Public Runtime read/write/readback preserves their type, flat values,
 dimensions, extreme integers and negative zero, restores the original values

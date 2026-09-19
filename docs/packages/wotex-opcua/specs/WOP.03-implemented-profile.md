@@ -3,7 +3,7 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.20
+  version: 2.0.21
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -211,6 +211,10 @@ Call, Browse and one-shot result projection. The independent async-opcua Rust
 peer now also passes both Runtime profiles for Double read/write and a real
 ConsumedThing Property observation. Explicit stop and Runtime-owner death each
 return its subscription, MonitoredItem and extra local helper counts to zero.
+Terminating an isolated peer beneath that observation produces one classified
+Runtime error and one `transport_down`, stops the supervised observation owner,
+reaps its native helpers and does not reconnect. A new peer is observed only
+through an explicitly new child.
 This remains a partial native client, not a complete compatibility or Runtime projection.
 The Runtime Transport now converts a Form-mapped ByteString's validated base64
 payload back to raw bytes only for the native client, before its typed Write.
