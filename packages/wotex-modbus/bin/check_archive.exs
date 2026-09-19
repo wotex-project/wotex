@@ -523,7 +523,9 @@ defmodule Wotex.Modbus.Check.Archive do
   defp decode_metadata(value) when is_binary(value), do: value
   defp decode_metadata(values) when is_list(values), do: Enum.map(values, &decode_metadata/1)
 
+  # `mix run` prunes the code path to the project's applications.
   defp write_private_key!(path) do
+    Mix.ensure_application!(:public_key)
     private_key = :public_key.generate_key({:rsa, 2048, 65_537})
     entry = :public_key.pem_entry_encode(:RSAPrivateKey, private_key)
     File.write!(path, :public_key.pem_encode([entry]))
