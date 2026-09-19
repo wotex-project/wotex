@@ -132,7 +132,7 @@ POLICIES = [ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt,
 async def main(directory, variant):
     if variant == "default":
         fixtures(directory)
-    elif variant not in ("expired_leaf", "wrong_host", "none_only", "anonymous_only"):
+    elif variant not in ("expired_leaf", "wrong_host", "none_only", "anonymous_only", "encrypted_tokens"):
         raise SystemExit("unknown variant")
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
@@ -299,6 +299,25 @@ async def main(directory, variant):
     resources_method = await server.nodes.objects.add_method(ua.NodeId("resources", namespace),
                                                              "Resources", resources, [],
                                                              [ua.VariantType.UInt32, ua.VariantType.UInt32])
+
+    # Records the EncryptionAlgorithm of every UserName token the server
+    # decrypts; asyncua itself accepts any algorithm it can decrypt.
+    token_algorithms = []
+    decrypt_user_token = server.iserver.decrypt_user_token
+
+    def record_user_token(isession, token):
+        token_algorithms.append(token.EncryptionAlgorithm or "")
+        return decrypt_user_token(isession, token)
+
+    server.iserver.decrypt_user_token = record_user_token
+
+    @uamethod
+    def token_algorithm(parent):
+        return ua.Variant(token_algorithms[-1] if token_algorithms else "", ua.VariantType.String)
+
+    token_method = await server.nodes.objects.add_method(ua.NodeId("token_algorithm", namespace),
+                                                         "TokenAlgorithm", token_algorithm, [],
+                                                         [ua.VariantType.String])
     config = {"executable": sys.executable, "endpoint": endpoint, "certificate": str(directory / "client.der"),
               "private_key": str(directory / "client.pem"), "client_uri": "urn:wotex:fixture:client",
               "server_uri": "urn:wotex:fixture:server", "server_certificate": str(directory / "server.der"),
@@ -318,6 +337,7 @@ async def main(directory, variant):
               "acks_method_id": acks_method.nodeid.to_string(),
               "variants_node_id": variants.nodeid.to_string(),
               "slow_method_id": slow_method.nodeid.to_string(),
+              "token_method_id": token_method.nodeid.to_string(),
               "username": USERNAME, "password": PASSWORD, "variant": variant}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}
@@ -329,6 +349,14 @@ async def main(directory, variant):
                    "trust_certificate": envelope("ca.der"), "crl": envelope("clean.crl"),
                    "authentication": {"type": "anonymous"}, "session_timeout_ms": 60000}
     async with server:
+        if variant == "encrypted_tokens":
+            # asyncua advertises the UserName token policy as None on
+            # SignAndEncrypt endpoints; this variant names each endpoint's own
+            # policy, so a client must encrypt the password as that policy requires.
+            for description in server.iserver.endpoints:
+                for policy in description.UserIdentityTokens:
+                    if policy.TokenType == ua.UserTokenType.UserName:
+                        policy.SecurityPolicyUri = description.SecurityPolicyUri
         if variant == "default":
             (directory / "config.json").write_text(json.dumps(config))
             (directory / "native-open.json").write_text(json.dumps(native_open) + "\n")

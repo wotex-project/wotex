@@ -237,6 +237,47 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
     end
   end
 
+  test "WOP-S03 user tokens follow the token policy's encryption algorithm", context do
+    username = token(context, "username")
+
+    algorithm = fn session, peer ->
+      assert {:ok, %{"status" => 0, "outputs" => [%{"value" => value}]}} =
+               Wotex.OPCUA.send(session, %{
+                 type: :call,
+                 node_id: peer["token_method_id"],
+                 value: %{object_id: peer["object_id"], arguments: []}
+               })
+
+      value
+    end
+
+    # The default peer names SecurityPolicy None for UserName tokens, so the
+    # password travels unencrypted inside the SignAndEncrypt channel only.
+    assert {:ok, session} = Wotex.OPCUA.connect(options(context, :basic256sha256, username))
+    assert algorithm.(session, context.peer) == ""
+    assert :ok = Wotex.OPCUA.disconnect(session)
+
+    {_, port} = variant(context, "encrypted_tokens", [])
+
+    variant_peer =
+      Jason.decode!(File.read!(Path.join(context.directory, "config-encrypted_tokens.json")))
+
+    try do
+      for {policy, expected} <- [
+            {:basic256sha256, "http://www.w3.org/2001/04/xmlenc#rsa-oaep"},
+            {:aes128_sha256_rsaoaep, "http://www.w3.org/2001/04/xmlenc#rsa-oaep"},
+            {:aes256_sha256_rsapss, "http://opcfoundation.org/UA/security/rsa-oaep-sha2-256"}
+          ] do
+        options = options(context, policy, username, endpoint: variant_peer["endpoint"])
+        assert {:ok, session} = Wotex.OPCUA.connect(options)
+        assert algorithm.(session, variant_peer) == expected
+        assert :ok = Wotex.OPCUA.disconnect(session)
+      end
+    after
+      stop_peer(port)
+    end
+  end
+
   defp resources(session, peer) do
     assert {:ok, %{"status" => 0, "outputs" => [%{"value" => subscriptions}, %{"value" => items}]}} =
              Wotex.OPCUA.send(session, %{

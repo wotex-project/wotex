@@ -21,6 +21,30 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## User token encryption algorithms, 2026-09-19
+
+The asyncua peer now records the `EncryptionAlgorithm` of every UserName token
+it decrypts and returns the latest through a `TokenAlgorithm` method; asyncua
+itself accepts any algorithm it can decrypt. Its default endpoints advertise
+SecurityPolicy None for the UserName token policy on SignAndEncrypt channels,
+and a Basic256Sha256 username Session there carries no token encryption: the
+password is protected by the channel alone. The new `encrypted_tokens` peer
+variant names each endpoint's own policy for UserName tokens. Through it the
+native client, with the SDK constructing the token, encrypts the password with
+`http://www.w3.org/2001/04/xmlenc#rsa-oaep` under Basic256Sha256 and
+Aes128_Sha256_RsaOaep and with
+`http://opcfoundation.org/UA/security/rsa-oaep-sha2-256` under
+Aes256_Sha256_RsaPss, as OPC 10000-7 assigns to those policies.
+`security_fault_test.exs` asserts all four cases. The software run on the
+workspace of the preceding section passed every lane, ExUnit with interop and
+software 440 passed (10 doctests, 4 properties, 426 tests), 1 excluded.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/security_fault_test.exs` | `ce30345e3176ec08bfc6d45638a87e25192496ee8c3b413da0216d31e292e6b6` |
+| `test/interop/secure_peer.py` | `6b8d2b82f8c85a09267d092c3b07e6887bdb465c50b647647bc3116a4ab606d3` |
+| `software-run.json` | `1e36e76cb4bc80feb3e2e162118d4d0bf5fd4c309201221c3eb84592bb4839fb` |
+
 ## Exact-archive consumer X-F48, 2026-09-19
 
 `mix wotex.software.run` now takes `--core-archive` and `--runtime-archive`
