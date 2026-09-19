@@ -52,6 +52,7 @@ def fixtures(directory):
           .serial_number(x509.random_serial_number()).not_valid_before(now-timedelta(days=1))
           .not_valid_after(now+timedelta(days=2)).add_extension(x509.BasicConstraints(ca=True, path_length=0), True)
           .add_extension(x509.KeyUsage(True, False, False, False, False, True, True, False, False), True)
+          .add_extension(x509.SubjectKeyIdentifier.from_public_key(ca_key.public_key()), False)
           .sign(ca_key, hashes.SHA256()))
     (directory / "ca.der").write_bytes(ca.public_bytes(serialization.Encoding.DER))
     issued = {}
@@ -67,7 +68,10 @@ def fixtures(directory):
                 .add_extension(x509.BasicConstraints(ca=False, path_length=None), True)
                 .add_extension(x509.KeyUsage(True, True, True, True, False, False, False, False, False), True)
                 .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH if role in ("client", "user", "stranger") else ExtendedKeyUsageOID.SERVER_AUTH]), False)
-                .add_extension(x509.SubjectAlternativeName(sans), False).sign(ca_key, hashes.SHA256()))
+                .add_extension(x509.SubjectAlternativeName(sans), False)
+                .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), False)
+                .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), False)
+                .sign(ca_key, hashes.SHA256()))
         (directory / (role+".der")).write_bytes(cert.public_bytes(serialization.Encoding.DER))
         key_path = directory / (role+".pem")
         key_path.write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
@@ -76,12 +80,16 @@ def fixtures(directory):
         der_key_path.write_bytes(key.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
         der_key_path.chmod(0o600)
         issued[role] = cert
-    crl_builder = x509.CertificateRevocationListBuilder().issuer_name(name).last_update(now-timedelta(hours=1)).next_update(now+timedelta(days=1))
+    # Key identifiers let issuer lookups that require them, such as the
+    # UA-.NETStandard peer's, match the CA by more than its name.
+    authority = x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key())
+    crl_builder = (x509.CertificateRevocationListBuilder().issuer_name(name).last_update(now-timedelta(hours=1))
+                   .next_update(now+timedelta(days=1)).add_extension(authority, False))
     (directory / "clean.crl").write_bytes(crl_builder.sign(ca_key, hashes.SHA256()).public_bytes(serialization.Encoding.DER))
     revoked = x509.RevokedCertificateBuilder().serial_number(issued["server"].serial_number).revocation_date(now-timedelta(minutes=1)).build()
     (directory / "revoked.crl").write_bytes(crl_builder.add_revoked_certificate(revoked).sign(ca_key, hashes.SHA256()).public_bytes(serialization.Encoding.DER))
     stale = (x509.CertificateRevocationListBuilder().issuer_name(name).last_update(now-timedelta(days=2))
-             .next_update(now-timedelta(days=1)))
+             .next_update(now-timedelta(days=1)).add_extension(authority, False))
     (directory / "expired.crl").write_bytes(stale.sign(ca_key, hashes.SHA256()).public_bytes(serialization.Encoding.DER))
     other_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     other_path = directory / "other.key.der"
@@ -93,6 +101,7 @@ def fixtures(directory):
                 .not_valid_before(now-timedelta(days=1)).not_valid_after(now+timedelta(days=2))
                 .add_extension(x509.BasicConstraints(ca=True, path_length=0), True)
                 .add_extension(x509.KeyUsage(True, False, False, False, False, True, True, False, False), True)
+                .add_extension(x509.SubjectKeyIdentifier.from_public_key(other_key.public_key()), False)
                 .sign(other_key, hashes.SHA256()))
     (directory / "other-ca.der").write_bytes(other_ca.public_bytes(serialization.Encoding.DER))
 
