@@ -21,6 +21,96 @@ The pinned Decimal parser regression remains active; there are no advisory
 waivers. See the [security policy](../security.md) and the dependency-security
 test.
 
+## Second independent peer on UA-.NETStandard, 2026-09-19
+
+`test/interop/dotnet_peer` is the second independent peer of WOP.04: a server
+on the OPC Foundation UA-.NETStandard stack,
+`OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.378.176 on .NET 10.
+`mix wotex.software.build` restores it with `dotnet restore --locked-mode`
+against `packages.lock.json` and builds it in containers of
+`mcr.microsoft.com/dotnet/sdk@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d`
+(SDK 10.0.401). The run starts it after the asyncua peer, in a container of
+the same image on the host network. It reuses the asyncua peer's CA, CRL and
+server certificate on a Basic256Sha256 SignAndEncrypt endpoint and serves a
+folder of 40 UInt32 variables. Two methods report the server's own state: the
+browse continuation points held by all of its Sessions, and the number of
+requests its Cancel service found. `test/interop/dotnet_peer_test.exs` asserts
+through the public API that:
+
+- the continuation-point count is 1 after the first page, stays 1 after
+  BrowseNext and is 0 after `Browse.release/2`, and a released or consumed
+  handle is rejected. Two concurrent chains count 2; releasing one leaves 1,
+  and advancing and releasing the other leaves 0. `Browse.all/3` with page size
+  7 and child-list Browse return the 40 children in server order and leave 0
+  (N03/N04);
+- the `max_references` and `max_pages` failures (`response_limit`, no effect)
+  leave 0, and an unconsumed continuation with a 200 ms browse deadline returns
+  to 0 without a caller action, after which `next/2` fails `deadline_exceeded`
+  (N04);
+- a Call to a 1500 ms method with a 300 ms Session timeout fails
+  `deadline_exceeded` with unknown effect and raises the server's Cancel count
+  by one, and a caller killed 200 ms into the same Call raises it by one more.
+  After both late responses the Session completes another Call and the count is
+  unchanged (C03 and the protocol Cancel of WOP.07).
+
+The UA-.NETStandard validator rejects the fixture chain unless the
+certificates carry Subject and Authority Key Identifiers
+(`BadCertificateChainIncomplete`); the asyncua fixtures now carry both, and the
+CRLs an Authority Key Identifier (`06566d34`). The .NET peer does not append
+its chain to the endpoint certificate, because the client pins the server leaf.
+
+Mutants, each applied to the working tree, run against the built peer and
+reverted:
+
+| Mutant | Case that fails |
+| --- | --- |
+| `Browse.release/2` answers `:ok` without I/O | N03/N04: count 1 after release |
+| The host drops an expired continuation without releasing it | N04: the count never returns to 0 |
+| The host sends no `cancel` control for a retired request | C03: the abandoned Call adds no Cancel |
+| The native Session sends no protocol Cancel | C03: the timed-out Call adds no Cancel |
+
+The native mutant was built from a copy of `priv/native` against the
+workspace's SDK and OpenSSL prefixes; the unmutated copy built the same way
+passes all three cases.
+
+A fresh macOS arm64 build and run, Elixir 1.20.2 / OTP 29, of a working tree
+whose three packages equal commit `14f30c38` passed all eight lanes: ExUnit
+with interop and software 444 passed (10 doctests, 4 properties, 430 tests),
+1 excluded; 207/207 native and ASan/UBSan CTest; the Mix, Hex, pip and native
+source audits; and the archive consumer. From commit `14f30c38`, the Linux
+arm64 lanes of `test/software/Dockerfile.linux`, which now adds the Docker
+29.4.0 CLI pinned by digest, ran with the engine socket mounted, on the host
+network and with the workspace at the same absolute path on the engine host.
+Both passed all eight lanes:
+
+| Lane | Elixir 1.20.2 / OTP 29 | Elixir 1.18.4 / OTP 27 |
+| --- | --- | --- |
+| ExUnit, interop and software | 444 passed (10 doctests, 4 properties, 430 tests), 1 excluded | 431 tests, 10 doctests, 4 properties, 0 failures, 1 excluded |
+| native CTest | 207/207 | 207/207 |
+| ASan/UBSan/LSan CTest | 216/216 | 216/216 |
+| Mix, Hex, pip and native source audits | clean | clean |
+| archive consumer (X-F48) | passed | passed |
+
+All three builds produced the same peer assembly. Linux x86_64 did not run.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/dotnet_peer_test.exs` | `ebcdcbadf35342afdb31b3fa88b0603d1b0e94ea6c181d3a92f3b145b52630d6` |
+| `test/interop/dotnet_peer/Program.cs` | `563ff8f10a9f55a83374b1b7fa0a94309da37af0dd525780ea8d60e2e4f9e9ee` |
+| `test/interop/dotnet_peer/DotnetPeer.csproj` | `21bfe1bdb31b67d8f804a382fbb41cf4f588f496f6190440ccd9c0f6431aff97` |
+| `test/interop/dotnet_peer/nuget.config` | `f545a7e2ea14ac53cdfb91217cae67b8ff14275313f6298f9a3331d205b6c948` |
+| `test/interop/dotnet_peer/packages.lock.json` | `f15fd8dae5e02d210d5afcb962f2553967b7bc1a9a2231548ba7a6165faca002` |
+| `test/interop/secure_peer.py` | `1c68d0a83d991d150e483b3dba86ba4dbbdf37cd212a56e4f596183a0b8bd6d3` |
+| `test/software/Dockerfile.linux` | `3a472f9dc85e17f129183f0adc4520867dc41f07061aa3726f6fa2efb35d521d` |
+| peer `DotnetPeer.dll` (all three builds) | `df347d256e47f2f98c2e7983b94cbbfe228c25c1b05aa31dd7d7014b36c86634` |
+| current lane image | `sha256:96a5c8d49b3d441ce9c29d4066c9135ec78673e692e5bf1874c61c20f7a13b58` |
+| minimum lane image | `sha256:7243a067c7e7597720442965661ba35883b39588589bb20cd5ad167dcba68841` |
+| macOS `software-build.json` | `55292f6ecd55de7b1cf3e5822f19c46677e205664c5d17ff5e2521463fb748ae` |
+| macOS `software-run.json` | `5e0b3f73f5b1604e94a2afa9ae5269836d1a3d55c64f645e3011555cacfbc60f` |
+| current lane `software-run.json` | `5b4f90441a2331247f311556d0f029332f8516df9fdf925f50031cfc29a73654` |
+| minimum lane `software-run.json` | `be902980db95648f67c49120ef90f6669acdc2c214b1f80c85ffa88f10da67ed` |
+| Linux `archive-consumer.json` (both lanes) | `9cc15d59957d045de64aa3b0b578dc6cc06bdad24befd5899d19c1aef54bac4b` |
+
 ## Software lanes on Linux for both runtimes, 2026-09-19
 
 `test/software/Dockerfile.linux` now records the Linux environment of the
