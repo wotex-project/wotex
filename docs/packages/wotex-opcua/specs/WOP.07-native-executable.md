@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.47
+  version: 1.1.48
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -76,7 +76,10 @@ initial and two fresh Values exactly once with sequence, client-handle,
 timestamp-resolution and overflow metadata. Double cancellation is idempotent;
 receiver death deletes only its subscription; and receiver-queue overflow emits
 one terminal error. Peer subscription and MonitoredItem counts return to zero
-and the Session remains usable after each lifecycle path.
+and the Session remains usable after each lifecycle path. Suspending the native
+SDK beyond a six-cycle lifetime also expires the independent server
+subscription; resumption delivers one `subscription_lost`, both peer counters
+remain zero and the Session serves a subsequent Read.
 The same independent peer also executes scalar Double read/write through both
 production Runtime profiles and Property observation through a real
 ConsumedThing child. Explicit stop and Runtime-owner death each return its

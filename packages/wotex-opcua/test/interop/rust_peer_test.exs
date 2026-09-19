@@ -333,6 +333,60 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
   end
 
   @tag rust_session: true
+  test "WOP-S04 WOP-V12 independent lifetime expiry ends only the subscription",
+       %{session: session, node: node, options: options} do
+    baseline = native_descendants()
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+
+    request = %{
+      node_id: node.("value"),
+      publishing_interval_ms: 50,
+      sampling_interval_ms: 0,
+      keepalive_count: 2,
+      lifetime_count: 6
+    }
+
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+    assert {:ok, observer} = Wotex.OPCUA.connect(options)
+
+    try do
+      assert resources(observer, node) == {1, 1}
+      [_, sdk] = native_processes(host)
+
+      assert {_, 0} =
+               System.cmd("/bin/kill", ["-STOP", Integer.to_string(sdk)], env: [{"LC_ALL", "C"}])
+
+      expired =
+        try do
+          eventually(fn -> resources(observer, node) == {0, 0} end, 100)
+        after
+          System.cmd("/bin/kill", ["-CONT", Integer.to_string(sdk)], env: [{"LC_ALL", "C"}])
+        end
+
+      assert expired,
+             "expected the independent peer to release the expired subscription, got #{inspect(resources(observer, node))}"
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :subscription_lost, effect: :none}}},
+                     5000
+
+      refute_receive {:wotex_opcua, ^reference, _}, 300
+      assert resources(observer, node) == {0, 0}
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    after
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  @tag rust_session: true
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
        %{session: session, peer: peer, node: node} do
     paged = node.("paged")

@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.9
+  version: 1.1.10
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -307,8 +307,11 @@ peer additionally proves ordered initial/fresh reports with sequence,
 client-handle and overflow metadata, idempotent cancellation,
 receiver-death isolation and one terminal receiver-overflow report. Each path
 returns peer subscription and MonitoredItem counts to zero and leaves the
-Session serving Reads. Independent Republish, lifetime and server-restart fault
-injection and remaining lifecycle cells are still required. Through the real Runtime
+Session serving Reads. When the native SDK is stopped beyond the revised
+lifetime, the independent server releases both resources and the resumed client
+delivers one `subscription_lost` while retaining the Session. Independent
+Republish and server-restart fault injection and remaining lifecycle cells are
+still required. Through the real Runtime
 ConsumedThing boundary the same independent peer also executes scalar Double
 read/write in the session and one-shot profiles and Property observation;
 explicit stop and Runtime-owner death each delete its subscription and

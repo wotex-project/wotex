@@ -154,6 +154,7 @@ impl SubscriptionCache {
         // always just sleep for the exact time until the next expired publish request, which could
         // be more efficient, and would be more responsive.
         let mut to_delete = Vec::new();
+        let mut expired_subscriptions = Vec::new();
         let mut items_to_delete = Vec::new();
         {
             let now = Utc::now();
@@ -165,15 +166,19 @@ impl SubscriptionCache {
                     sub_lck.session().clone(),
                     sub_lck.tick(&now, now_instant, TickReason::TickTimerFired),
                 ));
+                expired_subscriptions.extend(sub_lck.take_expired_subscription_ids());
                 if sub_lck.is_ready_to_delete() {
                     to_delete.push(*session_id);
                 }
             }
         }
-        if !to_delete.is_empty() {
+        if !to_delete.is_empty() || !expired_subscriptions.is_empty() {
             let mut lck = trace_write_lock!(self.inner);
             for id in to_delete {
                 lck.session_subscriptions.remove(&id);
+            }
+            for id in expired_subscriptions {
+                lck.subscription_to_session.remove(&id);
             }
             context
                 .info

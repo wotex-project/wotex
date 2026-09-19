@@ -39,6 +39,8 @@ pub struct SessionSubscriptions {
     publish_request_queue: VecDeque<PendingPublish>,
     /// Notifications that have been sent but have yet to be acknowledged (retransmission queue).
     retransmission_queue: VecDeque<NonAckedPublish>,
+    /// Subscriptions whose lifetime expired since the last cache tick.
+    expired_subscription_ids: Vec<u32>,
     /// Configured limits on subscriptions.
     limits: SubscriptionLimits,
 
@@ -60,6 +62,7 @@ impl SessionSubscriptions {
             subscriptions: HashMap::new(),
             publish_request_queue: VecDeque::new(),
             retransmission_queue: VecDeque::new(),
+            expired_subscription_ids: Vec::new(),
             limits,
             session,
             type_tree_for_user,
@@ -102,6 +105,10 @@ impl SessionSubscriptions {
     /// Return a vector of all the subscription IDs in this session.
     pub fn subscription_ids(&self) -> Vec<u32> {
         self.subscriptions.keys().copied().collect()
+    }
+
+    pub(super) fn take_expired_subscription_ids(&mut self) -> Vec<u32> {
+        std::mem::take(&mut self.expired_subscription_ids)
     }
 
     pub(super) fn remove(
@@ -640,6 +647,7 @@ impl SessionSubscriptions {
             // If the subscription expired, make sure to collect any deleted monitored items.
 
             if matches!(res, TickResult::Expired) {
+                self.expired_subscription_ids.push(sub_id);
                 to_delete.extend(subscription.drain().map(|item| {
                     MonitoredItemRef::new(
                         MonitoredItemHandle {

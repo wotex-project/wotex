@@ -112,14 +112,18 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
   subscription, and a two-message receiver bound ends with exactly one
   `receiver_overflow`. Every path returns peer subscription and MonitoredItem
   counts to zero while the Session continues serving Reads (S04/C05 slices of
-  V10..V12; independent Republish, lifetime and restart faults remain open).
+  V10..V12). With the client SDK stopped, the Rust server expires a six-cycle
+  lifetime and clears both resource counters. Resuming the SDK delivers one
+  `subscription_lost`; the Session then serves another Read. Independent
+  Republish and restart faults remain open.
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
 for active asynchronous requests; expose aggregate Cancel, continuation,
 application-request, subscription and MonitoredItem counts; advertise X.509 tokens with the
 endpoint's policy; preserve insertion order for reference buckets; and consume
-BrowseNext pages from the front. These are test-server capabilities, not
+BrowseNext pages from the front. Subscription expiry also removes the expired
+ID from the aggregate ownership index on the same cache tick. These are test-server capabilities, not
 production client code.
 
 On macOS arm64, `cargo check --locked`, Clippy over all targets with warnings
@@ -127,17 +131,17 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-26 independent-wire cases passed 26/26: the original three
+27 independent-wire cases passed 27/27: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
 nine negative security/fault cells, plus the Runtime profile/observation and
-typed-array cases and three independent subscription/lifecycle cases. The
+typed-array cases and four independent subscription/lifecycle cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `e6041ded39ff0abe2b5ff4bc3dc9eef2128e888ef4a327860321ff3996439f96` |
+| `test/interop/rust_peer_test.exs` | `b6d4e181756870cb23919b5a1e618e35cb1d4764af3399eca542a5fdf6f2df67` |
 | `test/interop/rust_peer/src/main.rs` | `089a81a1ac7dd76f219079e134afb5c31ed7137e8d9ba5e81c1988e3facda918` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
@@ -146,8 +150,8 @@ runtime matrix receipt remains required.
 | `vendor/async-opcua-server/src/server.rs` | `5259336ddbea57cf26bf4526a89a23465527a836c9f10628689ab93b633d057b` |
 | `vendor/async-opcua-server/src/server_handle.rs` | `f26428c887c711703e003408d09f6a10523761d0d5c91144c3f00686435c6da5` |
 | `vendor/async-opcua-server/src/session/message_handler.rs` | `3ddf711f5e6bd7e05dd231049a09821085b411331097975b658191d94dffa84a` |
-| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `f123c5463aae1546f6f45e27d6021914490e8fc3148ad9d55d69c8aae4dedc98` |
-| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `e9f8ee71fd5a1feac0417ee22782fc642a7bf2d5bcba09e667cac110acf2c9c0` |
+| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `4f537ae35f7f906accd7061d70c56971651beb41ae8256131373fc610c7aecc2` |
+| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `3795ed089f684ba97f3cd253a1dd77cba3bde6b43ed4871997235952681a6abe` |
 | `vendor/async-opcua-nodes/src/references.rs` | `71a4c5ac793bed375f3690b4a4d897b77c3d524150fd22adc0afe465f5331d00` |
 | `priv/fixtures/native-contract-v1.json` | `c59b65b8de69ea34d1a6a8e237e7d65c202811bfb9bb920e554a704d925ebc1c` |
 | `test/software/Dockerfile.linux` | `84b45988d378cc40e612b10347e7951eff8bf9deec901be2133608a8f6b3cf2f` |
