@@ -3,16 +3,16 @@
 Current implementation: typed domain APIs, persistent native host ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 264 tests, 55 declared interoperability,
+local gate: 9 doctests, 17 properties and 269 tests, 58 declared interoperability,
 hardware and software-stress exclusions; 95.9% coverage.
 The [virtual-controller fixture](virtual-controller.md) and its
-[software run receipt](software-run-v3.json) execute the 11 public BLE and
+[software run receipt](software-run-v4.json) execute the 11 public BLE and
 Runtime interoperability tests, including scenarios ported from the retired
 Python adapter lane, and the 5 WBL-C09 lifecycle stress tests against the
 Mix-built C++ host, real BlueZ 5.85 and two virtual controllers in both BEAM
-lanes. The x86_64 guest lane and package evidence remain required. The Python persistent adapter, its packaged helper and its
-unit tests are removed.
-Uncommitted fixture work is not acceptance evidence.
+lanes. The independent fixture provider is compiled C++17 over GDBus/GIO. The
+x86_64 guest lane remains required. The Python persistent
+adapter, its packaged helper and its unit tests are removed.
 
 Open finding: with a Runtime relay `max_queue_length` of 1, the buffered initial
 report can be rejected as `receiver_overflow` when the opening result is still
@@ -207,9 +207,11 @@ defects recorded above.
 the default suite and run by the same guest after the public files. The
 [first stress receipt](software-run-v2.json) records a fresh verified build and
 three consecutive runs, 15 of 15 tests in both lanes, with per-lane
-`stress.jsonl` samples. The [current receipt](software-run-v3.json) repeats
-that with the ported owned-link, address-mismatch and wrong-challenge scenarios,
-16 of 16 tests in both lanes across three consecutive runs. The WBL-C09 counts, baselines, forced faults and memory observations are
+`stress.jsonl` samples. The [Python-peer receipt](software-run-v3.json) repeats
+that with the ported owned-link, address-mismatch and wrong-challenge scenarios.
+The [current receipt](software-run-v4.json) binds the compiled C++17 GDBus/GIO
+peer and passes 16 of 16 tests in both lanes across three consecutive runs. The
+WBL-C09 counts, baselines, forced faults and memory observations are
 described in [virtual-controller.md](virtual-controller.md). An earlier attempt
 failed once in the lower lane because the open/close cycle checked
 `Process.alive?/1` immediately after `disconnect/1` returned, before the

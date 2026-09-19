@@ -24,7 +24,7 @@ defmodule WotexBLE.MixProject do
     ]
   end
 
-  def application, do: [extra_applications: [:crypto, :public_key]]
+  def application, do: [extra_applications: [:crypto, :inets, :public_key, :ssl]]
 
   def cli do
     [

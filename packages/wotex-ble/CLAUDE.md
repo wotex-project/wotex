@@ -14,8 +14,8 @@ root `CLAUDE.md`.
 
 - Production protocol execution uses the first-party C/C++ Port specified in
   WBL.07. Generic build/fixture orchestration and assertions use Mix/ExUnit.
-  Python is limited to required upstream build tools or justified independent
-  test peers.
+  Repository-owned runtime and fixture code uses Elixir, C or C++; Python is
+  limited to required upstream build generators and is never a fixture runtime.
 - Specifications state contracts declaratively; implementation status and
   evidence are separate. Do not write changelog or migration narratives.
 - No database, Repo, migration, Ash, Phoenix, Ecto, Oban, global registry,
@@ -66,7 +66,7 @@ root `CLAUDE.md`.
   fixture compilation and lane selection, software peer configuration);
   `test/native/` (C/C++ component drivers and the native build image);
   `test/interop/native/` (command-guardian probes); `test/interop/virtual/`
-  (virtual-controller images, guest scripts and the GATT peer).
+  (virtual-controller images, guest scripts and the GDBus C++ GATT peer).
 
 ## Working on this package
 

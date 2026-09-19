@@ -3,7 +3,7 @@ spec:
   id: WBL.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.23
+  version: 1.0.24
   owner: wotex-ble
   updated: 2026-09-18
 ---
@@ -38,10 +38,11 @@ mutation. Only a matching manifest permits reuse. Mix owns source download,
 hash verification, bounded process launch, result collection and cleanup. ExUnit
 owns assertion orchestration and machine-readable case results. Native C++ unit
 executables exercise the same production parser/ownership code under sanitizers.
-There is no new generic Python runner. Required upstream generation/bootstrap
-programs may use Python at build time; the manifest names each executable,
-source hash and purpose. Independent Python peers require the explicit exception
-below and cannot implement responses on behalf of the production adapter.
+There is no repository-owned Python runner or peer. Required immutable upstream
+generation/bootstrap programs may use Python at build time; the manifest names
+each executable, source hash and purpose. Fixture execution otherwise uses the
+repository stack languages and cannot implement responses on behalf of the
+production adapter.
 
 The required reference native lane is Linux x86_64, Debian 12, GCC/G++ 12.2.0;
 CMake 3.25.1 applies to CMake targets, Ninja 1.11.1 to native builds. SDK-required
@@ -714,11 +715,12 @@ reply can revive a retired record. The enclosing host applies the stream-retired
 barrier and normal cumulative credit retirement specified above.
 
 The Linux virtual-controller peer is the existing isolated BlueZ/btvirt design
-in [virtual-controller.md](../provenance/virtual-controller.md). Its Python GATT
-server is an allowed independent peer: it exports server objects to real BlueZ,
-sets test stimuli and observes indication Confirm calls. It never answers native
-client IPC. Its source/dbus-next hashes are fixture dependencies only; production
-ELF/runtime dependency inspection must contain no Python dependency. Generic VM,
+in [virtual-controller.md](../provenance/virtual-controller.md). Its first-party
+C++17 GDBus GATT server is independent from the production libdbus client: it
+exports server objects to real BlueZ, sets test stimuli and observes indication
+Confirm calls. It never answers native client IPC. The peer ELF, GIO/GLib
+packages and source hashes are fixture dependencies; production ELF/runtime
+dependency inspection must contain no Python dependency. Generic VM,
 build, manifest, result and cleanup orchestration belongs to Mix/ExUnit.
 Earlier virtual-controller results for the retired Python adapter define
 scenarios only; they do not establish execution of the accepted C++ helper.

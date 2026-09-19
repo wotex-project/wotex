@@ -1,0 +1,1354 @@
+{
+  "schema": "wotex.ble.software-run-evidence@1",
+  "specification": "WBL.07@1.0.24",
+  "scope": "Mix-built BlueZ 5.85 virtual-controller fixture using the compiled C++ GDBus/GIO peer, running the public BLE and Runtime interoperability lanes plus WBL-C09 lifecycle stress against the Mix-built native host in both BEAM lanes",
+  "source_identity": {
+    "kind": "exact software-manifest input SHA-256 and mode; no source commit association asserted",
+    "files": {
+      "wotex-ble/priv/bluez/native/bytes.hpp": {
+        "mode": 420,
+        "sha256": "9128f8bcddd63dbb9322999073ec49d099e7fdc9f92a5e7e4c1c90df31b32835"
+      },
+      "wotex-ble/test/interop/virtual/main.conf": {
+        "mode": 420,
+        "sha256": "d9138fbd977a539a8688565fd39a95645409baace48db418224d4fe99b9e72af"
+      },
+      "wotex-ble/priv/bluez/native/address.hpp": {
+        "mode": 420,
+        "sha256": "19a8791fa817adaffc5163fd76d9080ef2ca742bb5a3e0991673d779626e0409"
+      },
+      "wotex/lib/wotex/data_schema.ex": {
+        "mode": 420,
+        "sha256": "0b40194e18dd52307ecd7f5ae7f4431ad3e749c8588923c7ae803d709ef9dec5"
+      },
+      "wotex-ble/test/wotex/ble/native_command_test.exs": {
+        "mode": 420,
+        "sha256": "bfc0ee6a8b747b8c7c6e9ccd17cdf19d3b30a6fb6b3bc1213b37a9f6cc8dc4eb"
+      },
+      "wotex-ble/lib/wotex/ble/native/bootstrap.ex": {
+        "mode": 420,
+        "sha256": "65c75d9b74dce2f512d5bc4324d9cf8c4fe5da06afd2e12e1c0267a500a6b7ce"
+      },
+      "wotex-ble/priv/fixtures/custody-contract-v1.json": {
+        "mode": 420,
+        "sha256": "f978d2b4eab97627c33118855d64bc3b426bd728ec7c464e8c4fb95ad6eec346"
+      },
+      "wotex-ble/priv/bluez/native/credit.hpp": {
+        "mode": 420,
+        "sha256": "9ff87df22e957ab710e1e1688a5fccf31875185f3fa02959fc18bff7b48c34f6"
+      },
+      "wotex-ble/test/wotex/ble/dbus_bridge_test.exs": {
+        "mode": 420,
+        "sha256": "fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933"
+      },
+      "wotex-ble/priv/bluez/native/frame.hpp": {
+        "mode": 420,
+        "sha256": "efa0a443353e854854b2b2b0aa20a58bfdf94d7ff896e2473dc23067252c258e"
+      },
+      "wotex-ble/test/wotex/ble/characteristic_test.exs": {
+        "mode": 420,
+        "sha256": "620cffa79c215f6a66abe64c0a86666d705b5206bfba07cb4df2acb358aff40f"
+      },
+      "wotex-ble/test/wotex/ble/native_process_flow_test.exs": {
+        "mode": 420,
+        "sha256": "924a66ecccaa9eb40173898fcff349908a7744421edc29410bd64a44ab654be6"
+      },
+      "wotex-ble/test/interop/virtual/Dockerfile.system": {
+        "mode": 420,
+        "sha256": "58849ac7b37c1e60f0ac1b64e950621af6e476ccd436ef10670ac42d4c0f50c7"
+      },
+      "wotex-ble/lib/wotex/ble.ex": {
+        "mode": 420,
+        "sha256": "07b146de76f75d6b62e03764bb6219c7ddd6b88b3e56a5050cf16b51d96a973d"
+      },
+      "wotex-ble/test/wotex/ble/native_output_test.exs": {
+        "mode": 420,
+        "sha256": "411e5568a1cc85f596f6f24649b4575d7e471ee6617726732762e6363b9bd964"
+      },
+      "wotex-ble/test/wotex/ble/runtime_frame_test.exs": {
+        "mode": 420,
+        "sha256": "8b3a185e00c673829d8c47a2be3009d3261f71836b77ec9f6a9d3230154ca156"
+      },
+      "wotex-ble/test/native/objects_test.hpp": {
+        "mode": 420,
+        "sha256": "68daa87095347dea3a0080cbe59882abd6ea2a767894dd972821ebce19b6dc99"
+      },
+      "wotex/priv/w3c/MODIFICATIONS.md": {
+        "mode": 420,
+        "sha256": "ac2e2dc03cb459b3c0aace16ad9f80eadb6e03e0706b4fb11ab8b3ed7b7fe760"
+      },
+      "wotex-runtime/test/wotex/runtime/value_test.exs": {
+        "mode": 420,
+        "sha256": "b38d92b3abf620b06e49adbc436c72c5d0f1bea147bcc43178548bb424e18b58"
+      },
+      "wotex-runtime/lib/wotex/runtime/execution_context.ex": {
+        "mode": 420,
+        "sha256": "46edb5352bf19b74c26c8fc1c7f9c9c42ef1e8b4ef122dfe8c2ed5994a404f01"
+      },
+      "wotex/test/wotex/json_test.exs": {
+        "mode": 420,
+        "sha256": "44b315cb1e31ded0a594ced8408677287031baec52a0dcd9a2e78aa7870328f0"
+      },
+      "wotex-runtime/test/wotex/runtime/subscription_opening_test.exs": {
+        "mode": 420,
+        "sha256": "3f48985ee71cf3bd6c2709173408927b58a43ced22ffa4d010825ddfd43ffdc1"
+      },
+      "wotex/priv/w3c/td-json-schema-validation-1.1.json": {
+        "mode": 420,
+        "sha256": "87481cfafa3847d0c593c047750e090d4365dcc0f1b5daab3a725d63c991a4da"
+      },
+      "wotex-ble/lib/wotex/ble/native/build.ex": {
+        "mode": 420,
+        "sha256": "06457e438802c9f33d3938e1dd6263eebc104b018f9b9a9af674a7660f283ff8"
+      },
+      "wotex-ble/test/native/guardian_startup_check.c": {
+        "mode": 420,
+        "sha256": "175e318e098a7b3760b432e3e35457079d97bf9841d696ffc5d05ccae3b65b46"
+      },
+      "wotex-runtime/lib/wotex/runtime/port_call.ex": {
+        "mode": 420,
+        "sha256": "c08d86f8e7649aa1bae7f5d1253711b550cdcb4490ddf361d985a5a3fd73ffcc"
+      },
+      "wotex-ble/lib/wotex/ble/address.ex": {
+        "mode": 420,
+        "sha256": "a3df36cdfb68f444aaa1b191525166aaf780fd17aeffc00c0c6189fddfd2dbb3"
+      },
+      "wotex-runtime/lib/wotex/runtime/limits.ex": {
+        "mode": 420,
+        "sha256": "8cb38bdda721e36b4e8b49bb875efa0b0efea5eacc4c86c6d6406f91227c5cd9"
+      },
+      "wotex-runtime/test/wotex/runtime/form_selector_test.exs": {
+        "mode": 420,
+        "sha256": "81b735b7f478edf1ecf25cd04241ab778ad80164d7a7da2d3e5743d7f0b90202"
+      },
+      "wotex/test/wotex/library_contract_test.exs": {
+        "mode": 420,
+        "sha256": "842b8ba2a06317f1f9db0642fe295d665732b6c8c55b49f5dd88da27afba4ed0"
+      },
+      "wotex-ble/test/wotex/ble/dependency_security_test.exs": {
+        "mode": 420,
+        "sha256": "f7ca7a0fe7be419576821f384624c3cfec6700f0fafc760ac83720568113fc8d"
+      },
+      "wotex-runtime/lib/wotex/runtime/selection.ex": {
+        "mode": 420,
+        "sha256": "f52aa81040498213b1429853a7885fa8b7411415f3733fd349d872e175fe3986"
+      },
+      "wotex/lib/wotex/thing_description.ex": {
+        "mode": 420,
+        "sha256": "8ba9d15b79fd95e3df42462f03f193bdbfce4144c490ae5dbaef4b43ea17814f"
+      },
+      "wotex-ble/lib/wotex/ble/agent.ex": {
+        "mode": 420,
+        "sha256": "df2713ee5482379516081983557b0d0f43d38c5a1a8c97f2ce8bcf4b5d217cfa"
+      },
+      "wotex-ble/test/interop/virtual/guest.sh": {
+        "mode": 420,
+        "sha256": "37ea3c7eb55a4db9b2f8d08d06d3a17f1a6d519d9d7ed5a4148bebd84d1a7bb8"
+      },
+      "wotex-ble/mix.exs": {
+        "mode": 420,
+        "sha256": "29c0eb5f503547b0ddfdbfe3f6521badd6f6161c5848d3423b29880817eb83c9"
+      },
+      "wotex-ble/test/wotex/ble/health_test.exs": {
+        "mode": 420,
+        "sha256": "9469d739662696fa744f31a5e281150d126531ed4889d85fb872e9f7be49cbff"
+      },
+      "wotex-ble/priv/bluez/native/objects.hpp": {
+        "mode": 420,
+        "sha256": "541721c352433895f36e52ccd3569ff86edf13e0f40e0854d1d5008b2720ed1f"
+      },
+      "wotex-runtime/test/wotex/runtime/dependency_security_test.exs": {
+        "mode": 420,
+        "sha256": "9ae743b4f9f61be0f4db4cfdb83847c0dac2c2fa212f2a8075696c28999867bd"
+      },
+      "wotex-ble/test/native/pairing_test.hpp": {
+        "mode": 420,
+        "sha256": "bec5654ff917574545516591cb4be8dcbb4d70cdba0a3188f8800bfaa6adeb67"
+      },
+      "wotex/lib/wotex/error.ex": {
+        "mode": 420,
+        "sha256": "93afd502c91a8360ae87a9692550cd7b6d1fb7ff6c4901a31f5d55f65c23f8ce"
+      },
+      "wotex-ble/lib/wotex/ble/error.ex": {
+        "mode": 420,
+        "sha256": "d77290c89089589fb3ea036d372f114a0bdf129faa50cf5d8cb9b53b043cae5e"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/pairing.ex": {
+        "mode": 420,
+        "sha256": "9be9c2620932e5a6854850a73f17f80f585c59c1e45e1a0f47a4d9a08aae0218"
+      },
+      "wotex-ble/test/support/runtime_recording_transport.ex": {
+        "mode": 420,
+        "sha256": "16b41a210aa771fd8ea1e3cdc10e0bbaec46e860be0b99714a55b46ca952173c"
+      },
+      "wotex-ble/lib/wotex/ble/object_path.ex": {
+        "mode": 420,
+        "sha256": "f65c622eec13df7b806723e02045d3af930e05aa29b75a13a30f1c6b25aec978"
+      },
+      "wotex-ble/test/native/discovery_test.hpp": {
+        "mode": 420,
+        "sha256": "66b32ab87a057de280564290c6e7f555f24c77c3fb8d19490a3da0ed2ed01fc0"
+      },
+      "wotex-ble/priv/bluez/native/failure.hpp": {
+        "mode": 420,
+        "sha256": "a3ad408db0f03de0118684b681954db2f76298c9783abeb396c10a95d16acaf5"
+      },
+      "wotex-runtime/test/wotex/runtime/library_contract_test.exs": {
+        "mode": 420,
+        "sha256": "c398453c30e826367a5bbadc46ea16acd2eaba8a6ef82e3fbb9a9efd9d3990f7"
+      },
+      "wotex-ble/test/wotex/ble/native_reports_test.exs": {
+        "mode": 420,
+        "sha256": "a49796e7361dfc2cdc7fcfdcc88582df65090b03fa34a47cf4c02cef5255571d"
+      },
+      "wotex-ble/test/wotex/ble/report_flow_test.exs": {
+        "mode": 420,
+        "sha256": "d92f38bcd5425e1aa4ae1514f406d656f177612ea63c7da201769aaadec040ed"
+      },
+      "wotex-runtime/mix.exs": {
+        "mode": 420,
+        "sha256": "4e9c5bc4b098d44838499e538ab3c676ed450d290fca1c3618f189026ea9e648"
+      },
+      "wotex-ble/test/wotex/ble/mapping_test.exs": {
+        "mode": 420,
+        "sha256": "7e69552cf6ffef94efdf58e598febe83f3eb32ddac0ea155952c65e635a2c58a"
+      },
+      "wotex-runtime/lib/wotex/runtime/subscription.ex": {
+        "mode": 420,
+        "sha256": "3015526e037e8157c9606df95c5808c991fdd386689f9d2373c2e056e4d153af"
+      },
+      "wotex-ble/test/wotex/ble/native_pages_test.exs": {
+        "mode": 420,
+        "sha256": "8057b1edfecfa706302c60fac773e41af20ad950dfc7daaea3890c78328e14e8"
+      },
+      "wotex-ble/test/wotex/ble/stream_value_test.exs": {
+        "mode": 420,
+        "sha256": "6ec6a1c012c35b7e83920ea2d3d5416e584ce309c4f4a5c1d992905909b8694c"
+      },
+      "wotex-ble/test/support/native_lane.ex": {
+        "mode": 420,
+        "sha256": "863d1f5867742b072171dd9874bee5f1607c661768db4090d87374c598071ec3"
+      },
+      "wotex-ble/test/interop/native/command_probe.c": {
+        "mode": 420,
+        "sha256": "8e92d3336fe305ecb7646efe0aaedf6387d181254104700e30f5561ce0e9f71b"
+      },
+      "wotex-ble/lib/mix/tasks/wotex.ble.native.build.ex": {
+        "mode": 420,
+        "sha256": "365a55094a07f65e8ce574eb4d09a72024016626966712fbc6cf981978e59b3f"
+      },
+      "wotex-ble/test/wotex/ble/runtime_error_test.exs": {
+        "mode": 420,
+        "sha256": "700f532804dedc0dd13cc4498ab063f737d42f3aa000b74de48cc696fa1137ec"
+      },
+      "wotex-ble/test/wotex/ble/native_credit_test.exs": {
+        "mode": 420,
+        "sha256": "04cb8a474437dcfe8158703d3d1f8864c5472349a77032e8ddac7dd1333e71d6"
+      },
+      "wotex-ble/test/wotex/ble/native_artifacts_test.exs": {
+        "mode": 420,
+        "sha256": "e19a82e96750aab08c960258583cb8b61e59315196f99a025e5cbf78573460ec"
+      },
+      "wotex-ble/lib/wotex/ble/uuid.ex": {
+        "mode": 420,
+        "sha256": "5e34bac9523130101c6195954e622b369528a916492fd79c6ab014fc8efc3ce3"
+      },
+      "wotex-ble/test/native/credit_test.cpp": {
+        "mode": 420,
+        "sha256": "1ae0bbe927a13d15c452f563e584ab5c8c9963aa678f5845ca68142f934ec518"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/frame.ex": {
+        "mode": 420,
+        "sha256": "8ecd7da6482816b76e82da32a3962ee6fa980bb17b10bc6a046a2b99cffad54b"
+      },
+      "wotex/test/wotex/value_test.exs": {
+        "mode": 420,
+        "sha256": "e3b6ede3453854b4c23044e97cc7f88265b2686c58ef4ace562abbf615bfb881"
+      },
+      "wotex-ble/lib/wotex/ble/characteristic.ex": {
+        "mode": 420,
+        "sha256": "099f8b0f62aca179e6e1216628246656af0a547a3890674eeaa9d628a7f1146c"
+      },
+      "wotex-ble/lib/wotex/ble/procedure.ex": {
+        "mode": 420,
+        "sha256": "7ef01af8490ec786c38f169a6115a8d7b6056c4cffebef46312fd1ca030abe7e"
+      },
+      "wotex-ble/test/wotex/ble/stream_bridge_test.exs": {
+        "mode": 420,
+        "sha256": "f65ce06b4b2e04eaed00c89760bcb4379781e6342da52172615cf9315094e009"
+      },
+      "wotex-ble/test/wotex/ble/bluez_test.exs": {
+        "mode": 420,
+        "sha256": "64682b3b12d194989280a9e8080776e22c3df7d8b8c6ffe34bf211326a07dcda"
+      },
+      "wotex-ble/test/native/pending_test.hpp": {
+        "mode": 420,
+        "sha256": "02b428d85d2a750aa679ca4477f8792950a0111cff602d8ae2ddfc4a9c892b61"
+      },
+      "wotex-ble/priv/bluez/native/agent.hpp": {
+        "mode": 420,
+        "sha256": "90a475851d917b456fa42f845367afb77466090cc6c3d4c27238a8419abedaa0"
+      },
+      "wotex-ble/test/wotex/ble/identity_value_test.exs": {
+        "mode": 420,
+        "sha256": "33aa72000b5bdaa2857befe9c99c963f0ea93eba9f90fab92d801d0642b39674"
+      },
+      "wotex-ble/test/wotex/ble/native_startup_test.exs": {
+        "mode": 420,
+        "sha256": "ed2af84c394159d4870da9fe7c9e154c8c18c071b18b3d120011ebbba1b3fab4"
+      },
+      "wotex/lib/wotex/json.ex": {
+        "mode": 420,
+        "sha256": "f3158efcf850d4f01bf109a3f7fd9fc2c0d0b1601e717368e68c29e7fb533c89"
+      },
+      "wotex-ble/test/interop/virtual/bus.conf": {
+        "mode": 420,
+        "sha256": "49d30001cd1fe98737d42ad726feafb0c0407125941dd834d4e0302d0342e3e7"
+      },
+      "wotex-ble/lib/wotex/ble/value.ex": {
+        "mode": 420,
+        "sha256": "f6b263a96a2585b58c179dfe64dd29b4e2f8fa2c661dd30404ea2c688d58e118"
+      },
+      "wotex-runtime/test/support/td_factory.ex": {
+        "mode": 420,
+        "sha256": "dbf9883ccfd6e52e8f5c510efe9761c6012946e3a29656733dff60880d12562c"
+      },
+      "wotex-ble/test/native/procedures_test.hpp": {
+        "mode": 420,
+        "sha256": "0b9e37351e57e33061ceb40505742217321302e5377483d26254b89d56a1ed13"
+      },
+      "wotex-ble/priv/bluez/native/host.hpp": {
+        "mode": 420,
+        "sha256": "0627be07620f7b186e19ddc4cfd93d8b037ae3870cfbc808fde1ffba80fc8bbf"
+      },
+      "wotex-ble/test/wotex/ble/runtime_integration_test.exs": {
+        "mode": 420,
+        "sha256": "ae2937ab1d0ecc8059036aded75201113737268bab73eeea1ad7a09903977b4c"
+      },
+      "wotex-ble/test/native/notifications_test.hpp": {
+        "mode": 420,
+        "sha256": "846e3af19c20a7ad9037b729e2cd7220f8b70040df4b950cce5db439d0e2bf99"
+      },
+      "wotex-ble/test/interop/virtual/public.sh": {
+        "mode": 420,
+        "sha256": "b306658e5b22edca45396edb0419ff6b8985fb2471b1af6297e2583fc80a241f"
+      },
+      "wotex-runtime/test/wotex/runtime/consumed_thing_test.exs": {
+        "mode": 420,
+        "sha256": "e6eec9d4f09d127600205af0f31df26f1aa8e09930b7395121b64b8c5dfa3cc2"
+      },
+      "wotex-ble/lib/wotex/ble/port_call.ex": {
+        "mode": 420,
+        "sha256": "49250a069e3d85f35d4f2ac1eea3f5ed628af3951ccb4921fbd1c2b732770572"
+      },
+      "wotex-ble/test/interop/native_host_test.exs": {
+        "mode": 420,
+        "sha256": "6ecd592dde50b0cffcdecb481ac42334985a057b4398500e74f87e9c9ade8a2b"
+      },
+      "wotex-ble/priv/fixtures/wotex-integration-v1.json": {
+        "mode": 420,
+        "sha256": "3701bcf606bb94ea8d17c660830900f999e3db9fb9ae2033f260240b643892e1"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/connection.ex": {
+        "mode": 420,
+        "sha256": "6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac"
+      },
+      "wotex-ble/test/support/runtime_error_port.ex": {
+        "mode": 420,
+        "sha256": "90b4b23b2c23d11ae21098850840b920ebd7d560f7a75cf907a1bbf39ca79eb5"
+      },
+      "wotex-ble/lib/wotex/ble/native/workspace.ex": {
+        "mode": 420,
+        "sha256": "11092e297d9f7be03c00a7f9a23343c9f80baf5feeae953ef4f9e379d37e16aa"
+      },
+      "wotex-runtime/lib/wotex/runtime/consumed_thing.ex": {
+        "mode": 420,
+        "sha256": "d4826767f0bf96f97234420075bffa37ec11378ce87c789adfd770d6505e4ce8"
+      },
+      "wotex-ble/lib/wotex/ble/software/build.ex": {
+        "mode": 420,
+        "sha256": "289f0e1e623b7ddeb3c3ba2c17f4b7b73137eb9b08022f8e6c45ea8b12dcfe62"
+      },
+      "wotex-runtime/lib/wotex/runtime/result.ex": {
+        "mode": 420,
+        "sha256": "308ecf11a1fc51832df8204dbfed84cffabd801ca732e122af73f8c28a62ca79"
+      },
+      "wotex/test/test_helper.exs": {
+        "mode": 420,
+        "sha256": "b086ec47f0c6c7aaeb4cffca5ae5243dd05e0dc96ab761ced93325d5315f4b12"
+      },
+      "wotex-ble/priv/bluez/native/build_command.c": {
+        "mode": 420,
+        "sha256": "6b692c09c4a70c2d84c69fe4bd8f246511034251d8cbe0492106a8be297d4a50"
+      },
+      "wotex-runtime/lib/wotex/runtime/retry.ex": {
+        "mode": 420,
+        "sha256": "7f7401ec79fc34d756afe2f709cbe51f220f540173c39532e66698350971ff36"
+      },
+      "wotex-ble/test/interop/virtual/public_peer.cpp": {
+        "mode": 420,
+        "sha256": "7112b0bf8374b4ef2feacde1fe2a8d0db9a7613fc4ed694484b4999a7cdc97c3"
+      },
+      "wotex-ble/test/native/beam_startup_sdk.c": {
+        "mode": 420,
+        "sha256": "3b6573999eef19e046c20d408425741f10e463f657a1412019fb97847948f5b0"
+      },
+      "wotex-ble/test/support/native_command.ex": {
+        "mode": 420,
+        "sha256": "876fda16c896a5de583f96db8ba3e7d8a02039dd1c76c04f5ea3b6b6e2c80db1"
+      },
+      "wotex-runtime/lib/wotex/runtime/credentials.ex": {
+        "mode": 420,
+        "sha256": "e9268c0ea575b7d83cf3bc6b0d5c94ac3c1717014759bcf661337d9afc35aaf2"
+      },
+      "wotex-runtime/test/support/fake_transport.ex": {
+        "mode": 420,
+        "sha256": "0dddbefbffddabcfb604d10a7cded14fe9f572adedb4248fd32e0f32f79338c9"
+      },
+      "wotex-ble/test/interop/bluez_test.exs": {
+        "mode": 420,
+        "sha256": "c1c2fdb401a583680cc06e375f6b8461449ae570f9935c0e501ecd8bbccdd835"
+      },
+      "wotex/priv/w3c/tm-json-schema-validation-1.1.json": {
+        "mode": 420,
+        "sha256": "3c8dedb2a534d089fdbd7fda8eb05a5b13237a2331f42e2af08cdb4a7af9fc7a"
+      },
+      "wotex/lib/wotex.ex": {
+        "mode": 420,
+        "sha256": "ccd58e5ce1609b935b1822c0cc56200767f65792627b7c77b3ea0c053f97178d"
+      },
+      "wotex-ble/lib/wotex/ble/software/operations.ex": {
+        "mode": 420,
+        "sha256": "0057d826760a9831cac8e90d4777fdce8ab41e19f8dd0d3087ea3efbc48aa557"
+      },
+      "wotex-ble/test/documentation_test.exs": {
+        "mode": 420,
+        "sha256": "065eb5587bda8014cba83295c68670d5dd9f933c8f30ca8e0f7c079ec016bcf1"
+      },
+      "wotex-ble/lib/wotex/ble/runtime_relay.ex": {
+        "mode": 420,
+        "sha256": "97e3feea00c0b237143c7af92c7bfa793cf5b3e9957040b5a37b12d09daa380b"
+      },
+      "wotex-ble/priv/bluez/native/reports.hpp": {
+        "mode": 420,
+        "sha256": "4c21103bd60edc43341b4dd3c8c39e1b5ada67af5a6d1113624f8cf66d2341d2"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/stream.ex": {
+        "mode": 420,
+        "sha256": "2f5a989156654d2a0498fac8610d6f3c92574119e4592f32d43a25d110162a8f"
+      },
+      "wotex/lib/wotex/form.ex": {
+        "mode": 420,
+        "sha256": "3320d734d6a5da0c35611b00ecc0e060ff2a729e8424384c4d59faf19d663ad0"
+      },
+      "wotex-ble/test/support/native_fixture.ex": {
+        "mode": 420,
+        "sha256": "7b29d96156d99e8715b04c731121022ac916a036e0999ed16f7f2ba911088d20"
+      },
+      "wotex-ble/test/native/frame_test.cpp": {
+        "mode": 420,
+        "sha256": "61169209d5db97b92dfa83514640d3c0ede711dd80ca77ac806475d1b4e24eaa"
+      },
+      "wotex-ble/test/wotex/ble/native_bytes_test.exs": {
+        "mode": 420,
+        "sha256": "635f0b4bb39ad43beb4ad04efcbf3d6ba1351ceb8474a77b68335fd5b846b669"
+      },
+      "wotex-ble/priv/fixtures/contract-v1.json": {
+        "mode": 420,
+        "sha256": "9de800b0910e7b92386f2e1a86d095f313224ad42c3b81a30a81975dccf00848"
+      },
+      "wotex/lib/wotex/model_references.ex": {
+        "mode": 420,
+        "sha256": "372f9d3f028a5c989b7cc1c9f847c2dcbf2c2c6ff78c7c1d89475d0a0241bd56"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/executable.ex": {
+        "mode": 420,
+        "sha256": "95ae2c3d699a2545efa92b52bbb7dabf161f7eefa4eae2870750c92fb8b20616"
+      },
+      "wotex-ble/test/native/agent_test.hpp": {
+        "mode": 420,
+        "sha256": "4e5abfa401da3a967d738434ceb2c5f92448d24d604b20f6dddc6a77d1d5c10c"
+      },
+      "wotex-ble/priv/bluez/native/notify_value.hpp": {
+        "mode": 420,
+        "sha256": "f94e4c4e5f16d0215cc069503a2ead3bd395138dd2f391dd15fd1983d1ddcf5d"
+      },
+      "wotex/mix.exs": {
+        "mode": 420,
+        "sha256": "5aa287a5913ad6bba70bbb13867c96841edeffe1773863de7f18b27d3dc0a147"
+      },
+      "wotex-ble/lib/wotex/ble/challenge.ex": {
+        "mode": 420,
+        "sha256": "6d8eb36aa5a317feca4655a4584cfd69ebd6b395509c40e7c0da72d0b6b849b4"
+      },
+      "wotex/test/wotex/thing_description_test.exs": {
+        "mode": 420,
+        "sha256": "5bcb83ed1d3aec9e68d5d32cfec4739c38794cf4f96f637b77ca47e90f775e56"
+      },
+      "wotex-runtime/lib/wotex/runtime/transport.ex": {
+        "mode": 420,
+        "sha256": "455955961cfc7e177ec91240ef19cc1d45756607fb23cc6a119ef7dfd1f2f9c5"
+      },
+      "wotex-ble/test/wotex/ble/native_frame_test.exs": {
+        "mode": 420,
+        "sha256": "38aa78e53eccb0118c1550991e777fb8cbc7d51fc695ae7d62c94dcfd88014bf"
+      },
+      "wotex-ble/test/native/flow_source.cpp": {
+        "mode": 420,
+        "sha256": "9400d853fcda7a3945f2a81ab2ca0d107781c9fb656229f35de17b2f5bb326e1"
+      },
+      "wotex-ble/lib/wotex/ble/transport.ex": {
+        "mode": 420,
+        "sha256": "613a00667a4c8fa74812cff6cf42d346ccb1e20edcdcdd3e74df148d48f4051f"
+      },
+      "wotex-ble/test/software/lifecycle_stress_test.exs": {
+        "mode": 420,
+        "sha256": "4e264c81b22d6bd3e0d8c7bba2dc307f8698d8e26d185c30c9472dec82182f55"
+      },
+      "wotex-ble/test/native/pages_test.cpp": {
+        "mode": 420,
+        "sha256": "506f0ad73421b3e288246ab47cfe15b7ecede3b8e617ecb7d312c5ec6051ad0a"
+      },
+      "wotex/lib/wotex/thing_model.ex": {
+        "mode": 420,
+        "sha256": "b313b19679b6f874486aa1095abcedb347a8daa3e554785227ae1d9cdc855d23"
+      },
+      "wotex-runtime/test/support/opening_port.ex": {
+        "mode": 420,
+        "sha256": "05415997a65e542d6cf4a487f14be38e70777fde4e04349fbd5a7e85b584bb26"
+      },
+      "wotex-ble/priv/fixtures/native-port-v1.json": {
+        "mode": 420,
+        "sha256": "d70f63498c316fb17b67fd005183832e82e3d7268d2f03fbfb3d68364d63aef1"
+      },
+      "wotex-ble/priv/bluez/native/notifications.hpp": {
+        "mode": 420,
+        "sha256": "3666029cfdc72c27ae9c6bf03452b699b7702abc2c6148db58c99c9ec585568e"
+      },
+      "wotex-ble/test/interop/native/command_group_fault.c": {
+        "mode": 420,
+        "sha256": "f816cc0788daada150e334898051ad1b318d16b92f212872dfd9d3203bbca590"
+      },
+      "wotex-ble/test/support/software_peer.ex": {
+        "mode": 420,
+        "sha256": "736cef63919fa9cf919f56f6e078c4424d8ecc28ead05d1d0f5736c8685b65a7"
+      },
+      "wotex-ble/test/interop/native/command_launcher.c": {
+        "mode": 420,
+        "sha256": "b9e4f00ebe6d3034d48fad72c0378c5e16af2fb31a6f5390e1e7307ac925a7eb"
+      },
+      "wotex-runtime/lib/wotex/runtime/error.ex": {
+        "mode": 420,
+        "sha256": "fa4cf644fd39df8323f35fec126595387f8dc4c1ed51087158d6929a65a16379"
+      },
+      "wotex/mix.lock": {
+        "mode": 420,
+        "sha256": "111b14c70ab3827be9bf59c2846896a21487c55cc482d3e09630aaa019d3735c"
+      },
+      "wotex-runtime/test/wotex/runtime/exposed_thing_test.exs": {
+        "mode": 420,
+        "sha256": "27757edb31bd55de0b08e6f36d66157ac9b599abd67635de9fe62d660925c605"
+      },
+      "wotex-ble/test/wotex/ble/native_source_test.exs": {
+        "mode": 420,
+        "sha256": "c9319a80061a7be4c694fd611e293460192f5b83de2f64352486af3c1a84ea03"
+      },
+      "wotex-runtime/test/wotex/runtime/retry_test.exs": {
+        "mode": 420,
+        "sha256": "dd47626cdf2a68acfcf584d27e5ed66ad5d0bfcef8170b1d9a281cf8d90096e8"
+      },
+      "wotex-ble/test/interop/virtual/Dockerfile.public": {
+        "mode": 420,
+        "sha256": "1e760777ffbf52c09a33ecb0e5eaa10896f3310d26e98c32a5b7550f05f53f99"
+      },
+      "wotex-ble/test/interop/native/README.md": {
+        "mode": 420,
+        "sha256": "63b6620c3b3215633aaa41a6559a84560e766246fa861d3f76711255684a9efb"
+      },
+      "wotex-ble/priv/bluez/native/discovery.hpp": {
+        "mode": 420,
+        "sha256": "39a42994d7d4ef51a1e1dc21641edc4c7d8e412459dc5ac1893fc6a2351edbdd"
+      },
+      "wotex-ble/priv/bluez/native/main.cpp": {
+        "mode": 420,
+        "sha256": "f515f4f594bde6431a70892c79df9595f34ab0899208106f6b6f6ae83011e1ef"
+      },
+      "wotex-ble/lib/wotex/ble/software/fixture.ex": {
+        "mode": 420,
+        "sha256": "6fb5746867f8e76f08d03ed27259f88a5956aa08d9d5480095773868bf8feacc"
+      },
+      "wotex/test/wotex/dependency_security_test.exs": {
+        "mode": 420,
+        "sha256": "fa62e3009d3bc077f2c6a1bcfbdb440702bb220ddd730acbade0490f79a12084"
+      },
+      "wotex-runtime/lib/wotex/runtime/request.ex": {
+        "mode": 420,
+        "sha256": "e3eaf67fefe2a3055223f8412e939a892c6647e1ecefce20d210391389f3e59b"
+      },
+      "wotex-ble/lib/wotex/ble/subscription.ex": {
+        "mode": 420,
+        "sha256": "f44070945089bc5d78979185a14ec7ae6f4b56d1b9fc963a53374b159b0bfd28"
+      },
+      "wotex-ble/test/wotex/ble/native_custody_test.exs": {
+        "mode": 420,
+        "sha256": "cb478519c939c9d329de52bed3eea519972f23ac26f154eb47a9332d1741e41f"
+      },
+      "wotex-ble/test/interop/virtual/Dockerfile.bluez": {
+        "mode": 420,
+        "sha256": "4d5543d992c4928b7e85c1f325c0aa52711a58d0da4c37177624ab42c27530e5"
+      },
+      "wotex-ble/priv/bluez/native/procedures.hpp": {
+        "mode": 420,
+        "sha256": "dffa557693a4572a9f2a5bbfdfdf5734b1e1208a87fbdf026fa521513202caf7"
+      },
+      "wotex-runtime/test/test_helper.exs": {
+        "mode": 420,
+        "sha256": "c95b762db44e3f1f010493f741fa58d6df6f34e13a29454eddc95e4a54311b1b"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/options.ex": {
+        "mode": 420,
+        "sha256": "7fac0342c850e01615ab9b3c1cb20b95d5eef6ea60d863a7fb16b64372dd2b0e"
+      },
+      "wotex-ble/test/wotex/ble/native_contract_test.exs": {
+        "mode": 420,
+        "sha256": "ebdc639a917c3bd17bcd6fffbd0ab4d0ff764a7e8f65a07ef8ccd96f71677f0a"
+      },
+      "wotex-ble/mix.lock": {
+        "mode": 420,
+        "sha256": "5587e496f99613689e1c59386d11a5e7198969d0f03d5b1391ff712c9a9188d0"
+      },
+      "wotex-runtime/lib/wotex/runtime/telemetry.ex": {
+        "mode": 420,
+        "sha256": "f759ef5d97f914541e7d88daf82f958c06d5e26f89bf328a7f8efeb7cbdc459d"
+      },
+      "wotex-ble/priv/bluez/native/custody.c": {
+        "mode": 420,
+        "sha256": "d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2"
+      },
+      "wotex-ble/priv/bluez/native/output.hpp": {
+        "mode": 420,
+        "sha256": "73bd16b93bfeb4c85fb3296d3e8d000224fb030c06644101e39888b536108aa5"
+      },
+      "wotex-ble/lib/wotex/ble/software/run.ex": {
+        "mode": 420,
+        "sha256": "4e5fec396d5e878a0cd43964345004b6127bcce9ab80776cfbf802b48aa4dd59"
+      },
+      "wotex-runtime/test/support/fake_credentials.ex": {
+        "mode": 420,
+        "sha256": "0ebc88c0d60343a80c3606477f46b9dd5b095e426f19444e6fab6abf81538b01"
+      },
+      "wotex-ble/priv/bluez/native/pages.hpp": {
+        "mode": 420,
+        "sha256": "6d1660aa8dcf45febc8026fc23967c66dc0bfc525b58e54760f7220526f8e357"
+      },
+      "wotex-ble/test/wotex/ble/port_test.exs": {
+        "mode": 420,
+        "sha256": "c9be983d8965a54ef9157bb8a83a36e73bb288a08f6b3c2c230e1f8471d4185b"
+      },
+      "wotex-ble/lib/mix/tasks/wotex.ble.software.run.ex": {
+        "mode": 420,
+        "sha256": "e7a538f22f4e6f9b5b37fefda435be54d9c877236b19e1aef728de35c3dbfb65"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/artifacts.ex": {
+        "mode": 420,
+        "sha256": "c5a3e7d8dbd2fc0ed959730315245686b6e3d864c818250175e2a3736ba5f63f"
+      },
+      "wotex/lib/wotex/security_scheme.ex": {
+        "mode": 420,
+        "sha256": "35ee08a083a9a40688cd8f8aac0f4add90c3ba81525924b6e38671caf014ab96"
+      },
+      "wotex-ble/test/support/software_formatter.ex": {
+        "mode": 420,
+        "sha256": "eb9eafd5f38a0736f0ee4ed0a27192fbec6f3488b37b321cc7819dd8f25aba91"
+      },
+      "wotex/lib/wotex/action_affordance.ex": {
+        "mode": 420,
+        "sha256": "9b8933ed1dc80b27a196e73cccd0125e51d4e6964a742b742985c31fbffbe86d"
+      },
+      "wotex-ble/priv/bluez/native/bus.hpp": {
+        "mode": 420,
+        "sha256": "44b204e266381a3e101375ba5c359928e45424e881cd62cfed2bca69d9de1e87"
+      },
+      "wotex/lib/wotex/value.ex": {
+        "mode": 420,
+        "sha256": "80890438b01e42e6fb5e05ced56b1ff9d72c01e7213b0b3d87a49ff495726393"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/report_flow.ex": {
+        "mode": 420,
+        "sha256": "fce321b02e3b4caa2931a54247350c6b7c599ab25c123ded1e9ea7db93396498"
+      },
+      "wotex-ble/test/native/Dockerfile": {
+        "mode": 420,
+        "sha256": "d03e959873edd05962fc7d9d47f058eb84c2cfec3214c19e398c1c9e3715b9c4"
+      },
+      "wotex-ble/test/native/output_test.cpp": {
+        "mode": 420,
+        "sha256": "708b5df5098ba245e12ddbba62569f2b9b24ffcede81eecc4ac88d05edef7571"
+      },
+      "wotex-ble/lib/wotex/ble/mapping.ex": {
+        "mode": 420,
+        "sha256": "f9f6b0d63adc30862eb1bf269f76883715f58e8e7afedc52522cbe37cae50211"
+      },
+      "wotex-ble/priv/bluez/native/report_queue.hpp": {
+        "mode": 420,
+        "sha256": "053d7f5ad8463c04012dd444e6eb61012946821fee030ade7c3c03138a9f16c8"
+      },
+      "wotex-ble/priv/bluez/native/vendor/json.hpp": {
+        "mode": 420,
+        "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+      },
+      "wotex-ble/test/native/bus_test.cpp": {
+        "mode": 420,
+        "sha256": "a04db02cc1dbd8e621629d3dfd6e82e583061bad10cddb5df5c2d346a00619c9"
+      },
+      "wotex-ble/test/wotex/ble/procedure_test.exs": {
+        "mode": 420,
+        "sha256": "76e7c4b3d4461c73d34d23aa6c6b18ff1fbcdb8f29b1fd6544a8578006b31815"
+      },
+      "wotex-ble/test/test_helper.exs": {
+        "mode": 420,
+        "sha256": "dab3922d034b24583d36237c56fea4fb0a38ffc43e675dd5e960c595224b7d44"
+      },
+      "wotex-runtime/lib/wotex/runtime.ex": {
+        "mode": 420,
+        "sha256": "8871fa68a6f18fcb315d33b10d59494cb84f4a3f9944f34c6e11cb36bd59e796"
+      },
+      "wotex-ble/priv/bluez/native/error_value.hpp": {
+        "mode": 420,
+        "sha256": "1508ce01421afc7d1dd71323b963eab51f96161e836f491d9388a899339ee3d0"
+      },
+      "wotex-ble/test/native/custody_check.c": {
+        "mode": 420,
+        "sha256": "55720901eefe2e28dfb94910c5aba46b57798d894b00f47623a08d705226d256"
+      },
+      "wotex-ble/priv/bluez/native/dependencies.json": {
+        "mode": 420,
+        "sha256": "febc60faf7798033c7692db6088a7cf84cbf03a12ddd4e910739acdd610ca56c"
+      },
+      "wotex-ble/test/support/runtime_client.ex": {
+        "mode": 420,
+        "sha256": "c5d8844690b765564ad496ca7a8b4f10b77ab536a769413bc0a0f034097171c5"
+      },
+      "wotex-ble/test/support/client.ex": {
+        "mode": 420,
+        "sha256": "a78436c2975aaecb67a62d6b645c99e6426783ecf853eeacc9021092bc17245e"
+      },
+      "wotex-ble/test/native/scripted_host.cpp": {
+        "mode": 420,
+        "sha256": "11a65270e0f863f025daf32163560f0e723fba82eb469295793620522ccb111a"
+      },
+      "wotex-ble/test/interop/bluez_device_test.exs": {
+        "mode": 420,
+        "sha256": "bd7a5e444ec053c87c84de6d387305f365a4c5830afd3cf1298c86571bc1849a"
+      },
+      "wotex-ble/lib/wotex/ble/client.ex": {
+        "mode": 420,
+        "sha256": "4a5fa6661c9bbc342e7cf97b9462d298523bf7abd620e39873cc52dd9dcdeb94"
+      },
+      "wotex-runtime/lib/wotex/runtime/subscription_opening.ex": {
+        "mode": 420,
+        "sha256": "1cbb1af5e13438dc2e4ad78da86b1163d611779dbe89b92deb7878a084061998"
+      },
+      "wotex/lib/wotex/security_references.ex": {
+        "mode": 420,
+        "sha256": "e39abad1b5a7e1b66171e26297973532e9b0521222b5a5642f1eb5efcb2c8bad"
+      },
+      "wotex-ble/priv/bluez/native/runtime-guardian.md": {
+        "mode": 420,
+        "sha256": "6229ec85fe8f6f6c012a32aa02798b83038d7981c1a4d21937d7b3c25bfb62ac"
+      },
+      "wotex-ble/test/interop/virtual/bootstrap.sh": {
+        "mode": 420,
+        "sha256": "7fd1bf2481b69d4cd327e75d008fda45f0d0c3230de5165c0cd7476582d1f7ce"
+      },
+      "wotex-ble/test/wotex/ble/software_fixture_test.exs": {
+        "mode": 420,
+        "sha256": "830e9fb0311250755caf8d8d257a098375bb4fc07a679100b1cb25c1342c13aa"
+      },
+      "wotex-runtime/test/wotex/runtime/subscription_test.exs": {
+        "mode": 420,
+        "sha256": "77c5e9142e1160f56e1d9d47ec4234183890f6229c18ce7a70f45696da01ef44"
+      },
+      "wotex-ble/test/native/reports_test.cpp": {
+        "mode": 420,
+        "sha256": "7d40ede1d4ed7c800c8909cf81026dac7ad852c2e83903e27f99762c2c194252"
+      },
+      "wotex-ble/priv/bluez/native/pairing.hpp": {
+        "mode": 420,
+        "sha256": "b6dcc3efc4c1597a01c1d0ad5ecfb31c79d3d32af62cb9dbc313b7f5aec565b1"
+      },
+      "wotex/lib/wotex/event_affordance.ex": {
+        "mode": 420,
+        "sha256": "b91c41c9ffdfce52e30a2c29b1e933934e9e92d0cf42b8090c63220dafbca85b"
+      },
+      "wotex-ble/test/interop/virtual/make_filesystem.sh": {
+        "mode": 420,
+        "sha256": "24f193d3b942e3a83ab0ae210801b2d3fde2e429a46840b760e7e74695a84353"
+      },
+      "wotex-ble/lib/wotex/ble/bluez.ex": {
+        "mode": 420,
+        "sha256": "4378eafb7232888c005e0889a43e71b303512fd66f588bd33bd8bbd3ae0f0bc4"
+      },
+      "wotex-ble/lib/wotex/ble/native/command.ex": {
+        "mode": 420,
+        "sha256": "b55110fe387fab57eb7760d5c1667d09c650a86ee491ec15a8c02ae6a0042c62"
+      },
+      "wotex-ble/lib/wotex/ble/native/build_operations.ex": {
+        "mode": 420,
+        "sha256": "93a7b332956fc7ec7747ece0a45915d7137dddae26d8f8ac3bfcbfde06906afd"
+      },
+      "wotex-runtime/lib/wotex/runtime/context.ex": {
+        "mode": 420,
+        "sha256": "d7dfa3cc6dbcdb21d6a1893068815c5520df4c5aa693085b110beaf0473d8503"
+      },
+      "wotex/lib/wotex/value_schema.ex": {
+        "mode": 420,
+        "sha256": "e02af1c5047a94034ffc7a1236f31fdd79b1f0d03b93bd345811e9ec229d873b"
+      },
+      "wotex-runtime/lib/wotex/runtime/form_selector.ex": {
+        "mode": 420,
+        "sha256": "04c24dd795b229ac14361ab9d78ee6b799d1d49f7e69a40cb185b2438c44af9e"
+      },
+      "wotex-ble/test/wotex/ble/pairing_value_test.exs": {
+        "mode": 420,
+        "sha256": "b840355f331479bdaf7578754debb2e1b58dc014b13e7cb3c06b84b3ea1dfca3"
+      },
+      "wotex/lib/wotex/json/limits.ex": {
+        "mode": 420,
+        "sha256": "4af2252114e05a5c3fa816f4d8cc4af46bef56f33489e50b5dd4a1c951a0e288"
+      },
+      "wotex/lib/wotex/thing_model/validator.ex": {
+        "mode": 420,
+        "sha256": "5bc64296712654234ffb3df9dee20e1612973ae05db085e82286891392fb4d0e"
+      },
+      "wotex/test/wotex/admission_safety_test.exs": {
+        "mode": 420,
+        "sha256": "bd8449cdfa9254994f0a3c404fa371ad755d9ec20393308a80960b1d08616e53"
+      },
+      "wotex-ble/priv/bluez/native/vendor/LICENSE.MIT": {
+        "mode": 420,
+        "sha256": "62176251affdda17bece4ddd44271d68019e2448ca721d2c1af4c650f29c9898"
+      },
+      "wotex-ble/test/native/health_test.hpp": {
+        "mode": 420,
+        "sha256": "33c8524f5e9b393c1e2e591036bd9dee3ee124636e5c06847f641938bd8b6162"
+      },
+      "wotex-ble/test/interop/native_bus_test.exs": {
+        "mode": 420,
+        "sha256": "431011c91efd10695087022d90e7253f454f20e3a93c6112e76731bba52e7646"
+      },
+      "wotex-ble/test/native/host_process_test.hpp": {
+        "mode": 420,
+        "sha256": "06fab2032562d82630253f209d9d4ee05559a609dfb68b8de740202ca88eb716"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/response.ex": {
+        "mode": 420,
+        "sha256": "4742e720c51e744188d0b02b75f98b86be01a4d0ce26bfe6b1ee5884588c12a5"
+      },
+      "wotex-ble/test/native/notify_value_test.hpp": {
+        "mode": 420,
+        "sha256": "b5c0d2eb1d1cc62f4522d92c0fce3f86746c04e2b86e4fe1c41cd470630b1767"
+      },
+      "wotex-ble/lib/mix/tasks/wotex.ble.software.build.ex": {
+        "mode": 420,
+        "sha256": "326a476c9ea1d737fe8b95476e576d81df29bebd2e5cb6506d206b8c0603429f"
+      },
+      "wotex-ble/test/native/bytes_test.cpp": {
+        "mode": 420,
+        "sha256": "4c419413a337b6fe770e5232024847d936144902d98b4c8c54a1192f391f1d5f"
+      },
+      "wotex-runtime/lib/wotex/runtime/exposed_thing.ex": {
+        "mode": 420,
+        "sha256": "24d9e96d7cc2cbf4045d950a90dd721c8247ffdb5de4087bfd3ec727c17d8f0c"
+      },
+      "wotex/priv/w3c/LICENSE.md": {
+        "mode": 420,
+        "sha256": "4836077a1c67170bc261e63ced2c9636d5187506f72ac106df435070315078d5"
+      },
+      "wotex-ble/test/wotex/ble/contract_test.exs": {
+        "mode": 420,
+        "sha256": "7c5472597a46331d0537c7d5f7b515a4b8493470eb97c4a341602ea759d6354f"
+      },
+      "wotex-ble/test/native/host_test.hpp": {
+        "mode": 420,
+        "sha256": "d1e0ba32b302c392d7356088208c2fcd25bd8365e76e4a0c846e53a1ad2a3a4d"
+      },
+      "wotex-ble/test/wotex/ble/native_build_test.exs": {
+        "mode": 420,
+        "sha256": "db139f702020200fa9765d63e88e3ce402ba5027aea5dc52c44b9a3b84d59bbb"
+      },
+      "wotex-ble/priv/bluez/native/service.hpp": {
+        "mode": 420,
+        "sha256": "4e684b55d7029785c05388846eba4c324880d88fe7ca10e7236fc452fd2a3687"
+      },
+      "wotex-ble/test/wotex/ble/bluez_schema_test.exs": {
+        "mode": 420,
+        "sha256": "168e50faafe7d9a2e53d717f04bb6d41d5a6c2b2d6d7ef6919f87b3bbacc7258"
+      },
+      "wotex/lib/wotex/thing_description/validator.ex": {
+        "mode": 420,
+        "sha256": "26567b6631c2a9d279e367386d245116187d9ee19979b83e35cfc798ed024d6e"
+      },
+      "wotex-ble/test/interop/bluez_runtime_test.exs": {
+        "mode": 420,
+        "sha256": "038f9906d97e3bc8fd478af86e9a4ae9a7dba92b54de53f6d9d8cb3c3c39e906"
+      },
+      "wotex/test/wotex/thing_model_test.exs": {
+        "mode": 420,
+        "sha256": "39ea480245487d85bb28c0648dbe6664c52e80e60924d32a08b21d73677f10a1"
+      },
+      "wotex-ble/lib/wotex/ble/session.ex": {
+        "mode": 420,
+        "sha256": "b03dd56f50381f6d915a498222e9437aed3aa4e577554ee75b5344073300abb0"
+      },
+      "wotex-ble/test/wotex/ble/native_guardian_startup_test.exs": {
+        "mode": 420,
+        "sha256": "815ac933c96492fff869fb2a99b04aee124b542f7af0da40c2eacd3f35c0342c"
+      },
+      "wotex-runtime/mix.lock": {
+        "mode": 420,
+        "sha256": "781f34cdb3f6d3b13362584f407a15f52ff813f3a175a4fe3f61aa8ba0b1dbaf"
+      },
+      "wotex-ble/test/interop/virtual/build_manifest.exs": {
+        "mode": 420,
+        "sha256": "e280bd2d0cc3f4775e3b1b22aecb2d32a0d34634e046fbd9e52fa3218a51cd60"
+      },
+      "wotex-ble/test/wotex/ble/stream_response_test.exs": {
+        "mode": 420,
+        "sha256": "1f581a1bf8ba758bc01b852a9d0bf0bc5b84978321cca71403b04e63d7879767"
+      },
+      "wotex-ble/lib/wotex/ble/peer.ex": {
+        "mode": 420,
+        "sha256": "d43e24e4b09fa1fbf4ce834c9aad505fc833114e5f03659cb853e71455c48d9a"
+      },
+      "wotex-ble/lib/wotex/ble/native/source.ex": {
+        "mode": 420,
+        "sha256": "8e19fd327e591fe36eb0fa5c32c01b9a4d39be0af2a530a1923f16bba84ed9fe"
+      },
+      "wotex-ble/test/support/native_processes.ex": {
+        "mode": 420,
+        "sha256": "a33ddb8c0a9710f93a6b8bf7d8519a3453c4309b27fc21477077681c24f658a5"
+      },
+      "wotex-ble/lib/wotex/ble/runtime_frame.ex": {
+        "mode": 420,
+        "sha256": "0f3bd7bcaf2e27801692e0f68e95199c94a3681be87e2de10ad45d6d7f247a65"
+      },
+      "wotex-ble/lib/wotex/ble/bluez/subscription_owner.ex": {
+        "mode": 420,
+        "sha256": "3eb04f41484886699faf1c2e670c4eb78f1e66e6e27f1ef7936e42dc0b6e4214"
+      },
+      "wotex-ble/test/wotex/ble/runtime_stream_test.exs": {
+        "mode": 420,
+        "sha256": "16d2043f3f5f3aa7d20b20a75ac2713af07e2faf292a2c5963824061841ae4eb"
+      },
+      "wotex-runtime/lib/wotex/runtime/binding_profile.ex": {
+        "mode": 420,
+        "sha256": "f9a8f6118fccdfd7b1d50a855cd11c775e9f9dddca5610a82c8294b36d3a0f2e"
+      },
+      "wotex/lib/wotex/property_affordance.ex": {
+        "mode": 420,
+        "sha256": "00caaa083970b2f701826a9a2927e4897406375c0abf71c787d97d2bb8194857"
+      },
+      "wotex-ble/test/wotex/ble/contract_fixture_test.exs": {
+        "mode": 420,
+        "sha256": "3c4612f65da02f4df819691f0710798dcdf6ec41bf2efb51ba1f944cc8e9c548"
+      }
+    }
+  },
+  "host": {
+    "docker_sha256": "70d5a06adf388bd09b652f47ddc9ca31663a3e5353d24188bdb0054b3014ab3e",
+    "platform": "macOS arm64 with Docker Desktop Linux arm64"
+  },
+  "commands": [
+    "WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace ABSOLUTE_WORKSPACE",
+    "WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace ABSOLUTE_WORKSPACE (three times)"
+  ],
+  "requirements": [
+    "WBL-B01",
+    "WBL-B03",
+    "WBL-B04",
+    "WBL-N03",
+    "WBL-V03",
+    "WBL-V04",
+    "WBL-V05",
+    "WBL-V06",
+    "WBL-V07",
+    "WBL-V08",
+    "WBL-V09",
+    "WBL-V11",
+    "WBL-I02",
+    "WBL-I03",
+    "WBL-I04",
+    "WBL-I05",
+    "WBL-C09"
+  ],
+  "expected_cases_per_lane": 16,
+  "build": {
+    "manifest_sha256": "5268db6e1757624949b364cd0fd5f7934a3de83a54e9db1932e76fa6f22df463",
+    "native_host_sha256": "26fc5ac60345c1780da7150d403ebee7be56cc93d2bea92c3c4fbdf66ebe9685",
+    "native_target": "aarch64-linux-gnu",
+    "images": {
+      "bluez": "sha256:b53621c07b915f22c571bc13f27dae461f4827f4a966ce7576adf7e42ecfb486",
+      "public": "sha256:b700db37f120ebc703b77bebd9a3ab7ae33b26a28e59a1fcf711f95392df7929",
+      "system": "sha256:153301cc006ce75d9de7614672a19ded580f15e4d32700beb2b3c4d56eda20cb"
+    },
+    "guest": {
+      "bluez": "5.85",
+      "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "elixir_latest": "Elixir 1.20.2 (compiled with Erlang/OTP 29)",
+      "elixir_lower": "Elixir 1.18.4 (compiled with Erlang/OTP 27)",
+      "peer": "wotex-ble-public-peer 1",
+      "qemu": null
+    },
+    "artifacts": {
+      "downloads/bluez.tar.gz": "53a95c3dc9897f617b8bae0121d3f4c55c28a757bd48546c707bd2bbac45af0a",
+      "downloads/hex-source.tar.gz": "bdd6ef2015aa6e50a1c21212e098e8cbe7317da65f067955d154d890532742ae",
+      "downloads/rebar-source.tar.gz": "985cae6e957334cfa549190b9f5efb9185c184a18fc181c87b8dde096ba79f38",
+      "guest-build.json": "38f32a6003c1584c756515aeaa1feabbe4b0b6a271360c1f1f65d8f6f762d124",
+      "native-manifest.json": "f9afc6f064f117a2e0f40cd24ec1454a19e94707921095340a0b94545c1df225",
+      "rootfs.raw": "c53044c5f79e0bd861bad0835df06d05e7e905973bb87f5c57c608b744d8607d",
+      "rootfs.tar": "eb8ca7d5a4828384f305afc56edc7d8315abe3da2747139bf873e39a7b02beb4"
+    }
+  },
+  "runs": [
+    {
+      "build_manifest_sha256": "5268db6e1757624949b364cd0fd5f7934a3de83a54e9db1932e76fa6f22df463",
+      "expected_cases": 16,
+      "lanes": [
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 167818,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "13d114d17b08039cab7bf258865953870b0b2fe1f388b8a1807d1d4c8eef3263",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "912782f86ecf73d7b21cab2d11c72deef8c7a963f6d638b766bed4ecd0404429",
+            "dbus.log": "52556f63b3e32599ce7a3a74ae51d7b6291a98d71c06a037c41365102de336c5",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "9865db095a5f0a1c787cc208eae04365854b12a7d8afa123d0f7a733d0bf3995",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "11599555916a6221e524dcd15c2d01aca8647bbfc97052d2f240b4dd5bb93f64",
+            "runtime.log": "ceb35590edbd029ded1200b5199627ce1a8097f1f7b9b79bd9aa78ffc42eda07",
+            "stress.jsonl": "4aa2d46dc05ea555381964b31da7b49cbd69a2c3775e38438e24cdc1fcdec3c2",
+            "wire.btsnoop": "3cde73cacddcc9801e751302a889ed1b43eb2a36cf6192d9c6b89035ae4e6ac6"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "latest",
+          "peer": {
+            "agents": 0,
+            "calls": {
+              "AddMatch": 3,
+              "Connect": 1,
+              "Disconnect": 1,
+              "GetAll": 1,
+              "GetManagedObjects": 3,
+              "GetNameOwner": 1,
+              "Hello": 1
+            },
+            "confirms": 0,
+            "generation": 22,
+            "native_senders": [],
+            "notification_sessions": 0,
+            "notifying": [],
+            "peer_calls": {},
+            "peer_connected": false,
+            "pending_controls": 0,
+            "values": {
+              "duplicate_a": "a1",
+              "duplicate_b": "b2",
+              "indicate": "00",
+              "notify": "00",
+              "value": "3412"
+            }
+          },
+          "status": "passed"
+        },
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 192123,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "4bc5b7b58c7a9ead232952cfc665b75b8fa5f41df940af5eb2e84db3ec8c7761",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "c168926a0b7eb60fe46f9f2cb25f42b55479b957eff557df3b887cbe46d93596",
+            "dbus.log": "52556f63b3e32599ce7a3a74ae51d7b6291a98d71c06a037c41365102de336c5",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "b44ce8952daa14aeb4059265d3dfabc5b518e80200d9765ee33d3d6ad9ffb3d1",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "11599555916a6221e524dcd15c2d01aca8647bbfc97052d2f240b4dd5bb93f64",
+            "runtime.log": "d836dde8e57c07ebb1200a0b0cc71ab6fcb69bb5b08e39d77b1d87846a6af581",
+            "stress.jsonl": "e8941f257087194c0882313df9ce10af13291c6035ec552d0fb7934ad298b72e",
+            "wire.btsnoop": "f0bfb2a9de78685d9caec576565759369ccf4b5e539a3ccf69d848f9ea6a5ffa"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "lower",
+          "peer": {
+            "agents": 0,
+            "calls": {
+              "AddMatch": 3,
+              "Connect": 1,
+              "Disconnect": 1,
+              "GetAll": 1,
+              "GetManagedObjects": 3,
+              "GetNameOwner": 1,
+              "Hello": 1
+            },
+            "confirms": 0,
+            "generation": 22,
+            "native_senders": [],
+            "notification_sessions": 0,
+            "notifying": [],
+            "peer_calls": {},
+            "peer_connected": false,
+            "pending_controls": 0,
+            "values": {
+              "duplicate_a": "a1",
+              "duplicate_b": "b2",
+              "indicate": "00",
+              "notify": "00",
+              "value": "3412"
+            }
+          },
+          "status": "passed"
+        }
+      ],
+      "native_host_sha256": "26fc5ac60345c1780da7150d403ebee7be56cc93d2bea92c3c4fbdf66ebe9685",
+      "result": "passed",
+      "schema": "wotex.ble.software-run",
+      "version": 1,
+      "receipt_sha256": "a6c57c19e143f97d4eab981bf19eaf6d35ef63745c493bd41c5fcefa0c531661"
+    },
+    {
+      "build_manifest_sha256": "5268db6e1757624949b364cd0fd5f7934a3de83a54e9db1932e76fa6f22df463",
+      "expected_cases": 16,
+      "lanes": [
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 167371,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "357805c5dbbb278fa66bbaf69fc4b9f50c45c93d2615ebcfbd4cf3c95f65477a",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "9b91f2c8e8516fcc17cdf54f883562b5967a501fd01e10acb2a08eb6659b4945",
+            "dbus.log": "52556f63b3e32599ce7a3a74ae51d7b6291a98d71c06a037c41365102de336c5",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "a0433e5ffa5ffa5f6c80ebc8e6a6769c661aa57c18da16d690e5e6f81e0d4f3c",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "11599555916a6221e524dcd15c2d01aca8647bbfc97052d2f240b4dd5bb93f64",
+            "runtime.log": "ceb35590edbd029ded1200b5199627ce1a8097f1f7b9b79bd9aa78ffc42eda07",
+            "stress.jsonl": "bcac4c79d08ba127d19ac31904f77aa85bafd01888249e1d4bbc2be8b2ebda1f",
+            "wire.btsnoop": "50bf716a8c5fa4bdd87d7d06d77bed8c13671b05d2a65066bbb8e253ab9ffb6f"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "latest",
+          "peer": {
+            "agents": 0,
+            "calls": {
+              "AddMatch": 3,
+              "Connect": 1,
+              "Disconnect": 1,
+              "GetAll": 1,
+              "GetManagedObjects": 3,
+              "GetNameOwner": 1,
+              "Hello": 1
+            },
+            "confirms": 0,
+            "generation": 22,
+            "native_senders": [],
+            "notification_sessions": 0,
+            "notifying": [],
+            "peer_calls": {},
+            "peer_connected": false,
+            "pending_controls": 0,
+            "values": {
+              "duplicate_a": "a1",
+              "duplicate_b": "b2",
+              "indicate": "00",
+              "notify": "00",
+              "value": "3412"
+            }
+          },
+          "status": "passed"
+        },
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 191863,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "c408efdda96f89467cca8fbc93b1090c5b8f2c2c363ff063f1ca5f12271c1d83",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "c5cccb345962e91af855ccd8c9c1f05a1c079d1701accc82aca6699e40cc44be",
+            "dbus.log": "52556f63b3e32599ce7a3a74ae51d7b6291a98d71c06a037c41365102de336c5",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "8e7a25cb3053512f7bbd3168b2f65d9c65ae32794ec4be3343a2e646d66b41c1",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "11599555916a6221e524dcd15c2d01aca8647bbfc97052d2f240b4dd5bb93f64",
+            "runtime.log": "d836dde8e57c07ebb1200a0b0cc71ab6fcb69bb5b08e39d77b1d87846a6af581",
+            "stress.jsonl": "bd1c9582f19d5fd1309b9511f89717150c0b811b56d96d4997a112f3450ec3a6",
+            "wire.btsnoop": "fd5b636ee3c4cdee68de128929b23c7eaa715eb531ed90f0078705c6bdafbac1"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "lower",
+          "peer": {
+            "agents": 0,
+            "calls": {
+              "AddMatch": 3,
+              "Connect": 1,
+              "Disconnect": 1,
+              "GetAll": 1,
+              "GetManagedObjects": 3,
+              "GetNameOwner": 1,
+              "Hello": 1
+            },
+            "confirms": 0,
+            "generation": 22,
+            "native_senders": [],
+            "notification_sessions": 0,
+            "notifying": [],
+            "peer_calls": {},
+            "peer_connected": false,
+            "pending_controls": 0,
+            "values": {
+              "duplicate_a": "a1",
+              "duplicate_b": "b2",
+              "indicate": "00",
+              "notify": "00",
+              "value": "3412"
+            }
+          },
+          "status": "passed"
+        }
+      ],
+      "native_host_sha256": "26fc5ac60345c1780da7150d403ebee7be56cc93d2bea92c3c4fbdf66ebe9685",
+      "result": "passed",
+      "schema": "wotex.ble.software-run",
+      "version": 1,
+      "receipt_sha256": "fd5e597386ebeb20ca64998462ebf9d0e97934e3ff523859e4604239efcdbca9"
+    },
+    {
+      "build_manifest_sha256": "5268db6e1757624949b364cd0fd5f7934a3de83a54e9db1932e76fa6f22df463",
+      "expected_cases": 16,
+      "lanes": [
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 222451,
+          "evidence": {
+            "bluetoothd.log": "08c9e41180d39a80c95cf8cd039550d6441c1b954c163d80220361c34bceb475",
+            "btmon.log": "be98292fdaa428129afd912533c1919ba72a61c3262e82a6611b867b75d14f14",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "aef4b2c58d1c8cb3748e7efbe2f7a7705835d8bb58f321cc19592dc7dc515e83",
+            "dbus.log": "189fbb748725563769edc0bbddc9de4beb3ef394b48ee8079ec1dbe63cedacea",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "622ba32cd8f886114cd91219ddb1098943cef872b1442f756e36feeab976e3dd",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "11599555916a6221e524dcd15c2d01aca8647bbfc97052d2f240b4dd5bb93f64",
+            "runtime.log": "ceb35590edbd029ded1200b5199627ce1a8097f1f7b9b79bd9aa78ffc42eda07",
+            "stress.jsonl": "f17fa24b66b33ab61798ef27024e16f112abe496fe743547e760f652214c0741",
+            "wire.btsnoop": "335ef2843f65c33c107ab0260d66faecd675469ba4071b0aa29c66e002078e62"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "latest",
+          "peer": {
+            "agents": 0,
+            "calls": {
+              "AddMatch": 3,
+              "Connect": 1,
+              "Disconnect": 1,
+              "GetAll": 1,
+              "GetManagedObjects": 3,
+              "GetNameOwner": 1,
+              "Hello": 1
+            },
+            "confirms": 0,
+            "generation": 22,
+            "native_senders": [],
+            "notification_sessions": 0,
+            "notifying": [],
+            "peer_calls": {},
+            "peer_connected": false,
+            "pending_controls": 0,
+            "values": {
+              "duplicate_a": "a1",
+              "duplicate_b": "b2",
+              "indicate": "00",
+              "notify": "00",
+              "value": "3412"
+            }
+          },
+          "status": "passed"
+        },
+        {
+          "containers_remaining": 0,
+          "elapsed_ms": 165303,
+          "evidence": {
+            "bluetoothd.log": "3f1643e5fb2e2487855c9e4b8248376e16434df1464bb3a334068224559ca761",
+            "btmon.log": "e184ab0489e69cb7abdc4b713198363e49c88453579f6e6e22ffea449a07d06e",
+            "btvirt.log": "c591f46fc166680ec20b09c32cbfc398857f8d0f05b13b38654074ba5ee58fae",
+            "console.log": "9598be61dc9607fa94bad2cdda533d9407ddf209e6b58947c4ba40504d469c43",
+            "dbus.log": "52556f63b3e32599ce7a3a74ae51d7b6291a98d71c06a037c41365102de336c5",
+            "exunit.json": "c993c85d4f4cbe3e840fd3c6f95388975594f2373d75cf5750b100f8c990662a",
+            "exunit.log": "c1a6f79b14058ba7e529994215fda6900b9ba8714b1721e6bab36f06f7ecb285",
+            "guest-result.json": "238e2e93f345d96837fb2ad7295e6f05bcc2d89f760ca23bb434a74b1fd370c1",
+            "peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "public-peer-result.json": "6ed3612cf4f5c154e5a4731593b2b447f54aae738faed8607b53826d41fee59a",
+            "runtime.log": "d836dde8e57c07ebb1200a0b0cc71ab6fcb69bb5b08e39d77b1d87846a6af581",
+            "stress.jsonl": "a8794a03e2d330b57f6c265a2b1a23ec902a992aad1eb97b354b700ec3eb3c76",
+            "wire.btsnoop": "05a3d2ede84afb0bb5df29367819568afee889f7f6f005e4915dd491f0925177"
+          },
+          "exunit": {
+            "passed": 16
+          },
+          "lane": "lower",
+          "peer": {
+            "agents": 0,
+            "calls": {
+              "AddMatch": 3,
+              "Connect": 1,
+              "Disconnect": 1,
+              "GetAll": 1,
+              "GetManagedObjects": 4,
+              "GetNameOwner": 1,
+              "Hello": 1
+            },
+            "confirms": 0,
+            "generation": 22,
+            "native_senders": [],
+            "notification_sessions": 0,
+            "notifying": [],
+            "peer_calls": {},
+            "peer_connected": false,
+            "pending_controls": 0,
+            "values": {
+              "duplicate_a": "a1",
+              "duplicate_b": "b2",
+              "indicate": "00",
+              "notify": "00",
+              "value": "3412"
+            }
+          },
+          "status": "passed"
+        }
+      ],
+      "native_host_sha256": "26fc5ac60345c1780da7150d403ebee7be56cc93d2bea92c3c4fbdf66ebe9685",
+      "result": "passed",
+      "schema": "wotex.ble.software-run",
+      "version": 1,
+      "receipt_sha256": "1665b8080b1018074fead96de4df39898d234e85b935f50cf5b782fa80d1720d"
+    }
+  ]
+}

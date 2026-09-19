@@ -3,14 +3,14 @@ spec:
   id: WBL.05
   title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-ble
   updated: 2026-09-09
 ---
 
 # WBL.05 Standalone central and protocol workflows
 
-Specification version: `1.1.2`. Status: planned target, not implemented capability.
+Specification version: `1.1.3`. Status: planned target, not implemented capability.
 Requires [WBL.01](WBL.01-library-contract.md) and
 [WBL.04](WBL.04-software-contract.md). The baseline remains documented in
 [WBL.03](WBL.03-implemented-profile.md).
@@ -147,8 +147,8 @@ reject, timeout and wrong challenge ID. Inspect Agent registration count and
 native session count after owner death. Complete this workflow through the
 native API first, then the equivalent supported WoT cells. Neither a scripted
 D-Bus response nor an ExUnit fake replaces the virtual-controller lane. Pins
-remain BlueZ `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and libdbus 1.16.2 from .13. The independent fixture provider may use the
-explicitly pinned Python exception; it never supplies client IPC responses.
+remain BlueZ `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and libdbus 1.16.2 from .13. The independent fixture provider is the
+compiled GDBus/GIO C++ peer from .13; it never supplies client IPC responses.
 
 ## WBL-N04 — Concrete corpus and executable acceptance
 

@@ -46,5 +46,6 @@ APIs. Dependency artifacts and local source evidence remain separately identifie
 
 The [WBL.07 native backend contract](../specs/WBL.07-native-backend.md)
 requires a first-party compiled Port and Mix/ExUnit software tooling.
-Python is permitted only for required upstream build tools or an explicitly
-justified independent software peer. It is not part of production execution.
+Repository-owned runtime and fixture code is restricted to Elixir, Rust, C and
+C++. Python is permitted only when an immutable upstream build generator
+requires it; it is not part of production or fixture execution.

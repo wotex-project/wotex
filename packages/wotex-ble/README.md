@@ -52,9 +52,9 @@ records `native-manifest.json`; see the
 [native build receipt](../../docs/packages/wotex-ble/provenance/native-build-v1.json). The explicit
 software tasks `wotex.ble.software.build` and `wotex.ble.software.run` build and
 boot the BlueZ virtual-controller fixture once per BEAM lane; see the
-[software run receipt](../../docs/packages/wotex-ble/provenance/software-run-v3.json). Upstream SDK
-Python is build-time only, and the fixture's independent GATT peer uses Python
-only as a test peer.
+[software run receipt](../../docs/packages/wotex-ble/provenance/software-run-v4.json). Upstream SDK
+Python, where required, is build-time only. The fixture peer is a compiled
+C++17 GDBus application and the guest contains no repository-owned Python code.
 
 ## Implemented profile
 
@@ -76,11 +76,10 @@ Pending Pair sender loss may separately make BlueZ disconnect a borrowed peer.
 
 The native host passes the 11 public BLE and Runtime tests and the 5 WBL-C09
 lifecycle stress tests against real BlueZ 5.85 and two virtual Linux controllers
-in both BEAM lanes. The independent
-provider uses BlueZ's GATT server API, so the wire endpoints remain the same
-stack. See the [virtual-controller fixture](../../docs/packages/wotex-ble/provenance/virtual-controller.md).
-The x86_64 guest lane and final package gates remain unfinished in the ordered
-plan.
+in both BEAM lanes. The independent provider uses GDBus to expose BlueZ's GATT
+server API, while the production client uses libdbus; the wire endpoints remain
+the same BlueZ stack. See the [virtual-controller fixture](../../docs/packages/wotex-ble/provenance/virtual-controller.md).
+The x86_64 guest lane remains unfinished in the ordered plan.
 
 ## Quick start
 

@@ -16,7 +16,7 @@ defmodule Wotex.BLE.Software.Fixture do
 
   @packages ~w(wotex wotex-runtime wotex-ble)
   @directories ~w(config lib priv test)
-  @ignored ~w(_build deps __pycache__ plts .ruff_cache)
+  @ignored ~w(_build deps plts)
   @maximum_files 20_000
 
   @typedoc "Relative source path to content digest and permission bits."

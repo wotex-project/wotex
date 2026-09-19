@@ -30,7 +30,7 @@ specifications:
     executable_evidence: ["test/wotex/ble/bluez_test.exs", "test/wotex/ble/contract_test.exs", "test/wotex/ble/dependency_security_test.exs", "test/wotex/ble/mapping_test.exs", "test/wotex/ble/port_test.exs", "test/wotex/ble/contract_fixture_test.exs", "test/wotex/ble/dbus_bridge_test.exs", "test/wotex/ble/runtime_integration_test.exs", "test/wotex/ble/stream_bridge_test.exs"]
     compatibility_classification: "Typed values, persistent native D-Bus/Runtime behavior and scoped virtual BlueZ evidence; native .13 and final software acceptance remain open"
   - id: "WBL.04"
-    version: "1.1.4"
+    version: "1.1.5"
     path: "docs/specs/WBL.04-software-contract.md"
     implementation_status: "partial"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
@@ -39,7 +39,7 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.05"
-    version: "1.1.2"
+    version: "1.1.3"
     path: "docs/specs/WBL.05-standalone-client-and-preservation.md"
     implementation_status: "planned"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
@@ -57,7 +57,7 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.07"
-    version: "1.0.23"
+    version: "1.0.24"
     path: "docs/specs/WBL.07-native-backend.md"
     implementation_status: "partial"
     standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]

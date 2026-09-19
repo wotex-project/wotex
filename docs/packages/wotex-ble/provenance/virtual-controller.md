@@ -8,9 +8,9 @@ implementation of BlueZ's GATT server API supplies private UUIDs and values; it
 does not implement or replace the client boundary. Both wire endpoints use
 BlueZ, so this is same-stack protocol evidence with an independent GATT
 application provider. The exact executed cohort is the
-[software run receipt](software-run-v3.json); the earlier
-[public-only](software-run-v1.json) and [first stress](software-run-v2.json)
-receipts remain historical.
+[software run receipt](software-run-v4.json); the earlier
+[public-only](software-run-v1.json), [first stress](software-run-v2.json) and
+[Python-peer](software-run-v3.json) receipts remain historical.
 
 ## Explicit invocation
 
@@ -35,16 +35,17 @@ Both run from the repository root; inside `packages/wotex-ble` the equivalent is
 The build produces three owned images through the command guardian, each within
 ten minutes: `test/interop/virtual/Dockerfile.system` (Debian 12 packages, the
 pinned kernel and QEMU, both BEAM lanes), `Dockerfile.bluez` (BlueZ, virtual HCI
-module and peer environment) and `Dockerfile.public` (pinned Hex and Rebar3,
+module and compiled GDBus C++ peer) and `Dockerfile.public` (pinned Hex and Rebar3,
 all three packages compiled in both lanes and `mix wotex.native.build`). The
 public image is exported to a 6 GiB ext4 guest disk. `build_manifest.exs`
-records BlueZ, QEMU, compiler, BEAM, peer package and kernel/module/binary
+records BlueZ, QEMU, compiler, BEAM, peer executable and kernel/module/binary
 hashes inside the image.
 
 The selected guest uses Debian Linux `6.1.0-53-arm64` (`6.1.187-1`), QEMU
 `7.2.22` (`1:7.2+dfsg-7+deb12u18+b3`), BlueZ source
-`2123ab772fbe97d1369fc9e179ea87c3469cf98f` (5.85), dbus-next 0.2.3 with required
-package hashes, Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15.
+`2123ab772fbe97d1369fc9e179ea87c3469cf98f` (5.85), the recorded Debian
+GLib/GIO package and C++ peer ELF/source hashes, Elixir 1.20.2 / OTP 29.0.4 and
+Elixir 1.18.4 / OTP 27.3.4.15.
 
 The Debian kernel omits `CONFIG_BT_HCIVHCI`. The fixture builds the unmodified
 matching `hci_vhci.c` against the exact kernel headers/configuration and
@@ -125,10 +126,13 @@ The [first stress receipt](software-run-v2.json) records three consecutive
 passing runs, 15 of 15 tests per lane. The owned-link scenario then failed with
 `cleanup_timeout` in both lanes: the host exited on its cooperative deadline
 before writing a completed close, and the BEAM handed cleanup to the guardian at
-that same deadline. After both fixes, the current
-[software run receipt](software-run-v3.json) records a fresh verified build and
-three consecutive runs that pass both lanes, 16 of 16 tests in each (208 to 265 s
-per lane), with zero remaining owned containers. The stress file performs 1000
+that same deadline. After both fixes,
+[software-run-v3.json](software-run-v3.json) recorded three passing runs with
+the retired Python peer. The current
+[software run receipt](software-run-v4.json) records a fresh verified build of
+the C++17 GDBus/GIO peer and three consecutive runs that pass both lanes, 16 of
+16 tests in each (165 to 188 s per lane), with zero remaining owned containers.
+The stress file performs 1000
 alternating acknowledged writes and correlated reads on one sender; 100
 connect/health/disconnect cycles that each return to the BEAM process and port
 baseline, zero guardian or host OS processes and released BlueZ senders, Agents
@@ -146,8 +150,6 @@ are separate `stress.jsonl` evidence: host RSS stayed at 3.9 MB throughout each
 session and BEAM totals varied within about 1.4 MB. BEAM timers are not globally
 enumerable; their release is covered only through exit of the owning processes.
 
-An earlier Python-orchestrated guest ran the retired Python adapter through 15
-cases, including a wrong pairing challenge, read-caused Value changes, stale
-targets and BlueZ link-drain timing. Those results apply only to that adapter.
-Their scenarios now run in the public ExUnit lanes as described above. An x86_64
-guest lane and final package gates remain open.
+The earlier Python peer results apply only to that retired implementation. Their
+scenarios now run against the compiled peer in the public ExUnit lanes as
+described above. An x86_64 guest lane remains open.

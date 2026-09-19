@@ -301,6 +301,7 @@ defmodule Wotex.BLE.Software.Build do
       {Path.join(assets, "Dockerfile.system"), "context/system/Dockerfile"},
       {Path.join(assets, "Dockerfile.bluez"), "context/bluez/Dockerfile"},
       {Path.join(workspace, "downloads/bluez.tar.gz"), "context/bluez/bluez.tar.gz"},
+      {Path.join(context.root, "priv/bluez/native/vendor/json.hpp"), "context/bluez/json.hpp"},
       {Path.join(assets, "Dockerfile.public"), "context/public/Dockerfile"},
       {Path.join(workspace, "downloads/hex-source.tar.gz"), "context/public/hex-source.tar.gz"},
       {Path.join(workspace, "downloads/rebar-source.tar.gz"), "context/public/rebar-source.tar.gz"}

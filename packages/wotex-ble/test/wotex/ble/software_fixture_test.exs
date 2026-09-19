@@ -201,6 +201,10 @@ defmodule Wotex.BLE.SoftwareFixtureTest do
       File.write!(Path.join(package_root, "_build/ignored/file"), "ignored")
     end
 
+    vendor = Path.join(checkout, "priv/bluez/native/vendor")
+    File.mkdir_p!(vendor)
+    File.write!(Path.join(vendor, "json.hpp"), "fixture json header")
+
     virtual = Path.join(checkout, "test/interop/virtual")
     File.mkdir_p!(virtual)
 
@@ -219,6 +223,43 @@ defmodule Wotex.BLE.SoftwareFixtureTest do
     )
 
     %{root: root, checkout: checkout, workspace: Path.join(root, "workspace")}
+  end
+
+  test "WBL-B01 virtual-controller peer uses the admitted native fixture stack" do
+    virtual = Path.expand("../../interop/virtual", __DIR__)
+
+    names =
+      virtual
+      |> File.ls!()
+      |> Enum.sort()
+
+    assert "public_peer.cpp" in names
+    refute Enum.any?(names, &(Path.extname(&1) == ".py"))
+    refute "requirements.txt" in names
+
+    bluez = File.read!(Path.join(virtual, "Dockerfile.bluez"))
+    system = File.read!(Path.join(virtual, "Dockerfile.system"))
+    public = File.read!(Path.join(virtual, "public.sh"))
+    manifest = File.read!(Path.join(virtual, "build_manifest.exs"))
+    peer = File.read!(Path.join(virtual, "public_peer.cpp"))
+
+    assert bluez =~ "public_peer.cpp"
+    assert bluez =~ "pkg-config --cflags --libs gio-2.0"
+    assert public =~ "/opt/wbl/bin/wotex-ble-public-peer"
+    assert manifest =~ "/opt/wbl/bin/wotex-ble-public-peer"
+
+    refute Enum.any?([bluez, system, public, manifest], &Regex.match?(~r/\bpython\d*\b/i, &1))
+    refute Enum.any?([bluez, system, public, manifest], &Regex.match?(~r/\bpip\d*\b/i, &1))
+
+    assert peer =~
+             ~r/static GDBusMessage \*filter\(.*?gboolean incoming.*?if \(incoming &&.*?G_DBUS_MESSAGE_TYPE_METHOD_CALL\).*?return nullptr;.*?return message;/s
+  end
+
+  test "WBL-B01 software builder declares its HTTPS runtime applications" do
+    applications = Application.spec(:wotex_ble, :applications)
+
+    assert :inets in applications
+    assert :ssl in applications
   end
 
   test "WBL-B01 fixture inputs bind package sources, modes and assets without build output",
@@ -261,6 +302,9 @@ defmodule Wotex.BLE.SoftwareFixtureTest do
     refute File.exists?(Path.join(context.workspace, ".wotex-ble-software.lock"))
 
     assert File.read!(Path.join(context.workspace, "context/bluez/virtual/guest.sh")) == "guest.sh"
+
+    assert File.read!(Path.join(context.workspace, "context/bluez/json.hpp")) ==
+             "fixture json header"
 
     assert File.read!(Path.join(context.workspace, "context/public/source/wotex/lib/module.ex")) ==
              "wotex module"

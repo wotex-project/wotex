@@ -3,7 +3,7 @@ spec:
   id: WBL.04
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.4
+  version: 1.1.5
   owner: wotex-ble
   updated: 2026-09-17
 ---
@@ -327,9 +327,10 @@ Device1 state meanings use the pinned
 | WBL-V12 | C09 stress/admission/matrix plus bridge EOF/log/corrupt-line faults | Bounded native/D-Bus/BEAM cleanup and no false success |
 
 Pin BlueZ to `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and production
-libdbus 1.16.2 as .13. The independent GATT provider may use dbus-next 0.2.3
-(source `74dc9706e8d0ebb17f27818b8ef9e214172514ec`), solely as a test peer. Build BlueZ with its test and
-emulator tools. Use an isolated Linux VM with `CONFIG_BT_HCIVHCI` support and two virtual
+libdbus 1.16.2 as .13. The independent GATT provider is a compiled C++17
+application over GDBus/GIO, not the production libdbus client, and contains no
+Python runtime. Build BlueZ with its test and emulator tools. Use an isolated
+Linux VM with `CONFIG_BT_HCIVHCI` support and two virtual
 LE controllers created by `btvirt -L -l2`; verify no physical HCI controller
 is present before selecting fixture devices. Run a disposable private D-Bus and
 bluetoothd, and a fixture GATT server with duplicate UUID instances, readable/

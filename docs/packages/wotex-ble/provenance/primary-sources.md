@@ -26,9 +26,11 @@ compiler/runtime lanes and the separate permitted fixture dependencies.
   MessageBus in production.
 - [btvirt](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/emulator/main.c)
   supplies virtual LE controllers; the mandatory fixture checks VHCI support.
-  Its independent GATT provider may use [dbus-next 0.2.3 source](https://github.com/altdesktop/python-dbus-next/tree/74dc9706e8d0ebb17f27818b8ef9e214172514ec),
-  with fixture package hashes. That exception does not permit a Python client or
-  generic Python orchestration in the accepted native build.
+  Its independent GATT provider uses the
+  [GDBus connection API](https://docs.gtk.org/gio/class.DBusConnection.html)
+  from the recorded guest GLib/GIO package and first-party C++ source. This is a
+  separate D-Bus implementation from the production libdbus client and adds no
+  Python fixture exception.
 
 BlueHeron's direct HCI stack is a different owner boundary; it is not a fallback
 for this explicitly BlueZ central profile. Physical RF and Bluetooth qualification

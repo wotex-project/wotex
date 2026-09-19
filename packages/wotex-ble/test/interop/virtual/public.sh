@@ -9,7 +9,7 @@ export LANG=C.UTF-8 LC_ALL=C.UTF-8
 export WOTEX_BLE_SOFTWARE_CONFIG=/run/wbl/software.json WOTEX_REQUIRE_SOFTWARE=1
 export WOTEX_BLE_NATIVE_WORKSPACE=/opt/wbl/native
 rm -f /run/wbl/software.json /run/wbl/control.sock
-/opt/peer/bin/python -B -u /opt/wbl/fixture/public_peer.py > /results/peer.log 2>&1 &
+/opt/wbl/bin/wotex-ble-public-peer > /results/peer.log 2>&1 &
 peer_process=$!
 pids+=("$peer_process")
 for attempt in $(seq 1 300); do
