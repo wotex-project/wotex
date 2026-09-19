@@ -7,7 +7,7 @@ use std::{
 use super::{
     monitored_item::MonitoredItem,
     subscription::{MonitoredItemHandle, Subscription, TickReason, TickResult},
-    CreateMonitoredItem, NonAckedPublish, PendingPublish, PersistentSessionKey,
+    CreateMonitoredItem, NonAckedPublish, PendingPublish, PersistentSessionKey, RepublishFault,
 };
 use hashbrown::{HashMap, HashSet};
 use opcua_nodes::{Event, TypeTree};
@@ -48,6 +48,8 @@ pub struct SessionSubscriptions {
     session: Arc<RwLock<Session>>,
     /// Static reference to the type-tree for the user owning this.
     type_tree_for_user: Arc<dyn TypeTreeForUserStatic>,
+    /// Fixture-controlled fault state shared across server Sessions.
+    republish_fault: Arc<opcua_core::sync::Mutex<RepublishFault>>,
 }
 
 impl SessionSubscriptions {
@@ -56,6 +58,7 @@ impl SessionSubscriptions {
         user_token: PersistentSessionKey,
         session: Arc<RwLock<Session>>,
         type_tree_for_user: Arc<dyn TypeTreeForUserStatic>,
+        republish_fault: Arc<opcua_core::sync::Mutex<RepublishFault>>,
     ) -> Self {
         Self {
             user_token,
@@ -66,6 +69,7 @@ impl SessionSubscriptions {
             limits,
             session,
             type_tree_for_user,
+            republish_fault,
         }
     }
 
@@ -246,6 +250,7 @@ impl SessionSubscriptions {
         &self,
         request: &RepublishRequest,
     ) -> Result<RepublishResponse, StatusCode> {
+        self.republish_fault.lock().record_republish();
         let msg = self.find_notification_message(
             request.subscription_id,
             request.retransmit_sequence_number,
@@ -624,6 +629,7 @@ impl SessionSubscriptions {
         let mut more_notifications = false;
 
         for sub_id in subscription_ids {
+            let max_retransmission_queue_len = self.max_publish_requests() * 2;
             let subscription = self.subscriptions.get_mut(&sub_id).unwrap();
             let res = subscription.tick(
                 now,
@@ -634,6 +640,18 @@ impl SessionSubscriptions {
             // Get notifications and publish request pairs while there are any of either left.
             while !self.publish_request_queue.is_empty() {
                 if let Some(notification_message) = subscription.take_notification() {
+                    let discard = self.republish_fault.lock().take_withhold();
+                    if let Some(discard) = discard {
+                        if !discard {
+                            Self::enqueue_retransmission_notification(
+                                &mut self.retransmission_queue,
+                                max_retransmission_queue_len,
+                                sub_id,
+                                &notification_message,
+                            );
+                        }
+                        continue;
+                    }
                     tracing::trace!("Sending notification message {:?}", notification_message);
                     let publish_request = self.publish_request_queue.pop_front().unwrap();
                     responses.push((publish_request, notification_message, sub_id));

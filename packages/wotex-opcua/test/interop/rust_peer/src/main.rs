@@ -305,6 +305,7 @@ fn populate(
     let fixture = NodeId::new(namespace, "fixture");
     let continuation_points = NodeId::new(namespace, "continuation_points");
     let cancel_count = NodeId::new(namespace, "cancel_count");
+    let republish_fault = NodeId::new(namespace, "republish_fault");
     let resources = NodeId::new(namespace, "resources");
     let value = NodeId::new(namespace, "value");
     let int_array = NodeId::new(namespace, "int_array");
@@ -437,6 +438,30 @@ fn populate(
         {
             return Err("cannot add cancel count method".to_owned());
         }
+        if !MethodBuilder::new(&republish_fault, "RepublishFault", "RepublishFault")
+            .component_of(fixture.clone())
+            .input_args(
+                &mut *address_space,
+                &NodeId::new(namespace, "republish_fault_inputs"),
+                &[
+                    ("Withhold", DataTypeId::UInt32).into(),
+                    ("Discard", DataTypeId::Boolean).into(),
+                ],
+            )
+            .output_args(
+                &mut *address_space,
+                &NodeId::new(namespace, "republish_fault_outputs"),
+                &[
+                    ("Withheld", DataTypeId::UInt32).into(),
+                    ("Republished", DataTypeId::UInt32).into(),
+                ],
+            )
+            .executable(true)
+            .user_executable(true)
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add Republish fault method".to_owned());
+        }
         if !MethodBuilder::new(&resources, "Resources", "Resources")
             .component_of(fixture.clone())
             .output_args(
@@ -485,6 +510,20 @@ fn populate(
     manager.inner().add_method_callback(cancel_count, move |_| {
         Ok(vec![Variant::UInt32(cancel_handle.cancel_count())])
     });
+    let republish_handle = handle.clone();
+    manager
+        .inner()
+        .add_method_callback(republish_fault, move |arguments| {
+            let [Variant::UInt32(withhold), Variant::Boolean(discard)] = arguments else {
+                return Err(StatusCode::BadInvalidArgument);
+            };
+            let (withheld, republished) =
+                republish_handle.configure_republish_fault(*withhold, *discard);
+            Ok(vec![
+                Variant::UInt32(withheld),
+                Variant::UInt32(republished),
+            ])
+        });
     let resource_handle = handle.clone();
     manager.inner().add_method_callback(resources, move |_| {
         Ok(vec![
@@ -536,6 +575,7 @@ async fn publish_config(
                     "\"continuation_points_method_id\":",
                     "\"nsu={};s=continuation_points\",",
                     "\"cancel_count_method_id\":\"nsu={};s=cancel_count\",",
+                    "\"republish_fault_method_id\":\"nsu={};s=republish_fault\",",
                     "\"slow_method_id\":\"nsu={};s=slow\"}}"
                 ),
                 endpoint,
@@ -544,6 +584,7 @@ async fn publish_config(
                 children,
                 USERNAME,
                 PASSWORD,
+                NAMESPACE_URI,
                 NAMESPACE_URI,
                 NAMESPACE_URI,
                 NAMESPACE_URI,

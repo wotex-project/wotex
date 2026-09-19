@@ -3,7 +3,7 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.19
+  version: 2.0.20
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -175,8 +175,11 @@ lifetime makes the Rust server expire the subscription, emit one
 the Session usable. Stopping an isolated Rust server with a live subscription
 emits one exact `connection_failed` terminal, ends the Session and reaps the
 guardian/native process set without reconnect or replay. A newly started peer
-serves only after an explicit fresh connection. Independent Republish fault
-injection and other lifecycle interoperability remain open P02/P03 work.
+serves only after an explicit fresh connection. Independent fault injection
+now retains one withheld notification for ordered one-time Republish recovery
+and discards another for terminal `sequence_gap`; the server counts both
+Republish requests and peer resources return to zero. Other lifecycle
+interoperability remains open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.

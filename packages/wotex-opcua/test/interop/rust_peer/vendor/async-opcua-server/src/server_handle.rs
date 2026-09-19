@@ -119,6 +119,13 @@ impl ServerHandle {
         self.subscriptions.monitored_item_count()
     }
 
+    /// Configure the test fixture's next-notification Republish fault and
+    /// return the cumulative withheld and Republish request counts.
+    pub fn configure_republish_fault(&self, withhold: u32, discard: bool) -> (u32, u32) {
+        self.subscriptions
+            .configure_republish_fault(withhold, discard)
+    }
+
     /// Get a reference to the type tree, containing shared information about types in the server.
     pub fn type_tree(&self) -> &RwLock<DefaultTypeTree> {
         &self.type_tree

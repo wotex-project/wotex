@@ -219,6 +219,91 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
   end
 
   @tag rust_session: true
+  test "WOP-S04 WOP-V11 independent Republish recovers a withheld report once",
+       %{session: session, node: node} do
+    node_id = node.("value")
+
+    {:ok, %{"value" => %{"value" => original}}} =
+      Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node_id,
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+
+    try do
+      assert {:ok, _, %{"sequence" => initial}} = next_report(reference)
+      {before, republished} = republish_faults(session, node, 1, false)
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 71.0)
+      expected = before + 1
+      assert eventually(fn -> match?({^expected, _}, republish_faults(session, node, 0, false)) end)
+      refute_receive {:wotex_opcua, ^reference, _}, 100
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 72.0)
+
+      assert {:ok, %{"value" => %{"value" => 71.0}}, %{"sequence" => sequence}} =
+               next_report(reference)
+
+      assert sequence == initial + 1
+
+      assert {:ok, %{"value" => %{"value" => 72.0}}, %{"sequence" => next_sequence}} =
+               next_report(reference)
+
+      assert next_sequence == initial + 2
+      assert {^expected, count} = republish_faults(session, node, 0, false)
+      assert count == republished + 1
+      refute_receive {:wotex_opcua, ^reference, _}, 300
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert eventually(fn -> resources(session, node) == {0, 0} end)
+    after
+      assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+    end
+  end
+
+  @tag rust_session: true
+  test "WOP-S04 WOP-V11 unavailable independent Republish ends the subscription",
+       %{session: session, node: node} do
+    node_id = node.("value")
+
+    {:ok, %{"value" => %{"value" => original}}} =
+      Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node_id,
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+
+    try do
+      assert {:ok, _, _} = next_report(reference)
+      {before, republished} = republish_faults(session, node, 1, true)
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 73.0)
+      expected = before + 1
+      assert eventually(fn -> match?({^expected, _}, republish_faults(session, node, 0, false)) end)
+      refute_receive {:wotex_opcua, ^reference, _}, 100
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 74.0)
+
+      assert {:error, %Error{code: :sequence_gap, effect: :none}} = next_report(reference)
+      refute_receive {:wotex_opcua, ^reference, _}, 300
+      assert eventually(fn -> resources(session, node) == {0, 0} end)
+      assert {^expected, count} = republish_faults(session, node, 0, false)
+      assert count == republished + 1
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+    after
+      assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+    end
+  end
+
+  @tag rust_session: true
   test "WOP-C05 WOP-V12 independent receiver death cancels only its subscription",
        %{session: session, node: node} do
     baseline = native_descendants()
@@ -725,6 +810,37 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
              })
 
     value
+  end
+
+  defp republish_faults(session, node, withhold, discard) do
+    assert {:ok,
+            %{
+              "outputs" => [
+                %{"type" => "UInt32", "value" => withheld},
+                %{"type" => "UInt32", "value" => republished}
+              ]
+            }} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: node.("republish_fault"),
+               value: %{
+                 object_id: node.("fixture"),
+                 arguments: [
+                   %{type: "UInt32", value: withhold},
+                   %{type: "Boolean", value: discard}
+                 ]
+               }
+             })
+
+    {withheld, republished}
+  end
+
+  defp next_report(reference) do
+    receive do
+      {:wotex_opcua, ^reference, report} -> report
+    after
+      5000 -> flunk("timed out waiting for OPC UA report")
+    end
   end
 
   defp node_resolver(session, namespace_uri) do

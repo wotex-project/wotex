@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.49
+  version: 1.1.50
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -83,7 +83,10 @@ remain zero and the Session serves a subsequent Read. An isolated `server_loss`
 variant can then terminate beneath a live subscription: the receiver gets one
 BadCommunicationError-backed `connection_failed`, the Session and native
 helpers end without reconnect/replay, and a newly started peer serves only a
-fresh explicit Session.
+fresh explicit Session. Its counted Publish fault withholds one notification
+for ordered one-time Republish recovery and discards another for terminal
+`sequence_gap`; both paths release the server resources and preserve the
+Session.
 The same independent peer also executes scalar Double read/write through both
 production Runtime profiles and Property observation through a real
 ConsumedThing child. Explicit stop and Runtime-owner death each return its

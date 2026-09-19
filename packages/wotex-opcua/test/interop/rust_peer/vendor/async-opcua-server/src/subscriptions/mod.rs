@@ -91,6 +91,37 @@ struct SubscriptionCacheInner {
     monitored_items: HashMap<MonitoredItemKey, HashMap<MonitoredItemHandle, MonitoredItemEntry>>,
 }
 
+#[derive(Default)]
+pub(super) struct RepublishFault {
+    remaining_withholds: u32,
+    discard_withheld: bool,
+    withheld_count: u32,
+    republish_count: u32,
+}
+
+impl RepublishFault {
+    fn configure(&mut self, withhold: u32, discard: bool) -> (u32, u32) {
+        if withhold > 0 {
+            self.remaining_withholds = withhold;
+            self.discard_withheld = discard;
+        }
+        (self.withheld_count, self.republish_count)
+    }
+
+    pub(super) fn take_withhold(&mut self) -> Option<bool> {
+        if self.remaining_withholds == 0 {
+            return None;
+        }
+        self.remaining_withholds -= 1;
+        self.withheld_count = self.withheld_count.saturating_add(1);
+        Some(self.discard_withheld)
+    }
+
+    pub(super) fn record_republish(&mut self) {
+        self.republish_count = self.republish_count.saturating_add(1);
+    }
+}
+
 /// Structure storing all subscriptions and monitored items on the server.
 /// Used to notify users of changes.
 ///
@@ -99,6 +130,7 @@ struct SubscriptionCacheInner {
 /// manipulating subscriptions.
 pub struct SubscriptionCache {
     inner: RwLock<SubscriptionCacheInner>,
+    republish_fault: Arc<Mutex<RepublishFault>>,
     /// Configured limits on subscriptions.
     limits: SubscriptionLimits,
 }
@@ -111,8 +143,15 @@ impl SubscriptionCache {
                 subscription_to_session: HashMap::new(),
                 monitored_items: HashMap::new(),
             }),
+            republish_fault: Arc::new(Mutex::new(RepublishFault::default())),
             limits,
         }
+    }
+
+    /// Configure a fixture fault for upcoming notification messages and return
+    /// the cumulative withheld and Republish request counts.
+    pub fn configure_republish_fault(&self, withhold: u32, discard: bool) -> (u32, u32) {
+        self.republish_fault.lock().configure(withhold, discard)
     }
 
     /// Return the number of subscriptions currently owned by all sessions.
@@ -264,6 +303,7 @@ impl SubscriptionCache {
                     Self::get_key(&context.session),
                     context.session.clone(),
                     context.info.type_tree_getter.get_type_tree_static(context),
+                    self.republish_fault.clone(),
                 )))
             })
             .clone();
@@ -674,6 +714,7 @@ impl SubscriptionCache {
                         key.clone(),
                         context.session.clone(),
                         context.info.type_tree_getter.get_type_tree_static(context),
+                        self.republish_fault.clone(),
                     )))
                 })
                 .clone();

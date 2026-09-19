@@ -69,7 +69,8 @@ username and certificate user tokens. The peer serves a folder of 40 UInt32
 variables, a writable Double and a two-Double addition Method. Its fixture trust
 switch accepts the exact copied client leaf after async-opcua's certificate
 validation; it is not production trust policy. Methods report the server's own
-browse continuation, Cancel, subscription and MonitoredItem counts.
+browse continuation, Cancel, subscription, MonitoredItem,
+withheld-notification and Republish-request counts.
 `test/interop/rust_peer_test.exs` asserts through the public API that:
 
 - the continuation-point count is 1 after the first page, stays 1 after
@@ -118,8 +119,13 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
   server loss runs on an isolated named peer: stopping it beneath a live
   subscription delivers one `connection_failed` with BadCommunicationError and
   exchange phase, ends the Session and local helpers without reconnect/replay,
-  and a newly started peer serves only an explicitly fresh connection.
-  Independent Republish faults remain open.
+  and a newly started peer serves only an explicitly fresh connection. A
+  counted fault then withholds one notification while retaining it in the
+  retransmission queue: delivery of the next sequence makes the client issue
+  one Republish, after which both Values arrive once and in order. Discarding
+  the withheld notification instead makes the counted Republish return
+  BadMessageNotAvailable, emits one terminal `sequence_gap`, clears both peer
+  resources and leaves the Session serving Reads.
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
@@ -127,36 +133,38 @@ for active asynchronous requests; expose aggregate Cancel, continuation,
 application-request, subscription and MonitoredItem counts; advertise X.509 tokens with the
 endpoint's policy; preserve insertion order for reference buckets; and consume
 BrowseNext pages from the front. Subscription expiry also removes the expired
-ID from the aggregate ownership index on the same cache tick, and the named
-`server_loss` variant isolates destructive lifecycle evidence. These are test-server capabilities, not
-production client code.
+ID from the aggregate ownership index on the same cache tick. A shared,
+counted fault state withholds or discards exactly the next notification without
+replacing the Publish or Republish services, and the named `server_loss`
+variant isolates destructive lifecycle evidence. These are test-server
+capabilities, not production client code.
 
 On macOS arm64, `cargo check --locked`, Clippy over all targets with warnings
 denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-28 independent-wire cases passed 28/28: the original three
+30 independent-wire cases passed 30/30: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
 nine negative security/fault cells, plus the Runtime profile/observation and
-typed-array cases and five independent subscription/lifecycle cases. The
+typed-array cases and seven independent subscription/lifecycle cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `12c67f85293e6d1545bbec515995592dcfc20832f4d9f5fe4da7d55c4efe48b4` |
-| `test/interop/rust_peer/src/main.rs` | `2932b41957713d540414ed53b8daf663ce1ae89bfddbe29a1ee3b8ab894875f4` |
+| `test/interop/rust_peer_test.exs` | `282689c88a7ea7c3519d33ef763b5e0f8154cdd0e7530e075f2420fe0c9d6591` |
+| `test/interop/rust_peer/src/main.rs` | `674bd70aeede2b0b4d6b3c9f34060d52e449cc8b4a7ccea496af41e78f534ae0` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
 | `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |
 | `vendor/async-opcua-server/src/info.rs` | `a89c5543d2e2f94467a29d074deb8c99696bdc9102e028ccbf157441728f881d` |
 | `vendor/async-opcua-server/src/server.rs` | `5259336ddbea57cf26bf4526a89a23465527a836c9f10628689ab93b633d057b` |
-| `vendor/async-opcua-server/src/server_handle.rs` | `f26428c887c711703e003408d09f6a10523761d0d5c91144c3f00686435c6da5` |
+| `vendor/async-opcua-server/src/server_handle.rs` | `cea7d451483b15e64557c61149f9ca867f2384d920e783a5ecf03c28084001b6` |
 | `vendor/async-opcua-server/src/session/message_handler.rs` | `3ddf711f5e6bd7e05dd231049a09821085b411331097975b658191d94dffa84a` |
-| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `4f537ae35f7f906accd7061d70c56971651beb41ae8256131373fc610c7aecc2` |
-| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `3795ed089f684ba97f3cd253a1dd77cba3bde6b43ed4871997235952681a6abe` |
+| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `b3e0b10a28e44b92397d3c65e777f60b02ef27a0c08f72d44fde6da6a2c170bd` |
+| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `bd1e5b7b3e01a53add640043a641f347a027e3dd7dc4849781650fa7d60d9494` |
 | `vendor/async-opcua-nodes/src/references.rs` | `71a4c5ac793bed375f3690b4a4d897b77c3d524150fd22adc0afe465f5331d00` |
 | `priv/fixtures/native-contract-v1.json` | `c59b65b8de69ea34d1a6a8e237e7d65c202811bfb9bb920e554a704d925ebc1c` |
 | `test/software/Dockerfile.linux` | `84b45988d378cc40e612b10347e7951eff8bf9deec901be2133608a8f6b3cf2f` |

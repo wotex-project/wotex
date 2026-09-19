@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.11
+  version: 1.1.12
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -313,8 +313,11 @@ delivers one `subscription_lost` while retaining the Session. Terminating an
 isolated independent server emits one BadCommunicationError-backed
 `connection_failed`, ends the Session and all local helpers, and never
 reconnects; a replacement server requires an explicit fresh connection.
-Independent Republish fault injection and remaining lifecycle cells are still
-required. Through the real Runtime
+The peer also withholds one notification for ordered one-time Republish
+recovery, then discards one so BadMessageNotAvailable ends the subscription as
+`sequence_gap`; both Republish requests are counted by the server, peer
+resources return to zero and the Session remains usable. Remaining lifecycle
+cells are still required. Through the real Runtime
 ConsumedThing boundary the same independent peer also executes scalar Double
 read/write in the session and one-shot profiles and Property observation;
 explicit stop and Runtime-owner death each delete its subscription and
