@@ -51,12 +51,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       assert {:ok, session} = Wotex.OPCUA.connect(options)
       on_exit(fn -> Wotex.OPCUA.disconnect(session) end)
 
-      assert {:ok, %{"value" => %{"type" => "String", "array" => true, "value" => namespaces}}} =
-               Wotex.OPCUA.send(session, %{type: :read, node_id: "i=2255"})
-
-      index = Enum.find_index(namespaces, &(&1 == peer["namespace_uri"]))
-      assert is_integer(index)
-      node = &Address.to_string(%Address{namespace: index, kind: :string, identifier: &1})
+      node = node_resolver(session, peer["namespace_uri"])
       Map.merge(base, %{session: session, node: node})
     else
       base
@@ -386,6 +381,55 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert eventually(fn -> native_descendants() == baseline end)
   end
 
+  test "WOP-S02 WOP-V12 independent server loss is terminal without reconnect", context do
+    baseline = native_descendants()
+    {peer, endpoint} = variant(context, "server_loss")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(session, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+    processes = native_processes(host)
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node.("value"),
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+    assert resources(session, node) == {1, 1}
+    monitor = Process.monitor(host)
+    stop_peer(peer)
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:error,
+                     %Error{
+                       code: :connection_failed,
+                       effect: :none,
+                       details: %{status: 0x800E_0000, phase: :exchange}
+                     }}},
+                   10_000
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+    assert eventually(fn -> native_descendants() == baseline end)
+
+    {restarted, restarted_endpoint} = variant(context, "server_loss")
+    assert {:ok, fresh} = Wotex.OPCUA.connect(Keyword.put(options, :endpoint, restarted_endpoint))
+    fresh_node = node_resolver(fresh, context.peer["namespace_uri"])
+
+    assert {:ok, %{"value" => %{"type" => "Double"}}} =
+             Wotex.OPCUA.send(fresh, %{type: :read, node_id: fresh_node.("value")})
+
+    assert resources(fresh, fresh_node) == {0, 0}
+    assert :ok = Wotex.OPCUA.disconnect(fresh)
+    stop_peer(restarted)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
   @tag rust_session: true
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
        %{session: session, peer: peer, node: node} do
@@ -681,6 +725,15 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
              })
 
     value
+  end
+
+  defp node_resolver(session, namespace_uri) do
+    assert {:ok, %{"value" => %{"type" => "String", "array" => true, "value" => namespaces}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: "i=2255"})
+
+    index = Enum.find_index(namespaces, &(&1 == namespace_uri))
+    assert is_integer(index)
+    &Address.to_string(%Address{namespace: index, kind: :string, identifier: &1})
   end
 
   defp write(session, node_id, value) do

@@ -115,7 +115,11 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
   V10..V12). With the client SDK stopped, the Rust server expires a six-cycle
   lifetime and clears both resource counters. Resuming the SDK delivers one
   `subscription_lost`; the Session then serves another Read. Independent
-  Republish and restart faults remain open.
+  server loss runs on an isolated named peer: stopping it beneath a live
+  subscription delivers one `connection_failed` with BadCommunicationError and
+  exchange phase, ends the Session and local helpers without reconnect/replay,
+  and a newly started peer serves only an explicitly fresh connection.
+  Independent Republish faults remain open.
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
@@ -123,7 +127,8 @@ for active asynchronous requests; expose aggregate Cancel, continuation,
 application-request, subscription and MonitoredItem counts; advertise X.509 tokens with the
 endpoint's policy; preserve insertion order for reference buckets; and consume
 BrowseNext pages from the front. Subscription expiry also removes the expired
-ID from the aggregate ownership index on the same cache tick. These are test-server capabilities, not
+ID from the aggregate ownership index on the same cache tick, and the named
+`server_loss` variant isolates destructive lifecycle evidence. These are test-server capabilities, not
 production client code.
 
 On macOS arm64, `cargo check --locked`, Clippy over all targets with warnings
@@ -131,18 +136,18 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-27 independent-wire cases passed 27/27: the original three
+28 independent-wire cases passed 28/28: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
 nine negative security/fault cells, plus the Runtime profile/observation and
-typed-array cases and four independent subscription/lifecycle cases. The
+typed-array cases and five independent subscription/lifecycle cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `b6d4e181756870cb23919b5a1e618e35cb1d4764af3399eca542a5fdf6f2df67` |
-| `test/interop/rust_peer/src/main.rs` | `089a81a1ac7dd76f219079e134afb5c31ed7137e8d9ba5e81c1988e3facda918` |
+| `test/interop/rust_peer_test.exs` | `12c67f85293e6d1545bbec515995592dcfc20832f4d9f5fe4da7d55c4efe48b4` |
+| `test/interop/rust_peer/src/main.rs` | `2932b41957713d540414ed53b8daf663ce1ae89bfddbe29a1ee3b8ab894875f4` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
 | `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |

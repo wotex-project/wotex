@@ -42,6 +42,7 @@ enum FixtureVariant {
     MismatchedPrivateKey,
     NoneDowngrade,
     UnsupportedUserToken,
+    ServerLoss,
 }
 
 impl FixtureVariant {
@@ -57,6 +58,7 @@ impl FixtureVariant {
             "mismatched_private_key" => Ok(Self::MismatchedPrivateKey),
             "none_downgrade" => Ok(Self::NoneDowngrade),
             "unsupported_user_token" => Ok(Self::UnsupportedUserToken),
+            "server_loss" => Ok(Self::ServerLoss),
             _ => Err(format!("unsupported fixture variant: {value}")),
         }
     }
@@ -73,6 +75,7 @@ impl FixtureVariant {
             Self::MismatchedPrivateKey => "mismatched_private_key",
             Self::NoneDowngrade => "none_downgrade",
             Self::UnsupportedUserToken => "unsupported_user_token",
+            Self::ServerLoss => "server_loss",
         }
     }
 

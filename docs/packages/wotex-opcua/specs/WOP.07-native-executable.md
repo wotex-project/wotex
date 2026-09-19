@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.48
+  version: 1.1.49
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -79,7 +79,11 @@ one terminal error. Peer subscription and MonitoredItem counts return to zero
 and the Session remains usable after each lifecycle path. Suspending the native
 SDK beyond a six-cycle lifetime also expires the independent server
 subscription; resumption delivers one `subscription_lost`, both peer counters
-remain zero and the Session serves a subsequent Read.
+remain zero and the Session serves a subsequent Read. An isolated `server_loss`
+variant can then terminate beneath a live subscription: the receiver gets one
+BadCommunicationError-backed `connection_failed`, the Session and native
+helpers end without reconnect/replay, and a newly started peer serves only a
+fresh explicit Session.
 The same independent peer also executes scalar Double read/write through both
 production Runtime profiles and Property observation through a real
 ConsumedThing child. Explicit stop and Runtime-owner death each return its

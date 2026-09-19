@@ -3,7 +3,7 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.18
+  version: 2.0.19
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -172,8 +172,11 @@ path returns peer subscription and MonitoredItem counts to zero while the
 Session remains usable. Suspending the native SDK beyond a six-cycle revised
 lifetime makes the Rust server expire the subscription, emit one
 `subscription_lost` after the SDK resumes, clear both peer counters and leave
-the Session usable. Independent Republish and server-restart fault injection
-and other lifecycle interoperability remain open P02/P03 work.
+the Session usable. Stopping an isolated Rust server with a live subscription
+emits one exact `connection_failed` terminal, ends the Session and reaps the
+guardian/native process set without reconnect or replay. A newly started peer
+serves only after an explicit fresh connection. Independent Republish fault
+injection and other lifecycle interoperability remain open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.
