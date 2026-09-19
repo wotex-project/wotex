@@ -1,108 +1,124 @@
 # WoTEx
 
-**W3C Web of Things for Elixir: one Thing Description model and runtime across
-HTTP, MQTT, CoAP, OPC UA, Matter, BACnet, Modbus, BLE and Thread.**
+**W3C Web of Things building blocks for Elixir.**
 
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-The [W3C Web of Things](https://www.w3.org/WoT/) (WoT) describes a device or
-service as a Thing. Its Thing Description lists the Thing's Properties, Actions
-and Events, and each Form in it states which protocol operation reaches an
-interaction. WoTEx implements this model in Elixir as a family of packages:
-Thing Description values, a runtime that turns them into interactions, protocol
-packages that carry those interactions, and tools that produce evidence of
-their behavior.
+WoTEx represents W3C Web of Things descriptions as Elixir values and connects
+their Properties, Actions and Events to protocol-specific code. The repository
+contains sixteen independent Mix projects: the value model, a runtime,
+bindings, protocol packages, conformance tools and a consumer laboratory.
 
-## One model across protocols
+This is a development monorepo, not an umbrella application. Each package has
+its own version, dependencies, tests and release archive. No package from this
+repository has been published to Hex yet. Until that changes, use a pinned
+repository commit as described under [Using WoTEx](#using-wotex).
 
-Factories use OPC UA and Modbus, buildings use BACnet, homes use Matter and
-Thread, and devices and services exchange data over CoAP, MQTT and HTTP. A
-WoTEx application reads a Property, invokes an Action or observes an Event
-through the Thing Description. The runtime selects a compatible Form and hands
-the exchange to the transport the application supplies for that protocol.
-Interaction code does not depend on the protocol, and support for another
-protocol is another package behind the same runtime.
+## From a description to an exchange
 
-## How the packages are built
+A Thing Description says what a Thing exposes and which Forms can reach it.
+WoTEx keeps that description separate from the code that performs an exchange:
 
-- The consumer owns the system. Loading a package starts no process, reads
-  no application environment and performs no I/O. Long-lived work is returned
-  as child specifications for the consumer's supervision tree. Thing state,
-  identifiers, credentials, persistence, policy and retries stay with the
-  consumer.
-- Limits and failures are explicit. Each package admits input within
-  documented limits and reports failure as a structured error with a stable
-  code. Transports and credential providers are passed in by the consumer,
-  never discovered from configuration or a registry.
-- Native stacks run outside the BEAM. Where a protocol needs a native
-  stack (libcoap for OSCORE, open62541 for OPC UA, connectedhomeip for Matter,
-  BlueZ for Bluetooth Low Energy, the OpenThread SDK for Thread), it runs in a
-  separate operating-system process that one BEAM process owns through a
-  bounded framed protocol.
-- Claims are tied to evidence. A standards claim names the exact revision
-  it follows and the executable evidence behind it. Specifications are
-  versioned contracts, and each package's catalogue records how much of every
-  specification is implemented. No package claims certification.
-- Packages are independent. Each package has its own version, lock file,
-  Hex name and gate, and a consumer depends only on the packages it uses. The
-  packages share one repository so that a change is verified together with
-  every package it reaches.
+1. `wotex` parses and validates the Thing Description.
+2. `wotex_runtime` selects a Form for the requested interaction.
+3. A binding or protocol package performs the exchange through a transport
+   supplied by the application.
 
-## Packages
+The same application-facing interaction can therefore use HTTP, MQTT, CoAP,
+OPC UA, Matter, BACnet, Modbus or Bluetooth Low Energy without putting protocol
+details in the Thing Description model. Thread support covers network
+inspection and OpenThread SDK management.
 
-| Area | Package | Provides |
+## Package family
+
+| Area | Package | Responsibility |
 | --- | --- | --- |
-| Core | [`wotex`](packages/wotex) | Thing Description 1.1 and Thing Model 1.1 values: parsing, validation and encoding |
-| Runtime | [`wotex-runtime`](packages/wotex-runtime) | ConsumedThing and ExposedThing, Form selection, transport and credential behaviours |
-| Services | [`wotex-directory`](packages/wotex-directory) | Thing Description Directory mechanics over consumer-supplied storage |
-| | [`wotex-continuum`](packages/wotex-continuum) | Exchange values for observations, Action intent, results and lifecycle between edge devices and cloud services |
-| | [`wotex-nx`](packages/wotex-nx) | Typed observations as deterministic Nx batches |
-| Bindings | [`wotex-binding-http`](packages/wotex-binding-http) | HTTP and Server-Sent Events transport |
+| Core | [`wotex`](packages/wotex) | Thing Description 1.1 and Thing Model 1.1 parsing, validation and encoding |
+| Runtime | [`wotex-runtime`](packages/wotex-runtime) | ConsumedThing, ExposedThing, Form selection, transports and credentials |
+| Services | [`wotex-directory`](packages/wotex-directory) | Thing Description Directory mechanics over consumer-owned storage |
+| | [`wotex-continuum`](packages/wotex-continuum) | Exchange and lifecycle values shared between edge and cloud systems |
+| | [`wotex-nx`](packages/wotex-nx) | Deterministic Nx batches built from typed observations |
+| Bindings | [`wotex-binding-http`](packages/wotex-binding-http) | HTTP and Server-Sent Events |
 | | [`wotex-binding-mqtt`](packages/wotex-binding-mqtt) | MQTT Form mapping and transport |
-| Protocols | [`wotex-bacnet`](packages/wotex-bacnet) | BACnet |
+| Protocols | [`wotex-bacnet`](packages/wotex-bacnet) | BACnet interactions |
 | | [`wotex-ble`](packages/wotex-ble) | Bluetooth Low Energy through BlueZ |
 | | [`wotex-coap`](packages/wotex-coap) | CoAP with DTLS and OSCORE |
 | | [`wotex-matter`](packages/wotex-matter) | Matter through connectedhomeip |
-| | [`wotex-modbus`](packages/wotex-modbus) | Modbus TCP |
+| | [`wotex-modbus`](packages/wotex-modbus) | Modbus TCP interactions |
 | | [`wotex-opcua`](packages/wotex-opcua) | OPC UA through open62541 |
 | | [`wotex-thread`](packages/wotex-thread) | Thread inspection and OpenThread SDK management |
-| Evidence | [`wotex-conformance`](packages/wotex-conformance) | Conformance runner, vectors and evidence reports for any WoT library |
-| | [`wotex-lab`](packages/wotex-lab) | Laboratory that composes the packages into scenarios, evidence records, a Workbench, Nerves hosts and Nx experiments |
+| Evidence | [`wotex-conformance`](packages/wotex-conformance) | Conformance vectors, execution and evidence reports for WoT libraries |
+| | [`wotex-lab`](packages/wotex-lab) | Scenarios, evidence records, Workbench, Nerves hosts and Nx experiments |
 
-The [package graph](docs/architecture/package-graph.md) shows how the packages
-depend on each other and where the boundaries between them lie.
+The [package graph](docs/architecture/package-graph.md) records dependencies
+and ownership boundaries. Consumers install only the packages they use.
 
-## Versions
+## Ownership stays with the application
 
-Each package is versioned and released on its own. All packages are below 1.0,
-so a minor version may change a public API. A package's specifications under
-`docs/packages/<name>/specs/` define its behavior, and its catalogue records the
-implementation status of each specification.
+Loading a WoTEx package starts no process, reads no application environment and
+performs no I/O. Packages return child specifications when they need supervised
+work. The application remains responsible for Thing state, identifiers,
+credentials, policy, persistence, supervision and retries.
+
+Protocol packages accept transports and credential providers explicitly.
+Failures use structured errors with stable codes, and documented limits bound
+untrusted input and long-lived work. Native stacks such as open62541, BlueZ and
+connectedhomeip run outside the BEAM in owned operating-system processes.
 
 ## Using WoTEx
 
-Depend on the packages you use. Hex resolves each package's WoTEx
-dependencies, so an application that talks to Things over HTTP needs only the
-binding:
+Set up the repository and run one package's tests from the root:
+
+```bash
+git clone https://github.com/wotex-project/wotex.git
+cd wotex
+mix setup
+mix pkg wotex test
+```
+
+Before the packages are published, an application can depend on a package at a
+specific repository commit:
 
 ```elixir
+@wotex_ref "<commit>"
+
 def deps do
   [
-    {:wotex_binding_http, "~> 0.1"}
+    {:wotex,
+     git: "https://github.com/wotex-project/wotex.git",
+     ref: @wotex_ref,
+     sparse: "packages/wotex",
+     override: true}
   ]
 end
 ```
 
-Each package README shows a usage example, and the
-[consumer guide](docs/guides/consumer.md) describes what a consumer owns.
+Pin every WoTEx dependency to the same commit. The
+[consumer guide](docs/guides/consumer.md) shows how to add packages with
+transitive WoTEx dependencies and how to use a local checkout.
 
-## Documentation and contributing
+All packages are below 1.0, so a minor version may change a public API. Package
+READMEs contain package-specific examples and toolchain requirements.
 
-The [documentation index](docs/README.md) lists every package's
-specifications, plans and provenance, the family architecture and the guides.
-[Contributing](CONTRIBUTING.md) explains the repository layout, setup and
-validation.
+## Specifications and evidence
+
+WoTEx does not treat a package name as a claim of complete protocol support.
+Each specification names its standards revision, acceptance cases and
+executable evidence. Its catalogue records whether the implementation is
+planned, partial or complete. Native and interoperability evidence uses pinned
+source identities and records the limits of each result; no package claims
+certification.
+
+Start with the [documentation index](docs/README.md) for specifications, plans,
+provenance and guides. The package catalogue is also available as a single
+generated [family catalogue](docs/catalogue.yaml).
+
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers repository setup, package-scoped
+commands and validation. Changes to behavior begin with the owning package's
+specification and finish with evidence for the affected boundary.
 
 [Governance](GOVERNANCE.md) · [Security](SECURITY.md) ·
 [Code of Conduct](CODE_OF_CONDUCT.md) · [License](LICENSE)
