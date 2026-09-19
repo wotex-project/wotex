@@ -168,14 +168,15 @@ defmodule Wotex.OPCUA.Native.Software do
     # The BEAM's own helpers and the sampling ps are not workload processes.
     @ignored ~w(erl_child_setup inet_gethost ps)
 
+    # The executable is the first word of the full argument vector; `comm`
+    # truncates names to 15 bytes on Linux.
     defp descendants do
-      {output, 0} = System.cmd("/bin/ps", ["-A", "-o", "pid=", "-o", "ppid=", "-o", "comm="])
+      {output, 0} = System.cmd("/bin/ps", ["-A", "-o", "pid=", "-o", "ppid=", "-o", "args="])
 
       rows =
-        for line <- String.split(output, "
-  ", trim: true),
-            [pid, ppid, comm] <- [String.split(String.trim(line), ~r/\s+/, parts: 3)],
-            do: {String.to_integer(pid), String.to_integer(ppid), comm}
+        for line <- String.split(output, "\n", trim: true),
+            [pid, ppid | arguments] <- [String.split(String.trim(line), ~r/\s+/)],
+            do: {String.to_integer(pid), String.to_integer(ppid), List.first(arguments, "")}
 
       collect(rows, [String.to_integer(System.pid())], [])
     end
