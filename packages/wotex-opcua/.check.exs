@@ -26,11 +26,11 @@
     # tooling/packages.yaml): changed-line formatting, static analysis and the
     # native tests, which build into a cached workspace outside the repository.
     {:native_format,
-     command: "mix native.lint --no-clippy --package wotex-opcua",
+     command: "mix native.lint --package wotex-opcua",
      cd: "../..",
-     fix: "mix native.lint --fix --no-clippy --package wotex-opcua"},
+     fix: "mix native.lint --fix --package wotex-opcua"},
     {:native_lint,
-     command: "mix native.lint --tidy --no-format --package wotex-opcua",
+     command: "mix native.lint --tidy --no-format --no-clippy --package wotex-opcua",
      cd: "../..",
      deps: [:native_format]},
     {:native_test,

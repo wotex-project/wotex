@@ -21,20 +21,16 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
   exit 0
   """
   @succeed "#!/bin/sh\necho lane\nexit 0\n"
-  # Builds the .NET peer into the volume mounted at /work, reports the SDK
-  # version and runs the peer until it is stopped.
-  @docker """
+  # Builds the Rust peer into Cargo's explicit target directory and reports the
+  # toolchain version. Fetch is intentionally a no-op in this isolated fixture.
+  @cargo """
   #!/bin/sh
-  [ "$1" = run ] || exit 0
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      --volume) case "$2" in *:/work) work="${2%:/work}" ;; esac; shift ;;
-      build) mkdir -p "$work/output" && echo peer > "$work/output/DotnetPeer.dll" ;;
-      --version) echo 10.0.401 ;;
-      /peer/DotnetPeer.dll) echo "dotnet peer ready"; exec sleep 30 ;;
-    esac
-    shift
-  done
+  if [ "$1" = build ]; then
+    mkdir -p "$CARGO_TARGET_DIR/release"
+    printf '#!/bin/sh\necho "rust peer ready"\nexec sleep 30\n' > "$CARGO_TARGET_DIR/release/wotex-opcua-rust-peer"
+    chmod 755 "$CARGO_TARGET_DIR/release/wotex-opcua-rust-peer"
+  fi
+  if [ "$1" = --version ]; then echo 'cargo 1.97.1 (fixture)'; fi
   exit 0
   """
   # Answers the OSV batch query with no advisory for each of the three commits.
@@ -60,8 +56,9 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
 
     for file <-
           ~w(test/interop/audit-requirements.lock priv/native/CMakeLists.txt
-             test/interop/dotnet_peer/DotnetPeer.csproj test/interop/dotnet_peer/Program.cs
-             test/interop/dotnet_peer/nuget.config test/interop/dotnet_peer/packages.lock.json) do
+             test/interop/rust_peer/Cargo.toml test/interop/rust_peer/Cargo.lock
+             test/interop/rust_peer/src/main.rs
+             test/interop/rust_peer/vendor/async-opcua-server/src/lib.rs) do
       path = Path.join(root, file)
       File.mkdir_p!(Path.dirname(path))
       File.write!(path, file)
@@ -92,7 +89,7 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
 
     tools =
       Map.new(
-        [python: @python, cmake: @cmake, ctest: @succeed, mix: mix, curl: @curl, docker: @docker],
+        [python: @python, cmake: @cmake, ctest: @succeed, mix: mix, curl: @curl, cargo: @cargo],
         fn {name, body} ->
           path = Path.join(bin, Atom.to_string(name))
           File.write!(path, body)
@@ -133,21 +130,18 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     assert map_size(artifacts) == 7
     assert is_binary(artifacts["secure_peer"])
 
-    assert %{"sdk_version" => "10.0.401", "image" => image, "sources" => sources} =
-             manifest["dotnet_peer"]
-
-    assert image =~ ~r/\Amcr\.microsoft\.com\/dotnet\/sdk@sha256:[0-9a-f]{64}\z/
+    assert %{"cargo_version" => "1.97.1", "sources" => sources} = manifest["rust_peer"]
 
     assert Enum.sort(Map.keys(sources)) ==
-             ~w(DotnetPeer.csproj Program.cs nuget.config packages.lock.json)
+             ~w(Cargo.lock Cargo.toml src/main.rs vendor/async-opcua-server/src/lib.rs)
 
-    refute File.exists?(Path.join(context.root, "test/interop/dotnet_peer/bin"))
+    refute File.exists?(Path.join(context.root, "test/interop/rust_peer/target"))
     assert File.regular?(Path.join(context.workspace, "software-build.json"))
     assert {:ok, report} = Software.run(context.workspace, options)
 
     assert Enum.sort(Map.keys(report["lanes"])) ==
-             ~w(archive_consumer deps_audit hex_audit interop native_audit native_ctest pip_audit
-                sanitizer_ctest)
+             ~w(archive_consumer cargo_audit deps_audit hex_audit interop native_audit native_ctest
+                pip_audit sanitizer_ctest)
 
     assert Enum.all?(report["lanes"], fn {_, lane} -> lane["exit_status"] == 0 end)
     assert File.regular?(Path.join(context.workspace, "software-run.json"))
@@ -213,10 +207,10 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     assert_received {:lane, ["test" | _], env}
     assert {"WOTEX_REQUIRE_SOFTWARE", "1"} in env
 
-    assert {"WOTEX_OPCUA_DOTNET_CONFIG", dotnet_config} =
-             List.keyfind(env, "WOTEX_OPCUA_DOTNET_CONFIG", 0)
+    assert {"WOTEX_OPCUA_RUST_CONFIG", rust_config} =
+             List.keyfind(env, "WOTEX_OPCUA_RUST_CONFIG", 0)
 
-    assert Path.basename(dotnet_config) == "dotnet-config.json"
+    assert Path.basename(rust_config) == "rust-config.json"
     report = Jason.decode!(File.read!(Path.join(context.workspace, "software-run.json")))
     assert report["lanes"]["deps_audit"]["exit_status"] == 2
   end
@@ -290,7 +284,7 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     assert {:error, :stale_software_build} = Software.run(context.workspace, options)
   end
 
-  test "WOP-X06 a changed .NET peer project makes the build stale", context do
+  test "WOP-X06 a changed Rust peer project makes the build stale", context do
     options = [
       root: context.root,
       tools: context.tools,
@@ -299,7 +293,7 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     ]
 
     assert {:ok, _} = Software.build(context.workspace, options)
-    File.write!(Path.join(context.root, "test/interop/dotnet_peer/packages.lock.json"), "{}")
+    File.write!(Path.join(context.root, "test/interop/rust_peer/Cargo.lock"), "changed")
     assert {:error, :stale_software_build} = Software.run(context.workspace, options)
   end
 
@@ -389,18 +383,12 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
       "#!/bin/sh\necho 'secure peer ready'\nexec sleep 30\n"
     )
 
-    docker = Path.join(context.base, "bin/docker-exiting")
-    File.write!(docker, "#!/bin/sh\n[ \"$1\" = rm ] || echo \"$@\" > #{docker}.args\nexit 5\n")
-    File.chmod!(docker, 0o755)
-    exiting = Keyword.put(options, :tools, %{context.tools | docker: docker})
+    rust_peer = Path.join(context.workspace, "rust/output/release/wotex-opcua-rust-peer")
+    record_peer!(context.workspace, rust_peer, "#!/bin/sh\nexit 5\n", "rust_peer")
 
-    assert {:error, {:dotnet_peer, {:software_peer_exited, 5}}} =
-             Software.run(context.workspace, exiting)
+    assert {:error, {:rust_peer, {:software_peer_exited, 5}}} =
+             Software.run(context.workspace, options)
 
-    arguments = File.read!(docker <> ".args")
-    assert arguments =~ "--network host"
-    assert arguments =~ "--interactive"
-    assert arguments =~ "/peer/DotnetPeer.dll /fixture 40"
     refute File.exists?(Path.join(context.workspace, "software-run.json"))
   end
 
@@ -459,13 +447,14 @@ defmodule Wotex.OPCUA.Native.SoftwareTest do
     {:ok, %{}}
   end
 
-  defp record_peer!(workspace, peer, contents) do
+  defp record_peer!(workspace, peer, contents, name \\ "secure_peer") do
     File.write!(peer, contents)
+    File.chmod!(peer, 0o755)
 
     manifest_path = Path.join(workspace, "software-build.json")
     manifest = Jason.decode!(File.read!(manifest_path))
     digest = Base.encode16(:crypto.hash(:sha256, File.read!(peer)), case: :lower)
-    manifest = put_in(manifest, ["artifacts", "secure_peer"], digest)
+    manifest = put_in(manifest, ["artifacts", name], digest)
     File.write!(manifest_path, Jason.encode_to_iodata!(manifest))
   end
 

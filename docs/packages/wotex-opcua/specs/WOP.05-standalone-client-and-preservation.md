@@ -10,7 +10,7 @@ spec:
 
 # WOP.05 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.16**. Implementation status: **partial**.
+Specification version: **1.1.17**. Implementation status: **partial**.
 [WOP.04](WOP.04-software-contract.md) and [WOP.07](WOP.07-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.03-implemented-profile.md) and
@@ -18,8 +18,9 @@ The [implemented profile](WOP.03-implemented-profile.md) and
 capabilities. None of the planned pure-codec, persistent-session or pagination
 requirements below is accepted merely by specifying it. The first native
 service-level Browse slice, bounded child-NodeId projection and persistent
-single-page typed `Browse.references/3` result now have independent-peer
-evidence. The C process owns up to 64 live continuation chains per Session.
+single-page typed `Browse.references/3` result have same-stack wire evidence;
+the continuation subset also has independent async-opcua evidence. The C
+process owns up to 64 live continuation chains per Session.
 Persistent typed Browse now maps that token to a generation-bound handle,
 retains the original deadline and cumulative bounds, and offers `next/2`,
 `release/2` and `all/3` against deterministic response fixtures and a secure
@@ -32,7 +33,7 @@ original browse deadline passes, without a caller action; a later `next/2` on
 that handle returns `deadline_exceeded` and `release/2` returns `:ok`. A failed
 automatic release closes the Session. A same-stack peer exercises two live
 continuations, BrowseNext and automatic release. The second independent peer of
-WOP.04, a UA-.NETStandard server with a 40-child folder, reports its own live
+WOP.04, an async-opcua Rust server with a 40-child folder, reports its own live
 continuation-point count: it follows each Browse, BrowseNext, explicit release,
 two concurrent chains, the `max_references` and `max_pages` failures and an
 expired browse deadline back to zero, and `all/3` and child-list Browse return
@@ -61,7 +62,7 @@ behavior around it. Mapping and Transport adapt the native operations.
 | Native read/write and method scenarios | Preserve typed operations and compatibility success shapes | WOP-S01/S02/S05; status and individual Call result tests |
 | Address-space browsing | Preserve current child-NodeId projection and add complete typed references with bounded continuation ownership | WOP-N03/N04; multi-page peer and release-failure tests |
 | Monitored-item/subscription scenarios | Implement complete Publish/Republish/loss behavior | WOP-S04; registration alone is not delivery support |
-| One-shot secure result shapes | Explicit native compatibility mode, including browse | WOP-N04; temporary native-session lifecycle and independent-peer tests |
+| One-shot secure result shapes | Explicit native compatibility mode, including browse | WOP-N04; temporary native-session lifecycle and same-stack peer tests |
 | Protocol security and cleanup | Pinned native SDK and owned failure cleanup | WOP-S02/S03; no copied None-channel implementation in production |
 | WoT Forms and callback surface | Preserve exact target identity and extension terms | WOP.03 and Wotex integration contract |
 

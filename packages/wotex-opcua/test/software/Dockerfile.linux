@@ -5,7 +5,13 @@
 # The native build requires curl 8.4.0 or later, which bookworm-backports
 # supplies; bookworm's own curl 7.88.1 is rejected.
 ARG BASE=hexpm/elixir@sha256:5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da
+FROM rust:1.97.1-bookworm@sha256:0e2bcaef56d041a486784e54104a81aebe0da44bd03019bd70bc0401e42e4a97 AS rust
 FROM ${BASE}
+COPY --from=rust /usr/local/cargo /usr/local/cargo
+COPY --from=rust /usr/local/rustup /usr/local/rustup
+ENV PATH="/usr/local/cargo/bin:${PATH}" \
+    RUSTUP_HOME="/usr/local/rustup" \
+    CARGO_HOME="/usr/local/cargo"
 RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/backports.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends build-essential cmake perl python3 python3-venv \
@@ -14,9 +20,6 @@ RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/s
  && rm -rf /var/lib/apt/lists/* \
  && curl --version | head -1
 RUN mix local.hex --force && mix local.rebar --force
-# The software tasks build and start the UA-.NETStandard peer through a Docker
-# engine. Run the lane container with the engine socket mounted, on the host
-# network, and with the workspace at the same absolute path as on the engine
-# host, so that the peer's bind mounts and loopback endpoint resolve alike.
-COPY --from=docker:29.4.0-cli@sha256:2efe7c8e806b35050def6ba1ba0ddad67b521a0a6d37f4910b3d88f11b495d03 \
-     /usr/local/bin/docker /usr/local/bin/docker
+RUN rustc --version \
+ && cargo --version \
+ && cargo install cargo-audit --version 0.22.2 --locked

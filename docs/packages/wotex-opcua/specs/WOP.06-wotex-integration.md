@@ -17,8 +17,8 @@ packages. The [catalogue](catalogue.yaml) separates existing behavior from plann
 contracts. Every `I` requirement below is mandatory for software completion.
 One explicitly selected native one-shot Runtime ByteString Form path now
 converts the legacy base64 mapping into raw typed bytes before Write. A
-deterministic C fixture checks the transmitted byte envelope, and an
-independent secure peer confirms Write/readback/restore through Transport.
+deterministic C fixture checks the transmitted byte envelope, and the secure
+same-stack C peer confirms Write/readback/restore through Transport.
 The same peer now confirms a one-shot Form read of a flat ByteString array:
 validated byte envelopes become ordered BEAM binaries with bounded element
 and aggregate sizes. An explicit typed array input also passes Form mapping,
@@ -35,9 +35,9 @@ and `Runtime.Retry`; Runtime's cause keeps no native effect. `profile/0` and
 with `contentType` fails `unsupported_content_type` before I/O, and the session
 profile projects persistent Read and Write results. WOP-I-F01 runs through the
 real ConsumedThing with a scripted client, and both production profiles read,
-write and observe against the independent peer. An exact-archive consumer of
+write and observe against the same-stack peer. An exact-archive consumer of
 `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
-the native secure workflow against the independent peer on both required
+the native secure workflow against the same-stack peer on both required
 runtimes (WOP.07 X-F48). The remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values

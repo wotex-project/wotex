@@ -62,8 +62,8 @@ Repository-wide rules are in the root `CLAUDE.md`.
   JSON, ready and pinned native source corpora).
 - Test support: `test/support/` (scripted and streaming clients, recording and
   failure transports, credentials); `test/native/` (C probes and fixtures);
-  `test/interop/` (peer suites and the UA-.NETStandard peer project in
-  `dotnet_peer/`). The compiled secure fixture peer is
+  `test/interop/` (peer suites and the async-opcua peer project in
+  `rust_peer/`). The compiled secure fixture peer is
   `priv/native/secure_peer.c`.
 
 ## Working on this package
@@ -143,10 +143,11 @@ The native build needs network access, `cc`, CMake 3.20+ with `ctest`, `make`,
 Perl, `python3`, `ar`, `ranlib`, `ld` and curl 8.4.0+ on Linux x86_64/aarch64
 or macOS arm64. The software build adds a hash-pinned pip-audit environment
 (`python3 -m venv`, PyPI access), an ASan/UBSan tree, the compiled C fixture
-peer and the UA-.NETStandard peer, built with `docker` in a digest-pinned .NET
-SDK image from a locked NuGet restore; the run starts both peers (the .NET one
-in a host-network container) and runs the `interop`/`software` suites, native
-and sanitizer CTest, the Mix and Hex audits, `pip-audit` over its audit lock and
+peer and the async-opcua Rust peer, built by the repository's pinned Cargo
+toolchain from an exact lock followed by an offline release build; the run
+starts both peers and runs the `interop`/`software` suites, native
+and sanitizer CTest, the Mix and Hex audits, `pip-audit` over its audit lock,
+`cargo audit` over the Rust peer lock and
 the native source audit, which queries the OSV database with `curl`. Apply the shared
 `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility

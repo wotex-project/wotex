@@ -7,6 +7,7 @@
 # native-sources-v1.json, dependencies.json).
 packages/wotex-coap/native/oscore/vendor/**
 packages/wotex-opcua/priv/native/vendor/**
+packages/wotex-opcua/test/interop/rust_peer/vendor/**
 packages/wotex-ble/priv/bluez/native/vendor/**
 
 # nanobench, the benchmark library of mix native.bench, pinned by digest

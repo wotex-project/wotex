@@ -1,4 +1,4 @@
-defmodule Wotex.OPCUA.DotnetPeerInteropTest do
+defmodule Wotex.OPCUA.RustPeerInteropTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
@@ -6,11 +6,11 @@ defmodule Wotex.OPCUA.DotnetPeerInteropTest do
   alias Wotex.OPCUA.{Address, Browse, Error, Open62541}
   @moduletag :interop
 
-  # The second independent peer runs the OPC Foundation UA-.NETStandard server.
+  # The second independent peer runs the async-opcua Rust server.
   # Its fixture methods report the server's own live browse continuation points
   # across every Session and the number of requests its Cancel service found.
   setup do
-    peer = Jason.decode!(File.read!(System.fetch_env!("WOTEX_OPCUA_DOTNET_CONFIG")))
+    peer = Jason.decode!(File.read!(System.fetch_env!("WOTEX_OPCUA_RUST_CONFIG")))
     fixture = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG") |> Path.dirname()
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
     guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")

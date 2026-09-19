@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 2.0.13
   owner: wotex-opcua
-  updated: 2026-09-17
+  updated: 2026-09-19
 ---
 
 # WOP.03 Implemented OPC UA profile
@@ -157,7 +157,7 @@ to its index. Server indexes from 65536 minus the SDK table size to 65535 are
 indistinguishable after pinned SDK decoding and are not a supported identity.
 The public persistent client opens Sessions with each of the three
 SignAndEncrypt policies and anonymous, username and certificate user tokens
-against the independent peer. Rejected user credentials and unsupported token
+against the secure same-stack C peer. Rejected user credentials and unsupported token
 policies fail activation as `authentication_failed` with the numeric status;
 certificate and security rejections are `certificate_invalid`.
 Subscriptions and other policy/token interoperability remain open P02/P03 work.
@@ -173,9 +173,9 @@ A secure same-stack C peer limits the server to one reference per page and
 confirms typed BrowseNext, explicit release, `all/3`, and multi-page child-list
 projection in persistent and one-shot mode over the wire. The native release
 callback accepts exactly one empty Good result for its one continuation point.
-The same-stack peer does not provide independent continuation evidence;
-WOP-N03/N04 remain unaccepted until an admitted-language independent peer
-reports continuation and release counters.
+The async-opcua Rust peer now reports its own continuation and release counters
+for Browse, BrowseNext, limits and expiry. WOP-N03/N04 remain unaccepted until
+the remaining boundary matrix is complete.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent
@@ -187,23 +187,23 @@ shapes: `{type, value, status}`, `"written"`, and zero/one/many method outputs.
 One-shot failures are not translated: they return the same native Error code,
 effect and Runtime class as persistent mode (WOP.04 S02). The Python adapter's
 bridge-specific error codes were retired with that adapter.
-The independent Basic256Sha256 anonymous peer passes read, write/readback,
+The same-stack Basic256Sha256 anonymous peer passes read, write/readback,
 Call, Browse and one-shot result projection. This is an explicitly selected
 partial native client, not a complete compatibility or Runtime projection.
 The Runtime Transport now converts a Form-mapped ByteString's validated base64
 payload back to raw bytes only for the native client, before its typed Write.
-One independent secure-peer Form Write/readback/restore proves byte identity;
+One same-stack secure-peer Form Write/readback/restore proves byte identity;
 the complete WOP-I01..I06 integration and profile factory remain open.
 For ByteString reads, the Runtime value adapter now decodes scalar and bounded
 flat-array elements to BEAM binaries, preserving null elements and array order.
-The independent secure peer confirms one native one-shot Form array read after
+The same-stack secure peer confirms one native one-shot Form array read after
 a typed Write. The Form mapper now admits an explicit typed ByteString array
 envelope, validates its finite size/dimensions with the pure Variant codec,
 and transmits raw bytes through the selected native client. A deterministic C
-fixture and the independent peer check the native Runtime array Write/readback.
+fixture and the same-stack peer check the native Runtime array Write/readback.
 General typed-array validation, array metadata and the complete
 Runtime profile remain open.
-The same independent peer also accepts a public typed ByteString array Write
+The same peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
 and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.
 For this client, the facade preserves `effect: :none` on its finite local

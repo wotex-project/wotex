@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.1.4
   owner: wotex-opcua
-  updated: 2026-09-18
+  updated: 2026-09-19
 ---
 
 # WOP.04 Complete secure OPC UA client software profile
@@ -73,7 +73,7 @@ local timezone. `UA_DateTime` and the native IPC preserve the full signed
 64-bit tick value, including sub-microsecond ticks and extreme values. Service
 observations carry `datetime_resolution_ns: 100` and
 `raw_datetime_ticks_available: true`. DateTime never passes through floating
-point or a calendar conversion. The independent Python peer cannot prove raw
+point or a calendar conversion. The retired Python peer could not prove raw
 100 ns precision: exact-tick cases require the native codec/C peer lane.
 Picosecond fields remain separate from DateTime ticks.
 Wire signed length -1 means null; values below -1 are malformed.
@@ -288,10 +288,11 @@ the client. It is labelled same-stack and supplies the secure policy/token
 matrix, exact 100 ns values, controlled Publish/revision faults, resource
 counters, disposable scalar/array variables, typed methods and explicit
 users/certificate identities. It validates real wire behavior but cannot by
-itself satisfy WOP-V14's independent-stack requirement. An independently
-implemented admitted-language peer must supply that cross-stack matrix,
-BrowseNext/release pagination with the server's live continuation-point count,
-and Cancel of a transmitted request with the server's cancellation count.
+itself satisfy WOP-V14's independent-stack requirement. The async-opcua Rust
+peer supplies BrowseNext/release pagination with the server's live
+continuation-point count and Cancel of a transmitted request with the server's
+cancellation count. An independently implemented admitted-language peer must
+still supply the remaining cross-stack matrix.
 Security fault tests use controlled certificates, clock inputs and a bounded
 byte proxy. Same-stack and independent lanes are both required; neither
 substitutes for the other. No physical server is required.

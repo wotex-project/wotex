@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.41
+  version: 1.1.42
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -25,7 +25,7 @@ verifies DER/PKCS#8 inputs, keys, direct-CA trust, exact SAN/URI, usage, validit
 signatures and the current issuer CRL. Invalid credentials end with
 `certificate_invalid`. The complete-DER pin verifier is installed by the
 native configuration adapter and exercised by the production executable and
-the separate C probe against an independent Basic256Sha256 peer. The executable
+the separate C probe against the same-stack Basic256Sha256 C peer. The executable
 checks the server's timeout revision and NamespaceArray before reporting open.
 The C process owner now admits up to 64 application operations through an
 injectable service boundary, dispatches queued work in admission order on a
@@ -125,12 +125,12 @@ collect at most 256 local NodeIds on one persistent or temporary Session.
 Later invalid identity and Uncertain status release a live cursor; fixture
 tests pass for both lifecycle modes. The secure same-stack C peer confirms
 multi-page child collection over the wire in both modes. The second independent
-peer (UA-.NETStandard) confirms BrowseNext, release and expiry release with the
+peer (async-opcua Rust) confirms BrowseNext, release and expiry release with the
 server's live continuation-point count, and that a timed-out or abandoned Call
 reaches the server's Cancel service.
 The native runtime uses an Elixir API and an explicitly owned open62541 C
-executable. Python is confined to the independent test peer and upstream build
-generators; the former public Python compatibility adapter has been removed.
+executable. Python is confined to upstream build generators and the audit
+environment; the former public Python compatibility adapter and peer have been removed.
 `Native.Config.new/1` now validates the exact public native option shape without
 file I/O; `open_parameters/2` snapshots explicitly named regular credential
 files under one caller deadline, bounds each to 64 KiB, and projects the closed
@@ -141,10 +141,10 @@ and process I/O until a one-shot request. Persistent Read, Write and Call retain
 typed native maps; one-shot success preserves the recorded Read envelope,
 `"written"` Write acknowledgment and zero/one/many Call output shapes, including
 ByteString envelopes. Bounded child Browse works in both modes. These paths pass
-against one independent secure peer. Complete compatibility projection, typed Browse
+against the secure same-stack C peer. Complete compatibility projection, typed Browse
 pagination/release, cancellation, concurrency and the policy/token matrix remain open;
 this does not accept P02/P03.
-The independent peer also confirms typed ByteString array Write/readback through
+The same-stack peer also confirms typed ByteString array Write/readback through
 the public native client, preserving binary elements. This adds no full S01/S02
 or P02 acceptance claim.
 The facade now preserves the native client's finite pre-I/O Write/Call rejection
@@ -231,8 +231,8 @@ file bytes are converted to X03's closed DER/bytes IPC schema. One-shot
 configuration validates names/types at connect but reads credentials and creates
 its temporary native owner only when an operation uses its one deadline.
 The `Native.Config` layer performs the option and bounded file projection and
-is wired into the partial public native client. One independent Basic256Sha256
-anonymous peer passes persistent and one-shot paths; the complete token/policy
+is wired into the partial public native client. One same-stack Basic256Sha256
+anonymous peer passes persistent and one-shot paths; the complete cross-stack token/policy
 matrix and compatibility projection remain open.
 
 The source authority is [native-sources-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-sources-v1.json).
@@ -678,7 +678,10 @@ configuration, responses and cleanup evidence failures, never skips. The audits
 are the Mix dependency and Hex audits, `pip-audit` from a hash-pinned
 installation over `test/interop/audit-requirements.lock`, and a native audit whose
 inputs include SDK/OpenSSL source and shim/patch hashes, not just Mix.lock. Each
-audit is a recorded lane whose failure fails the run.
+audit is a recorded lane whose failure fails the run. The Rust peer lock also
+runs through `cargo audit`; its sole exception is RUSTSEC-2023-0071 under the
+advisory's local-only workaround because the disposable fixture binds only
+loopback. Any other RustSec vulnerability fails the lane.
 `Wotex.OPCUA.Native.Software` implements both tasks
 (`mix wotex.opcua.software.build` and `mix wotex.opcua.software.run`, with the
 package aliases above) for a source checkout. Build runs the native workspace
@@ -686,23 +689,20 @@ build and its CTest step, including `wotex_opcua_secure_peer`, builds a Debug
 ASan/UBSan tree from that workspace's prefixes, and installs
 `test/interop/audit-requirements.lock` (pip-audit and its dependencies) into a
 separate audit environment with `--require-hashes --no-deps`. It builds the
-second independent peer from
-`test/interop/dotnet_peer` (OPC Foundation UA-.NETStandard
-`OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.378.176 on .NET 10): `docker`
-pulls the .NET SDK image by digest, and containers from that image restore a
-workspace copy of the project with `dotnet restore --locked-mode`, which checks
-every NuGet package against its `packages.lock.json` content hash, and build it
-inside the workspace. It records the audit lock digest, installed audit
-distributions, SDK image, SDK version, peer project digests and seven
-executable digests. Run re-verifies that manifest and the peer project. It starts the C peer and
-then the UA-.NETStandard peer, which runs in a container of the pinned image on
-the host network, reuses the C peer's CA, CRL and server certificate,
+second independent peer from `test/interop/rust_peer` on the async-opcua 0.19.0
+Rust stack. Cargo fetches the exact lock into the workspace, then performs an
+offline release build with warnings denied. The two patched upstream crates are
+vendored, and the manifest records every project and patch digest, the Cargo
+version, the audit lock and installed audit distributions, and seven executable
+digests. Run re-verifies that manifest and the peer project. It starts the C
+peer and then the Rust peer, which reuses the C peer's CA, CRL and server certificate,
 serves a folder of 40 children with a SignAndEncrypt Basic256Sha256 endpoint,
 reports the server's live browse continuation points and its Cancel count
 through methods, and stops when its standard input closes. Each peer has a
 finite readiness deadline. The run then executes the ExUnit lane with
 `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, the Mix dependency and
-Hex audits, `pip-audit --require-hashes --disable-pip` over the audit lock, and
+Hex audits, `cargo audit` over the Rust lock,
+`pip-audit --require-hashes --disable-pip` over the audit lock, and
 the native source audit. The native source audit requires the checkout's
 `priv/fixtures/native-sources-v1.json` to be the manifest compiled into the
 build, asks the OSV database for advisories whose affected git ranges contain

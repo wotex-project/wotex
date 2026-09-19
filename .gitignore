@@ -3,6 +3,7 @@ _build/
 cover/
 deps/
 doc/
+**/target/
 **/priv/plts/
 .elixir_ls/
 .lexical/

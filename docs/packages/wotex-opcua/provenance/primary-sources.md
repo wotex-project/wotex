@@ -1,6 +1,6 @@
 # OPC UA primary sources and backend authority
 
-Review date: 2026-09-09. Standards, upstream API behavior and package policy are
+Review date: 2026-09-19. Standards, upstream API behavior and package policy are
 separate authorities. Source inspection is not execution or certification.
 
 ## Standards
@@ -64,11 +64,15 @@ accumulates Browse pages; the native target uses explicit bounded service calls.
 The former per-request Python runtime adapter and Python peer have been removed.
 Their recorded cohorts remain bounded historical evidence for those source
 identities. The current compiled C11 peer uses the pinned open62541 stack and is
-therefore same-stack evidence, not independent interoperability. The package
-has no Python runtime or peer asset; Python remains only in required upstream
-generation and isolated audit tooling. Existing pure fixture bytes verified
-with asyncua are source cross-checks, not proof of an implemented Wotex codec
-or native session.
+therefore same-stack evidence, not independent interoperability.
+[async-opcua 0.19.0](https://github.com/FreeOpcUa/async-opcua/tree/9ad28fc011002398f2e8a95696a50408a14531d9)
+supplies the current independent Rust peer for the narrower Browse continuation
+and Cancel observations. The exact graph is fixed in `Cargo.lock`; the locally
+patched `async-opcua-server` and `async-opcua-nodes` crates retain their
+MPL-2.0 declarations and upstream VCS identity. The package has no Python
+runtime or peer asset; Python remains only in required upstream generation and
+isolated audit tooling. Existing pure fixture bytes verified with asyncua are
+source cross-checks, not proof of an implemented Wotex codec or native session.
 
 Direct-CA trust, exact certificate pins, terminal Session loss, deadlines,
 queue/credit ceilings, consuming continuation handles and conservative unknown

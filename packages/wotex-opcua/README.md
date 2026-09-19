@@ -48,7 +48,7 @@ local-token BrowseNext/release path. Persistent typed Browse exposes bound
 handles, `next`, `release` and bounded `all`; deterministic fixtures and a
 secure same-stack C peer exercise wire pagination. Child-list Browse collects
 pages on one persistent or one-shot Session. A second independent peer on the
-UA-.NETStandard stack confirms BrowseNext, release and Cancel with the server's
+async-opcua Rust stack confirms BrowseNext, release and Cancel with the server's
 own counts. Complete compatibility
 projection, subscriptions and lifecycle work remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
@@ -64,7 +64,7 @@ The pinned SDK owns secure-channel cryptography and service codecs; the package
 owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
 The C fixture peer exercises the full secure profile but shares open62541 with
 the production client, so it is not independent-stack evidence. The
-UA-.NETStandard peer remains independent for its narrower Browse/Cancel cells.
+async-opcua peer remains independent for its narrower Browse/Cancel cells.
 
 [WOP.07](../../docs/packages/wotex-opcua/specs/WOP.07-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
@@ -243,21 +243,20 @@ mix pkg wotex-opcua wotex.software.run --workspace /absolute/disposable/dir \
 The build runs the native build under `native/`, a Debug ASan/UBSan tree under
 `asan/`, the compiled `wotex_opcua_secure_peer`, and an audit environment under
 `audit/venv` from `test/interop/audit-requirements.lock` (pip-audit), installed
-with `--require-hashes`. It builds the independent peer, on the
-OPC Foundation UA-.NETStandard stack, from `test/interop/dotnet_peer` under
-`dotnet/` in containers of a .NET SDK image pinned by digest, restoring NuGet
-packages in locked mode from `packages.lock.json`, and records
-`software-build.json`. It needs the native build prerequisites, `python3` with
-`venv`, access to PyPI and NuGet, and a Docker engine that supports host
-networking. The run verifies that manifest, starts the compiled C secure peer
-and the UA-.NETStandard peer, which
+with `--require-hashes`. It builds the independent async-opcua peer from
+`test/interop/rust_peer` under `rust/`: Cargo fetches the exact `Cargo.lock`,
+then builds the release offline with warnings denied, and the manifest records
+every project and vendored-patch digest in `software-build.json`. It needs the
+native build prerequisites, `python3` with `venv`, PyPI access and the pinned
+Rust toolchain. The run verifies that manifest, starts the compiled C secure
+peer and the Rust peer, which
 counts the server's live browse continuation points and its cancelled requests,
 runs the `interop` and `software` ExUnit lanes
 with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, `mix deps.audit`,
 `mix hex.audit`, `pip-audit` over the audit lock, an OSV query for the pinned
 native source commits and the exact-archive consumer, stops both peers and
 writes `software-run.json`; any failed lane fails the task. Both need `python3`,
-`cmake`, `ctest`, `mix`, `curl` and `docker` on `PATH`. The fully qualified tasks are
+`cmake`, `ctest`, `mix`, `curl`, `cargo` and `cargo-audit` on `PATH`. The fully qualified tasks are
 `wotex.opcua.software.build` and `wotex.opcua.software.run`. The `interop` and
 `software` tests read the `WOTEX_OPCUA_*` peer and executable paths that only
 this runner sets, so selecting them without it fails. The audit environment is
