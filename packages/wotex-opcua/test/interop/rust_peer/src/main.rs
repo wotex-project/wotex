@@ -14,7 +14,7 @@ use opcua::{
     server::{
         diagnostics::NamespaceMetadata,
         node_manager::memory::{simple_node_manager, SimpleNodeManager},
-        ServerBuilder, ANONYMOUS_USER_TOKEN_ID,
+        ServerBuilder, ServerUserToken, ANONYMOUS_USER_TOKEN_ID,
     },
     types::{DataTypeId, MessageSecurityMode, NodeId, ObjectId, ObjectTypeId, StatusCode, Variant},
 };
@@ -22,6 +22,10 @@ use tokio::io::AsyncReadExt;
 
 const NAMESPACE_URI: &str = "urn:wotex:rust-fixture";
 const APPLICATION_URI: &str = "urn:wotex:fixture:server";
+const USERNAME_TOKEN_ID: &str = "USERNAME";
+const CERTIFICATE_TOKEN_ID: &str = "CERTIFICATE";
+const USERNAME: &str = "operator";
+const PASSWORD: &str = "correct horse";
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> ExitCode {
@@ -61,6 +65,12 @@ async fn run() -> Result<(), String> {
         },
         "wotex-rust-peer",
     );
+    let user_certificate = fixture.join("user.der");
+    let token_ids = [
+        ANONYMOUS_USER_TOKEN_ID,
+        USERNAME_TOKEN_ID,
+        CERTIFICATE_TOKEN_ID,
+    ];
     let (server, handle) = ServerBuilder::new()
         .application_name("Wotex async-opcua fixture")
         .application_uri(APPLICATION_URI)
@@ -74,16 +84,42 @@ async fn run() -> Result<(), String> {
         .host("127.0.0.1")
         .port(port)
         .discovery_urls(vec!["/fixture".to_owned()])
+        .add_user_token(
+            USERNAME_TOKEN_ID,
+            ServerUserToken::user_pass(USERNAME, PASSWORD),
+        )
+        .add_user_token(
+            CERTIFICATE_TOKEN_ID,
+            ServerUserToken::x509("certificate", &user_certificate),
+        )
         .add_endpoint(
-            "secure",
+            "basic256sha256",
             (
                 "/fixture",
                 SecurityPolicy::Basic256Sha256,
                 MessageSecurityMode::SignAndEncrypt,
-                &[ANONYMOUS_USER_TOKEN_ID] as &[&str],
+                &token_ids as &[&str],
             ),
         )
-        .default_endpoint("secure")
+        .add_endpoint(
+            "aes128_sha256_rsaoaep",
+            (
+                "/fixture",
+                SecurityPolicy::Aes128Sha256RsaOaep,
+                MessageSecurityMode::SignAndEncrypt,
+                &token_ids as &[&str],
+            ),
+        )
+        .add_endpoint(
+            "aes256_sha256_rsapss",
+            (
+                "/fixture",
+                SecurityPolicy::Aes256Sha256RsaPss,
+                MessageSecurityMode::SignAndEncrypt,
+                &token_ids as &[&str],
+            ),
+        )
+        .default_endpoint("basic256sha256")
         .max_browse_continuation_points(16)
         .with_node_manager(manager_builder)
         .build()
@@ -164,6 +200,9 @@ fn populate(
     let fixture = NodeId::new(namespace, "fixture");
     let continuation_points = NodeId::new(namespace, "continuation_points");
     let cancel_count = NodeId::new(namespace, "cancel_count");
+    let resources = NodeId::new(namespace, "resources");
+    let value = NodeId::new(namespace, "value");
+    let add = NodeId::new(namespace, "add");
     let slow = NodeId::new(namespace, "slow");
 
     {
@@ -194,6 +233,36 @@ fn populate(
         {
             return Err("cannot add fixture object".to_owned());
         }
+        if !VariableBuilder::new(&value, "Value", "Value")
+            .data_type(DataTypeId::Double)
+            .value(41.5_f64)
+            .writable()
+            .component_of(fixture.clone())
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add writable value".to_owned());
+        }
+        if !MethodBuilder::new(&add, "Add", "Add")
+            .component_of(fixture.clone())
+            .input_args(
+                &mut *address_space,
+                &NodeId::new(namespace, "add_inputs"),
+                &[
+                    ("Left", DataTypeId::Double).into(),
+                    ("Right", DataTypeId::Double).into(),
+                ],
+            )
+            .output_args(
+                &mut *address_space,
+                &NodeId::new(namespace, "add_outputs"),
+                &[("Sum", DataTypeId::Double).into()],
+            )
+            .executable(true)
+            .user_executable(true)
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add addition method".to_owned());
+        }
         if !MethodBuilder::new(
             &continuation_points,
             "ContinuationPoints",
@@ -223,6 +292,22 @@ fn populate(
             .insert(&mut *address_space)
         {
             return Err("cannot add cancel count method".to_owned());
+        }
+        if !MethodBuilder::new(&resources, "Resources", "Resources")
+            .component_of(fixture.clone())
+            .output_args(
+                &mut *address_space,
+                &NodeId::new(namespace, "resources_outputs"),
+                &[
+                    ("Subscriptions", DataTypeId::UInt32).into(),
+                    ("MonitoredItems", DataTypeId::UInt32).into(),
+                ],
+            )
+            .executable(true)
+            .user_executable(true)
+            .insert(&mut *address_space)
+        {
+            return Err("cannot add resource method".to_owned());
         }
         if !MethodBuilder::new(&slow, "Slow", "Slow")
             .component_of(fixture)
@@ -256,6 +341,19 @@ fn populate(
     manager.inner().add_method_callback(cancel_count, move |_| {
         Ok(vec![Variant::UInt32(cancel_handle.cancel_count())])
     });
+    let resource_handle = handle.clone();
+    manager.inner().add_method_callback(resources, move |_| {
+        Ok(vec![
+            Variant::UInt32(resource_handle.subscription_count() as u32),
+            Variant::UInt32(resource_handle.monitored_item_count() as u32),
+        ])
+    });
+    manager.inner().add_method_callback(add, |arguments| {
+        let [Variant::Double(left), Variant::Double(right)] = arguments else {
+            return Err(StatusCode::BadInvalidArgument);
+        };
+        Ok(vec![Variant::Double(left + right)])
+    });
     manager.inner().add_method_callback(slow, |arguments| {
         let [Variant::UInt32(milliseconds)] = arguments else {
             return Err(StatusCode::BadInvalidArgument);
@@ -285,7 +383,11 @@ async fn publish_config(
                     "\"namespace_uri\":\"{}\",",
                     "\"paged_node_id\":\"nsu={};s=paged\",",
                     "\"children\":{},",
+                    "\"username\":\"{}\",",
+                    "\"password\":\"{}\",",
                     "\"object_id\":\"nsu={};s=fixture\",",
+                    "\"node_id\":\"nsu={};s=value\",",
+                    "\"method_id\":\"nsu={};s=add\",",
                     "\"continuation_points_method_id\":",
                     "\"nsu={};s=continuation_points\",",
                     "\"cancel_count_method_id\":\"nsu={};s=cancel_count\",",
@@ -295,6 +397,10 @@ async fn publish_config(
                 NAMESPACE_URI,
                 NAMESPACE_URI,
                 children,
+                USERNAME,
+                PASSWORD,
+                NAMESPACE_URI,
+                NAMESPACE_URI,
                 NAMESPACE_URI,
                 NAMESPACE_URI,
                 NAMESPACE_URI,

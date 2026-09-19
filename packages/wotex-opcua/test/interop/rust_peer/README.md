@@ -1,9 +1,13 @@
 # Independent Rust interoperability peer
 
 This test-only executable runs an OPC UA server on async-opcua 0.19.0. It is
-independent of the production client's open62541 stack and supplies the narrow
-Browse continuation and Cancel observations asserted by `rust_peer_test.exs`.
-It is not a general-purpose or production server profile.
+independent of the production client's open62541 stack. It supplies Browse
+continuation and Cancel observations plus the positive X-F30 through X-F38
+policy/token workflows asserted by `rust_peer_test.exs`. The fixture exposes
+all three required SignAndEncrypt policies, anonymous/username/certificate
+tokens, a writable Double, a typed addition Method, and live subscription,
+MonitoredItem and continuation counters. It is not a general-purpose or
+production server profile.
 
 `Cargo.lock` fixes the dependency graph. The software build copies this whole
 directory to its explicit workspace, performs one locked fetch, and then builds
@@ -18,9 +22,12 @@ part of the copied or hashed project.
 declared by their Cargo manifests. The fixture patches:
 
 - implement the standard Cancel service for active asynchronous requests and
-  expose aggregate Cancel and browse-continuation counts to fixture methods;
+  expose aggregate Cancel, browse-continuation, subscription and MonitoredItem
+  counts to fixture methods;
+- advertise X.509 user tokens with the endpoint's security policy so the
+  signature algorithm used by the client and verifier is identical;
 - keep address-space reference buckets in insertion order; and
-- return queued BrowseNext pages from the front; and
+- return queued BrowseNext pages from the front;
 - disable postcard's unused default heapless feature so the lock contains no
   target-inactive, unmaintained `atomic-polyfill` dependency.
 

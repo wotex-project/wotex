@@ -6,6 +6,15 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
   alias Wotex.OPCUA.{Address, Browse, Error, Open62541}
   @moduletag :interop
 
+  @corpus "priv/fixtures/native-contract-v1.json"
+  @corpus_sha256 :crypto.hash(:sha256, File.read!(@corpus)) |> Base.encode16(case: :lower)
+  @cases Map.new(Jason.decode!(File.read!(@corpus))["cases"], &{&1["id"], &1})
+  @policies %{
+    "Basic256Sha256" => :basic256sha256,
+    "Aes128_Sha256_RsaOaep" => :aes128_sha256_rsaoaep,
+    "Aes256_Sha256_RsaPss" => :aes256_sha256_rsapss
+  }
+
   # The second independent peer runs the async-opcua Rust server.
   # Its fixture methods report the server's own live browse continuation points
   # across every Session and the number of requests its Cancel service found.
@@ -45,7 +54,102 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert is_integer(index)
     node = &Address.to_string(%Address{namespace: index, kind: :string, identifier: &1})
 
-    %{session: session, peer: peer, node: node}
+    %{session: session, peer: peer, node: node, fixture: fixture, options: options}
+  end
+
+  for number <- 30..38 do
+    id = "WOP-X-F#{number}"
+
+    @tag case: id, corpus_sha256: @corpus_sha256
+    test "#{id} executes every service against the independent Rust policy and token", context do
+      %{"input" => input, "expectation" => %{"value" => expected}} =
+        Map.fetch!(@cases, unquote(id))
+
+      assert input["independent_peer"] == "async-opcua-rust-peer-1"
+
+      options =
+        Keyword.merge(context.options,
+          security_policy: Map.fetch!(@policies, input["policy"]),
+          authentication: token(context, input["user_token"])
+        )
+
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+      processes = native_processes(host)
+      read = %{type: :read, node_id: context.node.("value")}
+      {:ok, %{"value" => %{"value" => original}}} = Wotex.OPCUA.send(session, read)
+
+      {:ok, subscription} =
+        Wotex.OPCUA.subscribe(session, %{
+          node_id: context.node.("value"),
+          publishing_interval_ms: 50
+        })
+
+      reference = subscription.reference
+
+      results = %{
+        "read" =>
+          match?({:ok, %{"value" => %{"value" => ^original}}}, Wotex.OPCUA.send(session, read)),
+        "write" =>
+          match?(
+            {:ok, %{"status" => 0}},
+            Wotex.OPCUA.send(session, %{
+              type: :write,
+              node_id: context.node.("value"),
+              value: %{type: "Double", value: 42.25}
+            })
+          ),
+        "readback" =>
+          match?({:ok, %{"value" => %{"value" => 42.25}}}, Wotex.OPCUA.send(session, read)),
+        "call" =>
+          match?(
+            {:ok, %{"outputs" => [%{"value" => 3.5}]}},
+            Wotex.OPCUA.send(session, %{
+              type: :call,
+              node_id: context.node.("add"),
+              value: %{
+                object_id: context.node.("fixture"),
+                arguments: [%{type: "Double", value: 1.25}, %{type: "Double", value: 2.25}]
+              }
+            })
+          ),
+        "browse" => browsed?(session, context.node),
+        "subscribe" =>
+          receive do
+            {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => value}}, _}} ->
+              value in [original, 42.25]
+          after
+            5000 -> false
+          end,
+        "cancel" => Wotex.OPCUA.unsubscribe(session, subscription) == :ok
+      }
+
+      {active_subscriptions, active_items} = resources(session, context.node)
+      assert active_items == 0
+
+      {:ok, %{"status" => 0}} =
+        Wotex.OPCUA.send(session, %{
+          type: :write,
+          node_id: context.node.("value"),
+          value: %{type: "Double", value: original}
+        })
+
+      live_continuations = count(session, context.node, "continuation_points")
+      monitor = Process.monitor(host)
+      results = Map.put(results, "close", Wotex.OPCUA.disconnect(session) == :ok)
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
+      assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+
+      observed = %{
+        "operations_succeeded" => Enum.count(input["operations"], &Map.fetch!(results, &1)),
+        "active_peer_subscriptions" => active_subscriptions,
+        "active_peer_continuations" => live_continuations,
+        "active_local_resources" => Enum.count([host | processes], &alive?/1)
+      }
+
+      assert observed == expected
+      assert Enum.sort(Map.keys(results)) == Enum.sort(input["operations"])
+    end
   end
 
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
@@ -169,6 +273,73 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       node_id: node.("slow"),
       value: %{object_id: node.("fixture"), arguments: [%{type: "UInt32", value: milliseconds}]}
     }
+  end
+
+  defp resources(session, node) do
+    assert {:ok,
+            %{
+              "outputs" => [
+                %{"type" => "UInt32", "value" => subscriptions},
+                %{"type" => "UInt32", "value" => items}
+              ]
+            }} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: node.("resources"),
+               value: %{object_id: node.("fixture"), arguments: []}
+             })
+
+    {subscriptions, items}
+  end
+
+  defp browsed?(session, node) do
+    case Browse.references(session, node.("fixture")) do
+      {:ok, %Browse.Page{status: 0, continuation: nil, references: references}} ->
+        Enum.any?(
+          references,
+          &(Address.to_string(&1.node_id.node_id) == node.("add"))
+        )
+
+      _ ->
+        false
+    end
+  end
+
+  defp token(_, "anonymous"), do: %{type: :anonymous}
+
+  defp token(context, "username") do
+    %{type: :username, username: context.peer["username"], password: context.peer["password"]}
+  end
+
+  defp token(context, "certificate") do
+    %{
+      type: :certificate,
+      certificate: Path.join(context.fixture, "user.der"),
+      private_key: Path.join(context.fixture, "user.key.der")
+    }
+  end
+
+  defp native_processes(host) do
+    %{port: port} = :sys.get_state(host)
+    {:os_pid, guardian} = Port.info(port, :os_pid)
+
+    {children, 0} =
+      System.cmd("/usr/bin/pgrep", ["-P", Integer.to_string(guardian)], env: [{"LC_ALL", "C"}])
+
+    [guardian | Enum.map(String.split(children), &String.to_integer/1)]
+  end
+
+  defp alive?(pid) when is_pid(pid), do: Process.alive?(pid)
+  defp alive?(pid), do: os_alive?(pid)
+
+  defp os_alive?(pid) do
+    {_, status} =
+      System.cmd("/bin/kill", ["-0", Integer.to_string(pid)],
+        stderr_to_stdout: true,
+        env: [{"LC_ALL", "C"}]
+      )
+
+    status == 0
   end
 
   defp eventually(check, attempts \\ 100) do

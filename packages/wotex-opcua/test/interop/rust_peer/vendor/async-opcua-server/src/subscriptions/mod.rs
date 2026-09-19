@@ -115,6 +115,28 @@ impl SubscriptionCache {
         }
     }
 
+    /// Return the number of subscriptions currently owned by all sessions.
+    pub fn subscription_count(&self) -> usize {
+        trace_read_lock!(self.inner).subscription_to_session.len()
+    }
+
+    /// Return the number of monitored items currently owned by all subscriptions.
+    pub fn monitored_item_count(&self) -> usize {
+        let session_subscriptions = {
+            let inner = trace_read_lock!(self.inner);
+            inner
+                .session_subscriptions
+                .values()
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+
+        session_subscriptions
+            .iter()
+            .map(|subscriptions| subscriptions.lock().monitored_item_count())
+            .sum()
+    }
+
     /// Get the `SessionSubscriptions` object for a single session by its numeric ID.
     pub fn get_session_subscriptions(
         &self,

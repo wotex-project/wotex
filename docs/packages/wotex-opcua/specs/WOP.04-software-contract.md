@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.4
+  version: 1.1.5
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -290,9 +290,13 @@ counters, disposable scalar/array variables, typed methods and explicit
 users/certificate identities. It validates real wire behavior but cannot by
 itself satisfy WOP-V14's independent-stack requirement. The async-opcua Rust
 peer supplies BrowseNext/release pagination with the server's live
-continuation-point count and Cancel of a transmitted request with the server's
-cancellation count. An independently implemented admitted-language peer must
-still supply the remaining cross-stack matrix.
+continuation-point count, Cancel of a transmitted request with the server's
+cancellation count, and all nine positive combinations of the three
+SignAndEncrypt policies and three user-token modes. Each positive combination
+executes Read, Write/readback, Call, Browse, subscribe/cancel and close and
+observes zero peer subscriptions, MonitoredItems and continuations after
+cleanup. Independent certificate-fault/rejection, advanced subscription and
+remaining lifecycle cells are still required.
 Security fault tests use controlled certificates, clock inputs and a bounded
 byte proxy. Same-stack and independent lanes are both required; neither
 substitutes for the other. No physical server is required.

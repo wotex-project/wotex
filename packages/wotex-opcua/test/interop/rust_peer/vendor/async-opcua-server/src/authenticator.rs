@@ -325,7 +325,7 @@ impl AuthManager for DefaultAuthenticator {
                 token_type: UserTokenType::Certificate,
                 issued_token_type: UAString::null(),
                 issuer_endpoint_url: UAString::null(),
-                security_policy_uri: UAString::from(SecurityPolicy::Basic128Rsa15.to_uri()),
+                security_policy_uri: UAString::from(endpoint.security_policy().to_uri()),
             });
         }
 

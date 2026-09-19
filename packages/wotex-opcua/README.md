@@ -49,7 +49,10 @@ handles, `next`, `release` and bounded `all`; deterministic fixtures and a
 secure same-stack C peer exercise wire pagination. Child-list Browse collects
 pages on one persistent or one-shot Session. A second independent peer on the
 async-opcua Rust stack confirms BrowseNext, release and Cancel with the server's
-own counts. Complete compatibility
+own counts. It also executes all nine positive combinations of the three
+SignAndEncrypt policies and anonymous, username and certificate tokens through
+Read, Write/readback, Call, Browse, subscribe/cancel and close, with peer and
+local resources returning to zero. Complete compatibility
 projection, subscriptions and lifecycle work remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
 selected native one-shot client. Runtime reads also decode validated flat
@@ -64,7 +67,9 @@ The pinned SDK owns secure-channel cryptography and service codecs; the package
 owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
 The C fixture peer exercises the full secure profile but shares open62541 with
 the production client, so it is not independent-stack evidence. The
-async-opcua peer remains independent for its narrower Browse/Cancel cells.
+async-opcua peer independently covers Browse/Cancel and the nine positive
+policy/token workflows; independent certificate-fault/rejection and advanced
+subscription/lifecycle cells remain open.
 
 [WOP.07](../../docs/packages/wotex-opcua/specs/WOP.07-native-executable.md) fixes source digests, security,
 credit flow control, process ownership and executable acceptance.
@@ -250,7 +255,9 @@ every project and vendored-patch digest in `software-build.json`. It needs the
 native build prerequisites, `python3` with `venv`, PyPI access and the pinned
 Rust toolchain. The run verifies that manifest, starts the compiled C secure
 peer and the Rust peer, which
-counts the server's live browse continuation points and its cancelled requests,
+counts the server's live browse continuation points, cancelled requests,
+subscriptions and MonitoredItems and exposes the three-policy/three-token
+positive service matrix,
 runs the `interop` and `software` ExUnit lanes
 with `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, `mix deps.audit`,
 `mix hex.audit`, `pip-audit` over the audit lock, an OSV query for the pinned

@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.42
+  version: 1.1.43
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -64,11 +64,12 @@ token and user signature rejections map to `authentication_failed`; certificate,
 security-check, policy and mode rejections map to `certificate_invalid`; other
 statuses are `connection_failed`. The compiled same-stack C peer executes the
 nine policy/token Session cells with Read, Write/readback, Call, Browse and close,
-and the X-F39..F47 rejection cells. This is real wire validation, not
-independent-stack evidence. X-F30..F38 also subscribe, receive a
-report and cancel the subscription, and are bound: the peer's subscription
-count after cancellation, the live continuation count and the host and native
-processes alive after close are all zero.
+and the X-F39..F47 rejection cells. The independent async-opcua Rust peer now
+executes those same nine positive X-F30..F38 cells. Both peers also subscribe,
+receive a report and cancel the subscription: their subscription and
+MonitoredItem counts after cancellation, live continuation counts and host and
+native processes alive after close are all zero. X-F39..F47 remain same-stack
+only.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split
@@ -99,9 +100,10 @@ The BEAM owner exposes a generation-bound public handle with the original
 browse deadline and cumulative bounds, releases an unconsumed continuation with a
 bounded control when that deadline passes and ends the generation when that
 release fails. A duplicate live token from the native process ends the
-generation. Independent BrowseNext peer evidence and server release counters
-remain open. Output buffering, other operations, cancellation,
-and the secure policy/token matrix remain required. The owner now samples the
+generation. The independent Rust peer proves BrowseNext, release and automatic
+deadline release with its server-side continuation count. Output buffering,
+other lifecycle operations and the independent rejection matrix remain
+required. The owner now samples the
 SDK's client-local namespace table when the Session is ready and projects every
 decoded NodeId, ExpandedNodeId without a URI, encoded ExtensionObject type
 identity and Browse ReferenceDescription identity from that table to the server
@@ -142,7 +144,7 @@ typed native maps; one-shot success preserves the recorded Read envelope,
 `"written"` Write acknowledgment and zero/one/many Call output shapes, including
 ByteString envelopes. Bounded child Browse works in both modes. These paths pass
 against the secure same-stack C peer. Complete compatibility projection, typed Browse
-pagination/release, cancellation, concurrency and the policy/token matrix remain open;
+pagination/release, cancellation, concurrency and independent rejection cells remain open;
 this does not accept P02/P03.
 The same-stack peer also confirms typed ByteString array Write/readback through
 the public native client, preserving binary elements. This adds no full S01/S02
@@ -696,9 +698,11 @@ vendored, and the manifest records every project and patch digest, the Cargo
 version, the audit lock and installed audit distributions, and seven executable
 digests. Run re-verifies that manifest and the peer project. It starts the C
 peer and then the Rust peer, which reuses the C peer's CA, CRL and server certificate,
-serves a folder of 40 children with a SignAndEncrypt Basic256Sha256 endpoint,
-reports the server's live browse continuation points and its Cancel count
-through methods, and stops when its standard input closes. Each peer has a
+serves a folder of 40 children and writable/method nodes on all three required
+SignAndEncrypt policies with anonymous, username and certificate tokens,
+reports the server's live browse continuation points, Cancel count,
+subscriptions and MonitoredItems through methods, and stops when its standard
+input closes. Each peer has a
 finite readiness deadline. The run then executes the ExUnit lane with
 `WOTEX_REQUIRE_SOFTWARE=1`, native and sanitizer CTest, the Mix dependency and
 Hex audits, `cargo audit` over the Rust lock,

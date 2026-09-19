@@ -27,6 +27,7 @@ defmodule Wotex.OPCUA.SecurityFaultInteropTest do
       %{"input" => input, "expectation" => %{"value" => expected}} =
         Map.fetch!(@cases, unquote(id))
 
+      assert input["peer"] == "open62541-c-peer-1"
       options = options(context, @policies[input["policy"]], token(context, input["user_token"]))
       peer = context.peer
       assert {:ok, session} = Wotex.OPCUA.connect(options)

@@ -88,6 +88,9 @@ async fn main() {
 
 ```
 
-For more detailed documentation on the server see [server.md](../docs/server.md) and [advanced_server.md](../docs/advanced_server.md).
+For more detailed documentation on the server see
+[server.md](https://github.com/FreeOpcUa/async-opcua/blob/9ad28fc011002398f2e8a95696a50408a14531d9/docs/server.md)
+and
+[advanced_server.md](https://github.com/FreeOpcUa/async-opcua/blob/9ad28fc011002398f2e8a95696a50408a14531d9/docs/advanced_server.md).
 
 The server SDK is _very_ flexible. There are mechanisms to make simple usage easier, but writing an OPC-UA server is never going to be a simple task.

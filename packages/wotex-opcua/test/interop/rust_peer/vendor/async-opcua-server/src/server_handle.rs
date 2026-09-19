@@ -104,6 +104,16 @@ impl ServerHandle {
         self.info.cancel_count()
     }
 
+    /// Get the number of subscriptions currently owned by every session.
+    pub fn subscription_count(&self) -> usize {
+        self.subscriptions.subscription_count()
+    }
+
+    /// Get the number of monitored items currently owned by every subscription.
+    pub fn monitored_item_count(&self) -> usize {
+        self.subscriptions.monitored_item_count()
+    }
+
     /// Get a reference to the type tree, containing shared information about types in the server.
     pub fn type_tree(&self) -> &RwLock<DefaultTypeTree> {
         &self.type_tree

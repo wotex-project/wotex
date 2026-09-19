@@ -63,12 +63,14 @@ with `--locked --offline` and warnings denied. The manifest records the Cargo
 version, all project and vendored-patch digests, and the executable digest.
 
 The peer reuses the compiled C peer's CA, CRL, application certificates and
-keys on a Basic256Sha256 SignAndEncrypt endpoint and serves a folder of 40
-UInt32 variables. Its fixture trust switch accepts the exact copied client
-leaf after async-opcua's certificate validation; it is not production trust
-policy. Two methods report the server's own state: the browse continuation
-points held by all Sessions and the number of requests its Cancel service
-found. `test/interop/rust_peer_test.exs` asserts through the public API that:
+keys on Basic256Sha256, Aes128_Sha256_RsaOaep and
+Aes256_Sha256_RsaPss SignAndEncrypt endpoints. Each advertises anonymous,
+username and certificate user tokens. The peer serves a folder of 40 UInt32
+variables, a writable Double and a two-Double addition Method. Its fixture trust
+switch accepts the exact copied client leaf after async-opcua's certificate
+validation; it is not production trust policy. Methods report the server's own
+browse continuation, Cancel, subscription and MonitoredItem counts.
+`test/interop/rust_peer_test.exs` asserts through the public API that:
 
 - the continuation-point count is 1 after the first page, stays 1 after
   BrowseNext and is 0 after `Browse.release/2`, and a released or consumed
@@ -84,32 +86,43 @@ found. `test/interop/rust_peer_test.exs` asserts through the public API that:
   `deadline_exceeded` with unknown effect and raises the server's Cancel count
   by one, and a caller killed 200 ms into the same Call raises it by one more.
   After both late responses the Session completes another Call and the count is
-  unchanged (C03 and the protocol Cancel of WOP.07).
+  unchanged (C03 and the protocol Cancel of WOP.07); and
+- every X-F30..F38 combination executes Read, Write/readback, typed Call,
+  Browse, subscribe/report/cancel and close. After cancellation the server
+  reports zero subscriptions, MonitoredItems and continuations, and after close
+  the monitored BEAM host, guardian and native client processes are gone.
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
-for active asynchronous requests, expose aggregate Cancel and continuation
-counts, preserve insertion order for reference buckets and consume BrowseNext
-pages from the front. These are test-server capabilities, not production client
-code.
+for active asynchronous requests; expose aggregate Cancel, continuation,
+subscription and MonitoredItem counts; advertise X.509 tokens with the
+endpoint's policy; preserve insertion order for reference buckets; and consume
+BrowseNext pages from the front. These are test-server capabilities, not
+production client code.
 
 On macOS arm64, `cargo check --locked`, Clippy over all targets with warnings
 denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
-binds `127.0.0.1` and is never shipped. Against that release peer,
-the three independent-wire cases passed 3/3, including concurrent and expired
-continuations, server order, and protocol Cancel for both timeout and caller
-death. The focused software-build harness passed 7/7. A full software task and
-runtime matrix receipt remains required for this source identity.
+binds `127.0.0.1` and is never shipped. Against the locally built peer, the
+twelve independent-wire cases passed 12/12: the original three
+continuation/Cancel cases and all nine positive policy/token workflows. The
+focused software-build harness passed 7/7 for the preceding three-case source;
+it must be rerun for this changed peer identity. A full software task and
+runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `5ceea7d488932a0a706743939dffb2c00b5236faacc0b3a1d0eda41a6dc12455` |
-| `test/interop/rust_peer/src/main.rs` | `712bfa4599d79eedde20374ec3d5bf82f0e69c15357025a152ac860066926d79` |
+| `test/interop/rust_peer_test.exs` | `c6a4d838e4136f0036f652da1ad65f44a8e07f386f6a80b4afca326978c828cb` |
+| `test/interop/rust_peer/src/main.rs` | `5e3766da878199aa13a6701b94f0791f892a4293b3f812b0a2ee4ff6c1556148` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
+| `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |
+| `vendor/async-opcua-server/src/server_handle.rs` | `aaa0eef93e43cd05951e9254df914f1dbe0f7995949ddb221f957296d7729fd1` |
+| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `f123c5463aae1546f6f45e27d6021914490e8fc3148ad9d55d69c8aae4dedc98` |
+| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `e9f8ee71fd5a1feac0417ee22782fc642a7bf2d5bcba09e667cac110acf2c9c0` |
 | `vendor/async-opcua-nodes/src/references.rs` | `71a4c5ac793bed375f3690b4a4d897b77c3d524150fd22adc0afe465f5331d00` |
+| `priv/fixtures/native-contract-v1.json` | `aaa4d3903bcfa49fcc8e393d8d0349f8c98b09df0adb0aad893f1516100c35bf` |
 | `test/software/Dockerfile.linux` | `84b45988d378cc40e612b10347e7951eff8bf9deec901be2133608a8f6b3cf2f` |
 
 ## Software lanes on Linux for both runtimes, 2026-09-19

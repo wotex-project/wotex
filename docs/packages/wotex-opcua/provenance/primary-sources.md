@@ -66,9 +66,10 @@ Their recorded cohorts remain bounded historical evidence for those source
 identities. The current compiled C11 peer uses the pinned open62541 stack and is
 therefore same-stack evidence, not independent interoperability.
 [async-opcua 0.19.0](https://github.com/FreeOpcUa/async-opcua/tree/9ad28fc011002398f2e8a95696a50408a14531d9)
-supplies the current independent Rust peer for the narrower Browse continuation
-and Cancel observations. The exact graph is fixed in `Cargo.lock`; the locally
-patched `async-opcua-server` and `async-opcua-nodes` crates retain their
+supplies the current independent Rust peer for Browse continuation, Cancel and
+the nine positive three-policy/three-token service workflows. The exact graph
+is fixed in `Cargo.lock`; the locally patched `async-opcua-server` and
+`async-opcua-nodes` crates retain their
 MPL-2.0 declarations and upstream VCS identity. The package has no Python
 runtime or peer asset; Python remains only in required upstream generation and
 isolated audit tooling. Existing pure fixture bytes verified with asyncua are

@@ -811,6 +811,10 @@ impl SessionSubscriptions {
         self.subscriptions.get(&subscription_id).map(|s| s.len())
     }
 
+    pub(super) fn monitored_item_count(&self) -> usize {
+        self.subscriptions.values().map(Subscription::len).sum()
+    }
+
     /// Get a reference to the session this subscription collection is owned by.
     pub fn session(&self) -> &Arc<RwLock<Session>> {
         &self.session
