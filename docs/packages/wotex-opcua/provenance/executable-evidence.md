@@ -105,7 +105,14 @@ browse continuation, Cancel, subscription and MonitoredItem counts.
 - a real ConsumedThing reads, writes, reads back and restores the peer's Int32
   and Double arrays and its 2 × 3 Int16 matrix. Runtime preserves the matrix's
   flat value order and dimensions, extreme Int32 values and negative zero, and
-  the temporary request helpers return to the baseline (S01/S05 and I03).
+  the temporary request helpers return to the baseline (S01/S05 and I03); and
+- an independent subscription delivers the initial and two fresh Double Values
+  exactly once with sequence, client-handle, timestamp-resolution and overflow
+  metadata. Double cancellation is idempotent, receiver death deletes only its
+  subscription, and a two-message receiver bound ends with exactly one
+  `receiver_overflow`. Every path returns peer subscription and MonitoredItem
+  counts to zero while the Session continues serving Reads (S04/C05 slices of
+  V10..V12; independent Republish, lifetime and restart faults remain open).
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
@@ -120,17 +127,17 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-23 independent-wire cases passed 23/23: the original three
+26 independent-wire cases passed 26/26: the original three
 continuation/Cancel cases, all nine positive policy/token workflows and all
 nine negative security/fault cells, plus the Runtime profile/observation and
-typed-array cases. The
+typed-array cases and three independent subscription/lifecycle cases. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `5d1242a21e3d496d41043f4940141e856bfba548c4578f954902c84cec343841` |
+| `test/interop/rust_peer_test.exs` | `e6041ded39ff0abe2b5ff4bc3dc9eef2128e888ef4a327860321ff3996439f96` |
 | `test/interop/rust_peer/src/main.rs` | `089a81a1ac7dd76f219079e134afb5c31ed7137e8d9ba5e81c1988e3facda918` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |

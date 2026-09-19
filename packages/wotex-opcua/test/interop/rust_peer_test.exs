@@ -159,6 +159,180 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
   end
 
   @tag rust_session: true
+  test "WOP-S04 WOP-V10 independent monitoring delivers initial and fresh reports once",
+       %{session: session, node: node} do
+    baseline = native_descendants()
+    node_id = node.("value")
+
+    {:ok, %{"value" => %{"value" => original}}} =
+      Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+    request = %{
+      node_id: node_id,
+      publishing_interval_ms: 50,
+      sampling_interval_ms: 0,
+      queue_size: 2,
+      keepalive_count: 2,
+      lifetime_count: 6
+    }
+
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+    reference = subscription.reference
+
+    try do
+      assert_receive {:wotex_opcua, ^reference,
+                      {:ok, %{"value" => %{"type" => "Double", "value" => ^original}}, initial}},
+                     5000
+
+      assert %{
+               "sequence" => initial_sequence,
+               "client_handle" => client_handle,
+               "overflow" => false,
+               "datetime_resolution_ns" => 100,
+               "raw_datetime_ticks_available" => true
+             } = initial
+
+      assert resources(session, node) == {1, 1}
+
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 51.25)
+
+      assert_receive {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => 51.25}}, fresh}},
+                     5000
+
+      assert fresh["sequence"] > initial_sequence
+      assert fresh["client_handle"] == client_handle
+      assert fresh["overflow"] == false
+
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 52.5)
+
+      assert_receive {:wotex_opcua, ^reference, {:ok, %{"value" => %{"value" => 52.5}}, newest}},
+                     5000
+
+      assert newest["sequence"] > fresh["sequence"]
+      assert newest["client_handle"] == client_handle
+      refute_receive {:wotex_opcua, ^reference, _}, 300
+
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert eventually(fn -> resources(session, node) == {0, 0} end)
+    after
+      assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+    end
+
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert native_descendants() == baseline
+  end
+
+  @tag rust_session: true
+  test "WOP-C05 WOP-V12 independent receiver death cancels only its subscription",
+       %{session: session, node: node} do
+    baseline = native_descendants()
+
+    receiver =
+      spawn(fn ->
+        receive do
+          :stop -> :ok
+        end
+      end)
+
+    request = %{
+      node_id: node.("value"),
+      receiver: receiver,
+      publishing_interval_ms: 50,
+      sampling_interval_ms: 0
+    }
+
+    assert {:ok, lost} = Wotex.OPCUA.subscribe(session, request)
+
+    assert {:ok, kept} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node.("value"),
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    kept_reference = kept.reference
+    assert_receive {:wotex_opcua, ^kept_reference, {:ok, _, _}}, 5000
+    assert resources(session, node) == {2, 2}
+
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+    Process.exit(receiver, :kill)
+
+    assert eventually(fn ->
+             state = :sys.get_state(host)
+
+             not Map.has_key?(state.subscriptions, lost.reference) and
+               resources(session, node) == {1, 1}
+           end)
+
+    assert :ok = Wotex.OPCUA.unsubscribe(session, lost)
+
+    assert {:ok, %{"value" => %{"type" => "Double"}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+    assert :ok = Wotex.OPCUA.unsubscribe(session, kept)
+    assert eventually(fn -> resources(session, node) == {0, 0} end)
+    assert native_descendants() == baseline
+  end
+
+  @tag rust_session: true
+  test "WOP-C05 WOP-V11 independent receiver overflow is terminal once",
+       %{session: session, node: node} do
+    baseline = native_descendants()
+    test = self()
+    node_id = node.("value")
+
+    {:ok, %{"value" => %{"value" => original}}} =
+      Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+    receiver =
+      spawn(fn ->
+        receive do
+          :drain -> send(test, {:drained, drain([])})
+        end
+      end)
+
+    request = %{
+      node_id: node_id,
+      receiver: receiver,
+      publishing_interval_ms: 20,
+      sampling_interval_ms: 0,
+      max_queue_length: 2
+    }
+
+    assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+
+    try do
+      for value <- [61.0, 62.0, 63.0, 64.0] do
+        assert {:ok, %{"status" => 0}} = write(session, node_id, value)
+        Process.sleep(120)
+      end
+
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+
+      assert eventually(fn ->
+               not Map.has_key?(:sys.get_state(host).subscriptions, subscription.reference)
+             end)
+
+      send(receiver, :drain)
+      assert_receive {:drained, messages}, 1000
+      reference = subscription.reference
+
+      assert [{:wotex_opcua, ^reference, {:error, %Error{code: :receiver_overflow}}} | _] =
+               Enum.reverse(messages)
+
+      assert Enum.count(messages, &match?({:wotex_opcua, _, {:error, _}}, &1)) == 1
+      assert length(messages) == 3
+      assert eventually(fn -> resources(session, node) == {0, 0} end)
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    after
+      assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+    end
+
+    assert native_descendants() == baseline
+  end
+
+  @tag rust_session: true
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
        %{session: session, peer: peer, node: node} do
     paged = node.("paged")
@@ -455,6 +629,14 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     value
   end
 
+  defp write(session, node_id, value) do
+    Wotex.OPCUA.send(session, %{
+      type: :write,
+      node_id: node_id,
+      value: %{type: "Double", value: value}
+    })
+  end
+
   defp slow(node, milliseconds) do
     %{
       type: :call,
@@ -727,6 +909,14 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
 
   defp alive?(pid) when is_pid(pid), do: Process.alive?(pid)
   defp alive?(pid), do: os_alive?(pid)
+
+  defp drain(messages) do
+    receive do
+      message -> drain([message | messages])
+    after
+      0 -> Enum.reverse(messages)
+    end
+  end
 
   defp os_alive?(pid) do
     {_, status} =

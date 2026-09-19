@@ -3,7 +3,7 @@ spec:
   id: WOP.04
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.8
+  version: 1.1.9
   owner: wotex-opcua
   updated: 2026-09-19
 ---
@@ -302,8 +302,13 @@ observes zero peer subscriptions, MonitoredItems and continuations after
 cleanup. It also executes X-F39..F47 against isolated variants for expired and
 wrong-host leaves, application URI, trust, CRL, key, Security None downgrade and
 unsupported-token faults. Each attempt fails with no Session, no live local
-helper and a peer-recorded zero application requests. Advanced subscription and
-remaining lifecycle cells are still required. Through the real Runtime
+helper and a peer-recorded zero application requests. The same independent
+peer additionally proves ordered initial/fresh reports with sequence,
+client-handle and overflow metadata, idempotent cancellation,
+receiver-death isolation and one terminal receiver-overflow report. Each path
+returns peer subscription and MonitoredItem counts to zero and leaves the
+Session serving Reads. Independent Republish, lifetime and server-restart fault
+injection and remaining lifecycle cells are still required. Through the real Runtime
 ConsumedThing boundary the same independent peer also executes scalar Double
 read/write in the session and one-shot profiles and Property observation;
 explicit stop and Runtime-owner death each delete its subscription and
