@@ -118,7 +118,7 @@ defmodule Wotex.Lab.MCPTest do
     {reply, _} =
       Server.handle(state, request(4, "resources/read", %{"uri" => "wotex-lab://design-tokens"}))
 
-    assert {:ok, %{"version" => _, "tokens" => %{"base" => _}}} =
+    assert {:ok, %{"version" => _, "tokens" => %{"system" => _}}} =
              Wotex.JSON.decode(hd(reply["result"]["contents"])["text"])
 
     assert {%{"error" => %{"code" => -32_002}}, _} =

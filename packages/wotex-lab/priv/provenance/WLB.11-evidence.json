@@ -1,0 +1,70 @@
+{
+  "assertions": [
+    {"id": "WLB-C13:base-library-boundary", "status": "pass"},
+    {"id": "WLB-C13:shared-design-contract", "status": "pass"},
+    {"id": "WLB-C13:bounded-island-transport", "status": "pass"},
+    {"id": "WLB-C13:stale-update-resynchronization", "status": "pass"},
+    {"id": "WLB-C13:disconnect-command-safety", "status": "pass"},
+    {"id": "WLB-C13:semantic-fallback", "status": "pass"},
+    {"id": "WLB-C13:storybook-parity", "status": "pass"},
+    {"id": "WLB-C13:asset-inspection", "status": "pass"},
+    {"id": "WLB-C13:browser-accessibility-cohort", "status": "pass"},
+    {"id": "WLB-C13:manifest-integrity", "status": "pass"}
+  ],
+  "attempt": 1,
+  "budgets": {
+    "browser_timeout_ms": 15000,
+    "viewport_minimum_px": 320,
+    "zoom_percent": 400
+  },
+  "cleanup": {
+    "details": {
+      "browser_contexts": 0,
+      "retained_listeners": 0
+    },
+    "status": "ok"
+  },
+  "dependencies": [
+    {
+      "archive": "sha256:ca8a17a44f49d9a53a01f17443362d8b8d1f6a7e2838e6b07e890de1322c50d3",
+      "name": "phoenix_assets",
+      "version": "1.1.1"
+    },
+    {"archive": "missing", "name": "svelte", "version": "5.57.0"},
+    {"archive": "missing", "name": "vite", "version": "8.2.2"},
+    {"archive": "missing", "name": "node", "version": "26.9.0"},
+    {"archive": "missing", "name": "playwright", "version": "1.63.0"},
+    {"archive": "missing", "name": "chromium", "version": "153.0.8010.12"}
+  ],
+  "durations": {"asset_build_ms": 136},
+  "fixtures": {
+    "phoenix-assets:storybook": "sha256:12ee6af4ec429ae24356027a40082bd41d12cb87baa1d4ea1dbb920ea37cc98e",
+    "phoenix-assets:tokens": "sha256:6009c08d5b8dc9fc1bcb613cae4e28020884561b179d26b75a3a09a2d05f8db8"
+  },
+  "inputs": [
+    "command:pnpm run check",
+    "command:pnpm run check:browser:islands",
+    "command:MIX_ENV=test WOTEX_PATH_DEPS=1 mix test island-and-workbench-cohort",
+    "command:MIX_ENV=test WOTEX_PATH_DEPS=1 mix test storybook-cohort",
+    "verification:2026-09-21-local-source-browser-and-candidate-artifact-cohort"
+  ],
+  "lock_digest": "sha256:54e48f2388e2c4531a997b88ea0ad98108adb36aa335dec4c6764952abe0b397",
+  "outcomes": {
+    "asset_files": 8,
+    "browser_status": "passed",
+    "hosted_adoption": false,
+    "island_families": 3,
+    "wcag_certification": false
+  },
+  "revision": "c3ec0ef03de86eacc4f0e59dc4650decdb2e0f72",
+  "scenario_id": "WLB.11-workbench-and-design-system",
+  "schema_version": "1.0.0",
+  "seed": 0,
+  "source_tree_digest": "sha256:66a80b3743cb7dad6abb5721fdb2ec9b90014fc075183f9d583ef6b2f5508d69",
+  "toolchain": {
+    "backend": "LiveView-Svelte",
+    "elixir": "1.18.4",
+    "otp": "27",
+    "platform": "aarch64-apple-darwin"
+  }
+}

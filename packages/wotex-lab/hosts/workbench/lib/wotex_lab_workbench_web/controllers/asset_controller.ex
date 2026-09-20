@@ -12,8 +12,7 @@ defmodule WotexLabWorkbenchWeb.AssetController do
   use WotexLabWorkbenchWeb, :controller
 
   alias Wotex.Lab.DesignSystem
-
-  @value ~r/\A[A-Za-z0-9#%.,\- ()]{1,64}\z/
+  alias WotexLabWorkbench.Documentation
 
   @doc "The generated stylesheet."
   @spec tokens(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -26,24 +25,66 @@ defmodule WotexLabWorkbenchWeb.AssetController do
     |> send_resp(200, DesignSystem.stylesheet() <> overrides_css(overrides))
   end
 
+  @doc "Serves one local DocShell renderer asset with its content digest."
+  @spec documentation(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def documentation(conn, %{"name" => name}) do
+    case Documentation.asset(name) do
+      {:ok, media_type, bytes, digest} ->
+        conn
+        |> put_resp_content_type(media_type)
+        |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+        |> put_resp_header("etag", ~s("#{digest}"))
+        |> send_resp(200, bytes)
+
+      {:error, _} ->
+        send_resp(conn, 404, "not found")
+    end
+  end
+
+  @doc "Serves one release-built Pagefind asset from its bounded local tree."
+  @spec documentation_search(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def documentation_search(conn, %{"path" => path}) do
+    case Documentation.search_asset(path) do
+      {:ok, media_type, bytes, digest} ->
+        conn
+        |> put_resp_content_type(media_type)
+        |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+        |> put_resp_header("etag", ~s("#{digest}"))
+        |> send_resp(200, bytes)
+
+      {:error, _} ->
+        send_resp(conn, 404, "not found")
+    end
+  end
+
   @doc "Renders admitted overrides as a scoped CSS block; unknown names and unsafe values are dropped."
   @spec overrides_css(map()) :: String.t()
   def overrides_css(overrides) when is_map(overrides) do
-    known =
-      DesignSystem.tokens()
-      |> Map.values()
-      |> Enum.flat_map(&Map.keys/1)
-      |> MapSet.new()
+    admitted =
+      overrides
+      |> Enum.reduce(%{}, fn {name, value}, valid ->
+        case phoenix_design_system(:validate_overrides, [%{name => value}]) do
+          {:ok, override} -> Map.merge(valid, override)
+          {:error, _} -> valid
+        end
+      end)
 
     declarations =
-      overrides
-      |> Enum.filter(fn {name, value} ->
-        is_binary(name) and MapSet.member?(known, name) and is_binary(value) and
-          Regex.match?(@value, value)
-      end)
-      |> Enum.sort()
-      |> Enum.map_join("\n", fn {name, value} -> "  --wl-#{name}: #{value};" end)
+      case phoenix_design_system(:override_style, [admitted]) do
+        {:ok, value} -> value
+        {:error, _} -> ""
+      end
 
-    if declarations == "", do: "", else: "\n.wotex-lab {\n#{declarations}\n}\n"
+    if declarations == "",
+      do: "",
+      else: "\n.wotex-lab[data-pa-design-system]{#{declarations}}\n"
+  end
+
+  defp phoenix_design_system(function, arguments) do
+    module = PhoenixAssets.DesignSystem
+
+    if Code.ensure_loaded?(module),
+      do: apply(module, function, arguments),
+      else: {:error, :design_system_artifact_unavailable}
   end
 end

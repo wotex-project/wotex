@@ -52,9 +52,12 @@
     {:boundary, command: "elixir bin/check_boundary.exs"},
     # The reference hosts are separate Mix projects with their own gates and
     # locks; they inherit WOTEX_PATH_DEPS=1 from this gate. The Workbench's
-    # `check` alias fetches its dependencies first; the Nerves host runs its
-    # host cohort (MIX_TARGET=host) and never needs the rpi4 toolchain.
+    # `check` alias fetches its dependencies first. Phoenix Storybook then
+    # qualifies the Workbench's tracked production asset graph. The Nerves
+    # host runs its host cohort (MIX_TARGET=host) and never needs the rpi4
+    # toolchain.
     {:workbench, command: "mix check --no-retry", cd: "hosts/workbench"},
+    {:storybook_host, command: "mix check --no-retry", cd: "hosts/storybook", deps: [:workbench]},
     {:nerves_host,
      command: "mix do deps.get --check-locked + check --no-retry",
      cd: "hosts/nerves",

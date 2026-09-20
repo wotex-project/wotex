@@ -483,16 +483,17 @@ specifications:
   - id: WLB.11
     version: "0.12.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
-    implementation_status: partial
-    evidence_status: partial
+    implementation_status: implemented
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: priv/provenance/WLB.11-evidence.json
     standards:
       - name: WCAG
         revision: "2.2 AA"
         claim: Workbench accessibility target; token contrast tests are not whole-UI conformance.
       - name: Phoenix Assets shared design system and LiveView Svelte islands
         revision: "PHA.02 0.1.0"
-        claim: Planned consumer of the optional component, token, island and Storybook contracts; current HEEx source is partial evidence only.
+        claim: Implemented consumer of the optional component, token, island and Storybook contracts; local browser cohorts are source evidence, not hosted adoption or WCAG certification.
       - name: Design Tokens Format Module
         revision: "2025.10"
         claim: Planned token exchange format; a W3C Community Group Final Report, not a W3C Recommendation.
@@ -521,9 +522,12 @@ specifications:
       - "WotexLabWorkbenchWeb.DashboardController"
       - "WotexLabWorkbench.Report"
       - "WotexLabWorkbenchWeb.Components"
+      - "WotexLabWorkbenchWeb.Islands"
       - "WotexLabWorkbenchWeb.WorkbenchLive"
       - "WotexLabWorkbench.Health"
       - "WotexLabWorkbenchWeb.HealthController"
+      - "WotexLabStorybook.DesignContract"
+      - "WotexLabStorybookWeb.IslandLive"
     executable_evidence:
       - "test/wotex/lab/design_system_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_preview_test.exs"
@@ -540,23 +544,28 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/grafana_import_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
-    compatibility_classification: The accepted pre-1.0 reference-host contract additively selects PHA.02 Svelte islands, shared Phoenix Assets components and static Storybook while keeping LiveView authoritative for sessions, state, evidence, authorization and commands. The implemented HEEx/SVG host remains partial evidence and the SVG/table path remains the semantic fallback. Base Lab consumers keep inert Wotex theme tokens and scoped CSS without Phoenix, Vite, Svelte, Node, Explorer or BeamLens.
+      - "hosts/workbench/test/wotex_lab_workbench_web/islands_test.exs"
+      - "hosts/workbench/bin/check_islands_browser.mjs"
+      - "hosts/workbench/bin/check_assets.mjs"
+      - "hosts/storybook/test/wotex_lab_storybook_web/storybook_test.exs"
+    compatibility_classification: The accepted pre-1.0 reference-host contract implements PHA.02 Svelte islands, shared Phoenix Assets components and static Storybook while keeping LiveView authoritative for sessions, state, evidence, authorization and commands. The SVG/table path remains the semantic fallback. Base Lab consumers keep inert Wotex theme tokens and scoped CSS without Phoenix, Vite, Svelte, Node, Explorer or BeamLens. Local browser and candidate-artifact cohorts are complete source evidence; publication, WCAG certification and broader hosted adoption remain separate.
   - id: WLB.12
     version: "0.3.0"
     path: docs/specs/WLB.12-unified-documentation.md
-    implementation_status: planned
-    evidence_status: missing
-    adoption_status: no_reference
+    implementation_status: implemented
+    evidence_status: complete
+    adoption_status: reference_available
+    evidence_manifest: priv/provenance/WLB.12-evidence.json
     standards:
       - name: DocShell portable documentation site contract
         revision: "DSH.01 0.3.0"
-        claim: Planned consumer of renderer-neutral collection, site, search and static-export contracts.
+        claim: Implemented consumer of renderer-neutral collection, site, search and static-export contracts through a pinned candidate-artifact cohort.
       - name: Phoenix Assets DocShell renderer contract
         revision: "PHA.01 0.2.0"
-        claim: Planned consumer of optional LiveView and static HEEx renderers.
+        claim: Implemented consumer of optional LiveView and static HEEx renderers with one shared page model and Pagefind tree.
       - name: Phoenix Assets shared design system and LiveView Svelte islands
         revision: "PHA.02 0.1.0"
-        claim: Planned consumer of shared components, explicit island enhancement and static Storybook contracts.
+        claim: Implemented consumer of shared components, explicit island enhancement and static Storybook contracts.
       - name: WCAG
         revision: "2.2 AA"
         claim: Documentation accessibility target; automated checks are not whole-site certification.
@@ -566,6 +575,32 @@ specifications:
       - "WLB.11"
     completion_items:
       - "WLB-C14"
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: Additive planned Workbench, static documentation and static Storybook surface. The base library API and existing Workbench operations remain unchanged; implementation requires independently versioned DocShell and Phoenix Assets renderer, design-system and island contracts.
+    implementation_modules:
+      - "Wotex.Lab.Docs.Admission"
+      - "Wotex.Lab.Docs.Catalogue"
+      - "Wotex.Lab.Docs.Checkout"
+      - "Wotex.Lab.Docs.CohortBuilder"
+      - "Wotex.Lab.Docs.CohortResolver"
+      - "Wotex.Lab.Docs.CollectionBuilder"
+      - "Wotex.Lab.Docs.Projector"
+      - "Wotex.Lab.Docs.SourceTree"
+      - "Wotex.Lab.Docs.Staging"
+      - "WotexLabWorkbench.Documentation"
+      - "WotexLabWorkbench.Documentation.Build"
+      - "WotexLabWorkbench.Documentation.Publication"
+      - "WotexLabWorkbench.Documentation.StorybookBuilder"
+      - "WotexLabWorkbenchWeb.DocumentationLive"
+    executable_evidence:
+      - "test/wotex/lab/docs/catalogue_test.exs"
+      - "test/wotex/lab/docs/checkout_test.exs"
+      - "test/wotex/lab/docs/cohort_resolver_test.exs"
+      - "test/wotex/lab/docs/projector_test.exs"
+      - "test/wotex/lab/docs/source_tree_test.exs"
+      - "test/wotex/lab/docs/staging_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/documentation_build_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/documentation_publication_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/documentation_storybook_builder_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/documentation_live_test.exs"
+      - "hosts/workbench/bin/check_documentation_browser.mjs"
+      - "bin/check_workbench_archive.exs"
+    compatibility_classification: Additive implemented Workbench, static documentation and static Storybook surface. The base library API and existing Workbench operations remain unchanged. Independently versioned DocShell and Phoenix Assets renderer, design-system and island candidates are built and verified through the clone-free release cohort; hosted publication and WCAG certification remain separate adoption claims.

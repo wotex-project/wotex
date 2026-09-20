@@ -44,7 +44,7 @@ defmodule Wotex.Lab.BuildArtifacts do
 
   @spec run([String.t()]) :: :ok
   def run(argv) do
-    {output, workbench_release?} = parse!(argv)
+    {output, workbench_release?, candidates} = parse!(argv)
     create_output!(output)
     root = Path.expand("..", __DIR__)
     hex = Path.join(output, "hex")
@@ -73,7 +73,7 @@ defmodule Wotex.Lab.BuildArtifacts do
     )
 
     npm!(root, npm)
-    if workbench_release?, do: workbench_release!(root, output)
+    if workbench_release?, do: workbench_release!(root, output, candidates)
     {:ok, lab_digest} = ReferenceInputs.digest(root)
     source_digest = combined_source_digest(root, lab_digest)
     revision = ArchiveRepository.revision(root)
@@ -85,18 +85,38 @@ defmodule Wotex.Lab.BuildArtifacts do
     IO.puts("candidate artifacts: #{length(manifest["artifacts"])} files written to #{output}")
   end
 
-  defp parse!(["--output", output | options]) when options in [[], ["--workbench-release"]] do
-    (Path.type(output) == :absolute and Path.basename(output) not in ["", ".", ".."] and
+  defp parse!(arguments) do
+    {options, rest, invalid} =
+      OptionParser.parse(arguments,
+        strict: [
+          output: :string,
+          workbench_release: :boolean,
+          phoenix_assets_source: :string,
+          doc_shell_source: :string
+        ]
+      )
+
+    (rest == [] and invalid == []) || abort("invalid artifact build arguments")
+    output = Keyword.get(options, :output)
+
+    (is_binary(output) and Path.type(output) == :absolute and
+       Path.basename(output) not in ["", ".", ".."] and
        not File.exists?(output)) ||
       abort("--output must name a new absolute directory")
 
-    {Path.expand(output), options == ["--workbench-release"]}
-  end
+    release? = Keyword.get(options, :workbench_release, false)
 
-  defp parse!(_) do
-    abort(
-      "usage: mix run --no-start bin/build_artifacts.exs --output ABSOLUTE_PATH [--workbench-release]"
-    )
+    candidates =
+      if release? do
+        %{
+          phoenix_assets: required_directory!(options, :phoenix_assets_source),
+          doc_shell: required_directory!(options, :doc_shell_source)
+        }
+      else
+        %{}
+      end
+
+    {Path.expand(output), release?, candidates}
   end
 
   defp create_output!(output) do
@@ -165,7 +185,7 @@ defmodule Wotex.Lab.BuildArtifacts do
     end
   end
 
-  defp workbench_release!(root, output) do
+  defp workbench_release!(root, output, candidates) do
     release = Path.join(output, "release")
 
     case System.cmd(
@@ -175,7 +195,11 @@ defmodule Wotex.Lab.BuildArtifacts do
              "--no-start",
              "bin/check_workbench_archive.exs",
              "--output",
-             release
+             release,
+             "--phoenix-assets-source",
+             candidates.phoenix_assets,
+             "--doc-shell-source",
+             candidates.doc_shell
            ],
            cd: root,
            env: [{"WOTEX_PATH_DEPS", "1"} | ChildEnvironment.scrubbed()],
@@ -184,6 +208,24 @@ defmodule Wotex.Lab.BuildArtifacts do
       {_, 0} -> :ok
       {log, status} -> abort("Workbench release build failed (#{status}):\n#{log}")
     end
+  end
+
+  defp required_directory!(options, key) do
+    case Keyword.get(options, key) do
+      path when is_binary(path) ->
+        path = Path.expand(path)
+        File.dir?(path) || abort("--#{option_name(key)} is not a directory: #{path}")
+        path
+
+      _ ->
+        abort("--#{option_name(key)} is required with --workbench-release")
+    end
+  end
+
+  defp option_name(key) do
+    key
+    |> Atom.to_string()
+    |> String.replace("_", "-")
   end
 
   defp combined_source_digest(root, lab_digest) do

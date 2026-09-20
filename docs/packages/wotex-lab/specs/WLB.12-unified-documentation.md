@@ -1,7 +1,32 @@
 # WLB.12: Unified ecosystem documentation
 
 Specification version: 0.3.0. Contract: accepted. Implementation status:
-planned. Evidence status: missing. Adoption status: no_reference.
+implemented. Evidence status: complete. Adoption status: reference_available.
+
+## Implemented source and evidence boundary
+
+Lab now owns the validated source catalogue, isolated checkout and staging
+rules, release and rolling cohort resolution, collection admission and the
+single route/taxonomy projector. The Workbench builds that model with the
+pinned DocShell and Phoenix Assets contracts, serves inert LiveView routes and
+the same generated Pagefind tree, and exports the same page model as a static
+site. The combined publication stage admits separately manifested DocShell and
+Storybook trees only after link, asset, collision and design-contract checks.
+
+Focused unit, LiveView, publication, archive and real-Chromium cohorts cover
+the declared source types, exact digests, route projection, all Pagefind
+filters, live/static parity, keyboard use, 320-pixel reflow, 400% zoom, themes,
+high contrast, reduced motion, left-to-right and right-to-left locales,
+JavaScript-disabled fallbacks, 404 behavior and blocked network access. The
+clone-free release gate builds DocShell and Phoenix Assets candidate archives,
+resolves them through a local Hex registry, embeds the generated site and
+search tree, removes Git from the release environment and reads both from the
+release.
+
+This is complete local source and candidate-artifact evidence. It is not a
+successful GitHub Pages deployment, a public-site availability claim or a WCAG
+certification. Those adoption checks remain in the qualification runbook and
+never authorize a repository visibility change.
 
 ## Purpose
 

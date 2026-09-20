@@ -90,6 +90,7 @@ defmodule Wotex.Workspace.ManifestTest do
       map =
         put_in(Fixtures.manifest_map(), ["packages", "lab", "hosts"], [
           %{"path" => "hosts/workbench"},
+          %{"path" => "hosts/storybook"},
           %{"path" => "hosts/nerves", "env" => %{"MIX_TARGET" => "host"}}
         ])
 
@@ -97,6 +98,7 @@ defmodule Wotex.Workspace.ManifestTest do
 
       assert Manifest.fetch!("lab", manifest).hosts == [
                %Manifest.Host{path: "hosts/workbench", env: []},
+               %Manifest.Host{path: "hosts/storybook", env: []},
                %Manifest.Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
              ]
 
@@ -260,6 +262,7 @@ defmodule Wotex.Workspace.ManifestTest do
 
       assert lab.hosts == [
                %Manifest.Host{path: "hosts/workbench", env: []},
+               %Manifest.Host{path: "hosts/storybook", env: []},
                %Manifest.Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
              ]
 
@@ -275,7 +278,7 @@ defmodule Wotex.Workspace.ManifestTest do
       # The minimum lane skips the host gates: the hosts are applications
       # built with the current toolchain.
       assert {:ok, %{skip: skip}} = Manifest.lane("minimum", manifest)
-      assert "workbench" in skip and "nerves_host" in skip
+      assert "workbench" in skip and "storybook_host" in skip and "nerves_host" in skip
     end
 
     test "load/1 reports a missing file" do

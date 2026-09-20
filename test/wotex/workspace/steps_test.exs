@@ -66,7 +66,7 @@ defmodule Wotex.Workspace.StepsTest do
       name: "lab",
       app: "lab",
       native: true,
-      hosts: [%Host{path: "hosts/workbench"}, host]
+      hosts: [%Host{path: "hosts/workbench"}, %Host{path: "hosts/storybook"}, host]
     }
 
     gate = Steps.fast_gate(package)
@@ -82,6 +82,13 @@ defmodule Wotex.Workspace.StepsTest do
              {"hosts/workbench credo", ["credo", "--strict"],
               [mix_env: "test", cd: "hosts/workbench", env: []]},
              {"hosts/workbench test", ["test"], [mix_env: "test", cd: "hosts/workbench", env: []]},
+             {"hosts/storybook compile", ["compile", "--warnings-as-errors"],
+              [mix_env: "test", cd: "hosts/storybook", env: []]},
+             {"hosts/storybook format", ["format", "--check-formatted"],
+              [mix_env: "test", cd: "hosts/storybook", env: []]},
+             {"hosts/storybook credo", ["credo", "--strict"],
+              [mix_env: "test", cd: "hosts/storybook", env: []]},
+             {"hosts/storybook test", ["test"], [mix_env: "test", cd: "hosts/storybook", env: []]},
              {"hosts/nerves compile", ["compile", "--warnings-as-errors"],
               [mix_env: "test", cd: "hosts/nerves", env: [{"MIX_TARGET", "host"}]]},
              {"hosts/nerves format", ["format", "--check-formatted"],

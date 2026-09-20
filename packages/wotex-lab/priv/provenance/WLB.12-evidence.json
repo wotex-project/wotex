@@ -1,0 +1,79 @@
+{
+  "assertions": [
+    {"id": "WLB-C14:explicit-source-catalogue", "status": "pass"},
+    {"id": "WLB-C14:isolated-collection-build", "status": "pass"},
+    {"id": "WLB-C14:exact-source-identity", "status": "pass"},
+    {"id": "WLB-C14:single-route-and-search-model", "status": "pass"},
+    {"id": "WLB-C14:live-static-parity", "status": "pass"},
+    {"id": "WLB-C14:pagefind-query-and-filters", "status": "pass"},
+    {"id": "WLB-C14:browser-behavior-cohort", "status": "pass"},
+    {"id": "WLB-C14:atomic-combined-publication", "status": "pass"},
+    {"id": "WLB-C14:clone-free-release", "status": "pass"},
+    {"id": "WLB-C14:manifest-integrity", "status": "pass"}
+  ],
+  "attempt": 1,
+  "budgets": {
+    "archive_deadline_ms": 900000,
+    "browser_timeout_ms": 120000,
+    "search_asset_bytes": 33554432,
+    "site_artifact_bytes": 268435456
+  },
+  "cleanup": {
+    "details": {
+      "browser_contexts": 0,
+      "published_outputs": 0
+    },
+    "status": "ok"
+  },
+  "dependencies": [
+    {
+      "archive": "sha256:f8d13ed16008fc65bc81afb48d3f141d09b37770ce7b5996fee392e5614cef7a",
+      "name": "doc_shell",
+      "version": "0.4.0"
+    },
+    {
+      "archive": "sha256:ca8a17a44f49d9a53a01f17443362d8b8d1f6a7e2838e6b07e890de1322c50d3",
+      "name": "phoenix_assets",
+      "version": "1.1.1"
+    },
+    {"archive": "missing", "name": "pagefind", "version": "1.5.2"},
+    {"archive": "missing", "name": "node", "version": "26.9.0"},
+    {"archive": "missing", "name": "playwright", "version": "1.63.0"},
+    {"archive": "missing", "name": "chromium", "version": "153.0.8010.12"}
+  ],
+  "durations": {
+    "archive_gate_ms": 31916,
+    "browser_gate_ms": 4648
+  },
+  "fixtures": {
+    "documentation-browser-cohort": "sha256:773e1ea1a0cec3d0da9bcdd4220049a9de4fec378fcc4fb8f788d329c742edbd"
+  },
+  "inputs": [
+    "command:mix pkg wotex-lab test focused-documentation-cohort",
+    "command:pnpm run check:browser:documentation",
+    "command:mix run --no-start bin/check_workbench_archive.exs with-candidate-sources",
+    "verification:2026-09-21-local-live-static-browser-and-clone-free-release-cohort"
+  ],
+  "lock_digest": "sha256:54e48f2388e2c4531a997b88ea0ad98108adb36aa335dec4c6764952abe0b397",
+  "outcomes": {
+    "browser_status": "passed",
+    "git_on_release_path": false,
+    "hosted_adoption": false,
+    "release_built": true,
+    "resolved_archives": 63,
+    "search_filters": 7,
+    "surfaces": 2,
+    "wcag_certification": false
+  },
+  "revision": "c3ec0ef03de86eacc4f0e59dc4650decdb2e0f72",
+  "scenario_id": "WLB.12-unified-documentation",
+  "schema_version": "1.0.0",
+  "seed": 0,
+  "source_tree_digest": "sha256:4b74f27f724047233d3530d8d0296e03907d285e83ab73498ba54c645811abde",
+  "toolchain": {
+    "backend": "DocShell-Pagefind",
+    "elixir": "1.18.4",
+    "otp": "27",
+    "platform": "aarch64-apple-darwin"
+  }
+}

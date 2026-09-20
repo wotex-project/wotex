@@ -41,6 +41,7 @@ defmodule WotexLabWorkbench.Application do
 
     children = [
       {Phoenix.PubSub, name: WotexLabWorkbench.PubSub},
+      PhoenixAssets.child_specs(),
       Wotex.Lab.child_spec(
         id: "workbench",
         name: lab,
@@ -59,7 +60,13 @@ defmodule WotexLabWorkbench.Application do
          {:ok, control} <- control(Keyword.get(env, :control_mutations, false)),
          {:ok, otlp} <- otlp(Keyword.get(env, :metrics_otlp, false)) do
       Supervisor.start_link(
-        Enum.concat([observability, children, control, otlp, [WotexLabWorkbenchWeb.Endpoint]]),
+        Enum.concat([
+          observability,
+          List.flatten(children),
+          control,
+          otlp,
+          [WotexLabWorkbenchWeb.Endpoint]
+        ]),
         strategy: :one_for_one,
         name: WotexLabWorkbench.Supervisor
       )

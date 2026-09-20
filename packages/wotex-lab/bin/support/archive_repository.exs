@@ -17,46 +17,62 @@ defmodule Wotex.Lab.Check.ArchiveRepository do
     Enum.map(packages, fn {app, directory} ->
       dir = Path.expand("../#{directory}", root)
       File.dir?(dir) || abort("missing sibling package for #{app} at ../#{directory}")
-      env = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
-
-      {version, 0} =
-        System.cmd(
-          "mix",
-          [
-            "run",
-            "--no-start",
-            "--no-deps-check",
-            "--no-compile",
-            "-e",
-            "IO.write(Mix.Project.config()[:version])"
-          ],
-          cd: dir,
-          env: env,
-          stderr_to_stdout: true
-        )
-
-      version =
-        version
-        |> String.split("\n")
-        |> List.last()
-        |> String.trim()
-
-      Regex.match?(~r/\A\d+\.\d+\.\d+\z/, version) ||
-        abort("cannot read #{app} version: #{version}")
-
-      output = Path.join(tarballs, "#{app}-#{version}.tar")
-
-      {log, status} =
-        System.cmd("mix", ["hex.build", "--output", output],
-          cd: dir,
-          env: env,
-          stderr_to_stdout: true
-        )
-
-      status == 0 || abort("hex.build failed for #{app}:\n#{log}")
-      File.regular?(output) || abort("hex.build produced no archive for #{app}")
-      %{name: Atom.to_string(app), version: version, path: output, origin: :built}
+      build_archive!(app, dir, tarballs)
     end)
+  end
+
+  @doc "Builds one local Mix project into an admitted Hex archive without path dependencies."
+  @spec build_archive!(atom(), Path.t(), Path.t()) :: archive()
+  def build_archive!(app, directory, tarballs) when is_atom(app) do
+    dir = Path.expand(directory)
+    File.dir?(dir) || abort("missing candidate project for #{app} at #{dir}")
+    env = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
+
+    {identity, 0} =
+      System.cmd(
+        "mix",
+        [
+          "run",
+          "--no-start",
+          "--no-deps-check",
+          "--no-compile",
+          "-e",
+          ~S|config = Mix.Project.config(); IO.write("#{config[:app]} #{config[:version]}")|
+        ],
+        cd: dir,
+        env: env,
+        stderr_to_stdout: true
+      )
+
+    identity =
+      identity
+      |> String.split("\n")
+      |> List.last()
+      |> String.trim()
+
+    {name, version} =
+      case String.split(identity, " ", parts: 2) do
+        [name, version] -> {name, version}
+        _ -> abort("cannot read #{app} project identity: #{identity}")
+      end
+
+    name == Atom.to_string(app) || abort("candidate project is #{name}, expected #{app}")
+
+    Regex.match?(~r/\A\d+\.\d+\.\d+\z/, version) ||
+      abort("cannot read #{app} version: #{version}")
+
+    output = Path.join(tarballs, "#{app}-#{version}.tar")
+
+    {log, status} =
+      System.cmd("mix", ["hex.build", "--output", output],
+        cd: dir,
+        env: env,
+        stderr_to_stdout: true
+      )
+
+    status == 0 || abort("hex.build failed for #{app}:\n#{log}")
+    File.regular?(output) || abort("hex.build produced no archive for #{app}")
+    %{name: Atom.to_string(app), version: version, path: output, origin: :built}
   end
 
   # Public dependencies are admitted only at exact locked versions from the

@@ -28,6 +28,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
   @native_packages ~w(baml_elixir ex_maude explorer)a
   @deadline_ms 900_000
   @cohort ~w(hosts/workbench/config/**/* hosts/workbench/lib/**/*
+             hosts/workbench/bin/serve_documentation_browser_fixture.exs
              hosts/workbench/mix_tasks/**/* hosts/workbench/priv/static/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
              bin/check_workbench_archive.exs bin/support/archive_repository.exs
@@ -37,7 +38,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
   @spec run([String.t()]) :: :ok
   def run(argv) do
-    output = output!(argv)
+    {output, candidates} = options!(argv)
     root = Path.expand("..", __DIR__)
     host_source = Path.join(root, "hosts/workbench")
     work = Wotex.Lab.Check.WorkDirectory.create!(root, :workbench_archive)
@@ -45,7 +46,10 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     File.mkdir!(tarballs)
     started = System.monotonic_time()
 
-    local = ArchiveRepository.build_archives!(root, @packages, tarballs)
+    local =
+      ArchiveRepository.build_archives!(root, @packages, tarballs) ++
+        candidate_archives(candidates, tarballs)
+
     local_names = MapSet.new(local, & &1.name)
 
     public =
@@ -57,8 +61,10 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
     admitted = local ++ public
     native = admit_native_artifacts(work, host_source)
-    source_archive = build_source_archive(work, host_source)
+    documentation = build_documentation_fixture!(work, host_source, candidates)
+    source_archive = build_source_archive(work, host_source, documentation)
     consumer = extract_source_archive(work, source_archive)
+    prepare_candidate_lock(consumer)
     registry = ArchiveRepository.build_registry!(work, tarballs)
     {httpd, port} = ArchiveRepository.serve!(work, registry)
 
@@ -106,12 +112,85 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     end
   end
 
-  defp build_source_archive(work, host_source) do
+  defp candidate_archives(candidates, tarballs) do
+    [
+      ArchiveRepository.build_archive!(
+        :doc_shell,
+        candidates.doc_shell,
+        tarballs
+      ),
+      ArchiveRepository.build_archive!(
+        :phoenix_assets,
+        candidates.phoenix_assets,
+        tarballs
+      )
+    ]
+  end
+
+  defp build_documentation_fixture!(work, host_source, candidates) do
+    destination = Path.join(work, "documentation-fixture")
+    pagefind = Path.join(candidates.phoenix_assets, "npm/doc-shell/node_modules/.bin/pagefind")
+    File.regular?(pagefind) || abort("Pagefind is absent from the Phoenix Assets candidate")
+
+    environment = [
+      {"MIX_ENV", "test"},
+      {"WOTEX_PATH_DEPS", "1"},
+      {"PHOENIX_ASSETS_CANDIDATE", candidates.phoenix_assets},
+      {"DOC_SHELL_CANDIDATE", candidates.doc_shell}
+    ]
+
+    {log, status} =
+      System.cmd(
+        "mix",
+        [
+          "run",
+          "--no-start",
+          "bin/serve_documentation_browser_fixture.exs",
+          "--destination",
+          destination,
+          "--pagefind-executable",
+          pagefind,
+          "--build-only"
+        ],
+        cd: host_source,
+        env: environment,
+        stderr_to_stdout: true
+      )
+
+    status == 0 || abort("Workbench documentation fixture failed (#{status}):\n#{log}")
+
+    File.regular?(Path.join(destination, ".wotex/site.etf")) ||
+      abort("Workbench documentation fixture omitted its hosted site")
+
+    destination
+  end
+
+  defp build_source_archive(work, host_source, documentation) do
     archive = Path.join(work, "wotex-lab-workbench-source.tar")
+    stage = Path.join(work, "workbench-source")
+    File.mkdir!(stage)
+
+    Enum.each(@source_entries, fn entry ->
+      source = Path.join(host_source, entry)
+      target = Path.join(stage, entry)
+      File.mkdir_p!(Path.dirname(target))
+
+      case File.cp_r(source, target) do
+        {:ok, _} -> :ok
+        {:error, reason, path} -> abort("copying #{path} into the source stage failed: #{reason}")
+      end
+    end)
+
+    documentation_source = Path.join(documentation, ".wotex")
+    documentation_target = Path.join(stage, "priv/documentation")
+
+    case File.cp_r(documentation_source, documentation_target) do
+      {:ok, _} -> :ok
+      {:error, reason, path} -> abort("copying #{path} into the release failed: #{reason}")
+    end
 
     {output, status} =
-      System.cmd("tar", ["-cf", archive | @source_entries],
-        cd: host_source,
+      System.cmd("tar", ["-cf", archive, "-C", stage, "."],
         env: ChildEnvironment.scrubbed(),
         stderr_to_stdout: true
       )
@@ -134,6 +213,9 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       File.exists?(Path.join(consumer, entry)) || abort("source artifact omitted #{entry}")
     end)
 
+    File.regular?(Path.join(consumer, "priv/documentation/site.etf")) ||
+      abort("source artifact omitted built-in documentation")
+
     consumer
     |> Path.join("**/*")
     |> Path.wildcard(match_dot: true)
@@ -143,6 +225,25 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     end)
 
     consumer
+  end
+
+  defp prepare_candidate_lock(consumer) do
+    path = Path.join(consumer, "mix.lock")
+
+    lock =
+      path
+      |> ArchiveRepository.read_lock!()
+      |> Map.drop([:doc_shell, :phoenix_assets])
+
+    File.write!(
+      path,
+      inspect(lock,
+        pretty: true,
+        limit: :infinity,
+        printable_limit: :infinity,
+        width: 120
+      ) <> "\n"
+    )
   end
 
   defp admit_native_artifacts(work, host_source) do
@@ -247,6 +348,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     File.regular?(release) || abort("Workbench release launcher is absent")
 
     script = ~S'''
+    documentation = WotexLabWorkbench.Documentation.site()
+
     checks = %{
       git_absent: System.find_executable("git") == nil,
       workbench: Code.ensure_loaded?(WotexLabWorkbench),
@@ -258,7 +361,15 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       directory: Code.ensure_loaded?(Wotex.Directory),
       continuum: Code.ensure_loaded?(WotexContinuum),
       explorer: Code.ensure_loaded?(Explorer.DataFrame),
-      beamlens: Code.ensure_loaded?(Beamlens)
+      beamlens: Code.ensure_loaded?(Beamlens),
+      documentation:
+        match?({:ok, %{schema_version: "doc-shell-site/v1"}}, documentation) and
+          match?({:ok, _, _, _}, WotexLabWorkbench.Documentation.fetch_route("/docs/start/")),
+      documentation_search:
+        match?(
+          {:ok, "text/javascript", _, "sha256:" <> _},
+          WotexLabWorkbench.Documentation.search_asset(["pagefind", "pagefind.js"])
+        )
     }
 
     IO.puts("WORKBENCH_ARCHIVE_CHECKS " <> Enum.map_join(Enum.sort(checks), ",", fn {k, v} -> "#{k}=#{v}" end))
@@ -307,15 +418,30 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     end
   end
 
-  defp output!(argv) do
-    argv
-    |> Enum.reject(&(&1 == "--update-sbom"))
-    |> output_path!()
+  defp options!(argv) do
+    {options, rest, invalid} =
+      OptionParser.parse(argv,
+        strict: [
+          output: :string,
+          update_sbom: :boolean,
+          phoenix_assets_source: :string,
+          doc_shell_source: :string
+        ]
+      )
+
+    (rest == [] and invalid == []) || abort("invalid Workbench archive arguments")
+
+    candidates = %{
+      phoenix_assets: candidate!(options, :phoenix_assets_source),
+      doc_shell: candidate!(options, :doc_shell_source)
+    }
+
+    {output_path!(Keyword.get(options, :output)), candidates}
   end
 
-  defp output_path!([]), do: nil
+  defp output_path!(nil), do: nil
 
-  defp output_path!(["--output", path]) do
+  defp output_path!(path) do
     (Path.type(path) == :absolute and not File.exists?(path)) ||
       abort("--output must name a new absolute directory")
 
@@ -325,8 +451,23 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     Path.expand(path)
   end
 
-  defp output_path!(_),
-    do: abort("usage: mix run --no-start bin/check_workbench_archive.exs [--output ABSOLUTE_PATH]")
+  defp candidate!(options, key) do
+    case Keyword.get(options, key) do
+      path when is_binary(path) ->
+        path = Path.expand(path)
+        File.dir?(path) || abort("--#{option_name(key)} is not a directory: #{path}")
+        path
+
+      _ ->
+        abort("--#{option_name(key)} is required")
+    end
+  end
+
+  defp option_name(key) do
+    key
+    |> Atom.to_string()
+    |> String.replace("_", "-")
+  end
 
   defp export_artifacts(nil, _, _), do: []
 

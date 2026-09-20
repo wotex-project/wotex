@@ -54,6 +54,8 @@ defmodule WotexLabWorkbench.MixProject do
       {:prom_ex, "~> 1.12.0"},
       {:beamlens, "== 0.3.1"},
       {:phoenix, "~> 1.8.13"},
+      phoenix_assets_dependency(),
+      doc_shell_dependency(),
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},
       {:phoenix_pubsub, "~> 2.1"},
@@ -87,6 +89,46 @@ defmodule WotexLabWorkbench.MixProject do
 
       _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
+    end
+  end
+
+  defp phoenix_assets_dependency do
+    case {System.get_env("WOTEX_PATH_DEPS"), System.get_env("PHOENIX_ASSETS_CANDIDATE")} do
+      {"1", path} when is_binary(path) and path != "" ->
+        if Mix.env() in [:dev, :test, :docs] do
+          {:phoenix_assets, path: Path.expand(path), env: :prod, override: true}
+        else
+          raise "PHOENIX_ASSETS_CANDIDATE is allowed only in development, test or docs"
+        end
+
+      {_, nil} ->
+        {:phoenix_assets, "== 1.1.1"}
+
+      {_, ""} ->
+        {:phoenix_assets, "== 1.1.1"}
+
+      _ ->
+        raise "PHOENIX_ASSETS_CANDIDATE requires WOTEX_PATH_DEPS=1"
+    end
+  end
+
+  defp doc_shell_dependency do
+    case {System.get_env("WOTEX_PATH_DEPS"), System.get_env("DOC_SHELL_CANDIDATE")} do
+      {"1", path} when is_binary(path) and path != "" ->
+        if Mix.env() in [:dev, :test, :docs] do
+          {:doc_shell, path: Path.expand(path), env: :prod, override: true}
+        else
+          raise "DOC_SHELL_CANDIDATE is allowed only in development, test or docs"
+        end
+
+      {_, nil} ->
+        {:doc_shell, "== 0.4.0"}
+
+      {_, ""} ->
+        {:doc_shell, "== 0.4.0"}
+
+      _ ->
+        raise "DOC_SHELL_CANDIDATE requires WOTEX_PATH_DEPS=1"
     end
   end
 

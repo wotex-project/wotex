@@ -1,7 +1,8 @@
 defmodule WotexLabWorkbenchWeb.Components.Shell do
   @moduledoc """
   The workbench shell: skip link, collapsible sidebar navigation, compact
-  context line and one main workspace, themed through `data-theme`.
+  context line and one main workspace, themed through the shared Phoenix Assets
+  semantic-token contract.
   """
 
   use Phoenix.Component
@@ -12,14 +13,15 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
     {:experiments, "Experiments", "/"},
     {:things, "Things", "/things"},
     {:metrics, "Metrics", "/metrics"},
-    {:evidence, "Evidence", "/evidence"}
+    {:evidence, "Evidence", "/evidence"},
+    {:docs, "Documentation", "/docs/start/"}
   ]
 
   @doc "Sidebar items as `{id, label, path}`."
   @spec items() :: [{atom(), String.t(), String.t()}]
   def items, do: @items
 
-  attr :theme, :string, default: "system", doc: "system, light or dark"
+  attr :theme, :string, default: "system", doc: "system, light, dark or contrast"
   attr :sidebar_open, :boolean, default: true
   attr :current, :atom, default: :experiments, doc: "the active sidebar item"
   attr :title, :string, default: "WoTEx Lab workbench"
@@ -30,10 +32,22 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
   @doc "Renders the shell around the main workspace."
   @spec shell(map()) :: Phoenix.LiveView.Rendered.t()
   def shell(assigns) do
-    assigns = assign(assigns, :items, @items)
+    assigns =
+      assigns
+      |> assign(:items, @items)
+      |> assign(:design_contract, design_contract())
 
     ~H"""
-    <div class={["wotex-lab", "wl-shell", @sidebar_open && "wl-shell-open"]} data-theme={theme(@theme)}>
+    <div
+      class={["wotex-lab", "wl-shell", @sidebar_open && "wl-shell-open"]}
+      data-pa-design-system
+      data-pa-theme={theme(@theme)}
+      data-theme={theme(@theme)}
+      data-pa-token-digest={@design_contract["token_digest"]}
+      data-pa-component-digest={@design_contract["component_registry_digest"]}
+      data-pa-fixture-digest={@design_contract["story_fixture_digest"]}
+      data-pa-css-digest={@design_contract["documentation_css_digest"]}
+    >
       <a class="wl-skip" href="#main">Skip to main content</a>
       <header class="wl-topbar">
         <.icon_button
@@ -59,7 +73,11 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
             <form id="theme-settings" phx-change="set_theme" class="wl-settings">
               <label for="wl-theme">Theme</label>
               <select id="wl-theme" name="theme">
-                <option :for={value <- ~w(system light dark)} value={value} selected={value == @theme}>
+                <option
+                  :for={value <- ~w(system light dark contrast)}
+                  value={value}
+                  selected={value == @theme}
+                >
                   {value}
                 </option>
               </select>
@@ -79,5 +97,11 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
 
   defp theme("light"), do: "light"
   defp theme("dark"), do: "dark"
+  defp theme("contrast"), do: "contrast"
   defp theme(_), do: nil
+
+  defp design_contract do
+    {:ok, contract} = WotexLabWorkbench.Documentation.DesignContract.current()
+    contract
+  end
 end

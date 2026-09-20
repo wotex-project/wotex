@@ -1,5 +1,6 @@
 /_build/
 /deps/
+/node_modules/
 /cover/
 /doc/
 /priv/plts/

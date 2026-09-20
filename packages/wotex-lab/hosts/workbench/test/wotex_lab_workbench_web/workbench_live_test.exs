@@ -31,6 +31,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert html =~ "Numerical workbench"
     assert html =~ "mounting this page" or html =~ "Start disposable room"
+    assert html =~ ~r/data-pa-token-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-pa-component-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-pa-fixture-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-pa-css-digest="sha256:[0-9a-f]{64}"/
     assert Sessions.count() == before + 1
     assert is_binary(get_session(conn, SessionToken.key()))
 
@@ -501,15 +505,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     end)
 
     Application.put_env(:wotex_lab_workbench, :token_overrides, %{
-      "color-accent" => "#123456",
-      "color-bg" => "red; color: transparent",
+      "semantic.color.accent" => "#123456",
+      "semantic.color.canvas" => "red; color: transparent",
       "caller" => "#ffffff"
     })
 
     css = get(build_conn(), "/css/tokens.css") |> response(200)
-    assert css =~ "--wl-color-accent: #123456"
+    assert css =~ "--pa-semantic-color-accent:#123456;"
     refute css =~ "transparent"
-    refute css =~ "--wl-caller"
+    refute css =~ "--pa-caller"
 
     hostile = %{
       build_conn()
@@ -523,7 +527,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     refute policy =~ "example.test;"
 
     assert length(Components.modules()) == 15
-    assert Enum.map(Shell.items(), &elem(&1, 0)) == [:experiments, :things, :metrics, :evidence]
+
+    assert Enum.map(Shell.items(), &elem(&1, 0)) == [
+             :experiments,
+             :things,
+             :metrics,
+             :evidence,
+             :docs
+           ]
+
     assert :ok = WotexLabWorkbench.Application.config_change([], [], [])
   end
 end

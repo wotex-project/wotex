@@ -10,7 +10,7 @@ defmodule WotexLabWorkbenchWeb do
 
   @doc "Static paths the endpoint serves from `priv/static`."
   @spec static_paths() :: [String.t()]
-  def static_paths, do: ~w(css js favicon.ico robots.txt)
+  def static_paths, do: ~w(assets css js favicon.ico robots.txt)
 
   @doc false
   defmacro __using__(which) when is_atom(which), do: apply(__MODULE__, which, [])
@@ -82,6 +82,7 @@ defmodule WotexLabWorkbenchWeb do
       import WotexLabWorkbenchWeb.Components.PromptComposer
       import WotexLabWorkbenchWeb.Components.AnswerBlock
       import WotexLabWorkbenchWeb.Components.ActionApproval
+      import WotexLabWorkbenchWeb.Islands
       unquote(verified_routes())
     end
   end

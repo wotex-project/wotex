@@ -9,6 +9,8 @@ defmodule WotexLabWorkbenchWeb.Layouts do
 
   use WotexLabWorkbenchWeb, :html
 
+  import PhoenixAssets.Components, only: [vite_assets: 1]
+
   attr :conn, :map, required: true
   attr :inner_content, :any, required: true
 
@@ -31,7 +33,34 @@ defmodule WotexLabWorkbenchWeb.Layouts do
         </script>
         <script nonce={@nonce} src="/js/live_view/phoenix_live_view.min.js">
         </script>
-        <script nonce={@nonce} src="/js/app.js">
+        <.vite_assets entry="assets/app.ts" nonce={@nonce} />
+      </head>
+      <body>
+        {@inner_content}
+      </body>
+    </html>
+    """
+  end
+
+  @doc "The isolated root document for public documentation LiveViews."
+  @spec documentation_root(map()) :: Phoenix.LiveView.Rendered.t()
+  def documentation_root(assigns) do
+    assigns = assign(assigns, :nonce, assigns.conn.assigns[:csp_nonce])
+
+    ~H"""
+    <!DOCTYPE html>
+    <html lang="en" data-doc-theme="system">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="csrf-token" content={get_csrf_token()} />
+        <title>Wotex documentation</title>
+        <link rel="stylesheet" href="/docs-assets/doc-shell.css" />
+        <script nonce={@nonce} src="/js/phoenix/phoenix.min.js">
+        </script>
+        <script nonce={@nonce} src="/js/live_view/phoenix_live_view.min.js">
+        </script>
+        <script nonce={@nonce} type="module" src="/docs-assets/doc-shell-browser.js">
         </script>
       </head>
       <body>

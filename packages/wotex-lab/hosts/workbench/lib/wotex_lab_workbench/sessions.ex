@@ -19,7 +19,7 @@ defmodule WotexLabWorkbench.Sessions do
   alias WotexLabWorkbench.Room
 
   @commands ~w(start_room run cancel approve read register query export verify ask)a
-  @themes ~w(system light dark)
+  @themes ~w(system light dark contrast)
   @token_bytes 32
   @option_keys ~w(lab ttl_ms sweep_ms max_sessions name)a
 

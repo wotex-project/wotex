@@ -37,6 +37,17 @@ config :wotex_lab_workbench,
 
 config :phoenix, :json_library, Jason
 
+config :phoenix_assets,
+  otp_app: :wotex_lab_workbench,
+  endpoint: WotexLabWorkbenchWeb.Endpoint,
+  router: WotexLabWorkbenchWeb.Router,
+  asset_root: "assets",
+  static_root: "priv/static",
+  static_assets_path: "/assets",
+  serve_mode: :ssr,
+  dev: [enabled: false],
+  build: [vite_manifest: "priv/static/.vite/manifest.json"]
+
 # One compile-time adapter choice for the explicit host; never changed by a
 # Lab instance. No PromEx supervisor starts merely by configuring its adapter.
 config :prom_ex, :storage_adapter, WotexLabWorkbench.Observability.Store

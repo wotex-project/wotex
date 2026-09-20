@@ -1,7 +1,7 @@
 # WLB.11: Lean workbench and shared design system
 
 Specification version: 0.12.0. Contract: accepted. Implementation status:
-partial.
+implemented. Evidence status: complete. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
 
@@ -24,10 +24,17 @@ The public `/healthz` route exposes only schema version and required-process
 liveness, creates no session and is usable by the release image's fixed
 loopback probe.
 
-The LiveView/Svelte island architecture, shared Phoenix Assets component
-system, static Storybook, island transport and enhanced reporting components
-specified below are accepted additions and are not implemented by that source
-boundary. Existing HEEx and browser tests do not claim them.
+The reference host now consumes Phoenix Assets' shared tokens, CSS, HEEx
+components, Svelte components and island transport. Its single Vite graph
+produces bounded, content-hashed Workbench and Storybook entries. The chart,
+data-grid and tabs islands retain semantic HEEx fallbacks and use closed,
+revisioned snapshots and events. A separate Phoenix Storybook host exercises
+the real LiveView transport against the same registered components and fixture
+identities. Focused browser cohorts cover lifecycle, malformed and stale
+updates, reconnect resynchronization, command non-replay, fallback behavior,
+keyboard operation, reflow, zoom, themes, contrast, reduced motion and asset
+failure. Asset inspection rejects remote runtime dependencies, source maps,
+runtime compilation and Storybook manager code in the production graph.
 
 The existing host gate compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
@@ -133,8 +140,8 @@ GreptimeDB or an LLM. A non-umbrella reference host at `hosts/workbench/` owns
 its Mix project, endpoint, explicit supervision and optional integrations. It
 consumes Lab via artifact requirements and WLB.08's development switch, never
 private modules. Its packaged source archive and OCI image provide clone-free
-UI distribution. This directory is an accepted deliverable, not source already
-implemented by the foundation. No collection of mandatory new repositories.
+UI distribution. The implemented host remains separate from the base library;
+no collection of mandatory new repositories is introduced.
 
 The base library supplies `Wotex.Lab.DesignSystem.tokens/0`, `version/0` and
 `stylesheet/0`: immutable Wotex semantic theme roles and deterministic scoped
@@ -429,10 +436,10 @@ complete real-browser acceptance suite.
 
 ## Completion boundary
 
-The current HEEx host remains valid partial evidence. WLB.11 is complete only
-when WLB-S11-01 through WLB-S11-12 and WLB-V11-01 through WLB-V11-12 pass
-against pinned PHA.02 artifacts. Static Storybook publication is hosted
-adoption evidence, not proof of LiveView transport. Phoenix Storybook and local
-browser runs are source evidence until the tested host artifact and dependency
-cohort are recorded under WLB.08. Publication and hosted adoption follow the
+WLB-S11-01 through WLB-S11-12 and WLB-V11-01 through WLB-V11-12 have local
+source or candidate-artifact evidence against the pinned PHA.02 cohort. Static
+Storybook publication is hosted adoption evidence, not proof of LiveView
+transport. The Phoenix Storybook and local browser runs establish the source
+contract but do not claim WCAG certification. Publication and broader hosted
+adoption remain separate qualification work under the
 [qualification runbook](../plans/qualification.md).

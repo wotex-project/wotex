@@ -1,0 +1,28 @@
+{
+  "name": "@wotex/lab-workbench-assets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.4.2",
+  "scripts": {
+    "build": "node bin/clean_assets.mjs && vite build",
+    "check:browser:documentation": "node bin/check_documentation_browser.mjs",
+    "check:browser:islands": "node bin/check_islands_browser.mjs",
+    "check": "pnpm run typecheck && pnpm run build && node bin/check_assets.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@phoenix-assets/svelte": "1.1.1",
+    "svelte": "5.57.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.0",
+    "@types/node": "24.13.3",
+    "playwright": "1.63.0",
+    "typescript": "6.0.3",
+    "vite": "8.2.2"
+  },
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  }
+}

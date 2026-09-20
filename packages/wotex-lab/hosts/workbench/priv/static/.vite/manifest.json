@@ -1,0 +1,70 @@
+{
+  "../../../../../phoenix-assets/npm/svelte/dist/islands/chart-island.svelte": {
+    "file": "assets/island-chart-island-DOSrNqWu.js",
+    "name": "chart-island",
+    "src": "../../../../../phoenix-assets/npm/svelte/dist/islands/chart-island.svelte",
+    "isDynamicEntry": true,
+    "imports": [
+      "_island-hook-pT7uCoPM.js",
+      "_island-disclose-version-xihTtKlq.js"
+    ]
+  },
+  "../../../../../phoenix-assets/npm/svelte/dist/islands/data-grid-island.svelte": {
+    "file": "assets/island-data-grid-island-DV8cvzt-.js",
+    "name": "data-grid-island",
+    "src": "../../../../../phoenix-assets/npm/svelte/dist/islands/data-grid-island.svelte",
+    "isDynamicEntry": true,
+    "imports": [
+      "_island-hook-pT7uCoPM.js",
+      "_island-disclose-version-xihTtKlq.js"
+    ]
+  },
+  "../../../../../phoenix-assets/npm/svelte/dist/islands/tabs-island.svelte": {
+    "file": "assets/island-tabs-island-PVPRYQ80.js",
+    "name": "tabs-island",
+    "src": "../../../../../phoenix-assets/npm/svelte/dist/islands/tabs-island.svelte",
+    "isDynamicEntry": true,
+    "imports": [
+      "_island-hook-pT7uCoPM.js",
+      "_island-disclose-version-xihTtKlq.js"
+    ]
+  },
+  "_island-disclose-version-xihTtKlq.js": {
+    "file": "assets/island-disclose-version-xihTtKlq.js",
+    "name": "disclose-version"
+  },
+  "_island-hook-pT7uCoPM.js": {
+    "file": "assets/island-hook-pT7uCoPM.js",
+    "name": "hook",
+    "dynamicImports": [
+      "../../../../../phoenix-assets/npm/svelte/dist/islands/tabs-island.svelte",
+      "../../../../../phoenix-assets/npm/svelte/dist/islands/data-grid-island.svelte",
+      "../../../../../phoenix-assets/npm/svelte/dist/islands/chart-island.svelte"
+    ],
+    "css": [
+      "assets/workbench-D22H9QtZ.css"
+    ]
+  },
+  "_workbench-D22H9QtZ.css": {
+    "file": "assets/workbench-D22H9QtZ.css",
+    "src": "_workbench-D22H9QtZ.css"
+  },
+  "assets/app.ts": {
+    "file": "assets/workbench-Bz9-vsgc.js",
+    "name": "app",
+    "src": "assets/app.ts",
+    "isEntry": true,
+    "imports": [
+      "_island-hook-pT7uCoPM.js"
+    ]
+  },
+  "assets/storybook.ts": {
+    "file": "assets/workbench-DGLg-6sP.js",
+    "name": "storybook",
+    "src": "assets/storybook.ts",
+    "isEntry": true,
+    "imports": [
+      "_island-hook-pT7uCoPM.js"
+    ]
+  }
+}

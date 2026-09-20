@@ -30,8 +30,27 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   }
 
   alias WotexLabWorkbench.Investigation.{Answer, Broker, Disclosure, Provider, RunContext}
+
   alias WotexLabWorkbenchWeb.Components.StatusBadge
-  alias WotexLabWorkbenchWeb.Scope
+  alias WotexLabWorkbenchWeb.{Islands, Scope}
+
+  @overview_tabs [
+    %{
+      "id" => "experiments",
+      "label" => "Experiments",
+      "content" => "Admitted Nx runs with bounded parameters and explicit provenance."
+    },
+    %{
+      "id" => "things",
+      "label" => "Things",
+      "content" => "Disposable Things remain owned by the signed browser session."
+    },
+    %{
+      "id" => "evidence",
+      "label" => "Evidence",
+      "content" => "Reports and datasets are inert until an explicit export."
+    }
+  ]
 
   @impl Phoenix.LiveView
   def mount(_, _, socket) do
@@ -52,6 +71,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:insights, nil)
       |> assign(:read_result, nil)
       |> assign(:answer, nil)
+      |> assign(:island_revision, 0)
+      |> assign(:island_commands, [])
       |> assign(:investigation, investigation_state())
       |> assign(:disclosure, Disclosure.current())
       |> refresh()
@@ -62,7 +83,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   @impl Phoenix.LiveView
   def handle_params(params, _, socket) do
     socket = cancel_investigation_on_navigation(socket)
-    {:noreply, load_action(socket, socket.assigns.live_action, params)}
+    socket = load_action(socket, socket.assigns.live_action, params)
+    {:noreply, revise_islands(socket)}
   end
 
   @impl Phoenix.LiveView
@@ -261,6 +283,21 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
+  def handle_event("pa:island:" <> event, payload, socket) do
+    cond do
+      String.ends_with?(event, ":resync") ->
+        instance_id = String.trim_trailing(event, ":resync")
+        resync_island(socket, instance_id)
+
+      String.ends_with?(event, ":event") ->
+        instance_id = String.trim_trailing(event, ":event")
+        admit_island_event(socket, instance_id, payload)
+
+      true ->
+        {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
   @impl Phoenix.LiveView
   def handle_info(
         {:investigation, request, result},
@@ -291,7 +328,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         </div>
         <%= case @live_action do %>
           <% :experiments -> %>
-            <.experiments_view experiments={@experiments} runs={@runs} room={@scope.room} />
+            <.experiments_view
+              experiments={@experiments}
+              runs={@runs}
+              room={@scope.room}
+              session_id={@scope.session_id}
+              island_revision={@island_revision}
+            />
           <% :run -> %>
             <.run_view
               run={@run}
@@ -300,6 +343,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               investigation={@investigation}
               answer={@answer}
               disclosure={@disclosure}
+              session_id={@scope.session_id}
+              island_revision={@island_revision}
             />
           <% :things -> %>
             <.things_view things={@things} room={@scope.room} read_result={@read_result} />
@@ -310,6 +355,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               history_range={@history_range}
               room={@scope.room}
               dashboard_panels={@dashboard_panels}
+              session_id={@scope.session_id}
+              island_revision={@island_revision}
             />
           <% :evidence -> %>
             <.evidence_view
@@ -338,8 +385,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :experiments, :list, required: true
   attr :runs, :list, required: true
   attr :room, :any, required: true
+  attr :session_id, :string, required: true
+  attr :island_revision, :integer, required: true
 
   defp experiments_view(assigns) do
+    assigns = assign(assigns, :overview_tabs, @overview_tabs)
+
     ~H"""
     <header class="wl-page-header">
       <div>
@@ -350,6 +401,24 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     <p class="wl-lede">
       Run admitted Nx experiments, inspect tensors and keep every proposal inert until a separate policy decision.
     </p>
+    <.tabs_island
+      id={Islands.id(@session_id, "workbench-overview")}
+      label="Workbench boundaries"
+      tabs={@overview_tabs}
+      selected="experiments"
+      revision={@island_revision}
+    >
+      <:fallback>
+        <section class="wl-panel" aria-label="Workbench boundaries">
+          <h2>Workbench boundaries</h2>
+          <dl class="wl-provenance">
+            <div :for={tab <- @overview_tabs}>
+              <dt>{tab["label"]}</dt><dd>{tab["content"]}</dd>
+            </div>
+          </dl>
+        </section>
+      </:fallback>
+    </.tabs_island>
     <div class="wl-card-grid">
       <article :for={experiment <- @experiments} class="wl-card">
         <p class="wl-eyebrow">{experiment.kind |> Atom.to_string() |> String.replace("_", " ")}</p>
@@ -434,6 +503,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :investigation, :map, required: true
   attr :disclosure, :map, required: true
   attr :answer, :any, required: true
+  attr :session_id, :string, required: true
+  attr :island_revision, :integer, required: true
 
   defp run_view(assigns) do
     ~H"""
@@ -465,12 +536,21 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       <.tensor_summary :if={@run.tensor} summary={@run.tensor} />
       <.insights :if={@run.timeseries != []} run={@run} insights={@insights} />
       <section :if={@charts != []} class="wl-section">
-        <h2>Timeseries</h2><.chart
+        <h2>Timeseries</h2>
+        <.chart_island
           :for={{chart, index} <- Enum.with_index(@charts)}
-          id={"run-chart-#{index}"}
+          id={Islands.id(@session_id, "run-chart-#{index}")}
           chart={chart}
-          permalink={chart_path(@run, @insights, index)}
-        />
+          revision={@island_revision}
+        >
+          <:fallback>
+            <.chart
+              id={"run-chart-#{index}"}
+              chart={chart}
+              permalink={chart_path(@run, @insights, index)}
+            />
+          </:fallback>
+        </.chart_island>
       </section>
       <.data_table id="run-assertions" caption="Run assertions" rows={@run.assertions}>
         <:col :let={row} label="Assertion">{row.id}</:col>
@@ -576,10 +656,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :dashboard_panels, :list, required: true
   attr :history, :any, required: true
   attr :history_range, :string, required: true
+  attr :session_id, :string, required: true
+  attr :island_revision, :integer, required: true
 
   defp metrics_view(assigns) do
     latest = assigns.metrics && List.last(assigns.metrics.samples)
-    assigns = assign(assigns, :latest, latest)
+    {grid_columns, grid_rows} = metric_grid(assigns.metrics)
+
+    assigns =
+      assign(assigns, latest: latest, grid_columns: grid_columns, grid_rows: grid_rows)
 
     ~H"""
     <header class="wl-page-header">
@@ -646,18 +731,28 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           status={if @latest, do: "available", else: "unavailable"}
         />
       </div>
-      <.data_table
+      <.data_grid_island
         :if={@metrics}
-        id="metric-samples"
-        caption="Bounded session metric samples"
-        rows={@metrics.samples}
+        id={Islands.id(@session_id, "metric-samples")}
+        label="Bounded session metric samples"
+        columns={@grid_columns}
+        rows={@grid_rows}
+        revision={@island_revision}
       >
-        <:col :let={row} label="Sequence">{row.sequence}</:col><:col :let={row} label="Event">
-          {row.component}.{row.operation}.{row.event}
-        </:col><:col :let={row} label="Duration">
-          {if is_nil(row.duration_ms), do: "not measured", else: "#{row.duration_ms} ms"}
-        </:col><:col :let={row} label="Outcome">{row.outcome || "none"}</:col>
-      </.data_table>
+        <:fallback>
+          <.data_table
+            id="metric-samples"
+            caption="Bounded session metric samples"
+            rows={@metrics.samples}
+          >
+            <:col :let={row} label="Sequence">{row.sequence}</:col><:col :let={row} label="Event">
+              {row.component}.{row.operation}.{row.event}
+            </:col><:col :let={row} label="Duration">
+              {if is_nil(row.duration_ms), do: "not measured", else: "#{row.duration_ms} ms"}
+            </:col><:col :let={row} label="Outcome">{row.outcome || "none"}</:col>
+          </.data_table>
+        </:fallback>
+      </.data_grid_island>
       <button
         class="wl-button wl-button-secondary"
         phx-click="export_dataset"
@@ -752,6 +847,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         |> assign(:scope, scope)
         |> refresh()
         |> apply_effect(effect)
+        |> revise_islands()
 
       {:noreply, socket}
     else
@@ -769,6 +865,126 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp apply_effect(socket, {:insights, insights}),
     do: assign(socket, insights: insights, charts: insights.charts)
+
+  defp resync_island(socket, instance_id) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, descriptor} <- island_descriptor(socket, scope.session_id, instance_id),
+         {:ok, snapshot} <- Islands.snapshot(descriptor, socket.assigns.island_revision) do
+      {:noreply,
+       socket
+       |> assign(:scope, scope)
+       |> push_event("pa:island:#{instance_id}:snapshot", snapshot)}
+    else
+      _ -> {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
+  defp admit_island_event(socket, instance_id, payload) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, descriptor} <- island_descriptor(socket, scope.session_id, instance_id),
+         true <- payload["client_revision"] == to_string(socket.assigns.island_revision),
+         {:ok, event} <- Islands.validate_event(descriptor.component, instance_id, payload) do
+      acknowledge_island_event(assign(socket, :scope, scope), event)
+    else
+      _ -> {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
+  defp acknowledge_island_event(socket, %{"command_id" => nil}) do
+    {:reply, %{"status" => "accepted"}, socket}
+  end
+
+  defp acknowledge_island_event(socket, %{"command_id" => command_id}) do
+    if command_id in socket.assigns.island_commands do
+      {:reply, %{"status" => "duplicate"}, socket}
+    else
+      commands = Enum.take([command_id | socket.assigns.island_commands], 64)
+      {:reply, %{"status" => "accepted"}, assign(socket, :island_commands, commands)}
+    end
+  end
+
+  defp island_descriptor(socket, session_id, instance_id) do
+    descriptors =
+      case socket.assigns.live_action do
+        :experiments ->
+          [
+            %{
+              component: "tabs",
+              id: Islands.id(session_id, "workbench-overview"),
+              props: Islands.tabs_props("Workbench boundaries", @overview_tabs, "experiments")
+            }
+          ]
+
+        :run ->
+          chart_descriptors(socket.assigns.charts, session_id)
+
+        :metrics ->
+          [metric_grid_descriptor(socket.assigns.metrics, session_id)]
+
+        _ ->
+          []
+      end
+
+    case Enum.find(descriptors, &(&1 && &1.id == instance_id)) do
+      nil -> {:error, :unknown_island}
+      descriptor -> {:ok, descriptor}
+    end
+  end
+
+  defp chart_descriptors(charts, session_id) do
+    charts
+    |> Enum.with_index()
+    |> Enum.map(fn {chart, index} ->
+      %{
+        component: "chart",
+        id: Islands.id(session_id, "run-chart-#{index}"),
+        props: Islands.chart_props(chart)
+      }
+    end)
+  end
+
+  defp metric_grid_descriptor(nil, _), do: nil
+
+  defp metric_grid_descriptor(metrics, session_id) do
+    {columns, rows} = metric_grid(metrics)
+
+    %{
+      component: "data-grid",
+      id: Islands.id(session_id, "metric-samples"),
+      props: Islands.data_grid_props("Bounded session metric samples", columns, rows)
+    }
+  end
+
+  defp metric_grid(nil), do: {[], []}
+
+  defp metric_grid(metrics) do
+    columns = [
+      %{"key" => "sequence", "label" => "Sequence"},
+      %{"key" => "event", "label" => "Event"},
+      %{"key" => "duration", "label" => "Duration"},
+      %{"key" => "outcome", "label" => "Outcome"}
+    ]
+
+    rows =
+      metrics.samples
+      |> Enum.take(100)
+      |> Enum.map(fn row ->
+        %{
+          "key" => "sample-#{row.sequence}",
+          "values" => %{
+            "sequence" => to_string(row.sequence),
+            "event" => "#{row.component}.#{row.operation}.#{row.event}",
+            "duration" =>
+              if(is_nil(row.duration_ms), do: "not measured", else: "#{row.duration_ms} ms"),
+            "outcome" => to_string(row.outcome || "none")
+          }
+        }
+      end)
+
+    {columns, rows}
+  end
+
+  defp revise_islands(socket), do: update(socket, :island_revision, &(&1 + 1))
 
   defp refresh(%{assigns: %{scope: %{room: room, session_id: session_id}}} = socket)
        when is_pid(room) do

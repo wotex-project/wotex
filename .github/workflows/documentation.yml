@@ -1,0 +1,140 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/documentation.yml"
+      - "docs/**"
+      - "packages/**"
+      - "tooling/doc_shell_collector/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/documentation.yml"
+      - "docs/**"
+      - "packages/**"
+      - "tooling/doc_shell_collector/**"
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build static publication
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Wotex
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout DocShell candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: futhr/doc_shell
+          ref: 60401b5522aedf99503054e0b0b46b2365f18ac5
+          path: .candidates/doc_shell
+          persist-credentials: false
+
+      - name: Checkout Phoenix Assets candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: futhr/phoenix-assets
+          ref: acdae68219b4f939be434e68453378bf9c25a16c
+          path: .candidates/phoenix-assets
+          persist-credentials: false
+
+      - name: Install Erlang and Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: 1.20.2-otp-29
+          otp-version: 29.0.4
+
+      - name: Install Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.13.0
+          package-manager-cache: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          version: 10.33.0
+          run_install: false
+
+      - name: Install the pinned Phoenix Assets frontend graph
+        working-directory: .candidates/phoenix-assets
+        run: pnpm install --frozen-lockfile
+
+      - name: Install the Workbench documentation graph
+        working-directory: packages/wotex-lab/hosts/workbench
+        env:
+          MIX_ENV: docs
+          WOTEX_PATH_DEPS: "1"
+          DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
+          PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
+        run: mix deps.get --check-locked
+
+      - name: Build and preflight the complete publication
+        working-directory: packages/wotex-lab/hosts/workbench
+        shell: bash
+        env:
+          MIX_ENV: docs
+          WOTEX_PATH_DEPS: "1"
+          DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
+          PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
+        run: |
+          set -euo pipefail
+          repository_name=${GITHUB_REPOSITORY#*/}
+          if [[ "$repository_name" == "${GITHUB_REPOSITORY_OWNER}.github.io" ]]; then
+            pages_prefix=""
+          else
+            pages_prefix="/$repository_name"
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            profile=rolling
+          else
+            profile=release
+          fi
+          mix wotex_lab.docs.build \
+            --destination "$GITHUB_WORKSPACE/_site" \
+            --repository "$GITHUB_WORKSPACE" \
+            --phoenix-assets-source "$PHOENIX_ASSETS_CANDIDATE" \
+            --base-path "$pages_prefix/docs/" \
+            --canonical-origin "https://${GITHUB_REPOSITORY_OWNER}.github.io${pages_prefix}" \
+            --generation-id "$GITHUB_SHA" \
+            --profile "$profile"
+
+      - name: Retain the validated Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: _site
+          retention-days: 14
+
+  deploy:
+    name: Deploy default-branch publication
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the validated artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
