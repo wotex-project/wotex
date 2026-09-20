@@ -1032,7 +1032,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
 
   defp mutation_result({:error, %Error{} = error}, operation) do
     if Request.mutation?(operation),
-      do: {:error, %{error | effect: :unknown, retryable: false}},
+      do: {:error, Error.unknown_effect(error)},
       else: {:error, error}
   end
 
@@ -1040,7 +1040,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
 
   defp call_failure(message, code) do
     error = Error.new(code)
-    if drain_receipt(message), do: {:error, %{error | effect: :unknown}}, else: {:error, error}
+    if drain_receipt(message), do: {:error, Error.unknown_effect(error)}, else: {:error, error}
   end
 
   defp drain_receipt({_, :request, _, _, receipt}) do

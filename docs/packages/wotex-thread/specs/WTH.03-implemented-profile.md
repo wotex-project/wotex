@@ -15,6 +15,10 @@ This is a local Wotex Form profile, not a standardized W3C Thread binding:
 Only `readproperty` is supported. Runtime requires a matching `target` and an
 explicit Daemon `socket_path`. Application data uses a separate application
 protocol over Thread; these management reads are not a generic Thread binding.
+`Wotex.Thread.profile/0` exposes this exact read-only surface to Wotex Runtime.
+The transport rejects an explicit content type, credential object, mismatched
+controller target or any path outside the four listed above before opening its
+client.
 
 Dataset TLVs are at most 254 bytes. Duplicate types, including unknown types,
 are rejected. Known fixed-width fields are checked and network names are valid

@@ -3,7 +3,7 @@ defmodule Wotex.Thread.MappingTest do
 
   use ExUnit.Case, async: true
   alias Wotex.Runtime.{Context, ExecutionContext, Request}
-  alias Wotex.Thread.{Mapping, TestClient, Transport}
+  alias Wotex.Thread.{Mapping, RuntimeClient, Transport}
   @href "thread+unix://mesh/state"
   @target "mesh"
 
@@ -40,21 +40,30 @@ defmodule Wotex.Thread.MappingTest do
       affordance_name: "value",
       form: form,
       resolved_href: @href,
-      profile: nil,
+      profile: Wotex.Thread.profile(),
       request_id: "test-1",
       deadline: nil,
       input: nil
     }
 
-    opts = [client: TestClient, target: @target]
+    opts = [
+      client: RuntimeClient,
+      test_pid: self(),
+      peer_reply: "disabled",
+      target: @target
+    ]
 
     for deadline <- [
           nil,
           System.monotonic_time(:millisecond) + 1000,
           DateTime.add(DateTime.utc_now(), 1)
         ] do
-      assert {:ok, _} = Transport.request(%{request | deadline: deadline}, execution, opts)
-      assert_receive :disconnected
+      request = %{request | deadline: deadline}
+      execution = ExecutionContext.new(Context.new!(request_id: "test-1", deadline: deadline), nil)
+      assert {:ok, _} = Transport.request(request, execution, opts)
+      assert_receive {:runtime_client, :open, _}
+      assert_receive {:runtime_client, :request, %{type: :state}, _}
+      assert_receive {:runtime_client, :close}
     end
 
     for deadline <- [
@@ -71,11 +80,22 @@ defmodule Wotex.Thread.MappingTest do
     assert {:error, _} = Transport.request(request, execution, Keyword.put(opts, :target, "wrong"))
     assert {:error, _} = Transport.request(request, execution, [:bad])
 
+    assert {:error, %Wotex.Thread.Error{code: :invalid_options}} =
+             Transport.request(request, execution, [target: @target] ++ opts)
+
     assert {:error, _} =
              Transport.request(request, ExecutionContext.new(context, "credential"), opts)
 
-    assert {:error, _} = Transport.request(request, execution, Keyword.put(opts, :mode, :error))
-    assert_receive :disconnected
+    assert {:error, _} =
+             Transport.request(
+               request,
+               execution,
+               Keyword.put(opts, :peer_reply, {:error, :private})
+             )
+
+    assert_receive {:runtime_client, :open, _}
+    assert_receive {:runtime_client, :request, %{type: :state}, _}
+    assert_receive {:runtime_client, :close}
     assert {:error, _} = Transport.subscribe(nil, nil, nil, nil)
     assert {:error, _} = Transport.unsubscribe(nil, nil, nil, nil)
   end

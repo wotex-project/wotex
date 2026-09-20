@@ -54,6 +54,26 @@ defmodule Wotex.Thread do
       discovery_capable: false
     }
 
+  @doc "Returns the read-only daemon Runtime binding profile without opening a backend."
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile do
+    {:ok, profile} = profile(:daemon)
+    profile
+  end
+
+  @doc "Selects an implemented Runtime profile without inspecting the environment."
+  @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(:daemon) do
+    Wotex.Runtime.BindingProfile.new(
+      id: :thread,
+      schemes: ["thread+unix"],
+      operations: [:readproperty],
+      media_types: []
+    )
+  end
+
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
+
   @doc "Opens the supplied client module; absent transport fails explicitly."
   @spec connect(term()) :: {:ok, Session.t()} | {:error, Error.t()}
   def connect(opts) when is_list(opts) do

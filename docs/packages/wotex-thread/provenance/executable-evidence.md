@@ -33,6 +33,28 @@ macOS arm64. The native C++ target and the production host were not executed in
 this bounded change. Linux SDK, sanitizer and simulated-network results remain
 qualification work and are not inferred from source or injected-peer tests.
 
+## Runtime daemon integration, 2026-09-20
+
+`Wotex.Thread.profile/0` now exposes the four daemon inspection paths as one
+read-only `thread+unix` Runtime profile. `Wotex.Thread.Transport` consumes the
+Form and resolved address selected by Runtime, requires an exact configured
+controller, rejects explicit media and credential selectors before opening the
+client, and keeps mapping, setup, exchange and validation inside one deadline.
+Its successful values are checked against the finite native state, version,
+network-name and RLOC16 shapes before constructing a Runtime Result.
+
+`Wotex.Thread.Error` carries the additive Runtime class while retaining its
+native fields. Unknown mutation effect always becomes permanent and
+non-retryable. The seven cases in `wotex-integration-v1.json` run through real
+Thing Description construction, `ConsumedThing` and Runtime retry policy. The
+same tests cover Form precedence and extensions, all four read paths, invalid
+routes and selectors without client acquisition, false/zero/empty/null values,
+wrong result identity, deadline cleanup and the no-stream profile.
+
+These are deterministic Client and public-package tests in the local dependency
+lane. They do not establish the required OpenThread software-peer repetition,
+immutable archive adoption or the minimum/current runtime matrix.
+
 ## Mandatory local gate
 
 `WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, locked and

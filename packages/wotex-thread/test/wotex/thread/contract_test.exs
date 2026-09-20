@@ -3,7 +3,7 @@ defmodule Wotex.Thread.ContractTest do
 
   use ExUnit.Case, async: true
 
-  test "package does not register an application callback" do
+  test "WTH-I01 package does not register an application callback" do
     assert Application.spec(:wotex_thread, :mod) in [nil, [], :undefined]
   end
 
@@ -11,6 +11,7 @@ defmodule Wotex.Thread.ContractTest do
     error = Wotex.Thread.Error.new(:invalid_value, :address)
     assert error.code == :invalid_value
     assert error.field == :address
+    assert error.class == :permanent
     refute error.retryable
     assert error.effect == :none
   end

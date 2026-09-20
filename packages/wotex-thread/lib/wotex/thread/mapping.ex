@@ -28,9 +28,11 @@ defmodule Wotex.Thread.Mapping do
 
     with {:ok, type} <- Map.fetch(@operations, operation),
          true <- Atom.to_string(operation) in Form.operations(form, for: affordance),
+         fields = Form.to_map(form),
+         :ok <- media(fields),
          {:ok, uri} <- uri(href || Form.href(form)),
          {:ok, mapping} <- target(uri, type, input) do
-      {:ok, Map.put(mapping, :form, Form.to_map(form))}
+      {:ok, Map.put(mapping, :form, fields)}
     else
       {:error, %Error{}} = error -> error
       _ -> {:error, Error.new(:unsupported_operation)}
@@ -40,6 +42,12 @@ defmodule Wotex.Thread.Mapping do
   end
 
   def command(_, _, _, _), do: {:error, Error.new(:invalid_form)}
+
+  defp media(fields) do
+    if Map.has_key?(fields, "contentType"),
+      do: {:error, Error.new(:unsupported_content_type)},
+      else: :ok
+  end
 
   defp uri(href) when is_binary(href) and byte_size(href) <= 4096 do
     case URI.parse(href) do
@@ -53,7 +61,7 @@ defmodule Wotex.Thread.Mapping do
   defp target(
          %URI{scheme: "thread+unix", host: controller, port: nil, query: nil, path: path},
          :read,
-         _
+         nil
        )
        when is_binary(controller) and byte_size(controller) > 0 do
     case %{

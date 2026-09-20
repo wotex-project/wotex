@@ -389,7 +389,7 @@ packages:
         path: "docs/packages/wotex-thread/specs/WTH.05-standalone-client-and-preservation.md"
       - id: "WTH.06"
         version: "1.1.2"
-        implementation_status: "planned"
+        implementation_status: "partial"
         path: "docs/packages/wotex-thread/specs/WTH.06-wotex-integration.md"
       - id: "WTH.07"
         version: "1.0.7"

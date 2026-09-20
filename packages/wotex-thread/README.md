@@ -102,6 +102,14 @@ metadata and duration in native monotonic units; no credentials or values.
 Errors are structured and credential-free. Unknown Form extension terms survive
 mapping. These development APIs are not yet stable or certified.
 
+`Wotex.Thread.profile/0` returns the static, read-only daemon profile for
+`thread+unix` Forms. Runtime selects and resolves the Form; the transport then
+requires its controller key to match the configured target exactly. The four
+paths are `/state`, `/version`, `/network-name` and `/rloc16`. Forms with an
+explicit `contentType`, immediate credentials or unsupported security settings
+fail before the Thread client is opened. Native SDK subscriptions remain outside
+this Runtime profile.
+
 The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `receive/2`, `disconnect/1`, `health_check/1`, `subscribe/2`, `unsubscribe/2`.
 `send/2` returns the correlated operation result synchronously. No separate
@@ -210,14 +218,15 @@ already exists. Required software peers are separate from physical-device tests.
 
 The [standalone client contract](../../docs/packages/wotex-thread/specs/WTH.05-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
-Its [concrete corpus](priv/fixtures/contract-v1.json) contains specified,
-unexecuted cases; the scenario tables alone are not executable acceptance evidence.
+Its [concrete corpus](priv/fixtures/contract-v1.json) records case-level execution
+state; scenario tables alone are not executable acceptance evidence.
 
 The [specification catalogue](../../docs/packages/wotex-thread/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-thread/specs/WTH.06-wotex-integration.md)
-defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. These are target requirements; a passing baseline
-gate does not accept the unfinished software profile.
+defines the Runtime profile, route/value/error boundaries and public
+`ConsumedThing` tests. The local deterministic corpus executes in the ordinary
+test lane. Archive isolation, the required software peer and the runtime matrix
+remain separate acceptance work.
 
 ## License
 
