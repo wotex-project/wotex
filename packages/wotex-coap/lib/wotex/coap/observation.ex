@@ -11,6 +11,7 @@ defmodule Wotex.CoAP.Observation do
   alias Wotex.CoAP
   alias Wotex.CoAP.{Block, Blockwise, Codec, Connection, Error, Execution, Message, Observe}
   alias Wotex.CoAP.Observation.Report
+  alias Wotex.CoAP.Telemetry
 
   @doc "Validates a native Observe request without opening or registering anything."
   @spec options(term(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
@@ -370,6 +371,7 @@ defmodule Wotex.CoAP.Observation do
         )
 
         state = established(state)
+        Telemetry.subscription(:deliver, state.config.kind, :ok)
         pending(state)
 
       nil ->

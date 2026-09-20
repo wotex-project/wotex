@@ -230,6 +230,15 @@ subscription name or unbounded exception string enters telemetry. Test telemetry
 with canary credentials and payloads, including exception and startup failure.
 Avoid a global registry for sessions, receivers or protocol IDs.
 
+`Wotex.CoAP.Telemetry` now owns the finite projection used by both datagram and
+native owners. Request results are limited to `ok`, the five classified Runtime
+error categories, or `error`; operations are the four admitted methods and status is nil
+or one CoAP byte. Subscription metadata contains only Property/Event kind and
+that finite result. `telemetry_test.exs` covers successful and remote-error
+requests, a complete Observe lifecycle and failed establishment with canary
+routes and payloads. `native_connection_test.exs` repeats request and Observe
+delivery through the manifest-bound native owner with a canary OSCORE secret.
+
 ## WCO-C09 — Mandatory software evidence
 
 [WCO.08](WCO.08-native-build-and-software-evidence.md) fixes the explicit Mix task, native

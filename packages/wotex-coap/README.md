@@ -119,7 +119,10 @@ block sizes, aggregate budgets and the atomic upload profile.
 This is an ordinary Mix library, with no Application callback or implicit runtime
 work on dependency load. The consumer supplies credentials, routing policy and
 supervision. Telemetry uses `[:wotex, :coap, :request, :stop]`, with bounded status
-metadata and duration in native monotonic units; no credentials or values.
+metadata and duration in native monotonic units. Observations emit
+`[:wotex, :coap, :subscription, :open | :deliver | :close]` with a count and
+closed kind/result dimensions. Neither family includes credentials, values,
+hosts, URIs or caller-selected names.
 Errors are structured and credential-free. Unknown Form extension terms survive
 mapping. These development APIs are not yet stable or certified.
 

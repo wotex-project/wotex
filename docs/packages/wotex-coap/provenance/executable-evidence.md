@@ -38,6 +38,17 @@ UDP test transmits read/write requests and proves that an uncertain mutation
 stays permanent through Runtime even with explicit idempotence. Native effect
 and diagnostic details are not retained in Runtime causes.
 
+`telemetry_test.exs` executes WCO-C08 through public UDP requests and Observe:
+request stop events carry only duration, one of four operation atoms, a finite
+result and a byte-sized status; subscription open/deliver/close events carry
+only count, Property/Event kind and a finite result. It covers a remote error,
+successful lifecycle, failed establishment, exception text and startup-failure
+diagnostics while canary routes, hosts and payloads remain absent.
+`native_connection_test.exs` repeats request and two
+report deliveries through the manifest-bound OSCORE owner and proves that its
+credential, route and values remain absent from the same event schemas. These
+source tests do not claim hosted telemetry collection.
+
 `profile_test.exs` executes F01 over UDP through the public profile and real
 ConsumedThing route, including the preserved extension and zero remaining
 sockets. It covers all three unary operation/media cells, explicit null/false/

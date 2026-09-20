@@ -293,6 +293,83 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     refute_received {:wotex_coap, ^reference, _}
   end
 
+  test "WCO-C08 native request and subscription telemetry omit credentials and values", context do
+    telemetry_id = {__MODULE__, self(), make_ref()}
+
+    events = [
+      [:wotex, :coap, :request, :stop],
+      [:wotex, :coap, :subscription, :open],
+      [:wotex, :coap, :subscription, :deliver],
+      [:wotex, :coap, :subscription, :close]
+    ]
+
+    :ok =
+      :telemetry.attach_many(
+        telemetry_id,
+        events,
+        fn event, measurements, metadata, owner ->
+          send(owner, {:telemetry, event, measurements, metadata})
+        end,
+        self()
+      )
+
+    on_exit(fn -> :telemetry.detach(telemetry_id) end)
+
+    File.write!(Path.join(context.store, "mode"), "request")
+    assert {:ok, request_session} = Wotex.CoAP.connect(context.options)
+
+    assert {:ok, %Message{code: 69, payload: "ok"}} =
+             Wotex.CoAP.send(request_session, %{method: :get, path: "/secret"})
+
+    assert_receive {:telemetry, [:wotex, :coap, :request, :stop], %{duration: duration}, request}
+    assert is_integer(duration) and duration >= 0
+    assert request == %{operation: :get, result: :ok, status: 69}
+    assert :ok = Wotex.CoAP.disconnect(request_session)
+
+    observation_store = Path.join(context.root, "observation-context")
+    File.mkdir!(observation_store)
+    File.write!(Path.join(observation_store, "mode"), "observe")
+
+    observation_options =
+      options(context.executable, context.manifest, observation_store)
+
+    assert {:ok, observation_session} = Wotex.CoAP.connect(observation_options)
+
+    assert {:ok, handle} =
+             Wotex.CoAP.subscribe(observation_session, %{
+               path: "/temperature",
+               receiver: self(),
+               renew: false
+             })
+
+    reference = handle.reference
+    assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "20"}, _}}
+    assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "21"}, _}}
+
+    assert_receive {:telemetry, [:wotex, :coap, :subscription, :open], %{count: 1}, open}
+    assert open == %{kind: :property, result: :ok}
+
+    assert_receive {:telemetry, [:wotex, :coap, :subscription, :deliver], %{count: 1}, first}
+    assert first == %{kind: :property, result: :ok}
+
+    assert_receive {:telemetry, [:wotex, :coap, :subscription, :deliver], %{count: 1}, second}
+    assert second == %{kind: :property, result: :ok}
+
+    assert :ok = Wotex.CoAP.unsubscribe(observation_session, handle)
+
+    assert_receive {:telemetry, [:wotex, :coap, :subscription, :close], %{count: 1}, close_event}
+    assert close_event == %{kind: :property, result: :ok}
+
+    emitted = inspect([request, open, first, second, close_event])
+    refute emitted =~ Base.encode64(secret_canary())
+    refute emitted =~ "/secret"
+    refute emitted =~ "/temperature"
+    refute emitted =~ "20"
+    refute emitted =~ "21"
+
+    assert :ok = Wotex.CoAP.disconnect(observation_session)
+  end
+
   test "WCO-D04 native Observe rejects invalid admission before Port traffic", context do
     File.write!(Path.join(context.store, "mode"), "valid")
     assert {:ok, pid} = Connection.start(context.options)

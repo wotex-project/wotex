@@ -33,7 +33,8 @@ defmodule Wotex.CoAP.Connection do
     Message,
     Observation,
     Security,
-    Subscription
+    Subscription,
+    Telemetry
   }
 
   alias Wotex.CoAP.Datagram.{DTLS, UDP}
@@ -885,11 +886,7 @@ defmodule Wotex.CoAP.Connection do
     if call.exchange, do: Execution.cancel(call.exchange.timer)
     result = effect(result, call.message, call.sent)
 
-    :telemetry.execute(
-      [:wotex, :coap, :request, :stop],
-      %{duration: System.monotonic_time() - call.started},
-      %{code: call.message.code, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
-    )
+    Telemetry.request_stop(call.started, call.message.code, result)
 
     GenServer.reply(call.from, result)
   end
@@ -1039,6 +1036,8 @@ defmodule Wotex.CoAP.Connection do
         handle_token: token,
         request: request,
         receiver: config.receiver,
+        kind: config.kind,
+        opened: false,
         terminal: false,
         from: from,
         cancellation_started: false,
@@ -1053,7 +1052,15 @@ defmodule Wotex.CoAP.Connection do
 
   defp established_observation(state) do
     Execution.cancel(state.observation.deadline_timer)
-    %{state | observation: %{state.observation | from: nil, deadline_ref: nil}}
+    observation = state.observation
+
+    if not observation.opened,
+      do: Telemetry.subscription(:open, observation.kind, :ok)
+
+    %{
+      state
+      | observation: %{observation | from: nil, deadline_ref: nil, opened: true}
+    }
   end
 
   defp watch_cancel(%{observation: %{cancel_timer: timer}} = state, _) when is_reference(timer),
@@ -1138,13 +1145,31 @@ defmodule Wotex.CoAP.Connection do
 
   defp confirmed_cancel(state) do
     if state.observation.cancel_timer, do: Execution.cancel(state.observation.cancel_timer)
-    %{state | observation: %{state.observation | cancellation_confirmed: true, cancel_ref: nil}}
+    observation = state.observation
+
+    if observation.opened and not observation.terminal,
+      do: Telemetry.subscription(:close, observation.kind, :ok)
+
+    %{
+      state
+      | observation: %{
+          observation
+          | cancellation_confirmed: true,
+            cancel_ref: nil,
+            terminal: true
+        }
+    }
   end
 
   defp emit_terminal(%{observation: nil} = state, _), do: state
 
   defp emit_terminal(state, error) do
     observation = state.observation
+
+    if not observation.terminal do
+      event = if observation.opened, do: :close, else: :open
+      Telemetry.subscription(event, observation.kind, error)
+    end
 
     if not observation.terminal and not observation.cancellation_confirmed and
          Process.alive?(observation.receiver),

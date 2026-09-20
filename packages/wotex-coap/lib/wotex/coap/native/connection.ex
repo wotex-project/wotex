@@ -30,7 +30,7 @@ defmodule Wotex.CoAP.Native.Connection do
 
   use GenServer
 
-  alias Wotex.CoAP.{Error, NativeBackend, Security, Subscription}
+  alias Wotex.CoAP.{Error, NativeBackend, Security, Subscription, Telemetry}
   alias Wotex.CoAP.Native.{Admission, Body, Command, Report, ReportLedger, Wire}
 
   @keys [:host, :port, :timeout, :owner, :security, :native_backend]
@@ -580,6 +580,7 @@ defmodule Wotex.CoAP.Native.Connection do
             caller_monitor: Process.monitor(caller),
             receiver: config.receiver,
             receiver_monitor: Process.monitor(config.receiver),
+            kind: config.parameters.observation_kind,
             max_queue_length: config.max_queue_length,
             handle: handle,
             subscription_id: nil,
@@ -600,6 +601,12 @@ defmodule Wotex.CoAP.Native.Connection do
                active: %{operation: :observe, id: id, timer: timer}
            }}
         else
+          Telemetry.subscription(
+            :open,
+            config.parameters.observation_kind,
+            Error.new(:native_unavailable)
+          )
+
           {:stop, :normal, failure(:native_unavailable),
            %{
              state
@@ -608,6 +615,12 @@ defmodule Wotex.CoAP.Native.Connection do
         end
 
       :exhausted ->
+        Telemetry.subscription(
+          :open,
+          config.parameters.observation_kind,
+          Error.new(:sequence_exhausted)
+        )
+
         {:stop, :normal, failure(:sequence_exhausted),
          %{
            state
@@ -1044,6 +1057,7 @@ defmodule Wotex.CoAP.Native.Connection do
       )
 
       observation = establish_observation(observation)
+      Telemetry.subscription(:deliver, observation.kind, :ok)
 
       dispatch_next_credit(%{state | observation: observation}, :reports, now() + state.timeout)
     else
@@ -1196,6 +1210,7 @@ defmodule Wotex.CoAP.Native.Connection do
     Process.put(:wotex_coap_subscription, {__MODULE__, observation.handle.generation})
     GenServer.reply(observation.from, {:ok, observation.handle})
     Process.demonitor(observation.caller_monitor, [:flush])
+    Telemetry.subscription(:open, observation.kind, :ok)
 
     %{
       observation
@@ -1219,6 +1234,7 @@ defmodule Wotex.CoAP.Native.Connection do
 
   defp complete_cancellation(state) do
     Enum.each(state.observation.cancel_from || [], &GenServer.reply(&1, :ok))
+    Telemetry.subscription(:close, state.observation.kind, :ok)
     state = clear_observation(state)
     {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
   end
@@ -1231,6 +1247,9 @@ defmodule Wotex.CoAP.Native.Connection do
   defp finish_observation(%{observation: nil} = state, _, _), do: state
 
   defp finish_observation(%{observation: observation} = state, %Error{} = error, notify) do
+    event = if observation.from, do: :open, else: :close
+    Telemetry.subscription(event, observation.kind, error)
+
     if observation.from, do: GenServer.reply(observation.from, {:error, error})
 
     if observation.cancel_from,
@@ -1593,6 +1612,7 @@ defmodule Wotex.CoAP.Native.Connection do
       parameters: parameters,
       maximum_body_bytes: maximum_body_bytes,
       deadline: deadline,
+      started: System.monotonic_time(),
       from: from,
       monitor: monitor,
       timer: timer
@@ -1798,7 +1818,9 @@ defmodule Wotex.CoAP.Native.Connection do
         Process.cancel_timer(call.timer)
         Process.demonitor(call.monitor, [:flush])
         Admission.release(state.admission, lease)
-        GenServer.reply(call.from, call_result(result, call.parameters, lease))
+        result = call_result(result, call.parameters, lease)
+        Telemetry.request_stop(call.started, Map.get(call.parameters, :method, :unknown), result)
+        GenServer.reply(call.from, result)
 
         %{
           state

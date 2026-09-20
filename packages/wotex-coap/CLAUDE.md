@@ -51,7 +51,7 @@ Repository-wide rules are in the root `CLAUDE.md`.
 - `lib/wotex/coap/{mapping,transport}.ex`, `runtime_*.ex`: Form mapping, the
   Runtime Transport, route security and the relay that owns a native Observe
   for a Runtime subscription; `error.ex`: structured errors and Runtime
-  classes.
+  classes; `telemetry.ex`: finite request and subscription event projection.
 - `lib/wotex/coap/native_backend.ex`, `native/{connection,admission,command,wire,body,report,report_ledger}.ex`:
   verification and ownership of the native OSCORE helper and its bounded
   JSON-line protocol.
