@@ -18,7 +18,7 @@ defmodule WotexThread.MixProject do
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
-      test_ignore_filters: [~r{^test/support/}],
+      test_ignore_filters: [~r{^test/(fixtures|support)/}],
       test_coverage: [tool: ExCoveralls],
       dialyzer: dialyzer()
     ]
