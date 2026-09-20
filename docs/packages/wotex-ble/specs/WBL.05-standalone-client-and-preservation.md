@@ -3,21 +3,21 @@ spec:
   id: WBL.05
   title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.1.10
+  version: 1.1.11
   owner: wotex-ble
   updated: 2026-09-20
 ---
 
 # WBL.05 Standalone central and protocol workflows
 
-Specification version: `1.1.10`. Status: partially implemented target. WBL-P01
+Specification version: `1.1.11`. Status: implemented. WBL-P01
 accepts the pure peer, target, UUID and value-codec boundary. WBL-P02 accepts the
 persistent native connection and paged discovery APIs. WBL-P03 accepts explicit
 pairing Agent decisions and cleanup. WBL-P04 accepts acknowledged read/write
 procedures. WBL-P05 accepts native notification and indication ownership.
-WBL-P06 accepts explicit Runtime mapping and live native health. The complete
-consumer integration matrix remains a target requirement. WBL-P07 accepts the
-isolated virtual-controller native workflow.
+WBL-P06 accepts explicit Runtime mapping and live native health. WBL-P07 accepts
+the isolated virtual-controller native workflow. WBL-P07a and P08 accept the
+complete consumer integration and lifecycle source contracts.
 Requires [WBL.01](WBL.01-library-contract.md) and
 [WBL.04](WBL.04-software-contract.md). The baseline remains documented in
 [WBL.03](WBL.03-implemented-profile.md).
@@ -219,9 +219,9 @@ N03 on Linux ARM64; it does not claim RF behavior or an x86_64 guest run.
 ## WBL-N04 — Concrete corpus and executable acceptance
 
 [contract-v1.json](../../../../packages/wotex-ble/priv/fixtures/contract-v1.json) is fixture format `1.0.0` with
-status `specified_unexecuted`. It contains concrete examples; the broader Vxx
-rows in .10 are scenario families. Neither a scenario row nor parseable JSON
-counts as an executed test. All Vxx alternatives and boundaries still need tests.
+status `executed`. Its ten cases have asserting owners in the pure and private-bus
+native lanes. The broader Vxx rows in .10 remain scenario families; neither a
+scenario row nor parseable JSON counts as an executed test.
 
 Each case has a unique `id`, `requirements`, `kind`, `operation`, `input`, and
 `expectation`. The expectation uses `operator: "exact"` over a normalized

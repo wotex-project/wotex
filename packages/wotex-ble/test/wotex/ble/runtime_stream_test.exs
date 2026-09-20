@@ -46,6 +46,19 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
   end
 
+  test "WBL-I05 one opening report fits a one-frame Runtime owner bound" do
+    {native, record} = options("stream_runtime")
+    {consumed, context} = runtime_consumer([max_queue_length: 1] ++ native, :property)
+    owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
+
+    assert_receive {:runtime_decode, ^owner, {:value, <<1, 0>>, _}, _}, 5000
+    assert_receive {:wotex_runtime, _, {:ok, 1, _}}, 5000
+    refute_receive {:wotex_runtime, _, {:error, _}}, 20
+    assert Process.alive?(owner)
+    assert :ok = Wotex.Runtime.Subscription.stop(owner)
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
+  end
+
   test "WBL-I05 equal fresh signals remain distinct Runtime deliveries" do
     {native, record} = options("stream_runtime_repeat")
     {consumed, context} = runtime_consumer(native, :property)
@@ -179,17 +192,14 @@ defmodule Wotex.BLE.RuntimeStreamTest do
 
   test "WBL-I05 relay protects the Runtime owner mailbox and releases its session on overflow" do
     {native, record} = options("stream_runtime")
-    # A bound of 1 can also count the opening result still waiting in the owner
-    # mailbox when the buffered initial report arrives. Bound 2 keeps that
-    # establishment race out of this overflow case; three reports still exceed it.
-    {consumed, context} = runtime_consumer([max_queue_length: 2] ++ native, :property)
+    {consumed, context} = runtime_consumer([max_queue_length: 1] ++ native, :property)
     owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
     assert_receive {:runtime_decode, ^owner, {:value, _, metadata}, _}, 5000
     assert_receive {:wotex_runtime, _, {:ok, 1, _}}, 5000
     relay = :sys.get_state(owner).handle.pid
     subscription = :sys.get_state(relay).subscription
     :sys.suspend(owner)
-    for _ <- 1..3, do: send(relay, {:wotex_ble, subscription.reference, {:ok, <<1, 0>>, metadata}})
+    for _ <- 1..2, do: send(relay, {:wotex_ble, subscription.reference, {:ok, <<1, 0>>, metadata}})
     eventually(fn -> not Process.alive?(relay) end)
     :sys.resume(owner)
 
@@ -200,6 +210,51 @@ defmodule Wotex.BLE.RuntimeStreamTest do
     eventually(fn -> not Process.alive?(owner) end)
     eventually(fn -> closed(record) != nil end)
     assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
+  end
+
+  test "WBL-I05 one-shot mode rejects streams before creating an owner process" do
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => "https://www.w3.org/2022/wot/td/v1.1",
+        "title" => "One-shot stream rejection",
+        "securityDefinitions" => %{"none" => %{"scheme" => "nosec"}},
+        "security" => ["none"],
+        "properties" => %{
+          "reading" => %{
+            "observable" => true,
+            "forms" => [
+              %{
+                "href" => "ble://peer/180f/2a19",
+                "op" => ["observeproperty", "unobserveproperty"]
+              }
+            ]
+          }
+        }
+      })
+
+    {:ok, consumed} =
+      Wotex.Runtime.ConsumedThing.new(td,
+        profiles: [BLE.profile()],
+        credentials: {Wotex.BLE.RuntimeErrorPort, nil},
+        transports: %{
+          ble:
+            {Wotex.BLE.RuntimeRecordingTransport,
+             client: Wotex.BLE.RuntimeClient, test_pid: self(), target: "peer", peer_reply: <<42>>}
+        }
+      )
+
+    context = Wotex.Runtime.Context.new!(request_id: "unsupported-stream")
+
+    assert {:error, %{code: :compatible_form_not_found, phase: :selection}} =
+             Wotex.Runtime.ConsumedThing.observation_child_spec(
+               consumed,
+               "reading",
+               context,
+               id: make_ref(),
+               receiver: self()
+             )
+
+    refute_received {:runtime_client, :open, _}
   end
 
   @tag capture_log: true

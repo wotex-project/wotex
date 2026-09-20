@@ -3,9 +3,9 @@ spec:
   id: WBL.03
   title: "Implemented BLE profile"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-ble
-  updated: 2026-09-17
+  updated: 2026-09-20
 ---
 
 # WBL.03 Implemented BLE profile
@@ -45,14 +45,16 @@ pairing never authorizes removing bonds or registering a default Agent.
 
 The Mix-built host passes the 11 public BLE and Runtime tests and the 5 WBL-C09
 lifecycle stress tests against real BlueZ and virtual controllers in both BEAM
-lanes ([software run receipt](../provenance/software-run-v3.json)). The x86_64
-guest lane and final package gates are not established by those results. The native backend preserves the domain API and
-adds its exact backend identity and bounded credit protocol.
+lanes ([software run receipt](../provenance/software-run-v4.json)). Those results
+qualify their recorded Linux ARM64 source subject; they make no x86_64 or RF
+claim. The native backend preserves the domain API and adds its exact backend
+identity and bounded credit protocol.
 
 ## Evidence and compatibility
 
-See [executable evidence](../provenance/executable-evidence.md) for specific tests,
-commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
+See [executable evidence](../provenance/executable-evidence.md) for specific tests
+and commands, the [qualification runbook](../plans/qualification.md) for external
+matrices, and [source revisions](../provenance/primary-sources.md).
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
 Compatibility claims require exact differential scenarios for the advertised API.

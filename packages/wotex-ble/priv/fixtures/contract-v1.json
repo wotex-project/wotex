@@ -1,7 +1,7 @@
 {
   "format_version": "1.0.0",
   "package": "wotex_ble",
-  "status": "specified_unexecuted",
+  "status": "executed",
   "normalization_spec": "../WBL.11-standalone-client-and-preservation.md",
   "cases": [
     {

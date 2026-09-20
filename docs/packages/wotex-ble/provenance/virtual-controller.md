@@ -152,4 +152,4 @@ enumerable; their release is covered only through exit of the owning processes.
 
 The earlier Python peer results apply only to that retired implementation. Their
 scenarios now run against the compiled peer in the public ExUnit lanes as
-described above. An x86_64 guest lane remains open.
+described above. The x86_64 guest lane remains unqualified.

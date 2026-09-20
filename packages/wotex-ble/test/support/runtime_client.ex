@@ -8,12 +8,19 @@ defmodule Wotex.BLE.RuntimeClient do
     receiver = Keyword.fetch!(options, :test_pid)
     send(receiver, {:runtime_client, :open, Keyword.fetch!(options, :timeout)})
     Process.sleep(Keyword.get(options, :connect_delay, 0))
-    {:ok, %{receiver: receiver, reply: Keyword.fetch!(options, :peer_reply)}}
+
+    {:ok,
+     %{
+       receiver: receiver,
+       reply: Keyword.fetch!(options, :peer_reply),
+       request_delay: Keyword.get(options, :request_delay, 0)
+     }}
   end
 
   @impl Wotex.BLE.Client
   def request(handle, message, timeout) do
     send(handle.receiver, {:runtime_client, :request, message, timeout})
+    Process.sleep(handle.request_delay)
     {:ok, handle.reply}
   end
 

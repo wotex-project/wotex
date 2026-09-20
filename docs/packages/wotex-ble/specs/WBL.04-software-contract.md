@@ -3,7 +3,7 @@ spec:
   id: WBL.04
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.12
+  version: 1.1.13
   owner: wotex-ble
   updated: 2026-09-20
 ---
@@ -355,9 +355,9 @@ The accepted P06 slice covers contextual Form applicability, explicit value and
 mode extensions, media/security rejection before acquisition, typed Property
 and Event delivery, route-bound cancellation, relay mailbox bounds and native
 owner cleanup. Persistent health uses the original peer and live Device1 state;
-static capabilities make no peer claim. The focused Runtime boundary and pinned
-virtual-controller receipt cover this S05 slice. WBL.06's complete integration
-corpus and final consumer classification remain separate.
+static capabilities make no peer claim. The focused Runtime boundary, executed
+WBL.06 corpus, lifecycle source suite and pinned virtual-controller receipt cover
+the complete software profile. External qualification remains separate.
 
 ## Acceptance scenarios and software fixture
 

@@ -69,6 +69,8 @@ defmodule Wotex.BLE.RuntimeIntegrationTest do
     assert Map.take(corpus, ["format", "version"]) ==
              %{"format" => "wotex.protocol.integration", "version" => "1.0.0"}
 
+    assert corpus["status"] == "executed"
+
     ids = Enum.map(corpus["cases"], & &1["id"])
     assert ids == Enum.uniq(ids)
 
@@ -299,6 +301,35 @@ defmodule Wotex.BLE.RuntimeIntegrationTest do
     for deadline <- [DateTime.add(DateTime.utc_now(), -1), System.monotonic_time(:millisecond) - 1] do
       {:ok, consumed} = consumer(td())
       assert {:error, _} = read(consumed, Context.new!(request_id: "expired", deadline: deadline))
+      refute_received {:runtime_client, :open, _}
+    end
+  end
+
+  test "WBL-I04 exchange time consumes the same deadline and mutation effect stays unknown" do
+    {:ok, consumed} = consumer(td(), timeout: 20, request_delay: 30)
+    assert {:error, %{class: :timeout}} = read(consumed)
+    assert_receive {:runtime_client, :open, open_budget}
+    assert_receive {:runtime_client, :request, %{type: :read}, request_budget}
+    assert request_budget <= open_budget
+    assert_receive {:runtime_client, :close}
+
+    {:ok, consumed} = consumer(td(), timeout: 20, request_delay: 30, peer_reply: :written)
+
+    assert {:error, %{class: :permanent, details: %{cause: cause}}} =
+             ConsumedThing.write_property(consumed, "reading", <<0>>, context())
+
+    assert cause.code == :deadline_exceeded
+    refute Map.has_key?(cause, :effect)
+    assert_receive {:runtime_client, :open, _}
+    assert_receive {:runtime_client, :request, %{type: :write}, _}
+    assert_receive {:runtime_client, :close}
+  end
+
+  test "WBL-I03 WBL-I06 Runtime preserves falsy, empty and explicit null payloads" do
+    for payload <- [false, 0, <<>>, [], nil] do
+      {:ok, result} = Result.new("runtime-read", :readproperty, payload)
+      {:ok, consumed} = consumer(td(), result_override: result)
+      assert {:ok, %Result{payload: ^payload, status: :ok}} = read(consumed)
       refute_received {:runtime_client, :open, _}
     end
   end

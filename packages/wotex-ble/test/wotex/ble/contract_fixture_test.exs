@@ -20,6 +20,7 @@ defmodule Wotex.BLE.ContractFixtureTest do
 
   test "WBL-N04 P01 executes its exact assigned concrete case set" do
     assert @corpus["format_version"] == "1.0.0"
+    assert @corpus["status"] == "executed"
     assert Enum.sort(Enum.map(@cases, & &1["id"])) == Enum.sort(@p01_ids)
     assert Enum.all?(@cases, &(&1["kind"] == "pure"))
   end

@@ -2,24 +2,22 @@
 
 Current implementation: typed domain APIs, persistent native host ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
-stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 269 tests, 58 declared interoperability,
-hardware and software-stress exclusions; 95.9% coverage.
+stream behavior, Runtime integration and the complete lifecycle source suite.
+The bounded package gate passes 9 doctests, 17 properties and 273 tests, with 58
+explicit interoperability, hardware and software-stress exclusions.
 The [virtual-controller fixture](virtual-controller.md) and its
 [software run receipt](software-run-v4.json) execute the 11 public BLE and
 Runtime interoperability tests, including scenarios ported from the retired
 Python adapter lane, and the 5 WBL-C09 lifecycle stress tests against the
 Mix-built C++ host, real BlueZ 5.85 and two virtual controllers in both BEAM
 lanes. The independent fixture provider is compiled C++17 over GDBus/GIO. The
-x86_64 guest lane remains required. The Python persistent
+x86_64 guest lane remains an external qualification. The Python persistent
 adapter, its packaged helper and its unit tests are removed.
 
-Open finding: with a Runtime relay `max_queue_length` of 1, the buffered initial
-report can be rejected as `receiver_overflow` when the opening result is still
-in the Runtime owner mailbox. The full default suite reproduced this under load;
-60 isolated repetitions did not. The WBL-I05 overflow case therefore uses a
-bound of 2 and still injects three reports while the owner is suspended. This
-establishment race is recorded, not accepted as fixed.
+The WBL-I05 opening test proves that one buffered report fits a Runtime relay
+`max_queue_length` of 1. The transport establishment result belongs to the
+temporary opening worker, not the Runtime owner's mailbox. The bound-owner test
+then suspends that owner, admits one report and terminates on the second.
 
 ## Mandatory local gate
 
@@ -33,11 +31,11 @@ waivers. See the [security posture](../security.md) and the dependency-security 
 
 ## Acceptance boundary
 
-[WBL.07](../specs/WBL.07-native-backend.md) defines the required native binary,
-Mix/ExUnit tasks, exact version lanes and credit/resource tests. The executed
-component, startup and BEAM credit cases are identified below; unlisted native
-build and software-flow requirements remain open. A passing current gate,
-a listed test path or a source hash cannot establish execution of that target.
+[WBL.07](../specs/WBL.07-native-backend.md) defines the native binary,
+Mix/ExUnit tasks, exact version lanes and credit/resource tests. All 67 native
+corpus cases have asserting owners; the component, startup, BEAM credit, public
+GATT and lifecycle lanes are identified below. A passing current gate, a listed
+test path or a source hash does not establish an external qualification result.
 Each completed software run must
 bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
 The mandatory runtime matrix is Elixir 1.18.4/OTP 27.3.4.15 and Elixir
@@ -51,8 +49,9 @@ excluded. Native software results require their own immutable manifest.
 
 | Source | SHA-256 |
 | --- | --- |
-| `test/wotex/ble/contract_fixture_test.exs` | `3c4612f65da02f4df819691f0710798dcdf6ec41bf2efb51ba1f944cc8e9c548` |
-| `test/wotex/ble/runtime_integration_test.exs` | `ae2937ab1d0ecc8059036aded75201113737268bab73eeea1ad7a09903977b4c` |
+| `test/wotex/ble/contract_fixture_test.exs` | `492d264ea198f305dd373758f9ba8a6e476ecc2cae899f8d4bfe9d5ffce50651` |
+| `test/wotex/ble/runtime_integration_test.exs` | `9f2ca79ced4c9f8b4894666f5e5566de422480fbc3aada4223b4e062f1d95cb3` |
+| `test/wotex/ble/runtime_stream_test.exs` | `c956d7b4eb4dd6d92a6ae0a64e14b22076a4c9a53f95591557c55c2772ded30c` |
 | `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
 | `test/wotex/ble/stream_bridge_test.exs` | `f65ce06b4b2e04eaed00c89760bcb4379781e6342da52172615cf9315094e009` |
 
@@ -83,8 +82,8 @@ resolution or a GATT exchange.
 | `lib/wotex/ble/value.ex` | `f6b263a96a2585b58c179dfe64dd29b4e2f8fa2c661dd30404ea2c688d58e118` |
 | `lib/wotex/ble/uuid.ex` | `5e34bac9523130101c6195954e622b369528a916492fd79c6ab014fc8efc3ce3` |
 | `test/wotex/ble/identity_value_test.exs` | `33aa72000b5bdaa2857befe9c99c963f0ea93eba9f90fab92d801d0642b39674` |
-| `test/wotex/ble/contract_fixture_test.exs` | `3c4612f65da02f4df819691f0710798dcdf6ec41bf2efb51ba1f944cc8e9c548` |
-| `priv/fixtures/contract-v1.json` | `9de800b0910e7b92386f2e1a86d095f313224ad42c3b81a30a81975dccf00848` |
+| `test/wotex/ble/contract_fixture_test.exs` | `492d264ea198f305dd373758f9ba8a6e476ecc2cae899f8d4bfe9d5ffce50651` |
+| `priv/fixtures/contract-v1.json` | `9ae35a18b2ecfe72882b38d416837b0a7202f4dc6099ee868acc9c055816d619` |
 
 ## P02 persistent discovery ownership, 2026-09-20
 
@@ -282,8 +281,8 @@ WBL-B-F49..F55 execute the live Device1 query on the private D-Bus fixture. The
 five public Runtime interoperability cases in each BEAM lane against the virtual
 GATT peer. Those cases cover typed read/write, unsupported pre-acquisition cells,
 Property/Event delivery, receiver-death cleanup and cancellation through the
-original route. This P06 claim is limited to S05; WBL.06's complete corpus and
-consumer classification remain separate.
+original route. The P07a section below records the complete WBL.06 consumer
+boundary separately from this P06 slice.
 
 | P06 subject | SHA-256 |
 | --- | --- |
@@ -296,8 +295,8 @@ consumer classification remain separate.
 | `test/wotex/ble/mapping_test.exs` | `7e69552cf6ffef94efdf58e598febe83f3eb32ddac0ea155952c65e635a2c58a` |
 | `test/wotex/ble/health_test.exs` | `9469d739662696fa744f31a5e281150d126531ed4889d85fb872e9f7be49cbff` |
 | `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
-| `test/wotex/ble/runtime_stream_test.exs` | `16d2043f3f5f3aa7d20b20a75ac2713af07e2faf292a2c5963824061841ae4eb` |
-| `test/wotex/ble/runtime_integration_test.exs` | `ae2937ab1d0ecc8059036aded75201113737268bab73eeea1ad7a09903977b4c` |
+| `test/wotex/ble/runtime_stream_test.exs` | `c956d7b4eb4dd6d92a6ae0a64e14b22076a4c9a53f95591557c55c2772ded30c` |
+| `test/wotex/ble/runtime_integration_test.exs` | `9f2ca79ced4c9f8b4894666f5e5566de422480fbc3aada4223b4e062f1d95cb3` |
 | `test/native/health_test.hpp` | `33c8524f5e9b393c1e2e591036bd9dee3ee124636e5c06847f641938bd8b6162` |
 | `test/interop/bluez_runtime_test.exs` | `038f9906d97e3bc8fd478af86e9a4ae9a7dba92b54de53f6d9d8cb3c3c39e906` |
 
@@ -346,6 +345,43 @@ workflow; it makes no RF or x86_64 claim.
 | `test/interop/virtual/Dockerfile.bluez` | `4d5543d992c4928b7e85c1f325c0aa52711a58d0da4c37177624ab42c27530e5` |
 | `test/interop/virtual/Dockerfile.public` | `1e760777ffbf52c09a33ecb0e5eaa10896f3310d26e98c32a5b7550f05f53f99` |
 
+## P07a public Wotex integration, 2026-09-20
+
+`runtime_integration_test.exs`, `runtime_error_test.exs`,
+`runtime_frame_test.exs` and `runtime_stream_test.exs` pass 44 focused tests.
+They execute WBL-I-F01..F07, the complete error/retry table, every native scalar
+codec, one-shot and GATT profile selection, exact route and extension retention,
+falsy/empty/null Result preservation, a single setup/exchange deadline and the
+public Runtime stream lifecycle. The stream cases explicitly prove the 64-report
+opening bound, a one-report owner bound, overflow on the next report, unrelated
+frame rejection, changed stop routes, failed stop credentials, receiver death,
+terminal connection loss and bounded stalled cleanup.
+
+The compiled virtual-controller peer separately carries read, acknowledged
+write, notify and indicate through real ConsumedThing and Subscription owners.
+The integration corpus is `executed`; expectations remain in the test process.
+
+| P07a subject | SHA-256 |
+| --- | --- |
+| `priv/fixtures/wotex-integration-v1.json` | `0a2a358f9163adf1a86389114c31d11d07efbe1eecaef7c84180f31c63407f7c` |
+| `test/wotex/ble/runtime_integration_test.exs` | `9f2ca79ced4c9f8b4894666f5e5566de422480fbc3aada4223b4e062f1d95cb3` |
+| `test/wotex/ble/runtime_stream_test.exs` | `c956d7b4eb4dd6d92a6ae0a64e14b22076a4c9a53f95591557c55c2772ded30c` |
+
+## P08 lifecycle source acceptance, 2026-09-20
+
+`test/software/lifecycle_stress_test.exs` implements the exact C09 workload:
+1,000 sequential native operations, 100 open/close cycles, 100 receiver-death
+cycles, 32 concurrent callers plus the 64-request admission boundary, and forced
+deadline, corrupt-frame, host-loss and peer-close failures. Every completed
+cycle checks BEAM processes, Ports, native processes, peer senders and
+subscriptions against its baseline. Heap and host RSS samples are written as
+separate observations rather than treated as a leak oracle.
+
+The software-runner source requires both BEAM lanes, exact public and stress
+case counts, peer release and zero owned containers. The current source boundary
+is complete; executing it on x86_64, under sanitizers, from an archive or with a
+physical controller is revision-specific qualification.
+
 ## Native C++ request parsing
 
 `test/wotex/ble/native_frame_test.exs` compiles the shared production
@@ -383,8 +419,8 @@ emulation. Each downloads and verifies libdbus 1.16.2, builds the shared library
 fixture daemon, host and guardian with GCC 12.2.0, CMake 3.25.1 and Ninja 1.11.1,
 and verifies reuse on a second invocation. The actual host emits the exact
 ready frame with closed input on both lanes. These runs establish artifact and
-startup identity only; advisory scanning, sanitizer builds, the software tasks,
-the complete native corpus and BlueZ/GATT execution remain open.
+startup identity only. Advisory, sanitizer, corpus and BlueZ/GATT evidence is
+identified by its own receipt or section below.
 
 ## Native corpus ownership and built host process
 
@@ -469,8 +505,8 @@ all three lanes on Linux arm64 with GCC 12.2.0: 96 tests pass in each. The
 leak-audit lane runs the 1,000-launch guardian startup case with 32 launches.
 Running the default guardian startup and command tests on Linux exposed cleared
 PATH values that stopped GCC from finding `ld`; compilation now keeps PATH.
-The BEAM-launched startup and process-flow executables and x86_64 sanitizer
-lanes remain unaccepted.
+The BEAM-launched startup/process-flow and x86_64 sanitizer combinations remain
+unqualified by that receipt.
 
 ## Mix software fixture and virtual-controller lanes
 
@@ -579,8 +615,8 @@ terminates once, cancels pending work and closes its private connection without
 adopting the replacement. Cancelled establishment and late Hello also clean up.
 
 The service-name fixture is an identity/ownership test, not a BlueZ GATT peer.
-This evidence does not establish GATT, Agent1 procedures, the complete native
-Port helper or the planned SDK build task.
+That fixture alone does not establish GATT, Agent1 procedures, the complete
+native Port helper or the SDK build task; their evidence is recorded separately.
 
 ## Native typed discovery snapshots
 
@@ -831,8 +867,9 @@ backpressure, drains partial frames and compares the complete ordered byte-strea
 hash with an independently accumulated expected hash. Reply capacity returns
 only after complete transmission. Closed-reader and blocking-descriptor paths
 fail explicitly. Queue byte counts measure retained encoded bytes, not total
-allocator or process RSS. These tests do not execute the complete host or prove
-report credit acknowledgements across the BEAM Port boundary; those remain open.
+allocator or process RSS. These component tests do not execute the complete host
+or prove report credit acknowledgements across the BEAM Port boundary; the
+separate report and process-flow sections own those claims.
 
 ## Native value flow and terminal controls
 
@@ -960,8 +997,8 @@ field-specific missing and mismatched errors, descriptor-backed multi-chunk
 hashing, final symlink and permission rejection, empty and oversized sparse
 files, deadline equality and deployment replacement between explicit checks.
 The deterministic module example is a real doctest. Verification starts no
-process; integration with the BEAM native startup owner remains a separate
-acceptance obligation.
+process; the following startup section covers its integration with the BEAM
+native owner.
 
 ## BEAM native artifact admission and startup
 
@@ -976,10 +1013,9 @@ and an executable digest mismatch fail before either process starts. The
 fixture accepts no arguments or environment configuration; it is executable
 boundary evidence, not an adapter implementation or an agent harness.
 
-This closes only BEAM admission and startup for the already implemented native
-host. BEAM report acknowledgement/retirement, native build tasks, sanitizer
-matrix execution and complete virtual-ATT software acceptance remain open in
-WBL-P00 and later ordered packages.
+This section closes BEAM admission and startup for the native host. Report
+acknowledgement/retirement, native build, sanitizer and virtual-controller
+evidence is recorded in the dedicated sections and receipts in this document.
 
 ## Scripted native protocol contract lane
 

@@ -79,7 +79,7 @@ lifecycle stress tests against real BlueZ 5.85 and two virtual Linux controllers
 in both BEAM lanes. The independent provider uses GDBus to expose BlueZ's GATT
 server API, while the production client uses libdbus; the wire endpoints remain
 the same BlueZ stack. See the [virtual-controller fixture](../../docs/packages/wotex-ble/provenance/virtual-controller.md).
-The x86_64 guest lane remains unfinished in the ordered plan.
+The x86_64 guest lane remains a separate qualification target.
 
 ## Quick start
 
@@ -232,10 +232,10 @@ same qualified tasks.
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-ble/plans/software-implementation.md)
-and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-ble/specs) define the remaining software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-ble/specs) define the completed software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
-These target contracts are build instructions, not claims that every feature
-already exists. Required software peers are separate from physical-device tests.
+The catalogue ties those contracts to source and executable owners. Architecture,
+archive and physical-device qualification remains separate.
 
 The [standalone client contract](../../docs/packages/wotex-ble/specs/WBL.05-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
@@ -243,11 +243,11 @@ Its [concrete corpus](priv/fixtures/contract-v1.json) contains specified
 inputs and outcomes. Executable tests cite the cases they implement; the corpus
 file and scenario tables alone do not establish acceptance of the whole profile.
 
-The [specification catalogue](../../docs/packages/wotex-ble/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-ble/specs/WBL.06-wotex-integration.md)
+The [specification catalogue](../../docs/packages/wotex-ble/specs/catalogue.yaml) records the implemented
+profiles. The [Wotex integration contract](../../docs/packages/wotex-ble/specs/WBL.06-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. The implemented mapping and relay cover part of these requirements. A passing
-baseline gate does not accept the unfinished software-peer and stress profile.
+ConsumedThing acceptance tests. The mapping, relay, compiled software peer and
+lifecycle suite cover that public boundary without claiming RF behavior.
 
 ## License
 

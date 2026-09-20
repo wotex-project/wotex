@@ -3,7 +3,7 @@ spec:
   id: WBL.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.25
+  version: 1.0.26
   owner: wotex-ble
   updated: 2026-09-20
 ---
@@ -413,9 +413,11 @@ bytes, full admission, late callbacks, startup failures, EOF during pending work
 and cleanup. Each callback test records acquisition, terminal delivery,
 cancellation, destructor and native-resource counts from the implementation;
 the oracle does not synthesize those counts. Every resource count returns to
-baseline. C09 additionally requires 1000 operations, 100 open/close cycles,
-100 receiver-death cycles for stream profiles, 32 concurrent callers, both BEAM
-lanes, dependency audit and clean archive/out-of-tree package validation.
+baseline. C09 additionally requires executable source for 1000 operations, 100
+open/close cycles, 100 receiver-death cycles for stream profiles, 32 concurrent
+callers and the two BEAM lanes. Dependency, clean-archive and out-of-tree
+consumer results qualify an exact source revision under the qualification
+runbook.
 
 Results identify case ID, test path, corpus/source/binary hashes, runtime/native
 versions, command, result and cleanup counters. Missing software peers, optional

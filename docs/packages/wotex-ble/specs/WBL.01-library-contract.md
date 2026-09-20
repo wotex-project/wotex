@@ -3,7 +3,7 @@ spec:
   id: WBL.01
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.9
+  version: 1.1.10
   owner: wotex-ble
   updated: 2026-09-20
 ---
@@ -32,11 +32,13 @@ conservative write effects without automatic retry. WBL-P05 accepts monitored
 notification/indication owners, bound value reports, receiver backpressure and
 same-sender StopNotify cleanup. WBL-P06 accepts the S05 slice for explicit Form
 selectors, Runtime request/stream ownership, typed delivery and live native
-health. The broader WBL.06 consumer matrix remains open.
+health. WBL-P07a accepts the complete WBL.06 consumer matrix through public core
+and Runtime APIs. WBL-P08 accepts the lifecycle, admission and forced-fault
+source suite and its exact software-runner contract.
 
 WBL-P07 accepts the isolated BlueZ software workflow. Its immutable receipt
-binds the current source, native host, independent C++ GATT provider, two virtual
-controllers and both supported BEAM lanes to three consecutive passing runs.
+binds its recorded source subject, native host, independent C++ GATT provider,
+two virtual controllers and both supported BEAM lanes to three consecutive runs.
 Physical RF and x86_64 guest coverage remain outside this acceptance.
 
 ## WBL-C01 — Scope, API and compatibility

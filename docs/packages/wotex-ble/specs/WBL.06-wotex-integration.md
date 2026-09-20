@@ -3,18 +3,19 @@ spec:
   id: WBL.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-ble
-  updated: 2026-09-18
+  updated: 2026-09-20
 ---
 
 # WBL.06 Wotex integration and evidence contract
 
-This is an accepted **target specification**, not implemented-profile evidence.
-It makes [.10](WBL.04-software-contract.md) and
+This accepted specification makes [.10](WBL.04-software-contract.md) and
 [.11](WBL.05-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) records the implemented source boundary;
+the [qualification runbook](../plans/qualification.md) records architecture,
+archive and device claims separately. Every `I` requirement below is mandatory
+for software completion.
 
 ## WBL-I01 — Dependency direction and owned values
 
@@ -222,8 +223,9 @@ No-stream modes return a structured unsupported error without creating a process
 ## WBL-I06 — Acceptance through public packages
 
 The concrete [integration corpus](../../../../packages/wotex-ble/priv/fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
+synthetic TD, selected route/command and public payload projection. Its `executed`
+label requires every case to have an executable owner that compares the actual
+public result with the runner-owned expectation. JSON validity or an identifier
 in a fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
@@ -268,12 +270,15 @@ construct forged Request structs as the only integration proof. Cover:
    the selected complete interaction with the required .10 software peer to
    establish protocol evidence. Injected-port success is labelled accordingly.
 
-For final acceptance, run from an immutable package archive and isolated consumer
-project with public core/Runtime dependency versions, not an accidental shared
-build. Record the subject, dependency, fixture and adapter SHA-256 identities,
-exact Elixir/OTP versions, command, result and cleanup counts. Repeat the minimum
-and current runtime matrix in .00. A path-dependency gate proves local integration;
-it does not prove released artifact adoption.
+Archive and consumer qualification runs from an immutable package archive and an
+isolated consumer project with public core/Runtime dependency versions, not an
+accidental shared build. Record the subject, dependency, fixture and adapter
+SHA-256 identities, exact Elixir/OTP versions, command, result and cleanup counts,
+and repeat the minimum and current runtime matrix in .00. This qualifies a source
+revision under the [qualification runbook](../plans/qualification.md); availability
+of that runner or a published artifact does not decide catalogue
+`implementation_status`. A path-dependency gate proves local integration but not
+released-artifact adoption.
 
 [Wotex Conformance WCF.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-conformance/specs/WCF.01-conformance-runner.md) version 1.1.0
 requires expectations to stay runner-side and subjects to stay outside its
