@@ -3,9 +3,9 @@ spec:
   id: WBL.04
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.5
+  version: 1.1.12
   owner: wotex-ble
-  updated: 2026-09-17
+  updated: 2026-09-20
 ---
 
 # WBL.04 Complete BlueZ GATT central software profile
@@ -61,6 +61,15 @@ byte order defaults to little-endian and is an explicit codec option. Exact
 width is mandatory; strings cannot exceed the 512-byte attribute ceiling.
 There is no UUID-to-unit/value-format database guessed from characteristic names.
 
+The accepted P01 slice validates explicit peer and target identities, UUID
+normalization and wire encoding, every scalar codec width and byte order,
+Boolean, UTF-8 and opaque byte boundaries, forged structs and the 512-byte
+ceiling. WBL-F01..F05, F09 and F10 execute through the public pure APIs. The
+accepted P02 slice adds typed ObjectManager snapshots, exact peer/service/
+characteristic association, duplicate-instance ambiguity, bounded ordered pages
+and generation-bound cursor failures. Procedure-time read/write validation
+remains a P04 obligation.
+
 ## WBL-S02 — Connection and pairing lifecycle
 
 Persistent open requires `peer`, `connection: :borrowed | :owned` (default
@@ -91,6 +100,13 @@ the generation and fails pending work. No automatic reconnect, rediscovery
 retargeting, pairing, adapter power change or daemon startup. Connect failure
 unwinds listeners and the bus connection without taking down the system daemon.
 
+The accepted P02 connection slice covers borrowed, owned and already-connected
+links, ServicesResolved admission, same-sender Connect/Disconnect, owner-death
+cleanup and the listener/snapshot race. Private-bus tests exercise the D-Bus
+owner and typed state transitions; the pinned virtual-controller receipt proves
+public discovery and owned-link cleanup against BlueZ. Explicit pairing policy
+and Agent cleanup remain P03 obligations.
+
 Pairing is a separate explicit native `pair(session, request)` operation.
 Request selects `capability: :no_input_no_output | :display_yes_no | :keyboard_only`
 and a caller-owned Agent callback, with the C03 finite deadline. Register an
@@ -113,6 +129,14 @@ borrowed discovery/open/close still sends no Device1.Disconnect. Preserve existi
 bonds and make no claim that an unresolved Pair did not finish. This follows the
 pinned [Pair sender and cancellation implementation](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/device.c)
 and [unpair command implementation](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/adapter.c).
+
+The accepted P03 slice covers all seven prompt kinds, exact peer and challenge
+identity, kind-compatible accept/PIN/passkey decisions, rejection, policy crash
+or timeout, foreign and overlapping prompts, RegisterAgent/Pair/UnregisterAgent
+ordering and bounded cancellation. It records no automatic acceptance,
+CancelPairing, RemoveDevice or default-Agent request. The private-D-Bus fixture
+checks same-sender ownership; the pinned virtual-controller receipt covers
+accepted, rejected, timed-out and wrong-challenge public Pair calls.
 
 ## WBL-S03 — Read and acknowledged write
 
@@ -166,6 +190,15 @@ closes its affected session and requires an explicit new connection; it must
 not keep issuing operations on a suspected failed bearer. A shorter local read
 deadline cancels local work and closes this session generation to prevent late
 response reuse. Cleanup does not imply that an in-flight ATT write was canceled.
+
+The accepted P04 slice covers exact read/write address and byte envelopes,
+procedure flags, duplicate and stale targets, 0..512-byte values, all admitted
+codecs, acknowledged request-only writes and every named failure above. The
+`write_submitted` phase distinguishes local rejection from uncertain mutation;
+queued expiry sends nothing, while timeout, malformed acknowledgement and
+process loss after dispatch remain non-retryable with unknown effect. Private
+D-Bus tests check the typed method calls, and the pinned virtual-controller
+receipt records read, acknowledged write and independent readback over GATT.
 
 ## WBL-S04 — Notifications and indications
 
@@ -236,6 +269,15 @@ remove the listener before acknowledging local closure. On failure, close the
 owned D-Bus connection to release its notification session and report the failure.
 Receiver death/overflow uses the same cleanup. A late Value callback cannot
 deliver after closure. Do not stop another sender's notification subscription.
+
+The accepted P05 slice covers notify-only, indicate-only and both-flag mode
+selection, one buffered early Value, repeated equal reports, bound sender/path/
+generation metadata, terminal controls and same-sender StopNotify. It enforces
+64 active streams, finite frame/byte credit, one terminal delivery, monitored
+receiver cleanup, overflow, foreign handles and 1,000 owner lifetimes without
+tombstones. Private-D-Bus tests check StartNotify/StopNotify and signal identity;
+the pinned virtual-controller receipt records distinct notification and confirmed
+indication flows plus independent sender preservation.
 
 ## WBL-S05 — Runtime, capabilities and bridge schema
 
@@ -309,6 +351,14 @@ This static backend declaration performs no probe and asserts no peer capability
 Device1 state meanings use the pinned
 [BlueZ Device API](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst).
 
+The accepted P06 slice covers contextual Form applicability, explicit value and
+mode extensions, media/security rejection before acquisition, typed Property
+and Event delivery, route-bound cancellation, relay mailbox bounds and native
+owner cleanup. Persistent health uses the original peer and live Device1 state;
+static capabilities make no peer claim. The focused Runtime boundary and pinned
+virtual-controller receipt cover this S05 slice. WBL.06's complete integration
+corpus and final consumer classification remain separate.
+
 ## Acceptance scenarios and software fixture
 
 | ID | Scenario | Required result |
@@ -343,6 +393,14 @@ Record the source archive, driver source, configuration and module hashes plus
 vermagic; load that module only in the disposable guest. Required `/dev/vhci`
 and exactly two `/sys/devices/virtual/bluetooth/hci*` controllers remain runtime
 assertions. A missing or mismatched driver fails the lane.
+
+The accepted P07 fixture uses the pinned BlueZ 5.85 source, matching Linux
+kernel/module, private D-Bus, exactly two virtual controllers and the independent
+C++ GDBus/GIO peripheral. Three consecutive runs pass all 16 public and stress
+cases in both BEAM lanes with zero remaining containers, native senders, Agents
+or notification sessions. V03..V09 and V11 exercise discovery, owned cleanup,
+read/write/readback, pairing, repeated notifications and confirmed indications
+through the actual BlueZ GATT path. The receipt makes no RF or x86_64 claim.
 
 Capture actual server writes, active notification sessions and disconnects.
 Inject permission/authentication failures in the fixture service and D-Bus

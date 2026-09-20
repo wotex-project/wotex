@@ -3,9 +3,9 @@ spec:
   id: WBL.01
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.1
+  version: 1.1.8
   owner: wotex-ble
-  updated: 2026-09-18
+  updated: 2026-09-20
 ---
 
 # WBL.01 Software implementation rules
@@ -19,6 +19,25 @@ protocol specifications, and [the implementation sequence](../plans/software-imp
 The root and package `CLAUDE.md` files govern repository boundaries. Exact
 protocol requirements come from the revisions in [primary sources](../provenance/primary-sources.md); limits and
 API choices labelled **library policy** are deliberate local constraints.
+
+WBL-P01 accepts the pure peer, target, UUID and value-codec boundary. WBL-P02
+accepts persistent connection ownership and paged discovery: one pinned D-Bus
+sender, listener-before-snapshot reconciliation, live object association,
+owned/borrowed link cleanup and generation-bound cursors. WBL-P03 accepts the
+explicit pairing Agent boundary: exact peer challenges, compatible caller
+decisions, bounded policy workers and same-sender registration/cleanup. Their
+executed cases are recorded in the catalogue and provenance. WBL-P04 accepts
+acknowledged ReadValue/WriteValue procedures, exact target revalidation and
+conservative write effects without automatic retry. WBL-P05 accepts monitored
+notification/indication owners, bound value reports, receiver backpressure and
+same-sender StopNotify cleanup. WBL-P06 accepts the S05 slice for explicit Form
+selectors, Runtime request/stream ownership, typed delivery and live native
+health. The broader WBL.06 consumer matrix remains open.
+
+WBL-P07 accepts the isolated BlueZ software workflow. Its immutable receipt
+binds the current source, native host, independent C++ GATT provider, two virtual
+controllers and both supported BEAM lanes to three consecutive passing runs.
+Physical RF and x86_64 guest coverage remain outside this acceptance.
 
 ## WBL-C01 — Scope, API and compatibility
 

@@ -51,10 +51,300 @@ excluded. Native software results require their own immutable manifest.
 
 | Source | SHA-256 |
 | --- | --- |
-| `test/wotex/ble/contract_fixture_test.exs` | `3730f210ddcfa19258ccbdafd2721d50beae5234f431b8e81560b894bed32a7d` |
-| `test/wotex/ble/runtime_integration_test.exs` | `9c32f64eabf16aff5e4121e2508b801ca6efb92975a4614f3aaca6ec6bbed470` |
-| `test/wotex/ble/dbus_bridge_test.exs` | `97dd201ffe6b43044f346df7c7d2991c7dd142156ae94e229c55010c4fb9c2c2` |
+| `test/wotex/ble/contract_fixture_test.exs` | `3c4612f65da02f4df819691f0710798dcdf6ec41bf2efb51ba1f944cc8e9c548` |
+| `test/wotex/ble/runtime_integration_test.exs` | `ae2937ab1d0ecc8059036aded75201113737268bab73eeea1ad7a09903977b4c` |
+| `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
 | `test/wotex/ble/stream_bridge_test.exs` | `f65ce06b4b2e04eaed00c89760bcb4379781e6342da52172615cf9315094e009` |
+
+## P01 peer identity and value codecs, 2026-09-20
+
+`test/wotex/ble/identity_value_test.exs` and
+`test/wotex/ble/contract_fixture_test.exs` execute the pure P01 boundary through
+the public APIs. The focused command passed 36/36, including nine properties:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/identity_value_test.exs \
+  test/wotex/ble/contract_fixture_test.exs
+```
+
+WBL-F01..F05, F09 and F10 compare their exact `contract-v1.json`
+expectations. The remaining assertions cover explicit public/random peer
+identity, object-path syntax, handle and generation edges, forged structs, all
+integer widths and both byte orders, finite float widths and signed zero,
+non-finite encodings, strict Boolean bytes, UTF-8, opaque bytes, invalid options
+and the 512/513-byte boundary. This is pure identity and conversion evidence;
+it does not establish ObjectManager association, duplicate live target
+resolution or a GATT exchange.
+
+| P01 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble/peer.ex` | `d43e24e4b09fa1fbf4ce834c9aad505fc833114e5f03659cb853e71455c48d9a` |
+| `lib/wotex/ble/address.ex` | `a3df36cdfb68f444aaa1b191525166aaf780fd17aeffc00c0c6189fddfd2dbb3` |
+| `lib/wotex/ble/value.ex` | `f6b263a96a2585b58c179dfe64dd29b4e2f8fa2c661dd30404ea2c688d58e118` |
+| `lib/wotex/ble/uuid.ex` | `5e34bac9523130101c6195954e622b369528a916492fd79c6ab014fc8efc3ce3` |
+| `test/wotex/ble/identity_value_test.exs` | `33aa72000b5bdaa2857befe9c99c963f0ea93eba9f90fab92d801d0642b39674` |
+| `test/wotex/ble/contract_fixture_test.exs` | `3c4612f65da02f4df819691f0710798dcdf6ec41bf2efb51ba1f944cc8e9c548` |
+| `priv/fixtures/contract-v1.json` | `9de800b0910e7b92386f2e1a86d095f313224ad42c3b81a30a81975dccf00848` |
+
+## P02 persistent discovery ownership, 2026-09-20
+
+The focused bridge and page command passed 37/37:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/dbus_bridge_test.exs \
+  test/wotex/ble/native_pages_test.exs
+```
+
+The public bridge case opens the persistent owner, returns two typed pages for
+duplicate UUID instances, rejects an unknown cursor and an excessive page limit,
+and closes idempotently. Its lifecycle cases cover absolute deadlines, the
+64-request admission bound, dead queued callers, owner death during blocked I/O,
+joined close callers and forced bridge termination. The native page fixture
+adds 1,024-characteristic ordering, frame/node limits, generation invalidation,
+foreign and evicted tokens, token reuse and 2,000 successive generations.
+
+The private-D-Bus component evidence below covers listener-before-snapshot
+reconciliation, typed Device1/GattService1/GattCharacteristic1 association,
+pinned sender identity, ServicesResolved loss and owned/borrowed link cleanup.
+The [current software receipt](software-run-v4.json) pins the same production
+and test source hashes and records three consecutive 16/16 runs in each BEAM
+lane. Its public WBL-V03/V04 cases discover and disambiguate the virtual GATT
+peer and verify that an owned link connects and drains through its own cleanup.
+These claims do not accept pairing, read/write procedures, notification sessions
+or Runtime mapping.
+
+| P02 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble.ex` | `07b146de76f75d6b62e03764bb6219c7ddd6b88b3e56a5050cf16b51d96a973d` |
+| `lib/wotex/ble/bluez.ex` | `4378eafb7232888c005e0889a43e71b303512fd66f588bd33bd8bbd3ae0f0bc4` |
+| `lib/wotex/ble/bluez/connection.ex` | `6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac` |
+| `priv/bluez/native/discovery.hpp` | `39a42994d7d4ef51a1e1dc21641edc4c7d8e412459dc5ac1893fc6a2351edbdd` |
+| `priv/bluez/native/objects.hpp` | `541721c352433895f36e52ccd3569ff86edf13e0f40e0854d1d5008b2720ed1f` |
+| `priv/bluez/native/pages.hpp` | `6d1660aa8dcf45febc8026fc23967c66dc0bfc525b58e54760f7220526f8e357` |
+| `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
+| `test/wotex/ble/native_pages_test.exs` | `8057b1edfecfa706302c60fac773e41af20ad950dfc7daaea3890c78328e14e8` |
+| `test/native/discovery_test.hpp` | `66b32ab87a057de280564290c6e7f555f24c77c3fb8d19490a3da0ed2ed01fc0` |
+| `test/native/objects_test.hpp` | `68daa87095347dea3a0080cbe59882abd6ea2a767894dd972821ebce19b6dc99` |
+| `test/native/pages_test.cpp` | `506f0ad73421b3e288246ab47cfe15b7ecede3b8e617ecb7d312c5ec6051ad0a` |
+| `test/native/host_process_test.hpp` | `06fab2032562d82630253f209d9d4ee05559a609dfb68b8de740202ca88eb716` |
+
+## P03 explicit pairing Agent decisions, 2026-09-20
+
+The focused public pairing boundary passed 34/34, including one property:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/pairing_value_test.exs \
+  test/wotex/ble/dbus_bridge_test.exs
+```
+
+The tests cover all prompt kinds, normalized service UUIDs, redacted challenge
+inspection, prompt and decision bounds, incompatible answers, exact peer and
+deadline binding, explicit callback policy, policy crashes and timeout, owner
+death and invalid native results. Successful, rejected, PIN and passkey bridge
+flows each use the first-party persistent owner; policy configuration and
+challenge values do not enter its recorded frames or process status.
+
+WBL-B-F19..F24 execute native prompt/decision projections and WBL-B-F25/F26
+execute accepted and rejected RegisterAgent/Pair/UnregisterAgent lifecycles on
+the private D-Bus fixture. The [current software receipt](software-run-v4.json)
+pins the same sources and runs the public virtual-controller Pair case in both
+BEAM lanes. That case checks accept, reject, policy timeout and a forged
+challenge ID, followed by remote Agent and sender cleanup without CancelPairing,
+RemoveDevice or RequestDefaultAgent. This evidence does not accept read/write,
+notification or Runtime behavior.
+
+| P03 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble.ex` | `07b146de76f75d6b62e03764bb6219c7ddd6b88b3e56a5050cf16b51d96a973d` |
+| `lib/wotex/ble/agent.ex` | `df2713ee5482379516081983557b0d0f43d38c5a1a8c97f2ce8bcf4b5d217cfa` |
+| `lib/wotex/ble/challenge.ex` | `6d8eb36aa5a317feca4655a4584cfd69ebd6b395509c40e7c0da72d0b6b849b4` |
+| `lib/wotex/ble/bluez/pairing.ex` | `9be9c2620932e5a6854850a73f17f80f585c59c1e45e1a0f47a4d9a08aae0218` |
+| `lib/wotex/ble/bluez/connection.ex` | `6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac` |
+| `priv/bluez/native/agent.hpp` | `90a475851d917b456fa42f845367afb77466090cc6c3d4c27238a8419abedaa0` |
+| `priv/bluez/native/pairing.hpp` | `b6dcc3efc4c1597a01c1d0ad5ecfb31c79d3d32af62cb9dbc313b7f5aec565b1` |
+| `test/wotex/ble/pairing_value_test.exs` | `b840355f331479bdaf7578754debb2e1b58dc014b13e7cb3c06b84b3ea1dfca3` |
+| `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
+| `test/native/agent_test.hpp` | `4e5abfa401da3a967d738434ceb2c5f92448d24d604b20f6dddc6a77d1d5c10c` |
+| `test/native/pairing_test.hpp` | `bec5654ff917574545516591cb4be8dcbb4d70cdba0a3188f8800bfaa6adeb67` |
+| `test/interop/bluez_test.exs` | `c1c2fdb401a583680cc06e375f6b8461449ae570f9935c0e501ecd8bbccdd835` |
+
+## P04 acknowledged GATT procedures, 2026-09-20
+
+The focused procedure, schema and bridge command passed 37/37, including two
+properties:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/procedure_test.exs \
+  test/wotex/ble/bluez_schema_test.exs \
+  test/wotex/ble/dbus_bridge_test.exs
+```
+
+The public cases validate codec options before admission, canonical byte
+envelopes, read/write result shapes, bounded D-Bus error names and incompatible
+custom-client returns. Persistent bridge cases cover 0- and 512-byte values,
+command-only and missing flags, forged target selectors, every admitted BlueZ
+error name, queued expiry, active timeout, process loss, missing/duplicate/wrong
+submission events and malformed acknowledgements. Each submitted write is
+counted once; no case retries it or falls back to a command write.
+
+WBL-B-F27..F32 execute the native typed procedure projections on the private
+D-Bus fixture. The [current software receipt](software-run-v4.json) pins the
+same sources and runs the public WBL-V05 case in both BEAM lanes against the
+virtual GATT peer: raw and uint16 reads, one acknowledged write, independent
+readback, duplicate-UUID disambiguation, stale/address-mismatch rejection and
+typed NotPermitted failures. This evidence does not accept notification or
+Runtime behavior.
+
+| P04 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble.ex` | `07b146de76f75d6b62e03764bb6219c7ddd6b88b3e56a5050cf16b51d96a973d` |
+| `lib/wotex/ble/address.ex` | `a3df36cdfb68f444aaa1b191525166aaf780fd17aeffc00c0c6189fddfd2dbb3` |
+| `lib/wotex/ble/value.ex` | `f6b263a96a2585b58c179dfe64dd29b4e2f8fa2c661dd30404ea2c688d58e118` |
+| `lib/wotex/ble/bluez.ex` | `4378eafb7232888c005e0889a43e71b303512fd66f588bd33bd8bbd3ae0f0bc4` |
+| `lib/wotex/ble/bluez/connection.ex` | `6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac` |
+| `lib/wotex/ble/bluez/response.ex` | `4742e720c51e744188d0b02b75f98b86be01a4d0ce26bfe6b1ee5884588c12a5` |
+| `priv/bluez/native/procedures.hpp` | `dffa557693a4572a9f2a5bbfdfdf5734b1e1208a87fbdf026fa521513202caf7` |
+| `test/wotex/ble/procedure_test.exs` | `76e7c4b3d4461c73d34d23aa6c6b18ff1fbcdb8f29b1fd6544a8578006b31815` |
+| `test/wotex/ble/bluez_schema_test.exs` | `168e50faafe7d9a2e53d717f04bb6d41d5a6c2b2d6d7ef6919f87b3bbacc7258` |
+| `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
+| `test/native/procedures_test.hpp` | `0b9e37351e57e33061ceb40505742217321302e5377483d26254b89d56a1ed13` |
+| `test/interop/bluez_test.exs` | `c1c2fdb401a583680cc06e375f6b8461449ae570f9935c0e501ecd8bbccdd835` |
+
+## P05 notification and indication ownership, 2026-09-20
+
+The focused stream value, owner, credit and characteristic command passed
+34/34, including two properties:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/stream_value_test.exs \
+  test/wotex/ble/stream_bridge_test.exs \
+  test/wotex/ble/report_flow_test.exs \
+  test/wotex/ble/characteristic_test.exs
+```
+
+The public cases cover mode selection, the both-flags limitation, finite receiver
+and codec options, forged handles, owner death, overflow, early establishment
+failure, wrong report identity, terminal conversion errors, concurrent and
+uncertain cancellation, 64 active subscriptions and 1,000 completed lifetimes.
+The report ledger acknowledges only the contiguous admitted prefix, applies
+frame and byte credit, retires one stream without a tombstone and cannot mint
+credit from malformed controls.
+
+WBL-B-F33..F41 execute native mode, value and StartNotify/StopNotify projections
+on the private D-Bus fixture. The [current software receipt](software-run-v4.json)
+pins the same sources and runs WBL-V07..V09 against the virtual GATT peer in
+both BEAM lanes. The public cases deliver repeated equal notification and
+confirmed indication values, preserve `:bluez_value_change` source metadata,
+release a receiver-dead CCC session and keep a second sender and link alive when
+the first closes. This evidence does not accept Runtime mapping.
+
+| P05 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble.ex` | `07b146de76f75d6b62e03764bb6219c7ddd6b88b3e56a5050cf16b51d96a973d` |
+| `lib/wotex/ble/subscription.ex` | `f44070945089bc5d78979185a14ec7ae6f4b56d1b9fc963a53374b159b0bfd28` |
+| `lib/wotex/ble/characteristic.ex` | `099f8b0f62aca179e6e1216628246656af0a547a3890674eeaa9d628a7f1146c` |
+| `lib/wotex/ble/bluez.ex` | `4378eafb7232888c005e0889a43e71b303512fd66f588bd33bd8bbd3ae0f0bc4` |
+| `lib/wotex/ble/bluez/connection.ex` | `6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac` |
+| `lib/wotex/ble/bluez/subscription_owner.ex` | `3eb04f41484886699faf1c2e670c4eb78f1e66e6e27f1ef7936e42dc0b6e4214` |
+| `lib/wotex/ble/bluez/report_flow.ex` | `fce321b02e3b4caa2931a54247350c6b7c599ab25c123ded1e9ea7db93396498` |
+| `priv/bluez/native/notify_value.hpp` | `f94e4c4e5f16d0215cc069503a2ead3bd395138dd2f391dd15fd1983d1ddcf5d` |
+| `priv/bluez/native/notifications.hpp` | `3666029cfdc72c27ae9c6bf03452b699b7702abc2c6148db58c99c9ec585568e` |
+| `test/wotex/ble/stream_value_test.exs` | `6ec6a1c012c35b7e83920ea2d3d5416e584ce309c4f4a5c1d992905909b8694c` |
+| `test/wotex/ble/stream_bridge_test.exs` | `f65ce06b4b2e04eaed00c89760bcb4379781e6342da52172615cf9315094e009` |
+| `test/wotex/ble/report_flow_test.exs` | `d92f38bcd5425e1aa4ae1514f406d656f177612ea63c7da201769aaadec040ed` |
+| `test/wotex/ble/characteristic_test.exs` | `620cffa79c215f6a66abe64c0a86666d705b5206bfba07cb4df2acb358aff40f` |
+| `test/native/notify_value_test.hpp` | `b5c0d2eb1d1cc62f4522d92c0fce3f86746c04e2b86e4fe1c41cd470630b1767` |
+| `test/native/notifications_test.hpp` | `846e3af19c20a7ad9037b729e2cd7220f8b70040df4b950cce5db439d0e2bf99` |
+| `test/interop/bluez_test.exs` | `c1c2fdb401a583680cc06e375f6b8461449ae570f9935c0e501ecd8bbccdd835` |
+
+## P06 Runtime mapping and live health, 2026-09-20
+
+The focused mapping, health, bridge and Runtime command passed 56/56:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/mapping_test.exs \
+  test/wotex/ble/health_test.exs \
+  test/wotex/ble/dbus_bridge_test.exs \
+  test/wotex/ble/runtime_stream_test.exs \
+  test/wotex/ble/runtime_integration_test.exs
+```
+
+The cases cover typed Form addresses, exact target selection, known selector
+applicability, finite media/security/profile choices, every value codec, native
+read/write result identity and Property/Event stream conversion. Runtime stream
+cases cover no invented initial value, repeated equal reports, changed stop
+routes, forged handles, connection loss, 64 opening reports, receiver overflow,
+owner death, a single absolute deadline and stalled native cleanup. Health cases
+admit only the fixed persistent response and reject fabricated or malformed state.
+
+WBL-B-F49..F55 execute the live Device1 query on the private D-Bus fixture. The
+[current software receipt](software-run-v4.json) pins the same sources and runs
+five public Runtime interoperability cases in each BEAM lane against the virtual
+GATT peer. Those cases cover typed read/write, unsupported pre-acquisition cells,
+Property/Event delivery, receiver-death cleanup and cancellation through the
+original route. This P06 claim is limited to S05; WBL.06's complete corpus and
+consumer classification remain separate.
+
+| P06 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble.ex` | `07b146de76f75d6b62e03764bb6219c7ddd6b88b3e56a5050cf16b51d96a973d` |
+| `lib/wotex/ble/mapping.ex` | `f9f6b0d63adc30862eb1bf269f76883715f58e8e7afedc52522cbe37cae50211` |
+| `lib/wotex/ble/transport.ex` | `613a00667a4c8fa74812cff6cf42d346ccb1e20edcdcdd3e74df148d48f4051f` |
+| `lib/wotex/ble/runtime_relay.ex` | `97e3feea00c0b237143c7af92c7bfa793cf5b3e9957040b5a37b12d09daa380b` |
+| `lib/wotex/ble/bluez.ex` | `4378eafb7232888c005e0889a43e71b303512fd66f588bd33bd8bbd3ae0f0bc4` |
+| `lib/wotex/ble/bluez/connection.ex` | `6ed870e311f2cb64d717edf4079fce23f206f09938e37473bb3c77a1f74983ac` |
+| `test/wotex/ble/mapping_test.exs` | `7e69552cf6ffef94efdf58e598febe83f3eb32ddac0ea155952c65e635a2c58a` |
+| `test/wotex/ble/health_test.exs` | `9469d739662696fa744f31a5e281150d126531ed4889d85fb872e9f7be49cbff` |
+| `test/wotex/ble/dbus_bridge_test.exs` | `fb2eb03cc7238c3bcb249266216e33cbe86030bce9eaed3d1e30a802281ea933` |
+| `test/wotex/ble/runtime_stream_test.exs` | `16d2043f3f5f3aa7d20b20a75ac2713af07e2faf292a2c5963824061841ae4eb` |
+| `test/wotex/ble/runtime_integration_test.exs` | `ae2937ab1d0ecc8059036aded75201113737268bab73eeea1ad7a09903977b4c` |
+| `test/native/health_test.hpp` | `33c8524f5e9b393c1e2e591036bd9dee3ee124636e5c06847f641938bd8b6162` |
+| `test/interop/bluez_runtime_test.exs` | `038f9906d97e3bc8fd478af86e9a4ae9a7dba92b54de53f6d9d8cb3c3c39e906` |
+
+## P07 virtual-controller GATT workflow, 2026-09-20
+
+The local fixture-contract command passed 10/10:
+
+```console
+mix pkg wotex-ble test test/wotex/ble/software_fixture_test.exs
+```
+
+It checks the native fixture stack, source and asset admission, immutable build
+verification, both run lanes, exact guest/peer/ExUnit evidence and rejection of
+failed, panicked or incompletely cleaned lanes. A receipt-wide read-only audit
+compared all 237 recorded input hashes with their committed `HEAD` blobs; every
+identity matches. The heavier software lane was not rerun for this packet.
+
+The [current software receipt](software-run-v4.json) has SHA-256
+`1c72be53be73c66eab7a1c94de4156a42c927a1d17546199a93e63d3bc53b111`.
+It binds manifest `5268db6e1757624949b364cd0fd5f7934a3de83a54e9db1932e76fa6f22df463`,
+the ARM64 native host
+`26fc5ac60345c1780da7150d403ebee7be56cc93d2bea92c3c4fbdf66ebe9685`,
+BlueZ 5.85 and three owned images. Three consecutive runs pass 16/16 tests in
+each supported BEAM lane. All six lane results report zero remaining containers,
+native senders, Agents and notification sessions.
+
+The public workflow discovers and disambiguates the independent virtual GATT
+peer, reads `3412`, writes `7856` through acknowledged WriteValue and reads it
+back. It exercises denied operations, stale and mismatched targets, explicit
+pairing decisions, repeated notifications, confirmed indications, receiver
+death, independent sender preservation and owned-link cleanup. The two virtual
+controllers, private bluetoothd/D-Bus and compiled C++ GDBus/GIO provider contain
+no physical radio or Python client adapter. This accepts the Linux ARM64 P07
+workflow; it makes no RF or x86_64 claim.
+
+| P07 subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/ble/software/build.ex` | `289f0e1e623b7ddeb3c3ba2c17f4b7b73137eb9b08022f8e6c45ea8b12dcfe62` |
+| `lib/wotex/ble/software/fixture.ex` | `6fb5746867f8e76f08d03ed27259f88a5956aa08d9d5480095773868bf8feacc` |
+| `lib/wotex/ble/software/run.ex` | `4e5fec396d5e878a0cd43964345004b6127bcce9ab80776cfbf802b48aa4dd59` |
+| `test/wotex/ble/software_fixture_test.exs` | `830e9fb0311250755caf8d8d257a098375bb4fc07a679100b1cb25c1342c13aa` |
+| `test/interop/virtual/public_peer.cpp` | `7112b0bf8374b4ef2feacde1fe2a8d0db9a7613fc4ed694484b4999a7cdc97c3` |
+| `test/interop/virtual/public.sh` | `b306658e5b22edca45396edb0419ff6b8985fb2471b1af6297e2583fc80a241f` |
+| `test/interop/virtual/build_manifest.exs` | `e280bd2d0cc3f4775e3b1b22aecb2d32a0d34634e046fbd9e52fa3218a51cd60` |
+| `test/interop/virtual/Dockerfile.system` | `58849ac7b37c1e60f0ac1b64e950621af6e476ccd436ef10670ac42d4c0f50c7` |
+| `test/interop/virtual/Dockerfile.bluez` | `4d5543d992c4928b7e85c1f325c0aa52711a58d0da4c37177624ab42c27530e5` |
+| `test/interop/virtual/Dockerfile.public` | `1e760777ffbf52c09a33ecb0e5eaa10896f3310d26e98c32a5b7550f05f53f99` |
 
 ## Native C++ request parsing
 
@@ -421,8 +711,8 @@ WBL-B-F19 through WBL-B-F24 execute concrete prompt/decision inputs through
 `test/interop/native_bus_test.exs`. The native driver receives input only;
 ExUnit compares the independently encoded reply projection with the corpus.
 The pure cases construct actual typed libdbus messages and perform no bus or
-pairing operation. Registration, policy callback deadlines, late replies and
-native Pair/UnregisterAgent cleanup still require operation-level acceptance.
+pairing operation. The P03 evidence above supplies the separate registration,
+policy deadline, late-reply and Pair/UnregisterAgent lifecycle coverage.
 
 ## Native Pair and Agent lifecycle
 
@@ -447,10 +737,9 @@ the caller's original cleanup deadline; repeated cancellation cannot extend it.
 Native errors retain admitted names and exclude arbitrary diagnostic bodies.
 
 These tests exercise actual libdbus messages and native component ownership.
-They do not execute the complete Port helper, BEAM native route, persistent BlueZ
-service or virtual Bluetooth controller. Those implementation and interoperability
-requirements remain open. Public Pair effect classification must satisfy C04
-when the native backend is connected to the BEAM owner.
+On their own they do not execute the complete Port helper, BEAM native route,
+persistent BlueZ service or virtual controller. The P03 evidence above combines
+them with the public bridge and virtual-controller Pair cases.
 
 ## Native acknowledged GATT procedures
 
@@ -483,8 +772,9 @@ owner loss; late replies; borrowed and owned link cleanup; and a blocked owned
 Disconnect within the original deadline. One thousand successive reads on the
 same connection leave no pending calls or extra listeners. No write is retried.
 These results establish native component behavior through actual D-Bus messages.
-Complete Port-host dispatch, BEAM native integration and independent BlueZ/ATT
-interoperability remain separate open requirements.
+On their own they do not execute Port-host dispatch, the BEAM route or BlueZ/ATT
+interoperability. The P04 evidence above combines them with the public bridge
+and virtual-controller read/write cases.
 
 ## Native notification ownership
 
@@ -516,10 +806,10 @@ foreign, stale, completed and default tickets cannot cancel another call, and
 1,000 successive pending calls retain no tombstones. A cancelled discovery refresh
 can be followed by successful establishment on the same connection.
 
-These are actual libdbus component tests. The report callback represents bounded
-host admission; it is not a Port transport or proof of BEAM mailbox flow control.
-Complete host dispatch/output, cumulative credits across the BEAM boundary and
-independent BlueZ/ATT interoperability remain open requirements.
+These are actual libdbus component tests. On their own, the report callback is
+not a Port transport or proof of BEAM mailbox flow control. The P05 evidence
+above combines them with host/BEAM credit tests and the virtual-controller
+notification and indication cases.
 
 ## Native output serialization and reservations
 
@@ -599,8 +889,9 @@ The matrix checks missing fields, wrong variants, valid changed identities,
 malformed identities, false state, duplicate and excessive properties, bounded
 skipping of unknown properties, permission errors, malformed replies, deadline expiry,
 late replies and explicit cancellation. No borrowed case issues Disconnect.
-The cases use the actual libdbus operation/lifecycle code; they do not establish
-complete native-host routing or a BlueZ/ATT interoperability result.
+The cases use the actual libdbus operation/lifecycle code. On their own they do
+not establish native-host routing or BlueZ/ATT interoperability; the P06 evidence
+above combines them with the public bridge and virtual-controller Runtime cases.
 
 
 ## Native bounded discovery pages

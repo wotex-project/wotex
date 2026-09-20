@@ -3,14 +3,21 @@ spec:
   id: WBL.05
   title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.1.3
+  version: 1.1.10
   owner: wotex-ble
-  updated: 2026-09-09
+  updated: 2026-09-20
 ---
 
 # WBL.05 Standalone central and protocol workflows
 
-Specification version: `1.1.3`. Status: planned target, not implemented capability.
+Specification version: `1.1.10`. Status: partially implemented target. WBL-P01
+accepts the pure peer, target, UUID and value-codec boundary. WBL-P02 accepts the
+persistent native connection and paged discovery APIs. WBL-P03 accepts explicit
+pairing Agent decisions and cleanup. WBL-P04 accepts acknowledged read/write
+procedures. WBL-P05 accepts native notification and indication ownership.
+WBL-P06 accepts explicit Runtime mapping and live native health. The complete
+consumer integration matrix remains a target requirement. WBL-P07 accepts the
+isolated virtual-controller native workflow.
 Requires [WBL.01](WBL.01-library-contract.md) and
 [WBL.04](WBL.04-software-contract.md). The baseline remains documented in
 [WBL.03](WBL.03-implemented-profile.md).
@@ -66,6 +73,56 @@ Value codecs are the finite S01 set; `Value.encode(value, type, options)` and
 accepts only true/false and one 0/1 byte; wrong length, out-of-range numbers and
 unknown codec options fail `:invalid_value` before D-Bus admission. A 16-bit UUID
 is normalized to its Bluetooth base form, but never selects an application codec.
+
+The P01 evidence executes WBL-F01..F05, F09 and F10 with exact corpus
+expectations. It also covers peer address types, ATT handle and generation
+edges, malformed D-Bus paths, all integer widths, finite IEEE values and signed
+zero, non-finite inputs, Boolean byte strictness, invalid UTF-8, opaque bytes
+and the 512/513-byte boundary. It does not establish a live GATT association.
+
+The P02 evidence executes `connect/1`, `discover/2` and `disconnect/1` through
+the persistent native owner. It covers typed pages, stable ordering, duplicate
+UUID instances, explicit disambiguation, live peer/service association, the
+1..64 page limit, 1,024-token ledger, stale/foreign/evicted cursors, snapshot
+races and owner death. Borrowed links remain untouched; owned links issue one
+Connect and one cleanup Disconnect through the same sender. Read, write, pair,
+subscribe and Runtime behavior are accepted only by their later work packages.
+
+The P03 evidence executes `pair/2` with all admitted prompt and decision shapes.
+It validates the exact peer, challenge ID, remaining deadline, PIN/passkey bounds
+and compatible decision before a native reply. Callback rejection, crash,
+timeout, owner loss, foreign prompts and wrong challenge IDs fail closed. Native
+registration, Pair and unregistration use one sender; cleanup leaves no Agent
+export, pending call or policy worker and never calls CancelPairing, RemoveDevice
+or RequestDefaultAgent. Pairing does not claim characteristic authorization,
+MITM protection or a newly created bond.
+
+The P04 evidence executes `read/3` and `write/4` through the same persistent
+native owner and target association used by discovery. It covers exact byte
+envelopes and codecs, 0/512/513-byte boundaries, read/write flags, ambiguous,
+stale and mismatched targets, the finite BlueZ error-name table and malformed
+responses. Write succeeds only after the request-only WriteValue reply. Local
+rejection and queued expiry have no effect; a dispatched write without a valid
+acknowledgement has unknown effect and is never retried. The virtual-controller
+case independently reads back the acknowledged value.
+
+The P05 evidence executes `subscribe/2` and `unsubscribe/2` through monitored
+stream owners. It covers exact characteristic/mode selection, early and repeated
+Value changes, typed conversion, sender/path/generation binding, receiver death
+or overflow, terminal controls, foreign/stale handles, 64 active streams and
+1,000 completed lifetimes without retained tombstones. Cancellation uses the
+original sender and StopNotify; a stalled cleanup closes only that sender. The
+virtual-controller cases deliver two equal notify values and two confirmed
+indicate values, then preserve an independent session when the first closes.
+
+The P06 evidence maps only explicit `:oneshot` and `:gatt` profiles. Known value,
+byte-order and stream-mode extensions are validated in context before native
+acquisition; unsupported media and security requirements fail rather than being
+ignored. Runtime read/write/observe/subscribe calls retain result identity,
+typed values, bound routes and one owner deadline. Stream loss, receiver death,
+overflow and changed stop Forms release the original native relay. Persistent
+health revalidates the original peer and live Connected/ServicesResolved state;
+the static capability map does not attest peer state.
 
 Pairing request fields are `capability`, `agent: {module, config}` and optional
 `timeout`. The explicit trusted module implements
@@ -149,6 +206,15 @@ native API first, then the equivalent supported WoT cells. Neither a scripted
 D-Bus response nor an ExUnit fake replaces the virtual-controller lane. Pins
 remain BlueZ `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and libdbus 1.16.2 from .13. The independent fixture provider is the
 compiled GDBus/GIO C++ peer from .13; it never supplies client IPC responses.
+
+The P07 receipt records three consecutive 16/16 runs in each supported BEAM
+lane. Each run boots the disposable two-controller guest, executes the public
+native and Runtime GATT cases plus lifecycle stress, and finishes with no owned
+container, sender, Agent or notification session. Exact read, acknowledged write
+and readback values, duplicate instance selection, pairing outcomes, repeated
+notify/indicate delivery, indication confirmation, receiver cleanup and owned
+link drain are observed at their independent fixture boundaries. This accepts
+N03 on Linux ARM64; it does not claim RF behavior or an x86_64 guest run.
 
 ## WBL-N04 — Concrete corpus and executable acceptance
 
