@@ -61,9 +61,11 @@ lanes. `test/software/lifecycle_stress_test.exs` executes the C09 operation,
 open/close, receiver-death, concurrent-caller, forced-deadline, peer-loss and
 malformed-reply cycles on all four lanes. `bin/check_native_advisories.exs`
 requires a checked-in review for every advisory reported against the native
-source pins; it currently fails on the unreviewed OpenThread advisory
-CVE-2025-36939, whose fix is not identified. That maintainer review and clean
-archive validation remain open, so P00 is unaccepted.
+source pins. The selected OpenThread revision contains the reviewed router-ID,
+Dataset TLV and CSL-channel fixes associated with CVE-2025-36939. The isolated
+archive consumer completes the repository-owned package boundary. Platform and
+published-artifact identities remain qualification records rather than P00
+source work.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
@@ -79,8 +81,8 @@ archive validation remain open, so P00 is unaccepted.
 
 `contract_fixture_test.exs` validates the corpus format, operation kinds and exact
 expectations and binds each case to its executing test. WTH-F01–F05 and F10 run
-in `dataset_boundary_test.exs` and WTH-F06 in `daemon_fault_test.exs`; F07 and F08
-remain explicitly unexecuted under P04; F09 executes in `native_contract_test.exs`.
+in `dataset_boundary_test.exs`, WTH-F06 in `daemon_fault_test.exs`, F07 and F08
+through the production management owner, and F09 in `native_contract_test.exs`.
 
 ### WTH-P02: Own an explicit openthread host sdk instance
 
@@ -145,8 +147,8 @@ execute these cases.
 - Standalone closure: Keep native State subscriptions separate from Runtime application streams and eliminate inherited QoS/payload guesses.
 
 Native State subscriptions, the host stream owner, WTH-F09 and real SDK role
-reports execute on Linux software lanes; V11 Form cases rely on the existing
-mapping tests. P06 is not accepted before P00, P04 and P05.
+reports have executable Linux software lanes; V11 Form cases use the mapping
+tests. P00, P04 and P05 now provide P06's required ownership boundaries.
 
 ### WTH-P07: Build a real openthread software network fixture
 
@@ -163,8 +165,8 @@ five unique simulation node IDs and exports them only to the explicit runner.
 The required interop module covers formation, wrong and correct commissioning,
 attachment, matching and delayed Datasets, late management completion, borrowed
 daemon Runtime reads and the Wotex CoAP composition. This source is selected in
-both normal and sanitizer inventories. P07 remains unaccepted until the Linux
-software lanes execute it successfully and record their cleanup evidence.
+both normal and sanitizer inventories. P07 source is implemented; a successful
+Linux execution and its cleanup identities belong to the qualification runbook.
 
 ### WTH-P07a: Prove the Wotex consumer boundary
 
@@ -174,6 +176,12 @@ software lanes execute it successfully and record their cleanup evidence.
 - Test destinations: `test/wotex/thread/runtime_integration_test.exs` and explicit test-only credential/client ports.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
 - Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
+
+The Runtime corpus executes through public core and Runtime APIs in the default
+gate. `bin/check_archive.exs` also builds exact core, Runtime and Thread candidate
+archives once and runs the packaged corpus and daemon adapter from an isolated
+consumer in both configured Elixir/OTP lanes. Candidate archives do not claim
+publication or hosted-artifact adoption.
 
 ### WTH-P08: Prove host management cleanup and reproducibility
 

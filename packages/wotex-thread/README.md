@@ -208,8 +208,10 @@ dispatches the same native build; inside the package the short aliases
 
 These source lanes do not become execution evidence until run successfully on
 the required Linux targets. They do not establish physical-radio
-interoperability or complete the remaining lifecycle, archive and runtime-matrix
-requirements. The `hardware` test
+interoperability. Archive isolation runs independently in both configured BEAM
+lanes, while Linux, sanitizer and radio results belong to the
+[qualification runbook](../../docs/packages/wotex-thread/plans/qualification.md).
+The `hardware` test
 needs an existing `ot-daemon` socket:
 `WOTEX_THREAD_DAEMON_SOCKET=/run/openthread-wpan0.sock mix pkg wotex-thread test test/interop/daemon_device_test.exs --include hardware`.
 
@@ -221,10 +223,10 @@ is described in the
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-thread/plans/software-implementation.md)
-and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-thread/specs) define the remaining software
-profile with exact behavior, limits, failure transitions and acceptance scenarios.
-These target contracts are build instructions, not claims that every feature
-already exists. Required software peers are separate from physical-device tests.
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-thread/specs)
+define the implemented software profile, its limits, failure transitions and
+acceptance scenarios. Required software peers remain separate from physical-device
+tests and published-artifact adoption.
 
 The [standalone client contract](../../docs/packages/wotex-thread/specs/WTH.05-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
@@ -236,9 +238,11 @@ profiles from planned contracts. The [Wotex integration contract](../../docs/pac
 defines the Runtime profile, route/value/error boundaries and public
 `ConsumedThing` tests. The local deterministic corpus executes in the ordinary
 test lane. The software runner repeats the selected daemon interaction against
-its pinned OpenThread peer. Archive isolation and the minimum/current runtime
-matrix remain separate acceptance work, and this ARM64 development checkout
-does not stand in for the required Linux qualification run.
+its pinned OpenThread peer. The archive gate builds exact candidate archives for
+core, Runtime and Thread, then runs the packaged corpus and daemon adapter from an
+isolated consumer on the minimum and current runtime lanes. This source status
+does not substitute for Linux network, sanitizer, physical-radio or published
+artifact qualification.
 
 ## License
 

@@ -7,8 +7,9 @@ callback ownership. The explicit software runner now builds and selects a
 separate daemon, two SDK owners and the sensor/light application peers with
 fixed simulation node IDs. Native ExUnit and C++/process fixtures exercise real
 SDK/RCP software boundaries; source presence is scoped evidence, not a completed
-qualification run. Final architecture, sanitizer, archive and package closure
-remain required.
+qualification run. All repository-owned source contracts now have executable
+owners, including the isolated archive consumer. Architecture, sanitizer,
+physical-radio and published-artifact results remain qualification records.
 The production runtime and explicit native build require no Python; dormant
 Python native test drivers have been retired. Selected native lanes must fail if their SDK/peer/configuration
 is absent. Physical-radio testing is a separate optional lane.
@@ -52,9 +53,33 @@ same tests cover Form precedence and extensions, all four read paths, invalid
 routes and selectors without client acquisition, false/zero/empty/null values,
 wrong result identity, deadline cleanup and the no-stream profile.
 
-These are deterministic Client and public-package tests in the local dependency
-lane. They do not establish the required OpenThread software-peer repetition,
-immutable archive adoption or the minimum/current runtime matrix.
+These deterministic Client tests cover the local dependency boundary. The
+software runner owns the pinned OpenThread repetition, and the archive consumer
+below owns immutable candidate-package isolation. Published adoption remains a
+separate release claim.
+
+## Immutable archive consumer, 2026-09-20
+
+`bin/check_archive.exs` builds the exact core, Runtime and Thread candidate
+archives once with their public Hex dependency requirements. It rejects mutable
+dependency metadata, development machinery, unsafe members and Python runtime
+files, then reuses those bytes for inspection and extraction.
+
+The generated consumer has its own lock, dependency and build directories. Its
+path dependencies point only at the extracted candidate archives. The source and
+loaded-code assertions reject every live checkout root. The consumer loads
+`wotex-integration-v1.json` from the packaged Thread application and repeats
+WTH-I-F01 through public Thing Description, Runtime and Thread APIs using the
+packaged Unix-daemon adapter. The independent Unix-socket peer observes one
+`state` command, one closed connection and no remaining owned resource.
+
+Every successful run reports the subject, dependency, corpus, daemon adapter,
+consumer driver and lock SHA-256 identities; exact Elixir and OTP patch versions;
+the consumer command and cleanup counts. The disposable archive workspace is
+removed before success is reported. The package gate runs this check in the
+manifest's Elixir 1.18.4/OTP 27.3.4.15 and Elixir 1.20.2/OTP 29.0.4 lanes.
+Candidate archives prove isolated-package behavior, not publication or hosted
+artifact adoption.
 
 ## Simulated OpenThread network source, 2026-09-20
 
@@ -153,7 +178,8 @@ environment; a direct empty-environment smoke test opens and replies, and
 frames, forged handles, deadlines, ignored SIGTERM cleanup, Dataset,
 management and commissioner cases. This is an injected peer, not SDK or radio
 interoperability evidence. The dormant standalone Python native drivers were
-subsequently retired. WTH-B01 Mix/ExUnit acceptance remains open.
+subsequently retired. WTH-B01 was still open at this stage; the later native,
+software, stress, advisory and archive sections close its source work.
 
 A BEAM peer loses SIGTERM delivered during emulator startup. With a 100 ms
 startup deadline the escript was often still booting, so the owner's SIGKILL
@@ -305,7 +331,8 @@ workspaces. The lane was a manual container script, not the specified
 
 The production host still has no report source: no stream report or
 `stream_retired` barrier crosses its Port. F11–F13, the Mix software tasks, the
-x86_64 lane and C09 stress remain unexecuted.
+x86_64 lane and C09 stress were unexecuted at this stage and are covered by the
+later software-lane records.
 
 ## Mix software build and run, 2026-09-17
 
@@ -516,7 +543,9 @@ survivors and unchanged source identity. The macOS gate passed 142 checks with
 
 WTH-B-F11–F13 process-flow cases (native callback bursts while the connection,
 stream owner or receiver is suspended), the P07 network fixture and C09 stress
-remain unexecuted.
+were unexecuted in this run. Later sections record the process-flow and C09
+lanes; P07 now has complete source, while its execution remains qualification
+work.
 
 A report queued without credit keeps its encoder until credit returns. The first
 State stream encoder captured the snapshot, flags and identity by reference, so a
@@ -646,7 +675,8 @@ and all four results report zero survivors and unchanged source identity.
 | `test/software/acceptance.json` | `647e4ceed31b685f09ec496c5b2b9e8cdc158b324a9bff936ca66b05884726fd` |
 | `docs/specs/fixtures/native-port-v1.json` | `91d70393eb17360ea253f249ff3710d568c3fd12941b9eae91f7c8aa6dc3ba18` |
 
-C09 stress, dependency audit and clean archive validation remain open for P00.
+The later lifecycle, advisory and archive sections close the remaining C09,
+dependency-audit and isolated-package source checks for P00.
 
 ## Lifecycle stress, 2026-09-17
 
@@ -723,13 +753,14 @@ production observation.
 | `test/fixtures/stubborn_radio.c` | `a19ea6733534363d3bffc2c66c5b208a59027503ff4fca839aec4a990c18cd49` |
 | `test/fixtures/sdk_bridge.escript` | `68262c3a982d70b4cb615d4f4eb117ff28d3d6a34db03061d0099168c96febeb` |
 
-Dependency audit and clean archive validation remain open for P00.
+The native advisory review and isolated archive consumer below complete P00's
+repository-owned audit and package boundaries.
 
-## Native source advisory review, 2026-09-17
+## Native source advisory review, 2026-09-20
 
 `bin/check_native_advisories.exs` is a live release check for the exact native
 sources in `priv/openthread/dependencies.json`: OpenThread
-`5c8c318627954c99cd1a957a290bbd4b1027d04b`, Mbed TLS
+`f34c5e5476829d9205e80b37fccc2bdfe97e1dab`, Mbed TLS
 `068ff080b369adfac81509f9b57b2afabaf82dc5` (tag `v3.6.7`), its framework
 `dde0c4a0e448a0552f18817dcea633bb851fd288` and nlohmann/json
 `9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03` (tag `v3.11.3`, the pinned header's
@@ -750,35 +781,20 @@ review and named the current OpenThread `main` head
 `b8f0b95a8d7507542b95db343c2ef6ba4734f67e` as the CVE-2026-8369 fix exited 1,
 reporting both.
 
-The recorded run at 2026-09-17T12:11:58Z (`WOTEX_PATH_DEPS=1 mix run --no-start
-bin/check_native_advisories.exs`, log SHA-256
-`53e9e9c154721f1b6a5ca241f493ce42ce30b2cd728577b82bbf40d7b7b6855c`) exited 1.
-OSV returned no advisory for the four commits, and neither nlohmann/json CPE nor
-the OpenThread CPE matched a CVE. NVD reported 13 advisories. Three are fixed in
-the pin by verified ancestry: CVE-2019-20791 (`b8c3161`, `c3a3a0c`),
-CVE-2023-2626 (`3d5cb36`) and CVE-2026-8369 (`26a882d`, 555 commits before the
-pin). Six are not applicable: wpantund (CVE-2020-8916, CVE-2021-33889), Silicon
-Labs SDK, gateway or RCP components (CVE-2023-41095, CVE-2024-3017,
-CVE-2025-2329) and the Mbed TLS Clang select-optimize timing channel
-CVE-2025-66442, which the GCC 12.2.0 build with `MBEDTLS_HAVE_ASM` and without
-RSA, CBC or cipher padding in its generated configuration does not meet. Three
-keyword matches are unrelated products.
-
-CVE-2025-36939 remains unreviewed. NVD and the GitHub advisory
-GHSA-x6v7-jjvq-5rr9 describe MLE assertion failures and a stack-based buffer
-overflow reachable by an authenticated attacker on the same Thread network,
-referenced by the August 2026 Nest security bulletin. Neither source names an
-affected range, fixed version or fix commit, so the review cannot establish
-that pinned commit `5c8c318` (committed 2026-08-31) contains the fix. The check
-therefore fails, and the native dependency audit does not pass until the
-maintainer identifies the upstream fix or changes the pin.
+The 2026-09-20 review moved the OpenThread pin to a descendant of the router-ID,
+Dataset TLV and CSL-channel validation fixes associated by source review with
+CVE-2025-36939. The CNA does not name upstream commits, so this association is
+an inference; the review records the three matching commits and the live check
+requires each to be an ancestor of the selected pin. The same run retained the
+earlier fixed-in-pin, not-applicable and unrelated decisions and reported no
+unreviewed finding.
 
 | Source | SHA-256 |
 | --- | --- |
-| `bin/check_native_advisories.exs` | `11e955afd934ced8c385e0c6a4ded2cdec69fcb300509636290d0e17fed1fdb9` |
-| `docs/provenance/native-advisories.json` | `49e8f3ff8d8397a578b170b2893a0616c669344daaff386b78c47e65251776a0` |
-| `test/wotex/thread/native_advisories_test.exs` | `b98b73ff98d17553482469a03723ca5ce52b1f6293e017d4fccc4f0c7aff886b` |
-| `priv/openthread/dependencies.json` | `a05a44006bafbf57e165f3f7cab4ef88b398cb512e136f7b08375a128842bf17` |
+| `bin/check_native_advisories.exs` | `6c9ca5c37e71941d45ddf5319aa6f972869f2c7336d667bad5fc7ed08e07b2ca` |
+| `priv/provenance/native-advisories.json` | `0bdd160662f452f8ca91daa927de6ec3a14d287cafd180ae6c1c80b4f6fe6f58` |
+| `test/wotex/thread/native_advisories_test.exs` | `b872d8853708f6bc47fe71fe4fe96eb0e65ec48ae7b1644f28663aaf091c2a60` |
+| `priv/openthread/dependencies.json` | `d7ddd92ad7654ef6130ea5e614b5caab214f6095234a40d289550cf746949be3` |
 
 ## Contract corpus binding, 2026-09-17
 
@@ -786,9 +802,8 @@ maintainer identifies the upstream fix or changes the pin.
 requires the exact `contract-v1.json` top-level fields, format 1.0.0, IDs
 WTH-F01–F10, the fixed operation-to-kind table, exact-operator expectations and
 WTH S/N requirement identifiers. Every case is bound to the test that compares
-its actual observation, or recorded as unexecuted with its owning package:
-WTH-F07 and F08 (P04 lifecycle callbacks). WTH-F09 later executed through the
-native State stream owner.
+its actual observation. WTH-F07 and F08 execute through the production
+management owner, and WTH-F09 executes through the native State stream owner.
 The pure Dataset cases and the fragmented daemon case already execute in
 `dataset_boundary_test.exs` and `daemon_fault_test.exs`. The binding cannot
 count an unexecuted case as evidence.
@@ -796,10 +811,10 @@ count an unexecuted case as evidence.
 ## Acceptance boundary
 
 [WTH.07](../specs/WTH.07-native-backend.md) defines the required native binary,
-Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus is
-specified and unexecuted. A passing current gate, a listed test path or a source
-hash cannot establish execution of that target. Each completed software run must
-bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
+Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its source corpus
+has executable owners; a passing current gate, listed path or source hash still
+cannot establish a particular platform run. Each completed software run must bind
+case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
 The mandatory runtime matrix is Elixir 1.18.4/OTP 27.3.4.15 and Elixir
 1.20.2/OTP 29.0.4. Only identified executed lanes count as passing evidence.
 
