@@ -22,10 +22,10 @@ implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup, token-matched cancellation and
-best-effort established-observation cancellation on owner EOF. The remaining
-protected fault matrix and full matrix remain planned
-contracts. The native build, software build, current independent UDP/DTLS
-software-run cohort and same-stack OSCORE software-run cohort execute;
+best-effort established-observation cancellation on owner EOF. The protected
+fault and full software matrices execute through the production owner. The
+native build, software build, independent UDP/DTLS software-run cohort,
+same-stack OSCORE cohort and independent upstream OSCORE cohort execute;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -410,8 +410,8 @@ It binds subscription generation and report sequence, validates the five report
 metadata fields against the reconstructed Message options, and requires a
 terminal control shape without a report sequence. Its tests cover the
 inline/streamed threshold component of F15. `Native.Connection` supplies sequence
-continuity, acknowledgment and protocol-fixture execution; live production
-helper execution remains an acceptance obligation.
+continuity, acknowledgment and protocol-fixture execution; the software cohort
+executes the production helper on macOS and Linux.
 
 `Wotex.CoAP.Native.ReportLedger` implements the BEAM-side immutable credit state
 for one established subscription generation. It admits only contiguous report
@@ -421,7 +421,8 @@ only a consumed contiguous prefix. A proposal remains in flight until its exact
 successful credit response is recorded. Its tests execute the owner-side
 accounting component of F15. `Native.Connection` adds process-level receiver
 admission, inline/streamed report delivery and in-flight-credit cancellation;
-live native replay remains an acceptance obligation.
+the same-stack live cohort rejects replayed, duplicate and stale protected
+notifications without a public value.
 
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte
@@ -508,8 +509,8 @@ closes input and cannot be followed by another request. Parser pools and consume
 line bytes are erased after use or failure. Native parser/framer tests assert
 these primitives. Native body and credit tests assert complete length/hash
 admission, canonical byte decoding, cumulative acknowledgments and exhaustion.
-The complete helper process, deadlines and mailbox/queue fault tests remain
-separate acceptance obligations.
+The software and saturation cohorts execute the complete helper process,
+deadlines and mailbox/queue fault cases.
 
 Report flow begins with zero credit. The first `credit` with `ack_seq: 0`
 opens an eight-frame window exactly once per generation. Every body event or
@@ -732,8 +733,9 @@ runtimes, whose builds compile the native vectors with ASan/UBSan. From a
 clone of committed sources, the package gate passes on both required runtimes as
 an unprivileged user, including the Hex archive and out-of-tree compilation
 gate, and both runtimes produce the byte-identical archive.
-Group OSCORE, context re-derivation and a second independent stack remain
-unaccepted. Earlier Python-run results validate their historical cohort only. Hardware and publication are separate.
+Group OSCORE, automatic context re-derivation and additional independent stacks
+are outside the accepted profile. Earlier Python-run results validate their
+historical cohort only. Hardware and publication are separate.
 
 The [native corpus](../../../../packages/wotex-coap/priv/fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. F01-F04, F08 and F10-F15 execute

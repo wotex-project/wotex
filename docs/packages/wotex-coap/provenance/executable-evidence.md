@@ -964,7 +964,36 @@ idle `coap-server` processes present. Under twice as many busy loops as cores,
 maximum of 702 ms against the 3,000 ms budget. A 3,000 ms CoAP timeout
 therefore needs a lost confirmable request or response, whose first
 retransmission follows after 2 to 3 seconds, or a stall of the same order;
-neither was observed. The plan's obligation to diagnose and fix it stays open.
+neither was observed. No reproducible source defect remains from this historical
+observation; a future recurrence belongs to qualification triage and must retain
+its exact host/load evidence.
+
+## Immutable archive consumer, 2026-09-20
+
+`bin/check_archive.exs` builds the exact core, Runtime and CoAP candidate
+archives once with their public Hex requirements, rejects mutable dependency
+sources, unsafe members, development machinery and Python runtime files, then
+reuses those bytes for inspection and an isolated consumer. The consumer has no
+Wotex code path into the live checkout. It loads the packaged WCO-I-F01 corpus
+and executes `ThingDescription`, `ConsumedThing`, the production CoAP transport,
+codec and UDP adapter against an independent loopback peer. The result matches
+the corpus after one datagram, retains no owned port, and the temporary archive
+workspace is removed before success.
+
+Detached clean-source commit
+`930664dcde1c136d1836f443c63c3342979c8ada` passed on Elixir 1.18.4 / OTP
+27.3.4.15 and Elixir 1.20.2 / OTP 29.0.4 with identical content identities:
+
+- `wotex`: `fd2791d28a4e6f57c58f65e0d44d8a5ab4a2b6d71280e3a5a5cb2542913033a3`
+- `wotex_runtime`: `07bb4556c18f4472ad9c1c099106d4812042685a9e794f9dbe319b58ab8fa3d7`
+- `wotex_coap`: `8e1f837d72738ac30df4ec67cb6a777390a36db441452a695cd514de520a3e56`
+- integration corpus: `c1ce82b944bc04983debb1fd47481715ec0630e63d2e56a822be83a68ae77dd1`
+- UDP adapter: `37f09be73bc3b7e10d1e6d6a28c498b852605e4163ffdf07e1cf88513c122fb4`
+- consumer driver: `e9e934dd21d71254c02034f1ff9c3392f01f3a2f66000f005fb53f336bba8503`
+- isolated lock: `59f1bbf6bb317425a73eb88ce8f737b03dd9a9eecda141752f1474769f40fa1b`
+
+Candidate archives prove isolated package behavior, not publication or hosted
+artifact adoption.
 
 The [clean-source receipt](clean-source-v1.json) runs the package gate from a
 `git clone --no-local` of this repository's commit `d3de3dd2` in Linux arm64
@@ -992,5 +1021,6 @@ deadline plus the named 1,000-ms instrumentation allowance, so the leak-audit al
 is now that 300-second product. The ordinary lane keeps its 20-second alarm and all
 per-child limits.
 
-Independent upstream-stack OSCORE interoperability is not yet accepted. The historical Python result retains only its own
-recorded cohort.
+Independent upstream-stack OSCORE interoperability is accepted by the pinned
+Californium cohort in the current macOS and Linux software-run receipts. The
+historical Python result retains only its own recorded cohort.

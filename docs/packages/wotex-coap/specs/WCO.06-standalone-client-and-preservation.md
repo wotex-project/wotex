@@ -47,9 +47,10 @@ state machine. Dependency loading performs no network activity or startup.
 
 The implemented native helpers include complete transfer, discovery parsing and
 owned Observe registration, reports, renewal and cancellation. Native DTLS uses
-OTP. The remaining secure Runtime and OSCORE cells have separate acceptance;
-[executable evidence](../provenance/executable-evidence.md) records the actual
-native and independent-peer cohorts. Capabilities describe only admitted modes.
+OTP. Secure Runtime and OSCORE cells execute in their owning native, same-stack
+and independent-peer cohorts recorded by
+[executable evidence](../provenance/executable-evidence.md). Capabilities
+describe only admitted modes.
 
 ## WCO-D02 — Exact helper and URI contract
 

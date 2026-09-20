@@ -1,27 +1,18 @@
 # WCO software implementation sequence
 
-The BEAM UDP exchange, complete blockwise transfer, owned Observe, discovery,
-Runtime UDP streams, OTP PSK/PKI DTLS native/Runtime operations and the injected
-native OSCORE Runtime boundary are implemented. The native same-binary lifecycle
-worker now owns durable open, bounded upload state and close. Its libcoap engine
-executes unary requests and protected Observe registration, inline or streamed
-reports, report credit, Max-Age renewal, stale cleanup and cancellation. The
-production path also executes renewal failures and bounded Property/Event
-overload. Native serial admission, protected wraparound, confirmed in-flight
-renewal cancellation, intervening-notification ordering and owner-EOF cleanup
-for established or pending observations execute. The protected worker also
-progresses under an actually full owner output pipe and tears down within C03,
-and a suspended BEAM owner's Port mailbox holds at most eight report frames. The
-independent secure matrix and complete
-software closure remain targets. Native and software
-build orchestration is implemented with bounded, manifest-bound workspaces and
-native-vector probes. The software-run task now verifies that build and executes
-the owned independent libcoap UDP, PSK and PKI cohort, a same-stack OSCORE
-cohort through the Mix-built helper and the WCO-C09 lifecycle stress lane for all
-four transports. The same build and run pass inside Linux containers on both
-required Elixir/OTP runtimes with ASan/UBSan native vectors, and `mix check` passes
-from fresh committed-source clones on both runtimes. Independent upstream-stack
-OSCORE remains WCO-P09 work.
+The complete UDP, blockwise, Observe, discovery, Runtime, DTLS and OSCORE source
+profile is implemented. The native same-binary worker owns durable state,
+bounded upload and response bodies, unary exchanges, Observe registration and
+reports, report credit, freshness, renewal, cancellation and cleanup. It covers
+replay and authentication faults, Property/Event overload, owner loss, full
+output pipes and bounded Port mailboxes. Native and software build orchestration
+uses bounded manifest-bound workspaces and native-vector probes. The software
+run executes independent libcoap UDP/PSK/PKI, same-stack OSCORE, independent
+Californium OSCORE, lifecycle stress, saturation, native corpus and peer cleanup
+after owner loss. Those lanes and the clean package gate pass on both required
+Elixir/OTP runtimes; the isolated archive consumer repeats the packaged public
+boundary from exact core, Runtime and CoAP candidates. Platform, publication
+and future profiles remain qualification or separately versioned work.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
@@ -158,7 +149,14 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Acceptance scenarios: WCO-V01, WCO-V02, WCO-V03, WCO-V04, WCO-V05, WCO-V06, WCO-V07, WCO-V08, WCO-V09, WCO-V10, WCO-V11, WCO-V12, WCO-V13, WCO-V14, WCO-V15.
 - Change surface: libcoap software fixtures and stress runner.
 - Test destinations: `test/interop/libcoap_test.exs`, `test/software/lifecycle_stress_test.exs`.
-- Done when: Plain UDP/Observe/blockwise, DTLS, explicitly labelled same-stack OSCORE and independent upstream-stack OSCORE lanes run; all required stress/matrix/archive checks pass; all .11 cases and remaining scenario expansions execute, with pure/injected/independent lanes labelled separately. The PKI Runtime unary matrix in `test/interop/dtls_pki_test.exs` (WCO-I03/I04) completes on a heavily loaded host: its intermittent `invokeaction` `timeout` at a load average above 10 is diagnosed and fixed within the unchanged 3,000 ms call budget and without a retry.
+- Done when: Plain UDP/Observe/blockwise, DTLS, explicitly labelled same-stack
+  OSCORE and independent upstream-stack OSCORE lanes run; all required stress,
+  matrix and archive checks pass; all .11 cases and scenario expansions execute,
+  with pure, injected and independent lanes labelled separately. The PKI Runtime
+  unary matrix in `test/interop/dtls_pki_test.exs` (WCO-I03/I04) completes under
+  load within the unchanged 3,000 ms call budget and without a retry. A future
+  reproducible regression belongs to qualification triage, not an undefined
+  source requirement.
 - Suggested local commit: `test: prove all coap software transport profiles`.
 
 ## Reproducible software fixture contract
@@ -217,7 +215,7 @@ visibility or edit a consumer.
 The final package also accepts every .11 standalone and .12 integration requirement,
 then runs the full .00 C09 matrix, all .10 scenarios, .11
 fixture cases and software peers, then a clean committed-source archive with the lockfile through `mix check`
-and out-of-tree Hex package compilation. Confirm no Application callback or
+and isolated Hex package consumption. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
 credential artifacts and no consumer-specific names/history. A passing coverage
 number or stub adapter cannot substitute for a required protocol assertion.

@@ -89,14 +89,14 @@ explicit `coap` session uses the native OSCORE owner of
 discovery and Observe exchanges, and a `:coap_oscore` Runtime route dispatches
 ConsumedThing unary and Observe calls through the same owner. OSCORE's C Port
 owns one libcoap engine; the UDP and OTP DTLS paths need no native helper.
-The OSCORE software evidence and its open acceptance items (Group OSCORE,
-context re-derivation and a second independent stack) belong to .10, .12 and
-.13.
+The OSCORE software evidence belongs to .10, .12 and .13. Group OSCORE,
+automatic context re-derivation and additional independent stacks are outside
+this implemented profile.
 
 ## Evidence and compatibility
 
 See [executable evidence](../provenance/executable-evidence.md) for specific tests,
-commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
+commands and qualification boundaries, and [source revisions](../provenance/primary-sources.md).
 The [independent DTLS suite](../provenance/dtls-interoperability.md) covers native
 PSK/PKI operations, blockwise bodies, Observe, authentication failures and record
 replay. Secure Runtime calls also exercise the independent peer for all admitted

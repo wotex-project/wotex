@@ -19,8 +19,8 @@ implementation are separate profiles. Physical radios are unnecessary.
 The implemented profile includes native UDP exchange, duplicate discipline,
 complete Block1/Block2, active Observe, discovery, Runtime UDP streams and OTP
 DTLS PSK/PKI, pure UDP/DTLS Runtime profiles and conservative retry classes.
-Native OSCORE, its Runtime admission and independent secure matrix closure
-remain target work.
+Native OSCORE, its Runtime admission and the independent secure matrix execute
+through the manifest-bound helper and pinned upstream peer.
 [WCO.03](WCO.03-implemented-profile.md) defines supported behavior;
 [WCO.08](WCO.08-native-build-and-software-evidence.md) fixes native build, Port
 framing, durable state and Mix/ExUnit acceptance. Evidence is cohort-specific.

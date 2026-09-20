@@ -54,9 +54,9 @@ holds inline or streamed reports behind cumulative credit, applies 24-bit serial
 and renews or cancels with the original token. Max-Age expiry renews at no less
 than one-second intervals when enabled; otherwise it sends best-effort
 cancellation and reports stale state. Independent OSCORE interoperability and
-the final software matrix remain ordered work. Renewal faults retain their
-finite status/code, Property overload keeps one latest complete report and Event
-overlap terminates with owned cleanup. Native freshness checks ignore stale
+the full software matrix execute through pinned, manifest-bound peers. Renewal
+faults retain their finite status/code, Property overload keeps one latest
+complete report and Event overlap terminates with owned cleanup. Native freshness checks ignore stale
 metadata before representation identity and accept the protected FFFFFF-to-zero
 serial wrap. If libcoap cannot submit tracked cancellation during renewal, the
 worker sends an explicit original-route/token Observe=1 request, returns the
@@ -163,11 +163,13 @@ unused dependencies, formatting, `mix deps.audit` and `mix hex.audit`, Credo,
 Doctor, `mix docs --warnings-as-errors` (in the `docs` environment), runs the
 default suite once with the 95% coverage floor (`mix coveralls`), Dialyzer and
 `git diff --check`, then runs `bin/check_archive.exs` and
-`bin/check_application_free.exs`. The archive check builds the `wotex_coap` Hex
-archive without path dependencies in a printed system-temporary directory,
-verifies its contents and released `wotex`/`wotex_runtime` requirements,
-compiles the unpacked sources out of tree against the tested dependency BEAM
-files and prints the archive SHA-256; that is not dependency-archive adoption.
+`bin/check_application_free.exs`. The archive check builds exact `wotex`,
+`wotex_runtime` and `wotex_coap` candidate archives once, rejects mutable
+dependency metadata and development machinery, and compiles an isolated
+consumer whose only Wotex paths are the extracted candidates. That consumer
+runs the packaged integration corpus through public core, Runtime and CoAP APIs
+against a real UDP peer, records content identities and verifies complete
+temporary-workspace cleanup. Candidate archives do not claim publication.
 The application-free check proves that the package has no Application callback
 and that starting it and validating DTLS credentials start no OTP SSL
 supervisor.
@@ -237,21 +239,21 @@ are in [executable evidence](../../docs/packages/wotex-coap/provenance/executabl
 ## Software implementation contract
 
 The [ordered implementation sequence](../../docs/packages/wotex-coap/plans/software-implementation.md)
-and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-coap/specs) define the remaining software
+and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-coap/specs) define the implemented software
 profile with exact behavior, limits, failure transitions, acceptance scenarios
-and concrete fixtures.
-These target contracts are build instructions, not claims that every feature
-already exists. Required software peers are separate from physical-device tests.
+and concrete fixtures. Required software peers are separate from physical-device
+tests and publication.
 
 The [standalone client contract](../../docs/packages/wotex-coap/specs/WCO.06-standalone-client-and-preservation.md)
 defines native workflows and feature-preservation obligations. Its concrete
 fixture corpus contains specified cases; execution results remain in provenance.
 
-The [specification catalogue](../../docs/packages/wotex-coap/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-coap/specs/WCO.07-wotex-integration.md)
+The [specification catalogue](../../docs/packages/wotex-coap/specs/catalogue.yaml)
+records implementation status and exact evidence. The
+[Wotex integration contract](../../docs/packages/wotex-coap/specs/WCO.07-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. These are target requirements; a passing baseline
-gate does not accept the unfinished software profile.
+ConsumedThing acceptance tests. The immutable archive consumer repeats the
+packaged public boundary on the minimum and current runtime lanes.
 
 ## Native build and software orchestration
 
@@ -315,8 +317,8 @@ arm64 and in Linux containers on Elixir 1.20.2 / OTP 29 and Elixir 1.18.4 / OTP
 exact digest and run by a recorded Java runtime as a test peer only. The package gate,
 including the Hex archive and out-of-tree compilation gate, passes from a clean
 clone of the committed repository in Linux containers on both runtimes.
-Group OSCORE, context re-derivation and a second independent stack remain open
-acceptance work.
+Group OSCORE, automatic context re-derivation and additional independent stacks
+are outside this accepted profile and belong to separately versioned future work.
 
 ## License
 
