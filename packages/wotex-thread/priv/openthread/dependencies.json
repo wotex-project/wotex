@@ -3,8 +3,8 @@
   "sources": {
     "openthread": {
       "repository": "openthread/openthread",
-      "commit": "5c8c318627954c99cd1a957a290bbd4b1027d04b",
-      "archive_sha256": "90b4ce8905d21e2901b930436ed8de3abfcee95b9dfadd78528c7026564572db"
+      "commit": "f34c5e5476829d9205e80b37fccc2bdfe97e1dab",
+      "archive_sha256": "93109098957ac2bfa6e37d69d1c094f653b5e73cc33c7e5a498e6e1d45ade452"
     },
     "mbedtls": {
       "repository": "Mbed-TLS/mbedtls",

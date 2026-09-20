@@ -3,9 +3,9 @@ spec:
   id: WTH.03
   title: "Implemented Thread profile"
   status: accepted
-  version: 1.1.4
+  version: 1.1.5
   owner: wotex-thread
-  updated: 2026-09-17
+  updated: 2026-09-20
 ---
 
 # WTH.03 Implemented Thread profile

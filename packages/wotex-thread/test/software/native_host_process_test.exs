@@ -5,7 +5,7 @@ defmodule Wotex.Thread.NativeHostProcessTest do
 
   @moduletag :software
   @moduletag requirements: ["WTH-S03", "WTH-C03", "WTH-C07", "WTH-B03"], vectors: ["WTH-V04"]
-  @revision "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+  @revision "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
   @generation "0123456789abcdef0123456789abcdef"
 
   setup do

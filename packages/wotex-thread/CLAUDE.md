@@ -58,9 +58,9 @@ Repository-wide rules are in the root `CLAUDE.md`.
   advisory reviews; `bin/`: the archive, application-free and native advisory
   checks.
 - Specifications: `docs/packages/wotex-thread/specs/` (WTH.01–WTH.03,
-  WTH.04–WTH.07; `catalogue.yaml` owns status). Plans, security policy and
-  evidence: `docs/packages/wotex-thread/plans/`, `security.md` and
-  `provenance/`.
+  WTH.04–WTH.07; `catalogue.yaml` owns status). Plans, the qualification
+  runbook, security policy and evidence: `docs/packages/wotex-thread/plans/`,
+  `security.md` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, native-port and integration corpora);
   test peers in `test/fixtures/` (the escript SDK bridge and C fault peers).
 - Test support: `test/support/` (scripted client, `BuildFixture` for recorded

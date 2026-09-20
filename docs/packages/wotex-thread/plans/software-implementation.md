@@ -173,7 +173,9 @@ mapping tests. P06 is not accepted before P00, P04 and P05.
 - Acceptance scenarios: WTH-V13.
 - Change surface: native sanitizers, stress and complete software runner.
 - Test destinations: `test/software/lifecycle_stress_test.exs`.
-- Done when: Exercise callback lifetime/use-after-free faults plus required concurrency/version/archive/package gates; hardware remains a separate optional lane.
+- Done when: Implement the callback lifetime/use-after-free, concurrency and
+  stress assertions with deterministic cleanup counters. Architecture,
+  sanitizer, archive and hardware execution follows the qualification runbook.
 - Suggested local commit: `test: prove host management cleanup and reproducibility`.
 - Standalone closure: Require all concrete cases, native SDK workflows and software network resource counters before accepting the target.
 
@@ -231,8 +233,9 @@ Hex dependency path is authoritative. Inside this repository,
 `WOTEX_PATH_DEPS=1 mix check --no-retry` selects the `wotex` and
 `wotex-runtime` packages under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
-Native changes additionally run their required native tests and dependency audit;
-C/C++ adapters run ASan/UBSan in the Linux fault lane.
+Native changes additionally run the native checks reachable on the development
+host. The [qualification runbook](qualification.md) owns the Linux architecture,
+sanitizer, software-network, clean-archive and hardware matrices.
 
 After each package, update the current-profile/README capability claims only for
 behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)

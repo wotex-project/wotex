@@ -18,7 +18,7 @@ defmodule Wotex.Thread.OpenThread.Frame do
   alias Wotex.Thread.{Error, JoinerIdentity, State}
   alias Wotex.Thread.OpenThread.DatasetWire
 
-  @revision "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+  @revision "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
   @roles ~w(disabled detached child router leader)
   @role_values %{
     "disabled" => :disabled,

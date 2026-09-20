@@ -9,11 +9,10 @@
 
 int main(void) {
 #ifdef WOTEX_THREAD_OPEN_STALL
-  static const char ready[] =
-      "{\"version\":1,\"event\":\"ready\",\"backend\":\"openthread\","
-      "\"revision\":\"5c8c318627954c99cd1a957a290bbd4b1027d04b\"}\n";
-  const size_t length = sizeof ready - 1;
-  if (write(STDOUT_FILENO, ready, length) != (ssize_t)length) return 2;
+    static const char ready[] = "{\"version\":1,\"event\":\"ready\",\"backend\":\"openthread\","
+                                "\"revision\":\"f34c5e5476829d9205e80b37fccc2bdfe97e1dab\"}\n";
+    const size_t length = sizeof ready - 1;
+    if (write(STDOUT_FILENO, ready, length) != (ssize_t)length) return 2;
 #endif
   char discarded[4096];
   while (read(STDIN_FILENO, discarded, sizeof discarded) > 0) {

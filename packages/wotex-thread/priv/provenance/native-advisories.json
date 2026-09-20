@@ -1,12 +1,12 @@
 {
   "format": "wotex.native-advisories",
   "version": 1,
-  "reviewed": "2026-09-17",
+  "reviewed": "2026-09-20",
   "sources": [
     {
       "component": "openthread",
       "repository": "openthread/openthread",
-      "commit": "5c8c318627954c99cd1a957a290bbd4b1027d04b",
+      "commit": "f34c5e5476829d9205e80b37fccc2bdfe97e1dab",
       "nvd": [{"keyword": "OpenThread"}, {"cpe": "cpe:2.3:a:openthread:openthread:*:*:*:*:*:*:*:*"}]
     },
     {
@@ -37,6 +37,17 @@
     }
   ],
   "reviews": [
+    {
+      "id": "CVE-2025-36939",
+      "component": "openthread",
+      "decision": "fixed_in_pin",
+      "fix_commits": [
+        "387589687a70087f52db8719c3b10671e8398f40",
+        "1736567a083d9384cddbe7acd4fdd8776e1fb3bc",
+        "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
+      ],
+      "reason": "The CNA describes crafted MLE packet failures but identifies only affected Nest firmware. Upstream review found matching router-ID bounds, Dataset TLV bounds and CSL-channel validation fixes; all three fixes are ancestors of the selected OpenThread commit."
+    },
     {
       "id": "CVE-2019-20791",
       "component": "openthread",

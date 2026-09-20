@@ -22,7 +22,7 @@ defmodule Wotex.Thread.Software.Build do
   alias Wotex.Thread.Native.{Bootstrap, Build, Command, Source, Workspace}
 
   @project_root Path.expand("../../../..", __DIR__)
-  @sdk "openthread-5c8c318627954c99cd1a957a290bbd4b1027d04b"
+  @sdk "openthread-f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
   @tools ~w(cmake ninja cc c++ readelf)
   @pure_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
     wotex-thread-streams-test wotex-thread-flow-test wotex-thread-contract-driver)

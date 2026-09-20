@@ -11,7 +11,7 @@ defmodule Wotex.Thread.BuildFixture do
   @spinel_after "((uint32_t)data_in[3] << 24) | ((uint32_t)data_in[3] << 24) | ((uint32_t)data_in[7] << 24)"
   @discerner_before "return (static_cast<uint64_t>(1ULL) << mLength) - 1;"
   @discerner_after "return mLength == 64 ? ~static_cast<uint64_t>(0) : (static_cast<uint64_t>(1ULL) << mLength) - 1;"
-  @sdk_commit "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+  @sdk_commit "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
 
   @doc "Creates the pinned native sources, tool scripts and transfer of one disposable build."
   @spec environment(Path.t(), keyword()) :: map()

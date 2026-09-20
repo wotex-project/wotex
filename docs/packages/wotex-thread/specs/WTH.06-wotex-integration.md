@@ -3,9 +3,9 @@ spec:
   id: WTH.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-thread
-  updated: 2026-09-18
+  updated: 2026-09-20
 ---
 
 # WTH.06 Wotex integration and evidence contract

@@ -11,7 +11,7 @@ defmodule Wotex.Thread.SdkFrameTest do
     "version" => 1,
     "event" => "ready",
     "backend" => "openthread",
-    "revision" => "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+    "revision" => "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
   }
   @state %{
     "role" => "disabled",

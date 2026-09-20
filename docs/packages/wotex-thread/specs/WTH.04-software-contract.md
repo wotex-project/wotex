@@ -3,9 +3,9 @@ spec:
   id: WTH.04
   title: "Complete OpenThread host-management software profile"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-thread
-  updated: 2026-09-18
+  updated: 2026-09-20
 ---
 
 # WTH.04 Complete OpenThread host-management software profile
@@ -19,8 +19,9 @@ software-network and native/tooling obligations in [WTH.07](WTH.07-native-backen
 
 ## Scope and architectural decision
 
-OpenThread v2026.09.0, commit `5c8c318627954c99cd1a957a290bbd4b1027d04b`, is the
-executable reference. The complete Thread standard was not reviewed; retain the
+OpenThread commit `f34c5e5476829d9205e80b37fccc2bdfe97e1dab`, a descendant of
+v2026.09.0 with the reviewed MLE bounds fixes, is the executable reference. The
+complete Thread standard was not reviewed; retain the
 access limit and SDK-derived status from [primary sources](../provenance/primary-sources.md).
 No Thread certification is implied. Thread supplies IPv6 networking; application
 Property read/write semantics belong to a protocol such as CoAP or Matter.
@@ -84,8 +85,8 @@ Timestamp and Delay Timer must be present for a pending Dataset, but validation
 does not invent an ordering between active and pending timestamps or promise
 acceptance against a live network's current Dataset. The management callback
 owns that decision. These distinctions follow the pinned
-[Dataset validity implementation](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/core/meshcop/dataset.cpp)
-and [Dataset API](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/core/api/dataset_api.cpp).
+[Dataset validity implementation](https://github.com/openthread/openthread/blob/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/src/core/meshcop/dataset.cpp)
+and [Dataset API](https://github.com/openthread/openthread/blob/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/src/core/api/dataset_api.cpp).
 The bridge returns `:invalid_dataset`
 without sending network management traffic on failed validation. Unknown TLVs
 survive pure roundtrip; if the SDK does not accept their semantics, return its
@@ -183,7 +184,7 @@ or credentials. Enabling Thread requires an existing active Dataset that passes
 SDK and profile validation; otherwise return `dataset_required` before changing
 IPv6 or Thread. This prevents enable from bypassing the explicit formation
 permission: the pinned
-[Mle::Start implementation](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/core/thread/mle.cpp)
+[Mle::Start implementation](https://github.com/openthread/openthread/blob/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/src/core/thread/mle.cpp)
 can choose a PAN ID and start attachment without an installed Dataset.
 C07 `set_enabled` parameters are exactly `ipv6: boolean` and `thread: boolean`;
 the success result is the S02 typed State. Disable Thread before IPv6, and enable

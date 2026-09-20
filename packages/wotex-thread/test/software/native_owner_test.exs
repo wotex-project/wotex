@@ -56,7 +56,7 @@ defmodule Wotex.Thread.NativeOwnerTest do
     assert {:ok, "OpenThread"} = OpenThread.request(handle, %{type: :network_name}, 1000)
     assert {:ok, nil} = OpenThread.request(handle, %{type: :rloc16}, 1000)
     assert {:ok, version} = OpenThread.request(handle, %{type: :version}, 1000)
-    assert version =~ "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+    assert version =~ "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
     store = Path.join(context.directory, "settings/settings.data")
     before = File.read!(store)
     assert :ok = OpenThread.disconnect(handle)

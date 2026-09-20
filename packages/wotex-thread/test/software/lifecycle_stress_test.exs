@@ -156,7 +156,7 @@ defmodule Wotex.Thread.LifecycleStressTest do
 
         :version ->
           assert {:ok, version} = result
-          assert version =~ "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+          assert version =~ "f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
       end
     end
 

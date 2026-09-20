@@ -16,7 +16,7 @@ constexpr std::size_t kMaximumLine = 128 * 1024;
 constexpr std::size_t kMaximumDepth = 8;
 constexpr std::size_t kMaximumCollection = 1024;
 constexpr std::size_t kMaximumNodes = 4096;
-constexpr std::string_view kRevision = "5c8c318627954c99cd1a957a290bbd4b1027d04b";
+constexpr std::string_view kRevision = "f34c5e5476829d9205e80b37fccc2bdfe97e1dab";
 
 class ProtocolError final : public std::runtime_error {
  public:

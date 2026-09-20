@@ -3,30 +3,18 @@ spec:
   id: WTH.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.6
+  version: 1.0.7
   owner: wotex-thread
-  updated: 2026-09-18
+  updated: 2026-09-20
 ---
 
 # WTH.07 Native backend, build and IPC contract
 
-This is the accepted native OpenThread target. [Current implementation and evidence](../provenance/executable-evidence.md)
-are separate. This contract and the .00/.10/.11/.12 requirements jointly define
-acceptance; documentation or a source archive alone is not completed software.
-The explicit Mix native build now owns finite HTTPS downloads, regular-file
-archive admission, exact before/after SDK fixes, a C process guardian, empty
-workspace admission and content-bound manifest reuse. It replaces the generic
-Python build utility. A Debian 12 arm64 build emitted the expected native ready
-frame. The shared report-flow owner and BEAM ledger execute the parser and
-flow_trace corpus cases through a contract driver. The host admits flow
-initialization and acknowledgements with reserved output lanes, and the real
-host ready case executes. The software build and run tasks pass for both BEAM
-lanes on Linux arm64 and on the required Debian 12 GCC 12.2.0 x86_64 toolchain
-under emulation. Native State subscriptions are the report source, and the
-process-flow cases execute with a test-only callback source. The C09 lifecycle
-stress cases pass on all four lanes. The live native advisory check reports one
-unreviewed OpenThread advisory, CVE-2025-36939, and clean archive validation
-still needs evidence, so B01–B03 are not accepted.
+This is the accepted native OpenThread target. [Current implementation and
+evidence](../provenance/executable-evidence.md) are separate. This contract and
+the .00/.10/.11/.12 requirements define source behavior. The
+[qualification runbook](../plans/qualification.md) owns architecture,
+sanitizer, clean-archive, artifact-adoption and physical-device claims.
 
 ## WTH-B01 — Production and build boundary
 
@@ -62,14 +50,12 @@ programs may use Python at build time; the manifest names each executable,
 source hash and purpose. Independent Python peers require the explicit exception
 below and cannot implement responses on behalf of the production adapter.
 
-The required reference native lane is Linux x86_64, Debian 12, GCC/G++ 12.2.0;
-CMake 3.25.1 applies to CMake targets, Ninja 1.11.1 to native builds. SDK-required
-GN/generation tools use the immutable upstream lock entries and are recorded by
-actual executable SHA-256. Cross compilation requires an explicit target triple;
-an architecture mismatch fails before execution. Additional architectures are
-separate evidenced lanes. BEAM matrix: Elixir 1.18.4/OTP 27.3.4.15 and
-Elixir 1.20.2/OTP 29.0.4. The software runner executes the native client and real
-Runtime calls in both lanes, independently of physical hardware.
+The build supports the Linux architectures admitted by its explicit toolchain
+and target checks. SDK-required GN/generation tools use immutable upstream lock
+entries and are recorded by executable SHA-256. Cross compilation requires an
+explicit target triple; an architecture mismatch fails before execution. The
+runbook defines which native architectures, BEAM cohorts and sanitizer lanes
+must be executed for a particular qualification claim.
 
 `native-manifest.json` has schema `wotex.native-build`, version `1`, package,
 source_revision, source_files (relative path/SHA-256), upstream sources (URL,
@@ -80,14 +66,14 @@ SHA-256), exact arguments/environment allowlist, build_features, binaries
 credential, absolute consumer path or host environment dump enters this file.
 Downloads are source archives from the pinned upstreams; no remote is configured.
 Every required transitive SDK source is content-bound before compilation.
-Build failure, an unreviewed advisory, hash mismatch or missing required tool is
+Build failure, an unresolved in-scope advisory, hash mismatch or missing required tool is
 nonzero. A manifest is not successful execution evidence.
 
 ## WTH-B02 — Typed process boundary
 
 C07 defines the production version-1 JSON-line envelopes. The native helper
 emits exactly one ready frame before `open`; its exact backend is `openthread`
-and revision is `5c8c318627954c99cd1a957a290bbd4b1027d04b`. The BEAM owner checks both. A different backend
+and revision is `f34c5e5476829d9205e80b37fccc2bdfe97e1dab`. The BEAM owner checks both. A different backend
 never triggers an implicit fallback. Framing remains UTF-8 with 131072 bytes
 including newline, depth eight, at most 1024 entries per collection and 4096
 aggregate nodes. Numbers retain signed/unsigned 64-bit precision. Non-finite
@@ -284,8 +270,8 @@ SHA-256 `9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6`.
 
 The production host is the C++ executable from `priv/openthread/host.cpp` and
 its shared headers. `priv/openthread/dependencies.json` fixes OpenThread commit
-`5c8c318627954c99cd1a957a290bbd4b1027d04b`, archive SHA-256
-`90b4ce8905d21e2901b930436ed8de3abfcee95b9dfadd78528c7026564572db`,
+`f34c5e5476829d9205e80b37fccc2bdfe97e1dab`, archive SHA-256
+`93109098957ac2bfa6e37d69d1c094f653b5e73cc33c7e5a498e6e1d45ade452`,
 Mbed TLS 3.6.7 commit `068ff080b369adfac81509f9b57b2afabaf82dc5`, archive SHA-256
 `ca6bd316bbec49ef20088f39b8755fcaec0b7e45781506de55b17cd191ae6937`, and its
 framework commit `dde0c4a0e448a0552f18817dcea633bb851fd288`, archive SHA-256
@@ -327,5 +313,5 @@ including both pinned source fixes and retired callback contexts. Current
 partial native tests remain valid scoped evidence; they do not accept this
 complete network workflow.
 
-Primary APIs: [POSIX/RCP architecture](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/posix/README.md),
-[pinned joiner API](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/include/openthread/joiner.h).
+Primary APIs: [POSIX/RCP architecture](https://github.com/openthread/openthread/blob/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/src/posix/README.md),
+[pinned joiner API](https://github.com/openthread/openthread/blob/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/include/openthread/joiner.h).

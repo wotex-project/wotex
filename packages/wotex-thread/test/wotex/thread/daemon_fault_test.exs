@@ -40,7 +40,7 @@ defmodule Wotex.Thread.DaemonFaultTest do
            }
   end
 
-  @tag sdk_revision: "5c8c318627954c99cd1a957a290bbd4b1027d04b",
+  @tag sdk_revision: "f34c5e5476829d9205e80b37fccc2bdfe97e1dab",
        sdk_sources: ["include/openthread/platform/radio.h", "src/core/thread/mle_types.hpp"]
   test "WTH-S02 WTH-V03 admits exactly one typed result and its matching optional echo" do
     for role <- ~w(disabled detached child router leader) do

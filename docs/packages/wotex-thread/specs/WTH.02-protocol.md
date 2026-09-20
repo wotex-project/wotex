@@ -3,15 +3,16 @@ spec:
   id: WTH.02
   title: "Thread protocol and graduation contract"
   status: accepted
-  version: 1.0.1
+  version: 1.0.2
   owner: wotex-thread
-  updated: 2026-09-09
+  updated: 2026-09-20
 ---
 
 # WTH.02 Thread protocol and graduation contract
 
-OpenThread v2026.09.0, commit 5c8c318627954c99cd1a957a290bbd4b1027d04b
-(2026-08-31), is the executable reference. The complete Thread standard text
+OpenThread commit `f34c5e5476829d9205e80b37fccc2bdfe97e1dab`
+(2026-09-08), a descendant of v2026.09.0 that includes the reviewed MLE bounds
+fixes, is the executable reference. The complete Thread standard text
 was not reviewed; no Thread certification claim is made. Thread owns IPv6
 networking, not application Property read/write semantics. CoAP or Matter
 retains application-level ownership above Thread.

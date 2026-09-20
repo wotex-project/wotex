@@ -3,14 +3,14 @@ spec:
   id: WTH.05
   title: "Standalone network management and application composition"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-thread
-  updated: 2026-09-09
+  updated: 2026-09-20
 ---
 
 # WTH.05 Standalone network management and application composition
 
-Specification version: `1.1.0`. Status: planned target, not implemented capability.
+Specification version: `1.1.1`. Status: planned target, not implemented capability.
 Requires [WTH.01](WTH.01-library-contract.md) and
 [WTH.04](WTH.04-software-contract.md). The narrower baseline is
 [WTH.03](WTH.03-implemented-profile.md).
@@ -62,11 +62,12 @@ bounded numeric code and phase under `:remote_error`, without stringifying nativ
 buffers. A management timeout after submission has `effect: :unknown`; a validation
 failure has `effect: :none`. Callback acceptance remains separate from activation.
 
-These decisions target OpenThread v2026.09.0 commit
-`5c8c318627954c99cd1a957a290bbd4b1027d04b`, including its
-[Thread role API](https://raw.githubusercontent.com/openthread/openthread/5c8c318627954c99cd1a957a290bbd4b1027d04b/include/openthread/thread.h),
-[Joiner API](https://raw.githubusercontent.com/openthread/openthread/5c8c318627954c99cd1a957a290bbd4b1027d04b/include/openthread/joiner.h) and
-[Dataset API](https://raw.githubusercontent.com/openthread/openthread/5c8c318627954c99cd1a957a290bbd4b1027d04b/include/openthread/dataset.h).
+These decisions target OpenThread commit
+`f34c5e5476829d9205e80b37fccc2bdfe97e1dab`, a descendant of v2026.09.0,
+including its
+[Thread role API](https://raw.githubusercontent.com/openthread/openthread/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/include/openthread/thread.h),
+[Joiner API](https://raw.githubusercontent.com/openthread/openthread/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/include/openthread/joiner.h) and
+[Dataset API](https://raw.githubusercontent.com/openthread/openthread/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/include/openthread/dataset.h).
 They are an SDK-derived profile, not full Thread standard verification.
 
 ## WTH-N02 — Network and application boundaries
