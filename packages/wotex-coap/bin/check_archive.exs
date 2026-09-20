@@ -1,189 +1,378 @@
 defmodule Wotex.CoAP.Check.Archive do
   @moduledoc false
 
-  @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
+  @prefix "wotex-coap-archive."
+  @version "0.1.0"
+  @consumer_fixture "test/fixtures/archive_reference_consumer.exs"
+  @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
+  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs|priv/plts|_build)(/|$)|^tasks(/|$)}
+  @dependency_machinery ~r{(^|/)(mix\.lock|native|test)(/|$)}
+  @dependency_content ~w(
+    .formatter.exs
+    CHANGELOG.md
+    LICENSE
+    NOTICE
+    README.md
+    mix.exs
+  )
   @packaged [
-    "mix.exs",
+    ".formatter.exs",
     "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "README.md",
+    "mix.exs",
+    "mix.lock",
     "lib",
+    "native",
     "priv/fixtures/contract-v1.json",
     "priv/fixtures/custody-v1.json",
     "priv/fixtures/native-v1.json",
-    "priv/fixtures/wotex-integration-v1.json"
+    "priv/fixtures/wotex-integration-v1.json",
+    "test/fixtures/dtls_pki",
+    "test/interop",
+    "test/native",
+    "test/software",
+    "test/support",
+    "test/test_helper.exs"
   ]
-  @development [".git", "deps", "_build"]
-  @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
-  @transport "Elixir.Wotex.CoAP.Error.beam"
 
-  @identities [
-    ~r/\{:wotex, "~> 0\.1\.0"\}/,
-    ~r/\{:wotex_runtime, "~> 0\.1\.0"\}/
+  @packages [
+    %{app: :wotex, directory: "wotex", archive: "wotex-0.1.0.tar", requires: []},
+    %{
+      app: :wotex_runtime,
+      directory: "wotex-runtime",
+      archive: "wotex_runtime-0.1.0.tar",
+      requires: [:wotex]
+    },
+    %{
+      app: :wotex_coap,
+      directory: "wotex-coap",
+      archive: "wotex_coap-0.1.0.tar",
+      requires: [:wotex, :wotex_runtime]
+    }
   ]
 
   @spec main() :: :ok
   def main do
     project_root = File.cwd!()
-
-    {temporary, 0} =
-      System.cmd("mktemp", ["-d", Path.join(System.tmp_dir!(), "wotex-coap-archive.XXXXXX")])
-
-    temporary = String.trim(temporary)
-    archive = Path.join(temporary, "wotex_coap-#{Mix.Project.config()[:version]}.tar")
+    package_root = Path.dirname(project_root)
+    work = Path.join(System.tmp_dir!(), "#{@prefix}#{unique()}")
 
     result =
       try do
-        run!("mix", ["hex.build", "--output", archive], project_root,
-          env: [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
-        )
-
-        verify(project_root, archive, temporary)
+        {:ok, verify(project_root, package_root, work)}
       catch
         :throw, {:violation, message} -> {:violation, message}
       after
-        File.rm_rf!(Path.join(temporary, "package"))
-        File.rm_rf!(Path.join(temporary, "ebin"))
+        cleanup(work)
       end
 
-    report(result)
+    report(result, work)
   end
 
-  defp verify(project_root, archive, temporary) do
-    unless File.regular?(archive) do
-      violation("expected current wotex_coap archive: #{archive}")
-    end
+  defp verify(project_root, package_root, work) do
+    archive_directory = Path.join(work, "archives")
+    package_directory = Path.join(work, "packages")
+    consumer = Path.join(work, "reference_consumer")
+    File.mkdir_p!(archive_directory)
+    File.mkdir_p!(package_directory)
 
-    package = Path.join(temporary, "package")
-    ebin = Path.join(temporary, "ebin")
+    packages =
+      Enum.map(@packages, fn package ->
+        repository = source_repository(package, project_root, package_root)
+        archive = Path.join(archive_directory, package.archive)
+        extracted = Path.join(package_directory, Atom.to_string(package.app))
 
-    File.mkdir_p!(temporary)
-    extract!(archive, temporary, [])
+        source_project!(repository, package.app)
+        build_once!(repository, archive)
+        inspect_archive!(archive, package)
+        extract_archive!(archive, extracted)
 
-    Enum.each(@outer, &outer!(temporary, &1))
+        Map.merge(package, %{
+          archive_path: archive,
+          digest: digest(archive),
+          extracted: extracted,
+          repository: repository,
+          revision: revision(repository)
+        })
+      end)
 
-    File.mkdir_p!(package)
-    extract!(Path.join(temporary, "contents.tar.gz"), package, [:compressed])
-
-    Enum.each(@packaged, &packaged!(package, &1))
-    software_run!(package)
-
-    development!(package)
-    documentation!(package)
-    identities!(package)
-
-    dependencies!(project_root)
-
-    File.mkdir_p!(ebin)
-    compile!(project_root, package, ebin)
-
-    unless File.regular?(Path.join(ebin, @transport)) do
-      violation("out-of-tree archive compilation did not produce the transport")
-    end
-
-    IO.puts("archive contents passed")
-    IO.puts("out-of-tree archive compilation passed")
-    IO.puts("archive sha256: #{digest(archive)}")
-    IO.puts("archive artifacts: #{temporary}")
-
-    :ok
+    software_run!(packages)
+    write_consumer!(consumer, packages)
+    exercise_consumer!(consumer, packages)
+    evidence(packages, consumer)
   end
 
-  defp extract!(archive, directory, options) do
-    case :erl_tar.extract(String.to_charlist(archive), [{:cwd, directory} | options]) do
+  defp source_repository(%{app: :wotex_coap}, project_root, _package_root), do: project_root
+
+  defp source_repository(%{directory: directory}, _project_root, package_root),
+    do: Path.join(package_root, directory)
+
+  defp source_project!(source, app) do
+    mix_file = Path.join(source, "mix.exs")
+    unless File.regular?(mix_file), do: violation("missing #{app} source project at #{mix_file}")
+  end
+
+  # Every exact archive is built once. Inspection and consumer setup reuse those
+  # bytes rather than asking Hex to construct a second package tree.
+  defp build_once!(source, archive) do
+    run!("mix", ["hex.build", "--output", archive], source, release_environment())
+    unless File.regular?(archive), do: violation("Hex did not create #{archive}")
+  end
+
+  defp inspect_archive!(archive, package) do
+    members = outer_members!(archive)
+    require_outer!(members, archive)
+    metadata = member!(members, ~c"metadata.config", archive)
+    contents = member!(members, ~c"contents.tar.gz", archive)
+
+    require_metadata!(metadata, ~s({<<"name">>,<<"#{package.app}">>}), archive)
+    require_metadata!(metadata, ~s({<<"version">>,<<"#{@version}">>}), archive)
+    require_metadata!(metadata, ~s({<<"elixir">>,<<"~> 1.18">>}), archive)
+    require_metadata!(metadata, ~s({<<"licenses">>,[<<"Apache-2.0">>]}), archive)
+    require_metadata!(metadata, ~s({<<"build_tools">>,[<<"mix">>]}), archive)
+
+    Enum.each(package.requires, fn dependency ->
+      requirement =
+        ~r/{<<"app">>,<<"#{dependency}">>}.*?{<<"requirement">>,<<"~> 0\.1\.0">>}/s
+
+      unless Regex.match?(requirement, metadata) do
+        violation("#{archive} does not pin #{dependency} to ~> 0.1.0")
+      end
+    end)
+
+    if Regex.match?(@mutable_source, metadata) or String.contains?(metadata, "WOTEX_PATH_DEPS") do
+      violation("#{archive} metadata contains a mutable dependency source")
+    end
+
+    content_members = content_members!(contents, archive)
+    safe_members!(content_members, archive)
+
+    if Enum.any?(content_members, &Regex.match?(@machinery, &1)) do
+      violation("#{archive} contains development, local-task, or agent machinery")
+    end
+
+    if package.app != :wotex_coap and
+         Enum.any?(content_members, &Regex.match?(@dependency_machinery, &1)) do
+      violation("#{archive} dependency contains development or native machinery")
+    end
+
+    if Enum.any?(content_members, &(Path.extname(&1) == ".py")) do
+      violation("#{archive} contains a Python runtime file")
+    end
+
+    Enum.each(required_content(package.app), fn file ->
+      unless file in content_members or
+               Enum.any?(content_members, &String.starts_with?(&1, file <> "/")) do
+        violation("#{archive} is missing #{file}")
+      end
+    end)
+
+    unless Enum.any?(content_members, &String.starts_with?(&1, "lib/")) do
+      violation("#{archive} is missing library sources")
+    end
+
+    verify_package_metadata!(metadata, package.app, archive)
+  end
+
+  defp required_content(:wotex), do: @dependency_content ++ ["priv/w3c"]
+  defp required_content(:wotex_runtime), do: @dependency_content
+  defp required_content(:wotex_coap), do: @packaged
+
+  defp verify_package_metadata!(metadata, :wotex_coap, archive) do
+    for value <- [
+          "Consumer-neutral CoAP protocol values, operations and Web of Things Form mapping",
+          "https://github.com/wotex-project/wotex",
+          "https://github.com/wotex-project/wotex/blob/main/packages/wotex-coap/CHANGELOG.md",
+          "https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-coap"
+        ] do
+      require_metadata!(metadata, value, archive)
+    end
+  end
+
+  defp verify_package_metadata!(_metadata, _app, _archive), do: :ok
+
+  defp outer_members!(archive) do
+    case :erl_tar.extract(String.to_charlist(archive), [:memory]) do
+      {:ok, members} -> members
+      {:error, reason} -> violation("cannot inspect #{archive}: #{inspect(reason)}")
+    end
+  end
+
+  defp require_outer!(members, archive) do
+    names = Enum.map(members, fn {name, _} -> List.to_string(name) end)
+
+    for required <- ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"] do
+      unless required in names, do: violation("#{archive} is missing #{required}")
+    end
+  end
+
+  defp member!(members, name, archive) do
+    case List.keyfind(members, name, 0) do
+      {^name, content} -> content
+      nil -> violation("#{archive} is missing #{List.to_string(name)}")
+    end
+  end
+
+  defp content_members!(contents, archive) do
+    case :erl_tar.extract({:binary, contents}, [:compressed, :memory]) do
+      {:ok, members} -> Enum.map(members, fn {name, _} -> List.to_string(name) end)
+      {:error, reason} -> violation("cannot inspect #{archive} contents: #{inspect(reason)}")
+    end
+  end
+
+  defp safe_members!(members, archive) do
+    if Enum.any?(members, fn member ->
+         Path.type(member) == :absolute or ".." in Path.split(member)
+       end) do
+      violation("#{archive} contains an unsafe archive member")
+    end
+  end
+
+  defp require_metadata!(metadata, term, archive) do
+    unless String.contains?(metadata, term) do
+      violation("#{archive} metadata does not contain #{term}")
+    end
+  end
+
+  defp extract_archive!(archive, destination) do
+    File.mkdir_p!(destination)
+    members = outer_members!(archive)
+    contents = member!(members, ~c"contents.tar.gz", archive)
+
+    case :erl_tar.extract(
+           {:binary, contents},
+           [:compressed, {:cwd, String.to_charlist(destination)}]
+         ) do
       :ok -> :ok
       {:error, reason} -> violation("cannot extract #{archive}: #{inspect(reason)}")
     end
   end
 
-  defp outer!(temporary, entry) do
-    unless File.regular?(Path.join(temporary, entry)) do
-      violation("archive is missing #{entry}")
-    end
-  end
+  # The shipped software runner hashes and executes this exact set. Checking it
+  # after extraction proves those inputs are present in the archive being tested.
+  defp software_run!(packages) do
+    package = Enum.find(packages, &(&1.app == :wotex_coap))
 
-  defp packaged!(package, entry) do
-    unless File.exists?(Path.join(package, entry)) do
-      violation("package contents are missing #{entry}")
-    end
-  end
-
-  # The shipped `mix wotex.coap.software.run` executes and hashes these files
-  # from the package root, so an archive without one cannot run the lane.
-  defp software_run!(package) do
-    Enum.each(Wotex.CoAP.Software.Run.source_files(), &packaged!(package, &1))
-  end
-
-  defp development!(package) do
-    directories =
-      package
-      |> Path.join("**")
-      |> Path.wildcard(match_dot: true)
-      |> Enum.filter(&(File.dir?(&1) and Path.basename(&1) in @development))
-
-    unless directories == [] do
-      violation("archive contains development state")
-    end
-  end
-
-  # Documentation reaches consumers through HexDocs; the archive ships no
-  # documentation tree and no task ledger.
-  defp documentation!(package) do
-    paths =
-      package
-      |> Path.join("**")
-      |> Path.wildcard(match_dot: true)
-      |> Enum.map(&Path.relative_to(&1, package))
-      |> Enum.filter(&(hd(Path.split(&1)) in ["docs", "tasks"]))
-
-    unless paths == [] do
-      violation("archive contains documentation or task paths: #{Enum.join(paths, ", ")}")
-    end
-  end
-
-  defp identities!(package) do
-    manifest = File.read!(Path.join(package, "mix.exs"))
-
-    unless Enum.all?(@identities, &Regex.match?(&1, manifest)) do
-      violation("archive does not preserve normal Hex dependency identity")
-    end
-  end
-
-  defp dependencies!(project_root) do
-    Enum.each(@dependencies, fn dependency ->
-      path = Path.join([project_root, "_build/test/lib", dependency, "ebin"])
-
-      unless File.dir?(path) do
-        violation("compiled dependency is missing; run the test compile before the archive check")
+    Enum.each(Wotex.CoAP.Software.Run.source_files(), fn file ->
+      unless File.regular?(Path.join(package.extracted, file)) do
+        violation("wotex_coap archive is missing software-run input #{file}")
       end
     end)
   end
 
-  defp compile!(project_root, package, ebin) do
-    sources =
-      package
-      |> Path.join("lib/**/*.ex")
-      |> Path.wildcard()
-      |> Enum.filter(&File.regular?/1)
-      |> Enum.sort()
+  defp write_consumer!(consumer, packages) do
+    File.mkdir_p!(Path.join(consumer, "test"))
+    paths = Map.new(packages, &{&1.app, &1.extracted})
 
-    load =
-      Enum.flat_map(@dependencies, fn dependency ->
-        ["-pa", Path.join([project_root, "_build/test/lib", dependency, "ebin"])]
-      end)
+    File.write!(Path.join(consumer, "mix.exs"), consumer_mix(paths))
+    File.write!(Path.join(consumer, "test/test_helper.exs"), "ExUnit.start()\n")
 
-    run!("elixirc", ["--warnings-as-errors"] ++ load ++ ["-o", ebin] ++ sources, project_root)
+    case File.cp(
+           Path.expand(@consumer_fixture),
+           Path.join(consumer, "test/archive_reference_consumer_test.exs")
+         ) do
+      :ok -> :ok
+      {:error, reason} -> violation("cannot isolate archive consumer fixture: #{inspect(reason)}")
+    end
   end
 
-  defp digest(archive) do
-    :sha256
-    |> :crypto.hash(File.read!(archive))
-    |> Base.encode16(case: :lower)
+  defp consumer_mix(paths) do
+    """
+    defmodule WotexCoAPArchiveConsumer.MixProject do
+      use Mix.Project
+
+      def project do
+        [
+          app: :wotex_coap_archive_consumer,
+          version: "0.0.0",
+          elixir: "~> 1.18",
+          deps: deps()
+        ]
+      end
+
+      def application, do: [extra_applications: []]
+
+      defp deps do
+        [
+          {:wotex, path: #{inspect(paths.wotex)}, override: true},
+          {:wotex_runtime, path: #{inspect(paths.wotex_runtime)}, override: true},
+          {:wotex_coap, path: #{inspect(paths.wotex_coap)}, override: true}
+        ]
+      end
+    end
+    """
   end
 
-  defp run!(command, arguments, directory, extra \\ []) do
-    options = [cd: directory, into: IO.stream(), stderr_to_stdout: true] ++ extra
+  defp exercise_consumer!(consumer, packages) do
+    paths = Map.new(packages, &{&1.app, &1.extracted})
+    live_roots = Enum.map(packages, & &1.repository)
+
+    environment =
+      isolated_environment() ++
+        [
+          {"WOTEX_ARCHIVE_ROOTS", Enum.join(Map.values(paths), "\n")},
+          {"WOTEX_LIVE_ROOTS", Enum.join(live_roots, "\n")}
+        ]
+
+    run!("mix", ["deps.get"], consumer, environment)
+    run!("mix", ["deps.get", "--check-locked"], consumer, environment)
+    run!("mix", ["test", "--no-start", "--warnings-as-errors"], consumer, environment)
+  end
+
+  defp evidence(packages, consumer) do
+    paths = Map.new(packages, &{&1.app, &1.extracted})
+
+    %{
+      packages: packages,
+      lock_digest: digest(Path.join(consumer, "mix.lock")),
+      fixture_digest:
+        digest(Path.join(paths.wotex_coap, "priv/fixtures/wotex-integration-v1.json")),
+      adapter_digest: digest(Path.join(paths.wotex_coap, "lib/wotex/coap/datagram/udp.ex")),
+      driver_digest: digest(Path.expand(@consumer_fixture)),
+      elixir: System.version(),
+      otp: otp_version()
+    }
+  end
+
+  defp otp_version do
+    release = System.otp_release()
+    path = Path.join([List.to_string(:code.root_dir()), "releases", release, "OTP_VERSION"])
+
+    case File.read(path) do
+      {:ok, version} -> String.trim(version)
+      {:error, _} -> release
+    end
+  end
+
+  defp revision(repository) do
+    {output, 0} = System.cmd("git", ["rev-parse", "HEAD"], cd: repository, stderr_to_stdout: true)
+    String.trim(output)
+  end
+
+  defp release_environment do
+    [
+      {"WOTEX_PATH_DEPS", nil},
+      {"MIX_ENV", "dev"},
+      {"ERL_LIBS", nil},
+      {"MIX_PATH", nil}
+    ]
+  end
+
+  defp isolated_environment do
+    [
+      {"WOTEX_PATH_DEPS", nil},
+      {"MIX_ENV", "test"},
+      {"ERL_LIBS", nil},
+      {"MIX_PATH", nil},
+      {"MIX_BUILD_PATH", nil},
+      {"MIX_DEPS_PATH", nil}
+    ]
+  end
+
+  defp run!(command, arguments, directory, environment) do
+    options = [cd: directory, env: environment, into: IO.stream(), stderr_to_stdout: true]
     {_output, status} = System.cmd(command, arguments, options)
 
     unless status == 0 do
@@ -191,11 +380,50 @@ defmodule Wotex.CoAP.Check.Archive do
     end
   end
 
+  defp digest(path) do
+    :sha256
+    |> :crypto.hash(File.read!(path))
+    |> Base.encode16(case: :lower)
+  end
+
+  defp unique, do: Integer.to_string(System.unique_integer([:positive]))
+
+  defp cleanup(work) do
+    if String.starts_with?(work, Path.join(System.tmp_dir!(), @prefix)) do
+      File.rm_rf!(work)
+    else
+      IO.puts(:stderr, "refusing unsafe archive-check cleanup")
+      System.halt(1)
+    end
+  end
+
   defp violation(message), do: throw({:violation, message})
 
-  defp report(:ok), do: :ok
+  defp report({:ok, evidence}, work) do
+    Enum.each(evidence.packages, fn package ->
+      role = if package.app == :wotex_coap, do: "subject", else: "candidate dependency"
 
-  defp report({:violation, message}) do
+      IO.puts(
+        "#{role} #{package.app} revision=#{package.revision} archive_sha256=#{package.digest}"
+      )
+    end)
+
+    IO.puts("fixture wotex-integration-v1.json sha256=#{evidence.fixture_digest}")
+    IO.puts("adapter Wotex.CoAP.Datagram.UDP sha256=#{evidence.adapter_digest}")
+    IO.puts("archive consumer driver sha256=#{evidence.driver_digest}")
+    IO.puts("isolated consumer lock sha256=#{evidence.lock_digest}")
+    IO.puts("runtime Elixir=#{evidence.elixir} OTP=#{evidence.otp}")
+    IO.puts("command: mix test --no-start --warnings-as-errors")
+    IO.puts("result: passed; datagrams=1 owned_resources_after=0")
+
+    IO.puts(
+      "temporary archive workspace cleanup: #{if File.exists?(work), do: "failed", else: "removed"}"
+    )
+
+    unless File.exists?(work), do: :ok, else: System.halt(1)
+  end
+
+  defp report({:violation, message}, _work) do
     IO.puts(:stderr, message)
     System.halt(1)
   end

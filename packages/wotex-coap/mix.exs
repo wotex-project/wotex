@@ -22,7 +22,7 @@ defmodule WotexCoAP.MixProject do
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
-      test_ignore_filters: [~r{^test/support/}],
+      test_ignore_filters: [~r{^test/support/}, ~r{^test/fixtures/archive_reference_consumer\.exs$}],
       test_coverage: [tool: ExCoveralls],
       dialyzer: dialyzer()
     ]
