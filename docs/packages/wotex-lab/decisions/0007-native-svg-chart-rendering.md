@@ -5,6 +5,12 @@ WLB.11. This decision supersedes only the chart-rendering selection in
 [ADR 0005](0005-interactive-elixir-analytics.md); Explorer remains the optional
 dataframe analysis engine.
 
+[Decision 0010](0010-liveview-svelte-islands.md) later supersedes the claims
+that HEEx is the sole Workbench renderer and that the reference profile has no
+admitted local pan/zoom. The native SVG and bounded table remain the semantic
+fallback, and this decision's closed descriptor, server admission, gaps,
+bounds and prohibition on general chart programs remain in force.
+
 ## Context
 
 The Nx/Elixir community evidence reviewed for ADR 0005 separates numerical

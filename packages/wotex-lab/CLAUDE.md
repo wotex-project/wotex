@@ -21,8 +21,11 @@ are in the root `CLAUDE.md`.
 - PromEx/BeamLens/Phoenix belong to an explicit reference host. GreptimeDB is
   a supplied/local service, not embedded BEAM storage. No implicit LLM calls,
   introspection, database connection or public metrics listener.
-- The workbench is neutral LiveView/HEEx with base semantic tokens. No mandatory
-  UI framework, ELK stack or infrastructure dependency for the first tensor.
+- The Workbench is one LiveView application with the Svelte 5 islands, Vite,
+  Storybook and browser TypeScript/JavaScript selected by WLB.11 and WLB.12.
+  Backend and native language constraints do not restrict frontend source or
+  build tooling. The base library keeps its first-tensor path independent of
+  Phoenix and Node, and the reference release starts no Node runtime process.
 - Workspace mode (`WOTEX_PATH_DEPS=1`) never proves artifact adoption. Release
   paths use Hex or verified archives.
 - Specs and completion contracts describe the entire accepted programme; do not
@@ -75,8 +78,9 @@ are in the root `CLAUDE.md`.
 - `test/support/`: component fixtures, HTTP/MQTT servers, broker, GreptimeDB
   and remote-write harnesses, the native helper builder, the cookbook runner.
 - Specifications: `docs/packages/wotex-lab/specs/` (WLB.01 to WLB.12;
-  `catalogue.yaml` owns status). Plans, decisions and provenance reviews sit
-  beside them. The graph digests every document; `bin/check_graph.exs`,
+  `catalogue.yaml` owns status). Plans, the qualification runbook, decisions and
+  provenance reviews sit beside them. The graph digests every document;
+  `bin/check_graph.exs`,
   `bin/check_contracts.exs` (spec headings, versions and links) and
   `bin/generate_typescript_client.exs` reach the tree through
   `Wotex.Lab.Documentation` too.

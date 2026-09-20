@@ -134,7 +134,10 @@ do not silently skip, simulate or weaken the requirement.
 - Acceptance scenarios: WBL-V12.
 - Change surface: native audit, bridge faults and full software runner.
 - Test destinations: `test/software/lifecycle_stress_test.exs`.
-- Done when: Run required stress/version/archive/package gates and distinguish D-Bus policy tests from virtual-controller wire evidence.
+- Done when: Implement the stress, fault and cleanup assertions and distinguish
+  D-Bus policy tests from virtual-controller wire evidence. Architecture,
+  sanitizer, archive and physical-controller execution follows the
+  qualification runbook.
 - Suggested local commit: `test: prove bluez software lifecycle and compatibility`.
 - Standalone closure: Require all concrete corpus cases and the complete first-party native client workflow, with actual virtual GATT evidence.
 
@@ -187,11 +190,12 @@ repository, `mix pkg wotex-ble check --no-retry` (equivalently
 `WOTEX_PATH_DEPS=1 mix check --no-retry` inside `packages/wotex-ble`) selects the
 sibling package sources under `packages/`; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
-Native changes additionally run their required native tests and dependency audit;
-C/C++ adapters run ASan/UBSan in the Linux fault lane. Run Linux container lanes
-and the clean-source package gate as an unprivileged user. Root bypasses the
-file-permission denials asserted by `test/wotex/ble/native_source_test.exs` and
-`test/wotex/ble/native_build_test.exs`, so their results under root are invalid.
+Native changes additionally run the native checks reachable on the development
+host. The [qualification runbook](qualification.md) owns the Linux architecture,
+sanitizer, virtual-guest, clean-archive and physical-controller matrices. Run
+qualification as an unprivileged user; root bypasses the file-permission denials
+asserted by `test/wotex/ble/native_source_test.exs` and
+`test/wotex/ble/native_build_test.exs`, so those results under root are invalid.
 
 After each package, update the current-profile/README capability claims only for
 behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)

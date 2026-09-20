@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.2.0. Contract: accepted. Implementation status:
+Specification version: 0.3.0. Contract: accepted. Implementation status:
 planned. Evidence status: missing. Adoption status: no_reference.
 
 ## Purpose
@@ -18,10 +18,10 @@ The aggregate is generated. Maintainers do not copy source documents into Lab,
 rewrite the same guide for a second site, or maintain navigation separately in
 the LiveView and static outputs.
 
-This contract consumes DocShell's DSH.01 portable-site contract and Phoenix
-Assets' PHA.01 LiveView/static renderer contract. Lab owns only Wotex source
-membership, taxonomy, branding, public routes, release profiles, and deployment
-evidence.
+This contract consumes DocShell's DSH.01 portable-site contract, Phoenix
+Assets' PHA.01 LiveView/static renderer contract and PHA.02 shared design-system
+and island contract. Lab owns only Wotex source membership, taxonomy, branding,
+public routes, release profiles, domain composition and deployment evidence.
 
 ## Source cohort
 
@@ -207,11 +207,24 @@ tokens, logo/title slots, section taxonomy, source links, and routes. It does
 not fork the AST, API reference, search, navigation, code, diagram, or content
 directive renderers.
 
+DocShell components compose the same Phoenix Assets primitives, component CSS
+and semantic tokens as the Workbench. A documentation-only button, dialog,
+table, navigation pattern or status style is not maintained in Lab. Wotex theme
+overrides pass the PHA.02 token validator and apply to both the HEEx and Svelte
+component catalogues.
+
 The static build invokes the same HEEx components through
 `PhoenixAssets.DocShell.StaticRenderer`. The LiveView may add transport
 attributes, but both outputs share the same DocShell site/page values, CSS,
 browser entry, assets, route graph, search corpus, visible content, headings,
 links, and accessible names.
+
+The LiveView route may mount a registered Svelte island for an interaction that
+benefits from local client state. The island follows PHA.02's single-owner DOM,
+bounded prop/event, revision, resynchronization, fallback and teardown rules.
+Article text, navigation, search fallback, source provenance and ordinary links
+do not depend on an island or LiveSocket. The static export includes no enabled
+server-backed control and requires no endpoint, WebSocket or Node process.
 
 The default documentation shell includes keyboard search, hierarchical and
 collapsible navigation, breadcrumbs, table of contents, previous/next flow,
@@ -226,6 +239,28 @@ rhythm, responsive navigation, stable code/table overflow, clear current-page
 state, and empty/error/404 pages that preserve navigation and search. It does
 not reproduce another project's brand or require an external font, icon, CSS,
 script, analytics, or search service.
+
+## Design-system publication
+
+The documentation build also publishes the Phoenix Assets Svelte Storybook at
+`/design-system/` unless the host selects a separate origin. This is the public
+static component catalogue for the generic primitives and reporting components
+used by the Workbench and DocShell. It imports the production Svelte modules,
+CSS and fixed story fixtures; it does not contain a visual copy maintained by
+Lab.
+
+The Storybook build and DocShell site are separate manifested trees combined by
+one publication step. Their routes and assets cannot collide. The deployment
+records the Phoenix Assets package/npm versions, token digest, component
+registry digest, story fixture digest and Storybook output digest. A failed
+catalogue build leaves the preceding complete documentation publication in
+place.
+
+Storybook mock transports demonstrate component presentation and failure
+states. They do not claim LiveView authorization, persistence, reconnect or
+effect execution. A separately deployed Phoenix Storybook reference host may
+provide real LiveView examples. It is not part of the static Pages artifact,
+and the public docs remain complete when it is absent.
 
 ## Search and machine interfaces
 
@@ -302,8 +337,10 @@ content or documentation dependencies.
 | WLB-S12-06 | Export the same site/page model through the shared Phoenix Assets HEEx renderer as a complete static site. |
 | WLB-S12-07 | Provide the specified modern documentation capabilities, responsive behavior, accessibility target, and no-JavaScript fallbacks. |
 | WLB-S12-08 | Support pinned release and automatically resolved rolling profiles without publishing a partial or undisclosed cohort. |
-| WLB-S12-09 | Build and validate a provider-neutral static artifact and qualify GitHub Pages deployment with no paid service dependency. |
+| WLB-S12-09 | Build and validate a provider-neutral static artifact and a fail-closed GitHub Pages workflow with no paid service dependency. Remote deployment follows the WLB.08 qualification runbook. |
 | WLB-S12-10 | Keep source documents authoritative where they are maintained and reject copied, private, unallowlisted, unresolved, or stale aggregate inputs. |
+| WLB-S12-11 | Apply one PHA.02 design-system contract to Workbench, LiveView docs, static docs and Storybook, with Svelte islands confined to explicit progressive-enhancement boundaries. |
+| WLB-S12-12 | Build the production Svelte component catalogue as a separately manifested static Storybook while keeping live-only examples in an optional isolated Phoenix host. |
 
 ## Executable vectors
 
@@ -321,11 +358,16 @@ content or documentation dependencies.
 | WLB-V12-10 | A failed source, extraction, validation, render, link, accessibility, asset-budget or deployment preflight leaves the prior published artifact intact. |
 | WLB-V12-11 | The release profile reproduces its payload from the committed cohort; the rolling profile records one resolved immutable cohort and detects a missed trigger by reconciliation. |
 | WLB-V12-12 | A fresh Workbench release serves built-in docs with Git unavailable and no source checkout; a fresh static archive serves from a local HTTP server. |
+| WLB-V12-13 | Workbench, LiveView docs, static docs and Storybook report the same token, CSS, component-registry and fixture digests; no Lab-owned component-style fork is present. |
+| WLB-V12-14 | The combined static artifact serves docs and `/design-system/` from a local HTTP server below root and repository subpaths, contains no route/asset collision or live socket URL, and retains the prior complete staged output when either build fails. |
 
 ## Evidence boundary
 
-WLB.12 is complete only after DSH.01 and PHA.01 artifact versions are pinned and
-WLB-S12-01 through WLB-S12-10 have executable evidence. A local workspace build
-is source evidence. A Pages workflow file is deployment-source evidence. A
-successful default-branch deployment with recorded artifact and URL is hosted
-adoption evidence. None changes repository visibility or publishes a package.
+WLB.12 is complete only after DSH.01, PHA.01 and PHA.02 artifact versions are
+pinned and WLB-S12-01 through WLB-S12-12 have executable source or
+candidate-artifact evidence. A local workspace build is source evidence. A Pages
+workflow file is deployment-source evidence. A successful default-branch
+deployment with a recorded artifact and URL is hosted adoption evidence under
+the [qualification runbook](../plans/qualification.md); it does not decide
+WLB.12 implementation status. None changes repository visibility or publishes a
+package.

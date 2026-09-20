@@ -1,11 +1,12 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.11.0. Contract: accepted.
+Specification version: 0.12.0. Contract: accepted. Implementation status:
+partial.
 
 ## Implemented source and evidence boundary
 
-`hosts/workbench/` contains the non-umbrella Phoenix LiveView reference
-host, all required HEEx components, a scoped semantic CSS layer,
+`hosts/workbench/` contains the implemented non-umbrella Phoenix LiveView
+reference host, its current HEEx components, a scoped semantic CSS layer,
 server-rendered native SVG charts, three executable experiments,
 session-owned disposable rooms, bounded live metrics and immutable exports,
 formal evidence presentation, and a one-MiB JSON evidence report. Its separate
@@ -22,6 +23,11 @@ each request can include. The ordinary UI remains complete when it is disabled.
 The public `/healthz` route exposes only schema version and required-process
 liveness, creates no session and is usable by the release image's fixed
 loopback probe.
+
+The LiveView/Svelte island architecture, shared Phoenix Assets component
+system, static Storybook, island transport and enhanced reporting components
+specified below are accepted additions and are not implemented by that source
+boundary. Existing HEEx and browser tests do not claim them.
 
 The existing host gate compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
@@ -116,9 +122,11 @@ browser rendering or other Grafana versions.
 ## Product and implementation boundary
 
 The Lab includes a first-class UI: an experiment workbench for the Nx/Elixir
-community. Phoenix LiveView, HEEx function components and a small scoped CSS
-design system are the reference. Livebook/Kino remains the notebook experience;
-it is complementary, not hidden inside a custom notebook editor.
+community. Phoenix LiveView owns the application, session and server state.
+HEEx renders the page shell, semantic fallbacks and ordinary controls. Selected
+browser-intensive components mount Svelte 5 through Phoenix Assets' PHA.02
+island adapter. Livebook/Kino remains the notebook experience; it is
+complementary, not hidden inside a custom notebook editor.
 
 The base `wotex_lab` library remains usable without Phoenix, a browser, PromEx,
 GreptimeDB or an LLM. A non-umbrella reference host at `hosts/workbench/` owns
@@ -129,10 +137,13 @@ UI distribution. This directory is an accepted deliverable, not source already
 implemented by the foundation. No collection of mandatory new repositories.
 
 The base library supplies `Wotex.Lab.DesignSystem.tokens/0`, `version/0` and
-`stylesheet/0`: immutable semantic tokens and deterministic scoped CSS, with
-no runtime filesystem reads, network calls or global CSS reset. The host adds
-HEEx components and assets. Consumers may replace the host/components or
-override tokens without changing a scenario, query or WoT contract.
+`stylesheet/0`: immutable Wotex semantic theme roles and deterministic scoped
+CSS overrides, with no runtime filesystem reads, network calls or global CSS
+reset. Phoenix Assets owns the generic DTCG token source, component CSS, icons,
+HEEx primitives, Svelte primitives, island hook and Storybook. The host composes
+those primitives and may add Wotex-specific HEEx structure. Consumers may
+replace the reference host or override documented semantic roles without
+changing a scenario, query or WoT contract.
 
 ## Interaction and visual language
 
@@ -180,17 +191,29 @@ context.
 
 ## Component and chart contract
 
-Required HEEx components: shell/sidebar, context header, button/icon button,
-field/select, tabs, status badge, empty/error state, accessible data table,
-metric panel, chart with table alternative, tensor summary, query/evidence
-link, prompt composer, answer/source block, and explicit Action approval form.
-All use semantic token roles, slots and documented attributes. No caller HTML
-string injection, Tailwind/DaisyUI requirement, React runtime or second SPA.
+Required shared primitives: shell/sidebar, context header, button/icon button,
+field/select, tabs, status badge, empty/error/loading state, accessible table
+and data grid, panel, chart with table alternative, tooltip, dialog, menu and
+progress. Required Wotex compositions: metric panel, tensor summary,
+query/evidence link, prompt composer, answer/source block and explicit Action
+approval form. All use semantic token roles, slots and documented attributes.
+No caller HTML string injection, Tailwind/DaisyUI requirement, React runtime or
+second client router is permitted.
+
+The generic primitives and reporting components belong to Phoenix Assets and
+are shared by HEEx, Svelte and Storybook. Wotex-specific policy, copy and
+composition remain in the host. A component does not move upstream merely by
+being given a generic name; it moves only when its props, events and behavior
+make sense for an unrelated Phoenix Assets consumer.
 
 Use bounded, renderer-neutral chart descriptors shared with the Livebook/Kino
-lane. The server computes a closed geometry model and HEEx renders native SVG;
-the host ships no client chart compiler, external data loader or arbitrary
-user-authored chart execution. Pin the chart/LiveView compatibility cohort.
+lane. The server computes the admitted domain, marks, gaps, axes, legend,
+provenance and table model. HEEx renders the native SVG and table fallback. A
+registered Phoenix Assets reporting island may enhance that descriptor with
+local hover, selection, comparison, zoom and pan while keeping the same labels,
+gaps, units and evidence identity. The host ships no general chart grammar,
+external data loader or arbitrary user-authored chart execution. Pin the
+chart/island/LiveView compatibility cohort.
 
 Explorer owns optional native dataframe analysis, not chart rendering or
 telemetry storage. Series/range/mark controls are server-admitted and keyboard
@@ -199,9 +222,12 @@ an Action. Summary rows show observed and missing/nonfinite counts and retain
 units and source/query identity. Livebook and LiveView consume the same bounded
 analysis semantics without a required `kino_explorer` dependency.
 
-LiveView updates replace the admitted server-owned SVG atomically; there is no
-browser chart hook or client interpreter lifecycle. Caller `params`, signals,
-expressions and URLs remain forbidden. Pan/zoom is not implemented or claimed.
+Before island adoption, LiveView replaces the admitted server-owned SVG
+atomically. After adoption, LiveView sends revisioned descriptor snapshots or
+patches through PHA.02 and Svelte owns the enhanced chart subtree. Caller
+`params`, signals, expressions and URLs remain forbidden. Local pan/zoom changes
+only the viewport. Any operation that changes a query, dataset, evidence or
+server selection returns to LiveView for admission.
 Line/area/point marks preserve missing-value gaps. SVG includes axis labels,
 ticks, legend, title/description and an explicit zero area baseline. Tables are
 at most 100 rows and disclose truncation rather than embedding every point.
@@ -228,6 +254,95 @@ interval means input points per bucket. A requested downsampling budget below
 five is refused when truncation is needed, rather than dropping an extremum
 or gap to claim success. The fixed normal budget remains 2,000.
 
+## LiveView and Svelte ownership
+
+The Workbench uses one LiveView lifecycle with bounded Svelte islands, not a
+LiveView page beside a Svelte single-page application. LiveView owns routes,
+session and room identity, canonical assigns, server validation, evidence,
+authorization and effectful commands. Svelte owns descendant DOM and local
+presentation state inside one `PhoenixAssets.Svelte.Island` mount root.
+
+Every island declares:
+
+- a stable instance ID and registered component name;
+- a closed public prop schema and event schema;
+- generation and revision identity;
+- snapshot, patch and event byte/depth/count limits;
+- its HEEx semantic fallback;
+- local state that may survive a reconnect;
+- controls that require a connected server; and
+- focus recovery and accessible-name behavior.
+
+The outer boundary and semantic fallback remain LiveView-owned. Its inner mount
+root uses the PHA.02 hook and ignored DOM contract. LiveView may update the
+fallback and the mount root's transport `data-*` attributes. Svelte may update
+only descendants of that mount root. The hook owns only PHA.02's preserved
+readiness handoff attribute on the outer boundary. Any other page patch, island
+update or browser enhancer that crosses those ownership lines is a defect.
+
+The first accepted props are a complete finite snapshot. They arrive inline
+when they fit PHA.02's attribute limit or through its connected bootstrap while
+the fallback remains visible. Connected updates carry a full snapshot or a
+patch tied to the exact base revision. Duplicate revisions are ignored. A
+stale base, sequence gap, invalid operation, wrong instance or digest mismatch
+retains the last valid display and requests one full snapshot. No partial
+update is presented as current.
+
+Client events are untrusted. The host rechecks the instance, browser session,
+room, selected run/query, current revision, payload shape, deadline and
+authorization before changing state. Effectful commands use opaque command IDs
+and server deduplication. Disconnect never queues or replays a prompt
+submission, export, mutation, approval or Action. A reconnected island disables
+server-backed controls until it has accepted a fresh snapshot.
+
+Props contain only the public projection needed to render the component. They
+must not contain socket assigns, PIDs, functions, credentials, provider secrets,
+policy internals, unrestricted structs, full tensors, GPU buffers or
+unbounded telemetry. The browser bundle can reveal all Svelte branches and
+copy; server-confidential conditional content must remain in HEEx or arrive
+only after authorization.
+
+The reference profile uses no Svelte server process. HEEx supplies the first
+render and a patchable fallback beside the ignored mount root. The hook mounts
+the manifested Svelte chunk in the browser, then changes the boundary readiness
+state after a successful flush. A blocked chunk, invalid snapshot or mount
+failure leaves the current fallback visible and the rest of the LiveView
+usable. Hook destruction unmounts Svelte, restores fallback visibility and
+releases every listener, timer, observer and subscription.
+
+## Shared frontend system and Storybook
+
+Phoenix Assets PHA.02 is the source for generic design tokens, CSS, icons,
+component descriptors, Svelte components, HEEx primitives and story fixtures.
+Its authored token file follows Design Tokens Community Group 2025.10. Wotex
+adds semantic theme values through the documented override schema; it does not
+copy component CSS or maintain a parallel Svelte implementation.
+
+The Phoenix Assets Svelte Storybook is the public static component catalogue.
+It imports the same Svelte modules and CSS chunks as the Workbench island
+registry. Story transports are deterministic mocks for local, loading, success,
+validation, error, stale, disconnected and reconnect states. They do not claim
+server authorization, persistence, experiment execution or Action dispatch.
+
+A separate Phoenix Storybook integration host exercises the HEEx wrapper,
+semantic fallback, LiveComponent targets and real LiveView transport against
+the same fixture IDs and digests. It is development and qualification tooling,
+not a production dependency of the base library. Any online live catalogue is
+isolated from production data and credentials, uses a supported patched
+Phoenix Storybook release and has an explicit access decision.
+
+Story coverage includes each applicable variant, size, state, theme, viewport,
+keyboard sequence, focus recovery, reduced-motion outcome and failure mode.
+Automated accessibility and visual checks are gates and review inputs; they do
+not certify WCAG or accept a changed visual baseline automatically.
+
+The Workbench asset build has one Vite owner and one manifest. It loads the
+island runtime once and dynamically imports only registered component chunks
+used on the route. Storybook manager assets, test mocks and catalogue-only code
+must not enter the Workbench production bundle. CSS, runtime and component
+families have compressed and uncompressed budgets. Production assets contain
+no source map, remote runtime URL, runtime compiler or CDN dependency.
+
 ## Accessibility, lifecycle and security
 
 Target WCAG 2.2 AA: keyboard-only operation, visible focus, semantic landmarks,
@@ -237,6 +352,14 @@ system preference unless explicitly chosen. Charts have table/text alternatives.
 Prompt output uses restrained live-region announcements, not token-by-token
 screen-reader flooding. No hidden essential content on small screens.
 
+Island mount and update preserve focus by stable semantic key. If the focused
+control disappears, focus moves to the component's declared recovery target.
+HEEx fallback and mounted Svelte content are never both exposed to assistive
+technology. A mount does not move focus, announce duplicate content or reset a
+user's unsubmitted local input. Interactive table semantics use the WAI-ARIA
+grid pattern only when its full keyboard model is implemented; otherwise the
+component remains a table with ordinary focusable controls.
+
 LiveView starts no experiment merely by mounting/reconnecting. Start, cancel,
 dataset export and simulated mutation have distinct server-admitted commands.
 Authentication/instance scope is rechecked on mount and every event/query;
@@ -244,6 +367,12 @@ expired sessions revoke pending work. WLB.07's origin/CSRF/session/egress limits
 apply. TD extensions, prompts, labels and model responses render as escaped
 text. Use a restrictive CSP, local assets, body/event quotas and secure cookies.
 Browser reconnect cannot replay an approval or repeat an Action.
+
+Island component names come from a build-time registry. Props and events use
+closed schemas and finite limits. The production build contains no runtime
+Svelte compiler, `eval`, remote script, source map or arbitrary dynamic import.
+Island telemetry identifies the component, phase and bounded reason without
+recording props, prompts, credentials or user content.
 
 Action approval names the exact disposable Thing, operation, input, proposal
 digest, current revision and expiry. The server checks policy and freshness at
@@ -254,9 +383,56 @@ with bounds/exhaustion/counterexamples, never a green physical-safety badge.
 Acceptance includes browser tests for keyboard/theme/reflow, empty/denied/
 stale/loading/failure states, multi-session isolation, reconnect/cancel/replay,
 malicious TD/prompt content, bounded chart data, component/token overrides,
-live query vs immutable dataset distinction and no-LLM operation. Token
+live query vs immutable dataset distinction, island mount/update/destroy,
+stale-patch resynchronization, blocked assets, focus recovery, lifecycle leaks
+and no-LLM operation. Token
 contrast tests support this gate but do not prove whole-UI accessibility.
 
-The base library's design-system surface remains tokens/CSS only. The separate
-host implements the endpoint/components; neither token tests nor source-only
-component tests claim the complete real-browser acceptance suite.
+The base library's design-system surface remains Wotex theme tokens/CSS only.
+The separate host selects Phoenix Assets, Vite, Svelte and LiveView. Neither
+token tests, Storybook stories nor source-only component tests claim the
+complete real-browser acceptance suite.
+
+## Requirement catalogue
+
+| ID | Requirement |
+| --- | --- |
+| WLB-S11-01 | Keep the base `wotex_lab` library independent from Phoenix, Vite, Svelte, Node and a browser while shipping immutable Wotex theme roles. |
+| WLB-S11-02 | Use one LiveView application lifecycle and mount Svelte only through registered PHA.02 islands with exclusive descendant DOM ownership. |
+| WLB-S11-03 | Keep session, room, authorization, canonical state, evidence and effectful commands on the server; expose only closed bounded browser projections. |
+| WLB-S11-04 | Apply revisioned snapshots and patches, request full state after any gap or reconnect, and never replay an unacknowledged effectful command. |
+| WLB-S11-05 | Compose one Phoenix Assets token/CSS/component system across HEEx, Svelte, DocShell and Storybook without a host component-style fork. |
+| WLB-S11-06 | Render useful HEEx fallbacks and preserve the Workbench's admitted operation when an island, asset or LiveSocket is unavailable. |
+| WLB-S11-07 | Enhance bounded charts and data controls without admitting arbitrary client programs, remote data, unbounded values or browser-owned evidence. |
+| WLB-S11-08 | Build the production Svelte components as a static Storybook and test their real LiveView integration in a separate Phoenix Storybook host. Hosted publication follows the WLB.08 qualification runbook. |
+| WLB-S11-09 | Meet the specified keyboard, focus, landmark, reflow, contrast, motion, theme, failure and disconnected-state behavior. |
+| WLB-S11-10 | Ship one local content-hashed Vite graph with code splitting, bundle budgets, no production Storybook manager and no Node runtime process. |
+| WLB-S11-11 | Preserve session isolation, reconnect safety, explicit Action approval, escaped untrusted content and restrictive browser policy across every island event. |
+| WLB-S11-12 | Keep generic components upstream and Wotex domain policy/composition in the host, with executable boundary checks in both repositories. |
+
+## Executable vectors
+
+| ID | Evidence |
+| --- | --- |
+| WLB-V11-01 | A fresh base-library consumer compiles and runs its design-system API without Phoenix, Node, Vite, Svelte or browser assets. |
+| WLB-V11-02 | The Workbench mounts, updates, navigates away from and destroys every island family repeatedly without duplicate instances or retained listeners, timers, observers or subscriptions. |
+| WLB-V11-03 | Duplicate, stale, skipped, reordered, malformed, oversized and wrong-instance updates retain the last valid view and result in one full resynchronization. |
+| WLB-V11-04 | Socket loss disables server-backed island commands; reconnect sends a full current snapshot and does not repeat a run, export, prompt, approval or Action. |
+| WLB-V11-05 | Two sessions and two rooms cannot substitute island instance, revision, query, run, evidence or command identity. |
+| WLB-V11-06 | Props and client events reject credentials, socket assigns, PIDs, functions, unrestricted structs, full tensors, unbounded telemetry and unknown fields before transport. |
+| WLB-V11-07 | Enhanced charts preserve gaps, units, labels, evidence/query identity, accessible description and the bounded table fallback across themes and updates. |
+| WLB-V11-08 | JavaScript-disabled, blocked-chunk, mount-failure and invalid-snapshot cohorts retain shell, fallback, ordinary navigation and every declared safe server action. |
+| WLB-V11-09 | The static Storybook imports the same component chunks, CSS and fixture digests as the Workbench; mocks are visibly distinct from real server operation. |
+| WLB-V11-10 | Phoenix Storybook and Workbench browser cohorts cover keyboard/pointer interaction, focus recovery, 320-pixel reflow, 400% zoom, themes, high contrast, reduced motion, loading/error/disconnected states and assistive-content handoff. |
+| WLB-V11-11 | Production asset inspection finds one manifest, declared chunks within budget and no Storybook manager, source map, remote runtime URL, runtime compiler, arbitrary import or Node production process. |
+| WLB-V11-12 | The clone-free Workbench artifact runs the three experiments, metrics, evidence, documentation entry and no-LLM flow with islands enabled and with their client chunks deliberately unavailable. |
+
+## Completion boundary
+
+The current HEEx host remains valid partial evidence. WLB.11 is complete only
+when WLB-S11-01 through WLB-S11-12 and WLB-V11-01 through WLB-V11-12 pass
+against pinned PHA.02 artifacts. Static Storybook publication is hosted
+adoption evidence, not proof of LiveView transport. Phoenix Storybook and local
+browser runs are source evidence until the tested host artifact and dependency
+cohort are recorded under WLB.08. Publication and hosted adoption follow the
+[qualification runbook](../plans/qualification.md).

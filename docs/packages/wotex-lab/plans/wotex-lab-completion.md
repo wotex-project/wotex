@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.4.2. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.5.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
@@ -23,6 +23,12 @@ It retains the independent numerical, dataframe and rendering layers, bounded
 missing-aware previews, the passive first-tensor closure and every existing
 acceptance gate. Archived packages and advisory conflicts are not waived.
 
+Version 1.5 selects the PHA.02 shared design system and bounded Svelte islands
+inside the LiveView Workbench. LiveView retains routes, authorization,
+canonical state, evidence and effectful commands. The same production Svelte
+components publish through static Storybook; HEEx fallbacks and a separate
+Phoenix Storybook host cover no-JavaScript and real-transport behavior.
+
 ## Work packages
 
 | ID | Prerequisites | Required deliverable | Acceptance |
@@ -36,11 +42,11 @@ acceptance gate. Archived packages and advisory conflicts are not waived.
 | WLB-C07 | WLB-C02–C06; WCF.01 | Versioned evidence, independent target, telemetry, chaos and benchmarks | WLB.06 positive/negative outcomes, subprocess isolation, pinned artifacts, leak sentinels, calibrated performance cohorts |
 | WLB-C08 | WLB-C02–C07; WLB-C09; WLB-C13 | All sixteen executable cookbooks and generated public graph/interfaces | WLB.07 rows run as notebooks and automated scenarios; IDs/callbacks/sources resolve; ownership retrieval corpus passes |
 | WLB-C09 | WLB-C03; WLB-C06; WLB.09 | Explicit ex_maude profile, finite control model, bounded verification and counterexample replay | All formal-model cases, inconclusive vs exhaustion proof, no implicit binary install, two pools, timeout/crash/secret/injection tests; verification never dispatches |
-| WLB-C10 | WLB-C07–C09; WLB.08 | Complete artifact/distribution and compatibility dossier | Archive/no-Git consumer, Hex/Mix.install, OCI/npm/hosted/Nerves checks, minimum/current and allowed-dependency cohorts, SBOM/license/security review |
-| WLB-C11 | WLB-C10 | Explicit API and readiness decision | Every retained API/result/error/default and claim has evidence; incompatible changes have migration decisions; maintainer reviews candidate |
+| WLB-C10 | WLB-C07–C09; WLB.08 | Complete artifact builders, distribution checks and compatibility dossier | Archive/no-Git consumers, candidate Hex/Mix.install, OCI/npm/static/Nerves artifact checks, minimum/current and allowed-dependency cohorts, SBOM/license/security review; hosted and physical adoption use the qualification runbook |
+| WLB-C11 | WLB-C10 | Explicit API compatibility report and readiness inputs | Every retained API/result/error/default and claim has evidence; incompatible changes have migration options; the maintainer's release or stable-API decision is qualification, not source implementation |
 | WLB-C12 | WLB-C07; WLB.10 | PromEx metrics/panels, bounded ETS history, GreptimeDB bridge/query port and BeamLens skill | Protocol/store equality, retention, cardinality, loss/reset/clock cases, isolation, secret/prompt injection, cancellation and evidence-grounded AI queries |
-| WLB-C13 | WLB-C03; WLB-C07; WLB-C12; WLB.11 | Neutral base design system and explicit Phoenix LiveView workbench host | Tokens and accessible HEEx components, bounded charts, dashboard exports, no-LLM flow, keyboard/theme/reconnect/security browser suite and clone-free host artifact |
-| WLB-C14 | WLB-C08; WLB-C10; WLB-C13; WLB.12; DSH.01; PHA.01 | Unified built-in and static ecosystem documentation | All allowlisted packages and documentation sources emit isolated corpora; routes/links/search resolve; LiveView/static semantics match; offline archive, browser/accessibility and fail-closed rolling/release publication vectors pass |
+| WLB-C13 | WLB-C03; WLB-C07; WLB-C12; WLB.11; PHA.02 | Neutral base theme and explicit Phoenix LiveView workbench with bounded Svelte islands | Shared tokens/components, typed island transport, HEEx fallbacks, bounded enhanced charts, static Storybook, real LiveView catalogue, dashboard exports, no-LLM flow, lifecycle/keyboard/theme/reconnect/security browser suite and clone-free host artifact |
+| WLB-C14 | WLB-C08; WLB-C10; WLB-C13; WLB.12; DSH.01; PHA.01; PHA.02 | Unified built-in and static ecosystem documentation | All allowlisted packages and documentation sources emit isolated corpora; routes/links/search resolve; LiveView/static semantics and design-system digests match; docs and static Storybook compose collision-free; offline archive, browser/accessibility and fail-closed workflow-source vectors pass |
 
 WLB-C01, descriptor/Nx example source and C13's base tokens form the foundation deliverable.
 The catalogue records their status; prose or a source-only test cannot imply
@@ -78,9 +84,12 @@ The gates in WLB.08 are independent: foundation, package contents, base archive
 consumer, full-host Workbench archive, reference consumer, documentation
 distribution, general distribution, public candidate, stable API.
 Record exact commands, source tree/lock/artifact/schema/model digests,
-toolchains, resource envelope and claim dimensions. Missing artifacts or hardware
-remain unsatisfied evidence prerequisites. They do not permit a fake pass,
-visibility change, publication, or a weaker clone-free definition.
+toolchains, resource envelope and claim dimensions. The source gates determine
+implementation status. Hosted adoption, publication, physical hardware and
+maintainer release/API decisions follow the
+[qualification runbook](qualification.md). Missing external prerequisites do
+not permit a fake pass, visibility change, publication, or a weaker clone-free
+definition.
 
 No local tracker, coordinator state, worker attempt or consumer filesystem path
 belongs in a published package. Package allowlists exclude the root `docs/tasks/local/wotex-lab/`.

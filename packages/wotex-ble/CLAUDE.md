@@ -58,8 +58,8 @@ root `CLAUDE.md`.
   guardian sources, the vendored JSON header and the libdbus pin
   (`dependencies.json`).
 - Specifications: `docs/packages/wotex-ble/specs/` (WBL.01–WBL.03,
-  WBL.04–WBL.07; `catalogue.yaml` owns status). Plans and evidence:
-  `docs/packages/wotex-ble/plans/` and `provenance/`.
+  WBL.04–WBL.07; `catalogue.yaml` owns status). Plans, the qualification
+  runbook and evidence: `docs/packages/wotex-ble/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, custody, native-port and integration
   corpora).
 - Test support: `test/support/` (scripted clients, Runtime ports, native

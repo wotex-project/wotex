@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.6. Contract: accepted. Source status: the workspace
+Specification version: 0.9.7. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -8,12 +8,23 @@ generated npm client source gate are implemented. The
 Workbench also has a digest-pinned, non-root OCI Dockerfile, data-free health
 route and offline image-source gate; Docker's build-graph check passes, but no
 runnable image is claimed while its WoTEx Hex dependencies are unpublished.
-The full reference-consumer, distribution and release-candidate runners, built
-OCI image, published npm artifact, hosted deployment, prebuilt Nerves firmware
-and on-device evidence remain planned. The rpi4 firmware project, exact Nerves
+The full reference-consumer runner, artifact builders and local distribution
+checks remain implementation work. Published npm/Hex/container adoption, hosted
+deployment and on-device evidence are qualification states governed by the
+[qualification runbook](../plans/qualification.md), not missing source. The
+rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+## Implementation and qualification status
+
+`implementation_status` records whether the source, build tasks, workflows and
+executable local contracts exist. `evidence_status` records how much of that
+source has current results. `adoption_status` records use by an independent
+artifact or hosted environment. Missing credentials, publication, hosted
+services, Nerves hardware or a particular runner affect evidence or adoption;
+they do not keep implemented source partial.
 
 ## Dependency modes
 
@@ -61,6 +72,12 @@ new source implementation status does not change the historical index or imply
 independent artifact adoption. Dated follow-up decisions live in the seam review.
 
 ## Distinct gates
+
+The foundation through documentation-distribution gates are executable source
+and candidate-artifact contracts. General distribution, hosted adoption,
+physical-device results and maintainer release/API decisions use the
+qualification runbook. A source implementation may provide every command and
+workflow before those external claims are available.
 
 | Gate | Required proof |
 | --- | --- |
@@ -231,10 +248,11 @@ audit disable. `kino_explorer` is not an admitted new required dependency.
 Chart wrappers cannot introduce a client-side renderer/dialect or widen the
 native descriptor to external URLs, arbitrary expressions or raw JavaScript.
 
-Nerves is a required delivery lane: name the supported target (`rpi4` baseline),
-pin the Nerves system/firmware/toolchain, supply a prebuilt bootable image with
-integrity/license information, and test offline/start/reconnect plus a recorded
-on-target smoke. Host compilation alone cannot pass hardware execution.
+Nerves source must name the supported target (`rpi4` baseline), pin the Nerves
+system/firmware/toolchain, build a bootable image with integrity/license
+information, and supply the offline/start/reconnect and smoke procedures.
+Physical execution and prebuilt-image adoption follow the qualification
+runbook. Host compilation does not claim hardware execution.
 The target uses the numerical baseline and explicit supported network adapters;
 native EXLA/Maude are capability-specific, not assumed available on firmware.
 Build instructions accompany the image; no embedded compiler is required to
@@ -249,10 +267,9 @@ it runs the BinaryBackend thermal baseline and reads a simulated Property
 through two separately owned loopback Thing processes, returning a public
 evidence record without invoking an Action. Its boot assertion is `not_run` on
 the host target and can pass only in an rpi4-compiled release. The checked-in
-host test and `bin/check_nerves_source.exs` prove this source contract. They do
-not substitute for the still-required released-package firmware build,
-firmware checksum/license dossier, offline boot, physical reconnect or recorded
-on-target smoke.
+host test and `bin/check_nerves_source.exs` prove this source contract. Released
+package resolution, firmware adoption, offline boot, physical reconnect and a
+recorded on-target smoke remain separate qualification claims.
 
 Maude licensing, binary provenance and platform support follow WLB.09. The
 native containment distributions follow WLB.06 profile 2.0.2: ship reviewed

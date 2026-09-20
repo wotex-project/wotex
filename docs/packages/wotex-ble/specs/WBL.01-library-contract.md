@@ -3,7 +3,7 @@ spec:
   id: WBL.01
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.8
+  version: 1.1.9
   owner: wotex-ble
   updated: 2026-09-20
 ---
@@ -295,7 +295,7 @@ SDK, executable, kernel facility or response is missing. Physical `:hardware`
 tests are independent and do not block software completion. No skipped required
 software lane can be reported as a pass.
 
-## WBL-C10 — Commits and completion
+## WBL-C10 — Source completion and qualification
 
 Implement one work package from the plan, its tests, docs and provenance as one
 reviewable change. Run `mix check` from the repository root before every local
@@ -305,15 +305,18 @@ alone nor an injected mock is interoperability proof. Native dependency audits
 are additional to the Elixir gate. Keep exact source pins and review any changed
 dependency/advisory instead of ignoring it.
 
-Before calling the software profile complete: all requirement vectors pass; all
-required software lanes run; public capability claims match implementations;
-README/current-profile documents match behavior; vector SHA-256 identities are
-current; the declared minimum-version matrix passes; and, from clean committed
-source, the package gate `mix pkg wotex-ble check --no-retry` passes, including
-its archive check and out-of-tree package compilation. Include native bridge
-assets explicitly in the package allowlist only where the package's shipped Mix
-tasks need them (root `CLAUDE.md`), excluding build caches, credentials,
+Source completion requires every public capability to match its implementation,
+every requirement vector to have an executable assertion, current vector
+identities, and the focused and package checks reachable on the development
+host. Include native bridge assets in the package allowlist only where shipped
+Mix tasks need them (root `CLAUDE.md`), excluding build caches, credentials,
 sockets, PLTs, fixture state and downloaded SDKs.
+
+The [qualification runbook](../plans/qualification.md) owns operating-system,
+architecture, sanitizer, virtual-guest, clean-archive, artifact-adoption and
+physical-controller matrices. Missing access to one of those environments
+prevents that qualification claim; it does not keep otherwise implemented
+source marked partial or planned.
 
 Commit with the identity already configured by the contributor, as the root
 `CLAUDE.md` requires, and never record an agent, tool or bot as author,

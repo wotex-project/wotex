@@ -3,16 +3,19 @@ spec:
   id: WBL.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.24
+  version: 1.0.25
   owner: wotex-ble
-  updated: 2026-09-18
+  updated: 2026-09-20
 ---
 
 # WBL.07 Native backend, build and IPC contract
 
-This is the accepted native BlueZ target. [Current implementation and evidence](../provenance/executable-evidence.md)
-are separate. This contract and the .00/.10/.11/.12 requirements jointly define
-acceptance; documentation or a source archive alone is not completed software.
+This is the accepted native BlueZ target. [Current implementation and
+evidence](../provenance/executable-evidence.md) are separate. This contract and
+the .00/.10/.11/.12 requirements define source behavior. The
+[qualification runbook](../plans/qualification.md) owns architecture,
+sanitizer, virtual-guest, clean-archive, artifact-adoption and physical-device
+claims.
 
 ## WBL-B01 — Production and build boundary
 
@@ -44,19 +47,12 @@ each executable, source hash and purpose. Fixture execution otherwise uses the
 repository stack languages and cannot implement responses on behalf of the
 production adapter.
 
-The required reference native lane is Linux x86_64, Debian 12, GCC/G++ 12.2.0;
-CMake 3.25.1 applies to CMake targets, Ninja 1.11.1 to native builds. SDK-required
-GN/generation tools use the immutable upstream lock entries and are recorded by
-actual executable SHA-256. Cross compilation requires an explicit target triple;
-an architecture mismatch fails before execution. Additional architectures are
-separate evidenced lanes. Reference-lane acceptance requires, for both BEAM
-lanes on Linux x86_64, the native build, the native component tests in the
-ordinary, ASan/UBSan and LeakSanitizer lanes, the private-bus host and bus tests,
-and the software run with an x86_64 guest. Each recorded result names its
-architecture and whether it executed natively or under binary translation.
-BEAM matrix: Elixir 1.18.4/OTP 27.3.4.15 and
-Elixir 1.20.2/OTP 29.0.4. The software runner executes the native client and real
-Runtime calls in both lanes, independently of physical hardware.
+The build supports the Linux architectures admitted by its explicit toolchain
+and target checks. SDK-required generation tools use immutable upstream lock
+entries and are recorded by executable SHA-256. Cross compilation requires an
+explicit target triple; an architecture mismatch fails before execution. The
+runbook defines which native architectures, BEAM cohorts, sanitizer lanes and
+virtual guests must be executed for a particular qualification claim.
 
 `native-manifest.json` has schema `wotex.native-build`, version `1`, package,
 source_revision, source_files (relative path/SHA-256), upstream sources (URL,
@@ -114,9 +110,9 @@ the workspace path: `Dockerfile.system`, `Dockerfile.bluez` and
 lanes and runs `mix wotex.native.build`. It is exported to `rootfs.tar` and a
 6 GiB `rootfs.raw` guest disk. `software-manifest.json` binds inputs, tools,
 downloads, images, guest build evidence, the guest native manifest, logs and
-artifact digests; sources that change during the build fail it. The arm64
-images and guest form an additional architecture lane; the x86_64 reference
-lane requires the same build and run with x86_64 images and guest.
+artifact digests; sources that change during the build fail it. The images and
+guest retain their architecture in the manifest so qualification cannot
+substitute one architecture for another.
 
 `mix wotex.software.run` verifies that manifest read-only and never builds. For
 each lane it creates a copy-on-write overlay and boots one QEMU TCG guest in an

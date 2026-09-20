@@ -22,21 +22,30 @@ another schema and another place for navigation and links to diverge.
 Mature static documentation systems establish a useful user-experience floor:
 responsive hierarchical navigation, keyboard search, table of contents,
 themes, localization, source links, reading flow, code tools, structured
-content and static SEO. Those capabilities are accepted as renderer behavior,
-without importing another framework into the LiveView host.
+content and static SEO. Those capabilities are accepted as renderer behavior.
+Decision 0010 permits registered Svelte islands inside the LiveView host but
+does not make an island necessary for article, navigation or provenance.
 
 Phoenix function components can render in LiveView and as HTML-safe iodata.
 Using the same components for static export keeps the content and accessibility
 structure aligned. Browser enhancement is shared through a framework-neutral
 Phoenix Assets entry so the static site does not require a LiveSocket.
 
+The same Phoenix Assets token, CSS and component contract also supplies the
+Workbench and the statically published Svelte Storybook. The Storybook renders
+production Svelte components with mock transports. Real LiveView integration
+belongs to a separate Phoenix Storybook host and is not part of the static
+documentation artifact.
+
 ## Consequences
 
 - DocShell owns multi-corpus site semantics and static-export behaviours.
-- Phoenix Assets owns Svelte and LiveView renderers and their shared browser
-  behavior.
+- Phoenix Assets owns the design system, Svelte and LiveView renderers, island
+  adapter, Storybook and shared browser behavior.
 - Lab owns only source membership, taxonomy, branding, routes and deployment.
 - Public and release documentation disclose exact cohorts.
 - A failed build retains the preceding complete static site.
 - Hosting remains replaceable because the output is an ordinary static
   directory.
+- Static documentation and Storybook publish as separate manifested trees in
+  one fail-closed deployment.

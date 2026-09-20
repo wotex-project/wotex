@@ -2,6 +2,10 @@
 
 Status: accepted. Applies to WLB.10/WLB.11 and completion plan 1.1.0.
 
+[Decision 0010](0010-liveview-svelte-islands.md) later extends the rendering
+selection with bounded Svelte islands. LiveView remains the application,
+session, authorization and canonical-state owner selected here.
+
 The reference stack is Phoenix LiveView/HEEx, Telemetry.Metrics/PromEx,
 bounded ETS snapshots, GreptimeDB durable history and on-demand BeamLens.
 Livebook/Kino is the notebook path. Shared semantic CSS tokens live in the
