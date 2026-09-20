@@ -143,6 +143,7 @@ defmodule WotexLab.MixProject do
       },
       # Tarballs ship no Markdown documentation; specifications reach
       # consumers through HexDocs.
+      exclude_patterns: [~r{\Apriv/conformance/native/target(?:/|\z)}],
       files: ~w(lib priv/fixtures priv/models priv/cookbooks priv/conformance priv/provenance
         .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
     ]

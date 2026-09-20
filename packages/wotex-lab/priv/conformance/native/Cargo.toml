@@ -23,6 +23,10 @@ name = "containment-probe"
 path = "probes/main.rs"
 required-features = ["test-probes"]
 
+[[bin]]
+name = "wotex-reference-runner"
+path = "src/bin/reference_runner.rs"
+
 [profile.release]
 strip = true
 lto = true

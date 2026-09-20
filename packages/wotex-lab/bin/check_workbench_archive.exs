@@ -35,8 +35,9 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
              bin/support/work_directory.exs priv/provenance/workbench-bom.cdx.json
              priv/provenance/wotex-lab-api.json)
 
-  @spec run() :: :ok
-  def run do
+  @spec run([String.t()]) :: :ok
+  def run(argv) do
+    output = output!(argv)
     root = Path.expand("..", __DIR__)
     host_source = Path.join(root, "hosts/workbench")
     work = Wotex.Lab.Check.WorkDirectory.create!(root, :workbench_archive)
@@ -77,8 +78,22 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       run!(consumer, env, ["compile", "--warnings-as-errors"], "Workbench compilation")
       run!(consumer, env, ["release", "--overwrite"], "Workbench release")
       checks = release_smoke(consumer, env)
+      artifacts = export_artifacts(output, consumer, source_archive)
       elapsed = elapsed_ms(started)
-      evidence = record(root, work, source_archive, admitted, native, resolved, checks, elapsed)
+
+      evidence =
+        record(
+          root,
+          work,
+          source_archive,
+          admitted,
+          native,
+          resolved,
+          checks,
+          artifacts,
+          elapsed
+        )
+
       cleanup(work, source_archive, tarballs, consumer, registry)
 
       IO.puts(
@@ -292,11 +307,56 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     end
   end
 
+  defp output!(argv) do
+    argv
+    |> Enum.reject(&(&1 == "--update-sbom"))
+    |> output_path!()
+  end
+
+  defp output_path!([]), do: nil
+
+  defp output_path!(["--output", path]) do
+    (Path.type(path) == :absolute and not File.exists?(path)) ||
+      abort("--output must name a new absolute directory")
+
+    File.mkdir_p!(Path.dirname(path))
+    File.mkdir!(path)
+    File.chmod!(path, 0o700)
+    Path.expand(path)
+  end
+
+  defp output_path!(_),
+    do: abort("usage: mix run --no-start bin/check_workbench_archive.exs [--output ABSOLUTE_PATH]")
+
+  defp export_artifacts(nil, _, _), do: []
+
+  defp export_artifacts(output, consumer, source_archive) do
+    source_target = Path.join(output, "wotex-lab-workbench-source.tar")
+    File.cp!(source_archive, source_target)
+
+    release_root = Path.join(consumer, "_build/prod/rel")
+    release = Path.join(release_root, "wotex_lab_workbench")
+    architecture = List.to_string(:erlang.system_info(:system_architecture))
+    release_target = Path.join(output, "wotex-lab-workbench-#{architecture}.tar.gz")
+
+    {log, status} =
+      System.cmd("tar", ["-czf", release_target, "-C", release_root, Path.basename(release)],
+        env: ChildEnvironment.scrubbed(),
+        stderr_to_stdout: true
+      )
+
+    status == 0 || abort("Workbench release artifact failed (#{status}):\n#{log}")
+
+    Enum.map([release_target, source_target], fn path ->
+      "artifact:#{Path.basename(path)}:#{Digest.file!(path)}"
+    end)
+  end
+
   defp run!(consumer, env, args, label) do
     ArchiveRepository.run!(consumer, env, args, label, @deadline_ms)
   end
 
-  defp record(root, work, source_archive, admitted, native, resolved, checks, elapsed) do
+  defp record(root, work, source_archive, admitted, native, resolved, checks, artifacts, elapsed) do
     {:ok, source_tree_digest} = Digest.tree(root, @cohort)
     {:ok, lock_digest} = Digest.file(Path.join(root, "hosts/workbench/mix.lock"))
 
@@ -325,6 +385,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
         budgets: %{deadline_ms: @deadline_ms},
         inputs:
           ["source:#{Digest.file!(source_archive)}"] ++
+            artifacts ++
             Enum.map(admitted, &"archive:#{&1.name}-#{&1.version}:#{&1.origin}"),
         assertions: assertions,
         outcomes: %{
@@ -374,4 +435,4 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
   end
 end
 
-Wotex.Lab.Check.WorkbenchArchive.run()
+Wotex.Lab.Check.WorkbenchArchive.run(System.argv())

@@ -11,11 +11,17 @@ defmodule Wotex.Lab.ReferenceInputsTest do
              priv/cookbooks/example.livemd priv/fixtures/example.json
              priv/models/example.maude priv/conformance/profile.json
              priv/conformance/native/Cargo.lock priv/conformance/native/src/main.rs
+             priv/conformance/native/src/bin/reference_runner.rs
              priv/conformance/native/tests/lifecycle.rs priv/conformance/native/probes/probe.rs
              priv/provenance/source-index.json priv/provenance/source-cohort.json
              priv/provenance/WLB.05-evidence.json
+             bin/build_artifacts.exs bin/check_distribution.exs
              bin/check_reference_consumer.exs bin/check_source_cohort.exs
-             bin/support/reference_inputs.exs bin/support/reference_summary.exs
+             bin/check_workbench_archive.exs
+             bin/support/archive_repository.exs bin/support/child_environment.exs
+             bin/support/distribution.exs
+             bin/support/reference_inputs.exs bin/support/reference_runner.exs
+             bin/support/reference_summary.exs
              bin/support/work_directory.exs .check.exs .formatter.exs mix.exs mix.lock
              README.md LICENSE NOTICE CHANGELOG.md SECURITY.md CONTRIBUTING.md)
 
@@ -25,6 +31,9 @@ defmodule Wotex.Lab.ReferenceInputsTest do
   } do
     for relative <- @inputs, do: put_file(root, relative, "initial")
     assert {:ok, original} = ReferenceInputs.digest(root)
+
+    assert Enum.sort(ReferenceInputs.files(root)) ==
+             Enum.sort(Enum.map(@inputs, &Path.join(root, &1)))
 
     for relative <- @inputs do
       put_file(root, relative, "changed")
