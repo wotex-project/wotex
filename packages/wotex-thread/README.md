@@ -35,17 +35,20 @@ end
 ## Accepted native target
 
 The accepted backend retains the existing first-party C++17 OpenThread
-Port. The Port owns Commissioner and Joiner callbacks; complete
-simulated-network workflows and final lifecycle qualification remain required.
+Port. The Port owns Commissioner and Joiner callbacks. The explicit Linux
+software lane now contains the complete simulated-network workflow; executing
+that lane on the required architectures and completing final lifecycle
+qualification remain separate gates.
 Python is not a production runtime dependency. The injected BEAM ownership peer
 is an Erlang escript, the native build is a Mix task, and active software tests
 use ExUnit. Dormant Python protocol/process drivers have been retired.
 
 [WTH.07](../../docs/packages/wotex-thread/specs/WTH.07-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. On Linux, the native build task builds the
-pinned host, the software build adds a sanitizer host, the simulation RCP and
-native test executables, and the software run executes the native tests and the
-required ExUnit software lanes against that manifest (commands under
+pinned host. The software build adds a sanitizer host, the simulation RCP, a
+workspace-local POSIX daemon, the sensor/light CoAP peer and native test
+executables. The software run executes the native tests and the required ExUnit
+software lanes against that manifest (commands under
 [Development](#development)). Generic orchestration and
 assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
 
@@ -188,18 +191,25 @@ dispatches the same native build; inside the package the short aliases
   instrumentation.
 - The software build requires the same Linux toolchain and the checked-in
   `test/native` sources. It builds a normal and a sanitizer host, the pinned
-  simulation RCP and the native test executables, and writes
-  `software-manifest.json`.
+  simulation RCP, the POSIX daemon, the native test executables and the pinned
+  OpenThread CoAP application peer. The manifest fixes separate node IDs for
+  the leader, joiner, daemon, sleepy sensor and light, plus the daemon socket
+  and application resources.
 - The software run requires Linux, `mix` on `PATH` and a completed software
   workspace; it never builds. It runs the sanitizer native tests, then the full
   suite with `--include interop --include software --exclude hardware` against
-  the normal host and the software and native-contract tests against the
-  sanitizer host, with `WOTEX_REQUIRE_SOFTWARE=1`. It writes
+  the normal host and the software, native-contract and OpenThread-network
+  tests against the sanitizer host, with `WOTEX_REQUIRE_SOFTWARE=1`. The network
+  cases form and commission real simulated peers, distinguish pending Dataset
+  acceptance from activation, read the borrowed daemon through `ConsumedThing`,
+  and exercise the sensor/light resources through the Wotex CoAP package. It writes
   `software-run/result.json`; a run directory is terminal, so another run
   needs a fresh software workspace.
 
-These lanes do not establish physical-radio interoperability or complete the
-remaining software-network and lifecycle requirements. The `hardware` test
+These source lanes do not become execution evidence until run successfully on
+the required Linux targets. They do not establish physical-radio
+interoperability or complete the remaining lifecycle, archive and runtime-matrix
+requirements. The `hardware` test
 needs an existing `ot-daemon` socket:
 `WOTEX_THREAD_DAEMON_SOCKET=/run/openthread-wpan0.sock mix pkg wotex-thread test test/interop/daemon_device_test.exs --include hardware`.
 
@@ -225,8 +235,10 @@ The [specification catalogue](../../docs/packages/wotex-thread/specs/catalogue.y
 profiles from planned contracts. The [Wotex integration contract](../../docs/packages/wotex-thread/specs/WTH.06-wotex-integration.md)
 defines the Runtime profile, route/value/error boundaries and public
 `ConsumedThing` tests. The local deterministic corpus executes in the ordinary
-test lane. Archive isolation, the required software peer and the runtime matrix
-remain separate acceptance work.
+test lane. The software runner repeats the selected daemon interaction against
+its pinned OpenThread peer. Archive isolation and the minimum/current runtime
+matrix remain separate acceptance work, and this ARM64 development checkout
+does not stand in for the required Linux qualification run.
 
 ## License
 

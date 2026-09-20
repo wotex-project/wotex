@@ -43,7 +43,7 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "commissioner_rejected" => :commissioner_rejected,
     "not_owned" => :not_owned,
     "cancelled" => :cancelled,
-    "management_timeout" => :management_timeout,
+    "management_timeout" => :timeout,
     "formation_timeout" => :formation_timeout,
     "busy" => :busy,
     "storage_unavailable" => :storage_unavailable,

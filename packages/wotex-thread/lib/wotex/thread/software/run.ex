@@ -209,6 +209,7 @@ defmodule Wotex.Thread.Software.Run do
     source = source_identity(environment)
     guardian = Path.join(workspace, "bin/build-command")
     executables = Build.executables(workspace)
+    fixture = Build.fixture(workspace)
     native = Enum.map(executables.native_tests, &native_test(guardian, output, &1))
 
     lanes =
@@ -247,6 +248,10 @@ defmodule Wotex.Thread.Software.Run do
       "source_unchanged" => source == source_after,
       "software_manifest_sha256" => digest(Path.join(workspace, "software-manifest.json")),
       "binaries" => manifest["binaries"],
+      "fixture" => %{
+        "daemon_socket" => Path.relative_to(fixture.daemon_socket, workspace),
+        "node_ids" => Map.new(fixture.node_ids, fn {name, id} -> {Atom.to_string(name), id} end)
+      },
       "native_hosts" => %{
         "normal" => digest(executables.host),
         "sanitized" => digest(executables.sanitized_host)
@@ -296,6 +301,7 @@ defmodule Wotex.Thread.Software.Run do
       context
 
     inventory = lane_spec.inventory
+    fixture = Build.fixture(Path.dirname(output))
     cases = Path.join(output, "#{lane}-cases.jsonl")
     tmp = Path.join(output, "tmp-#{lane}")
     :ok = File.mkdir(tmp)
@@ -311,6 +317,14 @@ defmodule Wotex.Thread.Software.Run do
         {"WOTEX_REQUIRE_SOFTWARE", "1"},
         {"WOTEX_THREAD_HOST", host},
         {"WOTEX_THREAD_RCP", executables.rcp},
+        {"WOTEX_THREAD_DAEMON", executables.daemon},
+        {"WOTEX_THREAD_COAP_PEER", executables.coap_peer},
+        {"WOTEX_THREAD_DAEMON_SOCKET", fixture.daemon_socket},
+        {"WOTEX_THREAD_NODE_LEADER", Integer.to_string(fixture.node_ids.leader)},
+        {"WOTEX_THREAD_NODE_JOINER", Integer.to_string(fixture.node_ids.joiner)},
+        {"WOTEX_THREAD_NODE_DAEMON", Integer.to_string(fixture.node_ids.daemon)},
+        {"WOTEX_THREAD_NODE_SENSOR", Integer.to_string(fixture.node_ids.sensor)},
+        {"WOTEX_THREAD_NODE_LIGHT", Integer.to_string(fixture.node_ids.light)},
         {"WOTEX_THREAD_CONTRACT_DRIVER", executables.contract_driver},
         {"WOTEX_THREAD_DATASET_SEED", executables.dataset_seed},
         {"WOTEX_THREAD_FLOW_HOST", executables.flow_host},

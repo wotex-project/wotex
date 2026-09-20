@@ -4,9 +4,10 @@ defmodule Wotex.Thread.Software.Build do
 
   One disposable workspace receives a normal and an AddressSanitizer/
   UndefinedBehaviorSanitizer native host through `Wotex.Thread.Native.Build`,
-  the pinned OpenThread simulation RCP, and sanitizer-instrumented native test
-  executables. The native parser, output, flow and storage tests plus the
-  contract driver link only first-party headers; the Dataset seed and Spinel
+  the pinned OpenThread simulation RCP, a read-only POSIX daemon, and
+  sanitizer-instrumented native test executables. The native parser, output,
+  flow and storage tests plus the contract driver link only first-party
+  headers; the Dataset seed and Spinel
   test link the manifest-bound patched SDK tree. An uninstrumented
   `wotex-thread-flow-host` adds a test-only State callback source to the
   production host for process-flow cases. Every command runs through the
@@ -27,12 +28,15 @@ defmodule Wotex.Thread.Software.Build do
   @pure_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
     wotex-thread-streams-test wotex-thread-flow-test wotex-thread-contract-driver)
   @sdk_tests ~w(wotex-thread-dataset-seed wotex-thread-spinel-test)
+  @application_peer "wotex-thread-coap-peer"
   @native_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
     wotex-thread-streams-test wotex-thread-flow-test wotex-thread-spinel-test)
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx rcp_configure
-    rcp_compile tests_configure tests_compile flow_configure flow_compile)
+    rcp_compile daemon_configure daemon_compile tests_configure tests_compile flow_configure
+    flow_compile)
   @build_modules [__MODULE__, Mix.Tasks.Wotex.Thread.Software.Build]
   @tool_bytes 100_000_000
+  @node_ids %{leader: 41, joiner: 42, daemon: 43, sensor: 44, light: 45}
   @rcp_options ~w(-DOT_PLATFORM=simulation -DOT_APP_CLI=OFF -DOT_APP_NCP=OFF -DOT_APP_RCP=ON
     -DOT_FTD=OFF -DOT_MTD=OFF -DOT_RCP=ON -DOT_COMPILE_WARNING_AS_ERROR=ON -DBUILD_TESTING=OFF)
 
@@ -56,10 +60,21 @@ defmodule Wotex.Thread.Software.Build do
       host: Path.join(workspace, "native/build/wotex-thread-host"),
       sanitized_host: Path.join(workspace, "native-sanitized/build/wotex-thread-host"),
       rcp: Path.join(bin, "ot-rcp"),
+      daemon: Path.join(bin, "ot-daemon"),
       contract_driver: Path.join(bin, "wotex-thread-contract-driver"),
       dataset_seed: Path.join(bin, "wotex-thread-dataset-seed"),
       flow_host: Path.join(bin, "wotex-thread-flow-host"),
+      coap_peer: Path.join(bin, @application_peer),
       native_tests: Enum.map(@native_tests, &Path.join(bin, &1))
+    }
+  end
+
+  @doc "Returns the workspace-owned socket and simulation node assignments."
+  @spec fixture(Path.t()) :: %{daemon_socket: Path.t(), node_ids: %{atom() => pos_integer()}}
+  def fixture(workspace) do
+    %{
+      daemon_socket: Path.join([workspace, "fixtures/run", "openthread-wthdaemon.sock"]),
+      node_ids: @node_ids
     }
   end
 
@@ -147,12 +162,35 @@ defmodule Wotex.Thread.Software.Build do
       "source_files" => %{"priv/openthread" => native_files, "test/native" => test_files},
       "build_modules" => modules,
       "toolchain" => tools,
-      "build_features" => %{"sanitized_tests" => true, "rcp_platform" => "simulation"},
+      "build_features" => %{
+        "sanitized_tests" => true,
+        "rcp_platform" => "simulation",
+        "daemon" => "pinned-posix",
+        "daemon_socket" => "fixtures/run/openthread-%s.sock",
+        "application" => %{
+          "executable" => @application_peer,
+          "port" => 5683,
+          "sensor" => %{
+            "path" => "/sensor/temperature",
+            "content_format" => "text/plain",
+            "payload" => "21.50",
+            "sleepy" => true
+          },
+          "light" => %{
+            "path" => "/light/on_off",
+            "content_format" => "text/plain",
+            "sequence" => ["0", "1", "1"]
+          }
+        },
+        "node_ids" => Map.new(@node_ids, fn {name, id} -> {Atom.to_string(name), id} end)
+      },
       "arguments" => %{
         "rcp_configure" => rcp_configure(workspace, tools),
+        "daemon_configure" => daemon_configure(workspace, tools),
         "tests_configure" => tests_configure(workspace, native, tests, tools),
         "tests_targets" => @pure_tests ++ @sdk_tests,
-        "flow_configure" => flow_configure(workspace, native, tests, tools)
+        "flow_configure" => flow_configure(workspace, native, tests, tools),
+        "flow_targets" => ["wotex-thread-flow-host", @application_peer]
       },
       "environment_allowlist" => ~w(HOME LC_ALL PATH TMPDIR)
     }
@@ -161,7 +199,13 @@ defmodule Wotex.Thread.Software.Build do
   defp artifacts do
     ["bin/build-command", "native/native-manifest.json", "native-sanitized/native-manifest.json"] ++
       Enum.map(
-        ["ot-rcp", "wotex-thread-flow-host" | @pure_tests ++ @sdk_tests],
+        [
+          "ot-rcp",
+          "ot-daemon",
+          "wotex-thread-flow-host",
+          @application_peer
+          | @pure_tests ++ @sdk_tests
+        ],
         &"fixtures/bin/#{&1}"
       ) ++
       Enum.map(@log_names, &"logs/#{&1}.log")
@@ -184,6 +228,7 @@ defmodule Wotex.Thread.Software.Build do
          {:ok, _} <- Build.run(Path.join(workspace, "native"), false, environment),
          {:ok, _} <- Build.run(Path.join(workspace, "native-sanitized"), true, environment),
          :ok <- rcp(guardian, workspace, tools),
+         :ok <- daemon(guardian, workspace, tools),
          :ok <- tests(guardian, workspace, native, tests, tools),
          :ok <- flow_host(guardian, workspace, native, tests, tools),
          {:ok, binaries} <- binaries(workspace) do
@@ -196,7 +241,7 @@ defmodule Wotex.Thread.Software.Build do
   end
 
   defp directories(workspace) do
-    Enum.reduce_while(~w(bin logs tmp fixtures/bin), :ok, fn name, :ok ->
+    Enum.reduce_while(~w(bin logs tmp fixtures/bin fixtures/run), :ok, fn name, :ok ->
       case File.mkdir_p(Path.join(workspace, name)) do
         :ok -> {:cont, :ok}
         _ -> {:halt, {:error, :software_build_filesystem}}
@@ -243,6 +288,34 @@ defmodule Wotex.Thread.Software.Build do
       copy(
         Path.join(build, "examples/apps/ncp/ot-rcp"),
         Path.join(workspace, "fixtures/bin/ot-rcp")
+      )
+    end
+  end
+
+  defp daemon(guardian, workspace, tools) do
+    build = Path.join(workspace, "fixtures/daemon-build")
+
+    with {:ok, _} <-
+           command(
+             guardian,
+             workspace,
+             :daemon_configure,
+             tools["cmake"].path,
+             daemon_configure(workspace, tools),
+             300_000
+           ),
+         {:ok, _} <-
+           command(
+             guardian,
+             workspace,
+             :daemon_compile,
+             tools["cmake"].path,
+             ["--build", build, "--target", "ot-daemon", "-j4"],
+             1_800_000
+           ) do
+      copy(
+        Path.join(build, "src/posix/ot-daemon"),
+        Path.join(workspace, "fixtures/bin/ot-daemon")
       )
     end
   end
@@ -297,13 +370,19 @@ defmodule Wotex.Thread.Software.Build do
              workspace,
              :flow_compile,
              tools["cmake"].path,
-             ["--build", build, "--target", "wotex-thread-flow-host", "-j4"],
+             ["--build", build, "--target", "wotex-thread-flow-host", @application_peer, "-j4"],
              1_800_000
            ) do
-      copy(
-        Path.join(build, "wotex-thread-flow-host"),
-        Path.join(workspace, "fixtures/bin/wotex-thread-flow-host")
-      )
+      with :ok <-
+             copy(
+               Path.join(build, "wotex-thread-flow-host"),
+               Path.join(workspace, "fixtures/bin/wotex-thread-flow-host")
+             ) do
+        copy(
+          Path.join(build, @application_peer),
+          Path.join(workspace, "fixtures/bin/#{@application_peer}")
+        )
+      end
     end
   end
 
@@ -317,6 +396,7 @@ defmodule Wotex.Thread.Software.Build do
       Path.join(workspace, "fixtures/flow-build"),
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
       "-DWOTEX_NATIVE_SANITIZERS=OFF",
+      "-DOT_COAP=ON",
       "-DWOTEX_JSON_HEADER=#{Path.join(workspace, "native/downloads/json.hpp")}",
       "-DWOTEX_OPENTHREAD_SOURCE=#{Path.join([workspace, "native/sources/openthread", @sdk])}",
       "-DWOTEX_NATIVE_TEST_SOURCE=#{tests}",
@@ -335,6 +415,33 @@ defmodule Wotex.Thread.Software.Build do
       Path.join(workspace, "fixtures/rcp-build"),
       "-DCMAKE_C_COMPILER=#{tools["cc"].path}",
       "-DCMAKE_CXX_COMPILER=#{tools["c++"].path}" | @rcp_options
+    ]
+  end
+
+  defp daemon_configure(workspace, tools) do
+    socket = Path.join(workspace, "fixtures/run/openthread-%s")
+    define = "-DOPENTHREAD_POSIX_CONFIG_DAEMON_SOCKET_BASENAME=\\\"#{socket}\\\""
+
+    [
+      "-G",
+      "Ninja",
+      "-S",
+      Path.join([workspace, "native/sources/openthread", @sdk]),
+      "-B",
+      Path.join(workspace, "fixtures/daemon-build"),
+      "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+      "-DCMAKE_C_COMPILER=#{tools["cc"].path}",
+      "-DCMAKE_CXX_COMPILER=#{tools["c++"].path}",
+      "-DCMAKE_C_FLAGS=#{define}",
+      "-DCMAKE_CXX_FLAGS=#{define}",
+      "-DOT_PLATFORM=posix",
+      "-DOT_DAEMON=ON",
+      "-DOT_POSIX_RCP_HDLC_BUS=ON",
+      "-DOT_PLATFORM_NETIF=ON",
+      "-DOT_PLATFORM_UDP=ON",
+      "-DOT_LOG_LEVEL=NONE",
+      "-DOT_COMPILE_WARNING_AS_ERROR=ON",
+      "-DBUILD_TESTING=OFF"
     ]
   end
 
@@ -367,7 +474,13 @@ defmodule Wotex.Thread.Software.Build do
   end
 
   defp binaries(workspace) do
-    names = ["ot-rcp", "wotex-thread-flow-host" | @pure_tests ++ @sdk_tests]
+    names = [
+      "ot-rcp",
+      "ot-daemon",
+      "wotex-thread-flow-host",
+      @application_peer
+      | @pure_tests ++ @sdk_tests
+    ]
 
     result =
       Enum.reduce_while(names, {:ok, []}, fn name, {:ok, found} ->

@@ -3,11 +3,12 @@
 Current implementation: bounded Dataset/daemon APIs and a first-party C++ SDK
 host with semantic Dataset validation/export, interface/Thread enablement,
 formation, management callbacks, commissioner lifecycle/admissions and Joiner
-callback ownership. Native
-ExUnit and C++/process fixtures exercise real SDK/RCP software boundaries; their
-presence is scoped evidence, not a complete Thread profile. Complete
-simulated-network/application workflows and final
-stress/native/package closure remain required.
+callback ownership. The explicit software runner now builds and selects a
+separate daemon, two SDK owners and the sensor/light application peers with
+fixed simulation node IDs. Native ExUnit and C++/process fixtures exercise real
+SDK/RCP software boundaries; source presence is scoped evidence, not a completed
+qualification run. Final architecture, sanitizer, archive and package closure
+remain required.
 The production runtime and explicit native build require no Python; dormant
 Python native test drivers have been retired. Selected native lanes must fail if their SDK/peer/configuration
 is absent. Physical-radio testing is a separate optional lane.
@@ -54,6 +55,35 @@ wrong result identity, deadline cleanup and the no-stream profile.
 These are deterministic Client and public-package tests in the local dependency
 lane. They do not establish the required OpenThread software-peer repetition,
 immutable archive adoption or the minimum/current runtime matrix.
+
+## Simulated OpenThread network source, 2026-09-20
+
+`Wotex.Thread.Software.Build` now compiles the pinned POSIX daemon and a
+test-only C++ OpenThread CoAP peer beside the existing simulation RCP, normal
+host and sanitizer host. Its manifest records distinct leader, joiner, daemon,
+sensor and light node IDs; the daemon socket remains inside the disposable
+workspace. The peer runs one OpenThread instance and RCP per process. Sensor
+mode is a sleepy, router-ineligible child serving text/plain `21.50`; light mode
+serves `0`, accepts one text/plain PUT of `1`, and returns `1` on readback.
+
+`test/interop/openthread_test.exs` is required by both software lanes. It forms
+a fresh network, admits an exact discerner for 60 seconds, rejects the wrong
+PSKd, waits for the correct final Joiner callback, explicitly enables the
+joiner and requires its child/router role and matching Dataset. It separately
+checks management callback acceptance, delayed Pending Dataset activation on
+both nodes, a timed-out update followed by a busy admission barrier and later
+activation, State delivery, commissioner-record cleanup and process/interface
+teardown. The daemon case repeats the public `ConsumedThing` read against the
+pinned process and proves a library disconnect does not stop that borrowed
+daemon. The composition case invokes the sibling Wotex CoAP package as the
+client and checks the peer's request counters after shutdown.
+
+On this macOS ARM64 development host, the focused disposable build tests passed
+14/14 and the package fast gate passed 214 tests (four doctests, seven
+properties and 203 ordinary tests), with 39 explicit software/interop/hardware
+exclusions. Changed-line native formatting passed. The Linux network and
+sanitizer lanes were not started here, so this section records implemented and
+selected evidence source, not a claimed OpenThread network result.
 
 ## Mandatory local gate
 

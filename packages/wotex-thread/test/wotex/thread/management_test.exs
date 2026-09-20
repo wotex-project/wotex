@@ -83,7 +83,7 @@ defmodule Wotex.Thread.ManagementTest do
         "error" => %{"code" => "management_timeout"}
       }
 
-      assert {:error, %Error{code: :management_timeout}} = Frame.response(frame, "1", operation)
+      assert {:error, %Error{code: :timeout}} = Frame.response(frame, "1", operation)
     end
   end
 

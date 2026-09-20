@@ -50,6 +50,30 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     assert manifest["schema"] == "wotex.software-build"
 
     assert manifest["build_features"] == %{
+             "application" => %{
+               "executable" => "wotex-thread-coap-peer",
+               "light" => %{
+                 "content_format" => "text/plain",
+                 "path" => "/light/on_off",
+                 "sequence" => ["0", "1", "1"]
+               },
+               "port" => 5683,
+               "sensor" => %{
+                 "content_format" => "text/plain",
+                 "path" => "/sensor/temperature",
+                 "payload" => "21.50",
+                 "sleepy" => true
+               }
+             },
+             "daemon" => "pinned-posix",
+             "daemon_socket" => "fixtures/run/openthread-%s.sock",
+             "node_ids" => %{
+               "daemon" => 43,
+               "joiner" => 42,
+               "leader" => 41,
+               "light" => 45,
+               "sensor" => 44
+             },
              "sanitized_tests" => true,
              "rcp_platform" => "simulation"
            }
@@ -58,7 +82,13 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     executables = Build.executables(workspace)
 
     for path <-
-          [executables.host, executables.sanitized_host, executables.rcp] ++
+          [
+            executables.host,
+            executables.sanitized_host,
+            executables.rcp,
+            executables.daemon,
+            executables.coap_peer
+          ] ++
             [executables.contract_driver, executables.dataset_seed, executables.flow_host] ++
             executables.native_tests do
       assert File.regular?(path), path
@@ -66,6 +96,8 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
 
     recorded = Map.new(manifest["audit"]["binaries"], &{&1["path"], &1["sha256"]})
     assert recorded["fixtures/bin/ot-rcp"] == digest(executables.rcp)
+    assert recorded["fixtures/bin/ot-daemon"] == digest(executables.daemon)
+    assert recorded["fixtures/bin/wotex-thread-coap-peer"] == digest(executables.coap_peer)
     assert recorded["fixtures/bin/wotex-thread-flow-host"] == digest(executables.flow_host)
     assert File.regular?(Path.join(workspace, "native/native-manifest.json"))
     assert File.regular?(Path.join(workspace, "native-sanitized/native-manifest.json"))
@@ -90,6 +122,18 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     assert Enum.map(result["lanes"], & &1["lane"]) == ["normal", "sanitized"]
     assert Enum.all?(result["lanes"], & &1["evaluation"]["accepted"])
     assert result["cleanup"] == %{"survivors" => 0}
+
+    assert result["fixture"] == %{
+             "daemon_socket" => "fixtures/run/openthread-wthdaemon.sock",
+             "node_ids" => %{
+               "daemon" => 43,
+               "joiner" => 42,
+               "leader" => 41,
+               "light" => 45,
+               "sensor" => 44
+             }
+           }
+
     assert result["toolchain"]["elixir"] == System.version()
     assert result["native_hosts"]["normal"] == digest(Build.executables(workspace).host)
     assert File.regular?(path) and Jason.decode!(File.read!(path)) == result

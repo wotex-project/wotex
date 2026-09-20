@@ -158,6 +158,14 @@ mapping tests. P06 is not accepted before P00, P04 and P05.
 - Suggested local commit: `test: build a real openthread software network fixture`.
 - Standalone closure: Execute .11 network formation/joining/pending activation and layered sensor/light CoAP workflow with explicit test routing and software peer.
 
+The software build now owns the pinned daemon and C++ sensor/light peer, fixes
+five unique simulation node IDs and exports them only to the explicit runner.
+The required interop module covers formation, wrong and correct commissioning,
+attachment, matching and delayed Datasets, late management completion, borrowed
+daemon Runtime reads and the Wotex CoAP composition. This source is selected in
+both normal and sanitizer inventories. P07 remains unaccepted until the Linux
+software lanes execute it successfully and record their cleanup evidence.
+
 ### WTH-P07a: Prove the Wotex consumer boundary
 
 - Requirements: WTH-I01, WTH-I02, WTH-I03, WTH-I04, WTH-I05, WTH-I06; all previous native/profile packages are dependencies.

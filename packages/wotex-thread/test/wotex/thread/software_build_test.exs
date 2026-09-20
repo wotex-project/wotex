@@ -39,6 +39,15 @@ defmodule Wotex.Thread.SoftwareBuildTest do
     assert length(executables.native_tests) == 6
     assert Enum.all?(paths, &String.starts_with?(&1, "/disposable/software/"))
     assert executables.rcp == "/disposable/software/fixtures/bin/ot-rcp"
+    assert executables.daemon == "/disposable/software/fixtures/bin/ot-daemon"
+
+    assert executables.coap_peer ==
+             "/disposable/software/fixtures/bin/wotex-thread-coap-peer"
+
+    assert Build.fixture("/disposable/software") == %{
+             daemon_socket: "/disposable/software/fixtures/run/openthread-wthdaemon.sock",
+             node_ids: %{leader: 41, joiner: 42, daemon: 43, sensor: 44, light: 45}
+           }
   end
 
   if match?({:unix, :linux}, :os.type()) do

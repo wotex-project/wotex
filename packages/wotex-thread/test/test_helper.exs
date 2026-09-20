@@ -3,6 +3,7 @@ Code.require_file("support/client.ex", __DIR__)
 Code.require_file("support/runtime_client.ex", __DIR__)
 Code.require_file("support/runtime_error_port.ex", __DIR__)
 Code.require_file("support/runtime_recording_transport.ex", __DIR__)
+Code.require_file("support/software_network.ex", __DIR__)
 
 # The explicit software runner selects fixtures through the environment; required
 # configuration missing under WOTEX_REQUIRE_SOFTWARE is a failure, never a skip.
@@ -11,8 +12,12 @@ case System.get_env("WOTEX_REQUIRE_SOFTWARE") do
     ExUnit.start(exclude: [:interop, :hardware, :software])
 
   "1" ->
-    required = ~w(WOTEX_THREAD_HOST WOTEX_THREAD_RCP WOTEX_THREAD_CONTRACT_DRIVER
-      WOTEX_THREAD_DATASET_SEED WOTEX_THREAD_FLOW_HOST WOTEX_THREAD_CASE_RESULTS)
+    required = ~w(WOTEX_THREAD_HOST WOTEX_THREAD_RCP WOTEX_THREAD_DAEMON
+      WOTEX_THREAD_COAP_PEER
+      WOTEX_THREAD_DAEMON_SOCKET WOTEX_THREAD_NODE_LEADER WOTEX_THREAD_NODE_JOINER
+      WOTEX_THREAD_NODE_DAEMON WOTEX_THREAD_NODE_SENSOR WOTEX_THREAD_NODE_LIGHT
+      WOTEX_THREAD_CONTRACT_DRIVER WOTEX_THREAD_DATASET_SEED WOTEX_THREAD_FLOW_HOST
+      WOTEX_THREAD_CASE_RESULTS)
 
     case Enum.reject(required, &System.get_env/1) do
       [] ->

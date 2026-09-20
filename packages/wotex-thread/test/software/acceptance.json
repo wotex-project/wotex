@@ -39,11 +39,14 @@
         {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 WTH-C03 32 concurrent callers correlate replies and return admission to zero"},
         {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 forced startup deadlines reap the native host that was starting"},
         {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 native peer loss fails pending use explicitly and releases resources"},
-        {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 injected malformed replies close each generation without leaked owners"}
+        {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 injected malformed replies close each generation without leaked owners"},
+        {"module":"Wotex.Thread.OpenThreadInteropTest","name":"test WTH-N03 WTH-V12 real peers form, commission, join and activate a pending Dataset"},
+        {"module":"Wotex.Thread.OpenThreadInteropTest","name":"test WTH-S02 WTH-I06 a borrowed daemon serves the public Runtime and survives disconnect"},
+        {"module":"Wotex.Thread.OpenThreadInteropTest","name":"test WTH-N03 sensor and light compose over Thread with the Wotex CoAP client"}
       ]
     },
     "sanitized": {
-      "paths": ["test/software","test/wotex/thread/native_contract_test.exs"],
+      "paths": ["test/software","test/wotex/thread/native_contract_test.exs","test/interop/openthread_test.exs"],
       "required": [
         {"module":"Wotex.Thread.NativeContractTest","name":"test WTH-B-F01 through F05 execute the shared production request validator"},
         {"module":"Wotex.Thread.NativeContractTest","name":"test WTH-B-F06 captures the actual host ready frame and reaps its owned processes"},
@@ -79,7 +82,10 @@
         {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 WTH-C03 32 concurrent callers correlate replies and return admission to zero"},
         {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 forced startup deadlines reap the native host that was starting"},
         {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 native peer loss fails pending use explicitly and releases resources"},
-        {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 injected malformed replies close each generation without leaked owners"}
+        {"module":"Wotex.Thread.LifecycleStressTest","name":"test WTH-C09 injected malformed replies close each generation without leaked owners"},
+        {"module":"Wotex.Thread.OpenThreadInteropTest","name":"test WTH-N03 WTH-V12 real peers form, commission, join and activate a pending Dataset"},
+        {"module":"Wotex.Thread.OpenThreadInteropTest","name":"test WTH-S02 WTH-I06 a borrowed daemon serves the public Runtime and survives disconnect"},
+        {"module":"Wotex.Thread.OpenThreadInteropTest","name":"test WTH-N03 sensor and light compose over Thread with the Wotex CoAP client"}
       ]
     }
   }

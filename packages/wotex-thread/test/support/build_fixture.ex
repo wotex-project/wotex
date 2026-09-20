@@ -231,6 +231,10 @@ defmodule Wotex.Thread.BuildFixture do
             mkdir -p "$build/examples/apps/ncp"
             printf '#!/bin/sh\\nexit 0\\n' > "$build/examples/apps/ncp/ot-rcp"
             chmod 755 "$build/examples/apps/ncp/ot-rcp" ;;
+          ot-daemon)
+            mkdir -p "$build/src/posix"
+            printf '#!/bin/sh\\nexit 0\\n' > "$build/src/posix/ot-daemon"
+            chmod 755 "$build/src/posix/ot-daemon" ;;
           *)
             printf '#!/bin/sh\\nexit 0\\n' > "$build/$argument"
             chmod 755 "$build/$argument" ;;
