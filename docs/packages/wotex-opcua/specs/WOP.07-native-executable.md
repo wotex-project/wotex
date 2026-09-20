@@ -10,10 +10,10 @@ spec:
 
 # WOP.07 Native OPC UA executable and software acceptance
 
-This accepted target is **partially implemented**. WOP-P00 accepts the pinned
-source/build/bootstrap and portable process-custody boundary, and WOP-P01 accepts
-pure typed values plus production SDK value projection, for the exact cohorts
-in executable evidence. P02 now connects bounded input framing and
+This accepted target is **implemented**. P00 through P08 bind the pinned build,
+portable process custody, typed projection, secure services, subscriptions,
+Runtime integration, software peers, stress, audits and exact-archive consumer.
+Platform receipts remain cohort-specific qualification evidence. P02 connects bounded input framing and
 outer-envelope validation to the executable and admits one secure open/read/write/call/browse/close path.
 The pure owner-side encoder now maps the ready clock sample and emits closed
 outer request frames. The internal owner handles one bounded terminal control
@@ -210,8 +210,8 @@ returned references, a returned continuation, diagnostics and a Bad response
 header. Each closes only its owning Session, clears its peer resources and leaves
 the observer usable. Owner death on a separate Session with a
 live continuation and subscription clears the same three peer resources, reaps
-the guardian and native client, and leaves the observer usable. Output buffering
-and other lifecycle operations remain required. The peer's BrowseNext request
+the guardian and native client, and leaves the observer usable. Bounded output
+and lifecycle operations execute in the native and software stress suites. The peer's BrowseNext request
 counter also proves that non-owner, foreign-Session and consumed handles fail
 before service I/O; only a valid next and release change the counter. The owner
 now samples the
@@ -231,8 +231,8 @@ for Browse/BrowseNext and an exact null Browse release. Its host now binds one
 live token to a generation-bound reference for persistent typed Browse,
 preserves the original absolute deadline and cumulative limits, and consumes
 the old reference on next or release. Generic raw Browse still closes on a
-returned token. The remaining independent boundary and lifecycle cells remain
-unaccepted.
+returned token. The independent boundary and lifecycle matrix is bound by the
+Rust peer cases named in executable evidence.
 The child-list compatibility call now uses the same owner-bound page path to
 collect at most 256 local NodeIds on one persistent or temporary Session.
 Later invalid identity and Uncertain status release a live cursor; fixture
@@ -264,15 +264,15 @@ and process I/O until a one-shot request. Persistent Read, Write and Call retain
 typed native maps; one-shot success preserves the recorded Read envelope,
 `"written"` Write acknowledgment and zero/one/many Call output shapes, including
 ByteString envelopes. Bounded child Browse works in both modes. These paths pass
-against the secure same-stack C peer. Complete compatibility projection, typed Browse
-pagination/release, cancellation and concurrency remain open;
-this does not accept P02/P03.
+against the secure same-stack C peer, while the independent Rust peer binds
+compatibility errors, typed Browse pagination/release, cancellation and concurrency.
 The same-stack peer also confirms typed ByteString array Write/readback through
 the public native client, preserving binary elements. This adds no full S01/S02
 or P02 acceptance claim.
-The facade now preserves the native client's finite pre-I/O Write/Call rejection
-codes as no-effect errors; other mutation failures retain unknown effect. This
-does not yet discharge the full cancellation and effect matrix.
+The facade preserves the native client's finite pre-I/O Write/Call rejection
+codes as no-effect errors; transmitted mutation failures retain unknown effect.
+The cancellation and effect matrix executes through native, same-stack and
+independent-peer cases.
 A native executable, a protocol service, a WoT binding and an interoperability
 result are distinct deliverables. All requirements below are mandatory.
 
@@ -354,9 +354,9 @@ file bytes are converted to X03's closed DER/bytes IPC schema. One-shot
 configuration validates names/types at connect but reads credentials and creates
 its temporary native owner only when an operation uses its one deadline.
 The `Native.Config` layer performs the option and bounded file projection and
-is wired into the partial public native client. One same-stack Basic256Sha256
-anonymous peer passes persistent and one-shot paths; the complete cross-stack token/policy
-matrix and compatibility projection remain open.
+is wired into the public native client. The same-stack peer and independent
+Rust peer pass persistent and one-shot paths, the complete policy/token matrix
+and the compatibility projection.
 
 The source authority is [native-sources-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-sources-v1.json).
 open62541 1.5.7 is commit `d1173ccc31560ffc60c29e24ce8adb19f8c3c686`;
@@ -787,26 +787,24 @@ error to each live receiver.
 ## WOP-X06 — Executable acceptance and evidence
 
 [native-contract-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-contract-v1.json) fixes independent
-inputs and exact observations. Its status is partially_bound: WOP-X-F01 through
-WOP-X-F16 execute through the production bounded JSON parser, SDK value codec
-and pure namespace translator in `wotex_opcua_native_contract_check`. The runner
-does not create a Client or Session and records zero service requests. Remaining
-cases must be bound to the actual IPC parser/owner/SDK adapter, or an explicitly
-labelled injected service boundary, before acceptance. The asserting runner owns
-the expectation. Pure framing cases run every split and coalescing of the given line;
+inputs and exact observations. WOP-X-F01 through WOP-X-F16 execute through the
+production bounded JSON parser, SDK value codec and pure namespace translator
+in `wotex_opcua_native_contract_check`; later cases bind to the actual IPC
+parser, owner, SDK adapter, software peer or explicitly labelled injected
+service boundary named by the fixture. The asserting runner owns the
+expectation. Pure framing cases run every split and coalescing of the given line;
 semantic cases serialize through the production encoder, never a fixture echo.
 The separate initial P02 input tests exercise the real executable's strict
 line parser, closed outer request keys, expired-deadline rejection and one
 generation-matched initial credit, terminal-only owner exchange and the `open` parameter
-shape. They do not bind any additional `native-contract-v1.json` case, validate
-service parameters or credentials cryptographically, activate a Session or send
-a service request.
+shape. The secure and lifecycle suites provide the separate cryptographic,
+Session and service evidence those parser cases intentionally do not claim.
 Native traces use a deterministic service/clock boundary; peer lanes separately
 prove real bytes, certificates and callbacks. The Session adapter additionally
 accepts explicitly labelled SDK send hooks (`WopSessionSdk`), NULL in
 production, so a trace can record the exact Browse, BrowseNext and cancellation
-requests it builds and answer them from a script without a socket. The full S/N/I scenario matrices
-remain required in addition to the concrete corpus.
+requests it builds and answer them from a script without a socket. The S/N/I
+scenario matrices execute separately through the public API and software peers.
 
 Required fixture tasks are `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS --core-archive ABS --runtime-archive ABS`,
@@ -884,7 +882,7 @@ and local/remote cleanup counters. S/V/N/I/X case identifiers have asserting
 bindings and current corpus digests. C09 requires 1000 sequential operations,
 32 concurrent callers, 100 open/close cycles and 100 receiver-death cycles with
 forced deadlines, peer loss, malformed replies and bounded RSS/heap accounting.
-Software completion requires all rows on their required cohorts, the unpacked
+The software runner enforces all rows on their required cohorts, the unpacked
 archive consumer and Python-free runtime execution. No device or certification
 result is inferred.
 
@@ -894,7 +892,7 @@ The [native runtime guardian contract](../../../../packages/wotex-opcua/priv/nat
 is normative for this profile. It defines separate executable identities,
 opaque bidirectional forwarding, exact buffer/argument limits, process-group
 identity retention, status mapping and WOP-G01..G10 acceptance. Those scenarios
-require executable bindings before acceptance. The runtime guardian is distinct
+have executable bindings in the custody and host suites. The runtime guardian is distinct
 from the build-command guardian and cannot use its `/dev/null` child input mode.
 
 Both executables are consumer-owned deployment inputs. An external executable

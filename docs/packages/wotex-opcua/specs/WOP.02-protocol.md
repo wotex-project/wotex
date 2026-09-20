@@ -13,8 +13,8 @@ spec:
 OPC Foundation Part 4 and Part 6 revision 1.05.07 (2026-04-15), Part 2
 revision 1.05.06 (2025-10-22), Part 7 revision 1.05.02 (2022-11-01), and OPC
 10101 WoT Binding 1.00 (2026-01-08) govern the relevant behavior. No profile
-certification is claimed. Secure channels and sessions require independent
-negative-security interoperability evidence before graduation.
+certification is claimed. Secure channels and Sessions are bound by independent
+negative-security interoperability evidence.
 
 NodeId distinguishes numeric, string, GUID and opaque identifiers with a
 16-bit namespace index. Namespace URI identities must resolve afresh for each

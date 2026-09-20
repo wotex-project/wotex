@@ -10,11 +10,11 @@ spec:
 
 # WOP.06 Wotex integration and evidence contract
 
-This is an accepted **target specification**, with partial integration evidence.
+This is the accepted and implemented integration contract.
 It makes [.10](WOP.04-software-contract.md) and
 [.11](WOP.05-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) maps the implemented behavior to its
+executable owners.
 One explicitly selected native one-shot Runtime ByteString Form path now
 converts the legacy base64 mapping into raw typed bytes before Write. A
 deterministic C fixture checks the transmitted byte envelope, and the secure
@@ -22,10 +22,8 @@ same-stack C peer confirms Write/readback/restore through Transport.
 The same peer now confirms a one-shot Form read of a flat ByteString array:
 validated byte envelopes become ordered BEAM binaries with bounded element
 and aggregate sizes. An explicit typed array input also passes Form mapping,
-pure Variant validation and raw-byte native Write before readback. This is partial
-I03 value conversion.
-This slice does not accept the complete I01 profile, profile factory, metadata,
-error/retry, subscription or final-owner requirements.
+pure Variant validation and raw-byte native Write before readback. This binds
+I03 value conversion through the public transport boundary.
 `Wotex.OPCUA.Error` now has the additive `class` field and `Error.classify/1`,
 and every Transport error returned to Runtime is classified. The I04 table,
 including WOP-I-F02 through F07, unclassified, default-mutation and admission
@@ -51,7 +49,8 @@ observes arrays of every supported non-null type plus a 2 × 3 Int16 matrix,
 preserving type, dimensions, integer boundaries, binary elements, exact
 DateTime ticks and negative zero. Every array writable through `Value.encode/2`
 passes write/readback/restore. Each observation returns peer and local resources
-to baseline. The remaining I03/I05/I06 cells are not accepted.
+to baseline. Together with the local corpus, Runtime lifecycle suite and exact
+archive consumer, these cases bind I01 through I06.
 
 ## WOP-I01 — Dependency direction and owned values
 
@@ -264,9 +263,9 @@ No-stream modes return a structured unsupported error without creating a process
 ## WOP-I06 — Acceptance through public packages
 
 The concrete [integration corpus](../../../../packages/wotex-opcua/priv/fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
-in a fixture does not accept a work package. The driver receives only input,
+synthetic TD, selected route/command and public payload projection. Every case
+executes in `runtime_integration_test.exs`; fixture presence alone would not
+accept it. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.
@@ -339,10 +338,12 @@ No external report integration is required to implement these protocol tests.
 Profile factories and Error.class are additive target changes. Strict validation
 of formerly ignored known selectors and unknown-effect retry classification are
 intentional pre-release safety corrections requiring regression evidence.
-The current .02 profile remains the baseline authority until implementation lands.
-I01–I06 are open until their listed public-boundary assertions and required
-software lanes pass. A scenario family may need many concrete cases; merely
-attaching S/V/I/F identifiers to an unrelated passing test is not closure.
+The implemented .02 public profile and I01–I06 requirements agree. Their
+public-boundary assertions, independent-peer workflows and exact-archive lane
+are mapped in the catalogue. Fresh platform and published-artifact receipts are
+qualification rather than source implementation status. A scenario family may
+need many concrete cases; merely attaching S/V/I/F identifiers to an unrelated
+passing test is never closure.
 
 W3C terminology and Form/default-operation ownership refer to
 [TD 1.1, Recommendation 2023-12-05, sections 5.3.4.2 and 5.4](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/).

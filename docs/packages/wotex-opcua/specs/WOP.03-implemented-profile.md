@@ -10,11 +10,11 @@ spec:
 
 # WOP.03 Implemented OPC UA profile
 
-This document inventories the partial public native Session client. The former
+This document inventories the implemented public native Session client. The former
 Python-backed `Asyncua` runtime adapter has been removed from the development
 package. `Open62541` uses no runtime Python process. This does not accept the
-complete native target in WOP.04–WOP.07; callers still select the native client
-explicitly and provide its pinned executable and credentials.
+complete OPC UA standards family; callers select the native client explicitly
+and provide its pinned executable and credentials.
 
 The OPC 10101 URI subset is
 `opc.tcp://host:port/path?id=percent-encoded-NodeId`. A single `id` query parameter
@@ -50,9 +50,9 @@ IDs 26..31. DataValue codecs retain value presence, full status and exact signed
 100 ns timestamps, normalize 10 ps fractions, and preserve unconsumed bytes.
 Arrays have a 1024-element ceiling; Variant/DataValue consumed bytes are limited
 to 1 MiB including metadata. The native C value library constructs bounded SDK
-Variants/DataValues and projects their finite typed fields. Native request/service
-integration is partial; SDK receive-side preallocation limits remain work. The
-existing `Value` adapter still has its scalar contract.
+Variants/DataValues and projects their finite typed fields. Native services apply
+the SDK message/chunk ceilings and the narrower value, frame and aggregate limits
+before public projection.
 UA chunk framing defaults to 1 MiB and validates message type, chunk kind and
 length before allocating/waiting. Chunk framing alone does not validate secure
 channels, sequence numbers, RequestId, RequestHandle or service status.
@@ -60,8 +60,8 @@ channels, sequence numbers, RequestId, RequestHandle or service status.
 The implemented certificate profile requires a current, signed
 issuer CRL and a leaf directly issued by a trusted self-signed CA. It is a
 purposefully limited trust profile; intermediate chains and certificate renewal
-are unsupported. Basic256Sha256 SignAndEncrypt is mandatory. No additional
-security policy or complete OPC UA conformance/certification claim is made.
+are unsupported. The three WOP-S03 SignAndEncrypt policies are admitted. No
+additional policy or complete OPC UA conformance/certification claim is made.
 
 ## Explicit native build tooling
 
@@ -206,8 +206,8 @@ guardian/native process set without reconnect or replay. A newly started peer
 serves only after an explicit fresh connection. Independent fault injection
 now retains one withheld notification for ordered one-time Republish recovery
 and discards another for terminal `sequence_gap`; the server counts both
-Republish requests and peer resources return to zero. Other lifecycle
-interoperability remains open P02/P03 work.
+Republish requests and peer resources return to zero. The native lifecycle,
+stress and exact-archive suites complete the P02/P03 ownership evidence.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.
@@ -291,8 +291,8 @@ subscription likewise clears all three peer resources, reaps the guardian and
 native client, and leaves an observer Session usable. The same peer counts
 BrowseNext requests: a non-owner caller, a foreign Session and a consumed handle
 all fail locally without changing that count, while the valid next and release
-are the only counted requests.
-WOP-N03/N04 remain unaccepted until the remaining boundary matrix is complete.
+are the only counted requests. These cases complete the accepted WOP-N03/N04
+boundary matrix.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent
@@ -312,12 +312,12 @@ return its subscription, MonitoredItem and extra local helper counts to zero.
 Terminating an isolated peer beneath that observation produces one classified
 Runtime error and one `transport_down`, stops the supervised observation owner,
 reaps its native helpers and does not reconnect. A new peer is observed only
-through an explicitly new child.
-This remains a partial native client, not a complete compatibility or Runtime projection.
+through an explicitly new child. This is the implemented compatibility and
+Runtime projection for the operations explicitly advertised by the profiles.
 The Runtime Transport now converts a Form-mapped ByteString's validated base64
 payload back to raw bytes only for the native client, before its typed Write.
 One same-stack secure-peer Form Write/readback/restore proves byte identity;
-the complete WOP-I01..I06 integration and profile factory remain open.
+WOP-I01 through I06 execute through the public integration and lifecycle suites.
 For ByteString reads, the Runtime value adapter now decodes scalar and bounded
 flat-array elements to BEAM binaries, preserving null elements and array order.
 The same-stack secure peer confirms one native one-shot Form array read after
@@ -333,14 +333,14 @@ matrix. Arrays writable through `Value.encode/2` roundtrip through a real
 ConsumedThing and are restored. Runtime preserves flat matrix order,
 dimensions, integer boundaries, binary elements, exact DateTime ticks and
 negative zero. Every observation releases its peer and local resources on stop.
-The complete Runtime profile remains open.
 The same peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
-and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.
+and non-UTF-8 bytes. The admitted typed-value and lifecycle cells execute in the
+same independent suite.
 For this client, the facade preserves `effect: :none` on its finite local
 Write/Call input and configuration rejections. Transmitted or otherwise
 uncertain mutation failures remain conservatively `effect: :unknown`; the
-complete cancellation/error matrix remains open.
+cancellation and error matrix preserves that boundary through Runtime.
 `Native.Frame` encodes exact outer request fields and maps the owner deadline
 from the separately captured ready clock sample. The native build test uses
 that production encoder to drive the real process. The internal
@@ -398,8 +398,8 @@ unclaimed-host deadline or failed readiness closes the Port; independent custody
 handles stopped SDKs. The readiness corpus preserves integer clock boundaries
 and rejects duplicate keys, invalid UTF-8, extra frames and oversized control
 output. Actual built-SDK startup is exercised by the required native build test.
-SDK report credits and the remaining Session/service matrix remain required
-implementation; bootstrap readiness itself advertises none of those capabilities.
+SDK report credits and the Session/service matrix execute separately from
+bootstrap readiness, which advertises none of those capabilities by itself.
 
 The native JSON foundation parses strict, bounded frames into a fixed allocator
 pool, rejects duplicate decoded keys, and validates exact signed/unsigned

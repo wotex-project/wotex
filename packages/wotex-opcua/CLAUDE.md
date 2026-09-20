@@ -56,8 +56,9 @@ Repository-wide rules are in the root `CLAUDE.md`.
   yyjson and the native design notes (`runtime-guardian.md`, `json-codec.md`,
   `security.md`, `value-codec.md`).
 - Specifications: `docs/packages/wotex-opcua/specs/` (WOP.01–WOP.03,
-  WOP.04–WOP.07; `catalogue.yaml` owns status). Plans and evidence:
-  `docs/packages/wotex-opcua/plans/` and `provenance/`.
+  WOP.04–WOP.07; `catalogue.yaml` owns source status). Delivery and
+  qualification plans live in `docs/packages/wotex-opcua/plans/`; exact
+  historical receipts live in `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, integration, native contract, custody,
   JSON, ready and pinned native source corpora).
 - Test support: `test/support/` (scripted and streaming clients, recording and

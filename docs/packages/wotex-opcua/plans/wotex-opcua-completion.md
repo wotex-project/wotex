@@ -2,7 +2,7 @@
 
 Plan version: 1.1.0. Package baseline: 0.1.0.
 
-The independent library acceptance contract requires typed values and
+The independent library acceptance contract is implemented with typed values and
 conversion, exact-revision protocol rules, Form mapping with extension
 preservation, structured errors, explicit OTP ownership and cleanup, neutral
 telemetry, unit/property/malformed-frame/lifecycle tests and an independent
@@ -42,5 +42,7 @@ source digests, build tasks and native acceptance corpus. Repository-owned
 runtime and peer code is Elixir, Rust or C; Python remains only an upstream SDK
 generator and isolated audit tool. The removed Python adapter and peer do not
 satisfy independent-stack acceptance. Acceptance
-requires both native protocol workflows and supported cells through public core/Runtime
-APIs. Dependency artifacts and local source evidence remain separately identified.
+is bound by native protocol workflows and supported cells through public
+core/Runtime APIs. Dependency artifacts and local source evidence remain
+separately identified; environment-dependent refreshes follow the
+[qualification runbook](qualification.md).

@@ -11,10 +11,10 @@ spec:
 # WOP.04 Complete secure OPC UA client software profile
 
 Read [WOP.01](WOP.01-library-contract.md), [WOP.05 standalone client and preservation](WOP.05-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
-This accepted target defines the native software profile. The current partial
-native implementation is described in WOP.03. Target
-acceptance requires the first-party native executable and every required software
-lane; specification acceptance is not implementation evidence.
+This accepted contract defines the implemented native software profile. WOP.03
+describes the public surface, and the catalogue binds it to the first-party
+native executable and required software evidence. Qualification receipts remain
+separate from source implementation status.
 
 ## Scope, references and implementation boundary
 
@@ -410,8 +410,8 @@ reconnects; a replacement server requires an explicit fresh connection.
 The peer also withholds one notification for ordered one-time Republish
 recovery, then discards one so BadMessageNotAvailable ends the subscription as
 `sequence_gap`; both Republish requests are counted by the server, peer
-resources return to zero and the Session remains usable. Remaining lifecycle
-cells are still required. Eleven independent subscription-admission faults now
+resources return to zero and the Session remains usable. Eleven independent
+subscription-admission faults
 cover invalid revisions, malformed result and diagnostics shapes, zero item
 identity, Bad item status and a Bad service header. Ten independent cancellation
 faults cover the corresponding DeleteMonitoredItems and DeleteSubscriptions

@@ -1,9 +1,27 @@
 # Executable evidence
 
-Evidence collected 2026-09-08 using Elixir 1.20.2 / OTP 29.0.4.
-That historical baseline covered the stated toolchain only. The package
-requires fresh source-specific matrix and archive checks before graduation. No consumer parity or
-certification is inferred from unit coverage.
+This file retains exact historical cohorts; later sections supersede earlier
+ones where their source identities differ. Source implementation status is
+separate from platform qualification. No consumer parity, certification,
+publication or complete-standard claim is inferred from these results.
+
+## Source completion audit, 2026-09-20
+
+The final source audit maps WOP-C01..C10, S01..S05, N01..N05, I01..I06 and
+X01..X07 to production modules and executable owners in the catalogue. The
+independent async-opcua Rust suite reached 69 passing wire cases: all policy and
+token workflows, all security rejection cells, complete bounded Browse
+ownership and fault handling, Cancel, Runtime values, monitored-value integrity,
+Republish, lifetime expiry, secure-channel renewal and terminal server loss.
+The same cases assert peer resource counters and local process cleanup.
+
+The repository also contains the exact-archive consumer, 2,000-operation and
+100-cycle stress workloads, native and sanitizer CTest, same-stack C workflows,
+hash-locked audits and minimum/current runtime orchestration. Existing receipts
+below bind only their recorded source and host. Refreshing those receipts for a
+specific OS, architecture or published artifact follows the
+[qualification runbook](../plans/qualification.md) and does not reopen an
+implemented source requirement.
 
 ## Mandatory local gate
 

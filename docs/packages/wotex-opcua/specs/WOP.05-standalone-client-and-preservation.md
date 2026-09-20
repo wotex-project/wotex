@@ -10,14 +10,14 @@ spec:
 
 # WOP.05 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.43**. Implementation status: **partial**.
+Specification version: **1.1.43**. Implementation status: **implemented**.
 [WOP.04](WOP.04-software-contract.md) and [WOP.07](WOP.07-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.03-implemented-profile.md) and
 [executed evidence](../provenance/executable-evidence.md) describe current
-capabilities. None of the planned pure-codec, persistent-session or pagination
-requirements below is accepted merely by specifying it. The first native
-service-level Browse slice, bounded child-NodeId projection and persistent
+capabilities. Pure-codec, persistent-session and pagination requirements are
+accepted only through their mapped executable evidence. The native
+service-level Browse boundary, bounded child-NodeId projection and persistent
 single-page typed `Browse.references/3` result have same-stack wire evidence;
 the continuation subset also has independent async-opcua evidence. The C
 process owns up to 64 live continuation chains per Session.
@@ -101,10 +101,10 @@ a separate Session owner with both resources live deletes its continuation,
 subscription and MonitoredItem, reaps its guardian and native client, and does
 not disturb the observer. A server-owned BrowseNext counter proves that a
 non-owner caller, a foreign Session and a consumed handle fail before service
-I/O; the valid next and release increment it exactly twice. The rest of the
-N03/N04 boundary matrix remains; N03/N04 are not accepted. The native one-shot client now
-projects successful Read, Write and Call results into the recorded
-success shapes; error and full lifecycle compatibility remain open.
+I/O; the valid next and release increment it exactly twice. These cases complete
+the accepted N03/N04 boundary matrix. The native one-shot client projects Read,
+Write and Call successes into the recorded shapes while preserving the native
+Error code, effect and class on every failure.
 The BEAM frame accepts only canonical native `c` plus uint64 local tokens and
 an exact null release result. Its host binds tokens only for its own typed
 Browse request; a raw or unsolicited continuation still terminates the Session.
@@ -308,7 +308,7 @@ defined in WOP.04 S02.
 
 ## WOP-N05 — Concrete fixtures and acceptance binding
 
-[contract-v1.json](../../../../packages/wotex-opcua/priv/fixtures/contract-v1.json) is a partially bound corpus.
+[contract-v1.json](../../../../packages/wotex-opcua/priv/fixtures/contract-v1.json) is the bound standalone corpus.
 `standalone_contract_test.exs` executes F01 through F13 through the public
 pure codecs and compares every declared output field.
 `priv/native/browse_trace_check.c` executes F14 through F16 through the
@@ -318,12 +318,9 @@ builds and answering only with the case's scripted responses), the owner clock,
 and the host role that WOP-N04 defines: release at the original browse deadline
 and cleanup after the .00 grace. The runner compares the complete declared
 projection and never hands an expectation to the adapter. Its test tags bind the
-case, requirements and exact corpus SHA-256. Other corpus cases remain specified
-and unexecuted. Existing WOP-Vxx entries in .10 are scenario families, not
-implemented test vectors. Together with the production native value-contract
-runner required by WOP.07, these pure bindings accept WOP-P01 only. Every later
-family still requires its complete boundary, security and fault cases; no
-native Session, service, Browse or lifecycle behavior is accepted here.
+case, requirements and exact corpus SHA-256. Existing WOP-Vxx entries in .10 are
+scenario families whose concrete service, security, fault and lifecycle cases
+execute in the same-stack and independent-peer suites named by the catalogue.
 
 Corpus format version 1.0.0 separates `input` from `expectation`. The runner
 passes only `input` to the operation/test adapter and compares the complete

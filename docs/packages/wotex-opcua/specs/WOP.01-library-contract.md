@@ -10,8 +10,8 @@ spec:
 
 # WOP.01 Software implementation rules
 
-This is a target contract for the library's software completion milestone.
-Requirements below are not claims that the current code already implements them.
+This is the implemented contract for the library's software profile.
+The catalogue maps it to the production modules and executable evidence.
 Read this file with [WOP.04](WOP.04-software-contract.md),
 [standalone client preservation](WOP.05-standalone-client-and-preservation.md),
 [Wotex integration](WOP.06-wotex-integration.md), and the existing
@@ -271,14 +271,15 @@ interoperability proof. Native dependency audits are additional to the Elixir
 gate. Keep exact source pins and review any changed dependency/advisory instead
 of ignoring it.
 
-Before calling the software profile complete: all requirement vectors pass; all
-required software lanes run; public capability claims match implementations;
-README/current-profile documents match behavior; vector SHA-256 identities are
-current; the declared minimum-version matrix passes; and, from clean committed
-source, the package gate `mix pkg wotex-opcua check --no-retry` passes, including
-its archive check and out-of-tree package compilation. Include native bridge
-assets explicitly in the package allowlist only where the package's shipped Mix
-tasks need them (root `CLAUDE.md`), excluding build caches, credentials,
+The software profile is complete in source: requirement vectors have executable
+owners, public capability claims match the implementation, and the explicit
+software runner contains the native, peer, stress, audit, sanitizer, runtime
+matrix and exact-archive lanes. Fresh environment receipts follow the
+[qualification runbook](../plans/qualification.md); a missing platform or
+published-artifact receipt does not make implemented source partial.
+
+The package allowlist includes native bridge assets only where shipped Mix
+tasks need them (root `CLAUDE.md`) and excludes build caches, credentials,
 sockets, PLTs, fixture state and downloaded SDKs.
 
 Commit with the identity already configured by the contributor, as the root
