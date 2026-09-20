@@ -51,6 +51,7 @@ defmodule WotexOPCUA.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
+      {:doc_shell, "== 0.4.0", only: [:dev, :test, :docs], runtime: false},
       {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}

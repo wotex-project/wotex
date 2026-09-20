@@ -74,11 +74,37 @@ defmodule WotexLab.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
+      doc_shell_dependency(),
       {:ex_doc, "~> 0.40", only: [:dev, :test, :docs], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:yaml_elixir, "~> 2.12", only: [:dev, :test], runtime: false}
+      {:yaml_elixir, "~> 2.12", only: [:dev, :test, :docs], runtime: false}
     ] ++ emqtt_dependencies()
+  end
+
+  defp doc_shell_dependency do
+    case {System.get_env("WOTEX_PATH_DEPS"), System.get_env("DOC_SHELL_CANDIDATE")} do
+      {"1", path} when is_binary(path) and path != "" ->
+        if Mix.env() in [:dev, :test, :docs] do
+          {:doc_shell,
+           path: Path.expand(path),
+           env: :prod,
+           only: [:dev, :test, :docs],
+           runtime: false,
+           override: true}
+        else
+          raise "DOC_SHELL_CANDIDATE is allowed only in development, test or docs"
+        end
+
+      {_, nil} ->
+        {:doc_shell, "== 0.4.0", only: [:dev, :test, :docs], runtime: false}
+
+      {_, ""} ->
+        {:doc_shell, "== 0.4.0", only: [:dev, :test, :docs], runtime: false}
+
+      _ ->
+        raise "DOC_SHELL_CANDIDATE requires WOTEX_PATH_DEPS=1"
+    end
   end
 
   # emqtt lists quicer as a hard dependency although its application file does
