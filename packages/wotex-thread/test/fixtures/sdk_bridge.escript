@@ -190,6 +190,26 @@ operation(Mode, State, Petition, Request, <<"add_joiner">>) ->
     {State, Petition, continue};
 operation(_Mode, State, Petition, Request, <<"remove_joiner">>) ->
     reply(Request, null), {State, Petition, continue};
+operation(Mode, State, Petition, Request, <<"joiner_start">>) ->
+    case Mode of
+        "joiner_pending" -> put(joining, Request);
+        "joiner_stop_wait" -> put(joining, Request);
+        "joiner_bad" -> reply(Request, #{<<"joined">> => false});
+        "joiner_error" -> failure(Request, #{<<"code">> => <<"remote_error">>,
+                                             <<"status">> => 7});
+        _ -> reply(Request, #{<<"joined">> => true})
+    end,
+    {State, Petition, continue};
+operation(Mode, State, Petition, Request, <<"joiner_stop">>) ->
+    if Mode =:= "joiner_stop_wait" -> ok;
+       true ->
+           case erase(joining) of
+               undefined -> ok;
+               Joining -> failure(Joining, #{<<"code">> => <<"cancelled">>})
+           end,
+           reply(Request, null)
+    end,
+    {State, Petition, continue};
 operation(Mode, State, Petition, Request, <<"set_enabled">>) ->
     case Mode of
         "error" ->

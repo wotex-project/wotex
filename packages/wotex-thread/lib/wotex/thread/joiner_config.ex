@@ -11,10 +11,10 @@ defmodule Wotex.Thread.JoinerConfig do
   characters or DEL. The provisioning URL receives text validation only.
   Unknown fields and invalid values return `:invalid_joiner_config` errors.
 
-  This module constructs inert values. It does not start a joiner or prove
-  network admission, and joiner execution remains outside the implemented
-  native profile. `Inspect` shows only the discerner; the struct and encoded
-  parameters retain credentials and metadata under the caller's ownership.
+  Construction alone does not start a joiner or prove network admission. Pass
+  the value to `Wotex.Thread.joiner_start/3` to run one explicit native attempt.
+  `Inspect` shows only the discerner; the struct and encoded parameters retain
+  credentials and metadata under the caller's ownership.
 
   ## Examples
 
@@ -66,14 +66,22 @@ defmodule Wotex.Thread.JoinerConfig do
            Enum.all?(@fields, fn {key, size} ->
              CommissioningValue.text?(Map.get(input, key), size)
            end),
-         {:ok, _} <- discerner(Map.get(input, :discerner)) do
-      {:ok, struct!(__MODULE__, input)}
+         {:ok, identity} <- normalized_discerner(Map.get(input, :discerner)) do
+      {:ok, struct!(__MODULE__, Map.put(input, :discerner, identity))}
     else
       _ -> {:error, Error.new(:invalid_joiner_config)}
     end
   end
 
   def new(_), do: {:error, Error.new(:invalid_joiner_config)}
+
+  @doc false
+  @spec parameters(term()) :: {:ok, map()} | {:error, Error.t()}
+  def parameters(%__MODULE__{} = config), do: encode(config)
+
+  def parameters(input) do
+    with {:ok, config} <- new(input), do: encode(config)
+  end
 
   @doc false
   @spec encode(term()) :: {:ok, map()} | {:error, Error.t()}
@@ -84,6 +92,15 @@ defmodule Wotex.Thread.JoinerConfig do
   end
 
   def encode(_), do: {:error, Error.new(:invalid_joiner_config)}
+
+  defp normalized_discerner(nil), do: {:ok, nil}
+
+  defp normalized_discerner(%JoinerIdentity{kind: :discerner} = identity) do
+    with {:ok, _} <- JoinerIdentity.encode(identity), do: {:ok, identity}
+  end
+
+  defp normalized_discerner(%{discerner: _} = input), do: JoinerIdentity.new(input)
+  defp normalized_discerner(_), do: {:error, Error.new(:invalid_joiner_identity)}
 
   defp discerner(nil), do: {:ok, nil}
   defp discerner(%JoinerIdentity{kind: :discerner} = identity), do: JoinerIdentity.encode(identity)

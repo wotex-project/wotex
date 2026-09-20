@@ -174,6 +174,17 @@ defmodule Wotex.Thread do
   def remove_joiner(session, identity, timeout),
     do: native_ack(session, %{type: :remove_joiner, identity: identity}, timeout)
 
+  @doc "Starts one owned Joiner attempt and waits for its final completion callback."
+  @spec joiner_start(term(), term(), term()) ::
+          {:ok, %{joined: true}} | {:error, Error.t()}
+  def joiner_start(session, config, timeout),
+    do: native_request(session, %{type: :joiner_start, config: config}, timeout)
+
+  @doc "Stops the owned Joiner attempt without enabling Thread or retrying it."
+  @spec joiner_stop(term(), term()) :: :ok | {:error, Error.t()}
+  def joiner_stop(session, options),
+    do: native_options_ack(session, %{type: :joiner_stop}, options)
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do
@@ -272,6 +283,13 @@ defmodule Wotex.Thread do
       if remaining > 0,
         do: native_request(session, message, remaining),
         else: {:error, Error.new(:timeout)}
+    end
+  end
+
+  defp native_options_ack(session, message, options) do
+    case native_options_request(session, message, options) do
+      {:ok, nil} -> :ok
+      {:error, _} = error -> error
     end
   end
 

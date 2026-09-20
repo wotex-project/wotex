@@ -11,10 +11,10 @@ defmodule Wotex.Thread.OpenThread do
 
   `start_link/1` supports caller supervision. `session/1` waits for successful
   SDK acquisition. Loading the library starts nothing. Explicit APIs support
-  Dataset validation/export, enablement, network formation, management updates
-  and commissioner admissions, and native State subscriptions deliver bounded,
-  non-secret snapshots. Joiner execution remains planned; commissioner admission
-  alone does not commission a peer.
+  Dataset validation/export, enablement, network formation, management updates,
+  commissioner admissions and Joiner attempts, while native State subscriptions
+  deliver bounded, non-secret snapshots. Joiner success is reported only by the
+  final SDK callback and does not promise subsequent Thread attachment.
   """
 
   @behaviour Wotex.Thread.Client

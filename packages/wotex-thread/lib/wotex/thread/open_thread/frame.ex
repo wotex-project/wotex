@@ -37,6 +37,8 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "dataset_exists" => :dataset_exists,
     "invalid_joiner_identity" => :invalid_joiner_identity,
     "invalid_joiner_admission" => :invalid_joiner_admission,
+    "invalid_joiner_config" => :invalid_joiner_config,
+    "joiner_timeout" => :joiner_timeout,
     "commissioner_timeout" => :commissioner_timeout,
     "commissioner_rejected" => :commissioner_rejected,
     "not_owned" => :not_owned,
@@ -265,6 +267,11 @@ defmodule Wotex.Thread.OpenThread.Frame do
   end
 
   defp value(nil, "remove_joiner"), do: {:ok, nil}
+
+  defp value(%{"joined" => true} = result, "joiner_start") when map_size(result) == 1,
+    do: {:ok, %{joined: true}}
+
+  defp value(nil, "joiner_stop"), do: {:ok, nil}
 
   defp value(nil, "validate_dataset"), do: {:ok, nil}
 

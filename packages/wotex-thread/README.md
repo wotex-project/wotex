@@ -35,11 +35,11 @@ end
 ## Accepted native target
 
 The accepted backend retains the existing first-party C++17 OpenThread
-Port. Joiner execution, complete simulated-network workflows and full lifecycle
-proof remain required. Python is not a production
-runtime dependency. The injected BEAM ownership peer is an Erlang escript; the
-native build is a Mix task. Active software tests use ExUnit. Dormant Python
-protocol/process drivers have been retired; their unexecuted cells remain open.
+Port. The Port owns Commissioner and Joiner callbacks; complete
+simulated-network workflows and final lifecycle qualification remain required.
+Python is not a production runtime dependency. The injected BEAM ownership peer
+is an Erlang escript, the native build is a Mix task, and active software tests
+use ExUnit. Dormant Python protocol/process drivers have been retired.
 
 [WTH.07](../../docs/packages/wotex-thread/specs/WTH.07-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. On Linux, the native build task builds the
@@ -82,12 +82,14 @@ settings lock. Its implemented APIs validate and export Datasets, enable IPv6
 and Thread, form an explicitly permitted network, submit management updates,
 and start/stop the commissioner with exact, finite joiner admissions. Management
 acceptance is separate from Dataset activation; commissioner admission is
-separate from joining. `Wotex.Thread.subscribe/2` with `%{type: :state}`
+separate from joining. `joiner_start/3` waits for the final OpenThread callback;
+`joiner_stop/2` cancels the owned attempt. Joiner completion does not enable
+Thread or claim attachment. `Wotex.Thread.subscribe/2` with `%{type: :state}`
 delivers one initial non-secret State snapshot and later per-iteration
 coalesced snapshots with the SDK changed-flags mask, under bounded native
 credit and receiver queues; `unsubscribe/2` waits for native retirement. These
-are native control reports, not Runtime application streams. Joiner execution
-remains planned. Thread management does not provide generic application Property writes.
+are native control reports, not Runtime application streams. Thread management
+does not provide generic application Property writes.
 Border-router management and physical-radio interoperability remain outside
 this target profile.
 

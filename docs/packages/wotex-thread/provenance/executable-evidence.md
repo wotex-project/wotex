@@ -2,14 +2,36 @@
 
 Current implementation: bounded Dataset/daemon APIs and a first-party C++ SDK
 host with semantic Dataset validation/export, interface/Thread enablement,
-formation, management callbacks and commissioner lifecycle/admissions. Native
+formation, management callbacks, commissioner lifecycle/admissions and Joiner
+callback ownership. Native
 ExUnit and C++/process fixtures exercise real SDK/RCP software boundaries; their
-presence is scoped evidence, not a complete Thread profile. Joiner execution,
-complete simulated-network/application workflows and final
+presence is scoped evidence, not a complete Thread profile. Complete
+simulated-network/application workflows and final
 stress/native/package closure remain required.
 The production runtime and explicit native build require no Python; dormant
 Python native test drivers have been retired. Selected native lanes must fail if their SDK/peer/configuration
 is absent. Physical-radio testing is a separate optional lane.
+
+## Joiner callback ownership, 2026-09-20
+
+`Wotex.Thread.joiner_start/3` validates the exact Joiner configuration before
+submission and accepts success only from `{joined: true}`. `joiner_stop/2` uses
+the reserved control slot, cancels an active request and leaves the SDK session
+usable. The injected escript cases cover success, malformed completion,
+structured callback failure, explicit stop and queued-read progress.
+
+`priv/openthread/joiner.hpp` owns one live and one retired callback context. The
+generation check rejects a callback from the retired attempt, timeout calls
+`otJoinerStop`, and a final success does not enable Thread. The portable
+`test/native/joiner_test.cpp` target drives validation, commissioned-state
+preservation, immediate SDK rejection, stop and a stale callback while a newer
+attempt is active. It is wired into the explicit native test lane as
+`WTH-S05-WTH-V09`.
+
+The focused ExUnit boundary tests and changed-line native formatting passed on
+macOS arm64. The native C++ target and the production host were not executed in
+this bounded change. Linux SDK, sanitizer and simulated-network results remain
+qualification work and are not inferred from source or injected-peer tests.
 
 ## Mandatory local gate
 

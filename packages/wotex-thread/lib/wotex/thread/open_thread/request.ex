@@ -14,7 +14,7 @@ defmodule Wotex.Thread.OpenThread.Request do
   allocates no request identity and owns neither deadlines nor retry policy.
   """
 
-  alias Wotex.Thread.{Error, JoinerAdmission, JoinerIdentity}
+  alias Wotex.Thread.{Error, JoinerAdmission, JoinerConfig, JoinerIdentity}
   alias Wotex.Thread.OpenThread.DatasetWire
 
   @doc false
@@ -66,6 +66,14 @@ defmodule Wotex.Thread.OpenThread.Request do
          do: {:ok, {"remove_joiner", %{identity: identity}}}
   end
 
+  def encode(%{type: :joiner_start, config: config} = request) when map_size(request) == 2 do
+    with {:ok, parameters} <- JoinerConfig.parameters(config),
+         do: {:ok, {"joiner_start", parameters}}
+  end
+
+  def encode(%{type: :joiner_stop} = request) when map_size(request) == 1,
+    do: {:ok, {"joiner_stop", %{}}}
+
   def encode(%{type: :subscribe_state, queue_limit: limit} = request)
       when map_size(request) == 2 and is_integer(limit) and limit in 1..10_000,
       do: {:ok, {"subscribe_state", %{queue_limit: limit}}}
@@ -99,7 +107,9 @@ defmodule Wotex.Thread.OpenThread.Request do
              "commissioner_start",
              "commissioner_stop",
              "add_joiner",
-             "remove_joiner"
+             "remove_joiner",
+             "joiner_start",
+             "joiner_stop"
            ],
       do: true
 

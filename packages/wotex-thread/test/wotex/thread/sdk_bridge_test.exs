@@ -630,6 +630,89 @@ defmodule Wotex.Thread.SdkBridgeTest do
              ]
   end
 
+  test "WTH-S05 Joiner success is final callback completion and stop is explicit", context do
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    request = %{
+      pskd: "WTEST123",
+      discerner: %{discerner: %{length: 12, value: 42}},
+      provisioning_url: "https://device.invalid",
+      vendor_name: "Wotex",
+      vendor_model: "Fixture",
+      vendor_sw_version: "1.0",
+      vendor_data: "opaque"
+    }
+
+    assert {:ok, %{joined: true}} = Wotex.Thread.joiner_start(session, request, 1000)
+    assert :ok = Wotex.Thread.joiner_stop(session, timeout: 1000)
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    [_, start, stop, _] = requests(context)
+    assert start["operation"] == "joiner_start"
+
+    assert start["parameters"] == %{
+             "pskd" => "WTEST123",
+             "discerner" => %{"type" => "discerner", "length" => 12, "value" => "42"},
+             "provisioning_url" => "https://device.invalid",
+             "vendor_name" => "Wotex",
+             "vendor_model" => "Fixture",
+             "vendor_sw_version" => "1.0",
+             "vendor_data" => "opaque"
+           }
+
+    assert stop["operation"] == "joiner_stop"
+    assert stop["parameters"] == %{}
+  end
+
+  test "WTH-S05 Joiner stop cancels only the active attempt and preserves the session", context do
+    File.write!(Path.join(context.directory, "mode"), "joiner_pending")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    joining = Task.async(fn -> Wotex.Thread.joiner_start(session, %{pskd: "WTEST123"}, 5000) end)
+    eventually(fn -> Enum.any?(requests(context), &(&1["operation"] == "joiner_start")) end)
+    read = Task.async(fn -> Wotex.Thread.inspect_state(session, []) end)
+
+    assert :ok = Wotex.Thread.joiner_stop(session, timeout: 1000)
+    assert {:error, %Error{code: :cancelled, effect: :unknown}} = Task.await(joining)
+    assert {:ok, %State{}} = Task.await(read)
+    assert {:ok, %State{}} = Wotex.Thread.inspect_state(session, [])
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    assert Enum.map(requests(context), & &1["operation"]) ==
+             ["open", "joiner_start", "joiner_stop", "inspect", "inspect", "close"]
+  end
+
+  test "WTH-S05 Joiner validation and callback errors stay structured", context do
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_joiner_config, effect: :none}} =
+             Wotex.Thread.joiner_start(session, %{pskd: "bad"}, 1000)
+
+    for options <- [1000, [unknown: true], [timeout: 0], [timeout: 1, timeout: 2]] do
+      assert {:error, %Error{effect: :none}} = Wotex.Thread.joiner_stop(session, options)
+    end
+
+    assert Enum.map(requests(context), & &1["operation"]) == ["open"]
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    File.write!(Path.join(context.directory, "mode"), "joiner_error")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :remote_error, effect: :unknown, details: %{status: 7}}} =
+             Wotex.Thread.joiner_start(session, %{pskd: "WTEST123"}, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+  end
+
+  test "WTH-C07 a Joiner start cannot claim success before a valid final result", context do
+    File.write!(Path.join(context.directory, "mode"), "joiner_bad")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_response, effect: :unknown}} =
+             Wotex.Thread.joiner_start(session, %{pskd: "WTEST123"}, 1000)
+
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+  end
+
   test "WTH-N01 map admissions and options follow the standalone contract", context do
     assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
     assert {:ok, %{state: :active}} = Wotex.Thread.commissioner_start(session, [])

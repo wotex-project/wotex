@@ -172,6 +172,7 @@ class Worker final {
       finish_formation();
       finish_management();
       finish_commissioner();
+      finish_joiner();
       if (FD_ISSET(output_fd_, &loop.mWriteFdSet) && output_.flush(output_fd_) == Output::Flush::failed) return 2;
       if (!closing_ && FD_ISSET(STDIN_FILENO, &loop.mReadFdSet)) input();
       if (flow_ && flow_->failed()) throw ChannelError();
@@ -189,7 +190,13 @@ class Worker final {
     char bytes[4096]; const ssize_t count = ::read(STDIN_FILENO, bytes, sizeof bytes);
     if (count == 0) {
       if (!incoming_.empty()) throw ProtocolError();
-      forming_.reset(); managing_.reset(); petitioning_.reset(); sdk_.reset(); closing_ = true; return;
+      forming_.reset();
+      managing_.reset();
+      petitioning_.reset();
+      joining_.reset();
+      sdk_.reset();
+      closing_ = true;
+      return;
     }
     if (count < 0) {
       if (errno == EAGAIN || errno == EINTR) return;
@@ -245,7 +252,11 @@ class Worker final {
         reply(success(command, sdk_->snapshot()));
       } else if (command.operation == "close") {
         if (!command.parameters.empty()) throw ProtocolError();
-        forming_.reset(); managing_.reset(); petitioning_.reset(); sdk_.reset();
+        forming_.reset();
+        managing_.reset();
+        petitioning_.reset();
+        joining_.reset();
+        sdk_.reset();
 #ifdef WOTEX_NATIVE_SANITIZERS
         // Check explicit, fully torn-down sessions before acknowledging close.
         __lsan_do_leak_check();
@@ -291,6 +302,22 @@ class Worker final {
           sdk_->commissioning().remove(command.parameters);
           reply(success(command, nullptr));
         }
+      } else if (command.operation == "joiner_start") {
+        if (!sdk_) throw SdkError("not_open");
+        if (joining_) throw SdkError("busy");
+        const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
+        sdk_->joiner().start(command.parameters);
+        joining_ = Formation{
+            Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
+      } else if (command.operation == "joiner_stop") {
+        if (!command.parameters.empty()) throw ProtocolError();
+        if (!sdk_) throw SdkError("not_open");
+        sdk_->joiner().stop();
+        if (joining_) {
+          reject(joining_->command, "cancelled");
+          joining_.reset();
+        }
+        reply(success(command, nullptr));
       } else if (command.operation == "set_enabled") {
         if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
@@ -327,12 +354,21 @@ class Worker final {
       } else {
         throw SdkError("not_supported");
       }
-    } catch (otError error) { reject(command, "remote_error", static_cast<unsigned>(error)); }
-      catch (const CommissioningError &error) { reject(command, error.what()); }
-      catch (const DatasetError &) { reject(command, "invalid_dataset"); }
-      catch (const ProtocolError &) { reject(command, "invalid_request"); }
-      catch (const StorageError &) { reject(command, "storage_unavailable"); }
-      catch (const SdkError &error) { reject(command, error.what()); }
+    } catch (otError error) {
+      reject(command, "remote_error", static_cast<unsigned>(error));
+    } catch (const CommissioningError &error) {
+      reject(command, error.what());
+    } catch (const JoinerError &error) {
+      reject(command, error.what());
+    } catch (const DatasetError &) {
+      reject(command, "invalid_dataset");
+    } catch (const ProtocolError &) {
+      reject(command, "invalid_request");
+    } catch (const StorageError &) {
+      reject(command, "storage_unavailable");
+    } catch (const SdkError &error) {
+      reject(command, error.what());
+    }
   }
   void reject(const Request &command, std::string_view code, std::optional<unsigned> status = {}) {
     Json response = failure(command, code);
@@ -387,8 +423,25 @@ class Worker final {
       }
     }
   }
+  void finish_joiner() {
+    if (!joining_) return;
+    if (Clock::now() >= joining_->deadline) {
+      sdk_->joiner().stop();
+      reject(joining_->command, "joiner_timeout");
+      joining_.reset();
+      return;
+    }
+    const auto result = sdk_->joiner().take_result();
+    if (!result) return;
+    if (*result == OT_ERROR_NONE) {
+      reply(success(joining_->command, {{"joined", true}}));
+    } else {
+      reject(joining_->command, "remote_error", static_cast<unsigned>(*result));
+    }
+    joining_.reset();
+  }
   struct Formation { Request command; Clock::time_point deadline; };
-  std::optional<Formation> forming_, managing_, petitioning_;
+  std::optional<Formation> forming_, managing_, petitioning_, joining_;
   int output_fd_ = -1;
   Output output_;
   std::optional<ReportFlow> flow_;

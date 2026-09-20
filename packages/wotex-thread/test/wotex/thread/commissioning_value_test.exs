@@ -13,7 +13,7 @@ defmodule Wotex.Thread.CommissioningValueTest do
 
   @moduletag requirements: ["WTH-S05", "WTH-C02"], vectors: ["WTH-V08", "WTH-V09"]
 
-  test "commissioner commands have exact shapes and conservative mutation classification" do
+  test "commissioning commands have exact shapes and conservative mutation classification" do
     alias Wotex.Thread.OpenThread.{Frame, Request}
 
     for type <- [:commissioner_start, :commissioner_stop] do
@@ -35,9 +35,42 @@ defmodule Wotex.Thread.CommissioningValueTest do
       assert Request.mutation?(type)
     end
 
+    {:ok, discerner} = JoinerIdentity.new(%{discerner: %{length: 12, value: 42}})
+
+    assert {:ok, config} =
+             JoinerConfig.new(%{
+               pskd: "WTEST123",
+               discerner: discerner,
+               provisioning_url: "https://device.invalid",
+               vendor_name: "Wotex",
+               vendor_model: "Fixture",
+               vendor_sw_version: "1.0",
+               vendor_data: "opaque"
+             })
+
+    assert {:ok,
+            {"joiner_start",
+             %{
+               pskd: "WTEST123",
+               discerner: %{type: "discerner", length: 12, value: "42"},
+               provisioning_url: "https://device.invalid",
+               vendor_name: "Wotex",
+               vendor_model: "Fixture",
+               vendor_sw_version: "1.0",
+               vendor_data: "opaque"
+             }}} = Request.encode(%{type: :joiner_start, config: config})
+
+    assert {:ok, {"joiner_stop", %{}}} = Request.encode(%{type: :joiner_stop})
+    assert Request.mutation?("joiner_start")
+    assert Request.mutation?("joiner_stop")
+    assert {:error, %Error{}} = Request.encode(%{type: :joiner_start, config: nil})
+    assert {:error, %Error{}} = Request.encode(%{type: :joiner_stop, extra: true})
+
     for code <- [
           "invalid_joiner_identity",
           "invalid_joiner_admission",
+          "invalid_joiner_config",
+          "joiner_timeout",
           "commissioner_timeout",
           "commissioner_rejected",
           "not_owned",
@@ -51,6 +84,34 @@ defmodule Wotex.Thread.CommissioningValueTest do
                )
 
       assert Atom.to_string(value) == code
+    end
+
+    assert {:ok, %{joined: true}} =
+             Frame.response(
+               %{
+                 "version" => 1,
+                 "id" => "2",
+                 "ok" => true,
+                 "result" => %{"joined" => true}
+               },
+               "2",
+               "joiner_start"
+             )
+
+    assert {:ok, nil} =
+             Frame.response(
+               %{"version" => 1, "id" => "3", "ok" => true, "result" => nil},
+               "3",
+               "joiner_stop"
+             )
+
+    for invalid <- [%{}, %{"joined" => false}, %{"joined" => true, "state" => "child"}] do
+      assert :invalid =
+               Frame.response(
+                 %{"version" => 1, "id" => "4", "ok" => true, "result" => invalid},
+                 "4",
+                 "joiner_start"
+               )
     end
   end
 

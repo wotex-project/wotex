@@ -5,6 +5,7 @@
 #include "dataset.hpp"
 #include "storage.hpp"
 #include "commissioning.hpp"
+#include "joiner.hpp"
 #include <openthread/commissioner.h>
 #include <openthread/instance.h>
 #include <openthread/ip6.h>
@@ -64,6 +65,7 @@ class Sdk final {
       throw SdkError("sdk_start_failed");
     }
     commissioning_ = std::make_unique<Commissioning>(instance_);
+    joiner_ = std::make_unique<JoinerOwner>(instance_);
   }
   ~Sdk() { close(); }
   Sdk(const Sdk &) = delete;
@@ -97,6 +99,7 @@ class Sdk final {
     throw SdkError("not_supported");
   }
   Commissioning &commissioning() { return *commissioning_; }
+  JoinerOwner &joiner() { return *joiner_; }
   void form_network(const Json &parameters) {
     if (!exact_keys(parameters, {"dataset"})) throw ProtocolError();
     DatasetValue active(parameters.at("dataset"));
@@ -179,13 +182,14 @@ class Sdk final {
   void process(const otSysMainloopContext &mainloop) { otSysMainloopProcess(instance_, &mainloop); }
   void close() {
     if (instance_ != nullptr) {
-      otJoinerStop(instance_);
+      joiner_->close();
       commissioning_->close();
       otRemoveStateChangeCallback(instance_, changed, this);
       (void)otThreadSetEnabled(instance_, false);
       (void)otIp6SetEnabled(instance_, false);
       otSysDeinit();
       instance_ = nullptr;
+      joiner_.reset();
       commissioning_.reset();
     }
     storage_.reset();
@@ -235,6 +239,7 @@ class Sdk final {
   std::string radio_, interface_, path_, sdk_path_;
   std::unique_ptr<Storage> storage_;
   std::unique_ptr<Commissioning> commissioning_;
+  std::unique_ptr<JoinerOwner> joiner_;
   otInstance *instance_ = nullptr;
   otChangedFlags changed_flags_ = 0;
   bool allow_creation_ = false;

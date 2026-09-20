@@ -385,7 +385,7 @@ packages:
         path: "docs/packages/wotex-thread/specs/WTH.04-software-contract.md"
       - id: "WTH.05"
         version: "1.1.1"
-        implementation_status: "planned"
+        implementation_status: "partial"
         path: "docs/packages/wotex-thread/specs/WTH.05-standalone-client-and-preservation.md"
       - id: "WTH.06"
         version: "1.1.2"
