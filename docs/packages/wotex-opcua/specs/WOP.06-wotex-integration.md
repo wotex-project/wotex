@@ -3,7 +3,7 @@ spec:
   id: WOP.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.14
+  version: 1.1.15
   owner: wotex-opcua
   updated: 2026-09-20
 ---
@@ -45,13 +45,13 @@ supervised owner, reaps the relay's native helpers and performs no reconnect.
 Only an explicitly new Runtime child observes a replacement peer. An exact-archive consumer of
 `wotex_opcua`, `wotex_runtime` and `wotex` archives built from one commit runs
 the native secure workflow against the same-stack peer on both required
-runtimes (WOP.07 X-F48). The independent peer also roundtrips Int32 and Double
-arrays and a 2 × 3 Int16 matrix through a real ConsumedThing, preserving type,
-dimensions, extreme integers and negative zero before restoring every node. It
-also returns every scalar accepted by `Value.native_result/1` through real
-ConsumedThing reads. DateTime, Guid, ByteString, NodeId and StatusCode pass
-real observations with exact values, metadata and cleanup. Broader independent
-array breadth and the remaining I03/I05/I06 cells are not accepted.
+runtimes (WOP.07 X-F48). The independent peer returns every scalar accepted by
+`Value.native_result/1` through real ConsumedThing reads. It also reads and
+observes arrays of every supported non-null type plus a 2 × 3 Int16 matrix,
+preserving type, dimensions, integer boundaries, binary elements, exact
+DateTime ticks and negative zero. Every array writable through `Value.encode/2`
+passes write/readback/restore. Each observation returns peer and local resources
+to baseline. The remaining I03/I05/I06 cells are not accepted.
 
 ## WOP-I01 — Dependency direction and owned values
 

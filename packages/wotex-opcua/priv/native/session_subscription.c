@@ -120,7 +120,8 @@ static void receive_create_items(UA_Client *client, void *userdata, UA_UInt32 re
     if(!wop_session_accept(operation, request_id, response ? &response->responseHeader : NULL))
         return;
     /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
-    if(response->resultsSize != 1 || !response->results) return;
+    if (response->resultsSize != 1 || !response->results || response->diagnosticInfosSize != 0)
+        return;
     const UA_MonitoredItemCreateResult *result = &response->results[0];
     operation->item_status = result->statusCode;
     operation->monitored_item_id = result->monitoredItemId;
@@ -140,6 +141,7 @@ static void receive_delete(UA_Client *client, void *userdata, UA_UInt32 request_
             return;
         /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
         operation->valid = response->resultsSize == 1 && response->results &&
+                           response->diagnosticInfosSize == 0 &&
                            response->results[0] == UA_STATUSCODE_GOOD;
     } else {
         UA_DeleteSubscriptionsResponse *response = raw;
@@ -147,6 +149,7 @@ static void receive_delete(UA_Client *client, void *userdata, UA_UInt32 request_
             return;
         /* NOLINTNEXTLINE(clang-analyzer-core.NullDereference): wop_session_accept is true only for a non-NULL response */
         operation->valid = response->resultsSize == 1 && response->results &&
+                           response->diagnosticInfosSize == 0 &&
                            response->results[0] == UA_STATUSCODE_GOOD;
     }
 }

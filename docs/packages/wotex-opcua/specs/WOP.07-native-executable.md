@@ -3,7 +3,7 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.52
+  version: 1.1.86
   owner: wotex-opcua
   updated: 2026-09-20
 ---
@@ -74,9 +74,25 @@ leaves no local native process and records zero application requests in the peer
 Against that independent peer, the public subscription path also delivers the
 initial and two fresh Values exactly once with sequence, client-handle,
 timestamp-resolution and overflow metadata. Double cancellation is idempotent;
-receiver death deletes only its subscription; and receiver-queue overflow emits
-one terminal error. Peer subscription and MonitoredItem counts return to zero
-and the Session remains usable after each lifecycle path. Suspending the native
+foreign-Session and forged-generation cancellation fail before either delete
+service, while valid cancellation reaches each service once. Receiver death
+deletes only its subscription. Receiver-queue overflow emits one terminal
+error. Peer subscription and MonitoredItem counts return to zero
+and the Session remains usable after each lifecycle path. The same peer accepts
+32 live subscriptions. The 33rd attempt leaves its CreateSubscription and
+CreateMonitoredItems counters unchanged; deleting one handle admits exactly one
+replacement. Eleven malformed CreateSubscription/CreateMonitoredItems responses
+prove that invalid revisions,
+cardinality, diagnostics, identifiers, item status and service status are
+rejected after real acquisition, with server resources deleted and the Session
+preserved. Ten malformed DeleteMonitoredItems/DeleteSubscriptions responses
+return `cleanup_failed`, close only their owning Session and leave an observer
+usable after peer resources reach zero. Seven Publish variants independently
+exercise duplicate suppression, conflicting reuse, sequence zero, the
+100-message recovery bound, client-handle identity, StatusChange and Bad
+acknowledgement handling. The first six end only their subscription and retain
+the Session; the Bad acknowledgement closes the owner while an observer remains
+usable. Suspending the native
 SDK beyond a six-cycle lifetime also expires the independent server
 subscription; resumption delivers one `subscription_lost`, both peer counters
 remain zero and the Session serves a subsequent Read. An isolated `server_loss`
@@ -95,14 +111,13 @@ Terminating an isolated peer beneath that child emits one classified Runtime
 error and one `transport_down`, stops the observation owner and reaps every
 relay helper without reconnect or replay. An explicitly fresh child observes a
 newly started peer and cleans up its subscription normally.
-It also exposes writable Int32 and Double arrays and a writable 2 × 3 Int16
-matrix. Public Runtime read/write/readback preserves their type, flat values,
-dimensions, extreme integers and negative zero, restores the original values
-and leaves only the test's baseline Session helpers. The peer also returns the
-complete Runtime-supported scalar set, including exact DateTime ticks, Guid,
-raw ByteString, translated NodeId and StatusCode values. Those five special
-types also pass real observations and return all peer and relay resources to
-baseline on stop.
+It also exposes the complete Runtime-supported scalar set and arrays of every
+non-null type in that set, plus a writable 2 × 3 Int16 matrix. Public Runtime
+reads and observations preserve type, flat values, dimensions, integer
+boundaries, binary elements, exact DateTime ticks, Guid, translated NodeId,
+StatusCode and negative zero. Every array accepted by the Runtime Write mapper
+passes write/readback/restore. Each observation returns peer and relay resources
+to baseline on stop.
 Normal native output now waits in the X04 64-envelope/1 MiB queue on a
 nonblocking pipe and spends message/byte credit only when its first byte is
 written; ready and terminal controls use the separate allowance and never split
@@ -112,7 +127,13 @@ before consumption fail. Open/read/write/call/browse/close responses spend credi
 replenishes validated consumption. The read path translates one concrete input
 NodeId through the server URI and SDK-local namespace map and returns a typed
 DataValue, retaining a Bad result's numeric StatusCode. Decoded identity values
-are projected back to server namespace indexes (below). The Write path
+are projected back to server namespace indexes (below). Independent Rust Reads
+retain both timestamps, distinguish present Null from a missing value, and keep
+an unknown binary ExtensionObject's encoding NodeId and body. One-shot faults
+then remove the next value or change its status. Uncertain `0x40900000` retains
+the typed value and exact status, while Bad `0x80010000` becomes a request-scoped
+`remote_error`. The following Read succeeds on the same Session.
+The Write path
 validates one typed Variant, holds an SDK-owned copy through the callback and
 returns one numeric result status. A transmitted Write failure retains unknown
 effect without retry. The Call path translates concrete object/method NodeIds,
@@ -134,8 +155,66 @@ browse deadline and cumulative bounds, releases an unconsumed continuation with 
 bounded control when that deadline passes and ends the generation when that
 release fails. A duplicate live token from the native process ends the
 generation. The independent Rust peer proves BrowseNext, release and automatic
-deadline release with its server-side continuation count. Output buffering and
-other lifecycle operations remain required. The owner now samples the
+deadline release with its server-side continuation count. It also reaches the
+64-live-continuation Session limit, rejects a 65th Browse before peer I/O,
+reuses a released slot and deletes the remaining continuations on Session
+close. Filtered independent Browse also preserves all three directions, exact,
+subtype and all-reference-type selection, single and combined node-class masks,
+server order and all seven typed ReferenceDescription fields. Five malformed
+initial Browse variants cover
+missing and duplicate results, diagnostics, an oversized page and an overlong
+continuation. Each closes only its owning Session and subscription, clears peer
+resources and preserves an observer. The same five BrowseNext shapes consume a
+valid cursor, clear any successor continuation and preserve the observer. A
+pair of status variants retains Uncertain on a first or next page and proves
+that complete collection releases the cursor before reporting an incomplete
+browse. Bad result and response-header statuses retain their numeric identity:
+either is request-scoped on the first page and terminal on BrowseNext, where
+Session close clears the unknown successor and other Session resources. Empty
+first and next page variants retain
+their continuations, complete normally and count toward the cumulative page
+limit; limit cleanup releases the cursor and keeps the Session usable. Remote
+ExpandedNodeIds on initial and next pages retain their nonzero server index in
+typed Browse. Persistent and one-shot child projection reject the lossy
+conversion, release a live cursor and keep the peer continuation count at zero.
+Initial-page and next-page variants with an unknown namespace URI prove the
+same typed preservation and child-projection cleanup.
+Remote type-definition variants at both stages retain their URI and server
+index while persistent and one-shot local child collection completes normally.
+Out-of-table namespace indexes on each identity field are rejected on initial
+and next typed pages with cursor cleanup. Child projection rejects an invalid
+target but ignores invalid metadata fields it does not expose.
+Duplicate references on initial and next pages remain duplicated and ordered in
+typed Browse and both child-list lifecycles, with peer resources returning to zero.
+QualifiedName namespace 65535 and localized UTF-8 reference text survive both
+typed page positions without affecting child projection or cleanup.
+NodeClass zero likewise survives both page positions as unspecified while both
+compatibility lifecycles collect every child and leave no peer continuation.
+Null and empty QualifiedName strings also remain distinct on both typed page
+positions without changing child projection or continuation cleanup.
+Null type definitions retain all three null ExpandedNodeId fields at both page
+positions without changing child projection or continuation cleanup.
+An independent long-name variant proves the aggregate 1 MiB decoded-reference
+limit across sub-frame pages, including release and continued Session use for
+typed and both compatibility lifecycles.
+A destructive named peer consumes BrowseNext,
+writes a receipt marker and exits before its response. Another records one
+allocated continuation before dropping an initial Browse response. Either lost
+response ends the Session and its unrelated subscription and reaps both native
+helpers.
+A second variant consumes a valid release and exits before returning its
+response, ending its Session, subscription and native helpers. A third returns a
+Bad release result; that Session closes, its peer resources clear and an observer
+remains usable. Six release-fault variants cover zero and duplicate results,
+returned references, a returned continuation, diagnostics and a Bad response
+header. Each closes only its owning Session, clears its peer resources and leaves
+the observer usable. Owner death on a separate Session with a
+live continuation and subscription clears the same three peer resources, reaps
+the guardian and native client, and leaves the observer usable. Output buffering
+and other lifecycle operations remain required. The peer's BrowseNext request
+counter also proves that non-owner, foreign-Session and consumed handles fail
+before service I/O; only a valid next and release change the counter. The owner
+now samples the
 SDK's client-local namespace table when the Session is ready and projects every
 decoded NodeId, ExpandedNodeId without a URI, encoded ExtensionObject type
 identity and Browse ReferenceDescription identity from that table to the server
@@ -152,16 +231,26 @@ for Browse/BrowseNext and an exact null Browse release. Its host now binds one
 live token to a generation-bound reference for persistent typed Browse,
 preserves the original absolute deadline and cumulative limits, and consumes
 the old reference on next or release. Generic raw Browse still closes on a
-returned token. Independent-peer wire pagination and the target 64 live
-continuations remain unaccepted.
+returned token. The remaining independent boundary and lifecycle cells remain
+unaccepted.
 The child-list compatibility call now uses the same owner-bound page path to
 collect at most 256 local NodeIds on one persistent or temporary Session.
 Later invalid identity and Uncertain status release a live cursor; fixture
 tests pass for both lifecycle modes. The secure same-stack C peer confirms
 multi-page child collection over the wire in both modes. The second independent
-peer (async-opcua Rust) confirms BrowseNext, release and expiry release with the
-server's live continuation-point count, and that a timed-out or abandoned Call
-reaches the server's Cancel service.
+peer (async-opcua Rust) confirms BrowseNext, release, expiry release and the
+64-live-handle boundary with the server's continuation-point count. It also
+confirms first-page and next-page Uncertain retention and complete-collection
+cleanup, exact Bad status projection and the required terminal next-page
+cleanup, empty continuation-page acceptance and page-bound accounting, the
+complete filtered reference projection, and terminal Session cleanup
+after each malformed initial Browse or BrowseNext envelope, loss of an initial
+Browse response with an allocated continuation, a
+received-but-unanswered BrowseNext, a consumed-but-unanswered release, a Bad
+release response, each malformed Good release response, or owner death with a
+live continuation and subscription, and that a timed-out
+or abandoned Call reaches the server's Cancel service. Its BrowseNext counter
+also distinguishes local foreign/reused-handle rejection from valid wire calls.
 The native runtime uses an Elixir API and an explicitly owned open62541 C
 executable. Python is confined to upstream build generators and the audit
 environment; the former public Python compatibility adapter and peer have been removed.
@@ -544,7 +633,12 @@ blocking slices. Network work uses typed asynchronous service APIs; blocking
 synchronous Cancel is not allowed on the owner loop. Callback context binds
 SDK requestId, expected response type, generation and IPC ID. `noReconnect` and
 `noNewSession` are true. Channel renewal is SDK-owned; Session loss terminates
-the generation. Each application request has exactly one final success/failure response.
+the generation. A one-second independent peer variant counts one successful
+renewal while the same Session retains its monitored item and completes
+Write/report/Read. BadSessionIdInvalid on a transmitted Write terminates the
+generation with unknown effect. The independent server records one Write and
+an observer sees its changed value; no replay occurs. Each application request
+has exactly one final success/failure response.
 Cancellation produces a separate acknowledgment for its control request and one
 `canceled` failure for an unfinished target; completed targets return
 `{target_id, canceled: false}` without changing the delivered result. Native
@@ -590,6 +684,16 @@ for these raw-service subscriptions; two Publish engines must not compete.
 CreateSubscription retains revised publishing interval, lifetime and keepalive;
 CreateMonitoredItems retains revised sampling interval, queue size and item
 status. The returned handle is valid only after both service/item checks pass.
+Every create/delete response must contain exactly one result for the single
+request item and no diagnostics. Bad service or item status retains its numeric
+identity. A malformed create response deletes the identified server
+subscription; a malformed delete response closes the Session because confirmed
+cleanup is no longer available.
+The BEAM owner validates the creating host and handle generation before native
+I/O. After acknowledgement, another unsubscribe succeeds without sending either
+delete service again.
+Admission counts both established subscriptions and pending creates against the
+32-slot limit. A local `busy` failure sends no CreateSubscription request.
 All integer revisions satisfy S04 limits; finite noninteger interval revisions
 are preserved without rounding and must remain within the accepted interval
 range. An invalid revision causes server cleanup, not silent clamping.
@@ -606,6 +710,12 @@ Duplicate notifications can be acknowledged without repeated delivery. Fresh
 equal values remain deliverable. Server acknowledgment statuses are validated.
 A subscription's failed gap recovery terminates that subscription; a Session-wide
 security/correlation fault terminates the entire Session.
+The independent peer binds these decisions to real Publish responses. An exact
+duplicate is acknowledged without a second delivery. Conflicting sequence
+reuse, sequence zero, a gap above 100 messages, an unknown client handle and a
+Bad StatusChange each terminate only that subscription. A Bad acknowledgement
+result terminates the Session and clears its server subscription while another
+Session keeps serving.
 
 Native receiver death cancels only its subscription. A failed server delete
 requires closing the shared Session and reporting loss to its other dependants;

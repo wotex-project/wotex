@@ -283,6 +283,7 @@ impl MessageHandler {
 
             RequestMessage::CreateSubscription(request) => {
                 let request = self.get_request(data, *request);
+                request.info.record_create_subscription_request();
                 let context = request.context();
                 HandleMessageResult::SyncMessage(Response::from_result(
                     self.subscriptions.create_subscription(

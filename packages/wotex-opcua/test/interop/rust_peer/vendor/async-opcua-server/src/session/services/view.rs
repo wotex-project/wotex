@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use opcua_core::trace_write_lock;
 use tracing::{debug_span, error, info};
@@ -13,8 +13,10 @@ use crate::{
 };
 use opcua_types::{
     BrowseNextRequest, BrowseNextResponse, BrowsePathResult, BrowsePathTarget, BrowseRequest,
-    BrowseResponse, BrowseResult, ByteString, RegisterNodesRequest, RegisterNodesResponse,
-    ResponseHeader, StatusCode, TranslateBrowsePathsToNodeIdsRequest,
+    BrowseResponse, BrowseResult, ByteString, DiagnosticInfo, ExpandedNodeId, NodeClass,
+    ReferenceDescription, RegisterNodesRequest, RegisterNodesResponse, ResponseHeader, StatusCode,
+    UAString,
+    TranslateBrowsePathsToNodeIdsRequest,
     TranslateBrowsePathsToNodeIdsResponse, UnregisterNodesRequest, UnregisterNodesResponse,
 };
 
@@ -33,7 +35,7 @@ pub(crate) async fn browse(
         return service_fault!(request, StatusCode::BadViewIdUnknown);
     }
 
-    let max_references_per_node = if request.request.requested_max_references_per_node == 0 {
+    let mut max_references_per_node = if request.request.requested_max_references_per_node == 0 {
         request
             .info
             .operational_limits
@@ -45,6 +47,12 @@ pub(crate) async fn browse(
             .max_references_per_browse_node
             .min(request.request.requested_max_references_per_node as usize)
     };
+    let page_cap = std::env::var("WOTEX_OPCUA_RUST_BROWSE_PAGE_CAP")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok());
+    if let Some(page_cap) = page_cap {
+        max_references_per_node = max_references_per_node.min(page_cap);
+    }
 
     let mut nodes: Vec<_> = nodes_to_browse
         .into_iter()
@@ -153,23 +161,185 @@ pub(crate) async fn browse(
     }
 
     // Cannot be None here, since we are guaranteed to always empty out nodes.
-    let results = results.into_iter().map(Option::unwrap).collect();
+    let mut results = results.into_iter().map(Option::unwrap).collect();
+
+    // The disposable Wotex fixture records that the server allocated a
+    // continuation, then exits before its initial Browse response is sent.
+    if let Ok(marker) = std::env::var("WOTEX_OPCUA_RUST_EXIT_AFTER_BROWSE") {
+        let continuations = request
+            .session
+            .read()
+            .browse_continuation_point_count();
+        if fs::write(marker, format!("{continuations}\n")).is_ok() {
+            std::process::exit(84);
+        }
+        std::process::exit(85);
+    }
+
+    let diagnostic_infos = malformed_browse(&mut results);
+    let mut response_header = ResponseHeader::new_good(request.request_handle);
+    if std::env::var_os("WOTEX_OPCUA_RUST_BAD_BROWSE_SERVICE").is_some() {
+        response_header.service_result = StatusCode::BadUnexpectedError;
+    }
 
     Response {
         message: BrowseResponse {
-            response_header: ResponseHeader::new_good(request.request_handle),
+            response_header,
             results: Some(results),
-            diagnostic_infos: None,
+            diagnostic_infos,
         }
         .into(),
         request_id: request.request_id,
     }
 }
 
+fn malformed_browse(results: &mut Vec<BrowseResult>) -> Option<Vec<DiagnosticInfo>> {
+    malformed_browse_response("WOTEX_OPCUA_RUST_MALFORMED_BROWSE", results)
+}
+
+fn malformed_browse_response(
+    variable: &str,
+    results: &mut Vec<BrowseResult>,
+) -> Option<Vec<DiagnosticInfo>> {
+    let name_bytes = std::env::var("WOTEX_OPCUA_RUST_BROWSE_NAME_BYTES")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok());
+    if let Some(name_bytes) = name_bytes {
+        for reference in results[0].references.get_or_insert_default() {
+            reference.browse_name.name = "x".repeat(name_bytes).into();
+        }
+    }
+
+    match std::env::var(variable).as_deref() {
+        Ok("missing_result") => results.clear(),
+        Ok("extra_result") => results.push(BrowseResult {
+            status_code: StatusCode::Good,
+            continuation_point: ByteString::null(),
+            references: None,
+        }),
+        Ok("oversized_page") => results[0]
+            .references
+            .get_or_insert_default()
+            .push(ReferenceDescription::default()),
+        Ok("oversized_continuation") => {
+            results[0].continuation_point = ByteString::from(vec![0; 4097]);
+        }
+        Ok("diagnostic") => return Some(vec![DiagnosticInfo::default()]),
+        Ok("uncertain") => results[0].status_code = StatusCode::from(0x4000_0000),
+        Ok("bad") => results[0].status_code = StatusCode::BadUnexpectedError,
+        Ok("empty_page") => results[0].references = None,
+        Ok("remote_reference") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.node_id.server_index = 1;
+            }
+        }
+        Ok("unknown_namespace_reference") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.node_id.namespace_uri = "urn:wotex:unknown".into();
+            }
+        }
+        Ok("remote_type_definition") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.type_definition.namespace_uri = "urn:wotex:unknown-type".into();
+                reference.type_definition.server_index = 1;
+            }
+        }
+        Ok("unknown_local_node") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.node_id.node_id.namespace = 1000;
+            }
+        }
+        Ok("unknown_local_reference_type") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.reference_type_id.namespace = 1000;
+            }
+        }
+        Ok("unknown_local_type_definition") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.type_definition.node_id.namespace = 1000;
+            }
+        }
+        Ok("duplicate_reference") => {
+            if let Some(references) = results[0].references.as_mut() {
+                if references.len() > 1 {
+                    references[1] = references[0].clone();
+                }
+            }
+        }
+        Ok("named_reference") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.browse_name.namespace_index = u16::MAX;
+                reference.browse_name.name = "Namn".into();
+                reference.display_name.locale = "sv-SE".into();
+                reference.display_name.text = "Fjärr".into();
+            }
+        }
+        Ok("unspecified_node_class") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.node_class = NodeClass::Unspecified;
+            }
+        }
+        Ok("null_empty_browse_name") => {
+            if let Some(references) = results[0].references.as_mut() {
+                if references.len() > 1 {
+                    references[0].browse_name.namespace_index = 17;
+                    references[0].browse_name.name = UAString::null();
+                    references[1].browse_name.namespace_index = 18;
+                    references[1].browse_name.name = "".into();
+                }
+            }
+        }
+        Ok("null_type_definition") => {
+            if let Some(reference) = results[0]
+                .references
+                .as_mut()
+                .and_then(|references| references.first_mut())
+            {
+                reference.type_definition = ExpandedNodeId::null();
+            }
+        }
+        _ => {}
+    }
+    None
+}
+
 pub(crate) async fn browse_next(
     node_managers: NodeManagers,
     request: Request<BrowseNextRequest>,
 ) -> Response {
+    request.info.record_browse_next_request();
     let mut context = request.context();
     let nodes_to_browse = take_service_items!(
         request,
@@ -196,16 +366,27 @@ pub(crate) async fn browse_next(
         nodes
     };
 
-    let results = if request.request.release_continuation_points {
+    // The disposable Wotex fixture uses this opt-in hook to prove the client
+    // closes a Session when a BrowseNext request reached the server but its
+    // response was lost. The continuation has already been consumed above.
+    if !request.request.release_continuation_points {
+        if let Ok(marker) = std::env::var("WOTEX_OPCUA_RUST_EXIT_AFTER_BROWSE_NEXT") {
+            if fs::write(marker, b"received\n").is_ok() {
+                std::process::exit(86);
+            }
+            std::process::exit(87);
+        }
+    } else if let Ok(marker) = std::env::var("WOTEX_OPCUA_RUST_EXIT_AFTER_BROWSE_RELEASE") {
+        if fs::write(marker, b"received\n").is_ok() {
+            std::process::exit(88);
+        }
+        std::process::exit(89);
+    }
+
+    let mut results = if request.request.release_continuation_points {
         results
             .into_iter()
-            .map(|r| {
-                r.unwrap_or_else(|| BrowseResult {
-                    status_code: StatusCode::Good,
-                    continuation_point: ByteString::null(),
-                    references: None,
-                })
-            })
+            .map(|r| r.unwrap_or_else(browse_release_result))
             .collect()
     } else {
         let node_manager_count = node_managers.len();
@@ -325,14 +506,61 @@ pub(crate) async fn browse_next(
         results.into_iter().map(Option::unwrap).collect()
     };
 
+    let diagnostic_infos = if request.request.release_continuation_points {
+        malformed_browse_release(&mut results)
+    } else {
+        malformed_browse_response("WOTEX_OPCUA_RUST_MALFORMED_BROWSE_NEXT", &mut results)
+    };
+    let mut response_header = ResponseHeader::new_good(request.request_handle);
+    if request.request.release_continuation_points
+        && std::env::var_os("WOTEX_OPCUA_RUST_BAD_BROWSE_RELEASE_SERVICE").is_some()
+    {
+        response_header.service_result = StatusCode::BadUnexpectedError;
+    } else if !request.request.release_continuation_points
+        && std::env::var_os("WOTEX_OPCUA_RUST_BAD_BROWSE_NEXT_SERVICE").is_some()
+    {
+        response_header.service_result = StatusCode::BadUnexpectedError;
+    }
+
     Response {
         message: BrowseNextResponse {
-            response_header: ResponseHeader::new_good(request.request_handle),
+            response_header,
             results: Some(results),
-            diagnostic_infos: None,
+            diagnostic_infos,
         }
         .into(),
         request_id: request.request_id,
+    }
+}
+
+fn browse_release_result() -> BrowseResult {
+    BrowseResult {
+        status_code: browse_release_status(),
+        continuation_point: ByteString::null(),
+        references: None,
+    }
+}
+
+fn malformed_browse_release(results: &mut Vec<BrowseResult>) -> Option<Vec<DiagnosticInfo>> {
+    match std::env::var("WOTEX_OPCUA_RUST_MALFORMED_BROWSE_RELEASE").as_deref() {
+        Ok("missing_result") => results.clear(),
+        Ok("extra_result") => results.push(browse_release_result()),
+        Ok("reference") => results[0].references = Some(vec![ReferenceDescription::default()]),
+        Ok("continuation") => results[0].continuation_point = ByteString::from(vec![1]),
+        Ok("diagnostic") => return Some(vec![DiagnosticInfo::default()]),
+        _ => {}
+    }
+    None
+}
+
+fn browse_release_status() -> StatusCode {
+    let Ok(marker) = std::env::var("WOTEX_OPCUA_RUST_BAD_BROWSE_RELEASE") else {
+        return StatusCode::Good;
+    };
+    if fs::write(marker, b"responded\n").is_ok() {
+        StatusCode::BadUnexpectedError
+    } else {
+        StatusCode::BadInternalError
     }
 }
 

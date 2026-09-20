@@ -4,7 +4,7 @@
 
 //! Provides server state information, such as status, configuration, running servers and so on.
 
-use std::sync::atomic::{AtomicU16, AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
@@ -93,8 +93,26 @@ pub struct ServerInfo {
     pub diagnostics: ServerDiagnostics,
     /// Number of live requests found by the Cancel service.
     pub(crate) cancel_count: AtomicU32,
+    /// Number of BrowseNext requests accepted by an active Session.
+    pub(crate) browse_next_count: AtomicU32,
     /// Number of application service requests accepted by an active Session.
     pub(crate) application_request_count: AtomicU32,
+    /// Number of successfully renewed secure-channel tokens.
+    pub(crate) secure_channel_renewal_count: AtomicU32,
+    /// Number of Write requests accepted by an active Session.
+    pub(crate) write_request_count: AtomicU32,
+    /// Status code injected into the next completed Read result, or zero.
+    pub(crate) read_status_fault: AtomicU32,
+    /// Whether the next completed Read result omits its value.
+    pub(crate) read_missing_value_fault: AtomicBool,
+    /// Number of CreateSubscription requests accepted by an active Session.
+    pub(crate) create_subscription_count: AtomicU32,
+    /// Number of CreateMonitoredItems requests accepted by an active Session.
+    pub(crate) create_monitored_items_count: AtomicU32,
+    /// Number of DeleteMonitoredItems requests accepted by an active Session.
+    pub(crate) delete_monitored_items_count: AtomicU32,
+    /// Number of DeleteSubscriptions requests accepted by an active Session.
+    pub(crate) delete_subscriptions_count: AtomicU32,
 }
 
 impl ServerInfo {
@@ -107,6 +125,15 @@ impl ServerInfo {
         self.cancel_count.fetch_add(count, Ordering::Relaxed);
     }
 
+    /// Get the number of BrowseNext requests accepted by active Sessions.
+    pub fn browse_next_count(&self) -> u32 {
+        self.browse_next_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_browse_next_request(&self) {
+        self.browse_next_count.fetch_add(1, Ordering::Relaxed);
+    }
+
     /// Get the number of application service requests accepted by active Sessions.
     pub fn application_request_count(&self) -> u32 {
         self.application_request_count.load(Ordering::Relaxed)
@@ -114,6 +141,83 @@ impl ServerInfo {
 
     pub(crate) fn record_application_request(&self) {
         self.application_request_count
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get the number of successfully renewed secure-channel tokens.
+    pub fn secure_channel_renewal_count(&self) -> u32 {
+        self.secure_channel_renewal_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_secure_channel_renewal(&self) {
+        self.secure_channel_renewal_count
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get the number of Write requests accepted by active Sessions.
+    pub fn write_request_count(&self) -> u32 {
+        self.write_request_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_write_request(&self) {
+        self.write_request_count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Configure a one-shot status code for the next completed Read result.
+    pub fn configure_read_status_fault(&self, status: u32) -> u32 {
+        self.read_status_fault.swap(status, Ordering::Relaxed)
+    }
+
+    pub(crate) fn take_read_status_fault(&self) -> u32 {
+        self.read_status_fault.swap(0, Ordering::Relaxed)
+    }
+
+    /// Configure a one-shot missing value for the next completed Read result.
+    pub fn configure_read_missing_value_fault(&self) -> bool {
+        self.read_missing_value_fault.swap(true, Ordering::Relaxed)
+    }
+
+    pub(crate) fn take_read_missing_value_fault(&self) -> bool {
+        self.read_missing_value_fault.swap(false, Ordering::Relaxed)
+    }
+
+    /// Get the number of CreateSubscription requests accepted by active Sessions.
+    pub fn create_subscription_count(&self) -> u32 {
+        self.create_subscription_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_create_subscription_request(&self) {
+        self.create_subscription_count
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get the number of CreateMonitoredItems requests accepted by active Sessions.
+    pub fn create_monitored_items_count(&self) -> u32 {
+        self.create_monitored_items_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_create_monitored_items_request(&self) {
+        self.create_monitored_items_count
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get the number of DeleteMonitoredItems requests accepted by active Sessions.
+    pub fn delete_monitored_items_count(&self) -> u32 {
+        self.delete_monitored_items_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_delete_monitored_items_request(&self) {
+        self.delete_monitored_items_count
+            .fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Get the number of DeleteSubscriptions requests accepted by active Sessions.
+    pub fn delete_subscriptions_count(&self) -> u32 {
+        self.delete_subscriptions_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_delete_subscriptions_request(&self) {
+        self.delete_subscriptions_count
             .fetch_add(1, Ordering::Relaxed);
     }
 

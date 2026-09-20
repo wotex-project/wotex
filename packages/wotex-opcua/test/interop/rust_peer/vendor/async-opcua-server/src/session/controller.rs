@@ -680,6 +680,7 @@ impl SessionController {
         }
 
         // Test the request type
+        let renewal = matches!(request.request_type, SecurityTokenRequestType::Renew);
         let secure_channel_id = match request.request_type {
             SecurityTokenRequestType::Issue => {
                 trace!("Request type == Issue");
@@ -757,6 +758,9 @@ impl SessionController {
                 || security_mode == MessageSecurityMode::SignAndEncrypt)
         {
             self.channel.derive_keys();
+        }
+        if renewal {
+            self.info.record_secure_channel_renewal();
         }
 
         let response = OpenSecureChannelResponse {

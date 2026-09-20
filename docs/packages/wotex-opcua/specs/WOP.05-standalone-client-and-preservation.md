@@ -3,14 +3,14 @@ spec:
   id: WOP.05
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.17
+  version: 1.1.43
   owner: wotex-opcua
-  updated: 2026-09-19
+  updated: 2026-09-20
 ---
 
 # WOP.05 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.17**. Implementation status: **partial**.
+Specification version: **1.1.43**. Implementation status: **partial**.
 [WOP.04](WOP.04-software-contract.md) and [WOP.07](WOP.07-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.03-implemented-profile.md) and
@@ -37,8 +37,72 @@ WOP.04, an async-opcua Rust server with a 40-child folder, reports its own live
 continuation-point count: it follows each Browse, BrowseNext, explicit release,
 two concurrent chains, the `max_references` and `max_pages` failures and an
 expired browse deadline back to zero, and `all/3` and child-list Browse return
-the 40 children in server order. The rest of the N03/N04 boundary matrix remains;
-N03/N04 are not accepted. The native one-shot client now
+the 40 children in server order. A separate Session reaches the client limit of
+64 live continuations, rejects the 65th Browse without increasing the peer
+count, reuses a released slot and drops all remaining peer continuations when
+the Session closes. Filtered independent Browse proves exact Organizes subtype
+selection, all three directions, single and combined
+Variable/Object node-class masks, the all-reference-types selector, server order
+and every typed ReferenceDescription field. One destructive peer
+matrix returns missing or duplicate Browse results, diagnostics, one reference
+beyond the requested page size, or a 4097-byte continuation. Result-cardinality
+and diagnostic faults return `invalid_response`; oversized shapes return
+`response_limit`. Each closes only its owning Session and subscription, clears
+peer resources and leaves an observer usable. The matching BrowseNext matrix
+first consumes a valid cursor, then proves the same error split and successor
+cleanup without disturbing the observer. Independent first-page and next-page
+Uncertain variants expose the exact status through typed pages; `all/3` rejects
+both as incomplete, releases the current cursor and keeps the Session usable.
+A Bad result or response-header service result on the initial page returns its
+complete numeric status without ending the Session. Either form on the next page
+closes its owning Session and subscription, clears the unknown successor and
+leaves an observer usable. The empty-page matrix returns
+an empty first or next page with a live continuation. Both are
+valid typed pages, complete collection advances through them, and the page bound
+counts them before releasing the cursor and preserving the Session. Initial and
+next-page remote-reference variants independently prove that typed Browse
+retains `server_index: 1`. The child-list compatibility call cannot represent
+that ExpandedNodeId as a local NodeId, so persistent and one-shot calls return
+`unsupported_remote_reference`, release the cursor and keep the Session usable.
+Unknown-namespace-URI variants at the same two stages preserve
+`urn:wotex:unknown` in typed Browse and prove the same child-list behavior.
+Remote type-definition variants prove the second ExpandedNodeId field follows
+the same preservation contract without blocking projection of a local target.
+Six unknown-local-namespace variants cover all three identity fields on Browse
+and BrowseNext. Typed Browse rejects each and releases the cursor; child-list
+compatibility rejects only the target field it must project.
+Initial-page and next-page duplicate variants retain both typed references and
+both child NodeIds at the positions returned by the server.
+Named-reference variants retain namespace 65535, locale `sv-SE` and the UTF-8
+display text `Fjärr`; compatibility collection still returns the local targets.
+NodeClass zero remains explicitly unspecified on initial and next typed pages;
+it is never inferred as Variable.
+Null and empty QualifiedName strings remain distinct at both page positions;
+compatibility collection ignores the name and still returns every local target.
+Null type definitions retain a null NodeId, absent URI and zero server index on
+both page positions; compatibility collection still returns every target.
+An independent long-name variant keeps each four-reference page below the frame
+limit while crossing 1 MiB cumulatively. Typed, persistent compatibility and
+one-shot compatibility calls return `response_limit`, release the cursor and
+leave the Session usable.
+One destructive peer variant allocates and records a continuation before dropping
+the initial Browse response. Another consumes a BrowseNext continuation and records
+the request before exiting without a response. In both cases, the owning Session and its
+unrelated subscription end, and its guardian and native client exit; later
+release after the lost BrowseNext is harmless. A Bad release response likewise
+closes the owning Session and clears its continuation and unrelated subscription
+while an observer Session remains usable. A separate
+variant consumes a valid release and drops its response; that owning Session,
+subscription, guardian and native client also end. Six release-fault responses
+separately return zero results, duplicate results, references, continuation
+bytes, diagnostics or a Bad response header. Each produces `cleanup_failed`,
+closes only its owning Session, clears its peer resources and preserves an observer. Killing
+a separate Session owner with both resources live deletes its continuation,
+subscription and MonitoredItem, reaps its guardian and native client, and does
+not disturb the observer. A server-owned BrowseNext counter proves that a
+non-owner caller, a foreign Session and a consumed handle fail before service
+I/O; the valid next and release increment it exactly twice. The rest of the
+N03/N04 boundary matrix remains; N03/N04 are not accepted. The native one-shot client now
 projects successful Read, Write and Call results into the recorded
 success shapes; error and full lifecycle compatibility remain open.
 The BEAM frame accepts only canonical native `c` plus uint64 local tokens and

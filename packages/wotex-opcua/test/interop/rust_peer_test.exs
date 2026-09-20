@@ -218,6 +218,346 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert native_descendants() == baseline
   end
 
+  test "WOP-S04 WOP-V10 malformed independent subscription admission is request-scoped",
+       context do
+    baseline = native_descendants()
+
+    cases = [
+      {"invalid_subscription_publishing_interval", :invalid_response, nil},
+      {"invalid_subscription_keepalive", :invalid_response, nil},
+      {"invalid_subscription_lifetime", :invalid_response, nil},
+      {"missing_monitored_item_result", :invalid_response, nil},
+      {"extra_monitored_item_result", :invalid_response, nil},
+      {"zero_monitored_item_id", :invalid_response, nil},
+      {"invalid_monitored_item_sampling_interval", :invalid_response, nil},
+      {"invalid_monitored_item_queue_size", :invalid_response, nil},
+      {"diagnosed_monitored_item", :invalid_response, nil},
+      {"bad_monitored_item_status", :remote_error, 0x8001_0000},
+      {"bad_monitored_item_service", :remote_error, 0x8001_0000}
+    ]
+
+    Enum.each(cases, fn {name, code, status} ->
+      {peer, endpoint} = variant(context, name)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(session, context.peer["namespace_uri"])
+
+      try do
+        assert {:error, %Error{code: ^code, effect: :none} = error} =
+                 Wotex.OPCUA.subscribe(session, %{
+                   node_id: node.("value"),
+                   publishing_interval_ms: 50,
+                   sampling_interval_ms: 0,
+                   keepalive_count: 2,
+                   lifetime_count: 6
+                 })
+
+        if status, do: assert(error.details.status == status)
+        assert eventually(fn -> resources(session, node) == {0, 0} end)
+
+        assert {:ok, %{"value" => %{"type" => "Double"}}} =
+                 Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+      after
+        assert :ok = Wotex.OPCUA.disconnect(session)
+        stop_peer(peer)
+      end
+    end)
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-S04 WOP-V12 malformed independent cancellation closes only its Session", context do
+    baseline = native_descendants()
+
+    cases = [
+      "missing_delete_monitored_item_result",
+      "extra_delete_monitored_item_result",
+      "bad_delete_monitored_item_status",
+      "diagnosed_delete_monitored_item",
+      "bad_delete_monitored_item_service",
+      "missing_delete_subscription_result",
+      "extra_delete_subscription_result",
+      "bad_delete_subscription_status",
+      "diagnosed_delete_subscription",
+      "bad_delete_subscription_service"
+    ]
+
+    Enum.each(cases, fn name ->
+      {peer, endpoint} = variant(context, name)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, owner} = Wotex.OPCUA.connect(options)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+      %Wotex.OPCUA.Session{handle: %{host: host}} = owner
+      monitor = Process.monitor(host)
+
+      try do
+        assert {:ok, subscription} =
+                 Wotex.OPCUA.subscribe(owner, %{
+                   node_id: node.("value"),
+                   publishing_interval_ms: 50,
+                   sampling_interval_ms: 0
+                 })
+
+        reference = subscription.reference
+        assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+        assert resources(observer, node) == {1, 1}
+
+        assert {:error, %Error{code: :cleanup_failed, effect: :none}} =
+                 Wotex.OPCUA.unsubscribe(owner, subscription)
+
+        assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+        refute_receive {:wotex_opcua, ^reference, _}, 300
+        assert eventually(fn -> resources(observer, node) == {0, 0} end)
+
+        assert {:ok, %{"value" => %{"type" => "Double"}}} =
+                 Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+      after
+        _ = Wotex.OPCUA.disconnect(owner)
+        assert :ok = Wotex.OPCUA.disconnect(observer)
+        stop_peer(peer)
+      end
+    end)
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  @tag rust_session: true
+  test "WOP-S04 WOP-V12 foreign and repeated cancellation fail before independent service I/O",
+       %{session: session, node: node, options: options} do
+    baseline = native_descendants()
+    before = delete_counts(session, node)
+
+    assert {:ok, foreign} = Wotex.OPCUA.connect(options)
+
+    try do
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node.("value"),
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert {:ok, _, _} = next_report(reference)
+      assert delete_counts(session, node) == before
+
+      assert {:error, %Error{code: :invalid_subscription, effect: :none}} =
+               Wotex.OPCUA.unsubscribe(foreign, subscription)
+
+      assert delete_counts(session, node) == before
+      forged = %{subscription | generation: subscription.generation + 1}
+
+      assert {:error, %Error{code: :invalid_subscription, effect: :none}} =
+               Wotex.OPCUA.unsubscribe(session, forged)
+
+      assert delete_counts(session, node) == before
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      expected = {elem(before, 0) + 1, elem(before, 1) + 1}
+      assert eventually(fn -> delete_counts(session, node) == expected end)
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert delete_counts(session, node) == expected
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(foreign, %{type: :read, node_id: node.("value")})
+    after
+      assert :ok = Wotex.OPCUA.disconnect(foreign)
+    end
+
+    assert native_descendants() == baseline
+  end
+
+  @tag rust_session: true
+  test "WOP-S04 the independent peer binds the 32-subscription Session limit",
+       %{session: session, node: node} do
+    baseline = native_descendants()
+    creates_before = create_counts(session, node)
+    deletes_before = delete_counts(session, node)
+
+    request = %{
+      node_id: node.("value"),
+      publishing_interval_ms: 50,
+      sampling_interval_ms: 0
+    }
+
+    subscriptions =
+      Enum.map(1..32, fn _ ->
+        assert {:ok, subscription} = Wotex.OPCUA.subscribe(session, request)
+        subscription
+      end)
+
+    assert eventually(fn -> resources(session, node) == {32, 32} end)
+    assert create_counts(session, node) == add_counts(creates_before, 32)
+
+    assert {:error, %Error{code: :busy, effect: :none}} =
+             Wotex.OPCUA.subscribe(session, request)
+
+    assert create_counts(session, node) == add_counts(creates_before, 32)
+    [released | retained] = subscriptions
+    assert :ok = Wotex.OPCUA.unsubscribe(session, released)
+    assert eventually(fn -> resources(session, node) == {31, 31} end)
+    assert delete_counts(session, node) == add_counts(deletes_before, 1)
+
+    assert {:ok, replacement} = Wotex.OPCUA.subscribe(session, request)
+    assert eventually(fn -> resources(session, node) == {32, 32} end)
+    assert create_counts(session, node) == add_counts(creates_before, 33)
+
+    assert {:error, %Error{code: :busy, effect: :none}} =
+             Wotex.OPCUA.subscribe(session, request)
+
+    assert create_counts(session, node) == add_counts(creates_before, 33)
+
+    Enum.each([replacement | retained], fn subscription ->
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+    end)
+
+    assert eventually(fn -> resources(session, node) == {0, 0} end)
+    assert delete_counts(session, node) == add_counts(deletes_before, 33)
+
+    assert {:ok, %{"value" => %{"type" => "Double"}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+    assert native_descendants() == baseline
+  end
+
+  test "WOP-S04 WOP-V11 an exact duplicate independent Publish is acknowledged once", context do
+    baseline = native_descendants()
+    {peer, endpoint} = variant(context, "duplicate_publish")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(session, context.peer["namespace_uri"])
+    node_id = node.("value")
+
+    assert {:ok, %{"value" => %{"value" => original}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+    try do
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node_id,
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0,
+                 keepalive_count: 2,
+                 lifetime_count: 6
+               })
+
+      reference = subscription.reference
+      assert {:ok, _, _} = next_report(reference)
+      assert {:ok, %{"status" => 0}} = write(session, node_id, 81.0)
+      refute_receive {:wotex_opcua, ^reference, _}, 500
+      assert resources(session, node) == {1, 1}
+
+      assert {:ok, %{"value" => %{"value" => 81.0}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert eventually(fn -> resources(session, node) == {0, 0} end)
+    after
+      assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      stop_peer(peer)
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-S04 WOP-V11 invalid independent Publish messages end only the subscription",
+       context do
+    baseline = native_descendants()
+
+    cases = [
+      {"conflicting_duplicate_publish", :sequence_gap, true, nil},
+      {"oversized_publish_gap", :sequence_gap, true, nil},
+      {"zero_publish_sequence", :sequence_gap, false, nil},
+      {"unknown_publish_client_handle", :invalid_response, false, nil},
+      {"status_change_publish", :subscription_lost, false, 0x8001_0000}
+    ]
+
+    Enum.each(cases, fn {name, code, needs_fresh_value, status} ->
+      {peer, endpoint} = variant(context, name)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(session, context.peer["namespace_uri"])
+      node_id = node.("value")
+
+      assert {:ok, %{"value" => %{"value" => original}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+      try do
+        assert {:ok, subscription} =
+                 Wotex.OPCUA.subscribe(session, %{
+                   node_id: node_id,
+                   publishing_interval_ms: 50,
+                   sampling_interval_ms: 0
+                 })
+
+        reference = subscription.reference
+
+        if needs_fresh_value do
+          assert {:ok, _, _} = next_report(reference)
+          assert {:ok, %{"status" => 0}} = write(session, node_id, 82.0)
+        end
+
+        assert {:error, %Error{code: ^code, effect: :none} = error} = next_report(reference)
+        if status, do: assert(error.details.status == status)
+        refute_receive {:wotex_opcua, ^reference, _}, 300
+        assert eventually(fn -> resources(session, node) == {0, 0} end)
+
+        assert {:ok, %{"value" => %{"type" => "Double"}}} =
+                 Wotex.OPCUA.send(session, %{type: :read, node_id: node_id})
+
+        assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      after
+        assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+        assert :ok = Wotex.OPCUA.disconnect(session)
+        stop_peer(peer)
+      end
+    end)
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-S04 WOP-V11 a Bad independent Publish acknowledgement closes its Session",
+       context do
+    baseline = native_descendants()
+    {peer, endpoint} = variant(context, "bad_publish_acknowledgement")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, owner} = Wotex.OPCUA.connect(options)
+    assert {:ok, observer} = Wotex.OPCUA.connect(options)
+    node = node_resolver(observer, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = owner
+
+    try do
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(owner, %{
+                 node_id: node.("value"),
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0,
+                 keepalive_count: 2,
+                 lifetime_count: 6
+               })
+
+      reference = subscription.reference
+      assert {:ok, _, _} = next_report(reference)
+      monitor = Process.monitor(host)
+      assert {:error, %Error{code: :invalid_response, effect: :none}} = next_report(reference)
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+      refute_receive {:wotex_opcua, ^reference, _}, 300
+      assert eventually(fn -> resources(observer, node) == {0, 0} end)
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.unsubscribe(owner, subscription)
+    after
+      _ = Wotex.OPCUA.disconnect(owner)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
   @tag rust_session: true
   test "WOP-S04 WOP-V11 independent Republish recovers a withheld report once",
        %{session: session, node: node} do
@@ -619,6 +959,157 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert eventually(fn -> native_descendants() == baseline end)
   end
 
+  test "WOP-S03 WOP-V06 secure-channel renewal preserves reads and monitoring", context do
+    baseline = native_descendants()
+    {peer, endpoint} = variant(context, "short_secure_channel")
+    options = Keyword.merge(context.options, endpoint: endpoint, timeout: 5000)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(session, context.peer["namespace_uri"])
+    node_id = node.("value")
+    read = %{type: :read, node_id: node_id}
+    assert {:ok, %{"value" => %{"value" => original}}} = Wotex.OPCUA.send(session, read)
+
+    try do
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node_id,
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert {:ok, %{"value" => %{"value" => ^original}}, _} = next_report(reference)
+      renewals = count(session, node, "secure_channel_renewals")
+      assert eventually(fn -> count(session, node, "secure_channel_renewals") > renewals end)
+      assert resources(session, node) == {1, 1}
+
+      updated = original + 1.0
+      assert {:ok, %{"status" => 0}} = write(session, node_id, updated)
+      assert {:ok, %{"value" => %{"value" => ^updated}}, _} = next_report(reference)
+      assert {:ok, %{"value" => %{"value" => ^updated}}} = Wotex.OPCUA.send(session, read)
+      assert {:ok, %{"status" => 0}} = write(session, node_id, original)
+      assert :ok = Wotex.OPCUA.unsubscribe(session, subscription)
+      assert eventually(fn -> resources(session, node) == {0, 0} end)
+    after
+      _ = write(session, node_id, original)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      stop_peer(peer)
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-S02 WOP-V06 an invalid Session response never replays a transmitted Write", context do
+    baseline = native_descendants()
+    {peer, endpoint} = variant(context, "bad_write_session")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, owner} = Wotex.OPCUA.connect(options)
+    assert {:ok, observer} = Wotex.OPCUA.connect(options)
+    node = node_resolver(observer, context.peer["namespace_uri"])
+    node_id = node.("value")
+    read = %{type: :read, node_id: node_id}
+    assert {:ok, %{"value" => %{"value" => original}}} = Wotex.OPCUA.send(observer, read)
+    %Wotex.OPCUA.Session{handle: %{host: host}} = owner
+    monitor = Process.monitor(host)
+    before = count(observer, node, "write_count")
+    updated = original + 1.0
+
+    try do
+      assert {:error,
+              %Error{
+                code: :connection_failed,
+                effect: :unknown,
+                details: %{phase: :exchange, status: status}
+              }} = write(owner, node_id, updated)
+
+      assert Bitwise.band(status, 0x8000_0000) != 0
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+      assert eventually(fn -> count(observer, node, "write_count") == before + 1 end)
+      assert {:ok, %{"value" => %{"value" => ^updated}}} = Wotex.OPCUA.send(observer, read)
+      Process.sleep(300)
+      assert count(observer, node, "write_count") == before + 1
+    after
+      assert :ok = Wotex.OPCUA.disconnect(owner)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  @tag rust_session: true
+  test "WOP-S01 WOP-V03 independent Read preserves the complete DataValue boundary",
+       %{session: session, node: node} do
+    node_id = node.("value")
+    read = %{type: :read, node_id: node_id}
+
+    assert {:ok,
+            %{
+              "has_value" => true,
+              "status" => 0,
+              "source_timestamp" => source_timestamp,
+              "server_timestamp" => server_timestamp,
+              "value" => %{"value" => original}
+            }} = Wotex.OPCUA.send(session, read)
+
+    assert is_integer(source_timestamp)
+    assert is_integer(server_timestamp)
+
+    assert {:ok,
+            %{
+              "has_value" => true,
+              "status" => 0,
+              "value" => %{"type" => "Null", "array" => false, "value" => nil}
+            }} = Wotex.OPCUA.send(session, %{type: :read, node_id: node.("null_value")})
+
+    assert read_missing_value_fault(session, node) == false
+
+    assert {:ok, %{"has_value" => false, "status" => 0} = missing} =
+             Wotex.OPCUA.send(session, read)
+
+    refute Map.has_key?(missing, "value")
+
+    assert {:ok,
+            %{
+              "has_value" => true,
+              "status" => 0,
+              "value" => %{
+                "type" => "ExtensionObject",
+                "array" => false,
+                "value" => %{
+                  "encoding_id" => encoding_id,
+                  "encoding" => "binary",
+                  "body" => %{"type" => "bytes", "base64" => "AP8BAg=="}
+                }
+              }
+            }} =
+             Wotex.OPCUA.send(session, %{
+               type: :read,
+               node_id: node.("extension_object_value")
+             })
+
+    assert encoding_id == node.("opaque_encoding")
+
+    assert read_status_fault(session, node, 0x4090_0000) == 0
+
+    assert {:ok,
+            %{
+              "value" => %{"value" => ^original},
+              "status" => 0x4090_0000
+            }} = Wotex.OPCUA.send(session, read)
+
+    assert read_status_fault(session, node, 0x8001_0000) == 0
+
+    assert {:error,
+            %Error{
+              code: :remote_error,
+              effect: :none,
+              details: %{phase: :exchange, status: 0x8001_0000}
+            }} = Wotex.OPCUA.send(session, read)
+
+    assert {:ok, %{"value" => %{"value" => ^original}}} = Wotex.OPCUA.send(session, read)
+  end
+
   @tag rust_session: true
   test "WOP-N03 WOP-N04 the independent server counts every continuation the client holds",
        %{session: session, peer: peer, node: node} do
@@ -672,6 +1163,1346 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     assert {:ok, listed} = Wotex.OPCUA.send(session, %{type: :browse, node_id: paged})
     assert listed == children
     assert live.() == 0
+  end
+
+  @tag rust_session: true
+  test "WOP-N03 independent Browse preserves filters and complete typed references", context do
+    paged = context.node.("paged")
+    children = for index <- 1..context.peer["children"], do: context.node.("child#{index}")
+    organizes = %Address{namespace: 0, kind: :numeric, identifier: 35}
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: references}} =
+             Browse.references(context.session, paged,
+               direction: :forward,
+               reference_type_id: "ns=0;i=35",
+               include_subtypes: false,
+               node_class_mask: 2,
+               page_size: 256
+             )
+
+    assert Enum.map(references, &Address.to_string(&1.node_id.node_id)) == children
+
+    assert Enum.all?(references, fn reference ->
+             reference.reference_type_id == organizes and reference.is_forward and
+               reference.node_id.namespace_uri == nil and reference.node_id.server_index == 0 and
+               reference.browse_name.namespace == 0 and
+               String.starts_with?(reference.browse_name.name, "Child") and
+               reference.display_name == %{locale: nil, text: reference.browse_name.name} and
+               reference.node_class == 2 and reference.type_definition.namespace_uri == nil and
+               reference.type_definition.server_index == 0
+           end)
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: []}} =
+             Browse.references(context.session, paged,
+               reference_type_id: "ns=0;i=33",
+               include_subtypes: false,
+               node_class_mask: 2,
+               page_size: 256
+             )
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: []}} =
+             Browse.references(context.session, paged,
+               reference_type_id: "ns=0;i=35",
+               include_subtypes: false,
+               node_class_mask: 1,
+               page_size: 256
+             )
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: [parent]}} =
+             Browse.references(context.session, context.node.("child1"),
+               direction: :inverse,
+               reference_type_id: "ns=0;i=35",
+               include_subtypes: false,
+               node_class_mask: 1,
+               page_size: 256
+             )
+
+    assert parent.reference_type_id == organizes
+    refute parent.is_forward
+    assert Address.to_string(parent.node_id.node_id) == paged
+    assert parent.node_id.namespace_uri == nil
+    assert parent.node_id.server_index == 0
+    assert parent.browse_name == %{namespace: 0, name: "Paged"}
+    assert parent.display_name == %{locale: nil, text: "Paged"}
+    assert parent.node_class == 1
+    assert count(context.session, context.node, "continuation_points") == 0
+  end
+
+  @tag rust_session: true
+  test "WOP-N03 independent Browse applies both-direction and all-reference filters", context do
+    paged = context.node.("paged")
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: references}} =
+             Browse.references(context.session, paged,
+               direction: :both,
+               reference_type_id: "ns=0;i=35",
+               include_subtypes: false,
+               node_class_mask: 3,
+               page_size: 256
+             )
+
+    {inverse, forward} = Enum.split_with(references, &(not &1.is_forward))
+    assert [parent] = inverse
+    assert Address.to_string(parent.node_id.node_id) == "ns=0;i=85"
+    assert parent.node_class == 1
+    assert length(forward) == context.peer["children"]
+    assert Enum.all?(forward, &(&1.node_class == 2))
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: all}} =
+             Browse.references(context.session, context.node.("fixture"),
+               direction: :forward,
+               reference_type_id: "ns=0;i=0",
+               include_subtypes: false,
+               node_class_mask: 0,
+               page_size: 256
+             )
+
+    identities = Map.new(all, &{Address.to_string(&1.node_id.node_id), &1})
+    assert %{is_forward: true, node_class: 2} = identities[context.node.("value")]
+    assert %{is_forward: true, node_class: 4} = identities[context.node.("add")]
+    assert count(context.session, context.node, "continuation_points") == 0
+  end
+
+  test "WOP-N04 a lost independent Browse response closes the owning Session", context do
+    baseline = native_descendants()
+    marker = Path.join(context.fixture, "rust-browse-received")
+    {peer, endpoint} = variant(context, "lost_browse")
+    options = Keyword.merge(context.options, endpoint: endpoint, timeout: 5000)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(session, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+    processes = native_processes(host)
+    monitor = Process.monitor(host)
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node.("value"),
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+
+    assert {:error,
+            %Error{
+              code: :connection_failed,
+              effect: :none,
+              details: %{phase: :exchange, status: status}
+            }} = Browse.references(session, node.("paged"), page_size: 5)
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+    assert File.read(marker) == {:ok, "1\n"}
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:error, %Error{code: :connection_failed, effect: :none}}},
+                   5000
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert :ok = Wotex.OPCUA.disconnect(session)
+    assert eventually(fn -> not os_alive?(peer.pid) end)
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-N04 a lost independent BrowseNext response closes the owning Session", context do
+    baseline = native_descendants()
+    marker = Path.join(context.fixture, "rust-browse-next-received")
+    {peer, endpoint} = variant(context, "lost_browse_next")
+    options = Keyword.merge(context.options, endpoint: endpoint, timeout: 5000)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(session, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+    processes = native_processes(host)
+    monitor = Process.monitor(host)
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node.("value"),
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+    assert resources(session, node) == {1, 1}
+
+    assert {:ok, %Browse.Page{continuation: cursor}} =
+             Browse.references(session, node.("paged"), page_size: 5)
+
+    assert count(session, node, "continuation_points") == 1
+
+    assert {:error,
+            %Error{
+              code: :connection_failed,
+              effect: :none,
+              details: %{phase: :exchange, status: status}
+            }} = Browse.next(session, cursor)
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+    assert File.read(marker) == {:ok, "received\n"}
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:error, %Error{code: :connection_failed, effect: :none}}},
+                   5000
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert :ok = Browse.release(session, cursor)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+    assert eventually(fn -> not os_alive?(peer.pid) end)
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-N04 a lost independent Browse release response closes the owning Session", context do
+    baseline = native_descendants()
+    marker = Path.join(context.fixture, "rust-browse-release-received")
+    {peer, endpoint} = variant(context, "lost_browse_release")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(session, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+    processes = native_processes(host)
+    monitor = Process.monitor(host)
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node.("value"),
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+
+    assert {:ok, %Browse.Page{continuation: cursor}} =
+             Browse.references(session, node.("paged"), page_size: 5)
+
+    assert {:error,
+            %Error{
+              code: :connection_failed,
+              effect: :none,
+              details: %{phase: :exchange, status: status}
+            }} = Browse.release(session, cursor)
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+    assert File.read(marker) == {:ok, "received\n"}
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:error, %Error{code: :connection_failed, effect: :none}}},
+                   5000
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert :ok = Wotex.OPCUA.disconnect(session)
+    assert eventually(fn -> not os_alive?(peer.pid) end)
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-N04 a failed independent Browse release closes the owning Session", context do
+    baseline = native_descendants()
+    marker = Path.join(context.fixture, "rust-browse-release-failed")
+    {peer, endpoint} = variant(context, "bad_browse_release")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, observer} = Wotex.OPCUA.connect(options)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(observer, context.peer["namespace_uri"])
+    %Wotex.OPCUA.Session{handle: %{host: host}} = session
+    processes = native_processes(host)
+    monitor = Process.monitor(host)
+
+    assert {:ok, subscription} =
+             Wotex.OPCUA.subscribe(session, %{
+               node_id: node.("value"),
+               publishing_interval_ms: 50,
+               sampling_interval_ms: 0
+             })
+
+    reference = subscription.reference
+    assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+    assert resources(observer, node) == {1, 1}
+
+    assert {:ok, %Browse.Page{continuation: cursor}} =
+             Browse.references(session, node.("paged"), page_size: 5)
+
+    assert count(observer, node, "continuation_points") == 1
+
+    assert {:error, %Error{code: :cleanup_failed, effect: :none}} =
+             Browse.release(session, cursor)
+
+    assert File.read(marker) == {:ok, "responded\n"}
+
+    assert_receive {:wotex_opcua, ^reference,
+                    {:error, %Error{code: :cleanup_failed, effect: :none}}},
+                   5000
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+    refute_receive {:wotex_opcua, ^reference, _}, 300
+    assert eventually(fn -> resources(observer, node) == {0, 0} end)
+    assert count(observer, node, "continuation_points") == 0
+
+    assert {:ok, %{"value" => %{"type" => "Double"}}} =
+             Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
+    assert :ok = Wotex.OPCUA.disconnect(observer)
+    stop_peer(peer)
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  test "WOP-N04 malformed independent Browse release responses close the owning Session",
+       context do
+    for fault <- [
+          "missing_browse_release_result",
+          "extra_browse_release_result",
+          "referenced_browse_release",
+          "continued_browse_release",
+          "diagnosed_browse_release",
+          "bad_browse_release_service"
+        ] do
+      baseline = native_descendants()
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+      processes = native_processes(host)
+      monitor = Process.monitor(host)
+      before = count(observer, node, "browse_next_count")
+
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node.("value"),
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+      assert resources(observer, node) == {1, 1}
+
+      assert {:ok, %Browse.Page{continuation: cursor}} =
+               Browse.references(session, node.("paged"), page_size: 5)
+
+      assert count(observer, node, "continuation_points") == 1
+
+      assert {:error, %Error{code: :cleanup_failed, effect: :none}} =
+               Browse.release(session, cursor)
+
+      assert count(observer, node, "browse_next_count") == before + 1
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :cleanup_failed, effect: :none}}},
+                     5000
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+      refute_receive {:wotex_opcua, ^reference, _}, 100
+      assert eventually(fn -> resources(observer, node) == {0, 0} end)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+      assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+      assert eventually(fn -> native_descendants() == baseline end)
+    end
+  end
+
+  test "WOP-N03 malformed independent Browse envelopes close the owning Session", context do
+    for {fault, expected} <- [
+          {"missing_browse_result", :invalid_response},
+          {"extra_browse_result", :invalid_response},
+          {"diagnosed_browse", :invalid_response},
+          {"oversized_browse_page", :response_limit},
+          {"oversized_browse_continuation", :response_limit}
+        ] do
+      baseline = native_descendants()
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+      processes = native_processes(host)
+      monitor = Process.monitor(host)
+
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node.("value"),
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+      assert resources(observer, node) == {1, 1}
+
+      assert {:error, %Error{code: ^expected, effect: :none}} =
+               Browse.references(session, node.("paged"), page_size: 5)
+
+      assert_receive {:wotex_opcua, ^reference, {:error, %Error{code: ^expected, effect: :none}}},
+                     5000
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+      refute_receive {:wotex_opcua, ^reference, _}, 100
+      assert eventually(fn -> resources(observer, node) == {0, 0} end)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+      assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+      assert eventually(fn -> native_descendants() == baseline end)
+    end
+  end
+
+  test "WOP-N03 malformed independent BrowseNext envelopes close the owning Session", context do
+    for {fault, expected} <- [
+          {"missing_browse_next_result", :invalid_response},
+          {"extra_browse_next_result", :invalid_response},
+          {"diagnosed_browse_next", :invalid_response},
+          {"oversized_browse_next_page", :response_limit},
+          {"oversized_browse_next_continuation", :response_limit}
+        ] do
+      baseline = native_descendants()
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+      processes = native_processes(host)
+      monitor = Process.monitor(host)
+      before = count(observer, node, "browse_next_count")
+
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node.("value"),
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+      assert resources(observer, node) == {1, 1}
+
+      assert {:ok, %Browse.Page{continuation: cursor}} =
+               Browse.references(session, node.("paged"), page_size: 5)
+
+      assert count(observer, node, "continuation_points") == 1
+
+      assert {:error, %Error{code: ^expected, effect: :none}} = Browse.next(session, cursor)
+      assert count(observer, node, "browse_next_count") == before + 1
+
+      assert_receive {:wotex_opcua, ^reference, {:error, %Error{code: ^expected, effect: :none}}},
+                     5000
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+      refute_receive {:wotex_opcua, ^reference, _}, 100
+      assert eventually(fn -> resources(observer, node) == {0, 0} end)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+      assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+      assert eventually(fn -> native_descendants() == baseline end)
+    end
+  end
+
+  test "WOP-N03 independent Uncertain Browse pages remain visible and cannot look complete",
+       context do
+    for {fault, stage} <- [
+          {"uncertain_browse", :browse},
+          {"uncertain_browse_next", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(session, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{status: 0x4000_0000} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{status: 0, continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{status: 0x4000_0000} = page} =
+                     Browse.next(session, cursor)
+
+            page
+        end
+
+      assert length(page.references) == 5
+      assert %Browse.Continuation{} = page.continuation
+      assert count(session, node, "continuation_points") == 1
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(session, node, "continuation_points") == 0
+
+      assert {:error, %Error{code: :incomplete_browse, effect: :none}} =
+               Browse.all(session, node.("paged"), page_size: 5)
+
+      assert eventually(fn -> count(session, node, "continuation_points") == 0 end)
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 an independent Bad Browse status is request-scoped", context do
+    for fault <- ["bad_browse", "bad_browse_service"] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(session, context.peer["namespace_uri"])
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+
+      assert {:error,
+              %Error{
+                code: :remote_error,
+                effect: :none,
+                details: %{phase: :exchange, status: 0x8001_0000}
+              }} = Browse.references(session, node.("paged"), page_size: 256)
+
+      assert Process.alive?(host)
+      assert count(session, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N04 an independent Bad BrowseNext status closes the owning Session", context do
+    for fault <- ["bad_browse_next", "bad_browse_next_service"] do
+      baseline = native_descendants()
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+      %Wotex.OPCUA.Session{handle: %{host: host}} = session
+      processes = native_processes(host)
+      monitor = Process.monitor(host)
+
+      assert {:ok, subscription} =
+               Wotex.OPCUA.subscribe(session, %{
+                 node_id: node.("value"),
+                 publishing_interval_ms: 50,
+                 sampling_interval_ms: 0
+               })
+
+      reference = subscription.reference
+      assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+      assert resources(observer, node) == {1, 1}
+
+      assert {:ok, %Browse.Page{status: 0, continuation: cursor}} =
+               Browse.references(session, node.("paged"), page_size: 5)
+
+      assert {:error,
+              %Error{
+                code: :remote_error,
+                effect: :none,
+                details: %{phase: :exchange, status: 0x8001_0000}
+              }} = Browse.next(session, cursor)
+
+      assert_receive {:wotex_opcua, ^reference,
+                      {:error, %Error{code: :remote_error, effect: :none}}},
+                     5000
+
+      assert_receive {:DOWN, ^monitor, :process, ^host, _}, 5000
+      refute_receive {:wotex_opcua, ^reference, _}, 100
+      assert eventually(fn -> resources(observer, node) == {0, 0} end)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+      assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+      assert eventually(fn -> native_descendants() == baseline end)
+    end
+  end
+
+  test "WOP-N03 independent empty continuation pages are valid and count toward the bound",
+       context do
+    for {fault, stage, collected, max_pages} <- [
+          {"empty_browse_page", :browse, 35, 1},
+          {"empty_browse_next_page", :browse_next, 5, 2}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(session, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{status: 0, references: []} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{status: 0, continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{status: 0, references: []} = page} =
+                     Browse.next(session, cursor)
+
+            page
+        end
+
+      assert %Browse.Continuation{} = page.continuation
+      assert count(session, node, "continuation_points") == 1
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(session, node, "continuation_points") == 0
+
+      assert {:ok, %{status: 0, references: references}} =
+               Browse.all(session, node.("paged"), page_size: 5)
+
+      assert length(references) == collected
+      assert count(session, node, "continuation_points") == 0
+
+      assert {:error, %Error{code: :response_limit, effect: :none}} =
+               Browse.all(session, node.("paged"), page_size: 5, max_pages: max_pages)
+
+      assert eventually(fn -> count(session, node, "continuation_points") == 0 end)
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent remote references remain typed and never flatten to child NodeIds",
+       context do
+    for {fault, stage} <- [
+          {"remote_browse_reference", :browse},
+          {"remote_browse_next_reference", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [remote | _] = page.references
+      assert remote.node_id.namespace_uri == nil
+      assert remote.node_id.server_index == 1
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent unknown namespace URIs remain typed and never flatten to child NodeIds",
+       context do
+    for {fault, stage} <- [
+          {"unknown_namespace_browse_reference", :browse},
+          {"unknown_namespace_browse_next_reference", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [unknown | _] = page.references
+      assert unknown.node_id.namespace_uri == "urn:wotex:unknown"
+      assert unknown.node_id.server_index == 0
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent remote type definitions remain typed without blocking local children",
+       context do
+    for {fault, stage} <- [
+          {"remote_browse_type_definition", :browse},
+          {"remote_browse_next_type_definition", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [reference | _] = page.references
+      assert reference.node_id.namespace_uri == nil
+      assert reference.node_id.server_index == 0
+      assert reference.type_definition.namespace_uri == "urn:wotex:unknown-type"
+      assert reference.type_definition.server_index == 1
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, persistent_children} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert length(persistent_children) == 40
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:ok, oneshot_children} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert oneshot_children == persistent_children
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent unknown local namespaces release cursors at every identity field",
+       context do
+    for {fault, stage, child_projection} <- [
+          {"unknown_local_browse_node", :browse, :reject},
+          {"unknown_local_browse_next_node", :browse_next, :reject},
+          {"unknown_local_browse_reference_type", :browse, :allow},
+          {"unknown_local_browse_next_reference_type", :browse_next, :allow},
+          {"unknown_local_browse_type_definition", :browse, :allow},
+          {"unknown_local_browse_next_type_definition", :browse_next, :allow}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      case stage do
+        :browse ->
+          assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+                   Browse.references(session, node.("paged"), page_size: 5)
+
+        :browse_next ->
+          assert {:ok, %Browse.Page{continuation: cursor}} =
+                   Browse.references(session, node.("paged"), page_size: 5)
+
+          assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+                   Browse.next(session, cursor)
+      end
+
+      assert count(observer, node, "continuation_points") == 0
+
+      persistent_result =
+        Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      case child_projection do
+        :reject ->
+          assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+                   persistent_result
+
+        :allow ->
+          assert {:ok, children} = persistent_result
+          assert length(children) == 40
+      end
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      oneshot_result =
+        Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      case child_projection do
+        :reject ->
+          assert {:error, %Error{code: :unsupported_remote_reference, effect: :none}} =
+                   oneshot_result
+
+        :allow ->
+          assert {:ok, children} = oneshot_result
+          assert length(children) == 40
+      end
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, %{"value" => %{"type" => "Double"}}} =
+               Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent duplicate references retain server order across typed and child APIs",
+       context do
+    for {fault, stage, duplicate_index} <- [
+          {"duplicate_browse_reference", :browse, 0},
+          {"duplicate_browse_next_reference", :browse_next, 5}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [first, second | _] = page.references
+      assert first == second
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, persistent_children} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert length(persistent_children) == 40
+
+      assert Enum.at(persistent_children, duplicate_index) ==
+               Enum.at(persistent_children, duplicate_index + 1)
+
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:ok, oneshot_children} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert oneshot_children == persistent_children
+      assert count(observer, node, "continuation_points") == 0
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent reference names retain namespace locale and UTF-8 text", context do
+    for {fault, stage} <- [
+          {"named_browse_reference", :browse},
+          {"named_browse_next_reference", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [named | _] = page.references
+      assert named.browse_name == %{namespace: 65_535, name: "Namn"}
+      assert named.display_name == %{locale: "sv-SE", text: "Fjärr"}
+      assert named.node_id.namespace_uri == nil
+      assert named.node_id.server_index == 0
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, persistent_children} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert length(persistent_children) == 40
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:ok, oneshot_children} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert oneshot_children == persistent_children
+      assert count(observer, node, "continuation_points") == 0
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent unspecified NodeClass remains zero across typed pages", context do
+    for {fault, stage} <- [
+          {"unspecified_browse_node_class", :browse},
+          {"unspecified_browse_next_node_class", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [unspecified | _] = page.references
+      assert unspecified.node_class == 0
+      refute unspecified.node_class == 2
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, persistent_children} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert length(persistent_children) == 40
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:ok, oneshot_children} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert oneshot_children == persistent_children
+      assert count(observer, node, "continuation_points") == 0
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent Browse names retain null and empty strings", context do
+    for {fault, stage} <- [
+          {"null_empty_browse_name", :browse},
+          {"null_empty_browse_next_name", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [null_name, empty_name | _] = page.references
+      assert null_name.browse_name == %{namespace: 17, name: nil}
+      assert empty_name.browse_name == %{namespace: 18, name: ""}
+      refute null_name.browse_name == empty_name.browse_name
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, persistent_children} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert length(persistent_children) == 40
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:ok, oneshot_children} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert oneshot_children == persistent_children
+      assert count(observer, node, "continuation_points") == 0
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 independent null type definitions retain the null ExpandedNodeId", context do
+    for {fault, stage} <- [
+          {"null_browse_type_definition", :browse},
+          {"null_browse_next_type_definition", :browse_next}
+        ] do
+      {peer, endpoint} = variant(context, fault)
+      options = Keyword.put(context.options, :endpoint, endpoint)
+      assert {:ok, observer} = Wotex.OPCUA.connect(options)
+      assert {:ok, session} = Wotex.OPCUA.connect(options)
+      node = node_resolver(observer, context.peer["namespace_uri"])
+
+      page =
+        case stage do
+          :browse ->
+            assert {:ok, %Browse.Page{} = page} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            page
+
+          :browse_next ->
+            assert {:ok, %Browse.Page{continuation: cursor}} =
+                     Browse.references(session, node.("paged"), page_size: 5)
+
+            assert {:ok, %Browse.Page{} = page} = Browse.next(session, cursor)
+            page
+        end
+
+      assert [reference | _] = page.references
+
+      assert reference.type_definition == %{
+               node_id: %Address{namespace: 0, kind: :numeric, identifier: 0},
+               namespace_uri: nil,
+               server_index: 0
+             }
+
+      assert %Browse.Continuation{} = page.continuation
+      assert :ok = Browse.release(session, page.continuation)
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, persistent_children} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+      assert length(persistent_children) == 40
+      assert count(observer, node, "continuation_points") == 0
+
+      assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:ok, oneshot_children} =
+               Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+      assert oneshot_children == persistent_children
+      assert count(observer, node, "continuation_points") == 0
+
+      assert :ok = Wotex.OPCUA.disconnect(oneshot)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+      assert :ok = Wotex.OPCUA.disconnect(observer)
+      stop_peer(peer)
+    end
+  end
+
+  test "WOP-N03 aggregate Browse bytes are bounded across independent pages", context do
+    {peer, endpoint} = variant(context, "aggregate_browse_bytes")
+    options = Keyword.put(context.options, :endpoint, endpoint)
+    assert {:ok, observer} = Wotex.OPCUA.connect(options)
+    assert {:ok, session} = Wotex.OPCUA.connect(options)
+    node = node_resolver(observer, context.peer["namespace_uri"])
+
+    assert {:error, %Error{code: :response_limit, effect: :none}} =
+             Browse.all(session, node.("paged"), page_size: 4)
+
+    assert count(observer, node, "continuation_points") == 0
+
+    assert {:ok, %{"value" => %{"type" => "Double"}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: node.("value")})
+
+    assert {:error, %Error{code: :response_limit, effect: :none}} =
+             Wotex.OPCUA.send(session, %{type: :browse, node_id: node.("paged")})
+
+    assert count(observer, node, "continuation_points") == 0
+
+    assert {:ok, oneshot} = Wotex.OPCUA.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+    assert {:error, %Error{code: :response_limit, effect: :none}} =
+             Wotex.OPCUA.send(oneshot, %{type: :browse, node_id: node.("paged")})
+
+    assert count(observer, node, "continuation_points") == 0
+    assert :ok = Wotex.OPCUA.disconnect(oneshot)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+    assert :ok = Wotex.OPCUA.disconnect(observer)
+    stop_peer(peer)
+  end
+
+  test "WOP-N04 owner death releases an independent Session and its resources", context do
+    baseline = native_descendants()
+    assert {:ok, observer} = Wotex.OPCUA.connect(context.options)
+    node = node_resolver(observer, context.peer["namespace_uri"])
+    parent = self()
+
+    {owner, owner_monitor} =
+      spawn_monitor(fn ->
+        assert {:ok, session} = Wotex.OPCUA.connect(context.options)
+        %Wotex.OPCUA.Session{handle: %{host: host}} = session
+
+        assert {:ok, subscription} =
+                 Wotex.OPCUA.subscribe(session, %{
+                   node_id: node.("value"),
+                   publishing_interval_ms: 50,
+                   sampling_interval_ms: 0
+                 })
+
+        reference = subscription.reference
+        assert_receive {:wotex_opcua, ^reference, {:ok, _, _}}, 5000
+
+        assert {:ok, %Browse.Page{continuation: %Browse.Continuation{}}} =
+                 Browse.references(session, node.("paged"), page_size: 5)
+
+        send(parent, {:owned_session_ready, self(), host, native_processes(host)})
+        Process.sleep(:infinity)
+      end)
+
+    on_exit(fn ->
+      if Process.alive?(owner), do: Process.exit(owner, :kill)
+      Wotex.OPCUA.disconnect(observer)
+    end)
+
+    assert_receive {:owned_session_ready, ^owner, host, processes}, 10_000
+    host_monitor = Process.monitor(host)
+    assert resources(observer, node) == {1, 1}
+    assert count(observer, node, "continuation_points") == 1
+
+    Process.exit(owner, :kill)
+    assert_receive {:DOWN, ^owner_monitor, :process, ^owner, :killed}, 1000
+    assert_receive {:DOWN, ^host_monitor, :process, ^host, _}, 5000
+    assert eventually(fn -> resources(observer, node) == {0, 0} end)
+    assert eventually(fn -> count(observer, node, "continuation_points") == 0 end)
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+
+    assert {:ok, %{"value" => %{"type" => "Double"}}} =
+             Wotex.OPCUA.send(observer, %{type: :read, node_id: node.("value")})
+
+    assert :ok = Wotex.OPCUA.disconnect(observer)
+    assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  @tag rust_session: true
+  test "WOP-N03 foreign and reused handles fail before independent BrowseNext I/O", context do
+    before = count(context.session, context.node, "browse_next_count")
+    assert {:ok, foreign} = Wotex.OPCUA.connect(context.options)
+
+    on_exit(fn -> Wotex.OPCUA.disconnect(foreign) end)
+
+    assert {:ok, %Browse.Page{continuation: cursor}} =
+             Browse.references(context.session, context.node.("paged"), page_size: 5)
+
+    assert count(context.session, context.node, "continuation_points") == 1
+
+    assert {:error, %Error{code: :invalid_continuation}} =
+             Task.async(fn -> Browse.next(context.session, cursor) end) |> Task.await()
+
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.next(foreign, cursor)
+    assert count(context.session, context.node, "browse_next_count") == before
+    assert count(context.session, context.node, "continuation_points") == 1
+
+    assert {:ok, %Browse.Page{continuation: following}} =
+             Browse.next(context.session, cursor)
+
+    assert count(context.session, context.node, "browse_next_count") == before + 1
+    assert count(context.session, context.node, "continuation_points") == 1
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.next(context.session, cursor)
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.release(context.session, cursor)
+    assert count(context.session, context.node, "browse_next_count") == before + 1
+
+    assert :ok = Browse.release(context.session, following)
+    assert count(context.session, context.node, "browse_next_count") == before + 2
+    assert count(context.session, context.node, "continuation_points") == 0
+    assert :ok = Wotex.OPCUA.disconnect(foreign)
+  end
+
+  @tag rust_session: true
+  test "WOP-N03 the independent peer proves the 64-continuation Session boundary", context do
+    baseline = native_descendants()
+    live = fn -> count(context.session, context.node, "continuation_points") end
+    assert live.() == 0
+    assert {:ok, held_session} = Wotex.OPCUA.connect(context.options)
+    %Wotex.OPCUA.Session{handle: %{host: host}} = held_session
+    processes = native_processes(host)
+    monitor = Process.monitor(host)
+
+    try do
+      handles =
+        for _ <- 1..64 do
+          assert {:ok, %Browse.Page{continuation: %Browse.Continuation{} = handle}} =
+                   Browse.references(held_session, context.node.("paged"), page_size: 1)
+
+          handle
+        end
+
+      assert length(Enum.uniq_by(handles, & &1.reference)) == 64
+      assert live.() == 64
+
+      assert {:error, %Error{code: :busy}} =
+               Browse.references(held_session, context.node.("paged"), page_size: 1)
+
+      assert live.() == 64
+      assert :ok = Browse.release(held_session, hd(handles))
+      assert live.() == 63
+
+      assert {:ok, %Browse.Page{continuation: %Browse.Continuation{}}} =
+               Browse.references(held_session, context.node.("paged"), page_size: 1)
+
+      assert live.() == 64
+
+      assert {:error, %Error{code: :busy}} =
+               Browse.references(held_session, context.node.("paged"), page_size: 1)
+
+      assert live.() == 64
+    after
+      assert :ok = Wotex.OPCUA.disconnect(held_session)
+    end
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
+    assert eventually(fn -> live.() == 0 end)
+    assert eventually(fn -> not Enum.any?(processes, &os_alive?/1) end)
+    assert eventually(fn -> native_descendants() == baseline end)
   end
 
   @tag rust_session: true
@@ -821,8 +2652,21 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     config = Keyword.put(context.options, :target, context.peer["endpoint"])
 
     for {identifier, type, original, written, dimensions} <- [
+          {"boolean_array", "Boolean", [true, false], [false, true], nil},
+          {"sbyte_array", "SByte", [-128, 127], [0, -1], nil},
+          {"byte_array", "Byte", [0, 255], [1, 254], nil},
+          {"int16_array", "Int16", [-32_768, 32_767], [0, -1], nil},
+          {"uint16_array", "UInt16", [0, 65_535], [1, 65_534], nil},
           {"int_array", "Int32", [-2_147_483_648, 0, 7], [2_147_483_647, -1], nil},
+          {"uint32_array", "UInt32", [0, 4_294_967_295], [1, 4_294_967_294], nil},
+          {"int64_array", "Int64", [-9_223_372_036_854_775_808, 9_223_372_036_854_775_807], [0, -1],
+           nil},
+          {"uint64_array", "UInt64", [0, 18_446_744_073_709_551_615],
+           [1, 18_446_744_073_709_551_614], nil},
+          {"float_array", "Float", [-0.0, 1.5], [-0.0, 3.25], nil},
           {"double_array", "Double", [1.5, -0.0], [-0.0, 2.5e-300, 1.0e300], nil},
+          {"string_array", "String", ["x\0é", ""], ["changed", ""], nil},
+          {"bytestring_array", "ByteString", [<<0, 255>>, <<>>], [<<1, 2>>, <<>>], nil},
           {"int16_matrix", "Int16", [1, 2, 3, 4, 5, 6], [6, 5, 4, 3, 2, 1], [2, 3]}
         ] do
       node = context.node.(identifier)
@@ -849,7 +2693,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
         assert projected.opcua_type == type
         assert Map.get(projected, :opcua_dimensions) == dimensions
 
-        if type == "Double" do
+        if type in ["Float", "Double"] do
           [negative_zero | _] = written
           assert <<1::1, _::63>> = <<negative_zero::float-64>>
         end
@@ -863,6 +2707,72 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     end
 
     assert eventually(fn -> native_descendants() == baseline end)
+  end
+
+  @tag rust_session: true
+  test "WOP-S01 WOP-S05 Runtime observes every supported array from the Rust peer", context do
+    baseline = native_descendants()
+    config = Keyword.put(context.options, :target, context.peer["endpoint"])
+    assert {:ok, runtime_context} = Context.new(request_id: "rust-runtime-arrays")
+
+    arrays = [
+      {"boolean_array", "Boolean", [true, false], nil},
+      {"sbyte_array", "SByte", [-128, 127], nil},
+      {"byte_array", "Byte", [0, 255], nil},
+      {"int16_array", "Int16", [-32_768, 32_767], nil},
+      {"uint16_array", "UInt16", [0, 65_535], nil},
+      {"int_array", "Int32", [-2_147_483_648, 0, 7], nil},
+      {"uint32_array", "UInt32", [0, 4_294_967_295], nil},
+      {"int64_array", "Int64", [-9_223_372_036_854_775_808, 9_223_372_036_854_775_807], nil},
+      {"uint64_array", "UInt64", [0, 18_446_744_073_709_551_615], nil},
+      {"float_array", "Float", [-0.0, 1.5], nil},
+      {"double_array", "Double", [1.5, -0.0], nil},
+      {"string_array", "String", ["x\0é", ""], nil},
+      {"datetime_array", "DateTime", [132_541_920_000_000_001, 132_541_920_000_000_002], nil},
+      {"guid_array", "Guid",
+       ["00112233-4455-6677-8899-aabbccddeeff", "ffeeddcc-bbaa-9988-7766-554433221100"], nil},
+      {"bytestring_array", "ByteString", [<<0, 255>>, <<>>], nil},
+      {"nodeid_array", "NodeId", [context.node.("fixture"), "ns=0;i=2255"], nil},
+      {"status_code_array", "StatusCode", [0, 0x4000_0000], nil},
+      {"int16_matrix", "Int16", [1, 2, 3, 4, 5, 6], [2, 3]}
+    ]
+
+    for {identifier, type, expected, dimensions} <- arrays do
+      consumed = runtime_array_consumer(context.peer, context.node.(identifier), config)
+
+      assert {:ok, %Result{payload: actual, metadata: metadata}} =
+               ConsumedThing.read_property(consumed, "samples", runtime_context)
+
+      assert actual == expected
+      assert metadata.opcua_type == type
+      assert metadata.status == 0
+      assert Map.get(metadata, :opcua_dimensions) == dimensions
+      assert_negative_zero(actual, type)
+
+      id = {:rust_runtime_array, identifier}
+
+      assert {:ok, spec} =
+               ConsumedThing.observation_child_spec(consumed, "samples", runtime_context,
+                 id: id,
+                 receiver: self(),
+                 max_queue_length: 1000,
+                 overflow: :stop,
+                 restart: :temporary
+               )
+
+      owner = start_supervised!(spec, id: id)
+
+      assert_receive {:wotex_runtime, ^id, {:ok, observed, observed_metadata}}, 5000
+      assert observed == expected
+      assert observed_metadata.opcua_type == type
+      assert observed_metadata.status == 0
+      assert Map.get(observed_metadata, :opcua_dimensions) == dimensions
+      assert_negative_zero(observed, type)
+      assert resources(context.session, context.node) == {1, 1}
+      assert :ok = Subscription.stop(owner)
+      assert eventually(fn -> resources(context.session, context.node) == {0, 0} end)
+      assert eventually(fn -> native_descendants() == baseline end)
+    end
   end
 
   @tag rust_session: true
@@ -1016,6 +2926,31 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
     {withheld, republished}
   end
 
+  defp read_status_fault(session, node, status) do
+    assert {:ok, %{"outputs" => [%{"type" => "UInt32", "value" => previous}]}} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: node.("read_status_fault"),
+               value: %{
+                 object_id: node.("fixture"),
+                 arguments: [%{type: "UInt32", value: status}]
+               }
+             })
+
+    previous
+  end
+
+  defp read_missing_value_fault(session, node) do
+    assert {:ok, %{"outputs" => [%{"type" => "Boolean", "value" => previous}]}} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: node.("read_missing_value_fault"),
+               value: %{object_id: node.("fixture"), arguments: []}
+             })
+
+    previous
+  end
+
   defp next_report(reference) do
     receive do
       {:wotex_opcua, ^reference, report} -> report
@@ -1065,6 +3000,42 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
 
     {subscriptions, items}
   end
+
+  defp create_counts(session, node) do
+    assert {:ok,
+            %{
+              "outputs" => [
+                %{"type" => "UInt32", "value" => subscriptions},
+                %{"type" => "UInt32", "value" => monitored_items}
+              ]
+            }} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: node.("create_counts"),
+               value: %{object_id: node.("fixture"), arguments: []}
+             })
+
+    {subscriptions, monitored_items}
+  end
+
+  defp delete_counts(session, node) do
+    assert {:ok,
+            %{
+              "outputs" => [
+                %{"type" => "UInt32", "value" => monitored_items},
+                %{"type" => "UInt32", "value" => subscriptions}
+              ]
+            }} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: node.("delete_counts"),
+               value: %{object_id: node.("fixture"), arguments: []}
+             })
+
+    {monitored_items, subscriptions}
+  end
+
+  defp add_counts({left, right}, increment), do: {left + increment, right + increment}
 
   defp browsed?(session, node) do
     case Browse.references(session, node.("fixture")) do
@@ -1155,7 +3126,18 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
         "properties" => %{
           "samples" => %{
             "type" => "array",
-            "forms" => [%{"href" => href, "op" => ["readproperty", "writeproperty"]}]
+            "observable" => true,
+            "forms" => [
+              %{
+                "href" => href,
+                "op" => [
+                  "readproperty",
+                  "writeproperty",
+                  "observeproperty",
+                  "unobserveproperty"
+                ]
+              }
+            ]
           }
         }
       })
@@ -1171,6 +3153,14 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
 
     consumed
   end
+
+  defp assert_negative_zero(values, type) when type in ["Float", "Double"] do
+    negative_zero = Enum.find(values, &(&1 == 0.0))
+    assert is_float(negative_zero)
+    assert <<1::1, _::63>> = <<negative_zero::float-64>>
+  end
+
+  defp assert_negative_zero(_, _), do: :ok
 
   defp runtime_scalar_consumer(peer, node, config) do
     href = peer["endpoint"] <> "?id=" <> URI.encode_www_form(node)

@@ -78,8 +78,20 @@ pub(crate) async fn read(node_managers: NodeManagers, request: Request<ReadReque
     )
     .await;
 
-    let (results, diagnostic_infos) =
+    let (mut results, diagnostic_infos) =
         consume_results(results, request.request.request_header.return_diagnostics);
+    let status = request.info.take_read_status_fault();
+    let missing_value = request.info.take_read_missing_value_fault();
+    if status != 0 || missing_value {
+        if let Some(result) = results.as_mut().and_then(|values| values.first_mut()) {
+            if missing_value {
+                result.value = None;
+            }
+            if status != 0 {
+            result.status = Some(StatusCode::from(status));
+            }
+        }
+    }
 
     Response {
         message: ReadResponse {
@@ -93,6 +105,7 @@ pub(crate) async fn read(node_managers: NodeManagers, request: Request<ReadReque
 }
 
 pub(crate) async fn write(node_managers: NodeManagers, request: Request<WriteRequest>) -> Response {
+    request.info.record_write_request();
     let context = request.context();
     let nodes_to_write = take_service_items!(
         request,
@@ -141,9 +154,14 @@ pub(crate) async fn write(node_managers: NodeManagers, request: Request<WriteReq
     let (results, diagnostic_infos) =
         consume_results(results, request.request.request_header.return_diagnostics);
 
+    let mut response_header = ResponseHeader::new_good(request.request_handle);
+    if std::env::var_os("WOTEX_OPCUA_RUST_BAD_WRITE_SESSION").is_some() {
+        response_header.service_result = StatusCode::BadSessionIdInvalid;
+    }
+
     Response {
         message: WriteResponse {
-            response_header: ResponseHeader::new_good(request.request_handle),
+            response_header,
             results,
             diagnostic_infos,
         }

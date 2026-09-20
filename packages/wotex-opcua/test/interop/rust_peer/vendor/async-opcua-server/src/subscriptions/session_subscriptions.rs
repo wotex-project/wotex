@@ -20,12 +20,13 @@ use crate::{
 };
 use opcua_core::sync::RwLock;
 use opcua_types::{
-    AttributeId, CreateSubscriptionRequest, CreateSubscriptionResponse, DataValue, DateTime,
-    DateTimeUtc, ExtensionObject, ModifySubscriptionRequest, ModifySubscriptionResponse,
-    MonitoredItemCreateResult, MonitoredItemModifyRequest, MonitoredItemModifyResult,
-    MonitoringMode, NodeId, NotificationMessage, PublishRequest, PublishResponse, RepublishRequest,
-    RepublishResponse, ResponseHeader, ServiceFault, SetPublishingModeRequest,
-    SetPublishingModeResponse, StatusCode, TimestampsToReturn,
+    AttributeId, CreateSubscriptionRequest, CreateSubscriptionResponse, DataChangeNotification,
+    DataValue, DateTime, DateTimeUtc, ExtensionObject, ModifySubscriptionRequest,
+    ModifySubscriptionResponse, MonitoredItemCreateResult, MonitoredItemModifyRequest,
+    MonitoredItemModifyResult, MonitoringMode, NodeId, NotificationMessage, PublishRequest,
+    PublishResponse, RepublishRequest, RepublishResponse, ResponseHeader, ServiceFault,
+    SetPublishingModeRequest, SetPublishingModeResponse, StatusChangeNotification, StatusCode,
+    TimestampsToReturn,
 };
 
 /// Subscriptions belonging to a single session. Note that they are technically _owned_ by
@@ -50,6 +51,10 @@ pub struct SessionSubscriptions {
     type_tree_for_user: Arc<dyn TypeTreeForUserStatic>,
     /// Fixture-controlled fault state shared across server Sessions.
     republish_fault: Arc<opcua_core::sync::Mutex<RepublishFault>>,
+    /// Previous data notification retained for one isolated Publish fault.
+    fixture_previous_notification: Option<NotificationMessage>,
+    /// Whether this Session has applied its configured Publish fault.
+    fixture_publish_fault_applied: bool,
 }
 
 impl SessionSubscriptions {
@@ -70,6 +75,93 @@ impl SessionSubscriptions {
             session,
             type_tree_for_user,
             republish_fault,
+            fixture_previous_notification: None,
+            fixture_publish_fault_applied: false,
+        }
+    }
+
+    fn apply_fixture_publish_fault(
+        &mut self,
+        notification: &mut NotificationMessage,
+        ack_results: &mut Option<Vec<StatusCode>>,
+    ) {
+        if self.fixture_publish_fault_applied {
+            return;
+        }
+        let Ok(fault) = std::env::var("WOTEX_OPCUA_RUST_PUBLISH_FAULT") else {
+            return;
+        };
+
+        if fault == "bad_acknowledgement" {
+            if let Some(status) = ack_results.as_mut().and_then(|results| results.first_mut()) {
+                *status = StatusCode::BadUnexpectedError;
+                self.fixture_publish_fault_applied = true;
+            }
+            return;
+        }
+
+        if notification.notification_data.is_none() {
+            return;
+        }
+
+        match fault.as_str() {
+            "duplicate" | "conflicting_duplicate" | "oversized_gap" => {
+                let Some(previous) = self.fixture_previous_notification.take() else {
+                    self.fixture_previous_notification = Some(notification.clone());
+                    return;
+                };
+                match fault.as_str() {
+                    "duplicate" => *notification = previous,
+                    "conflicting_duplicate" => {
+                        notification.sequence_number = previous.sequence_number;
+                    }
+                    "oversized_gap" => {
+                        notification.sequence_number =
+                            previous.sequence_number.saturating_add(102);
+                    }
+                    _ => unreachable!(),
+                }
+                self.fixture_publish_fault_applied = true;
+            }
+            "zero_sequence" => {
+                notification.sequence_number = 0;
+                self.fixture_publish_fault_applied = true;
+            }
+            "unknown_client_handle" => {
+                let Some(data) = notification
+                    .notification_data
+                    .as_mut()
+                    .and_then(|items| items.first_mut())
+                else {
+                    return;
+                };
+                if !data.inner_is::<DataChangeNotification>() {
+                    return;
+                }
+                let mut change = *std::mem::take(data)
+                    .into_inner_as::<DataChangeNotification>()
+                    .expect("checked DataChangeNotification type");
+                let Some(item) = change
+                    .monitored_items
+                    .as_mut()
+                    .and_then(|items| items.first_mut())
+                else {
+                    return;
+                };
+                item.client_handle = item.client_handle.saturating_add(1);
+                *data = ExtensionObject::from_message(change);
+                self.fixture_publish_fault_applied = true;
+            }
+            "status_change" => {
+                notification.notification_data = Some(vec![ExtensionObject::from_message(
+                    StatusChangeNotification {
+                        status: StatusCode::BadUnexpectedError,
+                        ..Default::default()
+                    },
+                )]);
+                self.fixture_publish_fault_applied = true;
+            }
+            _ => {}
         }
     }
 
@@ -686,11 +778,16 @@ impl SessionSubscriptions {
         }
 
         let num_responses = responses.len();
-        for (idx, (publish_request, notification, subscription_id)) in
+        for (idx, (mut publish_request, mut notification, subscription_id)) in
             responses.into_iter().enumerate()
         {
             let is_last = idx == num_responses - 1;
             let max_retransmission_queue_len = self.max_publish_requests() * 2;
+
+            self.apply_fixture_publish_fault(
+                &mut notification,
+                &mut publish_request.ack_results,
+            );
 
             Self::enqueue_retransmission_notification(
                 &mut self.retransmission_queue,

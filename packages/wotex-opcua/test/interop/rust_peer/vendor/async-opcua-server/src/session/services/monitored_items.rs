@@ -17,10 +17,10 @@ use opcua_core::ResponseMessage;
 use opcua_types::{
     AttributeId, BrowsePath, CreateMonitoredItemsRequest, CreateMonitoredItemsResponse,
     DataChangeFilter, DeadbandType, DeleteMonitoredItemsRequest, DeleteMonitoredItemsResponse,
-    ModifyMonitoredItemsRequest, ModifyMonitoredItemsResponse, MonitoringMode, NodeId, Range,
-    ReadRequest, ReferenceTypeId, RelativePath, RelativePathElement, RequestHeader, ResponseHeader,
-    SetMonitoringModeRequest, SetMonitoringModeResponse, StatusCode, TimestampsToReturn,
-    TranslateBrowsePathsToNodeIdsRequest, Variant,
+    DiagnosticInfo, ModifyMonitoredItemsRequest, ModifyMonitoredItemsResponse, MonitoringMode,
+    NodeId, Range, ReadRequest, ReferenceTypeId, RelativePath, RelativePathElement, RequestHeader,
+    ResponseHeader, SetMonitoringModeRequest, SetMonitoringModeResponse, StatusCode,
+    TimestampsToReturn, TranslateBrowsePathsToNodeIdsRequest, Variant,
 };
 use tracing::debug_span;
 use tracing_futures::Instrument;
@@ -150,6 +150,7 @@ pub(crate) async fn create_monitored_items(
     node_managers: NodeManagers,
     request: Request<CreateMonitoredItemsRequest>,
 ) -> Response {
+    request.info.record_create_monitored_items_request();
     let context = request.context();
     let items_to_create = take_service_items!(
         request,
@@ -244,7 +245,7 @@ pub(crate) async fn create_monitored_items(
     )
     .await;
 
-    let res = match request.subscriptions.create_monitored_items(
+    let mut results = match request.subscriptions.create_monitored_items(
         request.session_id,
         request.request.subscription_id,
         &items,
@@ -291,11 +292,56 @@ pub(crate) async fn create_monitored_items(
         }
     };
 
+    let diagnostic_infos = match std::env::var("WOTEX_OPCUA_RUST_MALFORMED_MONITORED_ITEM")
+        .as_deref()
+    {
+        Ok("missing_result") => {
+            results.clear();
+            None
+        }
+        Ok("extra_result") => {
+            if let Some(result) = results.first().cloned() {
+                results.push(result);
+            }
+            None
+        }
+        Ok("bad_status") => {
+            if let Some(result) = results.first_mut() {
+                result.status_code = StatusCode::BadUnexpectedError;
+            }
+            None
+        }
+        Ok("zero_id") => {
+            if let Some(result) = results.first_mut() {
+                result.monitored_item_id = 0;
+            }
+            None
+        }
+        Ok("sampling_interval") => {
+            if let Some(result) = results.first_mut() {
+                result.revised_sampling_interval = -1.0;
+            }
+            None
+        }
+        Ok("queue_size") => {
+            if let Some(result) = results.first_mut() {
+                result.revised_queue_size = 0;
+            }
+            None
+        }
+        Ok("diagnostic") => Some(vec![DiagnosticInfo::default()]),
+        _ => None,
+    };
+    let mut response_header = ResponseHeader::new_good(request.request_handle);
+    if std::env::var_os("WOTEX_OPCUA_RUST_BAD_MONITORED_ITEM_SERVICE").is_some() {
+        response_header.service_result = StatusCode::BadUnexpectedError;
+    }
+
     Response {
         message: CreateMonitoredItemsResponse {
-            response_header: ResponseHeader::new_good(request.request_handle),
-            results: Some(res),
-            diagnostic_infos: None,
+            response_header,
+            results: Some(results),
+            diagnostic_infos,
         }
         .into(),
         request_id: request.request_id,
@@ -437,6 +483,7 @@ pub(crate) async fn delete_monitored_items(
     node_managers: NodeManagers,
     request: Request<DeleteMonitoredItemsRequest>,
 ) -> Response {
+    request.info.record_delete_monitored_items_request();
     let context = request.context();
     let items = take_service_items!(
         request,
@@ -480,11 +527,39 @@ pub(crate) async fn delete_monitored_items(
     )
     .await;
 
+    let mut result_statuses = results.into_iter().map(|result| result.0).collect::<Vec<_>>();
+    let diagnostic_infos = match std::env::var(
+        "WOTEX_OPCUA_RUST_MALFORMED_DELETE_MONITORED_ITEM",
+    )
+    .as_deref()
+    {
+        Ok("missing_result") => {
+            result_statuses.clear();
+            None
+        }
+        Ok("extra_result") => {
+            result_statuses.push(StatusCode::Good);
+            None
+        }
+        Ok("bad_status") => {
+            if let Some(status) = result_statuses.first_mut() {
+                *status = StatusCode::BadUnexpectedError;
+            }
+            None
+        }
+        Ok("diagnostic") => Some(vec![DiagnosticInfo::default()]),
+        _ => None,
+    };
+    let mut response_header = ResponseHeader::new_good(request.request_handle);
+    if std::env::var_os("WOTEX_OPCUA_RUST_BAD_DELETE_MONITORED_ITEM_SERVICE").is_some() {
+        response_header.service_result = StatusCode::BadUnexpectedError;
+    }
+
     Response {
         message: DeleteMonitoredItemsResponse {
-            response_header: ResponseHeader::new_good(request.request_handle),
-            results: Some(results.into_iter().map(|r| r.0).collect()),
-            diagnostic_infos: None,
+            response_header,
+            results: Some(result_statuses),
+            diagnostic_infos,
         }
         .into(),
         request_id: request.request_id,

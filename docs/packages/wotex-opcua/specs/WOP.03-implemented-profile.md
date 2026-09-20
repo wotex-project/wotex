@@ -3,7 +3,7 @@ spec:
   id: WOP.03
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 2.0.22
+  version: 2.0.56
   owner: wotex-opcua
   updated: 2026-09-20
 ---
@@ -116,7 +116,12 @@ server NamespaceArray, checks the server-revised timeout and emits a correlated,
 credit-spending success. A one-at-a-time asynchronous `read` accepts a concrete
 NodeId and null index range, resolves its server namespace URI to the SDK-local
 index and returns a typed DataValue. Bad StatusCodes retain the numeric status
-in a structured error. NodeId, ExpandedNodeId, QualifiedName and opaque
+in a structured error. Independent Rust Reads retain both timestamps and
+distinguish a present Null Variant from a Good DataValue with no value. An
+unknown binary ExtensionObject retains its encoding NodeId and body bytes. An
+Uncertain `0x40900000` Read remains successful and retains the numeric status
+beside its typed value. A Bad `0x80010000` Read returns a request-scoped
+`remote_error`; the next Read succeeds on the same Session. NodeId, ExpandedNodeId, QualifiedName and opaque
 ExtensionObject values are admitted with server namespace identities. `close` cooperatively deletes the Session
 and acknowledges cleanup; EOF also releases it. A one-at-a-time `write` validates
 one typed Variant, retains copied SDK-owned memory through its asynchronous
@@ -164,12 +169,35 @@ The independent async-opcua Rust peer executes the same nine policy/token
 cells with Read, Write/readback, Call, Browse, subscribe/cancel and close, then
 executes X-F39..F47 against isolated fault variants. Each rejection has no
 Session, no live local helper and a peer-recorded zero application requests.
+An isolated peer caps secure-channel tokens at one second and counts successful
+renewals. The persistent Session renews in place while its monitored item stays
+live, then writes, receives and reads back a changed value before cleanup.
+Another isolated peer applies one Write and returns BadSessionIdInvalid. The
+client reports `connection_failed` with unknown effect, ends only that Session
+and never replays the Write; an observer sees one request and the changed value.
 The independent peer also delivers one initial and each fresh monitored Value
 exactly once with sequence, client-handle, timestamp-resolution and overflow
-metadata. Double cancellation is idempotent; receiver death removes only its
-subscription; and a bounded receiver overflow emits one terminal error. Each
-path returns peer subscription and MonitoredItem counts to zero while the
-Session remains usable. Suspending the native SDK beyond a six-cycle revised
+metadata. Double cancellation is idempotent; a foreign Session and a forged
+handle generation are rejected before either delete service; the valid
+cancellation reaches DeleteMonitoredItems and DeleteSubscriptions exactly once.
+Receiver death removes only its subscription. A bounded receiver overflow emits
+one terminal error. Each path returns peer subscription and MonitoredItem
+counts to zero while the Session remains usable. The independent peer also holds 32 live subscriptions;
+the client rejects a 33rd before either create service, reuses a released slot
+and cancels all 32 handles with both peer counters returning to zero. Eleven
+malformed subscription-admission variants cover
+invalid revised parameters, result cardinality, diagnostics, zero identifiers,
+Bad item status and a Bad service result. Each cleans the acquired server
+resources, preserves the exact error boundary and leaves the Session usable.
+Ten cancellation variants apply the same envelope faults to
+DeleteMonitoredItems and DeleteSubscriptions. Each returns `cleanup_failed`,
+closes only its owning Session and leaves an observer usable with zero peer
+resources. Seven Publish variants prove exact-duplicate suppression,
+conflicting-duplicate rejection, the 100-message gap bound, nonzero sequences,
+client-handle identity, StatusChange termination and Session-wide Bad
+acknowledgement cleanup. The first six end at the subscription boundary and
+leave the Session usable; the Bad acknowledgement closes only its Session.
+Suspending the native SDK beyond a six-cycle revised
 lifetime makes the Rust server expire the subscription, emit one
 `subscription_lost` after the SDK resumes, clear both peer counters and leave
 the Session usable. Stopping an isolated Rust server with a live subscription
@@ -193,8 +221,78 @@ confirms typed BrowseNext, explicit release, `all/3`, and multi-page child-list
 projection in persistent and one-shot mode over the wire. The native release
 callback accepts exactly one empty Good result for its one continuation point.
 The async-opcua Rust peer now reports its own continuation and release counters
-for Browse, BrowseNext, limits and expiry. WOP-N03/N04 remain unaccepted until
-the remaining boundary matrix is complete.
+for Browse, BrowseNext, limits and expiry. A separate Session reaches exactly 64
+live continuations, rejects a 65th Browse locally, reuses one released slot and
+drops all remaining server continuations on close. Independent filtered Browse
+also preserves Organizes subtype selection, all three directions, combined
+Variable/Object node-class masks, the all-reference-types selector, server order
+and all seven typed ReferenceDescription fields. A destructive Rust peer
+matrix returns a missing or duplicate result, diagnostics, one reference beyond
+the requested page size, or a 4097-byte continuation. The first three fail as
+`invalid_response`; the two oversized shapes fail as `response_limit`. Each ends
+only its owning Session and unrelated subscription, clears peer resources and
+leaves an observer usable. The same five shapes on BrowseNext consume a valid
+cursor first, produce the same error split and clear any successor continuation
+while preserving the observer. Independent status variants retain an Uncertain
+status on either the first or next typed page; `all/3` rejects the incomplete
+result, releases the current cursor and leaves the Session usable. A Bad result
+or response-header service result on the first page retains its complete numeric
+status and is request-scoped. Either Bad form on the next page ends only its
+owning Session and subscription, clears the unknown successor and leaves an
+observer usable. Empty first and next pages with live continuations
+are exposed as valid typed pages. Complete collection advances through them,
+and `max_pages` counts them before releasing the cursor and keeping the Session
+usable. Independent initial-page and next-page variants also return a reference
+whose ExpandedNodeId has `server_index: 1`. Typed Browse preserves that remote
+identity. Persistent and one-shot child-list compatibility reject its lossy
+NodeId projection as `unsupported_remote_reference`, release any live cursor
+and leave the Session and peer continuation count clean. Matching variants put
+the unknown URI `urn:wotex:unknown` on the ExpandedNodeId instead; typed Browse
+retains it, while both child-list lifecycles reject it with the same cleanup.
+Remote `type_definition` identities on either page are also retained. Because
+their target NodeIds remain local, persistent and one-shot child collection
+still returns all children in server order and clears every continuation.
+Unknown local namespace indexes in the target, reference type or type definition
+fail typed Browse on initial and next pages, release the cursor and preserve the
+Session. Child projection rejects the invalid target but still collects local
+targets when only reference metadata is invalid.
+Duplicate-reference variants on the first and next page retain both typed
+descriptions in place. Persistent and one-shot child collection likewise keep
+the duplicate NodeIds at their server positions and clear every continuation.
+Named-reference variants preserve QualifiedName namespace 65535, Swedish locale
+and UTF-8 display text on initial and next typed pages. Child collection ignores
+that descriptive metadata and completes normally in both lifecycles.
+Unspecified-NodeClass variants retain numeric zero on initial and next typed
+pages rather than inferring Variable. Child projection remains unaffected and
+clears every continuation.
+Two further variants preserve the wire distinction between a null
+QualifiedName and an empty QualifiedName on either page. Both child-list
+lifecycles ignore that descriptive field and still collect every target.
+Null-type-definition variants retain the null NodeId, absent namespace URI and
+zero server index on either page without blocking child collection.
+An independent long-name variant keeps every page below the frame ceiling but
+crosses the 1 MiB aggregate reference budget. Typed and child collection reject
+the chain, release its continuation and preserve the Session.
+Another destructive Rust peer
+variant allocates an initial Browse continuation and records that count before
+exiting without a response; another exits only after consuming a BrowseNext
+continuation. Either lost response ends the owning Session, terminates its
+unrelated subscription and reaps the guardian and native client. Another variant
+consumes a valid release and exits before its response; a further variant
+returns a Bad Browse release result. The lost release ends its Session,
+subscription and native helpers. The Bad result closes only its owning Session,
+clears its server continuation, subscription and MonitoredItem, and leaves an
+observer Session usable. Six release-fault variants independently exercise zero
+results, duplicate results, returned references, a returned continuation,
+diagnostics and a Bad response header. Each closes only its owning Session,
+clears the same three peer resources and leaves an observer usable. Killing
+the process that owns a separate Session with a live continuation and
+subscription likewise clears all three peer resources, reaps the guardian and
+native client, and leaves an observer Session usable. The same peer counts
+BrowseNext requests: a non-owner caller, a foreign Session and a consumed handle
+all fail locally without changing that count, while the valid next and release
+are the only counted requests.
+WOP-N03/N04 remain unaccepted until the remaining boundary matrix is complete.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent
@@ -227,15 +325,15 @@ a typed Write. The Form mapper now admits an explicit typed ByteString array
 envelope, validates its finite size/dimensions with the pure Variant codec,
 and transmits raw bytes through the selected native client. A deterministic C
 fixture and the same-stack peer check the native Runtime array Write/readback.
-The independent async-opcua Rust peer now also roundtrips writable Int32 and
-Double arrays plus a 2 × 3 Int16 matrix through a real ConsumedThing. Runtime
-preserves the flat matrix, dimensions, extreme integers and negative zero, and
-the test restores every fixture value. The peer also returns every scalar type
-accepted by the Runtime native projection: Null, Boolean, all integer widths,
-Float, Double, String, DateTime, Guid, ByteString, NodeId and StatusCode. The
-DateTime, Guid, ByteString, NodeId and StatusCode nodes also pass real Runtime
-observations and release their peer and local resources on stop. Broader
-independent array coverage and the complete Runtime profile remain open.
+The independent async-opcua Rust peer returns every scalar type accepted by the
+Runtime native projection: Null, Boolean, all integer widths, Float, Double,
+String, DateTime, Guid, ByteString, NodeId and StatusCode. It also returns and
+observes arrays of every non-null type in that projection plus a 2 × 3 Int16
+matrix. Arrays writable through `Value.encode/2` roundtrip through a real
+ConsumedThing and are restored. Runtime preserves flat matrix order,
+dimensions, integer boundaries, binary elements, exact DateTime ticks and
+negative zero. Every observation releases its peer and local resources on stop.
+The complete Runtime profile remains open.
 The same peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
 and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.

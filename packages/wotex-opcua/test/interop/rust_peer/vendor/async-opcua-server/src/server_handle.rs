@@ -104,9 +104,54 @@ impl ServerHandle {
         self.info.cancel_count()
     }
 
+    /// Get the number of BrowseNext requests accepted by active Sessions.
+    pub fn browse_next_count(&self) -> u32 {
+        self.info.browse_next_count()
+    }
+
     /// Get the number of application service requests accepted by active Sessions.
     pub fn application_request_count(&self) -> u32 {
         self.info.application_request_count()
+    }
+
+    /// Get the number of successfully renewed secure-channel tokens.
+    pub fn secure_channel_renewal_count(&self) -> u32 {
+        self.info.secure_channel_renewal_count()
+    }
+
+    /// Get the number of Write requests accepted by active Sessions.
+    pub fn write_request_count(&self) -> u32 {
+        self.info.write_request_count()
+    }
+
+    /// Configure a one-shot status code for the next completed Read result.
+    pub fn configure_read_status_fault(&self, status: u32) -> u32 {
+        self.info.configure_read_status_fault(status)
+    }
+
+    /// Configure a one-shot missing value for the next completed Read result.
+    pub fn configure_read_missing_value_fault(&self) -> bool {
+        self.info.configure_read_missing_value_fault()
+    }
+
+    /// Get the number of CreateSubscription requests accepted by active Sessions.
+    pub fn create_subscription_count(&self) -> u32 {
+        self.info.create_subscription_count()
+    }
+
+    /// Get the number of CreateMonitoredItems requests accepted by active Sessions.
+    pub fn create_monitored_items_count(&self) -> u32 {
+        self.info.create_monitored_items_count()
+    }
+
+    /// Get the number of DeleteMonitoredItems requests accepted by active Sessions.
+    pub fn delete_monitored_items_count(&self) -> u32 {
+        self.info.delete_monitored_items_count()
+    }
+
+    /// Get the number of DeleteSubscriptions requests accepted by active Sessions.
+    pub fn delete_subscriptions_count(&self) -> u32 {
+        self.info.delete_subscriptions_count()
     }
 
     /// Get the number of subscriptions currently owned by every session.

@@ -184,7 +184,16 @@ impl Server {
                 ..Default::default()
             },
             cancel_count: Default::default(),
+            browse_next_count: Default::default(),
             application_request_count: Default::default(),
+            secure_channel_renewal_count: Default::default(),
+            write_request_count: Default::default(),
+            read_status_fault: Default::default(),
+            read_missing_value_fault: Default::default(),
+            create_subscription_count: Default::default(),
+            create_monitored_items_count: Default::default(),
+            delete_monitored_items_count: Default::default(),
+            delete_subscriptions_count: Default::default(),
         };
 
         let certificate_store = Arc::new(RwLock::new(certificate_store));

@@ -308,7 +308,7 @@ impl SubscriptionCache {
             })
             .clone();
         let mut cache_lck = cache.lock();
-        let res = cache_lck.create_subscription(request, &context.info)?;
+        let mut res = cache_lck.create_subscription(request, &context.info)?;
         lck.subscription_to_session
             .insert(res.subscription_id, session_id);
         context
@@ -316,6 +316,14 @@ impl SubscriptionCache {
             .diagnostics
             .set_current_subscription_count(lck.subscription_to_session.len() as u32);
         context.info.diagnostics.inc_subscription_count();
+
+        match std::env::var("WOTEX_OPCUA_RUST_MALFORMED_SUBSCRIPTION").as_deref() {
+            Ok("publishing_interval") => res.revised_publishing_interval = 0.0,
+            Ok("keepalive") => res.revised_max_keep_alive_count = 0,
+            Ok("lifetime") => res.revised_lifetime_count = 1,
+            _ => {}
+        }
+
         Ok(res)
     }
 

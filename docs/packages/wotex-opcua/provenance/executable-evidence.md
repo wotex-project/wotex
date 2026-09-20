@@ -67,12 +67,22 @@ keys on Basic256Sha256, Aes128_Sha256_RsaOaep and
 Aes256_Sha256_RsaPss SignAndEncrypt endpoints. Each advertises anonymous,
 username and certificate user tokens. The peer serves a folder of 40 UInt32
 variables, every scalar admitted by the Runtime native projection, writable
-numeric arrays and a two-Double addition Method. Its fixture trust switch
+arrays for every Runtime-writable type, read-only arrays for the remaining
+projected types and a two-Double addition Method. Its fixture trust switch
 accepts the exact copied client leaf after async-opcua's certificate validation;
 it is not production trust policy. Methods report the server's own browse
 continuation, Cancel, subscription, MonitoredItem,
-withheld-notification and Republish-request counts.
+BrowseNext-request, withheld-notification and Republish-request counts. One-shot
+controls remove the value or change the status on the next completed Read
+result without replacing the Read service.
 `test/interop/rust_peer_test.exs` asserts through the public API that:
+
+- Good Reads retain source and server timestamps, distinguish a present Null
+  Variant from a missing value, and preserve an unknown binary
+  ExtensionObject's encoding NodeId and body. An Uncertain `0x40900000` Read
+  returns its typed value and exact status. A Bad `0x80010000` Read returns a
+  request-scoped `remote_error` with effect `none`, and the next Read succeeds
+  on the same Session (S01/V03);
 
 - the continuation-point count is 1 after the first page, stays 1 after
   BrowseNext and is 0 after `Browse.release/2`, and a released or consumed
@@ -80,6 +90,75 @@ withheld-notification and Republish-request counts.
   and advancing and releasing the other leaves 0. `Browse.all/3` with page size
   7 and child-list Browse return the 40 children in server order and leave 0
   (N03/N04);
+- a dedicated Session opens 64 simultaneous Browse continuations while an
+  observer Session measures the server count. The client rejects a 65th Browse
+  without increasing that count, admits one replacement after an explicit
+  release, rejects the next request at 64 again, and Session close deletes all
+  remaining peer continuations and local helpers (N03/N04);
+- an exact Organizes Browse returns the 40 Variables in server order with no
+  continuation. Disabling HierarchicalReferences subtypes or selecting the
+  Object node class returns none; inverse Organizes Browse on a child returns
+  its parent. Every result retains reference identity and direction, expanded
+  NodeId, BrowseName, DisplayName, NodeClass and type definition, including the
+  peer's namespace-2 NodeIds and namespace-0 BrowseNames (N03);
+- both-direction exact Organizes Browse returns the inverse Objects parent and
+  40 forward Variable children under one combined node-class mask. Forward
+  Browse with NodeId zero as the reference type returns mixed Variable and
+  Method components, proving the all-reference-types selector (N03);
+- five isolated malformed-Browse peers return a missing or duplicate result,
+  diagnostics, one reference beyond the requested page size, or a 4097-byte
+  continuation. The first three produce `invalid_response`; the oversized
+  shapes produce `response_limit`. Every case ends only the owning Session and
+  subscription, clears its continuation and MonitoredItem, and leaves an
+  observer serving Reads (N03/N04);
+- the same five malformed shapes on BrowseNext consume one valid cursor and
+  increment the server's BrowseNext count once. They produce the same error
+  split, end only the owning Session and subscription, clear any successor
+  continuation and MonitoredItem, and leave an observer serving Reads
+  (N03/N04);
+- independent first-page and next-page variants return the exact Uncertain
+  status through typed pages. `Browse.all/3` rejects either position as
+  incomplete, releases the current cursor and leaves the Session serving Reads.
+  A Bad result or response-header service result on the first page returns
+  `0x80010000` as a request-scoped `remote_error`; either Bad form on BrowseNext
+  closes only its Session and subscription, clears the unknown successor and
+  leaves an observer serving Reads (N03/N04);
+- independent empty-page variants return no references with a live continuation
+  from either Browse or BrowseNext. The typed page remains valid, complete
+  collection advances to normal exhaustion, and `max_pages` counts the empty
+  page before releasing the cursor and preserving the Session (N03/N04);
+- an isolated `lost_browse` peer builds the first page, records one live server
+  continuation and exits before returning the Browse response. The public call
+  fails with no effect, the owning Session ends its unrelated subscription, and
+  its host, guardian and native client all exit (N04);
+- an isolated `lost_browse_next` peer consumes the first BrowseNext
+  continuation, writes a receipt marker and exits before returning its
+  response. The public call fails with no effect, the owning Session delivers
+  one terminal error to an unrelated subscription, and its host, guardian and
+  native client all exit. Releasing the consumed handle after Session death is
+  harmless (N04);
+- an isolated `bad_browse_release` peer records and returns a Bad result for a
+  valid release. The public release fails `cleanup_failed`, ends the owning
+  Session and its unrelated subscription, and reaps both native helpers. A
+  second Session observes zero continuations, subscriptions and MonitoredItems
+  and continues serving Reads (N04);
+- an isolated `lost_browse_release` peer consumes a valid release, writes a
+  receipt and exits before returning its response. The release fails with no
+  effect, ends the owning Session and unrelated subscription, and reaps both
+  native helpers (N04);
+- six isolated release-fault peers answer a consumed release with zero or
+  duplicate results, returned references, a returned continuation, diagnostics
+  or a Bad response header. Every response produces `cleanup_failed`, ends only
+  the owning Session and subscription, clears its continuation and MonitoredItem,
+  and leaves an observer serving Reads (N04);
+- killing the process that owns a separate Session after it creates a monitored
+  item and Browse continuation ends that Session and both native helpers. An
+  observer Session sees the peer's continuation, subscription and MonitoredItem
+  counts return to zero, then completes another Read (N04);
+- a non-owner caller, a foreign Session and attempts to reuse a consumed handle
+  each fail `invalid_continuation` without changing the server's BrowseNext
+  request count. The valid next and release increment it exactly twice and
+  return the live continuation count to zero (N03);
 - the `max_references` and `max_pages` failures (`response_limit`, no effect)
   leave 0, and an unconsumed continuation with a 200 ms browse deadline returns
   to 0 without a caller action, after which `next/2` fails `deadline_exceeded`
@@ -110,10 +189,14 @@ withheld-notification and Republish-request counts.
   reconnect or replay. A new peer serves an observation only after an explicit
   fresh Runtime child is started, and its resources return to zero on stop
   (I02/I05 and V13); and
-- a real ConsumedThing reads, writes, reads back and restores the peer's Int32
-  and Double arrays and its 2 × 3 Int16 matrix. Runtime preserves the matrix's
-  flat value order and dimensions, extreme Int32 values and negative zero, and
-  the temporary request helpers return to the baseline (S01/S05 and I03); and
+- a real ConsumedThing reads, writes, reads back and restores arrays of every
+  type admitted by the Runtime Write mapper plus a 2 × 3 Int16 matrix. It also
+  reads and observes arrays of every non-null type admitted by the Runtime
+  native projection. Runtime preserves flat value order, dimensions, signed and
+  unsigned integer boundaries, binary elements, exact DateTime ticks, Guid,
+  NodeId, StatusCode and negative zero. Each observation returns the peer's
+  subscription and MonitoredItem counts and local helpers to their baselines
+  (S01/S05 and I03/I05); and
 - real ConsumedThing reads return exact Null, Boolean, every integer width,
   negative-zero Float, String, DateTime, Guid, ByteString, NodeId and StatusCode
   payloads after native Variant validation. DateTime, Guid, ByteString, NodeId
@@ -138,17 +221,103 @@ withheld-notification and Republish-request counts.
   the withheld notification instead makes the counted Republish return
   BadMessageNotAvailable, emits one terminal `sequence_gap`, clears both peer
   resources and leaves the Session serving Reads.
+- eleven isolated subscription-admission variants return invalid revised
+  publishing, keepalive, lifetime, sampling or queue parameters; missing or
+  duplicate item results; a zero item identifier; diagnostics; a Bad item
+  result; or a Bad service result. The client preserves the exact
+  `invalid_response`/`remote_error` boundary, deletes the real acquired server
+  resources and completes another Read on the same Session (S04/V10); and
+- ten isolated cancellation variants alter result cardinality, diagnostics,
+  result status or service status after the peer has processed
+  DeleteMonitoredItems or DeleteSubscriptions. Each call returns
+  `cleanup_failed`, ends only its owning Session and leaves an observer serving
+  Reads after the peer reports zero subscriptions and MonitoredItems (S04/V12);
+- an exact duplicate Publish is acknowledged without a second delivery while
+  the subscription and Session remain usable. Conflicting sequence reuse,
+  sequence zero, a gap of 101 missing messages, an unknown client handle and a
+  Bad StatusChange each emit one terminal subscription error, clear the peer
+  resources and leave the Session serving Reads (S04/V11); and
+- a Bad acknowledgement result on an otherwise valid Publish emits one
+  `invalid_response`, closes only the owning Session, clears its subscription
+  and MonitoredItem and leaves an observer serving Reads (S04/V11).
+- a foreign Session and a forged generation both fail `invalid_subscription`
+  without raising either server delete counter. The creating Session reaches
+  DeleteMonitoredItems and DeleteSubscriptions once each; repeating the
+  cancellation leaves both counters unchanged and both Sessions usable
+  (S04/V12).
+- one Session establishes 32 simultaneous subscriptions and MonitoredItems.
+  Its 33rd attempt fails `busy` without changing either create-service counter.
+  Deleting one handle increments both delete counters, admits one replacement,
+  and restores the full boundary. Explicit cancellation then returns all peer
+  resources to zero while the Session continues serving Reads (S04/C03).
+- an isolated peer caps secure-channel tokens at one second and records each
+  successful renewal. The client renews while a subscription remains live,
+  then writes a new Double, receives that exact monitored report, reads it back,
+  restores the original value and returns both peer resources to zero (S02/V06).
+- another isolated peer applies a Write, then returns BadSessionIdInvalid in the
+  service header. The client returns `connection_failed` with unknown effect and
+  terminates that Session. An observer reads the changed value while the peer's
+  Write counter stays at exactly one, excluding replay (S02/V06).
 
 The vendored async-opcua-server and async-opcua-nodes crates remain MPL-2.0 and
 record their crates.io provenance. The local patches implement standard Cancel
 for active asynchronous requests; expose aggregate Cancel, continuation,
-application-request, subscription and MonitoredItem counts; advertise X.509 tokens with the
-endpoint's policy; preserve insertion order for reference buckets; and consume
-BrowseNext pages from the front. Subscription expiry also removes the expired
+application-request, subscription, MonitoredItem, CreateSubscription,
+CreateMonitoredItems, DeleteMonitoredItems and DeleteSubscriptions counts;
+count Write requests and successful secure-channel renewals; advertise X.509
+tokens with the endpoint's policy; preserve insertion order for reference
+buckets; and consume BrowseNext pages from the front. The server info additionally counts every
+BrowseNext request accepted by an active Session. Subscription expiry also removes the expired
 ID from the aggregate ownership index on the same cache tick. A shared,
 counted fault state withholds or discards exactly the next notification without
 replacing the Publish or Republish services, and the named `server_loss`
-variant isolates destructive lifecycle evidence. These are test-server
+variant isolates destructive lifecycle evidence. The named `lost_browse`
+variant records the number of live continuations after building the initial
+Browse result, then exits before response delivery. Five malformed-Browse
+variants alter only that completed response: result cardinality, diagnostics,
+reference count or continuation length. Five matching BrowseNext variants alter
+the response after consuming a valid cursor. Six status variants replace only
+the first or next page's result status with Uncertain or Bad, or its response
+header service result with Bad. Two empty-page variants
+remove references without removing the live continuation. The named
+`remote_browse_reference` and `remote_browse_next_reference` variants set the
+first returned ExpandedNodeId's server index to 1. Two matching
+`unknown_namespace` variants set its URI to `urn:wotex:unknown`. Both next-page
+variants cap server pages at five references so compatibility collection
+reaches the altered page with a live continuation. Two `remote_type_definition`
+variants instead put an unknown URI and server index 1 on the first reference's
+type definition; the next-page form uses the same five-reference cap. Six
+`unknown_local` variants put namespace index 1000 on the target, reference
+type or type definition at the initial or next-page boundary. This lies outside
+the server NamespaceArray without entering the SDK's documented high-index
+collision range. The named
+`duplicate_browse_reference` and `duplicate_browse_next_reference` variants
+replace the second returned reference with the first without changing page
+length; the next-page form uses the five-reference cap. Two `named_reference`
+variants set QualifiedName namespace 65535 and localized Swedish UTF-8 text;
+the next-page form uses the same cap. Two `unspecified_node_class` variants set
+the first reference's NodeClass to zero, with the next-page cap applied. Two
+`null_empty_browse_name` variants set adjacent QualifiedNames to null and empty
+strings; the next-page form uses the same cap. Two `null_type_definition`
+variants replace the first type definition with its null ExpandedNodeId; the
+next-page form uses the same cap. The `aggregate_browse_bytes` variant caps
+pages at four references and gives each QualifiedName a 26,000-byte string,
+keeping each response frame below 128 KiB while crossing 1 MiB cumulatively.
+The named
+`lost_browse_next` variant uses a
+vendored service hook to consume a continuation, persist a receipt and
+terminate before response delivery. The
+named `bad_browse_release` variant uses the same fixture boundary to return a
+Bad result after consuming a valid release continuation. The named
+`lost_browse_release` variant consumes that continuation, records receipt and
+exits before response delivery. Five further variants alter only the successful
+release response shape: missing or duplicate results, references, continuation
+bytes, or diagnostics. A sixth changes only the response header service result
+to Bad. Twenty-one subscription variants alter completed CreateSubscription,
+CreateMonitoredItems, DeleteMonitoredItems or DeleteSubscriptions response
+envelopes after the normal resource operation. Seven more alter one completed
+Publish at its sequence, notification identity, StatusChange or acknowledgement
+boundary. These are test-server
 capabilities, not production client code.
 
 On macOS arm64, `cargo check --locked`, Clippy over all targets with warnings
@@ -156,28 +325,58 @@ denied and `cargo build --release --locked` passed. `cargo audit` found only
 RUSTSEC-2023-0071, for which no patched `rsa` release exists; the lane's exact
 exception uses RustSec's local-only workaround because this disposable peer
 binds `127.0.0.1` and is never shipped. Against the locally built peer, the
-32 independent-wire cases passed 32/32: the original three
+69 independent-wire cases passed 69/69: twenty-nine
 continuation/Cancel cases, all nine positive policy/token workflows and all
-nine negative security/fault cells, plus three Runtime profile/value cases and
-eight independent subscription/lifecycle cases. The
+nine negative security/fault cells, plus five Runtime profile/value cases and
+seventeen independent subscription/lifecycle cases. Typed Browse retains a remote
+ExpandedNodeId from either the initial or next page. Persistent and one-shot
+child projection reject it as `unsupported_remote_reference`; both paths leave
+the peer continuation count at zero and the Session usable. A second pair
+preserves an unknown namespace URI in typed Browse and proves the same rejection
+and cleanup at the compatibility boundary. A third pair preserves a remote type
+definition while persistent and one-shot compatibility still collect all 40
+local target NodeIds and clear their continuations. The unknown-local matrix
+rejects every invalid typed identity and releases the cursor; compatibility
+rejects the invalid target while still collecting targets whose hidden metadata
+is invalid. Duplicate references remain duplicated and ordered through typed,
+persistent compatibility and one-shot compatibility calls, with zero peer
+continuations after completion. Named references retain their QualifiedName
+namespace, locale and UTF-8 display text while child projection stays local and
+cleans every continuation. NodeClass zero remains unspecified on both typed page
+positions, and both child-list lifecycles complete with zero peer resources.
+Null and empty QualifiedName strings remain distinct on both typed page
+positions; persistent and one-shot child projection still return all 40 local
+targets and clear their continuations. Null type definitions retain the null
+NodeId, nil namespace URI and zero server index on both typed page positions;
+both compatibility lifecycles still collect all targets and clear their
+continuations. Long QualifiedNames cross the aggregate 1 MiB reference budget
+without crossing the per-page frame limit. Typed and both compatibility calls
+return `response_limit`, clear the peer continuation and leave the Session
+usable. The
 focused software-build harness passed 7/7 for the preceding three-case source;
 it must be rerun for this changed peer identity. A full software task and
 runtime matrix receipt remains required.
 
 | Subject | SHA-256 |
 | --- | --- |
-| `test/interop/rust_peer_test.exs` | `8749bf6fb44db212bbb682e3a3573f205de215e354d2ce8a4dabf48ecd23f9e1` |
-| `test/interop/rust_peer/src/main.rs` | `a1c5a5a2c17cd16f3aad53bc7b614828b6055029da43df3d95ff5d44f86da1d6` |
+| `test/interop/rust_peer_test.exs` | `d15850bbab87868b9489da97ebb5c458c33594202854090bf5681033ce21aeee` |
+| `test/interop/rust_peer/src/main.rs` | `040a9308e7560df4c232b4e177dcbfc4e1747494f15265aafa9b854bbfb874d4` |
 | `test/interop/rust_peer/Cargo.toml` | `0f584731027feaea7fea7c7a8c7f90364785a6275b8d3a15b74e9c7c3c4c8fa5` |
 | `test/interop/rust_peer/Cargo.lock` | `4151a4f2da9637ab7c063c7693be60f4cafb235e0cfa51aa5db9b861d786224f` |
 | `vendor/async-opcua-server/src/authenticator.rs` | `9c5a828978dbe82dc43c0c0ad61053098ffed5b83f6ec797f168bf06e1a8ea46` |
-| `vendor/async-opcua-server/src/info.rs` | `a89c5543d2e2f94467a29d074deb8c99696bdc9102e028ccbf157441728f881d` |
-| `vendor/async-opcua-server/src/server.rs` | `5259336ddbea57cf26bf4526a89a23465527a836c9f10628689ab93b633d057b` |
-| `vendor/async-opcua-server/src/server_handle.rs` | `cea7d451483b15e64557c61149f9ca867f2384d920e783a5ecf03c28084001b6` |
-| `vendor/async-opcua-server/src/session/message_handler.rs` | `3ddf711f5e6bd7e05dd231049a09821085b411331097975b658191d94dffa84a` |
-| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `b3e0b10a28e44b92397d3c65e777f60b02ef27a0c08f72d44fde6da6a2c170bd` |
-| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `bd1e5b7b3e01a53add640043a641f347a027e3dd7dc4849781650fa7d60d9494` |
+| `vendor/async-opcua-server/src/info.rs` | `2668d109f4fba4edb4049693f04e8a8bce506ca2f242148ebd43499c4c7fe4a4` |
+| `vendor/async-opcua-server/src/server.rs` | `159b0b0048cc1d1d1ecacc52788fe5dfc35b059a08f762fbc766649668844ea1` |
+| `vendor/async-opcua-server/src/server_handle.rs` | `8467bab7899eab879bc5823fda9e57cb0df4524a6d719077c6eaf49c476d6154` |
+| `vendor/async-opcua-server/src/session/controller.rs` | `0fe2a3539f4844351309fce61f48a7791d27783db13ae73281754fc461fdd31d` |
+| `vendor/async-opcua-server/src/session/message_handler.rs` | `f6e2519d74e267ef864b3afaf86fbf732e2862ef2ad8378985a5217473a99186` |
+| `vendor/async-opcua-server/src/session/services/attribute.rs` | `52ae76c6a5e778770ad7d0dca7c325b23b4847e394e46ea3f0f6e694c7727cf2` |
+| `vendor/async-opcua-server/src/session/services/monitored_items.rs` | `cb020b9dfeb6496122547e989b20753523e41cf993cbac6652144b3d29faa428` |
+| `vendor/async-opcua-server/src/session/services/subscriptions.rs` | `09753c9e7d65070adf465cefdb13ed88281354b279f31856802fc18527881041` |
+| `vendor/async-opcua-server/src/session/services/view.rs` | `a7cdecadb74dd01d2f63ec5c02398c410f0dc2411d9a35b67598fcb759d8dd09` |
+| `vendor/async-opcua-server/src/subscriptions/mod.rs` | `2413eea904d7fb3119dc056fd597095eb0c366a076a556852690dea5ff3f21f8` |
+| `vendor/async-opcua-server/src/subscriptions/session_subscriptions.rs` | `28126445ae68aec9daafbf450ac3d979f5761bad5b58ceff0ff76ccb40a91705` |
 | `vendor/async-opcua-nodes/src/references.rs` | `71a4c5ac793bed375f3690b4a4d897b77c3d524150fd22adc0afe465f5331d00` |
+| `priv/native/session_subscription.c` | `07d6edab9ba81a40300756f3ff59aa2efaeb7b38a7f08e664d1789df56c01cc3` |
 | `priv/fixtures/native-contract-v1.json` | `c59b65b8de69ea34d1a6a8e237e7d65c202811bfb9bb920e554a704d925ebc1c` |
 | `test/software/Dockerfile.linux` | `84b45988d378cc40e612b10347e7951eff8bf9deec901be2133608a8f6b3cf2f` |
 
@@ -366,10 +565,13 @@ an out-of-range element fails the Read after the request and the Write before
 any client call. The same-stack C peer exposes writable Int32 and Double array
 variables, and `native_secure_test.exs` reads, writes, reads back and restores
 both through the persistent native client under Basic256Sha256 SignAndEncrypt.
-The independent async-opcua Rust peer now provides the same arrays plus a 2 × 3
-Int16 matrix. `rust_peer_test.exs` roundtrips and restores all three through a
-real ConsumedThing, preserving dimensions, `-0.0` and extreme Int32/Double
-values while temporary request helpers return to the baseline.
+The independent async-opcua Rust peer now provides arrays of every non-null type
+accepted by the Runtime native projection plus a 2 × 3 Int16 matrix.
+`rust_peer_test.exs` reads and observes all of them through a real
+ConsumedThing, preserving dimensions, integer boundaries, binary elements,
+exact DateTime ticks, Guid, NodeId, StatusCode and `-0.0`. Every array admitted
+by the Runtime Write mapper also passes write/readback/restore. Peer
+subscriptions, MonitoredItems and local helpers return to their baselines.
 
 A fresh `WOTEX_PATH_DEPS=1 mix wotex.software.build` on macOS arm64 (Elixir
 1.20.2 / OTP 29) and `mix wotex.software.run` on it passed every lane: ExUnit
