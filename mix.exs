@@ -46,6 +46,8 @@ defmodule WotexWorkspace.MixProject do
       "native.build": "wotex.native.build",
       "native.sources": "wotex.native.sources",
       "native.advisories": "wotex.native.advisories",
+      "native.inspect": "wotex.native.inspect",
+      "native.plan": "wotex.native.plan",
       "native.lint": "wotex.native.lint",
       "native.test": "wotex.native.test",
       "native.bench": "wotex.native.bench",

@@ -1,0 +1,37 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-matter",
+  "profile": "production",
+  "kind": "executable-bundle",
+  "targets": [
+    {"name": "matter-linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted SDK container and controller lane are linux/amd64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the production SDK-bound controller is qualified in the pinned linux/amd64 container"}
+  ],
+  "sources": {
+    "first_party": ["native", "test/support/software", "lib/mix/tasks/wotex.matter.native.build.ex"],
+    "upstream": [
+      {"name": "boringssl", "url": "https://codeload.github.com/google/boringssl/tar.gz/9cac8a6b38c1cbd45c77aee108411d588da006fe", "revision": "9cac8a6b38c1cbd45c77aee108411d588da006fe", "sha256": "4d0310f2d8dc2bb19598ecc46907d44a93cc3bfbde97943c0e9e34ef4f0698b8"},
+      {"name": "connectedhomeip", "url": "https://codeload.github.com/project-chip/connectedhomeip/tar.gz/250a9e6c50ee2068107f3c4808b680f5f2925415", "revision": "250a9e6c50ee2068107f3c4808b680f5f2925415", "sha256": "83032f0c98b02c8c16defc6e70ebe288c127ef3661153feca32839fb65b33628"},
+      {"name": "nlassert", "url": "https://codeload.github.com/nestlabs/nlassert/tar.gz/c5892c5ae43830f939ed660ff8ac5f1b91d336d3", "revision": "c5892c5ae43830f939ed660ff8ac5f1b91d336d3", "sha256": "392f0a7f1c35cc3520d5f71faf37bfe4518e00ba0dc704068f4fbf6eba5427a5"},
+      {"name": "nlio", "url": "https://codeload.github.com/nestlabs/nlio/tar.gz/0e725502c2b17bb0a0c22ddd4bcaee9090c8fb5c", "revision": "0e725502c2b17bb0a0c22ddd4bcaee9090c8fb5c", "sha256": "f7ffbc6fd3e9029c6aa558aec8f80819d1e9a8daba67633d512de23560147f34"},
+      {"name": "nlohmann-json", "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp", "revision": "3.11.3", "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"},
+      {"name": "pigweed", "url": "https://codeload.github.com/google/pigweed/tar.gz/c9687b52fa704606d19952255c78142fdb2a131a", "revision": "c9687b52fa704606d19952255c78142fdb2a131a", "sha256": "2e8d3380080d2ae9cc56f69d05d6f008989b092d6c9f71dc0c0fa25d4a2c3651"},
+      {"name": "uriparser", "url": "https://codeload.github.com/uriparser/uriparser/tar.gz/9b2bed92f5deecf740819f9bf27724bee2fe9c12", "revision": "9b2bed92f5deecf740819f9bf27724bee2fe9c12", "sha256": "879a0c62cd34216ad1076f3f1a6b4877078ac6cb55b5b38204eb94128a1eea2a"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["test/support/software/sources.json", "native/CMakeLists.txt"], "requirements": {"gcc": "12.2.0", "gn": "content-bound", "ninja": "1.11.1"}, "container_digest": "sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"},
+  "build": {"task": "wotex.matter.native.build", "options": {"platform": "linux/amd64"}, "features": ["controller", "interaction-model", "sanitized-companion"]},
+  "qualification": {"task": "wotex.native.test", "options": {"suite": "sdk"}, "features": ["asan", "ctest", "interop", "ubsan"]},
+  "outputs": [
+    {"path": "bin/wotex-matter-host", "kind": "file", "mode": 493, "required": true},
+    {"path": "bin/wotex-matter-host-sanitized", "kind": "file", "mode": 493, "required": true},
+    {"path": "native-manifest.json", "kind": "file", "mode": 420, "required": true}
+  ],
+  "compatibility": {"ipc": "wotex-matter-json-lines-v1", "sdk": "matter-1.6.0.0"},
+  "external_libraries": ["libavahi-client.so.3", "libc.so.6"],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

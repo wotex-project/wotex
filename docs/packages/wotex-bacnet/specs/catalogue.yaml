@@ -30,7 +30,7 @@ specifications:
     executable_evidence: ["test/wotex/bacnet/bacstack_test.exs", "test/wotex/bacnet/contract_test.exs", "test/wotex/bacnet/dependency_security_test.exs", "test/wotex/bacnet/ipv4_test.exs", "test/wotex/bacnet/mapping_test.exs", "test/wotex/bacnet/port_test.exs", "test/wotex/bacnet/value_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs"]
     compatibility_classification: "Implemented URI/scalar and Runtime Property profile, including verified borrowed COV ingress; no claim of full BACnet, certification or consumer parity."
   - id: "WBA.04"
-    version: "1.1.1"
+    version: "1.1.2"
     path: "docs/specs/WBA.04-software-contract.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}]

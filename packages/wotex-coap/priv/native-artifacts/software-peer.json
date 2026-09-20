@@ -1,0 +1,31 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-coap",
+  "profile": "software-peer",
+  "kind": "qualification-bundle",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted full sanitizer and independent-peer bundle is Linux x86_64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the software peer container and sanitizer cohort require Linux"}
+  ],
+  "sources": {
+    "first_party": ["native/oscore", "test/native", "test/interop", "test/software", "lib/wotex/coap/software", "lib/mix/tasks/wotex.coap.software.build.ex", "lib/mix/tasks/wotex.coap.software.run.ex"],
+    "upstream": [
+      {"name": "californium", "url": "https://repo1.maven.org/maven2/org/eclipse/californium/cf-plugtest-server/3.14.0/cf-plugtest-server-3.14.0.jar", "revision": "3.14.0", "sha256": "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"},
+      {"name": "libcoap", "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28", "revision": "7cf7465b784baded4de183290c547d582becfd28", "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["native/oscore/source.json", "test/software/Dockerfile.linux"], "requirements": {"c": "c11", "java": "required", "openssl": "3.x"}, "container_digest": null},
+  "build": {"task": "wotex.coap.software.build", "options": {"sanitizers": true}, "features": ["californium", "libcoap-peer", "native-vectors"]},
+  "qualification": {"task": "wotex.coap.software.run", "options": {"required": true}, "features": ["interop", "software"]},
+  "outputs": [
+    {"path": "native-manifest.json", "kind": "file", "mode": 420, "required": true},
+    {"path": "bin", "kind": "directory", "mode": 493, "required": true}
+  ],
+  "compatibility": {"role": "independent-test-peer", "runtime": "not-production"},
+  "external_libraries": ["libcrypto", "libssl"],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

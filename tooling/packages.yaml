@@ -62,6 +62,90 @@ select_all_on:
   - "mix.lock"
   - "lib/**"
   - "test/**"
+native_artifact:
+  schema_version: "1.0.0"
+  matrix_limit: 32
+  max_slices: 16
+  toolchains:
+    linux-gcc13:
+      identity: "ubuntu-24.04-gcc-13-native-v1"
+      inputs: ["tooling/native/docker/linux.Dockerfile"]
+    darwin-clang:
+      identity: "darwin-aarch64-xcode-command-line-tools-v1"
+      inputs: ["tooling/packages.yaml"]
+    matter-linux-amd64:
+      identity: "node-24-bookworm-gcc-12.2.0-gn-v1"
+      inputs: ["tooling/native/docker/matter-sdk.Dockerfile", "packages/wotex-matter/test/support/software/sources.json"]
+    nerves-rpi4:
+      identity: "nerves-rpi4-2.1.1-toolchain-15.3.1"
+      inputs: ["packages/wotex-lab/hosts/nerves/mix.exs", "packages/wotex-lab/hosts/nerves/mix.lock"]
+  systems:
+    host-linux:
+      identity: "linux-host-native-v1"
+    host-darwin:
+      identity: "darwin-host-native-v1"
+    ble-virtual-controller:
+      identity: "bluez-5.85-btvirt-guest-v1"
+      inputs: ["packages/wotex-ble/test/interop/virtual"]
+    matter-sdk:
+      identity: "connectedhomeip-250a9e6c50ee2068107f3c4808b680f5f2925415"
+      inputs: ["packages/wotex-matter/test/support/software/sources.json"]
+    nerves-rpi4-2-1-1:
+      identity: "nerves-system-rpi4-2.1.1-buildroot-1.34.1"
+      inputs: ["packages/wotex-lab/hosts/nerves/mix.lock", "packages/wotex-lab/hosts/nerves/config"]
+  targets:
+    linux-x86-64:
+      operating_system: linux
+      architecture: x86_64
+      endianness: little
+      libc: glibc
+      abi: gnu
+      toolchain: linux-gcc13
+      system: host-linux
+    linux-aarch64:
+      operating_system: linux
+      architecture: aarch64
+      endianness: little
+      libc: glibc
+      abi: gnu
+      toolchain: linux-gcc13
+      system: host-linux
+    darwin-aarch64:
+      operating_system: darwin
+      architecture: aarch64
+      endianness: little
+      libc: libsystem
+      abi: darwin
+      toolchain: darwin-clang
+      system: host-darwin
+    ble-guest-x86-64:
+      operating_system: linux
+      architecture: x86_64
+      endianness: little
+      libc: glibc
+      abi: gnu
+      toolchain: linux-gcc13
+      system: ble-virtual-controller
+    matter-linux-x86-64:
+      operating_system: linux
+      architecture: x86_64
+      endianness: little
+      libc: glibc
+      abi: gnu
+      toolchain: matter-linux-amd64
+      system: matter-sdk
+    nerves-rpi4:
+      operating_system: linux
+      architecture: aarch64
+      endianness: little
+      libc: musl
+      abi: nerves
+      toolchain: nerves-rpi4
+      system: nerves-rpi4-2-1-1
+  smoke:
+    - {package: wotex-ble, profile: production, target: linux-x86-64}
+    - {package: wotex-coap, profile: production, target: linux-x86-64}
+    - {package: wotex-thread, profile: production, target: linux-x86-64}
 packages:
   wotex:
     app: wotex
@@ -92,6 +176,8 @@ packages:
     depends_on: [wotex, wotex-runtime]
     native: true
     software_task: wotex.bacnet.software.run
+    native_artifacts:
+      - {profile: software-peer, descriptor: priv/native-artifacts/software-peer.json}
     native_check:
       - suite: guardian
         compile:
@@ -159,6 +245,10 @@ packages:
     native: true
     native_task: wotex.ble.native.build
     software_task: wotex.ble.software.run
+    native_artifacts:
+      - {profile: production, descriptor: priv/native-artifacts/production.json}
+      - {profile: sanitizers, descriptor: priv/native-artifacts/sanitizers.json}
+      - {profile: virtual-controller, descriptor: priv/native-artifacts/virtual-controller.json}
     native_check:
       - suite: portable
         compile:
@@ -361,6 +451,9 @@ packages:
     native: true
     native_task: wotex.coap.native.build
     software_task: wotex.coap.software.run
+    native_artifacts:
+      - {profile: production, descriptor: priv/native-artifacts/production.json}
+      - {profile: software-peer, descriptor: priv/native-artifacts/software-peer.json}
     native_check:
       # The software build compiles the helper against the pinned libcoap and
       # builds and runs the twelve fault and vector executables; the headers
@@ -523,6 +616,9 @@ packages:
     native: true
     native_task: wotex.matter.native.build
     software_task: wotex.matter.software.run
+    native_artifacts:
+      - {profile: production, descriptor: priv/native-artifacts/production.json}
+      - {profile: software-peer, descriptor: priv/native-artifacts/software-peer.json}
     native_check:
       - suite: value
         prepare:
@@ -667,6 +763,8 @@ packages:
     app: wotex_modbus
     depends_on: [wotex, wotex-runtime]
     native: true
+    native_artifacts:
+      - {profile: software-peer, descriptor: priv/native-artifacts/software-peer.json}
     software_task: wotex.modbus.software.run
     native_check:
       - suite: guardian
@@ -724,6 +822,9 @@ packages:
     native: true
     native_task: wotex.opcua.native.build
     software_task: wotex.opcua.software.run
+    native_artifacts:
+      - {profile: production, descriptor: priv/native-artifacts/production.json}
+      - {profile: software-peer, descriptor: priv/native-artifacts/software-peer.json}
     native_check:
       - suite: open62541
         build: wotex.opcua.native.build
@@ -933,6 +1034,10 @@ packages:
     native: true
     native_task: wotex.thread.native.build
     software_task: wotex.thread.software.run
+    native_artifacts:
+      - {profile: production, descriptor: priv/native-artifacts/production.json}
+      - {profile: sanitizers, descriptor: priv/native-artifacts/sanitizers.json}
+      - {profile: software-network, descriptor: priv/native-artifacts/software-network.json}
     native_check:
       # The SDK-free protocol, storage, output, stream and flow tests.
       - suite: protocol
@@ -1073,6 +1178,8 @@ packages:
       - wotex-continuum
       - wotex-conformance
     native: true
+    native_artifacts:
+      - {profile: nerves-rpi4, descriptor: priv/native-artifacts/nerves-rpi4.json}
     native_bench:
       # A crate of its own: the launcher has binary targets only, so the
       # benchmark includes its config.rs and accounting.rs by path.

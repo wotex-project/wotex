@@ -3,12 +3,18 @@ spec:
   id: WMB.07
   title: "Native peer build and software evidence"
   status: accepted
-  version: 1.3.1
+  version: 1.3.2
   owner: wotex-modbus
-  updated: 2026-09-18
+  updated: 2026-09-21
 ---
 
 # WMB.07 Native peer build and software evidence
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, artifact identity, verification, cache and evidence
+state semantics for the software-peer artifact. This specification continues
+to own Modbus behavior, the peer build command and qualification cohort. A
+valid descriptor establishes `declared` only.
 
 The runtime is the existing BEAM TCP client. The independent peer is the C
 libmodbus server in `test/interop/libmodbus/server.c`. Neither a Python runtime,

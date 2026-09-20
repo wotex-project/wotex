@@ -1,0 +1,34 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-opcua",
+  "profile": "production",
+  "kind": "executable-bundle",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "supported"},
+    {"name": "darwin-aarch64", "status": "supported"}
+  ],
+  "sources": {
+    "first_party": ["priv/native", "priv/fixtures/native-sources-v1.json", "lib/wotex/opcua/native", "lib/mix/tasks/wotex.opcua.native.build.ex"],
+    "upstream": [
+      {"name": "open62541", "url": "https://codeload.github.com/open62541/open62541/tar.gz/refs/tags/v1.5.7", "revision": "1.5.7", "sha256": "a4018b052c93fedb55f00558a85869b86f3bb2293184d322e33f2666c497eaeb"},
+      {"name": "openssl", "url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.8", "revision": "3.5.8", "sha256": "59f86483992995df5a213df38d93f31eeafe3b34599309b3e088ba67ca0aad9c"},
+      {"name": "yyjson", "url": "https://codeload.github.com/ibireme/yyjson/tar.gz/refs/tags/0.12.0", "revision": "0.12.0", "sha256": "b16246f617b2a136c78d73e5e2647c6f1de1313e46678062985bdcf1f40bb75d"}
+    ]
+  },
+  "patches": [
+    {"id": "open62541-secure-discovery-v2", "path": "priv/native/patch-sdk.cmake", "sha256": "89ea5c1ca137a7afb8e6fc25a2fa3387c05950ef0b3cead118df80685b3f69ee"}
+  ],
+  "toolchain": {"inputs": ["priv/fixtures/native-sources-v1.json", "priv/native/CMakeLists.txt"], "requirements": {"c": "c11", "cmake": "3.20-or-newer", "openssl": "3.5.8-static"}, "container_digest": null},
+  "build": {"task": "wotex.opcua.native.build", "options": {"build_type": "rel-with-deb-info", "shared_libraries": false}, "features": ["encryption", "json-encoding", "method-calls", "subscriptions"]},
+  "qualification": {"task": "wotex.native.test", "options": {"suite": "open62541"}, "features": ["ctest", "interop", "sanitizers"]},
+  "outputs": [
+    {"path": "output/bin/wotex_opcua_native", "kind": "file", "mode": 493, "required": true},
+    {"path": "output/bin/wotex_opcua_custody", "kind": "file", "mode": 493, "required": true}
+  ],
+  "compatibility": {"ipc": "wotex-opcua-json-lines-v1", "open62541": "1.5.7", "openssl": "3.5.8"},
+  "external_libraries": ["libc"],
+  "legal": ["LICENSE", "NOTICE", "priv/native/vendor/yyjson/LICENSE"],
+  "native_inputs": []
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-thread",
+  "profile": "sanitizers",
+  "kind": "qualification-executable",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted complete sanitizer qualification cell is Linux x86_64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the SDK-bound sanitizer lane requires Linux"}
+  ],
+  "sources": {
+    "first_party": ["priv/openthread", "test/native", "lib/wotex/thread/native", "priv/provenance/native-advisories.json"],
+    "upstream": [
+      {"name": "mbedtls", "url": "https://codeload.github.com/Mbed-TLS/mbedtls/tar.gz/068ff080b369adfac81509f9b57b2afabaf82dc5", "revision": "068ff080b369adfac81509f9b57b2afabaf82dc5", "sha256": "ca6bd316bbec49ef20088f39b8755fcaec0b7e45781506de55b17cd191ae6937"},
+      {"name": "mbedtls-framework", "url": "https://codeload.github.com/Mbed-TLS/mbedtls-framework/tar.gz/dde0c4a0e448a0552f18817dcea633bb851fd288", "revision": "dde0c4a0e448a0552f18817dcea633bb851fd288", "sha256": "3b0d4864fa877dc9165b90ff3d5b68505c6176c0b22d317d99fe8c89a993e9fd"},
+      {"name": "nlohmann-json", "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp", "revision": "3.11.3", "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"},
+      {"name": "openthread", "url": "https://codeload.github.com/openthread/openthread/tar.gz/f34c5e5476829d9205e80b37fccc2bdfe97e1dab", "revision": "f34c5e5476829d9205e80b37fccc2bdfe97e1dab", "sha256": "93109098957ac2bfa6e37d69d1c094f653b5e73cc33c7e5a498e6e1d45ade452"}
+    ]
+  },
+  "patches": [
+    {"id": "reviewed-sdk-fixes", "path": "lib/wotex/thread/native/source.ex", "sha256": "fa890ce1e7ad6e151079f432ad490334c2ef83c3642b5b09486ba004d5295bc2"}
+  ],
+  "toolchain": {"inputs": ["priv/openthread/dependencies.json", "priv/openthread/CMakeLists.txt"], "requirements": {"asan": "enabled", "cpp": "c++17", "ubsan": "enabled"}, "container_digest": null},
+  "build": {"task": "wotex.thread.native.build", "options": {"sanitizers": true}, "features": ["asan", "ubsan"]},
+  "qualification": {"task": "wotex.native.test", "options": {"suite": "openthread"}, "features": ["ctest", "sdk-bound", "sanitizers"]},
+  "outputs": [{"path": "build/wotex-thread-host", "kind": "file", "mode": 493, "required": true}],
+  "compatibility": {"evidence": "qualification-only", "security_disposition": "reviewed-no-unresolved-in-scope-advisory"},
+  "external_libraries": ["libasan.so", "libubsan.so"],
+  "legal": ["LICENSE", "NOTICE", "priv/openthread/vendor/LICENSE.MIT"],
+  "native_inputs": []
+}

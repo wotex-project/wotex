@@ -1,0 +1,30 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-ble",
+  "profile": "virtual-controller",
+  "kind": "virtual-controller-guest",
+  "targets": [
+    {"name": "ble-guest-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "an ARM64 guest does not satisfy the required Linux x86_64 virtual-controller cell"}
+  ],
+  "sources": {
+    "first_party": ["test/interop/virtual", "test/software", "lib/wotex/ble/software", "lib/mix/tasks/wotex.ble.software.build.ex"],
+    "upstream": [
+      {"name": "bluez", "url": "https://codeload.github.com/bluez/bluez/tar.gz/2123ab772fbe97d1369fc9e179ea87c3469cf98f", "revision": "2123ab772fbe97d1369fc9e179ea87c3469cf98f", "sha256": "53a95c3dc9897f617b8bae0121d3f4c55c28a757bd48546c707bd2bbac45af0a"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["test/interop/virtual"], "requirements": {"docker": "required", "qemu": "x86_64-tcg"}, "container_digest": null},
+  "build": {"task": "wotex.ble.software.build", "options": {"guest_architecture": "x86_64"}, "features": ["bluez", "btvirt", "gdbus", "qemu"]},
+  "qualification": {"task": "wotex.ble.software.run", "options": {"required_architecture": "x86_64"}, "features": ["interop", "software"]},
+  "outputs": [
+    {"path": "rootfs.raw", "kind": "file", "mode": 420, "required": true},
+    {"path": "rootfs.tar", "kind": "file", "mode": 420, "required": true},
+    {"path": "software-manifest.json", "kind": "file", "mode": 420, "required": true}
+  ],
+  "compatibility": {"guest": "linux-x86_64", "hardware_equivalence": "none"},
+  "external_libraries": ["libgio-2.0.so.0", "libglib-2.0.so.0"],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

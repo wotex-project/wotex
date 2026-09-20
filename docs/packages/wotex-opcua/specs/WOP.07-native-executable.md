@@ -3,12 +3,19 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.86
+  version: 1.1.87
   owner: wotex-opcua
-  updated: 2026-09-20
+  updated: 2026-09-21
 ---
 
 # WOP.07 Native OPC UA executable and software acceptance
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, canonical identities, verification, cache,
+retrieval and shared evidence-state semantics for the production and
+software-peer artifacts. This specification continues to own OPC UA behavior,
+process custody, build commands and qualification. Descriptor admission
+establishes `declared` only and does not promote existing cohort evidence.
 
 This accepted target is **implemented**. P00 through P08 bind the pinned build,
 portable process custody, typed projection, secure services, subscriptions,

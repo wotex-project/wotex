@@ -12,6 +12,76 @@ defmodule Wotex.Workspace.Manifest do
   alias Wotex.Workspace.NativeBench
   alias Wotex.Workspace.NativeSuite
 
+  defmodule NativeArtifactProfile do
+    @moduledoc "An explicitly admitted package-owned native artifact descriptor."
+
+    @type t :: %__MODULE__{profile: String.t(), descriptor: Path.t()}
+
+    @enforce_keys [:profile, :descriptor]
+    defstruct [:profile, :descriptor]
+  end
+
+  defmodule NativeArtifactTarget do
+    @moduledoc "A target tuple admitted by the root native artifact inventory."
+
+    @type t :: %__MODULE__{
+            name: String.t(),
+            operating_system: String.t(),
+            architecture: String.t(),
+            endianness: String.t(),
+            libc: String.t(),
+            abi: String.t(),
+            toolchain: String.t(),
+            system: String.t()
+          }
+
+    @enforce_keys [
+      :name,
+      :operating_system,
+      :architecture,
+      :endianness,
+      :libc,
+      :abi,
+      :toolchain,
+      :system
+    ]
+    defstruct @enforce_keys
+  end
+
+  defmodule NativeArtifactInput do
+    @moduledoc "A content-bound toolchain or system identity and its repository inputs."
+
+    @type t :: %__MODULE__{name: String.t(), identity: String.t(), inputs: [Path.t()]}
+
+    @enforce_keys [:name, :identity]
+    defstruct [:name, :identity, inputs: []]
+  end
+
+  defmodule NativeArtifactConfig do
+    @moduledoc "Closed root configuration for native artifact planning."
+
+    @type smoke_cell :: %{package: String.t(), profile: String.t(), target: String.t()}
+
+    @type t :: %__MODULE__{
+            schema_version: String.t(),
+            matrix_limit: pos_integer(),
+            max_slices: pos_integer(),
+            targets: %{String.t() => NativeArtifactTarget.t()},
+            toolchains: %{String.t() => NativeArtifactInput.t()},
+            systems: %{String.t() => NativeArtifactInput.t()},
+            smoke: [smoke_cell()]
+          }
+
+    @enforce_keys [:schema_version]
+    defstruct schema_version: nil,
+              matrix_limit: 64,
+              max_slices: 16,
+              targets: %{},
+              toolchains: %{},
+              systems: %{},
+              smoke: []
+  end
+
   defmodule Host do
     @moduledoc """
     One `hosts` entry of a package: an application inside the package
@@ -41,6 +111,7 @@ defmodule Wotex.Workspace.Manifest do
             software_task: String.t() | nil,
             native_check: [Wotex.Workspace.NativeSuite.t()],
             native_bench: [Wotex.Workspace.NativeBench.t()],
+            native_artifacts: [Wotex.Workspace.Manifest.NativeArtifactProfile.t()],
             hosts: [Wotex.Workspace.Manifest.Host.t()]
           }
 
@@ -54,6 +125,7 @@ defmodule Wotex.Workspace.Manifest do
       software_task: nil,
       native_check: [],
       native_bench: [],
+      native_artifacts: [],
       hosts: []
     ]
   end
@@ -65,11 +137,18 @@ defmodule Wotex.Workspace.Manifest do
           schema_version: String.t() | nil,
           lanes: %{String.t() => lane()},
           select_all_on: [String.t()],
+          native_artifact: NativeArtifactConfig.t(),
           packages: %{String.t() => Package.t()},
           order: [String.t()]
         }
 
-  defstruct path: nil, schema_version: nil, lanes: %{}, select_all_on: [], packages: %{}, order: []
+  defstruct path: nil,
+            schema_version: nil,
+            lanes: %{},
+            select_all_on: [],
+            native_artifact: nil,
+            packages: %{},
+            order: []
 
   @name_pattern ~r/^[a-z][a-z0-9-]*$/
 
@@ -105,13 +184,16 @@ defmodule Wotex.Workspace.Manifest do
          :ok <- check_dependencies(packages),
          {:ok, order} <- topological_sort(packages),
          {:ok, lanes} <- parse_lanes(Map.get(map, "lanes", %{})),
-         {:ok, globs} <- parse_globs(Map.get(map, "select_all_on", [])) do
+         {:ok, globs} <- parse_globs(Map.get(map, "select_all_on", [])),
+         {:ok, native_artifact} <-
+           parse_native_artifact(Map.get(map, "native_artifact", %{}), packages) do
       {:ok,
        %__MODULE__{
          path: path,
          schema_version: Map.get(map, "schema_version"),
          lanes: lanes,
          select_all_on: globs,
+         native_artifact: native_artifact,
          packages: packages,
          order: order
        }}
@@ -245,6 +327,8 @@ defmodule Wotex.Workspace.Manifest do
            parse_task(name, "software_task", Map.get(entry, "software_task")),
          {:ok, native_check} <- NativeSuite.parse_all(name, Map.get(entry, "native_check")),
          {:ok, native_bench} <- NativeBench.parse_all(name, Map.get(entry, "native_bench")),
+         {:ok, native_artifacts} <-
+           parse_native_artifact_profiles(name, Map.get(entry, "native_artifacts", [])),
          {:ok, hosts} <- parse_hosts(name, Map.get(entry, "hosts", [])),
          package = %Package{
            name: name,
@@ -255,6 +339,7 @@ defmodule Wotex.Workspace.Manifest do
            software_task: software_task,
            native_check: native_check,
            native_bench: native_bench,
+           native_artifacts: native_artifacts,
            hosts: hosts
          },
          :ok <- check_native_bench(package) do
@@ -323,6 +408,229 @@ defmodule Wotex.Workspace.Manifest do
   defp parse_task(_, _, nil), do: {:ok, nil}
   defp parse_task(_, _, task) when is_binary(task) and task != "", do: {:ok, task}
   defp parse_task(name, key, _), do: {:error, "package #{name}: #{key} must be a task name"}
+
+  defp parse_native_artifact_profiles(name, profiles) when is_list(profiles) do
+    parsed = Enum.map(profiles, &parse_native_artifact_profile/1)
+
+    cond do
+      :error in parsed ->
+        {:error,
+         "package #{name}: every native_artifacts entry needs a lowercase profile and a relative descriptor path"}
+
+      Enum.uniq_by(parsed, &elem(&1, 1).profile) != parsed ->
+        {:error, "package #{name}: native_artifacts must not repeat a profile"}
+
+      Enum.uniq_by(parsed, &elem(&1, 1).descriptor) != parsed ->
+        {:error, "package #{name}: native_artifacts must not repeat a descriptor path"}
+
+      true ->
+        {:ok, Enum.map(parsed, &elem(&1, 1))}
+    end
+  end
+
+  defp parse_native_artifact_profiles(name, _),
+    do: {:error, "package #{name}: native_artifacts must be a list"}
+
+  defp parse_native_artifact_profile(%{"profile" => profile, "descriptor" => descriptor} = entry)
+       when is_binary(profile) and is_binary(descriptor) do
+    with [] <- Map.keys(entry) -- ["profile", "descriptor"],
+         true <- Regex.match?(@name_pattern, profile),
+         true <- relative_inside?(descriptor) do
+      {:ok, %NativeArtifactProfile{profile: profile, descriptor: descriptor}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_native_artifact_profile(_), do: :error
+
+  defp parse_native_artifact(config, _) when config == %{} do
+    {:ok, %NativeArtifactConfig{schema_version: "1.0.0"}}
+  end
+
+  defp parse_native_artifact(%{"schema_version" => "1.0.0"} = config, packages) do
+    allowed =
+      ~w(schema_version matrix_limit max_slices targets toolchains systems smoke)
+
+    with [] <- Map.keys(config) -- allowed,
+         {:ok, matrix_limit} <- positive_integer(config, "matrix_limit", 64),
+         {:ok, max_slices} <- positive_integer(config, "max_slices", 16),
+         {:ok, toolchains} <- parse_native_inputs(config, "toolchains"),
+         {:ok, systems} <- parse_native_inputs(config, "systems"),
+         {:ok, targets} <-
+           parse_native_targets(Map.get(config, "targets", %{}), toolchains, systems),
+         {:ok, smoke} <- parse_native_smoke(Map.get(config, "smoke", []), packages, targets) do
+      {:ok,
+       %NativeArtifactConfig{
+         schema_version: "1.0.0",
+         matrix_limit: matrix_limit,
+         max_slices: max_slices,
+         targets: targets,
+         toolchains: toolchains,
+         systems: systems,
+         smoke: smoke
+       }}
+    else
+      [_ | _] = unknown ->
+        {:error, "native_artifact has unknown fields: #{Enum.join(Enum.sort(unknown), ", ")}"}
+
+      {:error, message} ->
+        {:error, message}
+
+      _ ->
+        {:error, "native_artifact is invalid"}
+    end
+  end
+
+  defp parse_native_artifact(%{"schema_version" => version}, _),
+    do: {:error, "native_artifact schema_version #{inspect(version)} is unsupported"}
+
+  defp parse_native_artifact(_, _),
+    do: {:error, "native_artifact must be a mapping with schema_version 1.0.0"}
+
+  defp positive_integer(map, key, default) do
+    case Map.get(map, key, default) do
+      value when is_integer(value) and value > 0 -> {:ok, value}
+      _ -> {:error, "native_artifact #{key} must be a positive integer"}
+    end
+  end
+
+  defp parse_native_inputs(config, key) do
+    case Map.get(config, key, %{}) do
+      inputs when is_map(inputs) ->
+        Enum.reduce_while(Enum.sort(inputs), {:ok, %{}}, fn {name, entry}, {:ok, acc} ->
+          case parse_native_input(key, name, entry) do
+            {:ok, input} -> {:cont, {:ok, Map.put(acc, name, input)}}
+            {:error, message} -> {:halt, {:error, message}}
+          end
+        end)
+
+      _ ->
+        {:error, "native_artifact #{key} must be a mapping"}
+    end
+  end
+
+  defp parse_native_input(kind, name, %{"identity" => identity} = entry)
+       when is_binary(name) and is_binary(identity) and identity != "" do
+    inputs = Map.get(entry, "inputs", [])
+
+    cond do
+      Map.keys(entry) -- ["identity", "inputs"] != [] ->
+        {:error, "native_artifact #{kind}.#{name} has unknown fields"}
+
+      not Regex.match?(@name_pattern, name) ->
+        {:error, "native_artifact #{kind} name #{inspect(name)} is invalid"}
+
+      not (is_list(inputs) and
+               Enum.all?(inputs, &(is_binary(&1) and relative_inside?(&1)))) ->
+        {:error, "native_artifact #{kind}.#{name}.inputs must list relative paths"}
+
+      Enum.uniq(inputs) != inputs ->
+        {:error, "native_artifact #{kind}.#{name}.inputs must not repeat paths"}
+
+      true ->
+        {:ok, %NativeArtifactInput{name: name, identity: identity, inputs: inputs}}
+    end
+  end
+
+  defp parse_native_input(kind, name, _),
+    do: {:error, "native_artifact #{kind}.#{name} must declare an identity"}
+
+  defp parse_native_targets(targets, toolchains, systems) when is_map(targets) do
+    Enum.reduce_while(Enum.sort(targets), {:ok, %{}}, fn {name, entry}, {:ok, acc} ->
+      case parse_native_target(name, entry, toolchains, systems) do
+        {:ok, target} -> {:cont, {:ok, Map.put(acc, name, target)}}
+        {:error, message} -> {:halt, {:error, message}}
+      end
+    end)
+  end
+
+  defp parse_native_targets(_, _, _),
+    do: {:error, "native_artifact targets must be a mapping"}
+
+  defp parse_native_target(name, entry, toolchains, systems)
+       when is_binary(name) and is_map(entry) do
+    fields = ~w(operating_system architecture endianness libc abi toolchain system)
+    values = Map.take(entry, fields)
+
+    cond do
+      not Regex.match?(@name_pattern, name) ->
+        {:error, "native_artifact target name #{inspect(name)} is invalid"}
+
+      Map.keys(entry) -- fields != [] ->
+        {:error, "native_artifact target #{name} has unknown fields"}
+
+      Enum.any?(fields, &(not (is_binary(values[&1]) and values[&1] != ""))) ->
+        {:error, "native_artifact target #{name} must declare #{Enum.join(fields, ", ")}"}
+
+      not Map.has_key?(toolchains, values["toolchain"]) ->
+        {:error,
+         "native_artifact target #{name} uses unknown toolchain #{inspect(values["toolchain"])}"}
+
+      not Map.has_key?(systems, values["system"]) ->
+        {:error, "native_artifact target #{name} uses unknown system #{inspect(values["system"])}"}
+
+      true ->
+        {:ok,
+         struct!(NativeArtifactTarget,
+           name: name,
+           operating_system: values["operating_system"],
+           architecture: values["architecture"],
+           endianness: values["endianness"],
+           libc: values["libc"],
+           abi: values["abi"],
+           toolchain: values["toolchain"],
+           system: values["system"]
+         )}
+    end
+  end
+
+  defp parse_native_target(name, _, _, _),
+    do: {:error, "native_artifact target #{name} must be a mapping"}
+
+  defp parse_native_smoke(smoke, packages, targets) when is_list(smoke) do
+    parsed = Enum.map(smoke, &parse_native_smoke_cell(&1, packages, targets))
+
+    case Enum.find(parsed, &match?({:error, _}, &1)) do
+      nil ->
+        cells = Enum.map(parsed, &elem(&1, 1))
+
+        if Enum.uniq(cells) == cells,
+          do: {:ok, cells},
+          else: {:error, "native_artifact smoke must not repeat a cell"}
+
+      {:error, message} ->
+        {:error, message}
+    end
+  end
+
+  defp parse_native_smoke(_, _, _), do: {:error, "native_artifact smoke must be a list"}
+
+  defp parse_native_smoke_cell(
+         %{"package" => package, "profile" => profile, "target" => target} = entry,
+         packages,
+         targets
+       ) do
+    cond do
+      Map.keys(entry) -- ["package", "profile", "target"] != [] ->
+        {:error, "native_artifact smoke cell has unknown fields"}
+
+      not Map.has_key?(packages, package) ->
+        {:error, "native_artifact smoke uses unknown package #{inspect(package)}"}
+
+      not Enum.any?(packages[package].native_artifacts, &(&1.profile == profile)) ->
+        {:error, "native_artifact smoke uses undeclared profile #{package}/#{profile}"}
+
+      not Map.has_key?(targets, target) ->
+        {:error, "native_artifact smoke uses unknown target #{inspect(target)}"}
+
+      true ->
+        {:ok, %{package: package, profile: profile, target: target}}
+    end
+  end
+
+  defp parse_native_smoke_cell(_, _, _),
+    do: {:error, "native_artifact smoke cells need package, profile and target"}
 
   defp parse_hosts(name, hosts) when is_list(hosts) do
     parsed = Enum.map(hosts, &parse_host/1)

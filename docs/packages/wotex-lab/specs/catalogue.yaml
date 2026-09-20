@@ -179,7 +179,7 @@ specifications:
       - "test/wotex/lab/wlb05_evidence_manifest_test.exs"
     compatibility_classification: WLB.05 is implemented with independent ETS/SQLite algorithms, authenticated per-source Continuum admission and one-effect smart-room policy races; artifact adoption remains a separate axis.
   - id: WLB.06
-    version: "1.7.2"
+    version: "1.7.3"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
     implementation_status: implemented
     evidence_status: complete
@@ -275,7 +275,7 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
     compatibility_classification: Version 0.9.1 records that the unchanged MCP catalogue, completion-plan and standards resources are read from the documentation tree beside a source checkout and are unavailable in a compiled package, rather than embedded at compile time. The additive session-bound queryMetrics operation answers the closed WLB.10 query descriptor from the bearer session room's attributed history without host opt-in; the OpenAPI projection and the generated TypeScript client gain it and every existing operation is unchanged. The source cookbook runner now reclaims unlinked run processes and run-attached telemetry handlers after completion, failure, exit or timeout, and every catalogue notebook must leave none; the scripted MQTT peer closes every accepted connection on stop. Isolation of arbitrary notebook code remains unclaimed. Additive Workbench run operations readRun, startRun, cancelRun and approveDecision extend the generated OpenAPI projection and TypeScript client; the three mutations stay refused unless the host sets control_mutations, and each executes at most once per session-room Idempotency-Key under origin, media-type, body, deadline, rate and concurrency limits. Existing read operations and their error shapes are unchanged. Additive host-owned MCP benchmark jobs bound quotas, cancellation and retained output. The additive MCP `query_metrics` tool exposes the WLB.10 query descriptor only for a host-bound history and scope. MCP resources now include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. The Nerves/MCP notebook identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
-    version: "0.9.7"
+    version: "0.9.8"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial

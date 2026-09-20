@@ -3,12 +3,19 @@ spec:
   id: WTH.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.7
+  version: 1.0.8
   owner: wotex-thread
-  updated: 2026-09-20
+  updated: 2026-09-21
 ---
 
 # WTH.07 Native backend, build and IPC contract
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, canonical identities, matrix planning, verification,
+cache, retrieval and shared evidence-state semantics. This specification
+continues to own OpenThread behavior, security disposition, patch order,
+process custody, build commands and qualification. Descriptor admission
+establishes `declared` only and does not claim an x86_64 or device result.
 
 This is the accepted native OpenThread target. [Current implementation and
 evidence](../provenance/executable-evidence.md) are separate. This contract and

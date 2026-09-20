@@ -3,12 +3,19 @@ spec:
   id: WMA.08
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.7
+  version: 1.0.8
   owner: wotex-matter
-  updated: 2026-09-18
+  updated: 2026-09-21
 ---
 
 # WMA.08 Native backend, build and IPC contract
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, canonical identities, verification, cache,
+retrieval and shared evidence-state semantics for the production and
+software-peer artifacts. This specification continues to own Matter behavior,
+process custody, build commands and target-specific qualification. Descriptor
+admission establishes `declared` only.
 
 This is the accepted native Matter target. [Current implementation and evidence](../provenance/executable-evidence.md)
 are separate. This contract and the .00/.10/.11/.12 requirements jointly define

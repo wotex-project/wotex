@@ -3,12 +3,20 @@ spec:
   id: WBL.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.26
+  version: 1.0.27
   owner: wotex-ble
-  updated: 2026-09-20
+  updated: 2026-09-21
 ---
 
 # WBL.07 Native backend, build and IPC contract
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, canonical build and payload identities, matrix
+planning, local verification, cache, retrieval and shared evidence-state
+semantics. This specification continues to own BlueZ behavior, native process
+custody, build commands and target-specific qualification. Descriptor admission
+establishes `declared`; it does not claim an x86_64 build, guest run, adoption,
+publication or physical-device result.
 
 This is the accepted native BlueZ target. [Current implementation and
 evidence](../provenance/executable-evidence.md) are separate. This contract and

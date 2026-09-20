@@ -83,6 +83,14 @@ An excerpt:
 
 ```yaml
 schema_version: "1.0.0"
+native_artifact:
+  schema_version: "1.0.0"
+  matrix_limit: 32
+  max_slices: 16
+  toolchains: {}
+  systems: {}
+  targets: {}
+  smoke: []
 lanes:
   minimum:
     elixir: "1.18.4-otp-27"
@@ -104,11 +112,15 @@ packages:
     native: true
     native_task: wotex.coap.native.build
     software_task: wotex.coap.software.run
+    native_artifacts:
+      - profile: production
+        descriptor: priv/native-artifacts/production.json
 ```
 
 | Key | Meaning |
 | --- | --- |
 | `schema_version` | Version of this file's format. |
+| `native_artifact` | Closed native artifact inventory. It declares admitted toolchains, systems, target tuples, planner bounds and smoke cells; package descriptors may refer only to these names. |
 | `lanes.<name>.elixir`, `lanes.<name>.otp` | Toolchain lanes the package gates run on in CI. `mix wotex.check --lane NAME` prints a lane and warns when the running Elixir differs; CI selects the toolchain. |
 | `lanes.<name>.skip` | `mix check` tools the lane does not run; CI and `mix wotex.check --lane NAME` pass each as `--except TOOL`. The minimum lane skips static analysis whose results depend on the compiler and OTP version. |
 | `select_all_on` | Repository-relative globs (`**` spans directories, `*` stays within a segment). A changed path matching any of them selects every package. |
@@ -118,11 +130,18 @@ packages:
 | `native` | `true` when the package builds or vendors native code. `mix native.sources` and `mix native.advisories` cover native packages only. |
 | `native_task` | The package's own build task, dispatched by `mix native.build --package NAME --workspace /abs/dir`. |
 | `software_task` | The package's own software-profile task, if any. The CI native lane runs it with `--workspace`; locally it runs only when invoked explicitly, e.g. `mix pkg NAME TASK --workspace /abs/dir`. |
+| `native_artifacts` | Explicit profile-to-descriptor admissions. Filesystem discovery never creates artifact profiles. `mix native.inspect` inspects one package by default; `mix native.inspect --all` is required for the complete inventory. |
 | `native_check` | Suites for `mix native.lint --tidy` and `mix native.test`: `suite` (name), `requires` (`linux`, `docker`, `tun`), `build` (a package task run with `--workspace`), `prepare` (commands), `compile_commands` (databases the build or `prepare` wrote), `compile` (`files` globs and `flags` for files compiled outside a build system), `test` (commands) and `container` (`dockerfile`, `platform`, `volumes`: run `prepare`, `test` and clang-tidy in that image). Strings take the placeholders `{package}`, `{root}`, `{workspace}` and `{scratch}`; a flag `pkg-config:NAME` expands to `pkg-config --cflags NAME`. On a host that is not Linux, a suite that requires only `linux` (optionally with `tun`, a tun device and `CAP_NET_ADMIN`, which the container is given) runs in the Linux container (`native/docker/linux.Dockerfile`) when Docker is available. See `Wotex.Workspace.NativeSuite` and `Wotex.Workspace.NativeContainer`. |
 | `native_bench` | Benchmarks for `mix native.bench`, each reported in `bench/output/native-<id>.md` of the package: `bench` (the id: lowercase letters, digits and underscores), `kind`, `title` and `description` (the report's heading and first paragraph), `requires` and `env` (the environment of the benchmark process), and for `nanobench` also `compile` (`files` globs and `flags`) and `link` (linker flags). The kind fixes the source: `nanobench` a C++ driver `bench/native/<id>.cpp`, which `compile` must match, built with the package sources `compile` names and the vendored nanobench; `criterion` a Cargo crate `bench/native/<id>/` with a committed `Cargo.lock`, run with `cargo bench`; `elixir` a script `bench/native/<id>_bench.exs`, run with `mix run` after the package's `native_task` built `--workspace` (the package must declare one). Strings take the `native_check` placeholders, `{workspace}` in the `elixir` kind only; `pkg-config:NAME` expands to `--cflags` in `compile` and to `--libs` in `link`. A `nanobench` or `elixir` benchmark that requires only Linux, optionally with `tun`, runs in the Linux container on another host; the container has no Rust toolchain. Each driver also gives clang-tidy its compile commands, as the compile-only suite `bench-<id>`. The package must be `native: true`. See `Wotex.Workspace.NativeBench` and `Wotex.Workspace.NativeBenchRunner`. |
 
 `mix wotex.new NAME` appends a manifest entry; the manifest is validated
 whenever a task loads it.
+
+`mix native.plan` refines the existing affected-package graph into deterministic
+package/profile/target/toolchain/system cells. It performs no build or network
+access. Use `--json` for CI, `--count` to inspect expansion and `--all` only for
+an explicit repository-wide plan. An unavailable diff reports its smoke-cohort
+fallback instead of returning an apparently empty plan.
 
 ## Affected packages
 

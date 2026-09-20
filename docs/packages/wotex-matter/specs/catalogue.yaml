@@ -66,7 +66,7 @@ specifications:
     executable_evidence: ["priv/fixtures/wotex-integration-v1.json", "test/wotex/matter/contract_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/runtime_integration_test.exs", "test/wotex/matter/runtime_stream_test.exs", "test/interop/native_oneshot_test.exs", "bin/check_archive.exs"]
     compatibility_classification: "P08 implements typed controller result projection and private Runtime stream relay. P08a executes WMA-I01–I06 through public core/Runtime APIs: exact profiles, strict selection and credentials, deadlines, classified failures/retries, result identity/metadata bounds and Runtime-owned streams with original-route cleanup. P09 adds pinned software-peer execution and immutable-source package/archive acceptance."
   - id: "WMA.08"
-    version: "1.0.7"
+    version: "1.0.8"
     path: "docs/specs/WMA.08-native-backend.md"
     implementation_status: "implemented"
     standards: [{"name": "Native Matter controller", "revision": "Exact source hashes and build profile in .13", "claim": "First-party controller, normal/sanitizer builds and pinned software-peer profile are accepted"}]

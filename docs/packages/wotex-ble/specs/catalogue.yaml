@@ -57,7 +57,7 @@ specifications:
     executable_evidence: ["priv/fixtures/wotex-integration-v1.json", "test/wotex/ble/runtime_integration_test.exs", "test/wotex/ble/runtime_error_test.exs", "test/wotex/ble/runtime_frame_test.exs", "test/wotex/ble/runtime_stream_test.exs", "test/interop/bluez_runtime_test.exs"]
     compatibility_classification: "WBL-I01–I06 execute through public ThingDescription, Form, BindingProfile, ConsumedThing, Context, Result, Retry and Subscription APIs. The one-shot and persistent GATT profiles preserve selected routes, extensions, typed native values, acknowledgements, finite error classes and the single interaction deadline. Unsupported media, selectors, security, profiles, routes and stream modes fail before native acquisition. The Runtime relay binds native ownership to the final subscription process, bounds opening and owner queues, ignores unrelated frames, preserves equal reports and closes the original route on failure, cancellation or owner death. WBL-I-F01..F07 compare runner-owned expectations, and the compiled software peer covers real GATT read, write, notify and indicate through Runtime. Archive, x86_64 and physical-device results are qualification claims."
   - id: "WBL.07"
-    version: "1.0.26"
+    version: "1.0.27"
     path: "docs/specs/WBL.07-native-backend.md"
     implementation_status: "implemented"
     standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "First-party C++ host, guardian, build and software-runner source contract"}]

@@ -1,0 +1,39 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-coap",
+  "profile": "production",
+  "kind": "executable",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "supported"},
+    {"name": "darwin-aarch64", "status": "supported"}
+  ],
+  "sources": {
+    "first_party": ["native/oscore", "lib/wotex/coap/native", "lib/mix/tasks/wotex.coap.native.build.ex"],
+    "upstream": [
+      {"name": "libcoap", "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28", "revision": "7cf7465b784baded4de183290c547d582becfd28", "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"},
+      {"name": "yyjson", "url": "https://codeload.github.com/ibireme/yyjson/tar.gz/refs/tags/0.12.0", "revision": "0.12.0", "sha256": "b16246f617b2a136c78d73e5e2647c6f1de1313e46678062985bdcf1f40bb75d"}
+    ]
+  },
+  "patches": [
+    {"id": "reject-unsaved-sender-sequences", "path": "native/oscore/patches/0001-reject-unsaved-sender-sequences.patch", "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"},
+    {"id": "skip-empty-cbor-byte-copy", "path": "native/oscore/patches/0002-skip-empty-cbor-byte-copy.patch", "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"},
+    {"id": "limit-whole-body-assembly", "path": "native/oscore/patches/0003-limit-whole-body-assembly.patch", "sha256": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7"},
+    {"id": "reject-representation-restart", "path": "native/oscore/patches/0004-reject-representation-restart.patch", "sha256": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767"},
+    {"id": "reject-unprotected-responses", "path": "native/oscore/patches/0005-reject-unprotected-responses.patch", "sha256": "483292e9eab1ee9c970698734901b89cb12ac846a74a2c225101c032e79635ad"},
+    {"id": "release-whole-body-first-response", "path": "native/oscore/patches/0006-release-whole-body-first-response.patch", "sha256": "d3e20f9cbb199639634cd0ddc2a90f4d6efeebd14fa9fd9010471065f3d5e2ec"},
+    {"id": "preserve-oscore-observe-sequence", "path": "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch", "sha256": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9"},
+    {"id": "drop-oscore-client-send-hold", "path": "native/oscore/patches/0008-drop-oscore-client-send-hold.patch", "sha256": "01a3be4fa8174891e1b72a07e35b41ccd696714439624775c8755415a12650e8"},
+    {"id": "keep-association-after-unverified-response", "path": "native/oscore/patches/0009-keep-association-after-unverified-response.patch", "sha256": "e218e7db735231d0d507323e939dab7085592f0a0057b1545ae49970d3bbc8c2"},
+    {"id": "ignore-uncorrelated-plaintext-responses", "path": "native/oscore/patches/0010-ignore-uncorrelated-plaintext-responses.patch", "sha256": "191bf1dd87239b3247a6f91cd8493b2793d7284df713836c32561dd7d01e1f00"}
+  ],
+  "toolchain": {"inputs": ["native/oscore/source.json", "native/oscore/vendor/yyjson/source.json"], "requirements": {"c": "c11", "cmake": "required", "openssl": "3.x"}, "container_digest": null},
+  "build": {"task": "wotex.coap.native.build", "options": {"build_type": "release"}, "features": ["dtls", "oscore"]},
+  "qualification": {"task": "wotex.native.test", "options": {"suite": "oscore"}, "features": ["interop", "vectors"]},
+  "outputs": [{"path": "bin/wotex-coap-oscore", "kind": "file", "mode": 493, "required": true}],
+  "compatibility": {"ipc": "wotex-coap-native-v1", "openssl": "3.x"},
+  "external_libraries": ["libcrypto", "libssl"],
+  "legal": ["LICENSE", "NOTICE", "native/oscore/vendor/yyjson/LICENSE"],
+  "native_inputs": []
+}

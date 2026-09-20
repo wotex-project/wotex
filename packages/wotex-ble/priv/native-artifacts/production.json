@@ -1,0 +1,33 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-ble",
+  "profile": "production",
+  "kind": "executable-bundle",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "supported"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "BlueZ and libdbus production execution require Linux"}
+  ],
+  "sources": {
+    "first_party": ["priv/bluez/native", "lib/wotex/ble/native", "lib/mix/tasks/wotex.ble.native.build.ex"],
+    "upstream": [
+      {"name": "libdbus", "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz", "revision": "1.16.2", "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2"},
+      {"name": "nlohmann-json", "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp", "revision": "3.11.3", "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["priv/bluez/native/dependencies.json"], "requirements": {"c": "c11", "cpp": "c++17", "cmake": "required", "ninja": "required", "readelf": "required"}, "container_digest": null},
+  "build": {"task": "wotex.ble.native.build", "options": {"optimization": "release"}, "features": ["bluez", "libdbus", "runtime-guardian"]},
+  "qualification": {"task": "wotex.native.test", "options": {"suite": "libdbus"}, "features": ["interop", "native"]},
+  "outputs": [
+    {"path": "output/bin/wotex-ble-host", "kind": "file", "mode": 493, "required": true},
+    {"path": "output/bin/wotex-ble-guardian", "kind": "file", "mode": 493, "required": true},
+    {"path": "output/bin/dbus-daemon", "kind": "file", "mode": 493, "required": true},
+    {"path": "output/lib/libdbus-1.so.3", "kind": "file", "mode": 493, "required": true}
+  ],
+  "compatibility": {"ipc": "wotex-ble-json-lines-v1", "otp": "27-or-newer"},
+  "external_libraries": ["libc.so.6", "libexpat.so.1"],
+  "legal": ["LICENSE", "NOTICE", "priv/bluez/native/vendor/LICENSE.MIT"],
+  "native_inputs": []
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-lab",
+  "profile": "nerves-rpi4",
+  "kind": "firmware",
+  "targets": [
+    {"name": "nerves-rpi4", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "a host build does not satisfy the Raspberry Pi 4 firmware cell"}
+  ],
+  "sources": {
+    "first_party": [
+      "hosts/nerves/config",
+      "hosts/nerves/lib",
+      "hosts/nerves/mix.exs",
+      "hosts/nerves/mix.lock",
+      "lib",
+      "priv/provenance"
+    ],
+    "upstream": []
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["hosts/nerves/mix.exs", "hosts/nerves/mix.lock"], "requirements": {"nerves_system_rpi4": "2.1.1", "nerves_toolchain_aarch64_nerves_linux_gnu": "15.3.1"}, "container_digest": null},
+  "build": {"task": "firmware", "options": {"mix_target": "rpi4"}, "features": ["nerves", "rpi4"]},
+  "qualification": {"task": "check", "options": {"mix_target": "rpi4"}, "features": ["firmware", "source-audit"]},
+  "outputs": [{"path": "_build/rpi4_prod/nerves/images/wotex_lab_nerves.fw", "kind": "file", "mode": 420, "required": true}],
+  "compatibility": {"device": "raspberry-pi-4", "host_equivalence": "none", "nerves_system": "2.1.1"},
+  "external_libraries": [],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

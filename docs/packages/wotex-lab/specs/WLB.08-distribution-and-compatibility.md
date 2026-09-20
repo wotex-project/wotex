@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.7. Contract: accepted. Source status: the workspace
+Specification version: 0.9.8. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -16,6 +16,12 @@ rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns verification, safe local adoption, target dependency closure and exact
+prebuilt retrieval. This specification owns Lab consumer, distribution and
+reference-host requirements. Local construction remains distinct from
+independent adoption, maintainer publication and physical Nerves evidence.
 
 ## Implementation and qualification status
 

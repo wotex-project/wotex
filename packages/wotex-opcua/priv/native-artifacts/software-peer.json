@@ -1,0 +1,31 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-opcua",
+  "profile": "software-peer",
+  "kind": "qualification-bundle",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted complete audit, sanitizer and independent-peer cell is Linux x86_64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the complete software audit and sanitizer cohort requires Linux"}
+  ],
+  "sources": {
+    "first_party": ["priv/native", "priv/fixtures/native-sources-v1.json", "test/interop", "test/software", "lib/wotex/opcua/native/software.ex"],
+    "upstream": [
+      {"name": "open62541", "url": "https://codeload.github.com/open62541/open62541/tar.gz/refs/tags/v1.5.7", "revision": "1.5.7", "sha256": "a4018b052c93fedb55f00558a85869b86f3bb2293184d322e33f2666c497eaeb"},
+      {"name": "openssl", "url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.8", "revision": "3.5.8", "sha256": "59f86483992995df5a213df38d93f31eeafe3b34599309b3e088ba67ca0aad9c"}
+    ]
+  },
+  "patches": [{"id": "open62541-secure-discovery-v2", "path": "priv/native/patch-sdk.cmake", "sha256": "89ea5c1ca137a7afb8e6fc25a2fa3387c05950ef0b3cead118df80685b3f69ee"}],
+  "toolchain": {"inputs": ["test/interop/rust_peer/Cargo.lock", "test/interop/audit-requirements.lock"], "requirements": {"cargo": "root-pinned", "cmake": "3.20-or-newer", "openssl": "3.5.8-static"}, "container_digest": null},
+  "build": {"task": "wotex.opcua.software.build", "options": {"sanitizers": true}, "features": ["async-opcua-peer", "audit-environment", "secure-c-peer"]},
+  "qualification": {"task": "wotex.opcua.software.run", "options": {"required": true}, "features": ["audits", "interop", "software"]},
+  "outputs": [
+    {"path": "software-build.json", "kind": "file", "mode": 420, "required": true},
+    {"path": "peer", "kind": "directory", "mode": 493, "required": true}
+  ],
+  "compatibility": {"role": "independent-test-peer", "runtime": "not-production"},
+  "external_libraries": ["libc"],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

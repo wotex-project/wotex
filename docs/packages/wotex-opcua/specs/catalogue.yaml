@@ -57,7 +57,7 @@ specifications:
     executable_evidence: ["priv/fixtures/wotex-integration-v1.json", "test/wotex/opcua/open62541_test.exs", "test/wotex/opcua/runtime_integration_test.exs", "test/wotex/opcua/runtime_stream_test.exs", "test/interop/native_secure_test.exs", "test/interop/native_runtime_stream_test.exs", "test/interop/rust_peer_test.exs", "lib/wotex/opcua/native/software.ex"]
     compatibility_classification: "I01 through I06 execute through core and Runtime public APIs. Static one-shot and Session profiles enforce route, media, security, deadline and identity boundaries; the complete retry table is classified; typed scalars, arrays and metadata cross real ConsumedThing calls; observations bind final ownership and clean up after stop, owner death, overflow and peer loss. The software runner uses exact core, Runtime and OPC UA archives in an isolated consumer on both configured runtimes."
   - id: "WOP.07"
-    version: "1.1.86"
+    version: "1.1.87"
     path: "docs/specs/WOP.07-native-executable.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / open62541 / OpenSSL", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Implemented reproducible native executable, secure service owner, process custody, software-peer, audit, sanitizer, stress and archive-consumer source lanes"}]

@@ -1,0 +1,31 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-thread",
+  "profile": "software-network",
+  "kind": "qualification-bundle",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted complete simulated-network and sanitizer cell is Linux x86_64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "TUN and the complete simulated OpenThread network require Linux"}
+  ],
+  "sources": {
+    "first_party": ["priv/openthread", "test/native", "test/interop", "test/software", "lib/wotex/thread/software"],
+    "upstream": [
+      {"name": "mbedtls", "url": "https://codeload.github.com/Mbed-TLS/mbedtls/tar.gz/068ff080b369adfac81509f9b57b2afabaf82dc5", "revision": "068ff080b369adfac81509f9b57b2afabaf82dc5", "sha256": "ca6bd316bbec49ef20088f39b8755fcaec0b7e45781506de55b17cd191ae6937"},
+      {"name": "openthread", "url": "https://codeload.github.com/openthread/openthread/tar.gz/f34c5e5476829d9205e80b37fccc2bdfe97e1dab", "revision": "f34c5e5476829d9205e80b37fccc2bdfe97e1dab", "sha256": "93109098957ac2bfa6e37d69d1c094f653b5e73cc33c7e5a498e6e1d45ade452"}
+    ]
+  },
+  "patches": [{"id": "reviewed-sdk-fixes", "path": "lib/wotex/thread/native/source.ex", "sha256": "fa890ce1e7ad6e151079f432ad490334c2ef83c3642b5b09486ba004d5295bc2"}],
+  "toolchain": {"inputs": ["priv/openthread/dependencies.json", "priv/openthread/CMakeLists.txt"], "requirements": {"cmake": "required", "ninja": "required", "tun": "required"}, "container_digest": null},
+  "build": {"task": "wotex.thread.software.build", "options": {"sanitizers": true}, "features": ["ot-daemon", "ot-rcp", "simulated-network"]},
+  "qualification": {"task": "wotex.thread.software.run", "options": {"required": true}, "features": ["interop", "software"]},
+  "outputs": [
+    {"path": "software-manifest.json", "kind": "file", "mode": 420, "required": true},
+    {"path": "fixtures/bin", "kind": "directory", "mode": 493, "required": true}
+  ],
+  "compatibility": {"hardware_equivalence": "none", "role": "simulated-test-network"},
+  "external_libraries": ["libc.so.6"],
+  "legal": ["LICENSE", "NOTICE", "priv/openthread/vendor/LICENSE.MIT"],
+  "native_inputs": []
+}

@@ -57,7 +57,7 @@ specifications:
     executable_evidence: ["priv/fixtures/wotex-integration-v1.json", "test/wotex/thread/runtime_integration_test.exs", "test/wotex/thread/runtime_error_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/contract_test.exs", "test/interop/openthread_test.exs", "test/fixtures/archive_reference_consumer.exs", "bin/check_archive.exs"]
     compatibility_classification: "The daemon BindingProfile, exact read mapping, typed values, deadline/security boundary and additive Runtime error classes execute through public core and Runtime APIs. The archive gate builds exact core, Runtime and Thread candidates once and runs an isolated consumer in both configured toolchain lanes. Pinned software-peer execution, published adoption and platform identities remain qualification claims."
   - id: "WTH.07"
-    version: "1.0.7"
+    version: "1.0.8"
     path: "docs/specs/WTH.07-native-backend.md"
     implementation_status: "implemented"
     standards: [{"name": "Native OpenThread host", "revision": "Exact source hashes and build profile in .13", "claim": "Implemented first-party native host and reproducible build profile; external run identities remain separate evidence"}]

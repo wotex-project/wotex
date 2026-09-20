@@ -3,12 +3,18 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.4
+  version: 1.9.5
   owner: wotex-coap
-  updated: 2026-09-19
+  updated: 2026-09-21
 ---
 
 # WCO.08 Native OSCORE owner, builds and software evidence
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, artifact identity, verification, cache, retrieval
+and shared evidence-state semantics for the native and software-peer artifacts.
+This specification continues to own OSCORE behavior, process custody, build
+commands and qualification. Descriptor admission establishes `declared` only.
 
 UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap

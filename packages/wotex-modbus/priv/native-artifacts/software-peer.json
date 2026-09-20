@@ -1,0 +1,30 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-modbus",
+  "profile": "software-peer",
+  "kind": "independent-peer-image",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted independent peer evidence cell is Linux x86_64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the libmodbus peer executes in a Linux container"}
+  ],
+  "sources": {
+    "first_party": ["test/interop", "test/support/software", "lib/mix/tasks/wotex.modbus.software.build.ex", "lib/mix/tasks/wotex.modbus.software.run.ex"],
+    "upstream": [
+      {"name": "libmodbus", "url": "https://codeload.github.com/stephane/libmodbus/tar.gz/9af6c16074df566551bca0a7c37443e48f216289", "revision": "9af6c16074df566551bca0a7c37443e48f216289", "sha256": "5d0f56cdd9f4f4bc6863dcac6bc9bdc7ea862566aefa29eef2f1bf649cc1ea3a"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["test/interop/libmodbus/Dockerfile", "test/support/software/manifest.exs"], "requirements": {"c": "c11", "docker": "required"}, "container_digest": null},
+  "build": {"task": "wotex.modbus.software.build", "options": {"network": "loopback"}, "features": ["libmodbus-peer"]},
+  "qualification": {"task": "wotex.modbus.software.run", "options": {"required": true}, "features": ["interop", "software"]},
+  "outputs": [
+    {"path": "peer-manifest.json", "kind": "file", "mode": 420, "required": true},
+    {"path": "image.id", "kind": "file", "mode": 420, "required": true}
+  ],
+  "compatibility": {"role": "independent-test-peer", "runtime": "not-production"},
+  "external_libraries": ["libmodbus.so.5"],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

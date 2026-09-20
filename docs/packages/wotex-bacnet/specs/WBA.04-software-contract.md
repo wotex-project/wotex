@@ -3,12 +3,18 @@ spec:
   id: WBA.04
   title: "Complete BACnet/IP client software profile"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-bacnet
-  updated: 2026-09-14
+  updated: 2026-09-21
 ---
 
 # WBA.04 Complete BACnet/IP client software profile
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns descriptor admission, artifact identity, verification, cache and evidence
+state semantics for the software-peer artifact. This specification continues
+to own BACnet behavior, the peer build command and its qualification cohort. A
+valid descriptor establishes the `declared` state only.
 
 Read [WBA.01](WBA.01-library-contract.md), [WBA.05 standalone client and preservation](WBA.05-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
 This is the implemented software profile. Current code implements typed read/write, strict ACK

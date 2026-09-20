@@ -57,7 +57,7 @@ specifications:
     executable_evidence: ["bin/check_archive.exs", "test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
     compatibility_classification: "Implemented pure BindingProfile factories, native Form selection, real ConsumedThing unary mapping, structured Error.class retry decisions and no-stream rejection. Candidate core/Runtime/Modbus archives install through an isolated Hex registry and execute direct plus Runtime interactions without path dependencies or checkout BEAMs. Public-registry availability, publication and external adoption remain nonclaims."
   - id: "WMB.07"
-    version: "1.3.1"
+    version: "1.3.2"
     path: "docs/specs/WMB.07-native-build-and-software-evidence.md"
     implementation_status: "implemented"
     standards: [{"name": "Native peer / SDK", "revision": "libmodbus 3.1.12", "claim": "Independent C test peer with explicit source-bound Mix build and run tasks"}]

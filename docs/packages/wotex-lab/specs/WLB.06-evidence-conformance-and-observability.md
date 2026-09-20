@@ -1,6 +1,6 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.7.2. Contract: accepted. Source status: implemented.
+Specification version: 1.7.3. Contract: accepted. Source status: implemented.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
@@ -14,6 +14,12 @@ runs the locked Rust unit and lifecycle cohort with its feature-gated probes in
 a private, cleaned OS-temporary Cargo target. The package gate does not run it,
 so a passing package gate does not include those native results. Generated
 binaries and probe artifacts remain outside the package archive.
+
+The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
+owns native artifact identities and the independent `declared`, `built`,
+`qualified`, `adopted`, `published` and `device_verified` states. Lab records
+and displays those states but does not infer one from another or construct a
+parallel artifact identity.
 
 ## Evidence record and maturity
 

@@ -1,0 +1,30 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-matter",
+  "profile": "software-peer",
+  "kind": "qualification-bundle",
+  "targets": [
+    {"name": "matter-linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the pinned connectedhomeip software cohort is linux/amd64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the software peer cohort executes in the pinned linux/amd64 container"}
+  ],
+  "sources": {
+    "first_party": ["native", "test/interop", "test/software", "test/support/software", "lib/mix/tasks/wotex.matter.software.build.ex", "lib/mix/tasks/wotex.matter.software.run.ex"],
+    "upstream": [
+      {"name": "connectedhomeip", "url": "https://codeload.github.com/project-chip/connectedhomeip/tar.gz/250a9e6c50ee2068107f3c4808b680f5f2925415", "revision": "250a9e6c50ee2068107f3c4808b680f5f2925415", "sha256": "83032f0c98b02c8c16defc6e70ebe288c127ef3661153feca32839fb65b33628"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["test/support/software/sources.json", "test/support/software/manifest.exs"], "requirements": {"gcc": "12.2.0", "platform": "linux/amd64"}, "container_digest": "sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"},
+  "build": {"task": "wotex.matter.software.build", "options": {"platform": "linux/amd64"}, "features": ["all-clusters-peer", "lighting-peer", "sanitizers"]},
+  "qualification": {"task": "wotex.matter.software.run", "options": {"required": true}, "features": ["hardware-excluded", "interop", "software"]},
+  "outputs": [
+    {"path": "workspace-manifest.json", "kind": "file", "mode": 420, "required": true},
+    {"path": "bin", "kind": "directory", "mode": 493, "required": true}
+  ],
+  "compatibility": {"role": "independent-test-peer", "runtime": "not-production"},
+  "external_libraries": ["libavahi-client.so.3", "libc.so.6"],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": []
+}

@@ -40,6 +40,82 @@ defmodule Wotex.Workspace.ManifestTest do
       core = Manifest.fetch!("core", manifest)
       refute core.native
       assert core.native_task == nil
+      assert core.native_artifacts == []
+    end
+
+    test "admits native artifact profiles, targets, toolchains, systems and smoke cells" do
+      map =
+        Fixtures.manifest_map()
+        |> put_in(["packages", "coap", "native_artifacts"], [
+          %{"profile" => "production", "descriptor" => "priv/native-artifacts/production.json"}
+        ])
+        |> Map.put("native_artifact", %{
+          "schema_version" => "1.0.0",
+          "matrix_limit" => 24,
+          "max_slices" => 4,
+          "toolchains" => %{
+            "compiler" => %{"identity" => "compiler-v1", "inputs" => ["tooling/compiler.lock"]}
+          },
+          "systems" => %{"host" => %{"identity" => "host-v1"}},
+          "targets" => %{
+            "linux-x86-64" => %{
+              "operating_system" => "linux",
+              "architecture" => "x86_64",
+              "endianness" => "little",
+              "libc" => "glibc",
+              "abi" => "gnu",
+              "toolchain" => "compiler",
+              "system" => "host"
+            }
+          },
+          "smoke" => [
+            %{"package" => "coap", "profile" => "production", "target" => "linux-x86-64"}
+          ]
+        })
+
+      assert {:ok, manifest} = Manifest.from_map(map)
+
+      assert [%{profile: "production", descriptor: "priv/native-artifacts/production.json"}] =
+               Manifest.fetch!("coap", manifest).native_artifacts
+
+      assert manifest.native_artifact.matrix_limit == 24
+      assert manifest.native_artifact.max_slices == 4
+      assert manifest.native_artifact.targets["linux-x86-64"].architecture == "x86_64"
+      assert manifest.native_artifact.toolchains["compiler"].inputs == ["tooling/compiler.lock"]
+
+      assert manifest.native_artifact.smoke == [
+               %{package: "coap", profile: "production", target: "linux-x86-64"}
+             ]
+    end
+
+    test "rejects undeclared native artifact identities and malformed profile admission" do
+      base = Fixtures.manifest_map()
+
+      for {map, expected} <- [
+            {put_in(base, ["packages", "coap", "native_artifacts"], [
+               %{"profile" => "Bad", "descriptor" => "x.json"}
+             ]), "native_artifacts entry"},
+            {Map.put(base, "native_artifact", %{"schema_version" => "2.0.0"}), "schema_version"},
+            {Map.put(base, "native_artifact", %{
+               "schema_version" => "1.0.0",
+               "toolchains" => %{},
+               "systems" => %{},
+               "targets" => %{
+                 "linux" => %{
+                   "operating_system" => "linux",
+                   "architecture" => "x86_64",
+                   "endianness" => "little",
+                   "libc" => "glibc",
+                   "abi" => "gnu",
+                   "toolchain" => "missing",
+                   "system" => "missing"
+                 }
+               }
+             }), "unknown toolchain"}
+          ] do
+        assert {:error, message} = Manifest.from_map(map)
+        assert message =~ expected
+      end
     end
 
     test "rejects a dependency on an unknown package" do

@@ -1,0 +1,31 @@
+{
+  "schema": "wotex.native-artifact-descriptor@1",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-ble",
+  "profile": "sanitizers",
+  "kind": "qualification-executables",
+  "targets": [
+    {"name": "linux-x86-64", "status": "supported"},
+    {"name": "linux-aarch64", "status": "unsupported", "reason": "the accepted sanitizer qualification cell is Linux x86_64"},
+    {"name": "darwin-aarch64", "status": "unsupported", "reason": "the complete ASan, UBSan and leak cohort is Linux-only"}
+  ],
+  "sources": {
+    "first_party": ["priv/bluez/native", "test/native", "test/interop/native", "lib/wotex/ble/native"],
+    "upstream": [
+      {"name": "libdbus", "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz", "revision": "1.16.2", "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2"},
+      {"name": "nlohmann-json", "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp", "revision": "3.11.3", "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"}
+    ]
+  },
+  "patches": [],
+  "toolchain": {"inputs": ["priv/bluez/native/dependencies.json"], "requirements": {"asan": "enabled", "c": "c11", "cpp": "c++17", "lsan": "enabled", "ubsan": "enabled"}, "container_digest": null},
+  "build": {"task": "wotex.ble.native.build", "options": {"instrumentation": "address-undefined-leak"}, "features": ["sanitizers"]},
+  "qualification": {"task": "wotex.native.test", "options": {"lane": "sanitizers"}, "features": ["asan", "lsan", "ubsan"]},
+  "outputs": [
+    {"path": "output/bin/wotex-ble-host", "kind": "file", "mode": 493, "required": true},
+    {"path": "output/bin/wotex-ble-guardian", "kind": "file", "mode": 493, "required": true}
+  ],
+  "compatibility": {"evidence": "qualification-only", "ipc": "wotex-ble-json-lines-v1"},
+  "external_libraries": ["libasan.so", "libubsan.so"],
+  "legal": ["LICENSE", "NOTICE", "priv/bluez/native/vendor/LICENSE.MIT"],
+  "native_inputs": []
+}
