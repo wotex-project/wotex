@@ -13,6 +13,9 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   can also read the configured durable receiver. `:query` adds the loopback operator
   query listener after the history cohort; it needs history or durable reads
   and a credential distinct from `:scrape`.
+  `:hosted` adds the digest-only tenant registry, TLS listener and isolated
+  investigation broker. It requires durable reads and never exposes the
+  host-wide volatile history.
   """
 
   use Supervisor
@@ -30,6 +33,8 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   alias WotexLabWorkbench.Observability.{
     Durable,
     DurableReader,
+    HostedAccess,
+    HostedListener,
     Inspection,
     PromEx,
     QueryListener,
@@ -42,13 +47,27 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
   def start_link(opts) do
     with :ok <-
-           Options.validate(opts, [:history, :scrape, :durable, :durable_query, :beamlens, :query]),
+           Options.validate(opts, [
+             :history,
+             :scrape,
+             :durable,
+             :durable_query,
+             :beamlens,
+             :query,
+             :hosted
+           ]),
          :ok <- history_options(Keyword.get(opts, :history, false)),
          :ok <- scrape_options(Keyword.get(opts, :scrape, false)),
          :ok <- durable_options(Keyword.get(opts, :durable, false)),
          :ok <- durable_query_options(Keyword.get(opts, :durable_query, false)),
          :ok <- beamlens_options(Keyword.get(opts, :beamlens, false)),
          :ok <- query_options(Keyword.get(opts, :query, false)),
+         :ok <- hosted_options(Keyword.get(opts, :hosted, false)),
+         :ok <-
+           hosted_dependencies(
+             Keyword.get(opts, :durable_query, false),
+             Keyword.get(opts, :hosted, false)
+           ),
          :ok <-
            query_dependencies(
              Keyword.get(opts, :history, false) != false or
@@ -73,6 +92,10 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
         durable_children(durable, history) ++
         scrape_children(Keyword.get(opts, :scrape, false)) ++
         query_children(Keyword.get(opts, :query, false)) ++
+        hosted_children(
+          Keyword.get(opts, :hosted, false),
+          Keyword.get(opts, :durable_query, false)
+        ) ++
         beamlens_children(Keyword.get(opts, :beamlens, false))
 
     Supervisor.init(children, strategy: :one_for_all)
@@ -114,6 +137,39 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   defp query_options(false), do: :ok
   defp query_options(opts), do: QueryListener.validate(opts)
 
+  defp hosted_options(false), do: :ok
+
+  defp hosted_options(opts) do
+    with :ok <- Options.validate(opts, [:tenants, :listener, :command, :provider]),
+         tenants when is_list(tenants) and tenants != [] <- Keyword.get(opts, :tenants),
+         :ok <- HostedListener.validate(Keyword.get(opts, :listener, [])),
+         {:ok, _} <-
+           WotexLabWorkbench.Investigation.HostedCommand.configure(Keyword.get(opts, :command, [])),
+         provider when provider in [:codex_then_ollama, :ollama] <- Keyword.get(opts, :provider) do
+      :ok
+    else
+      {:error, _} = error ->
+        error
+
+      _ ->
+        {:error,
+         Error.new(:invalid_hosted_access, :construction, "hosted access options are invalid")}
+    end
+  end
+
+  defp hosted_dependencies(_, false), do: :ok
+
+  defp hosted_dependencies(false, _),
+    do:
+      {:error,
+       Error.new(
+         :hosted_access_requires_durable_query,
+         :construction,
+         "hosted access needs durable reads"
+       )}
+
+  defp hosted_dependencies(_, _), do: :ok
+
   defp query_dependencies(_, _, false), do: :ok
 
   defp query_dependencies(false, _, _),
@@ -139,6 +195,18 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   defp query_children(false), do: []
   defp query_children(opts), do: [{QueryListener, opts}]
+
+  defp hosted_children(false, _), do: []
+
+  defp hosted_children(opts, durable) do
+    [
+      {Task.Supervisor, name: WotexLabHosted.TaskSupervisor},
+      {HostedAccess, tenants: opts[:tenants], durable: durable},
+      {WotexLabWorkbench.Investigation.HostedBroker,
+       command: opts[:command], provider: opts[:provider]},
+      {HostedListener, opts[:listener]}
+    ]
+  end
 
   defp scrape_children(false), do: []
   defp scrape_children(opts), do: [{Scrape, opts}]

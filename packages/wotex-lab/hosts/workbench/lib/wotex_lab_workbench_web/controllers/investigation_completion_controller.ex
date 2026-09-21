@@ -6,7 +6,7 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
 
   use WotexLabWorkbenchWeb, :controller
 
-  alias WotexLabWorkbench.Investigation.{Broker, Provider}
+  alias WotexLabWorkbench.Investigation.{BridgeAuthorization, Provider}
 
   @model "wotex-lab-investigation"
   @max_messages 32
@@ -15,19 +15,23 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
   @doc "Completes one bounded internal request or fails closed."
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, %{"messages" => messages} = params) do
-    with true <- Application.get_env(:wotex_lab_workbench, :beamlens_enabled, false),
+    with true <- bridge_enabled?(),
          true <- loopback?(conn.remote_ip),
          true <- params["stream"] != true,
          true <- params["model"] in [nil, @model],
          {:ok, messages} <- admit_messages(messages),
-         :ok <- Broker.authorize_bridge(bearer(conn)) do
+         capability = bearer(conn),
+         {:ok, provider, profile} <- BridgeAuthorization.authorize(capability) do
       opts =
         []
         |> maybe_put(:output_schema, output_schema(params["response_format"]))
         |> maybe_put(:response_format, params["response_format"])
+        |> Keyword.put(:provider, provider)
 
       case Provider.complete(messages, opts) do
         {:ok, content, metadata} ->
+          BridgeAuthorization.record(profile, capability, metadata)
+
           json(conn, %{
             id: "wotex-lab-#{System.unique_integer([:positive])}",
             object: "chat.completion",
@@ -43,6 +47,8 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
           })
 
         {:error, :diagnostics_unavailable} ->
+          BridgeAuthorization.record(profile, capability, %{})
+
           conn
           |> put_status(:service_unavailable)
           |> json(%{error: %{message: "investigation providers unavailable"}})
@@ -120,6 +126,11 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
   defp loopback?({127, _, _, _}), do: true
   defp loopback?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
   defp loopback?(_), do: false
+
+  defp bridge_enabled? do
+    Application.get_env(:wotex_lab_workbench, :beamlens_enabled, false) or
+      Application.get_env(:wotex_lab_workbench, :hosted_investigation_enabled, false)
+  end
 
   defp bearer(conn) do
     case Plug.Conn.get_req_header(conn, "authorization") do

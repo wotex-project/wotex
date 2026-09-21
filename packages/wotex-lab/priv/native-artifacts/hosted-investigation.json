@@ -1,0 +1,55 @@
+{
+  "schema": "wotex.native-artifact-descriptor@2",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-lab",
+  "profile": "hosted-investigation",
+  "kind": "executable-bundle",
+  "targets": [
+    {"name": "hosted-linux-x86-64", "status": "supported"},
+    {"name": "hosted-linux-aarch64", "status": "supported"},
+    {"name": "hosted-darwin-aarch64", "status": "supported"},
+    {"name": "nerves-rpi4", "status": "unsupported", "reason": "hosted investigations run outside firmware on an operator-provisioned host"}
+  ],
+  "sources": {
+    "first_party": [
+      "hosts/workbench/config",
+      "hosts/workbench/lib",
+      "hosts/workbench/mix.exs",
+      "hosts/workbench/mix.lock",
+      "lib",
+      "priv/conformance/native/Cargo.lock",
+      "priv/conformance/native/Cargo.toml",
+      "priv/conformance/native/probes",
+      "priv/conformance/native/src/accounting.rs",
+      "priv/conformance/native/src/bin/hosted_investigation_runner.rs",
+      "priv/conformance/native/tests/hosted_investigation_runner.rs"
+    ],
+    "upstream": []
+  },
+  "patches": [],
+  "toolchain": {
+    "inputs": ["hosts/workbench/mix.lock", "priv/conformance/native/Cargo.lock", "priv/conformance/native/Cargo.toml"],
+    "requirements": {"elixir": "1.20.2", "otp_release": "29", "erts": "17.0.4", "rust": "1.97.1", "mix_environment": "dev", "network": "forbidden"},
+    "container_digest": null
+  },
+  "build": {
+    "task": "wotex.lab.hosted.build",
+    "options": {"runtime": "absolute-verified-escript", "workspace": "absolute-new-directory"},
+    "features": ["beam-worker", "native-custodian", "private-baml-runtime"]
+  },
+  "qualification": {
+    "task": "wotex.lab.hosted.check",
+    "options": {"provider": "unavailable-loopback", "runtime": "same-runtime-as-build"},
+    "features": ["digest-verification", "one-request-vm", "process-tree-cleanup"]
+  },
+  "outputs": [
+    {"path": "native-build.json", "kind": "file", "mode": 420, "required": true},
+    {"path": "output/bin/wotex-hosted-investigation-runner", "kind": "file", "mode": 493, "required": true},
+    {"path": "output/bin/wotex-lab-hosted-worker", "kind": "file", "mode": 493, "required": true}
+  ],
+  "compatibility": {"beam": "otp-29.0.4", "baml_nif": "target-specific", "runtime": "full-digest-escript"},
+  "external_libraries": [],
+  "legal": ["LICENSE", "NOTICE"],
+  "native_inputs": [],
+  "retrieval": {"sources": []}
+}

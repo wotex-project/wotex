@@ -57,37 +57,44 @@ config :wotex_lab_workbench, metrics_durable: metrics_durable
 # loopback base; the hosted profile names an exact HTTPS origin and a query
 # credential that is checked here and read again per request, never stored.
 # The database is the one the exporter writes, never a request value.
-if url = System.get_env("WOTEX_LAB_GREPTIME_QUERY_URL") do
-  reader = WotexLabWorkbench.Observability.DurableReader
-  database = System.get_env("WOTEX_LAB_GREPTIME_DATABASE")
+metrics_durable_query =
+  case System.get_env("WOTEX_LAB_GREPTIME_QUERY_URL") do
+    nil ->
+      false
 
-  configured =
-    case System.get_env("WOTEX_LAB_GREPTIME_QUERY_PROFILE") do
-      profile when profile in [nil, "local"] ->
-        reader.configure(url, database)
+    url ->
+      reader = WotexLabWorkbench.Observability.DurableReader
+      database = System.get_env("WOTEX_LAB_GREPTIME_DATABASE")
 
-      "hosted" ->
-        with {:ok, _} <- reader.lookup_credential() do
-          reader.configure_hosted(
-            url,
-            database,
-            System.get_env("WOTEX_LAB_GREPTIME_QUERY_CA_CERTFILE")
-          )
+      configured =
+        case System.get_env("WOTEX_LAB_GREPTIME_QUERY_PROFILE") do
+          profile when profile in [nil, "local"] ->
+            reader.configure(url, database)
+
+          "hosted" ->
+            with {:ok, _} <- reader.lookup_credential() do
+              reader.configure_hosted(
+                url,
+                database,
+                System.get_env("WOTEX_LAB_GREPTIME_QUERY_CA_CERTFILE")
+              )
+            end
+
+          _ ->
+            :error
         end
 
-      _ ->
-        :error
-    end
+      case configured do
+        {:ok, options} ->
+          options
 
-  case configured do
-    {:ok, options} ->
-      config :wotex_lab_workbench, metrics_durable_query: options
-
-    _ ->
-      raise "durable reads require a loopback WOTEX_LAB_GREPTIME_QUERY_URL, or the hosted profile " <>
-              "with an HTTPS origin and a distinct WOTEX_LAB_GREPTIME_QUERY_TOKEN"
+        _ ->
+          raise "durable reads require a loopback WOTEX_LAB_GREPTIME_QUERY_URL, or the hosted profile " <>
+                  "with an HTTPS origin and a distinct WOTEX_LAB_GREPTIME_QUERY_TOKEN"
+      end
   end
-end
+
+config :wotex_lab_workbench, metrics_durable_query: metrics_durable_query
 
 # BeamLens remains completely dormant unless the trusted local operator opts
 # in. Provider availability is checked only when an investigation is requested;
@@ -178,6 +185,73 @@ if port = System.get_env("WOTEX_LAB_METRICS_QUERY_PORT") do
 
     {:error, _} ->
       raise "metric query listener requires an admitted port and URL-safe token (43–128 characters)"
+  end
+end
+
+# Hosted access is a separate TLS listener. Its tenant file contains only
+# SHA-256 token digests; every digest must differ from every configured
+# operator, exporter, reader, administration and OTLP credential. The worker
+# artifacts and Escript runtime are admitted by full digest on every request.
+if port = System.get_env("WOTEX_LAB_HOSTED_PORT") do
+  metrics_durable_query != false ||
+    raise "hosted access requires WOTEX_LAB_GREPTIME_QUERY_URL"
+
+  reserved_tokens =
+    ~w(WOTEX_LAB_METRICS_TOKEN WOTEX_LAB_METRICS_QUERY_TOKEN
+       WOTEX_LAB_GREPTIME_TOKEN WOTEX_LAB_GREPTIME_QUERY_TOKEN
+       WOTEX_LAB_GREPTIME_ADMIN_TOKEN WOTEX_LAB_OTLP_TOKEN)
+    |> Enum.map(&System.get_env/1)
+    |> Enum.reject(&is_nil/1)
+
+  with {:ok, tenants} <-
+         WotexLabWorkbench.Observability.HostedAccess.load(
+           System.get_env("WOTEX_LAB_HOSTED_TENANTS_FILE"),
+           reserved_tokens
+         ),
+       {:ok, listener} <-
+         WotexLabWorkbench.Observability.HostedListener.configure(
+           port,
+           System.get_env("WOTEX_LAB_HOSTED_BIND"),
+           System.get_env("WOTEX_LAB_HOSTED_TLS_CERTFILE"),
+           System.get_env("WOTEX_LAB_HOSTED_TLS_KEYFILE")
+         ),
+       provider <-
+         (case System.get_env("WOTEX_LAB_HOSTED_PROVIDER") do
+            "codex_then_ollama" -> :codex_then_ollama
+            "ollama" -> :ollama
+            _ -> :invalid
+          end),
+       true <- provider in [:codex_then_ollama, :ollama],
+       endpoint_port = System.get_env("PORT") || "4000",
+       {:ok, command} <-
+         WotexLabWorkbench.Investigation.HostedCommand.configure(
+           runner: System.get_env("WOTEX_LAB_HOSTED_RUNNER"),
+           runner_sha256: System.get_env("WOTEX_LAB_HOSTED_RUNNER_SHA256"),
+           runtime: System.get_env("WOTEX_LAB_HOSTED_ESCRIPT"),
+           runtime_sha256: System.get_env("WOTEX_LAB_HOSTED_ESCRIPT_SHA256"),
+           worker: System.get_env("WOTEX_LAB_HOSTED_WORKER"),
+           worker_sha256: System.get_env("WOTEX_LAB_HOSTED_WORKER_SHA256"),
+           work_root: System.get_env("WOTEX_LAB_HOSTED_WORK_ROOT"),
+           provider_url:
+             System.get_env("WOTEX_LAB_HOSTED_PROVIDER_URL") ||
+               "http://127.0.0.1:#{endpoint_port}/api/internal/beamlens/v1",
+           query_url:
+             System.get_env("WOTEX_LAB_HOSTED_QUERY_URL") ||
+               "http://127.0.0.1:#{endpoint_port}/api/internal/hosted-investigation/v1/query",
+           timeout_ms: 30_000
+         ) do
+    config :wotex_lab_workbench,
+      metrics_hosted: [
+        tenants: tenants,
+        listener: listener,
+        command: command,
+        provider: provider
+      ],
+      hosted_investigation_enabled: true
+  else
+    _ ->
+      raise "hosted access requires a digest-only tenant file, TLS listener, explicit provider " <>
+              "and full-digest native runner, Escript runtime and worker artifacts"
   end
 end
 

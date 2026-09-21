@@ -125,8 +125,8 @@ unavailable receipts fail the sample; the sampler counts failures and subsequent
 gaps, preserves one-time stale markers and exposes evictions through history.
 Its fixed instance is `workbench`, not the current browser session. No browser
 route reads this host-wide history; only the separately activated loopback
-query listener described below does. Remote query authentication and tenant
-isolation remain separate work. Restarting the optional supervisor discards its history;
+query listener described below does. Public tenants use the durable-only
+gateway described below. Restarting the optional supervisor discards its history;
 neither sampling nor dataframe conversion makes it durable or training data.
 
 Set `WOTEX_LAB_GREPTIME_URL` to the exact local endpoint
@@ -225,8 +225,8 @@ modules. Copied gateway PIDs do not authorize a different process. This local
 operator API is not exposed by a browser event, HTTP route or MCP tool, and
 does not imply hostile shared-VM isolation.
 
-The BeamLens profile is trusted-local only and requires all four explicit
-settings:
+The browser BeamLens profile is trusted-local only and requires all four
+explicit settings:
 
 ```console
 WOTEX_LAB_PROMEX=1 \
@@ -254,9 +254,9 @@ returns an owner-only reference, and sends
 run context and replaces the BeamLens agents after every terminal state.
 Session expiry/revocation terminates the room-bound worker. The four custom
 callbacks cannot issue Actions or select scope/endpoints. BeamLens
-0.3.1 nevertheless adds node/OS/uptime callbacks and starts its log store; that
-explicit disclosure is why this profile is not admitted for shared hosted
-tenants.
+0.3.1 nevertheless adds node/OS/uptime callbacks and starts its log store. The
+public profile below confines those processes to a new external VM for each
+request instead of sharing this trusted-local tree.
 
 Before a question is submitted, the composer states whether investigation data
 leaves this host. With `codex_then_ollama` it does: Codex is attempted first,
@@ -274,6 +274,100 @@ approval seam. A finding appears only when it cites `sha256:` digests that
 this investigation received from its run summaries or callbacks. Other findings
 are withheld and counted under missing evidence. When no finding remains, the
 answer is marked unsupported.
+
+## Public tenant metrics and investigations
+
+The public profile reads only a configured durable receiver. It never exposes
+the Workbench's volatile history or accepts a browser, scrape, operator-query,
+Greptime write/query/admin or OTLP credential as a tenant credential.
+
+Build and qualify the target-native worker from the repository root. Both
+commands are local and offline; neither publishes or adopts an artifact.
+
+```console
+mix pkg wotex-lab wotex.lab.hosted.build \
+  --workspace /srv/wotex/hosted-investigation \
+  --runtime /opt/erlang/bin/escript
+
+mix pkg wotex-lab wotex.lab.hosted.check \
+  --workspace /srv/wotex/hosted-investigation \
+  --runtime /opt/erlang/bin/escript
+```
+
+The workspace contains `native-build.json` and two executables under
+`output/bin`. Copying the files elsewhere changes the configured paths but not
+their required full SHA-256 digests. The Escript runtime must remain in its
+installed Erlang tree; copying that executable alone can break its runtime
+lookup. The build task accepts only the repository's pinned Erlang, Elixir and
+Rust versions, clears ambient compiler flags and performs clean Mix, Rebar and
+Cargo builds in private directories. It verifies each precompiled NIF against
+the dependency's checked-in checksum before copying it into a private read-only
+cache, disables network retrieval, and records those inputs in
+`native-build.json`. The final Escript contains only the hosted worker, the Lab
+metric modules it calls and their runtime dependencies.
+
+Provision a JSON file owned by the Workbench account and readable only by that
+account. It contains digests, not Bearer tokens:
+
+```json
+{
+  "schema_version": "wotex-lab-hosted-tenants/v1",
+  "tenants": [
+    {
+      "id": "tenant-a",
+      "instance": "tenant-a-metrics",
+      "token_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
+```
+
+Replace the example digest with the lowercase SHA-256 of a randomly generated
+43–128 character URL-safe token. Keep the token in the client secret store; do
+not put it in this file or the Workbench environment. Tenant ids, instances and
+digests must each be unique, and a tenant token must differ from every other
+Workbench credential.
+
+The profile requires the durable reader settings described above and these
+additional values:
+
+```console
+WOTEX_LAB_HOSTED_PORT=4443 \
+WOTEX_LAB_HOSTED_BIND=0.0.0.0 \
+WOTEX_LAB_HOSTED_TLS_CERTFILE=/etc/wotex/tls/server.pem \
+WOTEX_LAB_HOSTED_TLS_KEYFILE=/etc/wotex/tls/server-key.pem \
+WOTEX_LAB_HOSTED_TENANTS_FILE=/etc/wotex/hosted-tenants.json \
+WOTEX_LAB_HOSTED_PROVIDER=codex_then_ollama \
+WOTEX_LAB_HOSTED_RUNNER=/srv/wotex/hosted-investigation/output/bin/wotex-hosted-investigation-runner \
+WOTEX_LAB_HOSTED_RUNNER_SHA256=sha256:<full-runner-digest> \
+WOTEX_LAB_HOSTED_ESCRIPT=/opt/erlang/bin/escript \
+WOTEX_LAB_HOSTED_ESCRIPT_SHA256=sha256:<full-runtime-digest> \
+WOTEX_LAB_HOSTED_WORKER=/srv/wotex/hosted-investigation/output/bin/wotex-lab-hosted-worker \
+WOTEX_LAB_HOSTED_WORKER_SHA256=sha256:<full-worker-digest> \
+WOTEX_LAB_HOSTED_WORK_ROOT=/var/lib/wotex/hosted-work \
+mix phx.server
+```
+
+Create the work root before startup, make it a real directory rather than a
+symlink, and grant access only to the Workbench account. The configured runner,
+runtime and worker must be stable regular files without group or other write
+permission. The tenant file and TLS private key must have no group or other
+permissions; the certificate must not be group- or other-writable.
+
+Use `WOTEX_LAB_HOSTED_PROVIDER=ollama` to prohibit Codex. The internal provider
+and query bridge URLs default to the Workbench endpoint on `PORT`; override
+`WOTEX_LAB_HOSTED_PROVIDER_URL` and `WOTEX_LAB_HOSTED_QUERY_URL` only with exact
+loopback URLs when the endpoint uses another local topology.
+
+The TLS listener serves only `POST /v1/query` and
+`POST /v1/investigations`. Authentication binds the tenant's configured metric
+instance before decoding the query. Query bodies cannot select an instance,
+receiver, database, endpoint, credential or limit. Investigation bodies contain
+only `prompt`, `current` and `baseline`. Each investigation starts a fresh
+external BEAM VM under the native process-tree custodian; the worker receives
+expiring loopback capabilities and no tenant, receiver or provider credential.
+The [WLB.10 contract](../../../../docs/packages/wotex-lab/specs/WLB.10-metrics-storage-and-ai-inspection.md#public-tenant-gateway)
+defines the request, rate, concurrency, resource and evidence limits.
 
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser

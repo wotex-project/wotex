@@ -15,6 +15,13 @@ defmodule WotexLabWorkbench.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
+      escript: [
+        main_module: WotexLabWorkbench.Investigation.HostedWorker,
+        name: "wotex-lab-hosted-worker",
+        path: System.get_env("WOTEX_LAB_HOSTED_WORKER_OUTPUT") || "wotex-lab-hosted-worker",
+        app: nil,
+        include_priv_for: [:baml_elixir, :beamlens, :puck]
+      ],
       test_coverage: [tool: ExCoveralls],
       dialyzer: [plt_file: {:no_warn, "priv/plts/dialyxir.plt"}, plt_add_apps: [:mix, :ex_unit]],
       releases: [wotex_lab_workbench: [include_executables_for: [:unix], strip_beams: true]]

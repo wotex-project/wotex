@@ -15,7 +15,9 @@ defmodule Wotex.Lab.Check.Package do
                priv/conformance/native/src/main.rs priv/conformance/native/src/config.rs
                priv/conformance/native/src/accounting.rs
                priv/conformance/native/src/bin/reference_runner.rs
+               priv/conformance/native/src/bin/hosted_investigation_runner.rs
                priv/conformance/native/tests/reference_runner.rs
+               priv/conformance/native/tests/hosted_investigation_runner.rs
                priv/fixtures/thermal/manifest.json priv/fixtures/thermal/expected-output.json
                priv/cookbooks/thermal-nx.livemd priv/cookbooks/smart-room.livemd)
   # Documentation reaches consumers through HexDocs, never the archive; no
@@ -57,9 +59,11 @@ defmodule Wotex.Lab.Check.Package do
                              priv/conformance/native/src/main.rs
                              priv/conformance/native/src/config.rs
                              priv/conformance/native/src/accounting.rs
+                             priv/conformance/native/src/bin/hosted_investigation_runner.rs
                              priv/conformance/native/src/bin/reference_runner.rs
                              priv/conformance/native/probes/main.rs
                              priv/conformance/native/tests/lifecycle.rs
+                             priv/conformance/native/tests/hosted_investigation_runner.rs
                              priv/conformance/native/tests/reference_runner.rs) do
         abort("unexpected containment artifact (source-only profile): #{relative}")
       end

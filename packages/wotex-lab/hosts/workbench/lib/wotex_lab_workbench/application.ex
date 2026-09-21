@@ -20,6 +20,9 @@ defmodule WotexLabWorkbench.Application do
   `metrics_query` adds a separate loopback operator query listener; it needs
   local history or durable reads and a credential different from the scrape
   credential.
+  `metrics_hosted` adds the public TLS tenant listener and a one-request
+  external BeamLens worker. It requires durable reads; no tenant can reach the
+  host-wide volatile history or select its metric instance.
   BeamLens additionally requires explicit activation plus local history, and
   starts only its bounded trusted-operator skill/provider bridge processes.
   `metrics_otlp` adds the base library's OTLP exporter with the closed
@@ -81,10 +84,12 @@ defmodule WotexLabWorkbench.Application do
     beamlens? = Keyword.fetch!(env, :beamlens_enabled)
     query = Keyword.fetch!(env, :metrics_query)
     durable_query = Keyword.fetch!(env, :metrics_durable_query)
+    hosted = Keyword.fetch!(env, :metrics_hosted)
 
     with :ok <- observability_requirements(promex?, history?, scrape, durable, beamlens?),
          :ok <- durable_query_requirements(promex?, durable_query),
          :ok <- query_requirements(history? or durable_query != false, scrape, query),
+         :ok <- hosted_requirements(durable_query, hosted),
          do: observability_children(promex?, history?, scrape, durable, beamlens?, env)
   end
 
@@ -102,7 +107,8 @@ defmodule WotexLabWorkbench.Application do
           durable: durable,
           durable_query: Keyword.fetch!(env, :metrics_durable_query),
           beamlens: beamlens,
-          query: Keyword.fetch!(env, :metrics_query)}
+          query: Keyword.fetch!(env, :metrics_query),
+          hosted: Keyword.fetch!(env, :metrics_hosted)}
        ]}
     end
   end
@@ -134,6 +140,10 @@ defmodule WotexLabWorkbench.Application do
       do: {:error, :metrics_query_requires_distinct_credential},
       else: :ok
   end
+
+  defp hosted_requirements(_, false), do: :ok
+  defp hosted_requirements(false, _), do: {:error, :hosted_access_requires_durable_query}
+  defp hosted_requirements(_, _), do: :ok
 
   defp otlp(false), do: {:ok, []}
 

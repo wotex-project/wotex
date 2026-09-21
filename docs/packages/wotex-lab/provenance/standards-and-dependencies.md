@@ -253,8 +253,8 @@ MCP/LLM cancellation evidence. No dependency or lockfile changed.
 
 ### BeamLens integration admission
 
-Observation date: 2026-09-08. Upstream tagged 0.3.1 is now exactly locked in the
-Workbench reference host. Its
+Observation date: 2026-09-21. Upstream tagged 0.3.1 remains the latest Hex
+release and is exactly locked in the Workbench reference host. Its
 [main supervisor](https://github.com/beamlens/beamlens/blob/v0.3.1/lib/beamlens/supervisor.ex)
 starts a log store independently of the selected skills and uses fixed global
 names. An empty skill list selects the built-in set; it does not disable it.
@@ -281,16 +281,25 @@ Req transport tests cover restrictions, identity omission, API-key refusal,
 quota exhaustion, exact-model admission, malformed responses and bounded
 worker death. No live provider was invoked during acceptance.
 
-The activated tree contains the exact custom skill, coordinator/operator,
-BeamLens task supervisor/registry and the dependency's unavoidable log store.
-Tests assert that anomaly, tracer, exception and VM-event processes do not
-start. They also assert, rather than hide, the upstream base callbacks
+The activated trusted-local tree contains the exact custom skill,
+coordinator/operator, BeamLens task supervisor/registry and the dependency's
+unavoidable log store. Tests assert that anomaly, tracer, exception and
+VM-event processes do not start. They also assert the upstream base callbacks
 `get_current_time` and `get_node_info`. Node name, OS and uptime can therefore
 reach the selected model. The profile is admitted only when
-`WOTEX_LAB_BEAMLENS=trusted-local`; this disclosure keeps shared/disposable
-hosted tenants blocked pending an upstream change or separately isolated
-worker. The trusted-local browser can start only its revalidated session-room
-investigation; no public or shared-tenant route is admitted.
+`WOTEX_LAB_BEAMLENS=trusted-local`, and its browser entry point starts only a
+revalidated session-room investigation.
+
+The public profile does not place another tenant in that VM. Every request
+starts a target-specific Escript containing the hosted skill in a new external
+BEAM VM. The dependency's global names, base callbacks and empty log store are
+confined to that worker and disappear at exit. The worker has no tenant,
+receiver or provider credential; random loopback capabilities bind its provider
+and durable-query calls to the parent request. A Rust custodian owns the process
+group, bounds wall time, CPU, resident memory, descendants, file descriptors
+and output, and kills observed descendants before returning.
+`Investigation.HostedCommand` re-verifies the full digest of the custodian,
+Escript runtime and worker archive for every invocation.
 
 The custom skill exposes exactly the four WLB callbacks. Metric calls use
 one-call owner-bound gateways and fixed five-minute/query limits. Run summaries
@@ -309,6 +318,16 @@ baseline only within the same experiment and keeps the LiveView process as the
 broker owner. Tests cover hostile answer text, ignored model URLs, structured
 fact/hypothesis presentation, successful completion and worker-killing cancel.
 
+Hosted acceptance builds the native custodian and Escript from source, checks
+the generated manifest and digests, and runs the external BeamLens/BAML worker
+through the real loopback provider controller with a fake provider transport.
+The builder uses clean private Mix, Rebar and Cargo paths, a checksum-verified
+private NIF cache and a closed Escript archive. Separate tests cover the
+digest-only tenant registry, server-bound durable queries, a real TLS 1.3
+listener, cross-tenant substitution, capability exhaustion, output overflow,
+timeout and descendant cleanup. The executed artifact is Darwin aarch64. Linux
+targets and a deployed public receiver remain unrun evidence cells.
+
 The lock addition is BeamLens 0.3.1 plus `baml_elixir` 1.0.0-pre.27, `lua`
 0.4.0, `luerl` 1.5.1, `nimble_ownership` 1.0.2, `puck` 0.2.25, `recon` 2.5.6
 and `zoi` 0.18.7. The inspected package licenses are Apache-2.0 except recon's
@@ -319,13 +338,9 @@ This is not Linux or other-architecture evidence. `mix hex.audit` and
 `mix deps.audit` reported no matching vulnerability on 2026-09-08; Hex also
 warned that the retained Decimal advisory acknowledgement no longer matched
 its current feed, which does not override the separately recorded maintainer
-range conflict. Fake provider/agent workers and real BeamLens/metric processes
-are final default acceptance. During development, one initial bridge smoke run
-reached the existing signed-in Codex session before the integration test
-installed its fake runner; it received only the fixed BeamLens prompt and
-`finish now` test reason, returned `done`, and made no tool call. The corrected
-test asserts the fake model identity so a live provider cannot silently satisfy
-this gate, and the incidental turn is not counted as acceptance evidence.
+range conflict. Fake provider and agent workers plus real BeamLens and metric
+processes are the default acceptance path; the integration test asserts the
+fake model identity so a live provider cannot satisfy the gate.
 
 ## Acknowledged dependency advisories
 

@@ -1,0 +1,192 @@
+defmodule Wotex.Lab.HostedArtifactTest do
+  @moduledoc false
+
+  use ExUnit.Case, async: false
+
+  alias Mix.Tasks.Wotex.Lab.Hosted.Artifact
+
+  setup do
+    root =
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-hosted-artifact-test-#{Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)}"
+      )
+
+    File.mkdir!(root)
+    on_exit(fn -> File.rm_rf!(root) end)
+
+    %{
+      root: root,
+      workspace: Path.join(root, "artifact"),
+      second_workspace: Path.join(root, "artifact-repeat")
+    }
+  end
+
+  test "argument admission is closed and requires absolute paths", %{workspace: workspace} do
+    runtime = runtime!()
+
+    assert {^workspace, ^runtime} =
+             Artifact.arguments(["--workspace", workspace, "--runtime", runtime])
+
+    for args <- [
+          [],
+          ["--workspace", workspace],
+          ["--runtime", runtime],
+          ["--workspace", workspace, "--runtime", runtime, "extra"],
+          ["--workspace", workspace, "--runtime", runtime, "--unknown", "x"]
+        ] do
+      assert_raise Mix.Error, fn -> Artifact.arguments(args) end
+    end
+  end
+
+  test "Escript normalization rejects malformed and duplicate archive entries", %{root: root} do
+    malformed = Path.join(root, "malformed")
+    File.write!(malformed, "not-an-escript", [:exclusive])
+
+    assert_raise Mix.Error, ~r/could not be normalized/, fn ->
+      Artifact.normalize_escript!(malformed)
+    end
+
+    duplicate = Path.join(root, "duplicate")
+    write_escript!(duplicate, [{~c"main.beam", "first"}, {~c"main.beam", "second"}])
+
+    assert_raise Mix.Error, ~r/duplicate paths/, fn ->
+      Artifact.normalize_escript!(duplicate)
+    end
+
+    absolute = Path.join(root, "absolute")
+    write_escript!(absolute, [{~c"main.beam", "body"}])
+
+    absolute
+    |> File.read!()
+    |> String.replace("main.beam", "../x.beam")
+    |> then(&File.write!(absolute, &1))
+
+    assert_raise Mix.Error, ~r/local entry is invalid/, fn ->
+      Artifact.normalize_escript!(absolute)
+    end
+  end
+
+  @tag :integration
+  @tag timeout: 300_000
+  test "the source build qualifies its exact outputs and rejects mutation", %{
+    workspace: workspace,
+    second_workspace: second_workspace
+  } do
+    runtime = runtime!()
+    assert :ok = Artifact.build(workspace, runtime)
+
+    manifest =
+      workspace
+      |> Path.join("native-build.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert manifest["schema_version"] == "wotex-lab-hosted-artifact/v1"
+    assert manifest["build_environment"] == "dev"
+    assert manifest["cargo_version"] == "cargo 1.97.1 (c980f4866 2026-06-30)"
+    assert manifest["elixir_version"] == "1.20.2"
+    assert manifest["otp_release"] == "29"
+    assert manifest["rustc_version"] == "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+    assert manifest["runtime"]["sha256"] =~ ~r/\Asha256:[0-9a-f]{64}\z/
+
+    assert Enum.map(manifest["precompiled_inputs"], & &1["dependency"]) == [
+             "baml_elixir",
+             "ex_maude",
+             "explorer"
+           ]
+
+    assert Enum.all?(manifest["precompiled_inputs"], fn input ->
+             input["sha256"] =~ ~r/\Asha256:[0-9a-f]{64}\z/ and input["size"] > 0
+           end)
+
+    assert Enum.map(manifest["outputs"], & &1["path"]) == [
+             "output/bin/wotex-hosted-investigation-runner",
+             "output/bin/wotex-lab-hosted-worker"
+           ]
+
+    entries =
+      workspace
+      |> Path.join("output/bin/wotex-lab-hosted-worker")
+      |> escript_entries!()
+
+    refute Enum.any?(entries, &String.starts_with?(&1, "makeup/"))
+    refute Enum.any?(entries, &String.starts_with?(&1, "nx/"))
+    refute "puck/ebin/Elixir.Puck.Baml.beam" in entries
+
+    assert Enum.filter(entries, &String.starts_with?(&1, "wotex_lab_workbench/")) == [
+             "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.BeamlensSupervisor.beam",
+             "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.ContextStore.beam",
+             "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.HostedSkill.beam",
+             "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.HostedWorker.beam",
+             "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.OperatorRunner.beam"
+           ]
+
+    assert :ok = Artifact.check(workspace, runtime)
+
+    with_environment(
+      %{
+        "ERL_COMPILER_OPTIONS" => "[debug_info]",
+        "RUSTFLAGS" => "-C debuginfo=2",
+        "CFLAGS" => "-DWOTEX_AMBIENT_FLAG=1"
+      },
+      fn -> assert :ok = Artifact.build(second_workspace, runtime) end
+    )
+
+    repeated =
+      second_workspace
+      |> Path.join("native-build.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert repeated == manifest
+
+    worker = Path.join(workspace, "output/bin/wotex-lab-hosted-worker")
+    File.write!(worker, "changed", [:append])
+
+    assert_raise Mix.Error, ~r/output digest changed/, fn ->
+      Artifact.check(workspace, runtime)
+    end
+
+    assert_raise Mix.Error, ~r/workspace already exists/, fn ->
+      Artifact.build(workspace, runtime)
+    end
+  end
+
+  defp runtime! do
+    case System.find_executable("escript") do
+      nil -> flunk("escript runtime is unavailable")
+      runtime -> runtime
+    end
+  end
+
+  defp write_escript!(path, entries) do
+    {:ok, {_, archive}} = :zip.create(~c"worker.zip", entries, [:memory])
+
+    :ok =
+      :escript.create(String.to_charlist(path),
+        shebang: :default,
+        comment: [],
+        emu_args: ~c"-escript main main",
+        archive: archive
+      )
+  end
+
+  defp escript_entries!(path) do
+    {:ok, parts} = :escript.extract(String.to_charlist(path), [])
+    {:ok, files} = :zip.extract(Keyword.fetch!(parts, :archive), [:memory])
+    Enum.map(files, fn {name, _} -> to_string(name) end)
+  end
+
+  defp with_environment(values, function) do
+    previous = Map.take(System.get_env(), Map.keys(values))
+
+    try do
+      Enum.each(values, fn {key, value} -> System.put_env(key, value) end)
+      function.()
+    after
+      Enum.each(values, fn {key, _} -> System.delete_env(key) end)
+      Enum.each(previous, fn {key, value} -> System.put_env(key, value) end)
+    end
+  end
+end

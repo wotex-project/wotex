@@ -256,11 +256,12 @@ unsplit provenance and never start training implicitly. The accepted host
 composes custom PromEx panels, bounded history,
 the self-scraper/remote-write bridge and an explicitly activated trusted-local
 BeamLens skill/provider profile with owner-bound browser presentation.
-Isolated hosted-tenant BeamLens and public HTTP query bindings remain planned
-host work. No ELK,
-mandatory Prometheus
-server or separate collector. GreptimeDB is local/self-hosted, not embedded in
-the BEAM. Prompt results cite measurements and cannot invoke Actions. Plain
+The public TLS tenant gateway binds digest-authenticated callers to durable
+metric instances and runs each hosted BeamLens investigation in a verified
+one-request external VM under a native process-tree custodian. No ELK stack,
+Prometheus server or separate collector is mandatory. GreptimeDB is
+local/self-hosted, not embedded in the BEAM. Prompt results cite measurements
+and cannot invoke Actions. Plain
 experiments work without an LLM or durable database. See
 [metrics and AI](../../docs/packages/wotex-lab/specs/WLB.10-metrics-storage-and-ai-inspection.md) and
 [workbench/design system](../../docs/packages/wotex-lab/specs/WLB.11-workbench-and-design-system.md) for

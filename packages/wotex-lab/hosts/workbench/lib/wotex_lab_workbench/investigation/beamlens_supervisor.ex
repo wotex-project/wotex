@@ -1,11 +1,13 @@
 defmodule WotexLabWorkbench.Investigation.BeamlensSupervisor do
   @moduledoc """
-  Bounded BeamLens 0.3.1 tree for the single trusted-host operator.
+  Bounded BeamLens 0.3.1 tree for one admitted operator.
 
   BeamLens does not propagate documented per-run iteration options to its
   static processes. This composition uses its public building blocks so the
   coordinator and operator both carry the real eight-turn limit. Reset replaces
   both processes, cancelling queued/current work and discarding conversation.
+  The default skill is the trusted-local WoTEx skill. The hosted Escript may
+  select the hosted skill inside its isolated, one-request VM.
   """
 
   use Supervisor
@@ -51,7 +53,8 @@ defmodule WotexLabWorkbench.Investigation.BeamlensSupervisor do
   @impl Supervisor
   def init(opts) do
     registry = Keyword.fetch!(opts, :client_registry)
-    :persistent_term.put({Beamlens.Supervisor, :skills}, [Skill])
+    skill = Keyword.get(opts, :skill, Skill)
+    :persistent_term.put({Beamlens.Supervisor, :skills}, [skill])
 
     children = [
       {Task.Supervisor, name: Beamlens.TaskSupervisor},
@@ -59,11 +62,11 @@ defmodule WotexLabWorkbench.Investigation.BeamlensSupervisor do
       Beamlens.Skill.Logger.LogStore,
       {Beamlens.Coordinator,
        name: Beamlens.Coordinator,
-       skills: [Skill],
+       skills: [skill],
        max_iterations: @max_iterations,
        client_registry: registry},
       {Beamlens.Operator.Supervisor,
-       skills: [[skill: Skill, max_iterations: @max_iterations]], client_registry: registry}
+       skills: [[skill: skill, max_iterations: @max_iterations]], client_registry: registry}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

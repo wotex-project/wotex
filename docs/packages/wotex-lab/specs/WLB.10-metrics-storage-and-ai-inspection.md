@@ -1,35 +1,30 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.29.0. Contract: accepted. Source status: the metric
-catalogue, the in-process collector, the bounded ETS history with its read-only
-query contract and atomic immutable dataset export, the exposition parser, the
-remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
-are implemented in the base library;
-the Workbench implements custom PromEx definitions, bounded collection,
-catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
-history activation, a protected local scrape listener, bounded local and
-destination-pinned hosted/TLS GreptimeDB remote-write exporters and expiring
-local-operator query capabilities.
-The Workbench also implements the explicitly activated
-trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
-owner-bound no-queue broker, an active-scope capability-protected loopback
-provider bridge, explicitly selected
-Codex-plan/local-Ollama providers and trusted-local browser presentation.
-A separately activated loopback operator listener binds the query descriptor
-to HTTP. `Wotex.Lab.Metrics.Retention` and an operator-invoked Workbench call
-provision a durable database TTL on a local or hosted receiver. Both operator listeners
-can instead use a mutual-TLS remote transport with peer ranges. The base
-library exports Lab spans and exception logs over OTLP, and the Workbench can
-activate that exporter for a local or an authenticated hosted receiver.
-`Wotex.Lab.Metrics.DurableQuery` supplies fixed durable read templates, and the
-operator listener answers them from a local or explicitly selected hosted
-receiver through the Workbench durable reader. The Workbench control API's
-`queryMetrics` operation binds the descriptor over HTTP to a browser session's
-room history. Isolated hosted-tenant BeamLens and public HTTP query bindings
-remain planned; the MCP `query_metrics` tool binds the local gateway. Hosted exporter, reader and
-provisioning source is not deployment, retention or durable-row evidence. A template export
-alone is not proof of a Grafana import or query execution; the separate
-Grafana lane below supplies that evidence for one pinned server cohort.
+Specification version: 0.30.0. Contract: accepted. Source status: implemented.
+
+The base library owns the metric catalogue, bounded collection and ETS history,
+read-only query contract, immutable dataset export, Prometheus exposition,
+remote-write encoding, GreptimeDB bridge, retention, durable query templates
+and OTLP export. The Workbench owns PromEx collection and panels, Grafana
+exports, local and hosted GreptimeDB transports, protected operator listeners,
+session-room queries and the trusted-local BeamLens profile.
+
+The Workbench also provides a separate public TLS tenant gateway. A digest-only
+registry binds each credential to one durable metric instance. Public queries
+cannot select scope, receiver, database or limits. Public investigations run in
+a freshly started external BEAM VM under a native process-tree custodian. The
+worker receives expiring loopback provider and query capabilities, never tenant,
+receiver or provider credentials. `tooling/packages.yaml` and
+`priv/native-artifacts/hosted-investigation.json` admit its target-specific
+artifact profile.
+
+Hosted exporter, reader, gateway and provisioning source is not proof of a
+deployed receiver, retained row or public adoption. The executed source evidence
+covers the local TLS listener, target-native artifact construction, the isolated
+worker and its loopback bridges on the recorded runner. Linux targets and a
+public hosted receiver remain separate evidence cells. A dashboard template is
+not Grafana execution evidence; the pinned Grafana lane below supplies that
+evidence for one server cohort.
 
 ## Stack and ownership
 
@@ -160,8 +155,11 @@ no per-session atoms/modules are generated. Each Workbench session room
 instead owns an attributed collector and a separate bounded history under a
 random instance identifier, both discarded with the room (WLB.11). Events from
 Things and shared processes started under the host instance are outside that
-attribution. Slot expiry for shared histories and hosted tenant collection
-remain planned. VM metrics are not currently enabled.
+attribution. The implemented profiles do not multiplex several tenants into a
+shared collector slot: browser rooms own and discard their collectors, while
+the hosted gateway reads operator-provisioned durable instances. A future host
+that reuses shared collector slots must define expiry and reset semantics. VM
+metrics are not currently enabled.
 
 Counters preserve reset identity and cumulative semantics. Histograms use
 versioned fixed buckets; percentile queries derive from bucket counts, never
@@ -499,9 +497,8 @@ opens one gateway per call from a host-bound history and scope. The operator
 HTTP query binding below opens one inspection scope per request, for local
 history or the configured durable receiver. The WLB.07 `queryMetrics` control
 operation opens one gateway per request over the bearer session's attributed
-room history, a session-scoped binding rather than a hosted tenant boundary.
-Public HTTP query bindings and non-local or multi-tenant BeamLens callers remain
-planned.
+room history. The public tenant gateway has a separate credential, listener,
+rate policy and durable-only scope described below.
 
 `Wotex.Lab.Metrics.DurableQuery` answers the same admitted descriptor from a
 PromQL-compatible durable receiver through fixed read templates and a host
@@ -592,9 +589,8 @@ the descriptor's session scope from authenticated server context. Stores
 without that identifier remain storage-only and return `scope_unbound`; a
 different instance or snapshot slot returns `scope_denied`. An identifier is
 not an authorization credential and shared-BEAM processes remain trusted.
-Transport authentication and tenant isolation still belong to their unimplemented
-gateway/host profiles. The local expiring capability below is not a substitute
-for either.
+The operator and public tenant listeners supply distinct transport boundaries.
+The local expiring capability below is not a substitute for either.
 
 `Wotex.Lab.Metrics.Request.decode/3` admits only eight string-keyed fields:
 schema version, catalogue metric, aggregation, finite filters, UTC endpoints,
@@ -637,8 +633,8 @@ access. With durable reads also configured, the broker starts even without
 history, and `open/1` takes `source: :durable` to bind the durable reader
 instead; an unconfigured source is `inspection_source_unavailable`. The
 browser's saved panels query only the session room's attributed history
-described in WLB.11. Hosted tenant isolation and investigation-specific
-provider/cost/context budgets remain separate acceptance work.
+described in WLB.11. Public tenant queries and investigations use the separate
+durable-only gateway below.
 
 ### Operator HTTP query binding
 
@@ -677,6 +673,95 @@ accepts the mutual-TLS remote transport described with the scrape listener.
 Neither transport is a tenant endpoint; session-scoped HTTP reads use the
 WLB.07 `queryMetrics` control operation instead.
 
+### Public tenant gateway
+
+`Observability.HostedListener` is a separate HTTPS listener activated by
+`WOTEX_LAB_HOSTED_PORT`. Startup also requires an IP-literal bind, certificate
+and key files, a configured durable reader, an explicit investigation provider,
+the tenant registry and the three verified worker artifacts described below.
+The listener serves TLS 1.3 with no session tickets, HTTP/2, WebSockets,
+compression or keepalive. It admits 64 connections and one HTTP/1 request per
+connection. Query bodies are at most 8 KiB; investigation bodies are at most
+16 KiB. Requests require one Bearer header, `application/json`, one positive
+`Content-Length`, no query string, cookie, `Origin`, `Expect` or
+`Transfer-Encoding`, and at most 16 headers. Responses are non-cacheable and
+carry no cookie.
+
+`Observability.HostedAccess` loads one absolute, regular, stable file of at most
+64 KiB using schema `wotex-lab-hosted-tenants/v1`. The document contains 1–64
+exact entries with `id`, `instance` and `token_sha256`; ids, instances and
+digests are each unique. Tokens are 43–128 URL-safe characters, but only their
+full SHA-256 digests enter the file or process state. The file must have no
+group or other permissions. A tenant digest must not match the configured
+scrape, operator-query, Greptime write/query/admin or OTLP credential.
+Authentication uses constant-time digest comparison and returns an owner-bound
+lease. Owner death and the request's `after` block release active capacity,
+including malformed and interrupted bodies after authentication.
+
+`POST /v1/query` binds the authenticated entry's durable executor and instance
+to a fresh `Metrics.Gateway`. The body is only the closed request descriptor;
+scope, endpoint, receiver, database, credential and limits cannot be supplied.
+Each query has one call, one worker, a six-hour range, 5-second minimum step,
+2,000-point and 256 KiB output ceilings, and a two-second deadline. A tenant may
+run two queries concurrently and admit 60 per monotonic one-minute window.
+There is no public path to ETS history.
+
+`POST /v1/investigations` accepts only `prompt`, `current` and `baseline`.
+Prompts are non-blank UTF-8 binaries of at most 4 KiB; the two optional JSON
+maps share an 8 KiB ceiling. A tenant may run one investigation and admit four
+per monotonic hour. The host admits eight workers in total and queues none.
+Each active request owns two random 256-bit loopback capabilities, one for the
+selected provider and one for the server-bound query bridge. Each capability
+expires with the request and admits at most eight calls. The worker receives no
+tenant credential, durable-receiver credential, provider credential, database
+or endpoint choice.
+
+`Investigation.HostedCommand` verifies the full SHA-256 and stable file identity
+of the native custodian, Escript runtime and worker archive for every request.
+It creates a mode-0700 private directory, writes one mode-0600 request, removes
+the caller environment except the private home/temp path and fixed locale, and
+invokes the native custodian. A random result capability binds the worker's
+final frame, so dependency diagnostics on standard output cannot impersonate a
+result. Request files and private directories are removed on every terminal
+path.
+
+The Rust custodian creates a new session and process group. It enforces a
+30-second wall ceiling, a CPU limit derived from that ceiling, 1 GiB aggregate
+sampled RSS, 64 live descendants, 256 file descriptors and 256 KiB of captured
+output. Output is drained through a bounded in-memory reader; the output limit
+does not prevent the verified worker from extracting its embedded BAML NIF and
+skill resources into the private directory. Timeout, output, memory, process,
+signal and parent-loss outcomes remain distinct. The custodian kills the process
+group and every observed escaped descendant before returning `cleanup=ok`.
+
+`mix wotex.lab.hosted.build --workspace ABSOLUTE_NEW_DIRECTORY --runtime
+ABSOLUTE_ESCRIPT` builds the custodian offline and the target-specific Escript,
+then atomically installs the two executables with `native-build.json`. Clean
+private Mix and Rebar builds, a private Cargo target and a checksum-verified
+private NIF cache prevent repository build state and ambient compiler flags
+from entering the result. The Escript archive retains only the hosted worker,
+its five Lab metric contract modules and its admitted runtime dependencies;
+archive paths, counts, sizes, timestamps and ownership fields are checked and
+normalized.
+`mix wotex.lab.hosted.check` re-verifies those files and runs the one-request VM
+with unavailable loopback bridges; a successful check returns an admitted
+provider-unavailable result after complete cleanup. The
+`hosted-investigation` native-artifact descriptor supplies the root planner and
+identity contract through the `hosted-linux-x86-64`, `hosted-linux-aarch64` and
+`hosted-darwin-aarch64` targets. These targets bind the repository's exact
+Erlang, Elixir and Rust pins. Artifact construction does not publish or adopt
+it.
+
+`hosted_access_test.exs`, `hosted_listener_test.exs` and
+`hosted_investigation_test.exs` cover strict tenant documents, credential
+separation, rate and concurrency limits, owner death, framing, real TLS,
+cross-tenant scope substitution, capability exhaustion, the target-native
+builder and a complete external-worker/provider-bridge round trip. The Rust
+tests cover configuration, private files larger than the output ceiling,
+output overflow, timeout and descendant cleanup. These are local source and
+target-native results, not evidence of a deployed public receiver or another
+target architecture.
+
 Snapshots and query structs are revalidated at the execution boundary. Query
 samples must match the catalogue's type, finite labels and exact histogram
 buckets. A store permits 32 active query leases by default (hard ceiling 128),
@@ -700,15 +785,14 @@ arbitrary population of callers.
 BeamLens is a required reference integration with optional user activation.
 Use its public custom-skill callbacks and explicitly selected skills. Never
 start its default all-skills set: tracing, raw logs, exception stacks, arbitrary
-ETS/process inspection and automatic anomaly investigations are disabled in
-the disposable hosted profile. Dependency startup, global names and telemetry
-handlers require inspection in the admitted cohort. A host-scoped BeamLens
-service is not proof that BeamLens supports isolated per-instance supervisors.
-Untrusted hosted tenants require separate worker/OS isolation; shared-VM
-introspection is reserved for the trusted local operator profile. That profile
-is implemented. The trusted-local Workbench browser binds its already-verified
-session and room to the owner-bound `Investigation.Broker`; shared-host tenant
-isolation remains blocked.
+ETS/process inspection and automatic anomaly investigations are disabled. The
+trusted-local profile runs in the Workbench VM and binds its verified browser
+session and room to `Investigation.Broker`. Public tenant investigations never
+share that tree. Each starts a new external VM containing only the hosted skill,
+its request context and the dependency's required processes, then terminates
+the whole process tree. This is isolation from parent-BEAM globals and state;
+it is not a sandbox for unreviewed executable code.
+
 The 0.3.1 source review found unconditional log-store startup in the standard
 supervisor, inherited node-information callbacks and queued operator invocations
 whose caller timeout does not revoke the run. See the
@@ -719,9 +803,10 @@ coordinator/operator process state, admits no queue, and replaces both static
 agents after every completion, failure, cancellation, timeout or owner death.
 The unavoidable upstream log store still starts, and the upstream operator
 still merges `get_current_time` and `get_node_info` with the four custom
-callbacks. That node/OS/uptime disclosure is explicitly accepted only for the
-trusted-local profile and is a blocker for disposable hosted-tenant activation.
-No built-in skill, anomaly process, tracer, exception store or VM-event store
+callbacks. In the trusted-local profile those callbacks disclose the Workbench
+node, OS and uptime. In the public profile they describe the disposable worker;
+its new log store contains no parent-host logs and dies with the request. No
+built-in skill, anomaly process, tracer, exception store or VM-event store
 starts. No provider or key lookup occurs at boot.
 
 The custom skill exposes bounded `lab_metric_catalogue`, `lab_metric_query`,
@@ -735,8 +820,8 @@ query ceilings, then revokes it. Current/baseline summaries are supplied by the
 trusted server, canonicalized as JSON, content-addressed and limited to 8 KiB
 combined; the model can select only `current` or `baseline`. A 16 KiB cumulative
 callback-output budget makes repeated calls fail closed. Dependency base
-callbacks/node metadata remain the explicit trusted-local disclosure described
-above, not part of the custom callback claim.
+callbacks and node metadata remain outside the custom callback claim; their
+trusted-local and disposable-worker disclosures are stated above.
 
 The prompt entry point is on-demand. The implemented trusted-local budget is
 one investigation for the entire host, 30 seconds, 8 model turns/tool actions,
@@ -775,8 +860,8 @@ each admission consumes that request's eight-call budget. Missing, replayed
 outside the active scope and over-budget capabilities are refused. The bridge
 also rejects streaming/non-loopback/oversized messages and is inert when disabled.
 
-The admitted provider design follows the proven `goatmire-2026` boundary. A
-Codex App Server call must use an already signed-in ChatGPT-plan account,
+The provider boundary is explicit. A Codex App Server call must use an already
+signed-in ChatGPT-plan account,
 refuse API-key accounts and unavailable quota, create an ephemeral thread in a
 private empty directory, disable tools/search/connectors/inherited MCP servers,
 use read-only/no-network/no-approval policies, and close its owned stdio port.
@@ -883,7 +968,18 @@ credential sentinel;
 the same PromEx captures. The local
 protected query endpoint and TTL expiry have their own tests described above.
 `metrics_operator_transport_test.exs` covers the mutual-TLS scrape and query
-listeners. The Workbench `investigation_acceptance_test.exs` runs scripted
+listeners. `hosted_access_test.exs` and `hosted_listener_test.exs` cover the
+digest-only registry, credential separation, quotas, owner cleanup, public
+framing, server-bound durable scope and a real TLS 1.3 socket.
+`hosted_investigation_test.exs` builds the target-native artifact and runs the
+external VM through the real custodian and loopback provider bridge; its model
+transport is fake and its BeamLens/BAML worker is real. The package artifact
+test independently builds, qualifies and then corrupts an output to prove
+digest refusal. Native tests force output overflow and timeout while checking
+whole-tree cleanup. None of these tests claims another target architecture or a
+deployed public receiver.
+
+The Workbench `investigation_acceptance_test.exs` runs scripted
 agents through the real broker, context store, skill callbacks and query
 gateway. Its prompt corpus covers missing-mask spikes, warm-up versus inference
 latency, SSE drops, MQTT duplicates and dataset split leakage with an injected

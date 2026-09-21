@@ -74,6 +74,12 @@ native_artifact:
     darwin-clang:
       identity: "darwin-aarch64-xcode-command-line-tools-v1"
       inputs: ["tooling/packages.yaml"]
+    hosted-beam-rust-linux:
+      identity: "linux-erlang-29.0.4-elixir-1.20.2-rust-1.97.1-v1"
+      inputs: ["mise.toml", "rust-toolchain.toml"]
+    hosted-beam-rust-darwin:
+      identity: "darwin-aarch64-erlang-29.0.4-elixir-1.20.2-rust-1.97.1-v1"
+      inputs: ["mise.toml", "rust-toolchain.toml"]
     matter-linux-amd64:
       identity: "node-24-bookworm-gcc-12.2.0-gn-v1"
       inputs: ["tooling/native/docker/matter-sdk.Dockerfile", "packages/wotex-matter/test/support/software/sources.json"]
@@ -118,6 +124,30 @@ native_artifact:
       libc: libsystem
       abi: darwin
       toolchain: darwin-clang
+      system: host-darwin
+    hosted-linux-x86-64:
+      operating_system: linux
+      architecture: x86_64
+      endianness: little
+      libc: glibc
+      abi: gnu
+      toolchain: hosted-beam-rust-linux
+      system: host-linux
+    hosted-linux-aarch64:
+      operating_system: linux
+      architecture: aarch64
+      endianness: little
+      libc: glibc
+      abi: gnu
+      toolchain: hosted-beam-rust-linux
+      system: host-linux
+    hosted-darwin-aarch64:
+      operating_system: darwin
+      architecture: aarch64
+      endianness: little
+      libc: libsystem
+      abi: darwin
+      toolchain: hosted-beam-rust-darwin
       system: host-darwin
     ble-guest-x86-64:
       operating_system: linux
@@ -1181,6 +1211,7 @@ packages:
     native: true
     native_artifacts:
       - {profile: nerves-rpi4, descriptor: priv/native-artifacts/nerves-rpi4.json}
+      - {profile: hosted-investigation, descriptor: priv/native-artifacts/hosted-investigation.json}
     native_bench:
       # A crate of its own: the launcher has binary targets only, so the
       # benchmark includes its config.rs and accounting.rs by path.

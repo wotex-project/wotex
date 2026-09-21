@@ -2,6 +2,7 @@
 use serde_json::{json, Value};
 use std::{
     io::{self, BufRead, Write},
+    os::unix::fs::PermissionsExt,
     process::Command,
     time::Duration,
 };
@@ -10,6 +11,31 @@ fn main() -> io::Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("detached-child") {
         record_pid(&args[1], std::process::id())?;
+        std::thread::sleep(Duration::from_secs(30));
+        return Ok(());
+    }
+    if args.first().map(String::as_str) == Some("hosted-private-workspace") {
+        let cwd = std::env::current_dir()?;
+        let parent = std::fs::canonicalize(&args[1])?;
+        let home = std::fs::canonicalize(std::env::var_os("HOME").unwrap())?;
+        let temporary = std::fs::canonicalize(std::env::var_os("TMPDIR").unwrap())?;
+        assert_eq!(cwd.parent(), Some(parent.as_path()));
+        assert_eq!(home, cwd);
+        assert_eq!(temporary, cwd);
+        assert_eq!(std::fs::metadata(&cwd)?.permissions().mode() & 0o777, 0o700);
+        let resource = cwd.join("private-resource");
+        std::fs::write(&resource, vec![b'x'; 1_048_576])?;
+        assert_eq!(std::fs::metadata(resource)?.len(), 1_048_576);
+        println!("ok");
+        return Ok(());
+    }
+    if args.first().map(String::as_str) == Some("hosted-oversized-exit") {
+        io::stdout().write_all(&vec![b'x'; 8_192])?;
+        return Ok(());
+    }
+    if args.first().map(String::as_str) == Some("hosted-descendant") {
+        let child = Command::new("/bin/sleep").arg("30").spawn()?;
+        record_pid(&args[1], child.id())?;
         std::thread::sleep(Duration::from_secs(30));
         return Ok(());
     }

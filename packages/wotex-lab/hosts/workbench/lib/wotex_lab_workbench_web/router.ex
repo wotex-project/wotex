@@ -75,6 +75,7 @@ defmodule WotexLabWorkbenchWeb.Router do
   scope "/api/internal", WotexLabWorkbenchWeb do
     pipe_through(:internal_api)
     post("/beamlens/v1/chat/completions", InvestigationCompletionController, :create)
+    post("/hosted-investigation/v1/query", HostedInvestigationQueryController, :create)
   end
 
   scope "/api/v1", WotexLabWorkbenchWeb do

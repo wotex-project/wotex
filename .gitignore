@@ -20,6 +20,7 @@ __pycache__/
 .archive-check.*/
 .graph-check.*/
 .wotex-thread-*/
+.wotex-hosted-build-*/
 _site/
 tmp/
 # Dexter code index (mix index).

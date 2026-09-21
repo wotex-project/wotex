@@ -27,6 +27,10 @@ required-features = ["test-probes"]
 name = "wotex-reference-runner"
 path = "src/bin/reference_runner.rs"
 
+[[bin]]
+name = "wotex-hosted-investigation-runner"
+path = "src/bin/hosted_investigation_runner.rs"
+
 [profile.release]
 strip = true
 lto = true

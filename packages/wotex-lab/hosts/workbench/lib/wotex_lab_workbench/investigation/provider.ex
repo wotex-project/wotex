@@ -29,7 +29,9 @@ defmodule WotexLabWorkbench.Investigation.Provider do
   @doc "Completes through Codex plan access, falling back visibly to local Ollama."
   @spec complete([map()], keyword()) :: {:ok, String.t(), map()} | {:error, atom()}
   def complete(messages, opts \\ []) when is_list(messages) do
-    case config!(:beamlens_provider) do
+    {provider, opts} = Keyword.pop(opts, :provider, config!(:beamlens_provider))
+
+    case provider do
       :codex_then_ollama -> codex_then_ollama(messages, opts)
       :ollama -> ollama_only(messages, opts)
       _ -> {:error, :diagnostics_unavailable}
