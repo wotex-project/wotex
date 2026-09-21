@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-thread",
   "profile": "software-network",
@@ -27,5 +27,6 @@
   "compatibility": {"hardware_equivalence": "none", "role": "simulated-test-network"},
   "external_libraries": ["libc.so.6"],
   "legal": ["LICENSE", "NOTICE", "priv/openthread/vendor/LICENSE.MIT"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-opcua",
   "profile": "software-peer",
@@ -27,5 +27,6 @@
   "compatibility": {"role": "independent-test-peer", "runtime": "not-production"},
   "external_libraries": ["libc"],
   "legal": ["LICENSE", "NOTICE"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

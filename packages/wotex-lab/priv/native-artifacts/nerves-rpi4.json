@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-lab",
   "profile": "nerves-rpi4",
@@ -27,5 +27,6 @@
   "compatibility": {"device": "raspberry-pi-4", "host_equivalence": "none", "nerves_system": "2.1.1"},
   "external_libraries": [],
   "legal": ["LICENSE", "NOTICE"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

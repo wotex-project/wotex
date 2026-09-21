@@ -37,7 +37,7 @@ defmodule Wotex.Workspace.NativeArtifact.IdentityTest do
     assert second.canonical == first.canonical
   end
 
-  test "every descriptor field independently moves identity", context do
+  test "every output-affecting descriptor field independently moves identity", context do
     assert {:ok, baseline} = build(context)
     raw = context.descriptor.raw
 
@@ -69,6 +69,19 @@ defmodule Wotex.Workspace.NativeArtifact.IdentityTest do
       assert {:ok, changed} = build(%{context | descriptor: descriptor}), field
       refute changed.identity == baseline.identity, field
     end
+  end
+
+  test "changing a delivery origin does not change build identity", context do
+    assert {:ok, baseline} = build(context)
+
+    source = %{
+      "name" => "hosted",
+      "url" => "https://artifacts.example.invalid/{target}/{build_identity}.tar.gz"
+    }
+
+    descriptor = put_in(context.descriptor.raw, ["retrieval", "sources"], [source])
+    assert {:ok, changed} = build(%{context | descriptor: %{context.descriptor | raw: descriptor}})
+    assert changed.identity == baseline.identity
   end
 
   test "repository, source, toolchain and system content independently move identity", context do
@@ -175,7 +188,7 @@ defmodule Wotex.Workspace.NativeArtifact.IdentityTest do
 
   defp descriptor_map(patch_digest) do
     %{
-      "schema" => "wotex.native-artifact-descriptor@1",
+      "schema" => "wotex.native-artifact-descriptor@2",
       "artifact_format" => "wotex.native-artifact@1",
       "package" => "native",
       "profile" => "production",
@@ -208,7 +221,8 @@ defmodule Wotex.Workspace.NativeArtifact.IdentityTest do
       "compatibility" => %{"abi" => "v1"},
       "external_libraries" => [],
       "legal" => ["LICENSE"],
-      "native_inputs" => []
+      "native_inputs" => [],
+      "retrieval" => %{"sources" => []}
     }
   end
 end

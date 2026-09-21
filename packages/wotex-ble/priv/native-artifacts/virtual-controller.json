@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-ble",
   "profile": "virtual-controller",
@@ -26,5 +26,6 @@
   "compatibility": {"guest": "linux-x86_64", "hardware_equivalence": "none"},
   "external_libraries": ["libgio-2.0.so.0", "libglib-2.0.so.0"],
   "legal": ["LICENSE", "NOTICE"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

@@ -104,7 +104,7 @@ defmodule Wotex.Workspace.NativeArtifact.InventoryTest do
 
   defp descriptor do
     %{
-      "schema" => "wotex.native-artifact-descriptor@1",
+      "schema" => "wotex.native-artifact-descriptor@2",
       "artifact_format" => "wotex.native-artifact@1",
       "package" => "native",
       "profile" => "production",
@@ -119,7 +119,8 @@ defmodule Wotex.Workspace.NativeArtifact.InventoryTest do
       "compatibility" => %{},
       "external_libraries" => [],
       "legal" => ["LICENSE"],
-      "native_inputs" => []
+      "native_inputs" => [],
+      "retrieval" => %{"sources" => []}
     }
   end
 end

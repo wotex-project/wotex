@@ -53,6 +53,7 @@ defmodule WotexWorkspace.MixProject do
       "native.adopt": "wotex.native.adopt",
       "native.cache": "wotex.native.cache",
       "native.closure": "wotex.native.closure",
+      "native.retrieve": "wotex.native.retrieve",
       "native.lint": "wotex.native.lint",
       "native.test": "wotex.native.test",
       "native.bench": "wotex.native.bench",
@@ -64,6 +65,8 @@ defmodule WotexWorkspace.MixProject do
   defp deps do
     [
       {:yaml_elixir, "~> 2.11"},
+      {:req, "~> 0.7"},
+      {:plug, "~> 1.18", only: :test},
       {:credo, "~> 1.7", only: :dev, runtime: false},
       {:git_ops, "~> 2.12", only: :dev, runtime: false},
       {:ex_doc, "~> 0.38", only: :dev, runtime: false}

@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-ble",
   "profile": "production",
@@ -29,5 +29,6 @@
   "compatibility": {"ipc": "wotex-ble-json-lines-v1", "otp": "27-or-newer"},
   "external_libraries": ["libc.so.6", "libexpat.so.1"],
   "legal": ["LICENSE", "NOTICE", "priv/bluez/native/vendor/LICENSE.MIT"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

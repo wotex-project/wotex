@@ -69,7 +69,7 @@ defmodule Wotex.Workspace.NativeArtifact.Identity do
            digest_paths(raw["toolchain"]["inputs"], package_root),
          {:ok, root_toolchain_inputs} <- digest_paths(toolchain.inputs, root),
          {:ok, system_inputs} <- digest_paths(system.inputs, root),
-         {:ok, descriptor_json} <- CanonicalJSON.encode(raw),
+         {:ok, descriptor_json} <- CanonicalJSON.encode(Map.delete(raw, "retrieval")),
          {:ok, source_json} <- CanonicalJSON.encode(source_entries) do
       {:ok,
        %{

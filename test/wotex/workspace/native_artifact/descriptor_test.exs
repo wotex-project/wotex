@@ -41,7 +41,7 @@ defmodule Wotex.Workspace.NativeArtifact.DescriptorTest do
 
   defp valid do
     %{
-      "schema" => "wotex.native-artifact-descriptor@1",
+      "schema" => "wotex.native-artifact-descriptor@2",
       "artifact_format" => "wotex.native-artifact@1",
       "package" => "native",
       "profile" => "production",
@@ -66,7 +66,16 @@ defmodule Wotex.Workspace.NativeArtifact.DescriptorTest do
       "compatibility" => %{"abi" => "v1"},
       "external_libraries" => [],
       "legal" => ["LICENSE"],
-      "native_inputs" => []
+      "native_inputs" => [],
+      "retrieval" => %{
+        "sources" => [
+          %{
+            "name" => "hosted",
+            "url" =>
+              "https://artifacts.example.invalid/{package}/{profile}/{target}/{build_identity}.tar.gz"
+          }
+        ]
+      }
     }
   end
 
@@ -106,11 +115,11 @@ defmodule Wotex.Workspace.NativeArtifact.DescriptorTest do
   test "rejects unknown versions, missing and unknown fields, invalid types and undeclared targets" do
     assert {:error, message} =
              Descriptor.from_map(
-               %{valid() | "schema" => "wotex.native-artifact-descriptor@2"},
+               %{valid() | "schema" => "wotex.native-artifact-descriptor@3"},
                manifest()
              )
 
-    assert message =~ "expected \"wotex.native-artifact-descriptor@1\""
+    assert message =~ "expected \"wotex.native-artifact-descriptor@2\""
 
     assert {:error, message} = Descriptor.from_map(Map.delete(valid(), "outputs"), manifest())
     assert message =~ "missing required fields: outputs"
@@ -158,5 +167,29 @@ defmodule Wotex.Workspace.NativeArtifact.DescriptorTest do
     assert {:ok, descriptor} = Descriptor.from_map(map, manifest())
     assert Enum.map(descriptor.raw["patches"], & &1["id"]) == ["second", "first"]
     assert descriptor.raw["build"]["features"] == ["a", "z"]
+  end
+
+  test "admits only bounded immutable credential-free retrieval templates" do
+    source = hd(valid()["retrieval"]["sources"])
+
+    for {url, expected} <- [
+          {"https://artifacts.example.invalid/latest.tar.gz", "include {build_identity}"},
+          {"https://artifacts.example.invalid/{unknown}/{build_identity}.tar.gz",
+           "unknown template"},
+          {"http://artifacts.example.invalid/{build_identity}.tar.gz", "HTTPS URL"},
+          {"https://user:secret@artifacts.example.invalid/{build_identity}.tar.gz", "credentials"},
+          {"https://artifacts.example.invalid/{build_identity}.tar.gz?token=value", "query strings"}
+        ] do
+      map = put_in(valid(), ["retrieval", "sources"], [%{source | "url" => url}])
+      assert {:error, message} = Descriptor.from_map(map, manifest())
+      assert message =~ expected
+    end
+
+    duplicate = [source, source]
+
+    assert {:error, message} =
+             Descriptor.from_map(put_in(valid(), ["retrieval", "sources"], duplicate), manifest())
+
+    assert message =~ "duplicate source names"
   end
 end

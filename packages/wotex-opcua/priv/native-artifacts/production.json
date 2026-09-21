@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-opcua",
   "profile": "production",
@@ -30,5 +30,6 @@
   "compatibility": {"ipc": "wotex-opcua-json-lines-v1", "open62541": "1.5.7", "openssl": "3.5.8"},
   "external_libraries": ["libc"],
   "legal": ["LICENSE", "NOTICE", "priv/native/vendor/yyjson/LICENSE"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

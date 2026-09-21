@@ -9,13 +9,13 @@ defmodule Wotex.Workspace.NativeArtifact.Descriptor do
   alias Wotex.Workspace.Manifest
   alias Wotex.Workspace.NativeArtifact.CanonicalJSON
 
-  @schema "wotex.native-artifact-descriptor@1"
+  @schema "wotex.native-artifact-descriptor@2"
   @artifact_format "wotex.native-artifact@1"
   @digest ~r/^[0-9a-f]{64}$/
   @name ~r/^[a-z][a-z0-9-]*$/
   @task ~r/^[a-z][a-z0-9_.-]*$/
 
-  @required ~w(schema artifact_format package profile kind targets sources patches toolchain build qualification outputs compatibility external_libraries legal native_inputs)
+  @required ~w(schema artifact_format package profile kind targets sources patches toolchain build qualification outputs compatibility external_libraries legal native_inputs retrieval)
   @forbidden_key ~r/(credential|password|secret|access[_-]?token|cache[_-]?(path|root)|publication|published)/i
 
   @type target_support :: %{
@@ -89,6 +89,7 @@ defmodule Wotex.Workspace.NativeArtifact.Descriptor do
          :ok <- strings(map["external_libraries"], "$.external_libraries"),
          :ok <- paths(map["legal"], "$.legal", false),
          :ok <- native_inputs(map["native_inputs"]),
+         :ok <- retrieval(map["retrieval"]),
          {:ok, raw} <- normalize(map) do
       {:ok,
        %__MODULE__{
@@ -385,6 +386,84 @@ defmodule Wotex.Workspace.NativeArtifact.Descriptor do
   end
 
   defp native_inputs(_), do: {:error, "$.native_inputs: expected a list"}
+
+  defp retrieval(%{"sources" => sources} = retrieval) do
+    with :ok <- exact_fields(retrieval, ~w(sources), "$.retrieval") do
+      retrieval_sources(sources)
+    end
+  end
+
+  defp retrieval(_), do: {:error, "$.retrieval: expected sources"}
+
+  defp retrieval_sources(sources) when is_list(sources) and length(sources) <= 8 do
+    results = Enum.with_index(sources) |> Enum.map(&retrieval_source/1)
+
+    case Enum.find(results, &match?({:error, _}, &1)) do
+      nil ->
+        names = Enum.map(sources, & &1["name"])
+
+        if names == Enum.uniq(names),
+          do: :ok,
+          else: {:error, "$.retrieval.sources: duplicate source names are not allowed"}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  defp retrieval_sources(sources) when is_list(sources),
+    do: {:error, "$.retrieval.sources: at most 8 sources are allowed"}
+
+  defp retrieval_sources(_), do: {:error, "$.retrieval.sources: expected a list"}
+
+  defp retrieval_source({%{"name" => source_name, "url" => url}, index} = source) do
+    path = "$.retrieval.sources[#{index}]"
+
+    with :ok <- exact_fields(elem(source, 0), ~w(name url), path),
+         {:ok, _} <- name(source_name, "#{path}.name") do
+      retrieval_url(url, "#{path}.url")
+    end
+  end
+
+  defp retrieval_source({_, index}),
+    do: {:error, "$.retrieval.sources[#{index}]: expected name and url"}
+
+  defp retrieval_url(url, path) when is_binary(url) do
+    expanded =
+      Enum.reduce(
+        ~w(package profile target build_identity),
+        url,
+        &String.replace(
+          &2,
+          "{#{&1}}",
+          if(&1 == "build_identity", do: String.duplicate("0", 64), else: "cell")
+        )
+      )
+
+    uri = URI.parse(expanded)
+
+    cond do
+      not String.contains?(url, "{build_identity}") ->
+        {:error, "#{path}: URL must include {build_identity}"}
+
+      String.contains?(expanded, ["{", "}"]) ->
+        {:error, "#{path}: URL contains an unknown template variable"}
+
+      uri.scheme != "https" or not is_binary(uri.host) or uri.host == "" ->
+        {:error, "#{path}: expected an HTTPS URL template"}
+
+      not is_nil(uri.userinfo) or not is_nil(uri.query) or not is_nil(uri.fragment) ->
+        {:error, "#{path}: credentials, query strings and fragments are forbidden"}
+
+      uri.path in [nil, ""] ->
+        {:error, "#{path}: URL template must contain a path"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp retrieval_url(_, path), do: {:error, "#{path}: expected a string"}
 
   defp paths(value, path, empty?) when is_list(value) do
     cond do

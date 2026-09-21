@@ -1,6 +1,6 @@
 # Native artifact foundation
 
-Specification version: 0.5.0. Contract: accepted foundation.
+Specification version: 0.6.0. Contract: accepted foundation.
 
 This contract governs native artifacts built, qualified or adopted by the
 WoTEx repository. It applies to native executables, shared libraries, firmware
@@ -52,7 +52,8 @@ may depend on Lab for artifact construction, identity or verification.
 
 Every artifact-producing profile MUST have a schema-validated descriptor. The
 descriptor is data available to root tooling without executing an artifact or
-starting an application. It contains:
+starting an application. Descriptor schema
+`wotex.native-artifact-descriptor@2` contains:
 
 - descriptor schema version;
 - package name and profile name;
@@ -65,7 +66,8 @@ starting an application. It contains:
 - runtime compatibility requirements;
 - external shared-library requirements, when applicable;
 - legal-information and provenance inputs; and
-- the package build and qualification tasks.
+- the package build and qualification tasks; and
+- an ordered, bounded set of immutable prebuilt URL templates.
 
 An unsupported tuple carries a reason. Omitting a tuple and declaring it
 unsupported are distinct: omission makes no support claim, while an explicit
@@ -73,6 +75,13 @@ exclusion explains why a planner must not create that cell.
 
 Descriptors MUST NOT contain credentials, machine-specific absolute paths,
 mutable tags, local cache locations or publication state.
+
+An empty retrieval-source set is valid and makes no hosted or published claim.
+Every non-empty template is HTTPS, includes the full build identity and admits
+only the declared package, profile, target and build-identity variables.
+Retrieval-source changes do not alter build output and therefore do not move the
+build identity; the expected transport digest is supplied independently for
+each exact object.
 
 ## Canonical identity
 
@@ -382,7 +391,7 @@ an earlier slice or make unimplemented operations appear available.
 | Payload manifest and local verification | Implemented | Focused local plain-tar, gzip, schema, bound and adversarial verification tests pass; verification performs no extraction or adoption |
 | Cache adoption and concurrency | Implemented | Focused local reuse, corruption, concurrency, lease-loss, prior-entry preservation and bounded-collection tests pass |
 | Assembled-target dependency closure | Implemented | Focused local ELF32/ELF64, endianness, interpreter, transitive dependency, conflict, symlink and bound tests pass; no external target assembly is claimed |
-| Exact prebuilt retrieval | Planned | Not run |
+| Exact prebuilt retrieval | Implemented | Focused local streaming, digest, redirect, credential-scope, partial-download, adoption-preservation, error-aggregation and delivery-mode tests pass; no hosted or published artifact is claimed |
 | Mechanical runtime wrappers | Planned where repetition justifies them | Not run |
 
 These statuses describe repository-owned source. They do not promote a

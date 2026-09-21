@@ -1,5 +1,5 @@
 {
-  "schema": "wotex.native-artifact-descriptor@1",
+  "schema": "wotex.native-artifact-descriptor@2",
   "artifact_format": "wotex.native-artifact@1",
   "package": "wotex-thread",
   "profile": "sanitizers",
@@ -28,5 +28,6 @@
   "compatibility": {"evidence": "qualification-only", "security_disposition": "reviewed-no-unresolved-in-scope-advisory"},
   "external_libraries": ["libasan.so", "libubsan.so"],
   "legal": ["LICENSE", "NOTICE", "priv/openthread/vendor/LICENSE.MIT"],
-  "native_inputs": []
+  "native_inputs": [],
+  "retrieval": {"sources": []}
 }

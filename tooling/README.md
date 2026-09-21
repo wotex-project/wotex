@@ -170,6 +170,22 @@ system identity, and is the required pre-assembly gate for firmware, guest
 images and releases. It never consults host linker paths and has no filename-only
 fallback for non-ELF formats.
 
+`mix native.retrieve --package NAME --profile PROFILE --target TARGET --identity
+FULL_SHA256 --sha256 FULL_TRANSPORT_SHA256 --cache /absolute/cache` is the
+prebuilt-only path. It tries only descriptor-declared HTTPS sources, streams
+under fixed response, redirect and deadline bounds, checks the transport digest
+independently, then uses the same payload verifier and atomic cache adoption as
+local artifacts. `--source NAME` selects one exact origin;
+`--authorization-env NAME` is accepted only with that selection and credentials
+are removed before any cross-origin redirect. Stable JSON records the selected
+source and redacted delivery path without claiming publication.
+
+The explicit source-only path remains `mix native.build`. Repository callers
+that implement `prefer_prebuilt` use the shared delivery policy and must enable
+source fallback in that invocation; a retrieval failure never selects a build
+implicitly. Current descriptors deliberately declare no hosted sources until a
+maintainer publishes and admits immutable objects.
+
 ## Affected packages
 
 `mix wotex.affected` derives the changed paths from `git diff --name-only
