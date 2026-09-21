@@ -3,14 +3,14 @@ spec:
   id: WTH.05
   title: "Standalone network management and application composition"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-thread
   updated: 2026-09-21
 ---
 
 # WTH.05 Standalone network management and application composition
 
-Specification version: `1.1.1`. Status: planned target, not implemented capability.
+Specification version: `1.1.3`. Status: accepted and implemented.
 Requires [WTH.01](WTH.01-library-contract.md) and
 [WTH.04](WTH.04-software-contract.md). The narrower baseline is
 [WTH.03](WTH.03-implemented-profile.md).
@@ -124,9 +124,9 @@ useful workflow while keeping the protocol ownership boundary reviewable.
 ## WTH-N04 — Concrete corpus and executable acceptance
 
 [contract-v1.json](../../../../packages/wotex-thread/priv/fixtures/contract-v1.json) is fixture format `1.0.0` with
-status `specified_unexecuted`. It contains concrete examples; the broader Vxx
-rows in .10 are scenario families. Neither a scenario row nor parseable JSON
-counts as an executed test. All Vxx alternatives and boundaries still need tests.
+status `executed`. It contains ten concrete cases; the broader Vxx rows in .10
+remain scenario families and count only through their identified executable
+owners. Parseable JSON alone is never evidence.
 
 Each case has a unique `id`, `requirements`, `kind`, `operation`, `input`, and
 `expectation`. The expectation uses `operator: "exact"` over a normalized
@@ -149,14 +149,13 @@ The runner must inspect real owner state and recorded backend calls to produce
 that observation; it must not reproduce the expected state machine inside the
 assertion. The trace is an injected contract test, not interoperability evidence.
 
-Add `test/wotex/thread/contract_fixture_test.exs` during P01 and bind each pure
-case as its API becomes available; add lifecycle cases in their owning package.
-A case without an implementation remains explicitly unexecuted and prevents
-accepting its package. Do not check in an always-skipped test or count an ID in
-a comment as proof. Final evidence records case ID, fixture SHA-256, executable
-test path, command, source revision and result. The selected runner must fail on
-unknown fixture format/operation, missing assertion, mismatched output or absent
-required peer. Native software workflows below require separate real peer tests.
+`test/wotex/thread/contract_fixture_test.exs` binds each case to the test that
+compares its observation. A missing implementation makes the corpus invalid and
+prevents acceptance. An always-skipped test or an identifier in a comment is not
+proof. Evidence records case ID, fixture SHA-256, executable test path, command,
+source revision and result. The selected runner fails on an unknown format or
+operation, a missing assertion, a mismatch or an absent required peer. Native
+software workflows below retain their separate real-peer tests.
 
 The management lifecycle fixtures use exact disposable Dataset bytes and an
 explicit `scripted_sdk_validation_result: true`. That setup isolates callback

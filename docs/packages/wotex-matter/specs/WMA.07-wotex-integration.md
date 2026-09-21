@@ -3,7 +3,7 @@ spec:
   id: WMA.07
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.3
+  version: 1.1.4
   owner: wotex-matter
   updated: 2026-09-18
 ---
@@ -255,9 +255,9 @@ No-stream modes return a structured unsupported error without creating a process
 ## WMA-I06 — Acceptance through public packages
 
 The concrete [integration corpus](../../../../packages/wotex-matter/priv/fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
-in a fixture does not accept a work package. The driver receives only input,
+synthetic TD, selected route/command and public payload projection. Its `executed`
+status is guarded by the corpus and integration tests; JSON validity or an
+identifier in a fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.
@@ -281,10 +281,10 @@ The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
 The full I04 table also needs malformed/unclassified and default mutation cases.
 
-Add `test/wotex/matter/runtime_integration_test.exs`, exercising real core and
-Runtime public APIs with an explicitly selected deterministic protocol peer/port.
-Record each I requirement and concrete case ID in its assertion name. Do not
-construct forged Request structs as the only integration proof. Cover:
+`test/wotex/matter/runtime_integration_test.exs` exercises real core and Runtime
+public APIs with an explicitly selected deterministic protocol peer/port. Each
+case is identified by its I requirement and corpus ID. Forged Request structs are
+never the only integration proof. The suite covers:
 
 1. Real TD construction, contextual defaults and two Form choices; use two
    explicit profiles when supported, otherwise test the unsupported second mode; exact resolved href, target, command and unchanged extensions.

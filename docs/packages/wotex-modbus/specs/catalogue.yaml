@@ -48,7 +48,7 @@ specifications:
     executable_evidence: ["test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
     compatibility_classification: "Implemented native eight-function helpers, float convenience, typed value/address validation, named health reads and consumer-neutral compatibility behavior. D01-D04 projections and independent readback are asserted in the recorded TCP cohort."
   - id: "WMB.06"
-    version: "1.2.1"
+    version: "1.2.2"
     path: "docs/specs/WMB.06-wotex-integration.md"
     implementation_status: "implemented"
     standards: [{"name": "W3C WoT Modbus binding draft", "revision": "ea0ec98f864feca914e175026c441c3c36e8b1a9 2026-08-26", "claim": "Numeric TCP Form, entity/function and typed-value subset; no W3C conformance claim"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited Form values and operation vocabulary; Runtime policy is specified separately"}]

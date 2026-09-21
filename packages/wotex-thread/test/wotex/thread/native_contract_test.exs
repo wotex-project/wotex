@@ -321,6 +321,7 @@ defmodule Wotex.Thread.NativeContractTest do
     assert fixture["format"] == "wotex.native-contract"
     assert fixture["version"] == "1.0.0"
     assert fixture["package"] == "wotex_thread"
+    assert fixture["status"] == "executed"
 
     assert Enum.map(fixture["cases"], & &1["id"]) ==
              Enum.map(1..15, &"WTH-B-F#{String.pad_leading(Integer.to_string(&1), 2, "0")}")

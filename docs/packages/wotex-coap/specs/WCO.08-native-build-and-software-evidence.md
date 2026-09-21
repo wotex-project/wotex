@@ -3,7 +3,7 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.5
+  version: 1.9.6
   owner: wotex-coap
   updated: 2026-09-21
 ---
@@ -293,8 +293,8 @@ one separate close-control record. Atomic reservation and submission markers
 retain caller/deadline ownership across timeout races, reject foreign generation
 capabilities and make closing terminal for later admission. Four tests exercise
 the exact concurrent limit, singular close control, caller death, timeout and
-table-owner termination. The startup owner does not yet publish or consume this
-table outside its internal request boundary. It owns the table, consumes
+table-owner termination. The startup owner keeps this table private to its
+internal request boundary. It owns the table, consumes
 ordinary leases in FIFO order and consumes the singular close record: a full
 64-call reservation set cannot prevent close, concurrent close callers wait for
 the same process termination, and abandoned close control ends the generation.

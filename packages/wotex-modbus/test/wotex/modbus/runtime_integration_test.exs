@@ -29,6 +29,22 @@ defmodule Wotex.Modbus.RuntimeIntegrationTest do
   @fixture Jason.decode!(File.read!(@fixture_path))
   @digest Base.encode16(:crypto.hash(:sha256, File.read!(@fixture_path)), case: :lower)
 
+  test "WMB-I06 the integration corpus is closed and executable" do
+    assert Map.take(@fixture, ["format", "version", "status"]) == %{
+             "format" => "wotex.protocol.integration",
+             "version" => "1.0.0",
+             "status" => "executed"
+           }
+
+    assert Enum.map(@fixture["cases"], & &1["id"]) ==
+             Enum.map(1..7, &("WMB-I-F" <> String.pad_leading(Integer.to_string(&1), 2, "0")))
+
+    assert Enum.all?(
+             @fixture["cases"],
+             &match?(%{"operator" => "exact", "value" => _}, &1["expectation"])
+           )
+  end
+
   for fixture <- @fixture["cases"] do
     @tag fixture_sha256: @digest
     test "WMB-I04 WMB-I06 #{fixture["id"]} runs its input through actual core and Runtime APIs" do

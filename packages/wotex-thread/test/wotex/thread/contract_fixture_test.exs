@@ -7,8 +7,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
   @corpus Path.expand("../../../priv/fixtures/contract-v1.json", __DIR__)
   @external_resource @corpus
 
-  # Every corpus case is either bound to the executable test that compares its
-  # actual observation, or explicitly unexecuted with the package that owns it.
+  # Every corpus case is bound to the executable test that compares its actual observation.
   @bindings %{
     "WTH-F01" => {:executed, "test/wotex/thread/dataset_boundary_test.exs"},
     "WTH-F02" => {:executed, "test/wotex/thread/dataset_boundary_test.exs"},
@@ -16,8 +15,8 @@ defmodule Wotex.Thread.ContractFixtureTest do
     "WTH-F04" => {:executed, "test/wotex/thread/dataset_boundary_test.exs"},
     "WTH-F05" => {:executed, "test/wotex/thread/dataset_boundary_test.exs"},
     "WTH-F06" => {:executed, "test/wotex/thread/daemon_fault_test.exs"},
-    "WTH-F07" => {:unexecuted, "WTH-P04"},
-    "WTH-F08" => {:unexecuted, "WTH-P04"},
+    "WTH-F07" => {:executed, "test/native/management_test.cpp"},
+    "WTH-F08" => {:executed, "test/native/management_test.cpp"},
     "WTH-F09" => {:executed, "test/wotex/thread/native_contract_test.exs"},
     "WTH-F10" => {:executed, "test/wotex/thread/dataset_boundary_test.exs"}
   }
@@ -37,7 +36,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
 
     assert corpus["format_version"] == "1.0.0"
     assert corpus["package"] == "wotex_thread"
-    assert corpus["status"] == "specified_unexecuted"
+    assert corpus["status"] == "executed"
     ids = Enum.map(corpus["cases"], & &1["id"])
     assert ids == Enum.map(1..10, &"WTH-F#{String.pad_leading(Integer.to_string(&1), 2, "0")}")
 
@@ -54,7 +53,7 @@ defmodule Wotex.Thread.ContractFixtureTest do
     end
   end
 
-  test "WTH-N04 every case is bound to its executing test or explicitly unexecuted" do
+  test "WTH-N04 every case is bound to its executing test" do
     corpus = Jason.decode!(File.read!(@corpus))
     assert Map.keys(@bindings) |> Enum.sort() == Enum.map(corpus["cases"], & &1["id"])
 
@@ -69,7 +68,6 @@ defmodule Wotex.Thread.ContractFixtureTest do
              id
     end
 
-    assert for({id, {:unexecuted, _}} <- @bindings, do: id) |> Enum.sort() ==
-             ~w(WTH-F07 WTH-F08)
+    refute Enum.any?(@bindings, fn {_, {status, _}} -> status != :executed end)
   end
 end

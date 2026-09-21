@@ -6,7 +6,7 @@ defmodule Wotex.Thread.Software.Build do
   UndefinedBehaviorSanitizer native host through `Wotex.Thread.Native.Build`,
   the pinned OpenThread simulation RCP, a read-only POSIX daemon, and
   sanitizer-instrumented native test executables. The native parser, output,
-  flow and storage tests plus the contract driver link only first-party
+  flow, storage and management-owner tests plus the contract driver link only first-party
   headers; the Dataset seed and Spinel
   test link the manifest-bound patched SDK tree. An uninstrumented
   `wotex-thread-flow-host` adds a test-only State callback source to the
@@ -26,11 +26,13 @@ defmodule Wotex.Thread.Software.Build do
   @sdk "openthread-f34c5e5476829d9205e80b37fccc2bdfe97e1dab"
   @tools ~w(cmake ninja cc c++ readelf)
   @pure_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
-    wotex-thread-streams-test wotex-thread-flow-test wotex-thread-contract-driver)
+    wotex-thread-streams-test wotex-thread-flow-test wotex-thread-management-test
+    wotex-thread-contract-driver)
   @sdk_tests ~w(wotex-thread-dataset-seed wotex-thread-spinel-test)
   @application_peer "wotex-thread-coap-peer"
   @native_tests ~w(wotex-thread-protocol-test wotex-thread-storage-test wotex-thread-output-test
-    wotex-thread-streams-test wotex-thread-flow-test wotex-thread-spinel-test)
+    wotex-thread-streams-test wotex-thread-flow-test wotex-thread-management-test
+    wotex-thread-spinel-test)
   @log_names ~w(bootstrap version_cmake version_ninja version_cc version_cxx rcp_configure
     rcp_compile daemon_configure daemon_compile tests_configure tests_compile flow_configure
     flow_compile)

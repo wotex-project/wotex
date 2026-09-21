@@ -2,7 +2,7 @@
   "format": "wotex.native-contract",
   "version": "1.0.0",
   "package": "wotex_thread",
-  "status": "specified_unexecuted",
+  "status": "executed",
   "normalization_spec": "../WTH.13-native-backend.md",
   "cases": [
     {

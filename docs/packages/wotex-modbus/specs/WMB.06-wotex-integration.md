@@ -3,7 +3,7 @@ spec:
   id: WMB.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.2.1
+  version: 1.2.2
   owner: wotex-modbus
   updated: 2026-09-18
 ---
@@ -14,8 +14,8 @@ This is the accepted integration contract for the implemented TCP profile.
 Executable evidence identifies tested source, dependencies and software peers.
 It makes [.10](WMB.04-software-contract.md) and
 [.11](WMB.05-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) identifies the accepted implementation
+and its executable evidence. Every `I` requirement below is mandatory.
 
 ## WMB-I01 — Dependency direction and owned values
 
@@ -219,9 +219,9 @@ No-stream modes return a structured unsupported error without creating a process
 ## WMB-I06 — Acceptance through public packages
 
 The concrete [integration corpus](../../../../packages/wotex-modbus/priv/fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
-in a fixture does not accept a work package. The driver receives only input,
+synthetic TD, selected route/command and public payload projection. Its `executed`
+status is guarded by the integration test; JSON validity or an identifier in a
+fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.

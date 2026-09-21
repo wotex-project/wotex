@@ -6,6 +6,7 @@
 #include "storage.hpp"
 #include "commissioning.hpp"
 #include "joiner.hpp"
+#include "management.hpp"
 #include <openthread/commissioner.h>
 #include <openthread/instance.h>
 #include <openthread/ip6.h>
@@ -114,32 +115,36 @@ class Sdk final {
     check_status(otIp6SetEnabled(instance_, true));
     check_status(otThreadSetEnabled(instance_, true));
   }
-  bool management_busy() const { return management_pending_; }
-  void management_set(const std::string &operation, const Json &parameters) {
+  bool management_busy() const { return management_.busy(); }
+  void management_set(const Request &command) {
+    const std::string &operation = command.operation;
+    const Json &parameters = command.parameters;
     if (!exact_keys(parameters, {"dataset"})) throw ProtocolError();
     DatasetValue value(parameters.at("dataset"));
     const bool active = operation == "management_active_set";
     if (!value.valid(active)) throw DatasetError();
-    if (management_pending_) throw SdkError("busy");
+    const Request retained{command.id, command.operation, Json::object(), command.timeout_ms};
+    const auto deadline = ManagementOwner::Clock::now() +
+        std::chrono::milliseconds(command.timeout_ms);
+    if (!management_.begin(retained, deadline)) throw SdkError("busy");
     // A zero-component Dataset plus raw TLVs preserves unknown fields and order.
     // The pinned SDK copies these bytes before returning; only this stable context remains borrowed.
     otOperationalDataset empty {};
-    management_result_.reset();
-    management_pending_ = true;
     const otError status = active
         ? otDatasetSendMgmtActiveSet(instance_, &empty, value.tlvs.mTlvs, value.tlvs.mLength, managed, this)
         : otDatasetSendMgmtPendingSet(instance_, &empty, value.tlvs.mTlvs, value.tlvs.mLength, managed, this);
-    if (status != OT_ERROR_NONE) { management_pending_ = false; check_status(status); }
+    if (status != OT_ERROR_NONE) {
+      management_.submission_failed();
+      check_status(status);
+    }
   }
   otChangedFlags take_changed_flags() {
     const otChangedFlags flags = changed_flags_;
     changed_flags_ = 0;
     return flags;
   }
-  std::optional<otError> management_result() {
-    auto result = management_result_;
-    management_result_.reset();
-    return result;
+  std::optional<ManagementOwner::Result> management_result() {
+    return management_.take(ManagementOwner::Clock::now());
   }
   Json set_enabled(const Json &parameters) {
     if (!exact_keys(parameters, {"ipv6", "thread"}) || !parameters.at("ipv6").is_boolean() ||
@@ -201,8 +206,7 @@ class Sdk final {
   }
   static void managed(otError status, void *context) {
     auto *sdk = static_cast<Sdk *>(context);
-    sdk->management_pending_ = false;
-    sdk->management_result_ = status;
+    sdk->management_.complete(static_cast<unsigned>(status));
   }
   static void changed(otChangedFlags flags, void *context) {
     static_cast<Sdk *>(context)->changed_flags_ |= flags;
@@ -243,8 +247,7 @@ class Sdk final {
   otInstance *instance_ = nullptr;
   otChangedFlags changed_flags_ = 0;
   bool allow_creation_ = false;
-  bool management_pending_ = false;
-  std::optional<otError> management_result_;
+  ManagementOwner management_;
 };
 }  // namespace wotex::thread
 #endif

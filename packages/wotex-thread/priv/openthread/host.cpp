@@ -191,7 +191,6 @@ class Worker final {
     if (count == 0) {
       if (!incoming_.empty()) throw ProtocolError();
       forming_.reset();
-      managing_.reset();
       petitioning_.reset();
       joining_.reset();
       sdk_.reset();
@@ -253,7 +252,6 @@ class Worker final {
       } else if (command.operation == "close") {
         if (!command.parameters.empty()) throw ProtocolError();
         forming_.reset();
-        managing_.reset();
         petitioning_.reset();
         joining_.reset();
         sdk_.reset();
@@ -275,14 +273,12 @@ class Worker final {
         forming_ = Formation{Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
       } else if (command.operation == "management_active_set" || command.operation == "management_pending_set") {
         if (!sdk_) throw SdkError("not_open");
-        if (forming_ || managing_ || sdk_->management_busy()) throw SdkError("busy");
-        const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
-        sdk_->management_set(command.operation, command.parameters);
-        managing_ = Formation{Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
+        if (forming_ || sdk_->management_busy()) throw SdkError("busy");
+        sdk_->management_set(command);
       } else if (command.operation == "commissioner_start") {
         if (!command.parameters.empty()) throw ProtocolError();
         if (!sdk_) throw SdkError("not_open");
-        if (forming_ || managing_ || petitioning_) throw SdkError("busy");
+        if (forming_ || sdk_->management_busy() || petitioning_) throw SdkError("busy");
         const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
         sdk_->commissioning().start();
         petitioning_ = Formation{command, deadline};
@@ -392,17 +388,13 @@ class Worker final {
   void finish_management() {
     if (!sdk_) return;
     const auto result = sdk_->management_result();
-    if (!managing_) return; // A retired request can never complete a newer exchange.
-    if (Clock::now() >= managing_->deadline) {
-      reject(managing_->command, "management_timeout");
-      managing_.reset(); // SDK context survives until callback or instance teardown.
-    } else if (result) {
-      if (*result == OT_ERROR_NONE) {
-        reply(success(managing_->command, {{"accepted", true}, {"effective", "not_verified"}}));
-      } else {
-        reject(managing_->command, "remote_error", static_cast<unsigned>(*result));
-      }
-      managing_.reset();
+    if (!result) return;
+    if (result->outcome == ManagementOwner::Outcome::timed_out) {
+      reject(result->command, "management_timeout");
+    } else if (result->outcome == ManagementOwner::Outcome::accepted) {
+      reply(success(result->command, {{"accepted", true}, {"effective", "not_verified"}}));
+    } else {
+      reject(result->command, "remote_error", result->status);
     }
   }
   void finish_commissioner() {
@@ -441,7 +433,7 @@ class Worker final {
     joining_.reset();
   }
   struct Formation { Request command; Clock::time_point deadline; };
-  std::optional<Formation> forming_, managing_, petitioning_, joining_;
+  std::optional<Formation> forming_, petitioning_, joining_;
   int output_fd_ = -1;
   Output output_;
   std::optional<ReportFlow> flow_;

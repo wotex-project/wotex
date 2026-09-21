@@ -3,18 +3,19 @@ spec:
   id: WCO.07
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.2.0
+  version: 1.2.1
   owner: wotex-coap
   updated: 2026-09-18
 ---
 
 # WCO.07 Wotex integration and evidence contract
 
-This is an accepted **target specification**, not implemented-profile evidence.
-It makes [.10](WCO.05-software-contract.md) and
+This accepted integration contract implements the bounded UDP, DTLS and OSCORE
+profiles while keeping platform qualification separate. It makes
+[.10](WCO.05-software-contract.md) and
 [.11](WCO.06-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) and executable-evidence record identify
+the accepted implementation. Every `I` requirement below is mandatory.
 
 ## WCO-I01 — Dependency direction and owned values
 

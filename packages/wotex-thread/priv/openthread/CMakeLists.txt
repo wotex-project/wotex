@@ -55,10 +55,14 @@ if(WOTEX_NATIVE_TEST_SOURCE)
     "${WOTEX_NATIVE_TEST_SOURCE}/fake_openthread")
   target_link_libraries(wotex-thread-joiner-test PRIVATE wotex-thread-protocol)
   add_test(NAME WTH-S05-WTH-V09 COMMAND wotex-thread-joiner-test)
+  add_executable(wotex-thread-management-test "${WOTEX_NATIVE_TEST_SOURCE}/management_test.cpp")
+  target_link_libraries(wotex-thread-management-test PRIVATE wotex-thread-protocol)
+  add_test(NAME WTH-F07-WTH-F08-MANAGEMENT COMMAND wotex-thread-management-test
+    "${WOTEX_NATIVE_TEST_SOURCE}/../../priv/fixtures/contract-v1.json")
   add_executable(wotex-thread-contract-driver "${WOTEX_NATIVE_TEST_SOURCE}/contract_driver.cpp")
   target_link_libraries(wotex-thread-contract-driver PRIVATE wotex-thread-protocol)
   set_tests_properties(WTH-C07-WTH-V04 WTH-S03-WTH-V04 WTH-B02-OUTPUT WTH-S06-STREAMS
-    WTH-B02-FLOW WTH-S05-WTH-V09 PROPERTIES TIMEOUT 30)
+    WTH-B02-FLOW WTH-S05-WTH-V09 WTH-F07-WTH-F08-MANAGEMENT PROPERTIES TIMEOUT 30)
 endif()
 
 set(WOTEX_OPENTHREAD_SOURCE "" CACHE PATH "Explicit pinned OpenThread source tree")

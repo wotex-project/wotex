@@ -3,7 +3,7 @@ spec:
   id: WTH.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.9
+  version: 1.0.10
   owner: wotex-thread
   updated: 2026-09-21
 ---
@@ -249,7 +249,7 @@ or pure flow test alone cannot satisfy these process tests.
 ## WTH-B03 — Concrete native acceptance
 
 [The native corpus](../../../../packages/wotex-thread/priv/fixtures/native-port-v1.json) has format
-`wotex.native-contract`, version `1.0.0`, and `specified_unexecuted` status.
+`wotex.native-contract`, version `1.0.0`, and `executed` status.
 It supplements the .11 value/lifecycle and .12 Runtime corpora. Every case names
 an operation, exact input and exact normalized expectation. `line_utf8` includes
 the terminating newline when one is required. `parse_request` calls the shared
@@ -261,8 +261,9 @@ expected projection and compares the independently observed result.
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.
 
-`test/wotex/thread/native_contract_test.exs` drives the corpus and fails unknown
-formats/operations, absent assertions or mismatches. The process fixture splits
+`test/wotex/thread/native_contract_test.exs`, `test/software/process_flow_test.exs`
+and the portable native targets drive the corpus and fail unknown formats,
+operations, absent assertions or mismatches. The process fixture splits
 each valid request at every byte, coalesces two frames, closes mid-frame, sends
 oversized lines and leaves stderr noisy. Native ASan/UBSan runs include malformed
 bytes, full admission, late callbacks, startup failures, EOF during pending work

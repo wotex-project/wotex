@@ -118,7 +118,7 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     assert {:ok, %{result: result, path: path}} = Run.run(workspace, environment)
     assert result["schema"] == "wotex.thread.software-run" and result["status"] == "passed"
     assert result["source_unchanged"]
-    assert Enum.map(result["native_tests"], & &1["exit_status"]) == [0, 0, 0, 0, 0, 0]
+    assert Enum.map(result["native_tests"], & &1["exit_status"]) == [0, 0, 0, 0, 0, 0, 0]
     assert Enum.map(result["lanes"], & &1["lane"]) == ["normal", "sanitized"]
     assert Enum.all?(result["lanes"], & &1["evaluation"]["accepted"])
     assert result["cleanup"] == %{"survivors" => 0}

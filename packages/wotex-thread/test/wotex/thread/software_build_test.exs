@@ -36,7 +36,7 @@ defmodule Wotex.Thread.SoftwareBuildTest do
         {_, path} -> [path]
       end)
 
-    assert length(executables.native_tests) == 6
+    assert length(executables.native_tests) == 7
     assert Enum.all?(paths, &String.starts_with?(&1, "/disposable/software/"))
     assert executables.rcp == "/disposable/software/fixtures/bin/ot-rcp"
     assert executables.daemon == "/disposable/software/fixtures/bin/ot-daemon"

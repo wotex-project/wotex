@@ -57,7 +57,7 @@ specifications:
     executable_evidence: ["priv/fixtures/contract-v1.json", "test/wotex/matter/commissioning_test.exs", "test/wotex/matter/interaction_test.exs", "test/wotex/matter/path_value_test.exs", "test/wotex/matter/persistent_bridge_test.exs", "test/wotex/matter/subscription_recovery_test.exs", "test/wotex/matter/subscription_test.exs", "test/native/commissioning_test.cpp", "test/native/value_test.cpp", "test/native/storage_test.cpp", "test/native/controller_test.cpp", "test/native/interaction_test.cpp", "test/native/subscription_test.cpp", "bin/check_p01_native.exs", "bin/check_p02_native.exs", "bin/check_p03_native.exs", "bin/check_p04_native.exs", "bin/check_p05_native.exs", "bin/check_p06_native.exs", "bin/check_p07_native.exs"]
     compatibility_classification: "The full WMA-F01–F12 corpus executes across the pure, native and pinned-peer lanes. The first-party controller proves durable restart, finite interactions, exact report identity, subscription loss/recovery, commissioning, enhanced windows, ACL behavior and resource cleanup without a consumer-supplied controller factory."
   - id: "WMA.07"
-    version: "1.1.3"
+    version: "1.1.4"
     path: "docs/specs/WMA.07-wotex-integration.md"
     implementation_status: "implemented"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "P08/P08a public consumer integration and P09 pinned software-peer evidence for the finite profile"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values and operation vocabulary with explicit P08a Runtime profiles; package profile is not W3C conformance"}]

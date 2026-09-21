@@ -3,18 +3,18 @@ spec:
   id: WTH.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-thread
   updated: 2026-09-20
 ---
 
 # WTH.06 Wotex integration and evidence contract
 
-This is an accepted **target specification**, not implemented-profile evidence.
-It makes [.10](WTH.04-software-contract.md) and
+This accepted integration contract implements the bounded daemon profile and
+keeps platform qualification separate. It makes [.10](WTH.04-software-contract.md) and
 [.11](WTH.05-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) and executable-evidence record identify
+the accepted implementation. Every `I` requirement below is mandatory.
 
 ## WTH-I01 — Dependency direction and owned values
 
@@ -218,9 +218,9 @@ No-stream modes return a structured unsupported error without creating a process
 ## WTH-I06 — Acceptance through public packages
 
 The concrete [integration corpus](../../../../packages/wotex-thread/priv/fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
-in a fixture does not accept a work package. The driver receives only input,
+synthetic TD, selected route/command and public payload projection. Its `executed`
+status is guarded by the integration test; JSON validity or an identifier in a
+fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.
@@ -245,10 +245,10 @@ a production writeproperty binding. The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
 The full I04 table also needs malformed/unclassified and default mutation cases.
 
-Add `test/wotex/thread/runtime_integration_test.exs`, exercising real core and
-Runtime public APIs with an explicitly selected deterministic protocol peer/port.
-Record each I requirement and concrete case ID in its assertion name. Do not
-construct forged Request structs as the only integration proof. Cover:
+`test/wotex/thread/runtime_integration_test.exs` exercises real core and Runtime
+public APIs with an explicitly selected deterministic protocol peer/port. Each
+corpus case has an executable owner and an exact comparison. Forged Request
+structs are never the only integration proof. The suite covers:
 
 1. Real TD construction, contextual defaults and two Form choices; use two
    explicit profiles when supported, otherwise test the unsupported second mode; exact resolved href, target, command and unchanged extensions.
