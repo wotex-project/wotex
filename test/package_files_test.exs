@@ -21,7 +21,7 @@ defmodule WotexWorkspace.PackageFilesTest do
     assert length(Path.wildcard(Path.join(root, "packages/*/LICENSE"))) == length(packages())
   end
 
-  test "git_ops.json releases every package with its tag, version and changelog" do
+  test "git_ops.json releases every package and package config remains documentation-only" do
     config = JSON.decode!(File.read!(Path.join(Workspace.root(), "git_ops.json")))
 
     assert config["repository_url"] == "https://github.com/wotex-project/wotex"
@@ -36,10 +36,19 @@ defmodule WotexWorkspace.PackageFilesTest do
              }
     end
 
-    # No package carries its own git_ops configuration or dependency.
+    package_config = """
+    import Config
+
+    if config_env() == :docs and System.get_env("WOTEX_DOC_SHELL_BUILD") == "1" do
+      import_config "../../../tooling/doc_shell/package.exs"
+    end
+    """
+
+    # Package-local configuration exists only to admit the shared documentation
+    # build. Release metadata and GitOps configuration remain at the root.
     for name <- packages() do
-      refute File.exists?(Path.join([Workspace.root(), "packages", name, "config/config.exs"])),
-             "packages/#{name}/config/config.exs"
+      path = Path.join([Workspace.root(), "packages", name, "config/config.exs"])
+      assert File.read!(path) == package_config, "packages/#{name}/config/config.exs"
     end
   end
 
