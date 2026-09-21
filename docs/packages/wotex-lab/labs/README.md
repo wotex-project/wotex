@@ -55,3 +55,23 @@ physical peer   physical peer   physical peer
 The acceptance question is not "can each protocol move bytes?" It is whether the consumer observes the same Property/Action/Event semantics, typed values, errors and lifecycle guarantees through the common WoT interface without protocol-specific application logic.
 
 See `universal-wot.md` and the per-protocol lab directories.
+
+
+## Documentation map
+
+- [Inventory and identification ledger](inventory/README.md)
+- [Current home-bench cohort](home-bench/README.md)
+- [Protocol hardware matrix](protocol-matrix.md)
+- [Cross-protocol QA scenarios](qa-scenarios.md)
+- [Universal WoT interoperability lab](universal-wot.md)
+- [Reusable lab template](TEMPLATE.md)
+- [BLE](ble/README.md)
+- [HTTP/SSE](http/README.md)
+- [MQTT](mqtt/README.md)
+- [CoAP](coap/README.md)
+- [BACnet](bacnet/README.md)
+- [Modbus](modbus/README.md)
+- [OPC UA](opcua/README.md)
+- [Matter](matter/README.md)
+- [Thread](thread/README.md)
+- [LoRaWAN integration](lorawan/README.md)
