@@ -1239,4 +1239,6 @@ packages:
       - path: hosts/storybook
       - path: hosts/nerves
         env:
+          DOC_SHELL_CANDIDATE: ""
           MIX_TARGET: host
+          PHOENIX_ASSETS_CANDIDATE: ""

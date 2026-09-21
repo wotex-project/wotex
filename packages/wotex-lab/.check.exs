@@ -64,7 +64,11 @@
     {:nerves_host,
      command: "mix do deps.get --check-locked + check --no-retry",
      cd: "hosts/nerves",
-     env: %{"MIX_TARGET" => "host"}},
+     env: %{
+       "DOC_SHELL_CANDIDATE" => "",
+       "MIX_TARGET" => "host",
+       "PHOENIX_ASSETS_CANDIDATE" => ""
+     }},
     {:package, command: "mix run --no-start bin/check_package.exs", deps: [coverage: [status: 0]]},
     {:diff, command: "git diff --check"},
     {:gettext, false},

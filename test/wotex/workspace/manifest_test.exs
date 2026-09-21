@@ -339,7 +339,14 @@ defmodule Wotex.Workspace.ManifestTest do
       assert lab.hosts == [
                %Manifest.Host{path: "hosts/workbench", env: []},
                %Manifest.Host{path: "hosts/storybook", env: []},
-               %Manifest.Host{path: "hosts/nerves", env: [{"MIX_TARGET", "host"}]}
+               %Manifest.Host{
+                 path: "hosts/nerves",
+                 env: [
+                   {"DOC_SHELL_CANDIDATE", ""},
+                   {"MIX_TARGET", "host"},
+                   {"PHOENIX_ASSETS_CANDIDATE", ""}
+                 ]
+               }
              ]
 
       for host <- lab.hosts do
