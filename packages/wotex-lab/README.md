@@ -306,7 +306,8 @@ unused dependency checks, formatting, `mix deps.audit` (with the reviewed
 `.mix_audit.ignore`) and `mix hex.audit`, strict Credo, Doctor,
 `mix docs --warnings-as-errors`, tests with 95% line coverage, Dialyzer, the
 contract (`bin/check_contracts.exs`), graph (`bin/check_graph.exs`),
-API-surface (`bin/generate_api_surface.exs --check`), Nerves-host source
+API-surface (`bin/generate_api_surface.exs --check`), compatibility-readiness
+(`bin/generate_compatibility_review.exs --check`), Nerves-host source
 (`bin/check_nerves_source.exs`) and boundary (`bin/check_boundary.exs`)
 scripts, package content inspection (`bin/check_package.exs`) and
 `git diff --check`. It also runs the complete gates of both reference hosts:
@@ -321,9 +322,12 @@ and the rpi4 firmware build stays with the Nerves host's README.
 The explicit Workbench archive lane (`bin/check_workbench_archive.exs`)
 checks the deterministic CycloneDX 1.7 production SBOM at
 `priv/provenance/workbench-bom.cdx.json`. The full gate's API-surface check
-records Lab exports, behaviours, struct keys and typespecs in
-`priv/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
-These are release-review inputs, not a stable-API or public-candidate claim.
+records Lab exports, behaviours, struct keys, typespecs and documentation
+identities in `priv/provenance/wotex-lab-api.json`; drift requires explicit
+regeneration. The compatibility review digest-links that inventory, the exact
+minimum/current toolchains and every source/qualification decision boundary in
+`priv/provenance/wotex-lab-compatibility.json`. These are release-review inputs,
+not a stable-API or public-candidate claim.
 
 ### Explicit lanes
 
@@ -342,7 +346,7 @@ when asked, inside `packages/wotex-lab`.
 | Linux Bubblewrap containment | `elixir bin/check_linux_containment.exs` | Docker; sibling package directories without uncommitted changes |
 | Source-cohort drift guard | `elixir bin/check_source_cohort.exs` | every source owner in `packages/` |
 | Reference consumer | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_reference_consumer.exs` | runs the lanes this machine supports, records the rest as `not_run` |
-| Base archive consumer | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive_consumer.exs` | public dependencies in the local Hex cache |
+| Base Mix and Mix.install archive consumers | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive_consumer.exs` | public dependencies in the local Hex cache |
 | Workbench archive | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_workbench_archive.exs` | public dependencies and platform precompiled archives in the local Hex cache |
 | TypeScript client drift, Node tests, npm archive shape | `WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs --check` | Node and npm |
 | Workbench OCI source shape | `elixir bin/check_oci_source.exs` (`WOTEX_LAB_OCI_CHECK=1` adds Docker's build-graph check) | Docker only for the build-graph check |
@@ -395,6 +399,32 @@ consumer and Workbench archive runs are explicit release-readiness work; see
 for those gates. Source-cohort snapshots, external services, native tools and
 cookbook execution refresh evidence; separate release gates do not claim
 OCI runtime, hosted or hardware evidence.
+
+### Local candidate artifacts
+
+The builder writes only to a new absolute directory. Its default mode creates
+the closed Hex, npm and reference-host source cohort. Release mode also builds
+the clone-free Workbench release and the combined static documentation and
+Storybook archive. It requires explicit local sources for both renderer
+candidates and every documentation repository, then runs the collector
+offline.
+
+```sh
+mix run --no-start bin/build_artifacts.exs \
+  --output /absolute/new/candidates \
+  --workbench-release \
+  --phoenix-assets-source /absolute/phoenix-assets \
+  --doc-shell-source /absolute/doc-shell \
+  --organisation-source /absolute/wotex-profile
+
+mix run --no-start bin/check_distribution.exs \
+  --artifacts /absolute/new/candidates \
+  --require-release
+```
+
+The manifest binds every artifact's size and SHA-256. Validation recomputes
+those values, enforces the closed candidate layout and inspects archive paths.
+Neither command publishes, uploads, deploys, tags or changes visibility.
 
 The reference hosts are separate Mix projects inside this package, run from
 their own directories with their own `README.md`: `hosts/workbench/` (the

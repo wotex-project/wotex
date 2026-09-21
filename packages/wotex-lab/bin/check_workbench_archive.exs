@@ -34,7 +34,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
              bin/check_workbench_archive.exs bin/support/archive_repository.exs
              bin/support/child_environment.exs bin/support/release_review.exs
              bin/support/work_directory.exs priv/provenance/workbench-bom.cdx.json
-             priv/provenance/wotex-lab-api.json)
+             priv/provenance/wotex-lab-api.json
+             priv/provenance/wotex-lab-compatibility.json)
 
   @spec run([String.t()]) :: :ok
   def run(argv) do

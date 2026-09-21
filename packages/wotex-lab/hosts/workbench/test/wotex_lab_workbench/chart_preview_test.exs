@@ -62,12 +62,21 @@ defmodule WotexLabWorkbench.ChartPreviewTest do
     assert Runs.assertion("x", false, "no").status == :fail
     assert Runs.assertion("x", :not_run, "later").status == :not_run
 
-    app_js = File.read!(Path.expand("../../priv/static/js/app.js", __DIR__))
+    static = Path.expand("../../priv/static", __DIR__)
+
+    app_js =
+      static
+      |> Path.join(".vite/manifest.json")
+      |> File.read!()
+      |> JSON.decode!()
+      |> get_in(["assets/app.ts", "file"])
+      |> then(&File.read!(Path.join(static, &1)))
+
     refute app_js =~ "vega"
     refute app_js =~ "WotexChart"
     assert app_js =~ "LiveSocket"
 
-    assert WotexLabWorkbenchWeb.static_paths() == ~w(css js favicon.ico robots.txt)
+    assert WotexLabWorkbenchWeb.static_paths() == ~w(assets css js favicon.ico robots.txt)
     assert WotexLabWorkbenchWeb.ErrorHTML.render("404.html", %{}) == "Not Found"
   end
 

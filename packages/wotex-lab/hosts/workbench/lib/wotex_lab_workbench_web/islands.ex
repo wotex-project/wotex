@@ -14,10 +14,10 @@ defmodule WotexLabWorkbenchWeb.Islands do
 
   @type descriptor :: %{component: String.t(), id: String.t(), props: map()}
 
-  attr :id, :string, required: true
-  attr :chart, :any, required: true
-  attr :revision, :integer, required: true
-  slot :fallback, required: true
+  attr(:id, :string, required: true)
+  attr(:chart, :any, required: true)
+  attr(:revision, :integer, required: true)
+  slot(:fallback, required: true)
 
   @doc "Enhances one admitted chart while retaining its native SVG and table fallback."
   @spec chart_island(map()) :: Phoenix.LiveView.Rendered.t()
@@ -38,12 +38,12 @@ defmodule WotexLabWorkbenchWeb.Islands do
     """
   end
 
-  attr :id, :string, required: true
-  attr :label, :string, required: true
-  attr :columns, :list, required: true
-  attr :rows, :list, required: true
-  attr :revision, :integer, required: true
-  slot :fallback, required: true
+  attr(:id, :string, required: true)
+  attr(:label, :string, required: true)
+  attr(:columns, :list, required: true)
+  attr(:rows, :list, required: true)
+  attr(:revision, :integer, required: true)
+  slot(:fallback, required: true)
 
   @doc "Enhances one bounded table with the registered keyboard data grid."
   @spec data_grid_island(map()) :: Phoenix.LiveView.Rendered.t()
@@ -64,12 +64,12 @@ defmodule WotexLabWorkbenchWeb.Islands do
     """
   end
 
-  attr :id, :string, required: true
-  attr :label, :string, required: true
-  attr :tabs, :list, required: true
-  attr :selected, :string, required: true
-  attr :revision, :integer, required: true
-  slot :fallback, required: true
+  attr(:id, :string, required: true)
+  attr(:label, :string, required: true)
+  attr(:tabs, :list, required: true)
+  attr(:selected, :string, required: true)
+  attr(:revision, :integer, required: true)
+  slot(:fallback, required: true)
 
   @doc "Enhances a small local information switcher with registered tabs."
   @spec tabs_island(map()) :: Phoenix.LiveView.Rendered.t()
@@ -90,13 +90,13 @@ defmodule WotexLabWorkbenchWeb.Islands do
     """
   end
 
-  attr :id, :string, required: true
-  attr :component, :string, required: true
-  attr :props, :map, required: true
-  attr :generation, :string, required: true
-  attr :revision, :string, required: true
-  attr :capabilities, :list, required: true
-  slot :fallback, required: true
+  attr(:id, :string, required: true)
+  attr(:component, :string, required: true)
+  attr(:props, :map, required: true)
+  attr(:generation, :string, required: true)
+  attr(:revision, :string, required: true)
+  attr(:capabilities, :list, required: true)
+  slot(:fallback, required: true)
 
   if Code.ensure_loaded?(PhoenixAssets.Svelte.Island) do
     alias PhoenixAssets.Svelte.Island
@@ -190,14 +190,13 @@ defmodule WotexLabWorkbenchWeb.Islands do
   def snapshot(%{component: component, id: id, props: props}, revision) do
     module = PhoenixAssets.Svelte.Island.Snapshot
 
-    if Code.ensure_loaded?(module) do
-      case module.new(
+    if Code.ensure_loaded?(module) and function_exported?(module, :new, 4) do
+      case :erlang.apply(module, :new, [
              component,
              id,
              props,
-             generation: "0",
-             revision: to_string(revision)
-           ) do
+             [generation: "0", revision: to_string(revision)]
+           ]) do
         {:ok, snapshot} -> {:ok, Map.from_struct(snapshot)}
         {:error, _} = error -> error
       end
@@ -211,8 +210,8 @@ defmodule WotexLabWorkbenchWeb.Islands do
   def validate_event(component, instance_id, payload) do
     module = PhoenixAssets.Svelte.Island.Event
 
-    if Code.ensure_loaded?(module),
-      do: module.validate(component, instance_id, payload),
+    if Code.ensure_loaded?(module) and function_exported?(module, :validate, 3),
+      do: :erlang.apply(module, :validate, [component, instance_id, payload]),
       else: {:error, :island_artifact_unavailable}
   end
 

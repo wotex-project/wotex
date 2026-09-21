@@ -12,7 +12,7 @@ defmodule WotexLabWorkbench.Documentation.SearchAdapter do
     adapter = PhoenixAssets.DocShell.Pagefind
 
     with true <- Code.ensure_loaded?(adapter) and function_exported?(adapter, :build, 2),
-         {:ok, output} <- adapter.build(records, options),
+         {:ok, output} <- :erlang.apply(adapter, :build, [records, options]),
          {:ok, bytes} <- canonical_records(records),
          asset <-
            struct!(DocShell.Presentation.Asset,

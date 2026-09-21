@@ -51,7 +51,7 @@ defmodule WotexLabStorybookWeb.AssetController do
          true <- Enum.all?(path, &safe_segment?/1),
          relative = Path.join(["assets" | path]),
          {:ok, body} <- read_asset(relative) do
-      content_type = MIME.from_path(relative) || "application/octet-stream"
+      content_type = MIME.from_path(relative)
 
       conn
       |> put_resp_header("cache-control", "public, max-age=31536000, immutable")

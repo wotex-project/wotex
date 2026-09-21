@@ -68,7 +68,7 @@ defmodule WotexLabWorkbench.Documentation do
     module = PhoenixAssets.DocShell.Assets
 
     if Code.ensure_loaded?(module) and function_exported?(module, :all, 0) do
-      case Enum.find(module.all(), &(&1.path == name)) do
+      case Enum.find(:erlang.apply(module, :all, []), &(&1.path == name)) do
         %{media_type: media_type, bytes: bytes} ->
           {:ok, media_type, bytes, digest(bytes)}
 

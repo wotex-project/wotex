@@ -33,6 +33,8 @@ defmodule WotexLabWorkbench.HistoryPanelsTest do
     other_room = room(registry)
 
     run!(thermal_room, "thermal")
+    captured_at = System.system_time(:millisecond)
+    eventually(fn -> System.system_time(:millisecond) > captured_at end)
     run!(thermal_room, "thermal")
     run!(other_room, "window_anomaly")
     run!(other_room, "smart_room")

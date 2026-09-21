@@ -8,10 +8,14 @@ defmodule Wotex.Lab.Check.Package do
 
   @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE CHANGELOG.md
                priv/models/manifest.json priv/provenance/source-index.json
-               priv/provenance/source-cohort.json priv/fixtures/thermal/thing-description.json
+               priv/provenance/source-cohort.json priv/provenance/wotex-lab-api.json
+               priv/provenance/wotex-lab-compatibility.json
+               priv/fixtures/thermal/thing-description.json
                priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
                priv/conformance/native/src/main.rs priv/conformance/native/src/config.rs
                priv/conformance/native/src/accounting.rs
+               priv/conformance/native/src/bin/reference_runner.rs
+               priv/conformance/native/tests/reference_runner.rs
                priv/fixtures/thermal/manifest.json priv/fixtures/thermal/expected-output.json
                priv/cookbooks/thermal-nx.livemd priv/cookbooks/smart-room.livemd)
   # Documentation reaches consumers through HexDocs, never the archive; no
@@ -53,8 +57,10 @@ defmodule Wotex.Lab.Check.Package do
                              priv/conformance/native/src/main.rs
                              priv/conformance/native/src/config.rs
                              priv/conformance/native/src/accounting.rs
+                             priv/conformance/native/src/bin/reference_runner.rs
                              priv/conformance/native/probes/main.rs
-                             priv/conformance/native/tests/lifecycle.rs) do
+                             priv/conformance/native/tests/lifecycle.rs
+                             priv/conformance/native/tests/reference_runner.rs) do
         abort("unexpected containment artifact (source-only profile): #{relative}")
       end
 

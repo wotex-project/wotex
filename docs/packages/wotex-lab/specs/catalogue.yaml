@@ -222,9 +222,9 @@ specifications:
       - "priv/conformance/native/tests/lifecycle.rs"
     compatibility_classification: Version 1.7.2 records that the unchanged native helper cohort runs in the explicit native-containment lane, not inside the package gate. Kernel containment profile 1.1.0 additively adds run_map/5 for contained work without a subject archive and an explicit network option whose internal-network variant is recorded as its own evidence value; external_map/6 keeps its arguments, flags and evidence. The WLB.06 record now also keeps the observed wall time of each contained lane case beside the profile's fixed hostile-target deadline. Kernel containment profile 1.0.0 added an additive OCI namespace and cgroup profile that closes hostile whole-tree isolation for its trusted runtime, kernel and pinned image. Reviewed-local profile 2.0.2 mounts a minimal /dev and selects C.UTF-8 for Linux Bubblewrap targets, and a pinned Linux lane executes that path. The target process now reads and writes protocol bytes independently of the host locale. Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling. The main repository gate now executes its locked unit and feature-gated lifecycle tests in a private cleaned target; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
-    version: "0.9.1"
+    version: "0.9.2"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
-    implementation_status: partial
+    implementation_status: implemented
     evidence_status: partial
     adoption_status: reference_available
     standards:
@@ -273,11 +273,11 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/control_limits_test.exs"
       - "bin/generate_typescript_client.exs"
       - "clients/typescript/test/client.test.mjs"
-    compatibility_classification: Version 0.9.1 records that the unchanged MCP catalogue, completion-plan and standards resources are read from the documentation tree beside a source checkout and are unavailable in a compiled package, rather than embedded at compile time. The additive session-bound queryMetrics operation answers the closed WLB.10 query descriptor from the bearer session room's attributed history without host opt-in; the OpenAPI projection and the generated TypeScript client gain it and every existing operation is unchanged. The source cookbook runner now reclaims unlinked run processes and run-attached telemetry handlers after completion, failure, exit or timeout, and every catalogue notebook must leave none; the scripted MQTT peer closes every accepted connection on stop. Isolation of arbitrary notebook code remains unclaimed. Additive Workbench run operations readRun, startRun, cancelRun and approveDecision extend the generated OpenAPI projection and TypeScript client; the three mutations stay refused unless the host sets control_mutations, and each executes at most once per session-room Idempotency-Key under origin, media-type, body, deadline, rate and concurrency limits. Existing read operations and their error shapes are unchanged. Additive host-owned MCP benchmark jobs bound quotas, cancellation and retained output. The additive MCP `query_metrics` tool exposes the WLB.10 query descriptor only for a host-bound history and scope. MCP resources now include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. The Nerves/MCP notebook identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
+    compatibility_classification: Version 0.9.2 classifies the complete cookbook, graph, control, MCP and generated-client source as implemented while retaining partial evidence for unpublished artifacts and the rpi4 device lane. The unchanged MCP catalogue, completion-plan and standards resources are read from the documentation tree beside a source checkout and are unavailable in a compiled package, rather than embedded at compile time. The additive session-bound queryMetrics operation answers the closed WLB.10 query descriptor from the bearer session room's attributed history without host opt-in; the OpenAPI projection and the generated TypeScript client gain it and every existing operation is unchanged. The source cookbook runner reclaims unlinked run processes and run-attached telemetry handlers after completion, failure, exit or timeout, and every catalogue notebook must leave none; the scripted MQTT peer closes every accepted connection on stop. Isolation of arbitrary notebook code remains unclaimed. Additive Workbench run operations readRun, startRun, cancelRun and approveDecision extend the generated OpenAPI projection and TypeScript client; the three mutations stay refused unless the host sets control_mutations, and each executes at most once per session-room Idempotency-Key under origin, media-type, body, deadline, rate and concurrency limits. Existing read operations and their error shapes are unchanged. Additive host-owned MCP benchmark jobs bound quotas, cancellation and retained output. The additive MCP `query_metrics` tool exposes the WLB.10 query descriptor only for a host-bound history and scope. MCP resources include the admitted WLB.02 scenario descriptors, and the Nerves/MCP notebook reads its descriptor from that list. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
-    version: "0.9.8"
+    version: "0.9.9"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
-    implementation_status: partial
+    implementation_status: implemented
     evidence_status: partial
     adoption_status: reference_available
     standards:
@@ -308,6 +308,8 @@ specifications:
       - "bin/generate_api_surface.exs"
       - "priv/provenance/workbench-bom.cdx.json"
       - "priv/provenance/wotex-lab-api.json"
+      - "bin/generate_compatibility_review.exs"
+      - "priv/provenance/wotex-lab-compatibility.json"
       - "bin/check_reference_consumer.exs"
       - "test/wotex/lab/reference_summary_test.exs"
       - "test/wotex/lab/reference_inputs_test.exs"
@@ -317,9 +319,11 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
       - "bin/check_oci_source.exs"
       - "bin/check_nerves_source.exs"
+      - "bin/build_artifacts.exs"
+      - "bin/check_distribution.exs"
       - "hosts/nerves/test/smoke_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
-    compatibility_classification: Version 0.9.7 separates source implementation from environment qualification. The remaining implementation work is the full reference-consumer runner, artifact builders and local distribution checks. Published Hex/npm/container adoption, hosted deployment, Nerves device execution and maintainer release/API decisions affect evidence or adoption status under the qualification runbook, not implementation status. The package API is unchanged.
+    compatibility_classification: Version 0.9.9 completes the contained reference runner, fresh Mix and Mix.install archive consumers, local artifact and static-documentation builders, distribution validation and a fail-closed compatibility-readiness report. The API inventory additively records documentation digests, signatures and default counts. Published Hex/npm/container adoption, hosted deployment, Nerves device execution and maintainer release/API decisions affect evidence or adoption status under the qualification runbook, not implementation status. The package runtime API is unchanged.
   - id: WLB.09
     version: "0.3.0"
     path: docs/specs/WLB.09-formal-control-verification.md
@@ -550,7 +554,7 @@ specifications:
       - "hosts/storybook/test/wotex_lab_storybook_web/storybook_test.exs"
     compatibility_classification: The accepted pre-1.0 reference-host contract implements PHA.02 Svelte islands, shared Phoenix Assets components and static Storybook while keeping LiveView authoritative for sessions, state, evidence, authorization and commands. The SVG/table path remains the semantic fallback. Base Lab consumers keep inert Wotex theme tokens and scoped CSS without Phoenix, Vite, Svelte, Node, Explorer or BeamLens. Local browser and candidate-artifact cohorts are complete source evidence; publication, WCAG certification and broader hosted adoption remain separate.
   - id: WLB.12
-    version: "0.3.0"
+    version: "0.3.1"
     path: docs/specs/WLB.12-unified-documentation.md
     implementation_status: implemented
     evidence_status: complete
@@ -583,6 +587,7 @@ specifications:
       - "Wotex.Lab.Docs.CohortResolver"
       - "Wotex.Lab.Docs.CollectionBuilder"
       - "Wotex.Lab.Docs.Projector"
+      - "Wotex.Lab.Docs.RepositoryOverrides"
       - "Wotex.Lab.Docs.SourceTree"
       - "Wotex.Lab.Docs.Staging"
       - "WotexLabWorkbench.Documentation"
@@ -595,6 +600,7 @@ specifications:
       - "test/wotex/lab/docs/checkout_test.exs"
       - "test/wotex/lab/docs/cohort_resolver_test.exs"
       - "test/wotex/lab/docs/projector_test.exs"
+      - "test/wotex/lab/docs/repository_overrides_test.exs"
       - "test/wotex/lab/docs/source_tree_test.exs"
       - "test/wotex/lab/docs/staging_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/documentation_build_test.exs"
@@ -603,4 +609,4 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/documentation_live_test.exs"
       - "hosts/workbench/bin/check_documentation_browser.mjs"
       - "bin/check_workbench_archive.exs"
-    compatibility_classification: Additive implemented Workbench, static documentation and static Storybook surface. The base library API and existing Workbench operations remain unchanged. Independently versioned DocShell and Phoenix Assets renderer, design-system and island candidates are built and verified through the clone-free release cohort; hosted publication and WCAG certification remain separate adoption claims.
+    compatibility_classification: Version 0.3.1 additively gives release builds an exact local-repository override set and a fail-closed offline mode; rendering, routes and artifacts are unchanged. The implemented Workbench, static documentation and static Storybook surface remains available. The base library API and existing Workbench operations remain unchanged. Independently versioned DocShell and Phoenix Assets renderer, design-system and island candidates are built and verified through the clone-free release cohort; hosted publication and WCAG certification remain separate adoption claims.

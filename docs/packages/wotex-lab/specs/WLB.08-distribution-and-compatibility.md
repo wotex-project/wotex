@@ -1,15 +1,18 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.8. Contract: accepted. Source status: the workspace
+Specification version: 0.9.9. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
-generated npm client source gate are implemented. The
+generated npm client source gate are implemented. The base archive gate proves
+both a fresh Mix project and a fresh `Mix.install` consumer against the same
+private registry with Git unavailable. The contained reference consumer, local
+artifact builder, distribution validator, offline static-documentation builder
+and compatibility-readiness report are implemented. The
 Workbench also has a digest-pinned, non-root OCI Dockerfile, data-free health
 route and offline image-source gate; Docker's build-graph check passes, but no
 runnable image is claimed while its WoTEx Hex dependencies are unpublished.
-The full reference-consumer runner, artifact builders and local distribution
-checks remain implementation work. Published npm/Hex/container adoption, hosted
+Published npm/Hex/container adoption, hosted
 deployment and on-device evidence are qualification states governed by the
 [qualification runbook](../plans/qualification.md), not missing source. The
 rpi4 firmware project, exact Nerves
@@ -116,13 +119,17 @@ every executable except Git (asserted from inside the consumer) with a fresh
 `HEX_HOME` and the registry as the only mirror. The consumer lock is inspected
 recursively: every package must be an admitted archive and no profile package
 may appear. The smoke runs Thing Description and Nx positive and negative cases
-through public APIs and proves the profile modules are absent. The gate writes
+through public APIs and proves the profile modules are absent. A second fresh
+directory runs those checks through `Mix.install/2`, its own install root and
+the registry-only environment, so notebook-style installation cannot silently
+use the workspace or a network repository. The gate writes
 a `Wotex.Lab.Evidence.Record` with archive digests and retains only that
-record. `bin/check_reference_consumer.exs` supplies a workspace suite run,
-not the complete `reference_consumer_green` gate: it runs Lab suites against
-the same cohort with broker, GreptimeDB and formal lanes enabled where a Docker
-daemon with provisioned images and an explicitly supplied Maude engine are present, records a
-lane that could not run as `not_run` rather than passed, and retains an
+record. `bin/check_reference_consumer.exs` is the complete source
+implementation of the `reference_consumer_green` runner: it runs Lab suites
+against the same cohort with broker, GreptimeDB and formal lanes enabled where
+a Docker daemon with provisioned images and an explicitly supplied Maude engine
+are present, records a lane that could not run as `not_run` rather than passed,
+and retains an
 evidence record with the cohort digests. Each service lane checks its own
 already provisioned image; a missing Greptime image no longer disables the
 broker lane or silently admits a database pull. No image is pulled by this
@@ -181,23 +188,27 @@ requirement must be present.
 
 `priv/provenance/wotex-lab-api.json` is the pre-1.0 public review baseline for
 the base Lab application. It records every application module's exported
-function/arity, declared behaviour, struct keys and retrievable typespec clauses.
+function/arity, declared behaviour, struct keys, retrievable typespec clauses,
+documentation state and documentation digest. Documented function signatures
+and default-argument counts are retained without copying prose into the record.
 `bin/generate_api_surface.exs --check` fails on drift and requires an explicit
-`--write` review. This is a change detector, not a stable-API decision: default
-argument semantics, result/error meaning, serialized schemas and the
-minimum/current runtime cohort still require the explicit compatibility review
-before `stable_api_candidate` can pass.
+`--write` review. `priv/provenance/wotex-lab-compatibility.json` digest-links
+that complete inventory, counts its documentation, default, typespec, struct
+and behaviour coverage, records the exact minimum/current toolchains and
+classifies each accepted gate. Its generator refuses unknown fields, schemas,
+decisions or incomplete toolchains. Publication, release-candidate and
+stable-API remain explicit maintainer decisions; tooling cannot promote them.
 
-The workspace reference script still uses a waiting-task deadline around
-`System.cmd`; that is not an independently verified descendant-cleanup or
-bounded-output-capture contract. Its record therefore leaves runner containment
-and the full reference programme as `not_run`, with cleanup conservatively
-`failed` because it is unverified. The parser's eight-MiB input bound does not
-bound subprocess output allocation. A passing suite exit is source-test
-evidence only, not closure of these accepted runner obligations. It is
-workspace evidence, not the artifact-mode runner; the distribution and
-release-candidate runners remain acceptance obligations, not approximated by
-these scripts. Before running archive-consumer tests, the harness MUST assert
+The reference harness compiles the package-owned Rust process-group runner and
+executes both artifact suites through it. The runner creates a private output
+file, applies an eight-MiB file limit before exec, bounds file descriptors,
+memory, descendants and wall time, observes descendants by process identity,
+kills the whole group and every observed escaped descendant, and emits a
+receipt that binds cleanup, outcome, exit status and exact captured bytes. The
+Elixir harness accepts no result without that receipt and retains the runner
+digest with the evidence. A passing suite exit is still artifact source
+evidence rather than publication, hosted or device evidence. Before running
+archive-consumer tests, the harness MUST assert
 Git is unavailable (`command -v git` must fail) and inspect the resolved
 dependency graph recursively, including optional/profile/transitive deps.
 Resolution of the normal graph must occur in that restricted environment;
@@ -216,7 +227,14 @@ unqualified absolute performance gate.
 ## Clone-free deliverables
 
 Hex and Mix.install run the numerical entry point. Livebooks install the same
-artifacts. OCI provides the full disposable host with least-privilege user,
+artifacts. `bin/build_artifacts.exs` emits the complete local Hex/npm/source
+cohort and, when its explicit Workbench inputs are supplied, the executable
+Workbench release and combined static documentation/Storybook archive. The
+documentation build accepts a local override for every admitted repository and
+an offline mode that fails before collection when any repository is absent;
+that mode performs no fallback network checkout. `bin/check_distribution.exs`
+recomputes every manifested digest, checks the closed candidate layout and
+inspects every archive path. OCI provides the full disposable host with least-privilege user,
 read-only base filesystem, quotas, ephemeral instance storage, health/cleanup
 checks and optional digest-pinned broker. npm is schema-generated control
 client code. The checked-in `clients/typescript/` projection has no runtime

@@ -4,6 +4,9 @@
 #
 #   mix run --no-start bin/build_artifacts.exs --output /absolute/new/directory
 #
+# Release mode additionally requires --phoenix-assets-source,
+# --doc-shell-source and --organisation-source.
+#
 
 Code.require_file("support/archive_repository.exs", __DIR__)
 Code.require_file("support/child_environment.exs", __DIR__)
@@ -73,7 +76,12 @@ defmodule Wotex.Lab.BuildArtifacts do
     )
 
     npm!(root, npm)
-    if workbench_release?, do: workbench_release!(root, output, candidates)
+
+    if workbench_release? do
+      workbench_release!(root, output, candidates)
+      documentation!(root, output, candidates)
+    end
+
     {:ok, lab_digest} = ReferenceInputs.digest(root)
     source_digest = combined_source_digest(root, lab_digest)
     revision = ArchiveRepository.revision(root)
@@ -92,7 +100,8 @@ defmodule Wotex.Lab.BuildArtifacts do
           output: :string,
           workbench_release: :boolean,
           phoenix_assets_source: :string,
-          doc_shell_source: :string
+          doc_shell_source: :string,
+          organisation_source: :string
         ]
       )
 
@@ -110,7 +119,8 @@ defmodule Wotex.Lab.BuildArtifacts do
       if release? do
         %{
           phoenix_assets: required_directory!(options, :phoenix_assets_source),
-          doc_shell: required_directory!(options, :doc_shell_source)
+          doc_shell: required_directory!(options, :doc_shell_source),
+          organisation: required_directory!(options, :organisation_source)
         }
       else
         %{}
@@ -174,10 +184,10 @@ defmodule Wotex.Lab.BuildArtifacts do
     end
   end
 
-  defp run!(executable, args, directory, label) do
+  defp run!(executable, args, directory, label, env \\ ChildEnvironment.scrubbed()) do
     case System.cmd(executable, args,
            cd: directory,
-           env: ChildEnvironment.scrubbed(),
+           env: env,
            stderr_to_stdout: true
          ) do
       {_, 0} -> :ok
@@ -207,6 +217,73 @@ defmodule Wotex.Lab.BuildArtifacts do
          ) do
       {_, 0} -> :ok
       {log, status} -> abort("Workbench release build failed (#{status}):\n#{log}")
+    end
+  end
+
+  defp documentation!(root, output, candidates) do
+    host = Path.join(root, "hosts/workbench")
+    temporary = Path.join(output, ".documentation")
+    static = Path.join(output, "static")
+    destination = Path.join(temporary, "site")
+    workspace = Path.join(temporary, "workspace")
+    File.mkdir!(temporary)
+    File.mkdir!(static)
+    revision = ArchiveRepository.revision(root)
+
+    args = [
+      "wotex_lab.docs.build",
+      "--destination",
+      destination,
+      "--workspace",
+      workspace,
+      "--repository",
+      root,
+      "--repository-override",
+      "https://github.com/wotex-project/.github=#{candidates.organisation}",
+      "--offline",
+      "--phoenix-assets-source",
+      candidates.phoenix_assets,
+      "--base-path",
+      "/docs/",
+      "--generation-id",
+      "wotex-lab-distribution-#{revision}",
+      "--generated-at",
+      revision_timestamp!(root, revision)
+    ]
+
+    env = [
+      {"MIX_ENV", "test"},
+      {"WOTEX_PATH_DEPS", "1"},
+      {"PHOENIX_ASSETS_CANDIDATE", candidates.phoenix_assets},
+      {"DOC_SHELL_CANDIDATE", candidates.doc_shell}
+    ]
+
+    run!("mix", args, host, "static documentation build", env)
+    archive_tree!(destination, Path.join(static, "wotex-lab-documentation.tar.gz"))
+    File.rm_rf!(temporary)
+  end
+
+  defp archive_tree!(root, output) do
+    files = source_files(root, ["**/*"])
+    relative = Enum.map(files, &Path.relative_to(&1, root))
+
+    case :erl_tar.create(String.to_charlist(output), Enum.map(relative, &String.to_charlist/1), [
+           :compressed,
+           {:cwd, String.to_charlist(root)}
+         ]) do
+      :ok -> :ok
+      {:error, reason} -> abort("static documentation archive failed: #{inspect(reason)}")
+    end
+  end
+
+  defp revision_timestamp!(root, revision) do
+    case System.cmd("git", ["show", "-s", "--format=%cI", revision],
+           cd: root,
+           env: ChildEnvironment.scrubbed(),
+           stderr_to_stdout: true
+         ) do
+      {timestamp, 0} -> String.trim(timestamp)
+      {output, status} -> abort("cannot read revision timestamp (#{status}):\n#{output}")
     end
   end
 

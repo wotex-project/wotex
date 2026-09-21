@@ -23,7 +23,7 @@ defmodule WotexLabWorkbench.ProvenanceTest do
   end
 
   test "no host module builds a path into the documentation tree itself" do
-    literal = ~r/"(?:[^"\n]*\/)?docs(?:\/[^"\n]*)?"/
+    literal = ~r/"(?:\.\.?\/)*(?:[^"\/\n]+\/)*docs(?:\/[^"\n]*)?"/
 
     for path <- Path.wildcard(Path.expand("../../lib/**/*.ex", __DIR__)) do
       refute Regex.match?(literal, File.read!(path)),

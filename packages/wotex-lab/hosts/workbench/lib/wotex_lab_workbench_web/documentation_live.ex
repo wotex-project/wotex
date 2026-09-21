@@ -32,13 +32,15 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
     module = PhoenixAssets.DocShell.Components
 
     if Code.ensure_loaded?(module) and function_exported?(module, :page, 1) do
-      module.page(%{
-        page: assigns.page,
-        context: assigns.context,
-        brand: [],
-        footer: [],
-        __changed__: nil
-      })
+      :erlang.apply(module, :page, [
+        %{
+          page: assigns.page,
+          context: assigns.context,
+          brand: [],
+          footer: [],
+          __changed__: nil
+        }
+      ])
     else
       unavailable(assigns)
     end
@@ -48,7 +50,7 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
     module = PhoenixAssets.DocShell.Components
 
     if Code.ensure_loaded?(module) and function_exported?(module, :not_found, 1) do
-      module.not_found(%{site: site, __changed__: nil})
+      :erlang.apply(module, :not_found, [%{site: site, __changed__: nil}])
     else
       unavailable(assigns)
     end

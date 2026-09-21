@@ -16,9 +16,11 @@ defmodule Wotex.Lab.ReferenceInputsTest do
              priv/provenance/source-index.json priv/provenance/source-cohort.json
              priv/provenance/WLB.05-evidence.json
              bin/build_artifacts.exs bin/check_distribution.exs
+             bin/generate_api_surface.exs bin/generate_compatibility_review.exs
              bin/check_reference_consumer.exs bin/check_source_cohort.exs
              bin/check_workbench_archive.exs
              bin/support/archive_repository.exs bin/support/child_environment.exs
+             bin/support/compatibility_review.exs
              bin/support/distribution.exs
              bin/support/reference_inputs.exs bin/support/reference_runner.exs
              bin/support/reference_summary.exs

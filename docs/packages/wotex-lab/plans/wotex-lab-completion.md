@@ -1,14 +1,16 @@
 # Wotex Lab completion contract
 
-Plan version: 1.5.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.6.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
 tracker. All work packages below belong to the accepted programme. Dependencies
 express what evidence must exist before a claim can be accepted; they do not
-defer or waive obligations. The requested package foundation implements a
-bounded subset without claiming the programme is complete. Changing an accepted
-obligation requires a new plan version and compatibility explanation.
+defer or waive obligations. The catalogue records source implementation,
+evidence and adoption separately; an unavailable publisher, hosted service,
+runner or device cannot make implemented repository source partial or make
+absent evidence pass. Changing an accepted obligation requires a new plan
+version and compatibility explanation.
 
 Version 1.1 adds concrete metrics/AI and native-workbench obligations (C12/C13),
 including foundation design tokens, and strengthens transport/security seam
@@ -28,6 +30,12 @@ inside the LiveView Workbench. LiveView retains routes, authorization,
 canonical state, evidence and effectful commands. The same production Svelte
 components publish through static Storybook; HEEx fallbacks and a separate
 Phoenix Storybook host cover no-JavaScript and real-transport behavior.
+
+Version 1.6 records complete source implementation for C08, C10 and C11. The
+contained reference runner, Mix and Mix.install archive consumers, local
+artifact/static-documentation builders and compatibility-readiness inputs now
+exist. Publication, hosted adoption, physical-device evidence and release/API
+decisions remain qualification or maintainer states rather than source gaps.
 
 ## Work packages
 

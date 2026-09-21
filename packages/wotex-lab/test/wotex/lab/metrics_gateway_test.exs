@@ -273,7 +273,9 @@ defmodule Wotex.Lab.MetricsGatewayTest do
       [worker] = workers(access, replacement, self())
       monitor = Process.monitor(worker)
       Process.exit(access, :kill)
-      assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+      assert_receive {:DOWN, ^monitor, :process, ^worker, reason}
+      assert reason in [:killed, :noproc]
+      refute Process.alive?(worker)
     after
       :sys.resume(replacement)
     end

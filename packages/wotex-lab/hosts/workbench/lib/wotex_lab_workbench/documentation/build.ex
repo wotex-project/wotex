@@ -104,7 +104,7 @@ defmodule WotexLabWorkbench.Documentation.Build do
           canonical_origin: Keyword.get(opts, :canonical_origin)
         ]
 
-        module.project(arguments)
+        :erlang.apply(module, :project, [arguments])
       end
     else
       {:error, :doc_shell_site_candidate_required}
@@ -131,7 +131,7 @@ defmodule WotexLabWorkbench.Documentation.Build do
         generated_at: Keyword.get(opts, :generated_at)
       ]
 
-      exporter.export(arguments)
+      :erlang.apply(exporter, :export, [arguments])
     else
       {:error, :phoenix_assets_doc_shell_candidate_required}
     end

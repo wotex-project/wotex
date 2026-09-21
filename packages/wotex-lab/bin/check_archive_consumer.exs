@@ -57,8 +57,9 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
       apps = Regex.scan(~r/Generated (\w+) app/, compiled) |> Enum.map(&List.last/1)
       IO.puts("consumer compiled: " <> Enum.join(apps, ", "))
       checks = smoke(consumer, env)
+      install_checks = mix_install_smoke(work, env)
       elapsed = System.convert_time_unit(System.monotonic_time() - started, :native, :millisecond)
-      evidence = record(root, work, admitted, resolved, checks, elapsed)
+      evidence = record(root, work, admitted, resolved, checks, install_checks, elapsed)
       cleanup(work, tarballs, consumer, public)
 
       IO.puts(
@@ -109,7 +110,11 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
       td_parse: match?({:ok, _}, Wotex.ThingDescription.parse(valid)),
       td_reject: match?({:error, [%{code: :schema_violation} | _]}, Wotex.ThingDescription.parse(~s({"title":"no context"}))),
       td_malformed: match?({:error, %{code: _}}, Wotex.ThingDescription.parse("{")),
-      nx_run: match?({:ok, %{proposal: %Wotex.Nx.ActionProposal{}}}, Wotex.Lab.Examples.Thermal.run()),
+      nx_run:
+        (case Wotex.Lab.Examples.Thermal.run() do
+           {:ok, %{proposal: proposal}} -> Map.get(proposal, :__struct__) == Wotex.Nx.ActionProposal
+           _ -> false
+         end),
       nx_reject:
         (fn ->
            {:ok, data_schema} = Wotex.DataSchema.new(%{"type" => "number", "minimum" => 5, "maximum" => 35})
@@ -143,8 +148,50 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
     '''
   end
 
+  defp mix_install_smoke(work, env) do
+    consumer = Path.join(work, "mix-install-consumer")
+    File.mkdir!(consumer)
+    script = Path.join(consumer, "smoke.exs")
+
+    File.write!(
+      script,
+      "Mix.install([{:wotex_lab, \"0.1.0\"}], consolidate_protocols: false)\n" <>
+        String.replace(smoke_script(), "ARCHIVE_CONSUMER_CHECKS", "MIX_INSTALL_CONSUMER_CHECKS")
+    )
+
+    install_env = [{"MIX_INSTALL_DIR", Path.join(work, "mix-install")} | env]
+    bin = Enum.find_value(env, fn {name, value} -> if name == "PATH", do: value end)
+    is_binary(bin) || abort("Mix.install consumer has no restricted PATH")
+
+    output =
+      run_executable!(
+        consumer,
+        install_env,
+        Path.join(bin, "elixir"),
+        [script],
+        "Mix.install consumer smoke"
+      )
+
+    parse_checks(output, "MIX_INSTALL_CONSUMER_CHECKS", "Mix.install smoke")
+  end
+
   defp run!(consumer, env, args, label) do
     ArchiveRepository.run!(consumer, env, args, label, @deadline_ms)
+  end
+
+  defp run_executable!(directory, env, executable, args, label) do
+    File.regular?(executable) || abort("#{label} executable is absent")
+
+    task =
+      Task.async(fn ->
+        System.cmd(executable, args, cd: directory, env: env, stderr_to_stdout: true)
+      end)
+
+    case Task.yield(task, @deadline_ms) || Task.shutdown(task, :brutal_kill) do
+      {:ok, {output, 0}} -> output
+      {:ok, {output, status}} -> abort("#{label} failed (#{status}):\n#{output}")
+      nil -> abort("#{label} exceeded #{@deadline_ms} ms")
+    end
   end
 
   # The resolved graph is inspected recursively through the consumer lock: every
@@ -173,8 +220,11 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
 
   defp smoke(consumer, env) do
     output = run!(consumer, env, ["run", "smoke.exs"], "archive consumer smoke")
+    parse_checks(output, "ARCHIVE_CONSUMER_CHECKS", "archive consumer smoke")
+  end
 
-    case Regex.run(~r/ARCHIVE_CONSUMER_CHECKS (\S+)/, output) do
+  defp parse_checks(output, marker, label) do
+    case Regex.run(~r/#{Regex.escape(marker)} (\S+)/, output) do
       [_, checks] ->
         checks
         |> String.split(",")
@@ -184,15 +234,15 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
         end)
         |> tap(fn map ->
           Enum.all?(map, fn {_, ok?} -> ok? end) ||
-            abort("archive consumer checks failed: #{inspect(map)}")
+            abort("#{label} checks failed: #{inspect(map)}")
         end)
 
       nil ->
-        abort("smoke produced no checks:\n#{output}")
+        abort("#{label} produced no checks:\n#{output}")
     end
   end
 
-  defp record(root, work, admitted, resolved, checks, elapsed) do
+  defp record(root, work, admitted, resolved, checks, install_checks, elapsed) do
     {:ok, source_tree_digest} = Digest.tree(root, @cohort)
     {:ok, lock_digest} = Digest.file(Path.join(root, "mix.lock"))
     fixture = Path.join(root, "priv/fixtures/thermal/thing-description.json")
@@ -212,10 +262,13 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
         budgets: %{deadline_ms: @deadline_ms},
         inputs: Enum.map(admitted, &"archive:#{&1.name}-#{&1.version}:#{&1.origin}"),
         assertions:
-          Enum.map(checks, fn {key, ok?} ->
-            %{id: "WLB-C10:archive-consumer:#{key}", status: if(ok?, do: :pass, else: :fail)}
-          end),
-        outcomes: %{profile: :base, git_on_path: false, resolved_packages: length(resolved)},
+          assertions("archive-consumer", checks) ++ assertions("mix-install", install_checks),
+        outcomes: %{
+          profile: :base,
+          git_on_path: false,
+          resolved_packages: length(resolved),
+          mix_install: true
+        },
         durations: %{gate_ms: elapsed},
         cleanup: %{status: :ok, details: %{retained: "evidence.json"}}
       )
@@ -226,12 +279,29 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
     path
   end
 
+  defp assertions(prefix, checks) do
+    Enum.map(checks, fn {key, ok?} ->
+      %{
+        id: "WLB-C10:#{prefix}:#{key}",
+        status: if(ok?, do: :pass, else: :fail)
+      }
+    end)
+  end
+
   defp cleanup(work, tarballs, consumer, public) do
     String.contains?(work, ".archive-check.consumer-") ||
       abort("refusing unsafe archive-check cleanup")
 
     Enum.each(
-      [tarballs, consumer, public, Path.join(work, "bin"), Path.join(work, "hex_home")],
+      [
+        tarballs,
+        consumer,
+        public,
+        Path.join(work, "bin"),
+        Path.join(work, "hex_home"),
+        Path.join(work, "mix-install"),
+        Path.join(work, "mix-install-consumer")
+      ],
       &File.rm_rf!/1
     )
 

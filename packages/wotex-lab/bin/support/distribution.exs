@@ -12,6 +12,7 @@ defmodule Wotex.Lab.Check.Distribution do
   @source_paths ~w(source/wotex-lab-workbench.tar source/wotex-lab-oci-context.tar
                    source/wotex-lab-nerves-rpi4.tar)
   @npm ~r{\Anpm/wotex-lab-client-\d+\.\d+\.\d+\.tgz\z}
+  @static "static/wotex-lab-documentation.tar.gz"
   @release ~r{\Arelease/wotex-lab-workbench-[a-zA-Z0-9_.-]+\.tar\.gz\z}
   @release_source "release/wotex-lab-workbench-source.tar"
 
@@ -79,6 +80,7 @@ defmodule Wotex.Lab.Check.Distribution do
          true <- Enum.all?(@hex_packages, &(hex_count(paths, &1) == 1)),
          true <- Enum.all?(@source_paths, &(&1 in paths)),
          true <- Enum.count(paths, &Regex.match?(@npm, &1)) == 1,
+         true <- static_paths?(paths, require_release?),
          true <- valid_release_paths?(releases, require_release?) do
       :ok
     else
@@ -127,7 +129,7 @@ defmodule Wotex.Lab.Check.Distribution do
   defp safe_relative?(_), do: false
 
   defp candidate_path?(path) when is_binary(path) do
-    path in @source_paths or path == @release_source or Regex.match?(@npm, path) or
+    path in @source_paths or path in [@release_source, @static] or Regex.match?(@npm, path) or
       Regex.match?(@release, path) or Enum.any?(@hex_packages, &hex_path?(path, &1))
   end
 
@@ -146,6 +148,14 @@ defmodule Wotex.Lab.Check.Distribution do
   defp valid_release_paths?(paths, _required?) do
     length(paths) == 2 and @release_source in paths and
       Enum.count(paths, &Regex.match?(@release, &1)) == 1
+  end
+
+  defp static_paths?(paths, true), do: Enum.count(paths, &(&1 == @static)) == 1
+
+  defp static_paths?(paths, false) do
+    count = Enum.count(paths, &(&1 == @static))
+    release? = Enum.any?(paths, &String.starts_with?(&1, "release/"))
+    (release? and count == 1) or (not release? and count == 0)
   end
 
   defp valid_revision?("unknown"), do: true

@@ -71,7 +71,8 @@ defmodule Wotex.Lab.DistributionTest do
     release =
       base ++
         ~w(release/wotex-lab-workbench-aarch64-apple-darwin.tar.gz
-           release/wotex-lab-workbench-source.tar)
+           release/wotex-lab-workbench-source.tar
+           static/wotex-lab-documentation.tar.gz)
 
     assert :ok = Distribution.validate_candidate_paths(release, false)
     assert :ok = Distribution.validate_candidate_paths(release, true)
@@ -81,7 +82,8 @@ defmodule Wotex.Lab.DistributionTest do
           base ++ [hd(base)],
           List.delete(base, hd(base)),
           base ++ ["release/wotex-lab-workbench-source.tar"],
-          base ++ ["release/wotex-lab-workbench-aarch64-apple-darwin.tar.gz"]
+          base ++ ["release/wotex-lab-workbench-aarch64-apple-darwin.tar.gz"],
+          release -- ["static/wotex-lab-documentation.tar.gz"]
         ] do
       assert {:error, :invalid_candidate_layout} =
                Distribution.validate_candidate_paths(changed, false)

@@ -48,6 +48,9 @@
     {:contracts, command: "mix run --no-start bin/check_contracts.exs"},
     {:graph, command: "mix run --no-start bin/check_graph.exs"},
     {:api_surface, command: "mix run --no-start bin/generate_api_surface.exs --check"},
+    {:compatibility_review,
+     command: "mix run --no-start bin/generate_compatibility_review.exs --check",
+     deps: [:api_surface]},
     {:nerves_source, command: "elixir bin/check_nerves_source.exs"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
     # The reference hosts are separate Mix projects with their own gates and

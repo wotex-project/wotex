@@ -45,6 +45,7 @@ lanes:
     elixir: "1.18.4-otp-27"
     otp: "27.3.4.15"
     skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface,
+           compatibility_review,
            native_format, native_lint, native_test, workbench, storybook_host, nerves_host]
   current:
     elixir: "1.20.2-otp-29"

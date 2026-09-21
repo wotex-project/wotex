@@ -7,6 +7,8 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
       mix wotex_lab.docs.build \
         --destination /absolute/output \
         --repository /absolute/wotex \
+        --repository-override https://github.com/wotex-project/.github=/absolute/wotex-profile \
+        --offline \
         --phoenix-assets-source /absolute/phoenix-assets \
         --base-path /wotex/docs/
 
@@ -17,7 +19,7 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
 
   use Mix.Task
 
-  alias Wotex.Lab.Docs.{Catalogue, CohortBuilder, CohortResolver}
+  alias Wotex.Lab.Docs.{Catalogue, CohortBuilder, CohortResolver, RepositoryOverrides}
   alias WotexLabWorkbench.Documentation.Publication
 
   @switches [
@@ -25,12 +27,15 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
     base_path: :string,
     catalogue: :string,
     repository: :string,
+    repository_override: :keep,
+    offline: :boolean,
     phoenix_assets_source: :string,
     storybook_artifact: :string,
     canonical_origin: :string,
     pagefind_executable: :string,
     profile: :string,
     generation_id: :string,
+    generated_at: :string,
     workspace: :string
   ]
 
@@ -52,11 +57,10 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
     catalogue_path = Path.expand(Keyword.get(opts, :catalogue, Catalogue.default_path()))
     profile = Keyword.get(opts, :profile, "release")
     workspace = workspace(opts)
-    repository_url = "https://github.com/wotex-project/wotex"
-    overrides = %{repository_url => repository}
 
     result =
       with {:ok, catalogue} <- Catalogue.load(catalogue_path),
+           {:ok, overrides} <- repository_overrides(catalogue, repository, opts),
            {:ok, resolved} <-
              CohortResolver.resolve(catalogue, profile,
                repository_overrides: overrides,
@@ -94,7 +98,14 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
     ]
     |> Enum.reject(fn {_, value} -> is_nil(value) end)
     |> optional(:canonical_origin, Keyword.get(opts, :canonical_origin))
+    |> optional(:generated_at, Keyword.get(opts, :generated_at))
     |> optional(:pagefind_executable, pagefind(opts, phoenix_assets))
+  end
+
+  defp repository_overrides(catalogue, repository, opts) do
+    primary = "https://github.com/wotex-project/wotex=#{repository}"
+    values = [primary | Keyword.get_values(opts, :repository_override)]
+    RepositoryOverrides.admit(catalogue, values, Keyword.get(opts, :offline, false))
   end
 
   defp pagefind(opts, phoenix_assets) do

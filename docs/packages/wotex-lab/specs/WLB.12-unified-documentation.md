@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.3.0. Contract: accepted. Implementation status:
+Specification version: 0.3.1. Contract: accepted. Implementation status:
 implemented. Evidence status: complete. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
@@ -12,6 +12,9 @@ pinned DocShell and Phoenix Assets contracts, serves inert LiveView routes and
 the same generated Pagefind tree, and exports the same page model as a static
 site. The combined publication stage admits separately manifested DocShell and
 Storybook trees only after link, asset, collision and design-contract checks.
+The release task accepts an explicit local source for every admitted repository;
+its offline mode refuses an incomplete set before checkout, so a distribution
+build cannot silently replace a missing input with network access.
 
 Focused unit, LiveView, publication, archive and real-Chromium cohorts cover
 the declared source types, exact digests, route projection, all Pagefind

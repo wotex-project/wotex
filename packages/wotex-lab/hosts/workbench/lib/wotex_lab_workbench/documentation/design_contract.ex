@@ -13,12 +13,20 @@ defmodule WotexLabWorkbench.Documentation.DesignContract do
   @doc "Returns the production token, component, fixture, CSS and theme identities."
   @spec current() :: {:ok, map()} | {:error, term()}
   def current do
-    with {:ok, theme_digest} <- DocShell.Json.Canonical.digest(Wotex.Lab.DesignSystem.tokens()) do
+    design_system = PhoenixAssets.DesignSystem
+
+    with true <-
+           Code.ensure_loaded?(design_system) and
+             function_exported?(design_system, :contract, 0),
+         {:ok, theme_digest} <- DocShell.Json.Canonical.digest(Wotex.Lab.DesignSystem.tokens()) do
       {:ok,
-       PhoenixAssets.DesignSystem.contract()
+       :erlang.apply(design_system, :contract, [])
        |> Map.put("schema_version", @schema)
        |> Map.put("wotex_theme_version", Wotex.Lab.DesignSystem.version())
        |> Map.put("wotex_theme_digest", theme_digest)}
+    else
+      false -> {:error, :phoenix_assets_design_system_required}
+      {:error, _} = error -> error
     end
   end
 end

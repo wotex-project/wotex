@@ -38,7 +38,7 @@ defmodule Wotex.Lab.Check.ApiSurface do
       end
 
     %{
-      "schema_version" => "1.0.0",
+      "schema_version" => "2.0.0",
       "package" => "wotex_lab",
       "version" => to_string(Application.spec(:wotex_lab, :vsn)),
       "compatibility_status" => "pre-1.0-review-baseline",
@@ -57,21 +57,81 @@ defmodule Wotex.Lab.Check.ApiSurface do
 
   defp module_surface(module) do
     Code.ensure_loaded!(module)
+    documentation = documentation(module)
 
     functions =
       module.module_info(:exports)
       |> Enum.reject(&(&1 in @ignored))
       |> Enum.sort()
-      |> Enum.map(fn {name, arity} -> %{"name" => Atom.to_string(name), "arity" => arity} end)
+      |> Enum.map(&function_surface(&1, documentation.functions))
 
     %{
       "module" => Atom.to_string(module),
       "behaviours" => behaviours(module),
       "struct_keys" => struct_keys(module),
+      "documentation" => documentation.module,
       "functions" => functions,
       "specs" => specs(module)
     }
   end
+
+  defp documentation(module) do
+    case Code.fetch_docs(module) do
+      {:docs_v1, _, _, _, module_doc, _, entries} ->
+        %{
+          module: documentation_value(module_doc),
+          functions:
+            entries
+            |> Enum.flat_map(&documentation_entry/1)
+            |> Map.new()
+        }
+
+      {:error, reason} ->
+        abort("documentation metadata is unavailable for #{inspect(module)}: #{inspect(reason)}")
+    end
+  end
+
+  defp documentation_entry({{kind, name, arity}, _, signatures, doc, metadata})
+       when kind in [:function, :macro] do
+    {export_name, export_arity} =
+      if kind == :macro, do: {"MACRO-#{name}", arity + 1}, else: {Atom.to_string(name), arity}
+
+    value =
+      documentation_value(doc)
+      |> Map.put("signatures", signatures)
+      |> put_defaults(metadata)
+
+    [{{export_name, export_arity}, value}]
+  end
+
+  defp documentation_entry(_), do: []
+
+  defp documentation_value(%{"en" => text}) when is_binary(text) and text != "" do
+    %{"status" => "documented", "sha256" => digest(text)}
+  end
+
+  defp documentation_value(:hidden), do: %{"status" => "hidden"}
+  defp documentation_value(:none), do: %{"status" => "missing"}
+
+  defp documentation_value(other),
+    do: abort("unsupported documentation metadata: #{inspect(other)}")
+
+  defp function_surface({name, arity}, documentation) do
+    name = Atom.to_string(name)
+
+    %{"name" => name, "arity" => arity}
+    |> Map.put("documentation", Map.get(documentation, {name, arity}, %{"status" => "missing"}))
+  end
+
+  defp put_defaults(value, metadata) do
+    case Map.get(metadata, :defaults) do
+      count when is_integer(count) and count > 0 -> Map.put(value, "defaults", count)
+      _ -> value
+    end
+  end
+
+  defp digest(bytes),
+    do: "sha256:" <> Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
 
   defp behaviours(module) do
     module.module_info(:attributes)
