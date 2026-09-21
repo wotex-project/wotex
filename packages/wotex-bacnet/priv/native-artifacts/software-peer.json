@@ -10,7 +10,7 @@
     {"name": "darwin-aarch64", "status": "unsupported", "reason": "the C-stack peer executes in a Linux container"}
   ],
   "sources": {
-    "first_party": ["test/interop", "test/support/software", "lib/mix/tasks/wotex.bacnet.software.build.ex", "lib/mix/tasks/wotex.bacnet.software.run.ex"],
+    "first_party": ["priv/fixtures/software-sources-v1.json", "test/interop", "test/support/software", "lib/mix/tasks/wotex.bacnet.software.build.ex", "lib/mix/tasks/wotex.bacnet.software.run.ex"],
     "upstream": [
       {"name": "bacnet-stack", "url": "https://codeload.github.com/bacnet-stack/bacnet-stack/tar.gz/3603048350b8ba543ec76cf6aa8a232b3f4d442d", "revision": "3603048350b8ba543ec76cf6aa8a232b3f4d442d", "sha256": "b5529b73551c7bea6fdd2e6e44c1e4682f1ccb017f5e3ce6d28cac87c0d26043"}
     ]

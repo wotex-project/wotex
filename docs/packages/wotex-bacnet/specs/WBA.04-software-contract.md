@@ -3,7 +3,7 @@ spec:
   id: WBA.04
   title: "Complete BACnet/IP client software profile"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-bacnet
   updated: 2026-09-21
 ---
@@ -30,6 +30,15 @@ Use BACstack 0.0.1 and the ANSI/ASHRAE 135-2024 baseline recorded in
 were not inspected. The implementable service contract below is grounded in the
 pinned SDK and independent BACnet C-stack source; it is not a BTL or full-standard
 conformance claim. Keep that access limit in public claims.
+
+[`software-sources-v1.json`](../../../../packages/wotex-bacnet/priv/fixtures/software-sources-v1.json)
+is the executed machine-readable authority for the exact BACstack archive and
+independent C-stack peer. The software builder validates its closed schema,
+immutable HTTPS locations, versions, revision and SHA-256 values before any
+download or build, uses those values for dependency-lock verification and
+evidence, and includes the inventory in both its local source identity and the
+repository-wide native artifact descriptor. Duplicated constants cannot select
+a different source.
 
 Required: BACnet/IP ReadProperty, WriteProperty, explicitly configured bounded
 Who-Is/I-Am discovery, sequential property-read helpers, SubscribeCOV and

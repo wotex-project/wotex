@@ -105,6 +105,73 @@ defmodule Wotex.BACnet.SourceManifestTest do
     refute SoftwareManifest.identity(c.directory)["source_sha256"] == first["source_sha256"]
   end
 
+  test "WBA-C09 WBA-V13 the executed source inventory owns every download identity" do
+    root = File.cwd!()
+    sources = SoftwareManifest.sources(root)
+
+    assert SoftwareManifest.pin(sources) == "3603048350b8ba543ec76cf6aa8a232b3f4d442d"
+
+    assert SoftwareManifest.archive_sha(sources) ==
+             "b5529b73551c7bea6fdd2e6e44c1e4682f1ccb017f5e3ce6d28cac87c0d26043"
+
+    assert SoftwareManifest.source_url(sources) ==
+             "https://codeload.github.com/bacnet-stack/bacnet-stack/tar.gz/" <>
+               SoftwareManifest.pin(sources)
+
+    assert SoftwarePackage.url(sources) ==
+             "https://repo.hex.pm/tarballs/bacstack-0.0.1.tar"
+
+    assert SoftwareManifest.inputs(root)["priv/fixtures/software-sources-v1.json"] ==
+             sources.sha256
+
+    descriptor = Jason.decode!(File.read!("priv/native-artifacts/software-peer.json"))
+
+    assert "priv/fixtures/software-sources-v1.json" in descriptor["sources"]["first_party"]
+
+    assert descriptor["sources"]["upstream"] == [
+             %{
+               "name" => sources.peer["name"],
+               "url" => sources.peer["url"],
+               "revision" => sources.peer["commit"],
+               "sha256" => sources.peer["sha256"]
+             }
+           ]
+  end
+
+  test "WBA-C09 WBA-V13 source inventories reject stale mutable ambiguous and unknown input", c do
+    valid =
+      File.read!("priv/fixtures/software-sources-v1.json")
+      |> Jason.decode!()
+
+    [runtime, peer] = valid["sources"]
+
+    invalid = [
+      Map.put(valid, "status", "specified_unexecuted"),
+      Map.put(valid, "unknown", true),
+      Map.put(valid, "sources", [runtime, runtime]),
+      Map.put(valid, "sources", [Map.put(runtime, "url", "https://example.test/latest"), peer]),
+      Map.put(valid, "sources", [Map.put(runtime, "hex_outer_sha256", "short"), peer]),
+      Map.put(valid, "sources", [runtime, Map.put(peer, "commit", String.upcase(peer["commit"]))]),
+      Map.put(valid, "sources", [runtime, Map.put(peer, "url", peer["url"] <> "?ref=main")])
+    ]
+
+    for inventory <- invalid do
+      write_inventory(c.directory, inventory)
+
+      assert_raise Mix.Error, "invalid_source_inventory", fn ->
+        SoftwareManifest.sources(c.directory)
+      end
+    end
+
+    path = Path.join(c.directory, "priv/fixtures/software-sources-v1.json")
+    File.rm!(path)
+    File.ln_s!(File.cwd!(), path)
+
+    assert_raise Mix.Error, "invalid_source_inventory", fn ->
+      SoftwareManifest.sources(c.directory)
+    end
+  end
+
   test "WBA-C09 WBA-V13 Git identity requires one complete successful commit and tree result" do
     commit = String.duplicate("a", 40)
     tree = String.duplicate("b", 40)
@@ -157,17 +224,18 @@ defmodule Wotex.BACnet.SourceManifestTest do
 
   test "WBA-C09 WBA-V13 package admission verifies the exact lock before decompressing", c do
     lock = Mix.Dep.Lock.read()[:bacstack]
-    assert :ok = SoftwarePackage.verify_lock(lock)
+    sources = SoftwareManifest.sources(File.cwd!())
+    assert :ok = SoftwarePackage.verify_lock(lock, sources)
 
     for invalid <- [nil, put_elem(lock, 2, "0.0.2"), put_elem(lock, 7, "changed")] do
       assert_raise Mix.Error, "bacstack_lock_mismatch", fn ->
-        SoftwarePackage.verify("invalid compressed input", invalid, c.directory)
+        SoftwarePackage.verify("invalid compressed input", invalid, c.directory, sources)
       end
     end
 
     for archive <- [nil, "invalid compressed input", String.duplicate("x", 1_048_577)] do
       assert_raise Mix.Error, "bacstack_archive_mismatch", fn ->
-        SoftwarePackage.verify(archive, lock, c.directory)
+        SoftwarePackage.verify(archive, lock, c.directory, sources)
       end
     end
   end
@@ -203,7 +271,8 @@ defmodule Wotex.BACnet.SourceManifestTest do
     archive = File.read!(Path.join(workspace, "bacstack.tar"))
     installed = Mix.Project.deps_paths()[:bacstack]
     lock = Mix.Dep.Lock.read()[:bacstack]
-    result = SoftwarePackage.verify(archive, lock, installed)
+    sources = SoftwareManifest.sources(File.cwd!())
+    result = SoftwarePackage.verify(archive, lock, installed, sources)
     assert result["package_file_count"] == 232
     assert map_size(result["installed_files_sha256"]) == 234
 
@@ -213,8 +282,14 @@ defmodule Wotex.BACnet.SourceManifestTest do
     File.write!(source, File.read!(source) <> "\n# changed dependency\n")
 
     assert_raise Mix.Error, "bacstack_installed_mismatch", fn ->
-      SoftwarePackage.verify(archive, lock, copy)
+      SoftwarePackage.verify(archive, lock, copy, sources)
     end
+  end
+
+  defp write_inventory(root, inventory) do
+    path = Path.join(root, "priv/fixtures/software-sources-v1.json")
+    File.mkdir_p!(Path.dirname(path))
+    File.write!(path, Jason.encode!(inventory))
   end
 
   defp assert_installed_failure(directory, expected) do

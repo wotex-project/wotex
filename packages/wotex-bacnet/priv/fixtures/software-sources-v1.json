@@ -1,7 +1,7 @@
 {
   "format": "wotex.software.sources",
   "version": "1.0.0",
-  "status": "specified_unexecuted",
+  "status": "executed",
   "runtime": "BEAM BACstack; no production executable",
   "sources": [
     {

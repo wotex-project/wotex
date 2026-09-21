@@ -1,9 +1,9 @@
 defmodule Wotex.BACnet.SoftwareManifest do
   @moduledoc false
 
-  @pin "3603048350b8ba543ec76cf6aa8a232b3f4d442d"
-  @archive "b5529b73551c7bea6fdd2e6e44c1e4682f1ccb017f5e3ce6d28cac87c0d26043"
+  @source_inventory "priv/fixtures/software-sources-v1.json"
   @inputs [
+    @source_inventory,
     "test/interop/cstack/CMakeLists.txt",
     "test/interop/cstack/Dockerfile.software",
     "test/interop/cstack/peer.c",
@@ -42,12 +42,28 @@ defmodule Wotex.BACnet.SoftwareManifest do
     "mix.lock"
   ]
 
-  @spec pin() :: String.t()
-  def pin, do: @pin
-  @spec archive_sha() :: String.t()
-  def archive_sha, do: @archive
-  @spec source_url() :: String.t()
-  def source_url, do: "https://codeload.github.com/bacnet-stack/bacnet-stack/tar.gz/" <> @pin
+  @type sources :: %{runtime: map(), peer: map(), sha256: String.t()}
+
+  @spec sources(String.t()) :: sources()
+  def sources(root) do
+    path = Path.join(root, @source_inventory)
+
+    with {:ok, %{type: :regular, size: size}} when size in 1..16_384 <- File.lstat(path),
+         {:ok, bytes} <- File.read(path),
+         {:ok, inventory} when is_map(inventory) <- Jason.decode(bytes),
+         {:ok, runtime, peer} <- validate_sources(inventory) do
+      %{runtime: runtime, peer: peer, sha256: hash(bytes)}
+    else
+      _ -> fail(:invalid_source_inventory)
+    end
+  end
+
+  @spec pin(sources()) :: String.t()
+  def pin(%{peer: %{"commit" => value}}), do: value
+  @spec archive_sha(sources()) :: String.t()
+  def archive_sha(%{peer: %{"sha256" => value}}), do: value
+  @spec source_url(sources()) :: String.t()
+  def source_url(%{peer: %{"url" => value}}), do: value
   @spec inputs(String.t()) :: %{String.t() => String.t()}
   def inputs(root), do: Map.new(@inputs, &{&1, digest(Path.join(root, &1))})
   @spec digest(String.t()) :: String.t()
@@ -98,12 +114,15 @@ defmodule Wotex.BACnet.SoftwareManifest do
 
   @spec verify_local(String.t(), String.t(), map()) :: map()
   def verify_local(root, workspace, manifest) do
+    sources = sources(root)
+
     expected = %{
       "schema" => "wotex.bacnet.native-peer@1",
       "status" => "ready",
-      "source_commit" => @pin,
-      "source_url" => source_url(),
-      "source_archive_sha256" => @archive,
+      "source_commit" => pin(sources),
+      "source_url" => source_url(sources),
+      "source_archive_sha256" => archive_sha(sources),
+      "source_inventory_sha256" => sources.sha256,
       "inputs" => inputs(root)
     }
 
@@ -112,7 +131,7 @@ defmodule Wotex.BACnet.SoftwareManifest do
 
     unless bounded_file?(workspace, "source.tar.gz"), do: fail(:artifact_hash_mismatch)
 
-    unless digest(Path.join(workspace, "source.tar.gz")) == @archive,
+    unless digest(Path.join(workspace, "source.tar.gz")) == archive_sha(sources),
       do: fail(:archive_hash_mismatch)
 
     files = manifest["files"]
@@ -267,6 +286,49 @@ defmodule Wotex.BACnet.SoftwareManifest do
   end
 
   defp safe_name?(_), do: false
+
+  defp validate_sources(inventory) do
+    with true <-
+           exact_keys?(inventory, ~w(format version status runtime sources)) and
+             inventory["format"] == "wotex.software.sources" and
+             inventory["version"] == "1.0.0" and inventory["status"] == "executed" and
+             inventory["runtime"] == "BEAM BACstack; no production executable",
+         sources when is_list(sources) and length(sources) == 2 <- inventory["sources"],
+         true <- Enum.all?(sources, &is_map/1),
+         by_name when map_size(by_name) == 2 <- Map.new(sources, &{&1["name"], &1}),
+         %{} = runtime <- by_name["bacstack"],
+         %{} = peer <- by_name["bacnet-stack"],
+         true <- valid_runtime_source?(runtime),
+         true <- valid_peer_source?(peer) do
+      {:ok, runtime, peer}
+    else
+      _ -> {:error, :invalid_source_inventory}
+    end
+  end
+
+  defp valid_runtime_source?(source) do
+    exact_keys?(
+      source,
+      ~w(name role version url hex_outer_sha256 hex_inner_checksum)
+    ) and source["name"] == "bacstack" and source["role"] == "runtime_hex_dependency" and
+      is_binary(source["version"]) and
+      Regex.match?(~r/\A\d+\.\d+\.\d+\z/, source["version"]) and
+      source["url"] ==
+        "https://repo.hex.pm/tarballs/bacstack-#{source["version"]}.tar" and
+      valid_hash?(source["hex_outer_sha256"]) and valid_hash?(source["hex_inner_checksum"])
+  end
+
+  defp valid_peer_source?(source) do
+    exact_keys?(source, ~w(name role commit url sha256)) and
+      source["name"] == "bacnet-stack" and
+      source["role"] == "independent_software_peer" and
+      is_binary(source["commit"]) and Regex.match?(~r/\A[0-9a-f]{40}\z/, source["commit"]) and
+      source["url"] ==
+        "https://codeload.github.com/bacnet-stack/bacnet-stack/tar.gz/#{source["commit"]}" and
+      valid_hash?(source["sha256"])
+  end
+
+  defp exact_keys?(map, keys), do: Enum.sort(Map.keys(map)) == Enum.sort(keys)
   defp valid_hash?(value), do: is_binary(value) and Regex.match?(~r/\A[0-9a-f]{64}\z/, value)
   defp fail(code), do: Mix.raise(Atom.to_string(code))
 end

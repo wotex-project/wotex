@@ -31,6 +31,7 @@ defmodule Wotex.BACnet.SoftwareFixture do
       root: root,
       workspace: workspace,
       guardian: Path.join(workspace, "command"),
+      sources: SoftwareManifest.sources(root),
       source: SoftwareManifest.identity(root),
       inputs: SoftwareManifest.inputs(root)
     }
@@ -206,9 +207,10 @@ defmodule Wotex.BACnet.SoftwareFixture do
       manifest = %{
         "schema" => "wotex.bacnet.native-peer@1",
         "status" => "ready",
-        "source_url" => SoftwareManifest.source_url(),
-        "source_commit" => SoftwareManifest.pin(),
-        "source_archive_sha256" => SoftwareManifest.archive_sha(),
+        "source_url" => SoftwareManifest.source_url(context.sources),
+        "source_commit" => SoftwareManifest.pin(context.sources),
+        "source_archive_sha256" => SoftwareManifest.archive_sha(context.sources),
+        "source_inventory_sha256" => context.sources.sha256,
         "runtime_dependency" => package,
         "inputs" => context.inputs,
         "build_source" => context.source,
@@ -239,13 +241,14 @@ defmodule Wotex.BACnet.SoftwareFixture do
   end
 
   defp download_package(context, curl) do
-    archive = download_bytes(context, curl, SoftwarePackage.url(), 1_048_576)
+    archive = download_bytes(context, curl, SoftwarePackage.url(context.sources), 1_048_576)
 
     package =
       SoftwarePackage.verify(
         archive,
         Mix.Dep.Lock.read()[:bacstack],
-        Mix.Project.deps_paths()[:bacstack]
+        Mix.Project.deps_paths()[:bacstack],
+        context.sources
       )
 
     File.write!(Path.join(context.workspace, "bacstack.tar"), archive)
@@ -254,9 +257,10 @@ defmodule Wotex.BACnet.SoftwareFixture do
   end
 
   defp download(context, curl) do
-    archive = download_bytes(context, curl, SoftwareManifest.source_url(), 16_777_216)
+    archive =
+      download_bytes(context, curl, SoftwareManifest.source_url(context.sources), 16_777_216)
 
-    unless SoftwareManifest.hash(archive) == SoftwareManifest.archive_sha(),
+    unless SoftwareManifest.hash(archive) == SoftwareManifest.archive_sha(context.sources),
       do: fail(:archive_hash_mismatch)
 
     path = Path.join(context.workspace, "source.tar.gz")
@@ -264,7 +268,7 @@ defmodule Wotex.BACnet.SoftwareFixture do
     # The pinned GitHub archive has one global PAX comment containing its commit.
     # Validate that exact record before omitting it from filesystem member checks.
     expanded = :zlib.gunzip(archive)
-    expected_comment = "52 comment=" <> SoftwareManifest.pin() <> "\n"
+    expected_comment = "52 comment=" <> SoftwareManifest.pin(context.sources) <> "\n"
 
     unless binary_part(expanded, 156, 1) == "g" and
              binary_part(expanded, 512, 52) == expected_comment,
@@ -381,7 +385,8 @@ defmodule Wotex.BACnet.SoftwareFixture do
       SoftwarePackage.verify(
         File.read!(Path.join(context.workspace, "bacstack.tar")),
         Mix.Dep.Lock.read()[:bacstack],
-        Mix.Project.deps_paths()[:bacstack]
+        Mix.Project.deps_paths()[:bacstack],
+        context.sources
       )
 
     unless package == manifest["runtime_dependency"], do: fail(:bacstack_installed_mismatch)

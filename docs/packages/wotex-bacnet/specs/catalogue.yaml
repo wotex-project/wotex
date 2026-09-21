@@ -30,13 +30,13 @@ specifications:
     executable_evidence: ["test/wotex/bacnet/bacstack_test.exs", "test/wotex/bacnet/contract_test.exs", "test/wotex/bacnet/dependency_security_test.exs", "test/wotex/bacnet/ipv4_test.exs", "test/wotex/bacnet/mapping_test.exs", "test/wotex/bacnet/port_test.exs", "test/wotex/bacnet/value_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs"]
     compatibility_classification: "Implemented URI/scalar and Runtime Property profile, including verified borrowed COV ingress; no claim of full BACnet, certification or consumer parity."
   - id: "WBA.04"
-    version: "1.1.2"
+    version: "1.1.3"
     path: "docs/specs/WBA.04-software-contract.md"
     implementation_status: "implemented"
     standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Selected BACnet/IP client and binding scope; full ASHRAE standard access limited"}]
     requires: ["WBA.01", "WBA.02", "WBA.03"]
     implementation_modules: ["Wotex.BACnet.Address", "Wotex.BACnet.BACstack", "Wotex.BACnet.Client", "Wotex.BACnet.Error", "Wotex.BACnet.IPv4", "Wotex.BACnet.PortCall", "Wotex.BACnet.Session", "Wotex.BACnet.StackOwner", "Wotex.BACnet.Value", "Wotex.BACnet", "Wotex.BACnet.IngressTransport", "Wotex.BACnet.IngressWindow", "Wotex.BACnet.IPv4Packet", "Wotex.BACnet.IPv4Interface", "Wotex.BACnet.StackClient"]
-    executable_evidence: ["test/wotex/bacnet/service_boundary_test.exs", "test/wotex/bacnet/character_string_test.exs", "test/wotex/bacnet/stack_lifecycle_test.exs", "test/wotex/bacnet/stack_cov_test.exs", "test/wotex/bacnet/cov_lifecycle_test.exs", "test/wotex/bacnet/native_subscription_test.exs", "test/wotex/bacnet/runtime_stream_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs", "test/wotex/bacnet/ingress_window_test.exs", "test/wotex/bacnet/ipv4_packet_test.exs", "test/wotex/bacnet/ipv4_interface_test.exs"]
+    executable_evidence: ["priv/fixtures/software-sources-v1.json", "test/software/source_manifest_test.exs", "test/software/build_task_test.exs", "test/wotex/bacnet/service_boundary_test.exs", "test/wotex/bacnet/character_string_test.exs", "test/wotex/bacnet/stack_lifecycle_test.exs", "test/wotex/bacnet/stack_cov_test.exs", "test/wotex/bacnet/cov_lifecycle_test.exs", "test/wotex/bacnet/native_subscription_test.exs", "test/wotex/bacnet/runtime_stream_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs", "test/wotex/bacnet/ingress_window_test.exs", "test/wotex/bacnet/ipv4_packet_test.exs", "test/wotex/bacnet/ipv4_interface_test.exs"]
     compatibility_classification: "Typed services, COV, bounded owned UDP lifecycle, discovery, batch, release, Runtime observation, ACK loss, fault transitions and stress have local and pinned C-peer evidence for the exact accepted cohort."
   - id: "WBA.05"
     version: "1.1.1"
