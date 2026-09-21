@@ -31,6 +31,8 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
   }
 
   @thing_id "urn:wotex:lab:room:simulated"
+  @max_rows 64
+  @quality_scores %{good: 1.0, uncertain: 0.5, bad: 0.0, missing: 0.0}
   @options [
     :backend,
     :count,
@@ -172,8 +174,16 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
            Telemetry.span(:nx, :encode, %{profile: :window_anomaly}, fn ->
              Encoder.encode(rows, schema)
            end),
+         :ok <- batch_measurements(encoded),
          score <-
            Telemetry.span(:nx, :inference, %{profile: :window_anomaly}, fn ->
+             Telemetry.event(
+               :nx,
+               :inference,
+               %{queue_depth: 0},
+               %{profile: :window_anomaly}
+             )
+
              Nx.Defn.jit_apply(&score/1, [encoded], compiler: Nx.Defn.Evaluator)
            end),
          {:ok, anomaly} <- decode_anomaly(score, Keyword.get(opts, :threshold, 1.5), last_at),
@@ -200,6 +210,45 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
     end
   end
 
+  defp batch_measurements(encoded) do
+    {_, masks, quality} =
+      Nx.Defn.jit_apply(&Function.identity/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
+
+    mask_values =
+      masks
+      |> Tuple.to_list()
+      |> Enum.flat_map(&Nx.to_flat_list/1)
+
+    Telemetry.event(
+      :nx,
+      :encode,
+      %{
+        rows: Encoded.row_count(encoded),
+        width: length(Encoded.feature_order(encoded)),
+        fill: Encoded.row_count(encoded) / @max_rows,
+        mask_observed: ratio(mask_values, &(&1 == 1)),
+        quality: quality_ratio(Nx.to_flat_list(quality))
+      },
+      %{profile: :window_anomaly}
+    )
+  rescue
+    _ -> :ok
+  catch
+    _, _ -> :ok
+  end
+
+  defp ratio(values, predicate),
+    do: Enum.count(values, predicate) / max(length(values), 1)
+
+  defp quality_ratio(values) do
+    codes =
+      Map.new(Wotex.Nx.quality_codes(), fn {quality, code} ->
+        {code, Map.fetch!(@quality_scores, quality)}
+      end)
+
+    Enum.reduce(values, 0.0, &(Map.get(codes, &1, 0.0) + &2)) / max(length(values), 1)
+  end
+
   defp schema(fill) do
     with {:ok, data_schema} <- DataSchema.new(%{"type" => "number", "unit" => "Cel"}),
          {:ok, feature} <-
@@ -212,7 +261,7 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
              accepted_quality: [:good, :uncertain],
              missing: {:fill, fill}
            ) do
-      Schema.new(features: [feature], max_rows: 64)
+      Schema.new(features: [feature], max_rows: @max_rows)
     end
   end
 

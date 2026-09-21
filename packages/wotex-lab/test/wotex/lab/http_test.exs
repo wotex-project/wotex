@@ -263,7 +263,16 @@ defmodule Wotex.Lab.HttpTest do
     {:ok, big} = Lab.start_child(lab, :sessions, spec)
     monitor = Process.monitor(big)
     assert_receive {:stream_opened, _headers}, 2_000
+    assert_receive {:runtime_subscription_opened, ^big}, 2_000
+
+    %HTTPSubscription{client_handle: session} = :sys.get_state(big).handle
+    attach_from(session, [[:wotex, :lab, :sse, :subscription, :measurement]])
+
     HttpServer.push(server.controller, "data: " <> String.duplicate("9", 100) <> "\n\n")
+
+    assert_receive {:lab_event, [:wotex, :lab, :sse, :subscription, :measurement], %{dropped: 1},
+                    %{profile: :http}}
+
     assert_receive {:DOWN, ^monitor, :process, ^big, {:shutdown, :transport_down}}, 2_000
   end
 
@@ -349,6 +358,32 @@ defmodule Wotex.Lab.HttpTest do
     after
       100 -> nudge_until_down(stream, monitor, attempts - 1)
     end
+  end
+
+  @doc false
+  @spec forward_from(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          {pid(), pid()}
+        ) :: :ok
+  def forward_from(event, measurements, metadata, {receiver, emitter}) do
+    if self() == emitter, do: send(receiver, {:lab_event, event, measurements, metadata})
+    :ok
+  end
+
+  defp attach_from(emitter, events) do
+    handler = {__MODULE__, make_ref()}
+
+    :ok =
+      :telemetry.attach_many(
+        handler,
+        events,
+        &__MODULE__.forward_from/4,
+        {self(), emitter}
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
   end
 
   defp thing_description(port) do

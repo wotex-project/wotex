@@ -45,6 +45,14 @@ defmodule WotexLabWorkbench.HostedInvestigationTest do
     ]
 
     start_supervised!({HostedBroker, command: command, provider: :codex_then_ollama})
+    broker = Process.whereis(HostedBroker)
+
+    attach_from(broker, [
+      [:wotex, :lab, :metrics, :investigation, :start],
+      [:wotex, :lab, :metrics, :investigation, :stop],
+      [:wotex, :lab, :metrics, :investigation, :measurement]
+    ])
+
     durable = fn _ -> {:error, :unavailable} end
     binding = %{instance: "tenant-metrics", durable: durable}
 
@@ -80,6 +88,17 @@ defmodule WotexLabWorkbench.HostedInvestigationTest do
     assert HostedBroker.status().completed == 1
     assert HostedBroker.status().running == 0
 
+    assert_receive {:lab_event, [:wotex, :lab, :metrics, :investigation, :start],
+                    %{monotonic_time: _, system_time: _}, %{profile: :other}}
+
+    assert_receive {:lab_event, [:wotex, :lab, :metrics, :investigation, :stop],
+                    %{duration: duration}, %{outcome: :ok, profile: :other}}
+
+    assert duration >= 0
+
+    assert_receive {:lab_event, [:wotex, :lab, :metrics, :investigation, :measurement],
+                    %{context_bytes: 14, tool_calls: 9}, %{profile: :other}}
+
     assert {:ok, cancelled} = HostedBroker.ask(binding, "Wait for cancellation.")
 
     assert {:error, %Wotex.Lab.Error{code: :unknown_hosted_investigation}} =
@@ -89,6 +108,15 @@ defmodule WotexLabWorkbench.HostedInvestigationTest do
 
     assert_receive {:hosted_investigation, ^cancelled, {:error, :investigation_cancelled}},
                    2_000
+
+    assert_receive {:lab_event, [:wotex, :lab, :metrics, :investigation, :start], _,
+                    %{profile: :other}}
+
+    assert_receive {:lab_event, [:wotex, :lab, :metrics, :investigation, :stop], _,
+                    %{outcome: :rejected, profile: :other}}
+
+    assert_receive {:lab_event, [:wotex, :lab, :metrics, :investigation, :measurement],
+                    %{context_bytes: 0, tool_calls: 0}, %{profile: :other}}
 
     eventually(fn -> private_children(artifact) == [] end)
     assert HostedBroker.status().cancelled == 1
@@ -134,6 +162,32 @@ defmodule WotexLabWorkbench.HostedInvestigationTest do
         {key, value} -> Application.put_env(:wotex_lab_workbench, key, value)
       end)
     end)
+  end
+
+  @doc false
+  @spec forward_from(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          {pid(), pid()}
+        ) :: :ok
+  def forward_from(event, measurements, metadata, {receiver, emitter}) do
+    if self() == emitter, do: send(receiver, {:lab_event, event, measurements, metadata})
+    :ok
+  end
+
+  defp attach_from(emitter, events) do
+    handler = {__MODULE__, make_ref()}
+
+    :ok =
+      :telemetry.attach_many(
+        handler,
+        events,
+        &__MODULE__.forward_from/4,
+        {self(), emitter}
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
   end
 
   defp private_children(root) do

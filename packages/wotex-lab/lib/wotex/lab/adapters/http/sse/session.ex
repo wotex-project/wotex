@@ -107,6 +107,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
           handle_chunks(rest, response, owner, next_parser)
 
         {:error, error} ->
+          Telemetry.event(:sse, :subscription, %{dropped: 1}, %{profile: :http})
           _ = Req.cancel_async_response(response)
           exit({:shutdown, error.code})
       end

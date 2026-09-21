@@ -29,7 +29,7 @@ if Code.ensure_loaded?(:emqtt) do
     use GenServer
 
     alias Wotex.Binding.MQTT.{Broker, Command, Delivery}
-    alias Wotex.Lab.Error
+    alias Wotex.Lab.{Error, Telemetry}
 
     @messages %{
       broker_host_not_admitted: "the Form broker host is not the configured admitted peer",
@@ -165,11 +165,14 @@ if Code.ensure_loaded?(:emqtt) do
            {:ok, delivery} <- delivery(message) do
         send(state.owner, {:wotex_transport_frame, delivery})
       else
-        _ -> :ok
+        _ -> dropped()
       end
     end
 
-    defp forward(_, _), do: :ok
+    defp forward(_, _), do: dropped()
+
+    defp dropped,
+      do: Telemetry.event(:mqtt, :subscription, %{dropped: 1}, %{profile: :mqtt})
 
     defp delivery(%{topic: topic, payload: payload} = message) do
       case Delivery.new(payload,

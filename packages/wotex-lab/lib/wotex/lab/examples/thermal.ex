@@ -21,6 +21,7 @@ defmodule Wotex.Lab.Examples.Thermal do
   alias Wotex.Nx.{Decoder, Encoded, Encoder, Feature, Observation, OutputSchema, Row, Schema}
 
   @max_rows 2
+  @quality_scores %{good: 1.0, uncertain: 0.5, bad: 0.0, missing: 0.0}
 
   @doc "Runs the checked-in thermal fixture and returns the TD, encoded batch and inert proposal."
   @spec run(keyword()) :: {:ok, map()} | {:error, term()}
@@ -91,6 +92,7 @@ defmodule Wotex.Lab.Examples.Thermal do
          :ok <- batch_measurements(encoded),
          tensor <-
            Telemetry.span(:nx, :inference, %{profile: :thermal}, fn ->
+             Telemetry.event(:nx, :inference, %{queue_depth: 0}, %{profile: :thermal})
              Nx.Defn.jit_apply(&target/1, [Encoded.batch(encoded)], compiler: compiler)
            end),
          {:ok, output_schema} <- DataSchema.new(map["actions"]["setTarget"]["input"]),
@@ -104,15 +106,42 @@ defmodule Wotex.Lab.Examples.Thermal do
   end
 
   defp batch_measurements(encoded) do
-    rows = Encoded.row_count(encoded)
-    width = length(Encoded.feature_order(encoded))
+    {_, masks, quality} =
+      Nx.Defn.jit_apply(&Function.identity/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
+
+    mask_values =
+      masks
+      |> Tuple.to_list()
+      |> Enum.flat_map(&Nx.to_flat_list/1)
 
     Telemetry.event(
       :nx,
       :encode,
-      %{rows: rows, width: width, fill: rows / @max_rows},
+      %{
+        rows: Encoded.row_count(encoded),
+        width: length(Encoded.feature_order(encoded)),
+        fill: Encoded.row_count(encoded) / @max_rows,
+        mask_observed: ratio(mask_values, &(&1 == 1)),
+        quality: quality_ratio(Nx.to_flat_list(quality))
+      },
       %{profile: :thermal}
     )
+  rescue
+    _ -> :ok
+  catch
+    _, _ -> :ok
+  end
+
+  defp ratio(values, predicate),
+    do: Enum.count(values, predicate) / max(length(values), 1)
+
+  defp quality_ratio(values) do
+    codes =
+      Map.new(Wotex.Nx.quality_codes(), fn {quality, code} ->
+        {code, Map.fetch!(@quality_scores, quality)}
+      end)
+
+    Enum.reduce(values, 0.0, &(Map.get(codes, &1, 0.0) + &2)) / max(length(values), 1)
   end
 
   defp feature(thing_id, schema) do

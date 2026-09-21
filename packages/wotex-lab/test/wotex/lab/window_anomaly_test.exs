@@ -84,6 +84,11 @@ defmodule Wotex.Lab.WindowAnomalyTest do
   end
 
   test "rejected quality rows are filled with mask zero and their quality code" do
+    attach_from_caller([
+      [:wotex, :lab, :nx, :encode, :measurement],
+      [:wotex, :lab, :nx, :inference, :measurement]
+    ])
+
     assert {:ok, result} = WindowAnomaly.run(seed: 7, glitches: [30])
 
     {{_}, {masks}, quality} =
@@ -93,6 +98,18 @@ defmodule Wotex.Lab.WindowAnomalyTest do
     assert Nx.to_flat_list(quality) == [0, 0, 0, 0, 0, 0, 2, 0]
     assert Enum.at(result.rows, 6).provenance["temperature"] == "sim-30"
     assert Enum.at(result.rows, 6).observations["temperature"].quality == :bad
+
+    assert_receive {:lab_event, [:wotex, :lab, :nx, :encode, :measurement],
+                    %{
+                      fill: 0.125,
+                      mask_observed: 0.875,
+                      quality: 0.875,
+                      rows: 8,
+                      width: 1
+                    }, %{profile: :window_anomaly}}
+
+    assert_receive {:lab_event, [:wotex, :lab, :nx, :inference, :measurement], %{queue_depth: 0},
+                    %{profile: :window_anomaly}}
   end
 
   test "permuted input, exact and nearest strategies agree on aligned samples" do
@@ -223,5 +240,32 @@ defmodule Wotex.Lab.WindowAnomalyTest do
       )
 
     Schema.new(features: [feature], max_rows: 64)
+  end
+
+  @doc false
+  @spec forward_from_caller(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          {pid(), pid()}
+        ) :: :ok
+  def forward_from_caller(event, measurements, metadata, {receiver, emitter}) do
+    if self() == emitter, do: send(receiver, {:lab_event, event, measurements, metadata})
+    :ok
+  end
+
+  defp attach_from_caller(events) do
+    handler = {__MODULE__, make_ref()}
+    caller = self()
+
+    :ok =
+      :telemetry.attach_many(
+        handler,
+        events,
+        &__MODULE__.forward_from_caller/4,
+        {caller, caller}
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
   end
 end

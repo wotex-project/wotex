@@ -260,6 +260,9 @@ defmodule Wotex.Lab.MqttTest do
     assert_receive {:mqtt_connect, %{username: nil, password: nil}}
     assert_receive {:mqtt_subscribe, ["lab/scripted/properties/temperature"]}
 
+    session = :sys.get_state(subscription).handle
+    attach_from(session, [[:wotex, :lab, :mqtt, :subscription, :measurement]])
+
     MqttServer.publish(server, "#{prefix}/properties/temperature", "21.5")
 
     assert_receive {:wotex_runtime, :scripted,
@@ -268,8 +271,15 @@ defmodule Wotex.Lab.MqttTest do
 
     MqttServer.publish(server, "#{prefix}/properties/temperature", "123456789012345")
     MqttServer.publish(server, "other/thing/value", "1")
-    send(:sys.get_state(subscription).handle, {:publish, %{}})
-    send(:sys.get_state(subscription).handle, :unrelated)
+    send(session, {:publish, %{}})
+    send(session, :unrelated)
+
+    assert_receive {:lab_event, [:wotex, :lab, :mqtt, :subscription, :measurement], %{dropped: 1},
+                    %{profile: :mqtt}}
+
+    assert_receive {:lab_event, [:wotex, :lab, :mqtt, :subscription, :measurement], %{dropped: 1},
+                    %{profile: :mqtt}}
+
     refute_receive {:wotex_runtime, :scripted, _event}, 200
     assert Process.alive?(subscription)
 
@@ -413,6 +423,32 @@ defmodule Wotex.Lab.MqttTest do
     {:ok, subscription} = Lab.start_child(lab, :sessions, spec)
     assert_receive {:runtime_subscription_opened, ^subscription}, 2_000
     subscription
+  end
+
+  @doc false
+  @spec forward_from(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          {pid(), pid()}
+        ) :: :ok
+  def forward_from(event, measurements, metadata, {receiver, emitter}) do
+    if self() == emitter, do: send(receiver, {:lab_event, event, measurements, metadata})
+    :ok
+  end
+
+  defp attach_from(emitter, events) do
+    handler = {__MODULE__, make_ref()}
+
+    :ok =
+      :telemetry.attach_many(
+        handler,
+        events,
+        &__MODULE__.forward_from/4,
+        {self(), emitter}
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
   end
 
   defp consumed_thing(href, prefix \\ nil, opts \\ []) do

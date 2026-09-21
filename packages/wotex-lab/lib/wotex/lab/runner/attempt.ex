@@ -23,7 +23,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   use GenServer
 
   alias Wotex.Lab
-  alias Wotex.Lab.{Error, Scenario}
+  alias Wotex.Lab.{Error, Scenario, Telemetry}
   alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Runner.{Definition, Recording}
 
@@ -183,7 +183,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   def terminate(_, %{phase: :terminal}), do: :ok
 
   def terminate(_, state) do
-    _ = cleanup(state)
+    _ = instrumented_cleanup(state)
     :ok
   end
 
@@ -492,7 +492,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   defp finish(state, outcome, reason) do
     state = phase(state, :stopping)
     state = kill_worker(state)
-    cleanup_result = cleanup(state)
+    cleanup_result = instrumented_cleanup(state)
     {outcome, reason} = settle(state, cleanup_result, outcome, reason)
     state = %{state | outcome: outcome, reason: reason, cleanup: cleanup_result, children: %{}}
     state = notify(phase(state, :terminal), {:terminal, outcome})
@@ -524,6 +524,20 @@ defmodule Wotex.Lab.Runner.Attempt do
     case File.rm_rf(state.work_dir) do
       {:ok, _} -> cleanup_result(failures)
       {:error, reason, _} -> %{children: failures, work_dir: reason}
+    end
+  end
+
+  defp instrumented_cleanup(state) do
+    metadata = %{profile: :other, scenario_id: state.scenario.id}
+
+    case Telemetry.span(:scenario, :cleanup, metadata, fn ->
+           case cleanup(state) do
+             :ok -> {:ok, :ok}
+             failure -> {:error, failure}
+           end
+         end) do
+      {:ok, result} -> result
+      {:error, result} -> result
     end
   end
 

@@ -224,7 +224,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.09-formal-control-verification.md"
       - id: "WLB.10"
-        version: "0.30.0"
+        version: "0.31.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.10-metrics-storage-and-ai-inspection.md"
       - id: "WLB.11"

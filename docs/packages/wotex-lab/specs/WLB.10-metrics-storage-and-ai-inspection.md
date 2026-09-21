@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.30.0. Contract: accepted. Source status: implemented.
+Specification version: 0.31.0. Contract: accepted. Source status: implemented.
 
 The base library owns the metric catalogue, bounded collection and ETS history,
 read-only query contract, immutable dataset export, Prometheus exposition,
@@ -104,9 +104,17 @@ Training loss/held-out results are run data, not labels or proof of accuracy.
 Every group has catalogue metrics whose source events use the WLB.06
 vocabulary; the `formal` and `metrics` components and the `cleanup`, `export`,
 `query` and `investigation` operations describe verification, exporter,
-query and investigation metrics. Scenario cleanup, subscription drops, mask,
-quality and queue-depth, formal verification and investigation metrics have no
-Lab emitter yet; the catalogue states them and nothing simulates them.
+query and investigation metrics. The runner emits one cleanup span around each
+bounded cleanup result. SSE and MQTT sessions count frames rejected by their
+parser, payload or delivery bounds. The thermal and window examples report
+their encoded row count, feature count, schema-capacity fill, realized mask
+share and quality score. Quality scores are `good = 1`, `uncertain = 0.5` and
+`bad` or `missing = 0`; their arithmetic mean is the exported ratio. Those two
+examples execute directly without a serving queue and therefore report queue
+depth zero. A host that introduces a serving queue must report its actual
+waiting count instead. The formal profile emits verification spans and budget
+use. Both the trusted-local and isolated hosted investigation brokers emit
+duration, context-byte and tool-call measurements for admitted requests.
 
 Handlers execute synchronously in the emitter. They MUST perform only bounded
 validation/aggregation; no network, model call, disk write or blocking query.
@@ -958,6 +966,10 @@ prompt injection, cross-session scope substitution, cloud-disclosure and
 cancelled-agent tests. Prompt cases include missing-mask spikes, warm-up vs
 inference latency, SSE drops, MQTT duplicates and dataset split leakage. All
 answers resolve to recorded queries; fluent unsupported answers fail.
+`runner_test.exs`, `thermal_test.exs`, `window_anomaly_test.exs`,
+`http_test.exs`, `mqtt_test.exs`, `formal_maude_test.exs`, the Workbench
+`beamlens_integration_test.exs` and `hosted_investigation_test.exs` exercise
+the source emitters and their success, rejection or failure outcomes.
 `test/wotex/lab/metrics_*.exs` cover the collector-to-exposition equality
 fixture, reset, stale and histogram cases, series and history budgets, atomic
 admission, bounded exporter overload, retry and no-retry, network loss,

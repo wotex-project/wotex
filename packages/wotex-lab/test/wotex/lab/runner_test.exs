@@ -27,6 +27,8 @@ defmodule Wotex.Lab.RunnerTest do
 
   test "a revision-pinned definition executes in dependency order and cleans owned state",
        context do
+    scenario_id = "cleanup-success-#{System.unique_integer([:positive])}"
+    attach_events([[:wotex, :lab, :scenario, :cleanup, :stop]])
     {:ok, host} = host(context, observer: self())
 
     steps = [
@@ -36,6 +38,7 @@ defmodule Wotex.Lab.RunnerTest do
 
     {:ok, definition} =
       definition(steps,
+        id: scenario_id,
         assertions: [%{"id" => "reading", "step" => "value", "key" => "reading", "equals" => 21}],
         upstream: ["wotex_runtime:WRT.02"]
       )
@@ -54,6 +57,12 @@ defmodule Wotex.Lab.RunnerTest do
     assert Recording.to_map(status.recording)["outcome"] == "pass"
     assert_receive {:wotex_lab_run, _, {:phase, :admitted}}
     assert_receive {:wotex_lab_run, _, {:phase, :terminal}}
+
+    assert_receive {:wotex_lab_telemetry, [:wotex, :lab, :scenario, :cleanup, :stop],
+                    %{duration: duration},
+                    %{outcome: :ok, profile: :other, scenario_id: ^scenario_id}}
+
+    assert duration >= 0
     assert role_children(context.lab, :things) == []
     assert File.ls!(context.tmp_dir) == []
   end
@@ -214,13 +223,16 @@ defmodule Wotex.Lab.RunnerTest do
 
   test "cleanup is bounded by its budget and a forced stop is never hidden behind pass",
        context do
+    scenario_id = "cleanup-failure-#{System.unique_integer([:positive])}"
+    attach_events([[:wotex, :lab, :scenario, :cleanup, :stop]])
+
     {:ok, host} =
       host(context,
         component: [startup: :stubborn, receiver: self()],
         budgets: %{cleanup_ms: 50, wall_ms: 5_000}
       )
 
-    {:ok, definition} = definition([step("echo", "room.util", "echo", 1)])
+    {:ok, definition} = definition([step("echo", "room.util", "echo", 1)], id: scenario_id)
     {:ok, scenario} = scenario(definition)
     started_at = System.monotonic_time(:millisecond)
     assert {:ok, run} = Runner.start(scenario, definition, host)
@@ -235,6 +247,12 @@ defmodule Wotex.Lab.RunnerTest do
     assert %{code: :cleanup_failed, details: %{children: failures}} = status.reason
     assert length(failures) == 2
     assert Enum.all?(failures, &(&1.reason == :cleanup_budget_exhausted and &1.forced))
+
+    assert_receive {:wotex_lab_telemetry, [:wotex, :lab, :scenario, :cleanup, :stop],
+                    %{duration: duration},
+                    %{outcome: :error, profile: :other, scenario_id: ^scenario_id}}
+
+    assert duration >= 0
 
     for monitor <- monitors do
       assert_receive {:DOWN, ^monitor, :process, _, _}, 1_000
@@ -857,6 +875,12 @@ defmodule Wotex.Lab.RunnerTest do
       List.keyfind(Supervisor.which_children(lab), role, 0)
 
     DynamicSupervisor.which_children(supervisor)
+  end
+
+  defp attach_events(events) do
+    handler = {__MODULE__, make_ref()}
+    :ok = :telemetry.attach_many(handler, events, &Wotex.Lab.Telemetry.forward/4, self())
+    on_exit(fn -> :telemetry.detach(handler) end)
   end
 
   defp eventually(fun, attempts \\ 100)

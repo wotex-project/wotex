@@ -21,6 +21,12 @@ defmodule Wotex.Lab.ThermalTest do
   }
 
   test "public APIs produce an inspectable batch and inert proposal with provenance" do
+    handler =
+      attach_from_caller([
+        [:wotex, :lab, :nx, :encode, :measurement],
+        [:wotex, :lab, :nx, :inference, :measurement]
+      ])
+
     backend = Nx.default_backend()
     assert {:ok, result} = Thermal.run()
     assert Nx.default_backend() == backend
@@ -41,6 +47,15 @@ defmodule Wotex.Lab.ThermalTest do
     assert Nx.to_flat_list(values) == [20.0, 22.0]
     assert Nx.to_flat_list(masks) == [1, 1]
     assert Nx.to_flat_list(quality) == [0, 0]
+
+    assert_receive {:lab_event, [:wotex, :lab, :nx, :encode, :measurement],
+                    %{fill: 1.0, mask_observed: 1.0, quality: 1.0, rows: 2, width: 1},
+                    %{profile: :thermal}}
+
+    assert_receive {:lab_event, [:wotex, :lab, :nx, :inference, :measurement], %{queue_depth: 0},
+                    %{profile: :thermal}}
+
+    :ok = :telemetry.detach(handler)
 
     assert %ActionProposal{
              thing_id: "urn:wotex:lab:thermostat:1",
@@ -152,5 +167,33 @@ defmodule Wotex.Lab.ThermalTest do
              Decoder.decode(Nx.tensor(40.0), output, id: "invalid", proposed_at: 0)
 
     refute_received _unexpected
+  end
+
+  @doc false
+  @spec forward_from_caller(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          {pid(), pid()}
+        ) :: :ok
+  def forward_from_caller(event, measurements, metadata, {receiver, emitter}) do
+    if self() == emitter, do: send(receiver, {:lab_event, event, measurements, metadata})
+    :ok
+  end
+
+  defp attach_from_caller(events) do
+    handler = {__MODULE__, make_ref()}
+    caller = self()
+
+    :ok =
+      :telemetry.attach_many(
+        handler,
+        events,
+        &__MODULE__.forward_from_caller/4,
+        {caller, caller}
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    handler
   end
 end

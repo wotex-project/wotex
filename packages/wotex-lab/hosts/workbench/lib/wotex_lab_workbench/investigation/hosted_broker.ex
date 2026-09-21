@@ -11,7 +11,7 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
 
   use GenServer
 
-  alias Wotex.Lab.{Error, Options}
+  alias Wotex.Lab.{Error, Options, Telemetry}
   alias WotexLabWorkbench.Investigation.HostedCommand
 
   @max_active 8
@@ -99,7 +99,7 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
   def handle_call({:ask, binding, prompt, current, baseline}, {owner, _}, state) do
     with :ok <- validate_binding(binding),
          :ok <- validate_prompt(prompt),
-         :ok <- validate_context(current, baseline) do
+         {:ok, context_bytes} <- validate_context(current, baseline) do
       reference = make_ref()
       provider_capability = capability()
       query_capability = capability()
@@ -126,6 +126,13 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
       timeout = Keyword.fetch!(command, :timeout_ms) + @timeout_margin_ms
       timer = Process.send_after(self(), {:timeout, reference}, timeout)
       owner_monitor = Process.monitor(owner)
+      started_at = System.monotonic_time()
+
+      :telemetry.execute(
+        [:wotex, :lab, :metrics, :investigation, :start],
+        %{monotonic_time: started_at, system_time: System.system_time()},
+        %{profile: :other}
+      )
 
       active = %{
         owner: owner,
@@ -137,7 +144,9 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
         query_capability: query_capability,
         provider_calls: 0,
         query_calls: 0,
-        provider_result: nil
+        provider_result: nil,
+        context_bytes: context_bytes,
+        started_at: started_at
       }
 
       {:reply, {:ok, reference}, put_in(state, [:active, reference], active)}
@@ -259,6 +268,24 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
         if kill?, do: Task.shutdown(active.task, :brutal_kill)
         if notify?, do: send(active.owner, {:hosted_investigation, reference, result})
 
+        duration = max(System.monotonic_time() - active.started_at, 0)
+
+        :telemetry.execute(
+          [:wotex, :lab, :metrics, :investigation, :stop],
+          %{duration: duration},
+          %{outcome: telemetry_outcome(result), profile: :other}
+        )
+
+        Telemetry.event(
+          :metrics,
+          :investigation,
+          %{
+            tool_calls: active.provider_calls + active.query_calls,
+            context_bytes: active.context_bytes
+          },
+          %{profile: :other}
+        )
+
         counter =
           case result do
             {:ok, _, _} -> :completed
@@ -319,8 +346,20 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
 
   defp validate_context(current, baseline) do
     case Jason.encode(%{"current" => current, "baseline" => baseline}) do
-      {:ok, encoded} when byte_size(encoded) <= 8 * 1_024 -> :ok
-      _ -> failure(:invalid_context)
+      {:ok, encoded} when byte_size(encoded) <= 8 * 1_024 ->
+        {:ok, context_bytes(current) + context_bytes(baseline)}
+
+      _ ->
+        failure(:invalid_context)
+    end
+  end
+
+  defp context_bytes(nil), do: 0
+
+  defp context_bytes(value) do
+    case Jason.encode(value) do
+      {:ok, encoded} -> byte_size(encoded)
+      _ -> 0
     end
   end
 
@@ -344,6 +383,15 @@ defmodule WotexLabWorkbench.Investigation.HostedBroker do
   end
 
   defp provider_metadata(_), do: %{}
+
+  defp telemetry_outcome({:ok, _, _}), do: :ok
+  defp telemetry_outcome({:error, :investigation_timeout}), do: :timeout
+
+  defp telemetry_outcome({:error, reason})
+       when reason in [:investigation_cancelled, :owner_down],
+       do: :rejected
+
+  defp telemetry_outcome(_), do: :error
 
   defp secure_match?(left, right)
        when is_binary(left) and is_binary(right) and byte_size(left) == byte_size(right),

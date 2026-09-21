@@ -358,7 +358,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.30.0"
+    version: "0.31.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: implemented
     evidence_status: partial
@@ -388,6 +388,12 @@ specifications:
     completion_items:
       - "WLB-C12"
     implementation_modules:
+      - "Wotex.Lab.Runner.Attempt"
+      - "Wotex.Lab.Adapters.HTTP.SSE.Session"
+      - "Wotex.Lab.Adapters.MQTT.Session"
+      - "Wotex.Lab.Examples.Thermal"
+      - "Wotex.Lab.Examples.WindowAnomaly"
+      - "Wotex.Lab.Formal.Profile"
       - "Wotex.Lab.Metrics.Catalogue"
       - "Wotex.Lab.Metrics.Snapshot"
       - "Wotex.Lab.Metrics.Collector"
@@ -451,6 +457,12 @@ specifications:
       - "WotexLabWorkbenchWeb.InvestigationCompletionController"
       - "WotexLabWorkbenchWeb.HostedInvestigationQueryController"
     executable_evidence:
+      - "test/wotex/lab/runner_test.exs"
+      - "test/wotex/lab/thermal_test.exs"
+      - "test/wotex/lab/window_anomaly_test.exs"
+      - "test/wotex/lab/http_test.exs"
+      - "test/wotex/lab/mqtt_test.exs"
+      - "test/wotex/lab/formal_maude_test.exs"
       - "test/wotex/lab/metrics_catalogue_test.exs"
       - "test/wotex/lab/metrics_collector_test.exs"
       - "test/wotex/lab/metrics_history_test.exs"
@@ -497,8 +509,13 @@ specifications:
       - "test/wotex/lab/hosted_artifact_test.exs"
       - "priv/conformance/native/tests/hosted_investigation_runner.rs"
     compatibility_classification: >-
-      Optional host contract. WLB.07 queryMetrics binds the query descriptor to
-      one browser room; the MCP tool binds one disposable local gateway. The
+      Version 0.31.0 connects the previously catalogue-only cleanup,
+      subscription-drop, batch mask/quality, direct-inference queue-depth and
+      isolated-investigation measurements to their bounded source owners. The
+      established formal and trusted-local investigation emitters are now
+      recorded explicitly. Metric names, types, units, buckets and dimensions
+      are unchanged. The optional host contract still binds WLB.07 queryMetrics
+      to one browser room; the MCP tool binds one disposable local gateway. The
       operator listener keeps its local-history and durable routes. A separate
       public TLS listener now binds digest-authenticated tenants only to their
       configured durable instances, with fixed request, query, rate and

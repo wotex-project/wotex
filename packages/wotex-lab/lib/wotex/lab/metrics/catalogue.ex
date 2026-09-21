@@ -382,11 +382,11 @@ defmodule Wotex.Lab.Metrics.Catalogue do
       gauge(:nx_quality_mean_ratio, :nx, [:profile], encode,
         measurement: :quality,
         unit: :ratio,
-        description: "Mean quality of the last batch."
+        description: "Mean batch quality: good 1, uncertain 0.5, bad or missing 0."
       ),
       gauge(:nx_queue_depth, :nx, [:profile], measurements([:nx], [:inference]),
         measurement: :queue_depth,
-        description: "Inference requests waiting."
+        description: "Inference requests waiting; direct non-queued profiles report zero."
       )
     ]
   end
