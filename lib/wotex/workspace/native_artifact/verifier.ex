@@ -55,6 +55,19 @@ defmodule Wotex.Workspace.NativeArtifact.Verifier do
     end
   end
 
+  @doc "Validates an already decoded manifest and observed payload entry set."
+  @spec validate_entries(
+          PayloadManifest.t(),
+          [PayloadManifest.entry()],
+          Descriptor.t(),
+          String.t(),
+          String.t()
+        ) ::
+          :ok | {:error, [String.t()]}
+  def validate_entries(manifest, actual_entries, descriptor, target, expected_build_identity) do
+    validate(manifest, actual_entries, descriptor, target, expected_build_identity)
+  end
+
   defp validate(manifest, actual_entries, descriptor, target, expected_build_identity) do
     errors =
       []
@@ -123,8 +136,12 @@ defmodule Wotex.Workspace.NativeArtifact.Verifier do
 
     Enum.reduce(paths, errors, fn path, acc ->
       case {Map.get(expected, path), Map.get(actual, path)} do
-        {nil, _} ->
-          ["archive contains undeclared manifest entry #{path}" | acc]
+        {nil, actual_entry} ->
+          if structural_directory?(actual_entry, expected_entries) do
+            acc
+          else
+            ["archive contains undeclared manifest entry #{path}" | acc]
+          end
 
         {_, nil} ->
           ["archive is missing manifest entry #{path}" | acc]
@@ -141,6 +158,12 @@ defmodule Wotex.Workspace.NativeArtifact.Verifier do
       end
     end)
   end
+
+  defp structural_directory?(%{"kind" => "directory", "path" => path}, expected_entries) do
+    Enum.any?(expected_entries, &String.starts_with?(&1["path"], path <> "/"))
+  end
+
+  defp structural_directory?(_, _), do: false
 
   defp mismatch(errors, _, expected, actual) when expected == actual, do: errors
 

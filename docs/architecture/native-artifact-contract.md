@@ -1,6 +1,6 @@
 # Native artifact foundation
 
-Specification version: 0.3.0. Contract: accepted foundation.
+Specification version: 0.4.0. Contract: accepted foundation.
 
 This contract governs native artifacts built, qualified or adopted by the
 WoTEx repository. It applies to native executables, shared libraries, firmware
@@ -380,7 +380,7 @@ an earlier slice or make unimplemented operations appear available.
 | --- | --- | --- |
 | Descriptor, identity, inspection and planning | Implemented | Focused local tests pass; declared external cells have not run merely because they can be planned |
 | Payload manifest and local verification | Implemented | Focused local plain-tar, gzip, schema, bound and adversarial verification tests pass; verification performs no extraction or adoption |
-| Cache adoption and concurrency | Planned | Not run |
+| Cache adoption and concurrency | Implemented | Focused local reuse, corruption, concurrency, lease-loss, prior-entry preservation and bounded-collection tests pass |
 | Assembled-target dependency closure | Planned | Not run |
 | Exact prebuilt retrieval | Planned | Not run |
 | Mechanical runtime wrappers | Planned where repetition justifies them | Not run |

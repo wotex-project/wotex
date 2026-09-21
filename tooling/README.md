@@ -151,6 +151,15 @@ bounds, then compares every entry with that manifest and the admitted descriptor
 Verification is read-only: it does not extract, adopt, retrieve or start an
 artifact. Both commands operate on one explicit cell.
 
+`mix native.adopt --package NAME --profile PROFILE --target TARGET --artifact
+/absolute/artifact.tar --cache /absolute/cache` verifies the archive before it
+acquires the cell's full-identity lease. It copies and extracts into a private
+sibling directory, revalidates the staged tree, and makes the entry visible with
+one rename only while the lease remains valid. `mix native.cache` revalidates one
+exact entry, deletes one exact leased entry, or performs explicitly bounded
+garbage collection. Collection skips active, malformed and unowned entries and
+does not follow symlinks. Neither command retrieves or publishes artifacts.
+
 ## Affected packages
 
 `mix wotex.affected` derives the changed paths from `git diff --name-only

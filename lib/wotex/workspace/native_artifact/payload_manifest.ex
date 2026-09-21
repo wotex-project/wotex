@@ -153,6 +153,24 @@ defmodule Wotex.Workspace.NativeArtifact.PayloadManifest do
     end
   end
 
+  @doc "Scans every entry below an extracted payload root without following links."
+  @spec scan_tree(Path.t(), [Path.t()]) :: {:ok, [entry()]} | {:error, String.t()}
+  def scan_tree(root, excluded \\ []) do
+    with :ok <- ordinary_directory(root),
+         {:ok, names} <- list_root(root) do
+      names
+      |> Enum.sort()
+      |> Enum.reject(&(&1 in excluded))
+      |> Enum.reduce_while({:ok, []}, fn name, {:ok, entries} ->
+        case collect(Path.join(root, name), name) do
+          {:ok, additions} -> {:cont, {:ok, additions ++ entries}}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+      |> normalize_entries()
+    end
+  end
+
   @doc "Validates one normalized artifact-relative path."
   @spec validate_path(term()) :: :ok | {:error, String.t()}
   def validate_path(path), do: normalized_path(path)
@@ -450,6 +468,13 @@ defmodule Wotex.Workspace.NativeArtifact.PayloadManifest do
     case File.lstat(absolute) do
       {:ok, stat} -> {:ok, stat}
       {:error, reason} -> {:error, "#{relative}: #{:file.format_error(reason)}"}
+    end
+  end
+
+  defp list_root(root) do
+    case File.ls(root) do
+      {:ok, names} -> {:ok, names}
+      {:error, reason} -> {:error, "payload root: #{:file.format_error(reason)}"}
     end
   end
 
