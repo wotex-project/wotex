@@ -129,6 +129,65 @@ defmodule Wotex.Modbus.FixtureTasksTest do
     end
   end
 
+  test "WMB-N01 the admitted descriptor is the closed source authority", context do
+    expected = %{
+      "name" => "libmodbus",
+      "revision" => "9af6c16074df566551bca0a7c37443e48f216289",
+      "sha256" => "5d0f56cdd9f4f4bc6863dcac6bc9bdc7ea862566aefa29eef2f1bf649cc1ea3a",
+      "url" =>
+        "https://codeload.github.com/stephane/libmodbus/tar.gz/9af6c16074df566551bca0a7c37443e48f216289"
+    }
+
+    assert SoftwareManifest.source(context.root) == expected
+    descriptor_path = Path.join(context.root, "priv/native-artifacts/software-peer.json")
+
+    assert SoftwareManifest.inputs(context.root)["priv/native-artifacts/software-peer.json"] ==
+             SoftwareManifest.digest(descriptor_path)
+
+    assert SoftwareManifest.identity(context.root)["source_files_sha256"][
+             "priv/native-artifacts/software-peer.json"
+           ] == SoftwareManifest.digest(descriptor_path)
+
+    descriptor =
+      SoftwareManifest.read(descriptor_path)
+
+    invalid = [
+      Map.put(descriptor, "unknown", true),
+      put_in(descriptor, ["sources", "unknown"], true),
+      update_in(descriptor, ["sources", "upstream"], &(&1 ++ &1)),
+      put_in(
+        descriptor,
+        ["sources", "upstream", Access.at(0), "url"],
+        "https://codeload.github.com/stephane/libmodbus/tar.gz/main"
+      ),
+      update_in(
+        descriptor,
+        ["sources", "upstream", Access.at(0), "revision"],
+        &String.upcase/1
+      ),
+      put_in(descriptor, ["sources", "upstream", Access.at(0), "sha256"], "invalid"),
+      put_in(descriptor, ["sources", "first_party"], ["../outside"])
+    ]
+
+    for {candidate, index} <- Enum.with_index(invalid) do
+      root = Path.join(context.directory, Integer.to_string(index))
+      descriptor_path = Path.join(root, "priv/native-artifacts/software-peer.json")
+      File.mkdir_p!(Path.dirname(descriptor_path))
+      File.write!(descriptor_path, Jason.encode!(candidate))
+
+      assert_raise Mix.Error, "software_source_descriptor_invalid", fn ->
+        SoftwareManifest.source(root)
+      end
+    end
+
+    symlink_root = Path.join(context.directory, "symlink")
+    descriptor_path = Path.join(symlink_root, "priv/native-artifacts/software-peer.json")
+    File.mkdir_p!(Path.dirname(descriptor_path))
+    File.ln_s!(Path.join(context.root, "priv/native-artifacts/software-peer.json"), descriptor_path)
+
+    assert_raise Mix.Error, "invalid_manifest", fn -> SoftwareManifest.source(symlink_root) end
+  end
+
   test "WMB-N03 source identities bind actual file bytes without Git", context do
     lib = Path.join(context.directory, "lib")
     File.mkdir!(lib)

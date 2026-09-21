@@ -1,9 +1,11 @@
 defmodule Wotex.Modbus.SoftwareManifest do
   @moduledoc false
 
-  @pin "9af6c16074df566551bca0a7c37443e48f216289"
-  @archive "5d0f56cdd9f4f4bc6863dcac6bc9bdc7ea862566aefa29eef2f1bf649cc1ea3a"
+  @descriptor "priv/native-artifacts/software-peer.json"
+  @descriptor_keys ~w(artifact_format build compatibility external_libraries kind legal native_inputs outputs package patches profile qualification retrieval schema sources targets toolchain)
+  @source_keys ~w(name revision sha256 url)
   @inputs [
+    @descriptor,
     "test/interop/libmodbus/server.c",
     "test/interop/libmodbus/Dockerfile",
     "test/interop/native/command.c",
@@ -19,16 +21,29 @@ defmodule Wotex.Modbus.SoftwareManifest do
     "test/**/Dockerfile",
     "bin/*",
     "priv/fixtures/*.json",
+    "priv/native-artifacts/*.json",
     "mix.exs",
     "mix.lock"
   ]
 
-  @spec pin() :: String.t()
-  def pin, do: @pin
-  @spec archive_sha() :: String.t()
-  def archive_sha, do: @archive
-  @spec source_url() :: String.t()
-  def source_url, do: "https://codeload.github.com/stephane/libmodbus/tar.gz/" <> @pin
+  @spec source(String.t()) :: %{String.t() => String.t()}
+  def source(root) do
+    descriptor = read(Path.join(root, @descriptor))
+
+    case descriptor do
+      %{"sources" => %{"first_party" => first_party, "upstream" => [source]} = sources} ->
+        if admitted_descriptor?(descriptor) and admitted_sources?(sources, first_party) and
+             admitted_source?(source) do
+          source
+        else
+          fail(:software_source_descriptor_invalid)
+        end
+
+      _ ->
+        fail(:software_source_descriptor_invalid)
+    end
+  end
+
   @spec inputs(String.t()) :: %{String.t() => String.t()}
   def inputs(root), do: Map.new(@inputs, &{&1, digest(Path.join(root, &1))})
   @spec digest(String.t()) :: String.t()
@@ -79,19 +94,21 @@ defmodule Wotex.Modbus.SoftwareManifest do
 
   @spec verify_local(String.t(), String.t(), map()) :: map()
   def verify_local(root, workspace, manifest) do
+    source = source(root)
+
     expected = %{
       "schema" => "wotex.modbus.native-peer@1",
       "status" => "ready",
-      "source_commit" => @pin,
-      "source_url" => source_url(),
-      "source_archive_sha256" => @archive,
+      "source_commit" => source["revision"],
+      "source_url" => source["url"],
+      "source_archive_sha256" => source["sha256"],
       "inputs" => inputs(root)
     }
 
     unless Enum.all?(expected, fn {key, value} -> manifest[key] == value end),
       do: fail(:manifest_mismatch)
 
-    unless digest(Path.join(workspace, "source.tar.gz")) == @archive,
+    unless digest(Path.join(workspace, "source.tar.gz")) == source["sha256"],
       do: fail(:archive_hash_mismatch)
 
     files = manifest["files"]
@@ -203,6 +220,35 @@ defmodule Wotex.Modbus.SoftwareManifest do
   end
 
   defp safe_name?(_), do: false
+
+  defp admitted_descriptor?(descriptor) do
+    Enum.sort(Map.keys(descriptor)) == @descriptor_keys and
+      descriptor["schema"] == "wotex.native-artifact-descriptor@2" and
+      descriptor["artifact_format"] == "wotex.native-artifact@1" and
+      descriptor["package"] == "wotex-modbus" and descriptor["profile"] == "software-peer" and
+      descriptor["kind"] == "independent-peer-image"
+  end
+
+  defp admitted_sources?(sources, first_party) do
+    Enum.sort(Map.keys(sources)) == ["first_party", "upstream"] and
+      valid_first_party?(first_party)
+  end
+
+  defp admitted_source?(source) when is_map(source) do
+    Enum.sort(Map.keys(source)) == @source_keys and source["name"] == "libmodbus" and
+      valid_revision?(source["revision"]) and valid_hash?(source["sha256"]) and
+      source["url"] ==
+        "https://codeload.github.com/stephane/libmodbus/tar.gz/" <> source["revision"]
+  end
+
+  defp admitted_source?(_), do: false
+  defp valid_revision?(value), do: is_binary(value) and Regex.match?(~r/\A[0-9a-f]{40}\z/, value)
   defp valid_hash?(value), do: is_binary(value) and Regex.match?(~r/\A[0-9a-f]{64}\z/, value)
+
+  defp valid_first_party?(paths) when is_list(paths) and paths != [] do
+    Enum.uniq(paths) == paths and Enum.all?(paths, &safe_name?/1)
+  end
+
+  defp valid_first_party?(_), do: false
   defp fail(code), do: Mix.raise(Atom.to_string(code))
 end

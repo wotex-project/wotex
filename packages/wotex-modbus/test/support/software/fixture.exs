@@ -103,6 +103,7 @@ defmodule Wotex.Modbus.SoftwareFixture do
 
   defp build(context, manifest_path) do
     try do
+      source_identity = SoftwareManifest.source(context.root)
       compiler = executable(System.get_env("CC", "cc"))
       docker = executable("docker")
       curl = executable("curl")
@@ -120,7 +121,7 @@ defmodule Wotex.Modbus.SoftwareFixture do
       }
 
       SoftwareManifest.write(Path.join(context.workspace, "compiler.json"), compiler_info)
-      archive = download(context, curl)
+      archive = download(context, curl, source_identity)
       build_context = Path.join(context.workspace, "context")
       File.mkdir!(build_context)
       File.write!(Path.join(build_context, "source.tar.gz"), archive)
@@ -153,9 +154,9 @@ defmodule Wotex.Modbus.SoftwareFixture do
       manifest = %{
         "schema" => "wotex.modbus.native-peer@1",
         "status" => "ready",
-        "source_url" => SoftwareManifest.source_url(),
-        "source_commit" => SoftwareManifest.pin(),
-        "source_archive_sha256" => SoftwareManifest.archive_sha(),
+        "source_url" => source_identity["url"],
+        "source_commit" => source_identity["revision"],
+        "source_archive_sha256" => source_identity["sha256"],
         "inputs" => SoftwareManifest.inputs(context.root),
         "image_id" => image_id,
         "operating_system" => image["Os"],
@@ -189,7 +190,7 @@ defmodule Wotex.Modbus.SoftwareFixture do
     end
   end
 
-  defp download(context, curl) do
+  defp download(context, curl, source_identity) do
     archive =
       capture(
         context,
@@ -205,13 +206,13 @@ defmodule Wotex.Modbus.SoftwareFixture do
           "=https",
           "--max-time",
           "30",
-          SoftwareManifest.source_url()
+          source_identity["url"]
         ],
         timeout: 30_000,
         limit: 8_388_608
       )
 
-    unless SoftwareManifest.hash(archive) == SoftwareManifest.archive_sha(),
+    unless SoftwareManifest.hash(archive) == source_identity["sha256"],
       do: fail(:archive_hash_mismatch)
 
     path = Path.join(context.workspace, "source.tar.gz")
@@ -219,7 +220,7 @@ defmodule Wotex.Modbus.SoftwareFixture do
     # The pinned GitHub archive has one global PAX comment containing its commit.
     # Validate that exact record before omitting it from filesystem member checks.
     expanded = :zlib.gunzip(archive)
-    expected_comment = "52 comment=" <> SoftwareManifest.pin() <> "\n"
+    expected_comment = "52 comment=" <> source_identity["revision"] <> "\n"
 
     unless binary_part(expanded, 156, 1) == "g" and
              binary_part(expanded, 512, 52) == expected_comment,

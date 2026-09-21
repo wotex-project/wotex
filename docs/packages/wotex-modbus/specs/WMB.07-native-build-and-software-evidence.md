@@ -3,7 +3,7 @@ spec:
   id: WMB.07
   title: "Native peer build and software evidence"
   status: accepted
-  version: 1.3.2
+  version: 1.3.3
   owner: wotex-modbus
   updated: 2026-09-21
 ---
@@ -52,6 +52,13 @@ The source is libmodbus 3.1.12 at commit
 `9af6c16074df566551bca0a7c37443e48f216289`, archive SHA-256
 `5d0f56cdd9f4f4bc6863dcac6bc9bdc7ea862566aefa29eef2f1bf649cc1ea3a` from
 `https://codeload.github.com/stephane/libmodbus/tar.gz/9af6c16074df566551bca0a7c37443e48f216289`.
+The admitted `software-peer` native artifact descriptor is the sole
+machine-readable authority for that source name, immutable URL, revision and
+archive digest. The build task parses the descriptor without starting the
+package application and rejects unknown fields, duplicate upstream identities,
+mutable URLs, noncanonical revisions, invalid digests and unsafe first-party
+paths. The prose values above document the accepted identity; code does not
+read this specification as configuration.
 The checked-in Dockerfile fixes the Linux base image and native build flags.
 The task drives that build using separate executable/argument values, never
 shell interpolation. Archive extraction rejects traversal and escaping links.
@@ -59,10 +66,11 @@ Downloads have a 30-second deadline and 8 MiB bound; build time is bounded to
 10 minutes. Failure is nonzero and never creates a ready manifest.
 
 `peer-manifest.json` uses schema `wotex.modbus.native-peer@1`, exact source URL,
-commit/archive hash, fixture source hashes, image digest, OS/architecture,
-compiler/version, configure/compiler/linker options, binary/library hashes and
-sanitizer configuration. A ready manifest is atomically written only after
-verification. Reuse verifies every recorded input and artifact hash.
+commit/archive hash, native descriptor hash, fixture source hashes, image
+digest, OS/architecture, compiler/version, configure/compiler/linker options,
+binary/library hashes and sanitizer configuration. A ready manifest is
+atomically written only after verification. Reuse verifies every recorded
+input and artifact hash.
 The task neither changes Git state nor installs a system-wide library.
 
 ## WMB-N02 — Owned software run
