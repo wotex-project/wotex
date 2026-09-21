@@ -143,6 +143,14 @@ access. Use `--json` for CI, `--count` to inspect expansion and `--all` only for
 an explicit repository-wide plan. An unavailable diff reports its smoke-cohort
 fallback instead of returning an apparently empty plan.
 
+`mix native.manifest --package NAME --profile PROFILE --target TARGET --root
+/absolute/payload --output /absolute/artifact-manifest.json` hashes only the
+descriptor-declared output roots. `mix native.verify` scans a plain-tar or gzip
+artifact under fixed compressed, expanded, ratio, entry, file, path and manifest
+bounds, then compares every entry with that manifest and the admitted descriptor.
+Verification is read-only: it does not extract, adopt, retrieve or start an
+artifact. Both commands operate on one explicit cell.
+
 ## Affected packages
 
 `mix wotex.affected` derives the changed paths from `git diff --name-only

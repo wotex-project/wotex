@@ -1,6 +1,6 @@
 # Native artifact foundation
 
-Specification version: 0.2.0. Contract: accepted foundation.
+Specification version: 0.3.0. Contract: accepted foundation.
 
 This contract governs native artifacts built, qualified or adopted by the
 WoTEx repository. It applies to native executables, shared libraries, firmware
@@ -119,6 +119,26 @@ The artifact manifest records both identities and repeats the canonical build
 inputs required to inspect them. The manifest schema is independently
 versioned. A schema reader rejects unknown major versions and unknown required
 fields; it preserves unknown optional fields when it rewrites a manifest.
+
+## Payload archive format
+
+Artifact format `wotex.native-artifact@1` is a POSIX tar stream, optionally
+wrapped in one gzip stream. The archive contains one regular file named
+`artifact-manifest.json` and exactly the payload entries that manifest names.
+The tar stream uses portable octal metadata and two zero end blocks. Extended
+PAX and GNU records, sparse files and decompressed content after the end marker
+are outside this format. Gzip verification includes its CRC and
+expanded-size trailer; TLS, a filename or a transport digest never substitutes
+for payload verification.
+
+Payload manifest schema `wotex.native-payload-manifest@1` records the package,
+profile, target, full build identity, full payload identity, required field set,
+optional extension map and sorted entries. Every entry has `path`, `kind`,
+normalized `mode`, `size`, `sha256` and `link_target`; fields that do not apply
+are JSON null. Link targets are stored as normalized paths from the artifact
+root. The manifest itself is transport metadata and is not one of the payload
+entries. UID, GID, mtime, entry order and gzip metadata do not enter payload
+identity.
 
 ## Build and retrieval equivalence
 
@@ -359,7 +379,7 @@ an earlier slice or make unimplemented operations appear available.
 | Slice | Source status | Evidence status |
 | --- | --- | --- |
 | Descriptor, identity, inspection and planning | Implemented | Focused local tests pass; declared external cells have not run merely because they can be planned |
-| Payload manifest and local verification | Planned | Not run |
+| Payload manifest and local verification | Implemented | Focused local plain-tar, gzip, schema, bound and adversarial verification tests pass; verification performs no extraction or adoption |
 | Cache adoption and concurrency | Planned | Not run |
 | Assembled-target dependency closure | Planned | Not run |
 | Exact prebuilt retrieval | Planned | Not run |
