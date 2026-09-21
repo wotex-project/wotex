@@ -13,6 +13,7 @@ const docShell = await candidate("DOC_SHELL_CANDIDATE", "../../../../../doc_shel
 const pagefind = join(phoenixAssets, "npm/doc-shell/node_modules/.bin/pagefind")
 const livePort = port(process.argv[2] ?? "4104")
 const staticPort = port(process.argv[3] ?? "4105")
+const started = performance.now()
 const temporary = await mkdtemp(join(tmpdir(), "wotex-documentation-browser-"))
 const staticRoot = join(temporary, "site")
 const liveOrigin = new URL(`http://127.0.0.1:${livePort}`)
@@ -63,6 +64,7 @@ try {
         ],
         artifact_adoption: false,
         wcag_certification: false,
+        duration_ms: Math.round(performance.now() - started),
         status: "passed",
       })}\n`,
     )

@@ -42,8 +42,8 @@
     {"archive": "missing", "name": "chromium", "version": "153.0.8010.12"}
   ],
   "durations": {
-    "archive_gate_ms": 31916,
-    "browser_gate_ms": 4648
+    "archive_gate_ms": 52745,
+    "browser_gate_ms": 36173
   },
   "fixtures": {
     "documentation-browser-cohort": "sha256:773e1ea1a0cec3d0da9bcdd4220049a9de4fec378fcc4fb8f788d329c742edbd"
@@ -65,15 +65,15 @@
     "surfaces": 2,
     "wcag_certification": false
   },
-  "revision": "c3ec0ef03de86eacc4f0e59dc4650decdb2e0f72",
+  "revision": "ea319a985cccb9e1ffb97484191c0cf5adae00cb",
   "scenario_id": "WLB.12-unified-documentation",
   "schema_version": "1.0.0",
   "seed": 0,
-  "source_tree_digest": "sha256:4b74f27f724047233d3530d8d0296e03907d285e83ab73498ba54c645811abde",
+  "source_tree_digest": "sha256:4c391d9deae3975f0309e9d40e051c0c7c87a2458d438e1892b6e41a8d1eb28a",
   "toolchain": {
     "backend": "DocShell-Pagefind",
-    "elixir": "1.18.4",
-    "otp": "27",
+    "elixir": "1.20.2",
+    "otp": "29",
     "platform": "aarch64-apple-darwin"
   }
 }

@@ -15,11 +15,12 @@ defmodule Wotex.Lab.WLB12EvidenceManifestTest do
 
   @source_files [
     "../../.github/workflows/documentation.yml",
-    "../../tooling/doc_shell_collector/**/*",
+    "../../tooling/doc_shell_collector/bin/build.exs",
+    "../../tooling/doc_shell_collector/mix.exs",
+    "../../tooling/doc_shell_collector/mix.lock",
     "docs/decisions/0008-unified-documentation-publication.md",
     "docs/plans/unified-documentation.md",
     "docs/specs/WLB.12-unified-documentation.md",
-    "docs/specs/catalogue.yaml",
     "bin/build_artifacts.exs",
     "bin/check_workbench_archive.exs",
     "bin/support/archive_repository.exs",

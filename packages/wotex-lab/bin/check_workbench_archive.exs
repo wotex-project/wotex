@@ -557,6 +557,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
         tarballs,
         consumer,
         registry,
+        Path.join(work, "documentation-fixture"),
+        Path.join(work, "workbench-source"),
         Path.join(work, "bin"),
         Path.join(work, "hex_home"),
         Path.join(work, "native_cache")
