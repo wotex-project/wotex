@@ -14,6 +14,7 @@ defmodule Wotex.BACnet.Check.Archive do
     LICENSE
     NOTICE
     README.md
+    usage-rules.md
     mix.exs
   )
   # Machine-read fixtures ship only in this package's archive; the exact core

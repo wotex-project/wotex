@@ -10,6 +10,7 @@ defmodule Wotex.Matter.Check.Archive do
     "LICENSE",
     "NOTICE",
     "README.md",
+    "usage-rules.md",
     "lib",
     "native/src/host.cpp",
     "priv/fixtures/contract-v1.json",

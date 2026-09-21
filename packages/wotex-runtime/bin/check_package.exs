@@ -5,6 +5,7 @@ defmodule Wotex.Runtime.Check.Package do
     ".formatter.exs",
     "mix.exs",
     "README.md",
+    "usage-rules.md",
     "CHANGELOG.md",
     "LICENSE",
     "NOTICE"

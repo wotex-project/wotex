@@ -8,6 +8,7 @@ defmodule Wotex.BLE.Check.Archive do
     "LICENSE",
     "NOTICE",
     "README.md",
+    "usage-rules.md",
     "lib",
     "priv/fixtures/contract-v1.json",
     "priv/fixtures/custody-contract-v1.json",

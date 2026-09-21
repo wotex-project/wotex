@@ -47,7 +47,8 @@ defmodule Wotex.Workspace.ScaffoldTest do
           packages/wotex-demo/mix.exs packages/wotex-demo/.check.exs
           packages/wotex-demo/.doctor.exs packages/wotex-demo/.formatter.exs
           packages/wotex-demo/coveralls.json
-          packages/wotex-demo/CLAUDE.md packages/wotex-demo/README.md packages/wotex-demo/CHANGELOG.md
+          packages/wotex-demo/CLAUDE.md packages/wotex-demo/README.md
+          packages/wotex-demo/usage-rules.md packages/wotex-demo/CHANGELOG.md
           packages/wotex-demo/LICENSE packages/wotex-demo/NOTICE packages/wotex-demo/lib/wotex/demo.ex
           packages/wotex-demo/test/test_helper.exs packages/wotex-demo/test/wotex/demo_test.exs
           packages/wotex-demo/bench/version_bench.exs
@@ -122,7 +123,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
     assert mix_exs =~ ~s|package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"|
 
     assert mix_exs =~
-             ~s|files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LICENSE NOTICE)|
+             ~s|files: ~w(lib .formatter.exs mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)|
 
     assert mix_exs =~ ~s|@docs Path.expand("../../docs/packages/wotex-demo", __DIR__)|
     assert mix_exs =~ ~s|Path.wildcard("\#{@docs}/{specs,plans,decisions,provenance}/*.md")|
@@ -183,6 +184,13 @@ defmodule Wotex.Workspace.ScaffoldTest do
     refute readme =~ "path: "
     assert readme =~ "mix check.fast --package wotex-demo"
     refute readme =~ "@@"
+
+    usage_rules = File.read!(Path.join(root, "packages/wotex-demo/usage-rules.md"))
+    assert usage_rules =~ ~r/\A# Wotex Demo usage rules\n/
+    assert usage_rules =~ "`Wotex.Demo`"
+    assert usage_rules =~ "completed public contract"
+    assert usage_rules =~ ~r/implementation status\s+separately/
+    refute usage_rules =~ "@@"
 
     assert {:ok, catalogue} =
              YamlElixir.read_from_file(

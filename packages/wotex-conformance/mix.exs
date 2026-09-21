@@ -92,6 +92,7 @@ defmodule WotexConformance.MixProject do
         "LICENSE",
         "NOTICE",
         "README.md",
+        "usage-rules.md",
         "mix.exs"
       ]
     ]

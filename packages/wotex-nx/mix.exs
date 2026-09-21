@@ -101,6 +101,7 @@ defmodule WotexNx.MixProject do
         .formatter.exs
         mix.exs
         README.md
+        usage-rules.md
         LICENSE
         NOTICE
         CHANGELOG.md

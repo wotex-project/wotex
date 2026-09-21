@@ -118,7 +118,8 @@ defmodule WotexModbus.MixProject do
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-modbus"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs priv/fixtures)
+      files:
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib mix.exs priv/fixtures)
     ]
   end
 

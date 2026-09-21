@@ -119,7 +119,7 @@ defmodule WotexMatter.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib native priv/fixtures test/**/*.{ex,exs,cpp,json,inc} mix.exs mix.lock)
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib native priv/fixtures test/**/*.{ex,exs,cpp,json,inc} mix.exs mix.lock)
     ]
   end
 

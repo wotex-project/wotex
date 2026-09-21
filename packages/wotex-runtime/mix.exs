@@ -96,7 +96,7 @@ defmodule WotexRuntime.MixProject do
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-runtime"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib mix.exs)
     ]
   end
 

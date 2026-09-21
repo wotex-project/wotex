@@ -120,7 +120,7 @@ defmodule WotexOPCUA.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib priv/fixtures priv/native mix.exs)
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib priv/fixtures priv/native mix.exs)
     ]
   end
 

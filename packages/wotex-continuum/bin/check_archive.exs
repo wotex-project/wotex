@@ -13,6 +13,7 @@ defmodule WotexContinuum.CheckArchive do
   @present [
     "mix.exs",
     "README.md",
+    "usage-rules.md",
     "LICENSE",
     "NOTICE",
     "CHANGELOG.md",
@@ -49,8 +50,8 @@ defmodule WotexContinuum.CheckArchive do
     "test"
   ]
 
-  # Markdown documentation reaches consumers through HexDocs; no `docs/` tree
-  # and no task-tracker path may travel inside the archive.
+  # Specifications reach consumers through HexDocs; no `docs/` tree or task
+  # tracker may travel inside the archive. `usage-rules.md` is consumer input.
   @forbidden_segments ["docs", "tasks"]
 
   @contract_consumer_test ~S"""

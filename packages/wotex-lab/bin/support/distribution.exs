@@ -145,7 +145,7 @@ defmodule Wotex.Lab.Check.Distribution do
 
   defp valid_release_paths?([], false), do: true
 
-  defp valid_release_paths?(paths, _required?) do
+  defp valid_release_paths?(paths, _) do
     length(paths) == 2 and @release_source in paths and
       Enum.count(paths, &Regex.match?(@release, &1)) == 1
   end

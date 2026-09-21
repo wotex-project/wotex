@@ -211,7 +211,8 @@ defmodule WotexLabWorkbench.Observability.Store do
     do: {:ok, value}
 
   defp value(%{type: :histogram, unit: :seconds}, %{value: value})
-       when is_number(value) and value >= 0 and value <= 1.0e100, do: {:ok, round(value * @nanos)}
+       when is_number(value) and value >= 0 and value <= 1.0e100,
+       do: {:ok, round(value * @nanos)}
 
   defp value(_, %{value: value}) when is_integer(value) and value >= 0 and value <= 1.0e100,
     do: {:ok, value}

@@ -18,6 +18,7 @@ defmodule WotexNx.CheckArchive do
   @present [
     "mix.exs",
     "README.md",
+    "usage-rules.md",
     "LICENSE",
     "NOTICE",
     "lib/wotex/nx.ex",

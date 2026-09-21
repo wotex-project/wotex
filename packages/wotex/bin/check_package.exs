@@ -4,6 +4,7 @@ defmodule Wotex.Check.Package do
   @present [
     "mix.exs",
     "README.md",
+    "usage-rules.md",
     "LICENSE",
     "NOTICE",
     "CHANGELOG.md",

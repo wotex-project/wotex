@@ -20,6 +20,7 @@ defmodule Wotex.Thread.Check.Archive do
     "LICENSE",
     "NOTICE",
     "README.md",
+    "usage-rules.md",
     "mix.exs",
     "lib",
     "priv/fixtures/contract-v1.json",

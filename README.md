@@ -32,24 +32,71 @@ inspection and OpenThread SDK management.
 
 ## Package family
 
-| Area | Package | Responsibility |
-| --- | --- | --- |
-| Core | [`wotex`](packages/wotex) | Thing Description 1.1 and Thing Model 1.1 parsing, validation and encoding |
-| Runtime | [`wotex-runtime`](packages/wotex-runtime) | ConsumedThing, ExposedThing, Form selection, transports and credentials |
-| Services | [`wotex-directory`](packages/wotex-directory) | Thing Description Directory mechanics over consumer-owned storage |
-| | [`wotex-continuum`](packages/wotex-continuum) | Exchange and lifecycle values shared between edge and cloud systems |
-| | [`wotex-nx`](packages/wotex-nx) | Deterministic Nx batches built from typed observations |
-| Bindings | [`wotex-binding-http`](packages/wotex-binding-http) | HTTP and Server-Sent Events |
-| | [`wotex-binding-mqtt`](packages/wotex-binding-mqtt) | MQTT Form mapping and transport |
-| Protocols | [`wotex-bacnet`](packages/wotex-bacnet) | BACnet interactions |
-| | [`wotex-ble`](packages/wotex-ble) | Bluetooth Low Energy through BlueZ |
-| | [`wotex-coap`](packages/wotex-coap) | CoAP with DTLS and OSCORE |
-| | [`wotex-matter`](packages/wotex-matter) | Matter through connectedhomeip |
-| | [`wotex-modbus`](packages/wotex-modbus) | Modbus TCP interactions |
-| | [`wotex-opcua`](packages/wotex-opcua) | OPC UA through open62541 |
-| | [`wotex-thread`](packages/wotex-thread) | Thread inspection and OpenThread SDK management |
-| Evidence | [`wotex-conformance`](packages/wotex-conformance) | Conformance vectors, execution and evidence reports for WoT libraries |
-| | [`wotex-lab`](packages/wotex-lab) | Scenarios, evidence records, Workbench, Nerves hosts and Nx experiments |
+### [`wotex`](packages/wotex/README.md)
+
+Parses, validates and encodes Thing Descriptions 1.1 and Thing Models 1.1.
+
+### [`wotex-runtime`](packages/wotex-runtime/README.md)
+
+Provides ConsumedThing and ExposedThing runtimes, Form selection, transports
+and credentials.
+
+### [`wotex-directory`](packages/wotex-directory/README.md)
+
+Implements Thing Description Directory mechanics over consumer-owned storage.
+
+### [`wotex-continuum`](packages/wotex-continuum/README.md)
+
+Defines exchange and lifecycle values shared between edge and cloud systems.
+
+### [`wotex-nx`](packages/wotex-nx/README.md)
+
+Builds deterministic Nx batches from typed observations.
+
+### [`wotex-binding-http`](packages/wotex-binding-http/README.md)
+
+Maps Forms to HTTP exchanges and Server-Sent Events.
+
+### [`wotex-binding-mqtt`](packages/wotex-binding-mqtt/README.md)
+
+Maps Forms to MQTT topics, messages and transport operations.
+
+### [`wotex-bacnet`](packages/wotex-bacnet/README.md)
+
+Connects Web of Things interactions to BACnet.
+
+### [`wotex-ble`](packages/wotex-ble/README.md)
+
+Connects Web of Things interactions to Bluetooth Low Energy through BlueZ.
+
+### [`wotex-coap`](packages/wotex-coap/README.md)
+
+Connects Web of Things interactions to CoAP, with DTLS and OSCORE support.
+
+### [`wotex-matter`](packages/wotex-matter/README.md)
+
+Connects Web of Things interactions to Matter through connectedhomeip.
+
+### [`wotex-modbus`](packages/wotex-modbus/README.md)
+
+Connects Web of Things interactions to Modbus TCP.
+
+### [`wotex-opcua`](packages/wotex-opcua/README.md)
+
+Connects Web of Things interactions to OPC UA through open62541.
+
+### [`wotex-thread`](packages/wotex-thread/README.md)
+
+Inspects Thread networks and manages the OpenThread SDK.
+
+### [`wotex-conformance`](packages/wotex-conformance/README.md)
+
+Runs conformance vectors and produces evidence reports for Web of Things
+libraries.
+
+### [`wotex-lab`](packages/wotex-lab/README.md)
+
+Hosts scenarios, evidence records, Workbench, Nerves hosts and Nx experiments.
 
 The [package graph](docs/architecture/package-graph.md) records dependencies
 and ownership boundaries. Consumers install only the packages they use.
@@ -96,7 +143,8 @@ end
 
 Pin every WoTEx dependency to the same commit. The
 [consumer guide](docs/guides/consumer.md) shows how to add packages with
-transitive WoTEx dependencies and how to use a local checkout.
+transitive WoTEx dependencies, use a local checkout and sync the concise
+`usage-rules.md` for each installed package's completed specification.
 
 All packages are below 1.0, so a minor version may change a public API. Package
 READMEs contain package-specific examples and toolchain requirements.

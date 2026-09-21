@@ -78,11 +78,11 @@ defmodule Wotex.Lab.DistributionTest do
     assert :ok = Distribution.validate_candidate_paths(release, true)
 
     for changed <- [
-          base ++ ["unknown"],
-          base ++ [hd(base)],
+          ["unknown" | base],
+          [hd(base) | base],
           List.delete(base, hd(base)),
-          base ++ ["release/wotex-lab-workbench-source.tar"],
-          base ++ ["release/wotex-lab-workbench-aarch64-apple-darwin.tar.gz"],
+          ["release/wotex-lab-workbench-source.tar" | base],
+          ["release/wotex-lab-workbench-aarch64-apple-darwin.tar.gz" | base],
           release -- ["static/wotex-lab-documentation.tar.gz"]
         ] do
       assert {:error, :invalid_candidate_layout} =

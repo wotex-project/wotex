@@ -116,7 +116,7 @@ defmodule WotexBindingMQTT.MixProject do
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-binding-mqtt"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs)
+      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib mix.exs)
     ]
   end
 

@@ -13,6 +13,7 @@ defmodule Wotex.Modbus.Check.Archive do
     "LICENSE",
     "NOTICE",
     "README.md",
+    "usage-rules.md",
     "priv/fixtures/contract-v1.json",
     "priv/fixtures/wotex-integration-v1.json",
     "lib/wotex/modbus.ex",

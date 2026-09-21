@@ -4,8 +4,8 @@ defmodule WotexBindingHTTP.Check.Archive do
   @prefix "wotex-binding-http-archive."
   @version "0.1.0"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  # Markdown documentation reaches consumers through HexDocs: no `docs/` tree
-  # and no task-tracker path may travel inside an archive.
+  # Specifications reach consumers through HexDocs: no `docs/` tree or task
+  # tracker may travel inside an archive. `usage-rules.md` is consumer input.
   @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs|tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @required_content ~w(
     .formatter.exs
@@ -13,6 +13,7 @@ defmodule WotexBindingHTTP.Check.Archive do
     LICENSE
     NOTICE
     README.md
+    usage-rules.md
     mix.exs
   )
 

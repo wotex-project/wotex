@@ -9,10 +9,19 @@ defmodule CheckArchive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
-  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "CHANGELOG.md", "lib", "priv"]
+  @packaged [
+    "mix.exs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "usage-rules.md",
+    "CHANGELOG.md",
+    "lib",
+    "priv"
+  ]
   @development [".git", "deps", "_build"]
-  # Markdown documentation reaches consumers through HexDocs; no `docs/` tree
-  # and no task-tracker path may travel inside the archive.
+  # Specifications reach consumers through HexDocs; no `docs/` tree or task
+  # tracker may travel inside the archive. `usage-rules.md` is consumer input.
   @forbidden_segments ["docs", "tasks"]
   @consumer_fixture "test/fixtures/archive_consumer.exs"
   @target_fixture "test/fixtures/external_target.exs"

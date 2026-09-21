@@ -124,7 +124,7 @@ defmodule WotexCoAP.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib native priv/fixtures test/fixtures/dtls_pki test/interop test/native test/software test/support test/test_helper.exs mix.exs mix.lock)
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib native priv/fixtures test/fixtures/dtls_pki test/interop test/native test/software test/support test/test_helper.exs mix.exs mix.lock)
     ]
   end
 

@@ -111,7 +111,8 @@ defmodule WotexLabWorkbench.Observability.Relay do
   end
 
   defp measurement(%{measurement: :duration}, %{duration: duration})
-       when is_integer(duration) and duration < 0, do: {:error, :negative_durations}
+       when is_integer(duration) and duration < 0,
+       do: {:error, :negative_durations}
 
   defp measurement(%{measurement: :duration}, measurements) do
     if is_nil(Map.get(measurements, :duration)),

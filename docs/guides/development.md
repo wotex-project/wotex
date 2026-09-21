@@ -260,6 +260,28 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
   labelled `native`; after the native build it runs `mix native.lint --tidy`
   and `mix native.test` against that build.
 
+## Usage rules
+
+Every Mix project in this repository is an independently released library, so
+each package owns a concise `packages/<name>/usage-rules.md`. The file describes
+how a consumer should use the package's public API: its entry points, ownership
+boundary, explicit dependencies, lifecycle and error handling. It describes
+the final accepted contract in the package specifications and completion plan,
+not the source currently implemented. The package catalogue remains the sole
+owner of `implementation_status`. The rules must not direct consumers to
+private modules or behavior outside the final contract.
+
+`usage-rules.md` is part of the package archive. Add it to `package[:files]`
+and make the package's archive check require it. Repository contributor rules
+remain in `CLAUDE.md`, `AGENTS.md` and `.claude/`; do not copy those rules into
+the consumer file.
+
+The root Mix project has no package dependencies, so it does not aggregate the
+family's usage rules. A consuming application adds `usage_rules` as a
+development dependency, selects the WoTEx dependencies it uses in its
+`:usage_rules` configuration, and runs `mix usage_rules.sync`. This lets the
+consumer's dependency graph determine which package rules are installed.
+
 ## Adding a package
 
 `mix wotex.new <name> --depends-on wotex,wotex-runtime` scaffolds
@@ -270,8 +292,8 @@ switch (sibling path dependencies with `env: :dev`, refused outside
 development, test and docs), HexDocs extras and source links at its release
 tag, the standard full
 gate with archive, application-free and boundary scripts, a `CLAUDE.md`
-package contract and a `README.md` with installation and development
-sections. Then run `mix pkg <name> deps.get` and
+package contract, a consumer-facing `usage-rules.md`, and a `README.md` with
+installation and development sections. Then run `mix pkg <name> deps.get` and
 `mix pkg <name> check --no-retry`, and add the package to the package tables
 of the root README and `docs/README.md`. A package that gains C, C++ or Rust
 code sets `native: true`, declares its `native_check` suites in

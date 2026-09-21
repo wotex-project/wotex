@@ -97,6 +97,7 @@ defmodule WotexDirectory.MixProject do
         "LICENSE",
         "NOTICE",
         "README.md",
+        "usage-rules.md",
         "CHANGELOG.md",
         "lib",
         "mix.exs"

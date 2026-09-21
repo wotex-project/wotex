@@ -70,18 +70,24 @@ skill.
 - Machine-local execution state (trackers, progress notes, patches, receipts
   in progress) lives only in the ignored `docs/tasks/local/<name>/`. It never
   enters Git, package archives or generated documentation.
-- Package archives ship code, `priv/`, `README.md`, `CHANGELOG.md`, `LICENSE`
-  and `NOTICE` and, only where the package's shipped Mix tasks need them, its
-  native sources and the test assets those tasks run (today native sources in
+- Package archives ship code, `priv/`, `README.md`, `usage-rules.md`,
+  `CHANGELOG.md`, `LICENSE` and `NOTICE` and, only where the package's shipped
+  Mix tasks need them, its native sources and the test assets those tasks run
+  (today native sources in
   wotex-ble, wotex-coap, wotex-matter, wotex-opcua and wotex-thread, test
   assets in wotex-coap and wotex-matter). wotex-lab also ships the Rust source
   of its containment launcher (`priv/conformance/native/`), which a consumer
   of the containment profile builds and pins itself; the archive carries no
   launcher binary. The package's archive check (`bin/check_archive.exs`, or
-  `bin/check_package.exs`) is the authority for its exact contents. Archives
-  never ship Markdown documentation, governance files, agent files or check
-  scripts; notes inside a shipped native source tree are part of that tree.
-  Specifications reach consumers through HexDocs.
+  `bin/check_package.exs`) is the authority for its exact contents.
+  `usage-rules.md` is concise consumer guidance for tools that assemble rules
+  from installed dependencies. It describes the package's completed normative
+  specification and completion contract, not the implementation status of the
+  current checkout; `catalogue.yaml` remains the implementation-status owner.
+  Archives never ship the documentation tree, other Markdown documentation,
+  governance files, repository agent files or check scripts; notes inside a
+  shipped native source tree are part of that tree. Specifications reach
+  consumers through HexDocs.
 
 ## Naming and neutrality
 

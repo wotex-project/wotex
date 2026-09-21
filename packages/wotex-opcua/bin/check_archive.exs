@@ -10,6 +10,7 @@ defmodule Wotex.OPCUA.Check.Archive do
     "LICENSE",
     "NOTICE",
     "README.md",
+    "usage-rules.md",
     "lib",
     "priv/fixtures/contract-v1.json",
     "priv/fixtures/wotex-integration-v1.json",

@@ -167,11 +167,11 @@ defmodule WotexLab.MixProject do
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-lab/CHANGELOG.md",
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-lab"
       },
-      # Tarballs ship no Markdown documentation; specifications reach
-      # consumers through HexDocs.
+      # Tarballs ship consumer usage rules but no specification Markdown;
+      # specifications reach consumers through HexDocs.
       exclude_patterns: [~r{\Apriv/conformance/native/target(?:/|\z)}],
       files: ~w(lib priv/fixtures priv/models priv/cookbooks priv/conformance priv/provenance
-        .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
+        .formatter.exs mix.exs README.md usage-rules.md LICENSE NOTICE CHANGELOG.md)
     ]
   end
 

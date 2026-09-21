@@ -61,8 +61,45 @@ supervision, retries and proof of physical effects. Transports and credential
 resolvers are passed explicitly (`Wotex.Runtime.Transport`,
 `Wotex.Runtime.Credentials`); nothing is discovered from a registry.
 
+## Agent usage rules
+
+Every WoTEx package ships a concise `usage-rules.md` beside its public code.
+The rules describe the completed normative package contract; they are not an
+inventory of the implementation status in a particular checkout. In a
+consuming application, add the development tool and let the application's
+resolved dependency graph select the rules:
+
+```elixir
+def project do
+  [
+    # ...
+    usage_rules: [
+      file: "AGENTS.md",
+      usage_rules: [:usage_rules, ~r/^wotex/]
+    ]
+  ]
+end
+
+def deps do
+  [
+    {:usage_rules, "~> 1.1", only: :dev, runtime: false}
+    # WoTEx dependencies ...
+  ]
+end
+```
+
+Run `mix usage_rules.sync` after dependency changes. The regular expression
+includes the rules of installed WoTEx packages, including transitive package
+dependencies, while silently skipping packages that are not present. If the
+generated file becomes too large, configure `skills: [deps: [~r/^wotex/]]` to
+produce one managed skill per installed package instead.
+
+Do not configure this at the root of the WoTEx repository: its Mix project is
+tooling-only and deliberately has no package dependencies. Each independently
+released package owns and ships its own rules.
+
 ## Documentation
 
 Each package's specifications are published with its HexDocs and live in
-this repository under `docs/packages/<name>/`. Package archives do not
-contain Markdown documentation.
+this repository under `docs/packages/<name>/`. Package archives include the
+package README, changelog and `usage-rules.md`, but not the documentation tree.

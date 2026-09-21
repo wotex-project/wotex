@@ -29,10 +29,13 @@ For a completion or readiness claim, additionally confirm:
    `Application.spec(:<otp_app>, :mod)` is empty.
 2. Production dependencies match the reviewed allowlist or accepted graph.
 3. The packaged file list from the archive check contains only code, `priv/`,
-   `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE` and, where the
-   package's shipped Mix tasks need them, its native sources and the test
-   assets those tasks run; never Markdown documentation, governance files,
-   agent files or check scripts (root `CLAUDE.md`, "Layout invariants").
+   `README.md`, `usage-rules.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE` and,
+   where the package's shipped Mix tasks need them, its native sources and the
+   test assets those tasks run. `usage-rules.md` is the only additional
+   consumer-facing Markdown file. Confirm that it describes the completed
+   normative contract rather than the current implementation status; never
+   ship the documentation tree, governance files, repository agent files or
+   check scripts (root `CLAUDE.md`, "Layout invariants").
 4. Tracked text contains no consumer, company or product names, consumer
    namespaces, absolute machine paths, credentials, private data or copied
    non-public prose. Review the boundary semantically; do not encode private

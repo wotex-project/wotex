@@ -4,7 +4,8 @@ defmodule Wotex.Workspace.Scaffold do
 
     * `packages/<name>/`: a Mix library with the `WOTEX_PATH_DEPS` sibling
       switch (dev, test and docs only), Hex `files` limited to code,
-      `README.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`, HexDocs extras
+      `README.md`, `usage-rules.md`, `CHANGELOG.md`, `LICENSE` and `NOTICE`,
+      HexDocs extras
       from `docs/packages/<name>/` with source links through `source_url/2`
       at the `<name>-v<version>` tag, the standard full gate (`.check.exs`)
       with archive, application-free and boundary scripts, a `CLAUDE.md`
@@ -192,6 +193,7 @@ defmodule Wotex.Workspace.Scaffold do
       {"#{package}/coveralls.json", templates.coveralls},
       {"#{package}/CLAUDE.md", render(claude_md(depends_on), bindings)},
       {"#{package}/README.md", align_comments(render(readme(), bindings))},
+      {"#{package}/usage-rules.md", render(usage_rules(), bindings)},
       {"#{package}/CHANGELOG.md", render(changelog(), bindings)},
       {"#{package}/LICENSE", templates.license},
       {"#{package}/NOTICE", render(notice(), bindings)},
@@ -351,7 +353,7 @@ defmodule Wotex.Workspace.Scaffold do
               "Changelog" => "#{@source_url}/blob/main/packages/@@name@@/CHANGELOG.md",
               "Specifications" => "#{@source_url}/tree/main/docs/packages/@@name@@"
             },
-            files: ~w(lib .formatter.exs mix.exs README.md CHANGELOG.md LICENSE NOTICE)
+            files: ~w(lib .formatter.exs mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
           ]
         end
 
@@ -462,6 +464,10 @@ defmodule Wotex.Workspace.Scaffold do
       baseline. Package extension terms are never presented as W3C-defined.
     - Public functions have documentation and types. One module per `.ex` file.
       Tests use `@moduledoc false` followed by a blank line.
+    - `usage-rules.md` contains concise consumer guidance and ships in the Hex
+      archive. It describes the completed normative contract, while the
+      catalogue separately owns implementation status. Repository contributor
+      rules and the documentation tree do not ship.
 
     ## Where things are
 
@@ -552,6 +558,25 @@ defmodule Wotex.Workspace.Scaffold do
     [Apache License 2.0](https://github.com/wotex-project/wotex/blob/main/packages/@@name@@/LICENSE).
     """
     |> String.replace("@@commands@@", commands())
+  end
+
+  defp usage_rules do
+    ~S"""
+    # @@title@@ usage rules
+
+    These rules describe the completed public contract defined by the package's
+    normative specifications and completion plan. The package catalogue records
+    implementation status separately.
+
+    - Use `@@namespace@@` and the package's documented public modules as entry
+      points. Do not depend on undocumented modules or struct fields.
+    - Loading the package starts no process and performs no I/O. Supply runtime
+      dependencies explicitly and supervise every returned child specification.
+    - The consumer owns policy, credentials, persistence, retries and canonical
+      Thing state unless a public function documents a narrower boundary.
+    - Match structured errors by their documented fields, not rendered messages.
+      Preserve W3C Web of Things terms and extension data at public boundaries.
+    """
   end
 
   # The commands are rendered with their placeholders, so the comment column
@@ -663,13 +688,14 @@ defmodule Wotex.Workspace.Scaffold do
   defp check_archive do
     ~S"""
     # Builds the Hex archive without sibling path dependencies and verifies
-    # that it ships code, README.md, CHANGELOG.md, LICENSE and NOTICE only.
+    # that it ships code, README.md, usage-rules.md, CHANGELOG.md, LICENSE and
+    # NOTICE only.
     # Runs in the full gate: `mix run --no-start bin/check_archive.exs`.
 
     defmodule @@namespace@@.Check.Archive do
       @moduledoc false
 
-      @required ~w(mix.exs README.md CHANGELOG.md LICENSE NOTICE)
+      @required ~w(mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
       @forbidden ~w(docs test bin config .check.exs .credo.exs .doctor.exs coveralls.json CLAUDE.md)
 
       @spec main() :: :ok

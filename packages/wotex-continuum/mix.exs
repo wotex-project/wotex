@@ -98,7 +98,7 @@ defmodule WotexContinuum.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(lib priv/schemas priv/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md)
+        ~w(lib priv/schemas priv/vectors .formatter.exs mix.exs README.md usage-rules.md LICENSE NOTICE CHANGELOG.md)
     ]
   end
 

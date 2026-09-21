@@ -20,9 +20,10 @@ supervision. Repository-wide rules are in the root `CLAUDE.md`.
   claim W3C Profile or registry conformance.
 - One module per `.ex` file. Public functions have docs and types. Tests use
   `@moduledoc false` followed by a blank line.
-- `bin/check_archive.exs` must keep rejecting Markdown documentation, agent
-  files and `docs/tasks/local/` in every archive; create no tracker beneath
-  publishable documentation.
+- `bin/check_archive.exs` must require `usage-rules.md` while rejecting the
+  documentation tree, other Markdown documentation, repository agent files
+  and `docs/tasks/local/`; create no tracker beneath publishable
+  documentation.
 
 ## Where things are
 

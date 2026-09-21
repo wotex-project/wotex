@@ -120,7 +120,7 @@ defmodule WotexBLE.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib priv/bluez/native priv/fixtures mix.exs)
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib priv/bluez/native priv/fixtures mix.exs)
     ]
   end
 

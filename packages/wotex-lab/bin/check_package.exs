@@ -6,7 +6,7 @@ Code.require_file("support/work_directory.exs", __DIR__)
 defmodule Wotex.Lab.Check.Package do
   @moduledoc false
 
-  @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE CHANGELOG.md
+  @required ~w(lib/wotex/lab.ex mix.exs README.md usage-rules.md LICENSE NOTICE CHANGELOG.md
                priv/models/manifest.json priv/provenance/source-index.json
                priv/provenance/source-cohort.json priv/provenance/wotex-lab-api.json
                priv/provenance/wotex-lab-compatibility.json
@@ -20,8 +20,9 @@ defmodule Wotex.Lab.Check.Package do
                priv/conformance/native/tests/hosted_investigation_runner.rs
                priv/fixtures/thermal/manifest.json priv/fixtures/thermal/expected-output.json
                priv/cookbooks/thermal-nx.livemd priv/cookbooks/smart-room.livemd)
-  # Documentation reaches consumers through HexDocs, never the archive; no
-  # docs or tasks tree and no development tooling may enter it.
+  # Specifications reach consumers through HexDocs; no docs or tasks tree and
+  # no development tooling may enter the archive. `usage-rules.md` is consumer
+  # input.
   @excluded ~r{\A(?:docs|tasks|deps|_build|test|bin|\.git|\.claude)(?:/|\z)}
 
   @spec run() :: :ok

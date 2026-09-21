@@ -80,7 +80,8 @@ defmodule Wotex.MixProject do
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex"
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
-      files: ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md lib mix.exs priv/w3c)
+      files:
+        ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md lib mix.exs priv/w3c)
     ]
   end
 

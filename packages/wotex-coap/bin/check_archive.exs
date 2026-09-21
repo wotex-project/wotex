@@ -21,6 +21,7 @@ defmodule Wotex.CoAP.Check.Archive do
     "LICENSE",
     "NOTICE",
     "README.md",
+    "usage-rules.md",
     "mix.exs",
     "mix.lock",
     "lib",
