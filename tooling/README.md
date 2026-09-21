@@ -160,6 +160,16 @@ exact entry, deletes one exact leased entry, or performs explicitly bounded
 garbage collection. Collection skips active, malformed and unowned entries and
 does not follow symlinks. Neither command retrieves or publishes artifacts.
 
+`mix native.closure --cache /absolute/cache --rootfs /absolute/rootfs --target
+TARGET --artifact PACKAGE/PROFILE/FULL_SHA256` revalidates each selected cache
+entry, then resolves every reachable ELF interpreter and `DT_NEEDED` entry only
+against that target root filesystem and the admitted sibling artifacts. Repeat
+`--artifact` for one assembled target. The check reports all missing,
+incompatible and conflicting providers together, retains the manifest's exact
+system identity, and is the required pre-assembly gate for firmware, guest
+images and releases. It never consults host linker paths and has no filename-only
+fallback for non-ELF formats.
+
 ## Affected packages
 
 `mix wotex.affected` derives the changed paths from `git diff --name-only

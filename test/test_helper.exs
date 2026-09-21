@@ -78,6 +78,7 @@ defmodule WotexWorkspace.Fixtures do
 end
 
 Code.require_file("support/native_artifact_archive_fixture.ex", __DIR__)
+Code.require_file("support/native_artifact_elf_fixture.ex", __DIR__)
 
 # The real `cargo bench` test fetches and compiles criterion; run it with
 # `mix test --include criterion`.

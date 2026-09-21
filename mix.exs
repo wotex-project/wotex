@@ -52,6 +52,7 @@ defmodule WotexWorkspace.MixProject do
       "native.verify": "wotex.native.verify",
       "native.adopt": "wotex.native.adopt",
       "native.cache": "wotex.native.cache",
+      "native.closure": "wotex.native.closure",
       "native.lint": "wotex.native.lint",
       "native.test": "wotex.native.test",
       "native.bench": "wotex.native.bench",

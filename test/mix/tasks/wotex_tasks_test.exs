@@ -28,7 +28,7 @@ defmodule Mix.Tasks.WotexTasksTest do
                           check.affected check.all workspace format.all lint dialyzer.pkg
                           docs.check docs.pkg index native.build native.sources
                           native.advisories native.inspect native.plan native.manifest native.verify
-                          native.adopt native.cache
+                          native.adopt native.cache native.closure
                           native.lint native.test native.bench bench check))
 
     for {name, tasks} <- aliases, task <- List.wrap(tasks) do
