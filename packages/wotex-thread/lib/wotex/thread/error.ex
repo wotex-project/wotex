@@ -101,6 +101,7 @@ defmodule Wotex.Thread.Error do
               :invalid_form,
               :invalid_form_address,
               :invalid_handle,
+              :incompatible_backend,
               :invalid_joiner_admission,
               :invalid_joiner_config,
               :invalid_joiner_identity,

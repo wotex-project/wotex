@@ -35,6 +35,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
 
     options = [
       executable: executable,
+      executable_sha256: digest(executable),
       radio_url: "spinel+hdlc+uart:///fixture/radio",
       interface: "wthfixture",
       storage_path: Path.join(directory, "private-canary-store"),
@@ -152,6 +153,17 @@ defmodule Wotex.Thread.SdkBridgeTest do
     assert :ok = OpenThread.disconnect(handle)
   end
 
+  test "WTH-B01 a digest mismatch starts no native process", context do
+    options =
+      Keyword.put(context.options, :executable_sha256, String.duplicate("0", 64))
+
+    assert {:error, %Error{code: :incompatible_backend, field: :executable}} =
+             OpenThread.connect(options)
+
+    assert requests(context) == []
+    refute File.exists?(Path.join(context.directory, "pid"))
+  end
+
   test "WTH-C03 unrelated processes never receive owner calls or cleanup", context do
     assert {:ok, handle} = OpenThread.connect(context.options)
     {:ok, unrelated} = Agent.start(fn -> :unrelated end)
@@ -223,7 +235,13 @@ defmodule Wotex.Thread.SdkBridgeTest do
                  env: command_env()
                )
 
-      options = Keyword.merge(context.options, executable: executable, timeout: 100)
+      options =
+        Keyword.merge(context.options,
+          executable: executable,
+          executable_sha256: digest(executable),
+          timeout: 100
+        )
+
       started = System.monotonic_time(:millisecond)
       assert {:error, %Error{code: :timeout}} = OpenThread.connect(options)
       assert System.monotonic_time(:millisecond) - started < 1100
@@ -820,6 +838,9 @@ defmodule Wotex.Thread.SdkBridgeTest do
 
   defp command_env,
     do: Enum.map(System.get_env(), fn {key, value} -> {key, if(key == "PATH", do: value)} end)
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp requests(context) do
     case File.read(Path.join(context.directory, "requests")) do

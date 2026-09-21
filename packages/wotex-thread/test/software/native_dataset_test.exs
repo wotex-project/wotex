@@ -20,10 +20,12 @@ defmodule Wotex.Thread.NativeDatasetTest do
 
     File.mkdir_p!(directory)
     on_exit(fn -> File.rm_rf!(directory) end)
+    executable = System.fetch_env!("WOTEX_THREAD_HOST")
 
     options = [
       client: OpenThread,
-      executable: System.fetch_env!("WOTEX_THREAD_HOST"),
+      executable: executable,
+      executable_sha256: digest(executable),
       radio_url: "spinel+hdlc+forkpty://#{System.fetch_env!("WOTEX_THREAD_RCP")}?forkpty-arg=2",
       interface: "wthdataset",
       storage_path: Path.join(directory, "settings"),
@@ -34,6 +36,9 @@ defmodule Wotex.Thread.NativeDatasetTest do
 
     %{options: options}
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   test "WTH-S01 WTH-V02 public native validation uses the SDK and leaves state unchanged",
        context do

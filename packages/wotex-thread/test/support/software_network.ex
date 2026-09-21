@@ -31,10 +31,12 @@ defmodule Wotex.Thread.SoftwareNetwork do
   def host_options(role, root, options \\ []) when is_atom(role) and is_binary(root) do
     storage_mode = Keyword.get(options, :storage_mode, :create_new)
     allow_network_creation = Keyword.get(options, :allow_network_creation, false)
+    executable = System.fetch_env!("WOTEX_THREAD_HOST")
 
     [
       client: OpenThread,
-      executable: System.fetch_env!("WOTEX_THREAD_HOST"),
+      executable: executable,
+      executable_sha256: digest(executable),
       radio_url: radio_url(role),
       interface: Map.fetch!(@interfaces, role),
       storage_path: Path.join([root, "stores", Atom.to_string(role)]),
@@ -44,6 +46,9 @@ defmodule Wotex.Thread.SoftwareNetwork do
       timeout: Keyword.get(options, :timeout, 10_000)
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   @doc "Starts the pinned borrowed daemon on its own simulation RCP."
   @spec start_daemon(Path.t()) :: {:ok, owned_process()} | {:error, term()}

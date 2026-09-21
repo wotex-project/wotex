@@ -1240,6 +1240,7 @@ defmodule Wotex.Matter.SubscriptionTest do
 
     [
       executable: executable,
+      executable_sha256: digest(executable),
       lifecycle: :persistent,
       storage_path: temporary_path("store"),
       storage_mode: :create_new,
@@ -1251,6 +1252,9 @@ defmodule Wotex.Matter.SubscriptionTest do
       timeout: 3_000
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp native_fixture(audit, mode) do
     path = temporary_path("subscription-host")

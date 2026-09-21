@@ -20,10 +20,12 @@ defmodule Wotex.Thread.NativeStateTest do
 
     File.mkdir_p!(directory)
     on_exit(fn -> File.rm_rf!(directory) end)
+    executable = System.fetch_env!("WOTEX_THREAD_HOST")
 
     options = [
       client: OpenThread,
-      executable: System.fetch_env!("WOTEX_THREAD_HOST"),
+      executable: executable,
+      executable_sha256: digest(executable),
       radio_url: "spinel+hdlc+forkpty://#{System.fetch_env!("WOTEX_THREAD_RCP")}?forkpty-arg=24",
       interface: "wthstate",
       storage_path: Path.join(directory, "settings"),
@@ -36,6 +38,9 @@ defmodule Wotex.Thread.NativeStateTest do
 
     %{options: options}
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   test "WTH-S06 WTH-V10 real SDK role changes arrive as bounded non-secret snapshots", context do
     assert {:ok, session} = Thread.connect(context.options)

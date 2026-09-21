@@ -24,7 +24,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
 
   use GenServer
   alias Wotex.Thread.{Error, Session, Subscription}
-  alias Wotex.Thread.OpenThread.{Config, Frame, ReportLedger, Request, StreamOwner}
+  alias Wotex.Thread.OpenThread.{Config, Executable, Frame, ReportLedger, Request, StreamOwner}
 
   @owner_key {__MODULE__, :owner}
   @closed_limit 1024
@@ -187,9 +187,15 @@ defmodule Wotex.Thread.OpenThread.Connection do
       start_timer: Process.send_after(self(), :startup_timeout, max(deadline - now(), 0))
     }
 
-    case open_port(config.executable) do
-      {:ok, port} -> {:ok, %{state | port: port}}
-      :error -> {:stop, Error.new(:transport_unavailable)}
+    case Executable.verify(config.executable, config.executable_sha256, deadline) do
+      {:ok, executable} ->
+        case open_port(executable.path) do
+          {:ok, port} -> {:ok, %{state | port: port}}
+          :error -> {:stop, Error.new(:transport_unavailable)}
+        end
+
+      {:error, %Error{} = error} ->
+        {:stop, error}
     end
   end
 

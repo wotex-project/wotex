@@ -236,6 +236,7 @@ defmodule Wotex.Thread.LifecycleStressTest do
       options = [
         client: OpenThread,
         executable: executable,
+        executable_sha256: digest(executable),
         radio_url: "spinel+hdlc+uart:///fixture/radio",
         interface: "wthinjected",
         storage_path: Path.join(directory, "store"),
@@ -264,6 +265,7 @@ defmodule Wotex.Thread.LifecycleStressTest do
     [
       client: OpenThread,
       executable: context.host,
+      executable_sha256: digest(context.host),
       radio_url: "spinel+hdlc+forkpty://#{context.rcp}?forkpty-arg=#{node}",
       interface: "wthstress#{node}",
       storage_path: Path.join(context.directory, name),
@@ -272,6 +274,9 @@ defmodule Wotex.Thread.LifecycleStressTest do
       timeout: 10_000
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   # The Port's guardian, its SDK worker and the simulated radio the worker started.
   defp native_processes(session) do

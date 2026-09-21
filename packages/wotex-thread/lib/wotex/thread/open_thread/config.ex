@@ -2,8 +2,9 @@ defmodule Wotex.Thread.OpenThread.Config do
   @moduledoc """
   Admits explicit configuration for an owned native OpenThread session.
 
-  Configuration requires absolute executable and storage paths, a supported
-  Spinel radio URL, an interface name, a storage mode and a local owner PID.
+  Configuration requires an absolute executable path and its lowercase SHA-256,
+  an absolute storage path, a supported Spinel radio URL, an interface name, a
+  storage mode and a local owner PID.
   Unknown or duplicate options fail. Paths and URLs are limited to 4096 bytes,
   interface names to 15 bytes, and timeout to 1..60,000 milliseconds. Network
   creation is disabled unless explicitly permitted.
@@ -19,6 +20,7 @@ defmodule Wotex.Thread.OpenThread.Config do
 
   @keys [
     :executable,
+    :executable_sha256,
     :radio_url,
     :interface,
     :storage_path,
@@ -27,12 +29,21 @@ defmodule Wotex.Thread.OpenThread.Config do
     :timeout,
     :allow_network_creation
   ]
-  @enforce_keys [:executable, :radio_url, :interface, :storage_path, :storage_mode, :owner]
+  @enforce_keys [
+    :executable,
+    :executable_sha256,
+    :radio_url,
+    :interface,
+    :storage_path,
+    :storage_mode,
+    :owner
+  ]
   @derive {Inspect, only: [:interface, :storage_mode, :timeout, :allow_network_creation]}
   defstruct @enforce_keys ++ [timeout: 5000, allow_network_creation: false]
 
   @type t :: %__MODULE__{
           executable: String.t(),
+          executable_sha256: String.t(),
           radio_url: String.t(),
           interface: String.t(),
           storage_path: String.t(),
@@ -58,13 +69,9 @@ defmodule Wotex.Thread.OpenThread.Config do
 
   @doc false
   @spec validate(term()) :: :ok | {:error, Error.t()}
-  def validate(%__MODULE__{} = config) when map_size(config) == 9 do
-    if Enum.all?(@keys, &Map.has_key?(config, &1)) and absolute_path?(config.executable) and
-         absolute_path?(config.storage_path) and
-         radio_url?(config.radio_url) and interface?(config.interface) and
-         config.storage_mode in [:open_existing, :create_new] and is_pid(config.owner) and
-         node(config.owner) == node() and is_integer(config.timeout) and config.timeout in 1..60_000 and
-         is_boolean(config.allow_network_creation) do
+  def validate(%__MODULE__{} = config) when map_size(config) == 10 do
+    if Enum.all?(@keys, &Map.has_key?(config, &1)) and paths?(config) and owner?(config) and
+         bounds?(config) do
       :ok
     else
       {:error, Error.new(:invalid_options)}
@@ -72,6 +79,22 @@ defmodule Wotex.Thread.OpenThread.Config do
   end
 
   def validate(_), do: {:error, Error.new(:invalid_options)}
+
+  defp paths?(config),
+    do:
+      absolute_path?(config.executable) and digest?(config.executable_sha256) and
+        absolute_path?(config.storage_path) and radio_url?(config.radio_url) and
+        interface?(config.interface)
+
+  defp owner?(config),
+    do:
+      config.storage_mode in [:open_existing, :create_new] and is_pid(config.owner) and
+        node(config.owner) == node()
+
+  defp bounds?(config),
+    do:
+      is_integer(config.timeout) and config.timeout in 1..60_000 and
+        is_boolean(config.allow_network_creation)
 
   defp options([], _), do: :ok
 
@@ -93,6 +116,11 @@ defmodule Wotex.Thread.OpenThread.Config do
     do: Regex.match?(~r/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*\z/, name)
 
   defp interface?(_), do: false
+
+  defp digest?(value) when is_binary(value),
+    do: Regex.match?(~r/\A[0-9a-f]{64}\z/, value)
+
+  defp digest?(_), do: false
 
   defp radio_url?(url) when is_binary(url) and byte_size(url) in 1..4096 do
     String.valid?(url) and not Regex.match?(~r/[\x00-\x20\x7f]/, url) and

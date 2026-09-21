@@ -3,9 +3,9 @@ spec:
   id: WMA.04
   title: "Explicit native SDK client"
   status: accepted
-  version: 2.0.1
+  version: 2.0.2
   owner: wotex-matter
-  updated: 2026-09-18
+  updated: 2026-09-21
 ---
 
 # WMA.04 Explicit native SDK client
@@ -33,8 +33,9 @@ enforce exact fabric identity, finite deadlines, bounded framed IPC and
 structured errors. Neither mode retries a write or invoke after an unknown
 effect, and neither falls back to another backend.
 
-The consumer owns the absolute executable path, controller configuration,
-credential custody and explicit connection lifetime. The first-party backend
+The consumer owns the absolute executable path and its full lowercase SHA-256,
+controller configuration, credential custody and explicit connection lifetime.
+The first-party backend
 owns SDK startup, attestation checks, storage locking, per-path status
 validation and cleanup. [WMA.06](WMA.06-standalone-client-and-preservation.md)
 defines the typed standalone operations; [WMA.07](WMA.07-wotex-integration.md)

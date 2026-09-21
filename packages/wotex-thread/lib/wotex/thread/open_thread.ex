@@ -4,8 +4,8 @@ defmodule Wotex.Thread.OpenThread do
 
   Build the packaged native host with `mix wotex.thread.native.build --workspace ABS`
   (the package alias is `mix wotex.native.build`) in an explicit Linux workspace.
-  Supply its absolute executable path, radio URL, interface, storage path/mode
-  and owner to `connect/1`. A successful connection has acquired its SDK
+  Supply its absolute executable path and lowercase SHA-256, radio URL,
+  interface, storage path/mode and owner to `connect/1`. A successful connection has acquired its SDK
   resources and supports non-secret inspection. Closing it releases its
   owned SDK, radio descendants and interface while preserving durable settings.
 

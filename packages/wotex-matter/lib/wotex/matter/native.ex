@@ -2,11 +2,12 @@ defmodule Wotex.Matter.Native do
   @moduledoc """
   Executes first-party Matter SDK controllers with explicit lifecycle ownership.
 
-  This `Wotex.Matter.Client` implementation executes an absolute
-  `wotex-matter-host` path directly through a caller-owned BEAM Port. It checks
-  the exact native protocol revision, establishes a fresh flow generation, and
-  opens one explicit durable controller identity. No process starts until
-  `connect/1` is called, and there is no Python or simulator fallback.
+  This `Wotex.Matter.Client` implementation verifies an absolute
+  `wotex-matter-host` path against its caller-supplied SHA-256, then executes it
+  directly through a caller-owned BEAM Port. It checks the exact native protocol
+  revision, establishes a fresh flow generation, and opens one explicit durable
+  controller identity. No process starts until `connect/1` is called, and there
+  is no Python or simulator fallback.
 
   Creation requires `storage_mode: :create_new` with
   `authority: :generate_root`. Reopening requires
@@ -42,7 +43,7 @@ defmodule Wotex.Matter.Native do
   @behaviour Wotex.Matter.Client
 
   alias Wotex.Matter.{Address, Descriptor, Error, Subscription}
-  alias Wotex.Matter.Native.{Connection, Handle, OneshotHandle, Request}
+  alias Wotex.Matter.Native.{Connection, Executable, Handle, OneshotHandle, Request}
 
   @type handle :: Handle.t() | OneshotHandle.t()
 
@@ -50,6 +51,7 @@ defmodule Wotex.Matter.Native do
     :authority,
     :controller_node_id,
     :executable,
+    :executable_sha256,
     :fabric_id,
     :lifecycle,
     :paa_trust_store,
@@ -244,7 +246,7 @@ defmodule Wotex.Matter.Native do
     deadline = System.monotonic_time(:millisecond) + timeout
 
     with :ok <- Request.validate(message),
-         {:ok, validated} <- validate_options(handle.options),
+         {:ok, validated} <- validate_options(handle.options, deadline),
          :ok <- oneshot_identity(handle, validated),
          :ok <- Address.validate_message(message),
          {:ok, fabric_id} <- request_fabric(message, handle.fabric_id),
@@ -317,21 +319,23 @@ defmodule Wotex.Matter.Native do
   defp oneshot_close_failure({:error, %Error{code: code}}, message),
     do: oneshot_failure(code, message)
 
-  defp validate_options(options) when is_list(options) do
+  defp validate_options(options, deadline \\ nil)
+
+  defp validate_options(options, deadline) when is_list(options) do
     keys = if Keyword.keyword?(options), do: Keyword.keys(options), else: []
 
     if keys != [] and length(keys) == length(Enum.uniq(keys)) and
          Enum.sort(keys -- [:timeout]) == Enum.sort(@required_options) and
          keys -- @allowed_options == [] do
-      validate_values(Map.new(options))
+      validate_values(Map.new(options), deadline)
     else
       {:error, Error.new(:invalid_options)}
     end
   end
 
-  defp validate_options(_), do: {:error, Error.new(:invalid_options)}
+  defp validate_options(_, _), do: {:error, Error.new(:invalid_options)}
 
-  defp validate_values(options) do
+  defp validate_values(options, outer_deadline) do
     timeout = Map.get(options, :timeout, 5_000)
     mode = {options.storage_mode, options.authority}
 
@@ -342,29 +346,30 @@ defmodule Wotex.Matter.Native do
          true <- integer?(options.fabric_id, 1, 0xFFFFFFFFFFFFFFFF),
          true <- integer?(options.controller_node_id, 1, 0xFFFFFFEFFFFFFFFF),
          true <- integer?(timeout, 1, 60_000),
+         deadline <- executable_deadline(timeout, outer_deadline),
          :ok <- absolute_path(options.storage_path),
          :ok <- absolute_path(options.paa_trust_store),
-         :ok <- executable(options.executable),
-         :ok <- trust_directory(options.paa_trust_store) do
+         {:ok, executable} <-
+           Executable.verify(options.executable, options.executable_sha256, deadline),
+         :ok <- trust_directory(options.paa_trust_store),
+         remaining when remaining > 0 <- deadline - System.monotonic_time(:millisecond) do
       {:ok,
        options
-       |> Map.put(:timeout, timeout)
+       |> Map.put(:executable, executable.path)
+       |> Map.put(:timeout, remaining)
        |> Map.update!(:lifecycle, &Atom.to_string/1)
        |> Map.update!(:storage_mode, &Atom.to_string/1)
        |> Map.update!(:authority, &Atom.to_string/1)}
     else
+      {:error, %Error{}} = error -> error
+      remaining when is_integer(remaining) -> {:error, Error.new(:timeout, :executable)}
       _ -> {:error, Error.new(:invalid_options)}
     end
   end
 
-  defp executable(path) do
-    with :ok <- absolute_path(path),
-         {:ok, %{type: :regular, mode: mode}} <- File.lstat(path),
-         true <- Bitwise.band(mode, 0o111) != 0 do
-      :ok
-    else
-      _ -> :error
-    end
+  defp executable_deadline(timeout, outer_deadline) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+    if is_integer(outer_deadline), do: min(deadline, outer_deadline), else: deadline
   end
 
   defp trust_directory(path) do

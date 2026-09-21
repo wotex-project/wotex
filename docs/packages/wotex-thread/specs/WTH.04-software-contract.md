@@ -3,9 +3,9 @@ spec:
   id: WTH.04
   title: "Complete OpenThread host-management software profile"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-thread
-  updated: 2026-09-20
+  updated: 2026-09-21
 ---
 
 # WTH.04 Complete OpenThread host-management software profile
@@ -111,9 +111,10 @@ Borrowed daemon survives disconnect and owner death.
 
 ## WTH-S03 — Owned SDK bridge and state lifecycle
 
-`OpenThread.connect/1` requires absolute executable, explicit radio URL,
-interface name, storage directory, `storage_mode: :open_existing | :create_new`
-and owner. Native configuration rejects an already owned radio/interface/store;
+`OpenThread.connect/1` requires an absolute executable, its full lowercase
+SHA-256, an explicit radio URL, interface name, storage directory,
+`storage_mode: :open_existing | :create_new` and owner. Native configuration
+rejects an already owned radio/interface/store;
 an exclusive storage lock prevents concurrent local owners. SDK settings and
 Dataset state use owner-only permissions and durable backend storage. No default
 radio selection, root escalation, system service edits or unrelated host network

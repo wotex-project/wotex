@@ -300,6 +300,7 @@ defmodule Wotex.Matter.InteractionTest do
 
     [
       executable: executable,
+      executable_sha256: digest(executable),
       lifecycle: :persistent,
       storage_path: temporary_path("store"),
       storage_mode: :create_new,
@@ -311,6 +312,9 @@ defmodule Wotex.Matter.InteractionTest do
       timeout: 3_000
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp native_fixture(audit, delay_ms \\ 0) do
     path = temporary_path("interaction-host")

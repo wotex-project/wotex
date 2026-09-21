@@ -3,7 +3,7 @@ spec:
   id: WTH.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.8
+  version: 1.0.9
   owner: wotex-thread
   updated: 2026-09-21
 ---
@@ -29,9 +29,16 @@ The production backend is one first-party C++17 executable, `wotex-thread-host`,
 started by an explicitly owned BEAM Port. It requires no Python interpreter,
 Python package, shell command parser or NIF inside the BEAM. Module loading,
 profile construction and pure values start no process and read no configuration.
-The executable path is absolute, validated before startup, and executed directly
-with separate arguments. Native runtime libraries are declared in the build
-manifest; a missing or mismatched dependency fails startup.
+The executable path is absolute, paired with a caller-supplied lowercase
+SHA-256, validated before startup, and executed directly with separate
+arguments. Selection is pure; the connection hashes a nonempty executable
+regular file of at most 512 MiB under the original startup deadline, checks its
+identity before and after reading and against the final path, and starts no Port
+on mismatch. A missing or unreadable file is `transport_unavailable`, an expired
+budget is `timeout`, and a content or file-identity mismatch is
+`incompatible_backend`. Native runtime libraries are declared in the build
+manifest; a missing or mismatched dependency fails startup. The consumer keeps
+the verified deployment file immutable until process creation.
 
 The generic entry points are Mix tasks. These package aliases of the
 `wotex.thread.*` tasks run inside `packages/wotex-thread`:

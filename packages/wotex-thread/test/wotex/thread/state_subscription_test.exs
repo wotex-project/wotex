@@ -33,6 +33,7 @@ defmodule Wotex.Thread.StateSubscriptionTest do
     options = [
       client: OpenThread,
       executable: executable,
+      executable_sha256: digest(executable),
       radio_url: "spinel+hdlc+uart:///fixture/radio",
       interface: "wthstream",
       storage_path: Path.join(directory, "store"),
@@ -43,6 +44,9 @@ defmodule Wotex.Thread.StateSubscriptionTest do
 
     %{directory: directory, options: options}
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   test "WTH-S06 WTH-C05 the initial snapshot follows registration and credit returns after delivery",
        context do

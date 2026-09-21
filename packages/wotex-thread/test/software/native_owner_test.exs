@@ -25,6 +25,7 @@ defmodule Wotex.Thread.NativeOwnerTest do
 
     options = [
       executable: executable,
+      executable_sha256: digest(executable),
       radio_url: "spinel+hdlc+forkpty://#{rcp}?forkpty-arg=2",
       interface: "wthbeam",
       storage_path: Path.join(directory, "settings"),
@@ -35,6 +36,9 @@ defmodule Wotex.Thread.NativeOwnerTest do
 
     %{options: options, directory: directory}
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   test "WTH-S03 WTH-V04 real SDK reads preserve settings across owned close and reopen", context do
     assert {:ok, handle} = OpenThread.connect(context.options)

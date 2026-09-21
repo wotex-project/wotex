@@ -3,7 +3,7 @@ spec:
   id: WMA.08
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.8
+  version: 1.0.9
   owner: wotex-matter
   updated: 2026-09-21
 ---
@@ -27,9 +27,17 @@ The production backend is one first-party C++17 executable, `wotex-matter-host`,
 started by an explicitly owned BEAM Port. It requires no Python interpreter,
 Python package, shell command parser or NIF inside the BEAM. Module loading,
 profile construction and pure values start no process and read no configuration.
-The executable path is absolute, validated before startup, and executed directly
-with separate arguments. Native runtime libraries are declared in the build
-manifest; a missing or mismatched dependency fails startup.
+The executable path is absolute, paired with a caller-supplied lowercase
+SHA-256, validated before startup, and executed directly with separate
+arguments. Before Port creation, the native client hashes a nonempty executable
+regular file of at most 512 MiB under the same startup deadline, checks its
+identity before and after reading and against the final path, and starts no
+controller on mismatch. A missing or unreadable file is
+`transport_unavailable`, an expired budget is `timeout`, and a content or
+file-identity mismatch is `incompatible_backend`. Native runtime libraries are
+declared in the build manifest; a missing or mismatched dependency fails
+startup. The consumer keeps the verified deployment file immutable until
+process creation.
 The POSIX process boundary requires executable `/bin/kill`, invoked directly with
 separate arguments for the owned child's positive PID. Cooperative close requires
 an exact null result followed by native exit status zero within the same cleanup

@@ -101,6 +101,7 @@ defmodule Wotex.Matter.Error do
               :invalid_form,
               :invalid_form_address,
               :invalid_handle,
+              :incompatible_backend,
               :invalid_message,
               :invalid_options,
               :invalid_path,

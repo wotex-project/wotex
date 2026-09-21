@@ -1,6 +1,6 @@
 # Native artifact foundation
 
-Specification version: 0.6.0. Contract: accepted foundation.
+Specification version: 0.7.0. Contract: accepted foundation.
 
 This contract governs native artifacts built, qualified or adopted by the
 WoTEx repository. It applies to native executables, shared libraries, firmware
@@ -392,7 +392,7 @@ an earlier slice or make unimplemented operations appear available.
 | Cache adoption and concurrency | Implemented | Focused local reuse, corruption, concurrency, lease-loss, prior-entry preservation and bounded-collection tests pass |
 | Assembled-target dependency closure | Implemented | Focused local ELF32/ELF64, endianness, interpreter, transitive dependency, conflict, symlink and bound tests pass; no external target assembly is claimed |
 | Exact prebuilt retrieval | Implemented | Focused local streaming, digest, redirect, credential-scope, partial-download, adoption-preservation, error-aggregation and delivery-mode tests pass; no hosted or published artifact is claimed |
-| Mechanical runtime wrappers | Planned where repetition justifies them | Not run |
+| Mechanical runtime wrappers | Complete; no generated wrapper justified | Runtime-owner inspection found no repeated child-specification contract to generate. Thread and Matter now require exact executable digests; BLE, OPC UA and CoAP retain their existing package-specific verification. Focused admission and lifecycle tests pass without moving process policy into root tooling. |
 
 These statuses describe repository-owned source. They do not promote a
 descriptor or planned cell beyond `declared`, and they do not claim hosted,
@@ -410,6 +410,15 @@ published, x86_64, firmware or physical-device evidence.
 5. Add retrieval from declared origins with independent digest verification.
 6. Add package-specific executable wrappers only where they remove repeated
    plumbing without taking lifecycle policy from the package.
+
+The runtime inspection found only one handwritten package child specification,
+for the Thread owner. BLE and OPC UA each bind two executables with distinct
+error and custody contracts, CoAP binds an executable to its own build manifest,
+and Matter and Thread own different process and storage lifecycles. Generating a
+shared child specification would therefore encode package policy rather than
+remove repeated plumbing. The two packages that previously accepted only an
+executable path now require and verify a caller-supplied full SHA-256 before
+process creation. No wrapper generation surface is added.
 
 Publication, release promotion and visibility changes are not implementation
 slices. They remain maintainer actions after the corresponding local and

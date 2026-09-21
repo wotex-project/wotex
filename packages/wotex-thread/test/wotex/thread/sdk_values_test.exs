@@ -116,6 +116,9 @@ defmodule Wotex.Thread.SdkValuesTest do
           {:executable, "/"},
           {:executable, "/private\0canary"},
           {:executable, <<47, 255>>},
+          {:executable_sha256, String.duplicate("0", 63)},
+          {:executable_sha256, String.duplicate("A", 64)},
+          {:executable_sha256, nil},
           {:storage_path, String.duplicate("/x", 2049)},
           {:storage_path, nil},
           {:radio_url, "http://example.invalid"},
@@ -163,6 +166,7 @@ defmodule Wotex.Thread.SdkValuesTest do
   defp options do
     [
       executable: "/nonexistent/private-canary/bridge",
+      executable_sha256: String.duplicate("0", 64),
       radio_url: "spinel+hdlc+uart:///nonexistent/private-canary/radio",
       interface: "wth-fixture",
       storage_path: "/nonexistent/private-canary/store",

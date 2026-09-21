@@ -1518,6 +1518,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
     [
       executable: executable,
+      executable_sha256: digest(executable),
       lifecycle: :persistent,
       storage_path: temporary_path("store"),
       storage_mode: :create_new,
@@ -1529,6 +1530,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       timeout: 3_000
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp startup_fixture do
     path = temporary_path("startup-budget-host")

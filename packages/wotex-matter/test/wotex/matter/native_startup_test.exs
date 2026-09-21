@@ -20,6 +20,17 @@ defmodule Wotex.Matter.NativeStartupTest do
     assert {:error, %Error{code: :response_limit}} = Native.connect(options(oversized))
   end
 
+  test "a digest mismatch starts no native controller" do
+    marker = temporary_path("digest-marker")
+    executable = host("printf started > #{marker}")
+    options = Keyword.put(options(executable), :executable_sha256, String.duplicate("0", 64))
+
+    assert {:error, %Error{code: :incompatible_backend, field: :executable}} =
+             Native.connect(options)
+
+    refute File.exists?(marker)
+  end
+
   test "an owner lost before ready closes startup without a handshake" do
     {owner, monitor} = spawn_monitor(fn -> :ok end)
     assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}
@@ -80,6 +91,7 @@ defmodule Wotex.Matter.NativeStartupTest do
 
     [
       executable: executable,
+      executable_sha256: digest(executable),
       lifecycle: :persistent,
       storage_path: temporary_path("store"),
       storage_mode: :create_new,
@@ -91,6 +103,9 @@ defmodule Wotex.Matter.NativeStartupTest do
       timeout: 5_000
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp temporary_path(suffix) do
     Path.join(

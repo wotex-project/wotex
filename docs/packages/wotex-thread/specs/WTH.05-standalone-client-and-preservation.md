@@ -3,9 +3,9 @@ spec:
   id: WTH.05
   title: "Standalone network management and application composition"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-thread
-  updated: 2026-09-20
+  updated: 2026-09-21
 ---
 
 # WTH.05 Standalone network management and application composition
@@ -32,7 +32,7 @@ any socket write. Validating configuration never enables networking.
 
 | API | Exact contract |
 | --- | --- |
-| `connect(client: OpenThread, ...)` | `{:ok, %Session{}}` after S03 instance/platform/radio/store acquisition; requires executable, radio URL, interface, storage mode/path and owner |
+| `connect(client: OpenThread, ...)` | `{:ok, %Session{}}` after S03 instance/platform/radio/store acquisition; requires executable and full SHA-256, radio URL, interface, storage mode/path and owner |
 | `inspect_state(session, options)` | `{:ok, %State{role: atom, network_name: string_or_nil, rloc16: uint16_or_nil, ipv6_enabled: boolean, thread_enabled: boolean, generation: integer}}`; `options` permits `timeout` only; nil is unavailable, not zero |
 | `validate_dataset(session, dataset, kind, timeout)` | `:ok` or Error; `kind` is `:active` or `:pending`; call pinned SDK validity with exact bounded bytes |
 | `get_dataset(session, kind, timeout)` | `{:ok, %Dataset{}}` or `:dataset_not_found` Error; explicit secret export, redacted Inspect, no arbitrary raw CLI text |

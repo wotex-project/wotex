@@ -162,6 +162,7 @@ defmodule Wotex.Thread.ProcessFlowTest do
     options = [
       client: OpenThread,
       executable: config.executable,
+      executable_sha256: digest(config.executable),
       radio_url: "spinel+hdlc+forkpty://#{config.rcp}?forkpty-arg=#{config.node}",
       interface: "wthflow#{config.node}",
       storage_path: Path.join(config.directory, "settings"),
@@ -195,6 +196,9 @@ defmodule Wotex.Thread.ProcessFlowTest do
     counters = %{terminal_count: 0, deliveries_after_terminal: 0, delivered: 0}
     receiver_loop(parent, session, reference, counters)
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp receiver_loop(parent, session, reference, counters) do
     receive do

@@ -138,6 +138,7 @@ native lane and pass its absolute path explicitly:
   Wotex.Matter.connect(
     client: Wotex.Matter.Native,
     executable: "/opt/wotex/bin/wotex-matter-host",
+    executable_sha256: "<64 lowercase hexadecimal characters>",
     lifecycle: :persistent,
     storage_path: "/var/lib/example-matter/controller-1",
     storage_mode: :open_existing,

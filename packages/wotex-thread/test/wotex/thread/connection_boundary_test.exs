@@ -34,6 +34,7 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
     options = [
       client: OpenThread,
       executable: executable,
+      executable_sha256: digest(executable),
       radio_url: "spinel+hdlc+uart:///fixture/radio",
       interface: "wthboundary",
       storage_path: Path.join(directory, "store"),
@@ -44,6 +45,9 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
 
     %{directory: directory, options: options}
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   for {mode, description} <- [
         {"subscribe_bad", "a registration reply for another subscription"},

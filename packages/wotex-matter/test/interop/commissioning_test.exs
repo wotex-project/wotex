@@ -101,9 +101,12 @@ defmodule Wotex.Matter.CommissioningInteropTest do
   end
 
   defp controller_options(controller) do
+    executable = Map.fetch!(controller, "executable")
+
     [
       client: Native,
-      executable: Map.fetch!(controller, "executable"),
+      executable: executable,
+      executable_sha256: digest(executable),
       lifecycle: :persistent,
       storage_path: Map.fetch!(controller, "storage_path"),
       storage_mode: enum(controller, "storage_mode", [:create_new, :open_existing]),
@@ -115,6 +118,9 @@ defmodule Wotex.Matter.CommissioningInteropTest do
       timeout: Map.get(controller, "timeout", 60_000)
     ]
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp commissioning_request(scenario) do
     Map.take(scenario, ["node_id", "setup_pin", "discriminator", "timeout"])

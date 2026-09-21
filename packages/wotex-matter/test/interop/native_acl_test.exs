@@ -25,6 +25,7 @@ defmodule Wotex.Matter.NativeAclInteropTest do
       options = [
         client: Native,
         executable: Map.fetch!(controller, "executable"),
+        executable_sha256: digest(Map.fetch!(controller, "executable")),
         lifecycle: :persistent,
         storage_path: Map.fetch!(controller, "storage_path"),
         storage_mode: :create_new,
@@ -95,4 +96,7 @@ defmodule Wotex.Matter.NativeAclInteropTest do
       end
     end)
   end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 end
