@@ -2,6 +2,10 @@
 
 Status: operator build and physical-evidence guide. This document does not turn photographed hardware into qualified evidence.
 
+## Lab catalogue
+
+This page describes only the current home-bench cohort. The complete physical programme is indexed at [labs/README.md](labs/README.md), with per-protocol labs, a reusable template, cross-protocol QA scenarios and the universal-WoT acceptance lab.
+
 ## Purpose
 
 This bench is for the generic WoTEx laboratory: BLE/GATT, Wi-Fi/IP Things, GPIO/serial sensor peers, protocol discovery, Runtime interactions, and later Nerves evidence. It is separate from the asset-tracker product bench in `wotex-tracker`.
@@ -12,7 +16,7 @@ This bench is for the generic WoTEx laboratory: BLE/GATT, Wi-Fi/IP Things, GPIO/
 
 | Qty | Hardware | Bench role |
 | ---: | --- | --- |
-| 1 | Raspberry Pi 3-class Model B board in ventilated case | Linux/BlueZ gateway, WoTEx host, serial/GPIO bridge. Exact B vs B+ revision must be read from the PCB before hardware evidence. |
+| 1 | Raspberry Pi 3 Model B v1.2 (© Raspberry Pi 2015) in ventilated case with fitted fan | Linux/BlueZ gateway, WoTEx host, serial/GPIO bridge. PCB revision confirmed from photograph; fan voltage and occupied GPIO power pins still need verification. |
 | 2 | Arduino Nano 33 IoT retail units | Open BLE/Wi-Fi Things, IMU source, secure-element experiments, controlled GATT peers. |
 | 1 | Arduino Uno R3 | 5 V GPIO/serial fixture and deterministic sensor simulator. |
 | 1 | Shelly Motion 2 | Finished Wi-Fi motion Thing for local-LAN interoperability. |
@@ -21,7 +25,7 @@ This bench is for the generic WoTEx laboratory: BLE/GATT, Wi-Fi/IP Things, GPIO/
 | 1 | Blue USB serial/programming adapter | UART/programming after chipset and logic voltage are verified. |
 | 1 | Green ESP-01/serial-style programming adapter | Candidate ESP8266 programmer; exact marking/voltage must be verified. |
 | 1 | Delock mains smart plug | Candidate finished IP Thing; exact model/local protocol must be read from its label. |
-| several | Sensor modules in antistatic bags | PIR/motion-style modules are visible; exact part numbers/pinouts are not legible enough to wire safely from the photographs. |
+| several | Adafruit PIR Motion Sensor ADA189 | Confirmed from package label; authoritative electrical characteristics must be checked before Nano wiring.\n| several | Additional sensor modules in antistatic bags | Exact part numbers/pinouts remain unverified; do not wire them by appearance. |
 | several | USB cables, power adapters, jumper/header parts | Bench support. |
 
 ### Visible but not safely identifiable
