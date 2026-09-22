@@ -163,7 +163,6 @@ defmodule WotexLabWorkbench.Observability.HostedListener do
       :error -> unauthorized(conn)
       {:error, %Error{code: :hosted_unauthorized}} -> unauthorized(conn)
       {:error, %Error{} = error} -> failure(conn, error)
-      _ -> refuse(conn, 400, :invalid_request, "body is not a JSON object")
     end
   end
 

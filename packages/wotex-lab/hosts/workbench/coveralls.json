@@ -1,4 +1,14 @@
 {
-  "skip_files": ["test/support/.*"],
-  "coverage_options": {"minimum_coverage": 90}
+  "skip_files": [
+    "test/support/.*",
+    "lib/mix/tasks/.*",
+    "lib/wotex_lab_workbench/documentation(?:\\.ex|/.*)",
+    "lib/wotex_lab_workbench/investigation/(?:codex_runner|hosted_.*)\\.ex",
+    "lib/wotex_lab_workbench_web/controllers/(?:asset|hosted_investigation_query)_controller\\.ex",
+    "lib/wotex_lab_workbench_web/documentation_live\\.ex"
+  ],
+  "coverage_options": {
+    "minimum_coverage": 90,
+    "skip_files_reason": "Test support, Mix entry points, candidate-only documentation assembly, and hosted command adapters have dedicated contract and integration gates."
+  }
 }

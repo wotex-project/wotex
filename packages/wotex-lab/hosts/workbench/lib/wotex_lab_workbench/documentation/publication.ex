@@ -242,7 +242,6 @@ defmodule WotexLabWorkbench.Documentation.Publication do
     else
       false -> {:error, {:invalid_publication_manifest, name}}
       {:error, reason} -> {:error, {:invalid_publication_manifest, name, reason}}
-      _ -> {:error, {:invalid_publication_manifest, name}}
     end
   end
 

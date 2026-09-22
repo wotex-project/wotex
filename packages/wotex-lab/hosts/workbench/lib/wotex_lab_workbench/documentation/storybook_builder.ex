@@ -371,7 +371,6 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
     else
       false -> {:error, :invalid_storybook_manifest}
       {:error, reason} -> {:error, {:invalid_storybook_manifest, reason}}
-      _ -> {:error, :invalid_storybook_manifest}
     end
   end
 

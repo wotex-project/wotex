@@ -124,8 +124,10 @@ defmodule WotexLabWorkbench.Investigation.HostedWorker do
   end
 
   defp configure(request) do
+    # boundary: explicit bootstrap inside the disposable worker process
     Application.put_env(@app, :hosted_query_url, request.query_url, persistent: false)
 
+    # boundary: explicit bootstrap inside the disposable worker process
     Application.put_env(
       @app,
       :hosted_query_capability,
@@ -179,6 +181,7 @@ defmodule WotexLabWorkbench.Investigation.HostedWorker do
 
   defp start_applications(apps) do
     Enum.reduce_while(apps, :ok, fn app, :ok ->
+      # boundary: explicit bootstrap inside the disposable worker process
       case Application.ensure_all_started(app) do
         {:ok, _} -> {:cont, :ok}
         {:error, _} -> {:halt, {:error, :dependency_start_failed}}
