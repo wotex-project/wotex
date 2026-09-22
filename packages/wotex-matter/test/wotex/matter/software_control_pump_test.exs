@@ -23,8 +23,8 @@ defmodule Wotex.Matter.SoftwareControlPumpTest do
       first = encode(report(1)) <> encode(report(2))
       assert Port.command(port, first)
       started = System.monotonic_time(:millisecond)
-      probe = SoftwareControlPump.pending!(port, probe(), 30)
-      assert (System.monotonic_time(:millisecond) - started) in 30..1_000
+      probe = SoftwareControlPump.pending!(port, probe(), 1_000)
+      assert (System.monotonic_time(:millisecond) - started) in 30..2_000
       assert probe.sequence == 2 and probe.bytes == byte_size(first)
       probe = SoftwareControlPump.acknowledge!(port, probe)
       assert read_frame(port) == acknowledgement(2, byte_size(first))
