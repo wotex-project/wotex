@@ -60,7 +60,10 @@
     # host runs its host cohort (MIX_TARGET=host) and never needs the rpi4
     # toolchain.
     {:workbench, command: "mix check --no-retry", cd: "hosts/workbench"},
-    {:storybook_host, command: "mix check --no-retry", cd: "hosts/storybook", deps: [:workbench]},
+    {:storybook_host,
+     command: "mix do deps.get --check-locked + check --no-retry",
+     cd: "hosts/storybook",
+     deps: [:workbench]},
     {:nerves_host,
      command: "mix do deps.get --check-locked + check --no-retry",
      cd: "hosts/nerves",

@@ -1,4 +1,6 @@
 defmodule WotexLabStorybook.Stories.Root do
+  @moduledoc "Top-level index for the Wotex Lab component stories."
+
   use PhoenixStorybook.Index
 
   @spec folder_name() :: String.t()

@@ -3,9 +3,11 @@ defmodule WotexLabStorybookWeb.SecurityHeaders do
 
   import Plug.Conn
 
+  @doc "Returns the validated plug options unchanged."
   @spec init(keyword()) :: keyword()
   def init(options), do: options
 
+  @doc "Adds the Storybook host's restrictive browser security policy."
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, _) do
     nonce = Base.url_encode64(:crypto.strong_rand_bytes(18), padding: false)

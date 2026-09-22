@@ -3,6 +3,8 @@
   skipped: false,
   tools: [
     {:deps_get, command: "mix deps.get --check-locked"},
+    {:test_deps,
+     command: "mix deps.get --check-locked", env: %{"MIX_ENV" => "test"}},
     {:compiler, command: "mix compile --warnings-as-errors"},
     {:formatter, command: "mix format --check-formatted"},
     {:credo, command: "mix credo --strict"},
@@ -12,6 +14,6 @@
     {:dialyzer, command: "mix dialyzer"},
     {:doctor, command: "mix doctor"},
     {:ex_doc, command: "mix docs --warnings-as-errors", env: %{"MIX_ENV" => "docs"}},
-    {:ex_unit, command: "mix coveralls"}
+    {:ex_unit, command: "mix coveralls", env: %{"MIX_ENV" => "test"}}
   ]
 ]

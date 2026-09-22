@@ -7,6 +7,7 @@ defmodule WotexLabStorybookWeb.AssetController do
   @max_asset_bytes 4 * 1_024 * 1_024
   @composition_stylesheet "priv/static/contract-assets/storybook.css"
 
+  @doc "Serves the bounded Storybook asset loader."
   @spec loader(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def loader(conn, _) do
     path =
@@ -21,6 +22,7 @@ defmodule WotexLabStorybookWeb.AssetController do
     end
   end
 
+  @doc "Redirects to the exact JavaScript entry admitted by the Vite manifest."
   @spec javascript(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def javascript(conn, _) do
     case manifest_entry() do
@@ -34,6 +36,7 @@ defmodule WotexLabStorybookWeb.AssetController do
     end
   end
 
+  @doc "Combines the admitted Storybook and shared design-system stylesheets."
   @spec stylesheet(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def stylesheet(conn, _) do
     with {:ok, manifest, entry} <- manifest_entry(),
@@ -50,6 +53,7 @@ defmodule WotexLabStorybookWeb.AssetController do
     end
   end
 
+  @doc "Serves one bounded, normalized asset below the Workbench asset root."
   @spec asset(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def asset(conn, %{"path" => path}) when is_list(path) do
     with true <- path != [],
@@ -78,25 +82,29 @@ defmodule WotexLabStorybookWeb.AssetController do
   end
 
   defp stylesheet_paths(manifest, entry) do
-    paths = collect_stylesheets(manifest, entry, MapSet.new(), MapSet.new())
-    paths = Enum.sort(MapSet.to_list(paths))
+    paths =
+      manifest
+      |> collect_stylesheets(entry, %{}, %{})
+      |> Map.keys()
+      |> Enum.sort()
 
     if paths != [],
       do: {:ok, paths},
       else: {:error, :missing_stylesheet}
   end
 
+  @spec collect_stylesheets(map(), map(), map(), map()) :: map()
   defp collect_stylesheets(manifest, entry, visited, stylesheets) do
     key = entry["file"]
 
-    if MapSet.member?(visited, key) do
+    if is_map_key(visited, key) do
       stylesheets
     else
-      visited = MapSet.put(visited, key)
+      visited = Map.put(visited, key, true)
 
       stylesheets =
         Enum.reduce(entry["css"] || [], stylesheets, fn path, paths ->
-          if is_binary(path), do: MapSet.put(paths, path), else: paths
+          if is_binary(path), do: Map.put(paths, path, true), else: paths
         end)
 
       Enum.reduce(entry["imports"] || [], stylesheets, fn import, paths ->
