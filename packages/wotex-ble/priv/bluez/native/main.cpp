@@ -63,9 +63,12 @@ int main(int argc, char **) {
         }
       } catch (...) { failed = true; stop(); }
     }
-    // Cleanup can finish in the turn that reaches its deadline. Write that
-    // final result once without extending the cooperative allowance.
+    // Cleanup can finish in the turn that reaches its deadline. Advance the
+    // state machine once without blocking, then write that final result without
+    // extending the cooperative allowance.
     try {
+      std::vector<pollfd> descriptors{{STDIN_FILENO, 0, 0}, {STDOUT_FILENO, 0, 0}};
+      host.poll(descriptors, 0);
       host.flush(STDOUT_FILENO);
       if (host.finished() && !host.output_frames()) return failed ? 1 : host.status();
       // NOLINTNEXTLINE(bugprone-empty-catch): a failed final flush leaves status 1 below.

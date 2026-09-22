@@ -163,6 +163,8 @@ Variant call(GDBusConnection *connection, const char *destination, const char *p
 
 Object<GDBusConnection> connect_bus(const std::string &address) {
   GError *raw_error = nullptr;
+  // GLib models this bitmask as an enum even though callers combine its flags.
+  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
   GDBusConnection *connection = g_dbus_connection_new_for_address_sync(
       address.c_str(),
       static_cast<GDBusConnectionFlags>(G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
