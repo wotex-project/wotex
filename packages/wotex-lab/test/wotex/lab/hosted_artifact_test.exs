@@ -77,6 +77,33 @@ defmodule Wotex.Lab.HostedArtifactTest do
     end
   end
 
+  test "Escript normalization accepts central-directory entries in a different order", %{root: root} do
+    path = Path.join(root, "reordered-directory")
+
+    entries =
+      Enum.map(
+        [
+          "nil_escript.beam",
+          "wotex_lab/ebin/Elixir.Wotex.Lab.Error.beam",
+          "wotex_lab/ebin/Elixir.Wotex.Lab.Metrics.Catalogue.beam",
+          "wotex_lab/ebin/Elixir.Wotex.Lab.Metrics.Query.beam",
+          "wotex_lab/ebin/Elixir.Wotex.Lab.Options.beam",
+          "wotex_lab/ebin/Elixir.Wotex.Lab.Telemetry.beam",
+          "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.BeamlensSupervisor.beam",
+          "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.ContextStore.beam",
+          "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.HostedSkill.beam",
+          "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.HostedWorker.beam",
+          "wotex_lab_workbench/ebin/Elixir.WotexLabWorkbench.Investigation.OperatorRunner.beam"
+        ],
+        &{String.to_charlist(&1), "beam"}
+      )
+
+    write_escript!(path, entries)
+    reorder_central_directory!(path)
+
+    assert :ok = Artifact.normalize_escript!(path)
+  end
+
   @tag :integration
   @tag timeout: 300_000
   test "the source build qualifies its exact outputs and rejects mutation", %{
@@ -221,6 +248,43 @@ defmodule Wotex.Lab.HostedArtifactTest do
         comment_size::little-16, comment::binary>>
 
     normalized_local <> normalized_central <> normalized_eocd
+  end
+
+  defp reorder_central_directory!(path) do
+    {:ok, parts} = :escript.extract(String.to_charlist(path), [])
+    archive = Keyword.fetch!(parts, :archive)
+    [{eocd_offset, 4}] = :binary.matches(archive, <<0x50, 0x4B, 0x05, 0x06>>)
+    eocd = binary_part(archive, eocd_offset, byte_size(archive) - eocd_offset)
+
+    <<0x06054B50::little-32, _disk::little-16, _central_disk::little-16, _disk_entries::little-16,
+      entries::little-16, central_size::little-32, central_offset::little-32,
+      _comment_size::little-16, _comment::binary>> = eocd
+
+    local = binary_part(archive, 0, central_offset)
+    central = binary_part(archive, central_offset, central_size)
+    central_entries = central_directory_entries!(central, [])
+    reversed = IO.iodata_to_binary(central_entries)
+    normalized_archive = local <> reversed <> eocd
+
+    assert length(central_entries) == entries
+
+    {:ok, prefix} = File.read(path)
+    prefix_size = byte_size(prefix) - byte_size(archive)
+    File.write!(path, binary_part(prefix, 0, prefix_size) <> normalized_archive)
+  end
+
+  defp central_directory_entries!(<<>>, entries), do: entries
+
+  defp central_directory_entries!(
+         <<fixed::binary-size(46), rest::binary>>,
+         entries
+       ) do
+    <<0x02014B50::little-32, _::binary-size(24), name_size::little-16, extra_size::little-16,
+      comment_size::little-16, _::binary-size(12)>> = fixed
+
+    size = name_size + extra_size + comment_size
+    <<fields::binary-size(^size), tail::binary>> = rest
+    central_directory_entries!(tail, [fixed <> fields | entries])
   end
 
   defp escript_entries!(path) do

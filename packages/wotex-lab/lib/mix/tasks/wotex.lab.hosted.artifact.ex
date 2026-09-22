@@ -518,7 +518,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     local = binary_part(archive, 0, central_offset)
     central = binary_part(archive, central_offset, central_size)
     {normalized_central, central_entries} = normalize_central_entries!(central, [], entries)
-    ordered_central_entries = Enum.reverse(central_entries)
+    ordered_central_entries = Enum.sort_by(central_entries, &elem(&1, 1))
 
     {normalized_local, local_entries} =
       normalize_local_entries!(local, 0, [], 0, ordered_central_entries)
@@ -531,7 +531,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     )
 
     require!(
-      Enum.reverse(local_entries) == Enum.reverse(central_entries),
+      Enum.sort(local_entries) == Enum.sort(central_entries),
       "hosted worker ZIP directories disagree"
     )
 

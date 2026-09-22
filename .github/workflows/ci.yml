@@ -210,7 +210,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          stray=$(git ls-files packages | grep -E '/(CODE_OF_CONDUCT|CONTRIBUTING|GOVERNANCE|SECURITY|AGENTS)\.md$|/\.claude/|/\.github/|/docs/' || true)
+          stray=$(git ls-files packages | grep -E '^packages/[^/]+/(CODE_OF_CONDUCT|CONTRIBUTING|GOVERNANCE|SECURITY|AGENTS)\.md$|^packages/[^/]+/(\.claude|\.github|docs)/' || true)
           if [ -n "$stray" ]; then echo "$stray"; echo "package-level copies of shared files found"; exit 1; fi
           for f in packages/*/LICENSE; do cmp -s "$f" LICENSE || { echo "$f differs from the root LICENSE"; exit 1; }; done
 
@@ -228,6 +228,7 @@ jobs:
         lane: ${{ fromJSON(needs.manifest.outputs.lanes) }}
     env:
       WOTEX_PATH_DEPS: "1"
+      ELIXIR_ERL_OPTIONS: "+fnu"
       # Build workspaces of the native_lint and native_test gate tools.
       WOTEX_NATIVE_CACHE: ~/.cache/wotex-native
     steps:

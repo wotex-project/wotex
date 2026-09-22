@@ -20,10 +20,11 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       binutils build-essential ca-certificates cmake curl libavahi-client-dev \
       libdbus-1-dev libglib2.0-dev libssl-dev ninja-build pkg-config \
- && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
+ && curl --connect-timeout 20 --max-time 120 --retry 5 --retry-all-errors --retry-delay 2 \
+      -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
  && echo "deb http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-${LLVM_MAJOR} main" \
       > /etc/apt/sources.list.d/llvm.list \
- && apt-get update \
+ && apt-get -o Acquire::Retries=5 update \
  && apt-get install -y --no-install-recommends "clang-tidy-${LLVM_MAJOR}" \
  && ln -s "/usr/bin/clang-tidy-${LLVM_MAJOR}" /usr/local/bin/clang-tidy \
  && rm -rf /var/lib/apt/lists/* \
