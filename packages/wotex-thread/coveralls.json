@@ -1,7 +1,8 @@
 {
-  "skip_files": ["test/support/.*"],
+  "skip_files": ["test/support/.*", "lib/mix/tasks/.*"],
   "skip_file_reasons": {
-    "test/support/.*": "Test-only ports and request builders are not production coverage surfaces."
+    "test/support/.*": "Test-only ports and request builders are not production coverage surfaces.",
+    "lib/mix/tasks/.*": "Mix tasks are command wrappers qualified by their owning package gates."
   },
   "coverage_options": {
     "minimum_coverage": 95

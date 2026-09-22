@@ -52,6 +52,8 @@ defmodule Wotex.BLE.NativeBusTest do
       env: NativeLane.environment(clean_environment())
     ]
 
+    compile_options = Keyword.put(options, :timeout, NativeLane.timeout(60_000))
+
     assert {:ok, output, 0} =
              NativeCommand.bootstrap(
                bootstrap,
@@ -83,7 +85,7 @@ defmodule Wotex.BLE.NativeBusTest do
           executable
         ]
 
-    assert {:ok, output, 0} = NativeCommand.run(guardian, compiler, arguments, options)
+    assert {:ok, output, 0} = NativeCommand.run(guardian, compiler, arguments, compile_options)
     assert output == ""
 
     host = Path.join(directory, "bluez-native")
@@ -99,7 +101,7 @@ defmodule Wotex.BLE.NativeBusTest do
             else: source_path
       end)
 
-    assert {:ok, "", 0} = NativeCommand.run(guardian, compiler, host_arguments, options)
+    assert {:ok, "", 0} = NativeCommand.run(guardian, compiler, host_arguments, compile_options)
 
     File.write!(config, """
     <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"

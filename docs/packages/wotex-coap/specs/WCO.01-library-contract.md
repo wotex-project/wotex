@@ -3,9 +3,9 @@ spec:
   id: WCO.01
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-coap
-  updated: 2026-09-18
+  updated: 2026-09-22
 ---
 
 # WCO.01 Software implementation rules
@@ -230,8 +230,8 @@ subscription name or unbounded exception string enters telemetry. Test telemetry
 with canary credentials and payloads, including exception and startup failure.
 Avoid a global registry for sessions, receivers or protocol IDs.
 
-`Wotex.CoAP.Telemetry` now owns the finite projection used by both datagram and
-native owners. Request results are limited to `ok`, the five classified Runtime
+The package-private telemetry projector owns the finite projection used by both
+datagram and native owners. Request results are limited to `ok`, the five classified Runtime
 error categories, or `error`; operations are the four admitted methods and status is nil
 or one CoAP byte. Subscription metadata contains only Property/Event kind and
 that finite result. `telemetry_test.exs` covers successful and remote-error

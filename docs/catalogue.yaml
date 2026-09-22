@@ -120,7 +120,7 @@ packages:
     catalogue: "docs/packages/wotex-coap/specs/catalogue.yaml"
     specifications:
       - id: "WCO.01"
-        version: "1.1.1"
+        version: "1.1.2"
         implementation_status: "implemented"
         path: "docs/packages/wotex-coap/specs/WCO.01-library-contract.md"
       - id: "WCO.02"
