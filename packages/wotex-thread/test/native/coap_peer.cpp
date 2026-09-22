@@ -161,7 +161,7 @@ class Peer final {
         otIp6AddressToString(otThreadGetMeshLocalEid(instance_), address, sizeof(address));
         std::cout << "{\"ready\":true,\"mode\":\"" << options_.mode << "\",\"role\":\""
                   << role_name(role) << "\",\"address\":\"" << address
-                  << "\",\"sleepy\":" << (sleepy_ ? "true" : "false") << "}" << std::endl;
+                  << "\",\"sleepy\":" << (sleepy_ ? "true" : "false") << "}\n";
         announced = true;
       }
       if (!announced && now_ms() >= deadline) throw std::runtime_error("attachment timeout");

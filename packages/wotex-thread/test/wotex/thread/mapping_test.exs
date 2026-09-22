@@ -99,4 +99,34 @@ defmodule Wotex.Thread.MappingTest do
     assert {:error, _} = Transport.subscribe(nil, nil, nil, nil)
     assert {:error, _} = Transport.unsubscribe(nil, nil, nil, nil)
   end
+
+  test "Runtime rejects malformed transport boundaries before opening a client" do
+    {:ok, form} = Wotex.Form.new(%{"href" => @href})
+    context = Context.new!(request_id: "test-boundary")
+    execution = ExecutionContext.new(context, nil)
+
+    request = %Request{
+      operation: :readproperty,
+      affordance_type: :property,
+      affordance_name: "value",
+      form: form,
+      resolved_href: @href,
+      profile: Wotex.Thread.profile(),
+      request_id: "test-boundary",
+      deadline: nil,
+      input: nil
+    }
+
+    assert {:error, %Wotex.Thread.Error{code: :invalid_transport_context}} =
+             Transport.request(nil, execution, [])
+
+    assert {:error, %Wotex.Thread.Error{code: :invalid_transport_context}} =
+             Transport.prepare(request, %ExecutionContext{context: nil, credential: nil}, [])
+
+    assert {:error, %Wotex.Thread.Error{code: :invalid_transport_context}} =
+             Transport.prepare(nil, execution, [])
+
+    assert {:error, %Wotex.Thread.Error{code: :unsupported_profile}} =
+             Transport.prepare(%{request | operation: :writeproperty}, execution, [])
+  end
 end
