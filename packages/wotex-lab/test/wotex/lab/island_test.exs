@@ -5,6 +5,36 @@ defmodule Wotex.Lab.IslandTest do
 
   alias Wotex.Lab.Island.{CanonicalJSON, Component, Encoder, Event, Snapshot}
 
+  test "canonical JSON covers numeric forms and rejects ambiguous or unsafe input" do
+    assert {:ok, ~s({"decimal":1.25,"large":10000000000,"negative":-2.5,"tiny":1e-7,"zero":0})} =
+             CanonicalJSON.encode(%{
+               "decimal" => 1.25,
+               "large" => 1.0e10,
+               "negative" => -2.5,
+               "tiny" => 1.0e-7,
+               "zero" => -0.0
+             })
+
+    assert {:error, :invalid_island_number} = CanonicalJSON.encode(1.0e21)
+    assert {:ok, digest} = CanonicalJSON.digest(%{"stable" => [nil, true, false, 7]})
+    assert digest =~ ~r/\A[0-9a-f]{64}\z/
+
+    assert {:error, :duplicate_island_json_key} =
+             CanonicalJSON.encode(%{:duplicate => 1, "duplicate" => 2})
+
+    assert {:error, :secret_or_invalid_island_field} =
+             CanonicalJSON.encode(%{"access_token" => "not-admitted"})
+
+    assert {:error, {:island_limit, :string_bytes, 8_193, 8_192}} =
+             CanonicalJSON.encode(String.duplicate("x", 8_193))
+
+    assert {:error, :invalid_island_json} = CanonicalJSON.encode(9_007_199_254_740_992)
+    assert {:error, :invalid_island_json} = CanonicalJSON.encode(Date.utc_today())
+
+    too_deep = Enum.reduce(1..18, nil, fn _, nested -> [nested] end)
+    assert {:error, {:island_limit, :depth, 17, 16}} = CanonicalJSON.encode(too_deep)
+  end
+
   test "the registry admits only the three Lab components" do
     assert Enum.map(Component.all(), & &1["id"]) == ["chart", "data-grid", "tabs"]
     assert Component.digest() =~ ~r/\Asha256:[0-9a-f]{64}\z/

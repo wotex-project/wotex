@@ -1,3 +1,7 @@
+---
+id: lab-lorawan
+---
+
 # LoRaWAN integration lab
 
 Runbook status: planned cross-system lane. LoRaWAN is not a core WoTEx protocol

@@ -1,3 +1,7 @@
+---
+id: lab-catalogue
+---
+
 # WoTEx physical lab catalogue
 
 This directory indexes repeatable physical interoperability labs across the

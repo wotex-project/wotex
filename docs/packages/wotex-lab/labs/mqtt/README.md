@@ -1,3 +1,7 @@
+---
+id: lab-mqtt
+---
+
 # MQTT physical lab
 
 Protocol contract: `wotex-binding-mqtt` and `wotex-runtime`.

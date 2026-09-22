@@ -1,3 +1,7 @@
+---
+id: lab-opcua
+---
+
 # OPC UA physical lab
 
 Protocol contract: `wotex-opcua`.

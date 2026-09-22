@@ -1,3 +1,7 @@
+---
+id: lab-bacnet
+---
+
 # BACnet physical lab
 
 Protocol contract: `wotex-bacnet`.

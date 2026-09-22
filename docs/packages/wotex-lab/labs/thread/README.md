@@ -1,3 +1,7 @@
+---
+id: lab-thread
+---
+
 # Thread physical lab
 
 Protocol contract: `wotex-thread`.

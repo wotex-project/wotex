@@ -149,7 +149,7 @@ defmodule Wotex.Lab.Docs.CohortBuilder do
          :ok <- copy_artifacts(Path.dirname(built.artifact_dir), target),
          public = Path.join(target, "public"),
          descriptor = %{built.collection.descriptor | artifact_dir: public},
-         {:ok, imported} <- DocShell.Generate.Collection.load(descriptor),
+         {:ok, imported} <- doc_shell_collection(descriptor),
          true <- imported.content_digest == built.collection.content_digest do
       {:ok, imported, public}
     else
@@ -179,7 +179,15 @@ defmodule Wotex.Lab.Docs.CohortBuilder do
     module = DocShell.Generate.Cohort
 
     if Code.ensure_loaded?(module) and function_exported?(module, :new, 2),
-      do: DocShell.Generate.Cohort.new(collections, profile),
+      do: :erlang.apply(module, :new, [collections, profile]),
+      else: {:error, :doc_shell_site_candidate_required}
+  end
+
+  defp doc_shell_collection(descriptor) do
+    module = DocShell.Generate.Collection
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :load, 1),
+      do: :erlang.apply(module, :load, [descriptor]),
       else: {:error, :doc_shell_site_candidate_required}
   end
 

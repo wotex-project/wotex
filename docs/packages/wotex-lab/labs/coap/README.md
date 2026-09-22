@@ -1,3 +1,7 @@
+---
+id: lab-coap
+---
+
 # CoAP/DTLS/OSCORE physical lab
 
 Protocol contract: `wotex-coap`.

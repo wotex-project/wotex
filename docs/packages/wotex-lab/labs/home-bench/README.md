@@ -1,3 +1,7 @@
+---
+id: lab-home-bench
+---
+
 # Home bench cohort
 
 This lab instance documents the hardware currently available on the maintainer's bench. It is one cohort under the broader physical lab programme; it does not define the full hardware requirements of WoTEx.

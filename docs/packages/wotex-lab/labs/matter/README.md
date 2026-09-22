@@ -1,3 +1,7 @@
+---
+id: lab-matter
+---
+
 # Matter physical lab
 
 Protocol contract: `wotex-matter`.

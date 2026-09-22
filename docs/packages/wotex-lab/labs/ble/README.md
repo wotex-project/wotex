@@ -1,3 +1,7 @@
+---
+id: lab-ble
+---
+
 # BLE/GATT physical lab
 
 Protocol contract: `wotex-ble` and `wotex-runtime`.

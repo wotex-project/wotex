@@ -1,3 +1,7 @@
+---
+id: lab-inventory
+---
+
 # Physical inventory and identification ledger
 
 This ledger is cumulative. It records what hardware is physically available, what has been identified, and what remains unsafe to wire.

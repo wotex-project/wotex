@@ -1,3 +1,7 @@
+---
+id: lab-http
+---
+
 # HTTP/SSE physical lab
 
 Protocol contract: `wotex-binding-http` and `wotex-runtime`.

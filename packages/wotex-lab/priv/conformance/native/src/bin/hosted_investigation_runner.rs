@@ -438,17 +438,18 @@ fn remember(tree: &[accounting::Row], known: &mut BTreeMap<i32, u64>) -> io::Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::DirBuilderExt;
 
-    fn args() -> Vec<OsString> {
+    fn args(directory: &Path) -> Vec<OsString> {
         [
             "--wall-ms",
             "1000",
             "--output-bytes",
             "1024",
             "--work-dir",
-            "/tmp",
+            directory.to_str().unwrap(),
             "--temp-dir",
-            "/tmp",
+            directory.to_str().unwrap(),
             "--",
             "/bin/echo",
             "ok",
@@ -459,22 +460,33 @@ mod tests {
 
     #[test]
     fn configuration_is_closed_and_hosted_limits_are_fixed() {
-        assert!(Config::parse(args()).is_ok());
+        let directory =
+            std::env::temp_dir().join(format!("wotex-hosted-config-{}", std::process::id()));
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(&directory)
+            .unwrap();
+        std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700)).unwrap();
+
+        assert!(Config::parse(args(&directory)).is_ok());
         assert_eq!(MAX_MEMORY_BYTES, 1_073_741_824);
         assert_eq!(MAX_PROCESSES, 64);
 
         for value in ["0", "30001", "-1", "nan"] {
-            let mut changed = args();
+            let mut changed = args(&directory);
             changed[1] = value.into();
             assert!(Config::parse(changed).is_err());
         }
 
-        let mut relative = args();
+        let mut relative = args(&directory);
         relative[9] = "echo".into();
         assert!(Config::parse(relative).is_err());
 
-        let mut duplicate = args();
+        let mut duplicate = args(&directory);
         duplicate[2] = "--wall-ms".into();
         assert!(Config::parse(duplicate).is_err());
+
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

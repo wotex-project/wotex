@@ -1,3 +1,7 @@
+---
+id: lab-modbus
+---
+
 # Modbus physical lab
 
 Protocol contract: `wotex-modbus`.

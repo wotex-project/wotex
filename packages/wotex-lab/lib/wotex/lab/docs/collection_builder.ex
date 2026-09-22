@@ -235,8 +235,16 @@ defmodule Wotex.Lab.Docs.CollectionBuilder do
     with {:ok, descriptor} <- artifact_descriptor(artifact_dir),
          :ok <- descriptor_matches(source, descriptor) do
       descriptor = Map.put(descriptor, "artifact_dir", artifact_dir)
-      DocShell.Generate.Collection.load(descriptor)
+      doc_shell_collection(descriptor)
     end
+  end
+
+  defp doc_shell_collection(descriptor) do
+    module = DocShell.Generate.Collection
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :load, 1),
+      do: :erlang.apply(module, :load, [descriptor]),
+      else: {:error, :doc_shell_site_candidate_required}
   end
 
   defp artifact_descriptor(artifact_dir) do

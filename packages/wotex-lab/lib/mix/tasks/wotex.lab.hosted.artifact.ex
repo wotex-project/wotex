@@ -40,6 +40,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
   @cargo_version "cargo 1.97.1 (c980f4866 2026-06-30)"
   @targets ~w(aarch64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu)
 
+  @doc false
   @spec build(Path.t(), Path.t()) :: :ok | no_return()
   def build(workspace, runtime) do
     package = package_root()
@@ -151,6 +152,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     end
   end
 
+  @doc false
   @spec check(Path.t(), Path.t()) :: :ok | no_return()
   def check(workspace, runtime) do
     workspace = existing_workspace!(workspace)
@@ -218,6 +220,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     end
   end
 
+  @doc false
   @spec arguments([String.t()]) :: {Path.t(), Path.t()} | no_return()
   def arguments(args) do
     {options, remaining, invalid} =
