@@ -3,7 +3,9 @@ defmodule WotexLabWorkbench.CheckRunner do
 
   @checks [
     {:deps_get, "mix", ["deps.get", "--check-locked"], "test"},
+    {:frontend_dependencies, "mix", ["assets.setup"], "test"},
     {:compiler, "mix", ["compile", "--warnings-as-errors"], "test"},
+    {:frontend, "mix", ["assets.check"], "test"},
     {:formatter, "mix", ["format", "--check-formatted"], "test"},
     {:credo, "mix", ["credo", "--strict"], "test"},
     {:unused_deps, "mix", ["deps.unlock", "--check-unused"], "test"},

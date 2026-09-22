@@ -135,7 +135,10 @@ jobs:
 
   deploy:
     name: Deploy default-branch publication
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.WOTEX_PAGES_DEPLOY == 'true'
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
