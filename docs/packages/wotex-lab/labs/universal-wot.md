@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Prove that WoTEx is not merely a collection of protocol clients. The same semantic Thing must be consumable through multiple physical protocol implementations while preserving one application-facing affordance contract.
+Prove that the same semantic Thing is consumable through multiple physical
+protocol implementations while preserving one application-facing affordance
+contract.
 
 ## Reference Thing
 

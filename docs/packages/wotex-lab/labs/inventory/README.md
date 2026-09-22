@@ -6,7 +6,7 @@ This ledger is cumulative. It records what hardware is physically available, wha
 
 | Item | Identification | Electrical domain | Candidate labs | Status |
 | --- | --- | --- | --- | --- |
-| Raspberry Pi 3 Model B v1.2 | confirmed by PCB silkscreen | 5 V input; 3.3 V GPIO | BLE host, LAN host, serial bridge, Tracker development gateway | identified |
+| Raspberry Pi 3 Model B v1.2 | confirmed by PCB silkscreen | 5 V input; 3.3 V GPIO | BLE host, LAN host, serial bridge, development gateway | identified |
 | 2 x Arduino Nano 33 IoT | retail boxes confirmed; actual board/header revision to inspect | 3.3 V GPIO | BLE fixture, Wi-Fi HTTP/MQTT fixture, cross-protocol Thing | identify actual boards before soldering |
 | Arduino Uno R3 | confirmed | 5 V GPIO | serial/GPIO fixture | identified |
 | Adafruit PIR Motion Sensor ADA189 | confirmed by package label | verify exact supply/output before Nano connection | BLE/Wi-Fi physical motion source | identified, electrical check pending |

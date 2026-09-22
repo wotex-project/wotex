@@ -24,6 +24,12 @@ community, the entry point is a typed sensor observation becoming a numerical
 batch, a model result and an inert Action proposal with traceable provenance.
 
 This package supplies the library foundation, not the complete laboratory.
+Physical interoperability work is organized in the
+[hardware lab catalogue](../../docs/packages/wotex-lab/labs/README.md). It
+separates the current home-bench cohort from the wider protocol test programme.
+Hardware runs remain distinct from software and simulator evidence and do not
+set source implementation status.
+
 The [specification catalogue](../../docs/packages/wotex-lab/specs/catalogue.yaml) and
 [completion contract](../../docs/packages/wotex-lab/plans/wotex-lab-completion.md) define the entire
 accepted programme, including network adapters, dual Directory stores,

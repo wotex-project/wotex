@@ -1,8 +1,19 @@
 # WoTEx physical lab catalogue
 
-This directory is the index for repeatable physical interoperability labs across the WoTEx protocol family.
+This directory indexes repeatable physical interoperability labs across the
+WoTEx protocol family.
 
-The purpose is broader than the hardware currently on one bench. WoTEx claims transport/protocol independence at the Web of Things boundary, so the physical laboratory must test that the same Thing semantics survive across different protocol implementations, devices, gateways, host operating systems and failure modes.
+The programme extends beyond the hardware currently on one bench. It tests
+whether the same Thing semantics survive different protocol implementations,
+devices, gateways, host operating systems and failure modes.
+
+## Scope
+
+These documents are operator runbooks and QA plans. They do not define source
+implementation status, make physical-evidence claims or block completion of
+repository-owned code. Package specifications and their catalogues remain the
+authority for implementation status. A lab result exists only after the
+runbook has been executed and its evidence recorded.
 
 ## Rules
 
@@ -23,11 +34,12 @@ The purpose is broader than the hardware currently on one bench. WoTEx claims tr
 | HTTP / SSE | `wotex-binding-http` | Real Thing over LAN, schema/content negotiation, reconnect and bounded streaming |
 | MQTT | `wotex-binding-mqtt` | Real broker/device, retained state, QoS/session behaviour, LWT, reconnect and ACL isolation |
 | CoAP / DTLS / OSCORE | `wotex-coap` | Physical constrained peer, Observe, retransmission, security profile and loss |
-| BACnet | `wotex-bacnet` | Physical BACnet/IP or MS/TP device/gateway and property/action mapping |
+| BACnet | `wotex-bacnet` | Physical BACnet/IP or MS/TP device/gateway and Property/Action mapping |
 | Modbus | `wotex-modbus` | Physical Modbus TCP and, where admitted, RTU gateway/device |
 | OPC UA | `wotex-opcua` | Physical/server peer, browse/read/write/subscription and reconnect |
 | Matter | `wotex-matter` | Commissioned physical Matter accessory/controller interaction |
 | Thread | `wotex-thread` | Physical Thread topology/inspection and OpenThread management |
+| LoRaWAN integration | Lab | Network-server integration without treating LoRaWAN as a WoT interaction binding |
 | Directory | `wotex-directory` | Real host/storage/discovery composition rather than a new hardware protocol |
 | Continuum | `wotex-continuum` | Edge/cloud host placement, disconnect/replay and authority boundaries |
 | Cross-protocol WoT | `wotex-runtime` + Lab | Same semantic Thing implemented over two or more independent protocols |
@@ -54,4 +66,21 @@ physical peer   physical peer   physical peer
 
 The acceptance question is not "can each protocol move bytes?" It is whether the consumer observes the same Property/Action/Event semantics, typed values, errors and lifecycle guarantees through the common WoT interface without protocol-specific application logic.
 
-See `universal-wot.md` and the per-protocol lab directories.
+## Documentation map
+
+- [Inventory and identification ledger](inventory/README.md)
+- [Current home-bench cohort](home-bench/README.md)
+- [Protocol hardware matrix](protocol-matrix.md)
+- [Cross-protocol QA scenarios](qa-scenarios.md)
+- [Universal WoT interoperability lab](universal-wot.md)
+- [Reusable lab template](TEMPLATE.md)
+- [BLE](ble/README.md)
+- [HTTP/SSE](http/README.md)
+- [MQTT](mqtt/README.md)
+- [CoAP](coap/README.md)
+- [BACnet](bacnet/README.md)
+- [Modbus](modbus/README.md)
+- [OPC UA](opcua/README.md)
+- [Matter](matter/README.md)
+- [Thread](thread/README.md)
+- [LoRaWAN integration](lorawan/README.md)
