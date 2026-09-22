@@ -112,7 +112,8 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
   end
 
   defp collection(id) do
-    documents = documents(id)
+    [document | rest] = documents(id)
+    documents = [document, empty_openapi_document(id) | rest]
 
     {:ok, descriptor} =
       Collection.new(%{
@@ -167,6 +168,17 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
       "title" => String.replace(document_id, "-", " ") |> String.capitalize(),
       "ast" => [heading("Overview")],
       "meta" => %{"source_path" => source_path}
+    }
+  end
+
+  defp empty_openapi_document(id) do
+    %{
+      "id" => "#{id}:openapi",
+      "collection_id" => id,
+      "document_id" => "openapi",
+      "info" => %{"title" => id, "version" => "0.1.0"},
+      "openapi" => "3.1.0",
+      "paths" => %{}
     }
   end
 

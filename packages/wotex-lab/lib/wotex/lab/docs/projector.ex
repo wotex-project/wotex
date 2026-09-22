@@ -15,6 +15,7 @@ defmodule Wotex.Lab.Docs.Projector do
 
   @collection_ids Enum.map(Catalogue.source_ids(), &String.replace(&1, "-", "_"))
   @option_keys ~w(base_path title metadata)a
+  @openapi_document_keys ~w(collection_id document_id id info openapi paths)
 
   @sections [
     {"start", "Start"},
@@ -116,16 +117,37 @@ defmodule Wotex.Lab.Docs.Projector do
     end
   end
 
-  defp valid_collection?(%{descriptor: %{id: id}, documents: documents}) do
-    id in @collection_ids and is_list(documents) and documents != [] and
+  defp valid_collection?(%{descriptor: %{id: id}, documents: documents})
+       when is_list(documents) do
+    pages = Enum.reject(documents, &empty_openapi_document?(&1, id))
+
+    id in @collection_ids and pages != [] and
       Enum.all?(documents, fn document ->
-        is_map(document) and String.starts_with?(document["id"] || "", id <> ":") and
-          document["collection_id"] == id and nonempty?(document["document_id"]) and
-          nonempty?(document["kind"]) and nonempty?(document["title"])
+        valid_page_document?(document, id) or empty_openapi_document?(document, id)
       end)
   end
 
   defp valid_collection?(_), do: false
+
+  defp valid_page_document?(document, collection_id) when is_map(document) do
+    String.starts_with?(document["id"] || "", collection_id <> ":") and
+      document["collection_id"] == collection_id and nonempty?(document["document_id"]) and
+      nonempty?(document["kind"]) and nonempty?(document["title"])
+  end
+
+  defp valid_page_document?(_, _), do: false
+
+  defp empty_openapi_document?(document, collection_id) when is_map(document) do
+    info = document["info"]
+
+    Enum.sort(Map.keys(document)) == @openapi_document_keys and
+      document["id"] == collection_id <> ":openapi" and
+      document["collection_id"] == collection_id and document["document_id"] == "openapi" and
+      is_map(info) and nonempty?(info["title"]) and nonempty?(info["version"]) and
+      is_binary(document["openapi"]) and document["paths"] == %{}
+  end
+
+  defp empty_openapi_document?(_, _), do: false
 
   defp collection_id(%{descriptor: %{id: id}}), do: id
   defp collection_id(_), do: nil
@@ -158,7 +180,9 @@ defmodule Wotex.Lab.Docs.Projector do
   defp pages(collections) do
     collections
     |> Enum.flat_map(fn collection ->
-      Enum.map(collection.documents, &page(collection.descriptor.id, &1))
+      collection.documents
+      |> Enum.reject(&empty_openapi_document?(&1, collection.descriptor.id))
+      |> Enum.map(&page(collection.descriptor.id, &1))
     end)
     |> reject_route_collisions()
   end
