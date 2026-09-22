@@ -93,6 +93,8 @@ jobs:
           otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
       - name: Workspace dependencies
         run: mix deps.get --check-locked
+      - name: Compile workspace tooling
+        run: mix compile --warnings-as-errors
       - name: Select packages
         id: select
         shell: bash
@@ -117,6 +119,7 @@ jobs:
               packages=$(mix wotex.affected --base "${{ github.event.before }}" --json)
               ;;
           esac
+          packages=$(jq -ce 'if type == "array" then . else error("affected packages must be a JSON array") end' <<< "$packages")
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
           if [ "$packages" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
           echo "affected: $packages"
