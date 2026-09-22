@@ -43,10 +43,7 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
         html = File.read!(start)
         assert html =~ "Portable Wotex documentation"
         assert html =~ "data-cohort-digest=\"#{built.site.cohort_digest}\""
-        assert html =~ ~r/data-pa-token-digest="sha256:[0-9a-f]{64}"/
-        assert html =~ ~r/data-pa-component-digest="sha256:[0-9a-f]{64}"/
-        assert html =~ ~r/data-pa-fixture-digest="sha256:[0-9a-f]{64}"/
-        assert html =~ ~r/data-pa-css-digest="sha256:[0-9a-f]{64}"/
+        assert html =~ "data-pa-doc-shell"
         refute html =~ ~r/<script[^>]+src="https?:\/\//
         refute html =~ ~r/<link[^>]+rel="stylesheet"[^>]+href="https?:\/\//
         refute html =~ "phoenix_live_view"

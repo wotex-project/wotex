@@ -1,0 +1,93 @@
+/* Wotex Lab semantic token catalogue. */
+@layer wotex.tokens {
+  [data-wotex-design-system] {
+  --wotex-semantic-color-canvas: #f4f2ee;
+  --wotex-semantic-color-surface: #fbfaf7;
+  --wotex-semantic-color-text: #263044;
+  --wotex-semantic-color-muted: #5c6370;
+  --wotex-semantic-color-border: #737984;
+  --wotex-semantic-color-accent: #294f77;
+  --wotex-semantic-color-accent-text: #ffffff;
+  --wotex-semantic-color-focus: #1d4f91;
+  --wotex-semantic-color-danger: #b42318;
+  --wotex-semantic-color-warning: #815000;
+  --wotex-semantic-color-success: #17633b;
+  --wotex-semantic-space-control-x: 0.75rem;
+  --wotex-semantic-space-control-y: 0.5rem;
+  --wotex-semantic-space-panel: 1rem;
+  --wotex-semantic-space-section: 2rem;
+  --wotex-semantic-radius-control: 0.625rem;
+  --wotex-semantic-radius-panel: 0.875rem;
+  --wotex-semantic-motion-interaction: 120ms;
+  --wotex-semantic-motion-panel: 180ms;
+    color-scheme: light;
+  }
+  [data-wotex-design-system][data-wotex-theme="dark"] {
+  --wotex-semantic-color-canvas: #142b50;
+  --wotex-semantic-color-surface: #1b3864;
+  --wotex-semantic-color-text: #e0f4ff;
+  --wotex-semantic-color-muted: #acc8da;
+  --wotex-semantic-color-border: #879db5;
+  --wotex-semantic-color-accent: #e0f4ff;
+  --wotex-semantic-color-accent-text: #142b50;
+  --wotex-semantic-color-focus: #a8d8ff;
+  --wotex-semantic-color-danger: #ffb4aa;
+  --wotex-semantic-color-warning: #f4ca82;
+  --wotex-semantic-color-success: #8cd7ab;
+  --wotex-semantic-space-control-x: 0.75rem;
+  --wotex-semantic-space-control-y: 0.5rem;
+  --wotex-semantic-space-panel: 1rem;
+  --wotex-semantic-space-section: 2rem;
+  --wotex-semantic-radius-control: 0.625rem;
+  --wotex-semantic-radius-panel: 0.875rem;
+  --wotex-semantic-motion-interaction: 120ms;
+  --wotex-semantic-motion-panel: 180ms;
+    color-scheme: dark;
+  }
+  [data-wotex-design-system][data-wotex-theme="contrast"] {
+  --wotex-semantic-color-canvas: #000000;
+  --wotex-semantic-color-surface: #000000;
+  --wotex-semantic-color-text: #ffffff;
+  --wotex-semantic-color-muted: #ffffff;
+  --wotex-semantic-color-border: #ffffff;
+  --wotex-semantic-color-accent: #ffff00;
+  --wotex-semantic-color-accent-text: #000000;
+  --wotex-semantic-color-focus: #ffff00;
+  --wotex-semantic-color-danger: #ff6060;
+  --wotex-semantic-color-warning: #ffff00;
+  --wotex-semantic-color-success: #00ff90;
+  --wotex-semantic-space-control-x: 0.75rem;
+  --wotex-semantic-space-control-y: 0.5rem;
+  --wotex-semantic-space-panel: 1rem;
+  --wotex-semantic-space-section: 2rem;
+  --wotex-semantic-radius-control: 0.625rem;
+  --wotex-semantic-radius-panel: 0.875rem;
+  --wotex-semantic-motion-interaction: 120ms;
+  --wotex-semantic-motion-panel: 180ms;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    [data-wotex-design-system]:not([data-wotex-theme="light"]):not([data-wotex-theme="contrast"]) {
+  --wotex-semantic-color-canvas: #142b50;
+  --wotex-semantic-color-surface: #1b3864;
+  --wotex-semantic-color-text: #e0f4ff;
+  --wotex-semantic-color-muted: #acc8da;
+  --wotex-semantic-color-border: #879db5;
+  --wotex-semantic-color-accent: #e0f4ff;
+  --wotex-semantic-color-accent-text: #142b50;
+  --wotex-semantic-color-focus: #a8d8ff;
+  --wotex-semantic-color-danger: #ffb4aa;
+  --wotex-semantic-color-warning: #f4ca82;
+  --wotex-semantic-color-success: #8cd7ab;
+  --wotex-semantic-space-control-x: 0.75rem;
+  --wotex-semantic-space-control-y: 0.5rem;
+  --wotex-semantic-space-panel: 1rem;
+  --wotex-semantic-space-section: 2rem;
+  --wotex-semantic-radius-control: 0.625rem;
+  --wotex-semantic-radius-panel: 0.875rem;
+  --wotex-semantic-motion-interaction: 120ms;
+  --wotex-semantic-motion-panel: 180ms;
+      color-scheme: dark;
+    }
+  }
+}

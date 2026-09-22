@@ -333,10 +333,7 @@ async function checkSurface(browser, origin, kind) {
   }))
   const design = await page.locator(".doc-shell").evaluate((element) => ({
     cohort: element.getAttribute("data-cohort-digest"),
-    tokens: element.getAttribute("data-pa-token-digest"),
-    components: element.getAttribute("data-pa-component-digest"),
-    fixtures: element.getAttribute("data-pa-fixture-digest"),
-    css: element.getAttribute("data-pa-css-digest"),
+    renderer: element.hasAttribute("data-pa-doc-shell"),
   }))
 
   assert.deepEqual(errors, [])

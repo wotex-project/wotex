@@ -38,8 +38,9 @@ defmodule Wotex.Lab.BuildArtifacts do
     {:wotex_lab, "wotex-lab"}
   ]
   @workbench_patterns ~w(.check.exs .credo.exs .dockerignore .formatter.exs Dockerfile
-                          README.md bin/**/* config/**/* lib/**/* mix_tasks/**/*
-                          priv/static/**/* test/**/* mix.exs mix.lock assets/**/*)
+                          README.md .storybook/**/* bin/**/* config/**/* lib/**/* mix_tasks/**/*
+                          priv/static/**/* test/**/* mix.exs mix.lock assets/**/* package.json
+                          pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json vite.config.ts)
   @nerves_patterns ~w(.check.exs .credo.exs .formatter.exs README.md config/**/* lib/**/*
                        test/**/* mix.exs mix.lock)
   @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/* mix_tasks/**/*
@@ -243,6 +244,8 @@ defmodule Wotex.Lab.BuildArtifacts do
       "--offline",
       "--phoenix-assets-source",
       candidates.phoenix_assets,
+      "--storybook-source",
+      host,
       "--base-path",
       "/docs/",
       "--generation-id",

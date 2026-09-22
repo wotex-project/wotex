@@ -1,0 +1,179 @@
+/* Qualification canvas composition. The manager remains Phoenix Storybook;
+   this layer makes every WoTEx fixture truthful to the production palette. */
+
+.wotex-lab[data-wotex-design-system] {
+  min-height: 30rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  border: 1px solid var(--wl-color-border);
+  border-radius: 1rem;
+  background: var(--wl-color-bg);
+  color: var(--wl-color-text);
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
+  overflow: hidden;
+}
+
+.wotex-lab[data-wotex-design-system] > header {
+  padding-block-end: 1rem;
+  border-block-end: 1px solid var(--wl-color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.wotex-lab[data-wotex-design-system] > header p {
+  margin: 0;
+  color: var(--wl-color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+.wotex-lab[data-wotex-design-system] > header strong {
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  margin-inline-start: 0.25rem;
+  border: 1px solid var(--wl-color-border);
+  border-radius: 999px;
+  color: var(--wl-color-text);
+  display: inline-grid;
+  place-items: center;
+}
+
+.wotex-lab[data-wotex-design-system] button {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--wl-color-accent);
+  border-radius: var(--wl-radius-control);
+  background: var(--wl-color-accent);
+  color: var(--wl-color-on-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 680;
+}
+
+.wotex-lab[data-wotex-design-system] button:hover {
+  filter: brightness(1.08);
+}
+
+.wotex-lab[data-wotex-design-system] [data-wotex-island] {
+  min-width: 0;
+}
+
+.wotex-lab[data-wotex-design-system] figure,
+.wotex-lab[data-wotex-design-system] [data-semantic-fallback="navigation-tabs"] {
+  min-height: 22rem;
+  margin: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--wl-color-border);
+  border-radius: var(--wl-radius-panel);
+  background: var(--wl-color-panel);
+}
+
+.wotex-lab[data-wotex-design-system] figcaption,
+.wotex-lab[data-wotex-design-system] caption,
+.wotex-lab[data-wotex-design-system] h3 {
+  margin: 0 0 1rem;
+  color: var(--wl-color-text);
+  font-size: 1rem;
+  font-weight: 720;
+  text-align: start;
+}
+
+.wotex-lab[data-wotex-design-system] table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--wl-color-text);
+  font-size: 0.85rem;
+}
+
+.wotex-lab[data-wotex-design-system] th,
+.wotex-lab[data-wotex-design-system] td {
+  padding: 0.65rem 0.4rem;
+  border-block-end: 1px solid var(--wl-color-border);
+  text-align: start;
+}
+
+.wotex-lab[data-wotex-design-system] th {
+  font-weight: 680;
+}
+
+.wotex-lab[data-wotex-design-system] a {
+  color: var(--wl-color-accent);
+  text-underline-offset: 0.18em;
+}
+
+.wotex-lab[data-wotex-design-system] [data-semantic-fallback="navigation-tabs"] {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.wotex-lab[data-wotex-design-system] [data-semantic-fallback="navigation-tabs"] article {
+  padding: 1rem;
+  border: 1px solid var(--wl-color-border);
+  border-radius: var(--wl-radius-control);
+  background: var(--wl-color-bg);
+}
+
+.wotex-lab[data-wotex-design-system] [data-semantic-fallback="navigation-tabs"] h3,
+.wotex-lab[data-wotex-design-system] [data-semantic-fallback="navigation-tabs"] p {
+  margin: 0;
+}
+
+.wotex-lab[data-wotex-design-system] [data-semantic-fallback="navigation-tabs"] p {
+  margin-block-start: 0.35rem;
+  color: var(--wl-color-muted);
+  font-size: 0.84rem;
+}
+
+.psb-sandbox {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 36rem) {
+  #psb-story-live > div:first-child > div:first-child {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  #psb-story-live > div:first-child > div:first-child > h2,
+  #psb-story-live .psb-story-nav-form {
+    width: 100%;
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+
+  #psb-story-live .psb-story-nav-form select,
+  #psb-story-live .psb-variation-block,
+  #psb-story-live [id$="-component"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .wotex-lab[data-wotex-design-system] {
+    width: 100%;
+    min-height: 24rem;
+  }
+
+  .wotex-lab[data-wotex-design-system] > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wotex-lab[data-wotex-design-system] > header button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wotex-lab[data-wotex-design-system] *,
+  .wotex-lab[data-wotex-design-system] *::before,
+  .wotex-lab[data-wotex-design-system] *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -60,9 +60,13 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
 
   defp unavailable(assigns) do
     ~H"""
-    <main id="doc-main" class="doc-shell-unavailable">
-      <h1>Documentation unavailable</h1>
-      <p>The built-in documentation artifact is not available in this release.</p>
+    <main id="doc-main" class="doc-shell pa-doc-shell" data-pa-doc-shell>
+      <section class="pa-state" data-pa-state="empty" aria-labelledby="docs-unavailable-title">
+        <p>WoTEx documentation</p>
+        <h1 id="docs-unavailable-title">Documentation unavailable</h1>
+        <p>The built-in documentation artifact is not available in this release.</p>
+        <a class="pa-button" href="/">Return to the Lab workbench</a>
+      </section>
     </main>
     """
   end

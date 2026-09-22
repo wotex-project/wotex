@@ -1,0 +1,252 @@
+@import "./tokens.css";
+
+@layer wotex.base, wotex.components, wotex.overrides;
+
+@layer wotex.base {
+  [data-wotex-design-system] {
+    box-sizing: border-box;
+    min-width: 0;
+    background: var(--wotex-semantic-color-canvas);
+    color: var(--wotex-semantic-color-text);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+
+  [data-wotex-design-system] *,
+  [data-wotex-design-system] *::before,
+  [data-wotex-design-system] *::after {
+    box-sizing: inherit;
+  }
+
+  [data-wotex-design-system] :focus-visible {
+    outline: 0.1875rem solid var(--wotex-semantic-color-focus);
+    outline-offset: 0.1875rem;
+  }
+
+  [data-wotex-design-system] [hidden] {
+    display: none !important;
+  }
+}
+
+@layer wotex.components {
+  .wl-button,
+  .wl-field,
+  .wl-select {
+    min-height: 2.75rem;
+    border: 1px solid var(--wotex-semantic-color-border);
+    border-radius: var(--wotex-semantic-radius-control);
+    font: inherit;
+  }
+
+  .wl-control {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .wl-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+  }
+
+  .wl-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--wotex-semantic-space-control-y);
+    padding: var(--wotex-semantic-space-control-y) var(--wotex-semantic-space-control-x);
+    background: var(--wotex-semantic-color-accent);
+    color: var(--wotex-semantic-color-accent-text);
+    cursor: pointer;
+  }
+
+  .wl-button[data-wotex-variant="secondary"] {
+    background: var(--wotex-semantic-color-surface);
+    color: var(--wotex-semantic-color-text);
+  }
+
+  .wl-button[data-wotex-variant="danger"] {
+    background: var(--wotex-semantic-color-danger);
+  }
+
+  .wl-button:disabled,
+  [data-wotex-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .wl-field,
+  .wl-select {
+    width: 100%;
+    padding: var(--wotex-semantic-space-control-y) var(--wotex-semantic-space-control-x);
+    background: var(--wotex-semantic-color-canvas);
+    color: var(--wotex-semantic-color-text);
+  }
+
+  .wl-panel,
+  .wl-callout,
+  .wl-state,
+  .wl-dialog {
+    padding: var(--wotex-semantic-space-panel);
+    border: 1px solid var(--wotex-semantic-color-border);
+    border-radius: var(--wotex-semantic-radius-panel);
+    background: var(--wotex-semantic-color-surface);
+    color: var(--wotex-semantic-color-text);
+  }
+
+  .wl-callout[data-wotex-kind="warning"] {
+    border-inline-start: 0.3rem solid var(--wotex-semantic-color-warning);
+  }
+
+  .wl-callout[data-wotex-kind="danger"],
+  .wl-state[data-wotex-state="error"] {
+    border-inline-start: 0.3rem solid var(--wotex-semantic-color-danger);
+  }
+
+  .wl-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding-inline: var(--wotex-semantic-space-control-y);
+    border: 1px solid var(--wotex-semantic-color-border);
+    border-radius: 999px;
+    background: var(--wotex-semantic-color-surface);
+    font-size: 0.875rem;
+  }
+
+  .wl-tabs [role="tablist"] {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    border-block-end: 1px solid var(--wotex-semantic-color-border);
+  }
+
+  .wl-tabs [role="tab"] {
+    min-height: 2.75rem;
+    padding-inline: var(--wotex-semantic-space-control-x);
+    border: 0;
+    border-block-end: 0.2rem solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  .wl-tabs [role="tab"][aria-selected="true"] {
+    border-color: var(--wotex-semantic-color-accent);
+    color: var(--wotex-semantic-color-accent);
+  }
+
+  .wl-table-wrap {
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  .wl-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .wl-table th,
+  .wl-table td {
+    padding: var(--wotex-semantic-space-control-y) var(--wotex-semantic-space-control-x);
+    border-block-end: 1px solid var(--wotex-semantic-color-border);
+    text-align: start;
+  }
+
+  .wl-grid {
+    overflow: auto;
+    border: 1px solid var(--wotex-semantic-color-border);
+    border-radius: var(--wotex-semantic-radius-control);
+  }
+
+  .wl-grid-row {
+    display: grid;
+    grid-template-columns: repeat(var(--wotex-grid-columns, 1), minmax(8rem, 1fr));
+  }
+
+  .wl-grid-row > * {
+    min-width: 8rem;
+    padding: var(--wotex-semantic-space-control-y) var(--wotex-semantic-space-control-x);
+    border-block-end: 1px solid var(--wotex-semantic-color-border);
+  }
+
+  .wl-grid-header {
+    font-weight: 700;
+  }
+
+  .wl-chart-bars {
+    display: flex;
+    align-items: end;
+    gap: 0.15rem;
+    min-height: 10rem;
+  }
+
+  .wl-chart-bars > i {
+    flex: 1;
+    min-width: 0.25rem;
+    border: 0;
+    background: var(--wotex-semantic-color-accent);
+  }
+
+  .wl-chart-inspect {
+    border: 0;
+    background: transparent;
+    color: var(--wotex-semantic-color-accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .wl-legend ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .wl-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .wl-legend i {
+    width: 0.85rem;
+    height: 0.85rem;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .wl-progress {
+    width: 100%;
+    accent-color: var(--wotex-semantic-color-accent);
+  }
+
+  [data-wotex-island-state="mounted"] > [data-wotex-island-fallback] {
+    display: none;
+  }
+
+  [data-wotex-island-state]:not([data-wotex-island-state="mounted"]) > [data-wotex-island-mount] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-wotex-design-system] *,
+  [data-wotex-design-system] *::before,
+  [data-wotex-design-system] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-wotex-design-system] :focus-visible {
+    outline-color: Highlight;
+  }
+}

@@ -2,7 +2,7 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
   @shortdoc "Builds the locked static documentation publication"
 
   @moduledoc """
-  Builds the locked Wotex documentation cohort and its Phoenix Assets catalogue.
+  Builds the locked Wotex documentation cohort and Lab component catalogue.
 
       mix wotex_lab.docs.build \
         --destination /absolute/output \
@@ -10,6 +10,7 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
         --repository-override https://github.com/wotex-project/.github=/absolute/wotex-profile \
         --offline \
         --phoenix-assets-source /absolute/phoenix-assets \
+        --storybook-source /absolute/wotex/packages/wotex-lab/hosts/workbench \
         --base-path /wotex/docs/
 
   Every collection is still built in its own isolated lane. The repository
@@ -30,6 +31,7 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
     repository_override: :keep,
     offline: :boolean,
     phoenix_assets_source: :string,
+    storybook_source: :string,
     storybook_artifact: :string,
     canonical_origin: :string,
     pagefind_executable: :string,
@@ -49,10 +51,11 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
     destination = required_path(opts, :destination)
     repository = required_directory(opts, :repository)
     phoenix_assets = optional_directory(opts, :phoenix_assets_source)
+    storybook_source = optional_directory(opts, :storybook_source)
     storybook_artifact = optional_directory(opts, :storybook_artifact)
 
-    if is_nil(phoenix_assets) == is_nil(storybook_artifact),
-      do: Mix.raise("select exactly one of --phoenix-assets-source and --storybook-artifact")
+    if is_nil(storybook_source) == is_nil(storybook_artifact),
+      do: Mix.raise("select exactly one of --storybook-source and --storybook-artifact")
 
     catalogue_path = Path.expand(Keyword.get(opts, :catalogue, Catalogue.default_path()))
     profile = Keyword.get(opts, :profile, "release")
@@ -73,7 +76,13 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
              ) do
         Publication.run(
           cohort,
-          publication_options(opts, destination, phoenix_assets, storybook_artifact)
+          publication_options(
+            opts,
+            destination,
+            phoenix_assets,
+            storybook_source,
+            storybook_artifact
+          )
         )
       end
 
@@ -88,12 +97,18 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
     end
   end
 
-  defp publication_options(opts, destination, phoenix_assets, storybook_artifact) do
+  defp publication_options(
+         opts,
+         destination,
+         phoenix_assets,
+         storybook_source,
+         storybook_artifact
+       ) do
     [
       destination: destination,
       base_path: Keyword.get(opts, :base_path, "/docs/"),
       generation_id: Keyword.get(opts, :generation_id, generation_id()),
-      phoenix_assets_source: phoenix_assets,
+      storybook_source: storybook_source,
       storybook_artifact: storybook_artifact
     ]
     |> Enum.reject(fn {_, value} -> is_nil(value) end)

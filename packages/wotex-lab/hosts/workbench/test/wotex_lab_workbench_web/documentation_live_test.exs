@@ -37,10 +37,7 @@ defmodule WotexLabWorkbenchWeb.DocumentationLiveTest do
       assert html =~ "Wotex documentation"
       assert html =~ "Portable documentation from the release artifact."
       assert html =~ "data-cohort-digest=\"sha256:"
-      assert html =~ ~r/data-pa-token-digest="sha256:[0-9a-f]{64}"/
-      assert html =~ ~r/data-pa-component-digest="sha256:[0-9a-f]{64}"/
-      assert html =~ ~r/data-pa-fixture-digest="sha256:[0-9a-f]{64}"/
-      assert html =~ ~r/data-pa-css-digest="sha256:[0-9a-f]{64}"/
+      assert html =~ "data-pa-doc-shell"
       assert html =~ "Skip to documentation"
       assert html =~ "data-doc-search-contract="
       assert Sessions.count() == before

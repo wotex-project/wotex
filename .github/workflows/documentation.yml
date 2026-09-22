@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: futhr/doc_shell
-          ref: 60401b5522aedf99503054e0b0b46b2365f18ac5
+          ref: 43e2740069abf3f02ba14431ea8fd1cdde35ec7c
           path: .candidates/doc_shell
           persist-credentials: false
 
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: futhr/phoenix-assets
-          ref: acdae68219b4f939be434e68453378bf9c25a16c
+          ref: c76b626104e938d1c6601b73ed8c4d9d7aa4feb3
           path: .candidates/phoenix-assets
           persist-credentials: false
 
@@ -77,6 +77,12 @@ jobs:
         working-directory: .candidates/phoenix-assets
         run: pnpm install --frozen-lockfile
 
+      - name: Use the Workbench pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        with:
+          version: 12.4.2
+          run_install: false
+
       - name: Install the Workbench documentation graph
         working-directory: packages/wotex-lab/hosts/workbench
         env:
@@ -85,6 +91,10 @@ jobs:
           DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
           PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
         run: mix deps.get --check-locked
+
+      - name: Install the Lab component catalogue
+        working-directory: packages/wotex-lab/hosts/workbench
+        run: pnpm install --frozen-lockfile
 
       - name: Build and preflight the complete publication
         working-directory: packages/wotex-lab/hosts/workbench
@@ -111,6 +121,7 @@ jobs:
             --destination "$GITHUB_WORKSPACE/_site" \
             --repository "$GITHUB_WORKSPACE" \
             --phoenix-assets-source "$PHOENIX_ASSETS_CANDIDATE" \
+            --storybook-source "$GITHUB_WORKSPACE/packages/wotex-lab/hosts/workbench" \
             --base-path "$pages_prefix/docs/" \
             --canonical-origin "https://${GITHUB_REPOSITORY_OWNER}.github.io${pages_prefix}" \
             --generation-id "$GITHUB_SHA" \

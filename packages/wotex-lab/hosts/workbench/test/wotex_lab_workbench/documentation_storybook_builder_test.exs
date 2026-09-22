@@ -4,10 +4,10 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilderTest do
   alias WotexLabWorkbench.Documentation.{DesignContract, StorybookBuilder}
 
   @tag timeout: 120_000
-  test "builds and re-adopts the production Phoenix Assets stories below a repository path" do
-    source = System.get_env("PHOENIX_ASSETS_CANDIDATE")
+  test "builds and re-adopts the production Lab stories below a repository path" do
+    source = System.get_env("WOTEX_LAB_STORYBOOK_SOURCE") || Path.expand("../..", __DIR__)
 
-    if is_binary(source) and source != "" do
+    if File.regular?(Path.join(source, "node_modules/.bin/storybook")) do
       destination = temporary_path("storybook")
       adopted = temporary_path("adopted")
 
@@ -29,6 +29,7 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilderTest do
       assert built.manifest["file_count"] > built.manifest["story_count"]
       assert {:ok, contract} = DesignContract.current()
       assert built.manifest["design_system"] == contract
+      assert built.manifest["wotex_lab"]["npm_package"] == "@wotex/lab-workbench-assets"
 
       iframe = File.read!(Path.join(destination, "iframe.html"))
       assert iframe =~ ~s(src="/wotex/design-system/assets/)

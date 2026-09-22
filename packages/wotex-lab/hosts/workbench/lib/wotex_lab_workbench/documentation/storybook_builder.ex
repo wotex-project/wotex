@@ -1,11 +1,11 @@
 defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
   @moduledoc """
-  Builds or adopts Phoenix Assets' production Svelte Storybook as a closed tree.
+  Builds or adopts Wotex Lab's production Svelte Storybook as a closed tree.
 
-  Source builds execute the pinned Storybook binary from the Phoenix Assets
-  workspace and import its real production stories. Adopted artifacts must
-  carry the same self-verifying manifest. Neither path permits symlinks,
-  source maps, remote runtime assets or an unbounded output tree.
+  Source builds execute the pinned Storybook binary from the Workbench asset
+  workspace and import its production components and island stories. Adopted
+  artifacts must carry the same self-verifying manifest. Neither path permits
+  symlinks, source maps, remote runtime assets or an unbounded output tree.
   """
 
   alias WotexLabWorkbench.Documentation.{CommandEnvironment, DesignContract}
@@ -109,13 +109,13 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
   end
 
   defp source_root(path) do
-    with {:ok, root} <- existing_directory(path, :phoenix_assets_source),
-         true <- File.regular?(Path.join(root, "npm/svelte/package.json")),
-         true <- File.regular?(Path.join(root, "npm/svelte/.storybook/main.ts")),
-         true <- File.regular?(Path.join(root, "npm/svelte/node_modules/.bin/storybook")) do
+    with {:ok, root} <- existing_directory(path, :storybook_source),
+         true <- File.regular?(Path.join(root, "package.json")),
+         true <- File.regular?(Path.join(root, ".storybook/main.ts")),
+         true <- File.regular?(Path.join(root, "node_modules/.bin/storybook")) do
       {:ok, root}
     else
-      false -> {:error, {:invalid_phoenix_assets_storybook_source, path}}
+      false -> {:error, {:invalid_storybook_source, path}}
       {:error, _} = error -> error
     end
   end
@@ -152,7 +152,7 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
   end
 
   defp package(source) do
-    path = Path.join(source, "npm/svelte/package.json")
+    path = Path.join(source, "package.json")
 
     with {:ok, bytes} <- File.read(path),
          {:ok, %{"version" => version, "devDependencies" => dependencies} = package} <-
@@ -169,19 +169,18 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
   end
 
   defp compatible_version(%{"version" => version}) do
-    if version == PhoenixAssets.version(),
+    if version == WotexLabWorkbench.version(),
       do: :ok,
-      else: {:error, {:phoenix_assets_npm_version_mismatch, PhoenixAssets.version(), version}}
+      else: {:error, {:workbench_npm_version_mismatch, WotexLabWorkbench.version(), version}}
   end
 
   defp execute(source, destination, base_path) do
-    directory = Path.join(source, "npm/svelte")
-    executable = Path.join(directory, "node_modules/.bin/storybook")
+    executable = Path.join(source, "node_modules/.bin/storybook")
     args = ["build", "--quiet", "--output-dir", destination]
 
     case System.cmd(executable, args,
-           cd: directory,
-           env: CommandEnvironment.cleared([{"PHOENIX_ASSETS_STORYBOOK_BASE", base_path}]),
+           cd: source,
+           env: CommandEnvironment.cleared([{"WOTEX_LAB_STORYBOOK_BASE", base_path}]),
            stderr_to_stdout: true
          ) do
       {_, 0} -> :ok
@@ -325,10 +324,10 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
 
         if Regex.match?(~r/\A[0-9a-f]{40}\z/, revision),
           do: {:ok, revision},
-          else: {:error, {:invalid_phoenix_assets_revision, revision}}
+          else: {:error, {:invalid_storybook_source_revision, revision}}
 
       {output, status} ->
-        {:error, {:phoenix_assets_revision_failed, status, tail(output)}}
+        {:error, {:storybook_source_revision_failed, status, tail(output)}}
     end
   end
 
@@ -339,8 +338,8 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
       "entrypoint" => "index.html",
       "index" => "index.json",
       "source_revision" => revision,
-      "phoenix_assets" => %{
-        "hex_version" => contract["phoenix_assets_version"],
+      "wotex_lab" => %{
+        "host_version" => WotexLabWorkbench.version(),
         "npm_package" => package["name"],
         "npm_version" => package["version"]
       },
@@ -377,17 +376,17 @@ defmodule WotexLabWorkbench.Documentation.StorybookBuilder do
   end
 
   defp validate_manifest(manifest, base_path) do
+    {:ok, contract} = DesignContract.current()
+
     with true <- manifest["schema_version"] == @schema,
          true <- manifest["base_path"] == base_path,
          true <- manifest["entrypoint"] == "index.html",
          true <- manifest["index"] == "index.json",
          true <- digest?(manifest["output_digest"]),
-         {:ok, contract} <- DesignContract.current(),
          true <- manifest["design_system"] == contract do
       :ok
     else
       false -> {:error, :invalid_storybook_manifest_contract}
-      {:error, _} = error -> error
     end
   end
 

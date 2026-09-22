@@ -14,7 +14,7 @@ defmodule WotexLabWorkbench.Documentation.Publication do
   @manifest "publication-manifest.json"
 
   @allowed_options ~w(destination base_path canonical_origin generation_id
-                      pagefind_executable generated_at phoenix_assets_source
+                      pagefind_executable generated_at storybook_source
                       storybook_artifact)a
 
   @doc "Builds both static trees and activates them together."
@@ -69,7 +69,7 @@ defmodule WotexLabWorkbench.Documentation.Publication do
 
     storybook_options =
       [destination: storybook_destination, base_path: storybook_base]
-      |> optional(:source, Keyword.get(opts, :phoenix_assets_source))
+      |> optional(:source, Keyword.get(opts, :storybook_source))
       |> optional(:artifact, Keyword.get(opts, :storybook_artifact))
 
     with {:ok, docs} <- Build.run(cohort, docs_options),
@@ -137,7 +137,7 @@ defmodule WotexLabWorkbench.Documentation.Publication do
   defp validate_run_options(opts) do
     producers =
       Enum.count(
-        [Keyword.get(opts, :phoenix_assets_source), Keyword.get(opts, :storybook_artifact)],
+        [Keyword.get(opts, :storybook_source), Keyword.get(opts, :storybook_artifact)],
         &is_binary/1
       )
 
