@@ -517,8 +517,12 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
 
     local = binary_part(archive, 0, central_offset)
     central = binary_part(archive, central_offset, central_size)
-    {normalized_local, local_entries} = normalize_local_entries!(local, 0, [], 0)
     {normalized_central, central_entries} = normalize_central_entries!(central, [], entries)
+    ordered_central_entries = Enum.reverse(central_entries)
+
+    {normalized_local, local_entries} =
+      normalize_local_entries!(local, 0, [], 0, ordered_central_entries)
+
     local_paths = Enum.map(local_entries, &elem(&1, 0))
 
     require!(
@@ -544,23 +548,39 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     {offset, eocd}
   end
 
-  defp normalize_local_entries!(<<>>, _, entries, _),
+  defp normalize_local_entries!(<<>>, _, entries, _, []),
     do: {<<>>, entries}
 
-  defp normalize_local_entries!(bytes, offset, entries, uncompressed) do
+  defp normalize_local_entries!(bytes, offset, entries, uncompressed, [expected | expected_tail]) do
+    {expected_name, expected_offset, expected_flags, expected_compression, expected_crc,
+     expected_compressed_size, expected_uncompressed_size} = expected
+
     with <<fixed::binary-size(30), rest::binary>> <- bytes,
          <<0x04034B50::little-32, version::little-16, flags::little-16, compression::little-16,
            _::little-16, _::little-16, crc::little-32, compressed_size::little-32,
            uncompressed_size::little-32, name_size::little-16, extra_size::little-16>> <- fixed,
-         true <- Bitwise.band(flags, 0x0009) == 0,
+         true <- valid_zip_flags?(flags, compression),
          true <- compression in [0, 8],
          true <- compressed_size < 0xFFFFFFFF and uncompressed_size < 0xFFFFFFFF,
          true <- name_size in 1..1_024 and extra_size <= 1_024,
          <<name::binary-size(^name_size), extra::binary-size(^extra_size), tail::binary>> <- rest,
          true <- safe_zip_name?(name),
-         true <- byte_size(tail) >= compressed_size,
-         <<payload::binary-size(^compressed_size), remaining::binary>> <- tail,
-         total = uncompressed + uncompressed_size,
+         true <- name == expected_name,
+         true <- offset == expected_offset,
+         true <- flags == expected_flags,
+         true <- compression == expected_compression,
+         true <- local_sizes_match?(flags, crc, compressed_size, uncompressed_size, expected),
+         true <- byte_size(tail) >= expected_compressed_size,
+         <<payload::binary-size(^expected_compressed_size), descriptor_tail::binary>> <- tail,
+         {:ok, descriptor, remaining} <-
+           zip_data_descriptor(
+             descriptor_tail,
+             flags,
+             expected_crc,
+             expected_compressed_size,
+             expected_uncompressed_size
+           ),
+         total = uncompressed + expected_uncompressed_size,
          true <- total <= @max_escript_uncompressed_bytes do
       normalized_extra = normalize_zip_extra!(extra)
 
@@ -568,19 +588,21 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
         <<0x04034B50::little-32, version::little-16, flags::little-16, compression::little-16,
           0::little-16, 0x0021::little-16, crc::little-32, compressed_size::little-32,
           uncompressed_size::little-32, name_size::little-16, extra_size::little-16, name::binary,
-          normalized_extra::binary, payload::binary>>
+          normalized_extra::binary, payload::binary, descriptor::binary>>
 
-      entry = {name, offset, flags, compression, crc, compressed_size, uncompressed_size}
       next_offset = offset + byte_size(header)
 
       {normalized_remaining, entries} =
-        normalize_local_entries!(remaining, next_offset, [entry | entries], total)
+        normalize_local_entries!(remaining, next_offset, [expected | entries], total, expected_tail)
 
       {header <> normalized_remaining, entries}
     else
       _ -> Mix.raise("hosted worker ZIP local entry is invalid")
     end
   end
+
+  defp normalize_local_entries!(_, _, _, _, _),
+    do: Mix.raise("hosted worker ZIP local entry is invalid")
 
   defp normalize_central_entries!(<<>>, entries, expected) do
     require!(length(entries) == expected, "hosted worker ZIP directory count is invalid")
@@ -594,7 +616,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
            extra_size::little-16, comment_size::little-16, disk::little-16,
            internal_attributes::little-16, external_attributes::little-32, local_offset::little-32,
            rest::binary>> <- bytes,
-         true <- Bitwise.band(flags, 0x0009) == 0,
+         true <- valid_zip_flags?(flags, compression),
          true <- compression in [0, 8],
          true <- compressed_size < 0xFFFFFFFF and uncompressed_size < 0xFFFFFFFF,
          true <- disk == 0 and comment_size == 0,
@@ -626,6 +648,55 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     else
       _ -> Mix.raise("hosted worker ZIP directory entry is invalid")
     end
+  end
+
+  defp local_sizes_match?(flags, crc, compressed_size, uncompressed_size, expected) do
+    {_, _, _, _, expected_crc, expected_compressed_size, expected_uncompressed_size} = expected
+
+    if Bitwise.band(flags, 0x0008) == 0 do
+      {crc, compressed_size, uncompressed_size} ==
+        {expected_crc, expected_compressed_size, expected_uncompressed_size}
+    else
+      {crc, compressed_size, uncompressed_size} == {0, 0, 0}
+    end
+  end
+
+  defp zip_data_descriptor(bytes, flags, _, _, _)
+       when Bitwise.band(flags, 0x0008) == 0,
+       do: {:ok, <<>>, bytes}
+
+  defp zip_data_descriptor(
+         <<0x08074B50::little-32, crc::little-32, compressed_size::little-32,
+           uncompressed_size::little-32, rest::binary>>,
+         _,
+         expected_crc,
+         expected_compressed_size,
+         expected_uncompressed_size
+       )
+       when crc == expected_crc and compressed_size == expected_compressed_size and
+              uncompressed_size == expected_uncompressed_size do
+    {:ok,
+     <<0x08074B50::little-32, crc::little-32, compressed_size::little-32,
+       uncompressed_size::little-32>>, rest}
+  end
+
+  defp zip_data_descriptor(
+         <<crc::little-32, compressed_size::little-32, uncompressed_size::little-32, rest::binary>>,
+         _,
+         expected_crc,
+         expected_compressed_size,
+         expected_uncompressed_size
+       )
+       when crc == expected_crc and compressed_size == expected_compressed_size and
+              uncompressed_size == expected_uncompressed_size do
+    {:ok, <<crc::little-32, compressed_size::little-32, uncompressed_size::little-32>>, rest}
+  end
+
+  defp zip_data_descriptor(_, _, _, _, _), do: :error
+
+  defp valid_zip_flags?(flags, compression) do
+    allowed = if compression == 8, do: 0x080E, else: 0x0808
+    Bitwise.band(flags, Bitwise.bxor(0xFFFF, allowed)) == 0
   end
 
   defp normalize_zip_extra!(<<>>), do: <<>>

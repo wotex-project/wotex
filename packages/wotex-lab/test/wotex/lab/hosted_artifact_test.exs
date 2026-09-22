@@ -62,8 +62,18 @@ defmodule Wotex.Lab.HostedArtifactTest do
     |> String.replace("main.beam", "../x.beam")
     |> then(&File.write!(absolute, &1))
 
-    assert_raise Mix.Error, ~r/local entry is invalid/, fn ->
+    assert_raise Mix.Error, ~r/entry is invalid/, fn ->
       Artifact.normalize_escript!(absolute)
+    end
+  end
+
+  test "Escript normalization admits a bounded ZIP data descriptor", %{root: root} do
+    data_descriptor = Path.join(root, "data-descriptor")
+
+    write_escript!(data_descriptor, [{~c"main.beam", "body"}], data_descriptor: true)
+
+    assert_raise Mix.Error, ~r/missing a required entry/, fn ->
+      Artifact.normalize_escript!(data_descriptor)
     end
   end
 
@@ -160,8 +170,9 @@ defmodule Wotex.Lab.HostedArtifactTest do
     end
   end
 
-  defp write_escript!(path, entries) do
+  defp write_escript!(path, entries, options \\ []) do
     {:ok, {_, archive}} = :zip.create(~c"worker.zip", entries, [:memory])
+    archive = if options[:data_descriptor], do: with_data_descriptor!(archive), else: archive
 
     :ok =
       :escript.create(String.to_charlist(path),
@@ -170,6 +181,46 @@ defmodule Wotex.Lab.HostedArtifactTest do
         emu_args: ~c"-escript main main",
         archive: archive
       )
+  end
+
+  defp with_data_descriptor!(archive) do
+    [{eocd_offset, 4}] = :binary.matches(archive, <<0x50, 0x4B, 0x05, 0x06>>)
+    eocd = binary_part(archive, eocd_offset, byte_size(archive) - eocd_offset)
+
+    <<0x06054B50::little-32, disk::little-16, central_disk::little-16, disk_entries::little-16,
+      entries::little-16, central_size::little-32, central_offset::little-32,
+      comment_size::little-16, comment::binary>> = eocd
+
+    local = binary_part(archive, 0, central_offset)
+    central = binary_part(archive, central_offset, central_size)
+
+    <<0x04034B50::little-32, version::little-16, flags::little-16, compression::little-16,
+      modified_time::little-16, modified_date::little-16, crc::little-32,
+      compressed_size::little-32, uncompressed_size::little-32, name_size::little-16,
+      extra_size::little-16, body::binary>> = local
+
+    descriptor_flags = Bitwise.bor(flags, 0x0008)
+
+    normalized_local =
+      <<0x04034B50::little-32, version::little-16, descriptor_flags::little-16,
+        compression::little-16, modified_time::little-16, modified_date::little-16, 0::little-32,
+        0::little-32, 0::little-32, name_size::little-16, extra_size::little-16, body::binary,
+        0x08074B50::little-32, crc::little-32, compressed_size::little-32,
+        uncompressed_size::little-32>>
+
+    <<0x02014B50::little-32, made_by::little-16, required::little-16, _::little-16,
+      central_tail::binary>> = central
+
+    normalized_central =
+      <<0x02014B50::little-32, made_by::little-16, required::little-16, descriptor_flags::little-16,
+        central_tail::binary>>
+
+    normalized_eocd =
+      <<0x06054B50::little-32, disk::little-16, central_disk::little-16, disk_entries::little-16,
+        entries::little-16, central_size::little-32, byte_size(normalized_local)::little-32,
+        comment_size::little-16, comment::binary>>
+
+    normalized_local <> normalized_central <> normalized_eocd
   end
 
   defp escript_entries!(path) do

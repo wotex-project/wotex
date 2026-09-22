@@ -42,8 +42,14 @@ defmodule Wotex.Lab.WindowAnomalyTest do
           [count: 4_097],
           [step: 0],
           [heater: %{32 => 1.0}],
+          [heater: []],
           [glitches: [1, 1]],
+          [glitches: %{}],
           [seed: -1],
+          [seed: 1.0],
+          [start: 1.0],
+          [initial: 1_000_000_000_001],
+          [ambient: :cold],
           [unknown: true]
         ] do
       assert {:error, %Wotex.Lab.Error{}} = Thermal.generate(opts)
