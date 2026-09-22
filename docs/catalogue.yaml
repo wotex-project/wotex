@@ -228,11 +228,11 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.10-metrics-storage-and-ai-inspection.md"
       - id: "WLB.11"
-        version: "0.12.0"
+        version: "0.13.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.11-workbench-and-design-system.md"
       - id: "WLB.12"
-        version: "0.3.1"
+        version: "0.3.2"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.12-unified-documentation.md"
   wotex-matter:

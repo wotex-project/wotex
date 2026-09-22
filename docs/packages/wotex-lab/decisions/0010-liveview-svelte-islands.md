@@ -26,16 +26,17 @@ cleanup and reconnect behavior indeterminate.
 Phoenix LiveView supports external DOM owners through hooks and
 `phx-update="ignore"`. Svelte 5 provides explicit mount and unmount APIs.
 LiveSvelte 0.18 demonstrates full props, JSON Patch updates, streams, forms,
-uploads and navigation over a LiveView hook. Phoenix Assets already owns Vite,
-Storybook supervision and Svelte packages, while the current LiveSvelte release
-requires `phoenix_vite` and provides a separate Node SSR path. Installing both
-asset owners would duplicate process, manifest and deployment responsibilities.
+uploads and navigation over a LiveView hook. Phoenix Assets supplies generic
+Vite and manifest integration, while the current LiveSvelte release requires
+`phoenix_vite` and provides a separate Node SSR path. Lab must still own its
+component semantics, transport schema and visual catalogue; putting those in
+the generic asset library would reverse the product boundary.
 
 ## Decision
 
 The Workbench remains a Phoenix LiveView application and may mount registered
-Svelte 5 components through the PHA.02 island adapter in Phoenix Assets. Svelte
-is not a second router or application root.
+Svelte 5 components through its own bounded island adapter. Svelte is not a
+second router or application root.
 
 LiveView owns:
 
@@ -54,24 +55,25 @@ Svelte owns:
   presentation;
 - animation and transitions subject to reduced-motion policy.
 
-Phoenix Assets owns the island hook, closed component registry, transport
-envelopes, design-system tokens and CSS, generic Svelte/HEEx components, Vite
-graph and static Storybook. Wotex Lab supplies semantic theme overrides and
-projects domain data into bounded public props. Wotex policy and domain names do
-not move into Phoenix Assets.
+Wotex Lab owns the island hook, closed component registry, transport envelopes,
+design-system tokens and CSS, Svelte/HEEx components, story fixtures and static
+Storybook. The base Lab package owns renderer-neutral contracts; the Workbench
+host owns browser code and product presentation. Phoenix Assets remains a
+generic, UI-free asset substrate. Wotex policy, product semantics and component
+behavior do not move into it.
 
-The host does not depend on LiveSvelte or `phoenix_vite`. PHA.02 implements the
-same established hook lifecycle through the existing Phoenix Assets Vite and
-manifest boundary. The reference release starts no Node process. Each island
-has useful HEEx fallback content and mounts on the client.
+The host does not depend on LiveSvelte or `phoenix_vite`. Its Lab-owned hook
+uses the existing Phoenix Assets Vite and manifest boundary without delegating
+the protocol or component registry. The reference release starts no Node
+process. Each island has useful HEEx fallback content and mounts on the client.
 
 Each island has a LiveView-owned outer boundary with a patchable HEEx fallback
 and an ignored inner mount root. Svelte owns only the mount root's descendants.
-The adapter's preserved readiness attribute performs the accessibility handoff;
+The hook's preserved readiness attribute performs the accessibility handoff;
 the hook never edits the fallback DOM.
 
 The existing server-rendered SVG chart remains the semantic and no-JavaScript
-fallback. A registered Phoenix Assets reporting island may enhance the same
+fallback. A registered Lab reporting island may enhance the same
 closed descriptor with local inspection, hover, selection and admitted
 pan/zoom. It cannot accept Vega specifications, expressions, remote data URLs,
 arbitrary transforms or caller JavaScript. A client selection that changes
@@ -98,9 +100,9 @@ subtree.
 
 ## Design-system and catalogue consequences
 
-The authored token source follows Design Tokens Community Group 2025.10.
-Phoenix Assets generates the CSS, Elixir and TypeScript representations. Wotex
-overrides semantic theme roles instead of forking component styles.
+The authored Wotex token source follows Design Tokens Community Group 2025.10.
+Lab exposes deterministic Elixir identities and owns the browser CSS and
+TypeScript catalogue used by its hosts.
 
 The public static Storybook renders the same Svelte module imports used by the
 Workbench island registry. Deterministic mock transports demonstrate component

@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.6.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.7.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
@@ -25,17 +25,22 @@ It retains the independent numerical, dataframe and rendering layers, bounded
 missing-aware previews, the passive first-tensor closure and every existing
 acceptance gate. Archived packages and advisory conflicts are not waived.
 
-Version 1.5 selects the PHA.02 shared design system and bounded Svelte islands
-inside the LiveView Workbench. LiveView retains routes, authorization,
-canonical state, evidence and effectful commands. The same production Svelte
-components publish through static Storybook; HEEx fallbacks and a separate
-Phoenix Storybook host cover no-JavaScript and real-transport behavior.
+Version 1.5 selected a shared design system and bounded Svelte islands inside
+the LiveView Workbench. LiveView retains routes, authorization, canonical
+state, evidence and effectful commands. The same production Svelte components
+publish through static Storybook; HEEx fallbacks and a separate Phoenix
+Storybook host cover no-JavaScript and real-transport behavior. Version 1.7
+corrects the original upstream ownership choice.
 
 Version 1.6 records complete source implementation for C08, C10 and C11. The
 contained reference runner, Mix and Mix.install archive consumers, local
 artifact/static-documentation builders and compatibility-readiness inputs now
 exist. Publication, hosted adoption, physical-device evidence and release/API
 decisions remain qualification or maintainer states rather than source gaps.
+
+Version 1.7 restores the product boundary for C13 and C14. Wotex Lab owns its
+tokens, components, island protocol, fixtures and Storybook; Phoenix Assets
+remains the generic asset and DocShell-renderer substrate.
 
 ## Work packages
 
@@ -53,8 +58,8 @@ decisions remain qualification or maintainer states rather than source gaps.
 | WLB-C10 | WLB-C07–C09; WLB.08 | Complete artifact builders, distribution checks and compatibility dossier | Archive/no-Git consumers, candidate Hex/Mix.install, OCI/npm/static/Nerves artifact checks, minimum/current and allowed-dependency cohorts, SBOM/license/security review; hosted and physical adoption use the qualification runbook |
 | WLB-C11 | WLB-C10 | Explicit API compatibility report and readiness inputs | Every retained API/result/error/default and claim has evidence; incompatible changes have migration options; the maintainer's release or stable-API decision is qualification, not source implementation |
 | WLB-C12 | WLB-C07; WLB.10 | PromEx metrics/panels, bounded ETS history, GreptimeDB bridge/query port and BeamLens skill | Protocol/store equality, retention, cardinality, loss/reset/clock cases, isolation, secret/prompt injection, cancellation and evidence-grounded AI queries |
-| WLB-C13 | WLB-C03; WLB-C07; WLB-C12; WLB.11; PHA.02 | Neutral base theme and explicit Phoenix LiveView workbench with bounded Svelte islands | Shared tokens/components, typed island transport, HEEx fallbacks, bounded enhanced charts, static Storybook, real LiveView catalogue, dashboard exports, no-LLM flow, lifecycle/keyboard/theme/reconnect/security browser suite and clone-free host artifact |
-| WLB-C14 | WLB-C08; WLB-C10; WLB-C13; WLB.12; DSH.01; PHA.01; PHA.02 | Unified built-in and static ecosystem documentation | All allowlisted packages and documentation sources emit isolated corpora; routes/links/search resolve; LiveView/static semantics and design-system digests match; docs and static Storybook compose collision-free; offline archive, browser/accessibility and fail-closed workflow-source vectors pass |
+| WLB-C13 | WLB-C03; WLB-C07; WLB-C12; WLB.11 | Neutral base theme and explicit Phoenix LiveView workbench with bounded Svelte islands | Lab-owned tokens/components, typed island transport, HEEx fallbacks, bounded enhanced charts, static Storybook, real LiveView catalogue, dashboard exports, no-LLM flow, lifecycle/keyboard/theme/reconnect/security browser suite and clone-free host artifact |
+| WLB-C14 | WLB-C08; WLB-C10; WLB-C13; WLB.12; DSH.01; PHA.01 | Unified built-in and static ecosystem documentation | All allowlisted packages and documentation sources emit isolated corpora; routes/links/search resolve; LiveView/static semantics and Lab design-system digests match; docs and static Storybook compose collision-free; offline archive, browser/accessibility and fail-closed workflow-source vectors pass |
 
 WLB-C01, descriptor/Nx example source and C13's base tokens form the foundation deliverable.
 The catalogue records their status; prose or a source-only test cannot imply

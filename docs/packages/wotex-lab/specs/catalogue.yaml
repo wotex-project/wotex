@@ -551,7 +551,7 @@ specifications:
       the pinned Grafana and GreptimeDB cohort. No mandatory observability,
       database or model dependency enters the base library.
   - id: WLB.11
-    version: "0.12.0"
+    version: "0.13.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: implemented
     evidence_status: complete
@@ -561,9 +561,6 @@ specifications:
       - name: WCAG
         revision: "2.2 AA"
         claim: Workbench accessibility target; token contrast tests are not whole-UI conformance.
-      - name: Phoenix Assets shared design system and LiveView Svelte islands
-        revision: "PHA.02 0.1.0"
-        claim: Implemented consumer of the optional component, token, island and Storybook contracts; local browser cohorts are source evidence, not hosted adoption or WCAG certification.
       - name: Design Tokens Format Module
         revision: "2025.10"
         claim: Planned token exchange format; a W3C Community Group Final Report, not a W3C Recommendation.
@@ -576,6 +573,10 @@ specifications:
       - "WLB-C13"
     implementation_modules:
       - "Wotex.Lab.DesignSystem"
+      - "Wotex.Lab.Island.Component"
+      - "Wotex.Lab.Island.Encoder"
+      - "Wotex.Lab.Island.Event"
+      - "Wotex.Lab.Island.Snapshot"
       - "WotexLabWorkbench.Application"
       - "WotexLabWorkbench.Room"
       - "WotexLabWorkbench.Sessions"
@@ -597,9 +598,11 @@ specifications:
       - "WotexLabWorkbench.Health"
       - "WotexLabWorkbenchWeb.HealthController"
       - "WotexLabStorybook.DesignContract"
+      - "WotexLabStorybookWeb.Island"
       - "WotexLabStorybookWeb.IslandLive"
     executable_evidence:
       - "test/wotex/lab/design_system_test.exs"
+      - "test/wotex/lab/island_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_preview_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_contract_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/insights_test.exs"
@@ -618,9 +621,9 @@ specifications:
       - "hosts/workbench/bin/check_islands_browser.mjs"
       - "hosts/workbench/bin/check_assets.mjs"
       - "hosts/storybook/test/wotex_lab_storybook_web/storybook_test.exs"
-    compatibility_classification: The accepted pre-1.0 reference-host contract implements PHA.02 Svelte islands, shared Phoenix Assets components and static Storybook while keeping LiveView authoritative for sessions, state, evidence, authorization and commands. The SVG/table path remains the semantic fallback. Base Lab consumers keep inert Wotex theme tokens and scoped CSS without Phoenix, Vite, Svelte, Node, Explorer or BeamLens. Local browser and candidate-artifact cohorts are complete source evidence; publication, WCAG certification and broader hosted adoption remain separate.
+    compatibility_classification: Version 0.13.0 keeps the existing pre-1.0 Workbench behavior while moving its tokens, components, bounded island protocol, fixtures and static Storybook under Lab ownership. Phoenix Assets remains a generic asset substrate. LiveView stays authoritative for sessions, state, evidence, authorization and commands, and the SVG/table path remains the semantic fallback. Base Lab consumers keep inert Wotex theme tokens and bounded envelopes without Phoenix, Vite, Svelte, Node, Explorer or BeamLens. Local browser and candidate-artifact cohorts are source evidence; publication, WCAG certification and broader hosted adoption remain separate.
   - id: WLB.12
-    version: "0.3.1"
+    version: "0.3.2"
     path: docs/specs/WLB.12-unified-documentation.md
     implementation_status: implemented
     evidence_status: complete
@@ -633,9 +636,6 @@ specifications:
       - name: Phoenix Assets DocShell renderer contract
         revision: "PHA.01 0.2.0"
         claim: Implemented consumer of optional LiveView and static HEEx renderers with one shared page model and Pagefind tree.
-      - name: Phoenix Assets shared design system and LiveView Svelte islands
-        revision: "PHA.02 0.1.0"
-        claim: Implemented consumer of shared components, explicit island enhancement and static Storybook contracts.
       - name: WCAG
         revision: "2.2 AA"
         claim: Documentation accessibility target; automated checks are not whole-site certification.
@@ -675,4 +675,4 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/documentation_live_test.exs"
       - "hosts/workbench/bin/check_documentation_browser.mjs"
       - "bin/check_workbench_archive.exs"
-    compatibility_classification: Version 0.3.1 additively gives release builds an exact local-repository override set and a fail-closed offline mode; rendering, routes and artifacts are unchanged. The implemented Workbench, static documentation and static Storybook surface remains available. The base library API and existing Workbench operations remain unchanged. Independently versioned DocShell and Phoenix Assets renderer, design-system and island candidates are built and verified through the clone-free release cohort; hosted publication and WCAG certification remain separate adoption claims.
+    compatibility_classification: Version 0.3.2 keeps routes and documentation artifacts stable while making the static Storybook and design identities Lab-owned. DocShell and the Phoenix Assets renderer remain independently versioned candidates in the clone-free release cohort; the Lab component catalogue is built from the Workbench source or adopted as an exact artifact. The base library API and existing Workbench operations remain unchanged. Hosted publication and WCAG certification remain separate adoption claims.

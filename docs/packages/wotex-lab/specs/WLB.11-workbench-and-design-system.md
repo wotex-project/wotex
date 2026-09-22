@@ -1,6 +1,6 @@
-# WLB.11: Lean workbench and shared design system
+# WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.12.0. Contract: accepted. Implementation status:
+Specification version: 0.13.0. Contract: accepted. Implementation status:
 implemented. Evidence status: complete. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
@@ -24,8 +24,16 @@ The public `/healthz` route exposes only schema version and required-process
 liveness, creates no session and is usable by the release image's fixed
 loopback probe.
 
-The reference host now consumes Phoenix Assets' shared tokens, CSS, HEEx
-components, Svelte components and island transport. Its single Vite graph
+The reference host now owns its Wotex tokens, CSS, HEEx components, Svelte
+components, island transport and static Storybook. Phoenix Assets remains the
+generic asset-build substrate and supplies no Lab product semantics. The
+Workbench composition adds the complete responsive shell, editorial experiment
+cards, mobile dock, structured empty and error states, and warm-light/rich-navy themes. The public
+documentation route adds a host-owned responsive reading composition around
+the shared inert document renderer, including navigation, search, contents,
+reading flow, code, tables and print behavior. Storybook adds a qualification
+canvas that presents the same tokens and semantic fallbacks instead of relying
+on the manager's default surface. Its single Vite graph
 produces bounded, content-hashed Workbench and Storybook entries. The chart,
 data-grid and tabs islands retain semantic HEEx fallbacks and use closed,
 revisioned snapshots and events. A separate Phoenix Storybook host exercises
@@ -131,8 +139,8 @@ browser rendering or other Grafana versions.
 The Lab includes a first-class UI: an experiment workbench for the Nx/Elixir
 community. Phoenix LiveView owns the application, session and server state.
 HEEx renders the page shell, semantic fallbacks and ordinary controls. Selected
-browser-intensive components mount Svelte 5 through Phoenix Assets' PHA.02
-island adapter. Livebook/Kino remains the notebook experience; it is
+browser-intensive components mount Svelte 5 through the Lab-owned island
+adapter. Livebook/Kino remains the notebook experience; it is
 complementary, not hidden inside a custom notebook editor.
 
 The base `wotex_lab` library remains usable without Phoenix, a browser, PromEx,
@@ -143,27 +151,33 @@ private modules. Its packaged source archive and OCI image provide clone-free
 UI distribution. The implemented host remains separate from the base library;
 no collection of mandatory new repositories is introduced.
 
-The base library supplies `Wotex.Lab.DesignSystem.tokens/0`, `version/0` and
-`stylesheet/0`: immutable Wotex semantic theme roles and deterministic scoped
-CSS overrides, with no runtime filesystem reads, network calls or global CSS
-reset. Phoenix Assets owns the generic DTCG token source, component CSS, icons,
-HEEx primitives, Svelte primitives, island hook and Storybook. The host composes
-those primitives and may add Wotex-specific HEEx structure. Consumers may
+The base library supplies `Wotex.Lab.DesignSystem.tokens/0`, `version/0`,
+`contract/0` and `stylesheet/0`: immutable Wotex semantic theme roles,
+deterministic identities and scoped CSS overrides, with no runtime filesystem
+reads, network calls or global CSS reset. The Workbench host owns the concrete
+HEEx and Svelte components, island hook, fixtures, Vite graph and Storybook.
+Phoenix Assets owns only generic asset discovery, build and manifest behavior.
+Consumers may
 replace the reference host or override documented semantic roles without
 changing a scenario, query or WoT contract.
 
 ## Interaction and visual language
 
 Use the modern simplicity of a conversational workspace, not another brand's
-identity or assets: neutral surfaces, one restrained accent, system fonts,
-comfortable reading width, modest radii, fine borders and quiet status badges.
-No decorative gradients, glass panels, neon charts, giant cards, animated
-backgrounds or mandatory icon/font CDN. Dense data views are allowed where
-useful; empty screens explain one clear next action.
+identity or assets. The light theme uses a warm canvas, paper-like surfaces,
+deep ink and one restrained navy accent. The dark theme uses layered navy
+surfaces and pale blue-white text rather than grayscale black panels. Both use
+system fonts, comfortable reading widths, modest radii, fine borders and quiet
+status badges. No decorative gradients, glass panels, neon charts, animated
+backgrounds or mandatory icon/font CDN. Large editorial headings and cards
+must retain compact data density, responsive reflow and clear hierarchy rather
+than becoming ornamental. Empty screens explain one clear next action.
 
 The shell has a collapsible left sidebar, a compact top context line and a
-single main workspace. The sidebar contains Experiments, Things, Metrics,
-Evidence and Documentation, with settings at the bottom. Documentation opens
+single main workspace. At narrow widths it becomes a compact header and fixed
+bottom navigation without hiding the primary routes. The sidebar contains
+Experiments, Things, Metrics, Evidence and Documentation, with settings at the
+bottom. Documentation opens
 the public inert WLB.12 route and does not allocate a room. A run context
 includes its identity, source mode, backend and state. Conversation history is
 subordinate to the selected experiment, not a new global navigation system.
@@ -207,16 +221,15 @@ approval form. All use semantic token roles, slots and documented attributes.
 No caller HTML string injection, Tailwind/DaisyUI requirement, React runtime or
 second client router is permitted.
 
-The generic primitives and reporting components belong to Phoenix Assets and
-are shared by HEEx, Svelte and Storybook. Wotex-specific policy, copy and
-composition remain in the host. A component does not move upstream merely by
-being given a generic name; it moves only when its props, events and behavior
-make sense for an unrelated Phoenix Assets consumer.
+The primitives and reporting components belong to the Lab reference host and
+are shared by HEEx, Svelte and Storybook. Wotex policy, copy, presentation and
+composition stay together. A component does not move to Phoenix Assets merely
+because it has a generic name; the substrate remains UI-free.
 
 Use bounded, renderer-neutral chart descriptors shared with the Livebook/Kino
 lane. The server computes the admitted domain, marks, gaps, axes, legend,
 provenance and table model. HEEx renders the native SVG and table fallback. A
-registered Phoenix Assets reporting island may enhance that descriptor with
+registered Lab reporting island may enhance that descriptor with
 local hover, selection, comparison, zoom and pan while keeping the same labels,
 gaps, units and evidence identity. The host ships no general chart grammar,
 external data loader or arbitrary user-authored chart execution. Pin the
@@ -231,7 +244,7 @@ analysis semantics without a required `kino_explorer` dependency.
 
 Before island adoption, LiveView replaces the admitted server-owned SVG
 atomically. After adoption, LiveView sends revisioned descriptor snapshots or
-patches through PHA.02 and Svelte owns the enhanced chart subtree. Caller
+patches through the Lab island protocol and Svelte owns the enhanced chart subtree. Caller
 `params`, signals, expressions and URLs remain forbidden. Local pan/zoom changes
 only the viewport. Any operation that changes a query, dataset, evidence or
 server selection returns to LiveView for admission.
@@ -267,7 +280,7 @@ The Workbench uses one LiveView lifecycle with bounded Svelte islands, not a
 LiveView page beside a Svelte single-page application. LiveView owns routes,
 session and room identity, canonical assigns, server validation, evidence,
 authorization and effectful commands. Svelte owns descendant DOM and local
-presentation state inside one `PhoenixAssets.Svelte.Island` mount root.
+presentation state inside one `WotexLabWorkbenchWeb.Islands` mount root.
 
 Every island declares:
 
@@ -281,14 +294,14 @@ Every island declares:
 - focus recovery and accessible-name behavior.
 
 The outer boundary and semantic fallback remain LiveView-owned. Its inner mount
-root uses the PHA.02 hook and ignored DOM contract. LiveView may update the
+root uses the `WotexLabSvelteIsland` hook and ignored DOM contract. LiveView may update the
 fallback and the mount root's transport `data-*` attributes. Svelte may update
-only descendants of that mount root. The hook owns only PHA.02's preserved
+only descendants of that mount root. The hook owns only the Lab protocol's preserved
 readiness handoff attribute on the outer boundary. Any other page patch, island
 update or browser enhancer that crosses those ownership lines is a defect.
 
 The first accepted props are a complete finite snapshot. They arrive inline
-when they fit PHA.02's attribute limit or through its connected bootstrap while
+when they fit the Lab protocol's attribute limit or through its connected bootstrap while
 the fallback remains visible. Connected updates carry a full snapshot or a
 patch tied to the exact base revision. Duplicate revisions are ignored. A
 stale base, sequence gap, invalid operation, wrong instance or digest mismatch
@@ -317,15 +330,15 @@ failure leaves the current fallback visible and the rest of the LiveView
 usable. Hook destruction unmounts Svelte, restores fallback visibility and
 releases every listener, timer, observer and subscription.
 
-## Shared frontend system and Storybook
+## Lab frontend system and Storybook
 
-Phoenix Assets PHA.02 is the source for generic design tokens, CSS, icons,
-component descriptors, Svelte components, HEEx primitives and story fixtures.
-Its authored token file follows Design Tokens Community Group 2025.10. Wotex
-adds semantic theme values through the documented override schema; it does not
-copy component CSS or maintain a parallel Svelte implementation.
+Wotex Lab is the source for its design tokens, CSS, icons, component
+descriptors, Svelte components, HEEx primitives and story fixtures. The base
+library publishes the renderer-neutral token and island contracts; the
+Workbench owns browser code and concrete presentation. Its semantic token
+catalogue follows Design Tokens Community Group 2025.10.
 
-The Phoenix Assets Svelte Storybook is the public static component catalogue.
+The Wotex Lab Svelte Storybook is the public static component catalogue.
 It imports the same Svelte modules and CSS chunks as the Workbench island
 registry. Story transports are deterministic mocks for local, loading, success,
 validation, error, stale, disconnected and reconnect states. They do not claim
@@ -395,8 +408,9 @@ stale-patch resynchronization, blocked assets, focus recovery, lifecycle leaks
 and no-LLM operation. Token
 contrast tests support this gate but do not prove whole-UI accessibility.
 
-The base library's design-system surface remains Wotex theme tokens/CSS only.
-The separate host selects Phoenix Assets, Vite, Svelte and LiveView. Neither
+The base library's design-system surface remains Wotex theme tokens, bounded
+island envelopes and CSS only. The separate host selects Phoenix Assets, Vite,
+Svelte and LiveView. Neither
 token tests, Storybook stories nor source-only component tests claim the
 complete real-browser acceptance suite.
 
@@ -405,17 +419,17 @@ complete real-browser acceptance suite.
 | ID | Requirement |
 | --- | --- |
 | WLB-S11-01 | Keep the base `wotex_lab` library independent from Phoenix, Vite, Svelte, Node and a browser while shipping immutable Wotex theme roles. |
-| WLB-S11-02 | Use one LiveView application lifecycle and mount Svelte only through registered PHA.02 islands with exclusive descendant DOM ownership. |
+| WLB-S11-02 | Use one LiveView application lifecycle and mount Svelte only through registered Lab islands with exclusive descendant DOM ownership. |
 | WLB-S11-03 | Keep session, room, authorization, canonical state, evidence and effectful commands on the server; expose only closed bounded browser projections. |
 | WLB-S11-04 | Apply revisioned snapshots and patches, request full state after any gap or reconnect, and never replay an unacknowledged effectful command. |
-| WLB-S11-05 | Compose one Phoenix Assets token/CSS/component system across HEEx, Svelte, DocShell and Storybook without a host component-style fork. |
+| WLB-S11-05 | Compose one Lab-owned token, CSS and component system across HEEx, Svelte, DocShell composition and Storybook without delegating product UI to the asset substrate. |
 | WLB-S11-06 | Render useful HEEx fallbacks and preserve the Workbench's admitted operation when an island, asset or LiveSocket is unavailable. |
 | WLB-S11-07 | Enhance bounded charts and data controls without admitting arbitrary client programs, remote data, unbounded values or browser-owned evidence. |
 | WLB-S11-08 | Build the production Svelte components as a static Storybook and test their real LiveView integration in a separate Phoenix Storybook host. Hosted publication follows the WLB.08 qualification runbook. |
 | WLB-S11-09 | Meet the specified keyboard, focus, landmark, reflow, contrast, motion, theme, failure and disconnected-state behavior. |
 | WLB-S11-10 | Ship one local content-hashed Vite graph with code splitting, bundle budgets, no production Storybook manager and no Node runtime process. |
 | WLB-S11-11 | Preserve session isolation, reconnect safety, explicit Action approval, escaped untrusted content and restrictive browser policy across every island event. |
-| WLB-S11-12 | Keep generic components upstream and Wotex domain policy/composition in the host, with executable boundary checks in both repositories. |
+| WLB-S11-12 | Keep Phoenix Assets UI-free and keep Wotex component behavior, domain policy and composition in Lab, with executable boundary checks in both repositories. |
 
 ## Executable vectors
 
@@ -437,7 +451,7 @@ complete real-browser acceptance suite.
 ## Completion boundary
 
 WLB-S11-01 through WLB-S11-12 and WLB-V11-01 through WLB-V11-12 have local
-source or candidate-artifact evidence against the pinned PHA.02 cohort. Static
+source or candidate-artifact evidence against the Lab-owned frontend cohort. Static
 Storybook publication is hosted adoption evidence, not proof of LiveView
 transport. The Phoenix Storybook and local browser runs establish the source
 contract but do not claim WCAG certification. Publication and broader hosted
