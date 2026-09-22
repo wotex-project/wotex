@@ -233,7 +233,7 @@ jobs:
       - name: Native toolchain
         # OPC UA builds its pinned open62541 SDK inside the coverage step; the
         # native_lint and native_test tools build the other packages' SDKs.
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
       - name: Native tools needed
         # A native package runs native_format, native_lint and native_test
         # unless its lane skips them (lanes.minimum.skip).
@@ -334,7 +334,7 @@ jobs:
           elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
           otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
       - name: Native toolchain
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
       - run: mix deps.get --check-locked
       - name: Package dependencies
         working-directory: packages/${{ matrix.package }}
