@@ -1,1 +1,0 @@
-import{t as e}from"./island-hook-pT7uCoPM.js";var t=document.querySelector(`meta[name='csrf-token']`)?.content;if(window.Phoenix&&window.LiveView&&t){let n=new window.LiveView.LiveSocket(`/live`,window.Phoenix.Socket,{hooks:{PhoenixAssetsSvelteIsland:e},params:{_csrf_token:t}});n.connect(),window.liveSocket=n}
