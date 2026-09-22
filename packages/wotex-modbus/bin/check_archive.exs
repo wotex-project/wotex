@@ -640,13 +640,20 @@ defmodule Wotex.Modbus.Check.Archive do
       {"MIX_DEPS_PATH", Path.join(consumer, "deps")},
       {"MIX_ENV", "prod"},
       {"MIX_HOME", mix_home},
-      {"MIX_PATH", ""},
+      {"MIX_PATH", hex_code_path!()},
       {"WOTEX_ARCHIVE_CONSUMER_ROOT", consumer},
       {"WOTEX_CORE_SOURCE_ROOT", Map.fetch!(roots, :wotex)},
       {"WOTEX_RUNTIME_SOURCE_ROOT", Map.fetch!(roots, :wotex_runtime)},
       {"WOTEX_SOURCE_ROOT", Map.fetch!(roots, :wotex_modbus)},
       {"WOTEX_PATH_DEPS", nil}
     ]
+  end
+
+  defp hex_code_path! do
+    case :code.which(Hex) do
+      path when is_list(path) -> path |> List.to_string() |> Path.dirname()
+      _ -> violation("the archive check requires Hex from the active Mix toolchain")
+    end
   end
 
   defp verify_installed_archives!(hex_home, archives) do

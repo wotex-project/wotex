@@ -796,13 +796,20 @@ defmodule WotexContinuum.CheckArchive do
       {"MIX_DEPS_PATH", Path.join(consumer, "deps")},
       {"MIX_ENV", "test"},
       {"MIX_HOME", mix_home},
-      {"MIX_PATH", ""},
+      {"MIX_PATH", hex_code_path!()},
       {"WOTEX_ARCHIVE_CONSUMER_ROOT", consumer},
       {"WOTEX_CONTINUUM_SOURCE_ROOT", source_root},
       {"WOTEX_CORE_SOURCE_ROOT", core_root},
       {"WOTEX_EXPECTED_JASON_VERSION", expected_jason},
       {"WOTEX_PATH_DEPS", nil}
     ]
+  end
+
+  defp hex_code_path! do
+    case :code.which(Hex) do
+      path when is_list(path) -> path |> List.to_string() |> Path.dirname()
+      _ -> violation("the archive check requires Hex from the active Mix toolchain")
+    end
   end
 
   defp verify_downloaded_archive!(hex_home, continuum_archive) do
