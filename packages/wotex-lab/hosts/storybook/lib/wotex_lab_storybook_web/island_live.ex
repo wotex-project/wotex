@@ -3,8 +3,9 @@ defmodule WotexLabStorybookWeb.IslandLive do
 
   use Phoenix.LiveComponent
 
-  alias PhoenixAssets.Svelte.Island
+  alias Wotex.Lab.Island.{Event, Snapshot}
   alias WotexLabStorybook.DesignContract
+  alias WotexLabStorybookWeb.Island
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -24,7 +25,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
     {:noreply, update(socket, :revision, &(&1 + 1))}
   end
 
-  def handle_event("pa:island:" <> event, payload, socket) do
+  def handle_event("wotex:island:" <> event, payload, socket) do
     instance_id = "storybook--#{socket.assigns.fixture_id}"
 
     cond do
@@ -44,12 +45,11 @@ defmodule WotexLabStorybookWeb.IslandLive do
     ~H"""
     <section
       class="wotex-lab"
-      data-pa-design-system={@contract["schema_version"]}
-      data-pa-token-digest={@contract["token_digest"]}
-      data-pa-component-digest={@contract["component_registry_digest"]}
-      data-pa-fixture-digest={@contract["story_fixture_digest"]}
-      data-pa-css-digest={@contract["documentation_css_digest"]}
-      data-wotex-theme-digest={@contract["wotex_theme_digest"]}
+      data-wotex-design-system={@contract["schema_version"]}
+      data-wotex-token-digest={@contract["token_digest"]}
+      data-wotex-component-digest={@contract["component_registry_digest"]}
+      data-wotex-fixture-digest={@contract["story_fixture_digest"]}
+      data-wotex-stylesheet-digest={@contract["stylesheet_digest"]}
       data-fixture-id={@fixture_id}
       data-server-revision={@revision}
     >
@@ -77,8 +77,8 @@ defmodule WotexLabStorybookWeb.IslandLive do
     """
   end
 
-  attr :fixture_id, :string, required: true
-  attr :props, :map, required: true
+  attr(:fixture_id, :string, required: true)
+  attr(:props, :map, required: true)
 
   defp fallback(%{fixture_id: "reporting-chart"} = assigns) do
     ~H"""
@@ -179,7 +179,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
 
   defp resync(socket, instance_id) do
     result =
-      Island.Snapshot.new(
+      Snapshot.new(
         component(socket.assigns.fixture_id),
         instance_id,
         socket.assigns.props,
@@ -193,7 +193,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
         {:noreply,
          Phoenix.LiveView.push_event(
            socket,
-           "pa:island:#{instance_id}:snapshot",
+           "wotex:island:#{instance_id}:snapshot",
            Map.from_struct(snapshot)
          )}
 
@@ -205,7 +205,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
   defp admit_event(socket, instance_id, payload) do
     with true <- payload["client_revision"] == to_string(socket.assigns.revision),
          {:ok, event} <-
-           Island.Event.validate(component(socket.assigns.fixture_id), instance_id, payload) do
+           Event.validate(component(socket.assigns.fixture_id), instance_id, payload) do
       acknowledge(socket, event["command_id"])
     else
       _ -> {:reply, %{"status" => "rejected"}, socket}

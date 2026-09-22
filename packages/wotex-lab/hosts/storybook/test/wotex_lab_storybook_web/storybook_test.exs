@@ -27,7 +27,7 @@ defmodule WotexLabStorybookWeb.StorybookTest do
 
   test "serves the real island hook, generated CSS, and immutable chunks", %{conn: conn} do
     loader = get(conn, "/contract-assets/storybook-loader.js")
-    assert response(loader, 200) =~ "PhoenixAssetsSvelteIsland"
+    assert response(loader, 200) =~ "WotexLabSvelteIsland"
     assert response(loader, 200) =~ "/contract-assets/storybook-module.js"
     assert get_resp_header(loader, "etag") != []
 
@@ -36,8 +36,8 @@ defmodule WotexLabStorybookWeb.StorybookTest do
     assert get_resp_header(js, "cache-control") == ["no-store"]
 
     css = get(recycle(conn), "/contract-assets/design-system.css")
-    assert response(css, 200) =~ "--pa-semantic-color-canvas"
-    assert response(css, 200) =~ ".wotex-lab[data-pa-design-system]"
+    assert response(css, 200) =~ "--wotex-semantic-color-canvas"
+    assert response(css, 200) =~ ".wotex-lab[data-wotex-design-system]"
 
     static = Application.fetch_env!(:wotex_lab_storybook, :workbench_static)
     manifest_path = Path.join(static, ".vite/manifest.json")

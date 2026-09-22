@@ -4,9 +4,10 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
+    "skipLibCheck": true,
     "strict": true,
     "target": "ES2024",
     "types": ["node", "vite/client"]
   },
-  "include": ["assets/**/*.ts", "vite.config.ts"]
+  "include": [".storybook/**/*.ts", "assets/**/*.ts", "vite.config.ts"]
 }

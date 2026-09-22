@@ -2,25 +2,9 @@ import { resolve } from "node:path"
 import { svelte } from "@sveltejs/vite-plugin-svelte"
 import { defineConfig } from "vite"
 
-const candidate = process.env.PHOENIX_ASSETS_SVELTE_CANDIDATE
-
 export default defineConfig({
   base: "/",
   plugins: [svelte()],
-  resolve: candidate
-    ? {
-        alias: [
-          {
-            find: "@phoenix-assets/svelte/islands",
-            replacement: resolve(candidate, "islands/index.js"),
-          },
-          {
-            find: "@phoenix-assets/svelte/design-system.css",
-            replacement: resolve(candidate, "design-system/design-system.css"),
-          },
-        ],
-      }
-    : undefined,
   build: {
     assetsDir: "assets",
     emptyOutDir: false,

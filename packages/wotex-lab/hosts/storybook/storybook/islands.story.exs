@@ -13,7 +13,7 @@ defmodule WotexLabStorybook.Stories.Islands do
         id: :fixture_id,
         type: :string,
         required: true,
-        doc: "Stable Phoenix Assets fixture identity"
+        doc: "Stable Wotex Lab fixture identity"
       },
       %Attr{id: :revision, type: :integer, default: 1, doc: "Server-owned snapshot revision"}
     ]

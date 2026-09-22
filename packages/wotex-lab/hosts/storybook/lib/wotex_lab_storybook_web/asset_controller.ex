@@ -5,6 +5,7 @@ defmodule WotexLabStorybookWeb.AssetController do
 
   @manifest_entry "assets/storybook.ts"
   @max_asset_bytes 4 * 1_024 * 1_024
+  @composition_stylesheet "priv/static/contract-assets/storybook.css"
 
   @spec loader(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def loader(conn, _) do
@@ -37,8 +38,12 @@ defmodule WotexLabStorybookWeb.AssetController do
   def stylesheet(conn, _) do
     with {:ok, manifest, entry} <- manifest_entry(),
          {:ok, stylesheets} <- stylesheet_paths(manifest, entry),
-         {:ok, bodies} <- read_assets(stylesheets) do
-      body = Enum.join(bodies, "\n") <> "\n" <> Wotex.Lab.DesignSystem.stylesheet()
+         {:ok, bodies} <- read_assets(stylesheets),
+         {:ok, composition} <- read_composition_stylesheet() do
+      body =
+        Enum.join(bodies, "\n") <>
+          "\n" <> Wotex.Lab.DesignSystem.stylesheet() <> "\n" <> composition
+
       respond(conn, "text/css; charset=utf-8", body)
     else
       _ -> unavailable(conn)
@@ -129,6 +134,12 @@ defmodule WotexLabStorybookWeb.AssetController do
     else
       _ -> {:error, :invalid_asset}
     end
+  end
+
+  defp read_composition_stylesheet do
+    @composition_stylesheet
+    |> then(&Application.app_dir(:wotex_lab_storybook, &1))
+    |> File.read()
   end
 
   defp safe_segment?(segment) when is_binary(segment),

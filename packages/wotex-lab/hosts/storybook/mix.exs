@@ -26,7 +26,6 @@ defmodule WotexLabStorybook.MixProject do
   defp deps do
     [
       wotex_lab_dependency(),
-      phoenix_assets_dependency(),
       {:phoenix, "~> 1.8.13"},
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},
@@ -57,26 +56,6 @@ defmodule WotexLabStorybook.MixProject do
 
       _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
-    end
-  end
-
-  defp phoenix_assets_dependency do
-    case {System.get_env("WOTEX_PATH_DEPS"), System.get_env("PHOENIX_ASSETS_CANDIDATE")} do
-      {"1", path} when is_binary(path) and path != "" ->
-        if Mix.env() in [:dev, :test] do
-          {:phoenix_assets, path: Path.expand(path), env: :prod, override: true}
-        else
-          raise "PHOENIX_ASSETS_CANDIDATE is allowed only in development or test"
-        end
-
-      {_, nil} ->
-        {:phoenix_assets, "== 1.1.1"}
-
-      {_, ""} ->
-        {:phoenix_assets, "== 1.1.1"}
-
-      _ ->
-        raise "PHOENIX_ASSETS_CANDIDATE requires WOTEX_PATH_DEPS=1"
     end
   end
 

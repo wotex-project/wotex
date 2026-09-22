@@ -63,28 +63,20 @@ defmodule WotexLabWorkbenchWeb.AssetController do
     admitted =
       overrides
       |> Enum.reduce(%{}, fn {name, value}, valid ->
-        case phoenix_design_system(:validate_overrides, [%{name => value}]) do
+        case DesignSystem.validate_overrides(%{name => value}) do
           {:ok, override} -> Map.merge(valid, override)
           {:error, _} -> valid
         end
       end)
 
     declarations =
-      case phoenix_design_system(:override_style, [admitted]) do
+      case DesignSystem.override_style(admitted) do
         {:ok, value} -> value
         {:error, _} -> ""
       end
 
     if declarations == "",
       do: "",
-      else: "\n.wotex-lab[data-pa-design-system]{#{declarations}}\n"
-  end
-
-  defp phoenix_design_system(function, arguments) do
-    module = PhoenixAssets.DesignSystem
-
-    if Code.ensure_loaded?(module),
-      do: apply(module, function, arguments),
-      else: {:error, :design_system_artifact_unavailable}
+      else: "\n.wotex-lab[data-wotex-design-system]{#{declarations}}\n"
   end
 end

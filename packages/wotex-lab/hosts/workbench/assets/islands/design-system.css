@@ -1,0 +1,124 @@
+@layer wotex.islands {
+  [data-wotex-design-system] {
+    box-sizing: border-box;
+  }
+
+  [data-wotex-design-system] *,
+  [data-wotex-design-system] *::before,
+  [data-wotex-design-system] *::after {
+    box-sizing: inherit;
+  }
+
+  [data-wotex-island-state="mounted"] > [data-wotex-island-fallback],
+  [data-wotex-island-state]:not([data-wotex-island-state="mounted"])
+    > [data-wotex-island-mount] {
+    display: none;
+  }
+
+  .wl-island-panel,
+  .wl-island-grid,
+  .wl-island-tabs {
+    color: var(--wotex-semantic-color-text);
+    background: var(--wotex-semantic-color-surface);
+  }
+
+  .wl-island-panel {
+    padding: var(--wotex-semantic-space-panel);
+    border: 1px solid var(--wotex-semantic-color-border);
+    border-radius: var(--wotex-semantic-radius-panel);
+  }
+
+  .wl-island-chart-bars {
+    display: flex;
+    min-height: 10rem;
+    align-items: end;
+    gap: 0.15rem;
+  }
+
+  .wl-island-chart-bars > i {
+    min-width: 0.25rem;
+    flex: 1;
+    border: 0;
+    background: var(--wotex-semantic-color-accent);
+  }
+
+  .wl-island-chart-inspect {
+    border: 0;
+    color: var(--wotex-semantic-color-accent);
+    background: transparent;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .wl-island-table-wrap {
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  .wl-island-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .wl-island-table th,
+  .wl-island-table td {
+    padding: var(--wotex-semantic-space-control-y) var(--wotex-semantic-space-control-x);
+    border-block-end: 1px solid var(--wotex-semantic-color-border);
+    text-align: start;
+  }
+
+  .wl-island-grid {
+    overflow: auto;
+    border: 1px solid var(--wotex-semantic-color-border);
+    border-radius: var(--wotex-semantic-radius-control);
+  }
+
+  .wl-island-grid-row {
+    display: grid;
+    grid-template-columns: repeat(var(--wotex-grid-columns, 1), minmax(8rem, 1fr));
+  }
+
+  .wl-island-grid-row > * {
+    min-width: 8rem;
+    padding: var(--wotex-semantic-space-control-y) var(--wotex-semantic-space-control-x);
+    border-block-end: 1px solid var(--wotex-semantic-color-border);
+  }
+
+  .wl-island-grid-header {
+    font-weight: 700;
+  }
+
+  .wl-island-tabs [role="tablist"] {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    border-block-end: 1px solid var(--wotex-semantic-color-border);
+  }
+
+  .wl-island-tabs [role="tab"] {
+    min-height: 2.75rem;
+    padding-inline: var(--wotex-semantic-space-control-x);
+    border: 0;
+    border-block-end: 0.2rem solid transparent;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+  }
+
+  .wl-island-tabs [role="tab"][aria-selected="true"] {
+    border-color: var(--wotex-semantic-color-accent);
+    color: var(--wotex-semantic-color-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-wotex-design-system] *,
+  [data-wotex-design-system] *::before,
+  [data-wotex-design-system] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

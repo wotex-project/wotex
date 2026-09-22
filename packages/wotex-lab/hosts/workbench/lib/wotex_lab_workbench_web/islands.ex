@@ -1,6 +1,6 @@
 defmodule WotexLabWorkbenchWeb.Islands do
   @moduledoc """
-  Closed Workbench projections for the registered Phoenix Assets islands.
+  Closed Workbench projections for the registered Wotex Lab islands.
 
   The functions in this module expose only bounded presentation data. The
   surrounding LiveView retains the session, room, run, query and command
@@ -10,6 +10,8 @@ defmodule WotexLabWorkbenchWeb.Islands do
 
   use Phoenix.Component
 
+  alias Phoenix.LiveView.JS
+  alias Wotex.Lab.Island.{Event, Snapshot}
   alias WotexLabWorkbench.Chart
 
   @type descriptor :: %{component: String.t(), id: String.t(), props: map()}
@@ -98,29 +100,46 @@ defmodule WotexLabWorkbenchWeb.Islands do
   attr(:capabilities, :list, required: true)
   slot(:fallback, required: true)
 
-  if Code.ensure_loaded?(PhoenixAssets.Svelte.Island) do
-    alias PhoenixAssets.Svelte.Island
+  defp island_boundary(assigns) do
+    {:ok, snapshot} =
+      Snapshot.new(assigns.component, assigns.id, assigns.props,
+        generation: assigns.generation,
+        revision: assigns.revision,
+        capabilities: assigns.capabilities
+      )
 
-    defp island_boundary(assigns) do
-      ~H"""
-      <Island.island
-        id={@id}
-        component={@component}
-        props={@props}
-        generation={@generation}
-        revision={@revision}
-        capabilities={@capabilities}
+    {:ok, encoded} = Snapshot.encode_inline(snapshot)
+
+    assigns =
+      assigns
+      |> assign(:encoded, encoded)
+      |> assign(:mount_id, assigns.id <> "--svelte")
+      |> assign(:fallback_id, assigns.id <> "--fallback")
+      |> assign(:ignore_readiness, JS.ignore_attributes(["data-wotex-island-state"]))
+
+    ~H"""
+    <section
+      id={@id}
+      data-wotex-island={@component}
+      data-wotex-island-state="loading"
+      data-wotex-design-system
+      phx-mounted={@ignore_readiness}
+    >
+      <div id={@fallback_id} data-wotex-island-fallback>
+        {render_slot(@fallback)}
+      </div>
+      <div
+        id={@mount_id}
+        data-wotex-island-mount
+        data-wotex-island-instance={@id}
+        data-wotex-island-component={@component}
+        data-wotex-island-snapshot={@encoded}
+        phx-hook="WotexLabSvelteIsland"
+        phx-update="ignore"
       >
-        <:fallback>{render_slot(@fallback)}</:fallback>
-      </Island.island>
-      """
-    end
-  else
-    defp island_boundary(assigns) do
-      ~H"""
-      {render_slot(@fallback)}
-      """
-    end
+      </div>
+    </section>
+    """
   end
 
   @doc "Builds a stable island identifier scoped to one signed browser session."
@@ -188,32 +207,16 @@ defmodule WotexLabWorkbenchWeb.Islands do
   @doc "Builds a full-state protocol envelope for reconnect or explicit resynchronization."
   @spec snapshot(descriptor(), non_neg_integer()) :: {:ok, map()} | {:error, term()}
   def snapshot(%{component: component, id: id, props: props}, revision) do
-    module = PhoenixAssets.Svelte.Island.Snapshot
-
-    if Code.ensure_loaded?(module) and function_exported?(module, :new, 4) do
-      case :erlang.apply(module, :new, [
-             component,
-             id,
-             props,
-             [generation: "0", revision: to_string(revision)]
-           ]) do
-        {:ok, snapshot} -> {:ok, Map.from_struct(snapshot)}
-        {:error, _} = error -> error
-      end
-    else
-      {:error, :island_artifact_unavailable}
+    case Snapshot.new(component, id, props, generation: "0", revision: to_string(revision)) do
+      {:ok, snapshot} -> {:ok, Map.from_struct(snapshot)}
+      {:error, _} = error -> error
     end
   end
 
-  @doc "Validates a client event through the adopted Phoenix Assets descriptor."
+  @doc "Validates a client event through the Wotex Lab descriptor."
   @spec validate_event(String.t(), String.t(), map()) :: {:ok, map()} | {:error, term()}
-  def validate_event(component, instance_id, payload) do
-    module = PhoenixAssets.Svelte.Island.Event
-
-    if Code.ensure_loaded?(module) and function_exported?(module, :validate, 3),
-      do: :erlang.apply(module, :validate, [component, instance_id, payload]),
-      else: {:error, :island_artifact_unavailable}
-  end
+  def validate_event(component, instance_id, payload),
+    do: Event.validate(component, instance_id, payload)
 
   defp stringify_item(item) when is_map(item),
     do: Map.new(item, fn {key, value} -> {to_string(key), value} end)

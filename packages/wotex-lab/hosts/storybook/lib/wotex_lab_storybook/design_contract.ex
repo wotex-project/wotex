@@ -5,12 +5,6 @@ defmodule WotexLabStorybook.DesignContract do
 
   @doc "Returns the shared production identities and the Wotex theme identity."
   @spec current() :: map()
-  def current do
-    {:ok, theme_digest} = DocShell.Json.Canonical.digest(Wotex.Lab.DesignSystem.tokens())
-
-    PhoenixAssets.DesignSystem.contract()
-    |> Map.put("schema_version", @schema)
-    |> Map.put("wotex_theme_version", Wotex.Lab.DesignSystem.version())
-    |> Map.put("wotex_theme_digest", theme_digest)
-  end
+  def current,
+    do: Map.put(Wotex.Lab.DesignSystem.contract(), "schema_version", @schema)
 end

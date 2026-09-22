@@ -1,12 +1,12 @@
 (() => {
-  const delegate = Symbol("phoenix-assets-storybook-hook")
-  const ready = Symbol("phoenix-assets-storybook-ready")
+  const delegate = Symbol("wotex-lab-storybook-hook")
+  const ready = Symbol("wotex-lab-storybook-ready")
 
   const bridge = {
     async mounted() {
       this[ready] ??= import("/contract-assets/storybook-module.js").then(() => {
-        const hook = window.storybook?.Hooks?.PhoenixAssetsSvelteIsland
-        if (!hook || hook === bridge) throw new Error("Phoenix Assets island hook did not load")
+        const hook = window.storybook?.Hooks?.WotexLabSvelteIsland
+        if (!hook || hook === bridge) throw new Error("Wotex Lab island hook did not load")
         this[delegate] = hook
         return hook
       })
@@ -37,7 +37,7 @@
     ...storybook,
     Hooks: {
       ...storybook.Hooks,
-      PhoenixAssetsSvelteIsland: bridge,
+      WotexLabSvelteIsland: bridge,
     },
   }
 })()

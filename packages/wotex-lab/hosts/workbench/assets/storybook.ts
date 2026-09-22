@@ -1,5 +1,5 @@
-import "@phoenix-assets/svelte/design-system.css"
-import { PhoenixAssetsSvelteIsland } from "@phoenix-assets/svelte/islands"
+import "./islands/design-system.css"
+import { WotexLabSvelteIsland } from "./islands/hook.js"
 
 interface StorybookRegistry {
   Hooks?: Record<string, unknown>
@@ -22,6 +22,6 @@ window.storybook = {
   ...storybook,
   Hooks: {
     ...storybook.Hooks,
-    PhoenixAssetsSvelteIsland,
+    WotexLabSvelteIsland,
   },
 }

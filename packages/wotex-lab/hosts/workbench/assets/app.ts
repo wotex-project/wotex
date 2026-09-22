@@ -1,5 +1,5 @@
-import "@phoenix-assets/svelte/design-system.css"
-import { PhoenixAssetsSvelteIsland } from "@phoenix-assets/svelte/islands"
+import "./islands/design-system.css"
+import { WotexLabSvelteIsland } from "./islands/hook.js"
 
 interface PhoenixSocketConstructor {
   new (path: string, options?: Record<string, unknown>): unknown
@@ -31,7 +31,7 @@ const csrf = document.querySelector<HTMLMetaElement>("meta[name='csrf-token']")?
 
 if (window.Phoenix && window.LiveView && csrf) {
   const liveSocket = new window.LiveView.LiveSocket("/live", window.Phoenix.Socket, {
-    hooks: { PhoenixAssetsSvelteIsland },
+    hooks: { WotexLabSvelteIsland },
     params: { _csrf_token: csrf },
   })
 

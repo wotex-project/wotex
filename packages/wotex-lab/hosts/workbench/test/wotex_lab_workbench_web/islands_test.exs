@@ -75,16 +75,16 @@ defmodule WotexLabWorkbenchWeb.IslandsTest do
     {:ok, chart} = Chart.new(series: [%{name: "room", points: [{0, 1}]}])
     html = render_component(&Harness.render/1, chart: chart)
 
-    assert html =~ ~s(data-pa-island="chart")
-    assert html =~ ~s(phx-hook="PhoenixAssetsSvelteIsland")
+    assert html =~ ~s(data-wotex-island="chart")
+    assert html =~ ~s(phx-hook="WotexLabSvelteIsland")
     assert html =~ ~s(phx-update="ignore")
     assert html =~ ~s(id="native-fallback")
-    assert length(Regex.scan(~r/data-pa-island-mount/, html)) == 1
+    assert length(Regex.scan(~r/data-wotex-island-mount/, html)) == 1
   end
 
   test "closed events reject wrong instances, revisions and unknown payload fields" do
     envelope = %{
-      "schema" => "phoenix-assets-island-event/v1",
+      "schema" => "wotex-lab-island-event/v1",
       "component" => "tabs",
       "instance_id" => "session-fixture--tabs",
       "client_revision" => "4",

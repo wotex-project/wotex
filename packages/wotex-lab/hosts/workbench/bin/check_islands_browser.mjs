@@ -41,20 +41,20 @@ const waitForLiveView = (page) =>
 const waitForIslandState = (page, state, count) =>
   page.waitForFunction(
     ({ expectedState, expectedCount }) => {
-      const islands = [...document.querySelectorAll("[data-pa-island]")]
+      const islands = [...document.querySelectorAll("[data-wotex-island]")]
       return (
         islands.length === expectedCount &&
-        islands.every((island) => island.getAttribute("data-pa-island-state") === expectedState)
+        islands.every((island) => island.getAttribute("data-wotex-island-state") === expectedState)
       )
     },
     { expectedState: state, expectedCount: count },
   )
 
 const assertFallbackHandoff = async (page, visible) => {
-  const states = await page.locator("[data-pa-island]").evaluateAll((islands) =>
+  const states = await page.locator("[data-wotex-island]").evaluateAll((islands) =>
     islands.map((island) => {
-      const fallback = island.querySelector("[data-pa-island-fallback]")
-      const mount = island.querySelector("[data-pa-island-mount]")
+      const fallback = island.querySelector("[data-wotex-island-fallback]")
+      const mount = island.querySelector("[data-wotex-island-mount]")
       return {
         fallback: fallback ? getComputedStyle(fallback).display : "missing",
         mount: mount ? getComputedStyle(mount).display : "missing",
@@ -71,8 +71,8 @@ const assertFallbackHandoff = async (page, visible) => {
 
 const assertUniqueInstances = async (page) => {
   const identities = await page
-    .locator("[data-pa-island-mount]")
-    .evaluateAll((mounts) => mounts.map((mount) => mount.getAttribute("data-pa-island-instance")))
+    .locator("[data-wotex-island-mount]")
+    .evaluateAll((mounts) => mounts.map((mount) => mount.getAttribute("data-wotex-island-instance")))
   assert.equal(new Set(identities).size, identities.length)
   assert.ok(identities.every((identity) => typeof identity === "string" && identity.length > 0))
   return identities
@@ -111,24 +111,24 @@ const assertThemesAndMotion = async (page) => {
   for (const theme of ["light", "dark", "system"]) {
     const selector = page.locator("#wl-theme")
     if ((await selector.count()) === 1) await selector.selectOption(theme)
-    assert.ok((await page.locator("[data-pa-island]").count()) > 0)
+    assert.ok((await page.locator("[data-wotex-island]").count()) > 0)
   }
 
-  const island = page.locator("[data-pa-island]").first()
+  const island = page.locator("[data-wotex-island]").first()
   const normal = await island.evaluate((element) => {
-    element.setAttribute("data-pa-theme", "light")
+    element.setAttribute("data-wotex-theme", "light")
     const style = getComputedStyle(element)
     return [style.backgroundColor, style.color]
   })
   const contrast = await island.evaluate((element) => {
-    element.setAttribute("data-pa-theme", "contrast")
+    element.setAttribute("data-wotex-theme", "contrast")
     const style = getComputedStyle(element)
     return [style.backgroundColor, style.color]
   })
   assert.notDeepEqual(contrast, normal)
 
   await page.emulateMedia({ reducedMotion: "reduce" })
-  const durations = await page.locator("[data-pa-island] *").evaluateAll((elements) =>
+  const durations = await page.locator("[data-wotex-island] *").evaluateAll((elements) =>
     elements.flatMap((element) => {
       const style = getComputedStyle(element)
       return [style.animationDuration, style.transitionDuration]
@@ -156,7 +156,7 @@ const checkWorkbench = async (browser) => {
   await assertFallbackHandoff(page, false)
   const [overviewIdentity] = await assertUniqueInstances(page)
 
-  const tabs = page.locator("[data-pa-island='tabs'] [role='tab']")
+  const tabs = page.locator("[data-wotex-island='tabs'] [role='tab']")
   assert.ok((await tabs.count()) >= 2)
   await tabs.first().focus()
   await page.keyboard.press("ArrowRight")
@@ -171,9 +171,9 @@ const checkWorkbench = async (browser) => {
   await page.locator("#run-thermal button[type='submit']").click()
   await page.waitForURL("**/runs/**")
   await waitForIslandState(page, "mounted", 1)
-  assert.equal(await page.locator("[data-pa-island='chart'] .pa-table").count(), 1)
-  assert.equal(await page.locator("[data-pa-island='chart'] [data-pa-island-mount] figcaption").count(), 1)
-  assert.ok((await page.locator("[data-pa-island-fallback] tbody tr").count()) <= 100)
+  assert.equal(await page.locator("[data-wotex-island='chart'] .wl-island-table").count(), 1)
+  assert.equal(await page.locator("[data-wotex-island='chart'] [data-wotex-island-mount] figcaption").count(), 1)
+  assert.ok((await page.locator("[data-wotex-island-fallback] tbody tr").count()) <= 100)
 
   const runsBeforeReconnect = await page.evaluate(async () => {
     const result = await fetch("/evidence/report.json")
@@ -196,11 +196,11 @@ const checkWorkbench = async (browser) => {
   await waitForLiveView(page)
   await page.locator("#metric-query button[type='submit']").click()
   await waitForIslandState(page, "mounted", 1)
-  const firstCell = page.locator("[data-pa-island='data-grid'] [role='gridcell']").first()
+  const firstCell = page.locator("[data-wotex-island='data-grid'] [role='gridcell']").first()
   await firstCell.focus()
   await page.keyboard.press("ArrowRight")
   assert.equal(
-    await page.locator("[data-pa-island='data-grid'] [role='gridcell']:focus").count(),
+    await page.locator("[data-wotex-island='data-grid'] [role='gridcell']:focus").count(),
     1,
   )
   await page.keyboard.press("Enter")
@@ -208,7 +208,7 @@ const checkWorkbench = async (browser) => {
   for (let iteration = 0; iteration < 3; iteration += 1) {
     await page.goto(url(workbenchOrigin, "/things"))
     await waitForLiveView(page)
-    assert.equal(await page.locator("[data-pa-island]").count(), 0)
+    assert.equal(await page.locator("[data-wotex-island]").count(), 0)
     await page.goto(workbenchOrigin.href)
     await waitForLiveView(page)
     await waitForIslandState(page, "mounted", 1)
@@ -234,8 +234,8 @@ const checkWorkbenchFallbacks = async (browser) => {
   await noScriptPage.goto(workbenchOrigin.href)
   assert.equal(await noScriptPage.locator("main#main").count(), 1)
   assert.equal(await noScriptPage.locator("nav[aria-label='Workbench']").count(), 1)
-  assert.equal(await noScriptPage.locator("[data-pa-island-fallback]").isVisible(), true)
-  assert.equal(await noScriptPage.locator("[data-pa-island-mount] > *").count(), 0)
+  assert.equal(await noScriptPage.locator("[data-wotex-island-fallback]").isVisible(), true)
+  assert.equal(await noScriptPage.locator("[data-wotex-island-mount] > *").count(), 0)
   await noScriptPage.getByRole("link", { name: "Things" }).click()
   assert.equal(new URL(noScriptPage.url()).pathname, "/things")
   await noScript.close()
@@ -266,12 +266,12 @@ const checkWorkbenchFallbacks = async (browser) => {
       return setAttribute.call(
         this,
         name,
-        name === "data-pa-island-snapshot" ? "not-a-snapshot" : value,
+        name === "data-wotex-island-snapshot" ? "not-a-snapshot" : value,
       )
     }
     new MutationObserver(() => {
-      const mount = document.querySelector("[data-pa-island-snapshot]")
-      if (mount) mount.setAttribute("data-pa-island-snapshot", "not-a-snapshot")
+      const mount = document.querySelector("[data-wotex-island-snapshot]")
+      if (mount) mount.setAttribute("data-wotex-island-snapshot", "not-a-snapshot")
     }).observe(document, { childList: true, subtree: true })
   })
   await invalidPage.goto(workbenchOrigin.href)
@@ -297,8 +297,8 @@ const checkStorybook = async (browser) => {
   await assertUniqueInstances(page)
 
   const chart = page.locator("[data-fixture-id='reporting-chart']")
-  await chart.locator(".pa-chart-inspect").first().click()
-  assert.equal(await chart.locator(".pa-table").count(), 1)
+  await chart.locator(".wl-island-chart-inspect").first().click()
+  assert.equal(await chart.locator(".wl-island-table").count(), 1)
 
   const grid = page.locator("[data-fixture-id='data-grid']")
   const cell = grid.locator("[role='gridcell']").first()

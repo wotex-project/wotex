@@ -7,8 +7,7 @@ defmodule WotexLabStorybookWeb.ConnCase do
     quote do
       @endpoint WotexLabStorybookWeb.Endpoint
 
-      import Phoenix.ConnTest
-      import Phoenix.LiveViewTest
+      import Phoenix.{ConnTest, LiveViewTest}
       import Plug.Conn
     end
   end

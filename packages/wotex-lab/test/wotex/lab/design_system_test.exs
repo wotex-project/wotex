@@ -6,7 +6,7 @@ defmodule Wotex.Lab.DesignSystemTest do
   alias Wotex.Lab.DesignSystem
 
   test "tokens are versioned JSON-compatible data and every theme has the same roles" do
-    assert DesignSystem.version() == "0.2.0"
+    assert DesignSystem.version() == "0.4.0"
     tokens = DesignSystem.tokens()
     assert Enum.sort(Map.keys(tokens)) == ["contrast", "dark", "light", "system"]
 
@@ -20,8 +20,8 @@ defmodule Wotex.Lab.DesignSystemTest do
   test "CSS is deterministic, scoped and derived from the tokens without external assets" do
     css = DesignSystem.stylesheet()
     assert css == DesignSystem.stylesheet()
-    assert css =~ ".wotex-lab[data-pa-design-system][data-pa-theme=\"dark\"]"
-    assert css =~ ".wotex-lab[data-pa-design-system][data-pa-theme=\"contrast\"]"
+    assert css =~ ".wotex-lab[data-wotex-design-system][data-wotex-theme=\"dark\"]"
+    assert css =~ ".wotex-lab[data-wotex-design-system][data-wotex-theme=\"contrast\"]"
     assert css =~ ":focus-visible"
     refute css =~ ":root"
     refute css =~ "@import"
@@ -34,8 +34,24 @@ defmodule Wotex.Lab.DesignSystemTest do
         |> String.replace(~r/([A-Z])/, "-\\1")
         |> String.downcase()
 
-      assert css =~ "--pa-#{variable}: #{value};"
+      assert css =~ "--wotex-#{variable}: #{value};"
     end
+  end
+
+  test "contract and override declarations are closed and deterministic" do
+    contract = DesignSystem.contract()
+
+    assert contract["schema_version"] == "wotex-lab-design-system/v1"
+
+    for field <- ~w(token_digest component_registry_digest story_fixture_digest stylesheet_digest) do
+      assert contract[field] =~ ~r/\Asha256:[0-9a-f]{64}\z/
+    end
+
+    assert {:ok, "--wotex-semantic-color-accent:#123456;"} =
+             DesignSystem.override_style(%{"semantic.color.accent" => "#123456"})
+
+    assert {:error, {:invalid_design_token_override, "caller"}} =
+             DesignSystem.validate_overrides(%{"caller" => "#123456"})
   end
 
   test "text and state colors meet normal-text contrast on both neutral surfaces" do
