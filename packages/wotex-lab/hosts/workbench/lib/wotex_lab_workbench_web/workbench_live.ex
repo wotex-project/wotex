@@ -283,7 +283,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  def handle_event("pa:island:" <> event, payload, socket) do
+  def handle_event("wotex:island:" <> event, payload, socket) do
     cond do
       String.ends_with?(event, ":resync") ->
         instance_id = String.trim_trailing(event, ":resync")
@@ -369,7 +369,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         <% end %>
       </.shell>
     <% else %>
-      <div class="wotex-lab wl-denied">
+      <div
+        class="wotex-lab wl-denied"
+        data-wotex-design-system
+        data-wotex-theme="system"
+      >
         <.error_state
           title="Session denied"
           code={@denied || "denied"}
@@ -382,11 +386,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  attr :experiments, :list, required: true
-  attr :runs, :list, required: true
-  attr :room, :any, required: true
-  attr :session_id, :string, required: true
-  attr :island_revision, :integer, required: true
+  attr(:experiments, :list, required: true)
+  attr(:runs, :list, required: true)
+  attr(:room, :any, required: true)
+  attr(:session_id, :string, required: true)
+  attr(:island_revision, :integer, required: true)
 
   defp experiments_view(assigns) do
     assigns = assign(assigns, :overview_tabs, @overview_tabs)
@@ -420,16 +424,37 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       </:fallback>
     </.tabs_island>
     <div class="wl-card-grid">
-      <article :for={experiment <- @experiments} class="wl-card">
-        <p class="wl-eyebrow">{experiment.kind |> Atom.to_string() |> String.replace("_", " ")}</p>
-        <h2>{experiment.title}</h2>
-        <p>{experiment.summary}</p>
-        <dl class="wl-provenance">
-          <div :for={{label, value} <- Enum.sort(experiment.provenance)}>
-            <dt>{label}</dt><dd>{value}</dd>
+      <article
+        :for={{experiment, index} <- Enum.with_index(@experiments, 1)}
+        class={["wl-card", "wl-experiment-card", "wl-experiment-#{experiment.id}"]}
+      >
+        <div class="wl-experiment-copy">
+          <div class="wl-experiment-meta">
+            <p class="wl-eyebrow">
+              {experiment.kind |> Atom.to_string() |> String.replace("_", " ")}
+            </p>
+            <span class="wl-experiment-number" aria-hidden="true">
+              {index |> Integer.to_string() |> String.pad_leading(2, "0")}
+            </span>
           </div>
-        </dl>
-        <form id={"run-#{experiment.id}"} phx-submit="run" class="wl-stack">
+          <h2>{experiment.title}</h2>
+          <p class="wl-experiment-summary">{experiment.summary}</p>
+          <dl class="wl-provenance">
+            <div :for={{label, value} <- Enum.sort(experiment.provenance)}>
+              <dt>{label}</dt><dd>{value}</dd>
+            </div>
+          </dl>
+          <details class="wl-disclosure">
+            <summary>Public calls</summary><ul>
+              <li :for={call <- experiment.public_calls}><code>{call}</code></li>
+            </ul>
+          </details>
+        </div>
+        <form
+          id={"run-#{experiment.id}"}
+          phx-submit="run"
+          class="wl-stack wl-experiment-form"
+        >
           <input type="hidden" name="experiment_id" value={experiment.id} />
           <.parameter_field
             :for={parameter <- experiment.parameters}
@@ -440,11 +465,6 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             Run experiment
           </button>
         </form>
-        <details>
-          <summary>Public calls</summary><ul>
-            <li :for={call <- experiment.public_calls}><code>{call}</code></li>
-          </ul>
-        </details>
       </article>
     </div>
     <section class="wl-section">
@@ -466,8 +486,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  attr :parameter, :map, required: true
-  attr :experiment, :string, required: true
+  attr(:parameter, :map, required: true)
+  attr(:experiment, :string, required: true)
 
   defp parameter_field(assigns) do
     parameter = assigns.parameter
@@ -497,14 +517,14 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  attr :run, :any, required: true
-  attr :charts, :list, required: true
-  attr :insights, :any, required: true
-  attr :investigation, :map, required: true
-  attr :disclosure, :map, required: true
-  attr :answer, :any, required: true
-  attr :session_id, :string, required: true
-  attr :island_revision, :integer, required: true
+  attr(:run, :any, required: true)
+  attr(:charts, :list, required: true)
+  attr(:insights, :any, required: true)
+  attr(:investigation, :map, required: true)
+  attr(:disclosure, :map, required: true)
+  attr(:answer, :any, required: true)
+  attr(:session_id, :string, required: true)
+  attr(:island_revision, :integer, required: true)
 
   defp run_view(assigns) do
     ~H"""
@@ -580,9 +600,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  attr :things, :list, required: true
-  attr :room, :any, required: true
-  attr :read_result, :any, required: true
+  attr(:things, :list, required: true)
+  attr(:room, :any, required: true)
+  attr(:read_result, :any, required: true)
 
   defp things_view(assigns) do
     ~H"""
@@ -651,13 +671,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  attr :metrics, :any, required: true
-  attr :room, :any, required: true
-  attr :dashboard_panels, :list, required: true
-  attr :history, :any, required: true
-  attr :history_range, :string, required: true
-  attr :session_id, :string, required: true
-  attr :island_revision, :integer, required: true
+  attr(:metrics, :any, required: true)
+  attr(:room, :any, required: true)
+  attr(:dashboard_panels, :list, required: true)
+  attr(:history, :any, required: true)
+  attr(:history_range, :string, required: true)
+  attr(:session_id, :string, required: true)
+  attr(:island_revision, :integer, required: true)
 
   defp metrics_view(assigns) do
     latest = assigns.metrics && List.last(assigns.metrics.samples)
@@ -764,11 +784,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  attr :snapshot, :any, required: true
-  attr :room, :any, required: true
-  attr :answer, :any, required: true
-  attr :investigation, :map, required: true
-  attr :disclosure, :map, required: true
+  attr(:snapshot, :any, required: true)
+  attr(:room, :any, required: true)
+  attr(:answer, :any, required: true)
+  attr(:investigation, :map, required: true)
+  attr(:disclosure, :map, required: true)
 
   defp evidence_view(assigns) do
     properties = Enum.map(Formal.properties(), fn {id, text} -> {text, Atom.to_string(id)} end)
@@ -873,7 +893,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:noreply,
        socket
        |> assign(:scope, scope)
-       |> push_event("pa:island:#{instance_id}:snapshot", snapshot)}
+       |> push_event("wotex:island:#{instance_id}:snapshot", snapshot)}
     else
       _ -> {:reply, %{"status" => "rejected"}, socket}
     end

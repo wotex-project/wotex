@@ -31,10 +31,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert html =~ "Numerical workbench"
     assert html =~ "mounting this page" or html =~ "Start disposable room"
-    assert html =~ ~r/data-pa-token-digest="sha256:[0-9a-f]{64}"/
-    assert html =~ ~r/data-pa-component-digest="sha256:[0-9a-f]{64}"/
-    assert html =~ ~r/data-pa-fixture-digest="sha256:[0-9a-f]{64}"/
-    assert html =~ ~r/data-pa-css-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-wotex-token-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-wotex-component-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-wotex-fixture-digest="sha256:[0-9a-f]{64}"/
+    assert html =~ ~r/data-wotex-stylesheet-digest="sha256:[0-9a-f]{64}"/
     assert Sessions.count() == before + 1
     assert is_binary(get_session(conn, SessionToken.key()))
 
@@ -511,9 +511,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     })
 
     css = get(build_conn(), "/css/tokens.css") |> response(200)
-    assert css =~ "--pa-semantic-color-accent:#123456;"
+    assert css =~ "--wotex-semantic-color-accent:#123456;"
     refute css =~ "transparent"
-    refute css =~ "--pa-caller"
+    refute css =~ "--wotex-caller"
 
     hostile = %{
       build_conn()

@@ -11,13 +11,16 @@ defmodule WotexLabWorkbenchWeb.Layouts do
 
   import PhoenixAssets.Components, only: [vite_assets: 1]
 
-  attr :conn, :map, required: true
-  attr :inner_content, :any, required: true
+  attr(:conn, :map, required: true)
+  attr(:inner_content, :any, required: true)
 
   @doc "The HTML document."
   @spec root(map()) :: Phoenix.LiveView.Rendered.t()
   def root(assigns) do
-    assigns = assign(assigns, :nonce, assigns.conn.assigns[:csp_nonce])
+    assigns =
+      assigns
+      |> assign(:nonce, assigns.conn.assigns[:csp_nonce])
+      |> assign(:token_version, Wotex.Lab.DesignSystem.version())
 
     ~H"""
     <!DOCTYPE html>
@@ -27,7 +30,7 @@ defmodule WotexLabWorkbenchWeb.Layouts do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <title>WoTEx Lab workbench</title>
-        <link rel="stylesheet" href="/css/tokens.css" />
+        <link rel="stylesheet" href={"/css/tokens.css?v=#{@token_version}"} />
         <link rel="stylesheet" href="/css/host.css" />
         <script nonce={@nonce} src="/js/phoenix/phoenix.min.js">
         </script>
@@ -54,8 +57,9 @@ defmodule WotexLabWorkbenchWeb.Layouts do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
-        <title>Wotex documentation</title>
+        <title>WoTEx documentation</title>
         <link rel="stylesheet" href="/docs-assets/doc-shell.css" />
+        <link rel="stylesheet" href="/css/documentation.css?v=5" />
         <script nonce={@nonce} src="/js/phoenix/phoenix.min.js">
         </script>
         <script nonce={@nonce} src="/js/live_view/phoenix_live_view.min.js">
@@ -70,7 +74,7 @@ defmodule WotexLabWorkbenchWeb.Layouts do
     """
   end
 
-  attr :inner_content, :any, required: true
+  attr(:inner_content, :any, required: true)
 
   @doc "The LiveView layout: the view owns the themed shell."
   @spec app(map()) :: Phoenix.LiveView.Rendered.t()
