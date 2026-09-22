@@ -123,7 +123,7 @@ jobs:
             --phoenix-assets-source "$PHOENIX_ASSETS_CANDIDATE" \
             --storybook-source "$GITHUB_WORKSPACE/packages/wotex-lab/hosts/workbench" \
             --base-path "$pages_prefix/docs/" \
-            --canonical-origin "https://${GITHUB_REPOSITORY_OWNER}.github.io${pages_prefix}" \
+            --canonical-origin "https://${GITHUB_REPOSITORY_OWNER}.github.io" \
             --generation-id "$GITHUB_SHA" \
             --profile "$profile"
 

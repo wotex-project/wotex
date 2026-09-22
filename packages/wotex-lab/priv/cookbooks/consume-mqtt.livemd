@@ -89,10 +89,10 @@ peer =
     nil
   end
 
-href = if scripted?, do: Wotex.Lab.Test.MqttServer.href(peer), else: broker_href
+interaction_href = if scripted?, do: Wotex.Lab.Test.MqttServer.href(peer), else: broker_href
 
 if not scripted? do
-  {:ok, broker} = Broker.new(href)
+  {:ok, broker} = Broker.new(interaction_href)
   {:ok, seed} = Command.publish(broker, :writeproperty, temperature_topic, 21.5, qos: 1, retain: true)
   :ok = EmqttClient.publish(seed, execution_context, %{connect_timeout: 2_000})
 end
@@ -110,7 +110,7 @@ fixture = Application.app_dir(:wotex_lab, "priv/fixtures/mqtt/thing-description.
 {:ok, td} =
   fixture
   |> File.read!()
-  |> String.replace("mqtt://127.0.0.1:1883", href)
+  |> String.replace("mqtt://127.0.0.1:1883", interaction_href)
   |> String.replace("lab/cookbook/room", prefix)
   |> ThingDescription.parse()
 
@@ -224,7 +224,7 @@ retained_delivery =
 if scripted? do
   Wotex.Lab.Test.MqttServer.publish(peer, temperature_topic, "21.5")
 else
-  {:ok, broker} = Broker.new(href)
+  {:ok, broker} = Broker.new(interaction_href)
   {:ok, fresh} = Command.publish(broker, :writeproperty, temperature_topic, 21.5, qos: 1)
   :ok = EmqttClient.publish(fresh, execution_context, %{connect_timeout: 2_000})
 end
@@ -247,9 +247,9 @@ bound is dropped, not forwarded; a server DISCONNECT ends the session with
 `:transport_down`.
 
 ```elixir
-{:ok, broker} = Broker.new(href)
+{:ok, broker} = Broker.new(interaction_href)
 empty_peer = if scripted?, do: Wotex.Lab.Test.MqttServer.start(self(), on_exit: false), else: nil
-empty_href = if scripted?, do: Wotex.Lab.Test.MqttServer.href(empty_peer), else: href
+empty_href = if scripted?, do: Wotex.Lab.Test.MqttServer.href(empty_peer), else: interaction_href
 {:ok, empty_broker} = Broker.new(empty_href)
 
 {:ok, read_power} =

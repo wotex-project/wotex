@@ -8,7 +8,13 @@ defmodule WotexLabWorkbench.Documentation.Build do
   """
 
   alias Wotex.Lab.Docs.Projector
-  alias WotexLabWorkbench.Documentation.{CommandEnvironment, DesignContract, SearchAdapter}
+
+  alias WotexLabWorkbench.Documentation.{
+    CommandEnvironment,
+    DesignContract,
+    SearchAdapter,
+    StaticRenderer
+  }
 
   @allowed_options ~w(destination base_path canonical_origin generation_id
                       pagefind_executable generated_at)a
@@ -84,7 +90,8 @@ defmodule WotexLabWorkbench.Documentation.Build do
     module = DocShell.Presentation.SiteProjector
 
     if Code.ensure_loaded?(module) and function_exported?(module, :project, 1) do
-      with {:ok, design_system} <- DesignContract.current() do
+      with {:ok, collections} <- resolve_cross_collection_links(collections),
+           {:ok, design_system} <- DesignContract.current() do
         source_options = [
           base_path: Keyword.get(opts, :base_path, "/docs/"),
           metadata: %{
@@ -111,9 +118,150 @@ defmodule WotexLabWorkbench.Documentation.Build do
     end
   end
 
+  defp resolve_cross_collection_links(collections) do
+    source_index =
+      collections
+      |> Enum.flat_map(fn collection ->
+        Enum.flat_map(collection.documents, fn document ->
+          case get_in(document, ["meta", "source_path"]) do
+            path when is_binary(path) ->
+              [
+                {
+                  {collection.descriptor.source_url, path},
+                  {collection.descriptor.id, document["id"]}
+                }
+              ]
+
+            _ ->
+              []
+          end
+        end)
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    map_collections(collections, source_index)
+  end
+
+  defp map_collections(collections, source_index) do
+    result =
+      Enum.reduce_while(collections, {:ok, []}, fn collection, {:ok, mapped} ->
+        case map_documents(collection.documents, collection.descriptor, source_index) do
+          {:ok, documents} -> {:cont, {:ok, [%{collection | documents: documents} | mapped]}}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+
+    case result do
+      {:ok, mapped} -> {:ok, Enum.reverse(mapped)}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp map_documents(documents, descriptor, source_index) do
+    result =
+      Enum.reduce_while(documents, {:ok, []}, fn document, {:ok, mapped} ->
+        case map_document_links(document, descriptor, source_index) do
+          {:ok, document} -> {:cont, {:ok, [document | mapped]}}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+
+    case result do
+      {:ok, mapped} -> {:ok, Enum.reverse(mapped)}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp map_document_links(%{"ast" => ast} = document, descriptor, source_index)
+       when is_list(ast) do
+    source_path = get_in(document, ["meta", "source_path"])
+
+    with {:ok, ast} <-
+           map_nodes(ast, &map_link(&1, document, descriptor, source_path, source_index)) do
+      {:ok, %{document | "ast" => ast}}
+    end
+  end
+
+  defp map_document_links(document, _, _), do: {:ok, document}
+
+  defp map_nodes(nodes, mapper) when is_list(nodes), do: map_nodes(nodes, mapper, [])
+  defp map_nodes([], _, mapped), do: {:ok, Enum.reverse(mapped)}
+
+  defp map_nodes([node | nodes], mapper, mapped) do
+    with {:ok, node} <- map_node(node, mapper),
+         do: map_nodes(nodes, mapper, [node | mapped])
+  end
+
+  defp map_node(%{"content" => content} = node, mapper) when is_list(content) do
+    with {:ok, content} <- map_nodes(content, mapper),
+         do: mapper.(%{node | "content" => content})
+  end
+
+  defp map_node(node, mapper), do: mapper.(node)
+
+  defp map_link(%{"tag" => "a", "attrs" => %{"href" => "mailto:" <> _} = attrs} = node, _, _, _, _) do
+    {:ok, %{node | "tag" => "span", "attrs" => Map.delete(attrs, "href")}}
+  end
+
+  defp map_link(
+         %{"tag" => "a", "attrs" => %{"href" => href}} = node,
+         document,
+         descriptor,
+         source_path,
+         source_index
+       )
+       when is_binary(href) and is_binary(source_path) do
+    uri = URI.parse(href)
+
+    if is_nil(uri.scheme) and is_nil(uri.host) and not String.starts_with?(href, ["#", "/"]) do
+      {relative, anchor} = split_anchor(href)
+
+      target_path =
+        source_path
+        |> Path.dirname()
+        |> Path.join(relative)
+        |> Path.expand("/")
+        |> String.trim_leading("/")
+
+      case Map.get(source_index, {descriptor.source_url, target_path}, []) do
+        [{collection_id, _}] when collection_id == descriptor.id ->
+          {:ok, node}
+
+        [{_, target_id}] ->
+          {:ok, put_in(node, ["attrs", "href"], "doc:" <> target_id <> anchor_suffix(anchor))}
+
+        [] ->
+          href = source_link(descriptor.source_url, target_path, anchor)
+          {:ok, put_in(node, ["attrs", "href"], href)}
+
+        targets ->
+          {:error, {:ambiguous_cross_collection_link, document["id"], href, targets}}
+      end
+    else
+      {:ok, node}
+    end
+  end
+
+  defp map_link(node, _, _, _, _), do: {:ok, node}
+
+  defp split_anchor(value) do
+    case String.split(value, "#", parts: 2) do
+      [path] -> {path, nil}
+      [path, anchor] -> {path, anchor}
+    end
+  end
+
+  defp anchor_suffix(nil), do: ""
+  defp anchor_suffix(anchor), do: "#" <> anchor
+
+  defp source_link(source_url, path, anchor) do
+    encoded = URI.encode(path, &(&1 == ?/ or URI.char_unreserved?(&1)))
+    String.trim_trailing(source_url, "/") <> "/" <> encoded <> anchor_suffix(anchor)
+  end
+
   defp export(site, destination, opts) do
     exporter = DocShell.Presentation.StaticExporter
-    renderer = PhoenixAssets.DocShell.StaticRenderer
+    renderer = StaticRenderer
 
     if Code.ensure_loaded?(exporter) and Code.ensure_loaded?(renderer) do
       search_options =
@@ -267,8 +415,8 @@ defmodule WotexLabWorkbench.Documentation.Build do
 
   defp valid_origin?(origin) when is_binary(origin) do
     case URI.parse(origin) do
-      %URI{scheme: scheme, host: host, query: nil, fragment: nil}
-      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+      %URI{scheme: scheme, host: host, path: path, query: nil, fragment: nil}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" and path in [nil, ""] ->
         true
 
       _ ->

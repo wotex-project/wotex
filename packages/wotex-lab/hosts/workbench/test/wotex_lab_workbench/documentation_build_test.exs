@@ -5,6 +5,16 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
   alias Wotex.Lab.Docs.Catalogue
   alias WotexLabWorkbench.Documentation.{Build, DesignContract}
 
+  test "canonical origin excludes the deployment path" do
+    origin = "https://wotex-project.github.io/wotex"
+
+    assert {:error, {:invalid_documentation_site_origin, ^origin}} =
+             Build.run(%{catalogue: %{}, collections: []},
+               destination: temporary_path("invalid-origin"),
+               canonical_origin: origin
+             )
+  end
+
   if Code.ensure_loaded?(DocShell.Presentation.SiteProjector) and
        Code.ensure_loaded?(PhoenixAssets.DocShell.StaticRenderer) do
     @tag timeout: 120_000
@@ -42,12 +52,25 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
 
         html = File.read!(start)
         assert html =~ "Portable Wotex documentation"
+        assert html =~ ~s(href="#{base_path}runtime/overview/")
+
+        assert html =~
+                 ~s(href="https://github.com/wotex-project/wotex/tree/#{revision()}/docs/catalogue.yaml")
+
+        assert html =~
+                 ~s(href="https://github.com/wotex-project/wotex/tree/#{revision()}/CONTRIBUTING.md#command-reference")
+
+        assert html =~ "hello@wotex.example"
+        refute html =~ "mailto:"
         assert html =~ "data-cohort-digest=\"#{built.site.cohort_digest}\""
         assert html =~ "data-pa-doc-shell"
         refute html =~ ~r/<script[^>]+src="https?:\/\//
         refute html =~ ~r/<link[^>]+rel="stylesheet"[^>]+href="https?:\/\//
         refute html =~ "phoenix_live_view"
         refute html =~ "live/websocket"
+        encoded_search = Jason.encode!(built.site.search)
+        encoded_search = Base.url_encode64(encoded_search)
+        refute html =~ encoded_search
 
         decoded_records = JSON.decode!(File.read!(records))
         assert length(decoded_records) == length(built.site.search)
@@ -88,7 +111,7 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
         revision: revision(),
         tree_digest: "sha256:" <> String.duplicate("b", 64),
         artifact_dir: temporary_path(id),
-        source_url: "https://github.com/wotex-project/wotex/tree/#{revision()}",
+        source_url: source_url(id),
         edit_base_url: "https://github.com/wotex-project/wotex/edit/main",
         license: "Apache-2.0"
       })
@@ -103,8 +126,54 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
     }
   end
 
-  defp document("family_docs" = id), do: guide(id, "readme", "docs/README.md")
-  defp document("wotex_dot" = id), do: guide(id, "governance", "profile/README.md")
+  defp document("family_docs" = id) do
+    id
+    |> guide("readme", "docs/README.md")
+    |> Map.update!("ast", fn ast ->
+      [
+        %{
+          "tag" => "p",
+          "attrs" => %{},
+          "content" => [
+            %{
+              "tag" => "a",
+              "attrs" => %{"href" => "../packages/wotex-runtime/README.md"},
+              "content" => ["Runtime"],
+              "meta" => %{}
+            },
+            " and ",
+            %{
+              "tag" => "a",
+              "attrs" => %{"href" => "catalogue.yaml"},
+              "content" => ["catalogue"],
+              "meta" => %{}
+            },
+            " or ",
+            %{
+              "tag" => "a",
+              "attrs" => %{"href" => "mailto:hello@wotex.example"},
+              "content" => ["hello@wotex.example"],
+              "meta" => %{}
+            },
+            " or ",
+            %{
+              "tag" => "a",
+              "attrs" => %{"href" => "../CONTRIBUTING.md#command-reference"},
+              "content" => ["commands"],
+              "meta" => %{}
+            }
+          ],
+          "meta" => %{}
+        }
+        | ast
+      ]
+    end)
+  end
+
+  defp document("wotex_runtime" = id),
+    do: guide(id, "overview", "packages/wotex-runtime/README.md")
+
+  defp document("wotex_dot" = id), do: guide(id, "governance", "CONTRIBUTING.md")
   defp document(id), do: guide(id, "overview", "README.md")
 
   defp module_document do
@@ -147,5 +216,7 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
   end
 
   defp revision, do: String.duplicate("a", 40)
+  defp source_url("wotex_dot"), do: "https://github.com/wotex-project/.github/tree/#{revision()}"
+  defp source_url(_), do: "https://github.com/wotex-project/wotex/tree/#{revision()}"
   defp token, do: Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)
 end

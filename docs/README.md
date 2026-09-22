@@ -129,8 +129,8 @@ flowchart TD
 ```
 
 See the [Runtime README](../packages/wotex-runtime/README.md) and
-[Runtime specifications](packages/wotex-runtime/specs/) for the complete
-operation and ownership contracts.
+[Runtime specification](packages/wotex-runtime/specs/WRT.01-consumed-thing-runtime.md)
+for the complete operation and ownership contracts.
 
 ## Protocol device paths
 
@@ -514,22 +514,22 @@ flowchart TD
 
 Each package documentation tree uses a unique specification prefix:
 
-- [`wotex` — `WTX`](packages/wotex/) owns Thing Description and Thing Model values.
-- [`wotex-runtime` — `WRT`](packages/wotex-runtime/) owns portable interaction planning.
-- [`wotex-directory` — `WTD`](packages/wotex-directory/) owns Directory mechanics.
-- [`wotex-continuum` — `WCT`](packages/wotex-continuum/) owns edge/cloud exchange values.
-- [`wotex-nx` — `WNX`](packages/wotex-nx/) owns deterministic numerical boundaries.
-- [`wotex-binding-http` — `WBH`](packages/wotex-binding-http/) owns HTTP and SSE mapping.
-- [`wotex-binding-mqtt` — `WBM`](packages/wotex-binding-mqtt/) owns MQTT mapping.
-- [`wotex-bacnet` — `WBA`](packages/wotex-bacnet/) owns BACnet interactions.
-- [`wotex-ble` — `WBL`](packages/wotex-ble/) owns Bluetooth Low Energy interactions.
-- [`wotex-coap` — `WCO`](packages/wotex-coap/) owns CoAP interactions.
-- [`wotex-matter` — `WMA`](packages/wotex-matter/) owns Matter interactions.
-- [`wotex-modbus` — `WMB`](packages/wotex-modbus/) owns Modbus interactions.
-- [`wotex-opcua` — `WOP`](packages/wotex-opcua/) owns OPC UA interactions.
-- [`wotex-thread` — `WTH`](packages/wotex-thread/) owns Thread inspection and SDK management.
-- [`wotex-conformance` — `WCF`](packages/wotex-conformance/) owns conformance evidence.
-- [`wotex-lab` — `WLB`](packages/wotex-lab/) owns consumer scenarios and experiments.
+- [`wotex` — `WTX`](../packages/wotex/README.md) owns Thing Description and Thing Model values.
+- [`wotex-runtime` — `WRT`](../packages/wotex-runtime/README.md) owns portable interaction planning.
+- [`wotex-directory` — `WTD`](../packages/wotex-directory/README.md) owns Directory mechanics.
+- [`wotex-continuum` — `WCT`](../packages/wotex-continuum/README.md) owns edge/cloud exchange values.
+- [`wotex-nx` — `WNX`](../packages/wotex-nx/README.md) owns deterministic numerical boundaries.
+- [`wotex-binding-http` — `WBH`](../packages/wotex-binding-http/README.md) owns HTTP and SSE mapping.
+- [`wotex-binding-mqtt` — `WBM`](../packages/wotex-binding-mqtt/README.md) owns MQTT mapping.
+- [`wotex-bacnet` — `WBA`](../packages/wotex-bacnet/README.md) owns BACnet interactions.
+- [`wotex-ble` — `WBL`](../packages/wotex-ble/README.md) owns Bluetooth Low Energy interactions.
+- [`wotex-coap` — `WCO`](../packages/wotex-coap/README.md) owns CoAP interactions.
+- [`wotex-matter` — `WMA`](../packages/wotex-matter/README.md) owns Matter interactions.
+- [`wotex-modbus` — `WMB`](../packages/wotex-modbus/README.md) owns Modbus interactions.
+- [`wotex-opcua` — `WOP`](../packages/wotex-opcua/README.md) owns OPC UA interactions.
+- [`wotex-thread` — `WTH`](../packages/wotex-thread/README.md) owns Thread inspection and SDK management.
+- [`wotex-conformance` — `WCF`](../packages/wotex-conformance/README.md) owns conformance evidence.
+- [`wotex-lab` — `WLB`](../packages/wotex-lab/README.md) owns consumer scenarios and experiments.
 
 A specification identifier is unique across the family; its prefix names the
 owning package.
