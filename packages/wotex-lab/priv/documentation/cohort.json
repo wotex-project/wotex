@@ -13,11 +13,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex", "docs/packages/wotex"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:4e8052dd4d6bad1e516e59e0babe8de1b8a36dd28cf83d2cf2fa9e11127aa959",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:1c8141cf463ee1007850d22dc3d31381da07c125ba9558f57b76c6a05bf57401",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:160e0f852b513cbaf6074addcac01076e4be92b35e329e91072dcb11207c245a"
+      "expected_collection_digest": "sha256:72f83687da9eece739f10b63a994188b3b625af4252525e09857fcb37f47cbfb"
     },
     {
       "id": "wotex-runtime",
@@ -29,11 +29,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-runtime", "docs/packages/wotex-runtime"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:60e9993b2972d32e2b07566d3cc7596c13cbc1692639fc4bbb107b8891024be0",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:404dad4926359ca1e7410ce9564091836e6f42796352a372b7abf91bbee3c925",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:052af6367eed7d739a588dd0d782254d9afb76f6eca2863aa14816ad9810dcd3"
+      "expected_collection_digest": "sha256:1977822cffb2e3240c4740a106b703ad9cdc690a4c38dd04c8ac220dbc14c000"
     },
     {
       "id": "wotex-binding-http",
@@ -45,11 +45,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-binding-http", "docs/packages/wotex-binding-http"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:8b36c2d2f19ba198e86cf9250d77a0280d8ffe423ec1f66e8b92809e7227042f",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:198415e49ee7fa6613a5b6de149b1d63cf4032d64e4f2212ff05c6c01aafc9bf",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:2c6d25b1b26ca2142b5a129aad97977da0537a14a2affa2bf1f1e0b96e66257f"
+      "expected_collection_digest": "sha256:ba89d7ffb9f5537fa8c1dc4ab3d9fb130b9413205699a4ef9cc5ef10aef2c590"
     },
     {
       "id": "wotex-binding-mqtt",
@@ -61,11 +61,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-binding-mqtt", "docs/packages/wotex-binding-mqtt"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:e239718234741b4fe94665543db3f91d9a369f71039a3a44e2be394749d67f89",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:aec4e2df1db9abb961d868d911f12b57cb67cd5952c504cfcc93fdc30bd86fe6",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:109f0a4aad318aa741b40ffbeaf54fdb6fc581f6888aee4f00cf3e6cbcd763f6"
+      "expected_collection_digest": "sha256:05656ad7e27401d38d72a7c95c0b0fbc9242248fc154eafa3d5d91184a04b872"
     },
     {
       "id": "wotex-modbus",
@@ -77,11 +77,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-modbus", "docs/packages/wotex-modbus"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:69e4a6cddbe9a6b09e19e3acb0e0b1097f1e169f05bac450d0171519eb6a77ac",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:a5088f75b45e6c5feef91cf329af8af50622495e40a1fb324bfb4e784fa56cce",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:211706394ce147b9861bf27ca71395dab727c715c73b1bbaeb5039b9f60a0f33"
+      "expected_collection_digest": "sha256:4aec8b21f7d3879490185114ea4827558bcf4750fe17ddf6c6c8d975c9827767"
     },
     {
       "id": "wotex-coap",
@@ -93,11 +93,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-coap", "docs/packages/wotex-coap"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:81e0ee0e1e8e57ca6c3bb54658661085dd4ad3eb2347a45cff7820285e100f20",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:929bb773c845feadf8e08c7799ece6ef63a1f2864008c9302da9737df6135dd0",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:4e4e0219034feab99f049e04a6aff77012a7ec45f04d2d43be1c51a447da837b"
+      "expected_collection_digest": "sha256:5c8359d34e716435b11b36c0bfec2405119a1e187c9dff40cf206ee84f4243f2"
     },
     {
       "id": "wotex-bacnet",
@@ -109,11 +109,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-bacnet", "docs/packages/wotex-bacnet"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:7b112a0aab7e3d5159ecb76b6a7bf4e0f1590dff1640cb05ae42abeab05407c6",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:5ce4d09eecf60528a8a984688bfec32cac6c75eb28d5c465046165c23abf196f",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:103796d2be2955ccf0f89388afd8b6e1c2858257858495bcc9a03533381e97aa"
+      "expected_collection_digest": "sha256:eaeeb7425a9dce3d9d6735fb15cc64a8f0e744f7ef0d013409d8811dd462e663"
     },
     {
       "id": "wotex-opcua",
@@ -125,11 +125,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-opcua", "docs/packages/wotex-opcua"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:6cfdabca01e06e076b653c7570cd5b02837b40329141cfefbb8241a18c75dab2",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:5710b712446c9374f0fc3ec41bbe4cafc6a37db6a7d6563860932192d367e46a",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:8b2d1c99e2aec60b30962bb8df70b769d6982ecd3066e070766190288f0e4aff"
+      "expected_collection_digest": "sha256:07bf7f08c0602fd24c45980b2a9146f0bdb131965c9b2d210aae24d9a6da43fc"
     },
     {
       "id": "wotex-ble",
@@ -141,11 +141,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-ble", "docs/packages/wotex-ble"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:596e3808cd696e3f63deba27bf0c6d275dc786a63943646b8d54a639ecaeaefd",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:57d9614a3e54c08aa265fa785e0c87faa8ac58588968d66c2a4fb19016176256",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:e0765588882f150a6768307e0466d8e0f9598d296ffcfed0ad85beec8aa65a65"
+      "expected_collection_digest": "sha256:5b4d5318f84118986145f83beba914679dabb1f85e0dd1397c1491a4726a4b9d"
     },
     {
       "id": "wotex-matter",
@@ -157,11 +157,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-matter", "docs/packages/wotex-matter"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:42dc83a28c361897c7b8d9a069c3e126e32ff8e06d68dd7715af2578a4e76862",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:9d8b1b32ee9846eb0faf8b9a2798bd2274b6af5003e0b36dc6e25073f2321e16",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:1ddab0a7af6dd490ee58fc845716f9e85731a03d3073616fb85e0275e1ffa789"
+      "expected_collection_digest": "sha256:22f4dce5fcb6c9698f2c93e10e2fe61bfd89113b114c54056d7e5dddee2eb023"
     },
     {
       "id": "wotex-thread",
@@ -173,11 +173,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-thread", "docs/packages/wotex-thread"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:4a119c3a1c3f5dc6521cc526db6b241c98bac3ddbc94d8b159ad53b4f1b66432",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:4f2a31e09078255c43ec9ed4910d9b671822ee9908c7638acd5e981e671e2cbc",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:b975f912e9e3c3938b6e11e2fc9e614958629c7eecdafaa0903301b8063f817b"
+      "expected_collection_digest": "sha256:a22e6413e5a7a3d95e4f7860d059ecfec39d869dd25dee9adf9ed10cb6af79da"
     },
     {
       "id": "wotex-directory",
@@ -189,11 +189,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-directory", "docs/packages/wotex-directory"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:39c56eeac3307920d3b7d3274bab3b3d680be35743fcbe31be39ef2c36b7dc63",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:54b96edf1b39125364ed6bc86bdb3d6dabee5eed82d5c4fa9d22265a0403e11d",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:09ce1a1b50b4388bb399f884a74310a62b3477ac5f2c7756f42c3471eb3aa4fc"
+      "expected_collection_digest": "sha256:d7c902e6fbd78f6532b593b121a4747fa02713edbd123b081dbe3f269f298e28"
     },
     {
       "id": "wotex-continuum",
@@ -205,11 +205,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-continuum", "docs/packages/wotex-continuum"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:b9c1beb9b0c6103c8c8f0469ce0dd91df36dd1c5eded21e9e7c577f6ceaf4dc9",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:dee87852b0508b1cd3472405d96ce3f829cb6c52f011566728e054bc80c7bb99",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:d46714f33ed12b22a30691f1edbd40b6bee74ae2974d717a7d38146446bf1873"
+      "expected_collection_digest": "sha256:3bb23980949c698a35927698d74bf6cfeafa11efcaeb51a25b998fbc4010afeb"
     },
     {
       "id": "wotex-nx",
@@ -221,11 +221,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-nx", "docs/packages/wotex-nx"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:f71c8f151506b688b0ab465de4eac6f724f57b21d917f98d596be96a0099816f",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:5513fdc3c61f40a1711d0c525c4558379d94379cb596663f206d2d45a41d2876",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:f64acf37bce42664f2b8340c4f14f53f5cbb028a364d5a704da027cfec9c32a6"
+      "expected_collection_digest": "sha256:53212fc3f5470346f322a6791346057c555a7ad5cbb1c8cac1972eed280cb6e8"
     },
     {
       "id": "wotex-conformance",
@@ -237,11 +237,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-conformance", "docs/packages/wotex-conformance"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:c5881f85b08607719b36c3d2cdc9acbba89b14fb94676e094269afc4ddee7b28",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:a5da0b6715b3e950b2a2582925553bbd5b69e087cff5a3478e773e6154872aba",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:7cae29da6db73d32c7243e205f159e7e6a1f4ec8f63164933c490a008e77fd61"
+      "expected_collection_digest": "sha256:cf0c56fa7c27f13d42a745e610b27f69f7b0ba9a805ad8893ea49c7b00bf3400"
     },
     {
       "id": "wotex-lab",
@@ -253,11 +253,11 @@
       "version": "0.1.0",
       "documentation_roots": ["packages/wotex-lab", "docs/packages/wotex-lab"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:0749daf5e8091b46040e9f486e93a1b516d81d679498751fedb9362966ab7efc",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:e9a0087e16e9b9cb29d60fd5ab73906a7af04d28f32e00190b72ac810883cc84",
       "license": "Apache-2.0",
       "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:817da9b50a5ddfe960e87c925868233ead60cfc78fd55e6c62a0d5225a8a2b8f"
+      "expected_collection_digest": "sha256:935d14f4d0866fe3ccc51a7d0339fad3d68aea3e21fa697780fdfee57b5a8549"
     },
     {
       "id": "family-docs",
@@ -269,11 +269,11 @@
       "version": "0.1.0",
       "documentation_roots": ["docs/README.md", "docs/architecture", "docs/guides"],
       "default_branch": "main",
-      "revision": "7e53c215b539191129bdcc531666300f18b3873c",
-      "tree_digest": "sha256:234db9f316e37fe04a8716bdbc38740edb38ba2dd13f76be04b9dd5210fd6bc7",
+      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
+      "tree_digest": "sha256:6e9fcd458dec024d5bb3ed2a5e1871ddf2e1103bc95d2fd29a99158ad045f4f9",
       "license": "Apache-2.0",
       "build_command": ["mix", "run", "--no-start", "bin/build.exs", "--source", "family-docs"],
-      "expected_collection_digest": "sha256:a7c4571d1aa1d03376819b0d9fbe6ab8a3d44e8339072d3a85f09695752e72e5"
+      "expected_collection_digest": "sha256:efc4774406d89f51a723367fafc3a7d094b3241cfc95a61c6ee6e9a86499b98d"
     },
     {
       "id": "wotex-dot",
