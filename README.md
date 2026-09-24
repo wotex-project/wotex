@@ -4,6 +4,13 @@
 
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![Status: Experimental](https://img.shields.io/badge/status-experimental-orange.svg)
+
+> [!WARNING]
+> **WoTEx is experimental.** Package specifications define the intended
+> behavior; catalogue status and executable evidence state what each package
+> implements and tests. Missing implementation or evidence does not reduce a
+> specification. No package claims certification.
 
 WoTEx represents W3C Web of Things descriptions as Elixir values and connects
 their Properties, Actions and Events to protocol-specific code. The repository
