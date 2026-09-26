@@ -1,0 +1,15 @@
+schema_version: "1.1.0"
+package: "wotex_udp"
+specifications:
+  - id: "WUD.01"
+    version: "0.2.0-target"
+    path: "docs/specs/WUD.01-datagram-transport.md"
+    implementation_status: "planned"
+    standards:
+      - {name: "UDP", revision: "RFC 768", claim: "transport semantics only; no WoT binding claim"}
+      - {name: "OTP gen_udp", revision: "documentation reviewed 2026-09-26; implementation pins pending", claim: "backend candidate and truncation constraints"}
+    requires: []
+    implementation_modules: []
+    executable_evidence: []
+    required_cases: ["WUD-T1", "WUD-T2", "WUD-T3", "WUD-T4", "WUD-T5", "WUD-T6", "WUD-T7"]
+    compatibility_classification: "Target contract only; runtime API and target backend qualification remain implementation work."

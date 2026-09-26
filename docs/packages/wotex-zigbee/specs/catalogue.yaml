@@ -1,0 +1,33 @@
+schema_version: "1.1.0"
+package: "wotex_zigbee"
+specifications:
+  - id: "WZG.01"
+    version: "0.2.0-target"
+    path: "docs/specs/WZG.01-library-contract.md"
+    implementation_status: "planned"
+    standards: [{name: "Zigbee NCP host protocols", revision: "reference documentation pinned in spec; runtime firmware/API pin pending", claim: "backend architecture only"}]
+    requires: []
+    implementation_modules: []
+    executable_evidence: []
+    required_cases: ["WZG1-T1", "WZG1-T2", "WZG1-T3", "WZG1-T4", "WZG1-T5", "WZG1-T6"]
+    compatibility_classification: "Neutral coordinator contract; first serial backend and public API remain unimplemented."
+  - id: "WZG.02"
+    version: "0.2.0-target"
+    path: "docs/specs/WZG.02-network-zcl.md"
+    implementation_status: "planned"
+    standards: [{name: "Zigbee and ZCL", revision: "exact adopted specification/profile revisions required before implementation", claim: "no blanket protocol or cluster conformance"}]
+    requires: ["WZG.01"]
+    implementation_modules: []
+    executable_evidence: []
+    required_cases: ["WZG2-T1", "WZG2-T2", "WZG2-T3", "WZG2-T4", "WZG2-T5", "WZG2-T6", "WZG2-T7"]
+    compatibility_classification: "Network continuity and bounded ZCL target; manufacturer semantics remain consumer-owned."
+  - id: "WZG.03"
+    version: "0.2.0-target"
+    path: "docs/specs/WZG.03-hardware-evidence.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WZG.01", "WZG.02"]
+    implementation_modules: []
+    executable_evidence: []
+    required_cases: ["WZG3-T1", "WZG3-T2", "WZG3-T3", "WZG3-T4", "WZG3-T5"]
+    compatibility_classification: "Hardware, independent-peer and recovery evidence obligations; no executed receipts yet."

@@ -40,6 +40,10 @@ A bridge may represent non-Matter physical devices. The bridge contract MUST pre
 
 ## Evidence
 
-Required software peers include a bridged light and at least one non-light endpoint. Physical ecosystem evidence is separate and should include Apple Home and a compatible Google Matter controller only after the generic server contract passes software gates.
+Required software peers include a bridged light and at least one non-light endpoint. Physical ecosystem evidence is separate and should include independent Matter controllers only after the generic server contract passes software gates.
 
 CSA certification is outside ordinary package conformance and must never be implied by passing WMA tests.
+
+## Delivery
+
+The [exposed bridge delivery plan](../plans/exposed-bridge-delivery.md) sequences the existing target's native profile, endpoint custody, consumer authorization, reporting and independent-peer evidence. It adds no implementation claim to this target or the controller catalogue.
