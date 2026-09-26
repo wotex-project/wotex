@@ -64,3 +64,14 @@ publication they depend on one commit of this repository, declaring every
 WoTEx package they use with `git:` and `sparse: "packages/<name>"` at the same
 `ref`, with `override: true`, or with path dependencies into
 `../wotex/packages/<name>` for local development.
+
+
+## Planned protocol enablers
+
+The following target specifications are accepted as downstream-driven generic gaps but do not yet represent implemented packages:
+
+- `wotex-udp`: generic bounded datagram infrastructure defined by [WUD](../packages/wotex-udp/specs/WUD-index.md). UDP itself is not a WoT binding.
+- `wotex-zigbee`: generic coordinator/network/ZCL support defined by [WZG](../packages/wotex-zigbee/specs/WZG-index.md).
+- `wotex-matter` WMA.09: an additive exposed Matter bridge/server role. Existing WMA.01-WMA.08 remain controller-side.
+
+Product/vendor semantics remain outside this repository. See [home consumer enablers](home-consumer-enablers.md) for the ownership rationale.
