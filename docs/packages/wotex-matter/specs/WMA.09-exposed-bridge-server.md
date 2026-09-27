@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed target contract. Not implemented. Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as bridge/server evidence.
+Target contract. The package catalogue records implementation status separately.
+Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
+bridge/server evidence.
 
 ## Purpose
 

@@ -256,9 +256,8 @@ defmodule Wotex.Lab.HostedArtifactTest do
     [{eocd_offset, 4}] = :binary.matches(archive, <<0x50, 0x4B, 0x05, 0x06>>)
     eocd = binary_part(archive, eocd_offset, byte_size(archive) - eocd_offset)
 
-    <<0x06054B50::little-32, _disk::little-16, _central_disk::little-16, _disk_entries::little-16,
-      entries::little-16, central_size::little-32, central_offset::little-32,
-      _comment_size::little-16, _comment::binary>> = eocd
+    <<0x06054B50::little-32, _::little-16, _::little-16, _::little-16, entries::little-16,
+      central_size::little-32, central_offset::little-32, _::little-16, _::binary>> = eocd
 
     local = binary_part(archive, 0, central_offset)
     central = binary_part(archive, central_offset, central_size)

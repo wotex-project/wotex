@@ -1,6 +1,16 @@
 # Exposed bridge delivery plan
 
-Version: 1.0.0. Implements the existing WMA.09 target; not executed evidence and not a replacement for the controller contract.
+Version: 1.0.1. Delivery plan for the existing WMA.09 target; not a replacement
+for the controller contract. The catalogue records execution status.
+
+The pure endpoint registry now allocates monotonically, tombstones removed
+endpoints, validates restart snapshots and fails on exhaustion. Its tests
+simulate 256 identities and reject duplicate, rewound and overlapping
+snapshots. The benchmark measures only BEAM-side custody. No native server,
+fabric store, request dispatch or independent controller peer exists yet.
+The [finite software profile](exposed-bridge-profile.md) selects the source,
+Matter 1.6 data model, root/aggregator layout and two candidate bridged
+Device Types; generated server artifacts and peer receipts remain open.
 
 ## Scope
 
@@ -39,4 +49,6 @@ Test commissioning window expiry, revoked fabric, malformed TLV, resource exhaus
 5. Exact-artifact consumer integration, then real independent ecosystem controllers.
 6. Separate platform distribution, certification and installed-host acceptance.
 
-The package catalogue keeps WMA.09 planned until implementation exists. Passing controller-side WMA.01-WMA.08 tests must not advance the server evidence status. Native dependencies are not started by loading a library.
+The package catalogue keeps WMA.09 partial while only endpoint custody is
+implemented. Passing controller-side WMA.01-WMA.08 tests must not advance the
+server evidence status. Native dependencies are not started by loading a library.

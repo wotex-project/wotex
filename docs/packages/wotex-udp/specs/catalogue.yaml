@@ -2,14 +2,14 @@ schema_version: "1.1.0"
 package: "wotex_udp"
 specifications:
   - id: "WUD.01"
-    version: "0.2.0-target"
+    version: "0.3.0-target"
     path: "docs/specs/WUD.01-datagram-transport.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards:
       - {name: "UDP", revision: "RFC 768", claim: "transport semantics only; no WoT binding claim"}
-      - {name: "OTP gen_udp", revision: "documentation reviewed 2026-09-26; implementation pins pending", claim: "backend candidate and truncation constraints"}
+      - {name: "Erlang/OTP socket", revision: "OTP 27.3.4.17 API documentation; tested on OTP 29.0.4", claim: "deadline-aware datagram send/receive and explicit socket options in the partial backend"}
     requires: []
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules: ["Wotex.UDP", "Wotex.UDP.Admission", "Wotex.UDP.Backend", "Wotex.UDP.Config", "Wotex.UDP.Datagram", "Wotex.UDP.Endpoint", "Wotex.UDP.Error", "Wotex.UDP.Handle", "Wotex.UDP.Owner"]
+    executable_evidence: ["test/wotex/udp/transport_test.exs", "test/wotex/udp/boundary_test.exs", "bench/output/datagram.md", "bench/output/loopback.md", "bin/check_archive.exs", "bin/check_application_free.exs"]
     required_cases: ["WUD-T1", "WUD-T2", "WUD-T3", "WUD-T4", "WUD-T5", "WUD-T6", "WUD-T7"]
-    compatibility_classification: "Target contract only; runtime API and target backend qualification remain implementation work."
+    compatibility_classification: "Partial development implementation: bounded passive loopback, atomic pending-call and queued-send-byte admission under a 100-caller flood, expired queued-call rejection, explicit broadcast/multicast admission, IPv6 scope, hop limits, source metadata, typed errors, supervised owner epochs, port reuse, an independent Erlang UDP peer and exact archive consumer. Kernel drop census, cancellation stress, physical network interoperability and multi-platform evidence remain open. No complete WUD.01 claim."

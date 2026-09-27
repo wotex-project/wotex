@@ -49,6 +49,9 @@ Repository-wide rules are in the root `CLAUDE.md`.
 - `lib/wotex/matter/{mapping,transport,runtime_oneshot}.ex`, `runtime_relay*`:
   Form mapping, the Runtime Transport and the relay owning a Runtime stream;
   `error.ex`: structured errors and Runtime classes.
+- `lib/wotex/matter/bridge/endpoint_registry.ex`: pure WMA.09 endpoint identity,
+  tombstone and restart-snapshot validation. This does not implement a native
+  Matter server or alter the controller role.
 - `native/`: the C++17 controller host (`src/`, `include/wotex_matter/`),
   process-flow and resource test hosts (`testing/`), CMake and GN builds;
   `test/native/`: its C++ unit tests.

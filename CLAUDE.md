@@ -1,6 +1,6 @@
 # WoTEx repository contract
 
-This repository holds the WoTEx package family: 16 independent Mix projects
+This repository holds the WoTEx package family: 18 independent Mix projects
 under `packages/` and a root tooling project that drives them. Each
 `packages/<name>/CLAUDE.md` is that package's contract and governs work inside
 it. This file governs the repository as a whole and applies everywhere.

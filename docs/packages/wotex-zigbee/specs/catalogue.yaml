@@ -1,33 +1,34 @@
 schema_version: "1.1.0"
 package: "wotex_zigbee"
+completion_plan: "docs/plans/wotex-zigbee-completion.md"
 specifications:
   - id: "WZG.01"
-    version: "0.2.0-target"
+    version: "0.3.0-target"
     path: "docs/specs/WZG.01-library-contract.md"
-    implementation_status: "planned"
-    standards: [{name: "Zigbee NCP host protocols", revision: "reference documentation pinned in spec; runtime firmware/API pin pending", claim: "backend architecture only"}]
+    implementation_status: "partial"
+    standards: [{name: "TI CC26x2 ZNP Monitor/Test", revision: "SimpleLink CC26x2 SDK 2.30.00.34, SWRA198 revision 1.14", claim: "bounded serial host framing and finite non-administrative command profile; firmware bytes configured by consumer"}]
     requires: []
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules: ["Wotex.Zigbee", "Wotex.Zigbee.Command", "Wotex.Zigbee.Config", "Wotex.Zigbee.DataRequest", "Wotex.Zigbee.Error", "Wotex.Zigbee.Event", "Wotex.Zigbee.Frame", "Wotex.Zigbee.Handle", "Wotex.Zigbee.Owner", "Wotex.Zigbee.Reply", "Wotex.Zigbee.SerialPort", "Wotex.Zigbee.Serial.CircuitsUART", "Wotex.Zigbee.ZDO"]
+    executable_evidence: ["test/wotex/zigbee/frame_test.exs", "test/wotex/zigbee/owner_test.exs", "test/wotex/zigbee/event_test.exs", "test/wotex/zigbee/zdo_test.exs", "test/wotex/zigbee/circuits_uart_test.exs", "test/wotex/zigbee/data_request_test.exs", "test/support/serial_peer.ex", "test/support/fake_uart.ex", "bench/output/protocol.md", "bin/check_archive.exs", "bin/check_application_free.exs"]
     required_cases: ["WZG1-T1", "WZG1-T2", "WZG1-T3", "WZG1-T4", "WZG1-T5", "WZG1-T6"]
-    compatibility_classification: "Neutral coordinator contract; first serial backend and public API remain unimplemented."
+    compatibility_classification: "TI ZNP software host slice and Circuits.UART serial adapter implemented with exact version admission, USB identity checks, finite serial owner, simulated independent byte peer, bounded AF request identity/correlation, typed descriptor replies and separate indications. Physical macOS/Nerves qualification, interview route custody, credentials, recovery and NCP hardware qualification remain open; WZG.01 is not complete."
   - id: "WZG.02"
     version: "0.2.0-target"
     path: "docs/specs/WZG.02-network-zcl.md"
-    implementation_status: "planned"
-    standards: [{name: "Zigbee and ZCL", revision: "exact adopted specification/profile revisions required before implementation", claim: "no blanket protocol or cluster conformance"}]
+    implementation_status: "partial"
+    standards: [{name: "ZCL global attribute wire profile", revision: "finite TI CC26x2 SDK 2.30.00.34 host profile; full adopted ZCL revision not yet pinned", claim: "bounded read encoding and read-response/report decoding only; no cluster conformance"}]
     requires: ["WZG.01"]
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules: ["Wotex.Zigbee.ZCL", "Wotex.Zigbee.ZDO"]
+    executable_evidence: ["test/wotex/zigbee/zcl_test.exs", "test/wotex/zigbee/zdo_test.exs", "bench/output/protocol.md"]
     required_cases: ["WZG2-T1", "WZG2-T2", "WZG2-T3", "WZG2-T4", "WZG2-T5", "WZG2-T6", "WZG2-T7"]
-    compatibility_classification: "Network continuity and bounded ZCL target; manufacturer semantics remain consumer-owned."
+    compatibility_classification: "Finite ZCL global attribute codec and ZDO descriptor response decoder implemented. Network identity continuity, join/interview policy, restore, sleepy-device policy, reporting configuration, migration and a pinned full cluster profile remain open. Manufacturer semantics remain consumer-owned."
   - id: "WZG.03"
     version: "0.2.0-target"
     path: "docs/specs/WZG.03-hardware-evidence.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: []
     requires: ["WZG.01", "WZG.02"]
     implementation_modules: []
-    executable_evidence: []
+    executable_evidence: ["test/wotex/zigbee/frame_test.exs", "test/wotex/zigbee/owner_test.exs", "test/support/serial_peer.ex", "bench/output/protocol.md"]
     required_cases: ["WZG3-T1", "WZG3-T2", "WZG3-T3", "WZG3-T4", "WZG3-T5"]
-    compatibility_classification: "Hardware, independent-peer and recovery evidence obligations; no executed receipts yet."
+    compatibility_classification: "Pure fixture and independently encoded simulated serial peer execute locally. Real coordinator, mains and sleepy endpoint, recovery, physical soak and cross-platform receipts are absent; no hardware or certification claim."

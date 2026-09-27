@@ -271,6 +271,10 @@ packages:
         version: "1.0.9"
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.08-native-backend.md"
+      - id: "WMA.09"
+        version: "0.1.0-target"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-matter/specs/WMA.09-exposed-bridge-server.md"
   wotex-modbus:
     app: "wotex_modbus"
     catalogue: "docs/packages/wotex-modbus/specs/catalogue.yaml"
@@ -395,3 +399,27 @@ packages:
         version: "1.0.10"
         implementation_status: "implemented"
         path: "docs/packages/wotex-thread/specs/WTH.07-native-backend.md"
+  wotex-udp:
+    app: "wotex_udp"
+    catalogue: "docs/packages/wotex-udp/specs/catalogue.yaml"
+    specifications:
+      - id: "WUD.01"
+        version: "0.3.0-target"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-udp/specs/WUD.01-datagram-transport.md"
+  wotex-zigbee:
+    app: "wotex_zigbee"
+    catalogue: "docs/packages/wotex-zigbee/specs/catalogue.yaml"
+    specifications:
+      - id: "WZG.01"
+        version: "0.3.0-target"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-zigbee/specs/WZG.01-library-contract.md"
+      - id: "WZG.02"
+        version: "0.2.0-target"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-zigbee/specs/WZG.02-network-zcl.md"
+      - id: "WZG.03"
+        version: "0.2.0-target"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-zigbee/specs/WZG.03-hardware-evidence.md"

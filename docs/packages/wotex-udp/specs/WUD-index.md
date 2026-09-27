@@ -1,8 +1,8 @@
 # WUD specification index
 
-The planned `wotex_udp` package supplies bounded datagram mechanics, not application or device semantics.
+The `wotex_udp` development package supplies partial bounded datagram mechanics, not application or device semantics.
 
-- [WUD.01 — Datagram transport](WUD.01-datagram-transport.md), version 0.2.0-target.
+- [WUD.01 — Datagram transport](WUD.01-datagram-transport.md), version 0.3.0-target.
 - [Catalogue](catalogue.yaml): target status and required evidence.
 
-No package directory, published artifact or executed transport evidence is implied by this documentation. Registration in repository tooling belongs to the implementation step, not this documentation change.
+The package catalogue records the implemented slice and the evidence still required. No published artifact or physical interoperability claim is implied.

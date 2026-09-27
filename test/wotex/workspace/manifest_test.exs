@@ -310,7 +310,7 @@ defmodule Wotex.Workspace.ManifestTest do
     test "loads, starts with wotex and ends with wotex-lab" do
       manifest = Manifest.load!()
       order = Manifest.topological_order(manifest)
-      assert length(order) == 16
+      assert length(order) == 18
       assert hd(order) == "wotex"
 
       # Every package follows all of its dependencies.
@@ -319,9 +319,9 @@ defmodule Wotex.Workspace.ManifestTest do
                "#{name} is ordered before its dependency #{dependency}"
       end
 
-      # wotex-conformance is the only package that does not depend on wotex.
+      # wotex-conformance, wotex-udp and wotex-zigbee are independent of wotex.
       assert Manifest.transitive_dependents("wotex", manifest) ==
-               order -- ["wotex", "wotex-conformance"]
+               order -- ["wotex", "wotex-conformance", "wotex-udp", "wotex-zigbee"]
 
       assert Enum.sort(Manifest.transitive_dependents("wotex-runtime", manifest)) ==
                ~w(wotex-bacnet wotex-binding-http wotex-binding-mqtt wotex-ble wotex-coap

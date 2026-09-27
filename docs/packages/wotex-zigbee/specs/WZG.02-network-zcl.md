@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.2.0-target. Planned package.
+Version: 0.2.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 

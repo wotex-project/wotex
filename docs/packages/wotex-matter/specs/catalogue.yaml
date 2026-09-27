@@ -78,9 +78,9 @@ specifications:
   - id: "WMA.09"
     version: "0.1.0-target"
     path: "docs/specs/WMA.09-exposed-bridge-server.md"
-    implementation_status: "planned"
-    standards: [{"name": "connectedhomeip / Matter", "revision": "to be pinned at implementation", "claim": "Target only: exposed server/bridge role; no implementation or certification claim"}]
+    implementation_status: "partial"
+    standards: [{"name": "connectedhomeip / Matter", "revision": "v1.6.0.0 SDK source and Matter 1.6 finite Device Type/cluster target; generated server build remains unpinned", "claim": "Pure endpoint custody only; no Matter server, software-peer or certification claim"}]
     requires: ["WMA.01", "WMA.02", "WMA.05", "WMA.08", "wotex_runtime:WRT.01"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Planned additive server/bridge role. Existing WMA.01-WMA.08 evidence remains controller-side and cannot be cited as bridge/server support."
+    implementation_modules: ["Wotex.Matter.Bridge.EndpointRegistry"]
+    executable_evidence: ["test/wotex/matter/bridge_endpoint_registry_test.exs", "bench/output/bridge_endpoint_registry.md"]
+    compatibility_classification: "Pure stable endpoint allocation, tombstones, exhaustion and validated restart snapshots are implemented and simulated. No native SDK server, fabric/ACL admission, consumer dispatch, reporting, independent controller peer or physical ecosystem evidence exists yet. Existing WMA.01-WMA.08 evidence remains controller-side and cannot be cited as bridge/server support."

@@ -1,0 +1,135 @@
+defmodule Wotex.Zigbee.Event do
+  @moduledoc """
+  One bounded asynchronous ZNP indication from an untrusted network source.
+
+  AF confirmations identify a local transaction and endpoint; incoming AF
+  messages preserve source address, cluster, link quality and the NCP's
+  reported security flag. That flag is metadata, not consumer authorization
+  or independent cryptographic attestation. Active-endpoint and simple
+  descriptor ZDO replies have typed payloads; uncatalogued AREQs stay opaque.
+  """
+
+  alias Wotex.Zigbee.{Frame, ZDO}
+
+  @enforce_keys [:kind, :subsystem, :id, :payload]
+  defstruct [
+    :kind,
+    :subsystem,
+    :id,
+    :payload,
+    :status,
+    :endpoint,
+    :transaction,
+    :source_address,
+    :source_endpoint,
+    :cluster,
+    :link_quality,
+    :security_used,
+    :zdo
+  ]
+
+  @type t :: %__MODULE__{
+          kind:
+            :aps_confirm
+            | :af_incoming
+            | :zdo_active_endpoints
+            | :zdo_simple_descriptor
+            | :zdo_indication
+            | :malformed_indication
+            | :unknown_indication,
+          subsystem: 0..31,
+          id: 0..255,
+          payload: binary(),
+          status: byte() | nil,
+          endpoint: byte() | nil,
+          transaction: byte() | nil,
+          source_address: non_neg_integer() | nil,
+          source_endpoint: byte() | nil,
+          cluster: non_neg_integer() | nil,
+          link_quality: byte() | nil,
+          security_used: boolean() | nil,
+          zdo: ZDO.active_response() | ZDO.simple_response() | nil
+        }
+
+  @doc "Classifies one AREQ, preserving unknown command bytes without decoding them."
+  @spec from_frame(Frame.t()) :: t()
+  def from_frame(
+        %Frame{type: :areq, subsystem: 4, id: 0x80, payload: <<status, endpoint, transaction>>} =
+          frame
+      ) do
+    %__MODULE__{
+      kind: :aps_confirm,
+      subsystem: 4,
+      id: 0x80,
+      payload: frame.payload,
+      status: status,
+      endpoint: endpoint,
+      transaction: transaction
+    }
+  end
+
+  def from_frame(%Frame{
+        type: :areq,
+        subsystem: 4,
+        id: 0x81,
+        payload:
+          <<_::little-16, cluster::little-16, source::little-16, source_endpoint,
+            destination_endpoint, _, quality, security, _::little-32, transaction, length,
+            data::binary>>
+      })
+      when byte_size(data) == length do
+    %__MODULE__{
+      kind: :af_incoming,
+      subsystem: 4,
+      id: 0x81,
+      payload: data,
+      endpoint: destination_endpoint,
+      transaction: transaction,
+      source_address: source,
+      source_endpoint: source_endpoint,
+      cluster: cluster,
+      link_quality: quality,
+      security_used: security != 0
+    }
+  end
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x84} = frame),
+    do: zdo_event(frame, :zdo_simple_descriptor, ZDO.simple_descriptor(frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x85} = frame),
+    do: zdo_event(frame, :zdo_active_endpoints, ZDO.active_endpoints(frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5} = frame),
+    do: %__MODULE__{kind: :zdo_indication, subsystem: 5, id: frame.id, payload: frame.payload}
+
+  def from_frame(%Frame{type: :areq, subsystem: 4, id: id} = frame)
+      when id in [0x80, 0x81],
+      do: %__MODULE__{kind: :malformed_indication, subsystem: 4, id: id, payload: frame.payload}
+
+  def from_frame(%Frame{type: :areq} = frame),
+    do: %__MODULE__{
+      kind: :unknown_indication,
+      subsystem: frame.subsystem,
+      id: frame.id,
+      payload: frame.payload
+    }
+
+  defp zdo_event(frame, kind, {:ok, response}),
+    do: %__MODULE__{
+      kind: kind,
+      subsystem: 5,
+      id: frame.id,
+      payload: frame.payload,
+      status: response.status,
+      source_address: response.source_address,
+      zdo: response
+    }
+
+  defp zdo_event(frame, _, {:error, _}),
+    do: %__MODULE__{
+      kind: :malformed_indication,
+      subsystem: 5,
+      id: frame.id,
+      payload: frame.payload
+    }
+end

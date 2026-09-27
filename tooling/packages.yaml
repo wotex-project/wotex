@@ -178,6 +178,12 @@ native_artifact:
     - {package: wotex-coap, profile: production, target: linux-x86-64}
     - {package: wotex-thread, profile: production, target: linux-x86-64}
 packages:
+  wotex-udp:
+    app: wotex_udp
+    depends_on: []
+  wotex-zigbee:
+    app: wotex_zigbee
+    depends_on: []
   wotex:
     app: wotex
     depends_on: []

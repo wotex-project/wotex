@@ -1,6 +1,6 @@
 # WZG.03 — Coordinator and device evidence
 
-Version: 0.2.0-target. Planned evidence contract.
+Version: 0.2.0-target. The catalogue records executed and missing evidence.
 
 ## Cohort identity
 

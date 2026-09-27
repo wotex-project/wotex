@@ -69,7 +69,7 @@ defmodule WotexLabWorkbench.MixProject do
       {:bandit, "~> 1.12"},
       {:jason, "~> 1.4"},
       {:req, "~> 0.5"},
-      {:lazy_html, "~> 0.1", only: :test},
+      {:lazy_html, "~> 0.1.13", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.23", only: [:dev, :test], runtime: false},

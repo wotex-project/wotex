@@ -11,7 +11,6 @@ defmodule Wotex.Workspace.ExecTest do
 
   alias Wotex.Workspace
   alias Wotex.Workspace.Exec
-  alias Wotex.Workspace.NativeCache
   alias WotexWorkspace.Fixtures
 
   setup context do
@@ -103,7 +102,12 @@ defmodule Wotex.Workspace.ExecTest do
       tool = script!(root, "bin/pwd", ~S(pwd -P > "$0.out") <> "\n")
 
       assert {0, _} = run_captured([tool], quiet: true)
-      assert File.read!(tool <> ".out") == NativeCache.real_path(File.cwd!()) <> "\n"
+      actual = String.trim(File.read!(tool <> ".out"))
+      actual_stat = File.stat!(actual)
+      expected_stat = File.stat!(File.cwd!())
+
+      assert {actual_stat.major_device, actual_stat.minor_device, actual_stat.inode} ==
+               {expected_stat.major_device, expected_stat.minor_device, expected_stat.inode}
     end
 
     test "sets and unsets environment variables", %{root: root} do

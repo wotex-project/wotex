@@ -14,6 +14,8 @@ wotex-runtime  wotex-directory  wotex-nx     wotex-continuum
                       wotex-modbus, wotex-opcua, wotex-thread
 
 wotex-conformance      no WoTEx dependency
+wotex-udp              no WoTEx dependency (partial WUD.01)
+wotex-zigbee           no WoTEx dependency (partial WZG.01-WZG.03)
 
 wotex-lab      --> wotex, wotex-nx; optional wotex-runtime, wotex-directory,
                    wotex-binding-http, wotex-binding-mqtt, wotex-continuum;
@@ -29,11 +31,13 @@ archives, not as path dependencies.
 
 | Changed package | Packages whose gate must run |
 | --- | --- |
-| `wotex` | every package except `wotex-conformance` |
+| `wotex` | every package except `wotex-conformance`, `wotex-udp` and `wotex-zigbee` |
 | `wotex-runtime` | both bindings, all seven protocol adapters, `wotex-lab` |
 | `wotex-directory`, `wotex-nx`, `wotex-continuum`, `wotex-conformance`, a binding | itself and `wotex-lab` |
 | a protocol adapter | itself only |
 | `wotex-lab` | itself only |
+| `wotex-udp` | itself only |
+| `wotex-zigbee` | itself only |
 | repository-level files matching `select_all_on` in `tooling/packages.yaml` (`tooling/`, `.github/`, root `mix.exs`, `mix.lock`, `lib/`, `test/`, `mise.toml`, `.gitignore`) | every package |
 
 ## Boundaries between packages
@@ -66,12 +70,13 @@ WoTEx package they use with `git:` and `sparse: "packages/<name>"` at the same
 `../wotex/packages/<name>` for local development.
 
 
-## Planned protocol enablers
+## Protocol enablers
 
-The following target specifications are accepted as downstream-driven generic gaps but do not yet represent implemented packages:
+The following target specifications describe generic protocol gaps. The
+catalogues own each implementation status:
 
-- `wotex-udp`: generic bounded datagram infrastructure defined by [WUD](../packages/wotex-udp/specs/WUD-index.md). UDP itself is not a WoT binding.
-- `wotex-zigbee`: generic coordinator/network/ZCL support defined by [WZG](../packages/wotex-zigbee/specs/WZG-index.md).
-- `wotex-matter` WMA.09: an additive exposed Matter bridge/server role. Existing WMA.01-WMA.08 remain controller-side.
+- `wotex-udp`: partially implemented generic bounded datagram infrastructure defined by [WUD](../packages/wotex-udp/specs/WUD-index.md). UDP itself is not a WoT binding.
+- `wotex-zigbee`: a partial TI ZNP coordinator host and finite ZCL codec defined by [WZG](../packages/wotex-zigbee/specs/WZG-index.md).
+- `wotex-matter` WMA.09: partial endpoint custody for an additive exposed Matter bridge/server role. Existing WMA.01-WMA.08 remain controller-side.
 
 Product/vendor semantics remain outside this repository. See [home consumer enablers](home-consumer-enablers.md) for the ownership rationale.

@@ -5,7 +5,7 @@ description: Use for any code change in this repository — locating code, findi
 
 # Working in the WoTEx monorepo
 
-The repository is 16 independent Mix projects under `packages/` plus a root
+The repository is 18 independent Mix projects under `packages/` plus a root
 tooling project. Every command below runs from the repository root. The root
 project never loads package code; it runs each package's Mix in its own
 process with `WOTEX_PATH_DEPS=1`.
