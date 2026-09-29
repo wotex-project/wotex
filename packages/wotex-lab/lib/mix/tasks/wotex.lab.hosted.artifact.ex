@@ -6,7 +6,9 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
   @schema "wotex-lab-hosted-artifact/v1"
   @max_artifact_bytes 256 * 1_024 * 1_024
   @max_escript_entries 4_096
-  @max_escript_uncompressed_bytes 64 * 1_024 * 1_024
+  # The unfiltered Escript includes platform NIFs; the Linux x86_64 archive
+  # exceeds 64 MiB before the allowlisted entries are selected.
+  @max_escript_uncompressed_bytes 96 * 1_024 * 1_024
   @zip_epoch 315_532_800
   @escript_apps ~w(
     baml_elixir beamlens castore decimal elixir finch hpax jason logger lua luerl

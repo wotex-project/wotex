@@ -387,6 +387,10 @@ jobs:
           else
             echo "no native build task for ${{ matrix.package }}"
           fi
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ needs.manifest.outputs.rust }}
+          components: rustfmt, clippy
       - name: Software profile
         shell: bash
         working-directory: packages/${{ matrix.package }}
@@ -394,7 +398,17 @@ jobs:
           set -euo pipefail
           task=$(yq -r '.packages["${{ matrix.package }}"].software_task // ""' ../../tooling/packages.yaml)
           if [ -n "$task" ]; then
-            mix "$task" --workspace "$RUNNER_TEMP/software-${{ matrix.package }}"
+            workspace="$RUNNER_TEMP/software-${{ matrix.package }}"
+            mix "${task%.run}.build" --workspace "$workspace"
+            if [[ "$task" == *.opcua.software.run ]]; then
+              (cd ../wotex && env -u WOTEX_PATH_DEPS mix hex.build --output "$RUNNER_TEMP/wotex.tar")
+              (cd ../wotex-runtime && env -u WOTEX_PATH_DEPS mix hex.build --output "$RUNNER_TEMP/wotex-runtime.tar")
+              mix "$task" --workspace "$workspace" \
+                --core-archive "$RUNNER_TEMP/wotex.tar" \
+                --runtime-archive "$RUNNER_TEMP/wotex-runtime.tar"
+            else
+              mix "$task" --workspace "$workspace"
+            fi
           else
             echo "no software profile task for ${{ matrix.package }}"
           fi
@@ -406,10 +420,6 @@ jobs:
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
           sudo apt-get install -y "clang-format-${LLVM_MAJOR}" "clang-tidy-${LLVM_MAJOR}"
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ needs.manifest.outputs.rust }}
-          components: rustfmt, clippy
       - name: Native lint and tests
         # clang-tidy and the native tests of every native_check suite. A suite
         # whose build task is the package's native_task reuses the build above.
