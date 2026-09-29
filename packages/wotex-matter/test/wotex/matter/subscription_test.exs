@@ -500,7 +500,8 @@ defmodule Wotex.Matter.SubscriptionTest do
   test "WMA-C03 a blocked report ACK retires the native generation once" do
     for pending_request <- [false, true] do
       audit = temporary_path("blocked-credit")
-      executable = native_fixture(audit, "reports")
+      mode = if pending_request, do: "blocked_health", else: "reports"
+      executable = native_fixture(audit, mode)
       assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
 
       request = %{
@@ -522,15 +523,20 @@ defmodule Wotex.Matter.SubscriptionTest do
       port = :sys.get_state(owner).port
       {:os_pid, child} = Port.info(port, :os_pid)
 
-      assert {_, 0} =
-               Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
-
       health =
         if pending_request do
           task = Task.async(fn -> Native.health(session.handle, 5_000) end)
-          assert Task.yield(task, 20) == nil
+
+          assert eventually(fn ->
+                   Enum.any?(audit_frames(audit), &(&1["operation"] == "health"))
+                 end)
+
+          assert Task.yield(task, 0) == nil
           task
         end
+
+      assert {_, 0} =
+               Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
 
       try do
         assert fill_native_input(port, 128) == :busy

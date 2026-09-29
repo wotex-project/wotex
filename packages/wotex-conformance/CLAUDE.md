@@ -22,7 +22,7 @@ implementation. Repository-wide rules are in the root `CLAUDE.md`.
   vector revision, protocol revision, and environment.
 - Public source is not W3C certification or a stable release promise.
 - Elixir `~> 1.18`, matching `mix.exs`. The package supports Elixir 1.18.4
-  with Erlang/OTP 27.3.4.15 through Elixir 1.20.2 with Erlang/OTP 29.0.4, the
+  with Erlang/OTP 27.3.4.18 through Elixir 1.20.2 with Erlang/OTP 29.0.4, the
   minimum and current toolchain lanes in `tooling/packages.yaml`; the root
   `mise.toml` pins the current lane. Minimum-runtime evidence and the accepted
   cohort are reviewed separately under WCF-C06; the Mix requirement alone

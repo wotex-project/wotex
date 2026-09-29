@@ -35,7 +35,7 @@ consumer.
 
 ## Installation
 
-Wotex Continuum 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.15 through
+Wotex Continuum 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.18 through
 Elixir 1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
 in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
 Add it to your dependencies:

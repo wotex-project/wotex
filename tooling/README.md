@@ -94,7 +94,7 @@ native_artifact:
 lanes:
   minimum:
     elixir: "1.18.4-otp-27"
-    otp: "27.3.4.15"
+    otp: "27.3.4.18"
     skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface]
   current: { elixir: "1.20.2-otp-29", otp: "29.0.4" }
 select_all_on:

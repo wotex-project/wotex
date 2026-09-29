@@ -293,14 +293,35 @@ jobs:
         with:
           toolchain: ${{ needs.manifest.outputs.rust }}
           components: rustfmt, clippy
+      - name: Native cache key
+        if: steps.native.outputs.tools == 'true' && matrix.package != 'wotex-matter'
+        id: native_cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          inputs=(
+            "HEAD:packages/${{ matrix.package }}"
+            "HEAD:lib"
+            "HEAD:tooling/native"
+            "HEAD:tooling/packages.yaml"
+            "HEAD:rust-toolchain.toml"
+            "HEAD:.clang-format"
+            "HEAD:.clang-format-ignore"
+            "HEAD:.clang-tidy"
+          )
+          digest=$(
+            for input in "${inputs[@]}"; do
+              git rev-parse "$input"
+            done | git hash-object --stdin
+          )
+          echo "key=native-${{ matrix.package }}-$digest" >> "$GITHUB_OUTPUT"
       - if: steps.native.outputs.tools == 'true' && matrix.package != 'wotex-matter'
-        # Keyed by the package's files, so a root or tooling change that re-runs
-        # an unchanged package reuses its native build. Matter's SDK workspace is
-        # several GB; its gate rebuilds it.
+        # Keyed from tracked inputs before the gate creates nested build trees.
+        # Matter's SDK workspace is several GB; its gate rebuilds it.
         uses: actions/cache@v4
         with:
           path: ~/.cache/wotex-native/${{ matrix.package }}
-          key: native-${{ matrix.package }}-${{ hashFiles(format('packages/{0}/**', matrix.package), format('!packages/{0}/deps/**', matrix.package), format('!packages/{0}/_build/**', matrix.package), 'tooling/packages.yaml') }}
+          key: ${{ steps.native_cache.outputs.key }}
       - name: Workspace dependencies
         # The package gate's native tools run the root mix native.* tasks.
         if: steps.native.outputs.tools == 'true'

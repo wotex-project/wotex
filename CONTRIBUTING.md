@@ -52,7 +52,7 @@ A package's full gate covers its native code: clang-format on changed lines,
 clang-tidy and the native tests for C and C++, rustfmt, clippy and `cargo
 test` for Rust. `mise.toml` pins the current toolchain (Elixir 1.20.2, OTP
 29.0.4, Rust 1.97.1); CI also verifies the declared minimum (Elixir 1.18.4,
-OTP 27.3.4.15) and pins LLVM 23 for clang-format and clang-tidy. See the
+OTP 27.3.4.18) and pins LLVM 23 for clang-format and clang-tidy. See the
 [development guide](docs/guides/development.md) for Dexter, Dialyzer, native
 code, the explicit native lanes and CI.
 

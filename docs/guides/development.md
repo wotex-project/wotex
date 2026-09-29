@@ -245,7 +245,7 @@ Each package's `CLAUDE.md` and README list its lanes and prerequisites.
   apt.llvm.org and Rust 1.97.1, `cargo test` of the Rust crate, the
   sibling-API boundary, and shared-file and LICENSE checks.
 - **Check**: every affected package's gate on each lane of
-  `tooling/packages.yaml`, minimum (Elixir 1.18.4, OTP 27.3.4.15) and current
+  `tooling/packages.yaml`, minimum (Elixir 1.18.4, OTP 27.3.4.18) and current
   (Elixir 1.20.2, OTP 29.0.4). The minimum lane skips static analysis whose
   results depend on the compiler version, the native tools and wotex-lab's
   host gates (`lanes.minimum.skip`): the hosts are applications built with the

@@ -16,7 +16,7 @@ executable evidence.
 | WBM-P04 | Exact archive metadata names `wotex ~> 0.1.0`, `wotex_runtime ~> 0.1.0`, and `jason ~> 1.4` as Hex requirements and rejects Git, path, or environment-selected release dependencies |
 | WBM-P05 | Dependency resolution checks the package lock without mutation, while the external archive consumer creates and rechecks an independent lock before its behavioral test pass |
 | WBM-P06 | Every relative Markdown link resolves, every catalogued specification/evidence file exists, ExDoc builds without warnings, and standards wording retains Profile/Registry/certification nonclaims |
-| WBM-P07 | The minimum CI lane in `tooling/packages.yaml` declares Elixir `1.18.4-otp-27` with OTP `27.3.4.15`; each executed compatibility lane records its actual runtime and dependency revisions |
+| WBM-P07 | The minimum CI lane in `tooling/packages.yaml` declares Elixir `1.18.4-otp-27` with OTP `27.3.4.18`; each executed compatibility lane records its actual runtime and dependency revisions |
 | WBM-P08 | The fast gate (`mix check.fast`) remains compile, format, Credo, and behavioral tests; the package gate adds audits, documentation, coverage, Dialyzer, application-free, boundary, archive, and diff checks |
 
 ## Publication-order boundary
