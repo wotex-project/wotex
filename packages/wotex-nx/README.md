@@ -118,7 +118,7 @@ Wotex Nx 0.1 accepts Wotex 0.1 Thing Description and DataSchema values and
 declares Nx 0.13.1. Feature order, shape, dtype, missing-value behavior, and
 output interpretation are explicit public inputs. Changes to those meanings
 require a documented contract change. The executable reference cohort is
-two runtime lanes, Elixir 1.18.4 with Erlang/OTP 27.3.4.15 (minimum) and
+two runtime lanes, Elixir 1.18.4 with Erlang/OTP 27.3.4.18 (minimum) and
 Elixir 1.20.2 with Erlang/OTP 29.0.4 (current), each with Nx 0.13.1,
 `Nx.BinaryBackend`, and `Nx.Defn.Evaluator`; its
 [comparison policy](../../docs/packages/wotex-nx/provenance/runtime-backend-cohort.md)

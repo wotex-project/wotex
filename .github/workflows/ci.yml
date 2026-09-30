@@ -228,6 +228,10 @@ jobs:
         lane: ${{ fromJSON(needs.manifest.outputs.lanes) }}
     env:
       WOTEX_PATH_DEPS: "1"
+      # Keep the gate process and coverage in the same build environment.
+      # Recompiling EXLA in test while the dev gate has its NIF loaded rewrites
+      # the shared library underneath that VM and can crash it at shutdown.
+      MIX_ENV: test
       ELIXIR_ERL_OPTIONS: "+fnu"
       # Build workspaces of the native_lint and native_test gate tools.
       WOTEX_NATIVE_CACHE: ~/.cache/wotex-native

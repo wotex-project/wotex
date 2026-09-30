@@ -283,7 +283,7 @@ defmodule WotexNx.CheckArchive do
     end
 
     @cohort_lanes %{
-      "minimum" => {"1.18.4", "27.3.4.15"},
+      "minimum" => {"1.18.4", "27.3.4.18"},
       "current" => {"1.20.2", "29.0.4"}
     }
 

@@ -50,6 +50,25 @@ defmodule Wotex.Workspace.ToolchainTest do
     assert toolchain =~ ~r/^components = \["rustfmt", "clippy"\]$/m
   end
 
+  test "the Nx archive consumer accepts exactly the repository's runtime lanes" do
+    archive = read("packages/wotex-nx/bin/check_archive.exs")
+    assert [_, literal] = Regex.run(~r/@cohort_lanes (%\{.*?\n    \})/s, archive)
+    {cohort, []} = Code.eval_string(literal)
+
+    expected =
+      Map.new(Manifest.load!().lanes, fn {name, lane} ->
+        [elixir, _] = String.split(lane.elixir, "-otp-")
+        {name, {elixir, lane.otp}}
+      end)
+
+    assert cohort == expected
+  end
+
+  test "CI runs package dependencies and gates in the coverage build environment" do
+    ci = read(".github/workflows/ci.yml") |> YamlElixir.read_from_string!()
+    assert get_in(ci, ["jobs", "check", "env", "MIX_ENV"]) == "test"
+  end
+
   test "the native toolchain configuration selects every package when it changes" do
     select_all_on = Manifest.load!().select_all_on
 

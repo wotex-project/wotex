@@ -107,7 +107,8 @@ defmodule Wotex.Thread.SdkBridgeTest do
     [{OpenThread, pid, :worker, _}] = Supervisor.which_children(supervisor)
     assert {:ok, %Session{client: OpenThread, handle: handle}} = OpenThread.session(pid)
     assert :ok = OpenThread.disconnect(handle)
-    assert Supervisor.which_children(supervisor) == []
+    # The supervisor processes the child's exit independently of the close reply.
+    eventually(fn -> Supervisor.which_children(supervisor) == [] end)
     Supervisor.stop(supervisor)
   end
 
