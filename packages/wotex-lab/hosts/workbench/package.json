@@ -10,7 +10,8 @@
     "storybook:build": "storybook build --quiet",
     "check:browser:documentation": "node bin/check_documentation_browser.mjs",
     "check:browser:islands": "node bin/check_islands_browser.mjs",
-    "check": "pnpm run typecheck && pnpm run build && node bin/check_assets.mjs",
+    "check": "pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
+    "test:layout": "node --experimental-strip-types --test assets/layout-profile.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

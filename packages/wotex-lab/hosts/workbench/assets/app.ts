@@ -1,5 +1,9 @@
 import "./islands/design-system.css"
 import { WotexLabSvelteIsland } from "./islands/hook.js"
+import {
+  observeLayoutProfileWithin,
+  preserveShellFocusWithin,
+} from "./layout-profile.js"
 
 interface PhoenixSocketConstructor {
   new (path: string, options?: Record<string, unknown>): unknown
@@ -28,6 +32,18 @@ declare global {
 }
 
 const csrf = document.querySelector<HTMLMetaElement>("meta[name='csrf-token']")?.content
+if (document.body) {
+  const stopObservingLayout = observeLayoutProfileWithin(document.body)
+  const stopPreservingFocus = preserveShellFocusWithin(document.body)
+  window.addEventListener(
+    "pagehide",
+    () => {
+      stopObservingLayout()
+      stopPreservingFocus()
+    },
+    { once: true },
+  )
+}
 
 if (window.Phoenix && window.LiveView && csrf) {
   const liveSocket = new window.LiveView.LiveSocket("/live", window.Phoenix.Socket, {

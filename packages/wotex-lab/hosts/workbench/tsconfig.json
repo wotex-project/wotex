@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "lib": ["DOM", "ES2024"],
+    "allowImportingTsExtensions": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,

@@ -6,6 +6,8 @@ body {
 
 body {
   background: #f4f2ee;
+  container: workbench-shell / inline-size;
+  overflow-x: clip;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -350,6 +352,7 @@ body {
   min-width: 0;
   padding: clamp(2rem, 4.5vw, 4.5rem);
   background: var(--wl-color-bg);
+  container: workbench-content / inline-size;
 }
 
 .wl-main > * {
@@ -377,7 +380,7 @@ body {
 .wl-page-header h1 {
   max-width: 48rem;
   margin: 0;
-  font-size: clamp(2.2rem, 4.7vw, 4.15rem);
+  font-size: clamp(2rem, 4cqw, 3.25rem);
   font-weight: 650;
   letter-spacing: -0.057em;
   line-height: 0.98;
@@ -442,11 +445,11 @@ body {
 
 .wl-card,
 .wl-chart {
-  box-shadow: 0 8px 28px color-mix(in srgb, var(--wl-color-text) 5%, transparent);
+  box-shadow: none;
 }
 
 .wl-panel {
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--wl-color-text) 3%, transparent);
+  box-shadow: none;
 }
 
 .wl-section {
@@ -467,6 +470,9 @@ body {
   gap: clamp(1.5rem, 4vw, 4.5rem);
   overflow: hidden;
   padding: clamp(1.4rem, 3.4vw, 3rem);
+  border-width: 1px 0 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .wl-experiment-card::before {
@@ -1022,7 +1028,7 @@ body {
   --wl-shadow-panel: none;
 }
 
-@media (max-width: 68rem) {
+@container workbench-shell (width < 840px) {
   .wl-topbar {
     grid-template-columns: auto auto minmax(0, 1fr);
   }
@@ -1030,30 +1036,6 @@ body {
   .wl-context-item:nth-child(2),
   .wl-context-item:nth-child(3) {
     display: none;
-  }
-
-  .wl-experiment-card {
-    grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.8fr);
-  }
-
-  .wl-experiment-card .wl-provenance {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 54rem) {
-  .wl-experiment-card {
-    grid-template-columns: 1fr;
-  }
-
-  .wl-experiment-card .wl-provenance {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 48rem) {
-  body {
-    overflow-x: hidden;
   }
 
   .wl-shell,
@@ -1185,19 +1167,11 @@ body {
   }
 
   .wl-page-header h1 {
-    font-size: clamp(2.15rem, 12vw, 3.4rem);
+    font-size: clamp(2rem, 7cqw, 3rem);
   }
 
   .wl-page-header .wl-button {
     width: 100%;
-  }
-
-  .wl-experiment-card {
-    padding: 1.35rem 1.2rem 1.2rem 1.45rem;
-  }
-
-  .wl-experiment-card .wl-provenance {
-    grid-template-columns: 1fr;
   }
 
   .wl-filter-bar {
@@ -1225,6 +1199,26 @@ body {
   .wl-tablist,
   .wotex-lab .pa-tabs [role="tablist"] {
     overflow-x: auto;
+  }
+}
+
+@container workbench-content (width < 840px) {
+  .wl-experiment-card {
+    grid-template-columns: 1fr;
+  }
+
+  .wl-experiment-card .wl-provenance {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container workbench-content (width < 600px) {
+  .wl-experiment-card {
+    padding: 1.35rem 0 1.2rem;
+  }
+
+  .wl-experiment-card .wl-provenance {
+    grid-template-columns: 1fr;
   }
 }
 
