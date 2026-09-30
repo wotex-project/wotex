@@ -111,6 +111,13 @@ Storybook reference host exercises the HEEx wrapper and real LiveView transport.
 The public static catalogue and optional live catalogue disclose those
 different capabilities.
 
+Task composition is derived from the island or HEEx task-container width. The
+compact, medium and expanded profiles do not create a second client state model.
+An island retains its closed snapshot, instance and revision identity, local
+draft, selection and focus key while composition changes. LiveView retains
+authorization, pending command identity and recovery. A profile transition emits
+no server event and cannot replay an Action, mutation, approval, export or prompt.
+
 ## Consequences
 
 - Rich components can use Svelte without replacing LiveView or copying its

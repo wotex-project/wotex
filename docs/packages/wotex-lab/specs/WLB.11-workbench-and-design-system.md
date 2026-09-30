@@ -1,7 +1,7 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.13.0. Contract: accepted. Implementation status:
-implemented. Evidence status: complete. Adoption status: reference_available.
+Specification version: 0.14.0. Contract: accepted. Implementation status:
+implemented. Evidence status: partial. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
 
@@ -172,6 +172,43 @@ status badges. No decorative gradients, glass panels, neon charts, animated
 backgrounds or mandatory icon/font CDN. Large editorial headings and cards
 must retain compact data density, responsive reflow and clear hierarchy rather
 than becoming ornamental. Empty screens explain one clear next action.
+
+Workbench product surfaces begin with the current task and its authoritative
+subject. They use these task archetypes before selecting a component or page
+template:
+
+- `inspect` for one run, Thing Description, query, evidence record or formal result;
+- `compare` for bounded runs, series, contexts or evidence revisions;
+- `act` for starting or cancelling a run, exporting data or approving one exact Action;
+- `monitor` for freshness, loss, metrics, lifecycle and exception state; and
+- `compose` for bounded experiment parameters, queries and investigation prompts.
+
+Documentation remains an editorial reading surface and does not inherit the
+Workbench shell or allocate a room. Cards are used only when a run, experiment,
+Thing or evidence record is independently selectable or actionable. A dashboard
+composition is limited to recurring metric monitoring or a decision that requires
+several admitted measurements.
+
+Product composition follows the width of the task container rather than a device
+class:
+
+| Profile | Task-container width | Composition |
+| --- | --- | --- |
+| compact | below 600 pixels | one task column with supporting evidence disclosed in semantic order |
+| medium | 600 through 839 pixels | task plus selected supporting context |
+| expanded | 840 pixels or wider | task and relevant evidence may remain visible together |
+
+CSS container queries own these profiles. Viewport media queries remain limited to
+environmental capabilities such as reduced motion, pointer precision and print.
+A profile change preserves the selected experiment, run, Thing, Interaction
+Affordance, query, evidence digest, revision, local draft, chart selection, focus
+key, connected state, pending command identity and recovery path. It does not
+submit, replay or approve an operation.
+
+Compact composition cannot hide evidence identity, query scope, units, missing or
+nonfinite values, freshness, authorization, Action approval scope, command outcome,
+errors or reconnect recovery. Expanded composition may expose relevant context but
+cannot add unrelated panels or change the authoritative subject.
 
 The shell has a collapsible left sidebar, a compact top context line and a
 single main workspace. At narrow widths it becomes a compact header and fixed
@@ -356,6 +393,13 @@ keyboard sequence, focus recovery, reduced-motion outcome and failure mode.
 Automated accessibility and visual checks are gates and review inputs; they do
 not certify WCAG or accept a changed visual baseline automatically.
 
+Task fixtures reuse one closed snapshot and local-state envelope across compact,
+medium and expanded compositions. Boundary pairs at 599/600 pixels and 839/840
+pixels verify the selected subject and revision, local draft and selection, focus
+key, connected state, pending command identity, fallback state and recovery path.
+The fixture set includes loading, empty, denied, stale, disconnected, reconnecting,
+validation failure and unknown command outcome.
+
 The Workbench asset build has one Vite owner and one manifest. It loads the
 island runtime once and dynamically imports only registered component chunks
 used on the route. Storybook manager assets, test mocks and catalogue-only code
@@ -430,6 +474,8 @@ complete real-browser acceptance suite.
 | WLB-S11-10 | Ship one local content-hashed Vite graph with code splitting, bundle budgets, no production Storybook manager and no Node runtime process. |
 | WLB-S11-11 | Preserve session isolation, reconnect safety, explicit Action approval, escaped untrusted content and restrictive browser policy across every island event. |
 | WLB-S11-12 | Keep Phoenix Assets UI-free and keep Wotex component behavior, domain policy and composition in Lab, with executable boundary checks in both repositories. |
+| WLB-S11-13 | Select a task archetype and content-container profile without creating device-specific state, routes or command behavior. |
+| WLB-S11-14 | Preserve the authoritative subject, revision, local input, focus, command identity and recovery across composition changes while retaining required evidence and Action scope in compact composition. |
 
 ## Executable vectors
 
@@ -447,6 +493,8 @@ complete real-browser acceptance suite.
 | WLB-V11-10 | Phoenix Storybook and Workbench browser cohorts cover keyboard/pointer interaction, focus recovery, 320-pixel reflow, 400% zoom, themes, high contrast, reduced motion, loading/error/disconnected states and assistive-content handoff. |
 | WLB-V11-11 | Production asset inspection finds one manifest, declared chunks within budget and no Storybook manager, source map, remote runtime URL, runtime compiler, arbitrary import or Node production process. |
 | WLB-V11-12 | The clone-free Workbench artifact runs the three experiments, metrics, evidence, documentation entry and no-LLM flow with islands enabled and with their client chunks deliberately unavailable. |
+| WLB-V11-13 | HEEx, Svelte and Storybook render the same task fixture at 599/600-pixel and 839/840-pixel task-container boundary pairs without changing its closed snapshot or emitting a command. |
+| WLB-V11-14 | Keyboard-only, screen-reader, reduced-motion and coarse-pointer journeys preserve selection, focus, drafts, evidence identity, pending-command state and reconnect recovery in every profile. |
 
 ## Completion boundary
 
@@ -457,3 +505,7 @@ transport. The Phoenix Storybook and local browser runs establish the source
 contract but do not claim WCAG certification. Publication and broader hosted
 adoption remain separate qualification work under the
 [qualification runbook](../plans/qualification.md).
+
+WLB-S11-13, WLB-S11-14, WLB-V11-13 and WLB-V11-14 are accepted obligations
+without recorded executable evidence. They keep WLB.11 evidence partial until the
+container-profile implementation and boundary-pair cohorts pass.

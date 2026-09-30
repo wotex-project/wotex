@@ -228,7 +228,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.10-metrics-storage-and-ai-inspection.md"
       - id: "WLB.11"
-        version: "0.13.0"
+        version: "0.14.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.11-workbench-and-design-system.md"
       - id: "WLB.12"
