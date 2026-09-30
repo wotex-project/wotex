@@ -292,6 +292,16 @@ operation(Mode, State, Petition, Request, <<"unsubscribe">>) ->
             put(streams, lists:delete(Stream, streams())),
             retire(Stream),
             reply(Request, null);
+        {RetireMode, true} when RetireMode =:= "unsubscribe_retire_wait";
+                               RetireMode =:= "unsubscribe_retire_bad" ->
+            put(streams, lists:delete(Stream, streams())),
+            retire(Stream),
+            await_reply_release(get(root)),
+            Final = case RetireMode of
+                "unsubscribe_retire_bad" -> Request#{<<"id">> := <<"unmatched">>};
+                _ -> Request
+            end,
+            reply(Final, null);
         {_, true} ->
             put(streams, lists:delete(Stream, streams())),
             retire(Stream),
@@ -365,6 +375,13 @@ retire({Id, _} = Stream) ->
 stream_frame({Id, Generation}, Fields) ->
     Fields#{<<"version">> => 1, <<"session_generation">> => get(session),
             <<"subscription_id">> => Id, <<"generation">> => Generation}.
+
+%% Hold this reply while close queues behind it, exposing in-flight reply ordering.
+await_reply_release(Root) ->
+    case filelib:is_file(filename:join(Root, "release")) of
+        true -> ok;
+        false -> timer:sleep(2), await_reply_release(Root)
+    end.
 
 await_release(Root) ->
     case filelib:is_file(filename:join(Root, "release")) of

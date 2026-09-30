@@ -148,6 +148,35 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
     assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 3000
   end
 
+  for {mode, expected} <- [
+        {"unsubscribe_retire_wait", :ok},
+        {"unsubscribe_retire_bad", :invalid_response}
+      ] do
+    test "WTH-C03 closing after retirement validates the pending reply in #{mode}", context do
+      mode(context, unquote(mode))
+      assert {:ok, session} = Thread.connect(context.options)
+      connection = session.handle.pid
+      assert {:ok, subscription} = Thread.subscribe(session, %{type: :state})
+      reference = subscription.reference
+      assert_receive {:wotex_thread, ^reference, {:ok, %State{}, _}}
+      [record] = Map.values(:sys.get_state(connection).subscriptions)
+      Process.exit(record.owner, :kill)
+      assert_receive {:wotex_thread, ^reference, {:error, %Error{code: :owner_down}}}, 1000
+
+      eventually(fn -> :sys.get_state(connection).streams == %{} end)
+      assert :sys.get_state(connection).control != nil
+      assert :ok = Thread.unsubscribe(session, subscription)
+      closing = Task.async(fn -> Thread.disconnect(session) end)
+      eventually(fn -> :sys.get_state(connection).status == :closing end)
+      File.write!(Path.join(context.directory, "release"), "")
+
+      case unquote(expected) do
+        :ok -> assert :ok = Task.await(closing)
+        code -> assert {:error, %Error{code: ^code}} = Task.await(closing)
+      end
+    end
+  end
+
   test "WTH-C05 closed handles are remembered within a fixed bound", context do
     assert {:ok, session} = Thread.connect(context.options)
     connection = session.handle.pid
@@ -332,6 +361,8 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
     assert {:error, %Error{code: :invalid_handle}} = OpenThread.subscribe(:handle, self(), 1, 1000)
 
     assert {:ok, subscription} = OpenThread.subscribe(handle, self(), 1, 1000)
+    reference = subscription.reference
+    assert_receive {:wotex_thread, ^reference, {:ok, %State{}, _}}, 1000
 
     assert {:error, %Error{code: :invalid_subscription}} =
              OpenThread.unsubscribe(handle, subscription, 0)

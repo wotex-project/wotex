@@ -228,13 +228,19 @@ defmodule Wotex.OPCUA.PersistentBridgeTest do
     {host, directory} = open_fixture(context)
     caller = spawn(fn -> Host.request(host, "call", call("hold"), 10_000) end)
     assert eventually(fn -> outstanding(host) == 1 end)
+
+    # A completed later request proves the native owner dispatched the held
+    # call. BEAM admission alone also allows cancellation before dispatch.
+    assert {:ok, %{"value" => %{"value" => 2.0}}} =
+             Host.request(host, "read", read("value-2"), 1000)
+
     Process.exit(caller, :kill)
     assert eventually(fn -> outstanding(host) == 0 end)
     assert eventually(fn -> map_size(:sys.get_state(host).controls) == 0 end)
 
     assert {:ok, %{"status" => 0}} = Host.request(host, "write", write("value-1"), 1000)
     assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
-    assert %{"requests" => 2, "cancels" => 1} = counters(directory)
+    assert %{"requests" => 3, "cancels" => 1} = counters(directory)
     assert_reaped(directory)
   end
 

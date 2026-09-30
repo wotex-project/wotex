@@ -6,8 +6,10 @@ defmodule Mix.Tasks.Wotex.Native.Advisories do
   pinned upstream source of the native packages, by commit when one is
   pinned, else by name and version.
 
-      mix wotex.native.advisories [--offline]
+      mix wotex.native.advisories [--package NAME] [--offline]
 
+  `--package` may be repeated to query only those packages' pins. Without
+  it, every native package and the repository's tooling pins are queried.
   `--offline` performs no query and succeeds. The task fails on any
   advisory or failed query. The root alias is `mix native.advisories`.
   """
@@ -15,15 +17,20 @@ defmodule Mix.Tasks.Wotex.Native.Advisories do
   use Mix.Task
 
   alias Wotex.Workspace.CLI
+  alias Wotex.Workspace.Manifest
   alias Wotex.Workspace.Native
 
-  @switches [offline: :boolean]
+  @switches [offline: :boolean, package: :keep]
 
   @impl Mix.Task
   @spec run([String.t()]) :: :ok
   def run(args) do
     opts = parse_args(args)
-    reports = Native.sources()
+    names = Keyword.get_values(opts, :package)
+
+    reports =
+      Enum.filter(Native.sources(), fn report -> names == [] or report.package in names end)
+
     pins = Native.pins(reports)
 
     if opts[:offline] do
@@ -43,6 +50,16 @@ defmodule Mix.Tasks.Wotex.Native.Advisories do
   def parse_args(args) do
     {opts, rest} = CLI.parse(args, @switches)
     if rest != [], do: Mix.raise("unexpected arguments: #{Enum.join(rest, " ")}")
+
+    native =
+      Manifest.load!()
+      |> Manifest.native_packages()
+      |> Enum.map(& &1.name)
+
+    for name <- Keyword.get_values(opts, :package) do
+      unless name in native, do: Mix.raise("not a native package: #{inspect(name)}")
+    end
+
     opts
   end
 

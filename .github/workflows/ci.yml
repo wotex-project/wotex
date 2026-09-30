@@ -228,10 +228,9 @@ jobs:
         lane: ${{ fromJSON(needs.manifest.outputs.lanes) }}
     env:
       WOTEX_PATH_DEPS: "1"
-      # Keep the gate process and coverage in the same build environment.
-      # Recompiling EXLA in test while the dev gate has its NIF loaded rewrites
-      # the shared library underneath that VM and can crash it at shutdown.
-      MIX_ENV: test
+      # Production analysis and application checks must exclude test helpers
+      # and test-only runtime dependencies. Coverage selects test separately.
+      MIX_ENV: dev
       ELIXIR_ERL_OPTIONS: "+fnu"
       # Build workspaces of the native_lint and native_test gate tools.
       WOTEX_NATIVE_CACHE: ~/.cache/wotex-native
@@ -333,6 +332,18 @@ jobs:
       - name: Dependencies
         working-directory: packages/${{ matrix.package }}
         run: mix deps.get --check-locked
+      - name: Prepare Lab build environments
+        if: matrix.package == 'wotex-lab'
+        working-directory: packages/${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # EXLA shares its native library across build environments. Compile
+          # each environment before the gate VM can load that library, so a
+          # later coverage or documentation build cannot overwrite a live NIF.
+          for build_env in dev test docs; do
+            env MIX_ENV="$build_env" mix compile --warnings-as-errors
+          done
       - name: Package gate
         working-directory: packages/${{ matrix.package }}
         shell: bash
@@ -377,7 +388,8 @@ jobs:
 
   native:
     name: ${{ matrix.package }} native lane
-    runs-on: ubuntu-24.04
+    # The BLE software fixture builds and boots arm64 guest images.
+    runs-on: ${{ matrix.package == 'wotex-ble' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 180
     needs: [manifest, affected]
     if: >-
@@ -416,6 +428,9 @@ jobs:
         with:
           toolchain: ${{ needs.manifest.outputs.rust }}
           components: rustfmt, clippy
+      - name: OPC UA Rust advisory tool
+        if: matrix.package == 'wotex-opcua'
+        run: cargo install cargo-audit --version 0.22.2 --locked
       - name: Software profile
         shell: bash
         working-directory: packages/${{ matrix.package }}
@@ -463,4 +478,20 @@ jobs:
           mix native.lint --tidy --no-format --package "$package" "${workspace[@]}"
           mix native.test --package "$package" "${workspace[@]}"
       - name: Upstream advisories
-        run: mix wotex.native.advisories
+        run: mix wotex.native.advisories --package "${{ matrix.package }}"
+      - name: Retain native diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-diagnostics-${{ matrix.package }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/native-${{ matrix.package }}/logs/
+            ${{ runner.temp }}/native-${{ matrix.package }}/*manifest.json
+            ${{ runner.temp }}/software-${{ matrix.package }}/logs/
+            ${{ runner.temp }}/software-${{ matrix.package }}/software-run/
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/**/*.log
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/**/result.json
+            ${{ runner.temp }}/software-${{ matrix.package }}/*.log
+            ${{ runner.temp }}/software-${{ matrix.package }}/*.json

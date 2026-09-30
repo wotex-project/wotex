@@ -64,9 +64,15 @@ defmodule Wotex.Workspace.ToolchainTest do
     assert cohort == expected
   end
 
-  test "CI runs package dependencies and gates in the coverage build environment" do
+  test "CI keeps production gates in dev and prepares Lab's shared NIF before the gate" do
     ci = read(".github/workflows/ci.yml") |> YamlElixir.read_from_string!()
-    assert get_in(ci, ["jobs", "check", "env", "MIX_ENV"]) == "test"
+    assert get_in(ci, ["jobs", "check", "env", "MIX_ENV"]) == "dev"
+    steps = get_in(ci, ["jobs", "check", "steps"])
+    prepare = Enum.find_index(steps, &(&1["name"] == "Prepare Lab build environments"))
+    gate = Enum.find_index(steps, &(&1["name"] == "Package gate"))
+    assert prepare < gate
+    assert Enum.at(steps, prepare)["if"] == "matrix.package == 'wotex-lab'"
+    assert Enum.at(steps, prepare)["run"] =~ "for build_env in dev test docs"
   end
 
   test "the native toolchain configuration selects every package when it changes" do

@@ -540,6 +540,18 @@ defmodule Wotex.Thread.OpenThread.Connection do
   # A closing generation discards stream traffic; its receivers get one terminal error.
   defp frame(%{"event" => _}, %{status: :closing} = state), do: state
 
+  # Replies already in flight retain their request identity during shutdown.
+  # A retirement barrier can wake a cancellation waiter before its reply arrives.
+  defp frame(%{"id" => id} = message, %{status: :closing} = state)
+       when is_binary(id) and id in [state.active, state.control] do
+    %{operation: operation} = state.pending[id]
+
+    case Frame.response(message, id, operation) do
+      :invalid -> close(state, Error.new(:invalid_response))
+      _ -> complete(state, id, {:error, state.failure || Error.new(:connection_closed)})
+    end
+  end
+
   defp frame(message, %{status: :closing, close_ack: false} = state) do
     case Frame.response(message, "close", "close") do
       {:ok, nil} -> %{state | close_ack: true}
