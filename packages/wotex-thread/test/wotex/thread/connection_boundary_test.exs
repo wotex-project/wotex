@@ -360,9 +360,14 @@ defmodule Wotex.Thread.ConnectionBoundaryTest do
 
     assert {:error, %Error{code: :invalid_handle}} = OpenThread.subscribe(:handle, self(), 1, 1000)
 
-    assert {:ok, subscription} = OpenThread.subscribe(handle, self(), 1, 1000)
+    # The call reply must not occupy the report receiver's one-message mailbox.
+    parent = self()
+    receiver = spawn(fn -> forward(parent) end)
+    on_exit(fn -> Process.exit(receiver, :kill) end)
+
+    assert {:ok, subscription} = OpenThread.subscribe(handle, receiver, 1, 1000)
     reference = subscription.reference
-    assert_receive {:wotex_thread, ^reference, {:ok, %State{}, _}}, 1000
+    assert_receive {:forwarded, {:wotex_thread, ^reference, {:ok, %State{}, _}}}, 1000
 
     assert {:error, %Error{code: :invalid_subscription}} =
              OpenThread.unsubscribe(handle, subscription, 0)

@@ -507,7 +507,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert :ets.info(handle.admission, :size) == 1
     assert File.read!(audit) == initial
     assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    monitor = Process.monitor(handle.pid)
     assert :ok = Native.disconnect(handle)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
     assert :ets.info(handle.admission) == :undefined
     assert {:error, %Error{code: :transport_closed}} = Native.health(handle)
   end

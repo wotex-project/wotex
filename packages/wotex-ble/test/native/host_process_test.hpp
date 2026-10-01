@@ -64,17 +64,23 @@ public:
     send({{"version", 1}, {"id", id}, {"operation", operation}, {"parameters", parameters}, {"timeout_ms", timeout}});
   }
   void poll() {
+    // Reap before reading so an observed exit includes the child's final frames.
+    if (pid_ > 0) {
+      int value = 0;
+      const auto result = ::waitpid(pid_, &value, WNOHANG);
+      PROCESS_CHECK(result >= 0 || errno == EINTR);
+      if (result == pid_) {
+        PROCESS_CHECK(WIFEXITED(value));
+        status = WEXITSTATUS(value);
+        pid_ = -1;
+      }
+    }
     std::array<char, 8192> bytes{};
     for (unsigned count = 0; count < 16 && output_ >= 0; ++count) {
       const auto size = ::read(output_, bytes.data(), bytes.size());
       if (size < 0) { PROCESS_CHECK(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR); break; }
       if (!size) { lines_.eof(); ::close(output_); output_ = -1; break; }
       lines_.feed(std::string_view(bytes.data(), static_cast<std::size_t>(size)), [&](std::string_view line) { frames.push_back(parse_line(line)); });
-    }
-    if (pid_ > 0) {
-      int value = 0; const auto result = ::waitpid(pid_, &value, WNOHANG);
-      PROCESS_CHECK(result >= 0 || errno == EINTR);
-      if (result == pid_) { PROCESS_CHECK(WIFEXITED(value)); status = WEXITSTATUS(value); pid_ = -1; }
     }
   }
 };
