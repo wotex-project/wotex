@@ -82,6 +82,8 @@ jobs:
     outputs:
       packages: ${{ steps.select.outputs.packages }}
       any: ${{ steps.select.outputs.any }}
+      native: ${{ steps.select.outputs.native }}
+      any_native: ${{ steps.select.outputs.any_native }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -122,7 +124,13 @@ jobs:
           packages=$(jq -ce 'if type == "array" then . else error("affected packages must be a JSON array") end' <<< "$packages")
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
           if [ "$packages" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
+          native=$(jq -cn --argjson packages "$packages" \
+            --argjson native '${{ needs.manifest.outputs.native }}' \
+            '$packages - ($packages - $native)')
+          echo "native=$native" >> "$GITHUB_OUTPUT"
+          if [ "$native" = "[]" ]; then echo "any_native=false" >> "$GITHUB_OUTPUT"; else echo "any_native=true" >> "$GITHUB_OUTPUT"; fi
           echo "affected: $packages"
+          echo "affected native: $native"
 
   workspace:
     name: Workspace checks
@@ -217,7 +225,7 @@ jobs:
   check:
     name: ${{ matrix.package }} (${{ matrix.lane }})
     runs-on: ubuntu-24.04
-    # Native packages build their SDKs in the gate (Matter's in Docker).
+    # Runtime gates precede the native SDK validation matrix below.
     timeout-minutes: 75
     needs: [manifest, affected]
     if: needs.affected.outputs.any == 'true'
@@ -232,12 +240,11 @@ jobs:
       # and test-only runtime dependencies. Coverage selects test separately.
       MIX_ENV: dev
       ELIXIR_ERL_OPTIONS: "+fnu"
-      # Build workspaces of the native_lint and native_test gate tools.
+      # Runtime tests can also build native SDK workspaces.
       WOTEX_NATIVE_CACHE: ~/.cache/wotex-native
     steps:
       - uses: actions/checkout@v4
         with:
-          # The native format check compares with the merge base.
           fetch-depth: 0
       - uses: erlef/setup-beam@v1
         with:
@@ -255,6 +262,14 @@ jobs:
         with:
           version: 12.4.2
           run_install: false
+      - name: Containment fixture Rust
+        # Lab runtime tests compile the containment helper independently of
+        # the native formatting, analysis and unit-test job.
+        if: matrix.package == 'wotex-lab'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ needs.manifest.outputs.rust }}
+          components: rustfmt, clippy
       - uses: actions/cache@v4
         with:
           # hosts/* holds reference hosts: separate Mix projects with their own
@@ -269,24 +284,83 @@ jobs:
             ~/.cache/rustler_precompiled
           key: package-v2-${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
       - name: Native toolchain
-        # OPC UA builds its pinned open62541 SDK inside the coverage step; the
-        # native_lint and native_test tools build the other packages' SDKs.
+        # Runtime fixtures compile C/C++; OPC UA coverage also builds its
+        # pinned open62541 SDK before the separate native validation job.
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
-      - name: Native tools needed
-        # A native package runs native_format, native_lint and native_test
-        # unless its lane skips them (lanes.minimum.skip).
-        id: native
+      - name: Dependencies
+        working-directory: packages/${{ matrix.package }}
+        run: mix deps.get --check-locked
+      - name: Prepare Lab build environments
+        if: matrix.package == 'wotex-lab'
+        working-directory: packages/${{ matrix.package }}
         shell: bash
         run: |
           set -euo pipefail
-          skipped=$(yq -r '.lanes["${{ matrix.lane }}"].skip // [] | contains(["native_lint"])' tooling/packages.yaml)
-          if [ "${{ contains(fromJSON(needs.manifest.outputs.native), matrix.package) }}" = true ] && [ "$skipped" = false ]; then
-            echo "tools=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "tools=false" >> "$GITHUB_OUTPUT"
-          fi
+          # EXLA shares its native library across build environments. Compile
+          # each environment before the gate VM can load that library, so a
+          # later coverage or documentation build cannot overwrite a live NIF.
+          for build_env in dev test docs; do
+            env MIX_ENV="$build_env" mix compile --warnings-as-errors
+          done
+      - name: Package gate
+        # Fail behaviour, coverage, archive and analysis checks before starting
+        # SDK validation. Native checks remain required in native_check.
+        working-directory: packages/${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The lane's skip list keeps static analysis on the current lane only.
+          except=(--except native_format --except native_lint --except native_test)
+          while IFS= read -r check; do
+            except+=(--except "$check")
+          done < <(yq -r '.lanes["${{ matrix.lane }}"].skip // [] | .[]' ../../tooling/packages.yaml)
+          mix check --no-retry "${except[@]}" 2>&1 | tee "$RUNNER_TEMP/package-gate.log"
+      - name: Retain package diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-diagnostics-${{ matrix.package }}-${{ matrix.lane }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/package-gate.log
+            packages/${{ matrix.package }}/cover/
+
+  native_check:
+    name: ${{ matrix.package }} native checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    needs: [manifest, affected, workspace, check]
+    if: needs.affected.outputs.any_native == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.affected.outputs.native) }}
+    env:
+      WOTEX_PATH_DEPS: "1"
+      MIX_ENV: dev
+      ELIXIR_ERL_OPTIONS: "+fnu"
+      WOTEX_NATIVE_CACHE: ~/.cache/wotex-native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
+          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            packages/${{ matrix.package }}/deps
+            packages/${{ matrix.package }}/_build
+            packages/${{ matrix.package }}/hosts/*/deps
+            packages/${{ matrix.package }}/hosts/*/_build
+            ~/.cache/rustler_precompiled
+          key: package-v2-${{ matrix.package }}-current-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
+      - name: Native toolchain
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
       - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format, clang-tidy)
-        if: steps.native.outputs.tools == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -294,13 +368,12 @@ jobs:
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
           sudo apt-get install -y "clang-format-${LLVM_MAJOR}" "clang-tidy-${LLVM_MAJOR}"
-      - if: steps.native.outputs.tools == 'true'
-        uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ needs.manifest.outputs.rust }}
           components: rustfmt, clippy
       - name: Native cache key
-        if: steps.native.outputs.tools == 'true' && matrix.package != 'wotex-matter'
+        if: matrix.package != 'wotex-matter'
         id: native_cache
         shell: bash
         run: |
@@ -321,7 +394,7 @@ jobs:
             done | git hash-object --stdin
           )
           echo "key=native-${{ matrix.package }}-$digest" >> "$GITHUB_OUTPUT"
-      - if: steps.native.outputs.tools == 'true' && matrix.package != 'wotex-matter'
+      - if: matrix.package != 'wotex-matter'
         # Keyed from tracked inputs before the gate creates nested build trees.
         # Matter's SDK workspace is several GB; its gate rebuilds it.
         uses: actions/cache@v4
@@ -329,42 +402,41 @@ jobs:
           path: ~/.cache/wotex-native/${{ matrix.package }}
           key: ${{ steps.native_cache.outputs.key }}
       - name: Workspace dependencies
-        # The package gate's native tools run the root mix native.* tasks.
-        if: steps.native.outputs.tools == 'true'
+        # Native validation uses the root mix native.* tasks.
         run: mix deps.get --check-locked
-      - name: Dependencies
-        working-directory: packages/${{ matrix.package }}
-        run: mix deps.get --check-locked
-      - name: Prepare Lab build environments
-        if: matrix.package == 'wotex-lab'
-        working-directory: packages/${{ matrix.package }}
+      - name: Package dependencies
+        run: mix pkg "${{ matrix.package }}" deps.get --check-locked
+      - name: Native formatting and analysis
         shell: bash
         run: |
           set -euo pipefail
-          # EXLA shares its native library across build environments. Compile
-          # each environment before the gate VM can load that library, so a
-          # later coverage or documentation build cannot overwrite a live NIF.
-          for build_env in dev test docs; do
-            env MIX_ENV="$build_env" mix compile --warnings-as-errors
-          done
-      - name: Package gate
-        working-directory: packages/${{ matrix.package }}
+          mix native.lint --tidy --package "${{ matrix.package }}" 2>&1 | tee "$RUNNER_TEMP/native-lint.log"
+      - name: Native tests
         shell: bash
         run: |
           set -euo pipefail
-          # The lane's skip list keeps static analysis on the current lane only.
-          except=()
-          while IFS= read -r check; do
-            except+=(--except "$check")
-          done < <(yq -r '.lanes["${{ matrix.lane }}"].skip // [] | .[]' ../../tooling/packages.yaml)
-          mix check --no-retry "${except[@]}"
+          mix native.test --package "${{ matrix.package }}" 2>&1 | tee "$RUNNER_TEMP/native-test.log"
+      - name: Retain native gate diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-gate-diagnostics-${{ matrix.package }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/native-lint.log
+            ${{ runner.temp }}/native-test.log
+            ~/.cache/wotex-native/${{ matrix.package }}/**/*.log
 
   archive:
     name: Archives and consumers
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    needs: [manifest, affected, check]
-    if: needs.affected.outputs.any == 'true'
+    needs: [manifest, affected, workspace, check, native_check]
+    if: >-
+      !cancelled() && needs.affected.outputs.any == 'true' &&
+      needs.workspace.result == 'success' && needs.check.result == 'success' &&
+      (needs.native_check.result == 'success' || needs.native_check.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1

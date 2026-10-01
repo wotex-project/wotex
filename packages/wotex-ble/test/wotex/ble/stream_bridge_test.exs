@@ -307,6 +307,33 @@ defmodule Wotex.BLE.StreamBridgeTest do
     end
   end
 
+  test "WBL-C03 native cancellation racing retirement requires its release barrier" do
+    for {mode, survives} <- [{"stop_retired", true}, {"stop_error", false}] do
+      {session, record} =
+        connect(%{
+          "flags" => ["read", "notify"],
+          "modes" => [mode],
+          "error" => %{"code" => "invalid_subscription"}
+        })
+
+      assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
+      monitor = Process.monitor(handle.pid)
+
+      if survives do
+        assert :ok = BLE.unsubscribe(session, handle)
+        assert :sys.get_state(session.handle.pid).subscriptions == %{}
+        assert {:ok, <<0x2A, 0>>} = BLE.read(session, target())
+        assert closed(record) == nil
+      else
+        assert {:error, %Error{code: :invalid_subscription}} = BLE.unsubscribe(session, handle)
+        eventually(fn -> closed(record) != nil end)
+      end
+
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+      assert count(record, "unsubscribe") == 1
+    end
+  end
+
   test "WBL-C07 wrong establishment binding fails and a value codec error is terminal once" do
     {session, _} = connect("stream_wrong_binding")
     assert {:error, %Error{code: :invalid_response}} = BLE.subscribe(session, %{address: target()})

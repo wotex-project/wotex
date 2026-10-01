@@ -786,14 +786,23 @@ defmodule Wotex.BLE.BlueZ.Connection do
   defp mark_unknown_submitted_effect(error, _), do: error
 
   defp accept_unsubscribe(state, id, frame) do
+    native_id = state.pending[id].parameters["subscription_id"]
+
     case timed_parse(frame, "unsubscribe", state.pending[id].deadline) do
       {:ok, nil} ->
-        native_id = state.pending[id].parameters["subscription_id"]
-
         if native_stream_retired?(state, native_id) do
           {:noreply, complete(retire_subscription(state, native_id), id, :ok)}
         else
           {:noreply, close(state, :invalid_response)}
+        end
+
+      {:error, %Error{code: :invalid_subscription} = error} ->
+        # Native overload may retire the stream while its owner's cancellation
+        # is in flight. Only the validated retirement barrier proves release.
+        if native_stream_retired?(state, native_id) do
+          {:noreply, complete(retire_subscription(state, native_id), id, :ok)}
+        else
+          {:noreply, close(complete(state, id, {:error, error}), error.code)}
         end
 
       {:error, error} ->

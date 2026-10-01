@@ -74,10 +74,21 @@ defmodule Wotex.BLE.NativeProcessFlowTest do
          context do
       input = @fixture["input"]
       assert input["callbacks_per_iteration"] == 1
-      executable = context.sources[{input["callback_count"], input["value_bytes"]}]
+      # Each case owns its trigger path, including cleanup after a failed assertion.
+      executable =
+        context.sources[{input["callback_count"], input["value_bytes"]}] <> "-#{@fixture["id"]}"
+
+      File.cp!(context.sources[{input["callback_count"], input["value_bytes"]}], executable)
+      marker = executable <> ".start"
       receiver = spawn(fn -> receiver([]) end)
 
+      on_exit(fn ->
+        File.rm(marker)
+        Process.exit(receiver, :kill)
+      end)
+
       assert {:ok, session} = BLE.connect(options(context, executable))
+      on_exit(fn -> BLE.disconnect(session) end)
       connection = session.handle.pid
 
       assert {:ok, subscription} =
@@ -99,9 +110,9 @@ defmodule Wotex.BLE.NativeProcessFlowTest do
           "receiver" -> {:erlang, receiver}
         end
 
-      marker = executable <> ".start"
-      File.rm(marker)
       suspend(selected)
+      # Erlang releases receiver suspension when this test process exits.
+      if match?({:sys, _}, selected), do: on_exit(fn -> resume(selected) end)
       File.write!(marker, "")
       started = now()
 

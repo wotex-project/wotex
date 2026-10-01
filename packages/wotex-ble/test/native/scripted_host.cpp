@@ -21,15 +21,47 @@ namespace {
 using namespace wotex::ble;
 using Steady = std::chrono::steady_clock;
 
-const std::set<std::string> known_modes{
-  "wrong_ready", "silent", "oversize", "truncated", "uncooperative", "open_error", "close_slow",
-  "discover_blocked", "discover_slow", "discover_error", "discover_invalid_frame", "discover_wrong_id",
-  "health_error", "health_blocked", "procedure_blocked", "procedure_error", "procedure_crash",
-  "procedure_slow", "procedure_missing_event", "procedure_wrong_event", "procedure_extra_event",
-  "procedure_duplicate_event", "procedure_malformed", "procedure_read_event", "subscribe_blocked",
-  "subscribe_error", "stop_blocked", "stop_error", "stop_bad_ack", "stop_lost", "stop_slow",
-  "report_wrong_generation", "report_wrong_metadata", "report_extra", "report_unknown", "read_overtaken",
-  "repeat", "subscribe_wrong_binding", "close_blocked", "close_drain"};
+const std::set<std::string> known_modes{"wrong_ready",
+                                        "silent",
+                                        "oversize",
+                                        "truncated",
+                                        "uncooperative",
+                                        "open_error",
+                                        "close_slow",
+                                        "discover_blocked",
+                                        "discover_slow",
+                                        "discover_error",
+                                        "discover_invalid_frame",
+                                        "discover_wrong_id",
+                                        "health_error",
+                                        "health_blocked",
+                                        "procedure_blocked",
+                                        "procedure_error",
+                                        "procedure_crash",
+                                        "procedure_slow",
+                                        "procedure_missing_event",
+                                        "procedure_wrong_event",
+                                        "procedure_extra_event",
+                                        "procedure_duplicate_event",
+                                        "procedure_malformed",
+                                        "procedure_read_event",
+                                        "subscribe_blocked",
+                                        "subscribe_error",
+                                        "stop_blocked",
+                                        "stop_error",
+                                        "stop_bad_ack",
+                                        "stop_lost",
+                                        "stop_slow",
+                                        "stop_retired",
+                                        "report_wrong_generation",
+                                        "report_wrong_metadata",
+                                        "report_extra",
+                                        "report_unknown",
+                                        "read_overtaken",
+                                        "repeat",
+                                        "subscribe_wrong_binding",
+                                        "close_blocked",
+                                        "close_drain"};
 
 struct Scenario {
   std::set<std::string> modes;
@@ -345,6 +377,11 @@ class Script {
     silence(stream);
     if (mode("stop_blocked")) return;
     if (mode("stop_error")) { fail(id, scenario_.error); return; }
+    if (mode("stop_retired")) {
+      retire(stream);
+      fail(id, "invalid_subscription");
+      return;
+    }
     if (mode("stop_lost")) { retire(stream); return; }
     if (mode("stop_bad_ack")) { retire(stream); reply(id, true); return; }
     if (mode("stop_slow")) { after(50, [this, id, stream] { retire(stream); reply(id, nullptr); }); return; }
