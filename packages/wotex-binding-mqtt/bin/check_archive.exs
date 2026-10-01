@@ -6,7 +6,7 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
   # Specifications reach consumers through HexDocs: no `docs/` tree or task
   # tracker may travel inside an archive. `usage-rules.md` is consumer input.
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.gitignore|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs|tasks|mix\.lock|priv/plts|test|_build)(/|$)}
+  @machinery ~r{(^|/)(\.check\.exs|\.agents|\.claude|\.codex|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.gitignore|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs|tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @required_content ~w(
     .formatter.exs
     CHANGELOG.md

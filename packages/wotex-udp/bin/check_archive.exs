@@ -6,7 +6,7 @@ defmodule Wotex.UDP.Check.Archive do
 
   @prefix "wotex-udp-archive."
   @required ~w(.formatter.exs CHANGELOG.md LICENSE NOTICE README.md usage-rules.md mix.exs)
-  @forbidden ~r{(^|/)(\.check\.exs|\.claude|\.git|\.github|AGENTS\.md|CLAUDE\.md|bin|cover|deps|doc|docs|mix\.lock|test|_build)(/|$)}
+  @forbidden ~r{(^|/)(\.check\.exs|\.agents|\.claude|\.codex|\.git|\.github|AGENTS\.md|CLAUDE\.md|bin|cover|deps|doc|docs|mix\.lock|test|_build)(/|$)}
 
   @spec main() :: :ok
   def main do

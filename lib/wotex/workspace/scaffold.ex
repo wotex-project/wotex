@@ -8,8 +8,8 @@ defmodule Wotex.Workspace.Scaffold do
       HexDocs extras
       from `docs/packages/<name>/` with source links through `source_url/2`
       at the `<name>-v<version>` tag, the standard full gate (`.check.exs`)
-      with archive, application-free and boundary scripts, a `CLAUDE.md`
-      package contract and a `README.md` with installation and development
+      with archive, application-free and boundary scripts, `AGENTS.md`
+      package guidance and a `README.md` with installation and development
       sections;
     * `docs/packages/<name>/{specs,plans,provenance}/` with a catalogue
       skeleton and a completion contract, following the catalogue path
@@ -191,7 +191,7 @@ defmodule Wotex.Workspace.Scaffold do
       {"#{package}/.doctor.exs", templates.doctor},
       {"#{package}/.formatter.exs", templates.formatter},
       {"#{package}/coveralls.json", templates.coveralls},
-      {"#{package}/CLAUDE.md", render(claude_md(depends_on), bindings)},
+      {"#{package}/AGENTS.md", render(agents_md(depends_on), bindings)},
       {"#{package}/README.md", align_comments(render(readme(), bindings))},
       {"#{package}/usage-rules.md", render(usage_rules(), bindings)},
       {"#{package}/CHANGELOG.md", render(changelog(), bindings)},
@@ -428,7 +428,7 @@ defmodule Wotex.Workspace.Scaffold do
     """
   end
 
-  defp claude_md(depends_on) do
+  defp agents_md(depends_on) do
     siblings =
       case Enum.map(depends_on, &"`#{&1}`") do
         [] -> "It depends on no sibling package."
@@ -436,20 +436,20 @@ defmodule Wotex.Workspace.Scaffold do
         names -> "It uses #{sentence(names)} only through their public, documented API."
       end
 
-    String.replace(claude_md_template(), "@@siblings@@", siblings)
+    String.replace(agents_md_template(), "@@siblings@@", siblings)
   end
 
   defp sentence([one]), do: one
   defp sentence(names), do: Enum.join(Enum.drop(names, -1), ", ") <> " and " <> List.last(names)
 
-  defp claude_md_template do
+  defp agents_md_template do
     ~S"""
-    # @@title@@ package contract
+    # @@title@@ package guidance
 
     @@title@@ (`packages/@@name@@`, Hex `@@app@@`) owns <state what the package
     owns and what stays with the consumer>.
     @@siblings@@
-    Repository-wide rules are in the root `CLAUDE.md`.
+    Repository-wide rules are in the root `AGENTS.md`.
 
     ## Invariants
 
@@ -458,16 +458,6 @@ defmodule Wotex.Workspace.Scaffold do
       the consumer as caller-configured child specifications.
     - No database, Repo, migration, Ash, Phoenix, Ecto, Oban, global registry,
       framework integration or automatic network activity.
-    - Pure values never consult application environment, clocks or random
-      sources. Every public input boundary returns structured errors.
-    - Use W3C Web of Things terms exactly; Thing Description 1.1 is the
-      baseline. Package extension terms are never presented as W3C-defined.
-    - Public functions have documentation and types. One module per `.ex` file.
-      Tests use `@moduledoc false` followed by a blank line.
-    - `usage-rules.md` contains concise consumer guidance and ships in the Hex
-      archive. It describes the completed normative contract, while the
-      catalogue separately owns implementation status. Repository contributor
-      rules and the documentation tree do not ship.
 
     ## Where things are
 
@@ -696,7 +686,7 @@ defmodule Wotex.Workspace.Scaffold do
       @moduledoc false
 
       @required ~w(mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
-      @forbidden ~w(docs test bin config .check.exs .credo.exs .doctor.exs coveralls.json CLAUDE.md)
+      @forbidden ~w(docs test bin config .check.exs .credo.exs .doctor.exs coveralls.json .agents .claude .codex AGENTS.md CLAUDE.md)
 
       @spec main() :: :ok
       def main do

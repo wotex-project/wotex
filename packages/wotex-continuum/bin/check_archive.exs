@@ -27,7 +27,9 @@ defmodule WotexContinuum.CheckArchive do
 
   @absent [
     ".check.exs",
+    ".agents",
     ".claude",
+    ".codex",
     ".elixir_ls",
     ".git",
     ".github",

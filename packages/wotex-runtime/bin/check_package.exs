@@ -13,10 +13,13 @@ defmodule Wotex.Runtime.Check.Package do
 
   @absent [
     ".check.exs",
+    ".agents",
     ".claude",
+    ".codex",
     ".elixir_ls",
     ".git",
     ".github",
+    "AGENTS.md",
     "CLAUDE.md",
     "_build",
     "bin",

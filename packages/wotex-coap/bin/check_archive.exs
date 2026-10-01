@@ -5,7 +5,7 @@ defmodule Wotex.CoAP.Check.Archive do
   @version "0.1.0"
   @consumer_fixture "test/fixtures/archive_reference_consumer.exs"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs|priv/plts|_build)(/|$)|^tasks(/|$)}
+  @machinery ~r{(^|/)(\.check\.exs|\.agents|\.claude|\.codex|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs|priv/plts|_build)(/|$)|^tasks(/|$)}
   @dependency_machinery ~r{(^|/)(mix\.lock|native|test)(/|$)}
   @dependency_content ~w(
     .formatter.exs

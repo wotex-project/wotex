@@ -18,7 +18,7 @@ defmodule Wotex.OPCUA.Check.Archive do
     "priv/fixtures/native-ready-v1.json",
     "priv/fixtures/custody-contract-v1.json"
   ]
-  @development ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|cover|coveralls\.json|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
+  @development ~r{(^|/)(\.check\.exs|\.agents|\.claude|\.codex|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|cover|coveralls\.json|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.OPCUA.Error.beam"
 

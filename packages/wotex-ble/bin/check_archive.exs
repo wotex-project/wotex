@@ -38,7 +38,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/native/vendor/json.hpp",
     "priv/bluez/native/vendor/LICENSE.MIT"
   ]
-  @development [".git", "deps", "_build"]
+  @development ~w(.agents .claude .codex .git AGENTS.md CLAUDE.md deps _build)
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.BLE.Error.beam"
 
@@ -134,13 +134,13 @@ defmodule Wotex.BLE.Check.Archive do
   end
 
   defp development!(package) do
-    directories =
+    entries =
       package
       |> Path.join("**")
       |> Path.wildcard(match_dot: true)
-      |> Enum.filter(&(File.dir?(&1) and Path.basename(&1) in @development))
+      |> Enum.filter(&(Path.basename(&1) in @development))
 
-    unless directories == [] do
+    unless entries == [] do
       violation("archive contains development state")
     end
   end

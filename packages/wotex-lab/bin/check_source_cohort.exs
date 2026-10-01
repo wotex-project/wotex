@@ -11,7 +11,7 @@ defmodule Wotex.Lab.Check.SourceCohort do
   # a copied tree), and are recorded under the same `docs/<kind>/` names.
   @patterns ~w(lib/**/* test/**/* priv/w3c/**/* priv/schemas/**/* priv/vectors/**/*
                docs/specs/**/* specs/**/* docs/plans/**/* docs/decisions/**/*
-               mix.exs mix.lock README.md CLAUDE.md)
+               mix.exs mix.lock README.md AGENTS.md)
   @documentation_patterns ~w(specs/**/* plans/**/* decisions/**/*)
 
   @spec run([String.t()]) :: :ok

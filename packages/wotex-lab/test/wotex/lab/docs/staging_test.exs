@@ -1,4 +1,6 @@
 defmodule Wotex.Lab.Docs.StagingTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Lab.Docs.{SourceTree, Staging}
@@ -23,13 +25,14 @@ defmodule Wotex.Lab.Docs.StagingTest do
     assert File.read!(Path.join(destination, "packages/example/README.md")) == "# Example\n"
     assert File.regular?(Path.join(destination, "docs/packages/example/specs/EX.01.md"))
     assert File.regular?(Path.join(destination, "packages/example/notebooks/demo.livemd"))
-    refute File.exists?(Path.join(destination, "packages/example/CLAUDE.md"))
+    refute File.exists?(Path.join(destination, "packages/example/AGENTS.md"))
+    refute File.exists?(Path.join(destination, "packages/example/.agents"))
     refute File.exists?(Path.join(destination, "packages/example/bench/output.md"))
     refute File.exists?(Path.join(destination, "packages/example/native/README.md"))
     refute File.exists?(Path.join(destination, "packages/example/schema.json"))
     refute File.exists?(Path.join(destination, "packages/example/test/fixture/README.md"))
     assert staged.files == Enum.sort(staged.files)
-    refute Enum.any?(staged.files, &String.ends_with?(&1, "CLAUDE.md"))
+    refute Enum.any?(staged.files, &String.ends_with?(&1, "AGENTS.md"))
   end
 
   test "digest drift and occupied destinations fail without replacing bytes" do
@@ -69,7 +72,9 @@ defmodule Wotex.Lab.Docs.StagingTest do
     File.mkdir_p!(Path.join(root, "packages/example/test/fixture"))
     File.mkdir_p!(Path.join(root, "docs/packages/example/specs"))
     File.write!(Path.join(root, "packages/example/README.md"), "# Example\n")
-    File.write!(Path.join(root, "packages/example/CLAUDE.md"), "private instructions\n")
+    File.write!(Path.join(root, "packages/example/AGENTS.md"), "private instructions\n")
+    File.mkdir_p!(Path.join(root, "packages/example/.agents/skills/example"))
+    File.write!(Path.join(root, "packages/example/.agents/skills/example/SKILL.md"), "skill\n")
     File.write!(Path.join(root, "packages/example/schema.json"), "{}\n")
     File.write!(Path.join(root, "packages/example/notebooks/demo.livemd"), "# Demo\n")
     File.write!(Path.join(root, "packages/example/bench/output.md"), "# Generated benchmark\n")

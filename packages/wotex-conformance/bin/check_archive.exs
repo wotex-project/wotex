@@ -22,7 +22,7 @@ defmodule CheckArchive do
   @development [".git", "deps", "_build"]
   # Specifications reach consumers through HexDocs; no `docs/` tree or task
   # tracker may travel inside the archive. `usage-rules.md` is consumer input.
-  @forbidden_segments ["docs", "tasks"]
+  @forbidden_segments ~w(.agents .claude .codex AGENTS.md CLAUDE.md docs tasks)
   @consumer_fixture "test/fixtures/archive_consumer.exs"
   @target_fixture "test/fixtures/external_target.exs"
 
@@ -74,7 +74,7 @@ defmodule CheckArchive do
       relative = Path.relative_to(path, package)
 
       if Enum.any?(Path.split(relative), &(&1 in @forbidden_segments)) do
-        fail(temporary, "archive contains documentation or task path #{relative}")
+        fail(temporary, "archive contains an excluded path #{relative}")
       end
     end)
 

@@ -24,7 +24,9 @@ defmodule Wotex.Modbus.Check.Archive do
   # HexDocs; no `docs` or `tasks` path may ship in the archive.
   @absent [
     ".check.exs",
+    ".agents",
     ".claude",
+    ".codex",
     ".elixir_ls",
     ".git",
     ".github",

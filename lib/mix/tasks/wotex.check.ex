@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Wotex.Check do
       lane;
     * `--env ENV`: export `MIX_ENV=ENV` to the gate commands.
 
-  Never run `--all` for a one-package change; see the root `CLAUDE.md`.
+  Never run `--all` for a one-package change; see the root `AGENTS.md`.
   """
 
   use Mix.Task

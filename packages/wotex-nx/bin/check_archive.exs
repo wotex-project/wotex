@@ -7,7 +7,9 @@ defmodule WotexNx.CheckArchive do
 
   @excluded_source_inputs [
     ".check.exs",
+    ".agents",
     ".claude",
+    ".codex",
     ".tool-versions",
     "AGENTS.md",
     "CLAUDE.md",
@@ -29,7 +31,9 @@ defmodule WotexNx.CheckArchive do
 
   @absent [
     ".check.exs",
+    ".agents",
     ".claude",
+    ".codex",
     ".git",
     ".github",
     ".local-agent-harness",

@@ -10,7 +10,7 @@ defmodule Wotex.Zigbee.Check.Archive do
   """
 
   @required ~w(mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
-  @forbidden ~w(docs test bin config .check.exs .credo.exs .doctor.exs coveralls.json CLAUDE.md)
+  @forbidden ~w(docs test bin config .check.exs .credo.exs .doctor.exs coveralls.json .agents .claude .codex AGENTS.md CLAUDE.md)
 
   @spec main() :: :ok
   def main do

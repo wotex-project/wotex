@@ -2,7 +2,7 @@ defmodule DirectoryPackageMirror do
   @moduledoc false
 
   @sentinel_paths ~w(
-    AGENTS.md CLAUDE.md .claude/local.json .codex/local.json .agents/local.json
+    AGENTS.md CLAUDE.md .claude/settings.local.json .codex/config.toml .agents/skills/exclusion-sentinel/SKILL.md
     .git/exclusion-sentinel .github/exclusion-sentinel
     docs/tasks/local/exclusion-sentinel.json docs/tasks/local/nested/exclusion-sentinel.json
     docs/tasks/exclusion-sentinel.json docs/plans/exclusion-sentinel.json

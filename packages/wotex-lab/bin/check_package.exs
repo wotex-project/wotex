@@ -23,7 +23,7 @@ defmodule Wotex.Lab.Check.Package do
   # Specifications reach consumers through HexDocs; no docs or tasks tree and
   # no development tooling may enter the archive. `usage-rules.md` is consumer
   # input.
-  @excluded ~r{\A(?:docs|tasks|deps|_build|test|bin|\.git|\.claude)(?:/|\z)}
+  @excluded ~r{\A(?:docs|tasks|deps|_build|test|bin|\.git|\.agents|\.claude|\.codex|AGENTS\.md|CLAUDE\.md)(?:/|\z)}
 
   @spec run() :: :ok
   def run do

@@ -1,4 +1,6 @@
 defmodule Wotex.Lab.Docs.SourceTreeTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Lab.Docs.{Admission, SourceTree}
@@ -66,7 +68,11 @@ defmodule Wotex.Lab.Docs.SourceTreeTest do
     assert Admission.public?("packages/example/README.md", roots)
     assert Admission.public?("packages/example/notebooks/demo.livemd", roots)
     assert Admission.public?("docs/packages/example/specs/EX.01.md", roots)
+    refute Admission.public?("packages/example/AGENTS.md", roots)
     refute Admission.public?("packages/example/CLAUDE.md", roots)
+    refute Admission.public?("packages/example/.agents/skills/example/SKILL.md", roots)
+    refute Admission.public?("packages/example/.claude/skills/example/SKILL.md", roots)
+    refute Admission.public?("packages/example/.codex/instructions.md", roots)
     refute Admission.public?("packages/example/deps/copied.md", roots)
     refute Admission.public?("packages/example/credentials.md", roots)
     refute Admission.public?("docs/tasks/local/tracker.md", ["docs"])
@@ -80,7 +86,7 @@ defmodule Wotex.Lab.Docs.SourceTreeTest do
     File.mkdir_p!(Path.join(root, "packages/example"))
     File.mkdir_p!(Path.join(root, "docs/packages/example/specs"))
     File.write!(Path.join(root, "packages/example/README.md"), "# Example\n")
-    File.write!(Path.join(root, "packages/example/CLAUDE.md"), "private instructions\n")
+    File.write!(Path.join(root, "packages/example/AGENTS.md"), "private instructions\n")
     File.write!(Path.join(root, "docs/packages/example/specs/EX.01.md"), "# Contract\n")
     git!(root, ["init", "--quiet"])
     git!(root, ["config", "user.name", "Fixture"])

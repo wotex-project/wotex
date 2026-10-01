@@ -27,7 +27,7 @@ defmodule Wotex.Matter.Check.Archive do
     "test/support/runtime_credentials.ex"
   ]
   @development [".git", "deps", "_build", "doc", "cover", "__pycache__"]
-  @excluded ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|coveralls\.json|docs)(/|$)|^tasks(/|$)}
+  @excluded ~r{(^|/)(\.check\.exs|\.agents|\.claude|\.codex|\.credo\.exs|AGENTS\.md|CLAUDE\.md|CODE_OF_CONDUCT\.md|CONTRIBUTING\.md|GOVERNANCE\.md|SECURITY\.md|bin|coveralls\.json|docs)(/|$)|^tasks(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.Matter.Error.beam"
 

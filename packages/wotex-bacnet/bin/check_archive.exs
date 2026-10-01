@@ -7,7 +7,7 @@ defmodule Wotex.BACnet.Check.Archive do
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
   # Documentation lives in the monorepo `docs/` tree and reaches consumers through
   # HexDocs; no `docs` or `tasks` path may ship in the archive.
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
+  @machinery ~r{(^|/)(\.check\.exs|\.agents|\.claude|\.codex|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs|mix\.lock|priv/plts|test|_build)(/|$)|^tasks(/|$)}
   @required_content ~w(
     .formatter.exs
     CHANGELOG.md

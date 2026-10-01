@@ -47,7 +47,7 @@ defmodule Wotex.Workspace.ScaffoldTest do
           packages/wotex-demo/mix.exs packages/wotex-demo/.check.exs
           packages/wotex-demo/.doctor.exs packages/wotex-demo/.formatter.exs
           packages/wotex-demo/coveralls.json
-          packages/wotex-demo/CLAUDE.md packages/wotex-demo/README.md
+          packages/wotex-demo/AGENTS.md packages/wotex-demo/README.md
           packages/wotex-demo/usage-rules.md packages/wotex-demo/CHANGELOG.md
           packages/wotex-demo/LICENSE packages/wotex-demo/NOTICE packages/wotex-demo/lib/wotex/demo.ex
           packages/wotex-demo/test/test_helper.exs packages/wotex-demo/test/wotex/demo_test.exs
@@ -60,6 +60,8 @@ defmodule Wotex.Workspace.ScaffoldTest do
       assert relative in paths, "#{relative} not reported"
       assert File.exists?(Path.join(root, relative)), "#{relative} not created"
     end
+
+    refute File.exists?(Path.join(root, "packages/wotex-demo/CLAUDE.md"))
 
     for file <- ~w(.doctor.exs .formatter.exs coveralls.json) do
       assert File.read!(Path.join(root, "packages/wotex-demo/#{file}")) ==
@@ -165,16 +167,16 @@ defmodule Wotex.Workspace.ScaffoldTest do
              "managed_files" => [%{"path" => "mix.exs", "type" => "mix"}]
            }
 
-    claude = File.read!(Path.join(root, "packages/wotex-demo/CLAUDE.md"))
-    assert claude =~ ~r/\A# Wotex Demo package contract\n/
-    assert claude =~ "Repository-wide rules are in the root `CLAUDE.md`.\n\n## Invariants\n"
-    assert claude =~ "\n## Where things are\n"
-    assert claude =~ "\n## Working on this package\n"
-    assert claude =~ "`mix pkg wotex-demo test test/wotex/demo_test.exs`"
-    assert claude =~ "`mix check.fast --package wotex-demo`"
-    assert claude =~ "`mix check` (full gate here"
-    assert claude =~ "`mix pkg wotex-demo check --no-retry`"
-    assert claude =~ "It uses `wotex` and `wotex-runtime` only through their public"
+    guidance = File.read!(Path.join(root, "packages/wotex-demo/AGENTS.md"))
+    assert guidance =~ ~r/\A# Wotex Demo package guidance\n/
+    assert guidance =~ "Repository-wide rules are in the root `AGENTS.md`.\n\n## Invariants\n"
+    assert guidance =~ "\n## Where things are\n"
+    assert guidance =~ "\n## Working on this package\n"
+    assert guidance =~ "`mix pkg wotex-demo test test/wotex/demo_test.exs`"
+    assert guidance =~ "`mix check.fast --package wotex-demo`"
+    assert guidance =~ "`mix check` (full gate here"
+    assert guidance =~ "`mix pkg wotex-demo check --no-retry`"
+    assert guidance =~ "It uses `wotex` and `wotex-runtime` only through their public"
 
     readme = File.read!(Path.join(root, "packages/wotex-demo/README.md"))
     assert readme =~ "\n## Installation\n"
@@ -212,8 +214,8 @@ defmodule Wotex.Workspace.ScaffoldTest do
     mix_exs = File.read!(Path.join(root, "packages/wotex-solo/mix.exs"))
     assert {:ok, _} = Code.string_to_quoted(mix_exs)
     refute mix_exs =~ "sibling("
-    claude = File.read!(Path.join(root, "packages/wotex-solo/CLAUDE.md"))
-    assert claude =~ "It depends on no sibling package."
+    guidance = File.read!(Path.join(root, "packages/wotex-solo/AGENTS.md"))
+    assert guidance =~ "It depends on no sibling package."
   end
 
   test "every package README and a new package state one toolchain policy from the lanes",

@@ -8,7 +8,7 @@ defmodule Wotex.Lab.Docs.Admission do
   rejected before bytes reach DocShell.
   """
 
-  @blocked_segments ~w(.git .doc_shell_source _build bench clients deps doc hosts native node_modules test tmp target)
+  @blocked_segments ~w(.agents .claude .codex .git .doc_shell_source _build bench clients deps doc hosts native node_modules test tmp target)
   @blocked_names ~w(CLAUDE.md AGENTS.md .env .env.local credentials.json secrets.json)
   @extensions ~w(.md .livemd)
 

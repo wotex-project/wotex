@@ -31,8 +31,12 @@ defmodule Wotex.Directory.PackageMirrorTest do
   test "the external mirror retains exact public bytes and deliberately excluded state",
        context do
     %{mirror: mirror, archive: archive} = context
-    assert map_size(mirror.sentinels) >= 20
-    assert Map.has_key?(mirror.sentinels, "docs/tasks/local/exclusion-sentinel.json")
+
+    for path <- ~w(AGENTS.md .agents/skills/exclusion-sentinel/SKILL.md
+                   .claude/settings.local.json .codex/config.toml
+                   docs/tasks/local/exclusion-sentinel.json) do
+      assert Map.has_key?(mirror.sentinels, path)
+    end
 
     for {path, expected} <- mirror.inputs do
       assert DirectoryEvidence.digest(path) == expected
@@ -96,7 +100,8 @@ defmodule Wotex.Directory.PackageMirrorTest do
   end
 
   test "excluded paths and renamed sentinel bytes are independently rejected", context do
-    {path, bytes} = Enum.at(context.mirror.sentinels, 0)
+    path = ".agents/skills/exclusion-sentinel/SKILL.md"
+    bytes = Map.fetch!(context.mirror.sentinels, path)
     target = Path.join(context.archive, path)
     File.mkdir_p!(Path.dirname(target))
     File.write!(target, bytes)

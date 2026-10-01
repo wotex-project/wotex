@@ -4,8 +4,8 @@ defmodule Mix.Tasks.Wotex.New do
   @moduledoc """
   Scaffolds `packages/NAME` (a Mix library with the `WOTEX_PATH_DEPS`
   sibling switch, HexDocs extras and source links, the standard full gate
-  with archive, application-free and boundary scripts, a `CLAUDE.md` package
-  contract and a `README.md`), `docs/packages/NAME/{specs,plans,provenance}`
+  with archive, application-free and boundary scripts, `AGENTS.md` package
+  guidance and a `README.md`), `docs/packages/NAME/{specs,plans,provenance}`
   with a catalogue skeleton and a completion contract, and a manifest entry
   in `tooling/packages.yaml`; then re-renders `docs/catalogue.yaml`.
 
@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Wotex.New do
         scaffolded packages/#{name}. Next:
           mix pkg #{name} deps.get
           mix pkg #{name} check --no-retry
-        and describe the package in its README.md, CLAUDE.md and mix.exs, the
+        and describe the package in its README.md, AGENTS.md and mix.exs, the
         package table of the root README.md and, with its specification
         prefix, docs/README.md.\
         """)
