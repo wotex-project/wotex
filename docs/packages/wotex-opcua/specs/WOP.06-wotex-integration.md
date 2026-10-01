@@ -72,9 +72,9 @@ application callback is permitted.
 
 The reference review used the checked-in contracts and public APIs of the
 sibling packages in this repository at the specification versions in the table:
-the [core package contract](https://github.com/wotex-project/wotex/blob/main/packages/wotex/CLAUDE.md),
+the [core package contract](https://github.com/wotex-project/wotex/blob/main/packages/wotex/AGENTS.md),
 [Runtime WRT.01](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-runtime/specs/WRT.01-consumed-thing-runtime.md),
-the [HTTP binding contract](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-http/CLAUDE.md) and
+the [HTTP binding contract](https://github.com/wotex-project/wotex/blob/main/packages/wotex-binding-http/AGENTS.md) and
 the [MQTT binding catalogue](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-binding-mqtt/specs/catalogue.yaml).
 These references identify reviewed contracts, not a claim that they are published
 or a replacement for package-version constraints. HTTP/MQTT intentionally own

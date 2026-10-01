@@ -113,8 +113,8 @@ Package inputs ship no Markdown documentation and structurally exclude
 ignore alone never counts. A clean checkout requires no local tracker or
 external automation service to build, test or select a normative task.
 
-Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
-`packages/wotex-binding-http/CLAUDE.md`, this plan and the owning WBH files;
+Fresh checkout procedure: clone the repository; read the root `AGENTS.md`,
+`packages/wotex-binding-http/AGENTS.md`, this plan and the owning WBH files;
 run `mix setup` from the repository root, use `mix pkg wotex-binding-http test`
 and `mix check.fast --package wotex-binding-http` for the fast loop, and run
 `mix pkg wotex-binding-http check --no-retry` (equivalently

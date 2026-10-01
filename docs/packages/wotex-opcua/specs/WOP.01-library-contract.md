@@ -16,7 +16,7 @@ Read this file with [WOP.04](WOP.04-software-contract.md),
 [standalone client preservation](WOP.05-standalone-client-and-preservation.md),
 [Wotex integration](WOP.06-wotex-integration.md), and the existing
 protocol specifications, and [the implementation sequence](../plans/software-implementation.md).
-The root and package `CLAUDE.md` files govern repository boundaries. Exact
+The root and package `AGENTS.md` files govern repository boundaries. Exact
 protocol requirements come from the revisions in [primary sources](../provenance/primary-sources.md); limits and
 API choices labelled **library policy** are deliberate local constraints.
 
@@ -279,11 +279,11 @@ matrix and exact-archive lanes. Fresh environment receipts follow the
 published-artifact receipt does not make implemented source partial.
 
 The package allowlist includes native bridge assets only where shipped Mix
-tasks need them (root `CLAUDE.md`) and excludes build caches, credentials,
+tasks need them (root `AGENTS.md`) and excludes build caches, credentials,
 sockets, PLTs, fixture state and downloaded SDKs.
 
 Commit with the identity already configured by the contributor, as the root
-`CLAUDE.md` requires, and never record an agent, tool or bot as author,
+`AGENTS.md` requires, and never record an agent, tool or bot as author,
 committer or co-author. Do not configure remotes, push, tag, publish, change
 repository visibility or edit consumers. Keep transient run logs and
 exploratory patches in the ignored `docs/tasks/local/wotex-opcua/`.

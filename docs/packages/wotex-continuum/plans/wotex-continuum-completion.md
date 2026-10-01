@@ -127,7 +127,7 @@ remote-commit requirement to support parallel workers.
 | `public_release_candidate` | All preceding gates, WCT-C03 agreement, reviewed threat model, public content, licenses/provenance, accurate claims and immutable candidate evidence. The maintainer alone may later publish. |
 | `stable_api_candidate` | WCT-C05 compatibility review of API and wire contracts independently, exact error/result/null/default/canonical-byte rules and upgrade/rejection vectors. A stable wire version does not automatically make package 0.1 APIs stable. |
 
-Fresh checkout: clone the repository; read the root and package `CLAUDE.md`,
+Fresh checkout: clone the repository; read the root and package `AGENTS.md`,
 this plan and the catalogue's owning specs; run `mix setup` from the
 repository root. The package gate is `mix pkg wotex-continuum check --no-retry`
 (equivalently `WOTEX_PATH_DEPS=1 mix check --no-retry` from

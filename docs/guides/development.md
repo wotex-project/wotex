@@ -3,7 +3,7 @@
 This guide explains how to work on WoTEx packages without building or testing
 the whole repository. The command reference is in
 [CONTRIBUTING.md](../../CONTRIBUTING.md#command-reference); the agent-facing summary is the
-root [`CLAUDE.md`](../../CLAUDE.md).
+root [`AGENTS.md`](../../AGENTS.md).
 
 ## Setup
 
@@ -228,7 +228,7 @@ mix native.sources                # verify pinned native source digests
 mix native.advisories             # OSV advisories for pinned native sources
 ```
 
-Each package's `CLAUDE.md` and README list its lanes and prerequisites.
+Each package's `AGENTS.md` and README list its lanes and prerequisites.
 
 ## Continuous integration
 
@@ -273,7 +273,7 @@ private modules or behavior outside the final contract.
 
 `usage-rules.md` is part of the package archive. Add it to `package[:files]`
 and make the package's archive check require it. Repository contributor rules
-remain in `CLAUDE.md`, `AGENTS.md` and `.claude/`; do not copy those rules into
+remain in `AGENTS.md` and `.agents/skills/`; do not copy those rules into
 the consumer file.
 
 The root Mix project has no package dependencies, so it does not aggregate the
@@ -291,8 +291,8 @@ re-renders `docs/catalogue.yaml`. The package gets the `WOTEX_PATH_DEPS`
 switch (sibling path dependencies with `env: :dev`, refused outside
 development, test and docs), HexDocs extras and source links at its release
 tag, the standard full
-gate with archive, application-free and boundary scripts, a `CLAUDE.md`
-package contract, a consumer-facing `usage-rules.md`, and a `README.md` with
+gate with archive, application-free and boundary scripts, an `AGENTS.md`
+package guidance file, a consumer-facing `usage-rules.md`, and a `README.md` with
 installation and development sections. Then run `mix pkg <name> deps.get` and
 `mix pkg <name> check --no-retry`, and add the package to the package tables
 of the root README and `docs/README.md`. A package that gains C, C++ or Rust

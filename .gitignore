@@ -26,6 +26,10 @@ tmp/
 # Dexter code index (mix index).
 .dexter/
 
+# Local agent clients; shared guidance lives in .agents/ and AGENTS.md.
+.claude/
+.codex/
+
 # Local execution state; never published.
 /docs/tasks/inbox.md
 /docs/tasks/local/

@@ -1,8 +1,9 @@
 # Contributing
 
-WoTEx is a family of independent packages in one repository. Each package has
-its own contract in `packages/<name>/CLAUDE.md` and its own specifications
-under `docs/packages/<name>/specs/`. Read both before changing a package.
+WoTEx is a family of independent packages in one repository. `AGENTS.md` is
+the repository contract. Each package has scoped guidance in
+`packages/<name>/AGENTS.md` and specifications under
+`docs/packages/<name>/specs/`. Read the relevant guidance before changing a package.
 
 ## Repository layout
 
@@ -13,13 +14,13 @@ under `docs/packages/<name>/specs/`. Read both before changing a package.
 | `docs/architecture/`, `docs/guides/` | Family architecture and cross-package guides |
 | `docs/tasks/local/` | Ignored; the only place for machine-local execution state |
 | `tooling/` | The package manifest (`packages.yaml`), the images of the native checks and the vendored nanobench of the native benchmarks |
-| `.claude/` | Shared agent rules and skills; each `packages/<name>/CLAUDE.md` stays that package's contract |
+| `.agents/skills/` | Shared skills selected automatically by the AI; package guidance stays in `packages/<name>/AGENTS.md` |
 | `.clang-format`, `.clang-tidy`, `.clang-format-ignore`, `rust-toolchain.toml` | Native formatting, static analysis, exclusions and the Rust toolchain |
 
 `docs/` is for people. Code never reads from `docs/`: fixtures, schemas and
 machine-read provenance live in each package's `priv/`. The one exception is
 wotex-lab's knowledge graph and MCP resources, which read the documentation
-tree as their subject (see `CLAUDE.md`).
+tree as their subject (see `AGENTS.md`).
 
 ## Setup
 

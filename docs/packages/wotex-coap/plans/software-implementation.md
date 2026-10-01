@@ -18,7 +18,7 @@ executed cohort and its limits. The ordered packages define acceptance.
 
 ## Read before changing code
 
-1. Read `CLAUDE.md` and matching repository rules/skills.
+1. Read `AGENTS.md` and matching repository rules/skills.
 2. Read [WCO.01 — shared software rules](../specs/WCO.01-library-contract.md).
 3. Read [WCO.05 — exact target profile](../specs/WCO.05-software-contract.md), then the existing protocol/current-profile specifications linked there.
 4. Read [WCO.06 — standalone APIs, preservation and exact fixtures](../specs/WCO.06-standalone-client-and-preservation.md).
@@ -209,7 +209,7 @@ After each package, update the current-profile/README capability claims only for
 behavior supported by the recorded assertions, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
 explicit. Commit with the identity already configured by the contributor, as the
-root `CLAUDE.md` requires; never configure remotes, push, tag, publish, change
+root `AGENTS.md` requires; never configure remotes, push, tag, publish, change
 visibility or edit a consumer.
 
 The final package also accepts every .11 standalone and .12 integration requirement,

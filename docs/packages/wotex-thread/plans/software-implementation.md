@@ -7,7 +7,7 @@ build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
-1. Read the root and `packages/wotex-thread` `CLAUDE.md` and matching repository rules/skills.
+1. Read the root and `packages/wotex-thread` `AGENTS.md` and matching repository rules/skills.
 2. Read [WTH.01 — shared software rules](../specs/WTH.01-library-contract.md).
 3. Read [WTH.04 — exact target profile](../specs/WTH.04-software-contract.md), then the existing protocol/current-profile specifications linked there.
 4. Read [WTH.05 — standalone API, preservation and concrete corpus](../specs/WTH.05-standalone-client-and-preservation.md).
@@ -257,7 +257,7 @@ After each package, update the current-profile/README capability claims only for
 behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
 explicit. Commit with the identity already configured by the contributor, as the
-root `CLAUDE.md` requires; never configure remotes, push, tag, publish, change
+root `AGENTS.md` requires; never configure remotes, push, tag, publish, change
 visibility or edit a consumer.
 
 The final package accepts every .11 standalone, .12 integration and .13 native requirement,

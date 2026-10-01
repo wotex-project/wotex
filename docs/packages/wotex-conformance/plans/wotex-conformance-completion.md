@@ -126,8 +126,8 @@ Evidence records commit, archive SHA-256, corpus/manifest digest, protocol,
 runtime and dependency cohort, commands and exit codes. Passing a different
 corpus or subject cannot discharge a claim for the selected artifact.
 
-Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
-`packages/wotex-conformance/CLAUDE.md`, this plan and WCF.01; run `mix setup`
+Fresh checkout procedure: clone the repository; read the root `AGENTS.md`,
+`packages/wotex-conformance/AGENTS.md`, this plan and WCF.01; run `mix setup`
 from the repository root, use `mix pkg wotex-conformance test` and
 `mix check.fast --package wotex-conformance` for the fast loop, and run
 `mix pkg wotex-conformance check --no-retry` before recording

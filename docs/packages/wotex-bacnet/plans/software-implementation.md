@@ -7,7 +7,7 @@ production client. WBA.03 defines the implemented profile and
 [executable evidence](../provenance/executable-evidence.md) identifies the exact
 tested source, toolchains and cohorts.
 
-Read `CLAUDE.md`, the matching rules and skills, WBA.01, WBA.04, WBA.05,
+Read `AGENTS.md`, the matching rules and skills, WBA.01, WBA.04, WBA.05,
 WBA.06, the source register and the catalogue before changing this profile.
 The packages below follow their dependency order. A changed package requires
 focused assertions, the complete local gate and every affected native or peer

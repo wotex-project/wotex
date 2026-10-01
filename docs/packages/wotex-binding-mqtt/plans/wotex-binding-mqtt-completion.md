@@ -105,8 +105,8 @@ Package inputs ship no Markdown documentation and structurally exclude
 rules alone never count. A clean checkout needs neither tracker nor external
 automation service for local work.
 
-Fresh checkout procedure: clone the repository; read the root `CLAUDE.md`,
-`packages/wotex-binding-mqtt/CLAUDE.md`, this plan and the owning WBM files;
+Fresh checkout procedure: clone the repository; read the root `AGENTS.md`,
+`packages/wotex-binding-mqtt/AGENTS.md`, this plan and the owning WBM files;
 run `mix setup` from the repository root, use `mix pkg wotex-binding-mqtt test`
 and `mix check.fast --package wotex-binding-mqtt` for the fast loop, and run
 `mix pkg wotex-binding-mqtt check --no-retry` (equivalently
