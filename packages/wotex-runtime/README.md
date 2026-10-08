@@ -62,8 +62,13 @@ consumer-owned Task.Supervisor with `max_children: 1` per instance. Supply
 the decoder module, exact contract reference, supervisor pid, current-input
 callback and matching clock callback. The executor checks admission before
 work and reply acceptance, kills timed-out workers and reaps them on owner
-death. Trusted BEAM code has no VM or descendant isolation. Process codecs
-and independent protocol projections remain under development.
+death. Trusted BEAM code has no VM or descendant isolation. Process executors
+and native qualification remain under development.
+
+`Wotex.Runtime.Codec.Wire` validates and canonically encodes the process-codec
+v1 frames. Its immutable stream supports fragmented and coalesced input under
+explicit frame and queue limits. A valid frame establishes syntax only; the
+binding still owns handshake state, correlation, deadlines and process custody.
 
 ## Installation
 

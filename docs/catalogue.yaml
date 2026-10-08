@@ -380,7 +380,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-runtime/specs/WRT.05-implementation-lifecycle.md"
       - id: "WRT.06"
-        version: "1.2.0"
+        version: "1.3.0"
         implementation_status: "partial"
         path: "docs/packages/wotex-runtime/specs/WRT.06-bounded-codec.md"
   wotex-thread:

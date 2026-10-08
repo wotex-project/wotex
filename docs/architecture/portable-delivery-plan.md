@@ -1,7 +1,8 @@
 # Portable implementation delivery programme
 
-Plan `PD-P@1.2.0`, 2026-10-08. Target specifications: WRT.04–05 at 1.1.0
-and WRT.06 at 1.2.0, including its explicit consumer-supervised BEAM executor.
+Plan `PD-P@1.3.0`, 2026-10-08. Target specifications: WRT.04–05 at 1.1.0
+and WRT.06 at 1.3.0, including its explicit consumer-supervised BEAM executor
+and pure process-frame API.
 Source-review baseline: `c8c727a7c8c18fec82d80cc5ba88d246af3c67fc`.
 This is a dependency-ordered completion contract, not an execution tracker.
 Runtime admission, lifecycle values and the trusted BEAM codec seam are implemented.

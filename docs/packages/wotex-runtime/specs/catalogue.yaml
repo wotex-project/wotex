@@ -57,11 +57,11 @@ specifications:
     executable_evidence: ["test/wotex/runtime/implementation_lifecycle_test.exs"]
     compatibility_classification: "pure lifecycle construction, closed events, generation fencing and explicit cleanup outcomes implemented; binding custody, replacement and actual resource-release qualification remain open; no generic process manager"
   - id: "WRT.06"
-    version: "1.2.0"
+    version: "1.3.0"
     path: "docs/specs/WRT.06-bounded-codec.md"
     implementation_status: "partial"
     standards: []
     requires: ["WRT.04", "WRT.05"]
-    implementation_modules: ["Wotex.Runtime.Codec", "Wotex.Runtime.Codec.Call", "Wotex.Runtime.Codec.Result", "Wotex.Runtime.Codec.Value", "Wotex.Runtime.Codec.Decoder", "Wotex.Runtime.Codec.Executor", "Wotex.Runtime.Codec.Beam"]
-    executable_evidence: ["test/wotex/runtime/codec_test.exs", "test/wotex/runtime/codec_beam_test.exs"]
-    compatibility_classification: "bounded inert algebra, correlated facade and explicitly consumer-supervised trusted BEAM tasks implemented; process host, independent codec implementations, native enforcement and protocol-owner usefulness qualification remain open; no WASM or hardware claim"
+    implementation_modules: ["Wotex.Runtime.Codec", "Wotex.Runtime.Codec.Call", "Wotex.Runtime.Codec.Result", "Wotex.Runtime.Codec.Value", "Wotex.Runtime.Codec.Decoder", "Wotex.Runtime.Codec.Executor", "Wotex.Runtime.Codec.Beam", "Wotex.Runtime.Codec.Wire"]
+    executable_evidence: ["test/wotex/runtime/codec_test.exs", "test/wotex/runtime/codec_beam_test.exs", "test/wotex/runtime/codec_wire_test.exs", "bin/check_package.exs"]
+    compatibility_classification: "bounded inert algebra, correlated facade, explicitly consumer-supervised trusted BEAM tasks and pure process-frame grammar/incremental parsing implemented; live process host, independent codec implementations, native enforcement and consumer usefulness qualification remain open; no WASM or hardware claim"

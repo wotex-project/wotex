@@ -1,6 +1,6 @@
 # Wotex Runtime completion contract
 
-Plan `WRT-C@1.4.0` governs package `wotex_runtime 0.1.0`. It defines durable
+Plan `WRT-C@1.5.0` governs package `wotex_runtime 0.1.0`. It defines durable
 requirements, not mutable approval or progress. Requirement changes need review
 and a plan revision; historical Git content remains immutable. The normative
 catalogue is `docs/packages/wotex-runtime/specs/catalogue.yaml`.
@@ -47,7 +47,7 @@ acquire an SDK dependency or native process manager.
 
 ## Optional implementation delivery
 
-WRT.04–05 at 1.1.0 and WRT.06 at 1.2.0 are optional contracts with specified APIs and receipt
+WRT.04–05 at 1.1.0 and WRT.06 at 1.3.0 are optional contracts with specified APIs and receipt
 formats. WRT.04 admission, WRT.05 lifecycle values and WRT.06's trusted BEAM
 codec seam are implemented; their native and independent-consumer qualification
 remain open in the package

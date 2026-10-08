@@ -1,6 +1,6 @@
 # Optional implementation delivery
 
-Decision `PD-ADR@1.2.0`, 2026-10-08. Accepted design direction; implementation
+Decision `PD-ADR@1.3.0`, 2026-10-08. Accepted design direction; implementation
 status is recorded by the package catalogue. Source review baseline:
 `c8c727a7c8c18fec82d80cc5ba88d246af3c67fc`. This decision reconciles
 [extension research](../research/runtime-extension-architecture.md) at
@@ -37,7 +37,7 @@ compatibility obligation; change them when the target design requires it,
 revising owning specifications/catalogues and affected callers together. Keep
 package ownership and consumer authority because they serve the design, not
 because of a presumed installed user base. WRT.04–05 at 1.1.0 and WRT.06
-at 1.2.0 define exact
+at 1.3.0 define exact
 target APIs and record formats now; tests prove the target rather than choose it.
 Implementation must revise a protocol's own contract before adding a profile
 or changing its process protocol. See the [delivery plan](portable-delivery-plan.md)

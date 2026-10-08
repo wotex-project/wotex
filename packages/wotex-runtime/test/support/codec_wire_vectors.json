@@ -1,0 +1,88 @@
+{
+  "contract": "process-codec@1.0.0",
+  "provenance": "Repository-authored framing vectors; no external conformance or implementation claim.",
+  "vectors": [
+    {
+      "id": "hello",
+      "frame": {
+        "v": 1,
+        "type": "hello",
+        "instance_id": "codec-instance",
+        "generation": 1,
+        "descriptor_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "contract_id": "example.uint8",
+        "contract_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "decode_ms": 1000,
+        "configuration_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "configuration": {}
+      },
+      "canonical": "{\"configuration\":{},\"configuration_sha256\":\"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\"contract_id\":\"example.uint8\",\"contract_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"decode_ms\":1000,\"descriptor_sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"generation\":1,\"instance_id\":\"codec-instance\",\"type\":\"hello\",\"v\":1}\n"
+    },
+    {
+      "id": "ready",
+      "frame": {
+        "v": 1,
+        "type": "ready",
+        "instance_id": "codec-instance",
+        "generation": 1,
+        "descriptor_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "contract_id": "example.uint8",
+        "contract_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "decode_ms": 1000,
+        "configuration_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "canonical": "{\"configuration_sha256\":\"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\",\"contract_id\":\"example.uint8\",\"contract_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"decode_ms\":1000,\"descriptor_sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"generation\":1,\"instance_id\":\"codec-instance\",\"type\":\"ready\",\"v\":1}\n"
+    },
+    {
+      "id": "decode",
+      "frame": {
+        "v": 1,
+        "type": "decode",
+        "seq": 1,
+        "request_id": "wire-request",
+        "budget_ms": 1000,
+        "bytes": {
+          "type": "bytes",
+          "base64": "AQ=="
+        },
+        "metadata": {
+          "format": "uint8"
+        }
+      },
+      "canonical": "{\"budget_ms\":1000,\"bytes\":{\"base64\":\"AQ==\",\"type\":\"bytes\"},\"metadata\":{\"format\":\"uint8\"},\"request_id\":\"wire-request\",\"seq\":1,\"type\":\"decode\",\"v\":1}\n"
+    },
+    {
+      "id": "result",
+      "frame": {
+        "v": 1,
+        "type": "result",
+        "seq": 1,
+        "request_id": "wire-request",
+        "value": {
+          "type": "uint",
+          "value": "18446744073709551615"
+        }
+      },
+      "canonical": "{\"request_id\":\"wire-request\",\"seq\":1,\"type\":\"result\",\"v\":1,\"value\":{\"type\":\"uint\",\"value\":\"18446744073709551615\"}}\n"
+    },
+    {
+      "id": "refusal",
+      "frame": {
+        "v": 1,
+        "type": "refusal",
+        "seq": 1,
+        "request_id": "wire-request",
+        "code": "invalid_input"
+      },
+      "canonical": "{\"code\":\"invalid_input\",\"request_id\":\"wire-request\",\"seq\":1,\"type\":\"refusal\",\"v\":1}\n"
+    },
+    {
+      "id": "stop",
+      "frame": {
+        "v": 1,
+        "type": "stop"
+      },
+      "canonical": "{\"type\":\"stop\",\"v\":1}\n"
+    }
+  ]
+}

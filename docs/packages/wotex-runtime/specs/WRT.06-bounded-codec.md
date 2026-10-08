@@ -1,6 +1,6 @@
 # WRT.06: Bounded, inert codec profile
 
-Specification `WRT.06@1.2.0`. Package owner: `wotex_runtime`.
+Specification `WRT.06@1.3.0`. Package owner: `wotex_runtime`.
 Contract: accepted optional specification; implementation status: `partial`.
 This optional profile defines deterministic decoding of explicit bytes and
 metadata into inert typed values. It is not a transport, device enrollment,
@@ -199,6 +199,39 @@ transport credentials. No hidden startup or shared worker pool is introduced.
 
 ## C04 — Process framing and handshake
 
+### Pure wire API
+
+`Wotex.Runtime.Codec.Wire` owns the bounded C04 frame grammar and incremental
+framing, without starting a process or managing a handshake. Protocol bindings
+may call these public APIs; they still own direction, ready state, sequence and
+request correlation, current admission, deadlines and native custody.
+
+`Wire.validate/1` takes a frame map and returns `{:ok, frame_map}` or
+`{:error, Implementation.Error}`. `Wire.encode/1` validates that map and returns
+its JCS bytes followed by exactly one LF. `Wire.decode/1` takes one complete
+LF-terminated binary and returns a validated frame or error. `hello`
+configuration must match its declared JCS SHA-256; this is consistency checking,
+not integrity or schema qualification. No module or process is resolved from
+a wire field. Failures use fixed `protocol_fault`, phase `decode`, empty details.
+
+`Wire.new/1` takes a closed atom-keyed map with exactly `frame_bytes` in
+`1..131072` and `queue_bytes` in `1..262144`. It returns
+`{:ok, %Wire{buffer: <<>>, frame_bytes: limit, queue_bytes: limit}}` or
+`invalid_configuration` at admission. `Wire.feed/2` takes this value and a
+binary chunk, returning `{:ok, [frame_map], new_wire}` or a fixed protocol error.
+It supports fragmented UTF-8 and multiple complete frames in one chunk. It
+checks buffer-plus-chunk against queue_bytes before concatenation, checks each
+frame including LF against frame_bytes before parsing, and retains only the
+last partial frame. A partial frame must leave room for its required LF.
+Every call revalidates forged state, including no complete frame in the buffer.
+Inspection omits the buffered bytes. After an error the binding terminates the
+instance rather than resuming the parser or resynchronizing foreign output.
+
+These pure functions establish syntax only. Their success cannot establish
+ready state, a timely reply, a valid generation or process resource enforcement.
+
+### Wire grammar
+
 The process uses stdin/stdout UTF-8 JSON lines, one object per LF-terminated
 frame, no CRLF, BOM or blank line. No literal CR/LF appears inside the JSON
 body; string content may use JSON escapes. Whitespace other than CR/LF is
@@ -273,9 +306,14 @@ executor are implemented. `test/wotex/runtime/codec_test.exs` checks canonical
 values, bounds, pre-callback refusal, identity substitution and redaction.
 `test/wotex/runtime/codec_beam_test.exs` exercises actual supervised workers,
 owner death, timeout cleanup, overload and current-policy/late-reply refusal.
-These tests do not establish independent process-codec interoperability or
-consumer usefulness. Process framing, native custody/enforcement, independent
-implementations and the protocol-owner projection remain open.
+`Wire` implements the pure C04 grammar and incremental framing.
+`test/wotex/runtime/codec_wire_test.exs` checks the repository-authored corpus
+in `test/support/codec_wire_vectors.json`, malformed frames, UTF-8 fragmentation,
+coalescing and exact size/depth/node limits. The isolated package consumer also
+exercises this public seam. These tests do not establish independent
+process-codec interoperability or consumer usefulness. Live handshake/exchange,
+native custody/enforcement and independent implementations remain open. The
+optional Modbus projection is specified separately by its owner in WMB.09.
 
 Required evidence, stored under the package's `priv/` or `test/support/`:
 

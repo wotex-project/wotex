@@ -36,9 +36,24 @@ defmodule Wotex.Runtime.Check.Package do
 
   @consumer_test ~S"""
   defmodule RuntimePackageConsumerTest do
+    @moduledoc false
+
     use ExUnit.Case, async: true
 
     alias Wotex.Runtime.{Context, Error, ExposedThing}
+    alias Wotex.Runtime.Codec.Wire
+
+    test "the unpacked archive validates and incrementally frames codec messages" do
+      stop = %{"v" => 1, "type" => "stop"}
+      {:ok, wire} = Wire.new(%{frame_bytes: 131_072, queue_bytes: 262_144})
+      assert {:ok, bytes} = Wire.encode(stop)
+      assert bytes == ~s({"type":"stop","v":1}) <> "\n"
+      assert {:ok, [], partial} = Wire.feed(wire, ~s({"type":))
+      assert {:ok, [^stop], _} = Wire.feed(partial, ~s("stop","v":1}) <> "\n")
+
+      assert {:error, %Wotex.Runtime.Implementation.Error{code: :protocol_fault}} =
+               Wire.decode(~s({"type":"stop","v":1,"v":1}) <> "\n")
+    end
 
     test "the unpacked archive supports dispatch and typed errors" do
       source_root = System.fetch_env!("WOTEX_RUNTIME_SOURCE_ROOT")
