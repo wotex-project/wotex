@@ -50,12 +50,12 @@ specifications:
   - id: "WRT.05"
     version: "1.1.0"
     path: "docs/specs/WRT.05-implementation-lifecycle.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: []
     requires: ["WRT.01", "WRT.04"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "unreleased target lifecycle constructor/transition/event contract, package-owned process protocols and explicit stop/reopen; current APIs may change with owning contract/caller revisions; no generic process manager"
+    implementation_modules: ["Wotex.Runtime.Implementation.Lifecycle"]
+    executable_evidence: ["test/wotex/runtime/implementation_lifecycle_test.exs"]
+    compatibility_classification: "pure lifecycle construction, closed events, generation fencing and explicit cleanup outcomes implemented; binding custody, replacement and actual resource-release qualification remain open; no generic process manager"
   - id: "WRT.06"
     version: "1.1.0"
     path: "docs/specs/WRT.06-bounded-codec.md"

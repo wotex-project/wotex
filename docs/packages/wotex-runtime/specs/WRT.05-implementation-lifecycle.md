@@ -1,7 +1,7 @@
 # WRT.05: Admitted instance lifecycle and replacement
 
 Specification `WRT.05@1.1.0`. Package owner: `wotex_runtime`.
-Contract: target specification; implementation status: `planned`.
+Contract: accepted optional specification; implementation status: `partial`.
 This optional contract applies to instances admitted under WRT.04. It adds
 immutable lifecycle decisions and binding obligations, not a Runtime process
 manager. WoTEx is unreleased; current callbacks, messages and defaults are not
@@ -240,8 +240,12 @@ arbitrary native text never reaches public telemetry or errors.
 
 ## L08 — Acceptance obligations
 
-Future tests must traverse the public Runtime and actual binding owner, not
-only a pure transition helper. No conformance or hardware result is asserted.
+`test/wotex/runtime/implementation_lifecycle_test.exs` exercises the public
+constructor, complete state/event matrix, generation correlation, malformed
+values and preservation of uncertain effects through cleanup. Actual binding
+ownership, process cleanup and replacement acceptance remain open. Those tests
+must traverse the public Runtime and actual binding owner; pure transitions
+do not establish resource release. No conformance or hardware result is asserted.
 
 | Requirement | Required cases |
 |---|---|

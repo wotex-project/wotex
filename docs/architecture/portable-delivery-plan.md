@@ -3,7 +3,7 @@
 Plan `PD-P@1.1.0`, 2026-10-08. Target specifications: WRT.04–06 at 1.1.0.
 Source-review baseline: `c8c727a7c8c18fec82d80cc5ba88d246af3c67fc`.
 This is a dependency-ordered completion contract, not an execution tracker.
-Runtime admission values are implemented. The package catalogue records
+Runtime admission and lifecycle values are implemented. The package catalogue records
 implementation status; native and independent-consumer qualification remains open.
 
 ## Target and stop conditions

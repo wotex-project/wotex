@@ -373,7 +373,7 @@ packages:
         path: "docs/packages/wotex-runtime/specs/WRT.04-implementation-admission.md"
       - id: "WRT.05"
         version: "1.1.0"
-        implementation_status: "planned"
+        implementation_status: "partial"
         path: "docs/packages/wotex-runtime/specs/WRT.05-implementation-lifecycle.md"
       - id: "WRT.06"
         version: "1.1.0"

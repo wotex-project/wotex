@@ -45,7 +45,11 @@ Call `Admission.revalidate/2` with current inputs immediately before execution.
 A receipt constructor checks syntax, not signatures, native files or OS
 isolation. The binding owns those proofs and process custody. Ordinary
 ConsumedThing and ExposedThing use remains independent of descriptors.
-Native execution and codec profiles are still under development.
+`Lifecycle.new/1` constructs a passive admitted instance. `Lifecycle.transition/2`
+applies generation-bound observations and keeps cleanup outcomes explicit.
+The consumer serializes routing; the binding verifies readiness and resource
+release. A stopped generation is terminal. Native execution and codec profiles
+are still under development.
 
 ## Installation
 
