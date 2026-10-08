@@ -2,8 +2,10 @@ defmodule Wotex.UDP.Owner do
   @moduledoc """
   An explicitly started process that owns one UDP socket and one owner epoch.
 
-  Atomic admission bounds pending calls and queued send bytes before they enter
-  the mailbox. One asynchronous socket operation runs at a time. The owner
+  Atomic publication bounds complete requests and queued send bytes in an
+  owner-owned ETS queue. One coalesced wakeup and a ten-millisecond sweep
+  recover publication without notification; request payloads never enter the
+  mailbox. One asynchronous socket operation runs at a time. The owner
   monitors callers, cancels abandoned operations and checks original deadlines
   at dispatch and delivery. Close cancels pending work and releases the socket.
   Handle retrieval reads immutable process-local metadata without queueing work.
@@ -15,6 +17,7 @@ defmodule Wotex.UDP.Owner do
   alias Wotex.UDP.{Admission, Backend, Config, Endpoint, Error, Handle}
 
   @metadata_key {__MODULE__, :metadata}
+  @poll_ms 10
 
   @doc "Starts one socket owner linked to the caller. No global name is used."
   @spec start_link(Config.t()) :: GenServer.on_start()
@@ -35,22 +38,74 @@ defmodule Wotex.UDP.Owner do
   def call(%Handle{owner: owner} = handle, operation, args) do
     with {:ok, {current, config}} <- metadata(owner),
          :ok <- same_handle(handle, current),
-         :ok <- validate(config, operation, args),
-         bytes = queued_bytes(operation, args),
-         :ok <-
-           Admission.acquire(
-             current.admission,
-             config.max_pending_calls,
-             config.max_queued_send_bytes,
-             bytes
-           ) do
-      timeout = call_timeout(operation, args, config.max_timeout_ms)
-      deadline = now() + timeout
-      call_owner(owner, {operation, current.epoch, args, deadline}, timeout + 100)
+         :ok <- validate(config, operation, args) do
+      submit(current, config, operation, args)
     end
   end
 
   def call(_, _, _), do: error(:invalid_handle, :owner)
+
+  defp submit(handle, config, operation, args) do
+    monitor = Process.monitor(handle.owner)
+    reply = :erlang.alias([:explicit_unalias])
+    id = make_ref()
+    requested = call_timeout(operation, args, config.max_timeout_ms)
+    timeout = if requested == 0, do: min(config.max_timeout_ms, 100), else: requested
+
+    request = %{
+      id: id,
+      from: {self(), reply},
+      operation: operation,
+      args: args,
+      deadline: now() + timeout,
+      epoch: handle.epoch
+    }
+
+    try do
+      case Admission.enqueue(handle.admission, request) do
+        {:ok, notification} ->
+          if notification, do: send(notification, {:udp_work, notification})
+          await_reply(id, reply, monitor, handle.owner, operation, request.deadline + 100)
+
+        error ->
+          if Process.alive?(handle.owner), do: error, else: error(:owner_lost, :owner)
+      end
+    after
+      :erlang.unalias(reply)
+      Process.demonitor(monitor, [:flush])
+
+      receive do
+        {:udp_reply, ^id, _} -> :ok
+      after
+        0 -> :ok
+      end
+    end
+  end
+
+  defp await_reply(id, reply, monitor, owner, operation, deadline) do
+    receive do
+      {:udp_reply, ^id, {:owner_closed, result}} when operation == :close ->
+        await_closed(monitor, owner, result, deadline)
+
+      {:udp_reply, ^id, result} ->
+        result
+
+      {:DOWN, ^monitor, :process, ^owner, _} ->
+        error(:owner_lost, :owner)
+    after
+      max(deadline - now(), 0) ->
+        :erlang.unalias(reply)
+        error(:timeout, :owner)
+    end
+  end
+
+  defp await_closed(monitor, owner, result, deadline) do
+    receive do
+      {:DOWN, ^monitor, :process, ^owner, _} -> result
+    after
+      max(deadline - now(), 0) -> error(:timeout, :owner)
+    end
+  end
 
   defp metadata(owner) when is_pid(owner) and node(owner) == node() do
     case :erlang.process_info(owner, {:dictionary, @metadata_key}) do
@@ -77,7 +132,11 @@ defmodule Wotex.UDP.Owner do
   def init(config) do
     case Backend.open(config) do
       {:ok, socket} ->
-        admission = :atomics.new(1, signed: false)
+        notification = :erlang.alias([:explicit_unalias])
+
+        admission =
+          Admission.new(config.max_pending_calls, config.max_queued_send_bytes, notification)
+
         epoch = make_ref()
 
         handle = %Handle{
@@ -100,7 +159,9 @@ defmodule Wotex.UDP.Owner do
            config: config,
            pending: %{},
            queue: :queue.new(),
-           active: nil
+           active: nil,
+           notification: notification,
+           poll: poll()
          }}
 
       {:error, error} ->
@@ -109,54 +170,14 @@ defmodule Wotex.UDP.Owner do
   end
 
   @impl GenServer
-  def handle_call({operation, epoch, args, deadline}, from, state) do
-    cond do
-      epoch != state.epoch ->
-        release(state, operation, args)
-        {:reply, error(:stale_handle, :owner), state}
-
-      expired?(deadline, operation, args) ->
-        release(state, operation, args)
-        {:reply, error(:timeout, operation), state}
-
-      operation == :close ->
-        state =
-          Enum.reduce(Map.keys(state.pending), state, fn id, acc ->
-            finish(acc, id, error(:closed, :owner))
-          end)
-
-        release(state, operation, args)
-        result = Backend.close(state.socket)
-        {:stop, :normal, result, %{state | socket: nil}}
-
-      true ->
-        id = make_ref()
-
-        request = %{
-          from: from,
-          operation: operation,
-          args: args,
-          deadline: deadline,
-          monitor: Process.monitor(elem(from, 0)),
-          timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0)),
-          select: nil,
-          datagrams: [],
-          count: 0
-        }
-
-        state = %{
-          state
-          | pending: Map.put(state.pending, id, request),
-            queue: :queue.in(id, state.queue)
-        }
-
-        {:noreply, advance(state)}
-    end
-  end
-
   def handle_call(_, _, state), do: {:reply, error(:invalid_handle, :owner), state}
 
   @impl GenServer
+  def handle_info({:udp_work, notification}, %{notification: notification} = state), do: pump(state)
+
+  def handle_info({:admission_poll, token}, %{poll: token} = state),
+    do: pump(%{state | poll: poll()})
+
   def handle_info({:deadline, id}, state) do
     case Map.fetch(state.pending, id) do
       {:ok, request} -> {:noreply, advance(finish(state, id, timeout_result(request)))}
@@ -191,6 +212,81 @@ defmodule Wotex.UDP.Owner do
   @impl GenServer
   def terminate(_, %{socket: nil}), do: :ok
   def terminate(_, state), do: Backend.close(state.socket)
+
+  defp poll do
+    token = make_ref()
+    Process.send_after(self(), {:admission_poll, token}, @poll_ms)
+    token
+  end
+
+  defp pump(state) do
+    old = state.notification
+    :erlang.unalias(old)
+
+    receive do
+      {:udp_work, ^old} -> :ok
+    after
+      0 -> :ok
+    end
+
+    notification = :erlang.alias([:explicit_unalias])
+    requests = Admission.take(state.admission, notification)
+    state = %{state | notification: notification}
+
+    case Enum.reduce_while(requests, state, &ingest/2) do
+      {:stopped, state} -> {:stop, :normal, state}
+      state -> {:noreply, advance(state)}
+    end
+  end
+
+  defp ingest(request, state) do
+    cond do
+      request.epoch != state.epoch ->
+        reject(state, request, error(:stale_handle, :owner))
+
+      not Process.alive?(elem(request.from, 0)) ->
+        reject(state, request, error(:closed, :owner))
+
+      expired?(request.deadline, request.operation, request.args) ->
+        reject(state, request, error(:timeout, request.operation))
+
+      request.operation == :close ->
+        state =
+          Enum.reduce(Map.keys(state.pending), state, fn id, acc ->
+            finish(acc, id, error(:closed, :owner))
+          end)
+
+        result = Backend.close(state.socket)
+        respond(request.from, request.id, {:owner_closed, result})
+        {:halt, {:stopped, %{state | socket: nil}}}
+
+      true ->
+        request =
+          Map.merge(request, %{
+            monitor: Process.monitor(elem(request.from, 0)),
+            timer:
+              Process.send_after(self(), {:deadline, request.id}, max(request.deadline - now(), 0)),
+            select: nil,
+            datagrams: [],
+            count: 0
+          })
+
+        {:cont,
+         %{
+           state
+           | pending: Map.put(state.pending, request.id, request),
+             queue: :queue.in(request.id, state.queue)
+         }}
+    end
+  end
+
+  defp reject(state, request, result) do
+    Admission.release(state.admission, request.id)
+    respond(request.from, request.id, result)
+    {:cont, state}
+  end
+
+  defp respond({_, reply}, id, result), do: send(reply, {:udp_reply, id, result})
 
   defp selected?(%{active: nil}, _, _), do: false
 
@@ -261,8 +357,8 @@ defmodule Wotex.UDP.Owner do
     if request.select, do: Backend.cancel(state.socket, request.select)
     Process.cancel_timer(request.timer)
     Process.demonitor(request.monitor, [:flush])
-    release(state, request.operation, request.args)
-    GenServer.reply(request.from, result)
+    Admission.release(state.admission, id)
+    respond(request.from, id, result)
 
     %{
       state
@@ -320,9 +416,9 @@ defmodule Wotex.UDP.Owner do
 
   defp validate(_, operation, [%Endpoint{} = group, interface]) when operation in [:join, :leave] do
     valid_interface =
-      (is_integer(interface) and interface in 0..4_294_967_295) or
+      (is_integer(interface) and interface in 1..2_147_483_647) or
         (is_tuple(interface) and tuple_size(interface) == 4 and
-           match?({:ok, _}, Endpoint.bind(interface, 0)))
+           match?({:ok, _}, Endpoint.unicast(interface, 1)))
 
     if Endpoint.valid?(group) and valid_interface,
       do: :ok,
@@ -337,22 +433,7 @@ defmodule Wotex.UDP.Owner do
       else: error(:invalid_deadline, :deadline)
   end
 
-  defp expired?(deadline, operation, args) do
-    if operation in [:send, :recv, :recv_batch] and List.last(args) == 0,
-      do: deadline < now(),
-      else: deadline <= now()
-  end
-
-  defp release(state, operation, args),
-    do:
-      Admission.release(
-        state.admission,
-        state.config.max_queued_send_bytes,
-        queued_bytes(operation, args)
-      )
-
-  defp queued_bytes(:send, [_, data, _]), do: byte_size(data)
-  defp queued_bytes(_, _), do: 0
+  defp expired?(deadline, _, _), do: deadline <= now()
 
   defp call_timeout(operation, args, _) when operation in [:send, :recv, :recv_batch],
     do: List.last(args)
@@ -360,11 +441,4 @@ defmodule Wotex.UDP.Owner do
   defp call_timeout(_, _, limit), do: limit
   defp now, do: System.monotonic_time(:millisecond)
   defp error(kind, operation), do: {:error, %Error{kind: kind, operation: operation, reason: nil}}
-
-  defp call_owner(owner, request, timeout) do
-    GenServer.call(owner, request, timeout)
-  catch
-    :exit, {:timeout, _} -> error(:timeout, :owner)
-    :exit, _ -> error(:owner_lost, :owner)
-  end
 end

@@ -428,7 +428,7 @@ packages:
     catalogue: "docs/packages/wotex-udp/specs/catalogue.yaml"
     specifications:
       - id: "WUD.01"
-        version: "0.4.0-target"
+        version: "0.6.0-target"
         implementation_status: "partial"
         path: "docs/packages/wotex-udp/specs/WUD.01-datagram-transport.md"
   wotex-zigbee:

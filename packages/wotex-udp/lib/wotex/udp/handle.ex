@@ -20,7 +20,7 @@ defmodule Wotex.UDP.Handle do
   @opaque t :: %__MODULE__{
             owner: pid(),
             epoch: reference(),
-            admission: :atomics.atomics_ref(),
+            admission: Wotex.UDP.Admission.t(),
             max_timeout_ms: pos_integer(),
             max_datagram_bytes: pos_integer(),
             max_pending_calls: pos_integer(),

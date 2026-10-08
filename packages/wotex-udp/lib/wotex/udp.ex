@@ -19,6 +19,10 @@ defmodule Wotex.UDP do
   The owner cancels waits when an admitted caller dies. An admitted close
   cancels pending calls with `:closed` before releasing the socket. Close shares
   the finite call budget and may return `:overload`.
+  A zero timeout polls the socket only when no request is pending. It allows
+  at most 100 ms for owner handoff, capped by the configured `max_timeout_ms`, and
+  starts no socket wait. A busy owner returns `:timeout` or, at a full
+  admission ceiling, `:overload`.
   UDP send success is local OS acceptance, not remote delivery.
   """
 
@@ -52,7 +56,7 @@ defmodule Wotex.UDP do
   @spec handle(pid()) :: result(Handle.t())
   def handle(owner), do: Owner.handle(owner)
 
-  @doc "Stops the owner and closes its socket and memberships."
+  @doc "Closes the socket and memberships, then confirms owner exit before returning."
   @spec close(Handle.t()) :: :ok | {:error, Error.t()}
   def close(handle), do: Owner.call(handle, :close, [])
 
@@ -88,13 +92,13 @@ defmodule Wotex.UDP do
   @spec recv_batch(Handle.t(), pos_integer(), non_neg_integer()) :: result([Datagram.t()])
   def recv_batch(handle, count, timeout), do: Owner.call(handle, :recv_batch, [count, timeout])
 
-  @doc "Joins a multicast group on an explicit IPv4 address or IPv6 interface index."
-  @spec join(Handle.t(), Endpoint.t(), Endpoint.address() | non_neg_integer()) ::
+  @doc "Joins a multicast group on a concrete IPv4 address or positive IPv6 interface index."
+  @spec join(Handle.t(), Endpoint.t(), Endpoint.address() | pos_integer()) ::
           :ok | {:error, Error.t()}
   def join(handle, group, interface), do: Owner.call(handle, :join, [group, interface])
 
   @doc "Leaves a multicast group on the interface previously used to join."
-  @spec leave(Handle.t(), Endpoint.t(), Endpoint.address() | non_neg_integer()) ::
+  @spec leave(Handle.t(), Endpoint.t(), Endpoint.address() | pos_integer()) ::
           :ok | {:error, Error.t()}
   def leave(handle, group, interface), do: Owner.call(handle, :leave, [group, interface])
 end

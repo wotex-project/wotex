@@ -1,6 +1,6 @@
 # WUD.01 — Bounded datagram transport
 
-Version: 0.4.0-target. The catalogue records implementation status and
+Version: 0.6.0-target. The catalogue records implementation status and
 physical interoperability evidence separately.
 
 ## Boundary
@@ -42,45 +42,90 @@ The first public seam has `Wotex.UDP.Endpoint.bind/3`, `unicast/3`,
 validated by the owner. This API is a development contract, not an
 interoperability or release claim.
 
+`multicast: true` requires `multicast_interface:` in `Wotex.UDP.Config.new/1`.
+An IPv4 socket takes a concrete unicast interface address; an IPv6 socket takes
+an integer interface index from 1 to 2,147,483,647. A missing value, wildcard
+address, index zero, wrong family or interface option without multicast
+permission returns `invalid_config`. The owner sets the corresponding OTP
+[`multicast_if` socket option](https://www.erlang.org/docs/27/apps/kernel/socket.html#socket_option/0)
+before binding. An unavailable or unsupported option fails
+open with a typed OS error and closes the new socket; no default-route fallback
+is attempted. This is explicit multicast egress selection, not an operating-system
+network sandbox or proof of physical network delivery.
+
+Receive membership remains a separate explicit `join/3` or `leave/3` operation.
+IPv4 memberships reject wildcard, multicast and broadcast interface addresses;
+IPv6 memberships reject index zero and out-of-range indices. A scoped IPv6 group
+must match the membership index, and a scoped IPv6 send destination must match
+the configured egress index. Mismatches return `invalid_endpoint` before I/O.
+Membership changes do not change the configured egress interface. A consumer
+reopens the owner to select another egress interface. OTP rejection of an
+unavailable socket option returns `unsupported_feature`; it does not substitute
+another API or interface. IPv6 egress selection and IPv6 receive membership
+are independently supported cells and require their own host evidence.
+
 The passive receive mode has no unsolicited mailbox deliveries.
 `max_batch_datagrams` is the per-call receive credit. The kernel receive
 buffer is requested in bytes and may be adjusted by the OS. Operation calls
-reserve an atomic slot and their binary send bytes before entering the owner
-mailbox. Defaults admit 32 pending operations and 65,536 send bytes; a full
-budget returns `:overload`. A queued operation carries an absolute deadline;
-the owner discards it before I/O if that deadline has expired and retains its
-admission reservation until the queued message is drained.
+atomically publish their complete request and reserve both the call slot and
+binary send bytes in one owner-owned ETS record. Defaults admit 32 pending
+operations and 65,536 send bytes; a full budget returns `overload`. There is no
+separate reservation-before-message interval. The owner retains each published
+request until it completes, is canceled or is rejected under its original
+absolute deadline. Owner death automatically deletes the queue; a stale handle
+cannot publish into a replacement owner.
+
+Only one coalesced wakeup is admitted for the current owner notification alias.
+The owner also sweeps the queue every ten milliseconds, so death or suspension
+after publication and before notification cannot strand a call or byte budget.
+Each sweep retires the previous alias before publishing the next one and drops
+its already queued wakeup. Delayed old notifications cannot accumulate across
+sweeps or replay work. No request payload enters the owner mailbox. Claims and
+releases operate on complete request identities; duplicate release is inert.
+The queue is an internal per-owner resource, with no global name or registry.
 
 Handle retrieval reads a single immutable process-local metadata record on a
 local owner; it queues no owner call and remains available while operation
 admission is saturated. An arbitrary process or malformed selector returns
 `invalid_handle`; a dead owner returns `owner_lost`. Receiving boundaries compare
 all opaque handle fields with that record before reserving admission. A changed
-epoch returns `stale_handle`; substituted limits/counters or extra fields return
-`invalid_handle` and cannot modify the live counter.
+epoch returns `stale_handle`; substituted limits/queue identity or extra fields return
+`invalid_handle` and cannot modify the live queue.
 
 Socket waits use OTP's asynchronous select API with one active operation.
-The owner monitors each caller once its admitted message is handled. Caller
+The owner monitors each caller when it claims the published request. Caller
 loss cancels an active select or removes queued work, releasing its exact call
 and byte reservation. Queued deadlines continue to expire while another
 operation waits. Positive deadline equality is expired at dispatch and delivery;
-a zero deadline polls once without starting an asynchronous wait. An expired
+a zero-timeout operation polls the socket without starting an asynchronous wait.
+It is refused with `timeout` when another request is pending (or `overload`
+when an admission ceiling is full). An idle poll receives a handoff allowance
+of at most 100 milliseconds, capped by `max_timeout_ms`, with the same deadline
+checks before I/O and delivery. This bounds scheduler handoff without waiting
+for socket readiness. The caller's reply alias is retired on completion,
+owner loss or timeout, so late replies do not enter its mailbox. An expired
 batch returns only datagrams already accepted within its original deadline.
 Oversize or socket failures discard the partial batch.
 
 An admitted close cancels the active select, rejects admitted pending calls
 with `closed`, and closes the socket before replying. Close shares the finite
 call budget and may return `overload` when that budget is full. Supervisor stop
-or owner death also closes the owned socket. A canceled or retired socket
-notification cannot resume another request or owner. Canceling a send never
+or owner death also closes the owned socket. Admitted close keeps its admission
+fence until owner exit deletes the queue; it does not reopen the queue between
+socket closure and shutdown. The caller confirms owner exit under its original
+bounded handoff deadline before returning an executed close result. An expired
+close request releases its fence and leaves the owner available. A canceled or
+retired socket notification cannot resume another request or owner. Canceling a send never
 replays bytes or proves remote nondelivery. Windows completion-based asynchronous
 backends are explicitly refused by this implementation.
 
 The local suite exercises a 100-cycle active receive cancellation workload,
 queued caller loss, live queued expiry, close during a batch, two-owner
-isolation, owner death and port reuse. Exact kernel drop accounting, the
-pre-message reservation/owner-loss race and physical multi-platform qualification
-remain open; the catalogue retains `partial` status.
+isolation, owner death and port reuse. It also covers atomic publication without
+notification, dead publishers, duplicate identities, repeated release, zero-timeout
+admission and retired reply aliases in a live caller. Exact kernel drop accounting
+and physical multi-platform qualification remain open; the catalogue retains
+`partial` status.
 
 ## Evidence
 
@@ -89,7 +134,7 @@ WUD-T1: pure constructors have no I/O. WUD-T2: real IPv4/IPv6 loopback preserves
 | Case | Local executable evidence | Remaining evidence |
 | --- | --- | --- |
 | WUD-T1 to WUD-T3 | `packages/wotex-udp/test/wotex/udp/transport_test.exs`, `boundary_test.exs` | Host and malformed/truncation matrix |
-| WUD-T4 | Finite passive receive, batch and 100-caller atomic call/byte overload flood in `transport_test.exs` | Kernel drop census |
-| WUD-T5 | Supervised owner, owner crash, stale epoch, caller-loss and close cancellation, expired queued work and port reuse in `transport_test.exs` | Pre-message reservation/owner-loss race |
-| WUD-T6 | Opt-in and membership tests in `transport_test.exs`, `boundary_test.exs` | Physical interface churn and permission cohort |
+| WUD-T4 | Finite passive receive, batch and 100-caller atomic publication/byte overload flood in `transport_test.exs` | Kernel drop census |
+| WUD-T5 | Supervised owner, owner crash, stale epoch, caller-loss and close cancellation, expired queued work, publication-before-wake caller/owner loss and port reuse in `transport_test.exs` | Physical/platform cohort |
+| WUD-T6 | Opt-in, explicit IPv4/IPv6 egress options, wildcard/scope negatives, membership tests and independent loopback multicast peer in `transport_test.exs`, `boundary_test.exs` | Physical interface churn and permission cohort |
 | WUD-T7 | Independent Erlang UDP peer with complete byte packets in `transport_test.exs`; exact archive consumer in `packages/wotex-udp/bin/check_archive.exs` | Physical macOS/Linux ARM binary-protocol consumer |

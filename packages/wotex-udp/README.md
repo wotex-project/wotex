@@ -41,11 +41,22 @@ Defaults cap datagrams at 1,472 bytes, request a 65,536-byte kernel receive
 buffer, cap a batch at 32 datagrams, admit 32 concurrent owner operations and
 65,536 queued send bytes, and cap each operation deadline at 60,000
 milliseconds. Calls above the admission limits return `:overload` before
-entering the owner mailbox. Expired queued sends are discarded before socket
+publishing a request. Expired queued sends are discarded before socket
 I/O. The owner monitors admitted callers and cancels abandoned socket waits.
-An admitted close cancels pending work before releasing the socket; it shares
-the call budget and can return `:overload`. `handle/1` obtains a local owner's
-opaque handle without adding a mailbox request. Unicast starts with a hop limit of 64; multicast starts with 1.
+Complete requests and budgets publish atomically into an owner-owned queue;
+a ten-millisecond sweep recovers a missed wakeup. Zero-timeout calls poll only
+when no request is pending, with a handoff allowance of at most 100 milliseconds
+capped by `max_timeout_ms`. Socket readiness is never awaited for such a poll.
+An admitted close fences new producers and cancels pending work before releasing
+the socket; it shares the call budget and can return `:overload`. `handle/1`
+obtains a local owner's opaque handle without adding a mailbox request.
+Unicast starts with a hop limit of 64; multicast starts with 1.
+Enabling multicast also requires `multicast_interface:`: a concrete IPv4
+interface address or a positive IPv6 interface index. The backend sets this
+egress option before binding and fails open if the OS refuses it. Membership
+calls separately name their receive interface; wildcard addresses, index zero
+and conflicting IPv6 scopes are refused. Changing egress requires reopening
+the owner with a new configuration.
 The OS may adjust the receive buffer size. Oversize datagrams
 are discarded with a typed error. `recv_batch/3` has one total deadline.
 

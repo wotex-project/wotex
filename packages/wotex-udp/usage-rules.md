@@ -8,8 +8,10 @@ catalogue records implementation status separately.
 - Create a finite configuration before explicitly opening a socket. Close the
   socket on shutdown and supervise its owner process if needed.
 - Supply finite deadlines. A successful send proves only local OS acceptance.
-- Admit broadcast and multicast explicitly. Join a multicast group only on a
-  selected interface and release membership during shutdown.
+- Admit broadcast and multicast explicitly. Enabling multicast requires an
+  explicit `multicast_interface` for egress. Join each receive group on a
+  concrete interface; wildcard addresses, index zero and conflicting IPv6
+  scopes are refused. Release memberships during shutdown.
 - Treat incoming bytes and source metadata as untrusted. Interpret payloads
   in the consumer protocol layer, under its own correlation and policy.
 - Budget datagram bytes, queued bytes, receive credits and concurrent work.

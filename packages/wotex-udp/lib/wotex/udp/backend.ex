@@ -31,6 +31,7 @@ defmodule Wotex.UDP.Backend do
           with :ok <- :socket.setopt(handle, :socket, :rcvbuf, config.receive_buffer_bytes),
                :ok <- enable_broadcast(handle, config),
                :ok <- set_hops(handle, config),
+               :ok <- set_multicast_interface(handle, config),
                :ok <- :socket.bind(handle, Endpoint.sockaddr(config.local)) do
             {:ok, %__MODULE__{handle: handle, config: config}}
           else
@@ -77,6 +78,7 @@ defmodule Wotex.UDP.Backend do
       when is_binary(data) do
     with :ok <- check_timeout(config, timeout),
          :ok <- check_destination(config, destination),
+         :ok <- check_egress(config, destination),
          :ok <- check_size(data, config.max_datagram_bytes) do
       normalize(:send, :socket.sendto(handle, data, Endpoint.sockaddr(destination), timeout))
     end
@@ -116,6 +118,7 @@ defmodule Wotex.UDP.Backend do
           :ok | {:error, Error.t()} | {:select, :socket.select_info()}
   def send_nowait(%__MODULE__{handle: handle, config: config}, destination, data) do
     with :ok <- check_destination(config, destination),
+         :ok <- check_egress(config, destination),
          :ok <- check_size(data, config.max_datagram_bytes) do
       sent(handle, :socket.sendto(handle, data, Endpoint.sockaddr(destination), :nowait))
     end
@@ -178,14 +181,16 @@ defmodule Wotex.UDP.Backend do
   Joins a multicast group on an explicit interface.
 
   For IPv4 pass the interface's numeric IPv4 address. For IPv6 pass its
-  nonnegative interface index. The socket must have `multicast: true`.
+  positive interface index. Wildcard IPv4 addresses and IPv6 index zero are
+  refused. A scoped IPv6 group must name this same index. The socket must have
+  `multicast: true` and an explicit egress interface in its configuration.
   """
-  @spec join(t(), Endpoint.t(), Endpoint.address() | non_neg_integer()) ::
+  @spec join(t(), Endpoint.t(), Endpoint.address() | pos_integer()) ::
           :ok | {:error, Error.t()}
   def join(socket, group, interface), do: membership(socket, group, interface, :add_membership)
 
   @doc "Leaves a multicast group using the same group and interface as `join/3`."
-  @spec leave(t(), Endpoint.t(), Endpoint.address() | non_neg_integer()) ::
+  @spec leave(t(), Endpoint.t(), Endpoint.address() | pos_integer()) ::
           :ok | {:error, Error.t()}
   def leave(socket, group, interface), do: membership(socket, group, interface, :drop_membership)
 
@@ -214,14 +219,15 @@ defmodule Wotex.UDP.Backend do
 
   defp membership_value(%Endpoint{family: :inet, address: group}, interface)
        when is_tuple(interface) and tuple_size(interface) == 4 do
-    case Endpoint.bind(interface, 0) do
+    case Endpoint.unicast(interface, 1) do
       {:ok, _} -> {:ok, :ip, %{multiaddr: group, interface: interface}}
       error -> error
     end
   end
 
-  defp membership_value(%Endpoint{family: :inet6, address: group}, interface)
-       when is_integer(interface) and interface >= 0 do
+  defp membership_value(%Endpoint{family: :inet6, address: group, scope_id: scope}, interface)
+       when is_integer(interface) and interface in 1..2_147_483_647 and
+              (scope == 0 or scope == interface) do
     {:ok, :ipv6, %{multiaddr: group, interface: interface}}
   end
 
@@ -250,6 +256,15 @@ defmodule Wotex.UDP.Backend do
   defp check_destination(_, _),
     do: {:error, %Error{kind: :invalid_endpoint, operation: :send, reason: nil}}
 
+  defp check_egress(
+         %{multicast_interface: interface},
+         %Endpoint{kind: :multicast, family: :inet6, scope_id: scope}
+       )
+       when scope != 0 and scope != interface,
+       do: {:error, %Error{kind: :invalid_endpoint, operation: :send, reason: nil}}
+
+  defp check_egress(_, _), do: :ok
+
   defp check_timeout(config, timeout)
        when is_integer(timeout) and timeout >= 0 and timeout <= config.max_timeout_ms,
        do: :ok
@@ -266,6 +281,14 @@ defmodule Wotex.UDP.Backend do
 
   defp enable_broadcast(handle, %Config{broadcast: true}),
     do: :socket.setopt(handle, :socket, :broadcast, true)
+
+  defp set_multicast_interface(_, %Config{multicast: false}), do: :ok
+
+  defp set_multicast_interface(handle, %Config{local: %Endpoint{family: :inet}} = config),
+    do: :socket.setopt(handle, :ip, :multicast_if, config.multicast_interface)
+
+  defp set_multicast_interface(handle, %Config{local: %Endpoint{family: :inet6}} = config),
+    do: :socket.setopt(handle, :ipv6, :multicast_if, config.multicast_interface)
 
   defp set_hops(handle, %Config{local: %Endpoint{family: :inet}} = config) do
     with :ok <- :socket.setopt(handle, :ip, :ttl, config.unicast_hops) do

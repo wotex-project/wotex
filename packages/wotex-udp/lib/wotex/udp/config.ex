@@ -8,11 +8,15 @@ defmodule Wotex.UDP.Config do
   and each send or receive deadline at 60,000 ms.
   The default unicast hop limit is 64 and the multicast hop limit is 1.
   The operating system may adjust the actual receive buffer size. There is no
-  background delivery queue in this package. Pending calls reserve a bounded
-  slot before they can enter the owner's mailbox.
+  background datagram delivery queue in this package. Each pending operation
+  publishes its complete request together with its call and send-byte budget.
+  Request payloads stay in the bounded owner queue.
 
   Broadcast and multicast start disabled. A consumer must opt in for each
-  socket and explicitly identify a multicast interface when joining a group.
+  socket. Enabling multicast requires `multicast_interface:`: a concrete IPv4
+  interface address or a positive IPv6 interface index. This selects egress;
+  `Wotex.UDP.join/3` separately names each receive membership's interface.
+  Wildcard addresses and index zero cannot select an OS-default route.
   """
 
   alias Wotex.UDP.{Endpoint, Error}
@@ -28,7 +32,8 @@ defmodule Wotex.UDP.Config do
             unicast_hops: 64,
             multicast_hops: 1,
             broadcast: false,
-            multicast: false
+            multicast: false,
+            multicast_interface: nil
 
   @type t :: %__MODULE__{
           local: Endpoint.t(),
@@ -41,7 +46,8 @@ defmodule Wotex.UDP.Config do
           unicast_hops: 1..255,
           multicast_hops: 0..255,
           broadcast: boolean(),
-          multicast: boolean()
+          multicast: boolean(),
+          multicast_interface: nil | :inet.ip4_address() | 1..2_147_483_647
         }
 
   @doc "Validates a finite configuration and rejects unknown or duplicate options."
@@ -58,7 +64,8 @@ defmodule Wotex.UDP.Config do
       :unicast_hops,
       :multicast_hops,
       :broadcast,
-      :multicast
+      :multicast,
+      :multicast_interface
     ]
 
     if Keyword.keyword?(options) and
@@ -78,7 +85,7 @@ defmodule Wotex.UDP.Config do
   @spec valid?(t()) :: boolean()
   def valid?(%__MODULE__{} = config) do
     match?(%Endpoint{kind: :bind}, config.local) and Endpoint.valid?(config.local) and
-      bounds_valid?(config) and options_valid?(config)
+      bounds_valid?(config) and options_valid?(config) and multicast_interface_valid?(config)
   end
 
   defp bounds_valid?(config) do
@@ -97,6 +104,26 @@ defmodule Wotex.UDP.Config do
       in_range?(config.multicast_hops, 0, 255) and
       is_boolean(config.broadcast) and is_boolean(config.multicast)
   end
+
+  defp multicast_interface_valid?(%{multicast: false, multicast_interface: nil}), do: true
+
+  defp multicast_interface_valid?(%{
+         multicast: true,
+         local: %Endpoint{family: :inet},
+         multicast_interface: interface
+       }) do
+    is_tuple(interface) and tuple_size(interface) == 4 and
+      match?({:ok, _}, Endpoint.unicast(interface, 1))
+  end
+
+  defp multicast_interface_valid?(%{
+         multicast: true,
+         local: %Endpoint{family: :inet6},
+         multicast_interface: interface
+       }),
+       do: in_range?(interface, 1, 2_147_483_647)
+
+  defp multicast_interface_valid?(_), do: false
 
   defp in_range?(value, min, max), do: is_integer(value) and value >= min and value <= max
 

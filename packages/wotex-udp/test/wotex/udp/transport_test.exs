@@ -4,7 +4,7 @@ defmodule Wotex.UDP.TransportTest do
   use ExUnit.Case, async: true
 
   alias Wotex.UDP
-  alias Wotex.UDP.{Config, Endpoint, Error, Handle}
+  alias Wotex.UDP.{Admission, Config, Endpoint, Error, Handle}
 
   test "construction is inert and addresses are validated" do
     assert {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
@@ -79,13 +79,15 @@ defmodule Wotex.UDP.TransportTest do
   end
 
   test "IPv4 multicast membership uses the selected interface" do
-    {:ok, socket} = open_local(multicast: true)
+    {:ok, socket} = open_local(multicast: true, multicast_interface: {127, 0, 0, 1})
     on_exit(fn -> UDP.close(socket) end)
     {:ok, group} = Endpoint.multicast({239, 1, 2, 3}, 5000)
 
     assert :ok = UDP.join(socket, group, {127, 0, 0, 1})
     assert :ok = UDP.leave(socket, group, {127, 0, 0, 1})
     assert {:error, %Error{kind: :invalid_endpoint}} = UDP.join(socket, group, 12)
+    assert {:error, %Error{kind: :invalid_endpoint}} = UDP.join(socket, group, {0, 0, 0, 0})
+    assert {:error, %Error{kind: :invalid_endpoint}} = UDP.leave(socket, group, 0)
   end
 
   test "IPv6 loopback preserves the full source endpoint when the host supports it" do
@@ -227,7 +229,8 @@ defmodule Wotex.UDP.TransportTest do
     assert {:ok, ^destination} = Task.await(first, 1_000)
     assert :ok = Task.await(sender, 1_000)
     assert {:ok, ^destination} = Task.await(local, 1_000)
-    assert :atomics.get(admission, 1) == 0
+    assert Admission.usage(admission) == 0
+    assert :ok = UDP.close(socket)
   end
 
   test "a timed-out queued send is discarded before it reaches the socket" do
@@ -248,10 +251,11 @@ defmodule Wotex.UDP.TransportTest do
     await_admission(socket.admission, radix + 1)
 
     assert {:error, %Error{kind: :timeout}} = Task.await(sender, 1_000)
-    assert :atomics.get(socket.admission, 1) == radix + 1
+    assert Admission.usage(socket.admission) == radix + 1
     :ok = :sys.resume(owner)
     await_admission(socket.admission, 0)
     assert {:error, %Error{kind: :timeout}} = UDP.recv(socket, 0)
+    assert :ok = UDP.close(socket)
   end
 
   test "a burst of callers cannot exceed queued call and byte limits" do
@@ -285,11 +289,12 @@ defmodule Wotex.UDP.TransportTest do
            end)
 
     assert Enum.count(results, &match?({:error, %Error{kind: :overload}}, &1)) >= 96
-    assert :atomics.get(socket.admission, 1) <= 4 * (socket.max_queued_send_bytes + 1) + 32
+    assert Admission.usage(socket.admission) <= 4 * (socket.max_queued_send_bytes + 1) + 32
 
     :ok = :sys.resume(owner)
     await_admission(socket.admission, 0)
     assert {:error, %Error{kind: :timeout}} = UDP.recv(socket, 0)
+    assert :ok = UDP.close(socket)
   end
 
   test "an independent gen_udp peer exchanges complete binary packets" do
@@ -323,6 +328,30 @@ defmodule Wotex.UDP.TransportTest do
     assert {:ok, %{data: <<2>>}} = UDP.recv(second, 100)
   end
 
+  test "an independent multicast peer receives only the explicitly routed binary packet" do
+    interface = {127, 0, 0, 1}
+    group = {239, 1, 2, 3}
+
+    {:ok, peer} =
+      :gen_udp.open(0, [
+        :binary,
+        {:active, false},
+        {:ip, {0, 0, 0, 0}},
+        {:add_membership, {group, interface}}
+      ])
+
+    on_exit(fn -> :gen_udp.close(peer) end)
+    {:ok, {_, port}} = :inet.sockname(peer)
+    {:ok, destination} = Endpoint.multicast(group, port)
+    {:ok, sender} = open_local(multicast: true, multicast_interface: interface)
+    on_exit(fn -> UDP.close(sender) end)
+    {:ok, source} = UDP.local(sender)
+    source_port = source.port
+    assert :ok = UDP.send(sender, destination, <<0, 255, 7>>, 100)
+    assert {:ok, {^interface, ^source_port, <<0, 255, 7>>}} = :gen_udp.recv(peer, 0, 100)
+    assert {:error, :timeout} = :gen_udp.recv(peer, 0, 0)
+  end
+
   test "handle retrieval cannot queue behind a blocked or saturated owner" do
     {:ok, handle} = open_local(max_pending_calls: 1)
     owner = handle.owner
@@ -345,11 +374,12 @@ defmodule Wotex.UDP.TransportTest do
       |> Enum.to_list()
 
     assert Enum.all?(results, &(&1 == {:ok, {:ok, handle}}))
-    assert Process.info(owner, :message_queue_len) == {:message_queue_len, before}
+    assert elem(Process.info(owner, :message_queue_len), 1) <= before + 1
     assert {:error, %Error{kind: :overload}} = UDP.local(handle)
     :ok = :sys.resume(owner)
     assert {:ok, _} = Task.await(request, 1_000)
     await_admission(handle.admission, 0)
+    assert :ok = UDP.close(handle)
   end
 
   test "handle retrieval rejects arbitrary processes and malformed selectors" do
@@ -372,7 +402,7 @@ defmodule Wotex.UDP.TransportTest do
           Map.put(handle, :extra, "payload-canary")
         ] do
       assert {:error, %Error{kind: :invalid_handle}} = UDP.local(forged)
-      assert :atomics.get(handle.admission, 1) == 0
+      assert Admission.usage(handle.admission) == 0
     end
 
     assert {:ok, _} = UDP.local(handle)
@@ -563,17 +593,22 @@ defmodule Wotex.UDP.TransportTest do
     {:ok, handle} = open_local()
     on_exit(fn -> UDP.close(handle) end)
 
-    assert :ok =
-             Wotex.UDP.Admission.acquire(
-               handle.admission,
-               handle.max_pending_calls,
-               handle.max_queued_send_bytes,
-               0
-             )
+    reply = :erlang.alias([:explicit_unalias])
+    id = make_ref()
 
-    request = {:local, make_ref(), [], System.monotonic_time(:millisecond) + 100}
-    assert {:error, %Error{kind: :stale_handle}} = GenServer.call(handle.owner, request)
-    assert :atomics.get(handle.admission, 1) == 0
+    request = %{
+      id: id,
+      from: {self(), reply},
+      operation: :local,
+      args: [],
+      epoch: make_ref(),
+      deadline: System.monotonic_time(:millisecond) + 100
+    }
+
+    assert {:ok, notification} = Admission.enqueue(handle.admission, request)
+    if notification, do: send(notification, {:udp_work, notification})
+    assert_receive {:udp_reply, ^id, {:error, %Error{kind: :stale_handle}}}
+    assert Admission.usage(handle.admission) == 0
     assert {:ok, _} = UDP.local(handle)
   end
 
@@ -588,6 +623,309 @@ defmodule Wotex.UDP.TransportTest do
     {:ok, config} = Config.new(local: local)
     {:ok, replacement} = UDP.open(config)
     assert :ok = UDP.close(replacement)
+  end
+
+  test "publication without notification is processed by the bounded owner sweep" do
+    {:ok, sender} = open_local()
+    {:ok, receiver} = open_local()
+
+    on_exit(fn ->
+      UDP.close(sender)
+      UDP.close(receiver)
+    end)
+
+    {:ok, destination} = UDP.local(receiver)
+    parent = self()
+
+    publisher =
+      spawn(fn ->
+        reply = :erlang.alias([:explicit_unalias])
+        id = make_ref()
+
+        request = %{
+          id: id,
+          from: {self(), reply},
+          epoch: sender.epoch,
+          operation: :send,
+          args: [destination, <<17>>, 1_000],
+          deadline: System.monotonic_time(:millisecond) + 1_000
+        }
+
+        {:ok, notification} = Admission.enqueue(sender.admission, request)
+        send(parent, {:published_without_notice, notification})
+
+        receive do
+          {:udp_reply, ^id, result} -> send(parent, {:sweep_result, result})
+        end
+      end)
+
+    assert_receive {:published_without_notice, notification}
+    assert_receive {:sweep_result, :ok}, 1_000
+    assert {:ok, %{data: <<17>>}} = UDP.recv(receiver, 100)
+    refute Process.alive?(publisher)
+    await_admission(sender.admission, 0)
+    :ok = :sys.suspend(sender.owner)
+    for _ <- 1..100, do: send(notification, {:udp_work, notification})
+    assert elem(Process.info(sender.owner, :message_queue_len), 1) <= 1
+    :ok = :sys.resume(sender.owner)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(receiver, 0)
+    assert {:ok, _} = UDP.local(sender)
+  end
+
+  test "death after publication and before wake never strands a call or byte reservation" do
+    {:ok, sender} =
+      open_local(max_datagram_bytes: 8, max_pending_calls: 1, max_queued_send_bytes: 8)
+
+    {:ok, receiver} = open_local()
+
+    on_exit(fn ->
+      UDP.close(sender)
+      UDP.close(receiver)
+    end)
+
+    {:ok, destination} = UDP.local(receiver)
+    parent = self()
+    owner = sender.owner
+
+    for byte <- 1..100 do
+      :ok = :sys.suspend(owner)
+
+      publisher =
+        spawn(fn ->
+          request = %{
+            id: make_ref(),
+            from: {self(), :erlang.alias([:explicit_unalias])},
+            epoch: sender.epoch,
+            operation: :send,
+            args: [destination, <<99, 99, 99>>, 1_000],
+            deadline: System.monotonic_time(:millisecond) + 1_000
+          }
+
+          result = Admission.enqueue(sender.admission, request)
+          send(parent, {:unnotified, self(), result})
+
+          receive do
+            :never -> :ok
+          end
+        end)
+
+      assert_receive {:unnotified, ^publisher, {:ok, _}}
+      assert Admission.usage(sender.admission) == 12
+      monitor = Process.monitor(publisher)
+      Process.exit(publisher, :kill)
+      assert_receive {:DOWN, ^monitor, :process, ^publisher, :killed}
+      :ok = :sys.resume(owner)
+      await_admission(sender.admission, 0)
+      assert :ok = UDP.send(sender, destination, <<byte>>, 100)
+      assert {:ok, %{data: <<^byte>>}} = UDP.recv(receiver, 100)
+      assert {:error, %Error{kind: :timeout}} = UDP.recv(receiver, 0)
+    end
+
+    assert Process.alive?(owner)
+  end
+
+  test "a publication flood is bounded before wake and canceled publishers release all capacity" do
+    {:ok, sender} =
+      open_local(max_datagram_bytes: 8, max_pending_calls: 8, max_queued_send_bytes: 32)
+
+    {:ok, destination} = UDP.local(sender)
+    owner = sender.owner
+    :ok = :sys.suspend(owner)
+
+    on_exit(fn ->
+      if Process.alive?(owner) do
+        :sys.resume(owner)
+        UDP.close(sender)
+      end
+    end)
+
+    results =
+      1..100
+      |> Task.async_stream(
+        fn _ ->
+          request = %{
+            id: make_ref(),
+            from: {self(), :erlang.alias([:explicit_unalias])},
+            epoch: sender.epoch,
+            operation: :send,
+            args: [destination, <<0::64>>, 1_000],
+            deadline: System.monotonic_time(:millisecond) + 1_000
+          }
+
+          Admission.enqueue(sender.admission, request)
+        end,
+        max_concurrency: 100,
+        timeout: 1_000
+      )
+      |> Enum.to_list()
+
+    assert Enum.count(results, &match?({:ok, {:ok, _}}, &1)) == 4
+    assert Enum.count(results, &match?({:ok, {:error, %Error{kind: :overload}}}, &1)) == 96
+    assert Admission.usage(sender.admission) == 4 * 33 + 32
+    assert elem(Process.info(owner, :message_queue_len), 1) <= 1
+    :ok = :sys.resume(owner)
+    await_admission(sender.admission, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(sender, 0)
+    assert :ok = UDP.close(sender)
+  end
+
+  test "owner death after publication deletes its queue and invalidates its handle" do
+    {:ok, sender} = open_local()
+    {:ok, destination} = UDP.local(sender)
+    :ok = :sys.suspend(sender.owner)
+    parent = self()
+
+    publisher =
+      spawn(fn ->
+        monitor = Process.monitor(sender.owner)
+
+        request = %{
+          id: make_ref(),
+          from: {self(), :erlang.alias([:explicit_unalias])},
+          epoch: sender.epoch,
+          operation: :send,
+          args: [destination, <<1>>, 1_000],
+          deadline: System.monotonic_time(:millisecond) + 1_000
+        }
+
+        result = Admission.enqueue(sender.admission, request)
+        send(parent, {:before_owner_loss, result})
+
+        receive do
+          {:DOWN, ^monitor, :process, _, _} -> send(parent, :published_owner_lost)
+        end
+      end)
+
+    assert_receive {:before_owner_loss, {:ok, _}}
+    Process.unlink(sender.owner)
+    monitor = Process.monitor(sender.owner)
+    Process.exit(sender.owner, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :killed}
+    assert_receive :published_owner_lost
+    refute Process.alive?(publisher)
+    assert :ets.info(sender.admission) == :undefined
+    assert {:error, %Error{kind: :owner_lost}} = UDP.local(sender)
+    {:ok, local} = Endpoint.bind(destination.address, destination.port)
+    {:ok, config} = Config.new(local: local)
+    {:ok, replacement} = UDP.open(config)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(replacement, 0)
+    assert :ok = UDP.close(replacement)
+  end
+
+  test "an admitted close fences later producers before the owner receives its wake" do
+    {:ok, handle} = open_local()
+    {:ok, destination} = UDP.local(handle)
+    :ok = :sys.suspend(handle.owner)
+    closer = Task.async(fn -> UDP.close(handle) end)
+    await_admission(handle.admission, handle.max_queued_send_bytes + 1)
+    assert {:error, %Error{kind: :closed}} = UDP.send(handle, destination, <<1>>, 100)
+    :ok = :sys.resume(handle.owner)
+    assert :ok = Task.await(closer, 1_000)
+    assert :ets.info(handle.admission) == :undefined
+  end
+
+  test "a canceled close published without notification does not close the live socket" do
+    {:ok, handle} = open_local()
+    on_exit(fn -> UDP.close(handle) end)
+    :ok = :sys.suspend(handle.owner)
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        request = %{
+          id: make_ref(),
+          from: {self(), :erlang.alias([:explicit_unalias])},
+          epoch: handle.epoch,
+          operation: :close,
+          args: [],
+          deadline: System.monotonic_time(:millisecond) + 1_000
+        }
+
+        send(parent, {:close_publication, Admission.enqueue(handle.admission, request)})
+
+        receive do
+          :never -> :ok
+        end
+      end)
+
+    assert_receive {:close_publication, {:ok, _}}
+    monitor = Process.monitor(caller)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^caller, :killed}
+    :ok = :sys.resume(handle.owner)
+    await_admission(handle.admission, 0)
+    assert {:ok, _} = UDP.local(handle)
+  end
+
+  test "zero-timeout calls refuse to queue behind an active receive" do
+    {:ok, handle} = open_local(max_pending_calls: 4)
+    on_exit(fn -> UDP.close(handle) end)
+    {:ok, destination} = UDP.local(handle)
+    receiver = Task.async(fn -> UDP.recv(handle, 1_000) end)
+    await_receiving(handle.owner)
+    reserved = Admission.usage(handle.admission)
+
+    assert {:error, %Error{kind: :timeout}} = UDP.send(handle, destination, <<1>>, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(handle, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv_batch(handle, 2, 0)
+    assert Admission.usage(handle.admission) == reserved
+    assert :ok = UDP.close(handle)
+    assert {:error, %Error{kind: :closed}} = Task.await(receiver, 1_000)
+  end
+
+  test "an expired close reopens admission while the live caller receives its refusal" do
+    {:ok, handle} = open_local(max_timeout_ms: 20)
+    :ok = :sys.suspend(handle.owner)
+    closer = Task.async(fn -> UDP.close(handle) end)
+    await_admission(handle.admission, handle.max_queued_send_bytes + 1)
+    Process.sleep(40)
+    :ok = :sys.resume(handle.owner)
+    assert {:error, %Error{kind: :timeout, operation: :close}} = Task.await(closer, 1_000)
+    assert Process.alive?(handle.owner)
+    assert {:ok, _} = UDP.local(handle)
+    assert :ok = UDP.close(handle)
+    refute Process.alive?(handle.owner)
+    assert :ets.info(handle.admission) == :undefined
+  end
+
+  test "an expired idle poll retires its reply alias while its caller remains alive" do
+    {:ok, sender} = open_local(max_timeout_ms: 20)
+    {:ok, receiver} = open_local()
+    {:ok, destination} = UDP.local(receiver)
+    owner = sender.owner
+    :ok = :sys.suspend(owner)
+
+    on_exit(fn ->
+      if Process.alive?(owner) do
+        :sys.resume(owner)
+        UDP.close(sender)
+      end
+
+      UDP.close(receiver)
+    end)
+
+    parent = self()
+
+    caller =
+      spawn_link(fn ->
+        result = UDP.send(sender, destination, <<255>>, 0)
+        send(parent, {:idle_poll_result, result})
+
+        receive do
+          :inspect_mailbox -> send(parent, {:idle_poll_mailbox, Process.info(self(), :messages)})
+        end
+      end)
+
+    await_admission(sender.admission, sender.max_queued_send_bytes + 2)
+    assert_receive {:idle_poll_result, {:error, %Error{kind: :timeout}}}, 500
+    assert Process.alive?(caller)
+    :ok = :sys.resume(owner)
+    await_admission(sender.admission, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(receiver, 0)
+    send(caller, :inspect_mailbox)
+    assert_receive {:idle_poll_mailbox, {:messages, []}}
+    assert {:ok, _} = UDP.local(sender)
+    assert :ok = UDP.close(sender)
   end
 
   defp await_receiving(owner, attempts \\ 100)
@@ -614,7 +952,7 @@ defmodule Wotex.UDP.TransportTest do
   defp await_admission(admission, expected, attempts \\ 100)
 
   defp await_admission(admission, expected, attempts) when attempts > 0 do
-    if :atomics.get(admission, 1) == expected do
+    if Admission.usage(admission) == expected do
       :ok
     else
       Process.sleep(1)
@@ -623,6 +961,6 @@ defmodule Wotex.UDP.TransportTest do
   end
 
   defp await_admission(admission, expected, 0) do
-    assert :atomics.get(admission, 1) == expected
+    assert Admission.usage(admission) == expected
   end
 end

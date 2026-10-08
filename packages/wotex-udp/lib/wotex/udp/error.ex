@@ -52,6 +52,7 @@ defmodule Wotex.UDP.Error do
         :enoprotoopt -> :unsupported_feature
         :eopnotsupp -> :unsupported_feature
         :enotsup -> :unsupported_feature
+        {:invalid, {:socket_option, {_, _}}} -> :unsupported_feature
         :enobufs -> :overload
         :emsgsize -> :datagram_too_large
         :closed -> :closed
