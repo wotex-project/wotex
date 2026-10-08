@@ -2,6 +2,15 @@ schema_version: "1.1.0"
 package: "wotex_modbus"
 completion_plan: "docs/plans/wotex-modbus-completion.md"
 specifications:
+  - id: "WMB.09"
+    version: "1.0.0"
+    path: "docs/specs/WMB.09-register-codec.md"
+    implementation_status: "implemented"
+    standards: []
+    requires: ["WMB.02", "wotex_runtime:WRT.04", "wotex_runtime:WRT.06"]
+    implementation_modules: ["Wotex.Modbus.RegisterCodec"]
+    executable_evidence: ["test/wotex/modbus/register_codec_test.exs", "bin/check_archive.exs"]
+    compatibility_classification: "Pure packed-decimal decoder, embedded exact contract/schema references, public Runtime Beam projection and isolated candidate-archive acceptance implemented; no process host, native enforcement, standards representation or consumer usefulness claim."
   - id: "WMB.01"
     version: "1.1.1"
     path: "docs/specs/WMB.01-library-contract.md"

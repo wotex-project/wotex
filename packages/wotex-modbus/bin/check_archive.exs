@@ -16,8 +16,11 @@ defmodule Wotex.Modbus.Check.Archive do
     "usage-rules.md",
     "priv/fixtures/contract-v1.json",
     "priv/fixtures/wotex-integration-v1.json",
+    "priv/fixtures/register_codec/contract.json",
+    "priv/fixtures/register_codec/configuration.schema.json",
     "lib/wotex/modbus.ex",
-    "lib/wotex/modbus/transport.ex"
+    "lib/wotex/modbus/transport.ex",
+    "lib/wotex/modbus/register_codec.ex"
   ]
 
   # Documentation lives in the monorepo `docs/` tree and reaches consumers through
@@ -60,13 +63,14 @@ defmodule Wotex.Modbus.Check.Archive do
   end
 
   defmodule WotexModbusArchiveVerification do
-    alias Wotex.Modbus.{Codec, Command, Mapping}
+    alias Wotex.Modbus.{Codec, Command, Mapping, RegisterCodec}
     alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result}
 
     def run do
       assert_application_free!()
       assert_isolated_code!()
       assert_pure_boundaries!()
+      assert_register_codec!()
       assert_runtime_read!()
       assert_runtime_write!()
       assert_runtime_action!()
@@ -93,7 +97,8 @@ defmodule Wotex.Modbus.Check.Archive do
         ~w(WOTEX_SOURCE_ROOT WOTEX_RUNTIME_SOURCE_ROOT WOTEX_CORE_SOURCE_ROOT)
         |> Enum.map(&System.fetch_env!/1)
 
-      for module <- [Wotex, Wotex.Runtime.ConsumedThing, Wotex.Modbus, Jason] do
+      for module <- [Wotex, Wotex.Runtime.ConsumedThing, Wotex.Runtime.Codec.Beam,
+                     Wotex.Modbus, RegisterCodec, Jason] do
         beam = module |> :code.which() |> List.to_string()
 
         unless String.starts_with?(beam, Path.join(consumer, "_build")) do
@@ -129,6 +134,24 @@ defmodule Wotex.Modbus.Check.Archive do
       unless Wotex.Form.to_map(mapping.form)["example:extension"] ==
                %{"retain" => [false, 0, nil]} do
         raise "archive mapping lost a Form extension"
+      end
+    end
+
+    defp assert_register_codec! do
+      configuration = %{"registers" => 1, "byte_order" => "big", "word_order" => "big",
+                        "scale" => -2, "signed" => false}
+      :ok = RegisterCodec.validate_configuration(configuration, RegisterCodec.configuration_schema())
+      {:ok, %{"type" => "decimal", "coefficient" => "123", "exponent" => -1}} =
+        RegisterCodec.decode(<<0x12, 0x30>>, %{"format" => "packed-bcd-v1"}, configuration)
+      {:error, :invalid_input} =
+        RegisterCodec.decode(<<0xFF, 0xFF>>, %{"format" => "packed-bcd-v1"}, configuration)
+
+      priv = :wotex_modbus |> :code.priv_dir() |> List.to_string()
+      for {file, reference} <- [{"contract.json", RegisterCodec.contract()},
+                               {"configuration.schema.json", RegisterCodec.configuration_schema()}] do
+        bytes = File.read!(Path.join([priv, "fixtures", "register_codec", file]))
+        digest = Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
+        unless reference["sha256"] == digest, do: raise("archive codec reference mismatch")
       end
     end
 
@@ -299,7 +322,11 @@ defmodule Wotex.Modbus.Check.Archive do
     result =
       try do
         File.mkdir_p!(work)
-        verify(roots, work)
+        # Mix derives relative priv links from its physical working directory.
+        # Use the same path for explicit build/dependency directories on systems
+        # where the temporary directory has an alias (macOS /var, for example).
+        physical_work = File.cd!(work, fn -> File.cwd!() end)
+        verify(roots, physical_work)
       catch
         :throw, {:violation, message} -> {:violation, message}
       after

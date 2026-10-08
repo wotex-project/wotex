@@ -1,6 +1,6 @@
 # Wotex Modbus completion contract
 
-Plan version: 1.1.0. Package baseline: 0.1.0. Normative owner:
+Plan version: 1.2.0. Package baseline: 0.1.0. Normative owner:
 [specification catalogue](../specs/catalogue.yaml).
 
 Graduate this library independently. Acceptance requires typed values and
@@ -56,3 +56,8 @@ WMB-P08 reconciles that candidate with its package metadata and consumer-visible
 API behavior, dependency and toolchain lanes, legal/security boundary, standards
 scope and explicit nonclaims. The resulting dossier is a verification map, not
 release, publication or external-adoption evidence.
+
+The optional [WMB.09 register codec](../specs/WMB.09-register-codec.md) supplies
+an inert packed-decimal projection through WRT.06. Its pure and exact-archive
+acceptance is separate from existing TCP/Form interoperability. Native codec
+delivery and consumer usefulness remain independently qualified programme gates.

@@ -311,6 +311,10 @@ packages:
         version: "1.0.1"
         implementation_status: "implemented"
         path: "docs/packages/wotex-modbus/specs/WMB.08-release-candidate-dossier.md"
+      - id: "WMB.09"
+        version: "1.0.0"
+        implementation_status: "implemented"
+        path: "docs/packages/wotex-modbus/specs/WMB.09-register-codec.md"
   wotex-nx:
     app: "wotex_nx"
     catalogue: "docs/packages/wotex-nx/specs/catalogue.yaml"

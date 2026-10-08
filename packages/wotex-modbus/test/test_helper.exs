@@ -7,6 +7,7 @@ Code.require_file("support/session_trace.ex", __DIR__)
 Code.require_file("support/runtime_credentials.ex", __DIR__)
 Code.require_file("support/runtime_transport.ex", __DIR__)
 Code.require_file("support/runtime_fixture.ex", __DIR__)
+Code.require_file("support/register_codec_fixture.ex", __DIR__)
 
 if System.get_env("WOTEX_REQUIRE_SOFTWARE") == "1" do
   Code.require_file("support/software_formatter.ex", __DIR__)

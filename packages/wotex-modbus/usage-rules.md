@@ -1,6 +1,6 @@
 # Wotex Modbus usage rules
 
-These rules describe the completed WMB.01–WMB.08 contract. The package
+These rules describe the completed WMB.01–WMB.09 contract. The package
 catalogue records implementation status separately.
 
 - Open the owned Modbus TCP connection with an explicit numeric host, port,
@@ -13,6 +13,10 @@ catalogue records implementation status separately.
   identifiers and responses remain correlated and bounded.
 - Specify scalar kind, register width, byte order and word order for conversion;
   raw registers contain no semantic type information.
+- For the optional packed-decimal projection, register the exact
+  `Wotex.Modbus.RegisterCodec` contract and configuration schema. Supply width,
+  byte/word order, sign convention and scale explicitly. Decoded values are
+  inert; the projection grants no connection or write authority.
 - Never automatically retry a write. A timeout may leave effect unknown, and a
   protocol acknowledgement does not prove physical state.
 - Authentication, encryption, polling, Modbus RTU and application device policy

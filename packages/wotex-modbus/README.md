@@ -146,6 +146,20 @@ docker run --rm wotex-modbus-guardian
 
 ## Software implementation contract
 
+`Wotex.Modbus.RegisterCodec` is an optional pure packed-decimal projection.
+Its `decode/3` accepts exact register bytes, `{"format":"packed-bcd-v1"}`
+metadata and explicit width, byte order, word order, sign and decimal scale.
+It returns an inert Runtime decimal node without floating conversion or I/O.
+`contract/0` and `configuration_schema/0` expose embedded identities for the
+shipped immutable documents. Supply `validate_configuration/2` to a Runtime
+Plan and register the trusted decoder explicitly with `Wotex.Runtime.Codec.Beam`.
+Ordinary scalar Form mappings need no implementation admission. This application
+representation is not a Modbus-standard format or canonical Property truth.
+
+The [register codec contract](../../docs/packages/wotex-modbus/specs/WMB.09-register-codec.md)
+defines its exact grammar and refusals. Executable process delivery remains
+a separately qualified Runtime profile.
+
 The [ordered implementation sequence](../../docs/packages/wotex-modbus/plans/software-implementation.md)
 and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus/specs) define the software profile's
 behavior, limits, failure transitions, acceptance scenarios and concrete fixtures.
