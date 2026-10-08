@@ -6,7 +6,8 @@ defmodule Wotex.Zigbee.Event do
   messages preserve source address, cluster, link quality and the NCP's
   reported security flag. That flag is metadata, not consumer authorization
   or independent cryptographic attestation. Active-endpoint and simple
-  descriptor ZDO replies have typed payloads; uncatalogued AREQs stay opaque.
+  descriptor, IEEE identity and node ZDO replies have typed payloads;
+  uncatalogued AREQs stay opaque.
   """
 
   alias Wotex.Zigbee.{Frame, ZDO}
@@ -32,6 +33,8 @@ defmodule Wotex.Zigbee.Event do
           kind:
             :aps_confirm
             | :af_incoming
+            | :zdo_ieee_address
+            | :zdo_node_descriptor
             | :zdo_active_endpoints
             | :zdo_simple_descriptor
             | :zdo_indication
@@ -48,7 +51,12 @@ defmodule Wotex.Zigbee.Event do
           cluster: non_neg_integer() | nil,
           link_quality: byte() | nil,
           security_used: boolean() | nil,
-          zdo: ZDO.active_response() | ZDO.simple_response() | nil
+          zdo:
+            ZDO.active_response()
+            | ZDO.simple_response()
+            | ZDO.ieee_response()
+            | ZDO.node_response()
+            | nil
         }
 
   @doc "Classifies one AREQ, preserving unknown command bytes without decoding them."
@@ -96,6 +104,12 @@ defmodule Wotex.Zigbee.Event do
   def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x84} = frame),
     do: zdo_event(frame, :zdo_simple_descriptor, ZDO.simple_descriptor(frame.payload))
 
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x81} = frame),
+    do: zdo_event(frame, :zdo_ieee_address, ZDO.ieee_address(frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x82} = frame),
+    do: zdo_event(frame, :zdo_node_descriptor, ZDO.node_descriptor(frame.payload))
+
   def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x85} = frame),
     do: zdo_event(frame, :zdo_active_endpoints, ZDO.active_endpoints(frame.payload))
 
@@ -121,7 +135,7 @@ defmodule Wotex.Zigbee.Event do
       id: frame.id,
       payload: frame.payload,
       status: response.status,
-      source_address: response.source_address,
+      source_address: Map.get(response, :source_address),
       zdo: response
     }
 

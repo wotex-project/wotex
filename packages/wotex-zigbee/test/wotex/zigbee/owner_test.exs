@@ -156,6 +156,67 @@ defmodule Wotex.Zigbee.OwnerTest do
              "Zigbee command failed: timeout"
   end
 
+  test "identity and node requests expose NCP admission separately from later peer bytes" do
+    {:ok, handle} = open()
+    on_exit(fn -> Zigbee.close(handle) end)
+    assert_receive {:serial_open, peer, _}
+    assert {:ok, %Reply{status: 0, id: 1}} = Zigbee.ieee_address(handle, 0x1234, 100)
+    assert_receive {:serial_write, <<0xFE, 4, 0x25, 1, 0x34, 0x12, 0, 0, 6>>}
+    assert {:ok, %{events: []}} = Zigbee.drain_events(handle, 10)
+    assert {:ok, %Reply{status: 0, id: 2}} = Zigbee.node_descriptor(handle, 0x1234, 100)
+    assert_receive {:serial_write, <<0xFE, 4, 0x25, 2, 0x34, 0x12, 0x34, 0x12, 0x23>>}
+
+    identity = <<0, 8, 7, 6, 5, 4, 3, 2, 1, 0x34, 0x12, 0, 0>>
+    raw_node = <<2, 0x40, 0x80, 0x1234::little-16, 80, 128::little-16, 0::16, 128::little-16, 0>>
+    node = <<0x1234::little-16, 0, 0x1234::little-16, raw_node::binary>>
+    send(peer, {:inject, peer_frame(0x45, 0x81, identity) <> peer_frame(0x45, 0x82, node)})
+    assert_event_count(handle, 2)
+
+    assert {:ok, %{events: [ieee, descriptor]}} = Zigbee.drain_events(handle, 10)
+    assert ieee.kind == :zdo_ieee_address
+    assert ieee.zdo.peer_ieee == <<8, 7, 6, 5, 4, 3, 2, 1>>
+    assert descriptor.kind == :zdo_node_descriptor
+    assert descriptor.zdo.descriptor.logical_type == 2
+    assert descriptor.zdo.raw_descriptor == raw_node
+  end
+
+  test "ordinary owner calls reject raw administration and malformed profile frames before serial I/O" do
+    {:ok, handle} = open()
+    on_exit(fn -> Zigbee.close(handle) end)
+    assert_receive {:serial_open, _peer, _}
+    assert_receive {:serial_write, <<0xFE, 0, 0x21, 2, 0x23>>}
+
+    for frame <- [
+          %Frame{type: :sreq, subsystem: 5, id: 0x36, payload: <<0, 0, 0, 254, 1>>},
+          %Frame{type: :sreq, subsystem: 1, id: 9, payload: "credential-canary"},
+          %Frame{type: :sreq, subsystem: 5, id: 1, payload: <<0x1234::little-16, 1, 0>>},
+          %Frame{
+            type: :sreq,
+            subsystem: 5,
+            id: 2,
+            payload: <<0x1234::little-16, 0x5678::little-16>>
+          }
+        ] do
+      assert {:error, %Error{kind: :invalid_command} = error} =
+               Owner.call(handle, :command, [frame, 100])
+
+      refute inspect(error) =~ "credential-canary"
+    end
+
+    refute_receive {:serial_write, _}, 20
+    assert {:ok, _} = Zigbee.ieee_address(handle, 1, 100)
+  end
+
+  test "a status response with trailing bytes invalidates the uncorrelated owner epoch" do
+    {:ok, handle} = open(serial_options: [test_pid: self(), drop_reply: true])
+    assert_receive {:serial_open, peer, _}
+    command = Task.async(fn -> Zigbee.ieee_address(handle, 0x1234, 100) end)
+    assert_receive {:serial_write, <<0xFE, 4, 0x25, 1, _::binary>>}
+    send(peer, {:inject, peer_frame(0x65, 1, <<0, 1>>)})
+    assert {:error, %Error{kind: :invalid_frame}} = Task.await(command)
+    assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.node_descriptor(handle, 1, 100)
+  end
+
   test "configuration rejects adapter overrides, duplicate keys and malformed versions" do
     assert {:error, %Error{kind: :invalid_config}} = Config.new(:invalid)
 
@@ -205,6 +266,108 @@ defmodule Wotex.Zigbee.OwnerTest do
     :ok = :sys.resume(handle.owner)
     assert {:error, %Error{kind: :timeout}} = Task.await(call)
     refute_receive {:serial_write, <<0xFE, 4, 0x25, 5, _::binary>>}, 20
+  end
+
+  test "a valid queued SRSP delivered after the original deadline cannot succeed" do
+    {:ok, handle} = open(serial_options: [test_pid: self(), drop_reply: true])
+    assert_receive {:serial_open, peer, _}
+    call = Task.async(fn -> Zigbee.ieee_address(handle, 0x1234, 50) end)
+    assert_receive {:serial_write, <<0xFE, 4, 0x25, 1, _::binary>>}
+    :ok = :sys.suspend(handle.owner)
+    send(peer, {:inject, peer_frame(0x65, 1, <<0>>)})
+    wait_queued_call(handle.owner)
+    Process.sleep(55)
+    :ok = :sys.resume(handle.owner)
+    assert {:error, %Error{kind: :timeout}} = Task.await(call)
+    assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(handle.owner)
+  end
+
+  test "caller death while a command is pending fences its uncorrelated owner epoch" do
+    {:ok, handle} = open(serial_options: [test_pid: self(), drop_reply: true])
+    assert_receive {:serial_open, _, _}
+    caller = spawn(fn -> Zigbee.ieee_address(handle, 0x1234, 100) end)
+    assert_receive {:serial_write, <<0xFE, 4, 0x25, 1, _::binary>>}
+    monitor = Process.monitor(handle.owner)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}
+    assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(handle.owner)
+  end
+
+  test "serial callback delay cannot extend the command deadline" do
+    {:ok, handle} =
+      open(
+        serial: Wotex.Zigbee.TestControlledSerial,
+        serial_options: [test_pid: self(), write_behavior: {:delay, 30}]
+      )
+
+    assert {:error, %Error{kind: :timeout}} = Zigbee.ieee_address(handle, 0x1234, 20)
+    assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(handle.owner)
+  end
+
+  test "serial callback failures redact external data and end the command epoch" do
+    for behavior <- [:raise, :throw, :exit, :malformed, :error] do
+      {:ok, handle} =
+        open(
+          serial: Wotex.Zigbee.TestControlledSerial,
+          serial_options: [test_pid: self(), write_behavior: behavior]
+        )
+
+      assert {:error, %Error{kind: :serial} = error} = Zigbee.ieee_address(handle, 0x1234, 100)
+      refute inspect(error) =~ "credential-canary"
+      assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(handle.owner)
+    end
+  end
+
+  test "uncatalogued owner operations and malformed envelopes are refused without leaking arguments" do
+    {:ok, handle} = open()
+    on_exit(fn -> Zigbee.close(handle) end)
+    assert_receive {:serial_open, _, _}
+    assert_receive {:serial_write, <<0xFE, 0, 0x21, 2, _>>}
+
+    for operation <- [:uncatalogued, "credential-canary"] do
+      assert {:error, %Error{kind: :invalid_command} = error} =
+               Owner.call(handle, operation, ["credential-canary"])
+
+      refute inspect(error) =~ "credential-canary"
+    end
+
+    assert {:error, %Error{kind: :invalid_command} = error} =
+             GenServer.call(handle.owner, {:uncatalogued, handle.epoch, ["credential-canary"]})
+
+    refute inspect(error) =~ "credential-canary"
+
+    assert {:error, %Error{kind: :invalid_command}} =
+             GenServer.call(handle.owner, {:command, handle.epoch, []})
+
+    assert {:ok, _} = Zigbee.handle(handle.owner)
+    refute_receive {:serial_write, _}, 10
+  end
+
+  test "receiver admission clamps a forged future deadline to the supplied timeout" do
+    {:ok, handle} = open(serial_options: [test_pid: self(), drop_reply: true])
+    {:ok, frame} = Command.ieee_address(0x1234)
+    deadline = System.monotonic_time(:millisecond) + 60_000
+
+    assert {:error, %Error{kind: :timeout}} =
+             GenServer.call(handle.owner, {:command, handle.epoch, [frame, 10, deadline]}, 200)
+
+    assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(handle.owner)
+  end
+
+  test "a caller that dies while queued cannot dispatch an ordinary command" do
+    {:ok, handle} = open()
+    on_exit(fn -> Zigbee.close(handle) end)
+    assert_receive {:serial_open, _, _}
+    assert_receive {:serial_write, <<0xFE, 0, 0x21, 2, _>>}
+    :ok = :sys.suspend(handle.owner)
+    caller = spawn(fn -> Zigbee.ieee_address(handle, 0x1234, 100) end)
+    wait_queued_call(handle.owner)
+    monitor = Process.monitor(caller)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :killed}
+    :ok = :sys.resume(handle.owner)
+    assert {:ok, _} = Zigbee.handle(handle.owner)
+    refute_receive {:serial_write, _}, 10
   end
 
   defp wait_ready_waiter(owner, attempts \\ 50)
@@ -260,6 +423,12 @@ defmodule Wotex.Zigbee.OwnerTest do
     ]
 
     Config.new(Keyword.merge(defaults, overrides))
+  end
+
+  defp peer_frame(command, id, payload) do
+    bytes = <<byte_size(payload), command, id, payload::binary>>
+    checksum = Enum.reduce(:binary.bin_to_list(bytes), 0, &Bitwise.bxor/2)
+    <<0xFE, bytes::binary, checksum>>
   end
 
   defp open(overrides \\ []) do

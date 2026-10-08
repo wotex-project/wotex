@@ -5,13 +5,18 @@ defmodule Wotex.Zigbee.Owner do
   The owner accepts fragmented serial chunks, permits one outstanding SREQ,
   keeps AREQs in a finite queue and reports its overflow count. A command
   timeout ends the owner instead of matching a late SRSP to a later request.
+  A bounded interview holds that admission slot across all of its steps while
+  preserving unrelated indications. Caller death also ends a pending epoch.
   Neither startup nor timeout forms or resets a Zigbee network. The serial
   adapter and supervision policy belong to the consumer.
   """
 
   use GenServer
 
-  alias Wotex.Zigbee.{Command, Config, Error, Event, Frame, Handle, Reply}
+  alias Wotex.Zigbee.{Command, Config, Error, Event, Frame, Handle, Interview, Reply}
+  alias Wotex.Zigbee.Interview.Flow
+
+  @max_query_routes 128
 
   @doc "Starts a coordinator owner under a consumer supervisor."
   @spec start_link(Config.t()) :: GenServer.on_start()
@@ -31,25 +36,30 @@ defmodule Wotex.Zigbee.Owner do
 
   @doc "Executes one bounded owner call through its opaque epoch and caller deadline."
   @spec call(Handle.t(), atom(), [term()]) :: term()
-  def call(%Handle{owner: owner, epoch: epoch, timeout_ms: limit}, :command, [frame, timeout])
-      when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 do
+  def call(%Handle{owner: owner, epoch: epoch, timeout_ms: limit}, operation, [value, timeout])
+      when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 and
+             operation in [:command, :interview] do
     valid_timeout = is_integer(timeout) and timeout > 0
     wait = if valid_timeout, do: min(timeout, limit) + 100, else: limit + 100
     deadline = if valid_timeout, do: System.monotonic_time(:millisecond) + min(timeout, limit)
-    safe_call(owner, {:command, epoch, [frame, timeout, deadline]}, wait)
+    safe_call(owner, {operation, epoch, [value, timeout, deadline]}, wait)
   end
 
   def call(%Handle{owner: owner, epoch: epoch, timeout_ms: limit}, operation, args)
       when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 and
-             operation != :command and is_list(args) do
+             operation in [:close, :drain] and is_list(args) do
     safe_call(owner, {operation, epoch, args}, limit + 100)
   end
 
-  def call(_, operation, _), do: {:error, %Error{kind: :stale_handle, operation: operation}}
+  def call(_, operation, _) when operation in [:command, :interview, :close, :drain],
+    do: {:error, %Error{kind: :stale_handle, operation: operation}}
+
+  def call(_, _, _), do: {:error, error(:invalid_command, :owner)}
 
   @impl GenServer
   def init(%Config{} = config) do
     with true <- Config.valid?(config),
+         true <- Code.ensure_loaded?(config.serial),
          true <- function_exported?(config.serial, :open, 3),
          true <- function_exported?(config.serial, :write, 2),
          true <- function_exported?(config.serial, :close, 1),
@@ -69,6 +79,9 @@ defmodule Wotex.Zigbee.Owner do
              version_timer: timer,
              ready_waiter: nil,
              pending: nil,
+             interview: nil,
+             query_routes: MapSet.new(),
+             used_tokens: MapSet.new(),
              buffer: <<>>,
              events: :queue.new(),
              event_count: 0,
@@ -106,6 +119,7 @@ defmodule Wotex.Zigbee.Owner do
 
   def handle_call({:close, epoch, []}, _, state) do
     if epoch == state.epoch do
+      fail_waiters(state, :coordinator_lost)
       {:stop, :normal, :ok, state}
     else
       {:reply, {:error, error(:stale_handle, :close)}, state}
@@ -141,8 +155,7 @@ defmodule Wotex.Zigbee.Owner do
   end
 
   def handle_call({:command, epoch, [frame, timeout, deadline]}, from, state) do
-    remaining =
-      if is_integer(deadline), do: deadline - System.monotonic_time(:millisecond), else: -1
+    deadline = bounded_deadline(deadline, timeout, state.config.timeout_ms)
 
     cond do
       epoch != state.epoch ->
@@ -151,19 +164,57 @@ defmodule Wotex.Zigbee.Owner do
       state.mode != :ready ->
         {:reply, {:error, error(:coordinator_lost, :command)}, state}
 
-      state.pending != nil ->
+      state.pending != nil or state.interview != nil ->
         {:reply, {:error, error(:overload, :command)}, state}
 
-      not is_integer(timeout) or timeout < 1 or timeout > state.config.timeout_ms ->
+      not valid_timeout?(timeout, state.config.timeout_ms) ->
         {:reply, {:error, error(:invalid_value, :command)}, state}
 
-      remaining <= 0 ->
+      expired?(deadline) ->
         {:reply, {:error, error(:timeout, :command)}, state}
 
+      not Command.admitted?(frame) ->
+        {:reply, {:error, error(:invalid_command, :command)}, state}
+
+      not route_capacity?(state, frame) ->
+        {:reply, {:error, error(:overload, :command)}, state}
+
+      not Process.alive?(elem(from, 0)) ->
+        {:reply, {:error, error(:coordinator_lost, :command)}, state}
+
       true ->
-        send_command(state, frame, remaining, from)
+        send_command(remember_command(state, frame), frame, deadline, from)
     end
   end
+
+  def handle_call({:interview, epoch, [request, timeout, deadline]}, from, state) do
+    deadline = bounded_deadline(deadline, timeout, state.config.timeout_ms)
+
+    case interview_admission(state, epoch, request, timeout, deadline, from) do
+      :ok ->
+        reference = make_ref()
+        monitor = Process.monitor(elem(from, 0))
+        timer = deadline_timer({:interview_timeout, reference}, deadline)
+
+        interview = %{
+          flow: Flow.new(request, state.epoch),
+          from: from,
+          reference: reference,
+          monitor: monitor,
+          timer: timer,
+          deadline: deadline
+        }
+
+        routes = MapSet.put(state.query_routes, request.route_address)
+        updated = issue_interview(%{state | interview: interview, query_routes: routes})
+        if updated.mode == :failed, do: {:stop, :normal, updated}, else: {:noreply, updated}
+
+      kind ->
+        {:reply, {:error, error(kind, :interview)}, state}
+    end
+  end
+
+  def handle_call(_, _, state), do: {:reply, {:error, error(:invalid_command, :owner)}, state}
 
   @impl GenServer
   def handle_info({:zigbee_serial, port, chunk}, %{port: port} = state) do
@@ -207,43 +258,56 @@ defmodule Wotex.Zigbee.Owner do
         %{pending: %{reference: reference} = pending} = state
       ) do
     GenServer.reply(pending.from, {:error, error(:timeout, :command)})
-    {:stop, :normal, %{state | pending: nil}}
+    {:stop, :normal, clear_pending(state)}
   end
+
+  def handle_info(
+        {:interview_timeout, reference},
+        %{interview: %{reference: reference}} = state
+      ),
+      do: {:stop, :normal, end_interview(state, :timeout, true)}
+
+  def handle_info(
+        {:DOWN, monitor, :process, _, _},
+        %{pending: %{monitor: monitor}} = state
+      ),
+      do: {:stop, :normal, clear_pending(state)}
+
+  def handle_info(
+        {:DOWN, monitor, :process, _, _},
+        %{interview: %{monitor: monitor}} = state
+      ),
+      do: {:stop, :normal, end_interview(state, :caller_lost, true)}
 
   def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
   def terminate(_, state), do: state.config.serial.close(state.port)
 
-  defp send_command(state, %Frame{type: :sreq} = frame, timeout, from) do
-    case Frame.encode(frame) do
-      {:ok, bytes} ->
-        case state.config.serial.write(state.port, bytes) do
-          :ok ->
-            reference = make_ref()
-            timer = Process.send_after(self(), {:command_timeout, reference}, timeout)
+  defp send_command(state, frame, deadline, from) do
+    reference = make_ref()
 
-            pending = %{
-              from: from,
-              subsystem: frame.subsystem,
-              id: frame.id,
-              reference: reference,
-              timer: timer
-            }
+    pending = %{
+      from: from,
+      subsystem: frame.subsystem,
+      id: frame.id,
+      reference: reference,
+      monitor: Process.monitor(elem(from, 0)),
+      timer: deadline_timer({:command_timeout, reference}, deadline),
+      deadline: deadline
+    }
 
-            {:noreply, %{state | pending: pending}}
+    case write_frame(state, frame, deadline) do
+      :ok ->
+        {:noreply, %{state | pending: pending}}
 
-          {:error, _} ->
-            {:stop, :normal, {:error, error(:serial, :command)}, state}
-        end
-
-      error ->
-        {:reply, error, state}
+      kind ->
+        cleaned = clear_pending(%{state | pending: pending})
+        {:stop, :normal, {:error, error(kind, :command)}, cleaned}
     end
   end
 
-  defp send_command(state, _, _, _),
-    do: {:reply, {:error, error(:invalid_command, :command)}, state}
+  defp accept_frame(_, %{mode: :failed} = state), do: state
 
   defp accept_frame(
          %Frame{type: :srsp, subsystem: 1, id: 2, payload: payload},
@@ -263,40 +327,223 @@ defmodule Wotex.Zigbee.Owner do
 
   defp accept_frame(%Frame{type: :srsp} = frame, %{pending: pending} = state)
        when is_map(pending) do
-    Process.cancel_timer(pending.timer)
+    cond do
+      expired?(pending.deadline) ->
+        fail_response(state, :timeout)
 
-    if frame.subsystem == pending.subsystem and frame.id == pending.id and
-         byte_size(frame.payload) > 0 do
-      <<status, _::binary>> = frame.payload
+      frame.subsystem != pending.subsystem or frame.id != pending.id or
+          byte_size(frame.payload) != 1 ->
+        fail_response(state, :invalid_frame)
 
-      reply = %Reply{
-        subsystem: frame.subsystem,
-        id: frame.id,
-        status: status,
-        payload: frame.payload
-      }
+      true ->
+        <<status>> = frame.payload
 
-      GenServer.reply(pending.from, {:ok, reply})
-      %{state | pending: nil}
-    else
-      GenServer.reply(pending.from, {:error, error(:invalid_frame, :command)})
-      %{state | pending: nil, mode: :failed}
+        reply = %Reply{
+          subsystem: frame.subsystem,
+          id: frame.id,
+          status: status,
+          payload: frame.payload
+        }
+
+        if state.interview do
+          flow = Flow.admit(state.interview.flow, reply)
+          progress_interview(%{state | pending: nil, interview: %{state.interview | flow: flow}})
+        else
+          GenServer.reply(pending.from, {:ok, reply})
+          clear_pending(state)
+        end
     end
   end
 
   defp accept_frame(%Frame{type: :areq} = frame, state) do
+    event = Event.from_frame(frame)
+
+    if state.interview do
+      case Flow.offer(state.interview.flow, event) do
+        {:matched, flow} ->
+          progress_interview(%{state | interview: %{state.interview | flow: flow}})
+
+        :unmatched ->
+          enqueue_event(state, event)
+      end
+    else
+      enqueue_event(state, event)
+    end
+  end
+
+  defp accept_frame(_, state), do: state
+
+  defp enqueue_event(state, event) do
     if state.event_count >= state.config.max_events do
       %{state | dropped: state.dropped + 1}
     else
       %{
         state
-        | events: :queue.in(Event.from_frame(frame), state.events),
+        | events: :queue.in(event, state.events),
           event_count: state.event_count + 1
       }
     end
   end
 
-  defp accept_frame(_, state), do: state
+  defp interview_admission(state, epoch, request, timeout, deadline, from) do
+    cond do
+      epoch != state.epoch -> :stale_handle
+      state.mode != :ready -> :coordinator_lost
+      state.pending != nil or state.interview != nil -> :overload
+      not Interview.valid?(request) -> :invalid_value
+      not valid_timeout?(timeout, state.config.timeout_ms) -> :invalid_value
+      expired?(deadline) -> :timeout
+      MapSet.member?(state.query_routes, request.route_address) -> :correlation_exhausted
+      MapSet.size(state.query_routes) >= @max_query_routes -> :overload
+      not Process.alive?(elem(from, 0)) -> :coordinator_lost
+      true -> :ok
+    end
+  end
+
+  defp progress_interview(state) do
+    if expired?(state.interview.deadline) do
+      end_interview(state, :timeout, true)
+    else
+      case Flow.advance(state.interview.flow) do
+        {:waiting, _} -> state
+        {:next, flow} -> issue_interview(%{state | interview: %{state.interview | flow: flow}})
+        {:done, result} -> reply_interview(state, result)
+      end
+    end
+  end
+
+  defp issue_interview(state) do
+    case allocate_token(state) do
+      {:ok, state} ->
+        {:ok, frame} = Flow.command(state.interview.flow)
+        deadline = state.interview.deadline
+
+        if Process.alive?(elem(state.interview.from, 0)) do
+          case write_frame(state, frame, deadline) do
+            :ok ->
+              %{state | pending: %{subsystem: frame.subsystem, id: frame.id, deadline: deadline}}
+
+            kind ->
+              end_interview(state, kind, true)
+          end
+        else
+          end_interview(state, :caller_lost, true)
+        end
+
+      :exhausted ->
+        end_interview(state, :correlation_exhausted, false)
+    end
+  end
+
+  defp allocate_token(%{interview: %{flow: %{stage: {:basic, _}}}} = state) do
+    case Enum.find(0..255, &(not MapSet.member?(state.used_tokens, &1))) do
+      nil ->
+        :exhausted
+
+      token ->
+        flow = %{state.interview.flow | token: token}
+
+        {:ok,
+         %{
+           state
+           | used_tokens: MapSet.put(state.used_tokens, token),
+             interview: %{state.interview | flow: flow}
+         }}
+    end
+  end
+
+  defp allocate_token(state), do: {:ok, state}
+
+  defp end_interview(state, kind, failed) do
+    result = Flow.finish(state.interview.flow, kind)
+    updated = reply_interview(state, result)
+    if failed, do: %{updated | mode: :failed}, else: updated
+  end
+
+  defp reply_interview(state, result) do
+    GenServer.reply(state.interview.from, {:ok, result})
+    Process.cancel_timer(state.interview.timer)
+    Process.demonitor(state.interview.monitor, [:flush])
+    %{state | interview: nil, pending: nil}
+  end
+
+  defp fail_response(%{interview: interview} = state, kind) when is_map(interview),
+    do: end_interview(state, kind, true)
+
+  defp fail_response(state, kind) do
+    GenServer.reply(state.pending.from, {:error, error(kind, :command)})
+    %{clear_pending(state) | mode: :failed}
+  end
+
+  defp clear_pending(state) do
+    Process.cancel_timer(state.pending.timer)
+    Process.demonitor(state.pending.monitor, [:flush])
+    %{state | pending: nil}
+  end
+
+  defp write_frame(state, frame, deadline) do
+    if expired?(deadline) do
+      :timeout
+    else
+      {:ok, bytes} = Frame.encode(frame)
+
+      case serial_write(state, bytes) do
+        :ok -> if expired?(deadline), do: :timeout, else: :ok
+        :error -> :serial
+      end
+    end
+  end
+
+  defp serial_write(state, bytes) do
+    case state.config.serial.write(state.port, bytes) do
+      :ok -> :ok
+      _ -> :error
+    end
+  rescue
+    _ -> :error
+  catch
+    _, _ -> :error
+  end
+
+  defp bounded_deadline(deadline, timeout, limit)
+       when is_integer(deadline) and is_integer(timeout) and timeout >= 1 and timeout <= limit,
+       do: min(deadline, System.monotonic_time(:millisecond) + timeout)
+
+  defp bounded_deadline(_, _, _), do: nil
+  defp valid_timeout?(timeout, limit), do: is_integer(timeout) and timeout >= 1 and timeout <= limit
+  defp expired?(nil), do: true
+  defp expired?(deadline), do: deadline <= System.monotonic_time(:millisecond)
+
+  defp deadline_timer(message, deadline),
+    do: Process.send_after(self(), message, max(0, deadline - System.monotonic_time(:millisecond)))
+
+  defp route_capacity?(state, %Frame{subsystem: 5, payload: <<route::little-16, _::binary>>}),
+    do:
+      MapSet.member?(state.query_routes, route) or
+        MapSet.size(state.query_routes) < @max_query_routes
+
+  defp route_capacity?(_, _), do: true
+
+  defp remember_command(state, %Frame{subsystem: 5, payload: <<route::little-16, _::binary>>}),
+    do: %{state | query_routes: MapSet.put(state.query_routes, route)}
+
+  defp remember_command(state, %Frame{
+         subsystem: 4,
+         payload: <<_::48, token, _::16, length, data::binary-size(length)>>
+       }) do
+    tokens = MapSet.put(state.used_tokens, token)
+    %{state | used_tokens: remember_sequence(tokens, data)}
+  end
+
+  defp remember_sequence(tokens, <<control, rest::binary>>) do
+    case {Bitwise.band(control, 4), rest} do
+      {0, <<sequence, _::binary>>} -> MapSet.put(tokens, sequence)
+      {4, <<_::16, sequence, _::binary>>} -> MapSet.put(tokens, sequence)
+      _ -> tokens
+    end
+  end
+
+  defp remember_sequence(tokens, _), do: tokens
 
   defp take_events(queue, 0, collected), do: {Enum.reverse(collected), queue}
 
@@ -309,7 +556,17 @@ defmodule Wotex.Zigbee.Owner do
 
   defp fail_waiters(state, kind) do
     if state.ready_waiter, do: GenServer.reply(state.ready_waiter, {:error, error(kind, :ready)})
-    if state.pending, do: GenServer.reply(state.pending.from, {:error, error(kind, :command)})
+
+    cond do
+      state.interview ->
+        GenServer.reply(state.interview.from, {:ok, Flow.finish(state.interview.flow, kind)})
+
+      state.pending ->
+        GenServer.reply(state.pending.from, {:error, error(kind, :command)})
+
+      true ->
+        :ok
+    end
   end
 
   defp handle_for(state),

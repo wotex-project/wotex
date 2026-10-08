@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "source": {
+    "organization": "Zigbee Alliance",
+    "document": "07-5123",
+    "revision": "8",
+    "release": "December 2019",
+    "url": "https://csa-iot.org/wp-content/uploads/2022/01/07-5123-08-Zigbee-Cluster-Library-1.pdf",
+    "sha256": "ad536e1d95a40ca27532e360b124cd76a1b18d96398c1c19fd32fbf7dcdd1aa0",
+    "sections": ["2.4", "2.5.1", "2.5.2", "2.6.2", "3.2"]
+  },
+  "adoption": {
+    "claim": "finite client Read Attributes profile only; no cluster conformance or certification",
+    "profile_id": 260,
+    "cluster_id": 0,
+    "command_id": 0,
+    "response_command_id": 1,
+    "attributes": [
+      {"id": 0, "name": "ZCLVersion", "type": 32},
+      {"id": 4, "name": "ManufacturerName", "type": 66, "max_bytes": 32},
+      {"id": 5, "name": "ModelIdentifier", "type": 66, "max_bytes": 32},
+      {"id": 65533, "name": "ClusterRevision", "type": 33}
+    ]
+  },
+  "implementation": ["Wotex.Zigbee.Interview", "Wotex.Zigbee.ZCL"],
+  "evidence": ["test/wotex/zigbee/interview_test.exs", "test/wotex/zigbee/interview_owner_test.exs"]
+}

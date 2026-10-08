@@ -436,11 +436,11 @@ packages:
     catalogue: "docs/packages/wotex-zigbee/specs/catalogue.yaml"
     specifications:
       - id: "WZG.01"
-        version: "0.3.0-target"
+        version: "0.5.0-target"
         implementation_status: "partial"
         path: "docs/packages/wotex-zigbee/specs/WZG.01-library-contract.md"
       - id: "WZG.02"
-        version: "0.2.0-target"
+        version: "0.4.0-target"
         implementation_status: "partial"
         path: "docs/packages/wotex-zigbee/specs/WZG.02-network-zcl.md"
       - id: "WZG.03"

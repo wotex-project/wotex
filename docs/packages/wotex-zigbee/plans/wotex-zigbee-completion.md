@@ -1,14 +1,21 @@
 # Wotex Zigbee completion contract
 
-Version: 0.1.0. The catalogue is authoritative for implementation status.
+Version: 0.3.0. The catalogue is authoritative for implementation status.
 
 ## Delivered software slice
 
 - TI CC26x2 SDK 2.30.00.34 ZNP Monitor/Test framing (SWRA198 revision 1.14),
   exact `SYS_VERSION` admission, one explicit owner and finite queues.
-- Non-administrative active-endpoint, simple-descriptor and AF data requests.
+- Non-administrative IEEE identity, node, active-endpoint, simple-descriptor and AF data requests.
   Synchronous reply and later indications remain distinct. Finite ZDO
-  active-endpoint and simple-descriptor responses decode into typed values.
+  identity and descriptor responses decode into typed values. The owner
+  revalidates complete commands against this finite profile before serial I/O.
+- One owner-backed interview obtains matched IEEE/node/endpoint descriptors
+  and selected Basic attributes under one deadline and caller monitor. It
+  preserves partial outcomes, duplicates, unknown profiles and unrelated
+  queued events. Route and AF/ZCL token retirement remain finite per epoch.
+- Selected Basic client reads are pinned to ZCL document 07-5123 revision 8,
+  with source provenance and independently framed scripted-peer tests.
 - Bounded ZCL global Read Attributes request and response/report decoding for
   an explicit scalar and short-string type subset. Unknown types remain
   opaque; malformed known types fail.
@@ -36,10 +43,11 @@ Version: 0.1.0. The catalogue is authoritative for implementation status.
 
 ## Required for WZG.02 completion
 
-1. Pin the adopted Zigbee/ZCL specification and finite cluster profile.
-   Implement bounded join/interview, duplicate identity handling, selected
-   Basic attributes, record-by-record reporting/binding and sleepy-device
-   freshness policy.
+1. Pin the adopted Zigbee core specification and qualify the finite ZCL
+   revision 8 Basic read profile. Implement explicit joining, route custody
+   and duplicate identity handling, record-by-record reporting/binding and
+   sleepy-device freshness policy. The bounded descriptor/Basic interview
+   is implemented in software; physical qualification remains outstanding.
 2. Implement network custody and backup/restore with key and counter
    continuity, old-coordinator isolation, explicit permit-join and no silent
    security downgrade. Exercise stale backups and concurrent coordinator

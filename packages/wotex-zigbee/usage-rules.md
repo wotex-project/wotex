@@ -15,6 +15,11 @@ catalogue records implementation status separately.
 - Use `Wotex.Zigbee.DataRequest` for AF traffic that must retain interviewed
   EUI-64 peer identity and caller correlation. Verify the current 16-bit route
   against that identity after a rejoin; neither field authenticates a report.
+- Use `Wotex.Zigbee.Interview` with an expected IEEE, a candidate unicast
+  route and a registered local AF endpoint for bounded descriptor/Basic
+  inspection. Check partial issues and original duplicate/conflicting claims
+  before adopting a route. Each owner epoch has finite route/token slots;
+  an interview cannot reuse a previously queried route in that epoch.
 - Limit commands to the documented ZDO and AF profile. Network formation,
   reset, restore, permit-join and key changes require a separate explicit
   administrative profile and authorization.

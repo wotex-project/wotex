@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.2.0-target. The catalogue records implementation status separately.
+Version: 0.4.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -16,9 +16,45 @@ Channel migration, key rotation, network healing and leave/rejoin are separate f
 
 Manufacturer/model strings are untrusted evidence, not cryptographic attestation. Preserve duplicates, conflicts and unknown descriptors. A consumer performs profile/Thing admission.
 
+The initial software query profile supplies IEEE identity, node, active endpoint
+and simple descriptor requests and typed responses. Immediate SRSP admission
+and later ZDO status remain distinct. The finite IEEE and node layouts are
+owned by WZG1-04; successful decoding alone does not establish route custody,
+cryptographic identity or Thing admission.
+
+The owner-backed interview first matches the expected raw IEEE and candidate
+route, then obtains node, active endpoint and simple descriptors. Descriptor
+responses must match both source and address of interest; successful simple
+descriptors also match the requested endpoint. The advertised list is bounded
+by `max_endpoints` (default 16, maximum 77), including duplicates. Its original
+order and duplicates remain evidence; each valid distinct endpoint is queried
+once. Invalid endpoints, descriptor failures and unknown clusters/profiles are
+preserved. Too many advertised endpoints return a partial result without
+silently truncating the interview. No step retries automatically.
+
+Basic reads apply only to profile `0x0104` endpoints with Basic input cluster
+`0x0000`. The consumer selects from ZCLVersion, ManufacturerName,
+ModelIdentifier and ClusterRevision; all four are selected by default.
+Matching requires the route, remote/local endpoints, cluster, client-facing
+direction, global Read Attributes Response, absent manufacturer extension and
+the allocated ZCL sequence. APS confirmation is a separate required observation.
+Record errors, duplicate IDs, missing/extra IDs, wrong types, nulls and invalid
+or oversized strings remain partial evidence. Duplicate, unrelated, malformed
+and unsolicited indications stay in the ordinary bounded event queue with
+its existing drop counter. The NCP security flag is retained at its original
+trust level. A complete inspection does not perform consumer profile admission.
+
 ## ZCL
 
 **WZG2-04.** Preserve attribute IDs, types, manufacturer code, direction, transaction sequence, status and the exact distinction among value, null, unsupported and malformed. Bound collection lengths and nesting. Support only explicitly catalogued cluster operations. Manufacturer-specific attributes remain opaque unless a consumer adapter supplies semantics. No generic automatic TD generation from a cluster name.
+
+The selected Basic client read profile is pinned to
+[ZCL document 07-5123 revision 8, December 2019](https://csa-iot.org/wp-content/uploads/2022/01/07-5123-08-Zigbee-Cluster-Library-1.pdf),
+sections 2.4, 2.5.1–2, 2.6.2 and 3.2. Its reviewed source digest, attribute IDs,
+types and string limits are recorded in
+[`zcl-basic-r8.json`](../../../../packages/wotex-zigbee/test/support/profiles/zcl-basic-r8.json).
+This is a finite Read Attributes profile. It does not implement all Basic
+attributes/commands or establish complete ZCL, Zigbee or cluster conformance.
 
 Read/write responses, default responses, unsolicited reports and command outcomes retain source and trust. Configure reporting/binding only under an explicit consumer request, with record-by-record success/failure. Retries are profile-sensitive; a failed write must not be silently repeated as a different command.
 
@@ -33,3 +69,9 @@ Automatic OTA, Green Power proxy/sink behavior, arbitrary manufacturer codecs an
 ## Acceptance
 
 WZG2-T1: bounded join/interview and repeated joins preserve identity. WZG2-T2: same IEEE/new short address versus different IEEE/same label. WZG2-T3: forged/replayed reports preserve the stack's security disposition. WZG2-T4: stale backup, cloned coordinator and unsupported cross-chip restore fail safely. WZG2-T5: sleepy reporting and exhausted downlink queues. WZG2-T6: ZCL typed-value, manufacturer-extension, malformed frame and per-record error vectors. WZG2-T7: partial migration/key rotation and explicit recovery without false global success.
+
+`interview_owner_test.exs` executes the software inspection subset of WZG2-T1,
+the same-IEEE/new-route case of WZG2-T2, retained security metadata and rejected
+report/sequence/source cells of WZG2-T3, and selected Basic record negatives
+of WZG2-T6. Joining, route custody, sleepy policy, physical source security,
+network continuity and administration remain outstanding.

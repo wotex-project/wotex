@@ -20,13 +20,19 @@ the package is loaded.
 - TI CC26x2 SDK 2.30.00.34 ZNP interface and bundled Monitor/Test API
   SWRA198 revision 1.14, with 115200 baud, 8-N-1, optional RTS/CTS.
 - Exact five-byte `SYS_VERSION` admission before a handle is returned.
-- `ZDO_ACTIVE_EP_REQ`, `ZDO_SIMPLE_DESC_REQ` and `AF_DATA_REQUEST` with
+- `ZDO_IEEE_ADDR_REQ`, `ZDO_NODE_DESC_REQ`, `ZDO_ACTIVE_EP_REQ`,
+  `ZDO_SIMPLE_DESC_REQ` and `AF_DATA_REQUEST` with
   bounded payloads and one outstanding synchronous request.
 - Separate asynchronous ZDO, AF confirmation and AF incoming events. Active
-  endpoint and simple descriptor replies decode into typed, finite values.
+  endpoint, IEEE identity, node and simple descriptor replies decode into
+  typed, finite values pinned to the selected Monitor/Test revision.
   A successful synchronous reply proves NCP acceptance, not delivery.
 - ZCL global Read Attributes encoding and bounded Read Attributes Response
   and Report Attributes decoding for catalogued scalar and short string types.
+- `Wotex.Zigbee.interview/3` matches expected IEEE identity, node and endpoint
+  descriptors, then reads selected Basic attributes under one overall deadline.
+  The Basic read selection is pinned to ZCL document 07-5123 revision 8.
+  Ordered results retain partial issues and distinct NCP/APS/ZCL observations.
 - `Wotex.Zigbee.DataRequest` keeps EUI-64 identity and caller correlation with
   a bounded AF request. Only the current route and ZNP-defined fields are
   transmitted; the consumer must verify IEEE-to-route custody after rejoin.
@@ -64,6 +70,31 @@ transaction, opaque `correlation_id` and finite `data`. Pass it to
 `Wotex.Zigbee.send_data/3`; keep the request to correlate later indications.
 An immediate reply reports NCP admission only. Keys do not belong in this
 request.
+
+`Wotex.Zigbee.ieee_address/3` and `node_descriptor/3` query a known unicast
+route under a finite timeout. Drain their later typed Events separately from
+NCP admission and correlate them under the consumer's interview policy.
+IEEE bytes and descriptor claims do not authenticate a device. The owner
+refuses undeclared or modified command frames before serial I/O and invalidates
+its epoch on a malformed synchronous response.
+
+For a full bounded inspection, construct `Wotex.Zigbee.Interview` with
+`peer_ieee`, `route_address` and an already registered `source_endpoint`, then
+call `Wotex.Zigbee.interview/3`. The default admits at most 16 advertised
+endpoints and selects ZCLVersion, ManufacturerName, ModelIdentifier and
+ClusterRevision from eligible Basic servers. Duplicate lists and attribute
+records stay visible. Unrelated indications remain in the ordinary event
+queue. A partial result identifies failed or unavailable stages without
+retrying, joining or configuring the device.
+
+An interview needs a route with no earlier ZDO query in that owner epoch.
+The owner retains at most 128 queried routes and retires Basic transaction
+and sequence bytes from a 256-byte window. Reuse or exhaustion is explicit;
+consumers may negotiate a new serial owner without resetting the network.
+Timeout after dispatch or caller death closes the owner. Serial adapter
+callbacks must return within the operation budget; the owner cannot preempt
+a blocking callback. Consumer route custody, authorization and physical
+firmware/endpoint qualification remain separate.
 
 ## Development
 

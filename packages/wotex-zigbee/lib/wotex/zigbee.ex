@@ -22,7 +22,7 @@ defmodule Wotex.Zigbee do
   effect truth remain with the consumer.
   """
 
-  alias Wotex.Zigbee.{Command, Config, DataRequest, Error, Event, Handle, Owner, Reply}
+  alias Wotex.Zigbee.{Command, Config, DataRequest, Error, Event, Handle, Interview, Owner, Reply}
 
   @type result(value) :: {:ok, value} | {:error, Error.t()}
 
@@ -63,6 +63,35 @@ defmodule Wotex.Zigbee do
   @doc "Stops this owner; closing the serial adapter invalidates its epoch."
   @spec close(Handle.t()) :: :ok | {:error, Error.t()}
   def close(handle), do: Owner.call(handle, :close, [])
+
+  @doc """
+  Inspects one candidate under a single deadline without joining or configuring it.
+
+  The owner keeps immediate admission, later descriptors, APS confirmation and
+  selected Basic records separate in `Wotex.Zigbee.Interview.Result`. An admitted
+  workflow returns a partial result on rejection, timeout or serial loss.
+  Timeout or caller death ends the epoch; unrelated events remain drainable.
+  The route must have no earlier ZDO query in this epoch. A later interview of
+  a reused route requires a newly negotiated owner, without resetting the NCP.
+  """
+  @spec interview(Handle.t(), Interview.t(), pos_integer()) :: result(Interview.Result.t())
+  def interview(handle, request, timeout), do: Owner.call(handle, :interview, [request, timeout])
+
+  @doc "Queries one route's IEEE address; NCP admission and its later identity response are distinct."
+  @spec ieee_address(Handle.t(), non_neg_integer(), pos_integer()) :: result(Reply.t())
+  def ieee_address(handle, address, timeout) do
+    with {:ok, frame} <- Command.ieee_address(address) do
+      Owner.call(handle, :command, [frame, timeout])
+    end
+  end
+
+  @doc "Requests one route's node descriptor; the later ZDO response is a distinct event."
+  @spec node_descriptor(Handle.t(), non_neg_integer(), pos_integer()) :: result(Reply.t())
+  def node_descriptor(handle, address, timeout) do
+    with {:ok, frame} <- Command.node_descriptor(address) do
+      Owner.call(handle, :command, [frame, timeout])
+    end
+  end
 
   @doc "Requests active endpoints; the later ZDO response is a distinct event."
   @spec active_endpoints(Handle.t(), non_neg_integer(), pos_integer()) :: result(Reply.t())

@@ -1,6 +1,6 @@
 # WZG.01 — Coordinator host boundary
 
-Version: 0.3.0-target. The catalogue records implementation status; hardware
+Version: 0.5.0-target. The catalogue records implementation status; hardware
 qualification is separate.
 
 ## NCP architecture
@@ -21,6 +21,15 @@ Primary architecture references: [TI ZNP](https://software-dl.ti.com/simplelink/
 
 Handle fragmented/coalesced serial frames, invalid lengths/checksums, async indications and transport reset. Bound frame bytes, pending requests, report queues and deadlines. ZNP synchronous replies and later AF/ZDO confirmations are separate observations. EZSP implementations must implement their admitted ASH/version/recovery profile rather than assume an unframed serial stream. A timeout cannot be interpreted as a network reset request.
 
+Ordinary commands and interviews preserve the absolute caller deadline across
+queueing, serial writes and reply delivery. A valid SRSP queued past expiry cannot
+complete successfully. Receiver admission clamps a supplied deadline to the
+configured timeout. A timeout after writing, malformed SRSP, serial failure
+or loss of a pending caller ends the epoch and closes the adapter. An expired
+call rejected before writing leaves the owner usable. Serial callbacks must
+return within the consumer's budget; the owner cannot preempt a blocking
+callback. External callback error text stays outside public errors and results.
+
 ## Values and calls
 
 **WZG1-04.** Pure values carry logical IEEE identity, endpoint, cluster, manufacturer code, direction, typed payload and caller context. The backend maps correlation/sequence tokens under finite outstanding windows. A sent serial command, APS acknowledgement, ZCL default response and attribute report are distinct result classes. No result grants consumer authorization or proves physical effect.
@@ -31,6 +40,59 @@ caller correlation. Peer identity and caller correlation stay on the host;
 ZNP receives only its defined AF fields. The consumer verifies the route to
 IEEE mapping during interview and after rejoin. A route-only compatibility
 call remains available but does not claim durable identity.
+
+The non-administrative query API includes `Wotex.Zigbee.ieee_address/3` and
+`node_descriptor/3`. Both take a known unicast route from 0 to `0xFFF7` and a
+finite timeout. The IEEE request selects single-device response type zero and
+start index zero; node descriptor destination and address of interest are the
+same route. Neither request searches broadly, opens joining or changes network
+custody. A returned `Wotex.Zigbee.Reply` is immediate NCP admission only.
+
+The owner admits complete canonical frames from the declared IEEE, node,
+active-endpoint, simple-descriptor and AF data constructors. An ordinary owner
+call cannot send raw administration, an extended IEEE query, modified flags or
+a mismatched destination/address of interest. Rejection is `invalid_command`
+before serial I/O. Each admitted command's SRSP must contain exactly its
+single status byte; malformed or mismatched SRSPs invalidate the owner epoch.
+Startup `SYS_VERSION` remains the separate five-byte negotiation.
+
+`Wotex.Zigbee.ZDO.ieee_address/1` and `node_descriptor/1` decode the corresponding
+AREQs into `zdo_ieee_address` and `zdo_node_descriptor` Events. The IEEE value
+retains eight raw identity bytes, route, status, start index, associated count
+and at most 35 associated routes. It supplies no independent source-address
+field because this MT callback has none. The node value retains separate
+source/address-of-interest, all descriptor flag bytes and the complete bounded
+13-byte descriptor. A failed status exposes no successful node descriptor.
+IEEE identity and node capability claims remain untrusted interview evidence.
+
+These layouts follow the SDK-bundled
+[Monitor/Test API SWRA198 revision 1.14](https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/docs/zstack/Z-Stack%20Monitor%20and%20Test%20API.pdf),
+sections 3.12.1.2–3 and 3.12.2.2–3. Revision 1.14 places StartIndex before
+NumAssocDev in the IEEE callback. No automatic layout guessing or later-revision
+fallback occurs. Exact firmware qualification must validate these layouts.
+
+`Wotex.Zigbee.interview/3` owns one non-administrative workflow under one
+deadline and one caller monitor. `Wotex.Zigbee.Interview` supplies the expected
+raw IEEE identity, candidate route, registered local AF endpoint and finite
+descriptor/Basic selection. Matching responses can arrive before their SRSP,
+but cannot advance without successful NCP admission. APS confirmation and ZCL
+Read Attributes Response are both retained for Basic reads. Ordinary commands
+and other interviews receive `overload` while the workflow owns admission.
+An admitted workflow returns `Wotex.Zigbee.Interview.Result` with ordered
+steps, separate observations and explicit partial issues. An outer owner call
+timeout may prevent delivery of that result when an adapter blocks.
+
+The owner retires routes used by ordinary ZDO queries or interviews. A route
+with an earlier ZDO query cannot start another interview in the same epoch;
+return `correlation_exhausted` before I/O. A new route for the same IEEE remains
+eligible. At most 128 distinct queried routes are retained per epoch; excess
+new routes receive `overload`. Basic AF transaction/ZCL sequence bytes are
+selected from the unused 256-byte window and never reused by interviews in
+that epoch. Ordinary AF transactions and extractable ZCL sequence bytes also
+retire slots. Exhaustion returns a partial result without issuing another
+read. Reopening a consumer-selected owner creates a new host epoch without
+forming or resetting the NCP network. These bounds do not authenticate frames
+or establish replay-proof radio identity.
 
 Credentials are resolved through explicit custody and not stored in public request values, errors or telemetry. Opaque owner handles have epochs; a replaced process cannot complete the prior owner's operation. Loading the package starts nothing; stateful owners are explicit child specifications.
 
@@ -45,3 +107,5 @@ WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: ser
 | Serial adapter | `circuits_uart_test.exs` mocks the UART API and covers exact USB identity, post-open drift, open/write errors, owner cleanup and a `SYS_VERSION` handshake through `Wotex.Zigbee.Owner`. | A real coordinator on macOS and Nerves, unplug/replug, exclusive open and permissions on both hosts. |
 | Host protocol | `frame_test.exs`, `owner_test.exs`, `event_test.exs` and `zdo_test.exs` exercise the bounded software profile with an independently encoded simulated peer. | Exact firmware artifact, real NCP reset/recovery and physical endpoint evidence. |
 | Request identity | `data_request_test.exs` validates EUI-64, route, payload and caller correlation and sends through the simulated serial peer without placing host-only identity in the wire frame. | Interview-derived route custody, source identity resolution, manufacturer/direction semantics and credential port. |
+| Identity and node queries | `command_test.exs`, `zdo_test.exs` and `owner_test.exs` cover exact request bytes, bounded identity/node values, failed/malformed replies, independently framed later responses and owner rejection of uncatalogued commands. | Exact real firmware layouts, physical interview qualification and route custody after rejoin. |
+| Bounded interview | `interview_test.exs` and `interview_owner_test.exs` cover the independently framed workflow, early responses, duplicate lists/records, wrong sources, identity conflict, partial failures, one deadline, caller death, real route/token exhaustion and a new route for the same IEEE. `owner_test.exs` covers queued late SRSPs and delayed/failed serial callbacks. | Physical firmware and endpoint qualification, consumer route custody, credential port and network administration. |

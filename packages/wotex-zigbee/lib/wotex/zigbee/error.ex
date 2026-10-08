@@ -23,6 +23,7 @@ defmodule Wotex.Zigbee.Error do
           | :stale_handle
           | :serial
           | :status_failure
+          | :correlation_exhausted
 
   @type t :: %__MODULE__{kind: kind(), operation: atom()}
 

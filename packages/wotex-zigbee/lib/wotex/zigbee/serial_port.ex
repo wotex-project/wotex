@@ -12,6 +12,12 @@ defmodule Wotex.Zigbee.SerialPort do
   Linux hosts, including Nerves systems with a compatible serial device.
   Consumers may supply another adapter. The package owns MT framing; the
   consumer owns device selection, permissions and reconnect policy.
+
+  Callbacks must return promptly within the consumer's operation budget. The
+  owner checks the original deadline before and after writes and before
+  delivering replies; it cannot preempt a blocking adapter callback. An outer
+  call timeout reports unavailable owner completion, without proving whether
+  the NCP received bytes. A returned callback failure never exposes its text.
   """
 
   @type port_ref :: term()

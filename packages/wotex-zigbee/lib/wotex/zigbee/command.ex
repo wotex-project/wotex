@@ -14,6 +14,27 @@ defmodule Wotex.Zigbee.Command do
   @spec version() :: Frame.t()
   def version, do: %Frame{type: :sreq, subsystem: 1, id: 2, payload: <<>>}
 
+  @doc "Queries one unicast route's IEEE identity; the later response remains separate."
+  @spec ieee_address(non_neg_integer()) :: {:ok, Frame.t()} | {:error, Error.t()}
+  def ieee_address(address) when is_integer(address) and address in 0..0xFFF7,
+    do: {:ok, %Frame{type: :sreq, subsystem: 5, id: 1, payload: <<address::little-16, 0, 0>>}}
+
+  def ieee_address(_), do: invalid()
+
+  @doc "Requests the node descriptor of one known unicast route."
+  @spec node_descriptor(non_neg_integer()) :: {:ok, Frame.t()} | {:error, Error.t()}
+  def node_descriptor(address) when is_integer(address) and address in 0..0xFFF7 do
+    {:ok,
+     %Frame{
+       type: :sreq,
+       subsystem: 5,
+       id: 2,
+       payload: <<address::little-16, address::little-16>>
+     }}
+  end
+
+  def node_descriptor(_), do: invalid()
+
   @doc "Requests a device's active endpoints; the later ZDO response is an event."
   @spec active_endpoints(non_neg_integer()) :: {:ok, Frame.t()} | {:error, Error.t()}
   def active_endpoints(address) when is_integer(address) and address in 0..0xFFFE do
@@ -96,6 +117,62 @@ defmodule Wotex.Zigbee.Command do
   end
 
   def data_request(_, _, _, _, _, _, _), do: invalid()
+
+  @doc "Checks complete ordinary commands against the finite non-administrative profile."
+  @spec admitted?(term()) :: boolean()
+  def admitted?(
+        %Frame{type: :sreq, subsystem: 5, id: 1, payload: <<address::little-16, 0, 0>>} = frame
+      ),
+      do: match_frame(frame, ieee_address(address))
+
+  def admitted?(
+        %Frame{
+          type: :sreq,
+          subsystem: 5,
+          id: id,
+          payload: <<address::little-16, address::little-16>>
+        } = frame
+      )
+      when id in [2, 5] do
+    command = if id == 2, do: node_descriptor(address), else: active_endpoints(address)
+    match_frame(frame, command)
+  end
+
+  def admitted?(
+        %Frame{
+          type: :sreq,
+          subsystem: 5,
+          id: 4,
+          payload: <<address::little-16, address::little-16, endpoint>>
+        } = frame
+      ),
+      do: match_frame(frame, simple_descriptor(address, endpoint))
+
+  def admitted?(
+        %Frame{
+          type: :sreq,
+          subsystem: 4,
+          id: 1,
+          payload:
+            <<address::little-16, destination, source, cluster::little-16, transaction, flags,
+              radius, length, data::binary>>
+        } = frame
+      )
+      when byte_size(data) == length do
+    command =
+      data_request(address, destination, source, cluster, transaction, data,
+        radius: radius,
+        aps_ack: Bitwise.band(flags, 0x10) != 0,
+        aps_security: Bitwise.band(flags, 0x40) != 0
+      )
+
+    match_frame(frame, command)
+  end
+
+  def admitted?(_), do: false
+
+  defp match_frame(frame, {:ok, frame}), do: true
+  defp match_frame(_, _), do: false
 
   defp build_data_request(
          address,

@@ -2,10 +2,11 @@ defmodule Wotex.Zigbee.ZDO do
   @moduledoc """
   Finite TI ZNP ZDO descriptor response decoding for device interviews.
 
-  `active_endpoints/1` and `simple_descriptor/1` decode the asynchronous
-  responses to the corresponding host requests. Source and described network
+  The identity and descriptor decoders retain the asynchronous responses to
+  corresponding host requests. Source and described network
   addresses are retained separately; both are transient routes rather than
-  durable IEEE identity. Failed ZDO status has no invented endpoint or
+  durable IEEE identity. The IEEE callback has no separate source field and
+  preserves raw EUI-64 bytes without authenticating them. Failed ZDO status has no invented endpoint or
   descriptor. Counts and descriptor lengths must match the complete payload.
 
   This codec does not perform joining, retrying, manufacturer interpretation
@@ -14,6 +15,22 @@ defmodule Wotex.Zigbee.ZDO do
   """
 
   alias Wotex.Zigbee.Error
+
+  @type ieee_response :: %{
+          status: byte(),
+          peer_ieee: <<_::64>>,
+          network_address: non_neg_integer(),
+          start_index: byte(),
+          associated_count: byte(),
+          associated_devices: [non_neg_integer()]
+        }
+  @type node_response :: %{
+          source_address: non_neg_integer(),
+          network_address: non_neg_integer(),
+          status: byte(),
+          descriptor: map() | nil,
+          raw_descriptor: binary()
+        }
 
   @type active_response :: %{
           source_address: non_neg_integer(),
@@ -27,6 +44,68 @@ defmodule Wotex.Zigbee.ZDO do
           status: byte(),
           descriptor: map() | nil
         }
+
+  @doc """
+  Decodes the SWRA198 revision 1.14 IEEE response, preserving raw identity bytes.
+
+  This revision places `StartIndex` before `NumAssocDev`; at most 35 associated
+  routes are retained. A nonzero status never verifies the claimed IEEE identity.
+  Later firmware layouts need a separately admitted profile.
+  """
+  @spec ieee_address(binary()) :: {:ok, ieee_response()} | {:error, Error.t()}
+  def ieee_address(
+        <<status, ieee::binary-size(8), network::little-16, start, count, devices::binary>>
+      )
+      when byte_size(devices) <= 70 and rem(byte_size(devices), 2) == 0 and
+             div(byte_size(devices), 2) <= count and
+             (count == 0 or start + div(byte_size(devices), 2) <= count) do
+    {:ok,
+     %{
+       status: status,
+       peer_ieee: ieee,
+       network_address: network,
+       start_index: start,
+       associated_count: count,
+       associated_devices: clusters(devices)
+     }}
+  end
+
+  def ieee_address(_), do: invalid()
+
+  @doc "Decodes one fixed-length node descriptor response, retaining all descriptor flag bytes."
+  @spec node_descriptor(binary()) :: {:ok, node_response()} | {:error, Error.t()}
+  def node_descriptor(<<source::little-16, status, network::little-16, raw::binary-size(13)>>) do
+    descriptor = if status == 0, do: node_fields(raw), else: nil
+
+    {:ok,
+     %{
+       source_address: source,
+       network_address: network,
+       status: status,
+       descriptor: descriptor,
+       raw_descriptor: raw
+     }}
+  end
+
+  def node_descriptor(_), do: invalid()
+
+  defp node_fields(
+         <<logical, aps, mac, manufacturer::little-16, buffer, incoming::little-16,
+           server::little-16, outgoing::little-16, capabilities>>
+       ) do
+    %{
+      logical_flags: logical,
+      logical_type: Bitwise.band(logical, 7),
+      aps_flags_frequency: aps,
+      mac_capabilities: mac,
+      manufacturer_code: manufacturer,
+      max_buffer_bytes: buffer,
+      max_incoming_transfer_bytes: incoming,
+      server_mask: server,
+      max_outgoing_transfer_bytes: outgoing,
+      descriptor_capabilities: capabilities
+    }
+  end
 
   @doc "Decodes one complete `ZDO_ACTIVE_EP_RSP` payload, including failure status."
   @spec active_endpoints(binary()) :: {:ok, active_response()} | {:error, Error.t()}
