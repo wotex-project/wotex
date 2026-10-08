@@ -1,6 +1,6 @@
 # WZG.01 — Coordinator host boundary
 
-Version: 0.5.0-target. The catalogue records implementation status; hardware
+Version: 0.6.0-target. The catalogue records implementation status; hardware
 qualification is separate.
 
 ## NCP architecture
@@ -40,6 +40,35 @@ caller correlation. Peer identity and caller correlation stay on the host;
 ZNP receives only its defined AF fields. The consumer verifies the route to
 IEEE mapping during interview and after rejoin. A route-only compatibility
 call remains available but does not claim durable identity.
+
+`Wotex.Zigbee.Routes` is an inert, consumer-owned ledger keyed by raw IEEE
+identity. It admits a complete matching interview from its current owner
+epoch. Entries retain the identity observation time, owner sequence,
+generation and an explicit lifetime of at most 24 hours. A newer observation
+can replace the same identity's route; older evidence cannot rewind it.
+Different identities claiming an occupied route quarantine the claims,
+including at capacity. The consumer must retain the updated table returned
+with `route_conflict`. Forgetting one claim does not promote another.
+
+The owner stamps each received AREQ Event with its epoch, monotonic
+millisecond time and a sequence from 1 to `0xFFFFFFFFFFFFFFFF`. Sequence
+exhaustion ends the epoch rather than wrapping. Pure `Event.from_frame/1`
+leaves this metadata absent. `Routes.resolve/3` requires current unexpired
+custody and an observation from that epoch at or after the adopted identity
+observation, including sequence order within one millisecond. It retains the
+unchanged Event and its security disposition. These are host observations,
+not authentication or proof that a radio frame is fresh.
+
+`Wotex.Zigbee.send_routed_data/4` revalidates the supplied current table at
+the serial receiver before I/O. It requires the request's IEEE identity and
+route to match current custody in that receiver epoch and clamps the absolute
+operation deadline to custody expiry. Expiry before dispatch leaves the owner
+usable; expiry after dispatch ends the epoch through the normal timeout path.
+The consumer owns table serialization and supplies its latest value; old
+immutable snapshots cannot detect later consumer decisions. Rebinding to a
+new owner retains peer records but requires a fresh interview before use.
+Custody expiry grants no authorization and does not declare a quiet device
+offline.
 
 The non-administrative query API includes `Wotex.Zigbee.ieee_address/3` and
 `node_descriptor/3`. Both take a known unicast route from 0 to `0xFFF7` and a
@@ -106,6 +135,7 @@ WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: ser
 | --- | --- | --- |
 | Serial adapter | `circuits_uart_test.exs` mocks the UART API and covers exact USB identity, post-open drift, open/write errors, owner cleanup and a `SYS_VERSION` handshake through `Wotex.Zigbee.Owner`. | A real coordinator on macOS and Nerves, unplug/replug, exclusive open and permissions on both hosts. |
 | Host protocol | `frame_test.exs`, `owner_test.exs`, `event_test.exs` and `zdo_test.exs` exercise the bounded software profile with an independently encoded simulated peer. | Exact firmware artifact, real NCP reset/recovery and physical endpoint evidence. |
-| Request identity | `data_request_test.exs` validates EUI-64, route, payload and caller correlation and sends through the simulated serial peer without placing host-only identity in the wire frame. | Interview-derived route custody, source identity resolution, manufacturer/direction semantics and credential port. |
-| Identity and node queries | `command_test.exs`, `zdo_test.exs` and `owner_test.exs` cover exact request bytes, bounded identity/node values, failed/malformed replies, independently framed later responses and owner rejection of uncatalogued commands. | Exact real firmware layouts, physical interview qualification and route custody after rejoin. |
-| Bounded interview | `interview_test.exs` and `interview_owner_test.exs` cover the independently framed workflow, early responses, duplicate lists/records, wrong sources, identity conflict, partial failures, one deadline, caller death, real route/token exhaustion and a new route for the same IEEE. `owner_test.exs` covers queued late SRSPs and delayed/failed serial callbacks. | Physical firmware and endpoint qualification, consumer route custody, credential port and network administration. |
+| Request identity | `data_request_test.exs` validates EUI-64, route, payload and caller correlation and sends through the simulated serial peer without placing host-only identity in the wire frame. | Manufacturer/direction semantics and credential port. |
+| Identity and node queries | `command_test.exs`, `zdo_test.exs` and `owner_test.exs` cover exact request bytes, bounded identity/node values, failed/malformed replies, independently framed later responses and owner rejection of uncatalogued commands. | Exact real firmware layouts and physical interview qualification. |
+| Bounded interview | `interview_test.exs` and `interview_owner_test.exs` cover the independently framed workflow, early responses, duplicate lists/records, wrong sources, identity conflict, partial failures, one deadline, caller death, real route/token exhaustion and a new route for the same IEEE. `owner_test.exs` covers queued late SRSPs and delayed/failed serial callbacks. | Physical firmware and endpoint qualification, credential port and network administration. |
+| Adopted route custody | `routes_test.exs` covers rejoin, conflict quarantine at capacity, expiry, stale evidence, sequence order and epoch replacement. `routes_owner_test.exs` executes an independently framed interview, guarded AF admission, unchanged source security metadata, rejection before I/O, queued expiry and timeout after dispatch. It sets the sequence to its bound to exercise exhaustion; it does not execute that many observations. | Physical rejoin/source qualification, radio authentication and replay disposition from the selected stack. |

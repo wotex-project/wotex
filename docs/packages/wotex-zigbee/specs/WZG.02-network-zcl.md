@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.4.0-target. The catalogue records implementation status separately.
+Version: 0.5.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -44,6 +44,24 @@ and unsolicited indications stay in the ordinary bounded event queue with
 its existing drop counter. The NCP security flag is retained at its original
 trust level. A complete inspection does not perform consumer profile admission.
 
+After consumer review, `Wotex.Zigbee.Routes.adopt/4` admits a complete matching
+interview into a finite raw-IEEE ledger. Manufacturer/model strings never key
+the ledger. A newer owner observation moves the same identity to its new
+route; an older result cannot restore the prior route. Different identities
+claiming one route remain conflicted, even if one claim cannot fit in the
+table. Retain the returned conflict table before further traffic. Removing a
+claim does not grant authority to the remaining conflicted claim.
+
+The consumer supplies monotonic time and a lifetime from the identity
+observation, at most 24 hours. Adopting an old result does not refresh that
+observation. `Routes.resolve/3` fences source resolution by epoch, expiry,
+observation time and owner sequence while preserving the exact original
+Event. `Wotex.Zigbee.send_routed_data/4` checks the current supplied ledger at
+the receiver and limits the command deadline to custody expiry. A replacement
+owner requires explicit rebind and a fresh complete interview. Retained
+records, host ordering and IEEE matches do not authenticate a peer, establish
+radio replay protection or turn custody expiry into an offline declaration.
+
 ## ZCL
 
 **WZG2-04.** Preserve attribute IDs, types, manufacturer code, direction, transaction sequence, status and the exact distinction among value, null, unsupported and malformed. Bound collection lengths and nesting. Support only explicitly catalogued cluster operations. Manufacturer-specific attributes remain opaque unless a consumer adapter supplies semantics. No generic automatic TD generation from a cluster name.
@@ -70,8 +88,10 @@ Automatic OTA, Green Power proxy/sink behavior, arbitrary manufacturer codecs an
 
 WZG2-T1: bounded join/interview and repeated joins preserve identity. WZG2-T2: same IEEE/new short address versus different IEEE/same label. WZG2-T3: forged/replayed reports preserve the stack's security disposition. WZG2-T4: stale backup, cloned coordinator and unsupported cross-chip restore fail safely. WZG2-T5: sleepy reporting and exhausted downlink queues. WZG2-T6: ZCL typed-value, manufacturer-extension, malformed frame and per-record error vectors. WZG2-T7: partial migration/key rotation and explicit recovery without false global success.
 
-`interview_owner_test.exs` executes the software inspection subset of WZG2-T1,
-the same-IEEE/new-route case of WZG2-T2, retained security metadata and rejected
-report/sequence/source cells of WZG2-T3, and selected Basic record negatives
-of WZG2-T6. Joining, route custody, sleepy policy, physical source security,
+`interview_owner_test.exs` executes the software inspection subset of WZG2-T1
+and selected Basic record negatives of WZG2-T6. `routes_test.exs` and
+`routes_owner_test.exs` execute raw-identity/rejoin/conflict custody in WZG2-T2
+and host epoch/time/sequence fencing with unchanged security disposition in
+WZG2-T3. The scripted peer exercises interview adoption, source resolution and
+guarded AF sends. Joining, sleepy policy, physical rejoin/source security,
 network continuity and administration remain outstanding.

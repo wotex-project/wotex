@@ -24,6 +24,12 @@ defmodule Wotex.Zigbee.Error do
           | :serial
           | :status_failure
           | :correlation_exhausted
+          | :stale_epoch
+          | :stale_observation
+          | :unknown_route
+          | :route_conflict
+          | :route_expired
+          | :route_mismatch
 
   @type t :: %__MODULE__{kind: kind(), operation: atom()}
 

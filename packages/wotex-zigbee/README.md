@@ -35,7 +35,10 @@ the package is loaded.
   Ordered results retain partial issues and distinct NCP/APS/ZCL observations.
 - `Wotex.Zigbee.DataRequest` keeps EUI-64 identity and caller correlation with
   a bounded AF request. Only the current route and ZNP-defined fields are
-  transmitted; the consumer must verify IEEE-to-route custody after rejoin.
+  transmitted.
+- `Wotex.Zigbee.Routes` explicitly adopts complete interviews into a bounded
+  consumer-owned IEEE ledger. Guarded AF sends and source resolution check
+  epoch, custody expiry and route; rejoin and conflicts stay visible.
 
 `Wotex.Zigbee.Serial.CircuitsUART` is the included macOS/Linux serial adapter.
 It uses `Circuits.UART` and requires the coordinator's USB serial number,
@@ -67,9 +70,10 @@ not create a network or reconnect automatically after USB loss.
 For AF traffic, construct `Wotex.Zigbee.DataRequest` with an interviewed
 eight-byte peer IEEE address, current `route_address`, endpoints, cluster,
 transaction, opaque `correlation_id` and finite `data`. Pass it to
-`Wotex.Zigbee.send_data/3`; keep the request to correlate later indications.
-An immediate reply reports NCP admission only. Keys do not belong in this
-request.
+`Wotex.Zigbee.send_routed_data/4` with the current adopted route table; keep
+the request to correlate later indications. An immediate reply reports NCP
+admission only. Keys do not belong in this request. `send_data/3` remains
+available when the consumer separately enforces route custody.
 
 `Wotex.Zigbee.ieee_address/3` and `node_descriptor/3` query a known unicast
 route under a finite timeout. Drain their later typed Events separately from
@@ -87,13 +91,29 @@ records stay visible. Unrelated indications remain in the ordinary event
 queue. A partial result identifies failed or unavailable stages without
 retrying, joining or configuring the device.
 
+After reviewing a complete result, use `Wotex.Zigbee.Routes.new/2` with its
+`owner_epoch` and `Routes.adopt/4` with the result, monotonic milliseconds and
+a finite lifetime. The lifetime begins at the identity observation, not at
+adoption. Retain the latest returned table, including the third element of
+`{:error, error, table}` when adoption quarantines a route conflict. A newer
+interview can replace the same IEEE's route. Forgetting one conflicting peer
+does not make another claim current.
+
+`Routes.resolve/3` returns the unchanged Event alongside its current peer
+record. It checks owner epoch, expiry and observation ordering; it does not
+authenticate a report or upgrade the NCP security flag. When replacing an
+owner, call `Routes.rebind/2` and obtain a fresh interview before using retained
+routes. Supply the current table to guarded sends: old immutable snapshots
+cannot observe later consumer decisions. Custody expiry does not declare a
+sleepy device offline.
+
 An interview needs a route with no earlier ZDO query in that owner epoch.
 The owner retains at most 128 queried routes and retires Basic transaction
 and sequence bytes from a 256-byte window. Reuse or exhaustion is explicit;
 consumers may negotiate a new serial owner without resetting the network.
 Timeout after dispatch or caller death closes the owner. Serial adapter
 callbacks must return within the operation budget; the owner cannot preempt
-a blocking callback. Consumer route custody, authorization and physical
+a blocking callback. Consumer table ownership, authorization and physical
 firmware/endpoint qualification remain separate.
 
 ## Development

@@ -8,6 +8,11 @@ defmodule Wotex.Zigbee.Event do
   or independent cryptographic attestation. Active-endpoint and simple
   descriptor, IEEE identity and node ZDO replies have typed payloads;
   uncatalogued AREQs stay opaque.
+
+  The owner stamps `owner_epoch`, `received_at_ms` and `owner_sequence` when
+  observing a frame. Pure `from_frame/1` leaves them nil. The bounded sequence
+  orders observations even in the same millisecond. These fields support route
+  custody fencing and do not authenticate network origin or radio freshness.
   """
 
   alias Wotex.Zigbee.{Frame, ZDO}
@@ -26,7 +31,10 @@ defmodule Wotex.Zigbee.Event do
     :cluster,
     :link_quality,
     :security_used,
-    :zdo
+    :zdo,
+    :owner_epoch,
+    :received_at_ms,
+    :owner_sequence
   ]
 
   @type t :: %__MODULE__{
@@ -51,6 +59,9 @@ defmodule Wotex.Zigbee.Event do
           cluster: non_neg_integer() | nil,
           link_quality: byte() | nil,
           security_used: boolean() | nil,
+          owner_epoch: reference() | nil,
+          received_at_ms: integer() | nil,
+          owner_sequence: pos_integer() | nil,
           zdo:
             ZDO.active_response()
             | ZDO.simple_response()

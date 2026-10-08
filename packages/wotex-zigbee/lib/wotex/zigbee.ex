@@ -22,7 +22,18 @@ defmodule Wotex.Zigbee do
   effect truth remain with the consumer.
   """
 
-  alias Wotex.Zigbee.{Command, Config, DataRequest, Error, Event, Handle, Interview, Owner, Reply}
+  alias Wotex.Zigbee.{
+    Command,
+    Config,
+    DataRequest,
+    Error,
+    Event,
+    Handle,
+    Interview,
+    Owner,
+    Reply,
+    Routes
+  }
 
   @type result(value) :: {:ok, value} | {:error, Error.t()}
 
@@ -141,6 +152,18 @@ defmodule Wotex.Zigbee do
 
   def send_data(_, _, _),
     do: {:error, %Error{kind: :invalid_command, operation: :request}}
+
+  @doc """
+  Sends through the consumer's current adopted route table.
+
+  The receiver checks owner epoch, identity, route and custody expiry before
+  serial I/O, and limits the operation deadline to the custody expiry. This
+  checks host mapping only; the consumer still authorizes the operation.
+  """
+  @spec send_routed_data(Handle.t(), Routes.t(), DataRequest.t(), pos_integer()) ::
+          result(Reply.t())
+  def send_routed_data(handle, routes, request, timeout),
+    do: Owner.call(handle, :routed, [routes, request, timeout])
 
   @doc """
   Sends the legacy route-only AF call; consumers retain peer identity and

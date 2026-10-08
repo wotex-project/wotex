@@ -13,7 +13,7 @@ defmodule Wotex.Zigbee.Owner do
 
   use GenServer
 
-  alias Wotex.Zigbee.{Command, Config, Error, Event, Frame, Handle, Interview, Reply}
+  alias Wotex.Zigbee.{Command, Config, Error, Event, Frame, Handle, Interview, Reply, Routes}
   alias Wotex.Zigbee.Interview.Flow
 
   @max_query_routes 128
@@ -51,7 +51,19 @@ defmodule Wotex.Zigbee.Owner do
     safe_call(owner, {operation, epoch, args}, limit + 100)
   end
 
-  def call(_, operation, _) when operation in [:command, :interview, :close, :drain],
+  def call(%Handle{owner: owner, epoch: epoch, timeout_ms: limit}, :routed, [
+        routes,
+        request,
+        timeout
+      ])
+      when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 do
+    valid_timeout = is_integer(timeout) and timeout > 0
+    wait = if valid_timeout, do: min(timeout, limit) + 100, else: limit + 100
+    deadline = if valid_timeout, do: System.monotonic_time(:millisecond) + min(timeout, limit)
+    safe_call(owner, {:routed, epoch, [routes, request, timeout, deadline]}, wait)
+  end
+
+  def call(_, operation, _) when operation in [:command, :interview, :routed, :close, :drain],
     do: {:error, %Error{kind: :stale_handle, operation: operation}}
 
   def call(_, _, _), do: {:error, error(:invalid_command, :owner)}
@@ -82,6 +94,7 @@ defmodule Wotex.Zigbee.Owner do
              interview: nil,
              query_routes: MapSet.new(),
              used_tokens: MapSet.new(),
+             observation_sequence: 0,
              buffer: <<>>,
              events: :queue.new(),
              event_count: 0,
@@ -211,6 +224,28 @@ defmodule Wotex.Zigbee.Owner do
 
       kind ->
         {:reply, {:error, error(kind, :interview)}, state}
+    end
+  end
+
+  def handle_call({:routed, epoch, [routes, request, timeout, deadline]}, from, state) do
+    with {:ok, expiry} <-
+           Routes.check_request(routes, request, state.epoch, System.monotonic_time(:millisecond)),
+         {:ok, frame} <-
+           Command.data_request(
+             request.route_address,
+             request.destination_endpoint,
+             request.source_endpoint,
+             request.cluster,
+             request.transaction,
+             request.data,
+             radius: request.radius,
+             aps_ack: request.aps_ack,
+             aps_security: request.aps_security
+           ) do
+      bounded = if is_integer(deadline), do: min(deadline, expiry)
+      handle_call({:command, epoch, [frame, timeout, bounded]}, from, state)
+    else
+      failure -> {:reply, failure, state}
     end
   end
 
@@ -355,8 +390,20 @@ defmodule Wotex.Zigbee.Owner do
     end
   end
 
+  defp accept_frame(%Frame{type: :areq}, %{observation_sequence: 0xFFFFFFFFFFFFFFFF} = state) do
+    fail_waiters(state, :correlation_exhausted)
+    %{state | mode: :failed}
+  end
+
   defp accept_frame(%Frame{type: :areq} = frame, state) do
-    event = Event.from_frame(frame)
+    state = %{state | observation_sequence: state.observation_sequence + 1}
+
+    event = %{
+      Event.from_frame(frame)
+      | owner_epoch: state.epoch,
+        received_at_ms: System.monotonic_time(:millisecond),
+        owner_sequence: state.observation_sequence
+    }
 
     if state.interview do
       case Flow.offer(state.interview.flow, event) do

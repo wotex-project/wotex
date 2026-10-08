@@ -1,6 +1,6 @@
 # Wotex Zigbee completion contract
 
-Version: 0.3.0. The catalogue is authoritative for implementation status.
+Version: 0.4.0. The catalogue is authoritative for implementation status.
 
 ## Delivered software slice
 
@@ -27,7 +27,13 @@ Version: 0.3.0. The catalogue is authoritative for implementation status.
   end-to-end `SYS_VERSION` handshake; no real coordinator was attached.
 - A bounded AF data request carries durable EUI-64 peer identity, current
   route and caller correlation while sending only ZNP-defined fields on the
-  wire. The consumer remains responsible for verifying the route mapping.
+  wire.
+- An inert consumer-owned route ledger explicitly adopts complete interviews,
+  replaces a rejoined identity's route, quarantines conflicting claims and
+  fences source resolution by owner epoch, expiry, time and bounded sequence.
+  Guarded AF sends check the current supplied table before I/O and clamp their
+  deadline to custody expiry. Consumers retain the latest table, including
+  conflict updates; host custody does not establish radio authentication.
 
 ## Required for WZG.01 completion
 
@@ -44,10 +50,11 @@ Version: 0.3.0. The catalogue is authoritative for implementation status.
 ## Required for WZG.02 completion
 
 1. Pin the adopted Zigbee core specification and qualify the finite ZCL
-   revision 8 Basic read profile. Implement explicit joining, route custody
-   and duplicate identity handling, record-by-record reporting/binding and
-   sleepy-device freshness policy. The bounded descriptor/Basic interview
-   is implemented in software; physical qualification remains outstanding.
+   revision 8 Basic read profile. Implement explicit joining,
+   record-by-record reporting/binding and sleepy-device freshness policy.
+   Bounded descriptor/Basic interviews, adopted route custody and duplicate
+   identity handling are implemented in software; physical qualification
+   remains outstanding.
 2. Implement network custody and backup/restore with key and counter
    continuity, old-coordinator isolation, explicit permit-join and no silent
    security downgrade. Exercise stale backups and concurrent coordinator
