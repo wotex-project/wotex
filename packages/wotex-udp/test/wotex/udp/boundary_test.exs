@@ -6,7 +6,7 @@ defmodule Wotex.UDP.BoundaryTest do
   import ExUnit.CaptureLog
 
   alias Wotex.UDP
-  alias Wotex.UDP.{Backend, Config, Endpoint, Error}
+  alias Wotex.UDP.{Admission, Backend, Config, Endpoint, Error}
 
   test "invalid values and unknown address families never open a socket" do
     {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
@@ -28,6 +28,7 @@ defmodule Wotex.UDP.BoundaryTest do
     assert {:error, %Error{kind: :invalid_endpoint}} = Endpoint.unicast({0, 0, 0, 0, 0, 0, 0, 0}, 9)
     assert {:error, %Error{kind: :invalid_endpoint}} = Endpoint.from_sockaddr(%{})
     refute Endpoint.valid?(%Endpoint{local | family: :inet6})
+    refute Endpoint.valid?(%Endpoint{local | kind: :unsupported})
 
     assert {:error, %Error{kind: :invalid_endpoint}} =
              Endpoint.unicast({0xFE80, 0, 0, 0, 0, 0, 0, 1}, 123)
@@ -123,5 +124,71 @@ defmodule Wotex.UDP.BoundaryTest do
     assert %Error{kind: :overload} = Error.from_socket(:send, :enobufs)
     assert %Error{kind: :datagram_too_large} = Error.from_socket(:send, :emsgsize)
     assert Exception.message(Error.from_socket(:recv, :timeout)) == "UDP recv failed: timeout"
+  end
+
+  test "backend batch boundaries preserve complete datagrams and discard malformed batches" do
+    {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
+    {:ok, config} = Config.new(local: local, max_datagram_bytes: 4, max_batch_datagrams: 2)
+    {:ok, backend} = Backend.open(config)
+    on_exit(fn -> Backend.close(backend) end)
+    {:ok, destination} = Backend.local(backend)
+    {:ok, peer} = :gen_udp.open(0, [:binary, active: false, ip: {127, 0, 0, 1}])
+    on_exit(fn -> :gen_udp.close(peer) end)
+    send_packet = fn data -> :gen_udp.send(peer, destination.address, destination.port, data) end
+
+    assert {:error, %Error{kind: :invalid_batch_size}} = Backend.recv_batch(backend, 3, 20)
+    assert {:error, %Error{kind: :invalid_deadline}} = Backend.recv(backend, -1)
+    assert :ok = send_packet.(<<1>>)
+    assert :ok = send_packet.(<<2>>)
+    assert {:ok, [%{data: <<1>>}, %{data: <<2>>}]} = Backend.recv_batch(backend, 2, 100)
+    assert :ok = send_packet.(<<3>>)
+    assert {:ok, [%{data: <<3>>}]} = Backend.recv_batch(backend, 2, 20)
+    assert {:error, %Error{kind: :timeout}} = Backend.recv_batch(backend, 2, 0)
+    assert :ok = send_packet.(<<4>>)
+    assert :ok = send_packet.(<<0::40>>)
+    assert {:error, %Error{kind: :datagram_too_large}} = Backend.recv_batch(backend, 2, 100)
+    assert {:error, %Error{kind: :timeout}} = Backend.recv(backend, 0)
+    {:ok, multicast} = Endpoint.multicast({239, 1, 2, 3}, 5000)
+
+    assert {:error, %Error{kind: :multicast_disabled}} =
+             Backend.join(backend, multicast, {127, 0, 0, 1})
+  end
+
+  test "malformed admission counters and budgets fail without retaining caller input" do
+    counter = :atomics.new(1, signed: false)
+    assert {:error, %Error{kind: :invalid_handle}} = Admission.acquire(make_ref(), 2, 4, 0)
+    assert {:error, %Error{kind: :invalid_handle}} = Admission.acquire(counter, 0, 4, 0)
+    assert {:error, %Error{kind: :invalid_handle}} = Admission.acquire(counter, 2, 0, 0)
+    assert {:error, %Error{kind: :invalid_handle}} = Admission.acquire(counter, 2, 4, -1)
+    assert :atomics.get(counter, 1) == 0
+  end
+
+  test "foreign local socket metadata fails as a payload-free endpoint error" do
+    {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
+    {:ok, config} = Config.new(local: local)
+    {:ok, unix} = :socket.open(:local, :dgram, :default)
+
+    path =
+      Path.join(System.tmp_dir!(), "wotex-udp-source-canary-#{System.unique_integer([:positive])}")
+
+    on_exit(fn ->
+      :socket.close(unix)
+      File.rm(path)
+    end)
+
+    assert :ok = :socket.bind(unix, %{family: :local, path: path})
+    backend = %Backend{handle: unix, config: config}
+    assert {:error, %Error{kind: :invalid_endpoint} = error} = Backend.local(backend)
+    refute inspect(error) =~ "source-canary"
+  end
+
+  test "direct multicast membership rejects a malformed numeric interface" do
+    {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
+    {:ok, config} = Config.new(local: local, multicast: true)
+    {:ok, backend} = Backend.open(config)
+    on_exit(fn -> Backend.close(backend) end)
+    {:ok, group} = Endpoint.multicast({239, 1, 2, 3}, 5000)
+    assert {:error, %Error{kind: :invalid_endpoint}} = Backend.join(backend, group, {256, 0, 0, 1})
+    assert {:ok, _} = Backend.local(backend)
   end
 end

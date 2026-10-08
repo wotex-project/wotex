@@ -802,6 +802,7 @@ packages:
     native: true
     native_artifacts:
       - {profile: software-peer, descriptor: priv/native-artifacts/software-peer.json}
+      - {profile: register-codec-reference, descriptor: priv/native-artifacts/register-codec-reference.json}
     software_task: wotex.modbus.software.run
     native_check:
       - suite: guardian
@@ -815,6 +816,16 @@ packages:
           - [cc, -std=c11, -O1, -g, -Wall, -Wextra, -Werror, "-fsanitize=address,undefined", -fno-sanitize-recover=all, -fno-omit-frame-pointer, -Dsetpgid=wmb_fault_setpgid, "{package}/test/interop/native/command.c", "{package}/test/interop/native/group_fault.c", -o, "{scratch}/command-fault"]
           - run: ["{scratch}/check", "{scratch}/command", "{scratch}/probe", "{scratch}/command-fault"]
             cd: "{scratch}"
+      - suite: register-codecs
+        compile:
+          - files: [test/native/register_codec_cpp/main.cpp]
+            flags: [-std=c++17]
+        test:
+          - run: [mix, test, --only, register_reference, test/wotex/modbus/register_native_codec_test.exs]
+            env:
+              MIX_ENV: test
+              WOTEX_PATH_DEPS: "1"
+              WOTEX_REGISTER_CODECS_WORKSPACE: "{scratch}"
       - suite: libmodbus
         requires: [docker]
         build: wotex.modbus.software.build

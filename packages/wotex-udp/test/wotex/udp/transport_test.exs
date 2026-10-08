@@ -323,6 +323,288 @@ defmodule Wotex.UDP.TransportTest do
     assert {:ok, %{data: <<2>>}} = UDP.recv(second, 100)
   end
 
+  test "handle retrieval cannot queue behind a blocked or saturated owner" do
+    {:ok, handle} = open_local(max_pending_calls: 1)
+    owner = handle.owner
+    :ok = :sys.suspend(owner)
+
+    on_exit(fn ->
+      if Process.alive?(owner) do
+        :sys.resume(owner)
+        UDP.close(handle)
+      end
+    end)
+
+    request = Task.async(fn -> UDP.local(handle) end)
+    await_admission(handle.admission, handle.max_queued_send_bytes + 1)
+    {:message_queue_len, before} = Process.info(owner, :message_queue_len)
+
+    results =
+      1..100
+      |> Task.async_stream(fn _ -> UDP.handle(owner) end, max_concurrency: 100, timeout: 1_000)
+      |> Enum.to_list()
+
+    assert Enum.all?(results, &(&1 == {:ok, {:ok, handle}}))
+    assert Process.info(owner, :message_queue_len) == {:message_queue_len, before}
+    assert {:error, %Error{kind: :overload}} = UDP.local(handle)
+    :ok = :sys.resume(owner)
+    assert {:ok, _} = Task.await(request, 1_000)
+    await_admission(handle.admission, 0)
+  end
+
+  test "handle retrieval rejects arbitrary processes and malformed selectors" do
+    assert {:error, %Error{kind: :invalid_handle}} = UDP.handle(self())
+    assert {:error, %Error{kind: :invalid_handle}} = UDP.handle(nil)
+    assert {:error, %Error{kind: :invalid_handle}} = UDP.handle(:owner)
+    {:ok, handle} = open_local()
+    assert :ok = UDP.close(handle)
+    assert {:error, %Error{kind: :owner_lost}} = UDP.handle(handle.owner)
+  end
+
+  test "forged limits and counters never change the live admission reservation" do
+    {:ok, %Handle{} = handle} = open_local()
+    on_exit(fn -> UDP.close(handle) end)
+
+    for forged <- [
+          %Handle{handle | max_queued_send_bytes: 1},
+          %Handle{handle | max_pending_calls: 256},
+          %Handle{handle | admission: :atomics.new(1, signed: false)},
+          Map.put(handle, :extra, "payload-canary")
+        ] do
+      assert {:error, %Error{kind: :invalid_handle}} = UDP.local(forged)
+      assert :atomics.get(handle.admission, 1) == 0
+    end
+
+    assert {:ok, _} = UDP.local(handle)
+  end
+
+  test "caller death cancels a live receive without consuming the next datagram" do
+    {:ok, receiver} = open_local(max_pending_calls: 1)
+    {:ok, sender} = open_local()
+
+    on_exit(fn ->
+      UDP.close(receiver)
+      UDP.close(sender)
+    end)
+
+    {:ok, destination} = UDP.local(receiver)
+
+    for byte <- 1..100 do
+      caller = spawn(fn -> UDP.recv(receiver, 60_000) end)
+      await_receiving(receiver.owner)
+      monitor = Process.monitor(caller)
+      Process.exit(caller, :kill)
+      assert_receive {:DOWN, ^monitor, :process, ^caller, :killed}
+      await_admission(receiver.admission, 0)
+      assert :ok = UDP.send(sender, destination, <<byte>>, 100)
+      assert {:ok, %{data: <<^byte>>}} = UDP.recv(receiver, 100)
+      await_admission(receiver.admission, 0)
+    end
+  end
+
+  test "a dead queued sender is removed before dispatch and releases its byte budget" do
+    {:ok, receiver} = open_local(max_pending_calls: 3, max_queued_send_bytes: 1_472)
+    {:ok, destination} = UDP.local(receiver)
+    active = spawn(fn -> UDP.recv(receiver, 60_000) end)
+    await_receiving(receiver.owner)
+    sender = spawn(fn -> UDP.send(receiver, destination, <<99>>, 60_000) end)
+    radix = receiver.max_queued_send_bytes + 1
+    await_admission(receiver.admission, 2 * radix + 1)
+    Process.exit(sender, :kill)
+    await_admission(receiver.admission, radix)
+    Process.exit(active, :kill)
+    await_admission(receiver.admission, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(receiver, 0)
+    assert :ok = UDP.close(receiver)
+  end
+
+  test "queued deadlines expire while another receive is still active" do
+    {:ok, receiver} = open_local(max_pending_calls: 2)
+    {:ok, destination} = UDP.local(receiver)
+    active = spawn(fn -> UDP.recv(receiver, 60_000) end)
+    await_receiving(receiver.owner)
+    radix = receiver.max_queued_send_bytes + 1
+    assert {:error, %Error{kind: :timeout}} = UDP.send(receiver, destination, <<42>>, 20)
+    await_admission(receiver.admission, radix)
+    Process.exit(active, :kill)
+    await_admission(receiver.admission, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(receiver, 0)
+    assert :ok = UDP.close(receiver)
+  end
+
+  test "close cancels an active batch and queued calls before releasing the port" do
+    {:ok, receiver} = open_local(max_pending_calls: 4)
+    {:ok, destination} = UDP.local(receiver)
+    active = Task.async(fn -> UDP.recv_batch(receiver, 2, 60_000) end)
+    await_receiving(receiver.owner)
+    queued = Task.async(fn -> UDP.send(receiver, destination, <<9>>, 60_000) end)
+    await_admission(receiver.admission, 2 * (receiver.max_queued_send_bytes + 1) + 1)
+    monitor = Process.monitor(receiver.owner)
+    assert :ok = UDP.close(receiver)
+    assert {:error, %Error{kind: :closed}} = Task.await(active, 1_000)
+    assert {:error, %Error{kind: :closed}} = Task.await(queued, 1_000)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}
+    await_admission(receiver.admission, 0)
+
+    {:ok, local} = Endpoint.bind(destination.address, destination.port)
+    {:ok, config} = Config.new(local: local)
+    {:ok, replacement} = UDP.open(config)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv(replacement, 0)
+    assert :ok = UDP.close(replacement)
+  end
+
+  test "canceled selects and stale socket notifications do not affect another owner" do
+    {:ok, first} = open_local()
+    {:ok, second} = open_local()
+
+    on_exit(fn ->
+      UDP.close(first)
+      UDP.close(second)
+    end)
+
+    caller = spawn(fn -> UDP.recv(first, 60_000) end)
+    state = await_receiving(first.owner)
+    {:select_info, _, ref} = state.pending[state.active].select
+    Process.exit(caller, :kill)
+    await_admission(first.admission, 0)
+    send(first.owner, {:"$socket", state.socket.handle, :select, ref})
+    send(first.owner, {:"$socket", state.socket.handle, :abort, {ref, :closed}})
+    send(second.owner, {:"$socket", state.socket.handle, :select, ref})
+    assert :ok = UDP.close(first)
+    {:ok, destination} = UDP.local(second)
+    assert :ok = UDP.send(second, destination, <<7>>, 100)
+    assert {:ok, %{data: <<7>>}} = UDP.recv(second, 100)
+  end
+
+  test "active owner death cancels its socket wait and frees its bound port" do
+    {:ok, receiver} = open_local()
+    {:ok, destination} = UDP.local(receiver)
+    active = Task.async(fn -> UDP.recv(receiver, 60_000) end)
+    await_receiving(receiver.owner)
+    Process.unlink(receiver.owner)
+    monitor = Process.monitor(receiver.owner)
+    Process.exit(receiver.owner, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :killed}
+    assert {:error, %Error{kind: :owner_lost}} = Task.await(active, 1_000)
+    {:ok, local} = Endpoint.bind(destination.address, destination.port)
+    {:ok, config} = Config.new(local: local)
+    {:ok, replacement} = UDP.open(config)
+    assert :ok = UDP.close(replacement)
+  end
+
+  test "zero-timeout sends and batches poll complete queued datagrams" do
+    {:ok, handle} = open_local(max_batch_datagrams: 2)
+    on_exit(fn -> UDP.close(handle) end)
+    {:ok, %Endpoint{} = destination} = UDP.local(handle)
+    assert :ok = UDP.send(handle, destination, <<1>>, 0)
+    assert :ok = UDP.send(handle, destination, <<2>>, 0)
+    assert {:ok, [%{data: <<1>>}, %{data: <<2>>}]} = UDP.recv_batch(handle, 2, 0)
+    assert {:error, %Error{kind: :timeout}} = UDP.recv_batch(handle, 2, 0)
+
+    assert {:error, %Error{kind: :invalid_endpoint}} =
+             UDP.send(handle, %Endpoint{destination | port: -1}, <<1>>, 10)
+
+    assert {:error, %Error{kind: :invalid_endpoint}} = UDP.join(handle, nil, 0)
+
+    assert {:error, %Error{kind: :invalid_endpoint}} =
+             UDP.leave(handle, destination, "interface-canary")
+  end
+
+  test "real socket abort retires the active request and ignores stale control messages" do
+    {:ok, handle} = open_local()
+    active = Task.async(fn -> UDP.recv(handle, 60_000) end)
+    state = await_receiving(handle.owner)
+    assert :ok = :socket.close(state.socket.handle)
+    assert {:error, %Error{kind: :closed}} = Task.await(active, 1_000)
+    await_admission(handle.admission, 0)
+    send(handle.owner, {:deadline, make_ref()})
+    send(handle.owner, {:DOWN, make_ref(), :process, self(), :normal})
+    send(handle.owner, :untrusted_notification)
+    assert {:error, %Error{kind: :invalid_handle}} = GenServer.call(handle.owner, :unknown_control)
+    assert {:error, %Error{kind: :closed}} = UDP.recv(handle, 100)
+    assert {:error, %Error{kind: :closed}} = UDP.close(handle)
+  end
+
+  test "supervisor shutdown closes a live wait without affecting a second owner" do
+    {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
+    {:ok, config} = Config.new(local: local)
+    {:ok, supervisor} = Supervisor.start_link([UDP.child_spec(config)], strategy: :one_for_one)
+    [{_, owner, _, _}] = Supervisor.which_children(supervisor)
+    {:ok, handle} = UDP.handle(owner)
+    {:ok, destination} = UDP.local(handle)
+    active = Task.async(fn -> UDP.recv(handle, 60_000) end)
+    await_receiving(owner)
+    {:ok, second} = open_local()
+    on_exit(fn -> UDP.close(second) end)
+    assert :ok = Supervisor.stop(supervisor)
+    assert {:error, %Error{kind: :owner_lost}} = Task.await(active, 1_000)
+    {:ok, bound} = Endpoint.bind(destination.address, destination.port)
+    {:ok, reopened} = Config.new(local: bound)
+    {:ok, replacement} = UDP.open(reopened)
+    assert :ok = UDP.close(replacement)
+    assert {:ok, _} = UDP.local(second)
+  end
+
+  test "a caller lost before owner dispatch never leaves work or consumes a datagram" do
+    {:ok, handle} = open_local()
+    :ok = :sys.suspend(handle.owner)
+    caller = spawn(fn -> UDP.recv(handle, 60_000) end)
+    await_admission(handle.admission, handle.max_queued_send_bytes + 1)
+    monitor = Process.monitor(caller)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^caller, :killed}
+    :ok = :sys.resume(handle.owner)
+    await_admission(handle.admission, 0)
+    assert :sys.get_state(handle.owner).pending == %{}
+    assert :ok = UDP.close(handle)
+  end
+
+  test "the receiving owner fences a stale admitted message and releases only its reservation" do
+    {:ok, handle} = open_local()
+    on_exit(fn -> UDP.close(handle) end)
+
+    assert :ok =
+             Wotex.UDP.Admission.acquire(
+               handle.admission,
+               handle.max_pending_calls,
+               handle.max_queued_send_bytes,
+               0
+             )
+
+    request = {:local, make_ref(), [], System.monotonic_time(:millisecond) + 100}
+    assert {:error, %Error{kind: :stale_handle}} = GenServer.call(handle.owner, request)
+    assert :atomics.get(handle.admission, 1) == 0
+    assert {:ok, _} = UDP.local(handle)
+  end
+
+  test "an explicit process stop closes the owned socket during a receive" do
+    {:ok, handle} = open_local()
+    {:ok, destination} = UDP.local(handle)
+    active = Task.async(fn -> UDP.recv(handle, 60_000) end)
+    await_receiving(handle.owner)
+    assert :ok = GenServer.stop(handle.owner, :normal, 1_000)
+    assert {:error, %Error{kind: :owner_lost}} = Task.await(active, 1_000)
+    {:ok, local} = Endpoint.bind(destination.address, destination.port)
+    {:ok, config} = Config.new(local: local)
+    {:ok, replacement} = UDP.open(config)
+    assert :ok = UDP.close(replacement)
+  end
+
+  defp await_receiving(owner, attempts \\ 100)
+
+  defp await_receiving(owner, attempts) when attempts > 0 do
+    state = :sys.get_state(owner)
+
+    if state.active && state.pending[state.active].select do
+      state
+    else
+      Process.sleep(1)
+      await_receiving(owner, attempts - 1)
+    end
+  end
+
+  defp await_receiving(_, 0), do: flunk("owner did not enter a bounded socket wait")
+
   defp open_local(options \\ []) do
     {:ok, local} = Endpoint.bind({127, 0, 0, 1}, 0)
     {:ok, config} = Config.new(Keyword.put(options, :local, local))

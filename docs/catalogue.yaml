@@ -319,6 +319,10 @@ packages:
         version: "1.0.0"
         implementation_status: "partial"
         path: "docs/packages/wotex-modbus/specs/WMB.10-process-codec-owner.md"
+      - id: "WMB.11"
+        version: "1.0.1"
+        implementation_status: "implemented"
+        path: "docs/packages/wotex-modbus/specs/WMB.11-independent-register-codecs.md"
   wotex-nx:
     app: "wotex_nx"
     catalogue: "docs/packages/wotex-nx/specs/catalogue.yaml"
@@ -424,7 +428,7 @@ packages:
     catalogue: "docs/packages/wotex-udp/specs/catalogue.yaml"
     specifications:
       - id: "WUD.01"
-        version: "0.3.0-target"
+        version: "0.4.0-target"
         implementation_status: "partial"
         path: "docs/packages/wotex-udp/specs/WUD.01-datagram-transport.md"
   wotex-zigbee:

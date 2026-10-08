@@ -16,6 +16,9 @@ defmodule Wotex.UDP do
   Calls on an old epoch fail with `:stale_handle`, and calls after the owner
   dies fail with `:owner_lost`. Passive receives bound datagram size, count
   and elapsed time. No listener, automatic retry or payload decoder runs.
+  The owner cancels waits when an admitted caller dies. An admitted close
+  cancels pending calls with `:closed` before releasing the socket. Close shares
+  the finite call budget and may return `:overload`.
   UDP send success is local OS acceptance, not remote delivery.
   """
 
@@ -45,7 +48,7 @@ defmodule Wotex.UDP do
     Supervisor.child_spec({Owner, config}, options)
   end
 
-  @doc "Gets a handle from a live supervised owner process."
+  @doc "Gets a local owner's immutable handle without queueing a mailbox request."
   @spec handle(pid()) :: result(Handle.t())
   def handle(owner), do: Owner.handle(owner)
 

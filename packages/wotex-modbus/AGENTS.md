@@ -47,7 +47,7 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `lib/wotex/modbus/error.ex`: structured errors, effect and Runtime classes.
 - `lib/mix/tasks/`: the explicit software-peer tasks; `bin/`: the
   candidate-archive and application-free checks run by the gate.
-- Specifications: `docs/packages/wotex-modbus/specs/` (WMB.01–WMB.10;
+- Specifications: `docs/packages/wotex-modbus/specs/` (WMB.01–WMB.11;
   `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-modbus/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (the contract corpus and the integration corpus).
@@ -119,7 +119,21 @@ Explicit-only lanes, never part of a bounded change:
   `docker build --tag wotex-modbus-guardian test/interop/native` then
   `docker run --rm wotex-modbus-guardian`.
 
-There is no production native build. Apply the shared
+There is no production native build. The independent C++/Rust register codec
+reference is a separate stdio-only fixture, not a qualified native driver.
+It requires `c++`, the pinned Rust toolchain and the exact Cargo.lock sources.
+Prepare its cache and run from the root with a disposable absolute workspace:
+
+```console
+cargo fetch --locked --manifest-path packages/wotex-modbus/test/native/register_codec_rust/Cargo.toml
+WOTEX_REGISTER_CODECS_WORKSPACE=/absolute/disposable/dir \
+  mix pkg wotex-modbus test --only register_reference test/wotex/modbus/register_native_codec_test.exs
+```
+
+The ordinary suite excludes `register_reference`; the full native gate runs
+it and checks its first-party C++ and Rust. Build receipts record exact source,
+dependency, compiler and executable inputs. The normal archive excludes the
+reference source/build tree. Apply the shared
 `.agents/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.agents/skills/archive-validation/SKILL.md` for compatibility
 claims.

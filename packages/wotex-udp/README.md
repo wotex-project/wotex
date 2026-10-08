@@ -42,7 +42,10 @@ buffer, cap a batch at 32 datagrams, admit 32 concurrent owner operations and
 65,536 queued send bytes, and cap each operation deadline at 60,000
 milliseconds. Calls above the admission limits return `:overload` before
 entering the owner mailbox. Expired queued sends are discarded before socket
-I/O. Unicast starts with a hop limit of 64; multicast starts with 1.
+I/O. The owner monitors admitted callers and cancels abandoned socket waits.
+An admitted close cancels pending work before releasing the socket; it shares
+the call budget and can return `:overload`. `handle/1` obtains a local owner's
+opaque handle without adding a mailbox request. Unicast starts with a hop limit of 64; multicast starts with 1.
 The OS may adjust the receive buffer size. Oversize datagrams
 are discarded with a typed error. `recv_batch/3` has one total deadline.
 
@@ -53,10 +56,8 @@ implementation status and remaining evidence.
 ## Measurements
 
 `mix bench --package wotex-udp` records pure constructor and complete
-loopback send/receive measurements. On the development macOS host (Apple M5
-Pro, Elixir 1.20.2, OTP 29.0.4), the complete 64-byte IPv4 loopback exchange
-measured 54.08K operations/second (18.49 microseconds average); 1,472 bytes
-measured 54.06K operations/second (18.50 microseconds average). These are
-local software measurements, not network throughput or remote delivery
-claims. See [loopback results](bench/output/loopback.md) and
-[constructor results](bench/output/datagram.md).
+loopback send/receive measurements. The checked-in
+[loopback results](bench/output/loopback.md) and
+[constructor results](bench/output/datagram.md) describe earlier source inputs.
+Current asynchronous owner costs remain unmeasured. These local software
+measurements cannot establish network throughput or remote delivery.

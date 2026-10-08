@@ -2,6 +2,15 @@ schema_version: "1.1.0"
 package: "wotex_modbus"
 completion_plan: "docs/plans/wotex-modbus-completion.md"
 specifications:
+  - id: "WMB.11"
+    version: "1.0.1"
+    path: "docs/specs/WMB.11-independent-register-codecs.md"
+    implementation_status: "implemented"
+    standards: []
+    requires: ["WMB.09", "WMB.10", "wotex_runtime:WRT.06"]
+    implementation_modules: []
+    executable_evidence: ["test/wotex/modbus/register_native_codec_test.exs"]
+    compatibility_classification: "Separate C++ and Rust reference programs implement configuration identity, bounded parsing, canonical exchange and packed-decimal projection. Functional wire vectors execute on recorded targets; native enforcement, loader closure, clean offline adoption and consumer costs remain separately qualified."
   - id: "WMB.10"
     version: "1.0.0"
     path: "docs/specs/WMB.10-process-codec-owner.md"

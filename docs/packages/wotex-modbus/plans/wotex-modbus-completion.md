@@ -1,7 +1,11 @@
 # Wotex Modbus completion contract
 
-Plan version: 1.3.0. Package baseline: 0.1.0. Normative owner:
+Plan version: 1.4.0. Package baseline: 0.1.0. Normative owner:
 [specification catalogue](../specs/catalogue.yaml).
+
+The optional [independent codec references](../specs/WMB.11-independent-register-codecs.md)
+add C++/Rust stdio evidence for WMB.09 and WRT.06. Their functional cells do not
+complete native enforcement, loader closure or independent-consumer adoption.
 
 Graduate this library independently. Acceptance requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension

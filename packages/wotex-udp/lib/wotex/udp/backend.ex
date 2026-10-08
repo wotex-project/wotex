@@ -94,15 +94,65 @@ defmodule Wotex.UDP.Backend do
   @spec recv(t(), non_neg_integer()) :: result(Datagram.t())
   def recv(%__MODULE__{handle: handle, config: config}, timeout) do
     with :ok <- check_timeout(config, timeout),
-         {:ok, {source, data}} <-
-           :socket.recvfrom(handle, config.max_datagram_bytes + 1, [], timeout),
-         :ok <- check_size(data, config.max_datagram_bytes),
+         result <- :socket.recvfrom(handle, config.max_datagram_bytes + 1, [], timeout) do
+      received(config, result)
+    else
+      error -> error
+    end
+  end
+
+  @doc false
+  @spec recv_nowait(t()) :: result(Datagram.t()) | {:select, :socket.select_info()}
+  def recv_nowait(%__MODULE__{handle: handle, config: config}) do
+    case :socket.recvfrom(handle, config.max_datagram_bytes + 1, [], :nowait) do
+      {:select, info} -> {:select, info}
+      {:completion, info} -> unsupported_async(handle, info, :recv)
+      result -> received(config, result)
+    end
+  end
+
+  @doc false
+  @spec send_nowait(t(), Endpoint.t(), binary()) ::
+          :ok | {:error, Error.t()} | {:select, :socket.select_info()}
+  def send_nowait(%__MODULE__{handle: handle, config: config}, destination, data) do
+    with :ok <- check_destination(config, destination),
+         :ok <- check_size(data, config.max_datagram_bytes) do
+      sent(handle, :socket.sendto(handle, data, Endpoint.sockaddr(destination), :nowait))
+    end
+  end
+
+  @doc false
+  @spec continue_send(t(), binary(), :socket.select_info()) ::
+          :ok | {:error, Error.t()} | {:select, :socket.select_info()}
+  def continue_send(%__MODULE__{handle: handle}, data, info),
+    do: sent(handle, :socket.sendto(handle, data, info, :nowait))
+
+  @doc false
+  @spec cancel(t(), :socket.select_info()) :: :ok | {:error, term()}
+  def cancel(%__MODULE__{handle: handle}, info), do: :socket.cancel(handle, info)
+
+  defp received(config, {:ok, {source, data}}) do
+    with :ok <- check_size(data, config.max_datagram_bytes),
          {:ok, endpoint} <- Endpoint.from_sockaddr(source) do
       {:ok, %Datagram{data: data, source: endpoint}}
-    else
-      {:error, %Error{} = error} -> {:error, error}
-      {:error, reason} -> {:error, Error.from_socket(:recv, reason)}
     end
+  end
+
+  defp received(_, {:error, reason}), do: {:error, Error.from_socket(:recv, reason)}
+
+  defp sent(_, {:select, {:select_info, _, _} = info}), do: {:select, info}
+
+  defp sent(handle, {:select, {info, _}}) do
+    :socket.cancel(handle, info)
+    {:error, Error.from_socket(:send, :partial_send)}
+  end
+
+  defp sent(handle, {:completion, info}), do: unsupported_async(handle, info, :send)
+  defp sent(_, result), do: normalize(:send, result)
+
+  defp unsupported_async(handle, info, operation) do
+    :socket.cancel(handle, info)
+    {:error, %Error{kind: :unsupported_feature, operation: operation, reason: nil}}
   end
 
   @doc """

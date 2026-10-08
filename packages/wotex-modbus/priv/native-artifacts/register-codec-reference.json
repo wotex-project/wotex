@@ -1,0 +1,115 @@
+{
+  "schema": "wotex.native-artifact-descriptor@2",
+  "artifact_format": "wotex.native-artifact@1",
+  "package": "wotex-modbus",
+  "profile": "register-codec-reference",
+  "kind": "independent-codec-reference-set",
+  "targets": [
+    {
+      "name": "darwin-aarch64",
+      "status": "supported"
+    },
+    {
+      "name": "linux-x86-64",
+      "status": "supported"
+    },
+    {
+      "name": "linux-aarch64",
+      "status": "supported"
+    }
+  ],
+  "sources": {
+    "first_party": [
+      "test/native",
+      "test/support/register_native_codec.ex",
+      "test/wotex/modbus/register_native_codec_test.exs",
+      "priv/fixtures/register_codec"
+    ],
+    "upstream": [
+      {
+        "name": "nlohmann-json",
+        "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp",
+        "revision": "v3.11.3",
+        "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+      }
+    ]
+  },
+  "patches": [],
+  "toolchain": {
+    "inputs": [
+      "test/native/register_codec_cpp/dependencies.json",
+      "test/native/register_codec_rust/Cargo.toml",
+      "test/native/register_codec_rust/Cargo.lock"
+    ],
+    "requirements": {
+      "cpp": "c++17",
+      "rust": "1.97.1",
+      "cargo": "locked-offline",
+      "runtime": "stdio-reference-only"
+    },
+    "container_digest": null
+  },
+  "build": {
+    "task": "test",
+    "options": {
+      "only": "register_reference",
+      "test_file": "test/wotex/modbus/register_native_codec_test.exs",
+      "workspace_environment": "WOTEX_REGISTER_CODECS_WORKSPACE"
+    },
+    "features": [
+      "independent-cpp-rust-codecs"
+    ]
+  },
+  "qualification": {
+    "task": "test",
+    "options": {
+      "only": "register_reference",
+      "test_file": "test/wotex/modbus/register_native_codec_test.exs"
+    },
+    "features": [
+      "functional-wire-reference",
+      "no-os-enforcement-claim"
+    ]
+  },
+  "outputs": [
+    {
+      "path": "register-cpp",
+      "kind": "file",
+      "mode": 493,
+      "required": true
+    },
+    {
+      "path": "rust-target/release/wotex-modbus-register-reference",
+      "kind": "file",
+      "mode": 493,
+      "required": true
+    },
+    {
+      "path": "reference-build.json",
+      "kind": "file",
+      "mode": 420,
+      "required": true
+    }
+  ],
+  "compatibility": {
+    "role": "independent-codec-reference",
+    "binding": "process-codec@1.0.0",
+    "contract": "wotex.modbus.register-decimal@1.0.0",
+    "runtime": "not-qualified-for-native-enforcement"
+  },
+  "external_libraries": [
+    "system-c-runtime",
+    "system-cpp-runtime"
+  ],
+  "legal": [
+    "LICENSE",
+    "NOTICE",
+    "test/native/register_codec_cpp/NOTICE",
+    "test/native/register_codec_cpp/vendor/LICENSE.MIT",
+    "test/native/register_codec_rust/NOTICE"
+  ],
+  "native_inputs": [],
+  "retrieval": {
+    "sources": []
+  }
+}

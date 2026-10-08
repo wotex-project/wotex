@@ -1,0 +1,8 @@
+Wotex Modbus independent Rust register codec reference
+Copyright 2026 Wotex contributors
+First-party sources are licensed under Apache-2.0; see the package LICENSE.
+
+Cargo.lock pins dependency versions and archive checksums. Cargo retrieves
+dependency sources and their upstream notices into its external cache;
+dependency sources are not vendored in this tree.
+The programme makes no native enforcement or certification claim.

@@ -172,6 +172,16 @@ and descendant custody. Scripted tests establish owner behavior only; qualified
 native and independent-language delivery remain open in the
 [process owner contract](../../docs/packages/wotex-modbus/specs/WMB.10-process-codec-owner.md).
 
+Two separately written C++ and Rust programs exercise the same contract through
+real stdin/stdout exchanges. Their reference lane checks canonical output,
+configuration hashes, all register widths/orders, sign/scale limits, framing and
+malformed-input refusal. It records source, dependency, compiler and executable
+digests. These programs are repository test assets and the ordinary archive
+excludes them. They qualify functional wire behavior on recorded targets;
+native custody, loader closure and clean offline adoption remain separate work.
+See the [independent codec specification](../../docs/packages/wotex-modbus/specs/WMB.11-independent-register-codecs.md)
+and the package's explicit reference-lane instructions.
+
 The [ordered implementation sequence](../../docs/packages/wotex-modbus/plans/software-implementation.md)
 and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus/specs) define the software profile's
 behavior, limits, failure transitions, acceptance scenarios and concrete fixtures.

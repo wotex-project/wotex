@@ -1,4 +1,4 @@
-ExUnit.start(exclude: [:interop, :hardware, :software])
+ExUnit.start(exclude: [:interop, :hardware, :software, :register_reference])
 Code.require_file("support/peer.ex", __DIR__)
 Code.require_file("support/contract_fixture.ex", __DIR__)
 
@@ -10,6 +10,7 @@ Code.require_file("support/runtime_fixture.ex", __DIR__)
 Code.require_file("support/register_codec_fixture.ex", __DIR__)
 Code.require_file("support/register_process_fixture.ex", __DIR__)
 Code.require_file("support/register_process_driver.ex", __DIR__)
+Code.require_file("support/register_native_codec.ex", __DIR__)
 
 if System.get_env("WOTEX_REQUIRE_SOFTWARE") == "1" do
   Code.require_file("support/software_formatter.ex", __DIR__)

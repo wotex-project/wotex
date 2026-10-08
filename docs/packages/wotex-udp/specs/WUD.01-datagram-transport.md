@@ -1,6 +1,6 @@
 # WUD.01 — Bounded datagram transport
 
-Version: 0.3.0-target. The catalogue records implementation status and
+Version: 0.4.0-target. The catalogue records implementation status and
 physical interoperability evidence separately.
 
 ## Boundary
@@ -49,9 +49,38 @@ reserve an atomic slot and their binary send bytes before entering the owner
 mailbox. Defaults admit 32 pending operations and 65,536 send bytes; a full
 budget returns `:overload`. A queued operation carries an absolute deadline;
 the owner discards it before I/O if that deadline has expired and retains its
-admission reservation until the queued message is drained. Owner handle
-retrieval, cancellation stress and exact kernel drop accounting are not yet
-qualified; the catalogue retains `partial` status.
+admission reservation until the queued message is drained.
+
+Handle retrieval reads a single immutable process-local metadata record on a
+local owner; it queues no owner call and remains available while operation
+admission is saturated. An arbitrary process or malformed selector returns
+`invalid_handle`; a dead owner returns `owner_lost`. Receiving boundaries compare
+all opaque handle fields with that record before reserving admission. A changed
+epoch returns `stale_handle`; substituted limits/counters or extra fields return
+`invalid_handle` and cannot modify the live counter.
+
+Socket waits use OTP's asynchronous select API with one active operation.
+The owner monitors each caller once its admitted message is handled. Caller
+loss cancels an active select or removes queued work, releasing its exact call
+and byte reservation. Queued deadlines continue to expire while another
+operation waits. Positive deadline equality is expired at dispatch and delivery;
+a zero deadline polls once without starting an asynchronous wait. An expired
+batch returns only datagrams already accepted within its original deadline.
+Oversize or socket failures discard the partial batch.
+
+An admitted close cancels the active select, rejects admitted pending calls
+with `closed`, and closes the socket before replying. Close shares the finite
+call budget and may return `overload` when that budget is full. Supervisor stop
+or owner death also closes the owned socket. A canceled or retired socket
+notification cannot resume another request or owner. Canceling a send never
+replays bytes or proves remote nondelivery. Windows completion-based asynchronous
+backends are explicitly refused by this implementation.
+
+The local suite exercises a 100-cycle active receive cancellation workload,
+queued caller loss, live queued expiry, close during a batch, two-owner
+isolation, owner death and port reuse. Exact kernel drop accounting, the
+pre-message reservation/owner-loss race and physical multi-platform qualification
+remain open; the catalogue retains `partial` status.
 
 ## Evidence
 
@@ -60,7 +89,7 @@ WUD-T1: pure constructors have no I/O. WUD-T2: real IPv4/IPv6 loopback preserves
 | Case | Local executable evidence | Remaining evidence |
 | --- | --- | --- |
 | WUD-T1 to WUD-T3 | `packages/wotex-udp/test/wotex/udp/transport_test.exs`, `boundary_test.exs` | Host and malformed/truncation matrix |
-| WUD-T4 | Finite passive receive, batch and 100-caller atomic call/byte overload flood in `transport_test.exs` | Kernel drop census and owner handle retrieval admission |
-| WUD-T5 | Supervised owner, owner crash, stale epoch, expired queued send and port reuse in `transport_test.exs` | Cancellation stress |
+| WUD-T4 | Finite passive receive, batch and 100-caller atomic call/byte overload flood in `transport_test.exs` | Kernel drop census |
+| WUD-T5 | Supervised owner, owner crash, stale epoch, caller-loss and close cancellation, expired queued work and port reuse in `transport_test.exs` | Pre-message reservation/owner-loss race |
 | WUD-T6 | Opt-in and membership tests in `transport_test.exs`, `boundary_test.exs` | Physical interface churn and permission cohort |
 | WUD-T7 | Independent Erlang UDP peer with complete byte packets in `transport_test.exs`; exact archive consumer in `packages/wotex-udp/bin/check_archive.exs` | Physical macOS/Linux ARM binary-protocol consumer |

@@ -1,0 +1,10 @@
+Wotex Modbus independent register codec reference
+Copyright 2026 Wotex contributors
+First-party sources are licensed under Apache-2.0; see the package LICENSE.
+
+Includes the unchanged nlohmann/json 3.11.3 single header.
+Copyright (c) 2013-2022 Niels Lohmann.
+Licensed under MIT; see vendor/LICENSE.MIT and dependencies.json.
+
+The first-party SHA-256 algorithm follows NIST FIPS 180-4, August 2015.
+This reference is not NIST-certified or a qualified native enforcement driver.
