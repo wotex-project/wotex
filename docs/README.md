@@ -10,6 +10,22 @@ name into a claim of complete protocol support, interoperability or
 certification. Each protocol section states its current boundary and links to
 the package specification and completion plan.
 
+## Optional implementation delivery
+
+The [portable delivery decision](architecture/portable-delivery-decision.md)
+keeps independent libraries and explicit consumer registration, while defining
+a bounded optional path for data, codecs and native hosts. The
+[delivery programme](architecture/portable-delivery-plan.md) orders implementation
+and qualification. [Research gaps](research/portable-delivery-gap-analysis.md)
+separate source findings from unexecuted experiments.
+
+Runtime's new target contracts cover [admission](packages/wotex-runtime/specs/WRT.04-implementation-admission.md),
+[lifecycle/replacement](packages/wotex-runtime/specs/WRT.05-implementation-lifecycle.md)
+and [bounded codecs](packages/wotex-runtime/specs/WRT.06-bounded-codec.md).
+All three are planned. Existing consumers need no extension descriptor or
+loader; process profiles, independent interoperability and hardware support
+require their own evidence.
+
 ## The complete Thing interaction path
 
 A consumer may obtain a Thing Description directly or through

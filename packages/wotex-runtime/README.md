@@ -32,6 +32,21 @@ writes, Action status queries, Property observation, and Event subscription.
 They remain ordinary transport requests and caller-supervised children rather
 than a second state or process model.
 
+## Optional implementation admission
+
+`Wotex.Runtime.Implementation.Descriptor` parses bounded metadata without
+starting work. The consumer supplies installed `Registration` values and
+current `Verification`, `Trust`, `Policy` and `Inputs` decisions.
+`Admission.new/2` checks their exact identities and limits. `Plan.new/4`
+binds non-secret configuration through an explicit pure schema validator
+and a consumer-assigned `InstanceKey`.
+
+Call `Admission.revalidate/2` with current inputs immediately before execution.
+A receipt constructor checks syntax, not signatures, native files or OS
+isolation. The binding owns those proofs and process custody. Ordinary
+ConsumedThing and ExposedThing use remains independent of descriptors.
+Native execution and codec profiles are still under development.
+
 ## Installation
 
 Wotex Runtime 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.18 through

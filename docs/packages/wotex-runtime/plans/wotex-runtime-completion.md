@@ -1,6 +1,6 @@
 # Wotex Runtime completion contract
 
-Plan `WRT-C@1.1.0` governs package `wotex_runtime 0.1.0`. It defines durable
+Plan `WRT-C@1.3.0` governs package `wotex_runtime 0.1.0`. It defines durable
 requirements, not mutable approval or progress. Requirement changes need review
 and a plan revision; historical Git content remains immutable. The normative
 catalogue is `docs/packages/wotex-runtime/specs/catalogue.yaml`.
@@ -44,6 +44,34 @@ shared-connection isolation, native failure, late delivery and deadline
 propagation. Those tests belong to the binding's independent consumer suite;
 Runtime retains its protocol-independent transport behaviour and does not
 acquire an SDK dependency or native process manager.
+
+## Optional implementation delivery
+
+WRT.04–06 are optional contracts at 1.1.0 with specified APIs and receipt
+formats. WRT.04 pure values are implemented; its binding qualification and
+WRT.05–06 implementation remain open in the package catalogue. WoTEx is unreleased; existing WRT.01–03 APIs/defaults are not
+frozen. Revise their owning contracts and affected callers when the design
+requires a change. Optional delivery does not make descriptors mandatory or
+establish implemented bindings through documentation alone.
+The [platform decision](https://github.com/wotex-project/wotex/blob/main/docs/architecture/portable-delivery-decision.md)
+and [delivery programme](https://github.com/wotex-project/wotex/blob/main/docs/architecture/portable-delivery-plan.md)
+own the cross-package sequence. Runtime owns the pure values and codec semantic
+boundary; protocol bindings retain process custody, IPC, hardware and session
+meaning. Root artifact tooling remains provisioning-only. No Runtime SDK or
+OS-process manager dependency is added.
+
+| ID | Prerequisites | Deliverable | Acceptance |
+|---|---|---|---|
+| WRT-C07 | Current WRT.01–03 ownership review; PD-01 | [Specified admission API and receipts](../specs/WRT.04-implementation-admission.md), local schema and negative vectors | A01–A07; specified constructors/records, passive admission/plan, exact identities, current trust/policy, bounds and safe refusal; ordinary consumption needs no descriptor |
+| WRT-C08 | WRT-C07; first opting-in native binding contract | [Lifecycle values and binding integration](../specs/WRT.05-implementation-lifecycle.md) | L01–L08; generation fencing, explicit drain, unknown effect, owner-loss custody and cleanup; no stream continuity inferred from restart |
+| WRT-C09 | WRT-C07/C08; explicit registered codec contract | [Inert codec profile](../specs/WRT.06-bounded-codec.md) | C01–C06; canonical values, independent process implementations, no effects, actual budgets and fault cases; data-only comparison passes usefulness gate before executable expansion |
+
+Public Elixir API names, types and receipt formats are specified in WRT.04–06.
+Implement them with matching public documentation; a design correction changes
+the specification/catalogue first. Planned vectors and schemas are not executed
+evidence. Promote each specification only after its own complete obligation
+set and real integration pass; leave unavailable platform, independent
+adoption and physical evidence explicitly unproven.
 
 ## Five evidence gates
 

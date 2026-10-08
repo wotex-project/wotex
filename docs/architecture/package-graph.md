@@ -61,6 +61,12 @@ archives, not as path dependencies.
 - Consumer products, companies and customers are never named. Integration
   boundaries say `consumer` or `consumer host`.
 
+The [optional implementation delivery decision](portable-delivery-decision.md)
+retains this graph. Planned Runtime WRT.04–06 contracts add admission/lifecycle
+values and a bounded codec seam without mandatory descriptors, a runtime
+registry or root-tooling dependency. Protocol packages retain process custody
+and IPC; native artifact provisioning remains separate from runtime execution.
+
 ## Consumers outside the repository
 
 Products and third-party adapters depend on published packages. Until
