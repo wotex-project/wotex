@@ -169,6 +169,134 @@ defmodule Wotex.Zigbee.StartupTest do
     assert_dead(peer)
   end
 
+  test "caller death after version admission but before ready cannot orphan an open owner" do
+    opener = start_opener(config(write: :hold))
+    assert_receive {:serial_open, peer, _}
+    assert_receive {:serial_callback, :write, owner}
+    assert :erlang.suspend_process(opener)
+    send(owner, {:release_callback, :write})
+    wait_mode(owner, :awaiting_handoff)
+    assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(owner)
+    Process.exit(opener, :kill)
+    assert_dead(opener)
+    assert_receive {:serial_callback, :close, ^owner}
+    assert_dead(owner)
+    assert_dead(peer)
+    refute_receive {:serial_callback, :close, ^owner}, 10
+  end
+
+  test "the owner links before delivering a negotiated handle to a suspended caller" do
+    opener = start_opener(config(drop_version: true))
+    assert_receive {:serial_open, peer, _}
+    assert_receive {:serial_callback, :write, owner}
+    wait_ready(owner)
+    assert :erlang.suspend_process(opener)
+    send(peer, {:inject, version_frame()})
+    wait_mode(owner, :ready)
+    assert {:links, links} = Process.info(owner, :links)
+    assert opener in links
+    refute_receive {:open_result, ^opener, _}, 1
+    Process.exit(opener, :kill)
+    assert_receive {:serial_callback, :close, ^owner}
+    assert_dead(owner)
+    assert_dead(peer)
+  end
+
+  test "pending handoff refuses another waiter and normal caller exit closes the delivered owner" do
+    opener = start_opener(config(write: :hold))
+    assert_receive {:serial_open, peer, _}
+    assert_receive {:serial_callback, :write, owner}
+    assert :erlang.suspend_process(opener)
+    send(owner, {:release_callback, :write})
+    wait_mode(owner, :awaiting_handoff)
+    assert {:error, %Error{kind: :invalid_value}} = Owner.ready(owner, 20)
+    assert :erlang.resume_process(opener)
+    assert_receive {:open_result, ^opener, {:ok, handle}}
+    assert handle.owner == owner
+    assert {:links, links} = Process.info(owner, :links)
+    assert opener in links
+    send(opener, :finish)
+    assert_dead(opener)
+    assert_receive {:serial_callback, :close, ^owner}
+    assert_dead(owner)
+    assert_dead(peer)
+    refute_receive {:serial_callback, :close, ^owner}, 10
+  end
+
+  test "version admission cannot renew the original deadline while handoff is pending" do
+    opener = start_opener(config(write: :hold, timeout_ms: 300))
+    assert_receive {:serial_open, peer, _}
+    assert_receive {:serial_callback, :write, owner}
+    assert :erlang.suspend_process(opener)
+    send(owner, {:release_callback, :write})
+    wait_mode(owner, :awaiting_handoff)
+    assert_receive {:serial_callback, :close, ^owner}, 400
+    assert_dead(peer)
+    assert :erlang.resume_process(opener)
+    assert_receive {:open_result, ^opener, {:error, %Error{kind: :timeout}}}
+    assert_dead(owner)
+    refute_receive {:serial_callback, :close, ^owner}, 10
+  end
+
+  test "a handoff queued before the timer still refuses delivery past the startup deadline" do
+    opener = start_opener(config(write: :hold, timeout_ms: 150))
+    assert_receive {:serial_open, peer, _}
+    assert_receive {:serial_callback, :write, owner}
+    assert :erlang.suspend_process(opener)
+    send(owner, {:release_callback, :write})
+    wait_mode(owner, :awaiting_handoff)
+    :ok = :sys.suspend(owner)
+    assert :erlang.resume_process(opener)
+    wait_queued(owner)
+    Process.sleep(160)
+    :ok = :sys.resume(owner)
+    assert_receive {:open_result, ^opener, {:error, %Error{kind: :timeout}}}
+    assert_receive {:serial_callback, :close, ^owner}
+    assert_dead(owner)
+    assert_dead(peer)
+    refute_receive {:serial_callback, :close, ^owner}, 10
+  end
+
+  test "the separate unlinked startup seam retains its negotiated owner after caller exit" do
+    test_pid = self()
+    config = config()
+
+    starter =
+      spawn(fn ->
+        {:ok, owner} = Owner.start(config)
+        {:ok, handle} = Owner.ready(owner, 500)
+        send(test_pid, {:unlinked_ready, handle})
+        receive do: (:finish -> :ok)
+      end)
+
+    assert_receive {:unlinked_ready, handle}
+    on_exit(fn -> Zigbee.close(handle) end)
+    send(starter, :finish)
+    assert_dead(starter)
+    assert {:ok, ^handle} = Zigbee.handle(handle.owner)
+    assert :ok = Zigbee.close(handle)
+  end
+
+  test "linked adapter loss fails a pending command with one redacted close attempt" do
+    log =
+      capture_log(fn ->
+        {:ok, handle} = Zigbee.open(config(drop_reply: true))
+        assert_receive {:serial_open, peer, _}
+        call = Task.async(fn -> Zigbee.active_endpoints(handle, 0x1234, 500) end)
+        assert_receive {:serial_write, <<0xFE, 4, 0x25, 5, _::binary>>}
+        Process.exit(peer, "credential-canary")
+        assert {:error, %Error{kind: :coordinator_lost} = error} = Task.await(call)
+        refute inspect(error) =~ "credential-canary"
+        assert_receive {:serial_callback, :close, owner}
+        assert owner == handle.owner
+        assert_dead(owner)
+        refute_receive {:serial_callback, :close, ^owner}, 10
+      end)
+
+    refute log =~ "credential-canary"
+    assert {:error, %Error{kind: :invalid_config}} = Owner.open(nil)
+  end
+
   test "explicit close failures are redacted, attempt close once and end ownership" do
     log =
       capture_log(fn ->
@@ -207,6 +335,20 @@ defmodule Wotex.Zigbee.StartupTest do
   defp config, do: config([])
   defp version_frame, do: <<0xFE, 5, 0x61, 2, 2, 0, 3, 2, 0, 0x65>>
 
+  defp start_opener(config) do
+    test_pid = self()
+
+    opener =
+      spawn(fn ->
+        result = Zigbee.open(config)
+        send(test_pid, {:open_result, self(), result})
+        receive do: (:finish -> :ok)
+      end)
+
+    on_exit(fn -> Process.exit(opener, :kill) end)
+    opener
+  end
+
   defp assert_dead(pid) do
     monitor = Process.monitor(pid)
     assert_receive {:DOWN, ^monitor, :process, ^pid, _}
@@ -237,4 +379,17 @@ defmodule Wotex.Zigbee.StartupTest do
   end
 
   defp wait_ready(_, 0), do: flunk("ready waiter was not admitted")
+
+  defp wait_mode(owner, mode, attempts \\ 100)
+
+  defp wait_mode(owner, mode, attempts) when attempts > 0 do
+    if :sys.get_state(owner).mode == mode do
+      :ok
+    else
+      Process.sleep(1)
+      wait_mode(owner, mode, attempts - 1)
+    end
+  end
+
+  defp wait_mode(_, _, 0), do: flunk("startup did not reach the expected handoff phase")
 end

@@ -1,6 +1,6 @@
 # WZG.01 — Coordinator host boundary
 
-Version: 0.7.0-target. The catalogue records implementation status; hardware
+Version: 0.9.0-target. The catalogue records implementation status; hardware
 qualification is separate.
 
 ## NCP architecture
@@ -35,13 +35,27 @@ owner. Serial open, `SYS_VERSION` write and version reply delivery consume
 that budget. A port returned after expiry is closed without a version write;
 a queued valid version reply cannot complete after expiry. `Owner.ready/2`
 admits a wait from 1 to 60,000 ms and can shorten, never extend, the remaining
-negotiation budget. A handle retrieval queued past its own deadline fails
-without closing an already negotiated owner.
+negotiation budget. A ready wait against an already usable owner queued past
+its own deadline fails without closing that owner.
 
-The original startup caller and a pending ready waiter are monitored until
-negotiation ends. Caller loss while opening is checked when the callback
+The original startup caller and a pending ready waiter are monitored during
+negotiation. Caller loss while opening is checked when the callback
 returns; no subsequent version request is written. Caller loss during
-negotiation ends the owner. Known startup failures use a shutdown result with
+negotiation ends the owner.
+
+`Wotex.Zigbee.open/1` and `Owner.open/1` preserve that original caller monitor
+and startup deadline through handle handoff. Version admission before the
+caller can request its handle leaves the owner waiting within the same
+budget; another waiter cannot claim the handle. The owner establishes its
+caller link and lifetime monitor before delivering the successful reply.
+Normal or abnormal caller exit ends that owner, fails pending operations and
+attempts serial cleanup once. Copying a handle does not transfer this lifetime.
+Caller-owned owners trap linked exits so adapter loss follows the same
+redacted failure/cleanup path. A consumer-supervised `Owner.start_link/1`
+retains its supervisor's lifetime policy; `Owner.start/1` remains the separate
+unlinked startup/ready seam.
+
+Known startup failures use a shutdown result with
 the public error, avoiding a crash report of callback state or queued bytes.
 Raised, thrown, exited, malformed and returned failures from open, write or
 close are redacted. An acquired port receives one close attempt on failure
@@ -145,6 +159,22 @@ or establish replay-proof radio identity.
 
 Credentials are resolved through explicit custody and not stored in public request values, errors or telemetry. Opaque owner handles have epochs; a replaced process cannot complete the prior owner's operation. Loading the package starts nothing; stateful owners are explicit child specifications.
 
+`Wotex.Zigbee.send_queued_data/4` dispatches a validated inert
+`Wotex.Zigbee.Downlinks` receipt against current supplied route custody.
+The receiver checks complete receipt/request fields, owner epoch and
+non-future enqueue time before I/O. The absolute operation deadline is at
+most the supplied receipt deadline, custody expiry and caller/configured
+timeout. Mailbox waits cannot renew that budget. Expiry before writing leaves
+the owner usable; expiry after writing ends the epoch through the normal
+timeout path. Receipts remain consumer-owned context, not proof of prior
+queue admission or authorization. A reply remains NCP admission only.
+
+`downlinks_test.exs` exercises finite admission/selection.
+`zcl_configuration_owner_test.exs` dispatches selected write/reporting requests
+through an independently framed peer and checks mailbox expiry, timeout after
+writing, copied/future/old-epoch receipts and current-custody rejection.
+Physical sleepy/check-in and battery qualification remain outstanding.
+
 ## Acceptance
 
 WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: serial fragmentation, garbage, async reordering and finite budgets. WZG1-T3: command/reply versus later confirmation distinction. WZG1-T4: USB removal, stale handles and recovery without forming a new network. WZG1-T5: macOS and Nerves-compatible serial adapters exercise the same neutral contract. WZG1-T6: vendor profiles remain consumer-owned and no external home-automation daemon is required.
@@ -155,7 +185,7 @@ WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: ser
 | --- | --- | --- |
 | Serial adapter | `circuits_uart_test.exs` mocks the UART API and covers exact USB identity, post-open drift, open/write errors, owner cleanup and a `SYS_VERSION` handshake through `Wotex.Zigbee.Owner`. | A real coordinator on macOS and Nerves, unplug/replug, exclusive open and permissions on both hosts. |
 | Host protocol | `frame_test.exs`, `owner_test.exs`, `event_test.exs` and `zdo_test.exs` exercise the bounded software profile with an independently encoded simulated peer. | Exact firmware artifact, real NCP reset/recovery and physical endpoint evidence. |
-| Startup and teardown | `startup_test.exs` and `test/support/startup_serial.ex` exercise delayed serial open/write, queued version delivery, original and ready-caller loss, one ready waiter, shorter budgets, malformed input, redacted callback faults, immediate close on failed negotiation and one close attempt with an explicit failure result. Existing owner and UART tests cover timely negotiation and consumer supervision. | Qualified callback timing and cleanup on the physical serial hosts. |
+| Startup and teardown | `startup_test.exs` and `test/support/startup_serial.ex` exercise delayed serial open/write, queued version delivery, original and ready-caller loss, one ready waiter, shorter budgets, malformed input, redacted callback faults, immediate close on failed negotiation and one close attempt with an explicit failure result. Suspended callers exercise the version-to-ready gap, link-before-delivery, foreign handoff refusal and expiry within the original budget. Normal caller exit and linked adapter loss close once and preserve redacted pending failures. Existing owner and UART tests cover timely negotiation and consumer supervision. | Qualified callback timing and cleanup on the physical serial hosts. |
 | Request identity | `data_request_test.exs` validates EUI-64, route, payload and caller correlation and sends through the simulated serial peer without placing host-only identity in the wire frame. | Manufacturer/direction semantics and credential port. |
 | Identity and node queries | `command_test.exs`, `zdo_test.exs` and `owner_test.exs` cover exact request bytes, bounded identity/node values, failed/malformed replies, independently framed later responses and owner rejection of uncatalogued commands. | Exact real firmware layouts and physical interview qualification. |
 | Bounded interview | `interview_test.exs` and `interview_owner_test.exs` cover the independently framed workflow, early responses, duplicate lists/records, wrong sources, identity conflict, partial failures, one deadline, caller death, real route/token exhaustion and a new route for the same IEEE. `owner_test.exs` covers queued late SRSPs and delayed/failed serial callbacks. | Physical firmware and endpoint qualification, credential port and network administration. |

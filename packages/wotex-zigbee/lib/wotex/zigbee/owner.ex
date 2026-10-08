@@ -12,16 +12,49 @@ defmodule Wotex.Zigbee.Owner do
 
   Startup shares one deadline across serial open, version write and reply
   delivery. Negotiation monitors its original caller and any ready waiter.
+  `open/1` retains monitoring through handle handoff and links the caller
+  before replying. Caller-owned lifetime ends on normal or abnormal caller exit.
   Callback exceptions and malformed returns become redacted failures;
   explicit close reports failure instead of claiming successful cleanup.
   """
 
   use GenServer
 
-  alias Wotex.Zigbee.{Command, Config, Error, Event, Frame, Handle, Interview, Reply, Routes}
+  alias Wotex.Zigbee.{
+    Command,
+    Config,
+    Downlinks,
+    Error,
+    Event,
+    Frame,
+    Handle,
+    Interview,
+    Reply,
+    Routes
+  }
+
   alias Wotex.Zigbee.Interview.Flow
 
   @max_query_routes 128
+
+  @doc """
+  Negotiates an owner and links it to this caller before delivering the handle.
+
+  Original startup time and caller monitoring cover negotiation and handle
+  handoff. The owner closes when this caller exits, including normal exit.
+  Use `start_link/1` for consumer supervision instead of transferring this
+  caller-owned lifetime by copying a handle.
+  """
+  @spec open(Config.t()) :: {:ok, Handle.t()} | {:error, Error.t()}
+  def open(%Config{} = config) do
+    case start_owner(config, :opening) do
+      {:ok, owner} -> finish_open(owner, config.timeout_ms)
+      {:error, %Error{}} = error -> error
+      {:error, _} -> {:error, error(:serial, :open)}
+    end
+  end
+
+  def open(_), do: {:error, error(:invalid_config, :open)}
 
   @doc "Starts a coordinator owner under a consumer supervisor."
   @spec start_link(Config.t()) :: GenServer.on_start()
@@ -61,25 +94,29 @@ defmodule Wotex.Zigbee.Owner do
     safe_call(owner, {operation, epoch, args}, limit + 100)
   end
 
-  def call(%Handle{owner: owner, epoch: epoch, timeout_ms: limit}, :routed, [
+  def call(%Handle{owner: owner, epoch: epoch, timeout_ms: limit}, operation, [
         routes,
         request,
         timeout
       ])
-      when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 do
+      when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 and
+             operation in [:routed, :queued] do
     valid_timeout = is_integer(timeout) and timeout > 0
     wait = if valid_timeout, do: min(timeout, limit) + 100, else: limit + 100
     deadline = if valid_timeout, do: System.monotonic_time(:millisecond) + min(timeout, limit)
-    safe_call(owner, {:routed, epoch, [routes, request, timeout, deadline]}, wait)
+    safe_call(owner, {operation, epoch, [routes, request, timeout, deadline]}, wait)
   end
 
-  def call(_, operation, _) when operation in [:command, :interview, :routed, :close, :drain],
-    do: {:error, %Error{kind: :stale_handle, operation: operation}}
+  def call(_, operation, _)
+      when operation in [:command, :interview, :routed, :queued, :close, :drain],
+      do: {:error, %Error{kind: :stale_handle, operation: operation}}
 
   def call(_, _, _), do: {:error, error(:invalid_command, :owner)}
 
   @impl GenServer
-  def init({config, deadline, caller}) do
+  def init({config, deadline, caller, mode}) do
+    if mode == :opening, do: Process.flag(:trap_exit, true)
+
     with true <- Config.valid?(config),
          true <- Code.ensure_loaded?(config.serial),
          true <- function_exported?(config.serial, :open, 3),
@@ -87,7 +124,7 @@ defmodule Wotex.Zigbee.Owner do
          true <- function_exported?(config.serial, :close, 1),
          :ok <- startup_admission(deadline, caller),
          {:ok, port} <- serial_open(config) do
-      state = initial_state(config, port, deadline, caller)
+      state = initial_state(config, port, deadline, caller, mode)
 
       with :ok <- startup_admission(deadline, caller),
            :ok <- write_frame(state, Command.version(), deadline),
@@ -106,6 +143,10 @@ defmodule Wotex.Zigbee.Owner do
   end
 
   @impl GenServer
+  def handle_call({:ready, _}, {caller, _}, %{handoff_pending: true} = state)
+      when caller != state.startup_caller,
+      do: {:reply, {:error, error(:invalid_value, :ready)}, state}
+
   def handle_call({:ready, deadline}, from, %{mode: :negotiating, ready_waiter: nil} = state)
       when is_integer(deadline) do
     deadline = min(deadline, state.version_deadline)
@@ -128,6 +169,14 @@ defmodule Wotex.Zigbee.Owner do
 
   def handle_call({:ready, _}, _, %{mode: :negotiating} = state),
     do: {:reply, {:error, error(:overload, :ready)}, state}
+
+  def handle_call({:ready, deadline}, _, %{mode: :awaiting_handoff} = state)
+      when is_integer(deadline) do
+    case startup_admission(min(deadline, state.version_deadline), state.startup_caller) do
+      :ok -> {:reply, {:ok, handle_for(state)}, complete_startup(state)}
+      kind -> {:stop, :normal, {:error, error(kind, :ready)}, state}
+    end
+  end
 
   def handle_call({:ready, deadline}, _, %{mode: :ready} = state) when is_integer(deadline) do
     result =
@@ -265,6 +314,31 @@ defmodule Wotex.Zigbee.Owner do
     end
   end
 
+  def handle_call({:queued, epoch, [routes, delivery, timeout, deadline]}, from, state) do
+    cond do
+      epoch != state.epoch ->
+        {:reply, {:error, error(:stale_handle, :queued)}, state}
+
+      not Downlinks.valid_delivery?(delivery) ->
+        {:reply, {:error, error(:invalid_value, :queued)}, state}
+
+      delivery.owner_epoch != state.epoch ->
+        {:reply, {:error, error(:stale_epoch, :queued)}, state}
+
+      delivery.entry.enqueued_at_ms > System.monotonic_time(:millisecond) ->
+        {:reply, {:error, error(:invalid_value, :queued)}, state}
+
+      true ->
+        bounded = if is_integer(deadline), do: min(deadline, delivery.deadline_ms)
+
+        handle_call(
+          {:routed, epoch, [routes, delivery.entry.request, timeout, bounded]},
+          from,
+          state
+        )
+    end
+  end
+
   def handle_call(_, _, state), do: {:reply, {:error, error(:invalid_command, :owner)}, state}
 
   @impl GenServer
@@ -296,11 +370,26 @@ defmodule Wotex.Zigbee.Owner do
     if updated.mode == :failed, do: {:stop, :normal, updated}, else: {:noreply, updated}
   end
 
+  def handle_info(:version_timeout, %{mode: :awaiting_handoff} = state),
+    do: {:noreply, fail_negotiation(state, :timeout)}
+
   def handle_info({:DOWN, monitor, :process, _, _}, %{startup_monitor: monitor} = state),
     do: {:stop, :normal, state}
 
   def handle_info({:DOWN, monitor, :process, _, _}, %{ready_monitor: monitor} = state),
     do: {:stop, :normal, state}
+
+  def handle_info({:DOWN, monitor, :process, _, _}, %{consumer_monitor: monitor} = state) do
+    fail_waiters(state, :coordinator_lost)
+    {:stop, :normal, state}
+  end
+
+  def handle_info({:EXIT, _, _}, %{close_attempted: true} = state), do: {:noreply, state}
+
+  def handle_info({:EXIT, _, _}, %{consumer_caller: caller} = state) when is_pid(caller) do
+    fail_waiters(state, :coordinator_lost)
+    {:stop, :normal, state}
+  end
 
   def handle_info(:failed_stop, %{mode: {:failed, _}} = state), do: {:stop, :normal, state}
 
@@ -376,9 +465,7 @@ defmodule Wotex.Zigbee.Owner do
         fail_negotiation(state, :version_mismatch)
 
       true ->
-        Process.cancel_timer(state.version_timer)
-        if state.ready_waiter, do: GenServer.reply(state.ready_waiter, {:ok, handle_for(state)})
-        %{clear_startup(state) | mode: :ready}
+        negotiate_handle(state)
     end
   end
 
@@ -594,12 +681,13 @@ defmodule Wotex.Zigbee.Owner do
 
   defp start_owner(%Config{} = config, mode) do
     if Config.valid?(config) do
-      args = {config, System.monotonic_time(:millisecond) + config.timeout_ms, self()}
+      args = {config, System.monotonic_time(:millisecond) + config.timeout_ms, self(), mode}
 
       result =
         case mode do
           :linked -> GenServer.start_link(__MODULE__, args)
           :unlinked -> GenServer.start(__MODULE__, args)
+          :opening -> GenServer.start(__MODULE__, args)
         end
 
       case result do
@@ -614,7 +702,7 @@ defmodule Wotex.Zigbee.Owner do
   defp start_owner(_, _), do: {:error, error(:invalid_config, :open)}
   defp startup_stop(kind), do: {:stop, {:shutdown, error(kind, :open)}}
 
-  defp initial_state(config, port, deadline, caller) do
+  defp initial_state(config, port, deadline, caller, mode) do
     %{
       config: config,
       port: port,
@@ -627,6 +715,9 @@ defmodule Wotex.Zigbee.Owner do
       startup_monitor: Process.monitor(caller),
       ready_waiter: nil,
       ready_monitor: nil,
+      handoff_pending: mode == :opening,
+      consumer_caller: if(mode == :opening, do: caller),
+      consumer_monitor: nil,
       pending: nil,
       interview: nil,
       query_routes: MapSet.new(),
@@ -651,13 +742,48 @@ defmodule Wotex.Zigbee.Owner do
   defp ready_caller_alive?(%{ready_waiter: nil}), do: true
   defp ready_caller_alive?(state), do: Process.alive?(elem(state.ready_waiter, 0))
 
+  defp negotiate_handle(%{handoff_pending: true, ready_waiter: nil} = state),
+    do: %{state | mode: :awaiting_handoff}
+
+  defp negotiate_handle(state) do
+    updated = complete_startup(state)
+    if state.ready_waiter, do: GenServer.reply(state.ready_waiter, {:ok, handle_for(updated)})
+    updated
+  end
+
+  defp complete_startup(state) do
+    Process.cancel_timer(state.version_timer)
+
+    monitor =
+      if state.handoff_pending do
+        Process.link(state.startup_caller)
+        Process.monitor(state.startup_caller)
+      end
+
+    %{clear_startup(state) | mode: :ready, handoff_pending: false, consumer_monitor: monitor}
+  end
+
+  defp finish_open(owner, timeout) do
+    case ready(owner, timeout) do
+      {:ok, _} = result -> result
+      error -> stop_open_owner(owner, error)
+    end
+  end
+
+  defp stop_open_owner(owner, error) do
+    GenServer.stop(owner, :normal)
+    error
+  catch
+    :exit, _ -> error
+  end
+
   defp fail_negotiation(state, kind) do
     fail_waiters(state, kind)
     Process.cancel_timer(state.version_timer)
     serial_close(state)
     mode = if state.ready_waiter, do: :failed, else: {:failed, kind}
     if mode != :failed, do: Process.send_after(self(), :failed_stop, 1_000)
-    %{clear_startup(state) | mode: mode, close_attempted: true}
+    %{clear_startup(state) | mode: mode, close_attempted: true, handoff_pending: false}
   end
 
   defp clear_startup(state) do

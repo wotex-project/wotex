@@ -4,7 +4,7 @@ defmodule Wotex.Zigbee.ZCLConfigurationOwnerTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Zigbee
-  alias Wotex.Zigbee.{Config, DataRequest, Interview, Routes, TestSerialPeer}
+  alias Wotex.Zigbee.{Config, DataRequest, Downlinks, Error, Interview, Routes, TestSerialPeer}
   alias Wotex.Zigbee.ZCL.Configuration
 
   @ieee <<8, 7, 6, 5, 4, 3, 2, 1>>
@@ -54,7 +54,14 @@ defmodule Wotex.Zigbee.ZCLConfigurationOwnerTest do
           data: request.payload
         )
 
-      call = Task.async(fn -> Zigbee.send_routed_data(handle, routes, af, 1_000) end)
+      {:ok, queue} = Downlinks.new(handle.epoch, capacity: 1)
+      {:ok, %{queue: queue}} = Downlinks.enqueue(queue, af, now(), 1_000)
+
+      assert {:ok, %{ready: [delivery], refused: [], expired: [], queue: empty}} =
+               Downlinks.take(queue, routes, @ieee, now())
+
+      assert empty.entries == []
+      call = Task.async(fn -> Zigbee.send_queued_data(handle, routes, delivery, 1_000) end)
       data_length = byte_size(expected_wire)
       length = data_length + 10
 
@@ -79,6 +86,92 @@ defmodule Wotex.Zigbee.ZCLConfigurationOwnerTest do
       refute_receive {:serial_write, _}, 10
       :ok = Zigbee.close(handle)
     end
+  end
+
+  test "queued delivery keeps its absolute expiry through mailbox wait and expiry after writing" do
+    {handle, peer, routes, delivery} = queued_delivery(30)
+    :ok = :sys.suspend(handle.owner)
+    call = Task.async(fn -> Zigbee.send_queued_data(handle, routes, delivery, 1_000) end)
+    wait_call(handle.owner)
+    Process.sleep(40)
+    :ok = :sys.resume(handle.owner)
+    assert {:error, %Error{kind: :timeout}} = Task.await(call)
+    refute_receive {:serial_write, <<0xFE, _, 0x24, 1, _::binary>>}, 10
+    assert {:ok, _} = Zigbee.handle(handle.owner)
+    assert :ok = Zigbee.close(handle)
+    assert_dead(peer)
+
+    {handle, peer, routes, delivery} = queued_delivery(30)
+    call = Task.async(fn -> Zigbee.send_queued_data(handle, routes, delivery, 1_000) end)
+    assert_receive {:serial_write, <<0xFE, _, 0x24, 1, _::binary>>}
+    assert {:error, %Error{kind: :timeout}} = Task.await(call)
+    assert_dead(handle.owner)
+    assert_dead(peer)
+  end
+
+  test "copied or old-epoch delivery cannot bypass receiver validation or renew queue expiry" do
+    {handle, _, routes, delivery} = queued_delivery(1_000)
+
+    for copied <- [
+          %{delivery | deadline_ms: delivery.entry.expires_at_ms + 1},
+          %{
+            delivery
+            | entry: %{
+                delivery.entry
+                | enqueued_at_ms: now() + 1_000,
+                  expires_at_ms: now() + 2_000
+              },
+              deadline_ms: now() + 1_500
+          },
+          Map.put(delivery, :key, "credential-canary"),
+          nil
+        ] do
+      assert {:error, %Error{kind: :invalid_value} = error} =
+               Zigbee.send_queued_data(handle, routes, copied, 1_000)
+
+      refute inspect(error) =~ "credential-canary"
+    end
+
+    assert {:error, %Error{kind: :stale_epoch}} =
+             Zigbee.send_queued_data(handle, routes, %{delivery | owner_epoch: make_ref()}, 1_000)
+
+    assert {:error, %Error{kind: :stale_handle}} =
+             Zigbee.send_queued_data(%{handle | epoch: make_ref()}, routes, delivery, 1_000)
+
+    assert {:error, %Error{kind: :stale_handle}} =
+             Zigbee.send_queued_data(nil, routes, delivery, 1_000)
+
+    assert {:error, %Error{kind: :invalid_value}} =
+             Zigbee.send_queued_data(handle, routes, delivery, nil)
+
+    {:ok, rebound} = Routes.rebind(routes, make_ref())
+
+    assert {:error, %Error{kind: :stale_epoch}} =
+             Zigbee.send_queued_data(handle, rebound, delivery, 1_000)
+
+    refute_receive {:serial_write, <<0xFE, _, 0x24, 1, _::binary>>}, 10
+    assert :ok = Zigbee.close(handle)
+  end
+
+  defp queued_delivery(lifetime) do
+    {handle, peer, routes} = interviewed_peer()
+
+    {:ok, af} =
+      DataRequest.new(
+        peer_ieee: @ieee,
+        route_address: @route,
+        destination_endpoint: 1,
+        source_endpoint: 2,
+        cluster: 6,
+        transaction: 7,
+        correlation_id: "queued",
+        data: <<0, 19, 2, 1, 0, 0x20, 42>>
+      )
+
+    {:ok, queue} = Downlinks.new(handle.epoch)
+    {:ok, %{queue: queue}} = Downlinks.enqueue(queue, af, now(), lifetime)
+    {:ok, %{ready: [delivery]}} = Downlinks.take(queue, routes, @ieee, now())
+    {handle, peer, routes, delivery}
   end
 
   defp interviewed_peer do
@@ -144,6 +237,25 @@ defmodule Wotex.Zigbee.ZCLConfigurationOwnerTest do
   end
 
   defp now, do: System.monotonic_time(:millisecond)
+
+  defp assert_dead(pid) do
+    monitor = Process.monitor(pid)
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}
+  end
+
+  defp wait_call(owner, attempts \\ 100)
+
+  defp wait_call(owner, attempts) when attempts > 0 do
+    if elem(Process.info(owner, :message_queue_len), 1) > 0 do
+      :ok
+    else
+      Process.sleep(1)
+      wait_call(owner, attempts - 1)
+    end
+  end
+
+  defp wait_call(_, 0), do: flunk("queued delivery did not reach the owner")
+
   defp wait_events(owner, count, attempts \\ 100)
 
   defp wait_events(owner, count, attempts) when attempts > 0 do

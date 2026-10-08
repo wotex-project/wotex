@@ -1,13 +1,16 @@
 # Wotex Zigbee completion contract
 
-Version: 0.7.0. The catalogue is authoritative for implementation status.
+Version: 0.9.0. The catalogue is authoritative for implementation status.
 
 ## Delivered software slice
 
 - TI CC26x2 SDK 2.30.00.34 ZNP Monitor/Test framing (SWRA198 revision 1.14),
   exact `SYS_VERSION` admission, one explicit owner and finite queues.
   Startup preserves one deadline through serial open/write/version delivery,
-  monitors negotiating callers and redacts callback failures. Explicit close
+  monitors negotiating callers and redacts callback failures. Caller-owned
+  opening retains the original budget through handle handoff, establishes its
+  link before delivery and closes on normal or abnormal caller exit. Linked
+  adapter loss fails pending operations with redacted cleanup. Explicit close
   reports failure and attempts acquired-port cleanup once.
 - Non-administrative IEEE identity, node, active-endpoint, simple-descriptor and AF data requests.
   Synchronous reply and later indications remain distinct. Finite ZDO
@@ -49,6 +52,12 @@ Version: 0.7.0. The catalogue is authoritative for implementation status.
   Guarded AF sends check the current supplied table before I/O and clamp their
   deadline to custody expiry. Consumers retain the latest table, including
   conflict updates; host custody does not establish radio authentication.
+
+- Consumer-owned downlink queues bound global/per-peer counts, payload bytes
+  and finite lifetimes. Explicit FIFO selection, expiry, cancellation and
+  epoch invalidation retain removal receipts. Selected commands check current
+  custody and use absolute receiver deadlines through mailbox and serial
+  delivery. No automatic wakeup, polling, retry or reachability claim occurs.
 
 ## Required for WZG.01 completion
 

@@ -26,6 +26,7 @@ defmodule Wotex.Zigbee do
     Command,
     Config,
     DataRequest,
+    Downlinks,
     Error,
     Event,
     Handle,
@@ -37,28 +38,15 @@ defmodule Wotex.Zigbee do
 
   @type result(value) :: {:ok, value} | {:error, Error.t()}
 
-  @doc "Starts, negotiates and links one coordinator owner to the caller."
+  @doc """
+  Starts, negotiates and links one coordinator owner before delivering its handle.
+
+  The startup deadline includes handle handoff. This caller owns the returned
+  lifetime; its normal or abnormal exit closes the owner. Use `child_spec/2`
+  for consumer supervision. Copying a handle does not transfer ownership.
+  """
   @spec open(Config.t()) :: result(Handle.t())
-  def open(%Config{} = config) do
-    case Owner.start(config) do
-      {:ok, owner} ->
-        case Owner.ready(owner, config.timeout_ms) do
-          {:ok, _} = result ->
-            Process.link(owner)
-            result
-
-          error ->
-            if Process.alive?(owner), do: GenServer.stop(owner, :normal)
-            error
-        end
-
-      {:error, %Error{} = error} ->
-        {:error, error}
-
-      {:error, _} ->
-        {:error, %Error{kind: :serial, operation: :open}}
-    end
-  end
+  def open(%Config{} = config), do: Owner.open(config)
 
   def open(_), do: {:error, %Error{kind: :invalid_config, operation: :open}}
 
@@ -164,6 +152,19 @@ defmodule Wotex.Zigbee do
           result(Reply.t())
   def send_routed_data(handle, routes, request, timeout),
     do: Owner.call(handle, :routed, [routes, request, timeout])
+
+  @doc """
+  Dispatches one inert queue delivery within its supplied absolute deadline.
+
+  The receiver revalidates the delivery, owner epoch and current route custody
+  and cannot renew its lifetime across mailbox waits. Expiry before writing
+  leaves the owner usable; expiry after writing ends the epoch. The reply is
+  NCP admission only. Consumer authorization and wakefulness remain separate.
+  """
+  @spec send_queued_data(Handle.t(), Routes.t(), Downlinks.delivery(), pos_integer()) ::
+          result(Reply.t())
+  def send_queued_data(handle, routes, delivery, timeout),
+    do: Owner.call(handle, :queued, [routes, delivery, timeout])
 
   @doc """
   Sends the legacy route-only AF call; consumers retain peer identity and

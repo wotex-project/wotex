@@ -154,10 +154,28 @@ firmware/endpoint qualification remain separate.
 Startup shares one deadline across serial open, version write and negotiation.
 A late port is closed before requesting the version, and a late reply cannot
 produce a handle. A shorter `Owner.ready/2` wait can shorten that budget.
+Caller-owned opening retains the original deadline and caller monitor through
+handle handoff and links before delivering the handle. Normal or abnormal
+caller exit closes that owner; copying the handle does not transfer its
+lifetime. Use `Wotex.Zigbee.child_spec/2` for consumer supervision. Linked
+adapter loss also fails pending operations and attempts cleanup once.
 Negotiating caller loss ends ownership. Open/write/close callback faults
 become redacted errors. An acquired port receives one close attempt; explicit
 close reports a serial error when the adapter does not acknowledge cleanup.
 An adapter that fails before returning a port owns its own acquired resources.
+
+For consumer-approved queued downlinks, create `Wotex.Zigbee.Downlinks.new/2`
+for the current owner epoch and enqueue a complete `DataRequest` with
+monotonic time and finite lifetime. Retain every returned queue. Overflow
+refuses new entries; use `expire/2` to remove expired requests explicitly.
+When qualified consumer policy permits a delivery attempt, `take/5` selects
+a bounded peer FIFO against current custody and returns ready, expired and
+refused entries separately. Retain its queue before calling
+`Wotex.Zigbee.send_queued_data/4` with a ready receipt and current route table.
+The receiver preserves the supplied absolute deadline through mailbox waits.
+Retain NCP/APS/ZCL outcomes separately and allocate fresh correlation context.
+Selection never infers check-in, wakefulness, delivery or offline status and
+never retries or retargets a request.
 
 ## Development
 

@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.7.0-target. The catalogue records implementation status separately.
+Version: 0.8.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -172,6 +172,35 @@ The profile supplies no binding, joining or autonomous transaction lifecycle.
 
 **WZG2-05.** Model expected reporting/check-in behavior and bound queued downlinks. No fixed short inactivity timeout for every end device. A quiet battery device is not immediately offline; freshness and reachability are separate. Reporting interval changes have power implications and require qualified consumer policy. Do not poll to make a dashboard appear live.
 
+`Wotex.Zigbee.Downlinks` supplies an inert queue for one owner epoch.
+The consumer explicitly admits each AF request and supplies monotonic
+milliseconds and a lifetime from 1 ms to 24 hours. Host limits are 1,024
+entries globally, 128 per raw IEEE peer and 131,072 payload bytes; defaults
+are 128, 8 and 16,384 respectively. These limits are independent. Revalidate
+complete nested requests, timestamps, FIFO tickets, pending peer/correlation
+identity and all budgets after copying. Tickets never wrap. A refused
+admission leaves existing entries unchanged. Expired entries occupy capacity
+until explicit expiry or selection; overflow never drops an older command.
+
+`expire/2` returns removed entries in original order at their exact deadline.
+`take/5` expires entries across all peers, then removes a bounded FIFO
+selection for an explicitly chosen peer. Each selected request checks current
+route custody. Ready receipts retain the original request, owner epoch and
+the earlier queue/custody deadline. Refused entries retain their request and
+bounded reason, including route rejoin, conflict or custody expiry. Other
+peers and unselected entries retain their order. Clock rewind fails; no queue
+operation obtains ambient time or sends.
+
+Retain the returned queue before attempting ready receipts through
+`Wotex.Zigbee.send_queued_data/4`; WZG1-04 owns receiver deadline enforcement.
+Selection grants no authorization or wakefulness and allocates no fresh
+AF/ZCL tokens. Cancellation returns the removed entry. Owner rebind
+invalidates every queued request and retains ticket history. Neither removal
+nor expiry declares a peer offline. No automatic retry, polling, retargeting
+or reporting interval change occurs. The consumer owns serialization,
+expected reporting/check-in behavior and qualified battery policy; the queue
+alone supplies no sleepy-device freshness model.
+
 ## Scope exclusions
 
 Automatic OTA, Green Power proxy/sink behavior, arbitrary manufacturer codecs and concurrent multi-protocol radio scheduling are not implied. Each needs a separate explicit profile and evidence before it can be advertised. A Zigbee stack on the NCP does not turn every command into a supported public package operation.
@@ -198,5 +227,11 @@ ambiguity, Default Responses and source/header/request mismatch negatives.
 and responses through the serial owner after interview and route adoption;
 NCP admission, APS confirmation and unchanged-source ZCL observations remain
 separate. These tests cover the finite write/reporting subset of WZG2-T6.
+`downlinks_test.exs` executes the software queue subset of WZG2-T5: constructor
+purity, all three budgets, correlation/ticket exhaustion, FIFO selection,
+expiry, cancellation, rebind, clock rewind and custody refusal.
+`zcl_configuration_owner_test.exs` executes queued write/reporting dispatch
+and absolute expiry before and after I/O. This supplies no physical sleepy,
+check-in, wakefulness or battery evidence.
 Joining, sleepy policy, physical rejoin/source security, network continuity
 binding and administration remain outstanding.

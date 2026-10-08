@@ -9,6 +9,9 @@ catalogue records implementation status separately.
 - Start an owner explicitly with `Wotex.Zigbee.open/1` or under a consumer
   supervisor. Keep the serial device exclusively owned; close a handle after
   use. A stale handle cannot address a restarted owner.
+  Caller-owned opening links before handle delivery and closes on normal or
+  abnormal caller exit. Copying its handle does not transfer that lifetime;
+  use a consumer-supervised child specification for shared long-lived use.
 - Treat an SRSP as request admission by the NCP. Match later APS/ZDO/ZCL
   indications with source, endpoint, cluster, sequence and transaction
   context. Count dropped indications before trusting a continuous view.
@@ -54,7 +57,14 @@ catalogue records implementation status separately.
   or observation.
 - Use bounded deadlines and queues. A timeout ends the owner epoch so a
   delayed uncorrelated SRSP cannot satisfy a later command.
+- Retain the latest `Wotex.Zigbee.Downlinks` queue, expire requests explicitly
+  and select a bounded peer FIFO only under consumer delivery policy. Send
+  ready receipts through `Wotex.Zigbee.send_queued_data/4` with current custody
+  to preserve absolute expiry. Selection and expiry prove no wakefulness,
+  delivery or offline status. Rebind after owner replacement; queued routes
+  are never retargeted automatically.
 - Keep serial open, version negotiation and callback cleanup within the
-  configured startup budget. A ready wait cannot renew that budget. An
-  adapter must clean up resources if open fails before returning a port.
+  configured startup budget, including handle handoff. A ready wait cannot
+  renew that budget. An adapter must clean up resources if open fails before
+  returning a port.
   Treat an explicit close error as unconfirmed adapter cleanup.
