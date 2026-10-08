@@ -315,6 +315,10 @@ packages:
         version: "1.0.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-modbus/specs/WMB.09-register-codec.md"
+      - id: "WMB.10"
+        version: "1.0.0"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-modbus/specs/WMB.10-process-codec-owner.md"
   wotex-nx:
     app: "wotex_nx"
     catalogue: "docs/packages/wotex-nx/specs/catalogue.yaml"

@@ -36,6 +36,9 @@ Repository-wide rules are in the root `AGENTS.md`.
   ranges, function requests and exact-width scalar conversion.
 - `lib/wotex/modbus/codec.ex`: MBAP/PDU encoding and function-specific
   response validation.
+- `lib/wotex/modbus/register_codec.ex`: the optional inert packed-decimal
+  projection; `register_codec/{host,driver}.ex`: the explicitly started
+  process-codec owner and consumer custody/execution port. No default launcher.
 - `lib/wotex/modbus/{connection,session}.ex`: the owned TCP socket with
   bounded admission (64 requests, one active exchange) and deadline-bounded,
   correlated exchanges.
@@ -44,8 +47,8 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `lib/wotex/modbus/error.ex`: structured errors, effect and Runtime classes.
 - `lib/mix/tasks/`: the explicit software-peer tasks; `bin/`: the
   candidate-archive and application-free checks run by the gate.
-- Specifications: `docs/packages/wotex-modbus/specs/` (WMB.01–WMB.03,
-  WMB.04–WMB.08; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-modbus/specs/` (WMB.01–WMB.10;
+  `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-modbus/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (the contract corpus and the integration corpus).
 - Test support: `test/support/` (loopback peer, contract and Runtime fixtures,
@@ -82,6 +85,9 @@ Tests by area, under `test/wotex/modbus/` unless noted:
 - Codec, MBAP framing and function limits: `codec_test.exs`,
   `boundary_test.exs` (contract corpus), `stream_fault_test.exs`.
 - Scalar conversion: `value_test.exs`.
+- Optional register codecs: `register_codec_test.exs` and
+  `register_process_host_test.exs`; scripted drivers prove owner behavior,
+  not native enforcement or independent-language qualification.
 - Form mapping: `mapping_test.exs`.
 - Connection, helpers and compatibility callbacks: `connection_test.exs`,
   `compatibility_test.exs`, `contract_test.exs`.

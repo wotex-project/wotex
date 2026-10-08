@@ -157,8 +157,20 @@ Ordinary scalar Form mappings need no implementation admission. This application
 representation is not a Modbus-standard format or canonical Property truth.
 
 The [register codec contract](../../docs/packages/wotex-modbus/specs/WMB.09-register-codec.md)
-defines its exact grammar and refusals. Executable process delivery remains
-a separately qualified Runtime profile.
+defines its exact grammar and refusals.
+
+`Wotex.Modbus.RegisterCodec.Host` owns optional process-codec exchanges. Supply
+an admitted process Plan, startup Context, local owner, current-input/clock
+callbacks and an already-started consumer driver implementing
+`Wotex.Modbus.RegisterCodec.Driver`. Start the Host under consumer supervision,
+wait with `Host.await_ready/1`, and pass `{Host, pid}` to Runtime codec execution.
+The Host accepts one active request, checks the exact handshake and original
+deadline, and waits for bounded cleanup after a terminal fault or explicit stop.
+It starts no replacement and provides no default native launcher. The driver
+must prove the exact immutable deployment, target closure, resource enforcement
+and descendant custody. Scripted tests establish owner behavior only; qualified
+native and independent-language delivery remain open in the
+[process owner contract](../../docs/packages/wotex-modbus/specs/WMB.10-process-codec-owner.md).
 
 The [ordered implementation sequence](../../docs/packages/wotex-modbus/plans/software-implementation.md)
 and [specifications](https://github.com/wotex-project/wotex/tree/main/docs/packages/wotex-modbus/specs) define the software profile's

@@ -20,7 +20,10 @@ defmodule Wotex.Modbus.Check.Archive do
     "priv/fixtures/register_codec/configuration.schema.json",
     "lib/wotex/modbus.ex",
     "lib/wotex/modbus/transport.ex",
-    "lib/wotex/modbus/register_codec.ex"
+    "lib/wotex/modbus/register_codec.ex",
+    "lib/wotex/modbus/register_codec/driver.ex",
+    "lib/wotex/modbus/register_codec/host.ex",
+    "lib/wotex/modbus/register_codec/host/configuration.ex"
   ]
 
   # Documentation lives in the monorepo `docs/` tree and reaches consumers through
@@ -98,7 +101,8 @@ defmodule Wotex.Modbus.Check.Archive do
         |> Enum.map(&System.fetch_env!/1)
 
       for module <- [Wotex, Wotex.Runtime.ConsumedThing, Wotex.Runtime.Codec.Beam,
-                     Wotex.Modbus, RegisterCodec, Jason] do
+                     Wotex.Modbus, RegisterCodec, Wotex.Modbus.RegisterCodec.Host,
+                     Wotex.Modbus.RegisterCodec.Driver, Jason] do
         beam = module |> :code.which() |> List.to_string()
 
         unless String.starts_with?(beam, Path.join(consumer, "_build")) do
@@ -138,6 +142,9 @@ defmodule Wotex.Modbus.Check.Archive do
     end
 
     defp assert_register_codec! do
+      {:error, %Wotex.Runtime.Implementation.Error{code: :invalid_configuration}} =
+        Wotex.Modbus.RegisterCodec.Host.start_link(%{})
+      %{restart: :temporary} = Wotex.Modbus.RegisterCodec.Host.child_spec(%{})
       configuration = %{"registers" => 1, "byte_order" => "big", "word_order" => "big",
                         "scale" => -2, "signed" => false}
       :ok = RegisterCodec.validate_configuration(configuration, RegisterCodec.configuration_schema())

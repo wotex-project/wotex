@@ -1,6 +1,6 @@
 # Wotex Modbus completion contract
 
-Plan version: 1.2.0. Package baseline: 0.1.0. Normative owner:
+Plan version: 1.3.0. Package baseline: 0.1.0. Normative owner:
 [specification catalogue](../specs/catalogue.yaml).
 
 Graduate this library independently. Acceptance requires typed values and
@@ -61,3 +61,8 @@ The optional [WMB.09 register codec](../specs/WMB.09-register-codec.md) supplies
 an inert packed-decimal projection through WRT.06. Its pure and exact-archive
 acceptance is separate from existing TCP/Form interoperability. Native codec
 delivery and consumer usefulness remain independently qualified programme gates.
+
+[WMB.10](../specs/WMB.10-process-codec-owner.md) defines an optional supervised
+process-codec owner and consumer execution-driver boundary. Its functional
+reference workload checks decoder replacement without Host/Runtime changes;
+scripted owner evidence cannot qualify native enforcement or production costs.
