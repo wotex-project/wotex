@@ -1,6 +1,6 @@
 # WZG.01 — Coordinator host boundary
 
-Version: 0.6.0-target. The catalogue records implementation status; hardware
+Version: 0.7.0-target. The catalogue records implementation status; hardware
 qualification is separate.
 
 ## NCP architecture
@@ -29,6 +29,26 @@ or loss of a pending caller ends the epoch and closes the adapter. An expired
 call rejected before writing leaves the owner usable. Serial callbacks must
 return within the consumer's budget; the owner cannot preempt a blocking
 callback. External callback error text stays outside public errors and results.
+
+Startup also uses one absolute deadline, established before spawning the
+owner. Serial open, `SYS_VERSION` write and version reply delivery consume
+that budget. A port returned after expiry is closed without a version write;
+a queued valid version reply cannot complete after expiry. `Owner.ready/2`
+admits a wait from 1 to 60,000 ms and can shorten, never extend, the remaining
+negotiation budget. A handle retrieval queued past its own deadline fails
+without closing an already negotiated owner.
+
+The original startup caller and a pending ready waiter are monitored until
+negotiation ends. Caller loss while opening is checked when the callback
+returns; no subsequent version request is written. Caller loss during
+negotiation ends the owner. Known startup failures use a shutdown result with
+the public error, avoiding a crash report of callback state or queued bytes.
+Raised, thrown, exited, malformed and returned failures from open, write or
+close are redacted. An acquired port receives one close attempt on failure
+or teardown. An adapter that fails before returning a port owns cleanup of
+its unreturned resources. Explicit close returns a serial error if the
+callback does not return `:ok`; failure does not become a successful cleanup
+claim. A blocking callback remains subject to the consumer's adapter contract.
 
 ## Values and calls
 
@@ -135,6 +155,7 @@ WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: ser
 | --- | --- | --- |
 | Serial adapter | `circuits_uart_test.exs` mocks the UART API and covers exact USB identity, post-open drift, open/write errors, owner cleanup and a `SYS_VERSION` handshake through `Wotex.Zigbee.Owner`. | A real coordinator on macOS and Nerves, unplug/replug, exclusive open and permissions on both hosts. |
 | Host protocol | `frame_test.exs`, `owner_test.exs`, `event_test.exs` and `zdo_test.exs` exercise the bounded software profile with an independently encoded simulated peer. | Exact firmware artifact, real NCP reset/recovery and physical endpoint evidence. |
+| Startup and teardown | `startup_test.exs` and `test/support/startup_serial.ex` exercise delayed serial open/write, queued version delivery, original and ready-caller loss, one ready waiter, shorter budgets, malformed input, redacted callback faults, immediate close on failed negotiation and one close attempt with an explicit failure result. Existing owner and UART tests cover timely negotiation and consumer supervision. | Qualified callback timing and cleanup on the physical serial hosts. |
 | Request identity | `data_request_test.exs` validates EUI-64, route, payload and caller correlation and sends through the simulated serial peer without placing host-only identity in the wire frame. | Manufacturer/direction semantics and credential port. |
 | Identity and node queries | `command_test.exs`, `zdo_test.exs` and `owner_test.exs` cover exact request bytes, bounded identity/node values, failed/malformed replies, independently framed later responses and owner rejection of uncatalogued commands. | Exact real firmware layouts and physical interview qualification. |
 | Bounded interview | `interview_test.exs` and `interview_owner_test.exs` cover the independently framed workflow, early responses, duplicate lists/records, wrong sources, identity conflict, partial failures, one deadline, caller death, real route/token exhaustion and a new route for the same IEEE. `owner_test.exs` covers queued late SRSPs and delayed/failed serial callbacks. | Physical firmware and endpoint qualification, credential port and network administration. |

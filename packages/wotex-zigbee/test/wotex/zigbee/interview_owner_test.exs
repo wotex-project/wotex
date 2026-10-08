@@ -210,6 +210,21 @@ defmodule Wotex.Zigbee.InterviewOwnerTest do
     end
   end
 
+  test "Basic numeric non-values remain null evidence and cannot complete the interview" do
+    for {id, type, raw} <- [{0, 0x20, <<0xFF>>}, {0xFFFD, 0x21, <<0xFF, 0xFF>>}] do
+      {handle, peer} = open()
+      call = interview(handle, basic_attributes: [id])
+      descriptors(peer)
+      record = <<id::little-16, 0, type, raw::binary>>
+      basic(peer, 1, 0, record, attributes: [id])
+      assert {:ok, %Result{outcome: :partial} = result} = Task.await(call)
+      step = List.last(result.steps)
+      assert step.issues == [:invalid_value]
+      assert [%{value: :null, raw: ^raw}] = step.attributes.attributes
+      assert step.response.payload == <<8, 0, 1, record::binary>>
+    end
+  end
+
   test "APS failure and a second Basic endpoint retain distinct per-endpoint results" do
     {handle, peer} = open()
     call = interview(handle)

@@ -29,6 +29,8 @@ the package is loaded.
   A successful synchronous reply proves NCP acceptance, not delivery.
 - ZCL global Read Attributes encoding and bounded Read Attributes Response
   and Report Attributes decoding for catalogued scalar and short string types.
+  Revision 8 non-values remain null with their original bytes; full-range
+  numeric attribute definitions require explicit decoder policy.
 - `Wotex.Zigbee.interview/3` matches expected IEEE identity, node and endpoint
   descriptors, then reads selected Basic attributes under one overall deadline.
   The Basic read selection is pinned to ZCL document 07-5123 revision 8.
@@ -107,6 +109,14 @@ routes. Supply the current table to guarded sends: old immutable snapshots
 cannot observe later consumer decisions. Custody expiry does not declare a
 sleepy device offline.
 
+`Wotex.Zigbee.ZCL.decode_attributes/3` distinguishes failed read status,
+standard non-value (`:null`), ordinary value and unsupported type. It retains
+original bytes for successful records. Its third argument selects numeric
+attribute IDs whose adopted cluster/manufacturer definition uses the full
+range, including the otherwise reserved encoding. Keep that policy explicit;
+the codec does not infer device semantics. Unsupported widths retain the
+remaining opaque payload without guessing later record boundaries.
+
 An interview needs a route with no earlier ZDO query in that owner epoch.
 The owner retains at most 128 queried routes and retires Basic transaction
 and sequence bytes from a 256-byte window. Reuse or exhaustion is explicit;
@@ -115,6 +125,14 @@ Timeout after dispatch or caller death closes the owner. Serial adapter
 callbacks must return within the operation budget; the owner cannot preempt
 a blocking callback. Consumer table ownership, authorization and physical
 firmware/endpoint qualification remain separate.
+
+Startup shares one deadline across serial open, version write and negotiation.
+A late port is closed before requesting the version, and a late reply cannot
+produce a handle. A shorter `Owner.ready/2` wait can shorten that budget.
+Negotiating caller loss ends ownership. Open/write/close callback faults
+become redacted errors. An acquired port receives one close attempt; explicit
+close reports a serial error when the adapter does not acknowledge cleanup.
+An adapter that fails before returning a port owns its own acquired resources.
 
 ## Development
 

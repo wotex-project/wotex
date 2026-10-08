@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "source": {
+    "organization": "Zigbee Alliance",
+    "document": "07-5123",
+    "revision": "8",
+    "release": "December 2019",
+    "url": "https://csa-iot.org/wp-content/uploads/2022/01/07-5123-08-Zigbee-Cluster-Library-1.pdf",
+    "sha256": "ad536e1d95a40ca27532e360b124cd76a1b18d96398c1c19fd32fbf7dcdd1aa0",
+    "sections": ["2.6.2.1", "2.6.2.2", "2.6.2.5", "2.6.2.7", "2.6.2.8", "2.6.2.13", "2.6.2.14"]
+  },
+  "adoption": {
+    "claim": "finite global Read Attributes Response and Report Attributes value profile; no complete ZCL or cluster conformance",
+    "max_frame_bytes": 128,
+    "max_attributes": 32,
+    "max_string_bytes": 64,
+    "numeric_full_range_policy": "caller selects distinct numeric attribute IDs whose adopted definition uses the full range; never inferred from manufacturer or cluster labels",
+    "types": [
+      {"id": 16, "name": "bool", "octets": 1, "non_value_hex": "ff", "minimum": false, "minimum_hex": "00", "maximum": true, "maximum_hex": "01"},
+      {"id": 32, "name": "uint8", "octets": 1, "non_value_hex": "ff", "full_range_non_value": 255, "minimum": 0, "minimum_hex": "00", "maximum": 254, "maximum_hex": "fe"},
+      {"id": 33, "name": "uint16", "octets": 2, "non_value_hex": "ffff", "full_range_non_value": 65535, "minimum": 0, "minimum_hex": "0000", "maximum": 65534, "maximum_hex": "feff"},
+      {"id": 35, "name": "uint32", "octets": 4, "non_value_hex": "ffffffff", "full_range_non_value": 4294967295, "minimum": 0, "minimum_hex": "00000000", "maximum": 4294967294, "maximum_hex": "feffffff"},
+      {"id": 40, "name": "int8", "octets": 1, "non_value_hex": "80", "full_range_non_value": -128, "minimum": -127, "minimum_hex": "81", "maximum": 127, "maximum_hex": "7f"},
+      {"id": 41, "name": "int16", "octets": 2, "non_value_hex": "0080", "full_range_non_value": -32768, "minimum": -32767, "minimum_hex": "0180", "maximum": 32767, "maximum_hex": "ff7f"},
+      {"id": 65, "name": "octstr", "non_value_hex": "ff", "minimum": "", "minimum_hex": "00"},
+      {"id": 66, "name": "string", "non_value_hex": "ff", "minimum": "", "minimum_hex": "00"}
+    ]
+  },
+  "implementation": ["Wotex.Zigbee.ZCL"],
+  "evidence": ["test/wotex/zigbee/zcl_test.exs", "test/wotex/zigbee/interview_owner_test.exs"]
+}

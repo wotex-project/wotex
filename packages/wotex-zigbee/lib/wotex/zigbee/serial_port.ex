@@ -18,6 +18,11 @@ defmodule Wotex.Zigbee.SerialPort do
   delivering replies; it cannot preempt a blocking adapter callback. An outer
   call timeout reports unavailable owner completion, without proving whether
   the NCP received bytes. A returned callback failure never exposes its text.
+  This also applies to serial open and version negotiation. A failed `open/3`
+  must release any resources it acquired before returning or raising; no port
+  reference is available to the owner on that path. An acquired port is closed
+  once on startup failure or teardown. The explicit owner close reports a
+  raised, thrown, exited or non-`:ok` close as a serial failure.
   """
 
   @type port_ref :: term()

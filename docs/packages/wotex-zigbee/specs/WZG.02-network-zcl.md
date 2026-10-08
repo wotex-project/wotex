@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.5.0-target. The catalogue records implementation status separately.
+Version: 0.6.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -74,6 +74,28 @@ types and string limits are recorded in
 This is a finite Read Attributes profile. It does not implement all Basic
 attributes/commands or establish complete ZCL, Zigbee or cluster conformance.
 
+The finite global value codec admits boolean, uint8/16/32, int8/16 and short
+octet/character strings. Its exact type IDs, widths, non-values and endpoint
+vectors are pinned in
+[`zcl-global-r8.json`](../../../../packages/wotex-zigbee/test/support/profiles/zcl-global-r8.json),
+from revision 8 sections 2.6.2.1–2, 2.6.2.5, 2.6.2.7–8 and 2.6.2.13–14.
+Standard non-values decode as `:null`, retaining the original bytes in `raw`:
+boolean `0xFF`, all-one unsigned values, the high-bit-only signed values and
+short-string length `0xFF`. Other boolean values outside zero/one are malformed.
+Failed read status, a successful null, an empty string and an unsupported type
+remain distinct. Short strings retain encoded bytes; character interpretation
+belongs to the selected descriptor/profile. Basic inspection applies its own
+UTF-8 and 32-byte string limits.
+
+Some attribute definitions admit the full numeric range rather than use the
+type's non-value. `ZCL.decode_attributes/3` takes an explicit list of at most
+32 distinct numeric attribute IDs for that adopted policy. For those IDs the
+otherwise reserved encoding retains its integer value. No cluster or
+manufacturer label infers this choice. Selection for a successful nonnumeric
+record is refused. Truncated known values fail rather than become null.
+An unsupported type has no admitted width: retain the whole remaining payload
+as that record's opaque `raw` tail and infer no later record boundaries.
+
 Read/write responses, default responses, unsolicited reports and command outcomes retain source and trust. Configure reporting/binding only under an explicit consumer request, with record-by-record success/failure. Retries are profile-sensitive; a failed write must not be silently repeated as a different command.
 
 ## Sleepy endpoints and freshness
@@ -93,5 +115,9 @@ and selected Basic record negatives of WZG2-T6. `routes_test.exs` and
 `routes_owner_test.exs` execute raw-identity/rejoin/conflict custody in WZG2-T2
 and host epoch/time/sequence fencing with unchanged security disposition in
 WZG2-T3. The scripted peer exercises interview adoption, source resolution and
-guarded AF sends. Joining, sleepy policy, physical rejoin/source security,
-network continuity and administration remain outstanding.
+guarded AF sends. `zcl_test.exs` executes the pinned non-value/endpoint vectors
+for read responses and reports, explicit full-range policy, malformed policy,
+forbidden booleans, truncation, string bounds and opaque tails in WZG2-T6.
+`interview_owner_test.exs` retains numeric Basic nulls as partial evidence.
+Joining, sleepy policy, physical rejoin/source security, network continuity
+and administration remain outstanding.

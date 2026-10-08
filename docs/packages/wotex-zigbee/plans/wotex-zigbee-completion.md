@@ -1,11 +1,14 @@
 # Wotex Zigbee completion contract
 
-Version: 0.4.0. The catalogue is authoritative for implementation status.
+Version: 0.6.0. The catalogue is authoritative for implementation status.
 
 ## Delivered software slice
 
 - TI CC26x2 SDK 2.30.00.34 ZNP Monitor/Test framing (SWRA198 revision 1.14),
   exact `SYS_VERSION` admission, one explicit owner and finite queues.
+  Startup preserves one deadline through serial open/write/version delivery,
+  monitors negotiating callers and redacts callback failures. Explicit close
+  reports failure and attempts acquired-port cleanup once.
 - Non-administrative IEEE identity, node, active-endpoint, simple-descriptor and AF data requests.
   Synchronous reply and later indications remain distinct. Finite ZDO
   identity and descriptor responses decode into typed values. The owner
@@ -17,8 +20,10 @@ Version: 0.4.0. The catalogue is authoritative for implementation status.
 - Selected Basic client reads are pinned to ZCL document 07-5123 revision 8,
   with source provenance and independently framed scripted-peer tests.
 - Bounded ZCL global Read Attributes request and response/report decoding for
-  an explicit scalar and short-string type subset. Unknown types remain
-  opaque; malformed known types fail.
+  an explicit scalar and short-string type subset. Pinned revision 8
+  non-values remain null with their original bytes; adopted full-range numeric
+  attributes use explicit caller policy. Unknown widths retain the opaque
+  remainder; malformed known types fail.
 - Simulated serial peer with its own frame builder, malformed/fragmented byte
   tests, serial loss and timeout tests, coverage and pure-code benchmark.
 - `Circuits.UART` adapter for macOS/Linux with exact USB VID/PID/serial-number

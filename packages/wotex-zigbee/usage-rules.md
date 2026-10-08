@@ -36,5 +36,13 @@ catalogue records implementation status separately.
 - Treat incoming frames, manufacturer strings and security metadata as
   untrusted observations. Apply product and Thing policy outside this
   package. A successful radio command does not prove physical effect.
+- Preserve ZCL nulls, read failures, raw bytes and unsupported tails. Select
+  full-range numeric attribute IDs explicitly in `ZCL.decode_attributes/3`
+  only when the adopted definition uses that range. The codec does not infer
+  cluster or manufacturer semantics.
 - Use bounded deadlines and queues. A timeout ends the owner epoch so a
   delayed uncorrelated SRSP cannot satisfy a later command.
+- Keep serial open, version negotiation and callback cleanup within the
+  configured startup budget. A ready wait cannot renew that budget. An
+  adapter must clean up resources if open fails before returning a port.
+  Treat an explicit close error as unconfirmed adapter cleanup.

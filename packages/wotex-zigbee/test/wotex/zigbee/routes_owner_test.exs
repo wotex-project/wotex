@@ -117,12 +117,12 @@ defmodule Wotex.Zigbee.RoutesOwnerTest do
 
   test "owner observation sequence exhaustion fences the epoch without wrapping" do
     {handle, peer, _} = inspect_peer()
+    monitor = Process.monitor(handle.owner)
 
     :sys.replace_state(handle.owner, fn state ->
       %{state | observation_sequence: 0xFFFFFFFFFFFFFFFF}
     end)
 
-    monitor = Process.monitor(handle.owner)
     send(peer, {:inject, incoming()})
     assert_receive {:DOWN, ^monitor, :process, _, :normal}
     assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.handle(handle.owner)
