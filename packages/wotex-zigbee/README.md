@@ -8,7 +8,8 @@ Wotex Zigbee provides an explicit host boundary for a TI ZNP network
 co-processor. It frames Monitor/Test serial traffic, negotiates the exact
 firmware version, sends a small admitted set of ZDO and AF requests, and
 delivers bounded asynchronous indications. It also encodes finite ZCL global
-attribute reads and decodes attribute responses and reports.
+attribute reads, writes and reporting configuration, and decodes their
+responses and attribute reports.
 
 The package does not form a Zigbee network, keep network keys, or infer a
 device's physical state. Consumers supply hardware identity, network custody,
@@ -31,6 +32,9 @@ the package is loaded.
   and Report Attributes decoding for catalogued scalar and short string types.
   Revision 8 non-values remain null with their original bytes; full-range
   numeric attribute definitions require explicit decoder policy.
+- Inert ordinary Write Attributes, Configure Reporting and Read Reporting
+  Configuration requests with bounded scalar values and explicit intervals.
+  Source-matched responses preserve per-record outcomes and raw evidence.
 - `Wotex.Zigbee.interview/3` matches expected IEEE identity, node and endpoint
   descriptors, then reads selected Basic attributes under one overall deadline.
   The Basic read selection is pinned to ZCL document 07-5123 revision 8.
@@ -116,6 +120,27 @@ attribute IDs whose adopted cluster/manufacturer definition uses the full
 range, including the otherwise reserved encoding. Keep that policy explicit;
 the codec does not infer device semantics. Unsupported widths retain the
 remaining opaque payload without guessing later record boundaries.
+
+For an explicitly authorized write or reporting change, use
+`Wotex.Zigbee.ZCL.Configuration.write_attributes/4`,
+`configure_reporting/4` or `read_reporting/4`. Each returns an inert request
+with `payload` for a `DataRequest`. Retain both values, send through the
+current route table, and use `Configuration.observe/5` with the later source
+Event and monotonic milliseconds. It checks payload, custody, endpoints,
+cluster and ZCL header context and returns ordered peer-reported outcomes.
+Retain actual dispatch, NCP admission and APS confirmation separately. The
+consumer owns a finite correlation window and distinct transaction/sequence
+context; matching alone does not establish dispatch or prevent replay.
+
+Configure-send records specify `report_direction: :send`, `id`, `type`,
+`min_interval_s` and `max_interval_s`, plus integer `change` for analog types.
+Configure-receive records specify `report_direction: :receive`, `id` and
+`timeout_s`. Maximum `0xFFFF` disables reporting; minimum `0xFFFF` with maximum
+zero restores defaults. Both modes require analog change zero. Ordinary
+maximum zero retains change-based reporting. Binding destinations, cluster
+limits and battery policy belong to the consumer. A Default Response leaves
+records unconfirmed, even with success status. Inspect partial issues before
+accepting outcomes; construction and observation never retry or bind.
 
 An interview needs a route with no earlier ZDO query in that owner epoch.
 The owner retains at most 128 queried routes and retires Basic transaction

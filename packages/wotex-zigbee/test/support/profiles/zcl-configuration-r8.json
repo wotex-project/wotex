@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "source": {
+    "organization": "Zigbee Alliance",
+    "document": "07-5123",
+    "revision": "8",
+    "release": "December 2019",
+    "url": "https://csa-iot.org/wp-content/uploads/2022/01/07-5123-08-Zigbee-Cluster-Library-1.pdf",
+    "sha256": "ad536e1d95a40ca27532e360b124cd76a1b18d96398c1c19fd32fbf7dcdd1aa0",
+    "sections": ["2.5.3", "2.5.5", "2.5.7", "2.5.8", "2.5.9", "2.5.10", "2.5.12", "2.6.2"]
+  },
+  "adoption": {
+    "claim": "inert finite global write/reporting requests and source-matched observations; no device authorization, binding, radio qualification or complete ZCL conformance",
+    "max_records": 32,
+    "max_frame_bytes": 128,
+    "commands": {"write_attributes": 2, "write_response": 4, "configure_reporting": 6, "configure_response": 7, "read_reporting": 8, "read_reporting_response": 9, "default_response": 11},
+    "response_vectors": [
+      {"hex": "08070400", "command": "write_response", "aggregate": "all_success", "records": 0},
+      {"hex": "080704860100880200", "command": "write_response", "aggregate": "errors", "records": 2},
+      {"hex": "08070700", "command": "configure_response", "aggregate": "all_success", "records": 0},
+      {"hex": "0807078600010088010200", "command": "configure_response", "aggregate": "errors", "records": 2},
+      {"hex": "080709000001002100003c00020000010200000086000300", "command": "read_reporting_response", "aggregate": "records", "records": 3},
+      {"hex": "08070b0200", "command": "default_response", "aggregate": "default", "records": 0}
+    ]
+  },
+  "implementation": ["Wotex.Zigbee.ZCL.Configuration", "Wotex.Zigbee.ZCL.Configuration.Request", "Wotex.Zigbee.ZCL.Value"],
+  "evidence": ["test/wotex/zigbee/zcl_configuration_test.exs", "test/wotex/zigbee/zcl_configuration_owner_test.exs", "test/wotex/zigbee/zcl_value_test.exs"]
+}

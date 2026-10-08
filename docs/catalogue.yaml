@@ -440,7 +440,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-zigbee/specs/WZG.01-library-contract.md"
       - id: "WZG.02"
-        version: "0.6.0-target"
+        version: "0.7.0-target"
         implementation_status: "partial"
         path: "docs/packages/wotex-zigbee/specs/WZG.02-network-zcl.md"
       - id: "WZG.03"

@@ -1,6 +1,6 @@
 # Wotex Zigbee completion contract
 
-Version: 0.6.0. The catalogue is authoritative for implementation status.
+Version: 0.7.0. The catalogue is authoritative for implementation status.
 
 ## Delivered software slice
 
@@ -25,7 +25,17 @@ Version: 0.6.0. The catalogue is authoritative for implementation status.
   attributes use explicit caller policy. Unknown widths retain the opaque
   remainder; malformed known types fail.
 - Simulated serial peer with its own frame builder, malformed/fragmented byte
-  tests, serial loss and timeout tests, coverage and pure-code benchmark.
+  tests, serial loss and timeout tests and coverage. The pure-code benchmark
+  is a historical baseline; the changed ZCL codec and configuration profile
+  have not been benchmarked.
+- Inert revision 8 ordinary writes, send/receive reporting configuration and
+  reporting readback with finite records and exact frame budgets. Explicit
+  interval modes, scalar non-values and partial record outcomes retain raw
+  evidence. Source/header matching uses adopted custody and the original AF
+  context. Scripted peer tests distinguish dispatch, NCP admission, APS and
+  ZCL observations. The consumer owns authorization, a finite correlation
+  window and distinct transaction/sequence context; no binding or automatic
+  retry occurs.
 - `Circuits.UART` adapter for macOS/Linux with exact USB VID/PID/serial-number
   selection, exclusive open, post-open identity check, byte/error forwarding
   and owner-linked cleanup. A mocked UART exercises the adapter and an
@@ -56,10 +66,11 @@ Version: 0.6.0. The catalogue is authoritative for implementation status.
 
 1. Pin the adopted Zigbee core specification and qualify the finite ZCL
    revision 8 Basic read profile. Implement explicit joining,
-   record-by-record reporting/binding and sleepy-device freshness policy.
-   Bounded descriptor/Basic interviews, adopted route custody and duplicate
-   identity handling are implemented in software; physical qualification
-   remains outstanding.
+   binding and sleepy-device freshness policy. Bounded descriptor/Basic
+   interviews, adopted route custody, duplicate identity handling and finite
+   record-by-record writes/reporting configuration are implemented in software.
+   Physical qualification, binding destinations and power-policy evidence
+   remain outstanding.
 2. Implement network custody and backup/restore with key and counter
    continuity, old-coordinator isolation, explicit permit-join and no silent
    security downgrade. Exercise stale backups and concurrent coordinator

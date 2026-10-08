@@ -77,7 +77,9 @@ defmodule Wotex.Zigbee.Routes do
   @doc "Checks complete table fields and bounded entries after a consumer copies a value."
   @spec valid?(term()) :: boolean()
   def valid?(%__MODULE__{} = table) do
-    map_size(table) == 5 and is_reference(table.epoch) and
+    map_size(table) == 5 and
+      Enum.all?([:epoch, :capacity, :generation, :entries], &Map.has_key?(table, &1)) and
+      is_reference(table.epoch) and
       in_range?(table.capacity, 1, 1_024) and
       in_range?(table.generation, 0, @max_generation) and is_map(table.entries) and
       map_size(table.entries) <= table.capacity and

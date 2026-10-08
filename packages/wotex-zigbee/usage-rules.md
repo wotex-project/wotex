@@ -40,6 +40,18 @@ catalogue records implementation status separately.
   full-range numeric attribute IDs explicitly in `ZCL.decode_attributes/3`
   only when the adopted definition uses that range. The codec does not infer
   cluster or manufacturer semantics.
+- Authorize writes and reporting changes explicitly before putting a
+  `Wotex.Zigbee.ZCL.Configuration` request payload in a `DataRequest`.
+  Retain both values and actual send/NCP/APS observations. Use `observe/5`
+  with current custody for source/header matching and ordered record outcomes;
+  the consumer owns finite deadlines and distinct transaction/sequence context.
+  Matching alone does not prove dispatch or prevent replay. Default Responses,
+  ambiguous omissions and unsupported configurations remain unconfirmed.
+- Set send/receive reporting intervals explicitly and qualify cluster limits,
+  binding destinations and battery impact. Maximum `0xFFFF` disables reporting;
+  minimum `0xFFFF` with maximum zero restores defaults. Both modes require
+  analog change zero. No retry, binding or polling follows from construction
+  or observation.
 - Use bounded deadlines and queues. A timeout ends the owner epoch so a
   delayed uncorrelated SRSP cannot satisfy a later command.
 - Keep serial open, version negotiation and callback cleanup within the

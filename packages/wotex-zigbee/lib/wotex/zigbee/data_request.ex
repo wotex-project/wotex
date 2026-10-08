@@ -77,7 +77,9 @@ defmodule Wotex.Zigbee.DataRequest do
   @doc "Checks a request again after a caller has copied or modified its struct."
   @spec valid?(term()) :: boolean()
   def valid?(%__MODULE__{} = request) do
-    valid_target?(request) and valid_transfer?(request)
+    map_size(request) == length(@allowed) + 1 and
+      Enum.all?(@allowed, &Map.has_key?(request, &1)) and
+      valid_target?(request) and valid_transfer?(request)
   end
 
   def valid?(_), do: false

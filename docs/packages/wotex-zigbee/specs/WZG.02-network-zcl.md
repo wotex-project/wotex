@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.6.0-target. The catalogue records implementation status separately.
+Version: 0.7.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -98,6 +98,76 @@ as that record's opaque `raw` tail and infer no later record boundaries.
 
 Read/write responses, default responses, unsolicited reports and command outcomes retain source and trust. Configure reporting/binding only under an explicit consumer request, with record-by-record success/failure. Retries are profile-sensitive; a failed write must not be silently repeated as a different command.
 
+`Wotex.Zigbee.ZCL.Value` encodes the same finite value subset. Standard
+non-values require explicit `:null`; the otherwise reserved integer requires
+numeric `full_range: true`. Full-range policy excludes null and applies only
+when the adopted attribute definition permits it. Values outside their width
+are refused without wrapping or coercion. Short strings admit at most 64
+encoded bytes; boolean input is `true`, `false` or `:null`.
+
+`Wotex.Zigbee.ZCL.Configuration` builds inert ordinary Write Attributes,
+Configure Reporting and Read Reporting Configuration requests, pinned to
+revision 8 sections 2.5.3, 2.5.5, 2.5.7–10 and 2.5.12. The reviewed source
+digest, command IDs, limits and response vectors are recorded in
+[`zcl-configuration-r8.json`](../../../../packages/wotex-zigbee/test/support/profiles/zcl-configuration-r8.json).
+Every request retains its command, byte sequence, header direction,
+optional uint16 manufacturer code, canonical records and exact payload.
+Admit 1–32 distinct records and at most 128 bytes including the complete
+header. Refuse unknown fields, unsupported write types, malformed values,
+duplicate keys and frame overflow. Do not chunk, dispatch, retry or select
+undivided/no-response writes implicitly.
+
+Write records contain `id`, `type`, `value` and optional numeric `full_range`
+policy. Reporting records use a separate `report_direction`: `:send` (wire
+zero) identifies reports sent by the addressed cluster; `:receive` (wire one)
+identifies reports it expects. This is independent of the ZCL header
+direction. Configure-send records contain type and uint16 minimum/maximum
+seconds, with integer change only for admitted analog types. Discrete types
+omit change. Configure-receive records contain only ID, direction and uint16
+timeout seconds. Configure/read keys are `{report_direction, id}`; writes
+key by ID.
+
+Minimum zero imposes no lower reporting interval. A nonzero maximum must be
+at least the minimum. Maximum `0xFFFF` disables reports. Minimum `0xFFFF`
+with maximum zero requests the cluster defaults. Both special modes require
+analog change zero on transmission. Other maximum-zero configurations retain
+change-based reporting without periodic reporting. Signed changes retain
+their bytes; revision 8 specifies that the receiver ignores their sign.
+Receive timeout zero disables that reporting timeout. Binding destinations,
+cluster-specific limits, authorization and power policy remain explicit
+consumer responsibilities.
+
+Response decoding preserves the exact bytes, header, record order and
+duplicates. Write/configure success is exactly one zero-status byte with no
+record keys. Otherwise those responses contain only failure records. A read
+configuration response retains each key, status and send/receive fields;
+failures omit configuration. Unconfigured analog change retains standard
+null and raw bytes. Unknown types retain the whole remaining configuration
+tail, after checking the fixed interval fields exist; no later record
+boundaries are inferred. Malformed or oversized frames and reserved record
+directions fail. Observed interval values are evidence, not an approved
+configuration to retransmit.
+
+`Configuration.observe/5` requires a complete valid request and AF context
+with identical payload, current route custody and matching AF source,
+remote/local endpoints and cluster. The ZCL response must match command,
+sequence, manufacturer code and inverse header direction. Retain the exact
+original Event, its security disposition, raw response and caller correlation.
+Return outcomes in original request order. Aggregate success establishes
+peer-reported success for those records. A failure-only response implies
+success for omitted keys only when all response keys are expected and
+distinct. Duplicate/unexpected failures leave omissions unconfirmed. Missing
+read records, duplicate records and unsupported configurations remain
+unconfirmed. Default Responses retain command status and leave every record
+unconfirmed, including status zero. No response failure triggers a retry.
+
+This pure matching API does not establish that the request was dispatched.
+The consumer owns the finite operation deadline, fresh AF transaction/ZCL
+sequence context and actual send, NCP admission and APS observations. Reused
+context can match an old response. A matching record is no proof of radio
+replay protection, authentication, consumer authorization or physical effect.
+The profile supplies no binding, joining or autonomous transaction lifecycle.
+
 ## Sleepy endpoints and freshness
 
 **WZG2-05.** Model expected reporting/check-in behavior and bound queued downlinks. No fixed short inactivity timeout for every end device. A quiet battery device is not immediately offline; freshness and reachability are separate. Reporting interval changes have power implications and require qualified consumer policy. Do not poll to make a dashboard appear live.
@@ -119,5 +189,14 @@ guarded AF sends. `zcl_test.exs` executes the pinned non-value/endpoint vectors
 for read responses and reports, explicit full-range policy, malformed policy,
 forbidden booleans, truncation, string bounds and opaque tails in WZG2-T6.
 `interview_owner_test.exs` retains numeric Basic nulls as partial evidence.
+`zcl_value_test.exs` executes pinned scalar endpoints/non-values for encoding,
+explicit full-range policy and refusal of overflow/coercion.
+`zcl_configuration_test.exs` executes write/configure/read wire vectors,
+complete-frame budgets, reporting modes, fixed-field truncation, record
+ambiguity, Default Responses and source/header/request mismatch negatives.
+`zcl_configuration_owner_test.exs` independently frames all three requests
+and responses through the serial owner after interview and route adoption;
+NCP admission, APS confirmation and unchanged-source ZCL observations remain
+separate. These tests cover the finite write/reporting subset of WZG2-T6.
 Joining, sleepy policy, physical rejoin/source security, network continuity
-and administration remain outstanding.
+binding and administration remain outstanding.
