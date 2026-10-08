@@ -1,6 +1,6 @@
 # Wotex Zigbee completion contract
 
-Version: 0.9.0. The catalogue is authoritative for implementation status.
+Version: 1.2.0. The catalogue is authoritative for implementation status.
 
 ## Delivered software slice
 
@@ -59,6 +59,26 @@ Version: 0.9.0. The catalogue is authoritative for implementation status.
   custody and use absolute receiver deadlines through mailbox and serial
   delivery. No automatic wakeup, polling, retry or reachability claim occurs.
 
+- Finite revision 8 Poll Control Check-in and four explicit client command
+  codecs preserve quarterseconds, optional default-response flags and exact
+  bytes. Source/custody checks preserve Check-in metadata and a bounded host
+  response window. Scripted serial evidence distinguishes NCP admission from
+  Default Responses; no automatic response, binding or wakefulness claim occurs.
+
+- Consumer-owned expected reporting/Check-in cadence with explicit per-stream
+  intervals and grace, long-period, on-change and disabled modes. Source-checked
+  observations preserve raw Events, nulls and partial records; delayed consumption
+  does not renew a deadline. Bounded tables, host ordering and explicit owner
+  rebind preserve history without an offline claim, polling or delivery side effect.
+
+- Explicit source-guarded Bind/Unbind with explicit consumer-selected targets,
+  fixed 23-byte MT layouts resolved against the exact SDK parser, one deadline
+  and caller monitor, separate NCP/peer observations and partial unconfirmed
+  outcomes. The finite per-epoch retirement table prevents route/operation
+  reuse because callbacks omit the ZDO transaction. Scripted serial tests cover
+  reply ordering, refusal, timeout/loss, redacted faults and cleanup. No binding
+  follows automatically from an interview or reporting configuration.
+
 ## Required for WZG.01 completion
 
 1. Qualify the `Circuits.UART` adapter on macOS and a Nerves target against
@@ -75,9 +95,11 @@ Version: 0.9.0. The catalogue is authoritative for implementation status.
 
 1. Pin the adopted Zigbee core specification and qualify the finite ZCL
    revision 8 Basic read profile. Implement explicit joining,
-   binding and sleepy-device freshness policy. Bounded descriptor/Basic
+   then qualify consumer sleepy-device power policy. Bounded descriptor/Basic
    interviews, adopted route custody, duplicate identity handling and finite
-   record-by-record writes/reporting configuration are implemented in software.
+   record-by-record writes/reporting configuration, expected reporting/Check-in
+   cadence, bounded downlinks and explicit finite Bind/Unbind workflows are
+   implemented in software.
    Physical qualification, binding destinations and power-policy evidence
    remain outstanding.
 2. Implement network custody and backup/restore with key and counter

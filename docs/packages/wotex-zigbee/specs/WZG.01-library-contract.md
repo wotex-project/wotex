@@ -1,6 +1,6 @@
 # WZG.01 — Coordinator host boundary
 
-Version: 0.9.0-target. The catalogue records implementation status; hardware
+Version: 0.10.0-target. The catalogue records implementation status; hardware
 qualification is separate.
 
 ## NCP architecture
@@ -175,6 +175,43 @@ through an independently framed peer and checks mailbox expiry, timeout after
 writing, copied/future/old-epoch receipts and current-custody rejection.
 Physical sleepy/check-in and battery qualification remain outstanding.
 
+`Wotex.Zigbee.change_binding/4` owns one explicit Bind/Unbind workflow under
+current supplied source custody. `Wotex.Zigbee.Binding` requires operation,
+raw source IEEE, unicast route, source endpoint, cluster, IEEE/endpoint or
+group target and 1–64 host correlation bytes. Revalidate the complete request
+and ledger at the receiver, using `Routes.check_peer/5`, and clamp the absolute
+deadline to custody expiry. Source IEEE is transmitted in the defined MT field;
+host correlation is not transmitted. The ordinary command seam continues to
+reject raw Bind/Unbind frames.
+
+The workflow holds admission after its SRSP while awaiting the peer callback.
+Ordinary commands, interviews and another binding receive `overload`; unrelated
+AREQs remain in the finite queue. One caller monitor and timer cover both reply
+orders. `Binding.Result` retains NCP admission and a matching source/operation
+Event separately. NCP rejection returns an unconfirmed result even if a success
+callback arrived first. Malformed SRSP, timeout after dispatch, serial failure
+or caller loss closes the owner and retains available evidence. Refusal before
+dispatch leaves the owner usable and does not retire an unused pair.
+
+The finite profile follows SWRA198 revision 1.14 sections 3.12.1.14–15 and
+3.12.2.13–14, with an exact SDK source resolution recorded in
+[`zdo-binding-mt-r1.14.json`](../../../../packages/wotex-zigbee/test/support/profiles/zdo-binding-mt-r1.14.json).
+Both `MT_ZdoBindRequest` and `MT_ZdoUnbindRequest` in SDK 2.30.00.34 read a
+fixed eight-byte destination and endpoint, contrary to the document's
+variable-width usage grid. Both MT payloads are 23 bytes. Group mode one
+places its uint16 identifier in the low two bytes, zeroes the other six and
+uses endpoint zero. IEEE mode three carries all eight bytes and endpoint
+1–240. There is no automatic layout guessing or generic raw ZDO fallback.
+
+The callback retains only source/status and drops the ZDO sequence. It echoes
+no endpoint, cluster, destination or host token and carries no security flag.
+Retire each `{operation, route}` on dispatch or valid callback observation,
+including unsolicited observations, in a table of at most 256 pairs per epoch.
+Repeated pairs receive `correlation_exhausted`; new pairs at capacity receive
+`overload` without dispatch. This prevents later host requests from consuming
+a callback from an earlier request within that epoch. Reuse requires a fresh
+owner and fresh custody; neither supplies radio authentication or replay proof.
+
 ## Acceptance
 
 WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: serial fragmentation, garbage, async reordering and finite budgets. WZG1-T3: command/reply versus later confirmation distinction. WZG1-T4: USB removal, stale handles and recovery without forming a new network. WZG1-T5: macOS and Nerves-compatible serial adapters exercise the same neutral contract. WZG1-T6: vendor profiles remain consumer-owned and no external home-automation daemon is required.
@@ -190,3 +227,4 @@ WZG1-T1: constructor purity and unsupported backend/version errors. WZG1-T2: ser
 | Identity and node queries | `command_test.exs`, `zdo_test.exs` and `owner_test.exs` cover exact request bytes, bounded identity/node values, failed/malformed replies, independently framed later responses and owner rejection of uncatalogued commands. | Exact real firmware layouts and physical interview qualification. |
 | Bounded interview | `interview_test.exs` and `interview_owner_test.exs` cover the independently framed workflow, early responses, duplicate lists/records, wrong sources, identity conflict, partial failures, one deadline, caller death, real route/token exhaustion and a new route for the same IEEE. `owner_test.exs` covers queued late SRSPs and delayed/failed serial callbacks. | Physical firmware and endpoint qualification, credential port and network administration. |
 | Adopted route custody | `routes_test.exs` covers rejoin, conflict quarantine at capacity, expiry, stale evidence, sequence order and epoch replacement. `routes_owner_test.exs` executes an independently framed interview, guarded AF admission, unchanged source security metadata, rejection before I/O, queued expiry and timeout after dispatch. It sets the sequence to its bound to exercise exhaustion; it does not execute that many observations. | Physical rejoin/source qualification, radio authentication and replay disposition from the selected stack. |
+| Explicit binding ownership | `binding_test.exs` executes reviewed fixed-layout request/callback vectors and rejects malformed/copied inputs. `binding_owner_test.exs` exercises independent bytes, both observation orders, NCP rejection, peer failure, unrelated/duplicate events, mailbox/custody expiry, caller loss, malformed replies, redacted write faults, close/loss and actual 256-pair retirement with queue overflow. `routes_test.exs` covers source selector/custody refusal. | Exact physical firmware and qualified IEEE/group destinations, binding-table truth and sleepy-device power policy. |

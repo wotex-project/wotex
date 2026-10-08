@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "source": {
+    "organization": "Texas Instruments",
+    "document": "SWRA198 Monitor/Test API",
+    "revision": "1.14",
+    "sdk": "SimpleLink CC26x2 SDK 2.30.00.34",
+    "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/docs/zstack/Z-Stack%20Monitor%20and%20Test%20API.pdf",
+    "sha256": "1e4924ec73ea2c71fb36971b4fddc5eef34cbe4fdd53ca66f295cda3411ffb13",
+    "sections": [
+      "3.12.1.14",
+      "3.12.1.15",
+      "3.12.2.13",
+      "3.12.2.14"
+    ],
+    "sdk_source": {
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/simplelink_cc26x2_sdk_2_30_00_34.exe",
+      "sha256": "cebe6961f35b053375b42045d986d3828515e19eff765b745d0d807e1127341d",
+      "path": "source/ti/zstack/mt/mt_zdo.c",
+      "sha256_file": "263edbd0de076c4f2bfcd5de1709378467adeb9590e0d82b4f2c7fddefa5ee98",
+      "functions": [
+        "MT_ZdoBindRequest",
+        "MT_ZdoUnbindRequest",
+        "MT_ZdoDirectCB"
+      ],
+      "review": "Exact SDK parsers advance eight bytes for destination in both modes and read the endpoint byte. Group destinations use the low two address bytes, six zero padding bytes and endpoint zero. This 23-byte MT layout resolves the document usage grid (2/8 address bytes, 0/1 endpoint bytes), which disagrees with the source. Direct callbacks drop the ZDO sequence and prepend source address to the response body. No SDK source code is redistributed."
+    }
+  },
+  "adoption": {
+    "claim": "finite explicit Bind/Unbind software profile with current source custody, separate NCP admission and source/status callbacks; no complete Zigbee conformance or physical binding qualification",
+    "request_payload_bytes": 23,
+    "retired_route_operation_pairs": 256,
+    "correlation": "Callbacks expose source address and status only. The defined Bind/Unbind request and SRSP expose no assigned ZDO sequence or echoed binding fields. Host correlation is not transmitted. Each route/operation pair is retired on dispatch or a valid callback observation for the owner epoch. Generic raw ZDO transmission and generic callback registration are outside this finite profile.",
+    "requests": [
+      {
+        "operation": "bind",
+        "target": "ieee",
+        "payload_hex": "3412080706050403020101060003010203040506070802",
+        "wire_hex": "fe172521341208070605040302010106000301020304050607080233"
+      },
+      {
+        "operation": "bind",
+        "target": "group",
+        "payload_hex": "3412080706050403020101060001452300000000000000",
+        "wire_hex": "fe17252134120807060504030201010600014523000000000000005d"
+      },
+      {
+        "operation": "unbind",
+        "target": "ieee",
+        "payload_hex": "3412080706050403020101060003010203040506070802",
+        "wire_hex": "fe172522341208070605040302010106000301020304050607080230"
+      },
+      {
+        "operation": "unbind",
+        "target": "group",
+        "payload_hex": "3412080706050403020101060001452300000000000000",
+        "wire_hex": "fe17252234120807060504030201010600014523000000000000005e"
+      }
+    ],
+    "responses": [
+      {
+        "operation": "bind",
+        "payload_hex": "341200",
+        "status": 0
+      },
+      {
+        "operation": "bind",
+        "payload_hex": "34128c",
+        "status": 140
+      },
+      {
+        "operation": "unbind",
+        "payload_hex": "341200",
+        "status": 0
+      },
+      {
+        "operation": "unbind",
+        "payload_hex": "34128c",
+        "status": 140
+      }
+    ]
+  },
+  "implementation": [
+    "Wotex.Zigbee.Binding",
+    "Wotex.Zigbee.Binding.Flow",
+    "Wotex.Zigbee.Binding.Result",
+    "Wotex.Zigbee.Owner",
+    "Wotex.Zigbee.Event"
+  ],
+  "evidence": [
+    "test/wotex/zigbee/binding_test.exs",
+    "test/wotex/zigbee/binding_owner_test.exs",
+    "test/wotex/zigbee/routes_test.exs",
+    "test/support/binding_serial.ex"
+  ]
+}

@@ -7,8 +7,9 @@ defmodule Wotex.Zigbee do
   `SYS_VERSION` before returning an opaque handle. A long-lived consumer may
   supervise `child_spec/2` and obtain its handle with `handle/1`.
 
-  The admitted software profile sends bounded ZDO descriptor requests and AF
-  data requests. Their immediate SRSPs prove NCP admission only. Later ZDO,
+  The admitted software profile sends bounded ZDO descriptor requests, AF
+  data requests and explicit source-guarded Bind/Unbind workflows. Their
+  immediate SRSPs prove NCP admission only. Later ZDO,
   APS and application indications are separate bounded events. No implicit
   network formation, reset, restore or retry occurs.
 
@@ -23,6 +24,7 @@ defmodule Wotex.Zigbee do
   """
 
   alias Wotex.Zigbee.{
+    Binding,
     Command,
     Config,
     DataRequest,
@@ -75,6 +77,28 @@ defmodule Wotex.Zigbee do
   """
   @spec interview(Handle.t(), Interview.t(), pos_integer()) :: result(Interview.Result.t())
   def interview(handle, request, timeout), do: Owner.call(handle, :interview, [request, timeout])
+
+  @doc """
+  Performs one explicitly authorized Bind/Unbind under current source custody.
+
+  Keep NCP admission and the matched peer status separate in
+  `Wotex.Zigbee.Binding.Result`. The receiver validates the complete request
+  and current route, clamps the absolute deadline to custody expiry and owns
+  one caller monitor through both observations. Rejection before dispatch
+  leaves the owner usable; timeout, caller loss or serial failure after
+  dispatch ends the epoch without resetting the network.
+
+  This MT callback lacks echoed binding fields and an independent host token.
+  Each route/operation pair is retired on dispatch or callback observation;
+  repeating it requires a fresh owner and custody. The finite retirement table
+  admits 256 pairs. Consumer destination/battery qualification and actual
+  reporting remain separate; no retry, automatic binding or interval change
+  occurs.
+  """
+  @spec change_binding(Handle.t(), Routes.t(), Binding.t(), pos_integer()) ::
+          result(Binding.Result.t())
+  def change_binding(handle, routes, request, timeout),
+    do: Owner.call(handle, :binding, [routes, request, timeout])
 
   @doc "Queries one route's IEEE address; NCP admission and its later identity response are distinct."
   @spec ieee_address(Handle.t(), non_neg_integer(), pos_integer()) :: result(Reply.t())

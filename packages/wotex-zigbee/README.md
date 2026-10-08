@@ -45,6 +45,9 @@ the package is loaded.
 - `Wotex.Zigbee.Routes` explicitly adopts complete interviews into a bounded
   consumer-owned IEEE ledger. Guarded AF sends and source resolution check
   epoch, custody expiry and route; rejoin and conflicts stay visible.
+- Explicit `ZDO_BIND_REQ` and `ZDO_UNBIND_REQ` workflows check current source
+  custody and retain NCP admission separately from a matched source/status
+  callback. IEEE and group destinations use the exact SDK's fixed MT layout.
 
 `Wotex.Zigbee.Serial.CircuitsUART` is the included macOS/Linux serial adapter.
 It uses `Circuits.UART` and requires the coordinator's USB serial number,
@@ -176,6 +179,56 @@ The receiver preserves the supplied absolute deadline through mailbox waits.
 Retain NCP/APS/ZCL outcomes separately and allocate fresh correlation context.
 Selection never infers check-in, wakefulness, delivery or offline status and
 never retries or retargets a request.
+
+`Wotex.Zigbee.ZCL.PollControl` recognizes a finite revision 8 Check-in and
+builds explicit Check-in Response, Fast Poll Stop and long/short poll interval
+commands. The arguments are quarterseconds; `quarterseconds_to_ms/1` converts
+them exactly. Zero Check-in Response timeout selects the server's default;
+it does not grant an unlimited host window. Put authorized command bytes in a
+`DataRequest` separately. `observe_checkin/3` retains the source Event under
+current custody and bounds the host response window from its observation.
+The window and any Default Response prove no wakefulness or delivery.
+Qualify binding destinations, optional server limits and battery policy;
+construction and observation never send a response automatically.
+
+For expected packet cadence, arm a `Wotex.Zigbee.Freshness.Policy.report/1`
+or `checkin/1` in a `Wotex.Zigbee.Freshness` table for the current owner epoch.
+Supply raw IEEE identity, remote/local endpoints, a qualified
+`expected_interval_ms` and optional `grace_ms`; reports also select cluster,
+attribute ID, type and header context. Reports can use `:on_change`; either
+stream can use `:disabled`, with zero grace and no periodic deadline. Observe
+actual source-checked Events with `Freshness.observe/4`, then evaluate
+`snapshot/2` using explicit monotonic milliseconds. Retain every returned
+table, including snapshots. Delayed consumption uses the owner's original
+observation time. Nulls renew packet cadence while retaining unavailable data;
+duplicate, wrong-type and opaque records do not renew it. A late window proves
+no offline state, wakefulness or physical Property truth. Explicit owner
+rebind clears current receipts, preserves bounded history and requires fresh
+custody. Cadence inspection neither polls nor attempts a queued delivery.
+
+After authorizing and qualifying a binding destination, construct
+`Wotex.Zigbee.Binding.new/1` with explicit `operation: :bind` or `:unbind`,
+raw eight-byte `peer_ieee`, current `route_address`, `source_endpoint`,
+`cluster`, `target` and opaque `correlation_id`. The target is
+`{:ieee, raw_eight_bytes, endpoint}` or `{:group, group_id}`. Pass the inert
+request and current route table to `Wotex.Zigbee.change_binding/4`.
+`Wotex.Zigbee.Binding.Result` retains the request, NCP admission and matched
+peer Event under one deadline bounded by custody expiry. An early callback
+cannot override NCP rejection. A peer status proves no future report delivery,
+power-policy suitability or physical effect; this callback carries no security
+flag or echoed binding fields.
+
+The exact SDK parser uses a 23-byte MT request in both modes, including six
+zero address-padding bytes and endpoint zero for groups. This resolves a
+disagreement in the revision 1.14 document's variable-width usage grid.
+The defined callbacks omit the ZDO transaction byte, so each route/operation
+pair is retired on dispatch or valid callback observation for the owner epoch.
+At most 256 pairs are retained; reuse fails with `correlation_exhausted` and
+new pairs at capacity fail with `overload`. A fresh owner and fresh source
+custody are required for reuse. This host fence does not establish radio
+freshness. Timeout or caller loss after dispatch closes the owner without
+resetting the network. Interview, reporting and Check-in observation never
+create a binding automatically.
 
 ## Development
 

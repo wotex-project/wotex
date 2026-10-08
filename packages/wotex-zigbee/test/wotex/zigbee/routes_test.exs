@@ -255,6 +255,59 @@ defmodule Wotex.Zigbee.RoutesTest do
              Routes.resolve(table, %{report | owner_sequence: 10}, 10)
   end
 
+  test "explicit peer operations require current unexpired and unconflicted custody" do
+    epoch = make_ref()
+    {:ok, table} = Routes.new(epoch)
+    {:ok, table} = Routes.adopt(table, proof(epoch), 10, 30)
+    assert {:ok, 40} = Routes.check_peer(table, @first, 0x1234, epoch, 39)
+
+    assert {:error, %Error{kind: :route_expired}} =
+             Routes.check_peer(table, @first, 0x1234, epoch, 40)
+
+    assert {:error, %Error{kind: :route_mismatch}} =
+             Routes.check_peer(table, @first, 0x5678, epoch, 11)
+
+    assert {:error, %Error{kind: :unknown_route}} =
+             Routes.check_peer(table, @second, 0x1234, epoch, 11)
+
+    assert {:error, %Error{kind: :stale_epoch}} =
+             Routes.check_peer(table, @first, 0x1234, make_ref(), 11)
+
+    assert {:error, %Error{kind: :route_conflict}, conflicted} =
+             Routes.adopt(table, proof(epoch, @second), 11, 30)
+
+    assert {:error, %Error{kind: :route_conflict}} =
+             Routes.check_peer(conflicted, @first, 0x1234, epoch, 11)
+
+    next = make_ref()
+    {:ok, rebound} = Routes.rebind(table, next)
+
+    assert {:error, %Error{kind: :stale_epoch}} =
+             Routes.check_peer(rebound, @first, 0x1234, next, 11)
+  end
+
+  test "explicit peer selectors and copied tables are validated without leaking input" do
+    epoch = make_ref()
+    {:ok, table} = Routes.new(epoch)
+    {:ok, table} = Routes.adopt(table, proof(epoch), 10, 30)
+
+    for {ieee, route, now} <- [
+          {nil, 0x1234, 11},
+          {"credential-canary", 0x1234, 11},
+          {@first, 0xFFF8, 11},
+          {@first, 0x1234, nil},
+          {@first, 0x1234, 9}
+        ] do
+      assert {:error, %Error{} = error} = Routes.check_peer(table, ieee, route, epoch, now)
+      refute inspect(error) =~ "credential-canary"
+    end
+
+    for copied <- [nil, Map.put(table, :key, "credential-canary"), Map.delete(table, :capacity)] do
+      assert {:error, %Error{kind: :invalid_value}} =
+               Routes.check_peer(copied, @first, 0x1234, epoch, 11)
+    end
+  end
+
   defp proof(epoch, ieee \\ @first, route \\ 0x1234, observed \\ 10) do
     response = %Event{
       kind: :zdo_ieee_address,

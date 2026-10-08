@@ -4,7 +4,7 @@ The development package implements a bounded TI ZNP host slice and a finite
 ZCL global attribute codec. Consumer profiles retain device-family semantics.
 
 - [WZG.01 — Coordinator host](WZG.01-library-contract.md), 0.9.0-target.
-- [WZG.02 — Network continuity and ZCL](WZG.02-network-zcl.md), 0.8.0-target.
+- [WZG.02 — Network continuity and ZCL](WZG.02-network-zcl.md), 0.10.0-target.
 - [WZG.03 — Hardware evidence](WZG.03-hardware-evidence.md), 0.2.0-target.
 - [Catalogue](catalogue.yaml).
 

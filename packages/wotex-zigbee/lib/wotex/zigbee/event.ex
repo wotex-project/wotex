@@ -6,7 +6,7 @@ defmodule Wotex.Zigbee.Event do
   messages preserve source address, cluster, link quality and the NCP's
   reported security flag. That flag is metadata, not consumer authorization
   or independent cryptographic attestation. Active-endpoint and simple
-  descriptor, IEEE identity and node ZDO replies have typed payloads;
+  descriptor, IEEE identity, node and Bind/Unbind ZDO replies have typed payloads;
   uncatalogued AREQs stay opaque.
 
   The owner stamps `owner_epoch`, `received_at_ms` and `owner_sequence` when
@@ -15,7 +15,7 @@ defmodule Wotex.Zigbee.Event do
   custody fencing and do not authenticate network origin or radio freshness.
   """
 
-  alias Wotex.Zigbee.{Frame, ZDO}
+  alias Wotex.Zigbee.{Binding, Frame, ZDO}
 
   @enforce_keys [:kind, :subsystem, :id, :payload]
   defstruct [
@@ -45,6 +45,8 @@ defmodule Wotex.Zigbee.Event do
             | :zdo_node_descriptor
             | :zdo_active_endpoints
             | :zdo_simple_descriptor
+            | :zdo_bind
+            | :zdo_unbind
             | :zdo_indication
             | :malformed_indication
             | :unknown_indication,
@@ -67,6 +69,7 @@ defmodule Wotex.Zigbee.Event do
             | ZDO.simple_response()
             | ZDO.ieee_response()
             | ZDO.node_response()
+            | Binding.response()
             | nil
         }
 
@@ -123,6 +126,12 @@ defmodule Wotex.Zigbee.Event do
 
   def from_frame(%Frame{type: :areq, subsystem: 5, id: 0x85} = frame),
     do: zdo_event(frame, :zdo_active_endpoints, ZDO.active_endpoints(frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0xA1} = frame),
+    do: zdo_event(frame, :zdo_bind, Binding.response(:bind, frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0xA2} = frame),
+    do: zdo_event(frame, :zdo_unbind, Binding.response(:unbind, frame.payload))
 
   def from_frame(%Frame{type: :areq, subsystem: 5} = frame),
     do: %__MODULE__{kind: :zdo_indication, subsystem: 5, id: frame.id, payload: frame.payload}

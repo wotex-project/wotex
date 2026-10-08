@@ -173,6 +173,31 @@ defmodule Wotex.Zigbee.Routes do
 
   def resolve(_, _, _), do: failure(:invalid_value)
 
+  @doc """
+  Checks an explicit raw IEEE peer and unicast route in current receiver custody.
+
+  Return the custody expiry for an explicitly selected peer operation. This
+  supplies host mapping only; it grants no permission to configure a device
+  or select a binding destination. Immutable old tables cannot observe newer
+  consumer decisions.
+  """
+  @spec check_peer(t(), binary(), non_neg_integer(), reference(), integer()) ::
+          {:ok, integer()} | {:error, Error.t()}
+  def check_peer(table, ieee, route, epoch, now) do
+    with :ok <- table_admission(table),
+         :ok <- same_epoch(table.epoch, epoch),
+         true <- valid_ieee?(ieee) and in_range?(route, 0, 0xFFF7),
+         {:ok, entry} <- peer_entry(table, ieee),
+         :ok <- usable(entry, epoch, now) do
+      if entry.route_address == route,
+        do: {:ok, entry.expires_at_ms},
+        else: failure(:route_mismatch)
+    else
+      false -> failure(:invalid_value)
+      error -> error
+    end
+  end
+
   @doc "Checks an AF request at a current receiver epoch and returns its custody expiry."
   @spec check_request(t(), DataRequest.t(), reference(), integer()) ::
           {:ok, integer()} | {:error, Error.t()}

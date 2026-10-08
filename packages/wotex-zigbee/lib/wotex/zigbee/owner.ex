@@ -5,8 +5,9 @@ defmodule Wotex.Zigbee.Owner do
   The owner accepts fragmented serial chunks, permits one outstanding SREQ,
   keeps AREQs in a finite queue and reports its overflow count. A command
   timeout ends the owner instead of matching a late SRSP to a later request.
-  A bounded interview holds that admission slot across all of its steps while
-  preserving unrelated indications. Caller death also ends a pending epoch.
+  A bounded interview or explicit binding workflow holds that admission slot
+  across its observations while preserving unrelated indications. Caller
+  death also ends a pending epoch.
   Neither startup nor timeout forms or resets a Zigbee network. The serial
   adapter and supervision policy belong to the consumer.
 
@@ -21,6 +22,7 @@ defmodule Wotex.Zigbee.Owner do
   use GenServer
 
   alias Wotex.Zigbee.{
+    Binding,
     Command,
     Config,
     Downlinks,
@@ -33,9 +35,11 @@ defmodule Wotex.Zigbee.Owner do
     Routes
   }
 
+  alias Wotex.Zigbee.Binding.Flow, as: BindingFlow
   alias Wotex.Zigbee.Interview.Flow
 
   @max_query_routes 128
+  @max_binding_pairs 256
 
   @doc """
   Negotiates an owner and links it to this caller before delivering the handle.
@@ -100,7 +104,7 @@ defmodule Wotex.Zigbee.Owner do
         timeout
       ])
       when is_pid(owner) and is_reference(epoch) and is_integer(limit) and limit > 0 and
-             operation in [:routed, :queued] do
+             operation in [:routed, :queued, :binding] do
     valid_timeout = is_integer(timeout) and timeout > 0
     wait = if valid_timeout, do: min(timeout, limit) + 100, else: limit + 100
     deadline = if valid_timeout, do: System.monotonic_time(:millisecond) + min(timeout, limit)
@@ -108,7 +112,7 @@ defmodule Wotex.Zigbee.Owner do
   end
 
   def call(_, operation, _)
-      when operation in [:command, :interview, :routed, :queued, :close, :drain],
+      when operation in [:command, :interview, :routed, :queued, :binding, :close, :drain],
       do: {:error, %Error{kind: :stale_handle, operation: operation}}
 
   def call(_, _, _), do: {:error, error(:invalid_command, :owner)}
@@ -242,7 +246,7 @@ defmodule Wotex.Zigbee.Owner do
       state.mode != :ready ->
         {:reply, {:error, error(:coordinator_lost, :command)}, state}
 
-      state.pending != nil or state.interview != nil ->
+      busy?(state) ->
         {:reply, {:error, error(:overload, :command)}, state}
 
       not valid_timeout?(timeout, state.config.timeout_ms) ->
@@ -311,6 +315,24 @@ defmodule Wotex.Zigbee.Owner do
       handle_call({:command, epoch, [frame, timeout, bounded]}, from, state)
     else
       failure -> {:reply, failure, state}
+    end
+  end
+
+  def handle_call({:binding, epoch, [routes, request, timeout, deadline]}, from, state) do
+    deadline = bounded_deadline(deadline, timeout, state.config.timeout_ms)
+
+    with :ok <- binding_admission(state, epoch, request, timeout, deadline, from),
+         {:ok, expiry} <-
+           Routes.check_peer(
+             routes,
+             request.peer_ieee,
+             request.route_address,
+             state.epoch,
+             System.monotonic_time(:millisecond)
+           ) do
+      send_binding(state, request, min(deadline, expiry), from)
+    else
+      {:error, _} = failure -> {:reply, failure, state}
     end
   end
 
@@ -407,6 +429,9 @@ defmodule Wotex.Zigbee.Owner do
       ),
       do: {:stop, :normal, end_interview(state, :timeout, true)}
 
+  def handle_info({:binding_timeout, reference}, %{binding: %{reference: reference}} = state),
+    do: {:stop, :normal, end_binding(state, :timeout, true)}
+
   def handle_info(
         {:DOWN, monitor, :process, _, _},
         %{pending: %{monitor: monitor}} = state
@@ -418,6 +443,9 @@ defmodule Wotex.Zigbee.Owner do
         %{interview: %{monitor: monitor}} = state
       ),
       do: {:stop, :normal, end_interview(state, :caller_lost, true)}
+
+  def handle_info({:DOWN, monitor, :process, _, _}, %{binding: %{monitor: monitor}} = state),
+    do: {:stop, :normal, end_binding(state, :coordinator_lost, true)}
 
   def handle_info(_, state), do: {:noreply, state}
 
@@ -489,13 +517,7 @@ defmodule Wotex.Zigbee.Owner do
           payload: frame.payload
         }
 
-        if state.interview do
-          flow = Flow.admit(state.interview.flow, reply)
-          progress_interview(%{state | pending: nil, interview: %{state.interview | flow: flow}})
-        else
-          GenServer.reply(pending.from, {:ok, reply})
-          clear_pending(state)
-        end
+        accept_admission(state, pending, reply)
     end
   end
 
@@ -514,6 +536,35 @@ defmodule Wotex.Zigbee.Owner do
         owner_sequence: state.observation_sequence
     }
 
+    state = remember_binding_callback(state, event)
+    accept_event(state, event)
+  end
+
+  defp accept_frame(_, state), do: state
+
+  defp accept_admission(%{interview: interview} = state, _, reply) when is_map(interview) do
+    flow = Flow.admit(interview.flow, reply)
+    progress_interview(%{state | pending: nil, interview: %{interview | flow: flow}})
+  end
+
+  defp accept_admission(%{binding: binding} = state, _, reply) when is_map(binding) do
+    flow = BindingFlow.admit(binding.flow, reply)
+    progress_binding(%{state | pending: nil, binding: %{binding | flow: flow}})
+  end
+
+  defp accept_admission(state, pending, reply) do
+    GenServer.reply(pending.from, {:ok, reply})
+    clear_pending(state)
+  end
+
+  defp accept_event(%{binding: binding} = state, event) when is_map(binding) do
+    case BindingFlow.offer(binding.flow, event) do
+      {:matched, flow} -> progress_binding(%{state | binding: %{binding | flow: flow}})
+      :unmatched -> enqueue_event(state, event)
+    end
+  end
+
+  defp accept_event(state, event) do
     if state.interview do
       case Flow.offer(state.interview.flow, event) do
         {:matched, flow} ->
@@ -526,8 +577,6 @@ defmodule Wotex.Zigbee.Owner do
       enqueue_event(state, event)
     end
   end
-
-  defp accept_frame(_, state), do: state
 
   defp enqueue_event(state, event) do
     if state.event_count >= state.config.max_events do
@@ -545,7 +594,7 @@ defmodule Wotex.Zigbee.Owner do
     cond do
       epoch != state.epoch -> :stale_handle
       state.mode != :ready -> :coordinator_lost
-      state.pending != nil or state.interview != nil -> :overload
+      busy?(state) -> :overload
       not Interview.valid?(request) -> :invalid_value
       not valid_timeout?(timeout, state.config.timeout_ms) -> :invalid_value
       expired?(deadline) -> :timeout
@@ -625,6 +674,9 @@ defmodule Wotex.Zigbee.Owner do
 
   defp fail_response(%{interview: interview} = state, kind) when is_map(interview),
     do: end_interview(state, kind, true)
+
+  defp fail_response(%{binding: binding} = state, kind) when is_map(binding),
+    do: end_binding(state, kind, true)
 
   defp fail_response(state, kind) do
     GenServer.reply(state.pending.from, {:error, error(kind, :command)})
@@ -720,6 +772,8 @@ defmodule Wotex.Zigbee.Owner do
       consumer_monitor: nil,
       pending: nil,
       interview: nil,
+      binding: nil,
+      used_bindings: MapSet.new(),
       query_routes: MapSet.new(),
       used_tokens: MapSet.new(),
       observation_sequence: 0,
@@ -832,6 +886,126 @@ defmodule Wotex.Zigbee.Owner do
 
   defp remember_sequence(tokens, _), do: tokens
 
+  defp busy?(state),
+    do: state.pending != nil or state.interview != nil or state.binding != nil
+
+  defp binding_admission(state, epoch, request, timeout, deadline, from) do
+    kind =
+      cond do
+        epoch != state.epoch ->
+          :stale_handle
+
+        state.mode != :ready ->
+          :coordinator_lost
+
+        busy?(state) ->
+          :overload
+
+        not Binding.valid?(request) ->
+          :invalid_value
+
+        not valid_timeout?(timeout, state.config.timeout_ms) ->
+          :invalid_value
+
+        expired?(deadline) ->
+          :timeout
+
+        MapSet.member?(state.used_bindings, {request.operation, request.route_address}) ->
+          :correlation_exhausted
+
+        MapSet.size(state.used_bindings) >= @max_binding_pairs ->
+          :overload
+
+        not Process.alive?(elem(from, 0)) ->
+          :coordinator_lost
+
+        true ->
+          nil
+      end
+
+    if kind, do: {:error, error(kind, :binding)}, else: :ok
+  end
+
+  defp send_binding(state, request, deadline, from) do
+    reference = make_ref()
+
+    binding = %{
+      flow: BindingFlow.new(request, state.epoch),
+      from: from,
+      reference: reference,
+      monitor: Process.monitor(elem(from, 0)),
+      timer: deadline_timer({:binding_timeout, reference}, deadline),
+      deadline: deadline
+    }
+
+    {:ok, frame} = Binding.frame(request)
+    pairs = MapSet.put(state.used_bindings, {request.operation, request.route_address})
+    updated = %{state | binding: binding, used_bindings: pairs}
+
+    case write_binding(updated, frame, deadline) do
+      :ok ->
+        {:noreply, %{updated | pending: %{subsystem: 5, id: frame.id, deadline: deadline}}}
+
+      {:refused, kind} ->
+        clear_binding(updated)
+        {:reply, {:error, error(kind, :binding)}, state}
+
+      {:failed, kind} ->
+        {:stop, :normal, end_binding(updated, kind, true)}
+    end
+  end
+
+  defp write_binding(state, frame, deadline) do
+    {:ok, bytes} = Frame.encode(frame)
+
+    if expired?(deadline) do
+      {:refused, :timeout}
+    else
+      case serial_write(state, bytes) do
+        :ok -> if expired?(deadline), do: {:failed, :timeout}, else: :ok
+        :error -> {:failed, :serial}
+      end
+    end
+  end
+
+  defp progress_binding(state) do
+    if expired?(state.binding.deadline) do
+      end_binding(state, :timeout, true)
+    else
+      case BindingFlow.advance(state.binding.flow) do
+        :waiting -> state
+        {:done, result} -> reply_binding(state, result)
+      end
+    end
+  end
+
+  defp end_binding(state, kind, failed) do
+    updated = reply_binding(state, BindingFlow.finish(state.binding.flow, kind))
+    if failed, do: %{updated | mode: :failed}, else: updated
+  end
+
+  defp reply_binding(state, result) do
+    GenServer.reply(state.binding.from, {:ok, result})
+    clear_binding(state)
+  end
+
+  defp clear_binding(state) do
+    Process.cancel_timer(state.binding.timer)
+    Process.demonitor(state.binding.monitor, [:flush])
+    %{state | binding: nil, pending: nil}
+  end
+
+  defp remember_binding_callback(state, %Event{kind: kind, source_address: route})
+       when kind in [:zdo_bind, :zdo_unbind] do
+    operation = if kind == :zdo_bind, do: :bind, else: :unbind
+
+    if MapSet.size(state.used_bindings) < @max_binding_pairs,
+      do: %{state | used_bindings: MapSet.put(state.used_bindings, {operation, route})},
+      else: state
+  end
+
+  defp remember_binding_callback(state, _), do: state
+
   defp take_events(queue, 0, collected), do: {Enum.reverse(collected), queue}
 
   defp take_events(queue, count, collected) do
@@ -847,6 +1021,9 @@ defmodule Wotex.Zigbee.Owner do
     cond do
       state.interview ->
         GenServer.reply(state.interview.from, {:ok, Flow.finish(state.interview.flow, kind)})
+
+      state.binding ->
+        GenServer.reply(state.binding.from, {:ok, BindingFlow.finish(state.binding.flow, kind)})
 
       state.pending ->
         GenServer.reply(state.pending.from, {:error, error(kind, :command)})

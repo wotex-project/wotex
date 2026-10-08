@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.8.0-target. The catalogue records implementation status separately.
+Version: 0.11.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -61,6 +61,36 @@ the receiver and limits the command deadline to custody expiry. A replacement
 owner requires explicit rebind and a fresh complete interview. Retained
 records, host ordering and IEEE matches do not authenticate a peer, establish
 radio replay protection or turn custody expiry into an offline declaration.
+
+## Explicit binding
+
+`Wotex.Zigbee.Binding` represents one explicit Bind or Unbind for a source
+IEEE, current unicast route, source endpoint and cluster. Select a qualified
+IEEE/endpoint target or group target explicitly. Construction is inert;
+inspection, writes, reporting configuration, Check-in and cadence observation
+do not create a binding. Consumer authorization, destination qualification and
+battery policy precede `Wotex.Zigbee.change_binding/4`.
+
+The finite TI command profile and exact fixed-width SDK layout are owned by
+WZG1-04 and recorded in
+[`zdo-binding-mt-r1.14.json`](../../../../packages/wotex-zigbee/test/support/profiles/zdo-binding-mt-r1.14.json).
+The serial receiver checks current unconflicted, unexpired source custody and
+uses one absolute deadline and caller monitor through NCP admission and peer
+status. Replies can arrive in either order. NCP rejection remains unconfirmed
+even after an early successful callback. With NCP status zero and a matched
+callback before expiry, retain `peer_reported_success` or `peer_reported_failure`
+from the raw peer status; do not infer a successful binding from admission alone.
+
+Retained request fields are caller context because the callback echoes only
+source/status. It supplies no security flag or independent transaction byte.
+Per-epoch route/operation retirement is finite and prevents reuse, including
+after unsolicited observations; it does not establish radio replay protection.
+Unrelated, duplicate and malformed indications stay in the bounded queue.
+An admitted workflow ending without both observations retains an unconfirmed
+result and bounded issue. There is no automatic retry or reporting change.
+Peer status proves no current complete binding table, later report delivery,
+wakefulness, battery suitability or physical effect. Qualified targets and
+physical sleepy-device evidence remain required.
 
 ## ZCL
 
@@ -172,6 +202,85 @@ The profile supplies no binding, joining or autonomous transaction lifecycle.
 
 **WZG2-05.** Model expected reporting/check-in behavior and bound queued downlinks. No fixed short inactivity timeout for every end device. A quiet battery device is not immediately offline; freshness and reachability are separate. Reporting interval changes have power implications and require qualified consumer policy. Do not poll to make a dashboard appear live.
 
+`Wotex.Zigbee.Freshness` supplies an inert, consumer-owned cadence table for
+one owner epoch. Explicitly arm a `Freshness.Policy.report/1` or `checkin/1`
+expectation for each selected stream. Select raw IEEE identity, remote/local
+AF endpoints and, for reports, cluster, attribute ID, finite type, direction
+and optional manufacturer code. Numeric full-range interpretation remains an
+explicit adopted policy. Type, interpretation and cadence changes replace the
+same selector, reset current observations and retain the preceding receipt
+with its original policy. No device label or configuration response infers
+an expectation, authorization or manufacturer semantics.
+
+Periodic expectations admit 1 ms through 365 days, plus explicit grace from
+zero through 365 days. Reports also admit `:on_change`; either stream admits
+`:disabled`. Nonperiodic modes require zero grace and have no deadline, while
+still preserving matching observations. These are bounded consumer host
+expectations, not a promise that the device supports a corresponding wire
+configuration. The first deadline starts at arming; subsequent deadlines use
+the eligible owner's observation time, never delayed consumption time.
+Snapshots distinguish `:awaiting`, `:within_window` and `:late`; the exact
+deadline is late. Each stream keeps its own interval. A late window declares
+no offline state or lack of reachability.
+
+`Freshness.observe/4` requires current route custody and owner epoch, strictly
+increasing owner sequence and nondecreasing owner observation time. Decode an
+actual Report Attributes or finite Poll Control Check-in before matching a
+policy. Check source endpoints, cluster, header context and attribute ID;
+read responses, Default Responses and client commands do not satisfy these
+streams. Matching observations predating arming remain unmatched. Preserve
+the unchanged Event, its security disposition, raw records and decoded message.
+Values and explicit nulls renew packet cadence; null remains unavailable
+attribute data. Duplicate IDs, wrong types and unsupported records stay visible
+without renewing the window. An opaque tail prevents proving uniqueness even
+for a known preceding record; never infer later attribute boundaries.
+
+The table admits 1–1,024 streams (default 128) and retains only the latest
+matching receipt, latest eligible receipt and one previous receipt per stream.
+Overflow refuses a new selector without dropping an existing stream. Revalidate
+complete policies, Events, decoded receipts and time/sequence relationships
+after copying. Supply monotonic milliseconds to every operation and retain
+every returned table, including snapshots that advance the time watermark.
+Clock rewind and deadline overflow fail. `forget/3` returns removed evidence;
+`rebind/3` invalidates current observations, rearms retained policies and
+requires fresh route custody for the new owner. No operation reads a clock,
+sends, polls, responds, retries, changes intervals or selects a downlink.
+Host ordering, copied context and immutable older tables establish no radio
+replay protection, authentication or physical Property truth. Consumer policy
+also retains evidence of dropped Events and qualifies bindings and battery
+impact. Cadence remains separate from a Check-in response window and from
+any authorized delivery decision.
+
+`Wotex.Zigbee.ZCL.PollControl` pins the finite cluster `0x0020` profile to
+revision 8 section 3.16. Source digest, ranges and literal byte vectors are
+recorded in
+[`zcl-poll-control-r8.json`](../../../../packages/wotex-zigbee/test/support/profiles/zcl-poll-control-r8.json).
+Decode Check-in, Check-in Response, Fast Poll Stop, Set Long Poll Interval,
+Set Short Poll Interval and Default Responses to those client commands.
+Preserve direction, sequence, default-response flag, parameters and original
+bytes. Manufacturer extensions, reserved fields, other commands and malformed
+or trailing bytes are refused. This is no complete cluster conformance claim.
+
+Client constructors return inert bytes and permit Default Responses. Check-in
+Response accepts a boolean and uint16 quartersecond timeout. Zero selects the
+server's FastPollTimeout attribute; it is no infinite host deadline. A false
+start preserves the timeout even though the server may ignore it. Long poll
+intervals admit 4–`0x6E0000` quarterseconds, short intervals 1–65,535. Conversion
+to milliseconds is exact multiplication by 250 without inferring zero's
+operation-specific meaning. Optional server limits, relationships among
+intervals, binding, authorization and battery qualification remain consumer
+responsibilities. No construction or decoding sends or modifies a device.
+
+`PollControl.observe_checkin/3` checks current custody, AF source metadata,
+endpoints, cluster and the complete Check-in frame, retaining the unchanged
+Event and security disposition. Its response deadline is the earlier of
+7,680 ms from the owner observation and custody expiry. Delayed observations
+remain visible with an elapsed response window. An open host window is no
+proof of wakefulness: the server may return to its long interval after 7.68 s
+without a response. A successful Default Response establishes no fast polling
+or delivery. Inspection sends no automatic response and changes no queue or
+freshness policy.
+
 `Wotex.Zigbee.Downlinks` supplies an inert queue for one owner epoch.
 The consumer explicitly admits each AF request and supplies monotonic
 milliseconds and a lifetime from 1 ms to 24 hours. Host limits are 1,024
@@ -197,9 +306,9 @@ Selection grants no authorization or wakefulness and allocates no fresh
 AF/ZCL tokens. Cancellation returns the removed entry. Owner rebind
 invalidates every queued request and retains ticket history. Neither removal
 nor expiry declares a peer offline. No automatic retry, polling, retargeting
-or reporting interval change occurs. The consumer owns serialization,
-expected reporting/check-in behavior and qualified battery policy; the queue
-alone supplies no sleepy-device freshness model.
+or reporting interval change occurs. The consumer owns serialization and
+qualified battery policy. The cadence table supplies expected observation
+windows; a queue selection remains a separate authorized delivery decision.
 
 ## Scope exclusions
 
@@ -207,7 +316,7 @@ Automatic OTA, Green Power proxy/sink behavior, arbitrary manufacturer codecs an
 
 ## Acceptance
 
-WZG2-T1: bounded join/interview and repeated joins preserve identity. WZG2-T2: same IEEE/new short address versus different IEEE/same label. WZG2-T3: forged/replayed reports preserve the stack's security disposition. WZG2-T4: stale backup, cloned coordinator and unsupported cross-chip restore fail safely. WZG2-T5: sleepy reporting and exhausted downlink queues. WZG2-T6: ZCL typed-value, manufacturer-extension, malformed frame and per-record error vectors. WZG2-T7: partial migration/key rotation and explicit recovery without false global success.
+WZG2-T1: bounded join/interview and repeated joins preserve identity. WZG2-T2: same IEEE/new short address versus different IEEE/same label. WZG2-T3: forged/replayed reports preserve the stack's security disposition. WZG2-T4: stale backup, cloned coordinator and unsupported cross-chip restore fail safely. WZG2-T5: sleepy reporting and exhausted downlink queues. WZG2-T6: ZCL typed-value, manufacturer-extension, malformed frame and per-record error vectors. WZG2-T7: partial migration/key rotation and explicit recovery without false global success. WZG2-T8: explicit source-guarded Bind/Unbind with qualified targets, separate NCP/peer outcomes, finite correlation and cleanup.
 
 `interview_owner_test.exs` executes the software inspection subset of WZG2-T1
 and selected Basic record negatives of WZG2-T6. `routes_test.exs` and
@@ -233,5 +342,25 @@ expiry, cancellation, rebind, clock rewind and custody refusal.
 `zcl_configuration_owner_test.exs` executes queued write/reporting dispatch
 and absolute expiry before and after I/O. This supplies no physical sleepy,
 check-in, wakefulness or battery evidence.
-Joining, sleepy policy, physical rejoin/source security, network continuity
-binding and administration remain outstanding.
+`poll_control_test.exs` executes pinned command/interval vectors, exact units,
+malformed layouts, source/custody refusal and bounded response-window
+observations. `poll_control_owner_test.exs` independently frames a Check-in
+and all four explicit client commands through the serial owner, preserving
+separate NCP admission, negative Default Responses and unchanged security.
+`freshness_test.exs` executes per-stream periodic/grace boundaries, long,
+on-change and disabled expectations, delayed consumption, null/full-range
+interpretation, record ambiguity and opaque tails. It also executes capacity,
+explicit replacement/forgetting, copied-value refusal, clock/sequence fences,
+rejoin, conflict, expiry and owner rebind. Its public example runs as a doctest.
+`freshness_owner_test.exs` independently frames reports and Check-in through
+the serial owner after interview and custody adoption, retaining unchanged
+security, partial evidence and prior-epoch history without sending or polling.
+`binding_test.exs` executes pinned MT request/callback vectors, address modes,
+constructor purity, bounds and malformed/copied inputs. `binding_owner_test.exs`
+independently frames explicit Bind/Unbind after interview/adoption and exercises
+both reply orders, NCP rejection, peer failure, unrelated/duplicate callbacks,
+absolute deadlines, caller/serial loss, redacted write faults and finite pair
+retirement. These execute the software subset of WZG2-T8, separate from
+physical destinations, binding-table truth and qualified power policy.
+Joining, qualified battery policy, physical rejoin/source security, network
+continuity and administration remain outstanding.
