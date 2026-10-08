@@ -4,5 +4,7 @@ Code.require_file("support/fake_transport.ex", __DIR__)
 
 Code.require_file("support/opening_port.ex", __DIR__)
 Code.require_file("support/implementation_factory.ex", __DIR__)
+Code.require_file("support/codec_executor.ex", __DIR__)
+Code.require_file("support/codec_decoder.ex", __DIR__)
 
 ExUnit.start()

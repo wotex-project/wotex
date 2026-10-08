@@ -7,6 +7,7 @@ defmodule Wotex.Runtime.Implementation.Plan do
   """
   alias Wotex.Runtime.Implementation.{Admission, Error, InstanceKey, JSON}
 
+  @derive {Inspect, except: [:configuration]}
   @type t :: %__MODULE__{
           admission: Admission.t(),
           configuration: map(),

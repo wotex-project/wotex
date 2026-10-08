@@ -1,7 +1,7 @@
 # WRT.06: Bounded, inert codec profile
 
-Specification `WRT.06@1.1.0`. Package owner: `wotex_runtime`.
-Contract: target specification; implementation status: `planned`.
+Specification `WRT.06@1.2.0`. Package owner: `wotex_runtime`.
+Contract: accepted optional specification; implementation status: `partial`.
 This optional profile defines deterministic decoding of explicit bytes and
 metadata into inert typed values. It is not a transport, device enrollment,
 Property truth or Action authorization interface. Numerical budgets are
@@ -84,6 +84,42 @@ error under C02/C03. `Value.encode/1` returns `{:ok, jcs_binary}` or that error
 after validation and encoded-size admission. Both are pure and bounded; every
 constructor revalidates forged structs. These are specified signatures and
 layouts for implementation, not claims that exports already exist.
+
+### Trusted BEAM executor
+
+`Wotex.Runtime.Codec.Beam` implements `Codec.Executor.decode/4`. Its explicit
+consumer configuration is a closed atom-keyed map with exactly `decoder`,
+`contract`, `task_supervisor`, `current_inputs`, `now`. Decoder is the installed
+trusted module implementing `Codec.Decoder`; contract is the exact registration
+codec-contract reference. The consumer qualifies that module against that
+immutable contract. Runtime does not load code from descriptor text or prove
+module bytes from a reference. A mismatch is `schema_mismatch`.
+
+Task_supervisor is an already running, consumer-owned Task.Supervisor pid.
+The consumer provisions one per instance with `max_children: 1`; this gives
+atomic one-active/zero-queued admission. A second call returns `overloaded`.
+Decoder tasks are temporary. The supervisor is never shared between instance keys.
+Current_inputs is a zero-arity consumer callback returning current WRT.04
+Inputs; now is a zero-arity consumer clock returning an integer monotonic
+millisecond reading or a valid DateTime matching Context's deadline. With a
+null deadline either clock kind is accepted. The executor revalidates current
+admission before worker start and before accepting output. Clock mismatch or
+backwards movement refuses execution; equality at the original deadline or
+effective decode budget is expired. The budget is the minimum of remaining
+Context time, 1,000 milliseconds and admitted request_ms.
+
+The executor starts one temporary task under that explicitly supplied
+supervisor, passing only decoder module, bytes, metadata and admitted
+configuration to the decoder. An ephemeral custodian monitors the caller before
+task creation, attaches before decoding and kills the worker on owner loss.
+Worker termination also closes that custodian. Owner death or timeout kills
+the task; the executor confirms
+worker termination before returning. No VM or descendant isolation is claimed
+for trusted BEAM code. Tasks catch decoder exceptions, exits and throws before
+they can become raw task crash diagnostics. Decoder failures use the four
+deterministic refusal codes; malformed returns are `protocol_fault`. No retry
+or fallback follows worker loss. Loading Beam starts neither supervisor nor
+worker; decode is the explicit start boundary.
 
 ## C02 — Values and determinism
 
@@ -232,7 +268,16 @@ same-VM evaluation or a different decoder.
 
 ## C06 — Acceptance and future bindings
 
-Required future evidence, stored under the package's `priv/` or `test/support/`:
+The public algebra, Call/Result constructors, executor facade and trusted BEAM
+executor are implemented. `test/wotex/runtime/codec_test.exs` checks canonical
+values, bounds, pre-callback refusal, identity substitution and redaction.
+`test/wotex/runtime/codec_beam_test.exs` exercises actual supervised workers,
+owner death, timeout cleanup, overload and current-policy/late-reply refusal.
+These tests do not establish independent process-codec interoperability or
+consumer usefulness. Process framing, native custody/enforcement, independent
+implementations and the protocol-owner projection remain open.
+
+Required evidence, stored under the package's `priv/` or `test/support/`:
 
 | Requirement | Cases |
 |---|---|

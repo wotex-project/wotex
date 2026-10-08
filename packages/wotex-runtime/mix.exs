@@ -121,7 +121,7 @@ defmodule WotexRuntime.MixProject do
            title: "Implementation Admission"},
           {docs_path("specs/WRT.05-implementation-lifecycle.md"),
            title: "Implementation Lifecycle"},
-          {docs_path("specs/WRT.06-bounded-codec.md"), title: "Planned Bounded Codec"},
+          {docs_path("specs/WRT.06-bounded-codec.md"), title: "Bounded Codec"},
           {"CHANGELOG.md", title: "Changelog"},
           {"../../docs/packages/wotex-runtime/security.md", title: "Security"},
           {"LICENSE", title: "License"}

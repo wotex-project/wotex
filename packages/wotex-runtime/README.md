@@ -48,8 +48,22 @@ ConsumedThing and ExposedThing use remains independent of descriptors.
 `Lifecycle.new/1` constructs a passive admitted instance. `Lifecycle.transition/2`
 applies generation-bound observations and keeps cleanup outcomes explicit.
 The consumer serializes routing; the binding verifies readiness and resource
-release. A stopped generation is terminal. Native execution and codec profiles
-are still under development.
+release. A stopped generation is terminal. Native execution remains under
+development.
+
+`Wotex.Runtime.Codec.decode/5` admits bounded bytes and flat metadata before
+calling an explicitly supplied executor. Results carry an inert typed tree
+and exact implementation, configuration, generation and request identities.
+`Codec.Value` preserves full 64-bit integers and normalized decimals without
+floating conversion. Result inspection omits decoded values.
+
+`Wotex.Runtime.Codec.Beam` runs a registered trusted decoder under a separate
+consumer-owned Task.Supervisor with `max_children: 1` per instance. Supply
+the decoder module, exact contract reference, supervisor pid, current-input
+callback and matching clock callback. The executor checks admission before
+work and reply acceptance, kills timed-out workers and reaps them on owner
+death. Trusted BEAM code has no VM or descendant isolation. Process codecs
+and independent protocol projections remain under development.
 
 ## Installation
 
