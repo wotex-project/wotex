@@ -102,6 +102,7 @@ if (chip_build_tools) {
       "src/storage.cpp",
       "testing/sdk_bridge_endpoints_test.cpp",
       "testing/sdk_bridge_replies_test.cpp",
+      "testing/sdk_bridge_provider_test.cpp",
       "testing/sdk_bridge_requests_test.cpp",
       "testing/sdk_bridge_server_test.cpp",
     ]

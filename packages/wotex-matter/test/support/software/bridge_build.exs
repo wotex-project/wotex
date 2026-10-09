@@ -57,6 +57,10 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
        "bridge captured principal Groups and Scenes replies passed"
      ]},
     {"replies_retain", 70, "bridge reply child-handle refusal prepared"},
+    {"provider", 0, "installed SDK provider routing and notifications passed"},
+    {"provider_startup_failure", 70, "bridge provider partial startup refusal prepared"},
+    {"provider_shutdown_failure", 70, "bridge provider failed shutdown refusal prepared"},
+    {"provider_missing_finish", 70, "bridge provider missing shutdown refusal prepared"},
     {"requests_missing_finish", 70,
      [
        "bridge owned request metadata and arguments passed",

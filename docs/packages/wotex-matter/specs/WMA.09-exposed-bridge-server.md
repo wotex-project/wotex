@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.8.0-target.
+Version: 0.9.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -109,6 +109,23 @@ MUST remain observable even if the SDK-defined Failure-status fallback is
 written. A renderer that produces no reply MUST NOT establish completion.
 Retaining an SDK handle from the scoped adapter MUST terminate the process
 before a borrowed adapter can escape its renderer-call lifetime.
+
+The installed SDK data-model provider MUST preserve generated metadata and
+Root Node/Aggregator operations while routing live child reads, writes,
+commands and list-write lifecycle notifications to an explicit native
+receiver. Child operations MUST NOT fall back to native cluster execution.
+Disabled or absent endpoints MUST be refused before receiver delivery;
+metadata allocation failures MUST retain their error meaning. Receiver
+metadata MUST own its principal and operation flags before the callback
+returns. An asynchronously retained invocation MUST NOT return an automatic
+Success status. SDK path and fabric/ACL validation remains a prerequisite;
+the provider wrapper alone does not establish consumer authorization.
+
+The provider MUST relay delegated attribute/endpoint change notifications
+under the SDK stack lock and unregister its listener before delegated
+shutdown. Partial startup, failed shutdown or destruction while active MUST
+terminate the process before borrowed provider context can be released.
+A closed provider MUST NOT reopen its SDK lifetime or serve interactions.
 
 ## Bridged devices
 

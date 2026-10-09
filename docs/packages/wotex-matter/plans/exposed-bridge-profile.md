@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.6.0. Finite WMA.09 implementation target. The
+Version: 1.7.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -103,9 +103,17 @@ request path, reports a missing reply or encoding failure and preserves that
 failure when the SDK-defined fallback status is written. It never queries the
 original asynchronous handler's session or exchange. Retaining a child handle
 from the scoped adapter terminates the process before it can escape rendering.
-These internal owners have no consumer Port, SDK-provider interception or
-consumer policy/dispatch integration. Capturing synthetic principal values
-does not establish authenticated admission.
+The installed provider wrapper delegates generated metadata and root
+operations, delivers live child operations to an explicit native receiver
+and relays attribute/endpoint notifications. Disabled or absent endpoints
+are refused, and metadata allocation failures remain errors. The receiver
+owns copied principal/operation metadata; borrowed encoders, decoders and
+argument readers remain callback-scoped. Retained invokes return no automatic
+Success. Startup/shutdown failure and destruction while active terminate the
+process; shutdown unregisters the delegate listener and prevents reopening.
+These internal owners have no consumer Port or consumer policy/dispatch
+integration. Capturing synthetic principal values does not establish
+authenticated admission.
 
 Production attestation and commissioning material are consumer-owned, with no
 absent-provider or example-credential fallback. An explicitly separate test
@@ -144,7 +152,11 @@ modes. Reply tests execute the pinned SDK's Groups and Scenes handlers with
 copied fabric context and explicit synthetic group keys, inspect resulting
 fabric-scoped custody and reject foreign paths, response IDs, duplicate replies,
 encoding failures and escaped adapter handles. Request-owner tests use synthetic
-CASE, group and commissioning principal values and explicit test clocks. Authenticated consumer dispatch,
+CASE, group and commissioning principal values and explicit test clocks.
+Provider tests verify the actual installed wrapper, root delegation, child
+receiver refusal, copied metadata, notification forwarding, retained invoke
+completion without changing approved Property state, metadata allocation
+failure and fatal lifecycle paths. Authenticated consumer dispatch,
 subscription/report flow, end-to-end handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does
 not satisfy those server obligations. Certification and installed ecosystem

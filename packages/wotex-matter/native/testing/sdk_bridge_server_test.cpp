@@ -3,6 +3,7 @@
 #include "sdk_bridge_endpoints_test.hpp"
 #include "sdk_bridge_requests_test.hpp"
 #include "sdk_bridge_replies_test.hpp"
+#include "sdk_bridge_provider_test.hpp"
 
 #include <LinuxCommissionableDataProvider.h>
 #include <app/server/Server.h>
@@ -142,7 +143,10 @@ void Run(const char *directory, const std::string &mode) {
   Check(DeviceLayer::PlatformMgr().InitChipStack(), "platform initialization");
   DeviceLayer::PlatformMgr().LockChipStack();
 
-  auto *model = app::CodegenDataModelProviderInstance(&binding.storage_delegate());
+  auto *delegate = app::CodegenDataModelProviderInstance(&binding.storage_delegate());
+  auto provider_probe = testing::PrepareProvider(handoff);
+  SdkBridgeProviderBinding provider(*delegate, provider_probe->receiver());
+  auto *model = &provider;
   TestEthernet ethernet;
   Inet::InterfaceId interface;
   Check(Inet::InterfaceId::InterfaceNameToId("lo", interface), "explicit test interface");
@@ -206,6 +210,9 @@ void Run(const char *directory, const std::string &mode) {
   }
 
   std::unique_ptr<SdkBridgeEndpointBinding> children;
+  if (mode.rfind("provider", 0) == 0) {
+    provider_probe->Verify(binding, provider, *delegate, mode);
+  }
   if (mode == "replies" || mode == "replies_retain") {
     testing::VerifyBridgeReplies(binding, handoff, mode == "replies_retain");
   }
@@ -397,7 +404,9 @@ int main(int argc, char **argv) {
       mode != "endpoints_poison_add" && mode != "endpoints_poison_remove" && mode != "handoff" &&
       mode != "handoff_pending_finish" && mode != "handoff_closed_init" &&
       mode != "handoff_busy_init" && mode != "requests" && mode != "requests_invalidated" &&
-      mode != "requests_missing_finish" && mode != "replies" && mode != "replies_retain")
+      mode != "requests_missing_finish" && mode != "replies" && mode != "replies_retain" &&
+      mode != "provider" && mode != "provider_startup_failure" &&
+      mode != "provider_shutdown_failure" && mode != "provider_missing_finish")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

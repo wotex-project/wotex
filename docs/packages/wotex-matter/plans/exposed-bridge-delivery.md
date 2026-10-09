@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.7.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.8.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -168,8 +168,8 @@ payload copies, reader-position preservation, stale tickets, clock regression,
 delayed expiry, explicit reply rendering, encoding failure and valid/invalidated
 handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
 builds run these cases through the native builder. This is internal context
-ownership: actual provider interception, SDK fabric/ACL admission, consumer
-policy, native Port delivery and ExposedThing dispatch remain open.
+ownership: SDK fabric/ACL admission, consumer policy, native Port delivery
+and ExposedThing dispatch remain open.
 
 The internal
 [`SdkBridgeCommandReply`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_replies.hpp)
@@ -192,6 +192,30 @@ missing responses, failed encoding/fallback and escaped handles. Normal and
 ASan/UBSan builds run these cases through the native builder. These direct
 provider calls establish native rendering behavior; commissioned fabric/ACL
 admission and consumer policy/dispatch remain required.
+
+The internal
+[`SdkBridgeProviderBinding`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_provider.hpp)
+is the installed SDK data-model provider. It borrows the generated provider
+and an explicit `BridgeReceiver`, preserves metadata/root operations and
+routes live child reads, writes, invokes and list-write notifications to that
+receiver without a cluster-execution fallback. Metadata is copied before
+delivery. An absent/disabled endpoint cannot reach the receiver, and metadata
+allocation failure preserves its error meaning. Attribute/endpoint change
+notifications cross the wrapper under the SDK stack lock. Shutdown unregisters
+the borrowed listener and closes this provider lifetime. The SDK otherwise
+logs provider lifecycle failures and continues; this wrapper terminates with
+70 on partial startup, failed shutdown or active destruction.
+
+[`sdk_bridge_provider_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_provider_test.cpp)
+adds four cases to the separate server target. An explicit test receiver
+refuses child attributes before native decoding, retains an invoke without
+returning automatic Success and renders only an explicit completion fixture.
+The resulting status leaves the approved On/Off Property value unchanged.
+Tests verify installed-provider identity, root delegation, copied metadata,
+notification forwarding, metadata-allocation errors, closed-provider refusal
+and all three fatal lifecycle paths in normal and ASan/UBSan builds. Synthetic
+principal inputs do not establish SDK fabric/ACL admission or consumer policy;
+the consumer-facing native Port and ExposedThing dispatch remain open.
 
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 
