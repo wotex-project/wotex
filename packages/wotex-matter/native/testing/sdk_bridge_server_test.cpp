@@ -1,6 +1,7 @@
 #include "wotex_matter/bridge_storage.hpp"
 #include "wotex_matter/bridge_server.hpp"
 #include "sdk_bridge_endpoints_test.hpp"
+#include "sdk_bridge_requests_test.hpp"
 
 #include <LinuxCommissionableDataProvider.h>
 #include <app/server/Server.h>
@@ -207,6 +208,10 @@ void Run(const char *directory, const std::string &mode) {
   if (mode.compare(0, 10, "endpoints_") == 0) {
     children = testing::PrepareEndpoints(binding, mode);
   }
+  std::unique_ptr<testing::RequestProbe> requests;
+  if (mode == "requests" || mode == "requests_invalidated" || mode == "requests_missing_finish") {
+    requests = testing::PrepareRequests(handoff, mode == "requests_invalidated");
+  }
   std::array<BridgeConsumerHandoff::Ticket, BridgeConsumerHandoff::kCapacity> tickets{};
   if (mode == "handoff") {
     for (auto &ticket : tickets) {
@@ -226,8 +231,12 @@ void Run(const char *directory, const std::string &mode) {
     BridgeConsumerHandoff *handoff = nullptr;
     BridgeConsumerHandoff::Ticket *tickets = nullptr;
     bool handoff_ok = false;
+    testing::RequestProbe *requests = nullptr;
+    bool finish_requests = true;
   } receipt;
   receipt.children = children.get();
+  receipt.requests = requests.get();
+  receipt.finish_requests = mode != "requests_missing_finish";
   if (mode == "handoff") {
     receipt.handoff = &handoff;
     receipt.tickets = tickets.data();
@@ -253,6 +262,10 @@ void Run(const char *directory, const std::string &mode) {
           value.handoff->Resolve(value.tickets[1], H::Outcome::Denied, 102) == H::Reply::Stored &&
           value.handoff->Resolve(value.tickets[2], H::Outcome::Completed, 103) == H::Reply::Stored;
     }
+    if (value.requests != nullptr) {
+      value.requests->DuringLoop();
+      if (value.finish_requests) value.requests->Finish();
+    }
     value.ran = true;
     value.ready.notify_one();
   }, reinterpret_cast<intptr_t>(&receipt)),
@@ -265,7 +278,8 @@ void Run(const char *directory, const std::string &mode) {
     Check(receipt.observation, "event loop approved observation");
     if (mode == "handoff") Require(receipt.handoff_ok, "event loop handoff result custody");
   }
-  if (mode == "missing_finish" || mode == "endpoints_missing_finish") {
+  if (mode == "missing_finish" || mode == "endpoints_missing_finish" ||
+      mode == "requests_missing_finish") {
     return;
   }
   if (mode == "endpoints_poison_add" || mode == "endpoints_poison_remove") {
@@ -378,7 +392,8 @@ int main(int argc, char **argv) {
       mode != "endpoints_reopen" && mode != "endpoints_missing_finish" &&
       mode != "endpoints_poison_add" && mode != "endpoints_poison_remove" && mode != "handoff" &&
       mode != "handoff_pending_finish" && mode != "handoff_closed_init" &&
-      mode != "handoff_busy_init")
+      mode != "handoff_busy_init" && mode != "requests" && mode != "requests_invalidated" &&
+      mode != "requests_missing_finish")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

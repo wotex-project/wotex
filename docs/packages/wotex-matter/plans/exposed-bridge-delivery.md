@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.5.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.6.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -144,6 +144,32 @@ The separate SDK server target adds event-loop handoff, closed/pending startup
 refusal and unconsumed-shutdown termination cases. The owner supplies explicit
 test times; these cases do not exercise an authenticated Matter request or an
 ExposedThing callback.
+
+The internal
+[`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
+copies callback principal/path metadata and bounded command arguments before
+retaining an SDK `CommandHandler::Handle`. Copies preserve fabric, authentication
+mode, subject, CASE Authenticated Tags, commissioning context and operation
+flags. Attribute metadata additionally preserves list operation/index and an
+optional data version. Owned command arguments use an anonymous-root Structure
+of at most 65536 bytes, 24 container levels and 4096 nodes including the root.
+Malformed arguments, mismatched handler context and excess capacity acquire no
+SDK handle. The owner consumes results on the SDK thread, uses an explicit
+command-specific renderer for completion, returns refusal/timeout statuses and
+releases the handle even when response encoding fails. An invalidated SDK
+handle cannot receive a response. Closure drains this owner's handles before
+the event loop stops and preserves other owners' closed handoff contexts.
+
+[`sdk_bridge_requests_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_requests_test.cpp)
+adds request-owner cases to the separate SDK server target. Synthetic principal
+fixtures exercise owned metadata for CASE, group and commissioning contexts;
+the actual SDK Handle interface exercises sixteen retained commands, bounded
+payload copies, reader-position preservation, stale tickets, clock regression,
+delayed expiry, explicit reply rendering, encoding failure and valid/invalidated
+handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
+builds run these cases through the native builder. This is internal context
+ownership: actual provider interception, SDK fabric/ACL admission, consumer
+policy, native Port delivery and ExposedThing dispatch remain open.
 
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 

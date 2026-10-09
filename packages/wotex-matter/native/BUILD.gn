@@ -92,6 +92,7 @@ if (chip_build_tools) {
       "src/bridge_endpoint_model.cpp",
       "src/bridge_endpoints.cpp",
       "src/bridge_handoff.cpp",
+      "src/bridge_requests.cpp",
       "src/bridge_resources.cpp",
       "src/bridge_server.cpp",
       "src/bridge_storage.cpp",
@@ -99,6 +100,7 @@ if (chip_build_tools) {
       "src/sdk_storage.cpp",
       "src/storage.cpp",
       "testing/sdk_bridge_endpoints_test.cpp",
+      "testing/sdk_bridge_requests_test.cpp",
       "testing/sdk_bridge_server_test.cpp",
     ]
     include_dirs = [ "include", "third_party" ]

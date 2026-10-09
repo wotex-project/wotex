@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.6.0-target.
+Version: 0.7.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -85,6 +85,20 @@ result consumed at or after expiry MUST become a timeout. Closure MUST refuse
 new requests and retire all unconsumed results; the native owner MUST consume
 their contexts before releasing SDK resources. Unconsumed handoffs at server
 shutdown MUST terminate the native process before SDK cleanup.
+
+Before an SDK request callback returns, retained metadata MUST own the complete
+principal, including fabric, authentication mode, subject, CASE Authenticated
+Tags and commissioning context, together with its exact path and operation
+flags. Retained command arguments MUST be copied into one anonymous-root TLV
+Structure of at most 65536 encoded bytes, 24 container levels and 4096 nodes,
+counting the root. Malformed or excessive arguments MUST acquire neither a
+request slot nor an SDK command handle. A retained invoke context MUST own an
+SDK command handle until its result is consumed. An invalidated handle MUST
+NOT be used for a response. Only an explicit renderer for the selected command
+semantics may encode a completed consumer result; response-encoding failure
+MUST still release the consumed context. Closure MUST drain retained handles
+under the SDK stack lock before stopping the event loop. Destruction with a
+retained handle MUST terminate the process.
 
 ## Bridged devices
 

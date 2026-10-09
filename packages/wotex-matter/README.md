@@ -388,7 +388,11 @@ Its handoff owner retains sixteen request contexts through delivery, expiry
 and closure, with generation-scoped IDs and a 500 ms absolute deadline.
 The SDK binding refuses startup with a closed or pending handoff and terminates
 before shutdown cleanup if a context remains unconsumed. These custody tests
-carry no authenticated request or consumer callback.
+carry no authenticated request or consumer callback. The internal request
+owner copies principal/path metadata and bounded command arguments, retains
+actual SDK command handles and requires an explicit completion renderer.
+Its tests cover payload limits, expiry, encoding failure and handle cleanup;
+synthetic principal fixtures do not establish authenticated admission.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
 

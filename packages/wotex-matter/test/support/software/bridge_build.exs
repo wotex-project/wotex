@@ -38,7 +38,24 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"handoff", 0, "bridge handoff event loop and shutdown passed"},
     {"handoff_pending_finish", 70, "bridge handoff retained context prepared"},
     {"handoff_closed_init", 0, "server input refusal probe passed"},
-    {"handoff_busy_init", 0, "server input refusal probe passed"}
+    {"handoff_busy_init", 0, "server input refusal probe passed"},
+    {"requests", 0,
+     [
+       "bridge owned request metadata and arguments passed",
+       "bridge request event loop responses passed",
+       "bridge request handles, responses and shutdown passed"
+     ]},
+    {"requests_invalidated", 0,
+     [
+       "bridge owned request metadata and arguments passed",
+       "bridge request event loop responses passed",
+       "bridge request handles, responses and shutdown passed"
+     ]},
+    {"requests_missing_finish", 70,
+     [
+       "bridge owned request metadata and arguments passed",
+       "bridge request event loop responses passed"
+     ]}
   ]
   # Arguments remain positional, including paths with shell metacharacters.
   # The outer build runner records the command and bounds its output/deadline.

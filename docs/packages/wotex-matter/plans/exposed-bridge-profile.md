@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.4.0. Finite WMA.09 implementation target. The
+Version: 1.5.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -87,8 +87,19 @@ are consumed. A result delivered at the original deadline becomes a timeout,
 even if received earlier. Closure discards staged results, refuses new requests
 and preserves context credit until consumed. The server binding borrows this
 owner and terminates before SDK cleanup if any context remains unconsumed.
-This custody mechanism has no authenticated principal, request payload or
-consumer Port; the complete request dispatch boundary remains open.
+The separate SDK request owner copies principal, path and operation metadata
+before the callback's borrowed values expire. Invoke contexts retain an actual
+SDK command handle and an owned anonymous-root TLV Structure, bounded to 65536
+encoded bytes, 24 container levels and 4096 nodes including the root. Excessive
+or malformed payloads acquire no handoff slot or SDK handle. A completed result
+requires an explicit command-specific renderer; refusal and expiry produce
+their corresponding failure status. Encoding failure releases the consumed
+handle. Invalidated handles receive no response. Closure discards staged
+completion and drains retained handles under the SDK stack lock before the
+event loop stops; destruction with a retained handle terminates the process.
+These internal owners have no consumer Port, SDK-provider interception or
+consumer policy/dispatch integration. Capturing synthetic principal values
+does not establish authenticated admission.
 
 Production attestation and commissioning material are consumer-owned, with no
 absent-provider or example-credential fallback. An explicitly separate test
@@ -121,9 +132,11 @@ The model tests reject missing mandatory commands/attributes, wrong lighting
 features/revisions and changed named source inputs before generation. These
 checks and artifact digests establish the selected model only. Separate native
 tests cover atomic fabric/endpoint persistence, SDK server startup/shutdown,
-sixteen dynamic children, approved observations and cleanup with failure exits
-in both sanitizer modes. Authenticated consumer dispatch, subscription/report
-flow, handoff timeouts and independent peer workflows
+sixteen dynamic children, approved observations, bounded owned command arguments,
+actual SDK handle retention and cleanup with failure exits in both sanitizer
+modes. Request-owner tests use synthetic CASE, group and commissioning
+principal values and explicit test clocks. Authenticated consumer dispatch,
+subscription/report flow, end-to-end handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does
 not satisfy those server obligations. Certification and installed ecosystem
 acceptance remain separate.
