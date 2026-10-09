@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.16.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.17.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -9,9 +9,9 @@ simulate 256 identities and reject duplicate, rewound and overlapping
 snapshots. The benchmark measures only BEAM-side custody. The native bridge
 store persists SDK values and endpoint custody together with a separate
 immutable bridge/model identity. An internal SDK server binding owns startup
-and shutdown resources. Bounded BEAM consumer execution is implemented; a
-consumer-facing native process, authenticated request integration and independent
-controller peer remain open.
+and shutdown resources. Bounded BEAM consumer execution and explicit BEAM
+process coordination are implemented; the production SDK process host,
+authenticated request integration and independent controller peer remain open.
 The [finite software profile](exposed-bridge-profile.md) pins the source,
 Matter 1.6 data model, root/aggregator layout, both bridged Device Types,
 mandatory light/sensor clusters, generated model artifacts, build options,
@@ -307,6 +307,43 @@ codec tests decode two BEAM probes natively and two native samples on BEAM. The
 holds the stack lock, writes correlated samples through reserved control output
 and completes the read only after a result. This exchange supplies no actual
 host-clock rate qualification, peer authentication or native process bootstrap.
+
+[`Connection`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/connection.ex)
+owns one explicitly selected process and private consumer. Required options
+supply the live owner, immutable executable/digest, arguments, clock, qualified
+rate, policy, routes and bounded handshake timeout. Artifact refusal starts no
+native execution; launch clears inherited environment variables. A random
+generation binds the exact
+[`Control`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/control.ex)
+open/ready and close/closed receipts, clock probes and all requests/results.
+Startup requires the pinned model/revision receipt and one correlated sample
+before executing buffered requests. Refusal cleans up and returns a structured
+error to the linked starter.
+
+Queued and running requests share sixteen slots and strictly increasing native
+IDs. One pending probe serves the ordered queue, and at most one fresh probe per
+request prevents an insufficient sample from causing a probe loop. Regressing
+samples close the generation. Expired work returns unknown before policy;
+accepted work uses the private consumer and one-time result collection. Native
+writes never suspend this owner. Owner, consumer or native loss closes execution
+and reaps the child; status/error reports redact bootstrap and request contents.
+Explicit close stops workers, accepts only bounded in-flight requests or one
+pending sample, and joins an exact receipt, zero exit and Port release within
+one second of native close admission. Failed grace or protocol forces cleanup.
+
+[connection tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_connection_test.exs)
+run a real scripted process with public Runtime read/write/invoke dispatch,
+policy denial, deadline expiry, fresh probes, replay/overflow refusal, missing
+receipts, early/nonzero exits, clock regression, explicit owner/consumer loss,
+trapped workers, abrupt connection death, close bounds and redacted diagnostics.
+[control tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_control_test.exs)
+exercise exact fields, pinned receipts, duplicate refusal and LF/512-byte bounds.
+[process tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_port_process_test.exs)
+verify artifact refusal and real pipe pressure without suspending the caller.
+These tests establish the BEAM coordinator against scripted hosts. A production
+SDK host implementing bootstrap and closed custody, authenticated SDK dispatch,
+approved observations, host-clock qualification and independent peer receipts
+remain open; scripted ready/principal fixtures supply none of that evidence.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)

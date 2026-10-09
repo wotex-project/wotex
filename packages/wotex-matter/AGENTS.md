@@ -97,6 +97,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   cover refusal and unchanged request custody; `wait_clock_probes` exercises
   reserved replies while an actual SDK read waits. Clock-rate qualification and
   native process bootstrap remain separate obligations.
+- `lib/wotex/matter/bridge/{connection,control}.ex`: explicit selected-process
+  bootstrap, pinned generation receipts, ordered bounded execution, correlated
+  probes, non-suspending output and joined close. Configuration/Port helpers own
+  validation, environment clearing and child cleanup. The real-pipe
+  `bridge_{connection,control,port_process}_test.exs` tests use scripted hosts;
+  the production SDK host and authenticated execution integration remain open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: required retained-invoke
   guard for exact fabric/credential scope, live command metadata and current
   SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and

@@ -1,10 +1,11 @@
 # Exposed bridge software profile
 
-Version: 1.15.0. Finite WMA.09 implementation target. The
+Version: 1.16.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
-endpoint bindings and bounded BEAM consumer execution are implemented. Native
-Port bootstrap and authenticated request admission remain open.
+endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
+coordination are implemented. The production SDK process host and authenticated
+request admission remain open.
 
 ## Source and generated data
 
@@ -238,6 +239,40 @@ clock, protocol, owner or private-supervisor loss and explicit closure reap
 owned work, including handlers that trap exits. The native Port owner must
 monitor execution loss and close its native custody. This API supplies no
 native process bootstrap, live SDK admission or approved-observation transport.
+
+`Wotex.Matter.Bridge.Connection` coordinates an explicitly selected native
+process and its private consumer. Required options name a live local owner,
+immutable absolute executable and lowercase SHA-256, explicit arguments, clock,
+qualified minimum rate, policy, routes and a 1–5000 ms handshake timeout. Digest
+admission refuses missing, nonexecutable and symlink files before launch. The
+caller owns executable immutability, credentials, store and endpoint bootstrap
+configuration; inherited environment variables are cleared.
+
+A random 16-byte generation binds the process. `Control` supplies four-field
+open/close controls and checks exact ready/closed receipts within 512 bytes
+including LF. Ready adds the selected SDK revision and generated model SHA-256;
+it supplies a protocol receipt, not authentication or clock qualification.
+Startup requires ready and a correlated clock sample within its absolute
+deadline. Refusal returns a structured error after cleanup to the linked caller.
+
+The ordered queue and running work share sixteen slots. Requests buffered during
+bootstrap remain inert. One pending probe serves that queue, with at most one
+fresh probe per request; regressing or insufficient samples close the generation.
+Original native deadlines never change. Expired queued work returns unknown,
+accepted work crosses the private consumer boundary, and results retire once.
+Output uses non-suspending Port writes; pipe pressure closes the generation.
+
+The configured owner alone may inspect generation/counts or close. Owner,
+consumer or native loss reaps owned work and the native child, with detail-free
+failure reporting and conservative unknown effect after an admitted mutation.
+Explicit close first stops consumer work, then requires a correlated closed
+receipt, zero native exit and joined Port release within a one-second native
+grace. It discards at most sixteen in-flight requests and one correlated pending
+sample without executing them. Failed close forces child cleanup. Temporary
+supervision never restarts a generation. These real-pipe scripted-host tests
+establish BEAM process ownership; the production SDK host, authenticated SDK
+dispatch, actual clock qualification and approved-observation transport remain
+separate obligations.
 
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
 (`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.

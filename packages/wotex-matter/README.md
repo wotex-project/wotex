@@ -441,6 +441,17 @@ through reserved control capacity without consuming request credit or acquiring
 the SDK stack lock. The separate SDK case exercises this exchange while a read
 waits for its result; paired codec tests preserve both wire directions. An
 exchange does not qualify host clocks or authenticate a native process.
+`Wotex.Matter.Bridge.Connection` starts an explicitly selected immutable
+executable with a checked SHA-256 and cleared inherited environment. Required
+options include the owner, arguments, clock, qualified minimum rate, policy,
+routes and handshake timeout. Its generation binds exact pinned ready/closed
+receipts, clock probes and sixteen ordered pending requests. It owns private
+consumer execution, collects each result once and closes on pipe pressure,
+protocol failure or owner/native/consumer loss. Owner-only close joins worker
+cleanup, the correlated receipt, zero native exit and Port release. Real-pipe
+tests exercise this coordinator with scripted hosts. The production SDK host,
+authenticated request integration, approved observations and host-clock
+qualification remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in

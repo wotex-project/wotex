@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.17.0-target.
+Version: 0.18.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -285,6 +285,57 @@ and probe ID, retain its BEAM samples before sending and after receiving, and
 supply the qualified projection inputs above. A successfully exchanged sample
 MUST NOT be presented as host authentication, a qualified elapsed-time rate,
 consumer authorization or completed native bootstrap.
+
+### Native process coordination
+
+The BEAM connection MUST start explicitly with a live local owner, an absolute
+caller-selected immutable executable, its lowercase SHA-256, explicit arguments,
+nonblocking clock, qualified minimum rate, required policy, exact routes and a
+handshake timeout from 1 to 5000 milliseconds. It MUST refuse missing, malformed,
+nonexecutable, symlink or digest-mismatched artifacts before starting native
+execution. It MUST clear inherited environment variables and MUST NOT discover,
+download, build or restart an executable implicitly. File digest admission MUST
+NOT be presented as protection against replacement of a mutable selected file.
+
+One random 16-byte generation MUST bind the complete process lifetime. The
+version-1 `matter-bridge/open` and `close` controls each have exactly four scalar
+fields: integer `v: 1`, `backend`, `type` and lowercase hexadecimal `generation`.
+The `ready` receipt adds exactly `sdk_revision` and `model_sha256`, matching the
+selected SDK revision and generated model. The `closed` receipt has only the four
+base fields. Every control MUST include LF within 512 bytes; duplicate, missing,
+extra, mistyped or foreign-generation fields MUST be refused. A ready receipt
+MUST NOT substitute for authentication, initialized credential ownership or
+clock qualification. The selected native host MUST enforce SDK admission and
+close/drain custody on input loss before releasing SDK resources.
+
+Startup MUST require an exact ready receipt and one correlated clock exchange
+within its absolute handshake deadline. Requests received during that exchange
+MUST remain inert until bootstrap succeeds. Queued and running requests together
+MUST fit within sixteen slots, preserve strictly increasing native IDs and retain
+their original native deadlines. One pending probe MUST service the ordered
+queue; each request may trigger at most one fresh probe. A fresh sample that
+regresses or still cannot cover the original deadline MUST close the generation.
+Expired queued work MUST return unknown without executing policy or a handler.
+Accepted work MUST use the private consumer execution boundary and collect each
+result once. Native writes MUST NOT suspend this connection; a busy or failed
+pipe MUST close the generation without retries.
+
+Only the configured owner may inspect bounded generation/count status or request
+close. Owner, execution-owner or native loss MUST stop owned work and reap the
+native process. Failure reports and diagnostic status MUST exclude payloads,
+bootstrap arguments, route contents and external exception text. An admitted
+mutation MUST make subsequent channel loss conservatively unknown. Startup
+refusal MUST return a structured error after cleanup without terminating the
+linked caller. Temporary supervision MUST NOT restart a lost generation.
+
+Explicit close MUST stop consumer work first, then require the exact closed
+receipt, zero native exit and joined Port release within one second of native
+close admission. It may discard at most sixteen strictly increasing in-flight
+requests and one outstanding correlated clock reply without executing them.
+Other output, output after acknowledgment, nonzero exit or missed grace MUST
+fail close and force cleanup of the owned native child. Process coordination
+tests with a scripted host MUST NOT be cited as actual SDK process bootstrap,
+authenticated requests, approved-observation delivery or qualified host clocks.
 
 ### Native callback custody
 
