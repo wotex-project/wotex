@@ -12,6 +12,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"UBSAN_OPTIONS", "halt_on_error=1"}
   ]
   @cases [
+    {"credentials", 0, "explicit bridge credential ownership and refusal passed"},
     {"normal", 0, "server startup and shutdown probe passed"},
     {"reopen", 0, "server startup and shutdown probe passed"},
     {"poison_sdk", 74, nil},

@@ -51,6 +51,12 @@ class BridgeOutputOwner final {
   // Refusal retains no bytes; the SDK owner explicitly resolves or closes an
   // already admitted request rather than silently retrying or granting Success.
   Admission Push(Kind kind, std::string_view frame);
+  // Shutdown-owner operation outside custody/SDK callbacks. Refuses new
+  // output, discards frames whose writing has not started, completes the one
+  // active frame and writes this final bounded control before ending. Unlike
+  // Close, it preserves framing for the terminal receipt. Failure leaves the
+  // queue unchanged; loss/cancellation still aborts without a success receipt.
+  Admission Finish(std::string_view terminal_frame);
   // Close acquires shared custody after unlocking output; call it outside a
   // custody With callback. Push may run inside that callback.
   void Close();
@@ -79,7 +85,7 @@ class BridgeOutputOwner final {
   };
   std::optional<std::size_t> First(std::size_t begin, std::size_t end) const;
   std::optional<Pending> Take(const std::atomic<bool> &stop);
-  void Release(Pending &pending);
+  bool Release(Pending &pending);
   State End(State state);
   bool Closed();
 
@@ -89,6 +95,7 @@ class BridgeOutputOwner final {
   std::condition_variable changed_;
   std::array<Slot, kRequestCapacity + kControlCapacity> slots_;
   std::uint64_t next_{0};
+  std::uint64_t terminal_{0};
   State state_{State::Open};
   bool running_{false};
 };

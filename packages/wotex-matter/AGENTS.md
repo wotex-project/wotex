@@ -54,6 +54,15 @@ Repository-wide rules are in the root `AGENTS.md`.
   approved observation ownership; `native/testing/sdk_bridge_{server,endpoints}_test.*`
   form its separate test target. These bindings have no consumer-facing native
   Port or authenticated consumer command/write dispatch.
+- `native/{include/wotex_matter,src}/bridge_credentials.*`: explicit native
+  attestation/commissioning ownership, bounded input and secret retirement.
+  `native/testing/sdk_bridge_credentials_test.*` supplies pinned development
+  material only to the separate SDK test build. Production bootstrap and
+  authenticated consumer execution remain open.
+- `native/include/wotex_matter/bridge_control.hpp` and `native/src/bridge_input.cpp`:
+  bounded first-frame open, pinned ready/closed receipts and generation-scoped
+  close. `bridge_output.*` can explicitly complete an active frame before a
+  terminal control. Codec/output tests do not establish SDK process cleanup.
 - `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
   custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
   tests deadlines, generations and closure independently of the SDK.

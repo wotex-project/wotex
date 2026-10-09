@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.16.0. Finite WMA.09 implementation target. The
+Version: 1.17.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -296,8 +296,15 @@ Consumer authorization remains separately required.
 
 Production attestation and commissioning material are consumer-owned, with no
 absent-provider or example-credential fallback. An explicitly separate test
-build uses the pinned SDK example provider, test VID `0xFFF1`/PID `0x8001`
-and isolated, generated onboarding material. This model fixture contains
+build supplies pinned SDK development material to the explicit credential owner,
+using test VID `0xFFF1`/PID `0x8001` and isolated, generated onboarding material.
+The native owner accepts DAC/PAI certificates up to 600 bytes, declaration bytes
+up to 4096 bytes, exactly 97 serialized P-256 key bytes, an SDK-valid passcode,
+discriminator 0–4095, iterations 1000–100000 and explicit 16–32-byte salt.
+It checks certificate format/identity and key possession, copies its material,
+derives the verifier and clears retained secrets on retirement. It installs no
+provider. PAA-chain trust and declaration validity remain separate provisioning
+obligations. This model fixture contains
 credential source digests only. It includes no attestation private-key bytes
 or production credential claim. The selected peer is the pinned SDK's
 `examples/chip-tool:chip-tool`, independently built from the server.

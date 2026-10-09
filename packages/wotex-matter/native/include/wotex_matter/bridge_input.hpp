@@ -20,14 +20,16 @@ struct BridgeResultFrame {
 enum class BridgeResultDecode { Decoded, Malformed, Oversized, NoMemory };
 
 struct BridgeInputFrame {
-  enum class Kind { Result, ClockProbe };
+  enum class Kind { Result, ClockProbe, Close, Open };
   Kind kind{Kind::Result};
   BridgeResultFrame result;
 };
 
 // Results retain their exact six fields; clock-probe has exactly v, backend,
 // type, generation and a nonzero canonical uint64 decimal id. Probe identities
-// occupy a separate namespace. All input is scalar-only and bounded to 512
+// occupy a separate namespace. Close has only v, backend, type and generation;
+// open belongs only to the first-frame decoder and is refused after bootstrap.
+// All input is scalar-only and bounded to 512
 // bytes including LF. Failure preserves output, and probes grant no authority.
 BridgeResultDecode DecodeBridgeInputFrame(std::string_view line,
                                           const BridgeConsumerHandoff::Generation &generation,
@@ -73,6 +75,7 @@ class BridgeResultInput final {
  public:
   enum class State {
     Open,
+    Requested,
     Ended,
     Partial,
     Malformed,

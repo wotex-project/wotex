@@ -1,4 +1,5 @@
 #include "wotex_matter/bridge_input.hpp"
+#include "wotex_matter/bridge_control.hpp"
 
 #include <nlohmann/json.hpp>
 #include <atomic>
@@ -473,6 +474,127 @@ void Pipes() {
     assert(close(descriptors[0]) == 0);
   }
 }
+void ProcessControls() {
+  const Handoff::Generation generation{255, 17, 34};
+  const Json open{{"v", 1},
+                  {"backend", "matter-bridge"},
+                  {"type", "open"},
+                  {"generation", Generation(generation)}};
+  Handoff::Generation decoded{9};
+  assert(DecodeBridgeOpenFrame(open.dump(), decoded) == BridgeResultDecode::Decoded &&
+         decoded == generation);
+  auto closing = open;
+  closing["type"] = "close";
+  BridgeInputFrame input;
+  assert(DecodeBridgeInputFrame(closing.dump(), generation, input) == BridgeResultDecode::Decoded &&
+         input.kind == BridgeInputFrame::Kind::Close);
+  BridgeResultFrame result;
+  assert(DecodeBridgeResultFrame(closing.dump(), generation, result) ==
+         BridgeResultDecode::Malformed);
+  assert(DecodeBridgeInputFrame(open.dump(), generation, input) == BridgeResultDecode::Malformed);
+
+  const auto refuse = [&](const std::string &bytes) {
+    Handoff::Generation sentinel{9};
+    assert(DecodeBridgeOpenFrame(bytes, sentinel) == BridgeResultDecode::Malformed &&
+           sentinel == Handoff::Generation{9});
+  };
+  for (const auto &field : {"v", "backend", "type", "generation"}) {
+    auto missing = open;
+    missing.erase(field);
+    refuse(missing.dump());
+    const auto valid = open.dump();
+    refuse(valid.substr(0, valid.size() - 1) + ",\"" + field + "\":" + open[field].dump() + "}");
+  }
+  for (const auto &role : {"close", "result", "clock-probe", "ready"}) {
+    auto wrong = open;
+    wrong["type"] = role;
+    refuse(wrong.dump());
+  }
+  for (const auto &identity :
+       {std::string{}, std::string("00"), "A" + std::string(31, 'f'), std::string(32, 'g')}) {
+    auto wrong = open;
+    wrong["generation"] = identity;
+    refuse(wrong.dump());
+  }
+  auto wrong = open;
+  wrong["id"] = "1";
+  refuse(wrong.dump());
+  wrong = open;
+  wrong["v"] = 1.0;
+  refuse(wrong.dump());
+  refuse(open.dump() + "\n");
+  refuse(open.dump() + "\r");
+  const auto padded = open.dump() + std::string(511 - open.dump().size(), ' ');
+  assert(DecodeBridgeOpenFrame(padded, decoded) == BridgeResultDecode::Decoded);
+  assert(DecodeBridgeOpenFrame(padded + ' ', decoded) == BridgeResultDecode::Oversized);
+  const auto open_bytes = open.dump();
+  unsigned failures = 0;
+  bool complete = false;
+  for (int index = 0; index < 128; ++index) {
+    Handoff::Generation sentinel{9};
+    allocation_failure = index;
+    const auto status = DecodeBridgeOpenFrame(open_bytes, sentinel);
+    allocation_failure = -1;
+    if (status == BridgeResultDecode::Decoded) {
+      assert(sentinel == generation);
+      complete = true;
+      break;
+    }
+    ++failures;
+    assert(status == BridgeResultDecode::NoMemory && sentinel == Handoff::Generation{9});
+  }
+  assert(complete && failures > 0);
+
+  for (const auto role : {BridgeControlReply::Ready, BridgeControlReply::Closed}) {
+    std::string frame;
+    assert(EncodeBridgeControlReply(role, generation, frame) == BridgeControlEncode::Encoded &&
+           frame.back() == '\n' && frame.size() <= 512);
+    auto expected = closing;
+    expected["type"] = role == BridgeControlReply::Ready ? "ready" : "closed";
+    if (role == BridgeControlReply::Ready) {
+      expected["sdk_revision"] = kBridgeSdkRevision;
+      expected["model_sha256"] = kBridgeModelSha256;
+    }
+    assert(Json::parse(frame) == expected);
+    complete = false;
+    failures = 0;
+    for (int index = 0; index < 128; ++index) {
+      std::string sentinel = "unchanged";
+      allocation_failure = index;
+      const auto status = EncodeBridgeControlReply(role, generation, sentinel);
+      allocation_failure = -1;
+      if (status == BridgeControlEncode::Encoded) {
+        assert(sentinel == frame);
+        complete = true;
+        break;
+      }
+      ++failures;
+      assert(status == BridgeControlEncode::NoMemory && sentinel == "unchanged");
+    }
+    assert(complete && failures > 0);
+  }
+  std::string sentinel = "unchanged";
+  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): deliberately forge an unsupported scoped-enum value to verify structured refusal.
+  assert(EncodeBridgeControlReply(static_cast<BridgeControlReply>(99), generation, sentinel) ==
+             BridgeControlEncode::Malformed &&
+         sentinel == "unchanged");
+
+  ManualClock clock;
+  Handoff core(generation);
+  BridgeHandoffOwner owner(core, clock);
+  const auto ticket = Reserve(owner);
+  Sink sink;
+  BridgeResultInput stream(owner, generation, sink);
+  assert(stream.Feed(closing.dump() + '\n') == State::Requested && sink.closed == 1);
+  Drain(owner, ticket, Handoff::Outcome::Closed);
+  assert(stream.End() == State::Requested && sink.closed == 1);
+
+  Handoff foreign({8});
+  BridgeHandoffOwner foreign_owner(foreign, clock);
+  Sink foreign_sink;
+  BridgeResultInput foreign_stream(foreign_owner, generation, foreign_sink);
+  assert(foreign_stream.Feed(closing.dump() + '\n') == State::Malformed);
+}
 } // namespace
 
 int main() {
@@ -483,6 +605,7 @@ int main() {
   ClosureAndClock();
   AllocationFailure();
   Pipes();
+  ProcessControls();
   Refuse("\n", State::Malformed);
   Refuse(std::string(512, ' '), State::Oversized);
   Refuse("{", State::Partial);

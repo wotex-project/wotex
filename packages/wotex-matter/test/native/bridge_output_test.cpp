@@ -30,6 +30,12 @@ void operator delete[](void *memory, std::size_t) noexcept { std::free(memory); 
 
 namespace wotex::matter {
 struct BridgeOutputOwnerTestAccess {
+  static bool Writing(BridgeOutputOwner &owner) {
+    std::lock_guard<std::mutex> lock(owner.mutex_);
+    for (const auto &slot : owner.slots_)
+      if (slot.state == BridgeOutputOwner::SlotState::Writing) return true;
+    return false;
+  }
   static std::size_t Bytes(BridgeOutputOwner &owner, BridgeOutputOwner::Kind kind) {
     std::lock_guard<std::mutex> lock(owner.mutex_);
     const auto begin = kind == BridgeOutputOwner::Kind::Request ? 0 : owner.kRequestCapacity;
@@ -291,6 +297,79 @@ void Concurrent() {
   fixture.output.Close();
 }
 
+void TerminalFrame() {
+  Fixture fixture;
+  auto &output = fixture.output;
+  assert(output.Push(Kind::Control, "discard-control\n") == Admission::Accepted);
+  assert(output.Push(Kind::Request, "discard-request\n") == Admission::Accepted);
+  for (const auto &bytes : {std::string{}, std::string("missing LF"), std::string("\n\n"),
+                            std::string("bad\r\n"), std::string("bad\0\n", 5)})
+    assert(output.Finish(bytes) == Admission::Malformed);
+  assert(output.Finish(std::string(512, 'x') + '\n') == Admission::Oversized);
+  const auto final_frame = std::string(64, 'x') + '\n';
+  allocation_failure = true;
+  assert(output.Finish(final_frame) == Admission::NoMemory);
+  assert(BridgeOutputOwnerTestAccess::Bytes(output, Kind::Request) == 16);
+  for (unsigned i = 1; i < Output::kControlCapacity; ++i)
+    assert(output.Push(Kind::Control, "discard-control\n") == Admission::Accepted);
+  assert(output.Finish("closed\n") == Admission::Accepted);
+  assert(output.Push(Kind::Request, "late\n") == Admission::Closed);
+  assert(output.Finish("duplicate\n") == Admission::Closed);
+  int descriptors[2];
+  assert(pipe(descriptors) == 0);
+  std::atomic<bool> stop{false};
+  assert(output.Run(descriptors[1], stop) == State::Ended && fixture.sink.closed == 1);
+  assert(close(descriptors[1]) == 0);
+  char bytes[32];
+  const auto count = read(descriptors[0], bytes, sizeof(bytes));
+  assert(count == 7 && std::string(bytes, static_cast<std::size_t>(count)) == "closed\n");
+  assert(read(descriptors[0], bytes, sizeof(bytes)) == 0);
+  assert(close(descriptors[0]) == 0);
+
+  Fixture active;
+  const auto maximum = Maximum();
+  assert(active.output.Push(Kind::Request, maximum) == Admission::Accepted);
+  assert(pipe(descriptors) == 0);
+  State terminal = State::Open;
+  std::thread writer([&] { terminal = active.output.Run(descriptors[1], stop); });
+  while (!BridgeOutputOwnerTestAccess::Writing(active.output)) std::this_thread::yield();
+  assert(active.output.Finish("closed\n") == Admission::Accepted);
+  assert(fcntl(descriptors[0], F_SETFL, O_NONBLOCK) == 0);
+  std::string received;
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (received.size() < maximum.size() + 7 && std::chrono::steady_clock::now() < deadline) {
+    const auto got = read(descriptors[0], bytes, sizeof(bytes));
+    if (got > 0) received.append(bytes, static_cast<std::size_t>(got));
+    else std::this_thread::yield();
+  }
+  assert(received == maximum + "closed\n");
+  writer.join();
+  assert(terminal == State::Ended && active.sink.closed == 1);
+  assert(close(descriptors[0]) == 0 && close(descriptors[1]) == 0);
+
+  Fixture exhausted;
+  assert(exhausted.output.Push(Kind::Request, "preserve\n") == Admission::Accepted);
+  BridgeOutputOwnerTestAccess::Exhaust(exhausted.output);
+  assert(exhausted.output.Finish("closed\n") == Admission::Exhausted &&
+         BridgeOutputOwnerTestAccess::Bytes(exhausted.output, Kind::Request) == 9);
+  exhausted.output.Close();
+  assert(exhausted.output.Finish("closed\n") == Admission::Closed);
+  for (bool cancelled : {false, true}) {
+    Fixture lost;
+    assert(lost.output.Finish("closed\n") == Admission::Accepted);
+    assert(pipe(descriptors) == 0);
+    stop = cancelled;
+    if (!cancelled) assert(close(descriptors[0]) == 0);
+    assert(lost.output.Run(descriptors[1], stop) == (cancelled ? State::Cancelled : State::Write));
+    assert(lost.sink.closed == 1);
+    assert(close(descriptors[1]) == 0);
+    if (cancelled) {
+      assert(read(descriptors[0], bytes, sizeof(bytes)) == 0);
+      assert(close(descriptors[0]) == 0);
+    }
+  }
+}
+
 void MissingClose() {
   const auto child = fork();
   assert(child >= 0);
@@ -318,6 +397,7 @@ int main() {
   IdleAndFailure();
   LockOrdering();
   Concurrent();
+  TerminalFrame();
   MissingClose();
   std::cout << "bridge output credit, control ordering, cancellation and custody closure passed\n";
 }

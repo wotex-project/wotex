@@ -105,6 +105,7 @@ if (chip_build_tools) {
     cflags_cc = [ "-std=c++17" ]
     defines = [ "WOTEX_MATTER_BRIDGE_TESTING=1" ]
     sources = [
+      "src/bridge_credentials.cpp",
       "src/bridge_endpoint_model.cpp",
       "src/bridge_endpoints.cpp",
       "src/bridge_guard.cpp",
@@ -123,6 +124,7 @@ if (chip_build_tools) {
       "src/sdk_storage.cpp",
       "src/storage.cpp",
       "testing/sdk_bridge_endpoints_test.cpp",
+      "testing/sdk_bridge_credentials_test.cpp",
       "testing/sdk_bridge_guard_test.cpp",
       "testing/sdk_bridge_replies_test.cpp",
       "testing/sdk_bridge_provider_test.cpp",

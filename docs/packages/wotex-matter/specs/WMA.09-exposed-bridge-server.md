@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.18.0-target.
+Version: 0.19.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -63,6 +63,29 @@ retire global references to borrowed providers. A partial SDK initialization
 or poisoned store MUST terminate the native process before it can serve cached
 state; the outer owner MUST reap and classify that process without retrying a
 mutation.
+
+The explicit credential owner MUST copy consumer-supplied DAC, PAI and
+Certification Declaration bytes without selecting example credentials. DAC
+and PAI MUST each contain 1–600 bytes; the declaration MUST contain 1–4096
+bytes. The owner MUST validate the pinned SDK's DAC/PAI certificate formats,
+require matching DAC vendor/product identity and compatible PAI identity,
+and import exactly the SDK's 97-byte serialized P-256 keypair. The DAC public
+key MUST match the imported key, and a locally signed challenge MUST verify
+with that DAC key before provider service. These checks MUST NOT be represented
+as PAA-chain trust, Certification Declaration verification or certification.
+
+Commissioning MUST require an explicit SDK-valid setup passcode, discriminator
+0–4095, iteration count 1000–100000 and 16–32-byte salt. Provider creation MUST
+NOT install global providers, invent onboarding material or select a random
+salt. The owner MUST derive and retain its own bounded PASE verifier and copy
+its attestation bytes. Callers MUST own and clear their original private input.
+Creation failure MUST preserve the caller's existing owner. Provider signing
+MUST accept only 1–4096 message bytes and sufficient signature capacity.
+Immutable commissioning setters MUST refuse changes. After global references
+are retired, explicit retirement MUST refuse all getter/signing service and
+clear the retained key, verifier, salt and passcode. Failure MUST preserve
+caller output. Provider calls and retirement MUST remain serialized by the
+SDK owner.
 
 Dynamic SDK slots MUST remain distinct from durable endpoint IDs. Restore MUST
 receive one explicit consumer configuration for every live Thing and refuse
@@ -336,6 +359,23 @@ Other output, output after acknowledgment, nonzero exit or missed grace MUST
 fail close and force cleanup of the owned native child. Process coordination
 tests with a scripted host MUST NOT be cited as actual SDK process bootstrap,
 authenticated requests, approved-observation delivery or qualified host clocks.
+
+The native first-frame decoder MUST accept only the exact four-field `open`
+control supplying version, backend, type and the sixteen-byte generation.
+Subsequent input MUST refuse `open`. The exact four-field `close` control MUST
+match both the reader's generation and shared custody, close admission and wake
+pending waits before native cleanup. Ready/closed encoders MUST preserve the
+selected receipt fields and existing LF/512-byte limit; failure MUST preserve
+caller output.
+
+After cleanup, the shutdown owner MAY explicitly finish output with a final
+bounded control. This operation MUST refuse new output and discard frames
+whose writing has not started, while preserving the one active frame through
+its final LF before writing the terminal control. The terminal control MUST
+be written once, followed by output retirement. Allocation or counter refusal
+MUST preserve the queue. Cancellation or consumer loss MUST abort the finish
+without promoting it to successful closure. Finishing output MUST NOT establish
+SDK cleanup or authorize a closed receipt before actual native cleanup.
 
 ### Native callback custody
 

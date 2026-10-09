@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.17.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.18.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -85,6 +85,27 @@ the server and fabric table, and retires model/persistence references. Partial
 SDK initialization or destruction without serialized shutdown exits with 70;
 a poisoned store exits with 74 before returning to cached SDK service.
 The future native Port owner must reap and classify these exits.
+
+The internal
+[`SdkBridgeCredentials`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_credentials.hpp)
+owns explicitly supplied DAC/PAI/declaration bytes, a matching P-256 key,
+immutable commissioning inputs and the derived PASE verifier. It validates
+certificate format and VID/PID, signs and verifies a key-possession challenge,
+refuses missing or excessive inputs and clears retained secrets on retirement.
+It installs no provider and selects no example credentials or salt. Caller
+inputs remain caller-owned. PAA trust and declaration validity are separate
+provisioning obligations; this owner establishes neither certification nor
+peer interoperability.
+
+[`sdk_bridge_credentials_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_credentials_test.cpp)
+uses explicit pinned SDK development material only in the separate test target.
+Its credential case covers format/identity/key refusal, an imported matching
+public key with an unrelated private key, commissioning bounds, immutable
+getters/setters, derived verifier/signature checks, owned input copies and
+retired-provider refusal with unchanged outputs. SDK server lifecycle cases
+install this owner explicitly instead of installing the example provider.
+The production process bootstrap, private configuration loader and
+authenticated consumer request integration remain open.
 
 [`sdk_bridge_server_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_server_test.cpp)
 is a separate test-only target using explicit SDK example attestation and
@@ -222,6 +243,17 @@ and restores settable file status flags, with 50 ms write-poll and idle-wait
 timeouts. Callers own SIGPIPE behavior and join all users before closing
 descriptors or destroying output. Queued
 bytes or an active writer at destruction terminate with 70. Close does not flush.
+
+Native process controls have separate bounded open and ready/closed codecs.
+The reader accepts generation-scoped close, validates the actual shared custody
+generation and closes admission before cleanup. After cleanup, the owner can
+explicitly finish output: queued frames are discarded, the active frame reaches
+its LF and one terminal control follows. Finish refuses later admission and
+preserves queues on allocation/counter failure; cancellation or consumer loss
+still aborts. Native input/output tests cover malformed controls, allocation
+cutpoints, full control capacity, an active maximum-sized frame and terminal
+loss/cancellation. These mechanisms do not perform SDK cleanup or make a closed
+receipt valid before the process owner completes that cleanup.
 
 [bridge_output_test.cpp](../../../../packages/wotex-matter/test/native/bridge_output_test.cpp)
 executes exact frame limits, malformed bytes, allocation/lock/capacity refusal,

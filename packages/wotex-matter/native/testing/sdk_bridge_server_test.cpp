@@ -7,15 +7,14 @@
 #include "sdk_bridge_wait_test.hpp"
 #include "sdk_bridge_writes_test.hpp"
 #include "sdk_bridge_guard_test.hpp"
+#include "sdk_bridge_credentials_test.hpp"
 
-#include <LinuxCommissionableDataProvider.h>
 #include <app/server/Server.h>
 #include <app/InteractionModelEngine.h>
 #include <app/SafeAttributePersistenceProvider.h>
 #include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/clusters/network-commissioning/CodegenInstance.h>
 #include <app/util/endpoint-config-api.h>
-#include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <credentials/GroupDataProvider.h>
 #include <data-model-providers/codegen/CodegenDataModelProvider.h>
 #include <data-model-providers/codegen/Instance.h>
@@ -93,6 +92,11 @@ void Require(bool value, const char *stage) {
 void Run(const char *directory, const std::string &mode) {
   using namespace chip;
   using namespace wotex::matter;
+  if (mode == "credentials") {
+    DeviceLayer::SetCommissionableDataProvider(&closed_commissioning);
+    testing::TestCredentials();
+    return;
+  }
   BridgeIdentity identity{"bridge-startup-probe",
                           "dd8b1a870f1cfa89b609e70ff342e4f3d61525ae49bbbea27cf112d1bca0b671",
                           0xFFF1, 0x8001};
@@ -121,25 +125,10 @@ void Run(const char *directory, const std::string &mode) {
         "pending startup fixture");
   }
 
-  LinuxCommissionableDataProvider commissioning;
-  uint32_t pin = 0;
-  for (unsigned attempt = 0; attempt < 32; ++attempt) {
-    Check(Crypto::DRBG_get_bytes(reinterpret_cast<uint8_t *>(&pin), sizeof(pin)),
-          "test onboarding");
-    pin = pin % 99999998U + 1U;
-    if (SetupPayload::IsValidSetupPIN(pin)) break;
-  }
-  Require(SetupPayload::IsValidSetupPIN(pin), "test onboarding exhausted");
-  uint16_t discriminator = 0;
-  Check(Crypto::DRBG_get_bytes(reinterpret_cast<uint8_t *>(&discriminator), sizeof(discriminator)),
-        "test discriminator");
-  discriminator &= 0x0FFF;
-  Check(commissioning.Init(NullOptional, NullOptional, 1000, MakeOptional(pin), discriminator),
-        "commissionable provider");
-  DeviceLayer::SetCommissionableDataProvider(&commissioning);
+  auto credentials = testing::CreateTestCredentials();
+  DeviceLayer::SetCommissionableDataProvider(credentials.get());
   auto *original_dac = Credentials::GetDeviceAttestationCredentialsProvider();
-  Credentials::SetDeviceAttestationCredentialsProvider(
-      Credentials::Examples::GetExampleDACProvider());
+  Credentials::SetDeviceAttestationCredentialsProvider(credentials.get());
   if (mode == "missing_dac") {
     Credentials::SetDeviceAttestationCredentialsProvider(original_dac);
   }
@@ -422,7 +411,7 @@ void Run(const char *directory, const std::string &mode) {
 int main(int argc, char **argv) {
   if (argc != 3) return 2;
   const std::string mode(argv[2]);
-  if (mode != "normal" && mode != "reopen" && mode != "startup_failure" &&
+  if (mode != "credentials" && mode != "normal" && mode != "reopen" && mode != "startup_failure" &&
       mode != "missing_finish" && mode != "poison_sdk" && mode != "poison_allocate" &&
       mode != "poison_remove" && mode != "wrong_model" && mode != "wrong_vendor" &&
       mode != "wrong_product" && mode != "missing_dac" && mode != "endpoints_seed" &&

@@ -31,7 +31,7 @@ BridgeOutputOwner::Admission BridgeOutputOwner::Push(Kind kind, std::string_view
     return Admission::Malformed;
   std::unique_lock<std::mutex> lock(mutex_, std::try_to_lock);
   if (!lock.owns_lock()) return Admission::Busy;
-  if (state_ != State::Open) return Admission::Closed;
+  if (state_ != State::Open || terminal_ != 0) return Admission::Closed;
   if (next_ == std::numeric_limits<std::uint64_t>::max()) return Admission::Exhausted;
   const std::size_t begin = kind == Kind::Request ? 0 : kRequestCapacity;
   const std::size_t end = kind == Kind::Request ? kRequestCapacity : slots_.size();
@@ -51,6 +51,37 @@ BridgeOutputOwner::Admission BridgeOutputOwner::Push(Kind kind, std::string_view
     return Admission::Accepted;
   }
   return Admission::Full;
+}
+
+BridgeOutputOwner::Admission BridgeOutputOwner::Finish(std::string_view frame) {
+  if (frame.size() > kMaximumControlFrameBytes) return Admission::Oversized;
+  if (frame.empty() || frame.back() != '\n' ||
+      frame.substr(0, frame.size() - 1).find('\n') != std::string_view::npos ||
+      frame.find('\0') != std::string_view::npos || frame.find('\r') != std::string_view::npos)
+    return Admission::Malformed;
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (state_ != State::Open || terminal_ != 0) return Admission::Closed;
+  if (next_ == std::numeric_limits<std::uint64_t>::max()) return Admission::Exhausted;
+  std::string owned;
+  try {
+    owned.assign(frame);
+  } catch (const std::bad_alloc &) {
+    return Admission::NoMemory;
+  }
+  // At most one slot is Writing, leaving at least three control slots.
+  for (auto &slot : slots_)
+    if (slot.state == SlotState::Queued) slot = {};
+  for (std::size_t i = kRequestCapacity; i < slots_.size(); ++i) {
+    auto &slot = slots_[i];
+    if (slot.state != SlotState::Free) continue;
+    slot.frame.swap(owned);
+    slot.bytes = frame.size();
+    terminal_ = slot.identity = ++next_;
+    slot.state = SlotState::Queued;
+    changed_.notify_one();
+    return Admission::Accepted;
+  }
+  std::_Exit(kUnjoinedExit);
 }
 
 std::optional<std::size_t> BridgeOutputOwner::First(std::size_t begin, std::size_t end) const {
@@ -76,7 +107,7 @@ std::optional<BridgeOutputOwner::Pending> BridgeOutputOwner::Take(const std::ato
   return Pending{*selected, slot.identity, std::move(slot.frame)};
 }
 
-void BridgeOutputOwner::Release(Pending &pending) {
+bool BridgeOutputOwner::Release(Pending &pending) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto &slot = slots_[pending.slot];
   if (slot.state != SlotState::Writing || slot.identity != pending.identity)
@@ -84,6 +115,7 @@ void BridgeOutputOwner::Release(Pending &pending) {
   // Free the writer's bytes before releasing the charged slot.
   std::string{}.swap(pending.frame);
   slot = {};
+  return pending.identity == terminal_;
 }
 
 BridgeOutputOwner::State BridgeOutputOwner::End(State state) {
@@ -168,7 +200,7 @@ BridgeOutputOwner::State BridgeOutputOwner::Run(int descriptor, const std::atomi
           break;
         }
       }
-      Release(*pending);
+      if (Release(*pending)) End(State::Ended);
     }
     if (fcntl(descriptor, F_SETFL, flags) != 0) {
       std::lock_guard<std::mutex> lock(mutex_);
