@@ -15,7 +15,8 @@
     {:ex_doc, command: "mix docs --warnings-as-errors", env: %{"MIX_ENV" => "docs"}},
     {:ex_unit, false},
     {:coverage, command: "mix coveralls", env: %{"MIX_ENV" => "test"}},
-    {:dialyzer, command: "mix dialyzer"},
+    # Sibling path sources can change without changing this package's lock.
+    {:dialyzer, command: "mix dialyzer --force-check"},
     # First-party C, C++ and Rust code through the root tasks (see
     # tooling/packages.yaml): changed-line formatting, static analysis and the
     # native tests, which build into a cached workspace outside the repository.

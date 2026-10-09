@@ -142,6 +142,9 @@ defmodule Wotex.Modbus.Check.Archive do
     end
 
     defp assert_register_codec! do
+      # The isolated --no-start consumer prunes unused OTP code paths on the
+      # minimum toolchain. Fixture hashing explicitly restores its own path.
+      Mix.ensure_application!(:crypto)
       {:ok, _} = Application.ensure_all_started(:crypto)
       {:error, %Wotex.Runtime.Implementation.Error{code: :invalid_configuration}} =
         Wotex.Modbus.RegisterCodec.Host.start_link(%{})
