@@ -70,6 +70,10 @@ Repository-wide rules are in the root `AGENTS.md`.
   with copied principal/path/response-ID custody;
   `native/testing/sdk_bridge_replies_test.*` executes SDK Groups/Scenes with
   synthetic principal/key fixtures. Consumer policy remains separately owned.
+- `native/{include/wotex_matter,src}/bridge_writes.*`: internal owned finite
+  attribute values admitted to shared request custody;
+  `native/testing/sdk_bridge_writes_test.*` tests SDK decoding and admission
+  without consumer execution or approved-state mutation.
 - `native/include/wotex_matter/bridge_provider.hpp`: internal SDK provider
   wrapper and explicit child receiver, preserving root metadata/operations and
   relaying notifications; `native/testing/sdk_bridge_provider_test.*` tests

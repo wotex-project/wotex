@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.8.0. Finite WMA.09 implementation target. The
+Version: 1.9.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -122,6 +122,16 @@ the process. This owner neither schedules SDK work nor grants policy authority.
 These internal owners have no consumer Port or consumer policy/dispatch
 integration. Capturing synthetic principal values does not establish
 authenticated admission.
+
+The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
+(`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.
+StartUpOnOff (`0x0006/0x4003`) retains null or its defined Off/On/Toggle values
+(`0`, `1`, `2`). Unsupported paths, list operations and complete-principal
+mismatches are refused before decoding. SDK type/range errors preserve their
+meaning and acquire no context; valid values use the shared sixteen-slot
+custody and original deadline. Each request owns its metadata and scalar.
+The receiver must consume the ticket before returning a synchronous write
+response. This admission does not apply a write or publish approved state.
 
 Production attestation and commissioning material are consumer-owned, with no
 absent-provider or example-credential fallback. An explicitly separate test

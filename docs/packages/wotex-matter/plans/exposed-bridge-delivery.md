@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.9.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.10.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -197,6 +197,26 @@ handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
 builds run these cases through the native builder. This is internal context
 ownership: SDK fabric/ACL admission, consumer policy, native Port delivery
 and ExposedThing dispatch remain open.
+
+The internal
+[`StartBridgeWrite`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_writes.hpp)
+copies complete callback metadata and the finite profile's four writable
+attributes before reserving shared request custody. IdentifyTime, OnTime and
+OffWaitTime retain unsigned 16-bit values; StartUpOnOff retains null or its
+defined Off/On/Toggle values. Unsupported paths, list operations and mismatched
+decoder principals are refused before decoding. SDK type/range errors acquire
+no slot and leave the output unchanged. Admission neither applies an attribute
+value nor establishes authorization; a synchronous receiver must consume the
+ticket at its original deadline before returning its SDK write response.
+
+[`sdk_bridge_writes_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_writes_test.cpp)
+uses actual SDK attribute decoders with synthetic principal inputs. It checks
+owned metadata/scalars after callback storage changes, exact nullable/range/type
+errors, refusal before decoding, sixteen-slot admission, staged-result credit,
+deadline and clock refusal, expiry, closure and non-reused identities. Normal
+and ASan/UBSan server builds run this case. It establishes internal write
+admission; authenticated SDK request admission and consumer execution remain
+open.
 
 The internal
 [`SdkBridgeCommandReply`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_replies.hpp)

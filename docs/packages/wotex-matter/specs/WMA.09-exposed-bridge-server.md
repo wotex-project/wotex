@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.10.0-target.
+Version: 0.11.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -110,6 +110,17 @@ semantics may encode a completed consumer result; response-encoding failure
 MUST still release the consumed context. Closure MUST drain retained handles
 under the SDK stack lock before stopping the event loop. Destruction with a
 retained handle MUST terminate the process.
+
+A retained attribute write MUST own its scalar value and complete callback
+metadata before its decoder expires. The finite profile permits IdentifyTime,
+OnTime and OffWaitTime as unsigned 16-bit values, and StartUpOnOff as null or
+the defined Off, On and Toggle values. Unsupported paths and list operations,
+or a principal differing from the decoder's complete principal, MUST be refused
+before decoding. Invalid type/range values MUST preserve their SDK error and
+acquire no handoff slot. Valid writes MUST share the same sixteen-context
+custody and original deadline as other operations. Admission MUST NOT mutate
+approved state or establish consumer authorization. The receiver MUST consume
+every admitted write ticket before returning its synchronous SDK response.
 
 A delayed native renderer MUST use the captured principal and timed context,
 without querying the original SDK handler's session or exchange. Its scoped

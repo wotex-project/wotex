@@ -98,6 +98,7 @@ if (chip_build_tools) {
       "src/bridge_resources.cpp",
       "src/bridge_server.cpp",
       "src/bridge_storage.cpp",
+      "src/bridge_writes.cpp",
       "src/logging.cpp",
       "src/sdk_storage.cpp",
       "src/storage.cpp",
@@ -107,6 +108,7 @@ if (chip_build_tools) {
       "testing/sdk_bridge_requests_test.cpp",
       "testing/sdk_bridge_server_test.cpp",
       "testing/sdk_bridge_wait_test.cpp",
+      "testing/sdk_bridge_writes_test.cpp",
     ]
     include_dirs = [ "include", "third_party" ]
     deps = [

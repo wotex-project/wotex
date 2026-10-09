@@ -405,6 +405,10 @@ The internal threaded handoff owner uses an explicit elapsed-time clock and
 releases its custody mutex during synchronous waits. Its installed-provider
 read test holds the actual SDK stack lock while the input thread resolves or
 closes custody, and verifies original-deadline timeout without extending it.
+Internal write admission owns the four finite writable attribute values and
+their callback metadata, preserving SDK type/range errors and shared request
+credit through expiry or closure. SDK decoder tests cover this admission in
+normal and sanitizer builds; it does not apply values or authorize execution.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
 
