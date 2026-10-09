@@ -401,6 +401,10 @@ The installed provider wrapper preserves generated metadata/root operations,
 routes live child operations to an explicit native receiver and forwards SDK
 notifications. Its tests verify refused attributes, retained commands without
 automatic Success, unchanged approved state and fatal lifecycle failures.
+The internal threaded handoff owner uses an explicit elapsed-time clock and
+releases its custody mutex during synchronous waits. Its installed-provider
+read test holds the actual SDK stack lock while the input thread resolves or
+closes custody, and verifies original-deadline timeout without extending it.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
 

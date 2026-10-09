@@ -4,6 +4,7 @@
 #include "sdk_bridge_requests_test.hpp"
 #include "sdk_bridge_replies_test.hpp"
 #include "sdk_bridge_provider_test.hpp"
+#include "sdk_bridge_wait_test.hpp"
 
 #include <LinuxCommissionableDataProvider.h>
 #include <app/server/Server.h>
@@ -145,7 +146,10 @@ void Run(const char *directory, const std::string &mode) {
 
   auto *delegate = app::CodegenDataModelProviderInstance(&binding.storage_delegate());
   auto provider_probe = testing::PrepareProvider(handoff);
-  SdkBridgeProviderBinding provider(*delegate, provider_probe->receiver());
+  auto wait_probe = mode == "wait" ? testing::PrepareWait(handoff, *delegate) : nullptr;
+  BridgeReceiver &receiver = wait_probe ? static_cast<BridgeReceiver &>(*wait_probe)
+                                        : provider_probe->receiver();
+  SdkBridgeProviderBinding provider(*delegate, receiver);
   auto *model = &provider;
   TestEthernet ethernet;
   Inet::InterfaceId interface;
@@ -210,6 +214,7 @@ void Run(const char *directory, const std::string &mode) {
   }
 
   std::unique_ptr<SdkBridgeEndpointBinding> children;
+  if (wait_probe) wait_probe->Prepare(binding, provider);
   if (mode.rfind("provider", 0) == 0) {
     provider_probe->Verify(binding, provider, *delegate, mode);
   }
@@ -233,6 +238,7 @@ void Run(const char *directory, const std::string &mode) {
 
   DeviceLayer::PlatformMgr().UnlockChipStack();
   Check(DeviceLayer::PlatformMgr().StartEventLoopTask(), "event loop start");
+  if (wait_probe) wait_probe->DuringLoop();
   struct LoopReceipt {
     std::mutex mutex;
     std::condition_variable ready;
@@ -350,6 +356,7 @@ void Run(const char *directory, const std::string &mode) {
     Require(handoff.pending() == 0, "SDK handoff drained before resource release");
     std::cout << "bridge handoff event loop and shutdown passed\n" << std::flush;
   }
+  if (wait_probe) wait_probe->Finish();
   if (children) testing::FinishEndpoints(*children, binding);
   binding.Finish();
   binding.Finish();
@@ -406,7 +413,7 @@ int main(int argc, char **argv) {
       mode != "handoff_busy_init" && mode != "requests" && mode != "requests_invalidated" &&
       mode != "requests_missing_finish" && mode != "replies" && mode != "replies_retain" &&
       mode != "provider" && mode != "provider_startup_failure" &&
-      mode != "provider_shutdown_failure" && mode != "provider_missing_finish")
+      mode != "provider_shutdown_failure" && mode != "provider_missing_finish" && mode != "wait")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

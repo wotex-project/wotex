@@ -61,6 +61,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"provider_startup_failure", 70, "bridge provider partial startup refusal prepared"},
     {"provider_shutdown_failure", 70, "bridge provider failed shutdown refusal prepared"},
     {"provider_missing_finish", 70, "bridge provider missing shutdown refusal prepared"},
+    {"wait", 0, "SDK read waiting, input resolution, timeout and closure passed"},
     {"requests_missing_finish", 70,
      [
        "bridge owned request metadata and arguments passed",

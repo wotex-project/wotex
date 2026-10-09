@@ -24,8 +24,10 @@ target_compile_options(wotex_matter_value_test PRIVATE -Wall -Wextra -Wpedantic 
 
 add_test(NAME wotex_matter_value_test COMMAND wotex_matter_value_test)
 
-add_library(wotex_matter_bridge_handoff STATIC src/bridge_handoff.cpp)
+find_package(Threads REQUIRED)
+add_library(wotex_matter_bridge_handoff STATIC src/bridge_handoff.cpp src/bridge_handoff_owner.cpp)
 target_include_directories(wotex_matter_bridge_handoff PUBLIC include)
+target_link_libraries(wotex_matter_bridge_handoff PUBLIC Threads::Threads)
 target_compile_features(wotex_matter_bridge_handoff PUBLIC cxx_std_17)
 target_compile_options(wotex_matter_bridge_handoff PRIVATE -Wall -Wextra -Wpedantic -Werror)
 if(WOTEX_MATTER_SANITIZERS)
@@ -36,6 +38,11 @@ add_executable(wotex_matter_bridge_handoff_test ../test/native/bridge_handoff_te
 target_link_libraries(wotex_matter_bridge_handoff_test PRIVATE wotex_matter_bridge_handoff)
 target_compile_options(wotex_matter_bridge_handoff_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME wotex_matter_bridge_handoff_test COMMAND wotex_matter_bridge_handoff_test)
+
+add_executable(wotex_matter_bridge_handoff_owner_test ../test/native/bridge_handoff_owner_test.cpp)
+target_link_libraries(wotex_matter_bridge_handoff_owner_test PRIVATE wotex_matter_bridge_handoff)
+target_compile_options(wotex_matter_bridge_handoff_owner_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME wotex_matter_bridge_handoff_owner_test COMMAND wotex_matter_bridge_handoff_owner_test)
 
 if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   set(WOTEX_MATTER_SDK_INCLUDES

@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.7.0. Finite WMA.09 implementation target. The
+Version: 1.8.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -111,6 +111,14 @@ owns copied principal/operation metadata; borrowed encoders, decoders and
 argument readers remain callback-scoped. Retained invokes return no automatic
 Success. Startup/shutdown failure and destruction while active terminate the
 process; shutdown unregisters the delegate listener and prevents reopening.
+The internal threaded handoff owner borrows custody and an explicit elapsed-time
+clock. It samples time inside the custody lock, releases that lock during
+synchronous waiting and wakes on input resolution or closure. Every wake
+rechecks the original deadline, including spurious notifications and delayed
+completion. SDK cleanup through a serialized callback also wakes waiters.
+Callers close admission, drain contexts and join reader/SDK callers before
+releasing the owner or its borrowed inputs. Unconsumed destruction terminates
+the process. This owner neither schedules SDK work nor grants policy authority.
 These internal owners have no consumer Port or consumer policy/dispatch
 integration. Capturing synthetic principal values does not establish
 authenticated admission.
@@ -156,7 +164,13 @@ CASE, group and commissioning principal values and explicit test clocks.
 Provider tests verify the actual installed wrapper, root delegation, child
 receiver refusal, copied metadata, notification forwarding, retained invoke
 completion without changing approved Property state, metadata allocation
-failure and fatal lifecycle paths. Authenticated consumer dispatch,
+failure and fatal lifecycle paths. Threaded-owner tests exercise concurrent
+capacity, clock/identity refusal, closure, spurious wakes, absolute expiry and
+unconsumed destruction. An installed-provider read test runs under the actual
+SDK event-loop stack lock while the input thread resolves or closes custody;
+explicit completion, denial and absent-reply timeout retain their meanings.
+These read fixtures use synthetic principals and already approved state.
+Authenticated consumer dispatch,
 subscription/report flow, end-to-end handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does
 not satisfy those server obligations. Certification and installed ecosystem

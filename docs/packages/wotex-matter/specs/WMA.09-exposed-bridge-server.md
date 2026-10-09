@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.9.0-target.
+Version: 0.10.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -85,6 +85,17 @@ result consumed at or after expiry MUST become a timeout. Closure MUST refuse
 new requests and retire all unconsumed results; the native owner MUST consume
 their contexts before releasing SDK resources. Unconsumed handoffs at server
 shutdown MUST terminate the native process before SDK cleanup.
+
+The threaded handoff owner MUST serialize custody operations and sample its
+explicit elapsed-time clock inside that same lock. A synchronous SDK wait
+MUST release the custody lock while blocked, allowing input resolution and
+closure without acquiring the SDK stack lock. Every wake MUST recheck the
+original absolute deadline; a spurious wake MUST NOT extend it. Serialized
+SDK cleanup that closes custody MUST also wake its waiters. The native owner
+MUST close admission, drain contexts and join all callers before destroying
+the threaded owner or releasing its borrowed custody and clock. Destruction
+with unconsumed custody MUST terminate the process. These mechanics do not
+establish consumer authorization or schedule SDK completion work.
 
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated

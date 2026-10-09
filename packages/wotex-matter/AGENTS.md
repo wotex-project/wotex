@@ -57,6 +57,11 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
   custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
   tests deadlines, generations and closure independently of the SDK.
+- `native/{include/wotex_matter,src}/bridge_handoff_owner.*`: internal threaded
+  custody with an explicit clock and synchronous waits that release its mutex;
+  `test/native/bridge_handoff_owner_test.cpp` and
+  `native/testing/sdk_bridge_wait_test.*` exercise host concurrency and actual
+  SDK read waiting. Consumer Port and policy/dispatch remain open.
 - `native/{include/wotex_matter,src}/bridge_requests.*`: internal owned request
   metadata, bounded command payload copies and retained SDK invoke handles;
   `native/testing/sdk_bridge_requests_test.*` tests ownership with synthetic

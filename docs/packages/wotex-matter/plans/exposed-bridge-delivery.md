@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.8.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.9.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -144,6 +144,33 @@ The separate SDK server target adds event-loop handoff, closed/pending startup
 refusal and unconsumed-shutdown termination cases. The owner supplies explicit
 test times; these cases do not exercise an authenticated Matter request or an
 ExposedThing callback.
+
+The internal
+[`BridgeHandoffOwner`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_handoff_owner.hpp)
+borrows custody and an explicit `BridgeHandoffClock`, sampling elapsed time
+inside the same mutex that serializes custody calls. SDK context operations
+run through a nonblocking serialized callback; borrowed custody cannot escape
+it. A synchronous waiter releases that mutex while blocked, so input resolution
+and closure require no SDK stack lock. Every wake rechecks the original absolute
+deadline. Closure through SDK context cleanup also wakes waiters. The caller
+closes admission, drains contexts and joins all users before destruction or
+direct server shutdown accesses the borrowed custody. Destruction with pending
+contexts terminates with 70. The owner does not schedule asynchronous SDK work
+or grant consumer authorization.
+
+[`bridge_handoff_owner_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_handoff_owner_test.cpp)
+tests concurrent sixteen-context admission, input resolution while a simulated
+SDK lock is held, exact expiry, regressed clocks, foreign generations, closure
+through both paths, spurious notifications and unconsumed destruction. The
+separate server target's
+[`sdk_bridge_wait_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_wait_test.cpp)
+runs installed-provider reads under the actual SDK event-loop stack lock while
+the input thread resolves or closes custody independently. Explicit completion
+reads an already approved value; denial, absent-reply timeout and closure return
+their corresponding statuses and release context credit. The native builder
+runs the SDK case in normal and ASan/UBSan builds. Synthetic principals and
+completion inputs establish waiting ownership, not authenticated admission,
+consumer policy or ExposedThing dispatch.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
