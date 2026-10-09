@@ -85,13 +85,13 @@ defmodule Wotex.Matter.SoftwareFixture do
         SoftwareManifest.write(path, value)
         SoftwareManifest.verify_local(root, workspace, SoftwareManifest.read(path), mode)
       rescue
-        _ ->
+        error ->
           SoftwareManifest.write(Path.join(workspace, "build-result.json"), %{
             "schema" => "wotex.matter.software-build@1",
             "status" => "failed"
           })
 
-          reraise Mix.Error, [message: "software_build_failed"], __STACKTRACE__
+          reraise error, __STACKTRACE__
       end
     end
   end

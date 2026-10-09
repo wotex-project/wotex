@@ -337,6 +337,30 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     assert Path.wildcard(Path.join(workspace, "run-*")) == []
   end
 
+  test "failed native builds retain the specific cause and release their workspace lock", %{
+    root: root
+  } do
+    source = Path.join(root, "source")
+    manifest = Path.join(source, "test/support/software/sources.json")
+    File.mkdir_p!(Path.dirname(manifest))
+    File.write!(manifest, ~s({"schema":"unsupported"}))
+    workspace = Path.join(root, "failed-workspace")
+
+    File.cd!(source, fn ->
+      assert_raise Mix.Error, "source_manifest", fn ->
+        SoftwareFixture.main(:native_build, ["--workspace", workspace])
+      end
+    end)
+
+    assert SoftwareManifest.read(Path.join(workspace, "build-result.json")) == %{
+             "schema" => "wotex.matter.software-build@1",
+             "status" => "failed"
+           }
+
+    refute File.exists?(workspace <> ".lock")
+    assert File.read!(manifest) == ~s({"schema":"unsupported"})
+  end
+
   test "WMA-B01 commands bound output timeout and environment without a shell", %{root: root} do
     assert {:ok, "hello"} = SoftwareCommand.run("printf", ["%s", "hello"])
     assert {:error, :command_failed} = SoftwareCommand.run("false", [])
