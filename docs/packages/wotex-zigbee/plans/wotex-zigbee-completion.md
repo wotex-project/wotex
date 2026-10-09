@@ -114,6 +114,12 @@ Version: 1.6.0. The catalogue is authoritative for implementation status.
   loss, delayed writes and per-peer failures. Any key-write attempt closes
   the owner without retry, rollback or counter reset.
 
+The [pinned SDK persistence review](../decisions/pinned-sdk-persistence.md)
+identifies why raw NV commands and a source-default restart increment do not
+satisfy backup/restore. `backup_boundary_test.exs` executes refusal at the
+ordinary host boundary; it supplies no successful snapshot/restore evidence.
+The exact firmware/build and its isolation/counter procedure remain necessary.
+
 ## Required for WZG.01 completion
 
 1. Qualify the `Circuits.UART` adapter on macOS and a Nerves target against

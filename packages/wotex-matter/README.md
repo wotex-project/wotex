@@ -363,6 +363,26 @@ executable evidence. The fully qualified task names are
 `wotex.matter.native.build`, `wotex.matter.software.build` and
 `wotex.matter.software.run`.
 
+The separate WMA.09 bridge model can be reproduced from explicit verified SDK
+and tool directories into a new output directory:
+
+```console
+mix pkg wotex-matter wotex.matter.bridge.model --sdk /absolute/sdk --tools /absolute/tools --workspace /absolute/new-output
+```
+
+This task checks the selected source/tool inputs and all seven generated model
+artifact digests in the pinned container with networking disabled. It generates
+bindings for the bridge target's required light/sensor clusters. The internal
+native bridge store has a separate identity/format and persists SDK values,
+stable endpoint identities and removal tombstones atomically. The native build
+runs its crash/restart tests and actual SDK operational-keystore/certificate
+binding test in normal and ASan/UBSan modes. A separate test target starts the
+SDK server with explicitly injected resources, disables the generation-only
+endpoint and verifies shutdown, identity/credential refusal and fatal
+startup/store failures in both modes. This internal binding has no public
+native Port host yet. Dynamic endpoint serving, commissioning, consumer
+authorization, reporting and independent server peer workflows remain open.
+
 The per-packet native checks create their own temporary work directory, run in
 Docker and resolve sources from `packages/wotex-matter`:
 

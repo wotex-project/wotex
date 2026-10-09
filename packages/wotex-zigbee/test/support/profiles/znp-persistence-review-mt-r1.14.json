@@ -1,0 +1,115 @@
+{
+  "profile": "TI CC26x2 SDK 2.30.00.34 persistence source review; no admitted backup/restore backend",
+  "sources": {
+    "sdk": {
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/simplelink_cc26x2_sdk_2_30_00_34.exe",
+      "sha256": "cebe6961f35b053375b42045d986d3828515e19eff765b745d0d807e1127341d"
+    },
+    "monitor_test": {
+      "document": "SWRA198 revision 1.14",
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/docs/zstack/Z-Stack%20Monitor%20and%20Test%20API.pdf",
+      "sha256": "1e4924ec73ea2c71fb36971b4fddc5eef34cbe4fdd53ca66f295cda3411ffb13",
+      "section": "3.8.1.8\u201312, 3.8.1.30\u201335"
+    },
+    "sdk_files": [
+      {
+        "path": "source/ti/zstack/mt/mt.h",
+        "sha256": "75ed3847c388165a912d2f44f0dcc1ecdd5a7bb30bddcb7269712fb25c7baaf8"
+      },
+      {
+        "path": "source/ti/zstack/mt/mt_sys.c",
+        "sha256": "21ff8ed92e02ae49ccef8c1e8e9c25493aeb1975407b36335087171f5f45298d"
+      },
+      {
+        "path": "source/ti/zstack/stack/zdo/zd_app.c",
+        "sha256": "e59b0fe0faf96c461bc24a811946a32c5bfa5165f7d1e2b2c3d757bdcd3b2fc5"
+      },
+      {
+        "path": "source/ti/zstack/stack/zdo/zd_app.h",
+        "sha256": "8d0470b191e3579f751ade94e57782dedacd47761851793dcb3ef4c369467bf9"
+      },
+      {
+        "path": "source/ti/zstack/stack/sec/ssp.h",
+        "sha256": "ffe247503e82dce3d4a2d48f17a60013f5fb7422c3c3daa8de2de7d0cb9fd571"
+      },
+      {
+        "path": "source/ti/zstack/osal/src/inc/zcomdef.h",
+        "sha256": "c52f420fc1e0b950f44f6f9ed8c1415f336edcffd7bd4dd944d579964080cafd"
+      },
+      {
+        "path": "source/ti/zstack/services/src/nv/nvintf.h",
+        "sha256": "52d075a801ae437316c11cdc818949a6b8f2b0a3f42d7f93e808f49aa9872fb8"
+      }
+    ]
+  },
+  "review": {
+    "host_base_commit": "e83639c87e91653a0c611a668156cfa4533377b8",
+    "package_path": "packages/wotex-zigbee",
+    "raw_requests": [
+      {
+        "name": "legacy-read-active-key",
+        "id": 8,
+        "hex": "fe0321083a000010"
+      },
+      {
+        "name": "extended-offset-read-active-key",
+        "id": 28,
+        "hex": "fe04211c3a00000003"
+      },
+      {
+        "name": "extended-id-read-active-key",
+        "id": 51,
+        "hex": "fe0821330100003a0000001130"
+      },
+      {
+        "name": "nv-length-active-key",
+        "id": 19,
+        "hex": "fe0221133a000a"
+      },
+      {
+        "name": "nv-delete-active-key",
+        "id": 18,
+        "hex": "fe0421123a0011001c"
+      },
+      {
+        "name": "set-extended-address",
+        "id": 3,
+        "hex": "fe082103080706050403020122"
+      }
+    ],
+    "transient_write_layouts": [
+      {
+        "name": "legacy-write",
+        "id": 9,
+        "prefix_hex": "3a000011"
+      },
+      {
+        "name": "extended-offset-write",
+        "id": 29,
+        "prefix_hex": "3a0000001100"
+      },
+      {
+        "name": "extended-id-write",
+        "id": 52,
+        "prefix_hex": "0100003a00000011"
+      },
+      {
+        "name": "extended-id-update",
+        "id": 53,
+        "prefix_hex": "0100003a0011"
+      },
+      {
+        "name": "item-init",
+        "id": 7,
+        "prefix_hex": "3a00110011"
+      }
+    ],
+    "write_value": "one sequence octet plus sixteen random test octets; never a stored key fixture or qualified restore image",
+    "key_access": "Legacy NV reads use MT_CheckNvId under build flags. In MT_SysNvRead, the assigned access-check error is overwritten by the later unconditional nvFps.readItem call; source review alone does not prove installed read denial.",
+    "persistence": "ZDApp_SaveNwkKey writes active key/counter and network security material separately. ZDApp_NVUpdate may defer saving. The shown save/restore routines do not check each NV operation result. No atomic export/import transaction is established.",
+    "counter_restore": "ZDApp_RestoreNwkSecMaterial adds MAX_NWK_FRAMECOUNTER_CHANGES plus NWK_FRAMECOUNTER_CHANGES_RESTORE_DELTA to a uint32 counter. Header defaults are 1000 and 250, both build-overridable. A restart increment cannot establish freshness of a stale backup or exclusion of another live coordinator.",
+    "layout": "SSP structs retain active sequence/key/counter, but C sizeof/offsets and complete NV inventory depend on the exact installed build. No packed-image layout is adopted.",
+    "decision": "Raw NV, reset, extended-address mutation and private credential reads remain outside ordinary host command admission. Restore is unsupported until an exact backend procedure establishes coherent private state, counter high-water continuity, durable custody, old-coordinator isolation and independent qualification.",
+    "evidence": "Source/digest review and scripted host refusal only; no stale-backup validator, export/import implementation, installed firmware test or physical continuity evidence."
+  }
+}

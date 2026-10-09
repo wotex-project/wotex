@@ -31,7 +31,7 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
     "${WOTEX_MATTER_SDK_ROOT}/third_party/nlio/repo/include"
   )
 
-  add_library(wotex_matter_storage STATIC src/storage.cpp)
+  add_library(wotex_matter_storage STATIC src/storage.cpp src/bridge_storage.cpp)
   target_include_directories(wotex_matter_storage PUBLIC include)
   target_include_directories(
     wotex_matter_storage SYSTEM
@@ -119,7 +119,7 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
     PRIVATE -Wall -Wextra -Wpedantic -Werror
   )
 
-  add_library(wotex_matter_storage_test_library STATIC src/storage.cpp)
+  add_library(wotex_matter_storage_test_library STATIC src/storage.cpp src/bridge_storage.cpp)
   target_include_directories(wotex_matter_storage_test_library PUBLIC include)
   target_include_directories(
     wotex_matter_storage_test_library SYSTEM
@@ -147,6 +147,12 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
     PRIVATE -Wall -Wextra -Wpedantic -Werror
   )
   add_test(NAME wotex_matter_storage_test COMMAND wotex_matter_storage_test)
+
+  add_executable(wotex_matter_bridge_storage_test ../test/native/bridge_storage_test.cpp)
+  target_include_directories(wotex_matter_bridge_storage_test SYSTEM PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
+  target_link_libraries(wotex_matter_bridge_storage_test PRIVATE wotex_matter_storage_test_library)
+  target_compile_options(wotex_matter_bridge_storage_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_test(NAME wotex_matter_bridge_storage_test COMMAND wotex_matter_bridge_storage_test)
 
   if(WOTEX_MATTER_SANITIZERS)
     foreach(target wotex_matter_storage wotex_matter_storage_test_library wotex_matter_protocol wotex_matter_protocol_test_library)

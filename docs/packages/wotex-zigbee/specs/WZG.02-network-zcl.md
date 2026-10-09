@@ -8,6 +8,14 @@ Version: 0.15.0-target. The catalogue records implementation status separately.
 
 **WZG2-02.** Backup and restore must preserve the selected stack's key/counter continuity. An old backup is not safe merely because its checksum is valid. Before restore, isolate the old coordinator and follow the backend's supported counter/identity procedure. If continuity cannot be established, refuse restore and require an explicit rekey/re-enrollment recovery. Never silently reset outgoing frame counters, clone a live coordinator or promise portable restore across chipset families.
 
+The [pinned SDK persistence review](../decisions/pinned-sdk-persistence.md)
+records separate/deferred NV saving, build-dependent counter increments and
+private-read access behavior. These sources do not establish an atomic image,
+a current high-water counter or old-coordinator isolation. Raw NV and reset
+commands remain outside ordinary admission; backup/restore is unsupported
+pending an exact qualified backend procedure. The negative command checks
+establish that boundary only, not successful restore or stale-image validation.
+
 Channel migration, key rotation, network healing and leave/rejoin are separate finite administrative operations. No automatic factory reset, mass re-pair or security downgrade after transient loss. Return partial outcomes where some devices did not migrate.
 
 `Wotex.Zigbee.inspect_network/2` supplies the finite metadata observation

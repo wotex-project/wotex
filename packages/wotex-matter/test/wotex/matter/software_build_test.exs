@@ -5,7 +5,13 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Matter.{SoftwareCommand, SoftwareFixture, SoftwareManifest, SoftwarePeerExtension}
+  alias Wotex.Matter.{
+    SoftwareBridgeBuild,
+    SoftwareCommand,
+    SoftwareFixture,
+    SoftwareManifest,
+    SoftwarePeerExtension
+  }
 
   setup do
     {temporary, 0} = Wotex.Matter.Native.ProcessCommand.run("pwd", ["-P"], cd: System.tmp_dir!())
@@ -19,6 +25,45 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     File.mkdir!(root)
     on_exit(fn -> File.rm_rf!(root) end)
     %{root: root}
+  end
+
+  test "SDK server case receipts require their exact exit and completion marker" do
+    assert :ok =
+             SoftwareBridgeBuild.verify_case!(
+               "server startup and shutdown probe passed\n\nbridge server exit: 0\n",
+               0,
+               "server startup and shutdown probe passed"
+             )
+
+    assert :ok = SoftwareBridgeBuild.verify_case!("\nbridge server exit: 74\n", 74, nil)
+
+    for output <- [
+          "server startup and shutdown probe passed\n\nbridge server exit: 70\n",
+          "\nbridge server exit: 0\n",
+          "prefix server startup and shutdown probe passed\n\nbridge server exit: 0\n",
+          "runtime error: invalid access\nserver startup and shutdown probe passed\n\nbridge server exit: 0\n",
+          "AddressSanitizer: fault\nserver startup and shutdown probe passed\n\nbridge server exit: 0\n"
+        ] do
+      assert_raise Mix.Error, "bridge_server_test_failed", fn ->
+        SoftwareBridgeBuild.verify_case!(output, 0, "server startup and shutdown probe passed")
+      end
+    end
+  end
+
+  test "the separate SDK server profile preserves model bounds and private test paths" do
+    arguments = SoftwareBridgeBuild.arguments()
+    assert arguments =~ "chip_build_tools = true\n"
+    assert arguments =~ "chip_logging_backend = \"external\"\n"
+    [encoded] = Regex.run(~r/^target_defines = (.*)$/m, arguments, capture: :all_but_first)
+    defines = Jason.decode!(encoded)
+    assert "CHIP_CONFIG_MAX_FABRICS=5" in defines
+    assert "CHIP_IM_MAX_NUM_SUBSCRIPTIONS=15" in defines
+    assert "CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID=0xFFF1" in defines
+    assert "CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID=0x8001" in defines
+    assert ~s(CHIP_CONFIG_KVS_PATH="bridge-kvs") in defines
+    assert ~s(CHIP_DEFAULT_FACTORY_PATH="bridge-factory.ini") in defines
+    assert ~s(CHIP_DEFAULT_CONFIG_PATH="bridge-config.ini") in defines
+    assert ~s(CHIP_DEFAULT_DATA_PATH="bridge-counters.ini") in defines
   end
 
   test "WMA-B01 workspace admission rejects malformed arguments and symlink ancestors", %{

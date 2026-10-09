@@ -1,16 +1,23 @@
 # Exposed bridge delivery plan
 
-Version: 1.0.1. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.3.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
 endpoints, validates restart snapshots and fails on exhaustion. Its tests
 simulate 256 identities and reject duplicate, rewound and overlapping
-snapshots. The benchmark measures only BEAM-side custody. No native server,
-fabric store, request dispatch or independent controller peer exists yet.
-The [finite software profile](exposed-bridge-profile.md) selects the source,
-Matter 1.6 data model, root/aggregator layout and two candidate bridged
-Device Types; generated server artifacts and peer receipts remain open.
+snapshots. The benchmark measures only BEAM-side custody. The native bridge
+store persists SDK values and endpoint custody together with a separate
+immutable bridge/model identity. An internal SDK server binding owns startup
+and shutdown resources; a consumer-facing native process, request dispatch
+and independent controller peer remain open.
+The [finite software profile](exposed-bridge-profile.md) pins the source,
+Matter 1.6 data model, root/aggregator layout, both bridged Device Types,
+mandatory light/sensor clusters, generated model artifacts, build options,
+handoff limits, test-attestation inputs and independent controller peer source.
+Reproducible model generation and native store custody are implemented.
+The native build exercises the server binding separately from the controller.
+Endpoint serving, consumer handoff and peer receipts remain open.
 
 ## Scope
 
@@ -20,13 +27,74 @@ A controller interacting with an upstream bridge example is not itself a bridge 
 
 Select the exact connectedhomeip source, Matter specification and Device Type/cluster revisions. Document which bridge root/aggregator/bridged-node constructs and interaction operations are included. List unsupported types and optional features. Generated cluster data, build options, credentials and test peers are part of the profile identity.
 
-Decide native callback deadlines and bounded handoff into the consumer. Commissioning/attestation credentials and test identities must be separated from distributable credentials. No production or certification claim follows from sample credentials working.
+The selected consumer handoff is bounded to 500 ms, with sixteen pending
+requests and sixty-four approved observations. Five fabrics and fifteen
+subscriptions are bounded, with three per fabric. Production credentials have
+no sample-provider fallback; the selected SDK test attestation belongs to a
+separate test build. No production or certification claim follows from model
+generation or sample credentials working. Implement and verify these limits
+at the native receiver before accepting server execution.
 
 ## 2. Stable endpoint custody
 
 Allocate durable endpoint identities for consumer-owned Thing identities. Persist the mapping with the server store, retain removal tombstones and define exhaustion behavior. Restart must not bind an existing controller's endpoint to a different Thing. Restore includes fabric and endpoint-store compatibility; it is not just re-enumerating devices into arbitrary numeric slots.
 
 Map reachable/unknown/unavailable explicitly. One reachable bridge does not make each child reachable. A consumer supplies capabilities and state; the native server cannot infer the truth of a physical effect from an accepted callback.
+
+The internal `wotex::matter::BridgeStorage` implements native custody. Its
+`wotex.matter.bridge-store` version 1 format contains immutable opaque bridge
+identity, model SHA-256, vendor/product IDs, active Thing/endpoint/Device Type
+records, a monotonic next-endpoint counter and SDK key/value data. Every
+inactive ID below the counter is retired; tombstone storage does not grow with
+removal history. Opaque Thing identities retain arbitrary bytes, with a
+256-byte bound. Sixteen live endpoints and IDs 3 through 65534 are enforced.
+Changing a live Thing's Device Type is refused.
+
+The bridge and controller formats reject each other. They share the existing
+owner-only directory, nonblocking exclusive lock and temporary-file/intent,
+fsync/rename commit mechanism without changing controller serialization.
+Bridge mutations publish their output only after that commit succeeds. An
+ambiguous crash refuses reopening; a durable crash retains SDK values and the
+endpoint mapping. A failed write poisons both SDK and endpoint access. The
+server binding terminates its process on that failure before SDK caches can
+continue serving. This format is local persistence, not an authenticated
+backup/import protocol or a transaction spanning several SDK storage calls.
+
+[`bridge_storage_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_storage_test.cpp)
+exercises role/identity mismatch, locking, private modes, opaque identities,
+restart/remove/re-add, Device Type refusal, capacity, exhaustion, malformed
+state, poisoning and all eight allocation/removal commit cutpoints.
+[`sdk_bridge_storage_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_storage_test.cpp)
+binds the actual pinned SDK operational keystore and certificate store,
+generates an ephemeral test CA and operational key, verifies signatures and
+certificates across reopen, discards uncommitted keys and preserves endpoint
+custody after SDK fabric-key/certificate removal. The explicit native build
+runs this executable in normal and ASan/UBSan modes; it starts neither the
+server nor controller singleton. These store tests do not establish server
+commissioning, ACL admission or interaction behavior.
+
+The internal
+[`SdkBridgeServerBinding`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_server.hpp)
+injects the bridge store, operational keystore/certificate store, group and
+session providers, ACL storage, report scheduler, generated model, explicit
+Ethernet driver, interface and port into the SDK server. The process owner
+initializes memory/platform and credentials and serializes startup/shutdown
+under the SDK stack lock. Normal shutdown stops the event loop, shuts down
+the server and fabric table, and retires model/persistence references. Partial
+SDK initialization or destruction without serialized shutdown exits with 70;
+a poisoned store exits with 74 before returning to cached SDK service.
+The future native Port owner must reap and classify these exits.
+
+[`sdk_bridge_server_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_server_test.cpp)
+is a separate test-only target using explicit SDK example attestation and
+generated private onboarding material. Its eleven cases cover startup, real
+event-loop work, normal/reopened-store shutdown, missing interface/port/DAC,
+model/vendor/product mismatch, occupied-port startup failure, omitted shutdown
+and SDK/allocation/removal storage failure. The native builder generates the
+pinned model and runs every case in normal and ASan/UBSan builds. Endpoints 0
+and 1 have the selected Root Node/Aggregator declarations; dummy endpoint 2
+is disabled. No dynamic child, commissioning exchange, authenticated request,
+consumer callback or independent peer is exercised by this lifecycle target.
 
 ## 3. Request and report path
 
@@ -49,6 +117,6 @@ Test commissioning window expiry, revoked fabric, malformed TLV, resource exhaus
 5. Exact-artifact consumer integration, then real independent ecosystem controllers.
 6. Separate platform distribution, certification and installed-host acceptance.
 
-The package catalogue keeps WMA.09 partial while only endpoint custody is
-implemented. Passing controller-side WMA.01-WMA.08 tests must not advance the
+The package catalogue keeps WMA.09 partial while pure/native endpoint custody
+and model generation are implemented. Passing controller-side WMA.01-WMA.08 tests must not advance the
 server evidence status. Native dependencies are not started by loading a library.

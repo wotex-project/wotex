@@ -1,52 +1,106 @@
-# Exposed bridge software profile candidate
+# Exposed bridge software profile
 
-This is the finite WMA.09 implementation target. The
-[catalogue](../specs/catalogue.yaml) records what has actually been built and
-tested. No server or certification claim follows from these pins.
+Version: 1.2.0. Finite WMA.09 implementation target. The
+[catalogue](../specs/catalogue.yaml) records implementation separately.
+Model generation, native storage and an internal SDK server lifecycle binding
+are implemented. Dynamic endpoint serving and consumer dispatch remain open.
 
-## Source and data model
+## Source and generated data
 
-- `connectedhomeip` v1.6.0.0, commit
-  `250a9e6c50ee2068107f3c4808b680f5f2925415`, already pinned by the
-  Matter software-source manifest. The server build must use this same exact
-  source, generated data and dependency digests, with an independent build
-  identity from the controller host.
-- Matter 1.6 Core, Application Clusters and Device Type Library are the
-  selected specification revisions. The SDK source's `data_model/1.6` XML is
-  the machine-readable test baseline; generated ZAP data and build options
-  still require a server-specific artifact receipt.
-- Endpoint 0: Root Node `0x0016` revision 4. Endpoint 1: Aggregator `0x000E`
-  revision 2. Endpoint 2 is reserved for the SDK's generated static dummy
-  data, disabled at runtime. Bridged endpoints begin at 3 and cannot reuse a
-  removed endpoint ID.
-- Bridged Node `0x0013` revision 3 plus On/Off Light `0x0100` revision 3 or
-  Temperature Sensor `0x0302` revision 3 form the initial non-Matter device
-  cohort. A bridged endpoint must declare its actual device type; the bridge
-  must not represent the underlying device as Matter-certified.
+`connectedhomeip` v1.6.0.0, commit
+`250a9e6c50ee2068107f3c4808b680f5f2925415`, is the source baseline. The
+[source manifest](../../../../packages/wotex-matter/test/support/software/sources.json)
+pins the SDK archive, dependencies, GN and ZAP packages. The
+[bridge model profile](../../../../packages/wotex-matter/test/support/software/bridge-model.json)
+pins the selected Matter 1.6 XML and upstream ZAP inputs, the derived model,
+all seven generated C++/IDL artifacts, build options, test-attestation inputs
+and independent `chip-tool` peer sources.
+
+The [model fixture](../../../../packages/wotex-matter/test/support/software/bridge-model-zap.json)
+derives from the SDK's Apache-2.0 bridge, lighting and all-clusters ZAP
+examples. Its attribution is in the package `NOTICE`. The CSA specification
+XML is reviewed by digest; its contents are not redistributed in the fixture.
+The SDK's example attribute defaults are not authoritative for the selected
+Matter 1.6 revision. In particular, the model selects On/Off revision 6 and
+Temperature Measurement revision 6.
+
+Endpoint 0 is Root Node `0x0016` r4, with Descriptor, Access Control, Basic
+Information, General Commissioning, Network Commissioning, General Diagnostics,
+Administrator Commissioning, Operational Credentials and Group Key Management.
+The Linux profile uses an externally configured Ethernet/IP network; it
+enables neither BLE nor Thread. Endpoint 1 is Aggregator `0x000E` r2, with
+Descriptor. Endpoint 2 contains disabled generation-only dummy data.
+Bridged endpoints begin at 3, admit at most 16 live identities and cannot
+reuse a removed ID; exhaustion at 65534 is terminal for further allocation.
+
+Each live child declares Bridged Node `0x0013` r3 and its actual functional
+Device Type. A child does not acquire Matter certification by being bridged.
+The native implementation must bind the SDK's independent Bridged Device Basic
+Information server for that cluster; generating the disabled dummy endpoint
+does not implement it.
 
 ## Finite interaction set
 
-| Device | Cluster and revision | Admitted operations |
+| Device | Cluster and revision | Required profile behavior |
 | --- | --- | --- |
-| Every bridged endpoint | Descriptor `0x001D` r3; Bridged Device Basic Information `0x0039` r6 | Read device/parts lists, identity and reachable; report consumer-approved reachable changes. |
-| On/Off Light | On/Off `0x0006` r6 | Read/report OnOff; Off, On and Toggle commands after fabric ACL and consumer authorization. |
-| Temperature Sensor | Temperature Measurement `0x0402` r6 | Read/report MeasuredValue with explicit unavailable/null handling. |
+| Every child | Descriptor `0x001D` r3; Bridged Device Basic Information `0x0039` r6 | Device/parts lists, stable identity and approved reachable observations; child reachability is independent of bridge reachability. |
+| On/Off Light `0x0100` r3 | Identify `0x0003` r6; Groups `0x0004` r4; On/Off `0x0006` r6 with Lighting; Scenes Management `0x0062` r1 | Identify and TriggerEffect; finite fabric-scoped group and scene operations including CopyScene; Off, On, Toggle, OffWithEffect, OnWithRecallGlobalScene and OnWithTimedOff; mandatory lighting attributes and permitted writes. |
+| Temperature Sensor `0x0302` r3 | Identify `0x0003` r6; Temperature Measurement `0x0402` r6 | Identify; read/report MeasuredValue with explicit unavailable/null handling and declared bounds. |
 
-No other Device Types, clusters, writes, scenes, groups, binding, OTA or
-long-running action completion are admitted by this candidate profile.
-Commands return an accepted/denied/unknown outcome consistent with the
-selected Matter command semantics; an accepted command does not assert a
-physical effect. Reports are emitted only from consumer-approved observations.
+IdentifyTime and the Lighting feature's OnTime, OffWaitTime and StartUpOnOff
+writes pass the same fabric ACL and consumer authorization boundary as commands.
+Group and scene changes must retain fabric identity and bounded durable custody;
+recall must not bypass consumer authorization or infer a physical effect.
+Group names, Scene Names, Level Control, binding, OTA, fabric synchronization,
+power-source information and additional Device Types are outside this profile.
+Generated union bindings can contain a command needed by one Device Type;
+each live endpoint must expose only its own admitted command list.
 
-## Release evidence still required
+## Native ownership and limits
 
-Pin the generated ZAP artifact, server build flags, test credentials and
-independent controller peer before server coding is accepted. Then execute
-commissioning, ACL and consumer authorization negatives, two device types,
-restart/tombstone recovery, remove/re-add, report flow, timeouts, native loss,
-store failure, sanitizer and exact-archive tests. Credentials in fixtures are
-for tests only and must not ship in the Hex archive or a production binary.
+The selected normal and ASan/UBSan builds use the profile's exact GN options
+and an independent server process/store identity. Five fabrics and fifteen
+subscriptions are bounded, with three subscriptions per fabric. At most
+sixteen consumer requests and sixty-four approved observations may be pending.
+An inbound request carries the SDK-authenticated principal/fabric, exact
+endpoint/cluster/operation, request identity and one absolute deadline.
+Consumer handoff expires after 500 ms. Queue admission does not justify a
+successful command status; denial, timeout and unknown outcome remain explicit.
+Approved logical state and physical-effect truth remain distinct.
 
-Sources: [CSA Matter specification downloads](https://csa-iot.org/developer-resource/specifications-download-request/),
-[pinned SDK release](https://github.com/project-chip/connectedhomeip/releases/tag/v1.6.0.0),
-and the [SDK bridge example](https://github.com/project-chip/connectedhomeip/blob/v1.6.0.0/examples/bridge-app/linux/README.md).
+Production attestation and commissioning material are consumer-owned, with no
+absent-provider or example-credential fallback. An explicitly separate test
+build uses the pinned SDK example provider, test VID `0xFFF1`/PID `0x8001`
+and isolated, generated onboarding material. This model fixture contains
+credential source digests only. It includes no attestation private-key bytes
+or production credential claim. The selected peer is the pinned SDK's
+`examples/chip-tool:chip-tool`, independently built from the server.
+Model generation does not build either executable. The native build separately
+builds the internal server lifecycle test in both modes; the independent peer
+has not been executed against a first-party bridge.
+
+## Executed model evidence and reproduction
+
+Host source baseline: `626beb834f125d38eacf73b4007e3290e7c91c4a`, package
+`packages/wotex-matter`. The pinned SDK archive was verified and extracted into
+a disposable workspace. Two independent ZAP runs produced identical model
+outputs; two further reproductions in the pinned container image matched all
+seven recorded artifact digests. Generation used networking-disabled containers
+with SDK/tool inputs mounted read-only. It did not compile or start a server.
+
+From the repository root, with explicit verified SDK/tool directories:
+
+```console
+mix pkg wotex-matter wotex.matter.bridge.model --sdk /absolute/sdk --tools /absolute/tools --workspace /absolute/new-output
+mix pkg wotex-matter test test/wotex/matter/software_bridge_model_test.exs test/wotex/matter/bridge_endpoint_registry_test.exs
+```
+
+The model tests reject missing mandatory commands/attributes, wrong lighting
+features/revisions and changed named source inputs before generation. These
+checks and artifact digests establish the selected model only. Separate native
+tests cover atomic fabric/endpoint persistence and SDK server startup/shutdown
+with failure exits in both sanitizer modes. Dynamic endpoints, authenticated
+consumer dispatch, reporting, handoff timeouts and independent peer workflows
+remain required. Passing controller-side WMA.01–WMA.08 evidence does
+not satisfy those server obligations. Certification and installed ecosystem
+acceptance remain separate.

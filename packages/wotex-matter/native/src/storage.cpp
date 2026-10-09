@@ -1,4 +1,5 @@
 #include "wotex_matter/storage.hpp"
+#include "wotex_matter/bridge_storage.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -9,6 +10,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <set>
+#include <stdexcept>
 #include <string_view>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -20,8 +22,11 @@ namespace {
 using Json = nlohmann::json;
 using OrderedJson = nlohmann::ordered_json;
 using Values = std::map<std::string, std::vector<std::uint8_t>>;
+using Identity = std::variant<ControllerIdentity, BridgeIdentity>;
+using Endpoints = std::map<std::string, BridgeEndpoint>;
 
 constexpr char kSchema[] = "wotex.matter.store";
+constexpr char kBridgeSchema[] = "wotex.matter.bridge-store";
 constexpr char kStateFile[] = "store.json";
 constexpr char kLockFile[] = "store.lock";
 constexpr char kTemporaryFile[] = "store.tmp";
@@ -36,6 +41,19 @@ bool ValidIdentity(const ControllerIdentity &identity) {
   return identity.fabric_id > 0 && identity.controller_node_id > 0 &&
          identity.controller_node_id <= kMaximumOperationalNode &&
          identity.vendor_id > 0 && identity.vendor_id < UINT16_MAX;
+}
+
+bool ValidIdentity(const BridgeIdentity &identity) {
+  return !identity.bridge_id.empty() && identity.bridge_id.size() <= 256 &&
+      identity.model_sha256.size() == 64 &&
+      std::all_of(
+          identity.model_sha256.begin(), identity.model_sha256.end(),
+          [](char byte) { return (byte >= '0' && byte <= '9') || (byte >= 'a' && byte <= 'f'); }) &&
+      identity.vendor_id > 0 && identity.vendor_id < UINT16_MAX && identity.product_id > 0;
+}
+
+bool ValidIdentity(const Identity &identity) {
+  return std::visit([](const auto &value) { return ValidIdentity(value); }, identity);
 }
 
 bool ValidUtf8(std::string_view value) {
@@ -251,10 +269,7 @@ bool ReadState(int directory_fd, std::string &contents) {
   return closed;
 }
 
-bool ExactKeys(const Json &document) {
-  static const std::set<std::string> expected = {
-      "authority", "controller_node_id", "fabric_id", "schema", "values",
-      "vendor_id", "version"};
+bool ExactKeys(const Json &document, const std::set<std::string> &expected) {
   if (!document.is_object() || document.size() != expected.size()) {
     return false;
   }
@@ -265,14 +280,92 @@ bool ExactKeys(const Json &document) {
   return actual == expected;
 }
 
-bool ParseState(const std::string &contents,
-                const ControllerIdentity &expected_identity, Values &values) {
+bool ParseController(const Json &document, const ControllerIdentity &expected_identity) {
+  if (!ExactKeys(document,
+                 {"authority", "controller_node_id", "fabric_id", "schema", "values", "vendor_id",
+                  "version"}) ||
+      !document["schema"].is_string() || document["schema"].get<std::string>() != kSchema ||
+      !document["fabric_id"].is_number_unsigned() ||
+      !document["controller_node_id"].is_number_unsigned() ||
+      !document["vendor_id"].is_number_unsigned() || !document["authority"].is_string() ||
+      document["authority"].get<std::string>() != "generate_root") {
+    return false;
+  }
+  const std::uint64_t vendor_id = document["vendor_id"].get<std::uint64_t>();
+  if (vendor_id == 0 || vendor_id >= UINT16_MAX) return false;
+  const ControllerIdentity identity{document["fabric_id"].get<std::uint64_t>(),
+                                    document["controller_node_id"].get<std::uint64_t>(),
+                                    static_cast<std::uint16_t>(vendor_id)};
+  return ValidIdentity(identity) && identity == expected_identity;
+}
+
+bool ParseBridge(const Json &document, const BridgeIdentity &expected_identity,
+                 Endpoints &endpoints, std::uint32_t &next_endpoint) {
+  if (!ExactKeys(document,
+                 {"bridge_id", "endpoints", "model_sha256", "product_id", "schema", "values",
+                  "vendor_id", "version"}) ||
+      !document["schema"].is_string() || document["schema"].get<std::string>() != kBridgeSchema ||
+      !document["bridge_id"].is_string() || !document["model_sha256"].is_string() ||
+      !document["vendor_id"].is_number_unsigned() || !document["product_id"].is_number_unsigned()) {
+    return false;
+  }
+  const auto vendor = document["vendor_id"].get<std::uint64_t>();
+  const auto product = document["product_id"].get<std::uint64_t>();
+  std::vector<std::uint8_t> bridge_bytes;
+  if (vendor == 0 || vendor >= UINT16_MAX || product == 0 || product > UINT16_MAX ||
+      !Base64Decode(document["bridge_id"].get<std::string>(), bridge_bytes))
+    return false;
+  const BridgeIdentity identity{std::string(bridge_bytes.begin(), bridge_bytes.end()),
+                                document["model_sha256"].get<std::string>(),
+                                static_cast<std::uint16_t>(vendor),
+                                static_cast<std::uint16_t>(product)};
+  if (!ValidIdentity(identity) || !(identity == expected_identity)) return false;
+  const auto &registry = document["endpoints"];
+  if (!ExactKeys(registry, {"active", "next"}) || !registry["next"].is_number_unsigned() ||
+      !registry["active"].is_array() ||
+      registry["active"].size() > BridgeStorage::kMaximumLiveEndpoints) {
+    return false;
+  }
+  const auto next = registry["next"].get<std::uint64_t>();
+  if (next < BridgeStorage::kFirstEndpoint || next > BridgeStorage::kMaximumEndpoint + 1U)
+    return false;
+  Endpoints active;
+  std::set<std::uint16_t> ids;
+  for (const auto &entry : registry["active"]) {
+    if (!ExactKeys(entry, {"device_type", "endpoint", "thing"}) || !entry["thing"].is_string() ||
+        !entry["endpoint"].is_number_unsigned() || !entry["device_type"].is_number_unsigned())
+      return false;
+    const auto endpoint = entry["endpoint"].get<std::uint64_t>();
+    const auto type = entry["device_type"].get<std::uint64_t>();
+    std::vector<std::uint8_t> thing;
+    if (endpoint < BridgeStorage::kFirstEndpoint || endpoint >= next ||
+        (type != static_cast<std::uint16_t>(BridgedDeviceType::OnOffLight) &&
+         type != static_cast<std::uint16_t>(BridgedDeviceType::TemperatureSensor)) ||
+        !Base64Decode(entry["thing"].get<std::string>(), thing) || thing.empty() ||
+        thing.size() > 256) {
+      return false;
+    }
+    const BridgeEndpoint record{static_cast<std::uint16_t>(endpoint),
+                                static_cast<BridgedDeviceType>(type)};
+    if (!ids.insert(record.endpoint).second ||
+        !active.emplace(std::string(thing.begin(), thing.end()), record).second)
+      return false;
+  }
+  endpoints = std::move(active);
+  next_endpoint = static_cast<std::uint32_t>(next);
+  return true;
+}
+
+bool ParseState(const std::string &contents, const Identity &expected_identity, Values &values,
+                Endpoints &endpoints, std::uint32_t &next_endpoint) {
   bool duplicate = false;
   std::map<int, std::set<std::string>> keys;
-  const auto callback = [&duplicate, &keys](int depth, Json::parse_event_t event,
-                                            Json &parsed) {
+  const auto callback = [&duplicate, &keys](int depth, Json::parse_event_t event, Json &parsed) {
+    // The formats contain at most four nested containers. Refuse excessive
+    // nesting before the JSON parser can consume an unbounded call stack.
+    if (depth > 8) throw std::invalid_argument("storage depth");
     if (event == Json::parse_event_t::object_start) {
-      keys[depth].clear();
+      keys[depth + 1].clear();
     } else if (event == Json::parse_event_t::key) {
       const std::string key = parsed.get<std::string>();
       if (!keys[depth].insert(key).second) {
@@ -289,30 +382,17 @@ bool ParseState(const std::string &contents,
     return false;
   }
 
-  if (duplicate || document.is_discarded() || !ExactKeys(document) ||
-      !document["schema"].is_string() ||
-      document["schema"].get<std::string>() != kSchema ||
-      !document["version"].is_number_unsigned() ||
-      document["version"].get<std::uint64_t>() != 1 ||
-      !document["fabric_id"].is_number_unsigned() ||
-      !document["controller_node_id"].is_number_unsigned() ||
-      !document["vendor_id"].is_number_unsigned() ||
-      !document["authority"].is_string() ||
-      document["authority"].get<std::string>() != "generate_root" ||
-      !document["values"].is_object()) {
+  if (duplicate || document.is_discarded() || !document.is_object() ||
+      !document.contains("version") || !document.contains("values") ||
+      !document["version"].is_number_unsigned() || document["version"].get<std::uint64_t>() != 1 ||
+      !document["values"].is_object() || document["values"].size() > kMaximumKeys) {
     return false;
   }
 
-  const std::uint64_t vendor_id = document["vendor_id"].get<std::uint64_t>();
-  if (vendor_id == 0 || vendor_id >= UINT16_MAX) {
-    return false;
-  }
-  const ControllerIdentity identity{
-      document["fabric_id"].get<std::uint64_t>(),
-      document["controller_node_id"].get<std::uint64_t>(),
-      static_cast<std::uint16_t>(vendor_id)};
-  if (!ValidIdentity(identity) || !(identity == expected_identity) ||
-      document["values"].size() > kMaximumKeys) {
+  if (const auto *controller = std::get_if<ControllerIdentity>(&expected_identity)) {
+    if (!ParseController(document, *controller)) return false;
+  } else if (!ParseBridge(document, std::get<BridgeIdentity>(expected_identity), endpoints,
+                          next_endpoint)) {
     return false;
   }
 
@@ -333,8 +413,8 @@ bool ParseState(const std::string &contents,
   return true;
 }
 
-bool SerializeState(const ControllerIdentity &identity, const Values &values,
-                    std::string &contents) {
+bool SerializeState(const Identity &identity, const Values &values, const Endpoints &endpoints,
+                    std::uint32_t next_endpoint, std::string &contents) {
   try {
     OrderedJson encoded_values = OrderedJson::object();
     for (const auto &[key, value] : values) {
@@ -342,12 +422,28 @@ bool SerializeState(const ControllerIdentity &identity, const Values &values,
     }
 
     OrderedJson document = OrderedJson::object();
-    document["schema"] = kSchema;
+    const auto *controller = std::get_if<ControllerIdentity>(&identity);
+    document["schema"] = controller != nullptr ? kSchema : kBridgeSchema;
     document["version"] = 1;
-    document["fabric_id"] = identity.fabric_id;
-    document["controller_node_id"] = identity.controller_node_id;
-    document["vendor_id"] = identity.vendor_id;
-    document["authority"] = "generate_root";
+    if (controller != nullptr) {
+      document["fabric_id"] = controller->fabric_id;
+      document["controller_node_id"] = controller->controller_node_id;
+      document["vendor_id"] = controller->vendor_id;
+      document["authority"] = "generate_root";
+    } else {
+      const auto &bridge = std::get<BridgeIdentity>(identity);
+      document["bridge_id"] = Base64Encode({bridge.bridge_id.begin(), bridge.bridge_id.end()});
+      document["model_sha256"] = bridge.model_sha256;
+      document["vendor_id"] = bridge.vendor_id;
+      document["product_id"] = bridge.product_id;
+      OrderedJson active = OrderedJson::array();
+      for (const auto &[thing, endpoint] : endpoints) {
+        active.push_back({{"thing", Base64Encode({thing.begin(), thing.end()})},
+                          {"endpoint", endpoint.endpoint},
+                          {"device_type", static_cast<std::uint16_t>(endpoint.device_type)}});
+      }
+      document["endpoints"] = {{"next", next_endpoint}, {"active", std::move(active)}};
+    }
     document["values"] = std::move(encoded_values);
     contents = document.dump();
     contents.push_back('\n');
@@ -390,18 +486,31 @@ bool ControllerIdentity::operator==(const ControllerIdentity &other) const {
       vendor_id == other.vendor_id;
 }
 
+bool BridgeIdentity::operator==(const BridgeIdentity &other) const {
+  return bridge_id == other.bridge_id && model_sha256 == other.model_sha256 &&
+      vendor_id == other.vendor_id && product_id == other.product_id;
+}
+
 CHIP_ERROR DurableStorage::Open(const std::string &path,
                                 StorageMode storage_mode,
                                 AuthorityMode authority_mode,
                                 const ControllerIdentity &identity,
                                 std::unique_ptr<DurableStorage> &storage) {
   storage.reset();
+  if ((storage_mode == StorageMode::CreateNew && authority_mode != AuthorityMode::GenerateRoot) ||
+      (storage_mode == StorageMode::OpenExisting && authority_mode != AuthorityMode::Stored)) {
+    return CHIP_ERROR_INVALID_ARGUMENT;
+  }
+  return OpenStore(path, storage_mode, identity, storage);
+}
+
+CHIP_ERROR DurableStorage::OpenStore(const std::string &path, StorageMode storage_mode,
+                                     const Identity &identity,
+                                     std::unique_ptr<DurableStorage> &storage) {
+  storage.reset();
   if (!std::filesystem::path(path).is_absolute() || path.find('\0') != std::string::npos ||
       !ValidIdentity(identity) ||
-      (storage_mode == StorageMode::CreateNew &&
-       authority_mode != AuthorityMode::GenerateRoot) ||
-      (storage_mode == StorageMode::OpenExisting &&
-       authority_mode != AuthorityMode::Stored)) {
+      (storage_mode != StorageMode::CreateNew && storage_mode != StorageMode::OpenExisting)) {
     return CHIP_ERROR_INVALID_ARGUMENT;
   }
 
@@ -431,6 +540,8 @@ CHIP_ERROR DurableStorage::Open(const std::string &path,
   }
 
   Values values;
+  Endpoints endpoints;
+  std::uint32_t next_endpoint = BridgeStorage::kFirstEndpoint;
   if (!CleanCommitState(directory_fd)) {
     close(lock_fd);
     close(directory_fd);
@@ -440,16 +551,15 @@ CHIP_ERROR DurableStorage::Open(const std::string &path,
   if (!create) {
     std::string contents;
     if (!ReadState(directory_fd, contents) ||
-        !ParseState(contents, identity, values)) {
+        !ParseState(contents, identity, values, endpoints, next_endpoint)) {
       close(lock_fd);
       close(directory_fd);
       return CHIP_ERROR_PERSISTED_STORAGE_FAILED;
     }
   }
 
-  auto opened = std::unique_ptr<DurableStorage>(
-      new DurableStorage(path, identity, directory_fd, lock_fd,
-                         std::move(values)));
+  auto opened = std::unique_ptr<DurableStorage>(new DurableStorage(
+      identity, directory_fd, lock_fd, std::move(values), std::move(endpoints), next_endpoint));
   if (create) {
     const CHIP_ERROR commit_error = opened->Commit(opened->values_);
     if (commit_error != CHIP_NO_ERROR) {
@@ -461,10 +571,10 @@ CHIP_ERROR DurableStorage::Open(const std::string &path,
   return CHIP_NO_ERROR;
 }
 
-DurableStorage::DurableStorage(std::string path, ControllerIdentity identity,
-                               int directory_fd, int lock_fd, Values values)
-    : path_(std::move(path)), identity_(identity), directory_fd_(directory_fd),
-      lock_fd_(lock_fd), values_(std::move(values)) {}
+DurableStorage::DurableStorage(Identity identity, int directory_fd, int lock_fd, Values values,
+                               Endpoints endpoints, std::uint32_t next_endpoint)
+    : identity_(std::move(identity)), directory_fd_(directory_fd), lock_fd_(lock_fd),
+      values_(std::move(values)), endpoints_(std::move(endpoints)), next_endpoint_(next_endpoint) {}
 
 DurableStorage::~DurableStorage() {
   if (lock_fd_ >= 0) {
@@ -548,7 +658,9 @@ CHIP_ERROR DurableStorage::SyncDeleteKeyValue(const char *key) {
   return error;
 }
 
-const ControllerIdentity &DurableStorage::identity() const { return identity_; }
+const ControllerIdentity &DurableStorage::identity() const {
+  return std::get<ControllerIdentity>(identity_);
+}
 
 CHIP_ERROR DurableStorage::EnterProcessDirectory() const {
   return directory_fd_ >= 0 && fchdir(directory_fd_) == 0
@@ -561,8 +673,13 @@ bool DurableStorage::poisoned() const { return poisoned_; }
 void DurableStorage::Poison() { poisoned_ = true; }
 
 CHIP_ERROR DurableStorage::Commit(const Values &values) {
+  return Commit(values, endpoints_, next_endpoint_);
+}
+
+CHIP_ERROR DurableStorage::Commit(const Values &values, const Endpoints &endpoints,
+                                  std::uint32_t next_endpoint) {
   std::string contents;
-  if (poisoned_ || !SerializeState(identity_, values, contents) ||
+  if (poisoned_ || !SerializeState(identity_, values, endpoints, next_endpoint, contents) ||
       !CleanCommitState(directory_fd_)) {
     Poison();
     return CHIP_ERROR_PERSISTED_STORAGE_FAILED;

@@ -1,10 +1,11 @@
 Code.require_file("command.exs", __DIR__)
 Code.require_file("peer_extension.exs", __DIR__)
+Code.require_file("bridge_build.exs", __DIR__)
 
 defmodule Wotex.Matter.SoftwareBuild do
   @moduledoc false
 
-  alias Wotex.Matter.{SoftwareCommand, SoftwareManifest, SoftwarePeerExtension}
+  alias Wotex.Matter.{SoftwareBridgeBuild, SoftwareCommand, SoftwareManifest, SoftwarePeerExtension}
 
   @timeout 5_400_000
   @container_environment [
@@ -44,6 +45,9 @@ defmodule Wotex.Matter.SoftwareBuild do
     deps = [ "//examples/wotex-matter-host:wotex-matter-host" ]
   }
   if (chip_build_tools) {
+    group("wotex-matter-bridge-tests") {
+      deps = [ "//examples/wotex-matter-host:wotex-matter-sdk-bridge-server-test" ]
+    }
     group("wotex-software-peers") {
       deps = [
         "//examples/lighting-app/linux:chip-lighting-app",
@@ -79,9 +83,19 @@ defmodule Wotex.Matter.SoftwareBuild do
       try do
         start_container(context)
         install_tools(context, sources)
+
+        host(context, "build-network-isolation", "docker", [
+          "network",
+          "disconnect",
+          "bridge",
+          context.name
+        ])
+
         build_native(context, mode)
+        Mix.shell().info("Building and testing the separate Matter SDK server binding")
+        bridge = SoftwareBridgeBuild.run!(workspace, &inside(context, &1, &2, &3))
         extensions = if mode == :software, do: build_peers(context), else: []
-        manifest(context, sources, mode, extensions)
+        manifest(context, sources, mode, extensions, bridge)
       after
         release_watcher(watcher)
       end
@@ -186,6 +200,8 @@ defmodule Wotex.Matter.SoftwareBuild do
       context.name,
       "--platform",
       "linux/amd64",
+      "--network",
+      "bridge",
       "--volume",
       context.root <> ":/src:ro",
       "--volume",
@@ -277,7 +293,10 @@ defmodule Wotex.Matter.SoftwareBuild do
       ])
 
       targets =
-        ["obj/examples/wotex-matter-host/bin/wotex-matter-host"] ++
+        [
+          "obj/examples/wotex-matter-host/bin/wotex-matter-host",
+          "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-storage-test"
+        ] ++
           if(mode == :software,
             do:
               Enum.map(
@@ -298,6 +317,16 @@ defmodule Wotex.Matter.SoftwareBuild do
           "-j",
           "4"
         ] ++ targets
+      )
+
+      inside(
+        context,
+        directory <> "-sdk-bridge-storage-test",
+        [
+          "/work/" <>
+            directory <> "/obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-storage-test"
+        ],
+        [{"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"}, {"UBSAN_OPTIONS", "halt_on_error=1"}]
       )
 
       File.cp!(
@@ -429,7 +458,7 @@ defmodule Wotex.Matter.SoftwareBuild do
     extensions
   end
 
-  defp manifest(context, sources, mode, extensions) do
+  defp manifest(context, sources, mode, extensions, bridge) do
     tools =
       for {name, executable, arguments} <- [
             {"compiler", "/usr/bin/g++", ["--version"]},
@@ -484,6 +513,7 @@ defmodule Wotex.Matter.SoftwareBuild do
       "package" => "wotex_matter",
       "source_files" => identity["source_files_sha256"],
       "peer_extensions" => extensions,
+      "bridge_server_tests" => bridge,
       "upstream_sources" =>
         archives(sources, mode) ++ sources["python"] ++ [sources["header"], sources["cipd"]],
       "sdk_gitlinks" =>
@@ -499,6 +529,7 @@ defmodule Wotex.Matter.SoftwareBuild do
       },
       "arguments" => %{
         "host_gn" => @host_arguments,
+        "bridge_test_gn" => SoftwareBridgeBuild.arguments(),
         "peer_gn" => if(mode == :software, do: @peer_arguments, else: nil),
         "container_environment" => Map.new(@container_environment),
         "parallel_compilers" => 4,
@@ -514,6 +545,10 @@ defmodule Wotex.Matter.SoftwareBuild do
       "audit_results" => %{
         "cmake_normal" => "passed",
         "cmake_asan_ubsan" => "passed",
+        "bridge_sdk_storage_normal" => "passed",
+        "bridge_sdk_storage_asan_ubsan" => "passed",
+        "bridge_sdk_server_normal" => "passed",
+        "bridge_sdk_server_asan_ubsan" => "passed",
         "osv" => "passed",
         "protocol_interoperability" => "not_executed"
       },
@@ -648,7 +683,10 @@ defmodule Wotex.Matter.SoftwareBuild do
   defp archives(sources, :software), do: sources["archives"]
 
   defp archives(sources, :native),
-    do: Enum.reject(sources["archives"], &(&1["purpose"] == "software_peer_source"))
+    do:
+      Enum.reject(sources["archives"], fn source ->
+        source["purpose"] == "software_peer_source" and source["name"] != "jsoncpp"
+      end)
 
   defp binaries(:native),
     do: ~w(wotex-matter-host wotex-matter-host-sanitized

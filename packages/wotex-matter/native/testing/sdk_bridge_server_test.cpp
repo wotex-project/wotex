@@ -1,0 +1,281 @@
+#include "wotex_matter/bridge_storage.hpp"
+#include "wotex_matter/bridge_server.hpp"
+
+#include <LinuxCommissionableDataProvider.h>
+#include <app/server/Server.h>
+#include <app/InteractionModelEngine.h>
+#include <app/SafeAttributePersistenceProvider.h>
+#include <app/clusters/network-commissioning/CodegenInstance.h>
+#include <app/util/endpoint-config-api.h>
+#include <credentials/examples/DeviceAttestationCredsExample.h>
+#include <credentials/GroupDataProvider.h>
+#include <data-model-providers/codegen/CodegenDataModelProvider.h>
+#include <data-model-providers/codegen/Instance.h>
+#include <lib/support/CHIPMem.h>
+#include <platform/CHIPDeviceLayer.h>
+#include <setup_payload/SetupPayload.h>
+
+#include <csignal>
+#include <arpa/inet.h>
+#include <condition_variable>
+#include <cstring>
+#include <iostream>
+#include <mutex>
+#include <stdexcept>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#ifndef WOTEX_MATTER_BRIDGE_TESTING
+#error This standalone probe requires an explicit test build.
+#endif
+
+namespace {
+class ClosedCommissioning final : public chip::DeviceLayer::CommissionableDataProvider {
+ public:
+  CHIP_ERROR GetSetupDiscriminator(uint16_t &) override { return CHIP_ERROR_INCORRECT_STATE; }
+  CHIP_ERROR SetSetupDiscriminator(uint16_t) override { return CHIP_ERROR_INCORRECT_STATE; }
+  CHIP_ERROR GetSpake2pIterationCount(uint32_t &) override { return CHIP_ERROR_INCORRECT_STATE; }
+  CHIP_ERROR GetSpake2pSalt(chip::MutableByteSpan &) override { return CHIP_ERROR_INCORRECT_STATE; }
+  CHIP_ERROR GetSpake2pVerifier(chip::MutableByteSpan &, size_t &) override {
+    return CHIP_ERROR_INCORRECT_STATE;
+  }
+  CHIP_ERROR GetSetupPasscode(uint32_t &) override { return CHIP_ERROR_INCORRECT_STATE; }
+  CHIP_ERROR SetSetupPasscode(uint32_t) override { return CHIP_ERROR_INCORRECT_STATE; }
+};
+ClosedCommissioning closed_commissioning;
+class TestEthernet final : public chip::DeviceLayer::NetworkCommissioning::EthernetDriver {
+ public:
+  uint8_t GetMaxNetworks() override { return 1; }
+  chip::DeviceLayer::NetworkCommissioning::NetworkIterator *GetNetworks() override {
+    return new SingleNetwork;
+  }
+ private:
+  class SingleNetwork final : public chip::DeviceLayer::NetworkCommissioning::NetworkIterator {
+   public:
+    size_t Count() override { return 1; }
+    bool Next(chip::DeviceLayer::NetworkCommissioning::Network &network) override {
+      if (exhausted_) return false;
+      exhausted_ = true;
+      network = {};
+      std::memcpy(network.networkID, "lo", 2);
+      network.networkIDLen = 2;
+      network.connected = true;
+      return true;
+    }
+    void Release() override { delete this; }
+   private:
+    bool exhausted_ = false;
+  };
+};
+
+void Check(CHIP_ERROR error, const char *stage) {
+  if (error != CHIP_NO_ERROR) throw std::runtime_error(stage);
+}
+void Require(bool value, const char *stage) {
+  if (!value) throw std::runtime_error(stage);
+}
+
+void Run(const char *directory, const std::string &mode) {
+  using namespace chip;
+  using namespace wotex::matter;
+  BridgeIdentity identity{"bridge-startup-probe",
+                          "dd8b1a870f1cfa89b609e70ff342e4f3d61525ae49bbbea27cf112d1bca0b671",
+                          0xFFF1, 0x8001};
+  if (mode == "wrong_model") {
+    identity.model_sha256 = std::string(64, '0');
+  } else if (mode == "wrong_vendor") {
+    identity.vendor_id = 0xFFF2;
+  } else if (mode == "wrong_product") {
+    identity.product_id = 0x8002;
+  }
+  std::unique_ptr<BridgeStorage> store;
+  Check(BridgeStorage::Open(directory,
+                            mode == "reopen" ? StorageMode::OpenExisting : StorageMode::CreateNew,
+                            identity, store),
+        "bridge store");
+  Check(store->EnterProcessDirectory(), "private directory");
+  SdkBridgeServerBinding binding(*store);
+
+  LinuxCommissionableDataProvider commissioning;
+  uint32_t pin = 0;
+  for (unsigned attempt = 0; attempt < 32; ++attempt) {
+    Check(Crypto::DRBG_get_bytes(reinterpret_cast<uint8_t *>(&pin), sizeof(pin)),
+          "test onboarding");
+    pin = pin % 99999998U + 1U;
+    if (SetupPayload::IsValidSetupPIN(pin)) break;
+  }
+  Require(SetupPayload::IsValidSetupPIN(pin), "test onboarding exhausted");
+  uint16_t discriminator = 0;
+  Check(Crypto::DRBG_get_bytes(reinterpret_cast<uint8_t *>(&discriminator), sizeof(discriminator)),
+        "test discriminator");
+  discriminator &= 0x0FFF;
+  Check(commissioning.Init(NullOptional, NullOptional, 1000, MakeOptional(pin), discriminator),
+        "commissionable provider");
+  DeviceLayer::SetCommissionableDataProvider(&commissioning);
+  auto *original_dac = Credentials::GetDeviceAttestationCredentialsProvider();
+  Credentials::SetDeviceAttestationCredentialsProvider(
+      Credentials::Examples::GetExampleDACProvider());
+  if (mode == "missing_dac") {
+    Credentials::SetDeviceAttestationCredentialsProvider(original_dac);
+  }
+  Check(DeviceLayer::PlatformMgr().InitChipStack(), "platform initialization");
+  DeviceLayer::PlatformMgr().LockChipStack();
+
+  auto *model = app::CodegenDataModelProviderInstance(&binding.storage_delegate());
+  TestEthernet ethernet;
+  Inet::InterfaceId interface;
+  Check(Inet::InterfaceId::InterfaceNameToId("lo", interface), "explicit test interface");
+  Require(binding.Init(*model, ethernet, Inet::InterfaceId::Null(), 5540) ==
+              CHIP_ERROR_INVALID_ARGUMENT,
+          "missing interface");
+  Require(binding.Init(*model, ethernet, interface, 0) == CHIP_ERROR_INVALID_ARGUMENT,
+          "missing port");
+  if (mode == "wrong_model" || mode == "wrong_vendor" || mode == "wrong_product" ||
+      mode == "missing_dac") {
+    Require(binding.Init(*model, ethernet, interface, 5540) == CHIP_ERROR_INVALID_ARGUMENT,
+            "server input refused");
+    Require(!binding.initialized(), "refused server remains inactive");
+    binding.Finish();
+    app::CodegenDataModelProvider::Instance().SetPersistentStorageDelegate(nullptr);
+    Credentials::SetDeviceAttestationCredentialsProvider(original_dac);
+    DeviceLayer::SetCommissionableDataProvider(&closed_commissioning);
+    DeviceLayer::PlatformMgr().UnlockChipStack();
+    DeviceLayer::PlatformMgr().Shutdown();
+    std::cout << "server input refusal probe passed\n";
+    return;
+  }
+  if (mode == "startup_failure") {
+    const int blocker = socket(AF_INET6, SOCK_DGRAM, 0);
+    Require(blocker >= 0, "startup socket");
+    sockaddr_in6 address{};
+    address.sin6_family = AF_INET6;
+    address.sin6_port = htons(5540);
+    address.sin6_addr = in6addr_any;
+    Require(bind(blocker, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0,
+            "startup port custody");
+  }
+  Check(binding.Init(*model, ethernet, interface, 5540), "server binding initialization");
+  Require(binding.initialized(), "server binding active");
+  Require(binding.Init(*model, ethernet, interface, 5540) == CHIP_ERROR_INVALID_ARGUMENT,
+          "second initialization refused");
+  Require(!emberAfEndpointIndexIsEnabled(2), "dummy disabled");
+  Require(Server::GetInstance().GetFabricTable().FabricCount() == 0, "empty fabrics");
+  ReadOnlyBufferBuilder<app::DataModel::EndpointEntry> endpoints;
+  Check(model->Endpoints(endpoints), "model endpoints");
+  auto endpoint_list = endpoints.TakeBuffer();
+  Require(endpoint_list.size() == 2 && endpoint_list[0].id == 0 && endpoint_list[1].id == 1,
+          "root and aggregator only");
+  for (const auto &entry : endpoint_list) {
+    ReadOnlyBufferBuilder<app::DataModel::DeviceTypeEntry> types;
+    Check(model->DeviceTypes(entry.id, types), "root device types");
+    auto type_list = types.TakeBuffer();
+    Require(type_list.size() == 1, "single fixed device type");
+    Require(type_list[0].deviceTypeId == (entry.id == 0 ? 0x0016U : 0x000EU),
+            "fixed device type identity");
+    Require(type_list[0].deviceTypeRevision == (entry.id == 0 ? 4U : 2U),
+            "fixed device type revision");
+  }
+
+  DeviceLayer::PlatformMgr().UnlockChipStack();
+  Check(DeviceLayer::PlatformMgr().StartEventLoopTask(), "event loop start");
+  struct LoopReceipt {
+    std::mutex mutex;
+    std::condition_variable ready;
+    bool ran = false;
+  } receipt;
+  Check(DeviceLayer::PlatformMgr().ScheduleWork(
+            [](intptr_t context) {
+    auto &value = *reinterpret_cast<LoopReceipt *>(context);
+    std::lock_guard<std::mutex> lock(value.mutex);
+    value.ran = true;
+    value.ready.notify_one();
+  }, reinterpret_cast<intptr_t>(&receipt)),
+        "event loop work");
+  {
+    std::unique_lock<std::mutex> lock(receipt.mutex);
+    Require(
+        receipt.ready.wait_for(lock, std::chrono::seconds(2), [&receipt] { return receipt.ran; }),
+        "event loop deadline");
+  }
+  if (mode == "missing_finish") {
+    return;
+  }
+  if (mode == "poison_sdk" || mode == "poison_allocate" || mode == "poison_remove") {
+    DeviceLayer::PlatformMgr().LockChipStack();
+    BridgeEndpoint endpoint;
+    if (mode == "poison_remove") {
+      Check(binding.Allocate("removed", BridgedDeviceType::OnOffLight, endpoint),
+            "remove fixture allocation");
+    }
+    Require(mkdir("store.tmp", 0700) == 0, "failed commit fixture");
+    if (mode == "poison_sdk") {
+      const uint8_t value = 1;
+      const CHIP_ERROR error = binding.storage_delegate().SyncSetKeyValue("poison", &value,
+                                                                          sizeof(value));
+      (void)error;
+    } else if (mode == "poison_allocate") {
+      const CHIP_ERROR error = binding.Allocate("new", BridgedDeviceType::TemperatureSensor,
+                                                endpoint);
+      (void)error;
+    } else {
+      const CHIP_ERROR error = binding.Remove("removed");
+      (void)error;
+    }
+    throw std::runtime_error("poisoned owner continued");
+  }
+  Check(DeviceLayer::PlatformMgr().StopEventLoopTask(), "event loop stop");
+  DeviceLayer::PlatformMgr().LockChipStack();
+
+  binding.Finish();
+  binding.Finish();
+  Require(!binding.initialized(), "binding closed");
+  Require(app::InteractionModelEngine::GetInstance()->GetDataModelProvider() == nullptr,
+          "model released");
+  Require(Credentials::GetGroupDataProvider() == nullptr, "group provider released");
+  const uint8_t value = 1;
+  Require(app::GetSafeAttributePersistenceProvider()->SafeWriteValue(
+              app::ConcreteAttributePath(0, 0x0028, 0x0005), ByteSpan(&value, sizeof(value))) ==
+              CHIP_ERROR_INCORRECT_STATE,
+          "attribute persistence retired");
+  Require(binding.storage_delegate().SyncSetKeyValue("closed", &value, sizeof(value)) ==
+              CHIP_ERROR_INCORRECT_STATE,
+          "closed store");
+  BridgeEndpoint endpoint;
+  Require(binding.Allocate("closed", BridgedDeviceType::OnOffLight, endpoint) ==
+              CHIP_ERROR_INCORRECT_STATE,
+          "closed allocation");
+  Require(binding.Remove("closed") == CHIP_ERROR_INCORRECT_STATE, "closed removal");
+  Credentials::SetDeviceAttestationCredentialsProvider(original_dac);
+  DeviceLayer::SetCommissionableDataProvider(&closed_commissioning);
+  Require(!Credentials::IsDeviceAttestationCredentialsProviderSet(), "DAC released");
+  uint16_t retired_discriminator = 0;
+  Require(DeviceLayer::GetCommissionableDataProvider()->GetSetupDiscriminator(
+              retired_discriminator) == CHIP_ERROR_INCORRECT_STATE,
+          "commissionable provider retired");
+  DeviceLayer::PlatformMgr().UnlockChipStack();
+  DeviceLayer::PlatformMgr().Shutdown();
+  std::cout << "server startup and shutdown probe passed\n";
+}
+}
+
+int main(int argc, char **argv) {
+  if (argc != 3) return 2;
+  const std::string mode(argv[2]);
+  if (mode != "normal" && mode != "reopen" && mode != "startup_failure" &&
+      mode != "missing_finish" && mode != "poison_sdk" && mode != "poison_allocate" &&
+      mode != "poison_remove" && mode != "wrong_model" && mode != "wrong_vendor" &&
+      mode != "wrong_product" && mode != "missing_dac")
+    return 2;
+  std::signal(SIGPIPE, SIG_IGN);
+  if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;
+  int result = 0;
+  try {
+    Run(argv[1], mode);
+  } catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+    result = 1;
+  }
+  chip::Platform::MemoryShutdown();
+  return result;
+}

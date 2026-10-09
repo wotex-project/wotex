@@ -49,14 +49,18 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `lib/wotex/matter/bridge/endpoint_registry.ex`: pure WMA.09 endpoint identity,
   tombstone and restart-snapshot validation. This does not implement a native
   Matter server or alter the controller role.
+- `native/{include/wotex_matter,src}/bridge_{server,resources}.*`: internal
+  WMA.09 SDK server lifecycle and explicitly owned resource binding;
+  `native/testing/sdk_bridge_server_test.cpp` is its separate test target.
+  This binding has no consumer-facing native Port or dynamic endpoint dispatch.
 - `native/`: the C++17 controller host (`src/`, `include/wotex_matter/`),
   process-flow and resource test hosts (`testing/`), CMake and GN builds;
   `test/native/`: its C++ unit tests.
 - `lib/mix/tasks/`: the explicit native and software tasks; `bin/`: the
   gate's archive and application-free checks plus the per-packet native and
   advisory lanes.
-- Specifications: `docs/packages/wotex-matter/specs/` (WMA.01–WMA.04,
-  WMA.05–WMA.08; `catalogue.yaml` owns status). Plans and evidence:
+- Specifications: `docs/packages/wotex-matter/specs/` (WMA.01–WMA.08 and the
+  WMA.09 target; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-matter/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, native-port and integration corpora).
 - Test support: `test/support/` (scripted clients, Runtime credentials and

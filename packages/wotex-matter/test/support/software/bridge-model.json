@@ -1,0 +1,179 @@
+{
+  "consumer_handoff": {
+    "approved_report_capacity": 64,
+    "deadline_ms": 500,
+    "maximum_pending": 16,
+    "subscriptions_per_fabric": 3,
+    "timeout_outcome": "failure with unknown physical effect; no success from queue admission"
+  },
+  "container_image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+  "data_model": "Matter 1.6; selected declarations only, no conformance claim",
+  "device_types": {
+    "aggregator": {
+      "id": 14,
+      "revision": 2
+    },
+    "bridged_node": {
+      "id": 19,
+      "revision": 3
+    },
+    "light": {
+      "clusters": [
+        3,
+        4,
+        6,
+        29,
+        57,
+        98
+      ],
+      "id": 256,
+      "revision": 3
+    },
+    "root": {
+      "id": 22,
+      "revision": 4
+    },
+    "temperature_sensor": {
+      "clusters": [
+        3,
+        29,
+        57,
+        1026
+      ],
+      "id": 770,
+      "revision": 3
+    }
+  },
+  "dummy_endpoint": {
+    "enabled_at_runtime": false,
+    "id": 2,
+    "purpose": "generate the union of admitted cluster bindings; never a served Device Type"
+  },
+  "dynamic_endpoints": {
+    "first": 3,
+    "last": 65534,
+    "live_limit": 16,
+    "reuse": false
+  },
+  "evidence_scope": "reproducible ZAP/model generation only; server, store, authorization, reporting and peer execution remain unimplemented",
+  "generated_sha256": {
+    "cpp/CodeDrivenCallback.h": "2c588c79c513a89ff7a72f218cd3918f9d1f06eed995f912cb4f3d82090b9583",
+    "cpp/CodeDrivenInitShutdown.cpp": "2cf07c2e4348fc9912334d148aaea949460b1163386f392b6b936e5d053d7a10",
+    "cpp/IMClusterCommandHandler.cpp": "8021d627a9e171afc1337c1151a29a805f2f6b842d10ed8bc705df3ac3c82aa1",
+    "cpp/access.h": "1bc1d8e0aab548b97119e26d0be30896dce062a6e0a15424ee176692b4a6daed",
+    "cpp/endpoint_config.h": "c6aaba0cd7783130eeade4565cb3a9ed91645c8f0be3390acc4f64984a464ce1",
+    "cpp/gen_config.h": "c534595cf692d771a49b404da33941becf1696a87af3afefb7d19caba587ffcb",
+    "idl/Clusters.matter": "594c1c5dc59ff30a2640e374f7ebaed2014572782cfba26e226e0ec5fc0675dc"
+  },
+  "generation": {
+    "post_generation": false,
+    "prettify": false,
+    "templates": [
+      "src/app/zap-templates/app-templates.json",
+      "src/app/zap-templates/matter-idl-server.json"
+    ],
+    "zcl": "src/app/zap-templates/zcl/zcl.json"
+  },
+  "generator_sources": {
+    "lib/mix/tasks/wotex.matter.bridge.model.ex": "e3d7182b37ba6aa48295f0b63a8ad4cd00d810ab3f01274a6903a46d46b9c2d6",
+    "test/support/software/bridge_model.exs": "2cc710e49512717e1a9ea6d2f2141833353631eaf47231d4debe93bdec2baf0e"
+  },
+  "host_base_commit": "626beb834f125d38eacf73b4007e3290e7c91c4a",
+  "independent_peer": {
+    "execution": "not built or executed by model generation",
+    "inputs": {
+      "examples/chip-tool/BUILD.gn": "d897c237095691e48052059b8b02d073ece968ef8a7c125609098ae731d4b138",
+      "examples/chip-tool/main.cpp": "3c0d4e770280a2f898b90f5bffdce381e0692a78cfd98885903d18b6b5b1a134"
+    },
+    "sdk_revision": "250a9e6c50ee2068107f3c4808b680f5f2925415",
+    "source_manifest": "test/support/software/sources.json",
+    "target": "examples/chip-tool:chip-tool"
+  },
+  "inputs": {
+    "data_model/1.6/clusters/ACL-Cluster.xml": "13b2d430ee911a33727d3ff51cd9dbc2b53f604f08ead538bc07248d6df87095",
+    "data_model/1.6/clusters/AdminCommissioningCluster.xml": "3ddf94b231cbebdec1c441f5385fe82d0cffc2c203f8bcb8566a8dc7079f7a2f",
+    "data_model/1.6/clusters/BasicInformationCluster.xml": "a6a014e769d6ce5667ed21d0fd16b0378d6d7e48864fa64ad7c319e5f0c15e90",
+    "data_model/1.6/clusters/BridgedDeviceBasicInformationCluster.xml": "0e92cacf8bac197172d93407cdfbb82a2f09d822d0e1510ecdf8371e80175866",
+    "data_model/1.6/clusters/Descriptor-Cluster.xml": "3c3f6bb01229b3b44bc651d3afdcc12648a1c65b0f0830930d2ee52b9739d111",
+    "data_model/1.6/clusters/DiagnosticsGeneral.xml": "8e80582f4250bd035255d1e0792d891b590dbf267a1e8980d44a11c7e282719b",
+    "data_model/1.6/clusters/GeneralCommissioningCluster.xml": "6c9636ead928e562287fe61106a16eb2b366446cf5fbfbb8e980a0c915a55b51",
+    "data_model/1.6/clusters/Group-Key-Management-Cluster.xml": "e60dbc66d6358f025b0dfd437fe590e90441e155bdd42b0f88cb9b23abc18c51",
+    "data_model/1.6/clusters/Groups.xml": "133e73107bcee84b3fd8eccd90fee1e201519baa5f0158e149e1ae8d09fa092c",
+    "data_model/1.6/clusters/Identify.xml": "f741c247ae74379086fb675ca45514b0684db579cf7d5c5e290226db7f2f7854",
+    "data_model/1.6/clusters/NetworkCommissioningCluster.xml": "c2e204ac1a08ba51c3f7ad88b8e9a92a4d6116b07140e79c03212b37e78750e1",
+    "data_model/1.6/clusters/OnOff.xml": "d999e89aac27d87ffb748271111512ffb27a8f3c87f8de3e559b0a2407bc3a48",
+    "data_model/1.6/clusters/OperationalCredentialCluster.xml": "27cae79360f4681c0b3b36621e79f70096bd6739efbca99ddfc6839ce19f79b8",
+    "data_model/1.6/clusters/Scenes.xml": "fc700b812b187e05f5d525594882197498f7811acd3c1db1f7fb7d7acb0615ec",
+    "data_model/1.6/clusters/TemperatureMeasurement.xml": "3178103d8c6174ab8b286150488d439099098a72abbcaf0ee560f59c770831f4",
+    "data_model/1.6/device_types/BridgedNode.xml": "27a331b896729c092c330be7f9a767f53f498f15148c0fd91c77814522c2cc59",
+    "data_model/1.6/device_types/OnOffLight.xml": "6d5d7f08d6168ed981b499474b3d111f9c7dd73ab8ced6b1f379f199ef4bc530",
+    "data_model/1.6/device_types/RootNodeDeviceType.xml": "51b2d84d2847e16d8c61b512f92becd2f788cd1eadebf66863acd680ed36b410",
+    "data_model/1.6/device_types/TemperatureSensor.xml": "4bb6388243fbfa7cef9b2c9ddb308317dd7fb7d46e2f2887e8591eec4e0ae61b",
+    "data_model/1.6/device_types/aggregator.xml": "1f3f33dc48950cfad720007df916467398aab8fa7f69cfe933b9d306b0b24752",
+    "examples/all-clusters-app/all-clusters-common/all-clusters-app.zap": "76bd8c9686a73494c40887781ee3de03af13f22c46010a30a2a14fc3277eb35e",
+    "examples/bridge-app/bridge-common/bridge-app.zap": "c99c8e3e4b69aa42a2d22cad61a05c57acfcea54ca7f336ea1e76a694f2715e4",
+    "examples/lighting-app/lighting-common/lighting-app.zap": "07ea4259cca095ef3e8ec54fc075eef16d73d33b64f5715a2160ec94cf308bfe"
+  },
+  "model_sha256": "dd8b1a870f1cfa89b609e70ff342e4f3d61525ae49bbbea27cf112d1bca0b671",
+  "native_target": "x86_64-linux-gnu",
+  "package_path": "packages/wotex-matter",
+  "profile_version": "1.0.0",
+  "schema": "wotex.matter.bridge-model@1",
+  "sdk_archive_sha256": "83032f0c98b02c8c16defc6e70ebe288c127ef3661153feca32839fb65b33628",
+  "sdk_revision": "250a9e6c50ee2068107f3c4808b680f5f2925415",
+  "selected_build_arguments": {
+    "chip_build_libshell": false,
+    "chip_build_tools": true,
+    "chip_config_network_layer_ble": false,
+    "chip_crypto": "boringssl",
+    "chip_enable_ble": false,
+    "chip_enable_pw_rpc": false,
+    "chip_examples_enable_imgui_ui": false,
+    "chip_inet_config_enable_ipv4": true,
+    "chip_support_thread_meshcop": false,
+    "enable_exceptions": true,
+    "target_defines": [
+      "CHIP_CONFIG_MAX_FABRICS=5",
+      "CHIP_IM_MAX_NUM_SUBSCRIPTIONS=15"
+    ],
+    "treat_warnings_as_errors": true
+  },
+  "selected_sanitizers": [
+    "is_asan",
+    "is_ubsan"
+  ],
+  "source_manifest": "test/support/software/sources.json",
+  "source_manifest_sha256": "5620101346187154f16f965d2f17534e07ad21595feef0a5e1f1241f2771126f",
+  "test_attestation": {
+    "build_defines": [
+      "CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID=0xFFF1",
+      "CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID=0x8001"
+    ],
+    "inputs": {
+      "credentials/test/attestation/Chip-Test-PAA-FFF1-Cert.der": "369eef40616645e5bd3e1bc9db70815d6cf93e9a611973ac20c9cd14c8d60c37",
+      "src/credentials/examples/DeviceAttestationCredsExample.cpp": "4d9f32aa86d7f99f8e4b02e350e5f9f7a025141b968d95235d1e1c98de3ab2e4",
+      "src/credentials/examples/ExampleDACs.cpp": "3f9fb78511df78c19037d9f2ced83e4c9f776896e5d0b6a92ec2d3af5babb176",
+      "src/credentials/examples/ExamplePAI.cpp": "256d742c3de86ccf85ea30a707b7544d6003864f7e048afeb6bf5894f150802e"
+    },
+    "product_id": 32769,
+    "production_policy": "consumer-owned credentials; no example or absent-provider fallback; no test credential bytes copied into this fixture",
+    "provider": "explicit test-only SDK example provider",
+    "vendor_id": 65521
+  },
+  "tools": [
+    {
+      "executable": "gn",
+      "instance": "NE_8G-C-1QSR3Fzth11KzRynkGGK71LSQjiCBQaD6hoC",
+      "name": "gn",
+      "package": "gn/gn/linux-amd64",
+      "sha256": "3dcfa89818814fed6e252a82ef6fc4027184010d05619d224ca4dfc17e8ae85c"
+    },
+    {
+      "executable": "zap-cli",
+      "instance": "YSTXcN2b2sI35obRtz_f4SiOmbkL8_JFLCk-0fJQwKYC",
+      "name": "zap",
+      "package": "experimental/matter/zap/linux-amd64",
+      "sha256": "ad4b3bc455eb315c2f9149e8be423255b0acdd4b9cf4acb3beb37c09f126cc9d"
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 import("//build_overrides/chip.gni")
+import("${chip_root}/build/chip/tools.gni")
+import("${chip_root}/src/app/chip_data_model.gni")
 
 foreach(host,
         [
@@ -10,6 +12,7 @@ foreach(host,
     cflags_cc = [ "-std=c++17" ]
     sources = [
       "src/authority.cpp",
+      "src/bridge_storage.cpp",
       "src/commissioning.cpp",
       "src/controller.cpp",
       "src/interaction.cpp",
@@ -41,6 +44,61 @@ foreach(host,
       "${chip_root}/src/lib",
       "${chip_root}/src/platform",
       "${chip_root}/src/protocols/interaction_model",
+    ]
+  }
+}
+
+# Executed by the explicit native build in both normal and sanitizer modes.
+# This test uses the real SDK keystore and certificate store without starting
+# the controller or server singleton or exposing test credentials in a host.
+executable("wotex-matter-sdk-bridge-storage-test") {
+  cflags_cc = [ "-std=c++17" ]
+  sources = [
+    "src/bridge_storage.cpp",
+    "src/logging.cpp",
+    "src/sdk_storage.cpp",
+    "src/storage.cpp",
+    "testing/sdk_bridge_storage_test.cpp",
+  ]
+  include_dirs = [ "include", "third_party" ]
+  deps = [
+    "${chip_root}/src/credentials",
+    "${chip_root}/src/crypto",
+    "${chip_root}/src/lib",
+    "${chip_root}/src/platform",
+  ]
+}
+
+# Separate generated server profile; never linked into the controller host.
+if (chip_build_tools) {
+  chip_data_model("bridge-model") {
+    zap_file = "bridge-common/bridge-app.zap"
+    idl = "bridge-common/bridge-app.matter"
+    is_server = true
+    cflags = [ "-DDYNAMIC_ENDPOINT_COUNT=16" ]
+  }
+
+  executable("wotex-matter-sdk-bridge-server-test") {
+    cflags_cc = [ "-std=c++17" ]
+    defines = [ "WOTEX_MATTER_BRIDGE_TESTING=1" ]
+    sources = [
+      "src/bridge_resources.cpp",
+      "src/bridge_server.cpp",
+      "src/bridge_storage.cpp",
+      "src/logging.cpp",
+      "src/sdk_storage.cpp",
+      "src/storage.cpp",
+      "testing/sdk_bridge_server_test.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [
+      ":bridge-model",
+      "${chip_root}/examples/platform/linux:linux-commissionable-data-provider",
+      "${chip_root}/src/app/clusters/bridged-device-basic-information-server",
+      "${chip_root}/src/app/server",
+      "${chip_root}/src/credentials",
+      "${chip_root}/src/lib",
+      "${chip_root}/src/platform",
     ]
   }
 }

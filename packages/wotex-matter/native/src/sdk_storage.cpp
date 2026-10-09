@@ -2,7 +2,9 @@
 
 namespace wotex::matter {
 
-CHIP_ERROR SdkStorageBinding::Init(DurableStorage &storage) {
+SdkStorageBinding::~SdkStorageBinding() { Finish(); }
+
+CHIP_ERROR SdkStorageBinding::Init(chip::PersistentStorageDelegate &storage) {
   if (initialized_) {
     return CHIP_ERROR_INCORRECT_STATE;
   }

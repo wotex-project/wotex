@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace wotex::matter {
@@ -21,6 +22,26 @@ struct ControllerIdentity {
 
   bool operator==(const ControllerIdentity &other) const;
 };
+
+// A server has no preselected fabric or controller node. Its consumer-owned
+// identity and model digest are immutable for the lifetime of this store.
+struct BridgeIdentity {
+  std::string bridge_id;
+  std::string model_sha256;
+  std::uint16_t vendor_id{0};
+  std::uint16_t product_id{0};
+
+  bool operator==(const BridgeIdentity &other) const;
+};
+
+enum class BridgedDeviceType : std::uint16_t { OnOffLight = 0x0100, TemperatureSensor = 0x0302 };
+
+struct BridgeEndpoint {
+  std::uint16_t endpoint{0};
+  BridgedDeviceType device_type{BridgedDeviceType::OnOffLight};
+};
+
+class BridgeStorage;
 
 #ifdef WOTEX_MATTER_STORAGE_TESTING
 enum class CommitStage {
@@ -62,12 +83,20 @@ class DurableStorage final : public chip::PersistentStorageDelegate {
 #endif
 
  private:
-  using Values = std::map<std::string, std::vector<std::uint8_t>>;
+  friend class BridgeStorage;
 
-  DurableStorage(std::string path, ControllerIdentity identity, int directory_fd,
-                 int lock_fd, Values values);
+  using Values = std::map<std::string, std::vector<std::uint8_t>>;
+  using Identity = std::variant<ControllerIdentity, BridgeIdentity>;
+  using Endpoints = std::map<std::string, BridgeEndpoint>;
+
+  static CHIP_ERROR OpenStore(const std::string &path, StorageMode mode, const Identity &identity,
+                              std::unique_ptr<DurableStorage> &storage);
+
+  DurableStorage(Identity identity, int directory_fd, int lock_fd, Values values,
+                 Endpoints endpoints, std::uint32_t next_endpoint);
 
   CHIP_ERROR Commit(const Values &values);
+  CHIP_ERROR Commit(const Values &values, const Endpoints &endpoints, std::uint32_t next_endpoint);
   void Poison();
 
 #ifdef WOTEX_MATTER_STORAGE_TESTING
@@ -75,11 +104,12 @@ class DurableStorage final : public chip::PersistentStorageDelegate {
   CommitStage crash_stage_{CommitStage::None};
 #endif
 
-  std::string path_;
-  ControllerIdentity identity_;
+  Identity identity_;
   int directory_fd_{-1};
   int lock_fd_{-1};
   Values values_;
+  Endpoints endpoints_;
+  std::uint32_t next_endpoint_{3};
   bool poisoned_{false};
 };
 

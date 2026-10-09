@@ -686,7 +686,9 @@ packages:
             stdout: "{scratch}/gn.json"
           - run: [ninja, -C, /work/cmake-normal, -t, compdb]
             stdout: "{scratch}/cmake.json"
-        compile_commands: ["{scratch}/gn.json", "{scratch}/cmake.json"]
+          - run: [ninja, -C, /work/build-bridge, -t, compdb]
+            stdout: "{scratch}/bridge.json"
+        compile_commands: ["{scratch}/gn.json", "{scratch}/cmake.json", "{scratch}/bridge.json"]
     native_bench:
       - bench: value_bounds
         kind: nanobench

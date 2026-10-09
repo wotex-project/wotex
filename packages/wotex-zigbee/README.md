@@ -336,6 +336,16 @@ owner after available observations; no retry, rollback or counter reset occurs.
 key or establish counter continuity. Qualify activation independently, then
 reopen and adopt fresh custody before further traffic.
 
+Backup and restore remain unsupported. The reviewed SDK saves key/counter
+items separately, can defer saving, and applies a build-dependent restart
+increment. Those operations establish no atomic snapshot, current counter
+high-water or exclusion of another live coordinator. Raw NV reads/writes,
+address mutation and reset cannot bypass the ordinary command boundary.
+A supported backend needs an exact qualified firmware/build and complete
+private-state, isolation and counter procedure; a valid checksum is insufficient.
+The [persistence review](../../docs/packages/wotex-zigbee/decisions/pinned-sdk-persistence.md)
+records the source inputs and remaining evidence.
+
 ## Development
 
 Run commands from the repository root:

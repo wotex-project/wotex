@@ -1,4 +1,12 @@
-Wotex MQTT Binding
+Wotex Matter
 Copyright 2026 Wotex contributors
 
 Licensed under the Apache License, Version 2.0.
+
+The bridge model fixture in test/support/software/bridge-model-zap.json is
+derived from the bridge, lighting and all-clusters ZAP examples in Project CHIP
+connectedhomeip v1.6.0.0, commit 250a9e6c50ee2068107f3c4808b680f5f2925415.
+Those examples are licensed under the Apache License, Version 2.0.
+Copyright Project CHIP Authors. The fixture selects clusters, revisions and
+features for the WoTEx bridge target; it is not an upstream bridge application.
+The source and generated-artifact digests are in bridge-model.json beside it.

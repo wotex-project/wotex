@@ -5,13 +5,18 @@
 #include <crypto/PersistentStorageOperationalKeystore.h>
 #include <lib/core/CHIPError.h>
 
-#include "wotex_matter/storage.hpp"
+#include <lib/core/CHIPPersistentStorageDelegate.h>
 
 namespace wotex::matter {
 
 class SdkStorageBinding final {
  public:
-  CHIP_ERROR Init(DurableStorage &storage);
+  SdkStorageBinding() = default;
+  ~SdkStorageBinding();
+  SdkStorageBinding(const SdkStorageBinding &) = delete;
+  SdkStorageBinding &operator=(const SdkStorageBinding &) = delete;
+
+  CHIP_ERROR Init(chip::PersistentStorageDelegate &storage);
   void Finish();
 
   chip::PersistentStorageOperationalKeystore &operational_keystore();
