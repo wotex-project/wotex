@@ -105,7 +105,15 @@ void Run(const char *directory, const std::string &mode) {
                           identity, store),
       "bridge store");
   Check(store->EnterProcessDirectory(), "private directory");
-  SdkBridgeServerBinding binding(*store);
+  BridgeConsumerHandoff handoff({1});
+  SdkBridgeServerBinding binding(*store, handoff);
+  BridgeConsumerHandoff::Ticket initial_handoff;
+  if (mode == "handoff_closed_init") handoff.Close();
+  if (mode == "handoff_busy_init") {
+    Require(
+        handoff.Reserve(100, 600, initial_handoff) == BridgeConsumerHandoff::Admission::Reserved,
+        "pending startup fixture");
+  }
 
   LinuxCommissionableDataProvider commissioning;
   uint32_t pin = 0;
@@ -142,10 +150,18 @@ void Run(const char *directory, const std::string &mode) {
   Require(binding.Init(*model, ethernet, interface, 0) == CHIP_ERROR_INVALID_ARGUMENT,
           "missing port");
   if (mode == "wrong_model" || mode == "wrong_vendor" || mode == "wrong_product" ||
-      mode == "missing_dac") {
+      mode == "missing_dac" || mode == "handoff_closed_init" || mode == "handoff_busy_init") {
     Require(binding.Init(*model, ethernet, interface, 5540) == CHIP_ERROR_INVALID_ARGUMENT,
             "server input refused");
     Require(!binding.initialized(), "refused server remains inactive");
+    if (mode == "handoff_busy_init") {
+      handoff.Close();
+      BridgeConsumerHandoff::Outcome outcome = BridgeConsumerHandoff::Outcome::Unknown;
+      Require(handoff.Take(initial_handoff, 100, outcome) ==
+                      BridgeConsumerHandoff::Consume::Completed &&
+                  outcome == BridgeConsumerHandoff::Outcome::Closed,
+              "pending startup fixture consumed");
+    }
     binding.Finish();
     app::CodegenDataModelProvider::Instance().SetPersistentStorageDelegate(nullptr);
     Credentials::SetDeviceAttestationCredentialsProvider(original_dac);
@@ -191,6 +207,13 @@ void Run(const char *directory, const std::string &mode) {
   if (mode.compare(0, 10, "endpoints_") == 0) {
     children = testing::PrepareEndpoints(binding, mode);
   }
+  std::array<BridgeConsumerHandoff::Ticket, BridgeConsumerHandoff::kCapacity> tickets{};
+  if (mode == "handoff") {
+    for (auto &ticket : tickets) {
+      Require(handoff.Reserve(100, 600, ticket) == BridgeConsumerHandoff::Admission::Reserved,
+              "SDK handoff sixteen pending");
+    }
+  }
 
   DeviceLayer::PlatformMgr().UnlockChipStack();
   Check(DeviceLayer::PlatformMgr().StartEventLoopTask(), "event loop start");
@@ -200,14 +223,35 @@ void Run(const char *directory, const std::string &mode) {
     bool ran = false;
     SdkBridgeEndpointBinding *children = nullptr;
     CHIP_ERROR observation = CHIP_NO_ERROR;
+    BridgeConsumerHandoff *handoff = nullptr;
+    BridgeConsumerHandoff::Ticket *tickets = nullptr;
+    bool handoff_ok = false;
   } receipt;
   receipt.children = children.get();
+  if (mode == "handoff") {
+    receipt.handoff = &handoff;
+    receipt.tickets = tickets.data();
+  }
   Check(DeviceLayer::PlatformMgr().ScheduleWork(
             [](intptr_t context) {
     auto &value = *reinterpret_cast<LoopReceipt *>(context);
     std::lock_guard<std::mutex> lock(value.mutex);
     if (value.children != nullptr) {
       value.observation = testing::ObserveDuringLoop(*value.children);
+    }
+    if (value.handoff != nullptr) {
+      using H = BridgeConsumerHandoff;
+      const auto old = value.tickets[0];
+      H::Outcome outcome = H::Outcome::Unknown;
+      value.handoff_ok = value.handoff->Resolve(old, H::Outcome::Completed, 101) ==
+              H::Reply::Stored &&
+          value.handoff->Take(old, 101, outcome) == H::Consume::Completed &&
+          outcome == H::Outcome::Completed &&
+          value.handoff->Reserve(101, 601, value.tickets[0]) == H::Admission::Reserved &&
+          value.tickets[0].id == 17 &&
+          value.handoff->Resolve(old, H::Outcome::Completed, 101) == H::Reply::UnknownTicket &&
+          value.handoff->Resolve(value.tickets[1], H::Outcome::Denied, 102) == H::Reply::Stored &&
+          value.handoff->Resolve(value.tickets[2], H::Outcome::Completed, 103) == H::Reply::Stored;
     }
     value.ran = true;
     value.ready.notify_one();
@@ -219,6 +263,7 @@ void Run(const char *directory, const std::string &mode) {
         receipt.ready.wait_for(lock, std::chrono::seconds(2), [&receipt] { return receipt.ran; }),
         "event loop deadline");
     Check(receipt.observation, "event loop approved observation");
+    if (mode == "handoff") Require(receipt.handoff_ok, "event loop handoff result custody");
   }
   if (mode == "missing_finish" || mode == "endpoints_missing_finish") {
     return;
@@ -253,10 +298,38 @@ void Run(const char *directory, const std::string &mode) {
   Check(DeviceLayer::PlatformMgr().StopEventLoopTask(), "event loop stop");
   DeviceLayer::PlatformMgr().LockChipStack();
 
+  if (mode == "handoff_pending_finish") {
+    Require(
+        handoff.Reserve(100, 600, initial_handoff) == BridgeConsumerHandoff::Admission::Reserved,
+        "pending shutdown fixture");
+    std::cout << "bridge handoff retained context prepared\n" << std::flush;
+    binding.Finish();
+    throw std::runtime_error("unconsumed handoff shutdown continued");
+  }
+  if (mode == "handoff") {
+    using H = BridgeConsumerHandoff;
+    H::Ticket sentinel{{9}, 99};
+    H::Outcome outcome = H::Outcome::Unknown;
+    Require(handoff.Reserve(600, 1100, sentinel) == H::Admission::Busy && sentinel.id == 99,
+            "unconsumed expired SDK contexts retain admission credit");
+    Require(handoff.Take(tickets[1], 600, outcome) == H::Consume::Completed &&
+                outcome == H::Outcome::TimedOut,
+            "delayed SDK result expired");
+    handoff.Close();
+    for (std::size_t index = 0; index < tickets.size(); ++index) {
+      if (index == 1) continue;
+      Require(handoff.Take(tickets[index], 600, outcome) == H::Consume::Completed &&
+                  outcome == H::Outcome::Closed,
+              "closed SDK handoff consumed exact context");
+    }
+    Require(handoff.pending() == 0, "SDK handoff drained before resource release");
+    std::cout << "bridge handoff event loop and shutdown passed\n" << std::flush;
+  }
   if (children) testing::FinishEndpoints(*children, binding);
   binding.Finish();
   binding.Finish();
   Require(!binding.initialized(), "binding closed");
+  Require(handoff.closed() && handoff.pending() == 0, "handoff closed before SDK release");
   Require(app::InteractionModelEngine::GetInstance()->GetDataModelProvider() == nullptr,
           "model released");
   Require(Credentials::GetGroupDataProvider() == nullptr, "group provider released");
@@ -303,7 +376,9 @@ int main(int argc, char **argv) {
       mode != "poison_remove" && mode != "wrong_model" && mode != "wrong_vendor" &&
       mode != "wrong_product" && mode != "missing_dac" && mode != "endpoints_seed" &&
       mode != "endpoints_reopen" && mode != "endpoints_missing_finish" &&
-      mode != "endpoints_poison_add" && mode != "endpoints_poison_remove")
+      mode != "endpoints_poison_add" && mode != "endpoints_poison_remove" && mode != "handoff" &&
+      mode != "handoff_pending_finish" && mode != "handoff_closed_init" &&
+      mode != "handoff_busy_init")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

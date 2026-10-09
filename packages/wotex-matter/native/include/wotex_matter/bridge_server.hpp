@@ -2,6 +2,7 @@
 #define WOTEX_MATTER_BRIDGE_SERVER_HPP
 
 #include "wotex_matter/bridge_storage.hpp"
+#include "wotex_matter/bridge_handoff.hpp"
 
 #include <app/data-model-provider/Provider.h>
 #include <inet/InetInterface.h>
@@ -13,7 +14,9 @@ namespace wotex::matter {
 
 // Internal native-process binding. The owner explicitly initializes memory,
 // providers and PlatformMgr, holds the SDK stack lock for Init/Finish, and
-// stops the event loop before Finish. The store, model and Ethernet driver
+// closes and consumes every handoff, then stops the event loop before Finish.
+// Unconsumed handoffs at Finish terminate the process before SDK cleanup.
+// The store, handoff, model and Ethernet driver
 // outlive this binding. Each process has one SDK server lifetime.
 //
 // A poisoned store or an incomplete SDK Server::Init terminates this native
@@ -25,7 +28,7 @@ class SdkBridgeServerBinding final {
   static constexpr int kStoreFailureExit = 74;
   static constexpr int kStartupFailureExit = 70;
 
-  explicit SdkBridgeServerBinding(BridgeStorage &storage);
+  SdkBridgeServerBinding(BridgeStorage &storage, BridgeConsumerHandoff &handoff);
   ~SdkBridgeServerBinding();
   SdkBridgeServerBinding(const SdkBridgeServerBinding &) = delete;
   SdkBridgeServerBinding &operator=(const SdkBridgeServerBinding &) = delete;

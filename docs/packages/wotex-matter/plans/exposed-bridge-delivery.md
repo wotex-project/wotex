@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.4.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.5.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -124,6 +124,26 @@ cases run in normal and ASan/UBSan builds through the native builder.
 ## 3. Request and report path
 
 Inbound fabric/ACL admission precedes consumer authorization. Supply exact endpoint/cluster/operation, principal/fabric context, request identity and deadline to the consumer. A controller is not entitled to bypass the consumer's policy because commissioning succeeded.
+
+The internal
+[`BridgeConsumerHandoff`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_handoff.hpp)
+owns sixteen slots, an explicit process generation, non-reused request IDs and
+absolute deadlines bounded to 500 ms. It retains admission credit until the
+native owner consumes a context, including after expiry. Clock regression,
+foreign tickets, duplicate replies and consumer-forged timeout/closure outcomes
+are refused. Delayed consumption cannot publish a staged result after expiry;
+closure cannot publish a staged result or admit another request. Server shutdown
+closes the handoff and terminates before SDK cleanup if any context is unconsumed.
+This is request custody, not authenticated consumer dispatch or observation
+authority.
+
+[`bridge_handoff_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_handoff_test.cpp)
+exercises capacity, exact deadlines, all logical results, delayed delivery,
+closure, generation mismatch, clock regression and request-counter exhaustion.
+The separate SDK server target adds event-loop handoff, closed/pending startup
+refusal and unconsumed-shutdown termination cases. The owner supplies explicit
+test times; these cases do not exercise an authenticated Matter request or an
+ExposedThing callback.
 
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 

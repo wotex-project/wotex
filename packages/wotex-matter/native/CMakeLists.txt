@@ -24,6 +24,19 @@ target_compile_options(wotex_matter_value_test PRIVATE -Wall -Wextra -Wpedantic 
 
 add_test(NAME wotex_matter_value_test COMMAND wotex_matter_value_test)
 
+add_library(wotex_matter_bridge_handoff STATIC src/bridge_handoff.cpp)
+target_include_directories(wotex_matter_bridge_handoff PUBLIC include)
+target_compile_features(wotex_matter_bridge_handoff PUBLIC cxx_std_17)
+target_compile_options(wotex_matter_bridge_handoff PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(WOTEX_MATTER_SANITIZERS)
+  target_compile_options(wotex_matter_bridge_handoff PUBLIC -fno-omit-frame-pointer -fsanitize=address,undefined)
+  target_link_options(wotex_matter_bridge_handoff PUBLIC -fsanitize=address,undefined)
+endif()
+add_executable(wotex_matter_bridge_handoff_test ../test/native/bridge_handoff_test.cpp)
+target_link_libraries(wotex_matter_bridge_handoff_test PRIVATE wotex_matter_bridge_handoff)
+target_compile_options(wotex_matter_bridge_handoff_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME wotex_matter_bridge_handoff_test COMMAND wotex_matter_bridge_handoff_test)
+
 if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   set(WOTEX_MATTER_SDK_INCLUDES
     "${WOTEX_MATTER_SDK_ROOT}/src"

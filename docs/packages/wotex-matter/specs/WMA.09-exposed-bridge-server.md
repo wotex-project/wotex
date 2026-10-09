@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.5.0-target.
+Version: 0.6.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -74,6 +74,17 @@ An observation MUST match both the Thing identity and its current endpoint.
 Invalid observations MUST preserve previously approved state and reachability.
 Permanent removal MUST retire SDK cluster registrations and endpoint-scoped
 group/attribute custody. Normal shutdown MUST preserve durable group custody.
+
+The native consumer handoff MUST retain a slot for every unconsumed request
+context, including a staged result or expired request. It MUST admit at most
+sixteen contexts, bind each ticket to one explicit process generation and a
+non-reused request ID, and preserve one absolute deadline no later than 500 ms
+after admission. Clock regression MUST be refused. Neither queue admission nor
+a staged result grants authorization or establishes a physical effect. A
+result consumed at or after expiry MUST become a timeout. Closure MUST refuse
+new requests and retire all unconsumed results; the native owner MUST consume
+their contexts before releasing SDK resources. Unconsumed handoffs at server
+shutdown MUST terminate the native process before SDK cleanup.
 
 ## Bridged devices
 

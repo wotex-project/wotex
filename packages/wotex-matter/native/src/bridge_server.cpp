@@ -96,7 +96,8 @@ class ServerStore final : public chip::PersistentStorageDelegate {
 
 class SdkBridgeServerBinding::Impl final {
  public:
-  explicit Impl(BridgeStorage &storage) : storage_(storage), delegate_(storage) {}
+  Impl(BridgeStorage &storage, BridgeConsumerHandoff &handoff)
+      : storage_(storage), handoff_(handoff), delegate_(storage) {}
 
   ~Impl() {
     if (initialized_) {
@@ -109,8 +110,8 @@ class SdkBridgeServerBinding::Impl final {
   CHIP_ERROR Init(chip::app::DataModel::Provider &model,
                   chip::DeviceLayer::NetworkCommissioning::EthernetDriver &network,
                   const chip::Inet::InterfaceId &interface_id, std::uint16_t port) {
-    if (used_ || !interface_id.IsPresent() || port == 0 ||
-        !chip::Credentials::IsDeviceAttestationCredentialsProviderSet() ||
+    if (used_ || handoff_.closed() || handoff_.pending() != 0 || !interface_id.IsPresent() ||
+        port == 0 || !chip::Credentials::IsDeviceAttestationCredentialsProviderSet() ||
         storage_.identity().model_sha256 != kModelDigest) {
       return CHIP_ERROR_INVALID_ARGUMENT;
     }
@@ -178,6 +179,8 @@ class SdkBridgeServerBinding::Impl final {
   }
 
   void Finish() {
+    handoff_.Close();
+    if (handoff_.pending() != 0) std::_Exit(kStartupFailureExit);
     if (initialized_) {
       network_->Shutdown();
       network_.reset();
@@ -204,6 +207,7 @@ class SdkBridgeServerBinding::Impl final {
   }
 
   BridgeStorage &storage_;
+  BridgeConsumerHandoff &handoff_;
   ServerStore delegate_;
   SdkStorageBinding sdk_storage_;
   chip::Crypto::DefaultSessionKeystore session_keys_;
@@ -218,8 +222,9 @@ class SdkBridgeServerBinding::Impl final {
   bool groups_initialized_{false};
 };
 
-SdkBridgeServerBinding::SdkBridgeServerBinding(BridgeStorage &storage)
-    : impl_(std::make_unique<Impl>(storage)) {}
+SdkBridgeServerBinding::SdkBridgeServerBinding(BridgeStorage &storage,
+                                               BridgeConsumerHandoff &handoff)
+    : impl_(std::make_unique<Impl>(storage, handoff)) {}
 
 SdkBridgeServerBinding::~SdkBridgeServerBinding() = default;
 

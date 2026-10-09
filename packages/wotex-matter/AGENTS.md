@@ -54,6 +54,9 @@ Repository-wide rules are in the root `AGENTS.md`.
   approved observation ownership; `native/testing/sdk_bridge_{server,endpoints}_test.*`
   form its separate test target. These bindings have no consumer-facing native
   Port or authenticated consumer command/write dispatch.
+- `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
+  custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
+  tests deadlines, generations and closure independently of the SDK.
 - `native/`: the C++17 controller host (`src/`, `include/wotex_matter/`),
   process-flow and resource test hosts (`testing/`), CMake and GN builds;
   `test/native/`: its C++ unit tests.

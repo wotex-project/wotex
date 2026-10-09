@@ -384,6 +384,11 @@ light/sensor children with stable endpoint identity, exact cluster metadata,
 approved observations, nullable temperature bounds and fabric-scoped group
 cleanup. Restored labels and capabilities require explicit consumer
 configuration. This internal binding has no public native Port host yet.
+Its handoff owner retains sixteen request contexts through delivery, expiry
+and closure, with generation-scoped IDs and a 500 ms absolute deadline.
+The SDK binding refuses startup with a closed or pending handoff and terminates
+before shutdown cleanup if a context remains unconsumed. These custody tests
+carry no authenticated request or consumer callback.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
 

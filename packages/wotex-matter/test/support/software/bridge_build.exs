@@ -34,7 +34,11 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
      ]},
     {"endpoints_missing_finish", 70, "bridge endpoint metadata, custody and observations passed"},
     {"endpoints_poison_add", 74, "bridge endpoint metadata, custody and observations passed"},
-    {"endpoints_poison_remove", 74, "bridge endpoint metadata, custody and observations passed"}
+    {"endpoints_poison_remove", 74, "bridge endpoint metadata, custody and observations passed"},
+    {"handoff", 0, "bridge handoff event loop and shutdown passed"},
+    {"handoff_pending_finish", 70, "bridge handoff retained context prepared"},
+    {"handoff_closed_init", 0, "server input refusal probe passed"},
+    {"handoff_busy_init", 0, "server input refusal probe passed"}
   ]
   # Arguments remain positional, including paths with shell metacharacters.
   # The outer build runner records the command and bounds its output/deadline.

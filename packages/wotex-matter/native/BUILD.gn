@@ -91,6 +91,7 @@ if (chip_build_tools) {
     sources = [
       "src/bridge_endpoint_model.cpp",
       "src/bridge_endpoints.cpp",
+      "src/bridge_handoff.cpp",
       "src/bridge_resources.cpp",
       "src/bridge_server.cpp",
       "src/bridge_storage.cpp",

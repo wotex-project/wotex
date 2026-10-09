@@ -86,6 +86,18 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "handoff shutdown receipt requires a prepared context and its fatal exit" do
+    receipt = "bridge handoff retained context prepared"
+    output = receipt <> "\n\nbridge server exit: 70\n"
+    assert :ok = SoftwareBridgeBuild.verify_case!(output, 70, receipt)
+
+    for invalid <- ["\nbridge server exit: 70\n", receipt <> "\n\nbridge server exit: 0\n"] do
+      assert_raise Mix.Error, "bridge_server_test_failed", fn ->
+        SoftwareBridgeBuild.verify_case!(invalid, 70, receipt)
+      end
+    end
+  end
+
   test "WMA-B01 workspace admission rejects malformed arguments and symlink ancestors", %{
     root: root
   } do

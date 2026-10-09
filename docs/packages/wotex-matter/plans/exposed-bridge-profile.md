@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.3.0. Finite WMA.09 implementation target. The
+Version: 1.4.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -78,6 +78,17 @@ endpoint/cluster/operation, request identity and one absolute deadline.
 Consumer handoff expires after 500 ms. Queue admission does not justify a
 successful command status; denial, timeout and unknown outcome remain explicit.
 Approved logical state and physical-effect truth remain distinct.
+
+The internal handoff owner accepts an explicit 16-byte process generation and
+uses non-reused 64-bit request IDs. Its serialized native caller supplies time
+from one monotonic clock; the handoff refuses regression and deadline extension.
+Sixteen slots include staged and expired results until their native contexts
+are consumed. A result delivered at the original deadline becomes a timeout,
+even if received earlier. Closure discards staged results, refuses new requests
+and preserves context credit until consumed. The server binding borrows this
+owner and terminates before SDK cleanup if any context remains unconsumed.
+This custody mechanism has no authenticated principal, request payload or
+consumer Port; the complete request dispatch boundary remains open.
 
 Production attestation and commissioning material are consumer-owned, with no
 absent-provider or example-credential fallback. An explicitly separate test
