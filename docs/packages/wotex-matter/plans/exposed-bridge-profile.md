@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.10.0. Finite WMA.09 implementation target. The
+Version: 1.11.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -123,6 +123,24 @@ These internal owners have no consumer Port or consumer policy/dispatch
 integration. Capturing synthetic principal values does not establish
 authenticated admission.
 
+Internal result input uses a separate matter-bridge role and at most 512
+bytes per LF-delimited frame, including LF. Its six scalar fields bind version
+1, result, the exact lowercase hexadecimal process generation, a nonzero
+canonical uint64 decimal ID string and one of completed/denied/failed/unknown.
+A bounded SAX decoder refuses duplicate/missing/extra fields, nested or wrong
+types, role/generation mismatch, trailing documents, NUL and CR, preserving
+output on failure. Unknown or consumed IDs and staged duplicates are ignored;
+late results retain the original deadline and context credit.
+The reader owns a fixed partial frame and borrows an exclusive descriptor.
+It temporarily uses nonblocking reads, restores descriptor flags and uses a
+50 ms poll timeout to check a caller-owned stop flag. EOF,
+partial EOF, malformed or excessive input, failed allocation/clock/notification,
+read failure and cancellation close custody and wake waits without an SDK lock.
+An explicit nonblocking notification port runs after custody unlocks; an
+asynchronous SDK owner must coalesce late notifications within sixteen slots.
+The caller joins input before closing its descriptor or releasing custody.
+This input foundation supplies no consumer-facing Port startup or dispatch.
+
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
 (`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.
 StartUpOnOff (`0x0006/0x4003`) retains null or its defined Off/On/Toggle values
@@ -190,6 +208,11 @@ unconsumed destruction. An installed-provider read test runs under the actual
 SDK event-loop stack lock while the input thread resolves or closes custody;
 explicit completion, denial and absent-reply timeout retain their meanings.
 These read fixtures use synthetic principals and already approved state.
+Additional installed-provider cases deliver fragmented results over real pipes
+while the SDK stack lock is held, ignore a consumed timeout identity, and wake
+on EOF, malformed input, partial EOF or cancellation. Host input tests cover
+strict frame decoding, unchanged failure output, full shared credit, original
+expiry, staged-result loss, descriptor restoration and notification refusal.
 Guard tests use direct SDK fabric/ACL APIs, generated test certificates and
 synthetic CASE/group callback principals. They execute retained-owner refusal
 after ACL revocation, credential update/rollback, fabric-index reuse and

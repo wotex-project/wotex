@@ -148,7 +148,14 @@ void Run(const char *directory, const std::string &mode) {
 
   auto *delegate = app::CodegenDataModelProviderInstance(&binding.storage_delegate());
   auto provider_probe = testing::PrepareProvider(handoff);
-  auto wait_probe = mode == "wait" ? testing::PrepareWait(handoff, *delegate) : nullptr;
+  const bool waiting = mode == "wait" || mode == "wait_input_eof" ||
+      mode == "wait_input_malformed" || mode == "wait_input_partial" || mode == "wait_input_cancel";
+  const auto input_mode = mode == "wait_input_eof" ? testing::WaitInput::Ended
+      : mode == "wait_input_malformed"             ? testing::WaitInput::Malformed
+      : mode == "wait_input_partial"               ? testing::WaitInput::Partial
+      : mode == "wait_input_cancel"                ? testing::WaitInput::Cancelled
+                                                   : testing::WaitInput::Direct;
+  auto wait_probe = waiting ? testing::PrepareWait(handoff, *delegate, input_mode) : nullptr;
   BridgeReceiver &receiver = wait_probe ? static_cast<BridgeReceiver &>(*wait_probe)
                                         : provider_probe->receiver();
   SdkBridgeProviderBinding provider(*delegate, receiver);
@@ -420,7 +427,9 @@ int main(int argc, char **argv) {
       mode != "requests_missing_finish" && mode != "replies" && mode != "replies_retain" &&
       mode != "provider" && mode != "provider_startup_failure" &&
       mode != "provider_shutdown_failure" && mode != "provider_missing_finish" && mode != "wait" &&
-      mode != "writes" && mode != "guard" && mode != "guard_missing_finish")
+      mode != "wait_input_eof" && mode != "wait_input_malformed" && mode != "wait_input_partial" &&
+      mode != "wait_input_cancel" && mode != "writes" && mode != "guard" &&
+      mode != "guard_missing_finish")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

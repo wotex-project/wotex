@@ -62,6 +62,10 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"provider_shutdown_failure", 70, "bridge provider failed shutdown refusal prepared"},
     {"provider_missing_finish", 70, "bridge provider missing shutdown refusal prepared"},
     {"wait", 0, "SDK read waiting, input resolution, timeout and closure passed"},
+    {"wait_input_eof", 0, "SDK bounded result pipe, timeout and EOF wake passed"},
+    {"wait_input_malformed", 0, "SDK bounded result pipe, timeout and malformed wake passed"},
+    {"wait_input_partial", 0, "SDK bounded result pipe, timeout and partial wake passed"},
+    {"wait_input_cancel", 0, "SDK bounded result pipe, timeout and cancellation wake passed"},
     {"writes", 0,
      [
        "SDK finite write scalar ownership and refusal passed",

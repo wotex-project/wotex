@@ -66,6 +66,11 @@ Repository-wide rules are in the root `AGENTS.md`.
   metadata, bounded command payload copies and retained SDK invoke handles;
   `native/testing/sdk_bridge_requests_test.*` tests ownership with synthetic
   principal inputs. Consumer Port delivery and dispatch remain open.
+- `native/{include/wotex_matter,src}/bridge_input.*`: internal bounded bridge
+  result frames and an explicit cancellable descriptor reader;
+  `test/native/bridge_input_test.cpp` and installed-provider real-pipe cases in
+  `native/testing/sdk_bridge_wait_test.*` test correlation and custody closure.
+  Consumer-facing Port startup, policy and dispatch remain open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: required retained-invoke
   guard for exact fabric/credential scope, live command metadata and current
   SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and

@@ -405,6 +405,12 @@ The internal threaded handoff owner uses an explicit elapsed-time clock and
 releases its custody mutex during synchronous waits. Its installed-provider
 read test holds the actual SDK stack lock while the input thread resolves or
 closes custody, and verifies original-deadline timeout without extending it.
+Internal result input accepts a separate six-field matter-bridge/result
+frame of at most 512 bytes including LF, with exact generation and canonical
+request-ID matching. Its bounded reader closes custody on lost, malformed or
+cancelled input and wakes waits without an SDK lock. Host and installed-provider
+real-pipe tests cover fragmentation, stale IDs, expiry, EOF and cancellation in
+normal and sanitizer builds. Consumer Port startup and dispatch remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in

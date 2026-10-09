@@ -45,6 +45,17 @@ target_compile_options(wotex_matter_bridge_handoff_owner_test PRIVATE -Wall -Wex
 add_test(NAME wotex_matter_bridge_handoff_owner_test COMMAND wotex_matter_bridge_handoff_owner_test)
 
 if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
+  # Bridge input is a separate role and frame contract from the controller.
+  add_library(wotex_matter_bridge_input STATIC src/bridge_input.cpp)
+  target_include_directories(wotex_matter_bridge_input SYSTEM PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
+  target_link_libraries(wotex_matter_bridge_input PUBLIC wotex_matter_bridge_handoff)
+  target_compile_options(wotex_matter_bridge_input PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_executable(wotex_matter_bridge_input_test ../test/native/bridge_input_test.cpp)
+  target_include_directories(wotex_matter_bridge_input_test SYSTEM PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
+  target_link_libraries(wotex_matter_bridge_input_test PRIVATE wotex_matter_bridge_input)
+  target_compile_options(wotex_matter_bridge_input_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_test(NAME wotex_matter_bridge_input_test COMMAND wotex_matter_bridge_input_test)
+
   set(WOTEX_MATTER_SDK_INCLUDES
     "${WOTEX_MATTER_SDK_ROOT}/src"
     "${WOTEX_MATTER_SDK_ROOT}/third_party/nlassert/repo/include"

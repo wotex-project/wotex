@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.11.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.12.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -171,6 +171,34 @@ their corresponding statuses and release context credit. The native builder
 runs the SDK case in normal and ASan/UBSan builds. Synthetic principals and
 completion inputs establish waiting ownership, not authenticated admission,
 consumer policy or ExposedThing dispatch.
+
+The internal
+[BridgeResultInput](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_input.hpp)
+borrows threaded custody, its exact generation and a mandatory nonblocking
+notification sink. Its scalar-only SAX decoder admits the six-field
+matter-bridge/result frame specified by WMA.09, bounded to 512 bytes including
+LF, without a JSON DOM. Decode failure preserves output. Staged duplicates and
+consumed/unknown identities are ignored; late notification cannot extend the
+original deadline or release context credit. Notifications run after custody
+unlocks and may not acquire the SDK stack lock. An asynchronous SDK work owner
+must coalesce late notifications within sixteen pending contexts.
+
+Input retains a fixed partial frame. Its explicit descriptor reader enables
+nonblocking reads temporarily, restores flags and polls with a caller-owned stop
+flag every 50 ms. EOF, partial EOF, malformed/oversized input, failed
+allocation/clock/notification, read failure and cancellation close custody and
+wake waiters; SDK context drain remains the SDK owner's responsibility.
+The reader joins before its caller closes the descriptor or releases custody.
+[bridge_input_test.cpp](../../../../packages/wotex-matter/test/native/bridge_input_test.cpp)
+tests strict field/type/identity and size boundaries, unchanged failure output,
+fragmented/batched input, shared sixteen-slot credit, original expiry,
+staged-result loss, stale identities, pipe EOF, cancellation with an open writer,
+read failure and descriptor restoration. Four additional separate SDK server
+cases resolve fragmented real-pipe results while an installed-provider read
+holds the actual SDK stack lock, then verify absent-reply timeout and wake on
+EOF, malformed input, partial EOF or cancellation. The native builder runs them
+in normal and ASan/UBSan modes. This bounded input foundation has no
+consumer-facing Port host, authenticated consumer policy or ExposedThing dispatch.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)

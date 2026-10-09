@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.12.0-target.
+Version: 0.13.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -96,6 +96,28 @@ MUST close admission, drain contexts and join all callers before destroying
 the threaded owner or releasing its borrowed custody and clock. Destruction
 with unconsumed custody MUST terminate the process. These mechanics do not
 establish consumer authorization or schedule SDK completion work.
+
+Consumer result input MUST use LF-delimited frames of at most 512 bytes,
+including LF. Each frame MUST be one JSON object with exactly six scalar
+fields: unsigned integer `v: 1`, `backend: "matter-bridge"`, `type: "result"`,
+`generation` as the expected 16-byte generation encoded as 32 lowercase
+hexadecimal characters, `id` as the canonical decimal string of a nonzero
+uint64, and `outcome` as `"completed"`, `"denied"`, `"failed"` or `"unknown"`.
+Duplicate, missing or extra
+fields, nested values, wrong types, foreign roles/generations, trailing JSON,
+NUL, CR and oversized input MUST be refused. Decode failure MUST preserve the
+caller output. A duplicate staged result or consumed/unknown ID MUST NOT revive
+custody or release credit. A late result MUST NOT extend the original deadline.
+
+The serialized result reader MUST retain only a bounded partial frame and use
+an explicit bounded notification port after custody unlocks. Notification MUST
+NOT acquire the SDK stack lock; asynchronous completion owners MUST coalesce
+late-result notifications within the sixteen-context bound. EOF, partial EOF,
+malformed input, clock failure, allocation failure, notification refusal, read
+failure and caller cancellation MUST close admission and wake pending waits
+before SDK cleanup. Cancellation MUST NOT depend on closing a descriptor under
+a read. The caller MUST join the reader before closing its borrowed descriptor
+or releasing custody. Result correlation grants no consumer policy authority.
 
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated
