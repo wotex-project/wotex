@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.15.0-target.
+Version: 0.16.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -204,6 +204,64 @@ projection, mandatory consumer policy and ExposedThing dispatch MUST be supplied
 by their explicit owner before execution. Consumer result encoding MUST produce
 the existing exact six-field `matter-bridge/result` frame within 512 bytes
 including LF. Encoding either direction MUST grant no policy or effect authority.
+
+### Consumer execution ownership
+
+The consumer execution owner MUST start explicitly for one process generation,
+with one receiver, an explicit BEAM monotonic clock, required policy and exact
+routes. Dependency loading MUST start nothing. Its child specification MUST
+NOT restart a lost generation implicitly. Only the configured receiver may
+submit requests or collect results. The trusted native Port owner MUST preserve
+native admission order when encoding and enqueueing requests before their SDK
+callback returns. Delivered IDs MUST increase strictly; gaps are permitted,
+but a refused submission MUST NOT be retried under its original ID. Malformed,
+foreign-generation, duplicate or reversed frames MUST close execution custody.
+
+Native deadlines MUST NOT be treated as BEAM timestamps. A projection MUST
+bind one generation to a BEAM sample before a probe, a BEAM sample after its
+reply and the reply's native sample. Native samples MUST round down with less
+than one millisecond error; BEAM sampling error MUST be less than one
+millisecond. The caller MUST qualify a positive lower BEAM/native elapsed-time
+rate through the native expiry; one exchange, matching units or a shared host
+MUST NOT be cited as that qualification. The selected ratio has positive terms
+no greater than one million and is at most one. Projection MUST start from the
+earlier BEAM sample, subtract one millisecond in each clock domain and round
+the remaining qualified duration down. It MUST refuse exchanges over 500 BEAM
+milliseconds, native deadlines over 500 milliseconds beyond the probe, invalid
+or regressed clocks, generation mismatch and an elapsed or overflowing result.
+Obtaining a fresh probe MUST NOT extend the original native deadline.
+
+Routes MUST bind opaque Thing identity, endpoint, cluster, member and native
+operation to one validated ExposedThing, exact Runtime operation, declared
+Interaction Affordance and handler. At most 1024 routes may cover sixteen
+distinct Thing/endpoint pairs; identity aliases and rebindings MUST be refused.
+The Context MUST retain the complete decoded request, exact Runtime route,
+generation-scoped request identity and conservative BEAM deadline. Policy MUST
+receive that request and Context before payload mapping or handler execution.
+Only explicit approval may proceed. Missing routes MUST deny execution;
+malformed or failed policy and input mapping MUST fail closed without external
+exception text. Captured principal/fabric values MUST NOT substitute for
+authenticated SDK admission, live authorization or consumer policy.
+
+Input mapping MUST be explicit. Approved work MUST call the exact public
+ExposedThing dispatch boundary. Result mapping MUST explicitly choose completed,
+denied, failed or unknown and own approved-observation delivery before declaring
+completion. Dispatch or result failure, malformed outcome and expiry MUST yield
+unknown outcome without retrying a handler or promoting physical-effect truth.
+Policy, mapping, dispatch and result acceptance MUST share the original
+projected deadline, with serialized non-regressing clock checks between stages.
+
+Sixteen execution slots MUST include running workers and uncollected results.
+Credit MUST remain charged until actual worker retirement and receiver
+collection. Each staged result MUST produce one generation/ID-scoped readiness
+notification and the existing bounded native result frame. Collection MUST
+retire it once. Expiry MUST kill owned work and retain its unknown result.
+Receiver death, clock failure, protocol failure, execution-owner loss or explicit
+closure MUST reap owned workers, including workers that trap exits. The native
+Port owner MUST monitor execution custody, close native custody on its loss
+and resolve or refuse rejected submissions without retrying mutations.
+
+### Native callback custody
 
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated

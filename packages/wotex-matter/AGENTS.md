@@ -61,16 +61,17 @@ Repository-wide rules are in the root `AGENTS.md`.
   custody with an explicit clock and synchronous waits that release its mutex;
   `test/native/bridge_handoff_owner_test.cpp` and
   `native/testing/sdk_bridge_wait_test.*` exercise host concurrency and actual
-  SDK read waiting. Consumer Port and policy/dispatch remain open.
+  SDK read waiting. Native Port and authenticated execution integration remain open.
 - `native/{include/wotex_matter,src}/bridge_requests.*`: internal owned request
   metadata, bounded command payload copies and retained SDK invoke handles;
   `native/testing/sdk_bridge_requests_test.*` tests ownership with synthetic
-  principal inputs. Consumer Port delivery and dispatch remain open.
+  principal inputs. Native Port delivery and authenticated execution integration
+  remain open.
 - `native/{include/wotex_matter,src}/bridge_input.*`: internal bounded bridge
   result frames and an explicit cancellable descriptor reader;
   `test/native/bridge_input_test.cpp` and installed-provider real-pipe cases in
   `native/testing/sdk_bridge_wait_test.*` test correlation and custody closure.
-  Consumer-facing Port startup, policy and dispatch remain open.
+  Consumer-facing Port startup and authenticated execution integration remain open.
 - `native/{include/wotex_matter,src}/bridge_output.*`: bounded frame copies and
   one explicit writer, with reserved control capacity and custody closure on
   output loss. `test/native/bridge_output_test.cpp` and installed-provider cases
@@ -81,7 +82,15 @@ Repository-wide rules are in the root `AGENTS.md`.
   BEAM request decoding and correlated result encoding, preserving original
   fabric scope and opaque owned payloads. `native/testing/bridge_request_frame_test.cpp`
   and `test/wotex/matter/bridge_wire_test.exs` cover both wire directions and
-  allocation/boundary refusal. Clock projection, policy and dispatch remain open.
+  allocation/boundary refusal. Native Port integration remains open.
+- `lib/wotex/matter/bridge/{clock_projection,consumer}.ex`: pure, explicitly
+  qualified clock projection and an explicitly started sixteen-slot consumer
+  execution owner. Required policy and explicit mapping precede exact public
+  ExposedThing dispatch; staged results retain credit until collection. Tests in
+  `test/wotex/matter/bridge_{clock_projection,consumer}_test.exs` cover modeled
+  expiry, policy, backpressure and cleanup. Native Port bootstrap, authenticated
+  admission, actual clock qualification and approved-observation delivery remain
+  open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: required retained-invoke
   guard for exact fabric/credential scope, live command metadata and current
   SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and
@@ -97,7 +106,8 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `native/include/wotex_matter/bridge_provider.hpp`: internal SDK provider
   wrapper and explicit child receiver, preserving root metadata/operations and
   relaying notifications; `native/testing/sdk_bridge_provider_test.*` tests
-  installed routing and lifecycle refusal. Consumer policy/dispatch remain open.
+  installed routing and lifecycle refusal. Authenticated execution integration
+  remains open.
 - `native/`: the C++17 controller host (`src/`, `include/wotex_matter/`),
   process-flow and resource test hosts (`testing/`), CMake and GN builds;
   `test/native/`: its C++ unit tests.

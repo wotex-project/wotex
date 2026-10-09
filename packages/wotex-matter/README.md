@@ -410,7 +410,8 @@ frame of at most 512 bytes including LF, with exact generation and canonical
 request-ID matching. Its bounded reader closes custody on lost, malformed or
 cancelled input and wakes waits without an SDK lock. Host and installed-provider
 real-pipe tests cover fragmentation, stale IDs, expiry, EOF and cancellation in
-normal and sanitizer builds. Consumer Port startup and dispatch remain open.
+normal and sanitizer builds. Consumer Port startup and authenticated execution
+integration remain open.
 The internal output owner retains sixteen bounded request frames and four
 reserved controls, including an active write. Its explicitly started writer
 never performs I/O in an SDK callback; closure, cancellation and idle or blocked
@@ -422,8 +423,18 @@ flags and owned finite write or invoke payload. Its strict decoder requires the
 expected generation and one complete LF-delimited frame; result encoding matches
 the native six-field result protocol. Cross-language tests execute both directions
 and native allocation refusal in normal and sanitizer builds. Decoded requests
-are inert; their deadline belongs to the native clock. Consumer Port bootstrap,
-clock projection, mandatory policy and ExposedThing dispatch remain open.
+are inert; their deadline belongs to the native clock.
+`Wotex.Matter.Bridge.ClockProjection` conservatively projects that deadline from
+explicit probe samples and a caller-qualified elapsed-time ratio; it does not
+qualify host clocks or authenticate probes. `Wotex.Matter.Bridge.Consumer` is an
+explicitly started, bounded execution owner with required consumer policy,
+exact ExposedThing routes and explicit input/result mapping. Policy precedes
+public Runtime dispatch, every stage shares the original deadline, and sixteen
+slots include results until receiver collection. Receiver/owner/supervisor loss
+and expiry reap owned tasks without retry. The future native Port owner must
+preserve request order, monitor this execution owner and close native custody
+on its loss. Port bootstrap, authenticated admission and approved-observation
+delivery remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in

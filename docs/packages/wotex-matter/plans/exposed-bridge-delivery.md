@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.14.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.15.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -9,15 +9,16 @@ simulate 256 identities and reject duplicate, rewound and overlapping
 snapshots. The benchmark measures only BEAM-side custody. The native bridge
 store persists SDK values and endpoint custody together with a separate
 immutable bridge/model identity. An internal SDK server binding owns startup
-and shutdown resources; a consumer-facing native process, request dispatch
-and independent controller peer remain open.
+and shutdown resources. Bounded BEAM consumer execution is implemented; a
+consumer-facing native process, authenticated request integration and independent
+controller peer remain open.
 The [finite software profile](exposed-bridge-profile.md) pins the source,
 Matter 1.6 data model, root/aggregator layout, both bridged Device Types,
 mandatory light/sensor clusters, generated model artifacts, build options,
 handoff limits, test-attestation inputs and independent controller peer source.
 Reproducible model generation and native store custody are implemented.
 The native build exercises the server and dynamic endpoint bindings separately
-from the controller. Consumer request handoff and peer receipts remain open.
+from the controller. Native-to-consumer handoff and peer receipts remain open.
 
 ## Scope
 
@@ -259,8 +260,34 @@ metadata, counts, order and completion, rejects sanitizer findings, and records
 the codec binary and both result and argument input hashes. The
 [BEAM wire tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_wire_test.exs)
 cover strict framing, malformed/unsupported cells and arbitrary-byte totality.
-These codecs supply inert representations; consumer Port bootstrap, clock
-projection, mandatory consumer policy and ExposedThing dispatch remain required.
+These codecs supply inert representations. The separate BEAM execution owner
+requires conservative clock projection and mandatory consumer policy before
+public ExposedThing dispatch. Native Port bootstrap remains required.
+
+[`ClockProjection`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/clock_projection.ex)
+preserves the generation and explicit probe samples without equating clock
+epochs. It requires a caller-qualified lower elapsed-time ratio and applies
+quantization/transit margins within the original 500 ms deadline. It samples
+no clock and authenticates no probe.
+[`Consumer`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/consumer.ex)
+owns a private bounded task supervisor, required policy, exact ExposedThing
+routes and explicit input/result mapping. Only its receiver submits ordered
+IDs or collects results; sixteen slots include uncollected results. Policy,
+mapping, handler execution and result acceptance share one conservative
+deadline. Missing routes deny; callback exceptions fail closed or retain unknown
+effect according to execution stage. Expiry and receiver/owner/supervisor loss
+reap owned workers without retry, and diagnostic status redacts request data.
+
+[projection tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_clock_projection_test.exs)
+model independent epochs, qualified rates and both clock quantizations.
+[consumer tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_consumer_test.exs)
+execute real public Runtime dispatch with synthetic request metadata, test
+policy-before-handler ordering, deadline consumption, backpressure, one-time
+retirement, invalid clocks/protocols and cleanup including trapped exits.
+They do not qualify real host clocks or authenticate Matter peers. The native
+Port owner must preserve admission order, qualify/authenticate probe exchange,
+monitor execution custody and close native custody on loss. That integration,
+live SDK checks and approved-observation delivery remain open.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
@@ -285,8 +312,8 @@ payload copies, reader-position preservation, stale tickets, clock regression,
 delayed expiry, explicit reply rendering, encoding failure and valid/invalidated
 handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
 builds run these cases through the native builder. This is internal context
-ownership: authenticated SDK admission, consumer policy, native Port delivery
-and ExposedThing dispatch remain open.
+ownership: authenticated SDK admission, native Port delivery and integration
+with BEAM consumer execution remain open.
 
 The required
 [`SdkBridgeInvokeGuard`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_guard.hpp)
@@ -327,8 +354,8 @@ owned metadata/scalars after callback storage changes, exact nullable/range/type
 errors, refusal before decoding, sixteen-slot admission, staged-result credit,
 deadline and clock refusal, expiry, closure and non-reused identities. Normal
 and ASan/UBSan server builds run this case. It establishes internal write
-admission; authenticated SDK request admission and consumer execution remain
-open.
+admission; authenticated SDK request admission and native-to-consumer execution
+integration remain open.
 
 The internal
 [`SdkBridgeCommandReply`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_replies.hpp)
@@ -374,7 +401,7 @@ Tests verify installed-provider identity, root delegation, copied metadata,
 notification forwarding, metadata-allocation errors, closed-provider refusal
 and all three fatal lifecycle paths in normal and ASan/UBSan builds. Synthetic
 principal inputs do not establish SDK fabric/ACL admission or consumer policy;
-the consumer-facing native Port and ExposedThing dispatch remain open.
+the consumer-facing native Port and integration with BEAM execution remain open.
 
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 

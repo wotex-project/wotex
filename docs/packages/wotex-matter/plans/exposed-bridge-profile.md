@@ -1,9 +1,10 @@
 # Exposed bridge software profile
 
-Version: 1.13.0. Finite WMA.09 implementation target. The
+Version: 1.14.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
-endpoint bindings are implemented. Consumer request dispatch remains open.
+endpoint bindings and bounded BEAM consumer execution are implemented. Native
+Port bootstrap and authenticated request admission remain open.
 
 ## Source and generated data
 
@@ -119,9 +120,9 @@ completion. SDK cleanup through a serialized callback also wakes waiters.
 Callers close admission, drain contexts and join reader/SDK callers before
 releasing the owner or its borrowed inputs. Unconsumed destruction terminates
 the process. This owner neither schedules SDK work nor grants policy authority.
-These internal owners have no consumer Port or consumer policy/dispatch
-integration. Capturing synthetic principal values does not establish
-authenticated admission.
+These internal owners have no consumer Port. The separate BEAM execution owner
+does not connect them to authenticated request admission. Capturing synthetic
+principal values does not establish that admission.
 
 Internal result input uses a separate matter-bridge role and at most 512
 bytes per LF-delimited frame, including LF. Its six scalar fields bind version
@@ -139,7 +140,8 @@ read failure and cancellation close custody and wake waits without an SDK lock.
 An explicit nonblocking notification port runs after custody unlocks; an
 asynchronous SDK owner must coalesce late notifications within sixteen slots.
 The caller joins input before closing its descriptor or releasing custody.
-This input foundation supplies no consumer-facing Port startup or dispatch.
+This input foundation supplies no consumer-facing Port startup or authenticated
+execution integration.
 
 Internal output uses one explicitly started writer and nonblocking SDK
 try-lock admission. Sixteen request frames of at most 262144 bytes and four
@@ -160,7 +162,7 @@ The sink runs once after custody closes and never performs SDK cleanup.
 Callers arrange SIGPIPE behavior, join every user and then close the descriptor
 or retire output. Destruction with queued bytes or an active writer exits with
 70. A separate request codec supplies the wire representation; process bootstrap
-and consumer policy/dispatch integration remain open.
+and authenticated execution integration remain open.
 
 The paired codec uses exact version-1 `matter-bridge/request` objects with
 fifteen fields and LF, within the 262144-byte output limit. Native encoding and
@@ -180,6 +182,45 @@ returns structured errors for duplicate, missing, extra or unsupported cells.
 It exposes `deadline_native_ms` without equating it to BEAM time. The matching
 BEAM result encoder supplies the existing six-field frame within 512 bytes.
 Neither codec authorizes dispatch, samples clocks or mutates custody.
+
+`Wotex.Matter.Bridge.ClockProjection` is a pure generation-scoped exchange value.
+BEAM samples are signed 64-bit milliseconds and the native sample is uint64.
+The exchange covers at most 500 BEAM milliseconds and the deadline at most 500
+native milliseconds after the probe. An explicit qualified lower BEAM/native
+elapsed-time ratio `{n, d}` has `0 < n <= d <= 1000000`; it has no default.
+For native expiry `D`, native sample `N` and earlier BEAM sample `B`, the
+conservative deadline is `B + floor((D - N - 1) * n / d) - 1`. Transit and
+processing consume that budget. Expired, foreign, malformed or overflowing
+projections are refused; a later native expiry requires a fresh probe without
+extending the original deadline. The caller owns probe authentication, both
+sampling-error bounds and rate qualification through expiry. One exchange or
+a shared host does not qualify the rate.
+
+`Wotex.Matter.Bridge.Consumer` starts explicitly with one generation, receiver,
+nonblocking BEAM clock, required policy and exact routes. Its temporary child
+specification never restarts a generation. Only that receiver may submit or
+collect. Native admission order must survive encoding and enqueueing before
+the SDK callback returns: IDs strictly increase, gaps are allowed, and rejected
+IDs cannot be retried. Corrupt or replayed frames close custody.
+
+At most 1024 routes cover sixteen bijective Thing/endpoint pairs. Each names
+a validated ExposedThing, exact Runtime operation/Interaction Affordance and
+explicit input/result functions. Context preserves the full request, route,
+generation-bound identity and conservative BEAM deadline. Required policy runs
+before mapping and public ExposedThing dispatch. Missing routes deny; policy or
+input failures fail closed. Result mapping explicitly selects completed,
+denied, failed or unknown and owns approved-observation delivery. Dispatch or
+result failure, invalid outcome and expiry become unknown without retry.
+
+The owner serializes its clock checks between every execution stage. Sixteen
+slots include running workers and staged results; actual worker retirement
+precedes staging, and collection retires credit once. One bounded readiness
+notification identifies each result; collection returns the native six-field
+frame. Expiry brutally stops its worker and retains unknown outcome. Receiver,
+clock, protocol, owner or private-supervisor loss and explicit closure reap
+owned work, including handlers that trap exits. The native Port owner must
+monitor execution loss and close its native custody. This API supplies no
+native process bootstrap, live SDK admission or approved-observation transport.
 
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
 (`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.
@@ -276,7 +317,14 @@ Guard tests use direct SDK fabric/ACL APIs, generated test certificates and
 synthetic CASE/group callback principals. They execute retained-owner refusal
 after ACL revocation, credential update/rollback, fabric-index reuse and
 endpoint retirement, including metadata failures and fatal missing detach.
-Authenticated consumer dispatch,
+BEAM projection and consumer tests exercise conservative modeled expiry with
+independent clock epochs/rates, real ExposedThing policy/mapping/dispatch order,
+scope preservation, sixteen-slot backpressure, original-deadline expiry,
+clock/protocol refusal, one-time collection and receiver/owner/supervisor loss.
+Repeated complete/retire cycles verify bounded credit. These tests use explicit
+clocks and synthetic request principals; they qualify neither actual host clocks
+nor authenticated transport.
+Authenticated native-to-consumer dispatch,
 subscription/report flow, end-to-end handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does
 not satisfy those server obligations. Certification and installed ecosystem

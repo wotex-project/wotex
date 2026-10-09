@@ -28,8 +28,7 @@ defmodule Wotex.Matter.Bridge.Wire do
   perform no I/O, clock sampling or custody mutation.
   """
 
-  import Bitwise
-  alias Wotex.Matter.Bridge.Arguments
+  alias Wotex.Matter.Bridge.{Arguments, Path}
   alias Wotex.Matter.Error
 
   @keys ~w(v backend type generation id deadline_ms thing operation path principal fabric_scope flags list data_version payload)
@@ -173,29 +172,12 @@ defmodule Wotex.Matter.Bridge.Wire do
   defp hex(_, _, _), do: :error
 
   defp path(value, operation) do
-    if exact?(value, ~w(endpoint cluster member)) and unsigned?(value["endpoint"], 65_534) and
-         value["endpoint"] >= 3 and qualified_cluster?(value["cluster"]) and
-         member?(value["member"], operation),
+    if exact?(value, ~w(endpoint cluster member)) and
+         Path.valid?(value["endpoint"], value["cluster"], value["member"], operation),
        do:
          {:ok, %{endpoint: value["endpoint"], cluster: value["cluster"], member: value["member"]}},
        else: :error
   end
-
-  defp qualified_cluster?(value) when is_integer(value) and value >= 0 and value <= 0xFFF4FFFE,
-    do: value <= 0x7FFF or (bsr(value, 16) >= 1 and band(value, 0xFFFF) in 0xFC00..0xFFFE)
-
-  defp qualified_cluster?(_), do: false
-
-  defp member?(value, operation) when is_integer(value) and value >= 0 and value <= 0xFFF4FFFF do
-    vendor = bsr(value, 16)
-    suffix = band(value, 0xFFFF)
-
-    if operation == :invoke,
-      do: suffix <= 0xFF and vendor <= 0xFFF4,
-      else: (suffix <= 0x4FFF and vendor <= 0xFFF4) or (vendor == 0 and suffix in 0xF000..0xFFFE)
-  end
-
-  defp member?(_, _), do: false
 
   defp principal(value) do
     with true <- exact?(value, ~w(fabric_index auth_mode subject cats is_commissioning)),
