@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.12.0. Finite WMA.09 implementation target. The
+Version: 1.13.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -159,8 +159,27 @@ its mutex before closing custody or calling the required notification sink.
 The sink runs once after custody closes and never performs SDK cleanup.
 Callers arrange SIGPIPE behavior, join every user and then close the descriptor
 or retire output. Destruction with queued bytes or an active writer exits with
-70. These byte mechanics have no request encoder, process bootstrap or consumer
-policy/dispatch integration.
+70. A separate request codec supplies the wire representation; process bootstrap
+and consumer policy/dispatch integration remain open.
+
+The paired codec uses exact version-1 `matter-bridge/request` objects with
+fifteen fields and LF, within the 262144-byte output limit. Native encoding and
+`Wotex.Matter.Bridge.Wire` decoding preserve the original fabric snapshot,
+complete CASE/group principal including all three CAT slots, opaque Thing bytes,
+path, operation flags, optional write data version and owned payload. Decimal
+uint64 strings and lowercase hexadecimal retain exact identity widths. Finite
+write payloads preserve unsigned 16-bit values and explicit null/0–2 enum values;
+invoke arguments retain the SDK's anonymous Structure, 65536-byte, 24-level and
+4096-node syntax bounds, including SDK tag/container rules without an implicit
+profile. Command fields, profile identifiers and scalar values remain opaque.
+Representation checks perform no credential verification or live ACL lookup.
+
+Native failures leave caller output unchanged and distinguish malformed, excess
+and allocation refusal. The BEAM decoder requires the expected generation and
+returns structured errors for duplicate, missing, extra or unsupported cells.
+It exposes `deadline_native_ms` without equating it to BEAM time. The matching
+BEAM result encoder supplies the existing six-field frame within 512 bytes.
+Neither codec authorizes dispatch, samples clocks or mutates custody.
 
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
 (`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.
@@ -242,6 +261,17 @@ admit output inside shared custody, then hold the actual SDK stack lock during
 read waiting while an independent blocked writer closes on explicit closure,
 cancellation or consumer loss. Both builds use opaque byte stress fixtures;
 these cases establish ownership rather than a production request wire format.
+Separate codec tests pass thirteen native-encoded request fixtures through the
+actual BEAM decoder and eight BEAM-encoded results through the native decoder
+in both normal and ASan/UBSan builds. They cover finite writes, CASE/group
+metadata, exact invoke byte/depth/node bounds and native allocation failures
+with unchanged output. Eighty-five tag/container cases compare BEAM acceptance
+and refusal with the pinned SDK, including special qualified tags and missing
+implicit profiles. Retained-owner tests also verify that scope export keeps
+the admission-time epoch without resampling and preserves failure outputs.
+BEAM tests exercise malformed and unsupported cells, duplicate/extra/missing
+fields, identity widths and arbitrary-byte totality. These cases establish the
+paired representation, without authenticated transport or consumer execution.
 Guard tests use direct SDK fabric/ACL APIs, generated test certificates and
 synthetic CASE/group callback principals. They execute retained-owner refusal
 after ACL revocation, credential update/rollback, fabric-index reuse and

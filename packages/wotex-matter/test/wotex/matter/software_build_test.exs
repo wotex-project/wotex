@@ -1,4 +1,5 @@
 Code.require_file("../../support/software/fixture.exs", __DIR__)
+Code.require_file("../../support/bridge_wire_fixture.ex", __DIR__)
 
 defmodule Wotex.Matter.SoftwareBuildTest do
   @moduledoc false
@@ -6,6 +7,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Matter.{
+    BridgeWireFixture,
     SoftwareBridgeBuild,
     SoftwareCommand,
     SoftwareFixture,
@@ -48,6 +50,62 @@ defmodule Wotex.Matter.SoftwareBuildTest do
         SoftwareBridgeBuild.verify_case!(output, 0, "server startup and shutdown probe passed")
       end
     end
+  end
+
+  test "paired codec receipts validate all request cells and retained native metadata" do
+    frames = codec_frames()
+
+    assert %{"request_fixtures" => 13, "result_frames" => 8, "argument_fixtures" => 85} =
+             SoftwareBridgeBuild.verify_codec!(codec_output(frames))
+
+    for corrupted <- [
+          tl(frames),
+          Enum.reverse(frames),
+          [hd(frames) | frames],
+          [hd(frames) | tl(tl(frames))],
+          [Map.put(hd(frames), "thing", "ff00") | tl(frames)],
+          [put_in(hd(frames), ["principal", "cats"], [1, 0, 0]) | tl(frames)],
+          [put_in(hd(frames), ["fabric_scope", "epoch"], "1") | tl(frames)],
+          [put_in(hd(frames), ["flags", "expanded"], false) | tl(frames)],
+          [Map.put(hd(frames), "generation", String.duplicate("00", 16)) | tl(frames)]
+        ] do
+      assert_raise Mix.Error, "bridge_codec_test_failed", fn ->
+        SoftwareBridgeBuild.verify_codec!(codec_output(corrupted))
+      end
+    end
+  end
+
+  test "paired codec receipts reject malformed requests, missing completion and sanitizer errors" do
+    output = codec_output(codec_frames())
+    receipt = "bridge paired request/result codec and allocation boundaries passed\n"
+
+    for invalid <- [
+          String.replace(output, receipt, ""),
+          String.trim_trailing(output),
+          String.replace(output, "bridge argument fixtures: 85 passed\n", ""),
+          String.replace(
+            output,
+            "bridge argument fixtures: 85 passed\n",
+            "bridge argument fixtures: 84 passed\n"
+          ),
+          String.replace_prefix(output, "bridge request fixture: ", "bridge request fixture: {"),
+          "AddressSanitizer: fault\n" <> output,
+          "LeakSanitizer: fault\n" <> output,
+          "UndefinedBehaviorSanitizer: fault\n" <> output,
+          "runtime error: invalid access\n" <> output
+        ] do
+      assert_raise Mix.Error, "bridge_codec_test_failed", fn ->
+        SoftwareBridgeBuild.verify_codec!(invalid)
+      end
+    end
+  end
+
+  test "paired argument fixtures cover accepted and refused SDK tag/container cells" do
+    fixtures = Enum.map(SoftwareBridgeBuild.argument_fixtures(), &Jason.decode!/1)
+    assert length(fixtures) == 85
+    assert Enum.count(fixtures, & &1["valid"]) == 32
+    assert Enum.count(fixtures, &(not &1["valid"])) == 53
+    assert length(Enum.uniq(fixtures)) == 84
   end
 
   test "the separate SDK server profile preserves model bounds and private test paths" do
@@ -460,6 +518,57 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     assert :ok = SoftwareCommand.close_port(port)
     assert :ok = SoftwareCommand.close_port(port)
     assert wait_reaped(child, 100)
+  end
+
+  defp codec_frames do
+    read =
+      BridgeWireFixture.frame()
+      |> put_in(["flags", "expanded"], true)
+      |> put_in(["flags", "fabric_filtered"], true)
+      |> put_in(["flags", "allows_large_payload"], true)
+
+    write =
+      BridgeWireFixture.frame("write")
+      |> Map.put("data_version", 0xFFFFFFFF)
+      |> put_in(["flags", "expanded"], true)
+      |> put_in(["flags", "timed"], true)
+
+    writes =
+      for {cluster, member, kind, value} <- [
+            {3, 0, "u16", 65_535},
+            {6, 0x4001, "u16", 65_535},
+            {6, 0x4002, "u16", 65_535},
+            {6, 0x4003, "nullable_enum8", nil},
+            {6, 0x4003, "nullable_enum8", 0},
+            {6, 0x4003, "nullable_enum8", 1},
+            {6, 0x4003, "nullable_enum8", 2}
+          ] do
+        write
+        |> Map.put("path", %{"endpoint" => 3, "cluster" => cluster, "member" => member})
+        |> Map.put("payload", %{"kind" => kind, "value" => value})
+      end
+
+    arguments = [
+      <<21, 24>>,
+      <<21, 49, 1, 65_530::little-16>> <> :binary.copy(<<255>>, 65_530) <> <<24>>,
+      <<21>> <> :binary.copy(<<53, 1>>, 23) <> :binary.copy(<<24>>, 24),
+      <<21>> <> :binary.copy(<<41, 1>>, 4095) <> <<24>>
+    ]
+
+    invokes =
+      for bytes <- arguments do
+        BridgeWireFixture.frame("invoke")
+        |> put_in(["flags", "timed"], true)
+        |> Map.put("payload", BridgeWireFixture.arguments(bytes))
+      end
+
+    [read, put_in(read, ["principal", "auth_mode"], "group")] ++ writes ++ invokes
+  end
+
+  defp codec_output(frames) do
+    Enum.map_join(frames, "", &("bridge request fixture: " <> BridgeWireFixture.encode(&1))) <>
+      "bridge argument fixtures: 85 passed\n" <>
+      "bridge paired request/result codec and allocation boundaries passed\n"
   end
 
   defp command_process(_, 0), do: flunk("command did not start within the bounded wait")

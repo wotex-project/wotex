@@ -6,6 +6,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   alias Wotex.Matter.{SoftwareBridgeModel, SoftwareManifest}
 
   @target "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-server-test"
+  @codec "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-codec-test"
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -152,7 +153,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
         inside.(
           directory <> "-compile",
-          ["ninja", "--quiet", "-C", "/work/" <> directory, "-j", "4", @target],
+          ["ninja", "--quiet", "-C", "/work/" <> directory, "-j", "4", @target, @codec],
           []
         )
 
@@ -207,11 +208,45 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             %{"mode" => mode, "exit_status" => expected}
           end
 
+        result_path = Path.join([workspace, directory, "codec-results.ndjson"])
+        generation = :binary.copy(<<255>>, 16)
+
+        results =
+          for outcome <- [:completed, :denied, :failed, :unknown], id <- [1, 0xFFFFFFFFFFFFFFFF] do
+            {:ok, bytes} = Wotex.Matter.Bridge.Wire.encode_result(generation, id, outcome)
+            bytes
+          end
+
+        File.write!(result_path, results)
+        argument_path = Path.join([workspace, directory, "codec-arguments.ndjson"])
+        File.write!(argument_path, argument_fixtures())
+
+        codec_output =
+          inside.(
+            directory <> "-codec",
+            [
+              "/work/" <> directory <> "/" <> @codec,
+              "/work/" <> directory <> "/codec-results.ndjson",
+              "/work/" <> directory <> "/codec-arguments.ndjson"
+            ],
+            @environment
+          )
+
+        codec = verify_codec!(codec_output)
+
+        codec =
+          Map.merge(codec, %{
+            "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @codec])),
+            "results_sha256" => SoftwareManifest.digest(result_path),
+            "arguments_sha256" => SoftwareManifest.digest(argument_path)
+          })
+
         {directory,
          %{
            "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @target])),
            "generated_sha256" => compiled_model,
-           "cases" => cases
+           "cases" => cases,
+           "codec" => codec
          }}
       end
 
@@ -220,6 +255,145 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
       "generated_sha256" => SoftwareBridgeModel.profile()["generated_sha256"],
       "builds" => Map.new(builds)
     }
+  end
+
+  @doc false
+  @spec verify_codec!(binary()) :: map()
+  def verify_codec!(output) do
+    unless String.ends_with?(
+             output,
+             "bridge paired request/result codec and allocation boundaries passed\n"
+           ) and
+             not Regex.match?(
+               ~r/AddressSanitizer|LeakSanitizer|runtime error:|UndefinedBehaviorSanitizer/,
+               output
+             ),
+           do: Mix.raise("bridge_codec_test_failed")
+
+    generation = :binary.copy(<<255>>, 16)
+
+    frames =
+      for "bridge request fixture: " <> body <- String.split(output, "\n") do
+        case Wotex.Matter.Bridge.Wire.decode_request(body <> "\n", generation) do
+          {:ok, request} -> request
+          _ -> Mix.raise("bridge_codec_test_failed")
+        end
+      end
+
+    expected = [
+      {:read, 6, 0, :case, nil},
+      {:read, 6, 0, :group, nil},
+      {:write, 3, 0, :case, {:u16, 65_535}},
+      {:write, 6, 0x4001, :case, {:u16, 65_535}},
+      {:write, 6, 0x4002, :case, {:u16, 65_535}},
+      {:write, 6, 0x4003, :case, {:nullable_enum8, nil}},
+      {:write, 6, 0x4003, :case, {:nullable_enum8, 0}},
+      {:write, 6, 0x4003, :case, {:nullable_enum8, 1}},
+      {:write, 6, 0x4003, :case, {:nullable_enum8, 2}},
+      {:invoke, 6, 0, :case, {:tlv, 2}},
+      {:invoke, 6, 0, :case, {:tlv, 65_536}},
+      {:invoke, 6, 0, :case, {:tlv, 71}},
+      {:invoke, 6, 0, :case, {:tlv, 8192}}
+    ]
+
+    actual =
+      for frame <- frames do
+        payload =
+          case frame.payload do
+            {:tlv, bytes} -> {:tlv, byte_size(bytes)}
+            other -> other
+          end
+
+        {frame.operation, frame.path.cluster, frame.path.member, frame.principal.auth_mode, payload}
+      end
+
+    unless actual == expected and Enum.all?(frames, &fixture_metadata?/1) and
+             Enum.count(String.split(output, "\n"), &(&1 == "bridge argument fixtures: 85 passed")) ==
+               1,
+           do: Mix.raise("bridge_codec_test_failed")
+
+    %{"request_fixtures" => length(frames), "result_frames" => 8, "argument_fixtures" => 85}
+  end
+
+  @spec argument_fixtures() :: iodata()
+  def argument_fixtures do
+    tags = [
+      {0, <<>>},
+      {32, <<0>>},
+      {64, <<0::little-16>>},
+      {96, <<0::little-32>>},
+      {128, <<0::little-16>>},
+      {160, <<0::little-32>>},
+      {192, <<0::little-48>>},
+      {224, <<0::little-64>>}
+    ]
+
+    special =
+      for {control, width} <- [{192, 16}, {224, 32}],
+          number <- [0, 255, 256, 257],
+          do: {control, <<0xFFFFFFFF::little-32, number::little-size(width)>>}
+
+    tags = [{224, <<0xFFFFFFFFFFFFFFFF::little-64>>} | tags ++ special]
+
+    for {control, tag} <- tags,
+        bytes <- [
+          <<control + 21>> <> tag <> <<24>>,
+          <<21, control + 20>> <> tag <> <<24>>,
+          <<21, 54, 0, control + 20>> <> tag <> <<24, 24>>,
+          <<21, 55, 0, control + 20>> <> tag <> <<24, 24>>,
+          <<21, control + 24>> <> tag
+        ] do
+      Jason.encode!(%{
+        "bytes" => :binary.bin_to_list(bytes),
+        "valid" => Wotex.Matter.Bridge.Arguments.valid?(bytes)
+      }) <> "\n"
+    end
+  end
+
+  defp fixture_metadata?(frame) do
+    common = %{
+      id: 0xFFFFFFFFFFFFFFFF,
+      deadline_native_ms: 0xFFFFFFFFFFFFFFFF,
+      generation: :binary.copy(<<255>>, 16),
+      thing: <<0, 255>>,
+      path: Map.put(frame.path, :endpoint, 3),
+      principal: %{
+        fabric_index: 254,
+        auth_mode: frame.principal.auth_mode,
+        subject: 0xFFFFFFFFFFFFFFFF,
+        cats: [1, 0, 0xFFFFFFFF],
+        is_commissioning: true
+      },
+      fabric_scope: %{
+        epoch: 0xFFFFFFFFFFFFFFFF,
+        fabric_id: 0xFFFFFFFFFFFFFFFF,
+        bridge_node: 0xFFFFFFEFFFFFFFFF,
+        root_public_key: <<4>> <> :binary.copy(<<255>>, 64),
+        noc_sha256: :binary.copy(<<255>>, 32)
+      },
+      list: %{operation: :not_list, index: 0}
+    }
+
+    Map.take(frame, Map.keys(common)) == common and operation_metadata?(frame)
+  end
+
+  defp operation_metadata?(frame) do
+    {version, flags} =
+      case frame.operation do
+        :read -> {nil, {true, false, true, true}}
+        :write -> {0xFFFFFFFF, {true, true, false, false}}
+        :invoke -> {nil, {false, true, false, false}}
+      end
+
+    {expanded, timed, filtered, large} = flags
+
+    frame.data_version == version and
+      frame.flags == %{
+        expanded: expanded,
+        timed: timed,
+        fabric_filtered: filtered,
+        allows_large_payload: large
+      }
   end
 
   @spec verify_case!(binary(), integer(), String.t() | [String.t()] | nil) :: :ok

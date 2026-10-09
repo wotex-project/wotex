@@ -15,6 +15,7 @@ class FixtureInvokeGuard final : public BridgeInvokeGuard {
   CHIP_ERROR capture_error{CHIP_NO_ERROR};
   CHIP_ERROR validation_error{CHIP_NO_ERROR};
   unsigned captures{0}, validations{0};
+  std::uint64_t capture_epoch{7};
   BridgeInvokeScope last;
   CHIP_ERROR Capture(const BridgeRequestMetadata &request,
                      BridgeInvokeScope &scope) noexcept override {
@@ -23,7 +24,7 @@ class FixtureInvokeGuard final : public BridgeInvokeGuard {
     BridgeInvokeScope copied;
     copied.request = request;
     copied.fabric.principal = request.principal;
-    copied.fabric.epoch = 7;
+    copied.fabric.epoch = capture_epoch;
     scope = copied;
     return CHIP_NO_ERROR;
   }

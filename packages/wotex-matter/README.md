@@ -416,7 +416,14 @@ reserved controls, including an active write. Its explicitly started writer
 never performs I/O in an SDK callback; closure, cancellation and idle or blocked
 consumer loss close shared custody without an SDK lock. Host and installed-provider
 pipe tests verify capacity, control ordering, copied bytes and cleanup in both
-builds. Production request encoding and Port bootstrap remain open.
+builds. A separate native request codec and `Wotex.Matter.Bridge.Wire` preserve
+the original fabric snapshot, complete principal, opaque Thing identity, path,
+flags and owned finite write or invoke payload. Its strict decoder requires the
+expected generation and one complete LF-delimited frame; result encoding matches
+the native six-field result protocol. Cross-language tests execute both directions
+and native allocation refusal in normal and sanitizer builds. Decoded requests
+are inert; their deadline belongs to the native clock. Consumer Port bootstrap,
+clock projection, mandatory policy and ExposedThing dispatch remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in

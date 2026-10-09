@@ -248,8 +248,11 @@ void Boundaries() {
   Check(contexts.Start(request, reader, handler, 101, 601, ticket), "replacement context");
   BridgeInvocation unchanged;
   unchanged.deadline_ms = 99;
-  Require(ticket.id > old.id && contexts.Request(old, unchanged) == CHIP_ERROR_NOT_FOUND &&
-              unchanged.deadline_ms == 99 &&
+  BridgeFabricScope unchanged_scope;
+  unchanged_scope.epoch = 99;
+  Require(ticket.id > old.id &&
+              contexts.Request(old, unchanged, unchanged_scope) == CHIP_ERROR_NOT_FOUND &&
+              unchanged.deadline_ms == 99 && unchanged_scope.epoch == 99 &&
               contexts.Respond(old, 101, reply) == CHIP_ERROR_NOT_FOUND,
           "released context resurrected or reused its identity");
   Require(handoff.Resolve(ticket, Handoff::Outcome::Denied, 102) == Handoff::Reply::Stored,
@@ -391,9 +394,12 @@ class Probe final : public RequestProbe {
                 unchanged.id == 99 && unchanged.generation[0] == 9,
             "seventeenth context changed output");
     handler_.principal = {};
+    guard_.capture_epoch = 9;
+    const auto captures = guard_.captures;
     for (std::size_t index = 0; index < tickets_.size(); ++index) {
       BridgeInvocation captured;
-      Check(contexts_.Request(tickets_[index], captured), "owned request copy");
+      BridgeFabricScope fabric;
+      Check(contexts_.Request(tickets_[index], captured, fabric), "owned request and fabric copy");
       Require(captured.request.principal.fabricIndex == 2 &&
                   captured.request.principal.authMode == chip::Access::AuthMode::kCase &&
                   captured.request.principal.subject == 0x1234 &&
@@ -403,6 +409,12 @@ class Probe final : public RequestProbe {
                   captured.request.cluster == 6 && captured.request.member == 1 &&
                   captured.deadline_ms == 600,
               "request retained a borrowed principal/path/deadline");
+      Require(fabric.epoch == 7 &&
+                  fabric.principal.fabricIndex == captured.request.principal.fabricIndex &&
+                  fabric.principal.subject == captured.request.principal.subject &&
+                  fabric.principal.cats.values == captured.request.principal.cats.values,
+              "delivery did not retain admission-time fabric scope");
+      Require(guard_.captures == captures, "delivery recaptured a later fabric scope");
       auto copied = Reader(captured.arguments);
       Require(copied.GetTag() == chip::TLV::AnonymousTag(), "owned arguments root not anonymous");
       chip::TLV::TLVType outer;

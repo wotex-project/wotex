@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.13.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.14.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -233,6 +233,34 @@ independent pipe writer closes on explicit closure, cancellation or consumer
 loss. The native builder runs them in normal and ASan/UBSan builds. Their opaque
 stress bytes prove writer ownership, not a request codec, consumer-facing Port
 bootstrap, authenticated admission or ExposedThing dispatch.
+
+The separate
+[native request codec](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_request_frame.hpp)
+and `Wotex.Matter.Bridge.Wire` implement the exact fifteen-field request and
+six-field result representations in both directions. They preserve original
+fabric scope, complete principal, opaque Thing identity, selected flags, finite
+write values and owned invoke arguments. Retained invoke export copies its
+admission-time scope without consulting the current fabric table. The native
+encoder leaves failure output unchanged; the BEAM decoder requires the expected
+generation and rejects duplicate, missing, extra and unsupported cells.
+Native deadlines remain native time. The TLV scan enforces SDK tag/container
+rules without an implicit profile; command fields, profile identifiers and
+scalar values remain opaque.
+
+[bridge_request_frame_test.cpp](../../../../packages/wotex-matter/native/testing/bridge_request_frame_test.cpp)
+passes thirteen native requests through the actual BEAM decoder and eight
+BEAM results through the native decoder, including finite scalar/null values
+and exact invoke byte/depth/node bounds. Eighty-five tag/container cases compare
+BEAM acceptance and refusal with the pinned SDK, including special qualified
+tags. Its standalone target isolates real
+allocation-failure injection from SDK server fixtures. Both normal and
+ASan/UBSan builds execute this pair. The builder validates exact fixture
+metadata, counts, order and completion, rejects sanitizer findings, and records
+the codec binary and both result and argument input hashes. The
+[BEAM wire tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_wire_test.exs)
+cover strict framing, malformed/unsupported cells and arbitrary-byte totality.
+These codecs supply inert representations; consumer Port bootstrap, clock
+projection, mandatory consumer policy and ExposedThing dispatch remain required.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)

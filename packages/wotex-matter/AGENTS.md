@@ -75,7 +75,13 @@ Repository-wide rules are in the root `AGENTS.md`.
   one explicit writer, with reserved control capacity and custody closure on
   output loss. `test/native/bridge_output_test.cpp` and installed-provider cases
   in `native/testing/sdk_bridge_wait_test.*` cover pipe pressure, lock ordering
-  and cleanup. Request encoding and consumer-facing Port bootstrap remain open.
+  and cleanup. Consumer-facing Port bootstrap remains open.
+- `native/{include/wotex_matter,src}/bridge_request_frame.*` and
+  `lib/wotex/matter/bridge/{wire,arguments}.ex`: native request encoding, strict
+  BEAM request decoding and correlated result encoding, preserving original
+  fabric scope and opaque owned payloads. `native/testing/bridge_request_frame_test.cpp`
+  and `test/wotex/matter/bridge_wire_test.exs` cover both wire directions and
+  allocation/boundary refusal. Clock projection, policy and dispatch remain open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: required retained-invoke
   guard for exact fabric/credential scope, live command metadata and current
   SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and

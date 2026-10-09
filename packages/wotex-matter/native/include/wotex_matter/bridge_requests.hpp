@@ -112,6 +112,10 @@ class SdkBridgeInvokeContexts final {
                    BridgeConsumerHandoff::Ticket &ticket);
   CHIP_ERROR Request(const BridgeConsumerHandoff::Ticket &ticket,
                      BridgeInvocation &invocation) const;
+  // Copies the fabric scope captured at admission, without sampling a later
+  // fabric state. Failure preserves both outputs; neither copy grants policy.
+  CHIP_ERROR Request(const BridgeConsumerHandoff::Ticket &ticket, BridgeInvocation &invocation,
+                     BridgeFabricScope &fabric) const;
   CHIP_ERROR Respond(const BridgeConsumerHandoff::Ticket &ticket, std::uint64_t now_ms,
                      BridgeInvokeReply &reply);
   CHIP_ERROR Finish(std::uint64_t now_ms);

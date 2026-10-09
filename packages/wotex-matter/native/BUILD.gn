@@ -71,6 +71,22 @@ executable("wotex-matter-sdk-bridge-storage-test") {
 
 # Separate generated server profile; never linked into the controller host.
 if (chip_build_tools) {
+  # Pure codec probe with the pinned SDK's metadata and TLV reader. It starts
+  # no SDK server; allocation fault injection is isolated from server fixtures.
+  executable("wotex-matter-bridge-codec-test") {
+    cflags_cc = [ "-std=c++17" ]
+    sources = [
+      "src/bridge_input.cpp",
+      "src/bridge_handoff.cpp",
+      "src/bridge_handoff_owner.cpp",
+      "src/bridge_request_frame.cpp",
+      "src/logging.cpp",
+      "testing/bridge_request_frame_test.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [ "${chip_root}/src/lib" ]
+  }
+
   chip_data_model("bridge-model") {
     zap_file = "bridge-common/bridge-app.zap"
     idl = "bridge-common/bridge-app.matter"
@@ -97,6 +113,7 @@ if (chip_build_tools) {
       "src/bridge_input.cpp",
       "src/bridge_output.cpp",
       "src/bridge_replies.cpp",
+      "src/bridge_request_frame.cpp",
       "src/bridge_requests.cpp",
       "src/bridge_resources.cpp",
       "src/bridge_server.cpp",

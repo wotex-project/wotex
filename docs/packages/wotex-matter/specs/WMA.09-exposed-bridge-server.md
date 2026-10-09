@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.14.0-target.
+Version: 0.15.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -144,6 +144,66 @@ every user before destroying output or closing its exclusive pipe or stream
 socket descriptor; settable file status flags MUST be restored. Destruction
 with queued bytes or an active writer MUST terminate the process. Closure MUST
 NOT implicitly flush queued requests.
+
+The version-1 native request codec MUST use the `matter-bridge` backend and
+`request` role, separately from the controller protocol. One complete JSON
+object and its final LF MUST fit within 262144 bytes. Decoders MUST require the
+expected sixteen-byte process generation and refuse duplicate, missing or extra
+fields at every object boundary, CR, NUL, embedded LF and unsupported cells.
+The exact fifteen fields are:
+
+| Field | Representation |
+| --- | --- |
+| `v` | Integer `1` |
+| `backend` | String `matter-bridge` |
+| `type` | String `request` |
+| `generation` | Thirty-two lowercase hexadecimal characters |
+| `id` | Nonzero unsigned 64-bit decimal string |
+| `deadline_ms` | Nonzero unsigned 64-bit decimal string in the native clock domain |
+| `thing` | One to 256 opaque bytes encoded as lowercase hexadecimal |
+| `operation` | `read`, `write` or `invoke` |
+| `path` | Exactly `endpoint`, `cluster`, `member`; integer endpoint 3–65534 and valid SDK cluster/attribute/command identifiers |
+| `principal` | Exactly `fabric_index`, `auth_mode`, `subject`, `cats`, `is_commissioning` |
+| `fabric_scope` | Exactly `epoch`, `fabric_id`, `bridge_node`, `root_public_key`, `noc_sha256` |
+| `flags` | Exactly four booleans: `expanded`, `timed`, `fabric_filtered`, `allows_large_payload` |
+| `list` | Exactly `{"operation":"not-list","index":0}` for the finite scalar profile |
+| `data_version` | Null for reads/invokes; null or an unsigned 32-bit integer for writes |
+| `payload` | Null for reads; exactly `kind` and `value` for writes/invokes |
+
+Unsigned decimal strings MUST use `0` or a nonzero leading digit followed by
+digits, without signs, whitespace or leading zeros. The principal MUST preserve
+fabric index 1–254, CASE or group authentication mode, unsigned 64-bit subject
+including zero, all three unsigned 32-bit CAT slots in order and the boolean
+commissioning context. PASE, absent and internal authentication modes MUST be
+refused by this selected codec. Fabric epoch and fabric ID MUST be nonzero
+unsigned 64-bit decimal strings; bridge node MUST be an operational node ID.
+The root public key MUST retain 65 bytes beginning with `04`, and the NOC SHA-256
+MUST retain 32 bytes, both in lowercase hexadecimal. These representation checks
+MUST NOT be presented as credential verification or current authorization.
+Encoding MUST compare the complete captured principal with the request and
+preserve the original fabric snapshot; exporting retained invoke metadata MUST
+NOT sample a replacement scope from the current fabric table.
+
+Read flags MUST have `timed` false. Write flags MUST have `fabric_filtered` and
+`allows_large_payload` false. Invoke flags MUST additionally have `expanded`
+false. Unsupported list operations MUST be refused rather than discarded.
+Finite write payloads MUST use `u16` with a value 0–65535 for IdentifyTime, OnTime
+and OffWaitTime, or `nullable_enum8` with null or 0–2 for StartUpOnOff. Invoke
+payloads MUST use `tlv` with lowercase hexadecimal owned argument bytes and the
+anonymous Structure, byte, depth and node bounds below. The syntax scan MUST
+enforce the pinned SDK's tag/container rules without an implicit profile,
+including its special qualified-tag representations. It MUST leave command
+fields, profile identifiers and scalar values opaque; it MUST NOT substitute
+the narrower controller value profile for retained SDK arguments.
+
+Native encoding failures MUST preserve the caller's output bytes and distinguish
+malformed input, excess limits and allocation failure. BEAM decoding failures
+MUST return a structured invalid-frame error without external input details.
+Successful decoding MUST retain the native deadline as native time; clock
+projection, mandatory consumer policy and ExposedThing dispatch MUST be supplied
+by their explicit owner before execution. Consumer result encoding MUST produce
+the existing exact six-field `matter-bridge/result` frame within 512 bytes
+including LF. Encoding either direction MUST grant no policy or effect authority.
 
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated

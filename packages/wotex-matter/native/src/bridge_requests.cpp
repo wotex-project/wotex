@@ -283,11 +283,19 @@ CHIP_ERROR SdkBridgeInvokeContexts::Start(const chip::app::DataModel::InvokeRequ
 
 CHIP_ERROR SdkBridgeInvokeContexts::Request(const BridgeConsumerHandoff::Ticket &ticket,
                                             BridgeInvocation &invocation) const {
+  BridgeFabricScope fabric;
+  return Request(ticket, invocation, fabric);
+}
+
+CHIP_ERROR SdkBridgeInvokeContexts::Request(const BridgeConsumerHandoff::Ticket &ticket,
+                                            BridgeInvocation &invocation,
+                                            BridgeFabricScope &fabric) const {
   auto *entry = impl_->Find(ticket);
   if (entry == nullptr) return CHIP_ERROR_NOT_FOUND;
   try {
     auto copy = entry->invocation;
     invocation = std::move(copy);
+    fabric = entry->scope.fabric;
     return CHIP_NO_ERROR;
   } catch (const std::bad_alloc &) {
     return CHIP_ERROR_NO_MEMORY;
