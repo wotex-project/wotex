@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.6.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.7.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -170,6 +170,28 @@ handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
 builds run these cases through the native builder. This is internal context
 ownership: actual provider interception, SDK fabric/ACL admission, consumer
 policy, native Port delivery and ExposedThing dispatch remain open.
+
+The internal
+[`SdkBridgeCommandReply`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_replies.hpp)
+adapts native command-specific rendering to the retained context's copied
+principal and timed flag. It copies at most eight permitted response IDs,
+restricts replies to the original path and writes at most one reply. Invalid
+scope/path prevents further response service. A missing reply and the original
+encoding failure remain observable, including when the SDK-defined fallback
+Failure status is written. Metadata does not query an asynchronous SDK handler
+or its exchange, and retaining a child handle from this scoped adapter exits
+with 70 before the adapter can escape its renderer-call lifetime.
+
+[`sdk_bridge_replies_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_replies_test.cpp)
+adds two cases to the separate server target. Synthetic principal and group-key
+fixtures exercise the actual SDK Groups and Scenes handlers after context
+retention, inspect fabric-scoped group/scene custody and verify context cleanup
+after response-encoding failure. The scoped adapter tests reject invalid and
+excessive response IDs, invalid operations/paths, foreign or duplicate replies,
+missing responses, failed encoding/fallback and escaped handles. Normal and
+ASan/UBSan builds run these cases through the native builder. These direct
+provider calls establish native rendering behavior; commissioned fabric/ACL
+admission and consumer policy/dispatch remain required.
 
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 

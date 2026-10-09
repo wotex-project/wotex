@@ -393,6 +393,10 @@ owner copies principal/path metadata and bounded command arguments, retains
 actual SDK command handles and requires an explicit completion renderer.
 Its tests cover payload limits, expiry, encoding failure and handle cleanup;
 synthetic principal fixtures do not establish authenticated admission.
+The scoped reply adapter uses captured principal context for delayed native
+rendering, restricts replies to the original path and declared response IDs,
+and preserves response-encoding failures. Its SDK Groups/Scenes tests inspect
+fabric-scoped logical custody with explicit synthetic principal/key fixtures.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
 

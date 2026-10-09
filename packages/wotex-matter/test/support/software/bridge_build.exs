@@ -51,6 +51,12 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
        "bridge request event loop responses passed",
        "bridge request handles, responses and shutdown passed"
      ]},
+    {"replies", 0,
+     [
+       "bridge reply scope and encoding boundaries passed",
+       "bridge captured principal Groups and Scenes replies passed"
+     ]},
+    {"replies_retain", 70, "bridge reply child-handle refusal prepared"},
     {"requests_missing_finish", 70,
      [
        "bridge owned request metadata and arguments passed",

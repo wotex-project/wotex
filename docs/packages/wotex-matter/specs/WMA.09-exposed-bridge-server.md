@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.7.0-target.
+Version: 0.8.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -99,6 +99,16 @@ semantics may encode a completed consumer result; response-encoding failure
 MUST still release the consumed context. Closure MUST drain retained handles
 under the SDK stack lock before stopping the event loop. Destruction with a
 retained handle MUST terminate the process.
+
+A delayed native renderer MUST use the captured principal and timed context,
+without querying the original SDK handler's session or exchange. Its scoped
+reply adapter MUST copy at most eight distinct permitted response command IDs
+and write at most one reply for the original endpoint/cluster/command path.
+Invalid scope or path MUST prevent response service. A data-encoding failure
+MUST remain observable even if the SDK-defined Failure-status fallback is
+written. A renderer that produces no reply MUST NOT establish completion.
+Retaining an SDK handle from the scoped adapter MUST terminate the process
+before a borrowed adapter can escape its renderer-call lifetime.
 
 ## Bridged devices
 

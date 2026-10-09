@@ -61,6 +61,10 @@ Repository-wide rules are in the root `AGENTS.md`.
   metadata, bounded command payload copies and retained SDK invoke handles;
   `native/testing/sdk_bridge_requests_test.*` tests ownership with synthetic
   principal inputs. Provider interception and consumer dispatch remain open.
+- `native/{include/wotex_matter,src}/bridge_replies.*`: scoped native rendering
+  with copied principal/path/response-ID custody;
+  `native/testing/sdk_bridge_replies_test.*` executes SDK Groups/Scenes with
+  synthetic principal/key fixtures. Consumer policy remains separately owned.
 - `native/`: the C++17 controller host (`src/`, `include/wotex_matter/`),
   process-flow and resource test hosts (`testing/`), CMake and GN builds;
   `test/native/`: its C++ unit tests.
