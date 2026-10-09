@@ -65,6 +65,13 @@ std::optional<std::uint64_t> BridgeConsumerHandoff::Deadline(const Ticket &ticke
   return entry != nullptr ? std::make_optional(entry->deadline_ms) : std::nullopt;
 }
 
+BridgeConsumerHandoff::ClockSample BridgeConsumerHandoff::Sample(const Generation &generation,
+                                                                 std::uint64_t now_ms) {
+  if (generation != generation_) return ClockSample::InvalidGeneration;
+  if (closed_) return ClockSample::Closed;
+  return AcceptTime(now_ms) ? ClockSample::Sampled : ClockSample::InvalidClock;
+}
+
 void BridgeConsumerHandoff::Close() {
   closed_ = true;
   for (auto &entry : entries_) {

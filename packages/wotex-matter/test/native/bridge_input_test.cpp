@@ -56,6 +56,13 @@ Json Object(const Handoff::Ticket &ticket) {
           {"outcome", "completed"}};
 }
 std::string Frame(const Handoff::Ticket &ticket) { return Object(ticket).dump() + '\n'; }
+Json ProbeObject(const Handoff::Ticket &probe) {
+  auto value = Object(probe);
+  value.erase("outcome");
+  value["type"] = "clock-probe";
+  return value;
+}
+std::string ProbeFrame(const Handoff::Ticket &probe) { return ProbeObject(probe).dump() + '\n'; }
 
 class Clock final : public BridgeHandoffClock {
  public:
@@ -73,9 +80,15 @@ class ManualClock final : public BridgeHandoffClock {
 class Sink final : public BridgeResultSink {
  public:
   std::atomic<unsigned> ready{0}, closed{0};
+  std::uint64_t probe_id{0}, probe_ms{0};
   bool refuse{false};
   bool Ready(const Handoff::Ticket &) noexcept override {
     ++ready;
+    return !refuse;
+  }
+  bool ClockSample(const Handoff::Ticket &probe, std::uint64_t native_ms) noexcept override {
+    probe_id = probe.id;
+    probe_ms = native_ms;
     return !refuse;
   }
   void Closed() noexcept override { ++closed; }
@@ -239,6 +252,140 @@ void ClosureAndClock() {
   Drain(other, stale_clock_ticket, Handoff::Outcome::Closed);
 }
 
+void ProbeCodec() {
+  const Handoff::Generation generation{1, 2, 3};
+  const auto object = ProbeObject({generation, 1});
+  const auto valid = object.dump();
+  BridgeInputFrame frame;
+  assert(DecodeBridgeInputFrame(valid, generation, frame) == BridgeResultDecode::Decoded);
+  assert(frame.kind == BridgeInputFrame::Kind::ClockProbe && frame.result.ticket.id == 1 &&
+         frame.result.ticket.generation == generation);
+  BridgeResultFrame result{{{9}, 999}, Handoff::Outcome::Failed};
+  assert(DecodeBridgeResultFrame(valid, generation, result) == BridgeResultDecode::Malformed &&
+         result.ticket.id == 999);
+
+  const auto refuse = [&](const std::string &bytes,
+                          BridgeResultDecode expected = BridgeResultDecode::Malformed) {
+    BridgeInputFrame sentinel{BridgeInputFrame::Kind::Result,
+                              {{{9}, 999}, Handoff::Outcome::Failed}};
+    assert(DecodeBridgeInputFrame(bytes, generation, sentinel) == expected);
+    assert(sentinel.kind == BridgeInputFrame::Kind::Result && sentinel.result.ticket.id == 999 &&
+           sentinel.result.ticket.generation[0] == 9 &&
+           sentinel.result.outcome == Handoff::Outcome::Failed);
+  };
+  for (const auto &key : {"v", "backend", "type", "generation", "id"}) {
+    auto changed = object;
+    changed.erase(key);
+    refuse(changed.dump());
+    refuse(valid.substr(0, valid.size() - 1) + ",\"" + key + "\":" + object[key].dump() + "}");
+    for (const auto &wrong : {Json{}, Json::array(), Json::object(), Json(true)}) {
+      changed = object;
+      changed[key] = wrong;
+      refuse(changed.dump());
+    }
+  }
+  auto changed = object;
+  changed["outcome"] = "completed";
+  refuse(changed.dump());
+  for (const auto &id : {"0", "01", "+1", "-1", "1.0", "18446744073709551616"}) {
+    changed = object;
+    changed["id"] = id;
+    refuse(changed.dump());
+  }
+  changed = object;
+  changed["generation"] = Generation({9});
+  refuse(changed.dump());
+  changed = object;
+  changed["type"] = "clock-sample";
+  refuse(changed.dump());
+  changed = object;
+  changed["backend"] = "matter-native";
+  refuse(changed.dump());
+  changed = object;
+  changed["v"] = 1.0;
+  refuse(changed.dump());
+  auto boundary = valid + std::string(511 - valid.size(), ' ');
+  assert(DecodeBridgeInputFrame(boundary, generation, frame) == BridgeResultDecode::Decoded);
+  refuse(boundary + " ", BridgeResultDecode::Oversized);
+  for (const auto &suffix :
+       {std::string("{}"), std::string(1, '\0'), std::string("\n"), std::string("\r")})
+    refuse(valid + suffix);
+
+  const auto maximum = std::numeric_limits<std::uint64_t>::max();
+  changed = object;
+  changed["id"] = std::to_string(maximum);
+  assert(DecodeBridgeInputFrame(changed.dump(), generation, frame) == BridgeResultDecode::Decoded &&
+         frame.result.ticket.id == maximum);
+  for (const auto id : {std::uint64_t{1}, maximum}) {
+    for (const auto native : {std::uint64_t{0}, maximum}) {
+      std::string output = "sentinel";
+      assert(EncodeBridgeClockSample(generation, id, native, output) == BridgeClockEncode::Encoded);
+      assert(output.size() <= 512 && output.back() == '\n');
+      const auto decoded = Json::parse(output);
+      assert(decoded.size() == 6 && decoded["v"] == 1 && decoded["backend"] == "matter-bridge" &&
+             decoded["type"] == "clock-sample" && decoded["generation"] == Generation(generation) &&
+             decoded["id"] == std::to_string(id) && decoded["native_ms"] == std::to_string(native));
+    }
+  }
+  std::string output = "sentinel";
+  assert(EncodeBridgeClockSample(generation, 0, 1, output) == BridgeClockEncode::Malformed &&
+         output == "sentinel");
+
+  unsigned failed = 0;
+  bool completed = false;
+  for (int index = 0; index < 128; ++index) {
+    output = "sentinel";
+    allocation_failure = index;
+    const auto encoded = EncodeBridgeClockSample(generation, maximum, maximum, output);
+    allocation_failure = -1;
+    if (encoded == BridgeClockEncode::Encoded) {
+      completed = true;
+      break;
+    }
+    assert(encoded == BridgeClockEncode::NoMemory && output == "sentinel");
+    ++failed;
+  }
+  assert(completed && failed > 0);
+}
+
+void ProbeCustody() {
+  Handoff custody({1});
+  ManualClock clock;
+  BridgeHandoffOwner owner(custody, clock);
+  Sink sink;
+  BridgeResultInput input(owner, {1}, sink);
+  // Sampling is possible before the first request and cannot reserve credit.
+  assert(input.Feed(ProbeFrame({{1}, 2})) == State::Open && sink.probe_id == 2 &&
+         sink.probe_ms == 100 && custody.pending() == 0);
+  const auto ticket = Reserve(owner);
+  clock.now = 150;
+  assert(input.Feed(ProbeFrame({{1}, 4}) + Frame(ticket)) == State::Open && sink.probe_id == 4 &&
+         sink.probe_ms == 150 && sink.ready == 1 && custody.pending() == 1);
+  clock.now = 600;
+  Drain(owner, ticket, Handoff::Outcome::TimedOut);
+  assert(input.Feed(ProbeFrame({{1}, 3})) == State::Malformed && sink.closed == 1 &&
+         sink.probe_id == 4);
+
+  for (const auto expected : {State::Clock, State::Malformed, State::Sink, State::Ended}) {
+    Handoff core({1});
+    clock.now = 100;
+    BridgeHandoffOwner owned(core, clock);
+    const auto pending = Reserve(owned);
+    Sink notification;
+    BridgeResultInput reader(
+        owned, expected == State::Malformed ? Handoff::Generation{2} : Handoff::Generation{1},
+        notification);
+    if (expected == State::Clock) clock.now = 99;
+    if (expected == State::Sink) notification.refuse = true;
+    if (expected == State::Ended) owned.Close();
+    const auto generation = expected == State::Malformed ? Handoff::Generation{2}
+                                                         : Handoff::Generation{1};
+    assert(reader.Feed(ProbeFrame({generation, 1})) == expected && notification.closed == 1);
+    clock.now = 101;
+    Drain(owned, pending, Handoff::Outcome::Closed);
+  }
+}
+
 void AllocationFailure() {
   const Handoff::Generation generation{1};
   const auto valid = Object({generation, 1}).dump();
@@ -330,6 +477,8 @@ void Pipes() {
 
 int main() {
   Decode();
+  ProbeCodec();
+  ProbeCustody();
   BatchAndDeadline();
   ClosureAndClock();
   AllocationFailure();

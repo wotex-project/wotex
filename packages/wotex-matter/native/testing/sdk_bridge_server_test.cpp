@@ -151,7 +151,7 @@ void Run(const char *directory, const std::string &mode) {
   const bool waiting = mode == "wait" || mode == "wait_input_eof" ||
       mode == "wait_input_malformed" || mode == "wait_input_partial" ||
       mode == "wait_input_cancel" || mode == "wait_output_close" || mode == "wait_output_cancel" ||
-      mode == "wait_output_lost";
+      mode == "wait_output_lost" || mode == "wait_clock_probes";
   const auto input_mode = mode == "wait_input_eof" ? testing::WaitInput::Ended
       : mode == "wait_input_malformed"             ? testing::WaitInput::Malformed
       : mode == "wait_input_partial"               ? testing::WaitInput::Partial
@@ -159,6 +159,7 @@ void Run(const char *directory, const std::string &mode) {
       : mode == "wait_output_close"                ? testing::WaitInput::OutputEnded
       : mode == "wait_output_cancel"               ? testing::WaitInput::OutputCancelled
       : mode == "wait_output_lost"                 ? testing::WaitInput::OutputLost
+      : mode == "wait_clock_probes"                ? testing::WaitInput::ClockProbes
                                                    : testing::WaitInput::Direct;
   auto wait_probe = waiting ? testing::PrepareWait(handoff, *delegate, input_mode) : nullptr;
   BridgeReceiver &receiver = wait_probe ? static_cast<BridgeReceiver &>(*wait_probe)
@@ -435,7 +436,7 @@ int main(int argc, char **argv) {
       mode != "wait_input_eof" && mode != "wait_input_malformed" && mode != "wait_input_partial" &&
       mode != "wait_input_cancel" && mode != "writes" && mode != "guard" &&
       mode != "guard_missing_finish" && mode != "wait_output_close" &&
-      mode != "wait_output_cancel" && mode != "wait_output_lost")
+      mode != "wait_output_cancel" && mode != "wait_output_lost" && mode != "wait_clock_probes")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

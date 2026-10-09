@@ -435,6 +435,12 @@ and expiry reap owned tasks without retry. The future native Port owner must
 preserve request order, monitor this execution owner and close native custody
 on its loss. Port bootstrap, authenticated admission and approved-observation
 delivery remain open.
+`Wotex.Matter.Bridge.ClockProbe` supplies bounded, generation/ID-correlated
+clock controls. Native input samples the same serialized clock and writes
+through reserved control capacity without consuming request credit or acquiring
+the SDK stack lock. The separate SDK case exercises this exchange while a read
+waits for its result; paired codec tests preserve both wire directions. An
+exchange does not qualify host clocks or authenticate a native process.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in

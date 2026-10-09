@@ -22,6 +22,7 @@ enum class WaitInput {
   Malformed,
   Partial,
   Cancelled,
+  ClockProbes,
   OutputEnded,
   OutputCancelled,
   OutputLost

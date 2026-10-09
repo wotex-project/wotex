@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.15.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.16.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -288,6 +288,25 @@ They do not qualify real host clocks or authenticate Matter peers. The native
 Port owner must preserve admission order, qualify/authenticate probe exchange,
 monitor execution custody and close native custody on loss. That integration,
 live SDK checks and approved-observation delivery remain open.
+
+[`ClockProbe`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/clock_probe.ex)
+supplies exact bounded probe/sample controls for an expected generation and
+probe ID. The native input reader handles five-field probes separately from
+results, refuses reused/reversed probe IDs and samples under the custody mutex.
+Generation and clock history are checked even without a pending request. No
+probe changes request credit, results or deadlines. A required reply sink runs
+after custody unlocks and copies the sample into reserved output; refusal or
+clock/protocol failure closes custody and wakes pending waits.
+
+[probe tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_clock_probe_test.exs)
+exercise exact fields, roles, correlation, canonical uint64 bounds and framing.
+The native input tests cover idle/pending sampling, separate identity namespaces,
+clock/generation refusal, replay, expiry and real allocation failures. Paired
+codec tests decode two BEAM probes natively and two native samples on BEAM. The
+`wait_clock_probes` SDK case sends fragmented probes while an actual SDK read
+holds the stack lock, writes correlated samples through reserved control output
+and completes the read only after a result. This exchange supplies no actual
+host-clock rate qualification, peer authentication or native process bootstrap.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)

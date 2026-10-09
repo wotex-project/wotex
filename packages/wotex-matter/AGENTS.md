@@ -91,6 +91,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   expiry, policy, backpressure and cleanup. Native Port bootstrap, authenticated
   admission, actual clock qualification and approved-observation delivery remain
   open.
+- `lib/wotex/matter/bridge/clock_probe.ex` and `native/src/bridge_input.cpp`:
+  separate bounded clock controls, exact generation/probe correlation and native
+  sampling under the custody mutex. Probe/sample codecs and native input tests
+  cover refusal and unchanged request custody; `wait_clock_probes` exercises
+  reserved replies while an actual SDK read waits. Clock-rate qualification and
+  native process bootstrap remain separate obligations.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: required retained-invoke
   guard for exact fabric/credential scope, live command metadata and current
   SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and

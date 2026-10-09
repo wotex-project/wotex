@@ -55,7 +55,13 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   test "paired codec receipts validate all request cells and retained native metadata" do
     frames = codec_frames()
 
-    assert %{"request_fixtures" => 13, "result_frames" => 8, "argument_fixtures" => 85} =
+    assert %{
+             "request_fixtures" => 13,
+             "result_frames" => 8,
+             "argument_fixtures" => 85,
+             "probe_frames" => 2,
+             "clock_samples" => 2
+           } =
              SoftwareBridgeBuild.verify_codec!(codec_output(frames))
 
     for corrupted <- [
@@ -106,6 +112,33 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     assert Enum.count(fixtures, & &1["valid"]) == 32
     assert Enum.count(fixtures, &(not &1["valid"])) == 53
     assert length(Enum.uniq(fixtures)) == 84
+  end
+
+  test "paired clock receipts require exact generation, identity, time and both fixtures" do
+    output = codec_output(codec_frames())
+
+    for invalid <- [
+          String.replace(output, "bridge clock sample fixture:", "missing clock fixture:"),
+          String.replace(
+            output,
+            "bridge clock probe frames: 2 passed",
+            "bridge clock probe frames: 1 passed"
+          ),
+          String.replace(output, "\"native_ms\":\"0\"", "\"native_ms\":\"1\""),
+          String.replace(
+            output,
+            "\"native_ms\":\"18446744073709551615\"",
+            "\"native_ms\":\"18446744073709551616\""
+          )
+        ] do
+      assert_raise Mix.Error, "bridge_codec_test_failed", fn ->
+        SoftwareBridgeBuild.verify_codec!(invalid)
+      end
+    end
+
+    probes = SoftwareBridgeBuild.probe_fixtures() |> Enum.map(&Jason.decode!/1)
+    assert Enum.map(probes, & &1["id"]) == ["1", "18446744073709551615"]
+    assert Enum.all?(probes, &(map_size(&1) == 5 and &1["type"] == "clock-probe"))
   end
 
   test "the separate SDK server profile preserves model bounds and private test paths" do
@@ -566,8 +599,23 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   end
 
   defp codec_output(frames) do
+    samples =
+      for {id, native} <- [{1, 0}, {0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}] do
+        "bridge clock sample fixture: " <>
+          Jason.encode!(%{
+            "v" => 1,
+            "backend" => "matter-bridge",
+            "type" => "clock-sample",
+            "generation" => String.duplicate("ff", 16),
+            "id" => Integer.to_string(id),
+            "native_ms" => Integer.to_string(native)
+          }) <> "\n"
+      end
+
     Enum.map_join(frames, "", &("bridge request fixture: " <> BridgeWireFixture.encode(&1))) <>
       "bridge argument fixtures: 85 passed\n" <>
+      IO.iodata_to_binary(samples) <>
+      "bridge clock probe frames: 2 passed\n" <>
       "bridge paired request/result codec and allocation boundaries passed\n"
   end
 

@@ -67,6 +67,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"wait_input_malformed", 0, "SDK bounded result pipe, timeout and malformed wake passed"},
     {"wait_input_partial", 0, "SDK bounded result pipe, timeout and partial wake passed"},
     {"wait_input_cancel", 0, "SDK bounded result pipe, timeout and cancellation wake passed"},
+    {"wait_clock_probes", 0,
+     "SDK clock probes, reserved output and result under stack lock passed"},
     {"wait_output_close", 0, "SDK blocked output, reserved control and closure wake passed"},
     {"wait_output_cancel", 0, "SDK blocked output, reserved control and cancellation wake passed"},
     {"wait_output_lost", 0, "SDK blocked output, reserved control and consumer loss wake passed"},
@@ -220,6 +222,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
         File.write!(result_path, results)
         argument_path = Path.join([workspace, directory, "codec-arguments.ndjson"])
         File.write!(argument_path, argument_fixtures())
+        probe_path = Path.join([workspace, directory, "codec-probes.ndjson"])
+        File.write!(probe_path, probe_fixtures())
 
         codec_output =
           inside.(
@@ -227,7 +231,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             [
               "/work/" <> directory <> "/" <> @codec,
               "/work/" <> directory <> "/codec-results.ndjson",
-              "/work/" <> directory <> "/codec-arguments.ndjson"
+              "/work/" <> directory <> "/codec-arguments.ndjson",
+              "/work/" <> directory <> "/codec-probes.ndjson"
             ],
             @environment
           )
@@ -238,7 +243,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
           Map.merge(codec, %{
             "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @codec])),
             "results_sha256" => SoftwareManifest.digest(result_path),
-            "arguments_sha256" => SoftwareManifest.digest(argument_path)
+            "arguments_sha256" => SoftwareManifest.digest(argument_path),
+            "probes_sha256" => SoftwareManifest.digest(probe_path)
           })
 
         {directory,
@@ -312,7 +318,39 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
                1,
            do: Mix.raise("bridge_codec_test_failed")
 
-    %{"request_fixtures" => length(frames), "result_frames" => 8, "argument_fixtures" => 85}
+    verify_clock_samples!(output, generation)
+
+    %{
+      "request_fixtures" => length(frames),
+      "result_frames" => 8,
+      "argument_fixtures" => 85,
+      "probe_frames" => 2,
+      "clock_samples" => 2
+    }
+  end
+
+  defp verify_clock_samples!(output, generation) do
+    samples =
+      for "bridge clock sample fixture: " <> frame <- String.split(output, "\n"), do: frame
+
+    expected_samples = [{1, 0}, {0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF}]
+
+    unless length(samples) == 2 and
+             Enum.all?(Enum.zip(samples, expected_samples), fn {frame, {id, native_ms}} ->
+               Wotex.Matter.Bridge.ClockProbe.decode(frame <> "\n", generation, id) ==
+                 {:ok, native_ms}
+             end) and
+             Enum.count(String.split(output, "\n"), &(&1 == "bridge clock probe frames: 2 passed")) ==
+               1,
+           do: Mix.raise("bridge_codec_test_failed")
+  end
+
+  @spec probe_fixtures() :: iodata()
+  def probe_fixtures do
+    for id <- [1, 0xFFFFFFFFFFFFFFFF] do
+      {:ok, frame} = Wotex.Matter.Bridge.ClockProbe.encode(:binary.copy(<<255>>, 16), id)
+      frame
+    end
   end
 
   @spec argument_fixtures() :: iodata()

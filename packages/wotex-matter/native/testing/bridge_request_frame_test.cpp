@@ -331,13 +331,37 @@ void ArgumentResults(const char *path) {
   assert(count == 85 && accepted != 0 && refused != 0 && input.eof());
   std::cout << "bridge argument fixtures: 85 passed\n";
 }
+void ClockProbes(const char *path) {
+  std::ifstream input(path);
+  assert(input.is_open());
+  BridgeConsumerHandoff::Generation generation;
+  generation.fill(0xff);
+  std::string line;
+  std::size_t count = 0;
+  while (std::getline(input, line)) {
+    assert(count < 2 && line.size() < 512);
+    BridgeInputFrame probe;
+    const auto id = count == 0 ? 1 : maximum;
+    assert(DecodeBridgeInputFrame(line, generation, probe) == BridgeResultDecode::Decoded &&
+           probe.kind == BridgeInputFrame::Kind::ClockProbe && probe.result.ticket.id == id &&
+           probe.result.ticket.generation == generation);
+    std::string reply;
+    assert(EncodeBridgeClockSample(generation, id, count == 0 ? 0 : maximum, reply) ==
+           BridgeClockEncode::Encoded);
+    std::cout << "bridge clock sample fixture: " << reply;
+    ++count;
+  }
+  assert(count == 2 && input.eof());
+  std::cout << "bridge clock probe frames: 2 passed\n";
+}
 }
 int main(int argc, char **argv) {
-  if (argc != 3) return 2;
+  if (argc != 4) return 2;
   Valid();
   Refusals();
   Allocation();
   Results(argv[1]);
   ArgumentResults(argv[2]);
+  ClockProbes(argv[3]);
   std::cout << "bridge paired request/result codec and allocation boundaries passed\n";
 }

@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.14.0. Finite WMA.09 implementation target. The
+Version: 1.15.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings and bounded BEAM consumer execution are implemented. Native
@@ -196,6 +196,23 @@ extending the original deadline. The caller owns probe authentication, both
 sampling-error bounds and rate qualification through expiry. One exchange or
 a shared host does not qualify the rate.
 
+`Wotex.Matter.Bridge.ClockProbe` encodes five-field `clock-probe` controls and
+decodes six-field `clock-sample` replies for an exact generation/probe ID.
+Canonical uint64 decimal strings preserve both identity bounds and a zero
+native sample. Each scalar-only frame includes LF within 512 bytes. The native
+input reader accepts these controls separately from six-field results; its
+result-only decoder still refuses probes. Probe IDs increase strictly in their
+own namespace and retain no unbounded history.
+
+The native reader samples through the custody owner's mutex, validates its
+generation even while idle and advances the same non-regressing clock history.
+It reserves or retires no request credit and extends no deadline. Its explicit
+reply sink runs after custody unlocks and copies a bounded sample into reserved
+control output. Malformed/replayed probes, invalid clocks and reply refusal
+close input/custody and wake waits. Sampling requires no SDK stack lock or
+descriptor I/O. The Port owner owns exact reply correlation, BEAM exchange
+samples, authenticated process/probe admission and rate/error qualification.
+
 `Wotex.Matter.Bridge.Consumer` starts explicitly with one generation, receiver,
 nonblocking BEAM clock, required policy and exact routes. Its temporary child
 specification never restarts a generation. Only that receiver may submit or
@@ -324,6 +341,14 @@ clock/protocol refusal, one-time collection and receiver/owner/supervisor loss.
 Repeated complete/retire cycles verify bounded credit. These tests use explicit
 clocks and synthetic request principals; they qualify neither actual host clocks
 nor authenticated transport.
+Native input tests cover both scalar roles, generation/counter/clock refusal,
+unchanged failure outputs, actual allocation refusal and original deadlines.
+Paired codec tests pass two BEAM probes through native decoding and two native
+clock samples through the actual BEAM decoder, preserving zero/maximal time
+and identity widths. The separate SDK case exchanges two samples via reserved
+control output while an actual SDK read holds the stack lock, preserves request
+credit and completes only after result input. These cases establish exchange
+ownership rather than clock-rate qualification or authenticated bootstrap.
 Authenticated native-to-consumer dispatch,
 subscription/report flow, end-to-end handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does

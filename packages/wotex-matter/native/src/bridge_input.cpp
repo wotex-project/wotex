@@ -25,11 +25,11 @@ std::string FrameGeneration(const BridgeConsumerHandoff::Generation &generation)
 
 // Scalar-only SAX parser: no DOM, recursive values or extra fields.
 // Framing/correlation proves no authorization, SDK completion or physical effect.
-class ResultSax final : public nlohmann::json_sax<nlohmann::json> {
+class InputSax final : public nlohmann::json_sax<nlohmann::json> {
  public:
-  explicit ResultSax(BridgeConsumerHandoff::Generation generation)
+  explicit InputSax(BridgeConsumerHandoff::Generation generation)
       : generation_(FrameGeneration(generation)) {
-    result.ticket.generation = generation;
+    frame.result.ticket.generation = generation;
   }
   bool null() override { return false; }
   bool boolean(bool) override { return false; }
@@ -51,7 +51,10 @@ class ResultSax final : public nlohmann::json_sax<nlohmann::json> {
       accepted = value == "matter-bridge";
       break;
     case Kind:
-      accepted = value == "result";
+      if (value == "result") frame.kind = BridgeInputFrame::Kind::Result;
+      else if (value == "clock-probe") frame.kind = BridgeInputFrame::Kind::ClockProbe;
+      else return false;
+      accepted = true;
       break;
     case Generation:
       accepted = value == generation_;
@@ -59,16 +62,16 @@ class ResultSax final : public nlohmann::json_sax<nlohmann::json> {
     case Identity: {
       if (value.empty() || value.size() > 20 || value[0] == '0') return false;
       const auto parsed = std::from_chars(value.data(), value.data() + value.size(),
-                                          result.ticket.id);
+                                          frame.result.ticket.id);
       accepted = parsed.ec == std::errc{} && parsed.ptr == value.data() + value.size() &&
-          result.ticket.id != 0;
+          frame.result.ticket.id != 0;
       break;
     }
     case Outcome:
-      if (value == "completed") result.outcome = BridgeConsumerHandoff::Outcome::Completed;
-      else if (value == "denied") result.outcome = BridgeConsumerHandoff::Outcome::Denied;
-      else if (value == "failed") result.outcome = BridgeConsumerHandoff::Outcome::Failed;
-      else if (value == "unknown") result.outcome = BridgeConsumerHandoff::Outcome::Unknown;
+      if (value == "completed") frame.result.outcome = BridgeConsumerHandoff::Outcome::Completed;
+      else if (value == "denied") frame.result.outcome = BridgeConsumerHandoff::Outcome::Denied;
+      else if (value == "failed") frame.result.outcome = BridgeConsumerHandoff::Outcome::Failed;
+      else if (value == "unknown") frame.result.outcome = BridgeConsumerHandoff::Outcome::Unknown;
       else return false;
       accepted = true;
       break;
@@ -98,14 +101,15 @@ class ResultSax final : public nlohmann::json_sax<nlohmann::json> {
     return true;
   }
   bool end_object() override {
-    closed_ = started_ && !pending_ && seen_ == 63;
+    const auto required = frame.kind == BridgeInputFrame::Kind::Result ? 63u : 31u;
+    closed_ = started_ && !pending_ && seen_ == required;
     return closed_;
   }
   bool parse_error(std::size_t, const std::string &, const nlohmann::detail::exception &) override {
     return false;
   }
   bool finished() const { return closed_; }
-  BridgeResultFrame result;
+  BridgeInputFrame frame;
 
  private:
   enum Field : unsigned {
@@ -126,21 +130,52 @@ class ResultSax final : public nlohmann::json_sax<nlohmann::json> {
 
 } // namespace
 
-BridgeResultDecode DecodeBridgeResultFrame(std::string_view line,
-                                           const BridgeConsumerHandoff::Generation &generation,
-                                           BridgeResultFrame &result) noexcept {
+BridgeResultDecode DecodeBridgeInputFrame(std::string_view line,
+                                          const BridgeConsumerHandoff::Generation &generation,
+                                          BridgeInputFrame &frame) noexcept {
   if (line.size() >= kMaximumBridgeResultFrameBytes) return BridgeResultDecode::Oversized;
   if (line.empty() || line.find('\0') != std::string_view::npos ||
       line.find('\n') != std::string_view::npos || line.find('\r') != std::string_view::npos)
     return BridgeResultDecode::Malformed;
   try {
-    ResultSax sax(generation);
+    InputSax sax(generation);
     if (!nlohmann::json::sax_parse(line.begin(), line.end(), &sax) || !sax.finished())
       return BridgeResultDecode::Malformed;
-    result = sax.result;
+    frame = sax.frame;
     return BridgeResultDecode::Decoded;
   } catch (const std::bad_alloc &) {
     return BridgeResultDecode::NoMemory;
+  }
+}
+
+BridgeResultDecode DecodeBridgeResultFrame(std::string_view line,
+                                           const BridgeConsumerHandoff::Generation &generation,
+                                           BridgeResultFrame &result) noexcept {
+  BridgeInputFrame frame;
+  const auto decoded = DecodeBridgeInputFrame(line, generation, frame);
+  if (decoded != BridgeResultDecode::Decoded) return decoded;
+  if (frame.kind != BridgeInputFrame::Kind::Result) return BridgeResultDecode::Malformed;
+  result = frame.result;
+  return BridgeResultDecode::Decoded;
+}
+
+BridgeClockEncode EncodeBridgeClockSample(const BridgeConsumerHandoff::Generation &generation,
+                                          std::uint64_t probe_id, std::uint64_t native_ms,
+                                          std::string &output) noexcept {
+  if (probe_id == 0) return BridgeClockEncode::Malformed;
+  try {
+    std::string frame =
+        "{\"v\":1,\"backend\":\"matter-bridge\",\"type\":\"clock-sample\",\"generation\":\"";
+    frame += FrameGeneration(generation);
+    frame += "\",\"id\":\"";
+    frame += std::to_string(probe_id);
+    frame += "\",\"native_ms\":\"";
+    frame += std::to_string(native_ms);
+    frame += "\"}\n";
+    output = std::move(frame);
+    return BridgeClockEncode::Encoded;
+  } catch (const std::bad_alloc &) {
+    return BridgeClockEncode::NoMemory;
   }
 }
 
@@ -157,15 +192,39 @@ BridgeResultInput::State BridgeResultInput::Feed(std::string_view bytes) {
       buffer_[used_++] = byte;
       continue;
     }
-    BridgeResultFrame parsed;
-    const auto decoded = DecodeBridgeResultFrame(std::string_view(buffer_.data(), used_),
-                                                 generation_, parsed);
+    BridgeInputFrame frame;
+    const auto decoded = DecodeBridgeInputFrame(std::string_view(buffer_.data(), used_),
+                                                generation_, frame);
     if (decoded != BridgeResultDecode::Decoded) {
       return Close(decoded == BridgeResultDecode::NoMemory        ? State::NoMemory
                        : decoded == BridgeResultDecode::Oversized ? State::Oversized
                                                                   : State::Malformed);
     }
     used_ = 0;
+    const auto &parsed = frame.result;
+    if (frame.kind == BridgeInputFrame::Kind::ClockProbe) {
+      if (parsed.ticket.id <= last_probe_id_) return Close(State::Malformed);
+      last_probe_id_ = parsed.ticket.id;
+      std::uint64_t native_ms = 0;
+      const auto sampled = owner_.With([&](auto &custody, auto now) {
+        const auto status = custody.Sample(generation_, now);
+        if (status == BridgeConsumerHandoff::ClockSample::Sampled) native_ms = now;
+        return status;
+      });
+      using Sample = BridgeConsumerHandoff::ClockSample;
+      switch (sampled) {
+      case Sample::Sampled:
+        if (!sink_.ClockSample(parsed.ticket, native_ms)) return Close(State::Sink);
+        break;
+      case Sample::InvalidGeneration:
+        return Close(State::Malformed);
+      case Sample::InvalidClock:
+        return Close(State::Clock);
+      case Sample::Closed:
+        return Close(State::Ended);
+      }
+      continue;
+    }
     using Reply = BridgeConsumerHandoff::Reply;
     switch (owner_.Resolve(parsed.ticket, parsed.outcome)) {
     case Reply::Stored:

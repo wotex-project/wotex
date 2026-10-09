@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.16.0-target.
+Version: 0.17.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -98,7 +98,7 @@ with unconsumed custody MUST terminate the process. These mechanics do not
 establish consumer authorization or schedule SDK completion work.
 
 Consumer result input MUST use LF-delimited frames of at most 512 bytes,
-including LF. Each frame MUST be one JSON object with exactly six scalar
+including LF. Each result frame MUST be one JSON object with exactly six scalar
 fields: unsigned integer `v: 1`, `backend: "matter-bridge"`, `type: "result"`,
 `generation` as the expected 16-byte generation encoded as 32 lowercase
 hexadecimal characters, `id` as the canonical decimal string of a nonzero
@@ -260,6 +260,31 @@ Receiver death, clock failure, protocol failure, execution-owner loss or explici
 closure MUST reap owned workers, including workers that trap exits. The native
 Port owner MUST monitor execution custody, close native custody on its loss
 and resolve or refuse rejected submissions without retrying mutations.
+
+Clock exchange MUST use separate version-1 `matter-bridge` control roles. One
+`clock-probe` input has exactly five scalar fields: integer `v: 1`, the backend,
+`type`, expected lowercase hexadecimal generation and nonzero canonical uint64
+decimal `id`. Its `clock-sample` reply adds only `native_ms`, a canonical uint64
+decimal string permitting zero. Both frames MUST include LF and fit within
+512 bytes. Duplicate, missing or extra fields, wrong types, roles, generations,
+identities or framing MUST be refused. Result-only decoders MUST refuse probes.
+
+Probe IDs MUST increase strictly in a namespace separate from request IDs.
+Sampling MUST verify the generation even before the first request, use the
+custody owner's serialized clock and update the same non-regressing clock
+history. A probe MUST reserve or retire no request credit, stage no result,
+authorize no work and extend no deadline. Sampling and reply admission MUST
+remain independent of the SDK stack lock, including while an SDK callback
+waits for a consumer result. The reply sink MUST run after custody unlocks and
+copy one bounded frame into reserved control-output capacity without blocking
+or performing descriptor I/O. Malformed/replayed probes, invalid clocks and
+reply refusal MUST close input and native custody and wake pending waits.
+
+The Port owner MUST correlate each sample with its exact expected generation
+and probe ID, retain its BEAM samples before sending and after receiving, and
+supply the qualified projection inputs above. A successfully exchanged sample
+MUST NOT be presented as host authentication, a qualified elapsed-time rate,
+consumer authorization or completed native bootstrap.
 
 ### Native callback custody
 

@@ -14,6 +14,7 @@
 #include <thread>
 #include <atomic>
 #include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
 
 namespace wotex::matter {
@@ -50,8 +51,23 @@ class InputSink final : public BridgeResultSink {
     ++ready;
     return true;
   }
+  bool ClockSample(const Handoff::Ticket &probe, std::uint64_t native_ms) noexcept override {
+    if (!output || probe.id < 1 || probe.id > samples.size()) return false;
+    std::string frame;
+    if (EncodeBridgeClockSample(probe.generation, probe.id, native_ms, frame) !=
+            BridgeClockEncode::Encoded ||
+        output->Push(BridgeOutputOwner::Kind::Control, frame) !=
+            BridgeOutputOwner::Admission::Accepted)
+      return false;
+    samples[probe.id - 1] = native_ms;
+    ++probes;
+    return true;
+  }
   void Closed() noexcept override { ++closed; }
   std::atomic<unsigned> ready{0}, closed{0};
+  BridgeOutputOwner *output{nullptr};
+  std::array<std::uint64_t, 2> samples{};
+  std::atomic<unsigned> probes{0};
 };
 
 class OutputSink final : public BridgeOutputSink {
@@ -133,6 +149,10 @@ class ReceiverProbe final : public WaitProbe {
   }
 
   void DuringLoop() override {
+    if (input_mode_ == WaitInput::ClockProbes) {
+      DuringProbes();
+      return;
+    }
     if (input_mode_ == WaitInput::OutputEnded || input_mode_ == WaitInput::OutputCancelled ||
         input_mode_ == WaitInput::OutputLost) {
       DuringOutput();
@@ -243,6 +263,106 @@ class ReceiverProbe final : public WaitProbe {
   void Finish() override { children_->Finish(); }
 
  private:
+  void DuringProbes() {
+    OutputSink output_sink;
+    BridgeOutputOwner output(owner_, output_sink);
+    InputSink sink;
+    sink.output = &output;
+    BridgeResultInput input(owner_, {1}, sink);
+    std::atomic<bool> reader_stop{false}, writer_stop{false};
+    std::thread reader, writer;
+    int incoming[2]{-1, -1}, outgoing[2]{-1, -1};
+    BridgeResultInput::State terminal = BridgeResultInput::State::Open;
+    struct Cleanup {
+      BridgeOutputOwner &output;
+      std::thread &reader, &writer;
+      std::atomic<bool> &reader_stop, &writer_stop;
+      int *incoming, *outgoing;
+      ~Cleanup() {
+        output.Close();
+        reader_stop = true;
+        writer_stop = true;
+        if (reader.joinable()) reader.join();
+        if (writer.joinable()) writer.join();
+        for (unsigned i = 0; i < 2; ++i) {
+          if (incoming[i] >= 0) close(incoming[i]);
+          if (outgoing[i] >= 0) close(outgoing[i]);
+        }
+      }
+    } cleanup{output, reader, writer, reader_stop, writer_stop, incoming, outgoing};
+    Require(pipe(incoming) == 0 && pipe(outgoing) == 0, "SDK probe pipes");
+    const auto send = [&](const std::string &bytes) {
+      for (const auto byte : bytes)
+        Require(write(incoming[1], &byte, 1) == 1, "SDK fragmented clock probe");
+    };
+    admitted_ = std::promise<Handoff::Ticket>();
+    auto admitted = admitted_.get_future();
+    finished_ = std::promise<Status>();
+    auto finished = finished_.get_future();
+    Require(chip::DeviceLayer::PlatformMgr().ScheduleWork(
+                [](intptr_t context) { reinterpret_cast<ReceiverProbe *>(context)->Read(); },
+                reinterpret_cast<intptr_t>(this)) == CHIP_NO_ERROR,
+            "SDK probe waiting read scheduled");
+    Require(admitted.wait_for(std::chrono::seconds(2)) == std::future_status::ready,
+            "SDK probe admission deadline");
+    const auto ticket = admitted.get();
+    while (BridgeHandoffOwnerTestAccess::Waiters(owner_) == 0 &&
+           finished.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+      std::this_thread::yield();
+    Require(BridgeHandoffOwnerTestAccess::Waiters(owner_) != 0, "SDK probe active waiter");
+    reader = std::thread([&] { terminal = input.Run(incoming[0], reader_stop); });
+    for (unsigned id = 1; id <= 2; ++id) {
+      auto probe = Frame({{1}, id}, "completed");
+      probe.replace(probe.find("\"result\""), 8, "\"clock-probe\"");
+      probe.erase(probe.find(",\"outcome\":"));
+      probe += "}\n";
+      send(probe);
+    }
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (sink.probes != 2 &&
+           finished.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready &&
+           std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+    Require(sink.probes == 2 && sink.samples[1] >= sink.samples[0],
+            "SDK probes sampled while stack lock held");
+    Require(finished.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready &&
+                sink.ready == 0,
+            "SDK probes cannot complete a request");
+    owner_.With([](auto &custody, auto) {
+      Require(custody.pending() == 1, "SDK probe changed request credit");
+    });
+    writer = std::thread([&] { output.Run(outgoing[1], writer_stop); });
+    for (unsigned id = 1; id <= 2; ++id) {
+      std::string expected;
+      Require(EncodeBridgeClockSample({1}, id, sink.samples[id - 1], expected) ==
+                  BridgeClockEncode::Encoded,
+              "SDK clock reply encoding");
+      std::string bytes;
+      while (bytes.empty() || bytes.back() != '\n') {
+        pollfd descriptor{outgoing[0], POLLIN, 0};
+        Require(poll(&descriptor, 1, 2000) == 1 && (descriptor.revents & POLLIN),
+                "SDK clock reply read deadline");
+        char byte;
+        Require(read(outgoing[0], &byte, 1) == 1 && bytes.size() < 512, "SDK bounded clock reply");
+        bytes += byte;
+      }
+      Require(bytes == expected, "SDK reserved control reply correlation");
+    }
+    send(Frame(ticket, "completed"));
+    Require(finished.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+                finished.get() == Status::Success,
+            "SDK result after clock probes");
+    Require(close(incoming[1]) == 0, "SDK probe EOF");
+    incoming[1] = -1;
+    reader.join();
+    Require(terminal == BridgeResultInput::State::Ended && sink.ready == 1 && sink.closed == 1,
+            "SDK probe reader cleanup");
+    owner_.With(
+        [](auto &custody, auto) { Require(custody.pending() == 0, "SDK probe request leaked"); });
+    std::cout << "SDK clock probes, reserved output and result under stack lock passed\n"
+              << std::flush;
+  }
+
   void DuringOutput() {
     using Output = BridgeOutputOwner;
     OutputSink sink;

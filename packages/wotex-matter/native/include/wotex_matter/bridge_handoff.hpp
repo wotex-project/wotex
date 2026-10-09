@@ -28,6 +28,7 @@ class BridgeConsumerHandoff final {
   enum class Outcome { Completed, Denied, Failed, Unknown, TimedOut, Closed };
   enum class Reply { Stored, Late, Duplicate, UnknownTicket, InvalidOutcome, InvalidClock, Closed };
   enum class Consume { Pending, Completed, UnknownTicket, InvalidClock };
+  enum class ClockSample { Sampled, InvalidGeneration, InvalidClock, Closed };
 
   explicit BridgeConsumerHandoff(Generation generation);
   BridgeConsumerHandoff(const BridgeConsumerHandoff &) = delete;
@@ -36,6 +37,9 @@ class BridgeConsumerHandoff final {
   Admission Reserve(std::uint64_t now_ms, std::uint64_t deadline_ms, Ticket &ticket);
   Reply Resolve(const Ticket &ticket, Outcome outcome, std::uint64_t received_ms);
   Consume Take(const Ticket &ticket, std::uint64_t now_ms, Outcome &outcome);
+  // Samples share the custody clock history, without reserving or retiring a
+  // request. A supplied generation must match even when custody is idle.
+  ClockSample Sample(const Generation &generation, std::uint64_t now_ms);
   std::optional<std::uint64_t> Deadline(const Ticket &ticket) const;
   void Close();
   bool closed() const;
