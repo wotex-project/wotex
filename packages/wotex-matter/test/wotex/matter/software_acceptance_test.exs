@@ -22,6 +22,7 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
     %{root: root}
   end
 
+  @tag timeout: 90_000
   test "WMA-C09 the inventory identifies every registered required software case", %{root: root} do
     inventory = SoftwareAcceptance.inventory!("test/support/software/acceptance.json")
 
@@ -42,7 +43,8 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
     """
 
     log = Path.join(root, "inventory.log")
-    result = command(script, log: log)
+    # Unlike the single-module receipt probes, this command compiles every test file.
+    result = command(script, log: log, timeout: 60_000)
     assert {:ok, output} = result, File.read!(log)
     assert Jason.decode!(String.trim(output)) == Enum.map(expected, &Tuple.to_list/1)
     assert length(expected) == 36
