@@ -1,9 +1,9 @@
 # Exposed bridge software profile
 
-Version: 1.2.0. Finite WMA.09 implementation target. The
+Version: 1.3.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
-Model generation, native storage and an internal SDK server lifecycle binding
-are implemented. Dynamic endpoint serving and consumer dispatch remain open.
+Model generation, native storage, internal SDK server lifecycle and dynamic
+endpoint bindings are implemented. Consumer request dispatch remains open.
 
 ## Source and generated data
 
@@ -35,9 +35,11 @@ reuse a removed ID; exhaustion at 65534 is terminal for further allocation.
 
 Each live child declares Bridged Node `0x0013` r3 and its actual functional
 Device Type. A child does not acquire Matter certification by being bridged.
-The native implementation must bind the SDK's independent Bridged Device Basic
-Information server for that cluster; generating the disabled dummy endpoint
-does not implement it.
+The internal endpoint binding registers the SDK's independent Bridged Device
+Basic Information server for each child. Its stable opaque UniqueID derives
+from the immutable bridge identity and Thing identity. A restored consumer
+configuration supplies the label and temperature bounds explicitly; the store
+persists endpoint and Device Type custody, not that semantic configuration.
 
 ## Finite interaction set
 
@@ -55,6 +57,15 @@ Group names, Scene Names, Level Control, binding, OTA, fabric synchronization,
 power-source information and additional Device Types are outside this profile.
 Generated union bindings can contain a command needed by one Device Type;
 each live endpoint must expose only its own admitted command list.
+
+The endpoint binding fixes temperature capabilities for each registered
+lifetime and reads approved measurements without persisting them. An absent
+bound is unknown, and an absent measurement is unavailable/null. The pinned
+SDK's modern Temperature Measurement implementation declares revision 4;
+the binding wraps its read surface for the selected revision 6 while retaining
+the SDK's cluster ownership and cleanup. The owner exposes no capability-range
+mutation. Dynamic metadata enumerates the selected mandatory commands; their
+authenticated consumer execution remains a separate delivery obligation.
 
 ## Native ownership and limits
 
@@ -98,9 +109,10 @@ mix pkg wotex-matter test test/wotex/matter/software_bridge_model_test.exs test/
 The model tests reject missing mandatory commands/attributes, wrong lighting
 features/revisions and changed named source inputs before generation. These
 checks and artifact digests establish the selected model only. Separate native
-tests cover atomic fabric/endpoint persistence and SDK server startup/shutdown
-with failure exits in both sanitizer modes. Dynamic endpoints, authenticated
-consumer dispatch, reporting, handoff timeouts and independent peer workflows
+tests cover atomic fabric/endpoint persistence, SDK server startup/shutdown,
+sixteen dynamic children, approved observations and cleanup with failure exits
+in both sanitizer modes. Authenticated consumer dispatch, subscription/report
+flow, handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does
 not satisfy those server obligations. Certification and installed ecosystem
 acceptance remain separate.

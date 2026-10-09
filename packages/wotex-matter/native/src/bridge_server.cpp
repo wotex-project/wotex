@@ -4,6 +4,8 @@
 
 #include <app/InteractionModelEngine.h>
 #include <app/SafeAttributePersistenceProvider.h>
+#include <app/persistence/AttributePersistenceProvider.h>
+#include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/clusters/network-commissioning/CodegenInstance.h>
 #include <app/server/Server.h>
 #include <app/util/endpoint-config-api.h>
@@ -33,6 +35,18 @@ class ClosedAttributeStore final : public chip::app::SafeAttributePersistencePro
 };
 
 ClosedAttributeStore closed_attribute_store;
+
+class ClosedClusterAttributeStore final : public chip::app::AttributePersistenceProvider {
+ public:
+  CHIP_ERROR WriteValue(const chip::app::ConcreteAttributePath &, const chip::ByteSpan &) override {
+    return CHIP_ERROR_INCORRECT_STATE;
+  }
+  CHIP_ERROR ReadValue(const chip::app::ConcreteAttributePath &, chip::MutableByteSpan &) override {
+    return CHIP_ERROR_INCORRECT_STATE;
+  }
+};
+
+ClosedClusterAttributeStore closed_cluster_attribute_store;
 
 class ServerStore final : public chip::PersistentStorageDelegate {
  public:
@@ -174,6 +188,10 @@ class SdkBridgeServerBinding::Impl final {
       // The SDK setter ignores nullptr. Replace the persistence provider with
       // a process-lifetime refusal provider before releasing its store.
       chip::app::SetSafeAttributePersistenceProvider(&closed_attribute_store);
+      // Independent server clusters use a second persistence provider. Its
+      // global setter also ignores nullptr and its SDK default retains the
+      // borrowed storage delegate after model shutdown.
+      chip::app::SetAttributePersistenceProvider(&closed_cluster_attribute_store);
       initialized_ = false;
     }
     if (groups_initialized_) {
@@ -208,6 +226,8 @@ SdkBridgeServerBinding::~SdkBridgeServerBinding() = default;
 chip::PersistentStorageDelegate &SdkBridgeServerBinding::storage_delegate() {
   return impl_->delegate_;
 }
+
+BridgeStorage &SdkBridgeServerBinding::bridge_storage() { return impl_->storage_; }
 
 CHIP_ERROR SdkBridgeServerBinding::Init(
     chip::app::DataModel::Provider &model,

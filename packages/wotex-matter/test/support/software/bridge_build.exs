@@ -21,7 +21,20 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"wrong_model", 0, "server input refusal probe passed"},
     {"wrong_vendor", 0, "server input refusal probe passed"},
     {"wrong_product", 0, "server input refusal probe passed"},
-    {"missing_dac", 0, "server input refusal probe passed"}
+    {"missing_dac", 0, "server input refusal probe passed"},
+    {"endpoints_seed", 0,
+     [
+       "bridge endpoint metadata, custody and observations passed",
+       "bridge endpoint event loop and shutdown passed"
+     ]},
+    {"endpoints_reopen", 0,
+     [
+       "bridge endpoint metadata, custody and observations passed",
+       "bridge endpoint event loop and shutdown passed"
+     ]},
+    {"endpoints_missing_finish", 70, "bridge endpoint metadata, custody and observations passed"},
+    {"endpoints_poison_add", 74, "bridge endpoint metadata, custody and observations passed"},
+    {"endpoints_poison_remove", 74, "bridge endpoint metadata, custody and observations passed"}
   ]
   # Arguments remain positional, including paths with shell metacharacters.
   # The outer build runner records the command and bounds its output/deadline.
@@ -113,7 +126,13 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
         cases =
           for {mode, expected, receipt} <- @cases do
-            store = if mode == "reopen", do: "normal", else: mode
+            store =
+              case mode do
+                "reopen" -> "normal"
+                "endpoints_reopen" -> "endpoints_seed"
+                other -> other
+              end
+
             directory_path = "/work/" <> directory <> "/stores/" <> store
             binary = "/work/" <> directory <> "/" <> @target
 
@@ -152,10 +171,10 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     }
   end
 
-  @spec verify_case!(binary(), integer(), String.t() | nil) :: :ok
+  @spec verify_case!(binary(), integer(), String.t() | [String.t()] | nil) :: :ok
   def verify_case!(output, expected, receipt) do
     unless String.ends_with?(output, "\nbridge server exit: #{expected}\n") and
-             (is_nil(receipt) or receipt in String.split(output, "\n")) and
+             Enum.all?(List.wrap(receipt), &(&1 in String.split(output, "\n"))) and
              not Regex.match?(
                ~r/AddressSanitizer|LeakSanitizer|runtime error:|UndefinedBehaviorSanitizer/,
                output

@@ -1,10 +1,12 @@
 #include "wotex_matter/bridge_storage.hpp"
 #include "wotex_matter/bridge_server.hpp"
+#include "sdk_bridge_endpoints_test.hpp"
 
 #include <LinuxCommissionableDataProvider.h>
 #include <app/server/Server.h>
 #include <app/InteractionModelEngine.h>
 #include <app/SafeAttributePersistenceProvider.h>
+#include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/clusters/network-commissioning/CodegenInstance.h>
 #include <app/util/endpoint-config-api.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
@@ -70,10 +72,16 @@ class TestEthernet final : public chip::DeviceLayer::NetworkCommissioning::Ether
 };
 
 void Check(CHIP_ERROR error, const char *stage) {
-  if (error != CHIP_NO_ERROR) throw std::runtime_error(stage);
+  if (error != CHIP_NO_ERROR) {
+    std::cerr << "server test failed: " << stage << '\n';
+    throw std::runtime_error(stage);
+  }
 }
 void Require(bool value, const char *stage) {
-  if (!value) throw std::runtime_error(stage);
+  if (!value) {
+    std::cerr << "server test failed: " << stage << '\n';
+    throw std::runtime_error(stage);
+  }
 }
 
 void Run(const char *directory, const std::string &mode) {
@@ -90,10 +98,12 @@ void Run(const char *directory, const std::string &mode) {
     identity.product_id = 0x8002;
   }
   std::unique_ptr<BridgeStorage> store;
-  Check(BridgeStorage::Open(directory,
-                            mode == "reopen" ? StorageMode::OpenExisting : StorageMode::CreateNew,
-                            identity, store),
-        "bridge store");
+  Check(
+      BridgeStorage::Open(directory,
+                          mode == "reopen" || mode == "endpoints_reopen" ? StorageMode::OpenExisting
+                                                                         : StorageMode::CreateNew,
+                          identity, store),
+      "bridge store");
   Check(store->EnterProcessDirectory(), "private directory");
   SdkBridgeServerBinding binding(*store);
 
@@ -177,17 +187,28 @@ void Run(const char *directory, const std::string &mode) {
             "fixed device type revision");
   }
 
+  std::unique_ptr<SdkBridgeEndpointBinding> children;
+  if (mode.compare(0, 10, "endpoints_") == 0) {
+    children = testing::PrepareEndpoints(binding, mode);
+  }
+
   DeviceLayer::PlatformMgr().UnlockChipStack();
   Check(DeviceLayer::PlatformMgr().StartEventLoopTask(), "event loop start");
   struct LoopReceipt {
     std::mutex mutex;
     std::condition_variable ready;
     bool ran = false;
+    SdkBridgeEndpointBinding *children = nullptr;
+    CHIP_ERROR observation = CHIP_NO_ERROR;
   } receipt;
+  receipt.children = children.get();
   Check(DeviceLayer::PlatformMgr().ScheduleWork(
             [](intptr_t context) {
     auto &value = *reinterpret_cast<LoopReceipt *>(context);
     std::lock_guard<std::mutex> lock(value.mutex);
+    if (value.children != nullptr) {
+      value.observation = testing::ObserveDuringLoop(*value.children);
+    }
     value.ran = true;
     value.ready.notify_one();
   }, reinterpret_cast<intptr_t>(&receipt)),
@@ -197,9 +218,14 @@ void Run(const char *directory, const std::string &mode) {
     Require(
         receipt.ready.wait_for(lock, std::chrono::seconds(2), [&receipt] { return receipt.ran; }),
         "event loop deadline");
+    Check(receipt.observation, "event loop approved observation");
   }
-  if (mode == "missing_finish") {
+  if (mode == "missing_finish" || mode == "endpoints_missing_finish") {
     return;
+  }
+  if (mode == "endpoints_poison_add" || mode == "endpoints_poison_remove") {
+    DeviceLayer::PlatformMgr().LockChipStack();
+    testing::PoisonEndpoints(*children, mode);
   }
   if (mode == "poison_sdk" || mode == "poison_allocate" || mode == "poison_remove") {
     DeviceLayer::PlatformMgr().LockChipStack();
@@ -227,6 +253,7 @@ void Run(const char *directory, const std::string &mode) {
   Check(DeviceLayer::PlatformMgr().StopEventLoopTask(), "event loop stop");
   DeviceLayer::PlatformMgr().LockChipStack();
 
+  if (children) testing::FinishEndpoints(*children, binding);
   binding.Finish();
   binding.Finish();
   Require(!binding.initialized(), "binding closed");
@@ -234,6 +261,15 @@ void Run(const char *directory, const std::string &mode) {
           "model released");
   Require(Credentials::GetGroupDataProvider() == nullptr, "group provider released");
   const uint8_t value = 1;
+  Require(app::GetAttributePersistenceProvider()->WriteValue(
+              app::ConcreteAttributePath(3, 0x0039, 5), ByteSpan(&value, sizeof(value))) ==
+              CHIP_ERROR_INCORRECT_STATE,
+          "cluster attribute persistence retired");
+  uint8_t retired_value = 0;
+  MutableByteSpan retired_span(&retired_value, sizeof(retired_value));
+  Require(app::GetAttributePersistenceProvider()->ReadValue(
+              app::ConcreteAttributePath(3, 0x0039, 5), retired_span) == CHIP_ERROR_INCORRECT_STATE,
+          "cluster attribute reads retired");
   Require(app::GetSafeAttributePersistenceProvider()->SafeWriteValue(
               app::ConcreteAttributePath(0, 0x0028, 0x0005), ByteSpan(&value, sizeof(value))) ==
               CHIP_ERROR_INCORRECT_STATE,
@@ -265,7 +301,9 @@ int main(int argc, char **argv) {
   if (mode != "normal" && mode != "reopen" && mode != "startup_failure" &&
       mode != "missing_finish" && mode != "poison_sdk" && mode != "poison_allocate" &&
       mode != "poison_remove" && mode != "wrong_model" && mode != "wrong_vendor" &&
-      mode != "wrong_product" && mode != "missing_dac")
+      mode != "wrong_product" && mode != "missing_dac" && mode != "endpoints_seed" &&
+      mode != "endpoints_reopen" && mode != "endpoints_missing_finish" &&
+      mode != "endpoints_poison_add" && mode != "endpoints_poison_remove")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

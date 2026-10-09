@@ -66,6 +66,26 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     assert ~s(CHIP_DEFAULT_DATA_PATH="bridge-counters.ini") in defines
   end
 
+  test "endpoint receipts require completed setup and serialized shutdown" do
+    receipts = [
+      "bridge endpoint metadata, custody and observations passed",
+      "bridge endpoint event loop and shutdown passed"
+    ]
+
+    output = Enum.join(receipts, "\n") <> "\n\nbridge server exit: 0\n"
+    assert :ok = SoftwareBridgeBuild.verify_case!(output, 0, receipts)
+
+    for missing <- receipts do
+      assert_raise Mix.Error, "bridge_server_test_failed", fn ->
+        SoftwareBridgeBuild.verify_case!(String.replace(output, missing, ""), 0, receipts)
+      end
+    end
+
+    assert_raise Mix.Error, "bridge_server_test_failed", fn ->
+      SoftwareBridgeBuild.verify_case!("\nbridge server exit: 74\n", 74, hd(receipts))
+    end
+  end
+
   test "WMA-B01 workspace admission rejects malformed arguments and symlink ancestors", %{
     root: root
   } do

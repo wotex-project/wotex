@@ -75,19 +75,29 @@ if (chip_build_tools) {
     zap_file = "bridge-common/bridge-app.zap"
     idl = "bridge-common/bridge-app.matter"
     is_server = true
-    cflags = [ "-DDYNAMIC_ENDPOINT_COUNT=16" ]
+    cflags = [ "-DCHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT=16" ]
   }
 
   executable("wotex-matter-sdk-bridge-server-test") {
+    # SDK headers are external dependencies. In particular, ConcreteClusterPath
+    # intentionally leaves its unused expansion flag uninitialized. Keep all
+    # first-party diagnostics enabled without analysing that SDK-only padding.
+    cflags = [
+      "-DCHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT=16",
+      "-isystem" + rebase_path("${chip_root}/src", root_build_dir),
+    ]
     cflags_cc = [ "-std=c++17" ]
     defines = [ "WOTEX_MATTER_BRIDGE_TESTING=1" ]
     sources = [
+      "src/bridge_endpoint_model.cpp",
+      "src/bridge_endpoints.cpp",
       "src/bridge_resources.cpp",
       "src/bridge_server.cpp",
       "src/bridge_storage.cpp",
       "src/logging.cpp",
       "src/sdk_storage.cpp",
       "src/storage.cpp",
+      "testing/sdk_bridge_endpoints_test.cpp",
       "testing/sdk_bridge_server_test.cpp",
     ]
     include_dirs = [ "include", "third_party" ]

@@ -379,9 +379,13 @@ runs its crash/restart tests and actual SDK operational-keystore/certificate
 binding test in normal and ASan/UBSan modes. A separate test target starts the
 SDK server with explicitly injected resources, disables the generation-only
 endpoint and verifies shutdown, identity/credential refusal and fatal
-startup/store failures in both modes. This internal binding has no public
-native Port host yet. Dynamic endpoint serving, commissioning, consumer
-authorization, reporting and independent server peer workflows remain open.
+startup/store failures in both modes. Its endpoint tests restore sixteen
+light/sensor children with stable endpoint identity, exact cluster metadata,
+approved observations, nullable temperature bounds and fabric-scoped group
+cleanup. Restored labels and capabilities require explicit consumer
+configuration. This internal binding has no public native Port host yet.
+Commissioning, authenticated consumer command/write dispatch, subscription
+report flow and independent server peer workflows remain open.
 
 The per-packet native checks create their own temporary work directory, run in
 Docker and resolve sources from `packages/wotex-matter`:

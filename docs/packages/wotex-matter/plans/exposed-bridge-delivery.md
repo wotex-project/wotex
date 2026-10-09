@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.3.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.4.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -16,8 +16,8 @@ Matter 1.6 data model, root/aggregator layout, both bridged Device Types,
 mandatory light/sensor clusters, generated model artifacts, build options,
 handoff limits, test-attestation inputs and independent controller peer source.
 Reproducible model generation and native store custody are implemented.
-The native build exercises the server binding separately from the controller.
-Endpoint serving, consumer handoff and peer receipts remain open.
+The native build exercises the server and dynamic endpoint bindings separately
+from the controller. Consumer request handoff and peer receipts remain open.
 
 ## Scope
 
@@ -93,8 +93,33 @@ model/vendor/product mismatch, occupied-port startup failure, omitted shutdown
 and SDK/allocation/removal storage failure. The native builder generates the
 pinned model and runs every case in normal and ASan/UBSan builds. Endpoints 0
 and 1 have the selected Root Node/Aggregator declarations; dummy endpoint 2
-is disabled. No dynamic child, commissioning exchange, authenticated request,
-consumer callback or independent peer is exercised by this lifecycle target.
+is disabled. This lifecycle target does not exercise a commissioning exchange,
+authenticated request, consumer callback or independent peer.
+
+The internal
+[`SdkBridgeEndpointBinding`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_endpoints.hpp)
+borrows that server's authoritative bridge store and serializes sixteen dynamic
+children under the SDK stack lock. Durable endpoint identity does not depend
+on the SDK slot chosen after restart. Restore validates the complete explicit
+consumer configuration before registration. Add/remove commits identity first;
+an incomplete SDK registration terminates the process. Child reachability,
+On/Off state and nullable temperature measurements come from explicit approved
+observations matching both Thing and endpoint identity. Measurements start
+unavailable after restart. Temperature bounds remain fixed while registered.
+The binding enumerates the finite Device Type/cluster/command metadata and
+registers independent Bridged Device Basic Information servers. It does not
+implement authenticated consumer command/write dispatch.
+
+[`sdk_bridge_endpoints_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_endpoints_test.cpp)
+adds five cases to the separate server target. Fresh/reopened hosts exercise
+all sixteen children, exact clusters, revisions and command lists, Descriptor
+PartsList, opaque identity, nullable and one-sided bounds, invalid observations,
+remove/re-add without endpoint reuse and actual event-loop observations. Direct
+SDK group seeding verifies fabric-scoped persistence and permanent removal;
+it does not establish commissioned-fabric or ACL admission. Normal shutdown
+retires every child registration while preserving group custody. Omitted
+shutdown and failed add/remove commits verify the fatal owner paths. These
+cases run in normal and ASan/UBSan builds through the native builder.
 
 ## 3. Request and report path
 

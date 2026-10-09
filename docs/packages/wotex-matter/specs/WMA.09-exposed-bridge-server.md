@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.4.0-target.
+Version: 0.5.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -63,6 +63,17 @@ retire global references to borrowed providers. A partial SDK initialization
 or poisoned store MUST terminate the native process before it can serve cached
 state; the outer owner MUST reap and classify that process without retrying a
 mutation.
+
+Dynamic SDK slots MUST remain distinct from durable endpoint IDs. Restore MUST
+receive one explicit consumer configuration for every live Thing and refuse
+missing, duplicate or incompatible Device Types before registering children.
+The selected temperature capabilities MUST remain fixed for the registered
+lifetime. Unknown bounds and unavailable measurements MUST retain their null
+meaning; a restart MUST NOT promote a previous measurement to current truth.
+An observation MUST match both the Thing identity and its current endpoint.
+Invalid observations MUST preserve previously approved state and reachability.
+Permanent removal MUST retire SDK cluster registrations and endpoint-scoped
+group/attribute custody. Normal shutdown MUST preserve durable group custody.
 
 ## Bridged devices
 

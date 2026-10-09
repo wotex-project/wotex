@@ -49,10 +49,11 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `lib/wotex/matter/bridge/endpoint_registry.ex`: pure WMA.09 endpoint identity,
   tombstone and restart-snapshot validation. This does not implement a native
   Matter server or alter the controller role.
-- `native/{include/wotex_matter,src}/bridge_{server,resources}.*`: internal
-  WMA.09 SDK server lifecycle and explicitly owned resource binding;
-  `native/testing/sdk_bridge_server_test.cpp` is its separate test target.
-  This binding has no consumer-facing native Port or dynamic endpoint dispatch.
+- `native/{include/wotex_matter,src}/bridge_{server,resources,endpoints,endpoint_model}.*`:
+  internal WMA.09 SDK lifecycle, resources, dynamic endpoint metadata and
+  approved observation ownership; `native/testing/sdk_bridge_{server,endpoints}_test.*`
+  form its separate test target. These bindings have no consumer-facing native
+  Port or authenticated consumer command/write dispatch.
 - `native/`: the C++17 controller host (`src/`, `include/wotex_matter/`),
   process-flow and resource test hosts (`testing/`), CMake and GN builds;
   `test/native/`: its C++ unit tests.

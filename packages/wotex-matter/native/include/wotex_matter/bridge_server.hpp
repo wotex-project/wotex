@@ -31,6 +31,7 @@ class SdkBridgeServerBinding final {
   SdkBridgeServerBinding &operator=(const SdkBridgeServerBinding &) = delete;
 
   chip::PersistentStorageDelegate &storage_delegate();
+  BridgeStorage &bridge_storage();
   CHIP_ERROR Init(chip::app::DataModel::Provider &model,
                   chip::DeviceLayer::NetworkCommissioning::EthernetDriver &network,
                   const chip::Inet::InterfaceId &interface_id, std::uint16_t port);
