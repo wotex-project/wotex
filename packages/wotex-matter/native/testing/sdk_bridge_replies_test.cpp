@@ -1,4 +1,5 @@
 #include "sdk_bridge_replies_test.hpp"
+#include "sdk_bridge_fixture_guard.hpp"
 #include "wotex_matter/bridge_endpoints.hpp"
 #include "wotex_matter/bridge_replies.hpp"
 
@@ -275,7 +276,8 @@ void VerifyBridgeReplies(SdkBridgeServerBinding &server, BridgeConsumerHandoff &
   ReplyCheck(group_provider->SetGroupKey(2, 7, 1), "logical fixture group key");
   AsyncHandler handler;
   DelegateReply delegate;
-  SdkBridgeInvokeContexts contexts(handoff);
+  FixtureInvokeGuard guard;
+  SdkBridgeInvokeContexts contexts(handoff, guard);
   // Inputs are synthetic principal fixtures. Direct provider calls below do
   // not establish authenticated fabric/ACL or consumer-policy admission.
   for (unsigned phase = 0; phase != 3; ++phase) {

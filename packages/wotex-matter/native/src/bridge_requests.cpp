@@ -93,6 +93,16 @@ Status RefusedStatus(BridgeConsumerHandoff::Outcome outcome) {
   return Status::Failure;
 }
 
+Status GuardStatus(CHIP_ERROR error) {
+  if (error == CHIP_ERROR_ACCESS_DENIED) return Status::UnsupportedAccess;
+  if (error == CHIP_ERROR_ACCESS_RESTRICTED_BY_ARL) return Status::AccessRestricted;
+  if (error == CHIP_IM_GLOBAL_STATUS(UnsupportedEndpoint)) return Status::UnsupportedEndpoint;
+  if (error == CHIP_IM_GLOBAL_STATUS(UnsupportedCluster)) return Status::UnsupportedCluster;
+  if (error == CHIP_IM_GLOBAL_STATUS(UnsupportedCommand)) return Status::UnsupportedCommand;
+  if (error == CHIP_IM_GLOBAL_STATUS(NeedsTimedInteraction)) return Status::NeedsTimedInteraction;
+  return Status::Failure;
+}
+
 } // namespace
 
 BridgeRequestMetadata CaptureBridgeRequest(
@@ -140,15 +150,17 @@ BridgeRequestMetadata CaptureBridgeRequest(const chip::app::DataModel::InvokeReq
 
 class SdkBridgeInvokeContexts::Impl final {
  public:
-  explicit Impl(BridgeConsumerHandoff &handoff) : handoff_(handoff) {}
+  Impl(BridgeConsumerHandoff &handoff, BridgeInvokeGuard &guard)
+      : handoff_(handoff), guard_(guard) {}
   ~Impl() {
     if (pending_ != 0) std::_Exit(SdkBridgeServerBinding::kStartupFailureExit);
   }
 
   struct Pending {
-    Pending(BridgeInvocation value, chip::app::CommandHandler &handler)
-        : invocation(std::move(value)), handle(&handler) {}
+    Pending(BridgeInvocation value, BridgeInvokeScope captured, chip::app::CommandHandler &handler)
+        : invocation(std::move(value)), scope(captured), handle(&handler) {}
     BridgeInvocation invocation;
+    BridgeInvokeScope scope;
     chip::app::CommandHandler::Handle handle;
   };
 
@@ -177,6 +189,9 @@ class SdkBridgeInvokeContexts::Impl final {
     BridgeInvocation invocation;
     invocation.request = CaptureBridgeRequest(request);
     invocation.deadline_ms = deadline_ms;
+    BridgeInvokeScope scope;
+    const CHIP_ERROR guarded = guard_.Capture(invocation.request, scope);
+    if (guarded != CHIP_NO_ERROR) return guarded;
     const CHIP_ERROR copied = CopyArguments(arguments, invocation.arguments);
     if (copied != CHIP_NO_ERROR) return copied;
     const CHIP_ERROR admitted = AdmissionError(
@@ -184,7 +199,7 @@ class SdkBridgeInvokeContexts::Impl final {
     if (admitted != CHIP_NO_ERROR) return admitted;
     const auto admitted_ticket = invocation.ticket;
     try {
-      entries_[slot].emplace(std::move(invocation), handler);
+      entries_[slot].emplace(std::move(invocation), scope, handler);
     } catch (...) {
       // Admission already committed the ticket. An incomplete SDK handle
       // acquisition cannot be repaired by returning to request service.
@@ -210,7 +225,18 @@ class SdkBridgeInvokeContexts::Impl final {
     CHIP_ERROR error = CHIP_NO_ERROR;
     if (auto *handler = entry->handle.Get()) {
       if (outcome == BridgeConsumerHandoff::Outcome::Completed) {
-        error = reply.Completed(*handler, entry->invocation);
+        error = guard_.Validate(entry->scope);
+        if (error == CHIP_NO_ERROR) {
+          error = reply.Completed(*handler, entry->invocation);
+        } else {
+          const chip::app::ConcreteCommandPath path(entry->invocation.request.endpoint,
+                                                    entry->invocation.request.cluster,
+                                                    entry->invocation.request.member);
+          const auto encoded = handler->FallibleAddStatus(path, GuardStatus(error));
+          // A written refusal does not erase the guard failure. Encoding
+          // failure takes precedence while the consumed handle still drains.
+          if (encoded != CHIP_NO_ERROR) error = encoded;
+        }
       } else {
         const chip::app::ConcreteCommandPath path(entry->invocation.request.endpoint,
                                                   entry->invocation.request.cluster,
@@ -229,13 +255,15 @@ class SdkBridgeInvokeContexts::Impl final {
   }
 
   BridgeConsumerHandoff &handoff_;
+  BridgeInvokeGuard &guard_;
   std::array<std::optional<Pending>, BridgeConsumerHandoff::kCapacity> entries_{};
   std::size_t pending_{0};
   bool closed_{false};
 };
 
-SdkBridgeInvokeContexts::SdkBridgeInvokeContexts(BridgeConsumerHandoff &handoff)
-    : impl_(std::make_unique<Impl>(handoff)) {}
+SdkBridgeInvokeContexts::SdkBridgeInvokeContexts(BridgeConsumerHandoff &handoff,
+                                                 BridgeInvokeGuard &guard)
+    : impl_(std::make_unique<Impl>(handoff, guard)) {}
 SdkBridgeInvokeContexts::~SdkBridgeInvokeContexts() = default;
 
 CHIP_ERROR SdkBridgeInvokeContexts::Start(const chip::app::DataModel::InvokeRequest &request,

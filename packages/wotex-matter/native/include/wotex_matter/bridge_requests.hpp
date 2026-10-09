@@ -6,7 +6,10 @@
 
 #include <app/CommandHandler.h>
 #include <app/data-model-provider/OperationTypes.h>
+#include <app/data-model-provider/MetadataTypes.h>
+#include <crypto/CHIPCryptoPAL.h>
 
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -46,6 +49,35 @@ struct BridgeInvocation {
   std::vector<std::uint8_t> arguments;
 };
 
+// Fixed, owned fabric identity. Public key and certificate digest distinguish
+// a local fabric index from its current realm and operational credential.
+struct BridgeFabricScope {
+  chip::Access::SubjectDescriptor principal;
+  std::uint64_t epoch{0};
+  chip::FabricId fabric_id{0};
+  chip::NodeId bridge_node{0};
+  std::array<std::uint8_t, chip::Crypto::kP256_PublicKey_Length> root{};
+  std::array<std::uint8_t, chip::Crypto::kSHA256_Hash_Length> noc_sha256{};
+};
+
+struct BridgeInvokeScope {
+  BridgeRequestMetadata request;
+  BridgeFabricScope fabric;
+  chip::app::DataModel::AcceptedCommandEntry command;
+};
+
+// Mandatory SDK admission and delayed-rendering boundary. Capture owns its
+// scope before payload copying or admission; Validate runs immediately before
+// a completed renderer. Calls hold the SDK stack lock and must not wait,
+// reenter custody or throw. This guard does not grant consumer authorization.
+class BridgeInvokeGuard {
+ public:
+  virtual ~BridgeInvokeGuard() = default;
+  virtual CHIP_ERROR Capture(const BridgeRequestMetadata &request,
+                             BridgeInvokeScope &scope) noexcept = 0;
+  virtual CHIP_ERROR Validate(const BridgeInvokeScope &scope) noexcept = 0;
+};
+
 // A native, bounded response encoder for the selected command semantics. This
 // callback runs on the SDK owner, never on the consumer or input-reader thread.
 // It must not wait, reenter request admission, retain borrowed values or throw.
@@ -58,10 +90,10 @@ class BridgeInvokeReply {
                                const BridgeInvocation &invocation) noexcept = 0;
 };
 
-// Internal SDK command context owner. Its caller performs SDK path/ACL and
-// consumer-policy admission at their respective boundaries. All methods run
+// Internal SDK command context owner. Its required guard performs SDK path/ACL
+// admission and delayed revalidation; consumer policy is separately owned. All methods run
 // under the SDK stack lock and serialize access to the shared handoff. The
-// handoff outlives this owner. Close/drain before stopping the event loop and
+// handoff and guard outlive this owner. Close/drain before stopping the event loop and
 // retiring SDK resources. Destruction with retained handles terminates the host.
 class SdkBridgeInvokeContexts final {
  public:
@@ -69,7 +101,7 @@ class SdkBridgeInvokeContexts final {
   static constexpr std::size_t kMaximumArgumentDepth = 24;
   static constexpr std::size_t kMaximumArgumentNodes = 4096;
 
-  explicit SdkBridgeInvokeContexts(BridgeConsumerHandoff &handoff);
+  SdkBridgeInvokeContexts(BridgeConsumerHandoff &handoff, BridgeInvokeGuard &guard);
   ~SdkBridgeInvokeContexts();
   SdkBridgeInvokeContexts(const SdkBridgeInvokeContexts &) = delete;
   SdkBridgeInvokeContexts &operator=(const SdkBridgeInvokeContexts &) = delete;

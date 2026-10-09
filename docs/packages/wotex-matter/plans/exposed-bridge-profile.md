@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.9.0. Finite WMA.09 implementation target. The
+Version: 1.10.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -133,6 +133,16 @@ custody and original deadline. Each request owns its metadata and scalar.
 The receiver must consume the ticket before returning a synchronous write
 response. This admission does not apply a write or publish approved state.
 
+Retained child invokes require an explicit guard for the current SDK fabric
+and ACL. The captured scope owns
+the root public key, fabric and bridge-node IDs, non-reused epoch and exact NOC
+digest, together with the command metadata. Completion rechecks that scope,
+live path, unchanged command privilege/qualities and current ACL before native
+rendering. Credential rollback and local fabric-index reuse cannot revive a
+retired scope. Guard or response-encoding failure releases the consumed handle.
+The fabric delegate detaches after context drain and before SDK shutdown.
+Consumer authorization remains separately required.
+
 Production attestation and commissioning material are consumer-owned, with no
 absent-provider or example-credential fallback. An explicitly separate test
 build uses the pinned SDK example provider, test VID `0xFFF1`/PID `0x8001`
@@ -180,6 +190,10 @@ unconsumed destruction. An installed-provider read test runs under the actual
 SDK event-loop stack lock while the input thread resolves or closes custody;
 explicit completion, denial and absent-reply timeout retain their meanings.
 These read fixtures use synthetic principals and already approved state.
+Guard tests use direct SDK fabric/ACL APIs, generated test certificates and
+synthetic CASE/group callback principals. They execute retained-owner refusal
+after ACL revocation, credential update/rollback, fabric-index reuse and
+endpoint retirement, including metadata failures and fatal missing detach.
 Authenticated consumer dispatch,
 subscription/report flow, end-to-end handoff timeouts and independent peer workflows
 remain required. Passing controller-side WMA.01–WMA.08 evidence does

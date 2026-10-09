@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.11.0-target.
+Version: 0.12.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -110,6 +110,20 @@ semantics may encode a completed consumer result; response-encoding failure
 MUST still release the consumed context. Closure MUST drain retained handles
 under the SDK stack lock before stopping the event loop. Destruction with a
 retained handle MUST terminate the process.
+
+The retained invoke owner MUST require an explicit SDK guard before copying
+arguments or reserving custody. The guard MUST capture the exact fabric realm,
+a non-reused local epoch and operational-certificate digest, together with the
+live command metadata and required invoke privilege. Child admission MUST
+require a current fabric and current SDK ACL grant. Immediately before a
+completed renderer, the owner MUST revalidate that realm, live path, unchanged
+command contract and current ACL. Fabric deletion, index reuse, credential
+update or rollback MUST NOT revive a retired scope. Metadata failures MUST
+preserve their error meaning. A guard failure MUST prevent completed rendering
+and still release the consumed SDK handle; refusal encoding MUST NOT erase the
+guard error. The scope owner MUST detach from the fabric table after draining
+contexts and before SDK shutdown. Active destruction MUST terminate the host.
+These checks do not authenticate a supplied principal or grant consumer policy.
 
 A retained attribute write MUST own its scalar value and complete callback
 metadata before its decoder expires. The finite profile permits IdentifyTime,

@@ -6,6 +6,7 @@
 #include "sdk_bridge_provider_test.hpp"
 #include "sdk_bridge_wait_test.hpp"
 #include "sdk_bridge_writes_test.hpp"
+#include "sdk_bridge_guard_test.hpp"
 
 #include <LinuxCommissionableDataProvider.h>
 #include <app/server/Server.h>
@@ -215,6 +216,9 @@ void Run(const char *directory, const std::string &mode) {
   }
 
   std::unique_ptr<SdkBridgeEndpointBinding> children;
+  if (mode == "guard" || mode == "guard_missing_finish") {
+    testing::VerifyBridgeGuard(binding, provider, mode == "guard_missing_finish");
+  }
   if (mode == "writes") testing::VerifyBridgeWrites();
   if (wait_probe) wait_probe->Prepare(binding, provider);
   if (mode.rfind("provider", 0) == 0) {
@@ -416,7 +420,7 @@ int main(int argc, char **argv) {
       mode != "requests_missing_finish" && mode != "replies" && mode != "replies_retain" &&
       mode != "provider" && mode != "provider_startup_failure" &&
       mode != "provider_shutdown_failure" && mode != "provider_missing_finish" && mode != "wait" &&
-      mode != "writes")
+      mode != "writes" && mode != "guard" && mode != "guard_missing_finish")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

@@ -67,6 +67,13 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
        "SDK finite write scalar ownership and refusal passed",
        "SDK finite write admission, staged credit and deadline passed"
      ]},
+    {"guard", 0,
+     [
+       "SDK invoke guard metadata errors, timing and current ACL passed",
+       "SDK invoke guard revocation, credential rollback and endpoint retirement passed",
+       "SDK fabric scope attachment and shutdown passed"
+     ]},
+    {"guard_missing_finish", 70, "SDK fabric scope missing detach prepared"},
     {"requests_missing_finish", 70,
      [
        "bridge owned request metadata and arguments passed",

@@ -409,6 +409,10 @@ Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in
 normal and sanitizer builds; it does not apply values or authorize execution.
+Retained invokes require a guard for the current fabric realm, live command
+metadata and SDK ACL before admission and completed rendering. Direct SDK tests
+cover revocation, credential update/rollback, fabric-index reuse and endpoint
+retirement; supplied callback principals remain synthetic test fixtures.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
 

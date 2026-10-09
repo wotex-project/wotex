@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.10.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.11.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -195,8 +195,30 @@ payload copies, reader-position preservation, stale tickets, clock regression,
 delayed expiry, explicit reply rendering, encoding failure and valid/invalidated
 handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
 builds run these cases through the native builder. This is internal context
-ownership: SDK fabric/ACL admission, consumer policy, native Port delivery
+ownership: authenticated SDK admission, consumer policy, native Port delivery
 and ExposedThing dispatch remain open.
+
+The required
+[`SdkBridgeInvokeGuard`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_guard.hpp)
+now binds admission and completed rendering to the current SDK fabric, live
+command metadata and actual ACL. Its fabric-table delegate assigns non-reused
+epochs and captures the exact root key, fabric/node IDs and NOC digest; the
+digest also detects rollback without a delegate notification. A retired realm,
+removed endpoint, changed command contract or revoked ACL prevents the
+completed renderer. Metadata errors remain distinct, and every consumed handle
+drains even when refusal encoding fails. The borrowed guard and fabric table
+outlive contexts; drain contexts and detach the delegate before SDK shutdown.
+
+[`sdk_bridge_guard_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_guard_test.cpp)
+uses generated test certificates, direct SDK fabric/ACL APIs and synthetic
+CASE/group callback principals. It runs the retained owner with the actual
+guard, testing explicit grants, privilege/target refusal, staged-result ACL
+revocation, metadata failures, timed-command requirements, credential update
+and rollback, same-realm index reuse, endpoint retirement and missing detach.
+The native builder runs its normal and ASan/UBSan cases. Ownership-only tests
+use an explicit test-build guard fixture; no permissive production default is
+provided. Authenticated transport admission, consumer policy/dispatch and
+independent-peer workflows remain open.
 
 The internal
 [`StartBridgeWrite`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_writes.hpp)

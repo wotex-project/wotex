@@ -1,4 +1,5 @@
 #include "sdk_bridge_requests_test.hpp"
+#include "sdk_bridge_fixture_guard.hpp"
 #include "wotex_matter/bridge_requests.hpp"
 
 #include <lib/core/TLVWriter.h>
@@ -174,7 +175,8 @@ void Boundaries() {
   handler.principal.fabricIndex = 1;
   handler.principal.authMode = chip::Access::AuthMode::kCase;
   handler.principal.subject = 1;
-  SdkBridgeInvokeContexts contexts(handoff);
+  FixtureInvokeGuard guard;
+  SdkBridgeInvokeContexts contexts(handoff, guard);
   Reply reply;
   InvokeRequest request(ConcreteCommandPath(3, 6, 1), handler.principal);
   Handoff::Ticket ticket{{9}, 99};
@@ -277,10 +279,84 @@ void Boundaries() {
       "closed context owner admitted another request");
 }
 
+void GuardBoundaries() {
+  Handoff handoff({4});
+  Handler handler;
+  handler.principal.fabricIndex = 1;
+  handler.principal.authMode = chip::Access::AuthMode::kCase;
+  handler.principal.subject = 42;
+  handler.principal.cats.values[0] = 0x00010002;
+  FixtureInvokeGuard guard;
+  SdkBridgeInvokeContexts contexts(handoff, guard);
+  Reply reply;
+  InvokeRequest request(ConcreteCommandPath(3, 3, 0), handler.principal);
+  auto bytes = Arguments();
+  auto reader = ArgumentReader(bytes);
+  const auto position = reader.GetReadPoint();
+  for (const auto error :
+       {CHIP_ERROR_ACCESS_DENIED, CHIP_ERROR_NO_MEMORY, CHIP_ERROR_ACCESS_RESTRICTED_BY_ARL}) {
+    guard.capture_error = error;
+    Handoff::Ticket unchanged{{9}, 99};
+    Require(contexts.Start(request, reader, handler, 100, 600, unchanged) == error &&
+                unchanged.id == 99 && unchanged.generation[0] == 9 &&
+                reader.GetReadPoint() == position && contexts.pending() == 0 &&
+                handoff.pending() == 0 && handler.retained.empty(),
+            "guard admission failure acquired credit, payload or handle");
+  }
+  guard.capture_error = CHIP_NO_ERROR;
+  for (const auto error : {CHIP_ERROR_ACCESS_DENIED, CHIP_ERROR_ACCESS_RESTRICTED_BY_ARL,
+                           CHIP_ERROR_INCORRECT_STATE}) {
+    Handoff::Ticket ticket;
+    Check(contexts.Start(request, reader, handler, 100, 600, ticket), "guard completion fixture");
+    Require(handoff.Resolve(ticket, Handoff::Outcome::Completed, 100) == Handoff::Reply::Stored,
+            "guard completion staged");
+    const auto original = handler.principal;
+    handler.principal = {};
+    guard.validation_error = error;
+    Require(contexts.Respond(ticket, 100, reply) == error && reply.calls == 0 &&
+                handler.last_status ==
+                    (error == CHIP_ERROR_ACCESS_DENIED                  ? Status::UnsupportedAccess
+                         : error == CHIP_ERROR_ACCESS_RESTRICTED_BY_ARL ? Status::AccessRestricted
+                                                                        : Status::Failure) &&
+                contexts.pending() == 0 && handoff.pending() == 0 && handler.retained.empty() &&
+                guard.last.request.principal.subject == 42 &&
+                guard.last.request.principal.cats.values[0] == 0x00010002 &&
+                guard.last.request.endpoint == 3 && guard.last.fabric.epoch == 7,
+            "guard failure rendered completion, lost scope or leaked handle");
+    handler.principal = original;
+  }
+  Handoff::Ticket ticket;
+  Check(contexts.Start(request, reader, handler, 101, 601, ticket),
+        "guard encoding failure fixture");
+  Require(handoff.Resolve(ticket, Handoff::Outcome::Completed, 102) == Handoff::Reply::Stored,
+          "guard encoding staged");
+  handler.refuse_status = true;
+  Require(contexts.Respond(ticket, 102, reply) == CHIP_ERROR_BUFFER_TOO_SMALL && reply.calls == 0 &&
+              contexts.pending() == 0 && handler.retained.empty(),
+          "guard refusal encoding failure leaked context or hid its error");
+  handler.refuse_status = false;
+  Check(contexts.Start(request, reader, handler, 102, 602, ticket), "invalidated guard fixture");
+  Require(handoff.Resolve(ticket, Handoff::Outcome::Completed, 103) == Handoff::Reply::Stored,
+          "invalidated guard staged");
+  const auto validations = guard.validations;
+  handler.InvalidateAll();
+  Check(contexts.Respond(ticket, 103, reply), "invalidated guard drain");
+  Require(guard.validations == validations && reply.calls == 0 && contexts.pending() == 0,
+          "invalidated handle consulted guard or renderer");
+  Check(contexts.Start(request, reader, handler, 103, 603, ticket), "closed guard fixture");
+  Require(handoff.Resolve(ticket, Handoff::Outcome::Completed, 104) == Handoff::Reply::Stored,
+          "closed guard staged");
+  Check(contexts.Finish(104), "closed guard drain");
+  Require(guard.validations == validations && reply.calls == 0 && handler.retained.empty() &&
+              handler.last_status == Status::Failure,
+          "closure validated or rendered staged completion");
+  std::cout << "bridge mandatory invoke guard admission and completion passed\n" << std::flush;
+}
+
 class Probe final : public RequestProbe {
  public:
   Probe(Handoff &handoff, bool invalidate)
-      : handoff_(handoff), contexts_(handoff), invalidate_(invalidate) {
+      : handoff_(handoff), contexts_(handoff, guard_), invalidate_(invalidate) {
     handler_.principal.fabricIndex = 2;
     handler_.principal.authMode = chip::Access::AuthMode::kCase;
     handler_.principal.subject = 0x1234;
@@ -288,6 +364,7 @@ class Probe final : public RequestProbe {
     handler_.principal.cats.values[2] = 0x00030004;
     handler_.timed = true;
     Boundaries();
+    GuardBoundaries();
     Metadata();
     RefusedInputs();
     for (std::size_t index = 0; index < tickets_.size(); ++index) {
@@ -492,6 +569,7 @@ class Probe final : public RequestProbe {
 
   Handoff &handoff_;
   Handler handler_;
+  FixtureInvokeGuard guard_;
   SdkBridgeInvokeContexts contexts_;
   Reply reply_;
   std::array<Handoff::Ticket, Handoff::kCapacity> tickets_{};
@@ -502,6 +580,30 @@ class Probe final : public RequestProbe {
 
 std::unique_ptr<RequestProbe> PrepareRequests(BridgeConsumerHandoff &handoff, bool invalidate) {
   return std::make_unique<Probe>(handoff, invalidate);
+}
+
+void VerifyGuardedCompletion(BridgeInvokeGuard &guard,
+                             const chip::Access::SubjectDescriptor &principal,
+                             const std::function<void()> &retire, CHIP_ERROR error, Status status) {
+  Handoff handoff({6});
+  Handler handler;
+  handler.principal = principal;
+  SdkBridgeInvokeContexts contexts(handoff, guard);
+  Reply reply;
+  auto bytes = Arguments();
+  auto reader = ArgumentReader(bytes);
+  InvokeRequest request(ConcreteCommandPath(3, 6, 1), handler.principal);
+  Handoff::Ticket ticket;
+  Check(contexts.Start(request, reader, handler, 100, 600, ticket), "actual guard owner admission");
+  Require(handoff.Resolve(ticket, Handoff::Outcome::Completed, 100) == Handoff::Reply::Stored,
+          "actual guard staged completion");
+  handler.principal = {};
+  retire();
+  Require(contexts.Respond(ticket, 100, reply) == error &&
+              reply.calls == (error == CHIP_NO_ERROR ? 1U : 0U) && handler.last_status == status &&
+              contexts.pending() == 0 && handoff.pending() == 0 && handler.retained.empty(),
+          "actual guard owner rendered refused completion or leaked a handle");
+  Check(contexts.Finish(100), "actual guard owner shutdown");
 }
 
 } // namespace wotex::matter::testing

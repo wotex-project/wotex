@@ -91,6 +91,7 @@ if (chip_build_tools) {
     sources = [
       "src/bridge_endpoint_model.cpp",
       "src/bridge_endpoints.cpp",
+      "src/bridge_guard.cpp",
       "src/bridge_handoff.cpp",
       "src/bridge_handoff_owner.cpp",
       "src/bridge_replies.cpp",
@@ -103,6 +104,7 @@ if (chip_build_tools) {
       "src/sdk_storage.cpp",
       "src/storage.cpp",
       "testing/sdk_bridge_endpoints_test.cpp",
+      "testing/sdk_bridge_guard_test.cpp",
       "testing/sdk_bridge_replies_test.cpp",
       "testing/sdk_bridge_provider_test.cpp",
       "testing/sdk_bridge_requests_test.cpp",

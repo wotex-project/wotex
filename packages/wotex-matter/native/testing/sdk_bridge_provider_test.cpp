@@ -1,4 +1,5 @@
 #include "sdk_bridge_provider_test.hpp"
+#include "sdk_bridge_fixture_guard.hpp"
 #include "wotex_matter/bridge_endpoints.hpp"
 #include "wotex_matter/bridge_replies.hpp"
 
@@ -85,6 +86,7 @@ class AsyncHandler final : public CommandHandler {
 class ReceiverProbe final : public BridgeReceiver, public ProviderProbe {
  public:
   BridgeConsumerHandoff &handoff;
+  FixtureInvokeGuard guard;
   SdkBridgeInvokeContexts contexts;
   BridgeRequestMetadata last;
   BridgeConsumerHandoff::Ticket ticket;
@@ -92,7 +94,7 @@ class ReceiverProbe final : public BridgeReceiver, public ProviderProbe {
   BridgeReceiver &receiver() override { return *this; }
   void Verify(SdkBridgeServerBinding &server, SdkBridgeProviderBinding &provider,
               chip::app::DataModel::Provider &delegate, const std::string &mode) override;
-  explicit ReceiverProbe(BridgeConsumerHandoff &owner) : handoff(owner), contexts(owner) {}
+  explicit ReceiverProbe(BridgeConsumerHandoff &owner) : handoff(owner), contexts(owner, guard) {}
   chip::app::DataModel::ActionReturnStatus Read(BridgeRequestMetadata request,
                                                 chip::app::AttributeValueEncoder &) override {
     ++reads;
