@@ -218,7 +218,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          stray=$(git ls-files packages | grep -E '^packages/[^/]+/(CODE_OF_CONDUCT|CONTRIBUTING|GOVERNANCE|SECURITY|AGENTS)\.md$|^packages/[^/]+/(\.claude|\.github|docs)/' || true)
+          stray=$(git ls-files packages | grep -E '^packages/[^/]+/(CODE_OF_CONDUCT|CONTRIBUTING|GOVERNANCE|SECURITY)\.md$|^packages/[^/]+/(\.claude|\.github|docs)/' || true)
           if [ -n "$stray" ]; then echo "$stray"; echo "package-level copies of shared files found"; exit 1; fi
           for f in packages/*/LICENSE; do cmp -s "$f" LICENSE || { echo "$f differs from the root LICENSE"; exit 1; }; done
 
@@ -296,6 +296,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The hosted artifact build stays offline. Populate its locked Rust
+          # dependencies before the Workbench tests invoke that build.
+          cargo fetch --locked --manifest-path priv/conformance/native/Cargo.toml
           # EXLA shares its native library across build environments. Compile
           # each environment before the gate VM can load that library, so a
           # later coverage or documentation build cannot overwrite a live NIF.

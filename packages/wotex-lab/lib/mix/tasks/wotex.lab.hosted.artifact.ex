@@ -50,6 +50,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
     runtime = artifact!(runtime, true)
     stage = private_sibling!(workspace, "build")
     build_root = private_build_root!(package)
+    precompiled_cache = Path.join(build_root, "rustler-cache")
 
     try do
       output = Path.join(stage, "output/bin")
@@ -59,7 +60,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
       build_environment = build_environment(build_root)
       toolchain = toolchain!(build_environment)
 
-      {precompiled_cache, precompiled_inputs} =
+      {^precompiled_cache, precompiled_inputs} =
         prepare_precompiled_cache!(
           Path.join(package, "hosts/workbench"),
           build_root,
@@ -91,27 +92,23 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
 
       worker = Path.join(output, @worker)
 
-      try do
-        command!(
-          "mix",
-          ["escript.build"],
-          Path.join(package, "hosts/workbench"),
-          build_environment(build_root, [
-            {"HEX_OFFLINE", "1"},
-            {"HTTP_PROXY", "http://127.0.0.1:1"},
-            {"HTTPS_PROXY", "http://127.0.0.1:1"},
-            {"MIX_ENV", "dev"},
-            {"MIX_BUILD_PATH", mix_build},
-            {"NO_PROXY", ""},
-            {"REBAR_BASE_DIR", Path.join(build_root, "rebar")},
-            {"RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH", precompiled_cache},
-            {"WOTEX_PATH_DEPS", "1"},
-            {"WOTEX_LAB_HOSTED_WORKER_OUTPUT", worker}
-          ])
-        )
-      after
-        File.chmod!(precompiled_cache, 0o700)
-      end
+      command!(
+        "mix",
+        ["escript.build"],
+        Path.join(package, "hosts/workbench"),
+        build_environment(build_root, [
+          {"HEX_OFFLINE", "1"},
+          {"HTTP_PROXY", "http://127.0.0.1:1"},
+          {"HTTPS_PROXY", "http://127.0.0.1:1"},
+          {"MIX_ENV", "dev"},
+          {"MIX_BUILD_PATH", mix_build},
+          {"NO_PROXY", ""},
+          {"REBAR_BASE_DIR", Path.join(build_root, "rebar")},
+          {"RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH", precompiled_cache},
+          {"WOTEX_PATH_DEPS", "1"},
+          {"WOTEX_LAB_HOSTED_WORKER_OUTPUT", worker}
+        ])
+      )
 
       normalize_escript!(worker)
       File.chmod!(worker, 0o755)
@@ -149,6 +146,10 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
       Mix.shell().info("Manifest: #{Path.join(workspace, "native-build.json")}")
       :ok
     after
+      if match?({:ok, %File.Stat{type: :directory}}, File.lstat(precompiled_cache)) do
+        File.chmod!(precompiled_cache, 0o700)
+      end
+
       remove_build_root(build_root, package)
       remove_private(stage, workspace)
     end

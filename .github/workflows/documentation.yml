@@ -90,7 +90,11 @@ jobs:
           WOTEX_PATH_DEPS: "1"
           DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
           PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
-        run: mix deps.get --check-locked
+        run: |
+          # These two dependencies come from pinned candidate paths. Remove
+          # their Hex entries before resolving, preserving every other lock.
+          mix deps.unlock doc_shell phoenix_assets
+          mix deps.get --check-locked
 
       - name: Install the Lab component catalogue
         working-directory: packages/wotex-lab/hosts/workbench

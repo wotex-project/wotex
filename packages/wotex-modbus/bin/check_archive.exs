@@ -142,6 +142,7 @@ defmodule Wotex.Modbus.Check.Archive do
     end
 
     defp assert_register_codec! do
+      {:ok, _} = Application.ensure_all_started(:crypto)
       {:error, %Wotex.Runtime.Implementation.Error{code: :invalid_configuration}} =
         Wotex.Modbus.RegisterCodec.Host.start_link(%{})
       %{restart: :temporary} = Wotex.Modbus.RegisterCodec.Host.child_spec(%{})

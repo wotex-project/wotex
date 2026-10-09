@@ -105,6 +105,40 @@ defmodule Wotex.Lab.HostedArtifactTest do
   end
 
   @tag :integration
+  test "an offline Cargo failure is preserved and its private cache is removed", %{
+    root: root,
+    workspace: workspace
+  } do
+    tools = Path.join(root, "tools")
+    File.mkdir!(tools)
+    cargo = Path.join(tools, "cargo")
+
+    File.write!(cargo, """
+    #!/bin/sh
+    if [ "$1" = "--version" ]; then
+      echo 'cargo 1.97.1 (c980f4866 2026-06-30)'
+      exit 0
+    fi
+    echo 'offline Cargo dependency is unavailable' >&2
+    exit 1
+    """)
+
+    File.chmod!(cargo, 0o700)
+    build_pattern = Path.expand("../../.wotex-hosted-build-*", File.cwd!())
+    before_builds = Path.wildcard(build_pattern)
+
+    with_environment(%{"PATH" => tools <> ":" <> System.fetch_env!("PATH")}, fn ->
+      assert_raise Mix.Error, ~r/offline Cargo dependency is unavailable/, fn ->
+        Artifact.build(workspace, runtime!())
+      end
+    end)
+
+    assert Path.wildcard(build_pattern) == before_builds
+    assert File.ls!(root) == ["tools"]
+    refute File.exists?(workspace)
+  end
+
+  @tag :integration
   @tag timeout: 300_000
   test "the source build qualifies its exact outputs and rejects mutation", %{
     workspace: workspace,
