@@ -149,11 +149,16 @@ void Run(const char *directory, const std::string &mode) {
   auto *delegate = app::CodegenDataModelProviderInstance(&binding.storage_delegate());
   auto provider_probe = testing::PrepareProvider(handoff);
   const bool waiting = mode == "wait" || mode == "wait_input_eof" ||
-      mode == "wait_input_malformed" || mode == "wait_input_partial" || mode == "wait_input_cancel";
+      mode == "wait_input_malformed" || mode == "wait_input_partial" ||
+      mode == "wait_input_cancel" || mode == "wait_output_close" || mode == "wait_output_cancel" ||
+      mode == "wait_output_lost";
   const auto input_mode = mode == "wait_input_eof" ? testing::WaitInput::Ended
       : mode == "wait_input_malformed"             ? testing::WaitInput::Malformed
       : mode == "wait_input_partial"               ? testing::WaitInput::Partial
       : mode == "wait_input_cancel"                ? testing::WaitInput::Cancelled
+      : mode == "wait_output_close"                ? testing::WaitInput::OutputEnded
+      : mode == "wait_output_cancel"               ? testing::WaitInput::OutputCancelled
+      : mode == "wait_output_lost"                 ? testing::WaitInput::OutputLost
                                                    : testing::WaitInput::Direct;
   auto wait_probe = waiting ? testing::PrepareWait(handoff, *delegate, input_mode) : nullptr;
   BridgeReceiver &receiver = wait_probe ? static_cast<BridgeReceiver &>(*wait_probe)
@@ -429,7 +434,8 @@ int main(int argc, char **argv) {
       mode != "provider_shutdown_failure" && mode != "provider_missing_finish" && mode != "wait" &&
       mode != "wait_input_eof" && mode != "wait_input_malformed" && mode != "wait_input_partial" &&
       mode != "wait_input_cancel" && mode != "writes" && mode != "guard" &&
-      mode != "guard_missing_finish")
+      mode != "guard_missing_finish" && mode != "wait_output_close" &&
+      mode != "wait_output_cancel" && mode != "wait_output_lost")
     return 2;
   std::signal(SIGPIPE, SIG_IGN);
   if (chip::Platform::MemoryInit() != CHIP_NO_ERROR) return 1;

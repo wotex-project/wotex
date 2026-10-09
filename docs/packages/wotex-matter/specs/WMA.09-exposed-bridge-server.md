@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.13.0-target.
+Version: 0.14.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -118,6 +118,32 @@ failure and caller cancellation MUST close admission and wake pending waits
 before SDK cleanup. Cancellation MUST NOT depend on closing a descriptor under
 a read. The caller MUST join the reader before closing its borrowed descriptor
 or releasing custody. Result correlation grants no consumer policy authority.
+
+Outbound request delivery MUST use an explicitly started, exclusively owned
+writer, separate from the SDK callback and input reader. SDK output admission
+MUST copy bounded frame bytes without waiting for a queue mutex or descriptor.
+Refusal MUST retain no bytes; an already admitted request MUST be explicitly
+resolved or closed, without silently retrying or granting Success.
+
+The output owner MUST bound requests to sixteen frames of at most 262144 bytes
+each and reserve four control frames of at most 512 bytes each, including their
+final LF. LF elsewhere, CR, NUL and excess length MUST be refused. Selected
+wire encoders separately enforce JSON, role and schema contracts. Capacity
+MUST include an active frame until its bytes are fully written or discarded.
+Queued controls MUST precede queued requests, with FIFO within each class and
+no interleaving of an already started frame. Writing a frame MUST NOT release
+the shared request context or establish consumer authorization.
+
+Cancellation, explicit closure or consumer loss, including loss while output
+is idle, MUST close output admission and shared custody, wake pending waits
+without an SDK lock, and discard queued bytes. An active write MUST retire its
+charged slot before the writer returns. Output closure and notification MUST
+release the queue mutex before acquiring custody. Notification MUST occur once
+after custody closes and MUST NOT perform SDK cleanup. The caller MUST join
+every user before destroying output or closing its exclusive pipe or stream
+socket descriptor; settable file status flags MUST be restored. Destruction
+with queued bytes or an active writer MUST terminate the process. Closure MUST
+NOT implicitly flush queued requests.
 
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated

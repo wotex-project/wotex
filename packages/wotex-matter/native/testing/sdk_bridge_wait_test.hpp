@@ -16,7 +16,16 @@ class WaitProbe : public BridgeReceiver {
   virtual void Finish() = 0;
 };
 
-enum class WaitInput { Direct, Ended, Malformed, Partial, Cancelled };
+enum class WaitInput {
+  Direct,
+  Ended,
+  Malformed,
+  Partial,
+  Cancelled,
+  OutputEnded,
+  OutputCancelled,
+  OutputLost
+};
 
 std::unique_ptr<WaitProbe> PrepareWait(BridgeConsumerHandoff &handoff,
                                        chip::app::DataModel::Provider &delegate,

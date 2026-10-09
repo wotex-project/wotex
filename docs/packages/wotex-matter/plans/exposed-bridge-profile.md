@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.11.0. Finite WMA.09 implementation target. The
+Version: 1.12.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings are implemented. Consumer request dispatch remains open.
@@ -141,6 +141,27 @@ asynchronous SDK owner must coalesce late notifications within sixteen slots.
 The caller joins input before closing its descriptor or releasing custody.
 This input foundation supplies no consumer-facing Port startup or dispatch.
 
+Internal output uses one explicitly started writer and nonblocking SDK
+try-lock admission. Sixteen request frames of at most 262144 bytes and four
+reserved control frames of at most 512 bytes include final LF; CR, NUL, embedded
+LF and excess length are refused before copying. JSON/schema/role validation
+belongs to the selected encoder. An active frame keeps its slot and byte credit
+until every byte is written or discarded. Queued controls have priority over
+queued requests; each class preserves FIFO, and frames never interleave.
+Queue admission and completed output do not release shared request custody.
+
+The writer borrows an exclusive pipe or stream socket descriptor, temporarily
+enables nonblocking writes, restores settable file status flags and uses 50 ms
+poll/idle-wait timeouts. Cancellation, explicit closure, write failure and
+consumer loss while writing or idle close
+admission and shared custody and discard queued frames. Queue closure releases
+its mutex before closing custody or calling the required notification sink.
+The sink runs once after custody closes and never performs SDK cleanup.
+Callers arrange SIGPIPE behavior, join every user and then close the descriptor
+or retire output. Destruction with queued bytes or an active writer exits with
+70. These byte mechanics have no request encoder, process bootstrap or consumer
+policy/dispatch integration.
+
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
 (`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.
 StartUpOnOff (`0x0006/0x4003`) retains null or its defined Off/On/Toggle values
@@ -213,6 +234,14 @@ while the SDK stack lock is held, ignore a consumed timeout identity, and wake
 on EOF, malformed input, partial EOF or cancellation. Host input tests cover
 strict frame decoding, unchanged failure output, full shared credit, original
 expiry, staged-result loss, descriptor restoration and notification refusal.
+Output tests cover malformed/boundary bytes, allocation and contention refusal,
+owned copies, concurrent capacity, in-progress credit, reserved controls, FIFO,
+non-interleaving, idle and blocked consumer loss, cancellation, descriptor flags,
+queue/custody lock ordering and omitted closure. Three installed-provider cases
+admit output inside shared custody, then hold the actual SDK stack lock during
+read waiting while an independent blocked writer closes on explicit closure,
+cancellation or consumer loss. Both builds use opaque byte stress fixtures;
+these cases establish ownership rather than a production request wire format.
 Guard tests use direct SDK fabric/ACL APIs, generated test certificates and
 synthetic CASE/group callback principals. They execute retained-owner refusal
 after ACL revocation, credential update/rollback, fabric-index reuse and

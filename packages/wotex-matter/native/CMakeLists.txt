@@ -44,6 +44,14 @@ target_link_libraries(wotex_matter_bridge_handoff_owner_test PRIVATE wotex_matte
 target_compile_options(wotex_matter_bridge_handoff_owner_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME wotex_matter_bridge_handoff_owner_test COMMAND wotex_matter_bridge_handoff_owner_test)
 
+add_library(wotex_matter_bridge_output STATIC src/bridge_output.cpp)
+target_link_libraries(wotex_matter_bridge_output PUBLIC wotex_matter_bridge_handoff)
+target_compile_options(wotex_matter_bridge_output PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(wotex_matter_bridge_output_test ../test/native/bridge_output_test.cpp)
+target_link_libraries(wotex_matter_bridge_output_test PRIVATE wotex_matter_bridge_output)
+target_compile_options(wotex_matter_bridge_output_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME wotex_matter_bridge_output_test COMMAND wotex_matter_bridge_output_test)
+
 if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   # Bridge input is a separate role and frame contract from the controller.
   add_library(wotex_matter_bridge_input STATIC src/bridge_input.cpp)

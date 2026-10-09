@@ -66,6 +66,9 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"wait_input_malformed", 0, "SDK bounded result pipe, timeout and malformed wake passed"},
     {"wait_input_partial", 0, "SDK bounded result pipe, timeout and partial wake passed"},
     {"wait_input_cancel", 0, "SDK bounded result pipe, timeout and cancellation wake passed"},
+    {"wait_output_close", 0, "SDK blocked output, reserved control and closure wake passed"},
+    {"wait_output_cancel", 0, "SDK blocked output, reserved control and cancellation wake passed"},
+    {"wait_output_lost", 0, "SDK blocked output, reserved control and consumer loss wake passed"},
     {"writes", 0,
      [
        "SDK finite write scalar ownership and refusal passed",

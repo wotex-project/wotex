@@ -411,6 +411,12 @@ request-ID matching. Its bounded reader closes custody on lost, malformed or
 cancelled input and wakes waits without an SDK lock. Host and installed-provider
 real-pipe tests cover fragmentation, stale IDs, expiry, EOF and cancellation in
 normal and sanitizer builds. Consumer Port startup and dispatch remain open.
+The internal output owner retains sixteen bounded request frames and four
+reserved controls, including an active write. Its explicitly started writer
+never performs I/O in an SDK callback; closure, cancellation and idle or blocked
+consumer loss close shared custody without an SDK lock. Host and installed-provider
+pipe tests verify capacity, control ordering, copied bytes and cleanup in both
+builds. Production request encoding and Port bootstrap remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in

@@ -3,6 +3,7 @@
 #include "wotex_matter/bridge_endpoints.hpp"
 #include "wotex_matter/bridge_handoff_owner.hpp"
 #include "wotex_matter/bridge_input.hpp"
+#include "wotex_matter/bridge_output.hpp"
 
 #include <app/MessageDef/AttributeReportIBs.h>
 #include <platform/CHIPDeviceLayer.h>
@@ -53,6 +54,12 @@ class InputSink final : public BridgeResultSink {
   std::atomic<unsigned> ready{0}, closed{0};
 };
 
+class OutputSink final : public BridgeOutputSink {
+ public:
+  void Closed() noexcept override { ++closed; }
+  std::atomic<unsigned> closed{0};
+};
+
 std::string Frame(const Handoff::Ticket &ticket, const char *outcome) {
   const char digits[] = "0123456789abcdef";
   std::string generation;
@@ -78,6 +85,10 @@ class ReceiverProbe final : public WaitProbe {
       Require(custody.Reserve(now, now + Handoff::kMaximumDurationMs, ticket) ==
                   Handoff::Admission::Reserved,
               "SDK read request not admitted");
+      if (output_)
+        Require(output_->Push(BridgeOutputOwner::Kind::Request, output_frame_) ==
+                    BridgeOutputOwner::Admission::Accepted,
+                "SDK output admission under shared custody");
     });
     admitted_.set_value(ticket);
     Handoff::Outcome result = Handoff::Outcome::Unknown;
@@ -122,6 +133,11 @@ class ReceiverProbe final : public WaitProbe {
   }
 
   void DuringLoop() override {
+    if (input_mode_ == WaitInput::OutputEnded || input_mode_ == WaitInput::OutputCancelled ||
+        input_mode_ == WaitInput::OutputLost) {
+      DuringOutput();
+      return;
+    }
     InputSink sink;
     BridgeResultInput input(owner_, {1}, sink);
     std::atomic<bool> stop{false};
@@ -227,6 +243,92 @@ class ReceiverProbe final : public WaitProbe {
   void Finish() override { children_->Finish(); }
 
  private:
+  void DuringOutput() {
+    using Output = BridgeOutputOwner;
+    OutputSink sink;
+    Output output(owner_, sink);
+    output_ = &output;
+    // Opaque byte stress fixture, not a production request encoder or consumer
+    // dispatch. The actual installed-provider callback fills the final slot.
+    output_frame_ = std::string(Output::kMaximumRequestFrameBytes - 1, 'r') + '\n';
+    for (unsigned i = 1; i < Output::kRequestCapacity; ++i)
+      Require(output.Push(Output::Kind::Request, output_frame_) == Output::Admission::Accepted,
+              "SDK output stress capacity");
+    admitted_ = std::promise<Handoff::Ticket>();
+    auto admitted = admitted_.get_future();
+    finished_ = std::promise<Status>();
+    auto finished = finished_.get_future();
+    int descriptors[2]{-1, -1};
+    Require(pipe(descriptors) == 0, "SDK output pipe create");
+    const int flags = fcntl(descriptors[1], F_GETFL);
+    std::atomic<bool> stop{false};
+    Output::State terminal = Output::State::Open;
+    std::thread writer;
+    struct Cleanup {
+      Output &output;
+      std::thread &writer;
+      std::atomic<bool> &stop;
+      int *descriptors;
+      ~Cleanup() {
+        output.Close();
+        stop = true;
+        if (writer.joinable()) writer.join();
+        for (unsigned i = 0; i < 2; ++i)
+          if (descriptors[i] >= 0) close(descriptors[i]);
+      }
+    } cleanup{output, writer, stop, descriptors};
+    Require(chip::DeviceLayer::PlatformMgr().ScheduleWork(
+                [](intptr_t context) { reinterpret_cast<ReceiverProbe *>(context)->Read(); },
+                reinterpret_cast<intptr_t>(this)) == CHIP_NO_ERROR,
+            "SDK output waiting read scheduled");
+    Require(admitted.wait_for(std::chrono::seconds(2)) == std::future_status::ready,
+            "SDK output admission deadline");
+    admitted.get();
+    while (BridgeHandoffOwnerTestAccess::Waiters(owner_) == 0 &&
+           finished.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+      std::this_thread::yield();
+    Require(BridgeHandoffOwnerTestAccess::Waiters(owner_) != 0,
+            "SDK output waiter expired before writer start");
+    writer = std::thread([&] { terminal = output.Run(descriptors[1], stop); });
+    char first;
+    Require(read(descriptors[0], &first, 1) == 1 && first == 'r', "SDK output actual pipe write");
+    const auto full = output.Push(Output::Kind::Request, output_frame_);
+    Require(full == Output::Admission::Full || full == Output::Admission::Busy,
+            "SDK output active frame released credit");
+    auto control = Output::Admission::Busy;
+    while (control == Output::Admission::Busy)
+      control = output.Push(Output::Kind::Control, "control\n");
+    Require(control == Output::Admission::Accepted, "SDK output reserved control unavailable");
+    if (input_mode_ == WaitInput::OutputEnded) output.Close();
+    else if (input_mode_ == WaitInput::OutputCancelled) stop = true;
+    else {
+      Require(close(descriptors[0]) == 0, "SDK output consumer close");
+      descriptors[0] = -1;
+    }
+    Require(finished.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+                finished.get() == Status::Failure,
+            "SDK output closure failed under stack lock");
+    writer.join();
+    const auto expected = input_mode_ == WaitInput::OutputEnded ? Output::State::Ended
+        : input_mode_ == WaitInput::OutputCancelled             ? Output::State::Cancelled
+                                                                : Output::State::Write;
+    constexpr int status_flags = O_ACCMODE | O_APPEND | O_ASYNC | O_SYNC | O_DSYNC | O_NONBLOCK;
+    const int restored = fcntl(descriptors[1], F_GETFL);
+    Require(terminal == expected && sink.closed == 1 && restored >= 0 &&
+                (restored & status_flags) == (flags & status_flags),
+            "SDK output writer cleanup");
+    owner_.With(
+        [](auto &custody, auto) { Require(custody.pending() == 0, "SDK output credit leaked"); });
+    output_ = nullptr;
+    output_frame_.clear();
+    std::cout << "SDK blocked output, reserved control and "
+              << (input_mode_ == WaitInput::OutputEnded           ? "closure"
+                      : input_mode_ == WaitInput::OutputCancelled ? "cancellation"
+                                                                  : "consumer loss")
+              << " wake passed\n"
+              << std::flush;
+  }
+
   void Read() {
     // Runs under the real SDK event-loop stack lock. The input/main thread
     // resolves custody independently while this synchronous callback waits.
@@ -255,6 +357,8 @@ class ReceiverProbe final : public WaitProbe {
   std::promise<Status> finished_;
   BridgeRequestMetadata last_;
   const WaitInput input_mode_;
+  BridgeOutputOwner *output_{nullptr};
+  std::string output_frame_;
 };
 
 } // namespace

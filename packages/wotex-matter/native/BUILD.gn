@@ -95,6 +95,7 @@ if (chip_build_tools) {
       "src/bridge_handoff.cpp",
       "src/bridge_handoff_owner.cpp",
       "src/bridge_input.cpp",
+      "src/bridge_output.cpp",
       "src/bridge_replies.cpp",
       "src/bridge_requests.cpp",
       "src/bridge_resources.cpp",

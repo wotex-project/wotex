@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.12.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.13.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -199,6 +199,40 @@ holds the actual SDK stack lock, then verify absent-reply timeout and wake on
 EOF, malformed input, partial EOF or cancellation. The native builder runs them
 in normal and ASan/UBSan modes. This bounded input foundation has no
 consumer-facing Port host, authenticated consumer policy or ExposedThing dispatch.
+
+The internal
+[BridgeOutputOwner](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_output.hpp)
+copies bounded frame bytes through nonblocking try-lock admission and writes
+them on one explicitly owned thread. Sixteen request frames of at most 262144
+bytes and four reserved control frames of at most 512 bytes include LF. The
+selected encoder owns JSON/schema/role checks. Active writes retain their slot
+and byte credit until written or discarded; controls precede queued requests
+without interleaving frames, and each class preserves FIFO. SDK admission never
+waits for output, silently retries or turns queued/written bytes into Success.
+Shared request custody persists until the SDK consumes its result.
+
+Cancellation, explicit closure or consumer loss, including idle loss, closes
+admission and shared custody and discards queued bytes. Closure unlocks the
+queue before acquiring custody or invoking the required notification sink,
+preventing a cycle with SDK admission inside a serialized custody callback.
+Notification occurs once after custody closes; the SDK owner separately drains
+contexts. The writer temporarily uses nonblocking pipe or stream socket flags
+and restores settable file status flags, with 50 ms write-poll and idle-wait
+timeouts. Callers own SIGPIPE behavior and join all users before closing
+descriptors or destroying output. Queued
+bytes or an active writer at destruction terminate with 70. Close does not flush.
+
+[bridge_output_test.cpp](../../../../packages/wotex-matter/test/native/bridge_output_test.cpp)
+executes exact frame limits, malformed bytes, allocation/lock/capacity refusal,
+copied ownership, concurrent producers, active credit, reserved controls,
+ordering without byte interleaving, idle/blocked loss, cancellation, flag
+restoration, duplicate-run refusal, custody-lock ordering and fatal missing
+close. Three additional installed-provider cases fill the final output slot
+inside actual SDK read admission, then wait under the SDK stack lock while an
+independent pipe writer closes on explicit closure, cancellation or consumer
+loss. The native builder runs them in normal and ASan/UBSan builds. Their opaque
+stress bytes prove writer ownership, not a request codec, consumer-facing Port
+bootstrap, authenticated admission or ExposedThing dispatch.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
