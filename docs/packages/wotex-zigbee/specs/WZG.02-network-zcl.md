@@ -1,6 +1,6 @@
 # WZG.02 — Network continuity, interviews and ZCL
 
-Version: 0.11.0-target. The catalogue records implementation status separately.
+Version: 0.15.0-target. The catalogue records implementation status separately.
 
 ## Network identity and security
 
@@ -9,6 +9,91 @@ Version: 0.11.0-target. The catalogue records implementation status separately.
 **WZG2-02.** Backup and restore must preserve the selected stack's key/counter continuity. An old backup is not safe merely because its checksum is valid. Before restore, isolate the old coordinator and follow the backend's supported counter/identity procedure. If continuity cannot be established, refuse restore and require an explicit rekey/re-enrollment recovery. Never silently reset outgoing frame counters, clone a live coordinator or promise portable restore across chipset families.
 
 Channel migration, key rotation, network healing and leave/rejoin are separate finite administrative operations. No automatic factory reset, mass re-pair or security downgrade after transient loss. Return partial outcomes where some devices did not migrate.
+
+`Wotex.Zigbee.inspect_network/2` supplies the finite metadata observation
+profile owned by WZG1-04. It obtains local raw IEEE, capability/state and
+association evidence, then PAN/extended PAN, parent, channel and state under
+one deadline. Preserve the original replies, owner epoch, observation times,
+partial issues and any disagreement between reported short address/state.
+Unknown and uninitialized values remain visible. Matching sequential metadata
+is not an atomic network image, credential/counter continuity or proof of
+commissioning, radio authentication or reachability. The workflow reads no
+keys or counters and performs no joining, reset or configuration change.
+Qualified key/counter custody and its backup/restore port remain required.
+
+The local permit-join profile uses `Wotex.Zigbee.PermitJoin` and
+`Wotex.Zigbee.permit_join/4` under WZG1-04. The consumer explicitly selects
+the expected coordinator IEEE, extended PAN, PAN, channel and a 0–254 second
+duration; zero requests closure. Fresh complete matching metadata precedes
+each consumer credential authorization. The port qualifies resident keys,
+counters, Trust Center policy, install-code capability and any enrollment
+fallback without returning private material. Authorization and matching
+metadata each prove no secure enrollment or key continuity.
+
+One deadline and caller monitor cover inspection, custody and NCP admission.
+The finite authorization horizon reserves the requested duration before
+dispatch; it does not prove physical window start/end timing. Results retain
+available readings and admission, while raw management responses and local
+duration changes remain separate queued observations. An old uncorrelated
+management success cannot confirm a later close request. Drain the local
+zero-duration indication and drop count where available; absence is unknown.
+No automatic closing command, retry, network formation, reset or key change
+follows. Remote/broadcast joining, qualified insecure fallback and actual
+enrollment/closure remain unclaimed by this local software profile.
+
+The finite channel-migration profile under WZG1-04 uses
+`Wotex.Zigbee.ChannelMigration` and `Wotex.Zigbee.migrate_channel/5`. Fresh
+expected-network metadata, current custody for every selected peer and
+consumer credential authorization precede one broadcast/local-copy request.
+The consumer qualifies installed network-manager support, update-ID headroom,
+administrative pacing and settling delay. SDK source resolves the PDF's
+broadcast-mode and reply-ID errors; literal vectors and digests live in
+`test/support/profiles/zdo-channel-migration-mt-r1.14.json`.
+
+One explicit timer precedes fresh target-channel metadata. The receiver then
+reads Basic ZCLVersion once from each of `1..32` consumer-selected endpoints
+under current route custody, using fresh retired AF/ZCL tokens. Preserve
+NCP admission, APS confirmation, source/header matched ZCL records and original
+security disposition separately. A missing application response after SREQ
+admission may remain partial while a later peer responds. An unanswered SREQ
+ends the epoch because its late uncorrelated reply cannot safely complete a
+later probe. One original deadline and credential horizon cover the cohort;
+dispatch reserves the qualified settling delay before that horizon.
+
+The result retains both local readings and every requested peer, including
+unprobed peers. `observed_cohort` means target coordinator channel and complete
+Basic observations for the selected cohort, not all devices in the network or
+independently verified per-device radio channels. Local-copy status alone proves
+no broadcast delivery; sleepy devices may remain unconfirmed. Any administrative
+dispatch ends this owner after observations, even when the local-copy send
+fails. Reopen and adopt fresh custody before further operations. Recovery,
+rollback, healing, leave/rejoin and key rotation remain separate explicit
+requirements; no retry, reset or mass re-pair follows.
+
+The finite key-rotation profile under WZG1-04 uses `Wotex.Zigbee.KeyRotation`
+and `Wotex.Zigbee.rotate_key/5`. Expected network identity, a non-wrapping next
+sequence, qualified distribution/switch delays and a `1..32` peer cohort are
+inert request fields. Consumer custody independently qualifies the current
+sequence, fresh key, resident security, counters and exact firmware support.
+One update authorization and a private one-use owner writer precede broadcast
+distribution. Fresh matching metadata and separate switch authorization follow
+the distribution delay. A switch and settling delay precede fresh metadata
+and one source-matched Basic probe per peer. All stages share one shortened
+caller/custody/authorization deadline and caller monitor; dispatch reserves
+the qualified delays. Exact source/layouts and switch/reply vectors live in
+`test/support/profiles/zdo-key-rotation-mt-r1.14.json` without key fixtures.
+
+Update and switch send status remain separate. The pinned SDK can alter its
+local alternate key or schedule a local switch after a failed send, so failure
+cannot imply no effect. Every attempted key write closes this owner after
+available observations, without reset, rollback or automatic retry. Public
+results retain all three snapshots and every peer, including unprobed peers.
+`observed_cohort_after_switch` establishes complete Basic observations only;
+these identify neither the active key nor its counters. `activation` stays
+`:unconfirmed`, including when the NCP security flag is true. Independent
+router/sleepy-device sequence and counter evidence remain necessary before
+claiming successful rotation. Backup/restore and continuity recovery remain
+separate obligations.
 
 ## Discovery and interview
 
@@ -318,6 +403,10 @@ Automatic OTA, Green Power proxy/sink behavior, arbitrary manufacturer codecs an
 
 WZG2-T1: bounded join/interview and repeated joins preserve identity. WZG2-T2: same IEEE/new short address versus different IEEE/same label. WZG2-T3: forged/replayed reports preserve the stack's security disposition. WZG2-T4: stale backup, cloned coordinator and unsupported cross-chip restore fail safely. WZG2-T5: sleepy reporting and exhausted downlink queues. WZG2-T6: ZCL typed-value, manufacturer-extension, malformed frame and per-record error vectors. WZG2-T7: partial migration/key rotation and explicit recovery without false global success. WZG2-T8: explicit source-guarded Bind/Unbind with qualified targets, separate NCP/peer outcomes, finite correlation and cleanup.
 
+WZG2-T9: explicit finite local joining/closing under fresh expected-network
+metadata and qualified consumer credential custody; distinguish admission,
+uncorrelated responses, local changes and physical enrollment/closure evidence.
+
 `interview_owner_test.exs` executes the software inspection subset of WZG2-T1
 and selected Basic record negatives of WZG2-T6. `routes_test.exs` and
 `routes_owner_test.exs` execute raw-identity/rejoin/conflict custody in WZG2-T2
@@ -362,5 +451,33 @@ both reply orders, NCP rejection, peer failure, unrelated/duplicate callbacks,
 absolute deadlines, caller/serial loss, redacted write faults and finite pair
 retirement. These execute the software subset of WZG2-T8, separate from
 physical destinations, binding-table truth and qualified power policy.
-Joining, qualified battery policy, physical rejoin/source security, network
-continuity and administration remain outstanding.
+`network_test.exs` and `network_owner_test.exs` execute finite raw metadata
+inspection and partial/changed observations under WZG2-01. They do not qualify
+the key/counter continuity or restore requirements of WZG2-02/WZG2-T4.
+`permit_join_test.exs` and `permit_join_owner_test.exs` execute the software
+subset of WZG2-T9: exact local request/indication fields, fresh expected-network
+checks, consumer custody authorization and refusal, finite horizons, distinct
+admission and queued indications, redacted faults and lifetime cleanup. They
+do not qualify resident keys/counters, insecure fallback, actual enrollment
+or closing on a physical NCP. Qualified joining, battery policy, physical
+rejoin/source security, network continuity and other administration remain
+outstanding.
+
+`channel_migration_test.exs` and `channel_migration_owner_test.exs` execute the
+finite channel-change software subset of WZG2-T7: exact SDK bytes, before/after
+network checks, consumer custody authorization, current peer routes, distinct
+NCP/APS/ZCL observations and per-peer partial results. They exercise missing
+peers without global success, record/source/header negatives, bounded tokens,
+authorization/settling budgets, queued expiry, caller loss, close/serial loss
+and redacted callback faults. Exact firmware, current update-ID/pacing and
+resident security qualification, real router/sleepy migration, physical key rotation
+and explicit continuity recovery remain required.
+
+`key_rotation_test.exs` and `key_rotation_owner_test.exs` execute the finite
+key-update/switch software subset of WZG2-T7: exact SDK layouts, private key
+custody, two authorization phases, three fresh metadata snapshots and per-peer
+partial results under one deadline. They exercise private callback misuse and
+redaction, absent adapters, delay reservation, late dispatch, caller loss,
+write faults, malformed metadata, source/header/record negatives and serial
+loss without implying activation. Installed key/counter behavior, distribution,
+physical per-device activation and explicit continuity recovery remain open.

@@ -36,6 +36,43 @@ catalogue records implementation status separately.
 - Keep keys and counters in consumer-controlled custody. Do not clone a live
   coordinator or restore an old counter state. A 16-bit network address is
   only a route; use stable IEEE identity for durable device records.
+- Use `Wotex.Zigbee.inspect_network/2` for bounded coordinator/network metadata.
+  Retain both readings, their times, partial issues and matching/changed state.
+  Reserved values and successful inspection do not establish a commissioned
+  network, credential/counter continuity or reachability. Keys and counters
+  require separate qualified custody; inspection never reads or changes them.
+- Request local permit-join or closure explicitly with `Wotex.Zigbee.PermitJoin`
+  and `Wotex.Zigbee.permit_join/4`. Each call checks fresh expected-network
+  metadata before consulting an explicit `Wotex.Zigbee.Credentials` port.
+  Keep resident keys/counters and Trust Center/install-code/fallback policy
+  in qualified consumer custody. Return only a finite authorization horizon,
+  with no private material. Zero requests closure; 1–254 seconds requests a
+  bounded window. Inspect NCP admission and separately drain local changes
+  and management responses with their drop count. An uncorrelated prior reply
+  cannot confirm a later close; admission proves no physical joining state
+  or secure enrollment. Qualify actual closure and timing on the exact NCP.
+- Request channel migration explicitly with `Wotex.Zigbee.ChannelMigration`
+  and `Wotex.Zigbee.migrate_channel/5`, supplying current peer custody and
+  credential authorization. Qualify firmware network-manager support,
+  update-ID headroom and pacing, installed settling delay and resident
+  security. Keep target-channel metadata, local-copy admission and each peer's
+  NCP/APS/ZCL observations separate. Missing peers remain partial; a responsive
+  cohort proves no whole-network or sleepy-device migration. Any administrative
+  dispatch ends the owner after observation; reopen and adopt fresh custody.
+  Recovery requires its own explicit procedure. Never
+  infer rollback or absence of physical effect from a failed local-copy send.
+- Request key rotation explicitly with `Wotex.Zigbee.KeyRotation` and
+  `Wotex.Zigbee.rotate_key/5`. Qualify current sequence, unique fresh key,
+  counters, exact firmware/security/distribution policy and both delays in
+  consumer custody. Authorize update and switch separately. Obtain the key
+  only in `Credentials.with_network_key/4`, invoke its private writer once
+  synchronously in the owner process, then return dispatch status without key
+  bytes. Keep serial diagnostics private. Retain both admissions, all three
+  metadata snapshots and every peer's partial observations. Basic responses
+  identify no protecting key; `activation` remains unconfirmed. Failed sends
+  can still change local key state. Any key-write attempt ends the epoch;
+  reopen and adopt fresh custody. No retry, rollback, counter reset or
+  re-enrollment follows automatically.
 - Treat incoming frames, manufacturer strings and security metadata as
   untrusted observations. Apply product and Thing policy outside this
   package. A successful radio command does not prove physical effect.

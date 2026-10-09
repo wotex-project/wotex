@@ -30,6 +30,9 @@ defmodule Wotex.Zigbee.Error do
           | :route_conflict
           | :route_expired
           | :route_mismatch
+          | :network_mismatch
+          | :credentials
+          | :credential_denied
 
   @type t :: %__MODULE__{kind: kind(), operation: atom()}
 

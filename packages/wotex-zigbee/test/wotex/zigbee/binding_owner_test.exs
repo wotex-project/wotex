@@ -28,6 +28,7 @@ defmodule Wotex.Zigbee.BindingOwnerTest do
     wait_state(handle.owner, &(&1.binding.flow.response != nil))
     assert Task.yield(call, 10) == nil
     assert {:error, %Error{kind: :overload}} = Zigbee.active_endpoints(handle, @route, 1_000)
+    assert {:error, %Error{kind: :overload}} = Zigbee.inspect_network(handle, 1_000)
     assert {:ok, %{events: []}} = Zigbee.drain_events(handle, 128)
     send(peer, {:inject, wire(0x65, 0x21, <<0>>)})
     assert {:ok, %Result{outcome: :peer_reported_success, issue: nil} = result} = Task.await(call)
@@ -49,6 +50,7 @@ defmodule Wotex.Zigbee.BindingOwnerTest do
     wait_state(handle.owner, &(&1.binding.flow.admission != nil))
     assert :sys.get_state(handle.owner).pending == nil
     assert Task.yield(call, 10) == nil
+    assert {:error, %Error{kind: :overload}} = Zigbee.inspect_network(handle, 1_000)
     assert {:error, %Error{kind: :overload}} = Zigbee.active_endpoints(handle, @route, 1_000)
     assert {:error, %Error{kind: :overload}} = Zigbee.change_binding(handle, routes, bind, 1_000)
     {:ok, interview} = Interview.new(peer_ieee: @ieee, route_address: @route, source_endpoint: 2)
@@ -234,6 +236,37 @@ defmodule Wotex.Zigbee.BindingOwnerTest do
 
       Process.exit(caller, :kill)
       assert_receive {:DOWN, ^monitor, :process, _, :normal}
+      assert_receive {:binding_serial_close, ^peer}
+      refute_receive {:binding_serial_close, ^peer}, 10
+    end
+  end
+
+  test "neither final reply can finish a binding after its caller dies" do
+    for final <- [:callback, :admission] do
+      {handle, peer, routes} = interviewed_peer()
+      owner_monitor = Process.monitor(handle.owner)
+      caller = spawn(fn -> Zigbee.change_binding(handle, routes, request(), 1_000) end)
+      assert_receive {:serial_write, <<0xFE, _, 0x25, 0x21, _::binary>>}
+
+      case final do
+        :callback ->
+          send(peer, {:inject, wire(0x65, 0x21, <<0>>)})
+          wait_state(handle.owner, &(&1.binding.flow.admission != nil))
+
+        :admission ->
+          send(peer, {:inject, callback(:bind, 0)})
+          wait_state(handle.owner, &(&1.binding.flow.response != nil))
+      end
+
+      :ok = :sys.suspend(handle.owner)
+      response = if final == :callback, do: callback(:bind, 0), else: wire(0x65, 0x21, <<0>>)
+      send(peer, {:inject, response})
+      wait_message(handle.owner, fn message -> match?({:zigbee_serial, _, _}, message) end)
+      caller_monitor = Process.monitor(caller)
+      Process.exit(caller, :kill)
+      assert_receive {:DOWN, ^caller_monitor, :process, ^caller, :killed}
+      :ok = :sys.resume(handle.owner)
+      assert_receive {:DOWN, ^owner_monitor, :process, _, :normal}
       assert_receive {:binding_serial_close, ^peer}
       refute_receive {:binding_serial_close, ^peer}, 10
     end

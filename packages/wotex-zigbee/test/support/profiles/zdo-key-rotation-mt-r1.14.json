@@ -1,0 +1,104 @@
+{
+  "profile": "TI CC26x2 SDK 2.30.00.34 finite broadcast network-key update/switch over SWRA198 revision 1.14",
+  "sources": {
+    "sdk": {
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/simplelink_cc26x2_sdk_2_30_00_34.exe",
+      "sha256": "cebe6961f35b053375b42045d986d3828515e19eff765b745d0d807e1127341d"
+    },
+    "monitor_test": {
+      "document": "SWRA198 revision 1.14",
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/docs/zstack/Z-Stack%20Monitor%20and%20Test%20API.pdf",
+      "sha256": "1e4924ec73ea2c71fb36971b4fddc5eef34cbe4fdd53ca66f295cda3411ffb13",
+      "section": "3.12.1.46\u201347"
+    },
+    "sdk_files": [
+      {
+        "path": "source/ti/zstack/mt/mt.h",
+        "sha256": "75ed3847c388165a912d2f44f0dcc1ecdd5a7bb30bddcb7269712fb25c7baaf8"
+      },
+      {
+        "path": "source/ti/zstack/mt/mt_zdo.c",
+        "sha256": "263edbd0de076c4f2bfcd5de1709378467adeb9590e0d82b4f2c7fddefa5ee98"
+      },
+      {
+        "path": "source/ti/zstack/stack/zdo/zd_sec_mgr.c",
+        "sha256": "399aeec3de7ab6f02ae8b4af788e7ec7c5cedb599cf78317c4e259c25c14e537"
+      },
+      {
+        "path": "source/ti/zstack/stack/sec/ssp.h",
+        "sha256": "ffe247503e82dce3d4a2d48f17a60013f5fb7422c3c3daa8de2de7d0cb9fd571"
+      }
+    ]
+  },
+  "adoption": {
+    "update": {
+      "subsystem": 5,
+      "id": 78,
+      "payload_bytes": 19,
+      "destination": 65533,
+      "layout": "destination LE16, next sequence uint8, transient network key 16 octets; no stored key vector"
+    },
+    "switch": {
+      "subsystem": 5,
+      "id": 79,
+      "payload_bytes": 3,
+      "destination": 65533
+    },
+    "switch_requests": [
+      {
+        "next_sequence": 1,
+        "hex": "fe03254ffdff016a"
+      },
+      {
+        "next_sequence": 255,
+        "hex": "fe03254ffdffff94"
+      }
+    ],
+    "replies": [
+      {
+        "phase": "update",
+        "id": 78,
+        "hex": "fe01654e002a"
+      },
+      {
+        "phase": "switch",
+        "id": 79,
+        "hex": "fe01654f002b"
+      }
+    ],
+    "source_review": [
+      "mt.h defines update 0x4E and switch 0x4F. The MT parser accepts destination LE16 and sequence byte, passes the remaining update bytes as the key, and returns one status byte under the same command ID. Both commands require MT_ZDO_EXTENSIONS and a coordinator build.",
+      "ssp.h defines SEC_KEY_LEN as 16 octets. The PDF update grid labels a 128-byte key and 0x83 payload; those values confuse bits and bytes. The finite host update payload is 2+1+16=19 octets.",
+      "ZDSecMgrUpdateNwkKey sets nwkSecure TRUE. For standard-security broadcasts it sets apsSecure FALSE. It invokes SSP_UpdateNwkKey and NV update after the transport attempt regardless of the send status. A failed SRSP does not prove no local alternate-key change.",
+      "ZDSecMgrSwitchNwkKey sets the local switch flag/index for broadcast destinations regardless of the send status and requests NV update. A failed SRSP does not prove absence of a scheduled local switch.",
+      "The reviewed SSP header declares alternate-key update, active-key switch and active-key/counter values. These reviewed files do not establish SSP implementation behavior. Activation timing, counter behavior, installed security mode and binary firmware must be independently qualified; no Basic response proves which key protected it."
+    ],
+    "host_workflow": "fresh metadata/current peer routes, update grant, one-use transient private-key writer, update status, qualified distribution delay, fresh metadata, separate switch grant, switch status, qualified settling delay, fresh metadata and one retired-token Basic read per selected peer",
+    "limits": {
+      "peers": 32,
+      "current_sequence": [
+        0,
+        254
+      ],
+      "next_sequence": "strict integer current_sequence+1, no wrap",
+      "distribution_ms": [
+        1,
+        30000
+      ],
+      "settle_ms": [
+        1,
+        30000
+      ],
+      "peer_timeout_ms": [
+        1,
+        60000
+      ],
+      "owner_timeout_ms": [
+        1,
+        60000
+      ]
+    },
+    "qualification": "source and scripted serial evidence only; exact firmware/build flags, adopted Zigbee core revision, current active sequence, unique fresh key, security policy, distribution/pacing/delays, counter continuity and physical router/sleepy activation require consumer qualification",
+    "excluded": "public key-returning API, key persistence in owner state/results, unicast or fallback distribution, retries, rollback, counter reset, sequence wrap, automatic re-enrollment and activation success claims"
+  }
+}

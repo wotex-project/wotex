@@ -15,7 +15,7 @@ defmodule Wotex.Zigbee.Event do
   custody fencing and do not authenticate network origin or radio freshness.
   """
 
-  alias Wotex.Zigbee.{Binding, Frame, ZDO}
+  alias Wotex.Zigbee.{Binding, Frame, PermitJoin, ZDO}
 
   @enforce_keys [:kind, :subsystem, :id, :payload]
   defstruct [
@@ -47,6 +47,8 @@ defmodule Wotex.Zigbee.Event do
             | :zdo_simple_descriptor
             | :zdo_bind
             | :zdo_unbind
+            | :zdo_permit_join
+            | :permit_join_indication
             | :zdo_indication
             | :malformed_indication
             | :unknown_indication,
@@ -70,6 +72,8 @@ defmodule Wotex.Zigbee.Event do
             | ZDO.ieee_response()
             | ZDO.node_response()
             | Binding.response()
+            | PermitJoin.response()
+            | PermitJoin.indication()
             | nil
         }
 
@@ -132,6 +136,25 @@ defmodule Wotex.Zigbee.Event do
 
   def from_frame(%Frame{type: :areq, subsystem: 5, id: 0xA2} = frame),
     do: zdo_event(frame, :zdo_unbind, Binding.response(:unbind, frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0xB6} = frame),
+    do: zdo_event(frame, :zdo_permit_join, PermitJoin.response(frame.payload))
+
+  def from_frame(%Frame{type: :areq, subsystem: 5, id: 0xCB} = frame) do
+    case PermitJoin.indication(frame.payload) do
+      {:ok, indication} ->
+        %__MODULE__{
+          kind: :permit_join_indication,
+          subsystem: 5,
+          id: 0xCB,
+          payload: frame.payload,
+          zdo: indication
+        }
+
+      {:error, _} ->
+        zdo_event(frame, :permit_join_indication, {:error, nil})
+    end
+  end
 
   def from_frame(%Frame{type: :areq, subsystem: 5} = frame),
     do: %__MODULE__{kind: :zdo_indication, subsystem: 5, id: frame.id, payload: frame.payload}

@@ -48,6 +48,19 @@ the package is loaded.
 - Explicit `ZDO_BIND_REQ` and `ZDO_UNBIND_REQ` workflows check current source
   custody and retain NCP admission separately from a matched source/status
   callback. IEEE and group destinations use the exact SDK's fixed MT layout.
+- Explicit `UTIL_GET_DEVICE_INFO` and `ZDO_EXT_NWK_INFO` inspection retains
+  coordinator identity, capability/state bytes, associated routes and
+  PAN/extended PAN, parent and channel metadata under one owner deadline.
+- Explicit local permit-join/closure uses fresh expected-network readings and
+  a consumer credential custody port, with finite authorization and duration.
+  NCP admission and separately queued joining-state indications stay distinct.
+- Explicit channel migration checks network and peer custody, authorizes through
+  the consumer port, and retains target-channel metadata and per-peer Basic
+  observations with partial outcomes. Dispatch ends the owner after observation.
+
+- Explicit key rotation uses separately authorized update and switch phases,
+  a one-use private key writer, three metadata snapshots and per-peer Basic
+  observations. Activation remains unconfirmed pending independent evidence.
 
 `Wotex.Zigbee.Serial.CircuitsUART` is the included macOS/Linux serial adapter.
 It uses `Circuits.UART` and requires the coordinator's USB serial number,
@@ -229,6 +242,99 @@ custody are required for reuse. This host fence does not establish radio
 freshness. Timeout or caller loss after dispatch closes the owner without
 resetting the network. Interview, reporting and Check-in observation never
 create a binding automatically.
+
+Call `Wotex.Zigbee.inspect_network/2` for a bounded pair of coordinator/device
+and network metadata readings. `Wotex.Zigbee.Network.Snapshot` preserves each
+complete payload, decoded value and owner observation time. The first reading
+includes raw coordinator IEEE, short address, capability bits, device state
+and at most 64 associated routes. The second includes short address, state,
+PAN/extended PAN, parent addresses and channel using the exact SDK layout.
+Unknown bits, reserved/uninitialized values and duplicate routes stay visible.
+
+`:observed` means both replies were obtained within the deadline; `:matching`
+or `:changed` compares their short address and device state. These sequential
+readings supply no atomic network image, credential or counter continuity,
+commissioning admission or reachability proof. A failed device status stops
+inspection with a partial result. Timeout or loss retains available readings
+and closes the owner after dispatch. Unrelated AREQs remain in the bounded
+queue. Inspection reads no keys, opens no joining and changes no configuration.
+
+`Wotex.Zigbee.permit_join/4` is the explicit local joining seam. Construct
+`Wotex.Zigbee.PermitJoin` with the expected coordinator IEEE, extended PAN,
+PAN, channel, duration, TCSignificance byte and host correlation. Zero requests
+closure; 1–254 seconds requests a finite window. Remote/broadcast targets and
+255 are unsupported. The owner reads fresh metadata before every request,
+checks that expected network and calls an explicit `Wotex.Zigbee.Credentials`
+adapter through its opaque consumer-owned handle. The consumer qualifies
+resident keys/counters, Trust Center policy, install-code support and any
+insecure enrollment fallback. Keys and counters are never returned to this API.
+
+The credential adapter's finite monotonic horizon reserves the requested
+duration before dispatch and can shorten the original deadline. It must return
+within the supplied budget. Known expiry, denial or mismatch before the joining
+write leaves the owner usable; loss or timeout with an outstanding command
+ends its epoch. `Wotex.Zigbee.PermitJoin.Result` retains available readings and
+NCP admission. Drain management responses and local duration-change indications
+separately, preserving their owner time/sequence and dropped-event count.
+Those fields carry no request token, so a prior response cannot confirm a
+later close. Admission alone proves no open/closed window or secure enrollment;
+physical timing, closure and security remain qualification requirements.
+
+`Wotex.Zigbee.migrate_channel/5` is the explicit channel-change seam. Supply
+`Wotex.Zigbee.ChannelMigration` with the expected network, a different channel,
+a qualified settling delay, one per-peer observation budget and 1–32 peers.
+Each selected peer declares raw IEEE, current route and local/Basic server
+endpoints. Supply the current `Wotex.Zigbee.Routes` table and an explicit
+credential custody port. The adapter must qualify firmware network-manager
+support, current update-ID headroom and administrative pacing, resident
+security and the delay against the installed broadcast delivery timer.
+
+The owner checks fresh network metadata, authorizes, sends one broadcast with
+a local copy, waits once and checks the target local channel. It then reads
+Basic ZCLVersion once per selected peer with fresh AF/ZCL tokens. The horizon
+reserves settling time for dispatch and bounds observations. Source/header
+matching, NCP admission, APS confirmation and ZCL records remain separate in
+`Wotex.Zigbee.ChannelMigration.Result`. A missing application response may
+remain partial while a later peer responds; an unanswered SREQ closes the
+epoch because its reply has no independent correlation token.
+
+`observed_cohort` covers only the requested cohort. It proves no whole-network
+migration, independently verified peer radio channel, sleepy-device delivery
+or key/counter continuity. The SDK's reply reports the local-copy send status;
+it proves no broadcast delivery, even when nonzero. Any administrative
+dispatch ends the owner after observations. Reopen and adopt fresh custody
+before further traffic. The workflow performs no rollback, retry, rekey,
+factory reset or mass re-enrollment.
+
+`Wotex.Zigbee.rotate_key/5` takes the handle, credential port, current route
+table, an inert `Wotex.Zigbee.KeyRotation` request and finite timeout. Build
+that request with expected coordinator IEEE/extended PAN/PAN/channel, current
+sequence `0..254`, integer next sequence `current + 1`, qualified
+`distribution_ms` and `settle_ms` (`1..30,000` each), per-peer timeout
+(`1..60,000`), `1..32` peers in the migration shape and host correlation.
+The consumer qualifies the exact firmware/build flags, active sequence,
+fresh key, security/distribution policy, counters, pacing and both delays.
+
+The credential adapter authorizes `:update` and `:switch` separately against
+fresh network metadata. Its optional `with_network_key/4` obtains the new key
+privately and invokes the supplied one-use writer synchronously in the owner
+process, then returns `:ok` only after successful dispatch. The writer takes
+16 nonzero/non-FF octets, cannot dispatch twice or survive callback return,
+and rejects foreign processes. No key enters public requests/results or owner
+state; transient serial bytes still require private adapter handling.
+Authorization-only adapters refuse key rotation. Callback faults are redacted.
+
+One update, distribution delay, fresh inspection/authorization, switch,
+settling delay and fresh inspection precede per-peer Basic observations.
+Dispatch reserves the qualified delays within the shortened caller/custody/
+authorization budget. `KeyRotation.Result` preserves three snapshots, both
+admissions and every selected peer. The SDK may change its local alternate key
+or schedule a switch despite send failure. Any key-write attempt closes this
+owner after available observations; no retry, rollback or counter reset occurs.
+`observed_cohort_after_switch` covers Basic responses only. `activation` remains
+`:unconfirmed` because neither metadata nor those responses identify the active
+key or establish counter continuity. Qualify activation independently, then
+reopen and adopt fresh custody before further traffic.
 
 ## Development
 

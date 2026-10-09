@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "source": {
+    "organization": "Texas Instruments",
+    "document": "SWRA198 Monitor/Test API",
+    "revision": "1.14",
+    "sdk": "SimpleLink CC26x2 SDK 2.30.00.34",
+    "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/docs/zstack/Z-Stack%20Monitor%20and%20Test%20API.pdf",
+    "sha256": "1e4924ec73ea2c71fb36971b4fddc5eef34cbe4fdd53ca66f295cda3411ffb13",
+    "sections": [
+      "3.12.1.22",
+      "3.12.2.21",
+      "3.12.2.33"
+    ],
+    "sdk_source": {
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/simplelink_cc26x2_sdk_2_30_00_34.exe",
+      "sha256": "cebe6961f35b053375b42045d986d3828515e19eff765b745d0d807e1127341d",
+      "files": [
+        {
+          "path": "source/ti/zstack/mt/mt_zdo.c",
+          "sha256": "263edbd0de076c4f2bfcd5de1709378467adeb9590e0d82b4f2c7fddefa5ee98",
+          "functions": [
+            "MT_ZdoMgmtPermitJoinRequest",
+            "MT_ZdoPermitJoinInd"
+          ]
+        },
+        {
+          "path": "source/ti/zstack/stack/zdo/zd_profile.c",
+          "sha256": "9cabc384496aa1770429b4dd4a37699e76ead478e31596abd89b596473625230",
+          "functions": [
+            "ZDP_MgmtPermitJoinReq"
+          ]
+        },
+        {
+          "path": "source/ti/zstack/stack/zdo/zd_object.c",
+          "sha256": "cfa708a0b9fcfa0edc390411e0900a67aedf8f6ecea1b103b1d29ccec5f87353",
+          "functions": [
+            "ZDO_ProcessMgmtPermitJoinReq"
+          ]
+        },
+        {
+          "path": "source/ti/zstack/stack/zdo/zd_app.h",
+          "sha256": "8d0470b191e3579f751ade94e57782dedacd47761851793dcb3ef4c369467bf9",
+          "functions": [
+            "devStates_t"
+          ]
+        }
+      ],
+      "review": "The exact MT parser accepts five bytes: address mode, uint16 destination, duration and TCSignificance. This finite profile fixes mode 2 and local coordinator address 0, explicitly accepts duration 0..254 and significance 0 or 1. The SDK receiver ignores TCSignificance per its R21 comment and clamps duration 255 to 254; the host refuses 255 rather than relying on coercion. The command suppresses a synchronous local change indication while its call is active; later local changes can still be indicated. Management response carries source/status without duration or transaction; local indication carries duration only. Neither is correlated to an opening/closing request. The generic MT send path is excluded; the pinned ZDP_SendData source does not return its declared afStatus_t. DEV_ZB_COORD is enum value 9. No SDK source is redistributed and no complete Zigbee core conformance is claimed."
+    }
+  },
+  "adoption": {
+    "claim": "finite explicit local permit-join with fresh metadata and consumer credential authorization; NCP admission and separately queued change/management indications only; no secure enrollment or physical closure claim",
+    "duration_s_max": 254,
+    "destination": {
+      "address_mode": 2,
+      "network_address": 0
+    },
+    "requests": [
+      {
+        "duration_s": 60,
+        "tc_significance": 1,
+        "hex": "fe0525360200003c0129"
+      },
+      {
+        "duration_s": 0,
+        "tc_significance": 1,
+        "hex": "fe052536020000000115"
+      },
+      {
+        "duration_s": 254,
+        "tc_significance": 1,
+        "hex": "fe052536020000fe01eb"
+      },
+      {
+        "duration_s": 60,
+        "tc_significance": 0,
+        "hex": "fe0525360200003c0028"
+      }
+    ]
+  },
+  "implementation": [
+    "Wotex.Zigbee.PermitJoin",
+    "Wotex.Zigbee.PermitJoin.Result",
+    "Wotex.Zigbee.Credentials",
+    "Wotex.Zigbee.Credentials.PortCall",
+    "Wotex.Zigbee.Owner",
+    "Wotex.Zigbee.Event"
+  ],
+  "evidence": [
+    "test/wotex/zigbee/permit_join_test.exs",
+    "test/wotex/zigbee/permit_join_owner_test.exs",
+    "test/support/credentials.ex",
+    "test/support/permit_serial.ex"
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "profile": "TI CC26x2 SDK 2.30.00.34 finite channel migration over SWRA198 revision 1.14",
+  "sources": {
+    "sdk": {
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/simplelink_cc26x2_sdk_2_30_00_34.exe",
+      "sha256": "cebe6961f35b053375b42045d986d3828515e19eff765b745d0d807e1127341d"
+    },
+    "monitor_test": {
+      "document": "SWRA198 revision 1.14",
+      "url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc26x2_sdk/2.30.00.34/exports/docs/zstack/Z-Stack%20Monitor%20and%20Test%20API.pdf",
+      "sha256": "1e4924ec73ea2c71fb36971b4fddc5eef34cbe4fdd53ca66f295cda3411ffb13",
+      "section": "3.12.1.23"
+    },
+    "sdk_files": [
+      {
+        "path": "source/ti/zstack/mt/mt_zdo.c",
+        "sha256": "263edbd0de076c4f2bfcd5de1709378467adeb9590e0d82b4f2c7fddefa5ee98"
+      },
+      {
+        "path": "source/ti/zstack/stack/zdo/zd_profile.c",
+        "sha256": "9cabc384496aa1770429b4dd4a37699e76ead478e31596abd89b596473625230"
+      },
+      {
+        "path": "source/ti/zstack/stack/zdo/zd_nwk_mgr.c",
+        "sha256": "60eed981f822355d287a232c1b71bddb5bc522f7e511fd6f6a08d2b873925659"
+      },
+      {
+        "path": "source/ti/zstack/stack/zdo/zd_nwk_mgr.h",
+        "sha256": "d1a500e601e40a7552730c70b1ef3ce3d1a1169c60f5d5c3864282a27cd73f18"
+      },
+      {
+        "path": "source/ti/zstack/stack/sys/zglobals.h",
+        "sha256": "efea3aa83fa01a937c1a03b86bdca9f04c37035bb1a522a15ec3ae7fc85b8cde"
+      },
+      {
+        "path": "source/ti/zstack/osal/src/inc/zcomdef.h",
+        "sha256": "c52f420fc1e0b950f44f6f9ed8c1415f336edcffd7bd4dd944d579964080cafd"
+      }
+    ]
+  },
+  "adoption": {
+    "request": {
+      "subsystem": 5,
+      "id": 55,
+      "payload_bytes": 11,
+      "destination": 65533,
+      "address_mode": 15,
+      "scan_duration": 254,
+      "scan_count": 0,
+      "network_manager_address": 0,
+      "channel_mask": "exactly one bit for the selected channel 11..26"
+    },
+    "requests": [
+      {
+        "target_channel": 11,
+        "hex": "fe0b2537fdff0f00080000fe000000e2"
+      },
+      {
+        "target_channel": 20,
+        "hex": "fe0b2537fdff0f00001000fe000000fa"
+      },
+      {
+        "target_channel": 26,
+        "hex": "fe0b2537fdff0f00000004fe000000ee"
+      }
+    ],
+    "reply": {
+      "subsystem": 5,
+      "id": 55,
+      "payload_bytes": 1,
+      "meaning": "status of the local-copy send; the parser overwrites the earlier broadcast send status"
+    },
+    "source_review": [
+      "MT_ZdoMgmtNwkUpdateRequest assigns the wire address mode directly. zcomdef.h defines AddrBroadcast as 15 (0x0F), contrary to the PDF table value 0xFF. The parser echoes the request command ID 0x37, contrary to the PDF SRSP grid value 0x36.",
+      "Broadcast mode sends the request once to 0xFFFD, then sends a unicast copy to the local NIB address. Only the final return value reaches SRSP.",
+      "ZDP_MgmtNwkUpdateReq encodes mask, 0xFE and the SDK-selected current nwkUpdateId+1. ScanCount and network-manager address are not included in this channel-change ZDO payload.",
+      "ZDNwkMgr_ProcessMgmtNwkUpdateReq requires the incoming update ID to be numerically greater, sets it and schedules a switch when the channel differs. The visible comparison supplies no wrap recovery at current ID 255.",
+      "The channel-change event updates NIB channel, calls ZMacSetReq, requests NV saving and resets transmission statistics. There is no channel-migration peer completion callback.",
+      "ZDNWKMGR_BCAST_DELIVERY_TIME is NIB.BroadcastDeliveryTime times 100ms; BCAST_DELIVERY_TIME defaults to 30 and is build-overridable. The host requires an explicitly qualified delay rather than adopting a default as installed-firmware proof."
+    ],
+    "host_workflow": "fresh metadata, current consumer authorization, one broadcast/local-copy command, one explicit delay, fresh target-channel metadata, one token-retired revision 8 Basic ZCLVersion read per currently custodied peer",
+    "limits": {
+      "peers": 32,
+      "settle_ms": [
+        1,
+        30000
+      ],
+      "peer_timeout_ms": [
+        1,
+        60000
+      ],
+      "owner_timeout_ms": [
+        1,
+        60000
+      ]
+    },
+    "qualification": "source and scripted serial evidence only; exact firmware artifact/build, core Zigbee revision, network-manager support, update-ID headroom and pacing, installed broadcast delay, keys/counters, physical peer migration and sleepy recovery require consumer qualification",
+    "excluded": "energy scans, manager reassignment, unicast administration, arbitrary channel masks, automatic retry/rollback/rekey/reset and whole-network success claims"
+  }
+}

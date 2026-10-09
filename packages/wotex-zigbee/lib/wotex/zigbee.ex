@@ -8,9 +8,9 @@ defmodule Wotex.Zigbee do
   supervise `child_spec/2` and obtain its handle with `handle/1`.
 
   The admitted software profile sends bounded ZDO descriptor requests, AF
-  data requests and explicit source-guarded Bind/Unbind workflows. Their
-  immediate SRSPs prove NCP admission only. Later ZDO,
-  APS and application indications are separate bounded events. No implicit
+  data requests, explicit Bind/Unbind, credentialed joining and channel migration.
+  Their immediate SRSPs prove NCP admission only. Later ZDO, APS and
+  application indications are separate bounded events. No implicit
   network formation, reset, restore or retry occurs.
 
   `Wotex.Zigbee.DataRequest` keeps an interviewed EUI-64 peer identity and
@@ -25,15 +25,20 @@ defmodule Wotex.Zigbee do
 
   alias Wotex.Zigbee.{
     Binding,
+    ChannelMigration,
     Command,
     Config,
+    Credentials,
     DataRequest,
     Downlinks,
     Error,
     Event,
     Handle,
     Interview,
+    KeyRotation,
+    Network,
     Owner,
+    PermitJoin,
     Reply,
     Routes
   }
@@ -99,6 +104,91 @@ defmodule Wotex.Zigbee do
           result(Binding.Result.t())
   def change_binding(handle, routes, request, timeout),
     do: Owner.call(handle, :binding, [routes, request, timeout])
+
+  @doc """
+  Reads the coordinator's bounded device and network metadata under one deadline.
+
+  `Wotex.Zigbee.Network.Snapshot` preserves both exact replies, observation
+  times, failed status, partial issues and changed route/state. The owner
+  holds one admission slot and caller monitor across both queries. Unrelated
+  indications remain queued. Expiry before dispatch leaves the owner usable;
+  timeout, malformed reply, serial failure or caller loss after dispatch
+  ends the epoch. No query reads keys, opens joining or changes the network.
+  Sequential matching metadata supplies no atomic or credential continuity
+  proof. Qualify the exact firmware and consumer custody separately.
+  """
+  @spec inspect_network(Handle.t(), pos_integer()) :: result(Network.Snapshot.t())
+  def inspect_network(handle, timeout), do: Owner.call(handle, :network, [timeout])
+
+  @doc """
+  Explicitly requests local permit-join or closure through consumer credential custody.
+
+  Fresh device/network readings must match `Wotex.Zigbee.PermitJoin` before
+  the supplied `Wotex.Zigbee.Credentials` port authorizes the exact request.
+  Its finite horizon shortens dispatch time by the requested duration. One
+  caller monitor and original deadline cover inspection, authorization and
+  command admission; no key bytes enter requests or results.
+
+  `Wotex.Zigbee.PermitJoin.Result` retains NCP admission only. Management
+  responses and local change indications remain independently drainable;
+  they lack a request token. Zero requests closure and 1–254 seconds request
+  bounded joining. This profile does not broadcast, form a network, restore
+  counters, change credentials or infer successful enrollment or closure.
+  """
+  @spec permit_join(Handle.t(), Credentials.t(), PermitJoin.t(), pos_integer()) ::
+          result(PermitJoin.Result.t())
+  def permit_join(handle, credentials, request, timeout),
+    do: Owner.call(handle, :permit_join, [credentials, request, timeout])
+
+  @doc """
+  Changes channel explicitly and observes a bounded, currently custodied peer cohort.
+
+  One deadline covers fresh expected-network metadata, consumer credential
+  authorization, one broadcast/local-copy request, one qualified settling
+  delay, target-channel metadata and one Basic read per selected peer. Each
+  probe uses a fresh retired AF/ZCL token. A missing application observation
+  may finish that peer and proceed; an unanswered SREQ ends the epoch because
+  its uncorrelated reply cannot be reused safely.
+
+  `Wotex.Zigbee.ChannelMigration.Result` retains local and per-peer partial
+  observations, original security flags and unprobed peers. It does not infer
+  whole-network migration or delivery to sleepy devices. Any administrative
+  dispatch ends this owner epoch after observations. Reopen and adopt fresh
+  custody before further operations. No rollback, retry, rekey or reset occurs.
+  The consumer qualifies firmware update-ID headroom, network-manager support,
+  administrative pacing, credentials and the requested settling delay.
+  """
+  @spec migrate_channel(
+          Handle.t(),
+          Credentials.t(),
+          Routes.t(),
+          ChannelMigration.t(),
+          pos_integer()
+        ) ::
+          result(ChannelMigration.Result.t())
+  def migrate_channel(handle, credentials, routes, request, timeout),
+    do: Owner.call(handle, :channel_migration, [credentials, routes, request, timeout])
+
+  @doc """
+  Explicitly updates and switches a network key through private consumer custody.
+
+  Fresh network metadata and current cohort custody precede update authorization.
+  A one-use owner-only callback sends the consumer's 16-byte key; no key enters
+  requests, results or stored owner state. After the qualified distribution
+  delay, fresh metadata and separate switch authorization precede one switch.
+  The receiver reserves both delays within finite horizons and retains one
+  original deadline and caller monitor through post-switch peer observations.
+
+  `Wotex.Zigbee.KeyRotation.Result` retains separate admissions, metadata and
+  per-peer partial observations. Basic responses identify no key sequence;
+  activation stays unconfirmed pending independent consumer qualification.
+  Any key-write attempt ends the epoch after observations, including failed
+  sends that can still change local key state. No rollback, retry or reset occurs.
+  """
+  @spec rotate_key(Handle.t(), Credentials.t(), Routes.t(), KeyRotation.t(), pos_integer()) ::
+          result(KeyRotation.Result.t())
+  def rotate_key(handle, credentials, routes, request, timeout),
+    do: Owner.call(handle, :key_rotation, [credentials, routes, request, timeout])
 
   @doc "Queries one route's IEEE address; NCP admission and its later identity response are distinct."
   @spec ieee_address(Handle.t(), non_neg_integer(), pos_integer()) :: result(Reply.t())

@@ -339,6 +339,43 @@ defmodule Wotex.Zigbee.InterviewOwnerTest do
     assert {:error, %Error{kind: :coordinator_lost}} = Zigbee.interview(handle, request(), 1_000)
   end
 
+  test "a queued reply cannot advance or finish an interview after its caller dies" do
+    for stage <- [:identity, :active] do
+      {handle, peer} = open()
+      owner_monitor = Process.monitor(handle.owner)
+      peer_monitor = Process.monitor(peer)
+      caller = spawn(fn -> Zigbee.interview(handle, request(), 1_000) end)
+
+      if stage == :active do
+        identity(peer)
+        respond_node(peer)
+        expect(0x25, 5, <<@route::little-16, @route::little-16>>)
+      else
+        expect(0x25, 1, <<@route::little-16, 0, 0>>)
+      end
+
+      :ok = :sys.suspend(handle.owner)
+
+      response =
+        if stage == :active do
+          wire(0x65, 5, <<0>>) <>
+            wire(0x45, 0x85, <<@route::little-16, 0, @route::little-16, 0>>)
+        else
+          wire(0x65, 1, <<0>>) <> wire(0x45, 0x81, ieee_payload())
+        end
+
+      inject(peer, response)
+      wait_messages(handle.owner)
+      caller_monitor = Process.monitor(caller)
+      Process.exit(caller, :kill)
+      assert_receive {:DOWN, ^caller_monitor, :process, ^caller, :killed}
+      :ok = :sys.resume(handle.owner)
+      assert_receive {:DOWN, ^owner_monitor, :process, _, :normal}
+      assert_receive {:DOWN, ^peer_monitor, :process, _, :normal}
+      refute_receive {:serial_write, _}, 10
+    end
+  end
+
   test "expired queued interviews perform no serial I/O and preserve a usable owner" do
     {handle, _} = open()
     :ok = :sys.suspend(handle.owner)
