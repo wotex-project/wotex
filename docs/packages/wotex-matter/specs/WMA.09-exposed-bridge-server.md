@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.22.0-target.
+Version: 0.23.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -178,6 +178,45 @@ initialize no platform or store, perform no network/window action and start no
 SDK server. Before releasing or replacing a successful owner, its caller MUST
 retire all borrowed provider references. Loading MUST NOT establish trusted
 attestation, commissioning, peer interoperability or certification.
+
+The internal SDK resource owner MUST borrow one successfully loaded bootstrap,
+unchanged configuration, request custody, receiver and explicit closed
+commissioning provider for its entire serialized lifetime. Its caller MUST
+initialize SDK memory. Initialization MUST refuse reused, closed or pending
+custody before filesystem or platform startup, resolve only the selected
+interface and open only the selected store mode. Pre-platform allocation
+failure MUST return a fixed no-memory error. After entering the locked store
+directory, partial platform/server startup MUST terminate with 70, without a
+successful process receipt.
+
+New-store startup MUST durably allocate every explicitly configured initial
+device identity before dynamic SDK registration. Reopen MUST restore exactly
+the compatible live mappings and MUST NOT allocate absent devices as a fallback.
+
+The owner MUST install its explicit credentials before platform startup and
+its configured public identity after platform startup but before server startup.
+Absent optional factory identity MUST return not-implemented without selecting
+SDK example values. Identity retirement MUST refuse service and preserve output.
+The Ethernet driver MUST inspect only its explicit externally configured
+interface, expose at most one bounded iterator entry and derive connected state
+from actual kernel UP/RUNNING flags. Sampling failure MUST refuse service;
+shutdown MUST prevent reopening. It MUST NOT discover, configure or retry a
+network connection.
+
+The owner MUST require an initially closed commissioning window, retain zero
+as closed or open exactly one configured 180–900-second startup window. SDK
+expiry MUST close that window without automatic reopening. Starting and stopping
+the event loop MUST be explicit, serialized and outside the SDK stack lock;
+stopping MUST join the loop from outside that loop. Initialization and final
+cleanup MUST acquire the SDK stack lock themselves. Cleanup MUST require a
+stopped loop and already closed, fully consumed request custody. It MUST close
+the window, retire endpoints/server and borrowed model/storage references,
+restore captured identity/attestation providers, install the explicit closed
+commissioning provider, shut down the platform, restore the original process
+directory and release the store lock. Cleanup failure or active destruction
+MUST terminate with 70 before a successful closed receipt. The resource owner
+alone MUST NOT establish Port readiness, authenticated request admission,
+consumer authorization, clock-rate qualification or independent-peer support.
 
 The bridge SDK logging hook MUST discard module, format and argument data
 without dereferencing, formatting, emitting or retaining it. The explicit

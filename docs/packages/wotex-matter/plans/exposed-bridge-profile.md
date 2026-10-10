@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.20.0. Finite WMA.09 implementation target. The
+Version: 1.21.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -327,7 +327,20 @@ cleared on every path. It installs no provider and starts no platform, store,
 network or server. A separate bridge hook discards SDK log inputs without
 formatting them. Its guarded normal/sanitizer loading fixture checks private
 file/refusal/allocation cleanup, copied signing, both unchanged provider pointers
-and exact output. Window ownership and process-host integration remain open.
+and exact output. An internal configured SDK resource owner installs those
+explicit credentials, public identity and externally configured interface,
+owns the locked store/process directory, dynamic endpoints and one closed or
+finite startup window. New mode commits the explicit initial device identities;
+reopen restores compatible mappings without creating absent devices. It starts
+and joins the loop explicitly; final cleanup
+requires closed/drained custody, retires SDK references, restores providers and
+the original directory, and releases the store lock. Reuse and unsafe lifecycle
+calls refuse service or terminate before a successful receipt. A separate guarded
+GN fixture checks fourteen cases in both modes, including exact/missing reopen
+mappings, actual 180-second window expiry and fixed diagnostics. Fatal cases
+establish no successful cleanup or
+leak finalization. Production Port startup, authenticated execution, actual
+clock-rate qualification and independent-peer support remain open.
 The model fixture includes no attestation private-key bytes
 or production credential claim. The selected peer is the pinned SDK's
 `examples/chip-tool:chip-tool`, independently built from the server.

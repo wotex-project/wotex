@@ -9,6 +9,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @codec "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-codec-test"
   @configuration "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-configuration-test"
   @bootstrap "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-bootstrap-test"
+  @lifecycle "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test"
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -103,6 +104,31 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   printf '\nbridge server exit: %s\n' "$actual"
   test "$actual" -eq "$expected"
   """
+  @lifecycle_cases [
+    {"normal", 0},
+    {"reopen", 0},
+    {"reopen-missing", 70},
+    {"window", 0},
+    {"expiry", 0},
+    {"closed", 0},
+    {"busy", 0},
+    {"interface", 0},
+    {"store-exists", 0},
+    {"store-locked", 0},
+    {"preflight-allocation", 0},
+    {"missing-finish", 70},
+    {"running-finish", 70},
+    {"unclosed-finish", 70}
+  ]
+  @lifecycle_exit_check """
+  expected=$1
+  duration=$2
+  shift 2
+  timeout "$duration" "$@"
+  actual=$?
+  printf '\\nbridge bootstrap exit: %s\\n' "$actual"
+  test "$actual" -eq "$expected"
+  """
 
   @spec arguments() :: String.t()
   def arguments do
@@ -168,7 +194,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             @target,
             @codec,
             @configuration,
-            @bootstrap
+            @bootstrap,
+            @lifecycle
           ],
           []
         )
@@ -190,6 +217,28 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
           )
 
         verify_bootstrap!(bootstrap_output)
+
+        lifecycle_cases =
+          for {mode, expected} <- @lifecycle_cases do
+            output =
+              inside.(
+                directory <> "-lifecycle-" <> mode,
+                [
+                  "/bin/sh",
+                  "-c",
+                  @lifecycle_exit_check,
+                  "bridge-bootstrap-test",
+                  Integer.to_string(expected),
+                  if(mode == "expiry", do: "190", else: "20"),
+                  "/work/" <> directory <> "/" <> @lifecycle,
+                  mode
+                ],
+                @environment
+              )
+
+            verify_lifecycle!(output, expected)
+            %{"mode" => mode, "exit_status" => expected}
+          end
 
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
@@ -288,6 +337,11 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
              "exit_status" => 0,
              "binary_sha256" =>
                SoftwareManifest.digest(Path.join([workspace, directory, @bootstrap]))
+           },
+           "lifecycle" => %{
+             "binary_sha256" =>
+               SoftwareManifest.digest(Path.join([workspace, directory, @lifecycle])),
+             "cases" => lifecycle_cases
            },
            "configuration" => %{
              "exit_status" => 0,
@@ -480,6 +534,17 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   def verify_bootstrap!(output) do
     unless output == "owned SDK bootstrap credential loading passed\n",
       do: Mix.raise("bridge_bootstrap_test_failed")
+
+    :ok
+  end
+
+  @spec verify_lifecycle!(binary(), integer()) :: :ok
+  def verify_lifecycle!(output, expected) do
+    receipt = if expected == 0, do: "owned SDK bootstrap resource lifecycle passed\n", else: ""
+
+    unless expected in [0, 70] and
+             output == receipt <> "\nbridge bootstrap exit: #{expected}\n",
+           do: Mix.raise("bridge_lifecycle_test_failed")
 
     :ok
   end

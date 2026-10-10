@@ -185,4 +185,48 @@ if (chip_build_tools) {
       "${chip_root}/src/platform",
     ]
   }
+  # Separate configured SDK resource lifecycle fixture; no consumer Port.
+  executable("wotex-matter-sdk-bridge-bootstrap-test") {
+    cflags = [
+      "-DCHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT=16",
+      "-isystem" + rebase_path("${chip_root}/src", root_build_dir),
+    ]
+    cflags_cc = [ "-std=c++17" ]
+    defines = [ "WOTEX_MATTER_BRIDGE_TESTING=1" ]
+    sources = [
+      "src/bridge_bootstrap.cpp",
+      "src/bridge_configuration.cpp",
+      "src/bridge_credentials.cpp",
+      "src/bridge_endpoint_model.cpp",
+      "src/bridge_endpoints.cpp",
+      "src/bridge_guard.cpp",
+      "src/bridge_handoff.cpp",
+      "src/bridge_handoff_owner.cpp",
+      "src/bridge_input.cpp",
+      "src/bridge_logging.cpp",
+      "src/bridge_output.cpp",
+      "src/bridge_private_file.cpp",
+      "src/bridge_replies.cpp",
+      "src/bridge_request_frame.cpp",
+      "src/bridge_requests.cpp",
+      "src/bridge_resources.cpp",
+      "src/bridge_server.cpp",
+      "src/bridge_storage.cpp",
+      "src/bridge_writes.cpp",
+      "src/sdk_storage.cpp",
+      "src/storage.cpp",
+      "testing/sdk_bridge_bootstrap_test.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [
+      ":bridge-model",
+      "${chip_root}/examples/platform/linux:linux-commissionable-data-provider",
+      "${chip_root}/src/app/clusters/bridged-device-basic-information-server",
+      "${chip_root}/src/app/server",
+      "${chip_root}/src/credentials",
+      "${chip_root}/src/lib",
+      "${chip_root}/src/platform",
+      "${chip_root}/src/setup_payload",
+    ]
+  }
 }

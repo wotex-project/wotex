@@ -77,6 +77,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   separate bridge profile. Its guarded `bridge_bootstrap_test.cpp` GN fixture
   tests loading, allocation/failure cleanup and provider preservation. Loading
   performs no provider installation, platform/server startup or network activity.
+- `native/include/wotex_matter/bridge_sdk_bootstrap.hpp`, `bridge_device_info.hpp`
+  and `bridge_ethernet.hpp`: configured internal SDK resource ownership after
+  explicit private loading, public identity/interface boundaries, finite window
+  expiry and joined store/provider cleanup. Separate guarded SDK lifecycle
+  fixtures verify fixed receipts in normal/sanitizer builds. Production Port
+  startup, authenticated dispatch and clock-rate qualification remain open.
 - `native/include/wotex_matter/bridge_control.hpp` and `native/src/bridge_input.cpp`:
   bounded first-frame open, pinned ready/closed receipts and generation-scoped
   close. `bridge_output.*` can explicitly complete an active frame before a

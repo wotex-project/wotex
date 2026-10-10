@@ -52,6 +52,30 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "SDK lifecycle receipts require fixed output and the actual expected exit" do
+    healthy = "owned SDK bootstrap resource lifecycle passed\n\nbridge bootstrap exit: 0\n"
+    fatal = "\nbridge bootstrap exit: 70\n"
+    assert :ok = SoftwareBridgeBuild.verify_lifecycle!(healthy, 0)
+    assert :ok = SoftwareBridgeBuild.verify_lifecycle!(fatal, 70)
+
+    for {output, expected} <- [
+          {"", 0},
+          {healthy, 70},
+          {fatal, 0},
+          {healthy <> healthy, 0},
+          {String.trim_trailing(healthy), 0},
+          {"caller payload\n" <> healthy, 0},
+          {"AddressSanitizer\n" <> healthy, 0},
+          {"LeakSanitizer\n" <> fatal, 70},
+          {"runtime error: fixture\n" <> healthy, 0},
+          {"\nbridge bootstrap exit: 74\n", 74}
+        ] do
+      assert_raise Mix.Error, "bridge_lifecycle_test_failed", fn ->
+        SoftwareBridgeBuild.verify_lifecycle!(output, expected)
+      end
+    end
+  end
+
   test "bootstrap loading receipt accepts only the exact fixed success output" do
     marker = "owned SDK bootstrap credential loading passed\n"
     assert :ok = SoftwareBridgeBuild.verify_bootstrap!(marker)

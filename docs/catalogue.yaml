@@ -272,7 +272,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.08-native-backend.md"
       - id: "WMA.09"
-        version: "0.22.0-target"
+        version: "0.23.0-target"
         implementation_status: "partial"
         path: "docs/packages/wotex-matter/specs/WMA.09-exposed-bridge-server.md"
   wotex-modbus:
