@@ -80,7 +80,8 @@ Repository-wide rules are in the root `AGENTS.md`.
 - `native/include/wotex_matter/bridge_sdk_bootstrap.hpp`, `bridge_device_info.hpp`
   and `bridge_ethernet.hpp`: configured internal SDK resource ownership after
   explicit private loading, public identity/interface boundaries, finite window
-  expiry and joined store/provider cleanup. Separate guarded SDK lifecycle
+  expiry and joined store/provider cleanup. The server binding stops discovery
+  and releases allocated advertisements before SDK memory shutdown. Separate guarded SDK lifecycle
   fixtures verify fixed receipts in normal/sanitizer builds. Production Port
   startup, authenticated dispatch and clock-rate qualification remain open.
 - `native/include/wotex_matter/bridge_control.hpp` and `native/src/bridge_input.cpp`:

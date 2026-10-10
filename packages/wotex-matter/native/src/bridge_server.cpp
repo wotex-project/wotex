@@ -8,6 +8,7 @@
 #include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/clusters/network-commissioning/CodegenInstance.h>
 #include <app/server/Server.h>
+#include <app/server/Dnssd.h>
 #include <app/util/endpoint-config-api.h>
 #include <credentials/DeviceAttestationCredsProvider.h>
 #include <data-model-providers/codegen/CodegenDataModelProvider.h>
@@ -182,6 +183,9 @@ class SdkBridgeServerBinding::Impl final {
     handoff_.Close();
     if (handoff_.pending() != 0) std::_Exit(kStartupFailureExit);
     if (initialized_) {
+      // Server shutdown closes the advertiser without releasing its records.
+      // Stop discovery while SDK memory and the borrowed fabric table are live.
+      chip::app::DnssdServer::Instance().StopServer();
       network_->Shutdown();
       network_.reset();
       chip::Server::GetInstance().Shutdown();

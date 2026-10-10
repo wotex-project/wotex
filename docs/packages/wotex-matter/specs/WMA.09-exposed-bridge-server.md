@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.24.0-target.
+Version: 0.25.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -58,8 +58,10 @@ credentials, the generated data-model provider, the network driver, interface
 and service port. Missing credentials or a model/vendor/product identity
 mismatch MUST prevent server initialization. The disabled model-generation
 endpoint MUST NOT be served. Each native process has one SDK server lifetime.
-Normal shutdown MUST stop the event loop before releasing SDK resources and
-retire global references to borrowed providers. A partial SDK initialization
+Normal shutdown MUST stop the event loop before releasing SDK resources,
+remove advertised services and their allocated records before SDK memory
+shutdown, and retire discovery references to the borrowed fabric table as well
+as global references to borrowed providers. A partial SDK initialization
 or poisoned store MUST terminate the native process before it can serve cached
 state; the outer owner MUST reap and classify that process without retrying a
 mutation.

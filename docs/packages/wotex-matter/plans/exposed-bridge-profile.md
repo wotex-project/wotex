@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.22.0. Finite WMA.09 implementation target. The
+Version: 1.23.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -333,11 +333,14 @@ owns the locked store/process directory, dynamic endpoints and one closed or
 finite startup window. New mode commits the explicit initial device identities;
 reopen restores compatible mappings without creating absent devices. It starts
 and joins the loop explicitly; final cleanup
-requires closed/drained custody, retires SDK references, restores providers and
+requires closed/drained custody, stops discovery and releases advertising records
+before SDK memory shutdown, retires SDK references, restores providers and
 the original directory, and releases the store lock. Reuse and unsafe lifecycle
 calls refuse service or terminate before a successful receipt. A separate guarded
-GN fixture checks fourteen cases in both modes, including exact/missing reopen
-mappings, actual 180-second window expiry and fixed diagnostics. Fatal cases
+GN fixture checks fifteen cases in both modes, including two allocated synthetic
+operational advertisements, exact/missing reopen mappings, actual 180-second
+window expiry and fixed diagnostics. Advertising cleanup establishes no
+commissioning or authenticated peer result. Fatal cases
 establish no successful cleanup or
 leak finalization. Production Port startup, authenticated execution, actual
 clock-rate qualification and independent-peer support remain open.

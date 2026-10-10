@@ -2,6 +2,7 @@
 #define WOTEX_MATTER_BRIDGE_SDK_BOOTSTRAP_FIXTURE_HPP
 #include "wotex_matter/bridge_sdk_bootstrap.hpp"
 #include <app/MessageDef/AttributeReportIBs.h>
+#include <lib/dnssd/Advertiser.h>
 #include <condition_variable>
 #include <filesystem>
 #include <mutex>
@@ -200,6 +201,17 @@ inline void OwnedBootstrapLifecycle(BridgeBootstrap &bootstrap,
   }
   assert(Server::GetInstance().GetCommissioningWindowManager().IsCommissioningWindowOpen() ==
          (configuration.commissioning_window_seconds != 0));
+  if (mode == "advertised") {
+    auto &advertiser = Dnssd::ServiceAdvertiser::Instance();
+    assert(advertiser.IsInitialized());
+    const std::array<std::uint8_t, 6> address{2, 0, 0, 0, 0, 1};
+    for (const auto fabric : {std::uint64_t{1}, std::uint64_t{2}}) {
+      Dnssd::OperationalAdvertisingParameters parameters;
+      parameters.SetPeerId(PeerId(fabric, 1)).SetMac(ByteSpan(address)).SetPort(5540);
+      assert(advertiser.Advertise(parameters) == CHIP_NO_ERROR);
+    }
+    assert(advertiser.FinalizeServiceUpdate() == CHIP_NO_ERROR);
+  }
   DeviceLayer::PlatformMgr().UnlockChipStack();
   assert(owner.Start() == CHIP_NO_ERROR);
   if (mode == "running-finish") owner.Finish();
@@ -246,6 +258,7 @@ inline void OwnedBootstrapLifecycle(BridgeBootstrap &bootstrap,
   assert(owner.Stop() == CHIP_ERROR_INCORRECT_STATE);
   owner.Finish();
   owner.Finish();
+  assert(!Dnssd::ServiceAdvertiser::Instance().IsInitialized());
   assert(owner.provider() == nullptr && owner.endpoints() == nullptr);
   assert(owner.Start() == CHIP_ERROR_INCORRECT_STATE && owner.Stop() == CHIP_ERROR_INCORRECT_STATE);
   assert(owner.Init() == CHIP_ERROR_INCORRECT_STATE);

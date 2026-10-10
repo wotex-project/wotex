@@ -107,6 +107,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   """
   @lifecycle_cases [
     {"normal", 0},
+    {"advertised", 0},
     {"reopen", 0},
     {"reopen-missing", 70},
     {"window", 0},

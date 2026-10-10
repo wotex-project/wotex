@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.23.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.24.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -181,7 +181,8 @@ invalid interfaces, unavailable stores and pre-platform allocation failure.
 New-store startup durably allocates the explicit initial devices; reopen restores
 the compatible existing mappings without allocating absent devices.
 Partial startup and active destruction terminate with 70. Normal cleanup joins
-the loop, retires borrowed SDK references, restores the original process
+the loop, stops discovery and releases allocated advertising records before
+SDK memory shutdown, retires borrowed SDK references, restores the original process
 directory and releases the store lock.
 
 [`BridgeDeviceInfo`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_device_info.hpp)
@@ -193,12 +194,16 @@ one-entry iterator. It performs no network discovery, configuration or retry.
 
 [`sdk_bridge_bootstrap_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_bootstrap_test.cpp)
 is a separate guarded GN fixture using the actual private loader and suppressed
-SDK logging. Its fourteen normal/sanitizer cases cover configured light/sensor
+SDK logging. Its fifteen normal/sanitizer cases cover configured light/sensor
 metadata and durable IDs, root identity TLV reads, provider/interface boundaries,
 event-loop work, closed/finite windows, actual
 180-second expiry, reused/closed/busy refusal, unavailable/locked stores,
 allocation refusal, exact/missing reopen mappings, directory/store-lock cleanup
-and fatal omitted or unsafe cleanup. Receipts require exact fixed output and
+and fatal omitted or unsafe cleanup. The advertising case allocates two
+operational service records through the pinned SDK, then requires normal
+teardown and process exit after SDK memory shutdown. It uses synthetic mDNS
+identities and establishes no commissioning or authenticated peer result.
+Receipts require exact fixed output and
 record the actual binary digest.
 Fatal cases establish refusal, not leak finalization or successful cleanup.
 These checks establish no production SDK Port host, authenticated consumer
