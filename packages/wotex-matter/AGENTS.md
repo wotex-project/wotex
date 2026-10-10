@@ -92,7 +92,8 @@ Repository-wide rules are in the root `AGENTS.md`.
   `lib/wotex/matter/bridge/observation.ex`: pure bounded approved-state transport
   and exact correlated receipts. The separate native allocation fixture and
   `test/wotex/matter/bridge_observation_test.exs` cover nullable values, strict
-  framing and preserved refusal output. Process credit/replay ownership,
+  framing and preserved refusal output. The explicit BEAM connection owns
+  sixty-four observation slots, non-reused IDs and receipt deadlines. Native
   authenticated delivery and SDK application remain open.
 - `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
   custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
@@ -129,8 +130,8 @@ Repository-wide rules are in the root `AGENTS.md`.
   ExposedThing dispatch; staged results retain credit until collection. Tests in
   `test/wotex/matter/bridge_{clock_projection,consumer}_test.exs` cover modeled
   expiry, policy, backpressure and cleanup. Native Port bootstrap, authenticated
-  admission, actual clock qualification and approved-observation delivery remain
-  open.
+  admission, actual clock qualification and native approved-state application
+  remain open; the explicit connection separately owns observation delivery.
 - `lib/wotex/matter/bridge/clock_probe.ex` and `native/src/bridge_input.cpp`:
   separate bounded clock controls, exact generation/probe correlation and native
   sampling under the custody mutex. Probe/sample codecs and native input tests
@@ -139,10 +140,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   native process bootstrap remain separate obligations.
 - `lib/wotex/matter/bridge/{connection,control}.ex`: explicit selected-process
   bootstrap, pinned generation receipts, ordered bounded execution, correlated
-  probes, non-suspending output and joined close. Configuration/Port helpers own
-  validation, environment clearing and child cleanup. The real-pipe
-  `bridge_{connection,control,port_process}_test.exs` tests use scripted hosts;
-  the production SDK host and authenticated execution integration remain open.
+  probes, owner-only approved-observation delivery, non-suspending output and
+  joined close. Configuration/Port helpers own validation, environment clearing
+  and child cleanup. The real-pipe
+  `bridge_{connection,connection_observation,control,port_process}_test.exs` tests
+  use scripted hosts; the production SDK host, authenticated execution and
+  native observation application integration remain open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: retained-invoke and
   synchronous-attribute guards for exact fabric/credential scope, live metadata,
   timed/data-version requirements and current SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and

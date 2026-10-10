@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.25.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.26.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -421,7 +421,7 @@ retirement, invalid clocks/protocols and cleanup including trapped exits.
 They do not qualify real host clocks or authenticate Matter peers. The native
 Port owner must preserve admission order, qualify/authenticate probe exchange,
 monitor execution custody and close native custody on loss. That integration,
-live SDK checks and approved-observation delivery remain open.
+live SDK checks and native approved-observation application remain open.
 
 [`ClockProbe`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/clock_probe.ex)
 supplies exact bounded probe/sample controls for an expected generation and
@@ -461,8 +461,18 @@ samples close the generation. Expired work returns unknown before policy;
 accepted work uses the private consumer and one-time result collection. Native
 writes never suspend this owner. Owner, consumer or native loss closes execution
 and reaps the child; status/error reports redact bootstrap and request contents.
-Explicit close stops workers, accepts only bounded in-flight requests or one
-pending sample, and joins an exact receipt, zero exit and Port release within
+The configured owner also supplies approved observations through `observe/3`.
+Each of sixty-four independent slots retains a non-reused generation-scoped ID
+and an absolute configured-clock deadline at most 500 ms away. Matching receipts
+release credit; missing, late, malformed or replayed receipts close custody.
+Receipt acceptance checks the original real elapsed-time budget after clock
+sampling. Invalid values/deadlines consume no ID, and exhaustion closes without
+wrapping. A result mapper explicitly obtains any required observation receipt
+before returning completed.
+
+Explicit close cancels observation callers once and stops workers, accepts only
+bounded in-flight requests, one pending sample or one exact receipt per canceled
+observation, and joins an exact closed receipt, zero exit and Port release within
 one second of native close admission. Failed grace or protocol forces cleanup.
 
 [connection tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_connection_test.exs)
@@ -474,10 +484,15 @@ trapped workers, abrupt connection death, close bounds and redacted diagnostics.
 exercise exact fields, pinned receipts, duplicate refusal and LF/512-byte bounds.
 [process tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_port_process_test.exs)
 verify artifact refusal and real pipe pressure without suspending the caller.
-These tests establish the BEAM coordinator against scripted hosts. A production
-SDK host implementing bootstrap and closed custody, authenticated SDK dispatch,
-approved observations, host-clock qualification and independent peer receipts
-remain open; scripted ready/principal fixtures supply none of that evidence.
+[Observation delivery tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_connection_observation_test.exs)
+exercise owner-only delivery, independent credit, applied/refused correlation,
+non-reused and exhausted IDs, clock failure, original deadline preservation,
+replay, explicit close, owner/native loss and result ordering through public
+Runtime dispatch. These tests establish the BEAM coordinator against scripted
+hosts. A production SDK host implementing bootstrap and closed custody,
+authenticated SDK dispatch, native approved-state application, host-clock
+qualification and independent peer receipts remain open; scripted
+ready/principal fixtures supply none of that evidence.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
@@ -628,8 +643,9 @@ decoding and four native receipts with the BEAM checker. The builder requires
 exact fixture order and fixed completion markers and records binary/input
 digests. [BEAM boundary tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_observation_test.exs)
 cover nullable values, generation/ID correlation, malformed fields and framing.
-This supplies no process-owned observation credit, replay tracking or SDK
-application. Those delivery and authority boundaries remain open.
+The BEAM connection separately owns observation credit, non-reused IDs and
+receipt deadlines. These codecs and scripted delivery tests supply no native SDK
+application, authenticated execution or physical-effect authority.
 
 ## 4. Isolation and recovery
 

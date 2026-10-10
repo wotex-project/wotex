@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.24.0. Finite WMA.09 implementation target. The
+Version: 1.25.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -247,8 +247,9 @@ values remain explicit. The separate GN fixture pairs eight BEAM observations
 with native decoding and four native applied/refused receipts with BEAM checking
 in both builds. It checks malformed/duplicate input, bounds and real allocation
 cutpoints with preserved output. Encoding and decoding perform no state
-application, capability lookup or consumer authorization. Process-owned replay
-custody, bounded delivery and SDK application remain separate work.
+application, capability lookup or consumer authorization. The explicit BEAM
+connection owns bounded delivery and replay refusal; SDK application remains
+separate work.
 
 `Wotex.Matter.Bridge.Connection` coordinates an explicitly selected native
 process and its private consumer. Required options name a live local owner,
@@ -272,16 +273,25 @@ Original native deadlines never change. Expired queued work returns unknown,
 accepted work crosses the private consumer boundary, and results retire once.
 Output uses non-suspending Port writes; pipe pressure closes the generation.
 
-The configured owner alone may inspect generation/counts or close. Owner,
+The configured owner alone may inspect generation/counts, deliver approved
+observations with `Connection.observe/3` or close. Each observation supplies all
+five state fields and a configured-clock absolute deadline no more than 500 ms
+away. Sixty-four separate slots retain credit until an exact applied/refused
+receipt or closure. IDs increase without reuse or wrapping; invalid input
+consumes no ID. Both configured and real elapsed-time deadlines are checked
+after receipt clock sampling. Late, missing, malformed or replayed receipts
+close the generation. Receipts complete no request; an explicit consumer result
+mapper owns any required observation before returning completed. Owner,
 consumer or native loss reaps owned work and the native child, with detail-free
 failure reporting and conservative unknown effect after an admitted mutation.
-Explicit close first stops consumer work, then requires a correlated closed
-receipt, zero native exit and joined Port release within a one-second native
-grace. It discards at most sixteen in-flight requests and one correlated pending
-sample without executing them. Failed close forces child cleanup. Temporary
-supervision never restarts a generation. These real-pipe scripted-host tests
-establish BEAM process ownership; the production SDK host, authenticated SDK
-dispatch, actual clock qualification and approved-observation transport remain
+Explicit close cancels observation callers once and stops consumer work, then
+requires a correlated closed receipt, zero native exit and joined Port release
+within a one-second native grace. It discards at most sixteen in-flight requests,
+one correlated pending sample and one exact receipt per canceled observation
+without executing them. Failed close forces child cleanup. Temporary supervision
+never restarts a generation. Real-pipe scripted-host tests establish BEAM process
+ownership and observation delivery; the production SDK host, authenticated SDK
+dispatch, actual clock qualification and native observation application remain
 separate obligations.
 
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime

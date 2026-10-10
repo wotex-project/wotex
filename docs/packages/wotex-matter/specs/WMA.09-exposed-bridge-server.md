@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.26.0-target.
+Version: 0.27.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -503,22 +503,44 @@ Accepted work MUST use the private consumer execution boundary and collect each
 result once. Native writes MUST NOT suspend this connection; a busy or failed
 pipe MUST close the generation without retries.
 
-Only the configured owner may inspect bounded generation/count status or request
-close. Owner, execution-owner or native loss MUST stop owned work and reap the
+Only the configured owner may inspect bounded generation/count status, deliver
+approved observations through `Wotex.Matter.Bridge.Connection.observe/3` or
+request close. Observation delivery MUST require all five explicit state fields
+and an absolute deadline on the configured BEAM clock, strictly in the future
+and at most 500 milliseconds away. At most sixty-four pending observations MUST
+retain separate credit until a matching applied/refused receipt or generation
+closure; request and probe credit MUST remain independent. Observation IDs MUST
+increase without reuse or wrapping within the generation. Invalid state or
+deadline MUST consume no ID and emit no frame. Exhausted IDs MUST close the
+generation; full observation credit MUST return busy without delivery.
+
+Admission and receipt checks MUST preserve the original elapsed-time budget,
+including time spent encoding and sampling the clock. Receipt acceptance MUST
+check both the configured deadline and the real monotonic deadline after clock
+sampling. Missing, late, malformed, foreign or replayed receipts MUST close the
+generation and resolve pending callers once. Invalid or regressing clocks MUST
+close with a structured clock error. Applied/refused receipts MUST NOT complete
+a consumer request; its explicit result mapper owns any required observation
+receipt before returning completed.
+
+Owner, execution-owner or native loss MUST stop owned work and reap the
 native process. Failure reports and diagnostic status MUST exclude payloads,
 bootstrap arguments, route contents and external exception text. An admitted
 mutation MUST make subsequent channel loss conservatively unknown. Startup
 refusal MUST return a structured error after cleanup without terminating the
 linked caller. Temporary supervision MUST NOT restart a lost generation.
 
-Explicit close MUST stop consumer work first, then require the exact closed
-receipt, zero native exit and joined Port release within one second of native
-close admission. It may discard at most sixteen strictly increasing in-flight
-requests and one outstanding correlated clock reply without executing them.
-Other output, output after acknowledgment, nonzero exit or missed grace MUST
-fail close and force cleanup of the owned native child. Process coordination
-tests with a scripted host MUST NOT be cited as actual SDK process bootstrap,
-authenticated requests, approved-observation delivery or qualified host clocks.
+Explicit close MUST cancel pending observation callers once and stop consumer
+work before requiring the exact closed receipt, zero native exit and joined
+Port release within one second of native close admission. It may discard at
+most sixteen strictly increasing in-flight requests, one outstanding correlated
+clock reply and one exact receipt for each canceled observation, without
+executing work or reviving a canceled caller. Other output, output after
+acknowledgment, nonzero exit or missed grace MUST fail close and force cleanup
+of the owned native child. Scripted-host tests establish BEAM process ownership
+and observation delivery only; they MUST NOT be cited as actual SDK process
+bootstrap, authenticated requests, native approved-state application or
+qualified host clocks.
 
 The native first-frame decoder MUST accept only the exact four-field `open`
 control supplying version, backend, type and the sixteen-byte generation.

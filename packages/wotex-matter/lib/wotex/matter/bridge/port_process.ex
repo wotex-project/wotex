@@ -48,7 +48,7 @@ defmodule Wotex.Matter.Bridge.PortProcess do
 
   @doc false
   @spec send_frame(port(), binary()) :: boolean()
-  def send_frame(port, bytes) when is_binary(bytes) and byte_size(bytes) <= 512 do
+  def send_frame(port, bytes) when is_binary(bytes) and byte_size(bytes) <= 1024 do
     Port.command(port, bytes, [:nosuspend])
   rescue
     _ -> false

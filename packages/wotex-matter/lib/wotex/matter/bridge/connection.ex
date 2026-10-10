@@ -18,7 +18,7 @@ defmodule Wotex.Matter.Bridge.Connection do
   admission before emitting requests and close/drain SDK custody on input loss.
   Ready/model receipts and captured principal values do not supply those checks.
 
-  One random generation binds open/ready, clock probes, requests, results and
+  One random generation binds open/ready, clock probes, requests, results, observations and
   close/closed. A successful start requires the exact pinned ready receipt and
   one correlated clock sample. The caller must qualify the supplied clocks,
   rate and sampling bounds described by `Wotex.Matter.Bridge.ClockProjection`;
@@ -31,15 +31,18 @@ defmodule Wotex.Matter.Bridge.Connection do
   a handler. Completed results are collected once and written without suspending
   this owner; a busy or failed native pipe closes the generation.
 
-  The configured owner alone may call `status/1` or `close/1`.
+  The configured owner alone may call `status/1`, `observe/3` or `close/1`.
   Owner, native Port or consumer loss closes execution and reaps the native
   process. One `{:wotex_matter_bridge_closed, connection, generation, error}`
   message reports channel loss to the configured owner, with no external exception or
   payload text. An admitted mutation makes subsequent loss conservatively
   unknown. Explicit close stops consumer work, requires the exact closed receipt
   and zero native exit within a separate one-second cleanup grace, then joins
-  Port release. This process supplies no production SDK host binary, approved
-  observation transport, authenticated-peer evidence or host-clock qualification.
+  Port release. Separate approved observations retain at most sixty-four slots
+  until a matching applied/refused receipt or generation closure. Delivery is
+  explicit and independent of handler results. A consumer result mapper must
+  obtain its required receipt before returning completed. This process supplies
+  no production SDK host binary, authenticated-peer evidence or host-clock qualification.
   """
 
   use GenServer
@@ -50,6 +53,7 @@ defmodule Wotex.Matter.Bridge.Connection do
     ConnectionConfiguration,
     Consumer,
     Control,
+    Observation,
     Wire
   }
 
@@ -59,6 +63,7 @@ defmodule Wotex.Matter.Bridge.Connection do
   @uint64 0xFFFFFFFFFFFFFFFF
   @limit 16
   @cleanup 1000
+  @observation_limit 64
 
   @doc "Starts one explicitly selected native process and its private execution owner."
   @spec start_link(term()) :: GenServer.on_start()
@@ -96,6 +101,26 @@ defmodule Wotex.Matter.Bridge.Connection do
   @doc "Stops owned work and joins native close, exit and Port release without retry."
   @spec close(term()) :: :ok | {:error, Error.t()}
   def close(connection), do: call(connection, :close)
+
+  @doc """
+  Delivers explicit approved state and waits for its correlated native receipt.
+
+  Only the configured owner may call this function. All observation fields
+  follow `Wotex.Matter.Bridge.Observation`. `deadline` is an absolute
+  millisecond value on the configured BEAM clock, strictly in the future and
+  at most 500 milliseconds away. At most sixty-four observations retain credit
+  until their matching receipt or generation closure. IDs are independent of
+  requests and probes and are never reused within the generation.
+
+  `:applied` means endpoint validation and approved-state application;
+  `:refused` preserves prior state. Neither outcome completes a request or
+  establishes a physical effect. Missing, late, malformed or replayed receipts
+  close the generation. Explicit close cancels pending callers once.
+  """
+  @spec observe(term(), Observation.t(), integer()) ::
+          {:ok, :applied | :refused} | {:error, Error.t()}
+  def observe(connection, observation, deadline),
+    do: call(connection, {:observe, observation, deadline})
 
   @impl GenServer
   def init({starter, configuration}) do
@@ -179,6 +204,8 @@ defmodule Wotex.Matter.Bridge.Connection do
       last_ms: nil,
       last_id: 0,
       last_probe_id: 0,
+      last_observation_id: 0,
+      observations: %{},
       projection: nil,
       probe: nil,
       pending: %{},
@@ -202,11 +229,30 @@ defmodule Wotex.Matter.Bridge.Connection do
   def handle_call(:status, {owner, _}, %{owner: owner} = state) do
     {:reply,
      {:ok,
-      %{generation: state.generation, pending: map_size(state.pending), probing: state.probe != nil}},
-     state}
+      %{
+        generation: state.generation,
+        pending: map_size(state.pending),
+        probing: state.probe != nil,
+        observations: map_size(state.observations)
+      }}, state}
+  end
+
+  def handle_call({:observe, observation, deadline}, {owner, _} = from, %{owner: owner} = state) do
+    cond do
+      map_size(state.observations) >= @observation_limit ->
+        {:reply, {:error, Error.new(:busy)}, state}
+
+      state.last_observation_id == @uint64 ->
+        {:stop, :normal, {:error, failure(state, :response_limit)},
+         %{state | error: failure(state, :response_limit)}}
+
+      true ->
+        admit_observation(observation, deadline, from, state)
+    end
   end
 
   def handle_call(:close, {owner, _}, %{owner: owner} = state) do
+    state = cancel_observers(state, failure(state, :owner_closed))
     Consumer.close(state.consumer)
     if state.probe, do: Process.cancel_timer(state.probe.timer)
     {:ok, frame} = Control.encode(:close, state.generation)
@@ -271,6 +317,13 @@ defmodule Wotex.Matter.Bridge.Connection do
       transition(drain(%{state | pending: Map.delete(state.pending, id)}))
     else
       _ -> stop(state, :transport_closed)
+    end
+  end
+
+  def handle_info({:observation_expired, id, token}, state) do
+    case Map.get(state.observations, id) do
+      %{token: ^token} -> stop(state, :timeout)
+      _ -> {:noreply, state}
     end
   end
 
@@ -376,7 +429,8 @@ defmodule Wotex.Matter.Bridge.Connection do
       {:EXIT, ^consumer_pid, _} ->
         {:error, Error.new(:owner_closed), state}
     after
-      max(0, deadline - System.monotonic_time(:millisecond)) -> {:error, Error.new(:timeout), state}
+      max(0, deadline - System.monotonic_time(:millisecond)) ->
+        {:error, Error.new(:timeout), state}
     end
   end
 
@@ -405,8 +459,14 @@ defmodule Wotex.Matter.Bridge.Connection do
 
   defp ingest(frame, state) do
     case Wire.decode_request(frame, state.generation) do
-      {:ok, request} -> enqueue(frame, request, state)
-      _ -> sample_reply(frame, state)
+      {:ok, request} ->
+        enqueue(frame, request, state)
+
+      _ ->
+        case observation_id(frame) do
+          {:ok, id} -> observation_reply(frame, id, state)
+          :error -> sample_reply(frame, state)
+        end
     end
   end
 
@@ -588,7 +648,7 @@ defmodule Wotex.Matter.Bridge.Connection do
         {:error, failure(state, :response_limit)}
 
       _ ->
-        closing_probe(frame, state, discarded)
+        closing_observation(frame, state, discarded)
     end
   end
 
@@ -601,7 +661,119 @@ defmodule Wotex.Matter.Bridge.Connection do
 
   defp closing_probe(_, state, _), do: {:error, failure(state, :invalid_frame)}
 
+  defp admit_observation(observation, deadline, from, state) do
+    id = state.last_observation_id + 1
+    started = System.monotonic_time(:millisecond)
+
+    with {:ok, frame} <- Observation.encode(state.generation, id, observation),
+         true <- is_integer(deadline),
+         {:ok, now} <- sample(state) do
+      next = %{state | last_ms: now}
+      real_deadline = started + deadline - now
+
+      cond do
+        deadline <= now or real_deadline <= System.monotonic_time(:millisecond) ->
+          {:reply, {:error, Error.new(:deadline_exceeded)}, next}
+
+        deadline > now + 500 ->
+          {:reply, {:error, Error.new(:invalid_timeout)}, next}
+
+        not PortProcess.send_frame(state.port, frame) ->
+          {:stop, :normal, {:error, failure(next, :transport_closed)},
+           %{next | error: failure(next, :transport_closed)}}
+
+        true ->
+          token = make_ref()
+          remaining = max(0, real_deadline - System.monotonic_time(:millisecond))
+          timer = Process.send_after(self(), {:observation_expired, id, token}, remaining)
+
+          entry = %{
+            from: from,
+            deadline: deadline,
+            real_deadline: real_deadline,
+            token: token,
+            timer: timer
+          }
+
+          {:noreply,
+           %{next | last_observation_id: id, observations: Map.put(next.observations, id, entry)}}
+      end
+    else
+      {:error, %Error{code: :invalid_transport_context} = error} ->
+        error = Error.with_effect(error, if(state.mutation, do: :unknown, else: :none))
+        {:stop, :normal, {:error, error}, %{state | error: error}}
+
+      _ ->
+        {:reply, {:error, Error.new(:invalid_frame)}, state}
+    end
+  end
+
+  defp observation_id(frame) when is_binary(frame) and byte_size(frame) in 1..512 do
+    with true <- :binary.last(frame) == 10,
+         body = binary_part(frame, 0, byte_size(frame) - 1),
+         {:ok, %{"type" => "observation-receipt", "id" => id}} <-
+           Wotex.JSON.decode(body,
+             max_bytes: 511,
+             max_depth: 1,
+             max_nodes: 16,
+             max_collection_size: 6,
+             max_string_bytes: 32
+           ),
+         true <- is_binary(id) and byte_size(id) in 1..20,
+         {value, ""} <- Integer.parse(id),
+         true <- value in 1..@uint64 and id == Integer.to_string(value) do
+      {:ok, value}
+    else
+      _ -> :error
+    end
+  end
+
+  defp observation_id(_), do: :error
+
+  defp observation_reply(frame, id, state) do
+    with %{from: from} = entry when from != nil <- Map.get(state.observations, id),
+         {:ok, outcome} <- Observation.decode_receipt(frame, state.generation, id),
+         true <- System.monotonic_time(:millisecond) < entry.real_deadline,
+         {:ok, now} <- sample(state),
+         true <- now < entry.deadline,
+         true <- System.monotonic_time(:millisecond) < entry.real_deadline do
+      Process.cancel_timer(entry.timer)
+      GenServer.reply(from, {:ok, outcome})
+      {:ok, %{state | observations: Map.delete(state.observations, id), last_ms: now}}
+    else
+      {:error, %Error{code: :invalid_transport_context} = error} -> {:error, error, state}
+      _ -> {:error, Error.new(:invalid_frame), state}
+    end
+  end
+
+  defp cancel_observers(state, error) do
+    observations =
+      Map.new(state.observations, fn {id, entry} ->
+        if entry.timer, do: Process.cancel_timer(entry.timer)
+        if entry.from, do: GenServer.reply(entry.from, {:error, error})
+        {id, %{entry | from: nil, timer: nil}}
+      end)
+
+    %{state | observations: observations}
+  end
+
+  defp closing_observation(frame, state, discarded) do
+    case observation_id(frame) do
+      {:ok, id} ->
+        with %{from: nil} <- Map.get(state.observations, id),
+             {:ok, _} <- Observation.decode_receipt(frame, state.generation, id) do
+          {:discard, %{state | observations: Map.delete(state.observations, id)}, discarded}
+        else
+          _ -> {:error, failure(state, :invalid_frame)}
+        end
+
+      :error ->
+        closing_probe(frame, state, discarded)
+    end
+  end
+
   defp cleanup(%{consumer: _, port: _} = state) do
+    cancel_observers(state, Map.get(state, :error) || Error.new(:owner_closed))
     if state.probe, do: Process.cancel_timer(state.probe.timer)
     Consumer.close(state.consumer)
     PortProcess.close(state.port)

@@ -46,6 +46,11 @@ defmodule Wotex.Matter.BridgeProcessFixture do
           #{Keyword.get(sections, :closing, closed())}
           exit 0
           ;;
+        *\\"type\\":\\"observation\\"*)
+          probe=${line#*\\"id\\":\\"}
+          probe=${probe%%\\"*}
+          #{Keyword.get(sections, :observation, "")}
+          ;;
         *\\"type\\":\\"result\\"*)
           #{Keyword.get(sections, :after_result, "")}
           ;;

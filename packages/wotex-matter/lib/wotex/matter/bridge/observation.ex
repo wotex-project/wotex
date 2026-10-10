@@ -41,7 +41,7 @@ defmodule Wotex.Matter.Bridge.Observation do
   @spec encode(term(), term(), term()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(generation, id, observation)
       when is_binary(generation) and byte_size(generation) == 16 and is_integer(id) and
-             id in 1..@uint64 and is_map(observation) do
+             id in 1..@uint64 and is_map(observation) and map_size(observation) == 5 do
     with true <- Enum.sort(Map.keys(observation)) == Enum.sort(@keys),
          %{
            thing: thing,

@@ -386,7 +386,7 @@ defmodule Wotex.Matter.BridgeConnectionTest do
        context do
     connection = start(context)
     assert {:ok, status} = Connection.status(connection)
-    assert Enum.sort(Map.keys(status)) == [:generation, :pending, :probing]
+    assert Enum.sort(Map.keys(status)) == [:generation, :observations, :pending, :probing]
     rendered = inspect(:sys.get_status(connection), limit: :infinity)
     refute rendered =~ context.directory
     refute rendered =~ "ExposedThing"
