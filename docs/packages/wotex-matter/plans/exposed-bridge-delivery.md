@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.22.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.23.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -521,6 +521,24 @@ The native builder runs its normal and ASan/UBSan cases. Ownership-only tests
 use an explicit test-build guard fixture; no permissive production default is
 provided. Authenticated transport admission, consumer policy/dispatch and
 independent-peer workflows remain open.
+
+The internal
+[`SdkBridgeAttributeGuard`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_guard.hpp)
+captures the original fabric/principal and live attribute contract before a
+synchronous receiver admits payload or custody. It retains both privileges and
+all five SDK quality flags, checks the current ACL, enforces timed writes and
+supplied data versions, and preserves the previous scope on refusal. Validation
+after a consumer wait repeats realm/path/contract/version/ACL checks before
+completed encoding or mutation. No decoding, request reservation or state change
+occurs in this guard. Its borrowed provider/fabric attachment remain alive under
+the SDK stack lock throughout each captured scope.
+
+The actual SDK guard fixture checks readable OnOff/global metadata, writable
+OnTime, absent read/write privilege, timed/data-version refusal, changed quality,
+metadata errors, full principal agreement, ACL revocation and fabric update.
+Normal and sanitizer builder receipts require the attribute phase as well as
+existing invoke and delegate-cleanup phases. These synthetic callback tests
+establish no authenticated transport, consumer policy or production receiver.
 
 The internal
 [`StartBridgeWrite`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_writes.hpp)

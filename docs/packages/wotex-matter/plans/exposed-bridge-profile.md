@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.21.0. Finite WMA.09 implementation target. The
+Version: 1.22.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -412,6 +412,12 @@ Guard tests use direct SDK fabric/ACL APIs, generated test certificates and
 synthetic CASE/group callback principals. They execute retained-owner refusal
 after ACL revocation, credential update/rollback, fabric-index reuse and
 endpoint retirement, including metadata failures and fatal missing detach.
+The same SDK fixture exercises an internal synchronous attribute guard against
+actual readable/global/writable metadata, absent privileges, timed-write and
+data-version requirements, changed qualities, metadata errors, complete principal
+agreement, current ACL revocation and retired fabric scope. Capture and delayed
+validation change no request credit or approved state. Production receiver
+integration and authenticated transport qualification remain open.
 BEAM projection and consumer tests exercise conservative modeled expiry with
 independent clock epochs/rates, real ExposedThing policy/mapping/dispatch order,
 scope preservation, sixteen-slot backpressure, original-deadline expiry,

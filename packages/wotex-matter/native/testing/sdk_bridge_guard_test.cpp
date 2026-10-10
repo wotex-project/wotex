@@ -83,6 +83,19 @@ class ScopeMetadata final : public chip::app::CodegenDataModelProvider {
   explicit ScopeMetadata(chip::app::DataModel::Provider &provider) : provider_(provider) {}
   unsigned failing_stage{0};
   std::optional<chip::app::DataModel::AcceptedCommandEntry> replacement;
+  std::optional<chip::app::DataModel::AttributeEntry> attribute_replacement;
+  bool change_version{false};
+  CHIP_ERROR Attributes(
+      const chip::app::ConcreteClusterPath &path,
+      chip::ReadOnlyBufferBuilder<chip::app::DataModel::AttributeEntry> &builder) override {
+    if (failing_stage == 4) return CHIP_ERROR_NO_MEMORY;
+    if (attribute_replacement) {
+      const chip::app::DataModel::AttributeEntry entries[]{*attribute_replacement};
+      return builder.AppendElements(entries);
+    }
+    return provider_.Attributes(path, builder);
+  }
+
   CHIP_ERROR Endpoints(
       chip::ReadOnlyBufferBuilder<chip::app::DataModel::EndpointEntry> &builder) override {
     return failing_stage == 1 ? CHIP_ERROR_NO_MEMORY : provider_.Endpoints(builder);
@@ -90,7 +103,17 @@ class ScopeMetadata final : public chip::app::CodegenDataModelProvider {
   CHIP_ERROR ServerClusters(
       chip::EndpointId endpoint,
       chip::ReadOnlyBufferBuilder<chip::app::DataModel::ServerClusterEntry> &builder) override {
-    return failing_stage == 2 ? CHIP_ERROR_NO_MEMORY : provider_.ServerClusters(endpoint, builder);
+    if (failing_stage == 2) return CHIP_ERROR_NO_MEMORY;
+    if (!change_version) return provider_.ServerClusters(endpoint, builder);
+    chip::ReadOnlyBufferBuilder<chip::app::DataModel::ServerClusterEntry> original;
+    ReturnErrorOnFailure(provider_.ServerClusters(endpoint, original));
+    const auto entries = original.TakeBuffer();
+    for (auto entry : entries) {
+      ++entry.dataVersion;
+      const chip::app::DataModel::ServerClusterEntry changed[]{entry};
+      ReturnErrorOnFailure(builder.AppendElements(changed));
+    }
+    return CHIP_NO_ERROR;
   }
   CHIP_ERROR AcceptedCommands(
       const chip::app::ConcreteClusterPath &path,
@@ -203,6 +226,131 @@ void VerifyBridgeGuard(SdkBridgeServerBinding &server, chip::app::DataModel::Pro
                "current ACL permit");
   ScopeSuccess(guard.Capture(request, invoke_scope), "current invoke scope");
   ScopeSuccess(guard.Validate(invoke_scope), "current invoke ACL");
+  SdkBridgeAttributeGuard attribute_guard(scopes, metadata);
+  BridgeRequestMetadata read_request = request;
+  read_request.operation = BridgeRequestMetadata::Operation::Read;
+  read_request.member = 0;
+  BridgeAttributeScope read_scope;
+  ScopeSuccess(attribute_guard.Capture(read_request, read_scope), "actual readable OnOff metadata");
+  ScopeSuccess(attribute_guard.Validate(read_scope), "actual readable ACL completion");
+  metadata.attribute_replacement.emplace(
+      0, chip::BitMask<chip::app::DataModel::AttributeQualityFlags>{}, std::nullopt,
+      chip::Access::Privilege::kOperate);
+  BridgeAttributeScope unreadable_scope;
+  unreadable_scope.fabric.epoch = 777;
+  ScopeRequire(attribute_guard.Capture(read_request, unreadable_scope) ==
+                       CHIP_IM_GLOBAL_STATUS(UnsupportedRead) &&
+                   unreadable_scope.fabric.epoch == 777,
+               "write-only metadata refuses read and preserves scope");
+  ScopeRequire(attribute_guard.Validate(read_scope) == CHIP_IM_GLOBAL_STATUS(UnsupportedRead),
+               "retired read privilege refuses delayed completion");
+  metadata.attribute_replacement.reset();
+  BridgeAttributeScope attribute_sentinel;
+  attribute_sentinel.fabric.epoch = 777;
+  for (unsigned stage : {1, 2, 4}) {
+    metadata.failing_stage = stage;
+    ScopeRequire(
+        attribute_guard.Capture(read_request, attribute_sentinel) == CHIP_ERROR_NO_MEMORY &&
+            attribute_sentinel.fabric.epoch == 777,
+        "attribute admission error preserves output");
+    ScopeRequire(attribute_guard.Validate(read_scope) == CHIP_ERROR_NO_MEMORY,
+                 "attribute completion preserves metadata error");
+    metadata.failing_stage = 0;
+  }
+  for (auto auth : {chip::Access::AuthMode::kPase, chip::Access::AuthMode::kNone}) {
+    auto invalid = read_request;
+    invalid.principal.authMode = auth;
+    ScopeRequire(attribute_guard.Capture(invalid, attribute_sentinel) == CHIP_ERROR_ACCESS_DENIED &&
+                     attribute_sentinel.fabric.epoch == 777,
+                 "attribute unauthenticated scope refusal");
+  }
+  for (auto member : {0xFFF8U, 0xFFF9U, 0xFFFBU, 0xFFFCU, 0xFFFDU}) {
+    auto global = read_request;
+    global.member = member;
+    ScopeSuccess(attribute_guard.Capture(global, attribute_sentinel),
+                 "actual global attribute metadata");
+  }
+  for (const auto endpoint_id : {0, 1, 2, 65535}) {
+    auto invalid = read_request;
+    invalid.endpoint = static_cast<chip::EndpointId>(endpoint_id);
+    ScopeRequire(
+        attribute_guard.Capture(invalid, attribute_sentinel) == CHIP_ERROR_INVALID_ARGUMENT,
+        "attribute root and invalid child refusal");
+  }
+  auto absent_attribute = read_request;
+  absent_attribute.endpoint = 64;
+  ScopeRequire(attribute_guard.Capture(absent_attribute, attribute_sentinel) ==
+                   CHIP_IM_GLOBAL_STATUS(UnsupportedEndpoint),
+               "attribute absent endpoint status");
+  absent_attribute = read_request;
+  absent_attribute.cluster = 0x1234;
+  ScopeRequire(attribute_guard.Capture(absent_attribute, attribute_sentinel) ==
+                   CHIP_IM_GLOBAL_STATUS(UnsupportedCluster),
+               "attribute absent cluster status");
+  absent_attribute = read_request;
+  absent_attribute.member = 0x7F;
+  ScopeRequire(attribute_guard.Capture(absent_attribute, attribute_sentinel) ==
+                   CHIP_IM_GLOBAL_STATUS(UnsupportedAttribute),
+               "attribute absent member status");
+  auto write_request = read_request;
+  write_request.operation = BridgeRequestMetadata::Operation::Write;
+  ScopeRequire(attribute_guard.Capture(write_request, attribute_sentinel) ==
+                   CHIP_IM_GLOBAL_STATUS(UnsupportedWrite),
+               "actual read-only OnOff refuses direct write");
+  write_request.member = 0x4001;
+  BridgeAttributeScope write_scope;
+  ScopeSuccess(attribute_guard.Capture(write_request, write_scope),
+               "actual writable OnTime metadata");
+  ScopeSuccess(attribute_guard.Validate(write_scope), "actual writable ACL completion");
+  chip::ReadOnlyBufferBuilder<chip::app::DataModel::ServerClusterEntry> actual_clusters;
+  ScopeSuccess(provider.ServerClusters(3, actual_clusters), "actual cluster data version");
+  const auto actual_cluster_entries = actual_clusters.TakeBuffer();
+  for (const auto &entry : actual_cluster_entries)
+    if (entry.clusterId == 6) write_request.data_version = entry.dataVersion;
+  ScopeRequire(write_request.data_version.has_value(), "selected cluster version found");
+  ScopeSuccess(attribute_guard.Capture(write_request, write_scope), "matching version admitted");
+  metadata.change_version = true;
+  ScopeRequire(attribute_guard.Validate(write_scope) == CHIP_IM_GLOBAL_STATUS(DataVersionMismatch),
+               "changed version refuses delayed mutation");
+  metadata.change_version = false;
+  write_request.data_version = write_request.data_version.value_or(0) + 1;
+  ScopeRequire(attribute_guard.Capture(write_request, attribute_sentinel) ==
+                   CHIP_IM_GLOBAL_STATUS(DataVersionMismatch),
+               "mismatching version refuses admission");
+  write_request.data_version.reset();
+  using AttributeFlags = chip::app::DataModel::AttributeQualityFlags;
+  metadata.attribute_replacement.emplace(
+      0x4001, chip::BitMask<AttributeFlags>(AttributeFlags::kTimed), chip::Access::Privilege::kView,
+      chip::Access::Privilege::kOperate);
+  ScopeRequire(attribute_guard.Capture(write_request, attribute_sentinel) ==
+                   CHIP_IM_GLOBAL_STATUS(NeedsTimedInteraction),
+               "timed write contract enforced");
+  write_request.timed = true;
+  ScopeSuccess(attribute_guard.Capture(write_request, write_scope),
+               "explicit timed write admitted");
+  metadata.attribute_replacement.emplace(0x4001, chip::BitMask<AttributeFlags>{},
+                                         chip::Access::Privilege::kView,
+                                         chip::Access::Privilege::kOperate);
+  ScopeRequire(attribute_guard.Validate(write_scope) == CHIP_ERROR_ACCESS_DENIED,
+               "changed attribute quality refuses completion");
+  metadata.attribute_replacement.emplace(0x4001, chip::BitMask<AttributeFlags>{},
+                                         chip::Access::Privilege::kView,
+                                         chip::Access::Privilege::kManage);
+  ScopeRequire(
+      attribute_guard.Capture(write_request, attribute_sentinel) == CHIP_ERROR_ACCESS_DENIED,
+      "actual ACL refuses higher write privilege");
+  metadata.attribute_replacement.reset();
+  auto foreign_attribute_scope = read_scope;
+  foreign_attribute_scope.request.principal.cats.values[2] = 0x00030004;
+  ScopeRequire(attribute_guard.Validate(foreign_attribute_scope) == CHIP_ERROR_INVALID_ARGUMENT,
+               "complete attribute principal agreement");
+  ScopeSuccess(access.DeleteEntry(nullptr, index, acl_index), "attribute test ACL revoke");
+  ScopeRequire(attribute_guard.Validate(read_scope) == CHIP_ERROR_ACCESS_DENIED,
+               "attribute delayed completion rechecks current ACL");
+  acl_index = ScopeGrant(principal);
+  std::cout << "\nSDK attribute guard metadata, version, timing and current ACL passed\n"
+            << std::flush;
+
   VerifyGuardedCompletion(guard, principal, [] {}, CHIP_NO_ERROR, Status::Success);
   BridgeInvokeScope sentinel;
   sentinel.fabric.epoch = 777;
@@ -296,6 +444,9 @@ void VerifyBridgeGuard(SdkBridgeServerBinding &server, chip::app::DataModel::Pro
                           CHIP_ERROR_ACCESS_DENIED, Status::UnsupportedAccess);
   ScopeRequire(scopes.Check(original) == CHIP_ERROR_ACCESS_DENIED,
                "old scope invalidated on update");
+  ScopeRequire(attribute_guard.Validate(read_scope) == CHIP_ERROR_ACCESS_DENIED,
+               "attribute original fabric update refuses completion");
+
   BridgeFabricScope pending;
   ScopeSuccess(scopes.Capture(principal, pending), "pending scope capture");
   ScopeSuccess(scopes.Check(pending), "pending scope valid");

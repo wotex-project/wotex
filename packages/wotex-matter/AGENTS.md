@@ -136,9 +136,9 @@ Repository-wide rules are in the root `AGENTS.md`.
   validation, environment clearing and child cleanup. The real-pipe
   `bridge_{connection,control,port_process}_test.exs` tests use scripted hosts;
   the production SDK host and authenticated execution integration remain open.
-- `native/{include/wotex_matter,src}/bridge_guard.*`: required retained-invoke
-  guard for exact fabric/credential scope, live command metadata and current
-  SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and
+- `native/{include/wotex_matter,src}/bridge_guard.*`: retained-invoke and
+  synchronous-attribute guards for exact fabric/credential scope, live metadata,
+  timed/data-version requirements and current SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and
   synthetic principals, without transport or consumer-authorization evidence.
 - `native/{include/wotex_matter,src}/bridge_replies.*`: scoped native rendering
   with copied principal/path/response-ID custody;

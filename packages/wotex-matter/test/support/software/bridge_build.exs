@@ -83,6 +83,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
      ]},
     {"guard", 0,
      [
+       "SDK attribute guard metadata, version, timing and current ACL passed",
        "SDK invoke guard metadata errors, timing and current ACL passed",
        "SDK invoke guard revocation, credential rollback and endpoint retirement passed",
        "SDK fabric scope attachment and shutdown passed"

@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.23.0-target.
+Version: 0.24.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -542,6 +542,21 @@ and still release the consumed SDK handle; refusal encoding MUST NOT erase the
 guard error. The scope owner MUST detach from the fabric table after draining
 contexts and before SDK shutdown. Active destruction MUST terminate the host.
 These checks do not authenticate a supplied principal or grant consumer policy.
+
+Synchronous child attribute admission MUST capture the current fabric scope,
+live endpoint/cluster/attribute metadata, both attribute privileges and all SDK
+quality flags before payload copying or shared custody admission. Read/write
+privilege absence MUST return UnsupportedRead/UnsupportedWrite. A write MUST
+enforce the metadata's timed-interaction requirement and any supplied cluster
+data version. Admission MUST require the current SDK ACL grant. Immediately
+before completed encoding or mutation after a consumer wait, the receiver MUST
+revalidate the original realm, complete principal, live path, unchanged attribute
+contract, original write data version and current ACL. A changed version MUST
+return DataVersionMismatch. Metadata errors MUST retain their meaning and failed
+capture MUST preserve the previous scope. These internal checks MUST NOT reserve
+custody, decode payloads, mutate approved state, authenticate supplied principals
+or grant consumer policy. The provider and fabric attachment MUST outlive every
+captured scope; calls MUST remain under the SDK stack lock without waiting.
 
 A retained attribute write MUST own its scalar value and complete callback
 metadata before its decoder expires. The finite profile permits IdentifyTime,
