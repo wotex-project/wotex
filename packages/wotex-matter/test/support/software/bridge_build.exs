@@ -7,6 +7,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
   @target "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-server-test"
   @codec "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-codec-test"
+  @configuration "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-configuration-test"
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -156,9 +157,28 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
         inside.(
           directory <> "-compile",
-          ["ninja", "--quiet", "-C", "/work/" <> directory, "-j", "4", @target, @codec],
+          [
+            "ninja",
+            "--quiet",
+            "-C",
+            "/work/" <> directory,
+            "-j",
+            "4",
+            @target,
+            @codec,
+            @configuration
+          ],
           []
         )
+
+        configuration_output =
+          inside.(
+            directory <> "-configuration",
+            ["/work/" <> directory <> "/" <> @configuration],
+            @environment
+          )
+
+        verify_configuration!(configuration_output)
 
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
@@ -253,6 +273,11 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
            "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @target])),
            "generated_sha256" => compiled_model,
            "cases" => cases,
+           "configuration" => %{
+             "exit_status" => 0,
+             "binary_sha256" =>
+               SoftwareManifest.digest(Path.join([workspace, directory, @configuration]))
+           },
            "codec" => codec
          }}
       end
@@ -433,6 +458,14 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
         fabric_filtered: filtered,
         allows_large_payload: large
       }
+  end
+
+  @spec verify_configuration!(binary()) :: :ok
+  def verify_configuration!(output) do
+    unless output == "bounded bridge bootstrap configuration passed\n",
+      do: Mix.raise("bridge_configuration_test_failed")
+
+    :ok
   end
 
   @spec verify_case!(binary(), integer(), String.t() | [String.t()] | nil) :: :ok

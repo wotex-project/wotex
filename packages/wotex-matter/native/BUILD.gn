@@ -71,6 +71,21 @@ executable("wotex-matter-sdk-bridge-storage-test") {
 
 # Separate generated server profile; never linked into the controller host.
 if (chip_build_tools) {
+  # Separate allocator-fault fixture; no SDK startup or provider installation.
+  executable("wotex-matter-bridge-configuration-test") {
+    cflags = [
+      "-DCHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT=16",
+      "-isystem" + rebase_path("${chip_root}/src", root_build_dir),
+    ]
+    cflags_cc = [ "-std=c++17" ]
+    sources = [
+      "src/bridge_configuration.cpp",
+      "testing/bridge_configuration_test.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [ "${chip_root}/src/lib" ]
+  }
+
   # Pure codec probe with the pinned SDK's metadata and TLV reader. It starts
   # no SDK server; allocation fault injection is isolated from server fixtures.
   executable("wotex-matter-bridge-codec-test") {

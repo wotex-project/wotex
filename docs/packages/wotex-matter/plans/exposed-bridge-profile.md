@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.18.0. Finite WMA.09 implementation target. The
+Version: 1.19.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -311,8 +311,17 @@ Snapshots enforce effective-user ownership, mode 0400/0600, one hardlink, no
 symlink traversal, explicit byte bounds and observed-change refusal. Their owned
 buffers and decoded PIN/salt are cleared on retirement. Structural decoding does
 not establish SDK PIN validity or commissioning; original files remain owned by
-the consumer. Full production configuration and process-host integration remain
-open. The model fixture includes no attestation private-key bytes
+the consumer. An internal bounded configuration decoder owns the twenty-one
+required bootstrap fields, exact selected SDK/model identity, explicit names,
+store mode, interface/port, five material paths and at most sixteen finite
+device configurations. It preserves opaque identities through lowercase hex,
+requires explicit temperature capability values or null and refuses unknown/duplicate
+fields, malformed UTF-8, excessive values and allocation failure without
+replacing the current owner. The commissioning-window setting is explicit zero
+or 180–900 seconds; parsing performs no window action. A separate native test
+executable isolates its allocator faults from SDK lifecycle tests. Actual
+credential loading, window ownership and process-host integration remain open.
+The model fixture includes no attestation private-key bytes
 or production credential claim. The selected peer is the pinned SDK's
 `examples/chip-tool:chip-tool`, independently built from the server.
 Model generation does not build either executable. The native build separately

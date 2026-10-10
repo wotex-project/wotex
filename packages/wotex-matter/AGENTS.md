@@ -64,6 +64,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   observed-change refusal and owned binary commissioning input. Their native
   tests cover file custody, allocation/read/mutation refusal and secret clearing.
   These primitives install no provider and start no SDK server or process host.
+- `native/include/wotex_matter/bridge_configuration.hpp` and
+  `native/src/bridge_configuration.cpp`: bounded explicit bootstrap JSON values,
+  with strict identity, path, commissioning-window and endpoint configuration.
+  `native/testing/bridge_configuration_test.cpp` is a separate SDK-build fixture
+  for decode/refusal/allocation ownership; it performs no SDK initialization.
+  Configuration parsing does not load credentials or start a process host.
 - `native/include/wotex_matter/bridge_control.hpp` and `native/src/bridge_input.cpp`:
   bounded first-frame open, pinned ready/closed receipts and generation-scoped
   close. `bridge_output.*` can explicitly complete an active frame before a

@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.20.0-target.
+Version: 0.21.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -110,6 +110,54 @@ owner. The decoder MUST copy the salt and passcode into its own bounded storage
 and clear both on retirement. Successful structural decoding MUST NOT establish
 SDK PIN validity, provider creation or commissioning. This is a package bootstrap
 format, not a Matter or W3C-standard field.
+
+Native bootstrap configuration MUST use the package format
+`wotex.matter.bridge-bootstrap@1`: one UTF-8 JSON object of at most 65536 bytes,
+with exactly the following twenty-one required fields. Unknown or duplicate
+members, trailing input, unsupported nesting, raw NUL and incorrect scalar types
+MUST be refused. Numeric fields MUST use integer values, not floating-point,
+boolean or string representations. Integer zero MUST retain its value regardless
+of the parser's signed representation. No absent member MUST select a default.
+
+| Field | Required value |
+| --- | --- |
+| `schema` | Exactly `wotex.matter.bridge-bootstrap@1` |
+| `sdk_revision` | Exact selected revision from the native bridge controls |
+| `model_sha256` | Exact selected generated-model digest from the native bridge controls |
+| `bridge_id` | 2–512 even lowercase hex digits, decoded to 1–256 opaque bytes |
+| `vendor_id` | Integer 1–65534 |
+| `product_id` | Integer 1–65535 |
+| `vendor_name`, `product_name` | Nonempty UTF-8 strings of at most 32 bytes, without NUL |
+| `hardware_version` | Explicit integer 0–65535 |
+| `hardware_version_string` | Nonempty UTF-8 string of at most 64 bytes, without NUL |
+| `store_path` | Normalized absolute UTF-8 path of at most 4096 bytes, without NUL, CR, LF, empty components, `.` or `..` |
+| `store_mode` | Exactly `new` or `reopen`, without a create-or-open fallback |
+| `interface` | Explicit nonempty UTF-8 name of at most 15 bytes, without NUL, CR or LF |
+| `port` | Integer 1–65535 |
+| `commissioning_window_seconds` | Explicit integer 0 for closed or 180–900 for one finite startup window |
+| `dac_path`, `pai_path`, `declaration_path`, `key_path`, `commissioning_path` | The same path constraints as `store_path` |
+| `devices` | Array of zero to sixteen exact device configurations |
+
+Each device object MUST require exactly `thing_id`, `device_type`, `node_label`,
+`minimum_temperature` and `maximum_temperature`. Thing identities MUST use the
+same hex representation as `bridge_id` and be unique by decoded bytes. Device
+Type MUST be On/Off Light (`256`, `0x0100`) or Temperature Sensor (`770`, `0x0302`).
+Node labels MUST be UTF-8 strings of at most 32 bytes, preserving their existing
+SDK byte meaning. Both temperature members MUST be explicit null for a light.
+A sensor MUST supply explicit null or signed hundredths of a degree Celsius:
+minimum -27315–32766, maximum -27314–32767 and maximum greater than minimum when
+both are present. Unsupported types, duplicate identities and extra device
+members MUST be refused.
+
+The decoder MUST perform no filesystem access, credential validation, provider
+installation, network activity or SDK startup. Failure, including allocation or
+library-capacity refusal, MUST preserve the caller's existing configuration
+owner and return a fixed classification. The owning file, store, credential and
+network boundaries MUST separately validate their actual resources. Window
+opening and expiry MUST belong to the SDK process owner, without automatic
+reopening after expiry. A parsed setting MUST NOT open a window or establish
+commissioning, authentication or interoperability. This configuration is a
+package bootstrap format, not a Matter or W3C-standard field.
 
 Dynamic SDK slots MUST remain distinct from durable endpoint IDs. Restore MUST
 receive one explicit consumer configuration for every live Thing and refuse

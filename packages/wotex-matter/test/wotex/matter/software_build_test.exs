@@ -52,6 +52,25 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "configuration receipt accepts only the exact fixed success output" do
+    marker = "bounded bridge bootstrap configuration passed\n"
+    assert :ok = SoftwareBridgeBuild.verify_configuration!(marker)
+
+    for output <- [
+          "",
+          String.trim_trailing(marker),
+          marker <> marker,
+          "caller payload\n" <> marker,
+          marker <> "AddressSanitizer\n",
+          marker <> "runtime error: fixture\n",
+          marker <> "LeakSanitizer\n"
+        ] do
+      assert_raise Mix.Error, "bridge_configuration_test_failed", fn ->
+        SoftwareBridgeBuild.verify_configuration!(output)
+      end
+    end
+  end
+
   test "paired codec receipts validate all request cells and retained native metadata" do
     frames = codec_frames()
 

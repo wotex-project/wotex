@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.19.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.20.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -130,6 +130,25 @@ buffer clearing. Production code exposes no fault hook.
 covers the exact byte layout, truncation/excess, boundary values, independent
 copies, structural-only PIN handling and cleared retirement. The owning CMake
 native lane includes these tests; complete SDK process bootstrap remains open.
+
+The internal
+[`BridgeConfiguration`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_configuration.hpp)
+decoder owns the exact bounded package bootstrap JSON values: pinned identity,
+explicit public names/hardware, store mode/path, interface/service port, private
+material paths, a closed or finite commissioning-window setting and zero to
+sixteen finite device configurations. It preserves opaque identity bytes and
+explicit null capability bounds. Refusal leaves the previous owner intact.
+Decode performs no file access, provider installation or SDK startup. The
+process host owns actual loading, network/window startup and cleanup.
+
+[`bridge_configuration_test.cpp`](../../../../packages/wotex-matter/native/testing/bridge_configuration_test.cpp)
+is a separate GN executable with its own allocator fault injection. It covers
+all required fields, unknown/duplicate/nested input, UTF-8 and scalar types,
+exact byte/numeric/device bounds, signed integer zero, node-label byte meaning
+and every real allocation cutpoint before successful replacement. The native
+build runs it normally and with ASan/UBSan/leak checks, verifies its exact fixed
+output and records its binary digest. These decode tests establish no SDK
+initialization, authenticated consumer execution or independent-peer result.
 
 [`sdk_bridge_server_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_server_test.cpp)
 is a separate test-only target using explicit SDK example attestation and
