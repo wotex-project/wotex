@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.19.0. Finite WMA.09 implementation target. The
+Version: 1.20.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -319,8 +319,15 @@ requires explicit temperature capability values or null and refuses unknown/dupl
 fields, malformed UTF-8, excessive values and allocation failure without
 replacing the current owner. The commissioning-window setting is explicit zero
 or 180–900 seconds; parsing performs no window action. A separate native test
-executable isolates its allocator faults from SDK lifecycle tests. Actual
-credential loading, window ownership and process-host integration remain open.
+executable isolates its allocator faults from SDK lifecycle tests. An internal
+loader snapshots the selected private configuration/material files and creates
+owned SDK credentials after caller SDK memory initialization. Fixed refusal
+preserves the previous owner; temporary private bytes and scalar PIN copies are
+cleared on every path. It installs no provider and starts no platform, store,
+network or server. A separate bridge hook discards SDK log inputs without
+formatting them. Its guarded normal/sanitizer loading fixture checks private
+file/refusal/allocation cleanup, copied signing, both unchanged provider pointers
+and exact output. Window ownership and process-host integration remain open.
 The model fixture includes no attestation private-key bytes
 or production credential claim. The selected peer is the pinned SDK's
 `examples/chip-tool:chip-tool`, independently built from the server.

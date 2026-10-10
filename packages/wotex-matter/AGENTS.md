@@ -70,6 +70,13 @@ Repository-wide rules are in the root `AGENTS.md`.
   `native/testing/bridge_configuration_test.cpp` is a separate SDK-build fixture
   for decode/refusal/allocation ownership; it performs no SDK initialization.
   Configuration parsing does not load credentials or start a process host.
+- `native/include/wotex_matter/bridge_bootstrap.hpp` and
+  `native/src/bridge_bootstrap.cpp`: explicit private configuration/material
+  loading with owned credentials, fixed refusal and temporary secret clearing.
+  `native/src/bridge_logging.cpp` suppresses SDK log payload processing in the
+  separate bridge profile. Its guarded `bridge_bootstrap_test.cpp` GN fixture
+  tests loading, allocation/failure cleanup and provider preservation. Loading
+  performs no provider installation, platform/server startup or network activity.
 - `native/include/wotex_matter/bridge_control.hpp` and `native/src/bridge_input.cpp`:
   bounded first-frame open, pinned ready/closed receipts and generation-scoped
   close. `bridge_output.*` can explicitly complete an active frame before a

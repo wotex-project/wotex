@@ -71,6 +71,32 @@ executable("wotex-matter-sdk-bridge-storage-test") {
 
 # Separate generated server profile; never linked into the controller host.
 if (chip_build_tools) {
+  # Separate private-file/credential fixture, with no SDK platform startup.
+  executable("wotex-matter-bridge-bootstrap-test") {
+    cflags = [
+      "-DCHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT=16",
+      "-isystem" + rebase_path("${chip_root}/src", root_build_dir),
+    ]
+    cflags_cc = [ "-std=c++17" ]
+    defines = [ "WOTEX_MATTER_BRIDGE_TESTING=1" ]
+    sources = [
+      "src/bridge_bootstrap.cpp",
+      "src/bridge_configuration.cpp",
+      "src/bridge_credentials.cpp",
+      "src/bridge_private_file.cpp",
+      "src/bridge_logging.cpp",
+      "testing/bridge_bootstrap_test.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [
+      "${chip_root}/src/credentials",
+      "${chip_root}/src/crypto",
+      "${chip_root}/src/lib",
+      "${chip_root}/src/platform",
+      "${chip_root}/src/setup_payload",
+    ]
+  }
+
   # Separate allocator-fault fixture; no SDK startup or provider installation.
   executable("wotex-matter-bridge-configuration-test") {
     cflags = [

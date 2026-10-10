@@ -52,6 +52,25 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "bootstrap loading receipt accepts only the exact fixed success output" do
+    marker = "owned SDK bootstrap credential loading passed\n"
+    assert :ok = SoftwareBridgeBuild.verify_bootstrap!(marker)
+
+    for output <- [
+          "",
+          String.trim_trailing(marker),
+          marker <> marker,
+          "caller payload\n" <> marker,
+          marker <> "AddressSanitizer\n",
+          marker <> "runtime error: fixture\n",
+          marker <> "LeakSanitizer\n"
+        ] do
+      assert_raise Mix.Error, "bridge_bootstrap_test_failed", fn ->
+        SoftwareBridgeBuild.verify_bootstrap!(output)
+      end
+    end
+  end
+
   test "configuration receipt accepts only the exact fixed success output" do
     marker = "bounded bridge bootstrap configuration passed\n"
     assert :ok = SoftwareBridgeBuild.verify_configuration!(marker)

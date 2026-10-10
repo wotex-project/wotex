@@ -8,6 +8,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @target "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-server-test"
   @codec "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-codec-test"
   @configuration "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-configuration-test"
+  @bootstrap "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-bootstrap-test"
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -166,7 +167,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             "4",
             @target,
             @codec,
-            @configuration
+            @configuration,
+            @bootstrap
           ],
           []
         )
@@ -179,6 +181,15 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
           )
 
         verify_configuration!(configuration_output)
+
+        bootstrap_output =
+          inside.(
+            directory <> "-bootstrap",
+            ["/work/" <> directory <> "/" <> @bootstrap],
+            @environment
+          )
+
+        verify_bootstrap!(bootstrap_output)
 
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
@@ -273,6 +284,11 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
            "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @target])),
            "generated_sha256" => compiled_model,
            "cases" => cases,
+           "bootstrap" => %{
+             "exit_status" => 0,
+             "binary_sha256" =>
+               SoftwareManifest.digest(Path.join([workspace, directory, @bootstrap]))
+           },
            "configuration" => %{
              "exit_status" => 0,
              "binary_sha256" =>
@@ -458,6 +474,14 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
         fabric_filtered: filtered,
         allows_large_payload: large
       }
+  end
+
+  @spec verify_bootstrap!(binary()) :: :ok
+  def verify_bootstrap!(output) do
+    unless output == "owned SDK bootstrap credential loading passed\n",
+      do: Mix.raise("bridge_bootstrap_test_failed")
+
+    :ok
   end
 
   @spec verify_configuration!(binary()) :: :ok

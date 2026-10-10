@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.21.0-target.
+Version: 0.22.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -158,6 +158,31 @@ opening and expiry MUST belong to the SDK process owner, without automatic
 reopening after expiry. A parsed setting MUST NOT open a window or establish
 commissioning, authentication or interoperability. This configuration is a
 package bootstrap format, not a Matter or W3C-standard field.
+
+Private bootstrap loading MUST take one explicit configuration-file path after
+caller SDK memory initialization. It MUST use the bounded private-file boundary
+for the configuration and all five selected material files. Configuration MUST
+fit within 65536 bytes; DAC/PAI and declaration MUST retain their credential-owner
+bounds. The serialized keypair MUST have the selected SDK's exact 97-byte
+capacity, and commissioning input MUST have its exact 35–51-byte layout.
+Provider creation MUST use the configured VID/PID and the explicit decoded
+commissioning material. The loader MUST clear its passcode copy, decoded PIN/salt
+and original key/setup snapshots after the credential factory call, on success
+or refusal. All temporary snapshots MUST retire on every return path. Original
+consumer files and copies remain consumer-owned.
+
+Loading failure MUST preserve the previous configuration/credential owner and
+return a fixed file, configuration, credentials or no-memory classification,
+without paths or external diagnostic text. Loading MUST install no provider,
+initialize no platform or store, perform no network/window action and start no
+SDK server. Before releasing or replacing a successful owner, its caller MUST
+retire all borrowed provider references. Loading MUST NOT establish trusted
+attestation, commissioning, peer interoperability or certification.
+
+The bridge SDK logging hook MUST discard module, format and argument data
+without dereferencing, formatting, emitting or retaining it. The explicit
+process owner MUST report only fixed stage codes. Controller logging belongs
+to its separate host profile.
 
 Dynamic SDK slots MUST remain distinct from durable endpoint IDs. Restore MUST
 receive one explicit consumer configuration for every live Thing and refuse
