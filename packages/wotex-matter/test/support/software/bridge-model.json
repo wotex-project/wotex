@@ -109,7 +109,7 @@
     "data_model/1.6/device_types/OnOffLight.xml": "6d5d7f08d6168ed981b499474b3d111f9c7dd73ab8ced6b1f379f199ef4bc530",
     "data_model/1.6/device_types/RootNodeDeviceType.xml": "51b2d84d2847e16d8c61b512f92becd2f788cd1eadebf66863acd680ed36b410",
     "data_model/1.6/device_types/TemperatureSensor.xml": "4bb6388243fbfa7cef9b2c9ddb308317dd7fb7d46e2f2887e8591eec4e0ae61b",
-    "data_model/1.6/device_types/aggregator.xml": "1f3f33dc48950cfad720007df916467398aab8fa7f69cfe933b9d306b0b24752",
+    "data_model/1.6/device_types/Aggregator.xml": "1f3f33dc48950cfad720007df916467398aab8fa7f69cfe933b9d306b0b24752",
     "examples/all-clusters-app/all-clusters-common/all-clusters-app.zap": "76bd8c9686a73494c40887781ee3de03af13f22c46010a30a2a14fc3277eb35e",
     "examples/bridge-app/bridge-common/bridge-app.zap": "c99c8e3e4b69aa42a2d22cad61a05c57acfcea54ca7f336ea1e76a694f2715e4",
     "examples/lighting-app/lighting-common/lighting-app.zap": "07ea4259cca095ef3e8ec54fc075eef16d73d33b64f5715a2160ec94cf308bfe"
