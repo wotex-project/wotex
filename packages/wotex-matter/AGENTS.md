@@ -59,6 +59,11 @@ Repository-wide rules are in the root `AGENTS.md`.
   `native/testing/sdk_bridge_credentials_test.*` supplies pinned development
   material only to the separate SDK test build. Production bootstrap and
   authenticated consumer execution remain open.
+- `native/include/wotex_matter/bridge_{private_file,commissioning_input}.hpp`
+  and `native/src/bridge_private_file.cpp`: bounded private material snapshots,
+  observed-change refusal and owned binary commissioning input. Their native
+  tests cover file custody, allocation/read/mutation refusal and secret clearing.
+  These primitives install no provider and start no SDK server or process host.
 - `native/include/wotex_matter/bridge_control.hpp` and `native/src/bridge_input.cpp`:
   bounded first-frame open, pinned ready/closed receipts and generation-scoped
   close. `bridge_output.*` can explicitly complete an active frame before a

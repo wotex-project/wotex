@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.17.0. Finite WMA.09 implementation target. The
+Version: 1.18.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -305,7 +305,14 @@ It checks certificate format/identity and key possession, copies its material,
 derives the verifier and clears retained secrets on retirement. It installs no
 provider. PAA-chain trust and declaration validity remain separate provisioning
 obligations. This model fixture contains
-credential source digests only. It includes no attestation private-key bytes
+credential source digests only. Native input primitives retain bounded snapshots
+of explicit private regular files and a separate 35–51-byte commissioning record.
+Snapshots enforce effective-user ownership, mode 0400/0600, one hardlink, no
+symlink traversal, explicit byte bounds and observed-change refusal. Their owned
+buffers and decoded PIN/salt are cleared on retirement. Structural decoding does
+not establish SDK PIN validity or commissioning; original files remain owned by
+the consumer. Full production configuration and process-host integration remain
+open. The model fixture includes no attestation private-key bytes
 or production credential claim. The selected peer is the pinned SDK's
 `examples/chip-tool:chip-tool`, independently built from the server.
 Model generation does not build either executable. The native build separately

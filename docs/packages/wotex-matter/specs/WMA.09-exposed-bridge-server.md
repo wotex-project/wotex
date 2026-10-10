@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.19.0-target.
+Version: 0.20.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -86,6 +86,30 @@ are retired, explicit retirement MUST refuse all getter/signing service and
 clear the retained key, verifier, salt and passcode. Failure MUST preserve
 caller output. Provider calls and retirement MUST remain serialized by the
 SDK owner.
+
+Native bootstrap material MUST use explicit consumer-owned private snapshots,
+with no file discovery or repeated credential reads after loading. A snapshot
+MUST accept only a normalized absolute path of at most 4096 bytes, refuse NUL,
+CR, LF, empty components, `.` and `..`, and follow no parent or leaf symlink.
+It MUST require a regular file owned by the effective user, one hardlink and
+exact mode 0400 or 0600. The caller MUST select a maximum of 1–65536 bytes;
+empty or excessive files MUST be refused before byte allocation. Reads MUST
+handle short reads and interruptions, verify EOF, and refuse an observed
+change in file identity, size, ownership, permissions, links or modification
+metadata. Failure MUST preserve the previous snapshot. Release MUST clear
+the complete owned byte allocation. These checks MUST NOT be described as
+filesystem immutability or protection from a malicious file owner; the consumer
+owns original disk material and other copies.
+
+The internal commissioning-input format MUST contain exactly `WMCSET1` followed
+by NUL, a big-endian uint32 passcode, uint16 discriminator, uint32 iteration
+count, uint8 salt length and the salt bytes. Its total length MUST be 35–51
+bytes, discriminator 0–4095, iterations 1000–100000 and salt length 16–32.
+Extra, missing or malformed bytes MUST be refused without changing the current
+owner. The decoder MUST copy the salt and passcode into its own bounded storage
+and clear both on retirement. Successful structural decoding MUST NOT establish
+SDK PIN validity, provider creation or commissioning. This is a package bootstrap
+format, not a Matter or W3C-standard field.
 
 Dynamic SDK slots MUST remain distinct from durable endpoint IDs. Restore MUST
 receive one explicit consumer configuration for every live Thing and refuse

@@ -52,6 +52,30 @@ target_link_libraries(wotex_matter_bridge_output_test PRIVATE wotex_matter_bridg
 target_compile_options(wotex_matter_bridge_output_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME wotex_matter_bridge_output_test COMMAND wotex_matter_bridge_output_test)
 
+add_library(wotex_matter_bridge_bootstrap_input STATIC src/bridge_private_file.cpp)
+target_include_directories(wotex_matter_bridge_bootstrap_input PUBLIC include)
+target_compile_features(wotex_matter_bridge_bootstrap_input PUBLIC cxx_std_17)
+target_compile_options(wotex_matter_bridge_bootstrap_input PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(WOTEX_MATTER_SANITIZERS)
+  target_compile_options(wotex_matter_bridge_bootstrap_input PUBLIC -fno-omit-frame-pointer -fsanitize=address,undefined)
+  target_link_options(wotex_matter_bridge_bootstrap_input PUBLIC -fsanitize=address,undefined)
+endif()
+foreach(test_name bridge_private_file bridge_commissioning_input)
+  add_executable(wotex_matter_${test_name}_test ../test/native/${test_name}_test.cpp)
+  target_link_libraries(wotex_matter_${test_name}_test PRIVATE wotex_matter_bridge_bootstrap_input)
+  target_compile_options(wotex_matter_${test_name}_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_test(NAME wotex_matter_${test_name}_test COMMAND wotex_matter_${test_name}_test)
+endforeach()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # Test-only GNU interposition mutates real files during reads. Production
+  # sources expose no fault hook and retain ordinary POSIX calls.
+  add_executable(wotex_matter_bridge_private_file_fault_test ../test/native/bridge_private_file_fault_test.cpp)
+  target_link_libraries(wotex_matter_bridge_private_file_fault_test PRIVATE wotex_matter_bridge_bootstrap_input)
+  target_link_options(wotex_matter_bridge_private_file_fault_test PRIVATE "-Wl,--wrap=read" "-Wl,--wrap=fstat")
+  target_compile_options(wotex_matter_bridge_private_file_fault_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_test(NAME wotex_matter_bridge_private_file_fault_test COMMAND wotex_matter_bridge_private_file_fault_test)
+endif()
+
 if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   # Bridge input is a separate role and frame contract from the controller.
   add_library(wotex_matter_bridge_input STATIC src/bridge_input.cpp)

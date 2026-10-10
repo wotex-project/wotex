@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.18.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.19.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -106,6 +106,30 @@ retired-provider refusal with unchanged outputs. SDK server lifecycle cases
 install this owner explicitly instead of installing the example provider.
 The production process bootstrap, private configuration loader and
 authenticated consumer request integration remain open.
+
+The internal
+[`BridgePrivateFile`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_private_file.hpp)
+owns a bounded private regular-file snapshot, refuses symlink traversal,
+incorrect UID/mode/link custody and observed read-time changes, and clears its
+exact byte allocation before release. The
+[`BridgeCommissioningInput`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_commissioning_input.hpp)
+copies and clears the explicit binary PIN/salt record without selecting defaults
+or installing a provider. Structural decoding leaves SDK PIN validation to the
+credential owner. Neither primitive establishes filesystem immutability or
+starts a server. The consumer owns original disk material and other copies.
+
+[`bridge_private_file_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_private_file_test.cpp)
+covers binary ownership, path/UID/mode/link/type refusal, byte bounds, real
+allocation failures and wipe before deallocation.
+[`bridge_private_file_fault_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_private_file_fault_test.cpp)
+uses Linux-only linker interposition for actual short/interrupted reads, errors,
+early EOF, extension/truncation, same-size rewrites, permission changes and final
+metadata failure, checking refusal, prior-owner preservation and temporary
+buffer clearing. Production code exposes no fault hook.
+[`bridge_commissioning_input_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_commissioning_input_test.cpp)
+covers the exact byte layout, truncation/excess, boundary values, independent
+copies, structural-only PIN handling and cleared retirement. The owning CMake
+native lane includes these tests; complete SDK process bootstrap remains open.
 
 [`sdk_bridge_server_test.cpp`](../../../../packages/wotex-matter/native/testing/sdk_bridge_server_test.cpp)
 is a separate test-only target using explicit SDK example attestation and
