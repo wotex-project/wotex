@@ -88,6 +88,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   bounded first-frame open, pinned ready/closed receipts and generation-scoped
   close. `bridge_output.*` can explicitly complete an active frame before a
   terminal control. Codec/output tests do not establish SDK process cleanup.
+- `native/{include/wotex_matter,src}/bridge_observation.*` and
+  `lib/wotex/matter/bridge/observation.ex`: pure bounded approved-state transport
+  and exact correlated receipts. The separate native allocation fixture and
+  `test/wotex/matter/bridge_observation_test.exs` cover nullable values, strict
+  framing and preserved refusal output. Process credit/replay ownership,
+  authenticated delivery and SDK application remain open.
 - `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
   custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
   tests deadlines, generations and closure independently of the SDK.

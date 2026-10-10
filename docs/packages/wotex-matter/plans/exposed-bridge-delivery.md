@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.24.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.25.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -614,6 +614,22 @@ the consumer-facing native Port and integration with BEAM execution remain open.
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 
 Keep duplicate command handling separate from exactly-once claims: the underlying device may not support idempotency. Rejections and unknown outcomes require software-peer fixtures before physical integration.
+
+The explicit observation transport codecs are implemented independently of
+process delivery. [`Observation`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/observation.ex)
+encodes all five approved-state fields and checks exact correlated applied or
+refused receipts. The [native codec](../../../../packages/wotex-matter/native/src/bridge_observation.cpp)
+uses scalar-only SAX parsing, owns opaque Thing bytes and preserves caller
+output on malformed input or allocation refusal. Parsing starts no SDK resource
+and mutates no endpoint. Its [separate fixture](../../../../packages/wotex-matter/native/testing/bridge_observation_test.cpp)
+checks exact bounds, decoded duplicate keys and real allocation cutpoints;
+the normal and sanitizer GN runs pair eight BEAM observations with native
+decoding and four native receipts with the BEAM checker. The builder requires
+exact fixture order and fixed completion markers and records binary/input
+digests. [BEAM boundary tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_observation_test.exs)
+cover nullable values, generation/ID correlation, malformed fields and framing.
+This supplies no process-owned observation credit, replay tracking or SDK
+application. Those delivery and authority boundaries remain open.
 
 ## 4. Isolation and recovery
 

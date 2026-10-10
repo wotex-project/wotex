@@ -8,6 +8,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @target "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-server-test"
   @codec "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-codec-test"
   @configuration "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-configuration-test"
+  @observation "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-observation-test"
   @bootstrap "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-bootstrap-test"
   @lifecycle "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test"
   @environment [
@@ -196,6 +197,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             @target,
             @codec,
             @configuration,
+            @observation,
             @bootstrap,
             @lifecycle
           ],
@@ -210,6 +212,28 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
           )
 
         verify_configuration!(configuration_output)
+
+        observation_path = Path.join([workspace, directory, "codec-observations.ndjson"])
+        File.write!(observation_path, observation_fixtures())
+
+        observation_output =
+          inside.(
+            directory <> "-observation",
+            [
+              "/work/" <> directory <> "/" <> @observation,
+              "/work/" <> directory <> "/codec-observations.ndjson"
+            ],
+            @environment
+          )
+
+        observation = verify_observation!(observation_output)
+
+        observation =
+          Map.merge(observation, %{
+            "binary_sha256" =>
+              SoftwareManifest.digest(Path.join([workspace, directory, @observation])),
+            "observations_sha256" => SoftwareManifest.digest(observation_path)
+          })
 
         bootstrap_output =
           inside.(
@@ -350,6 +374,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
              "binary_sha256" =>
                SoftwareManifest.digest(Path.join([workspace, directory, @configuration]))
            },
+           "observation" => observation,
            "codec" => codec
          }}
       end
@@ -449,6 +474,55 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
       {:ok, frame} = Wotex.Matter.Bridge.ClockProbe.encode(:binary.copy(<<255>>, 16), id)
       frame
     end
+  end
+
+  @spec observation_fixtures() :: iodata()
+  def observation_fixtures do
+    for {reachable, on_off, temperature} <- [
+          {true, true, nil},
+          {false, false, nil},
+          {true, nil, -32_767},
+          {false, nil, 32_767}
+        ],
+        id <- [1, 0xFFFFFFFFFFFFFFFF] do
+      {:ok, frame} =
+        Wotex.Matter.Bridge.Observation.encode(:binary.copy(<<255>>, 16), id, %{
+          thing: <<0, 255>>,
+          endpoint: 3,
+          reachable: reachable,
+          on_off: on_off,
+          temperature: temperature
+        })
+
+      frame
+    end
+  end
+
+  @spec verify_observation!(binary()) :: map()
+  def verify_observation!(output) do
+    generation = :binary.copy(<<255>>, 16)
+    expected = for outcome <- [:applied, :refused], id <- [1, 0xFFFFFFFFFFFFFFFF], do: {id, outcome}
+    lines = String.split(output, "\n")
+    fixtures = for "bridge observation receipt fixture: " <> line <- lines, do: line
+
+    valid =
+      length(fixtures) == 4 and
+        Enum.all?(Enum.zip(fixtures, expected), fn {line, {id, outcome}} ->
+          Wotex.Matter.Bridge.Observation.decode_receipt(line <> "\n", generation, id) ==
+            {:ok, outcome}
+        end)
+
+    remaining = Enum.reject(lines, &String.starts_with?(&1, "bridge observation receipt fixture: "))
+
+    unless valid and
+             remaining == [
+               "bounded observation codec preserves refusal and exact receipt roles",
+               "observation decode and receipt allocation cutpoints preserve caller output",
+               ""
+             ],
+           do: Mix.raise("bridge_observation_test_failed")
+
+    %{"observation_frames" => 8, "receipt_frames" => 4}
   end
 
   @spec argument_fixtures() :: iodata()

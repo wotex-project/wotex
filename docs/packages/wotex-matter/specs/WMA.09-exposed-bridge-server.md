@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.25.0-target.
+Version: 0.26.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -233,6 +233,28 @@ lifetime. Unknown bounds and unavailable measurements MUST retain their null
 meaning; a restart MUST NOT promote a previous measurement to current truth.
 An observation MUST match both the Thing identity and its current endpoint.
 Invalid observations MUST preserve previously approved state and reachability.
+Approved observation transport MUST use one LF-delimited JSON object of at
+most 1024 bytes including LF, with exactly ten scalar fields: integer `v: 1`,
+`backend: "matter-bridge"`, `type: "observation"`, the expected 16-byte
+`generation` as 32 lowercase hexadecimal characters, `id` as a canonical
+nonzero uint64 decimal string, `thing` as 1..256 opaque bytes encoded in
+lowercase hexadecimal, integer `endpoint` in 3..65534, boolean `reachable`,
+boolean or null `on_off`, and integer -32767..32767 or null `temperature`.
+Temperature MUST retain Matter's signed hundredths of a degree Celsius.
+Null MUST retain unavailable state. Decoding MUST NOT apply state, authorize
+dispatch, resolve request custody or infer a physical effect. The endpoint
+owner MUST separately validate the current Thing/endpoint and fixed capabilities.
+Observation IDs MUST occupy a separate, non-reused generation-scoped namespace.
+
+The observation receipt MUST contain exactly six scalar fields and fit within
+512 bytes including LF: `v: 1`, `backend: "matter-bridge"`,
+`type: "observation-receipt"`, the original generation and canonical observation
+ID, and `outcome` of `"applied"` or `"refused"`. Applied MUST mean endpoint
+validation and approved-state application completed; it MUST NOT establish
+request completion or a physical effect. Refused MUST preserve prior state.
+Duplicate, missing or extra fields, nested values, wrong types/roles/generations,
+trailing JSON, NUL, CR and oversized frames MUST be refused. Codec refusal,
+including allocation failure, MUST preserve caller output.
 Permanent removal MUST retire SDK cluster registrations and endpoint-scoped
 group/attribute custody. Normal shutdown MUST preserve durable group custody.
 

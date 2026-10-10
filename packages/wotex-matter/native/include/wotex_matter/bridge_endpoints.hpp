@@ -2,6 +2,7 @@
 #define WOTEX_MATTER_BRIDGE_ENDPOINTS_HPP
 
 #include "wotex_matter/bridge_server.hpp"
+#include "wotex_matter/bridge_observation.hpp"
 
 #include <app/util/af-types.h>
 #include <protocols/interaction_model/StatusCode.h>
@@ -20,15 +21,6 @@ struct BridgeDeviceConfiguration {
   std::string node_label;
   std::optional<std::int16_t> minimum_temperature;
   std::optional<std::int16_t> maximum_temperature;
-};
-
-// An observation is explicitly approved by the consumer owner. It supplies no
-// command authority or physical-effect conclusion. Missing temperature is
-// unavailable/null; missing On/Off state remains unavailable for its read.
-struct BridgeObservation {
-  bool reachable{false};
-  std::optional<bool> on_off;
-  std::optional<std::int16_t> temperature;
 };
 
 // Internal SDK endpoint owner. All calls are serialized under the SDK stack

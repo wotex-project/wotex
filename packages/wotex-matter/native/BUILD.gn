@@ -71,6 +71,17 @@ executable("wotex-matter-sdk-bridge-storage-test") {
 
 # Separate generated server profile; never linked into the controller host.
 if (chip_build_tools) {
+  # Bounded approved-state transport and allocation faults; no SDK startup.
+  executable("wotex-matter-bridge-observation-test") {
+    cflags_cc = [ "-std=c++17" ]
+    sources = [
+      "src/bridge_observation.cpp",
+      "testing/bridge_observation_test.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [ "${chip_root}/src/lib" ]
+  }
+
   # Separate private-file/credential fixture, with no SDK platform startup.
   executable("wotex-matter-bridge-bootstrap-test") {
     cflags = [

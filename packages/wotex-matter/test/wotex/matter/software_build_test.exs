@@ -143,6 +143,65 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "paired observation receipts preserve exact identity, outcome and allocator evidence" do
+    generation = :binary.copy(<<255>>, 16)
+    fixtures = SoftwareBridgeBuild.observation_fixtures() |> Enum.map(&Jason.decode!/1)
+    assert length(fixtures) == 8
+
+    assert Enum.map(fixtures, & &1["id"]) ==
+             List.duplicate(["1", "18446744073709551615"], 4) |> List.flatten()
+
+    assert Enum.map(fixtures, & &1["temperature"]) == [
+             nil,
+             nil,
+             nil,
+             nil,
+             -32_767,
+             -32_767,
+             32_767,
+             32_767
+           ]
+
+    receipts =
+      for outcome <- ["applied", "refused"], id <- ["1", "18446744073709551615"] do
+        "bridge observation receipt fixture: " <>
+          Jason.encode!(%{
+            "v" => 1,
+            "backend" => "matter-bridge",
+            "type" => "observation-receipt",
+            "generation" => Base.encode16(generation, case: :lower),
+            "id" => id,
+            "outcome" => outcome
+          }) <> "\n"
+      end
+
+    markers =
+      "bounded observation codec preserves refusal and exact receipt roles\n" <>
+        "observation decode and receipt allocation cutpoints preserve caller output\n"
+
+    output = IO.iodata_to_binary(receipts) <> markers
+
+    assert SoftwareBridgeBuild.verify_observation!(output) == %{
+             "observation_frames" => 8,
+             "receipt_frames" => 4
+           }
+
+    for invalid <- [
+          "",
+          markers,
+          output <> output,
+          output <> "AddressSanitizer\n",
+          String.replace(output, "\"applied\"", "\"completed\""),
+          String.replace(output, "\"id\":\"1\"", "\"id\":\"01\""),
+          String.replace(output, "allocation cutpoints", "allocation snapshot"),
+          "external payload\n" <> output
+        ] do
+      assert_raise Mix.Error, "bridge_observation_test_failed", fn ->
+        SoftwareBridgeBuild.verify_observation!(invalid)
+      end
+    end
+  end
+
   test "paired codec receipts reject malformed requests, missing completion and sanitizer errors" do
     output = codec_output(codec_frames())
     receipt = "bridge paired request/result codec and allocation boundaries passed\n"

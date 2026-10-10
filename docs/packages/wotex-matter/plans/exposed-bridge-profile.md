@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.23.0. Finite WMA.09 implementation target. The
+Version: 1.24.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -239,6 +239,16 @@ clock, protocol, owner or private-supervisor loss and explicit closure reap
 owned work, including handlers that trap exits. The native Port owner must
 monitor execution loss and close its native custody. This API supplies no
 native process bootstrap, live SDK admission or approved-observation transport.
+
+The pure observation codecs provide a separate ten-field, 1024-byte LF frame
+and a correlated six-field receipt within the 512-byte control limit. Opaque
+Thing bytes, current endpoint, reachability and nullable On/Off/temperature
+values remain explicit. The separate GN fixture pairs eight BEAM observations
+with native decoding and four native applied/refused receipts with BEAM checking
+in both builds. It checks malformed/duplicate input, bounds and real allocation
+cutpoints with preserved output. Encoding and decoding perform no state
+application, capability lookup or consumer authorization. Process-owned replay
+custody, bounded delivery and SDK application remain separate work.
 
 `Wotex.Matter.Bridge.Connection` coordinates an explicitly selected native
 process and its private consumer. Required options name a live local owner,
