@@ -35,8 +35,12 @@ defmodule Wotex.Routines.Expansion do
   end
 
   defp node(data, args, path, state) do
-    with {:ok, state} <- charge(state, :nodes, "expanded_nodes") do
+    with true <- length(path) <= 32,
+         {:ok, state} <- charge(state, :nodes, "expanded_nodes") do
       expand(data, args, path, state)
+    else
+      false -> Error.refusal(:path_bound)
+      error -> error
     end
   end
 
@@ -105,7 +109,7 @@ defmodule Wotex.Routines.Expansion do
 
   defp expand(%{"kind" => "delay"} = data, _, path, state) do
     with {:ok, state} <- charge(state, :waits, "waits") do
-      {:ok, Map.put(data, "path", path), state}
+      {:ok, Map.put(data, "path", Enum.reverse(path)), state}
     end
   end
 
@@ -151,7 +155,7 @@ defmodule Wotex.Routines.Expansion do
   end
 
   defp expand(%{"kind" => "noop"} = data, _, path, state),
-    do: {:ok, Map.put(data, "path", path), state}
+    do: {:ok, Map.put(data, "path", Enum.reverse(path)), state}
 
   defp children(values, args, path, state) do
     result =

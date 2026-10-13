@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.4. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.5. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -281,6 +281,76 @@ required branch completes. Aggregates preserve partial/unknown outcomes rather
 than rewriting them as a single success/failure. Run deadline or invalid time
 generation expires unsent continuation; already handed-off uncertainty remains.
 
+### Closed retained execution representation
+
+Prior input has exactly original, busy and edge. original/busy are explicit
+null or a complete Run; edge is explicit null or the retained edge baseline.
+No absent original is inferred from an empty cache. The host selects these
+records from its durable original/current-run indexes.
+
+Event requires kind, original and program_digest plus only its kind's members:
+manual/cancel have no others; due has schedule_id, due_ms, late_window_ms,
+clock_generation and time_zone_basis; fact has binding and fact_id; admission
+has path, ref and outcome (held/refused); handoff has path and ref; result has
+path, ref, stage, outcome and report_contract. Result report_contract is null
+for queue/protocol stages and the exact installed reference for report stages.
+Every path is a nonnegative integer vector of at most 32 members; compilation refuses a longer expanded path. No receipt sets a new program,
+author, target, clock, grant or participant mapping.
+
+Run has exactly format, original, program_digest, source_digest,
+compiler_basis, epoch, clock_generation, start_ms, last_ms, deadline_ms,
+status, steps, spent, window and reason. Format is wotex.routines.run@1.
+Window is explicit null or the complete retained due descriptor. reason is
+explicit null or a fixed bounded refusal code. Spent is the nonrefundable list
+of held step originals and admission references, not a library-authenticated
+claim about an external store. Each expanded node has one record in steps:
+path, original, kind, status, started_ms, deadline_ms, branch and receipts.
+The first three identify the exact compiled node. Optional coordinates and
+branch are explicit null until established; branch is then/else for if.
+Receipts is a closed seven-slot object: admission, handoff, local_queue,
+protocol_response, correlated_report, reported_match and terminal. Each slot
+is null or {ref, digest, outcome}; digest binds the complete input event.
+First accepted stage receipts are retained. An exact duplicate keeps the slot;
+a different event at an occupied stage refuses without replacing history.
+
+Run construction regenerates all expected paths/originals from the complete
+Program. Missing, extra, duplicated or altered records refuse. It checks all
+status/receipt/spend/time coherence and selected bounds before transition.
+Current input time cannot precede last_ms in the retained epoch; a changed
+epoch/generation expires unsent work. Started/handed-off steps retain evidence
+and uncertainty, with no physical retry. Source conditions gate a new run and
+are rechecked before each new unsent effect. Selected if paths stay fixed;
+no later condition change switches a partly executed branch. Wait is the only
+condition construct that deliberately waits for future facts.
+
+The transition is a closed object with run, proposals, basis and outcome. Run
+is a checked Run value, or null for skipped-busy; outcome is its status or
+skipped-busy. Basis contains program_digest, source_digest, compiler_basis,
+event, snapshot and time, preserving the
+complete supplied collection, observation and clock data. Each inert proposal
+has original (root), step_original, program_digest, path, binding,
+installed_basis, thing_id, resource_domains, operation, input, completion and
+evidence_contract. Domains are the sorted distinct complete resolved resource
+role IDs. Data contains no priority, permission or transport handle. The host
+must recheck this entire basis in its transaction before admitting work.
+The host must persist skipped-busy against the event's original as well. A
+busy Run from another program revision refuses correspondence; the host must
+resolve revision replacement before supplying an executable current program.
+
+For an existing original, repeating its original manual/due event is an explicit
+elapsed reevaluation, not another trigger. A due descriptor must remain exactly
+the retained descriptor. Admission and handoff receipts refer to that original's
+effect path; results require a retained handoff. Stage order is monotone:
+local_queue, protocol_response, correlated_report, reported_match. A higher
+stage may arrive without intermediate stages; lower new stages after a higher
+one refuse, while exact duplicates retain their first receipts. Accepted stages
+only complete at or above the installed threshold. After completion, a new stage refuses; exact duplicates still retain the completed outcome. Failed/unknown stages halt
+the affected path. Cancellation and expiry may retain later qualified receipts
+for already handed-off work, but never reactivate unsent paths. A changed clock
+basis, regression, elapsed deadline or closed due window cancels unsent work;
+uncertain handed-off work stays unknown. Effect deadlines are the minimum of the inherited run/child deadline and step start plus the installed deadline_ms. Installed duration/dwell/report qualification is part of the exact consumer-owned report contract; cooldown and repeat safety additionally remain host admission checks against retained whole-resource history. The kernel never treats an absolute input or elapsed delay as a report qualification. A false/unknown root or invocation
+condition blocks new effects; a selected conditional branch stays selected.
+
 ### Collection and arbitration contract
 
 Collection receives the complete bounded active Program list and a supplied
@@ -313,3 +383,5 @@ execution. An old format never accepts a new operator by accident.
 | WRO02-T3 | 03, 05 | Conflict beyond batch cutoff still conflicts; equivalent originals retain all accounting; membership mismatch refuses commit |
 | WRO02-T4 | 02, 06 | ACK-only sequence, partial parallel failure, deadline and post-handoff cancellation never fabricate completion, compensation or resend |
 | WRO02-T5 | 01–06 | Independent archive consumers execute the same scalar/event/slow-actuator procedure without shared private modules, schema or consumer terminology |
+
+Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported edges, complete-set collection/arbitration and independent transition/archive consumers remain unimplemented obligations.

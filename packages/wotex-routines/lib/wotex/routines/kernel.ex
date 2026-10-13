@@ -1,0 +1,224 @@
+defmodule Wotex.Routines.Kernel do
+  @moduledoc "Pure retained-run transitions and inert proposals. The consumer owns admission, clocks and effects."
+
+  alias Wotex.Routines.{
+    Compiler,
+    Error,
+    Event,
+    Execution,
+    ExecutionTree,
+    Limits,
+    ObservationView,
+    Profile,
+    Receipt,
+    Run,
+    Snapshot,
+    Time,
+    Validation
+  }
+
+  @terminal ~w(partial completed refused failed unknown cancelled expired)
+  @due ~w(schedule_id due_ms late_window_ms clock_generation time_zone_basis)
+
+  @doc "Checks complete inputs and advances one original without performing or authorizing any effect."
+  @spec advance(term(), term(), term(), term(), term(), Profile.t(), Limits.t()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def advance(program, event, snapshot, time, prior, profile, limits) do
+    with {:ok, profile} <- Profile.new(profile),
+         {:ok, limits} <- Limits.new(limits),
+         {:ok, program} <- Compiler.to_map(program, profile, limits),
+         {:ok, event} <- Event.to_map(event, limits),
+         {:ok, snapshot} <- Snapshot.to_map(snapshot, program, profile, limits),
+         {:ok, time} <- Time.to_map(time, limits),
+         {:ok, prior} <- prior(prior, program, profile, limits),
+         :ok <- correspondence(program, event, snapshot, prior),
+         {:ok, run, proposals, outcome} <-
+           transition(program, event, snapshot, time, prior, profile, limits) do
+      result = %{
+        "run" => run,
+        "proposals" => proposals,
+        "outcome" => outcome,
+        "basis" => %{
+          "program_digest" => program["ir_digest"],
+          "source_digest" => program["source_digest"],
+          "compiler_basis" => program["context"]["compiler_basis"],
+          "event" => event,
+          "snapshot" => snapshot,
+          "time" => time
+        }
+      }
+
+      with :ok <- checked_run(run, program, profile, limits),
+           :ok <- Validation.bounded(result, limits) do
+        {:ok, result}
+      end
+    end
+  end
+
+  defp checked_run(nil, _, _, _), do: :ok
+
+  defp checked_run(run, program, profile, limits) do
+    case Run.new(run, program, profile, limits) do
+      {:ok, _} -> :ok
+      error -> error
+    end
+  end
+
+  defp prior(input, program, profile, limits) do
+    with {:ok, data, _} <- Validation.admit(input, limits, nil),
+         :ok <- Validation.fields(data, ~w(original busy edge)),
+         {:ok, original} <- retained(data["original"], program, profile, limits),
+         {:ok, busy} <- retained(data["busy"], program, profile, limits),
+         true <- data["edge"] == nil do
+      {:ok, %{"original" => original, "busy" => busy, "edge" => nil}}
+    else
+      false -> Error.refusal(:unsupported_edge_state)
+      error -> error
+    end
+  end
+
+  defp retained(nil, _, _, _), do: {:ok, nil}
+  defp retained(run, program, profile, limits), do: Run.to_map(run, program, profile, limits)
+
+  defp correspondence(program, event, snapshot, prior) do
+    cond do
+      program["ir_digest"] != event["program_digest"] ->
+        Error.refusal(:foreign_event)
+
+      program["ir_digest"] not in snapshot["active_programs"] ->
+        Error.refusal(:inactive_program)
+
+      prior["original"] != nil and prior["original"]["original"] != event["original"] ->
+        Error.refusal(:foreign_original)
+
+      prior["original"] == nil and prior["busy"] != nil and
+          prior["busy"]["original"] == event["original"] ->
+        Error.refusal(:missing_original)
+
+      true ->
+        :ok
+    end
+  end
+
+  defp transition(program, event, snapshot, time, prior, profile, limits) do
+    cond do
+      prior["original"] != nil ->
+        continue(prior["original"], program, event, snapshot, time, profile, limits)
+
+      event["kind"] in ~w(admission handoff result cancel) ->
+        Error.refusal(:missing_original)
+
+      busy?(prior["busy"], event) ->
+        {:ok, nil, [], "skipped-busy"}
+
+      true ->
+        begin(program, event, snapshot, time, profile, limits)
+    end
+  end
+
+  defp busy?(nil, _), do: false
+
+  defp busy?(busy, event),
+    do: busy["status"] not in @terminal and busy["original"] != event["original"]
+
+  defp begin(program, event, snapshot, time, profile, limits) do
+    with :ok <- trigger(program["ir"]["trigger"], event),
+         :ok <-
+           Validation.integer(time["elapsed_ms"] + program["ir"]["run_ms"], limits, "/deadline_ms"),
+         {:ok, steps} <- ExecutionTree.records(program, event["original"], limits) do
+      run = %{
+        "format" => "wotex.routines.run@1",
+        "original" => event["original"],
+        "program_digest" => program["ir_digest"],
+        "source_digest" => program["source_digest"],
+        "compiler_basis" => program["context"]["compiler_basis"],
+        "epoch" => time["epoch"],
+        "clock_generation" => time["clock_generation"],
+        "start_ms" => time["elapsed_ms"],
+        "last_ms" => time["elapsed_ms"],
+        "deadline_ms" => time["elapsed_ms"] + program["ir"]["run_ms"],
+        "status" => "running",
+        "steps" => steps,
+        "spent" => [],
+        "window" => if(event["kind"] == "due", do: Map.take(event, @due), else: nil),
+        "reason" => nil
+      }
+
+      continue(run, program, event, snapshot, time, profile, limits)
+    end
+  end
+
+  defp trigger(%{"kind" => "manual"}, %{"kind" => "manual"}), do: :ok
+
+  defp trigger(%{"kind" => "due", "schedule_id" => id}, %{"kind" => "due", "schedule_id" => id}),
+    do: :ok
+
+  defp trigger(_, _), do: Error.refusal(:trigger_mismatch)
+
+  defp continue(run, program, event, snapshot, time, profile, limits) do
+    with :ok <- repeat_trigger(run, program, event),
+         {:ok, run} <- Receipt.apply(run, event, program, limits) do
+      run = %{run | "last_ms" => max(run["last_ms"], time_coordinate(run, time))}
+      reason = expiry(run, time)
+      values = ObservationView.values(program, snapshot, time, limits)
+
+      cond do
+        event["kind"] == "cancel" ->
+          run = Execution.halt(run, "cancelled", "cancelled")
+          {:ok, run, [], run["status"]}
+
+        reason != nil and run["status"] not in @terminal ->
+          run = Execution.halt(run, "expired", reason)
+          {:ok, run, [], run["status"]}
+
+        true ->
+          with {:ok, run, proposals} <-
+                 Execution.advance(run, program, values, time, profile, limits) do
+            {:ok, run, proposals, run["status"]}
+          end
+      end
+    end
+  end
+
+  defp repeat_trigger(run, program, %{"kind" => kind} = event) when kind in ~w(manual due fact) do
+    with :ok <- trigger(program["ir"]["trigger"], event) do
+      if kind != "due" or Map.take(event, @due) == run["window"],
+        do: :ok,
+        else: Error.refusal(:stale_due_window)
+    end
+  end
+
+  defp repeat_trigger(_, _, _), do: :ok
+
+  defp time_coordinate(run, time),
+    do: if(run["epoch"] == time["epoch"], do: time["elapsed_ms"], else: run["last_ms"])
+
+  defp expiry(run, time) do
+    cond do
+      run["epoch"] != time["epoch"] or run["clock_generation"] != time["clock_generation"] ->
+        "clock_changed"
+
+      time["elapsed_ms"] < run["last_ms"] ->
+        "clock_regressed"
+
+      time["elapsed_ms"] >= run["deadline_ms"] ->
+        "deadline_elapsed"
+
+      not window_open?(run["window"], time) ->
+        "window_closed"
+
+      true ->
+        nil
+    end
+  end
+
+  defp window_open?(nil, _), do: true
+
+  defp window_open?(window, time) do
+    low = time["utc_low_ms"]
+    high = time["utc_high_ms"]
+
+    is_integer(low) and is_integer(high) and window["clock_generation"] == time["clock_generation"] and
+      low >= window["due_ms"] and high < window["due_ms"] + window["late_window_ms"]
+  end
+end

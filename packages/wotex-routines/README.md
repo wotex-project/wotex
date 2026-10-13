@@ -6,9 +6,8 @@ observations, clocks, persistence and effects.
 
 The source currently provides explicit limits, offline contract closure,
 behaviour basis, exact dimensional conversion, qualified-fact representation
-and a lossless Continuum observation adapter. Loading or constructing these
-values starts no routine, network operation or timer. The pure source/kernel,
-temporal driver and analysis contracts are accepted successors; consult the
+and a lossless Continuum observation adapter, complete source compilation, qualified snapshot evaluation and retained composition transitions. Loading or constructing these
+values starts no routine, network operation or timer. Reported-edge collection/arbitration, temporal driver and analysis contracts remain accepted successors; consult the
 [catalogue](../../docs/packages/wotex-routines/specs/catalogue.yaml) for status.
 
 ## Consumption
@@ -33,6 +32,8 @@ schema is `priv/schemas/wro-01.schema.json`; independent scalar, event, fast/slo
 actuator and media examples and hand-calculated conversions are in
 `priv/vectors/wro-01.json`. They are software fixtures, not device qualification.
 Checked projections revalidate caller-built structs against explicit limits.
+
+The pure `Wotex.Routines.Kernel.advance/7` takes an explicit Event, complete Snapshot/Time and retained original/busy/edge slots. It returns inert proposals with their complete revalidation basis; the consumer persists originals and receipts, rechecks authority atomically and owns every handoff. Queue/protocol receipts never satisfy a higher installed report threshold. See the [source/kernel contract](../../docs/packages/wotex-routines/specs/WRO.02-source-kernel.md) and shipped `wro-02-*.schema.json` contracts.
 
 ## Development
 
