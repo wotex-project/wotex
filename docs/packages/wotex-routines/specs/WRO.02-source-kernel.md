@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.1.0. Updated: 2026-10-13. Status: accepted target; implementation planned.
+Version: 0.2.0. Updated: 2026-10-13. Status: accepted target; implementation planned.
 
 ## Inputs, outputs and authority
 
@@ -81,6 +81,166 @@ or runtime changes require new correspondence/admission; historical identities
 remain interpretable. Restore/transfer do not themselves activate definitions.
 
 ## Entry and acceptance
+
+### Closed first source and compilation contract
+
+The initial format is `wotex.routines.source@1`, profile
+`bounded-composition@1`. There are no inferred parameters, bindings, limits,
+deadlines, evidence thresholds or overlap policies. Public constructors/codecs
+return `{:ok, value}` or WRO.01's payload-free Error. Unknown/missing fields,
+unsupported profiles, altered native programs and bound failures refuse.
+
+`Profile.new/1` requires the following positive integer selections. They are
+ceilings for this executable profile, not defaults or universal product policy:
+
+| Member | Maximum |
+| --- | --- |
+| source_bytes | 1048576 |
+| source_depth | 32 |
+| expanded_nodes, predicate_nodes | 4096 each |
+| invocation_depth | 16 |
+| parallel_width | 64 |
+| effects, waits, active_definitions, active_runs, pending_work | 1024 each |
+| run_ms | 604800000 |
+
+WRO.01 JSON/number limits remain separately explicit. Both sets apply; neither
+can widen the other. Whole closure bytes and every possible expanded path count
+before execution. Invocation copies count again at each call site; both paths
+of a conditional count. A consumer may select the narrower product bounds.
+
+`Source.new/3` and `Codec.decode_source/3` take source data/bytes, Profile and
+JSON Limits. The closed root requires `format`, `profile`, `id`, `revision`,
+`parameters`, `bindings`, `trigger`, `condition`, `steps`, `overlap`, `run_ms`.
+Revision is a nonempty immutable consumer-owned string. Overlap is exactly
+`reject`; condition and steps are mandatory even for an unconditional source.
+Bindings are distinct names selecting the explicit compilation context.
+Parameter declarations are named WRO.01 value contracts (boolean/integer/enum)
+with no default. Effect arguments are literals or the closed object
+`{parameter: name}`; there are no arithmetic expressions or interpolation.
+
+Predicates are these closed forms, with no extra fields:
+
+| Form | Members and semantics |
+| --- | --- |
+| Literal | `{op: literal, value: true/false/unknown}`; unknown is the string unknown |
+| Comparison | `{op: eq/gt/lt, binding, value}`; exact value/parameter matching the installed contract; gt/lt require integer units |
+| Negation | `{op: not, arg}` |
+| Combination | `{op: all/any, args}`; nonempty finite predicate array |
+
+Every node has a nonempty `id`, unique within its source. Path vectors identify
+copies after invocation expansion; no string concatenation ambiguity is allowed.
+
+| Step kind | Required members besides id/kind |
+| --- | --- |
+| noop | None; explicitly completes without an effect |
+| effect | binding, input, completion; binding's operation must be writeproperty/invokeaction, completion must equal its installed threshold |
+| sequence | steps, a nonempty ordered node array |
+| parallel | branches, a nonempty ordered node array; join is all-required |
+| if | condition, then, else; both complete node paths are declared |
+| wait | condition, timeout_ms; positive finite elapsed budget |
+| delay | duration_ms; positive finite elapsed budget |
+| invoke | routine_id, revision, arguments; exact declared child parameters |
+
+Root `steps` is one node, usually sequence/parallel. Explicit noop is a real
+declared construct; unsupported syntax never becomes noop. Child triggers are
+not started by invoke: only their bound step tree executes under the root's
+original, duration and spend. All supplied child sources must pass structural
+validation; the complete invocation graph must be acyclic, including unused
+definitions. Missing/mismatched child versions and arguments refuse.
+
+Triggers are closed manual, due or reported-edge descriptors. Manual has only
+kind. Due has kind and schedule_id; WRO.03 supplies its original coordinate.
+Edge has kind, binding, direction (rising/falling), debounce_ms, cooldown_ms and
+hysteresis. Boolean edges require null hysteresis. Integer hysteresis is the
+closed `{enter, exit}` pair in the installed unit; rising requires enter > exit,
+falling enter < exit. Durations are explicit nonnegative integers. No trigger
+starts a timer or expands a participant set at runtime.
+
+`Compiler.compile(source, context, profile, limits)` takes a closed explicit
+context: `registry`, `bases`, `bindings`, `definitions`, `arguments` and
+`compiler_basis`. Registry and bases use WRO.01 values; no module/class name or
+transport callback is data. Context bindings map each name to an exact installed
+basis reference, an absolute thing_id and every resource-role binding. The
+consumer supplies reviewed instance mappings and owns their trust. Definitions
+are exact version-pinned child sources. Arguments bind every root parameter;
+invoke binds child arguments from literals/parent parameters before expansion.
+Extra, missing or widened bindings and arguments refuse.
+
+The Program retains complete canonical source/context, normalized expanded
+nodes/predicate instructions and distinct source, IR and compiler identities.
+Source identity includes the complete supplied closure and bindings. IR identity
+includes source identity and the whole normalized program. `Compiler.current/4`
+regenerates from retained source/context under the selected profile/limits and
+compares the entire result; a recomputed digest on modified IR is insufficient.
+Compiler basis identifies the selected build/dependency cohort and remains a
+consumer-verified artifact fact, rather than an authenticity assertion by a hash.
+
+### Explicit execution and receipt values
+
+`Kernel.advance(program, event, snapshot, time, prior_run, profile, limits)`
+returns a finite transition containing the next Run, ordered inert proposals,
+and the full revalidation basis. Every supplied native value is revalidated.
+The consumer retrieves the original's retained Run and also supplies any
+nonterminal busy Run for overlap checks. Selecting, persisting and compacting
+originals are host obligations; passing nil does not prove an original is new.
+The kernel never expires a no-repeat ledger or authorizes physical replay.
+
+Snapshot requires identity, membership generation, active program identities,
+resource revisions, current binding/profile/source/clock identities and complete
+Fact data for provided bindings. Time requires epoch, elapsed_ms, clock_generation
+and explicit UTC low/high millisecond coordinates (or both null). UTC coordinates
+are ordered; elapsed regression or epoch change expires unsent elapsed waits.
+Trusted source age uses WRO.01's clock basis/uncertainty and the complete current
+UTC interval. Missing trust/basis, future source intervals, incompatible units,
+expired receipts, unusable quality or unaccepted source classes produce unknown.
+Receipt freshness and source age remain separate checks. Replayed/retained or
+baseline/lost continuity cannot create an edge.
+
+Events identify the exact program revision and original. Manual, due, fact,
+result and cancel are separate kinds. A due event additionally retains original
+due_ms, late_window_ms, schedule/clock identities; its whole UTC confidence
+interval must fit `[due_ms, due_ms + late_window_ms)`. A result names the original
+step/path and a retained result reference, with separate stage and outcome.
+Stages are local_queue/protocol_response/correlated_report/reported_match;
+outcomes are accepted/failed/unknown. Stages do not fabricate cause. A stale,
+foreign, duplicate-conflicting or out-of-order result refuses; an exact duplicate
+retains its original outcome. Report-stage input is consumer-qualified data,
+not an arbitrary report authenticated by the kernel.
+
+Run state binds original, program/compiler identities, time epoch/generation,
+start/deadline, each expanded path's original/status/result reference, edge
+baseline/stability/cooldown and consumed-root references. Step states distinguish
+unsent, proposed, handed_off, waiting, completed, failed, unknown and cancelled.
+Proposal generation changes unsent to proposed so retained-state recomputation
+cannot emit it again. Handoff is an explicit host receipt after durable commit;
+local queue and protocol responses remain below reported completion thresholds.
+The kernel cannot know whether its returned state was durably retained.
+
+Unknown halts dependent new work. Failure cancels unsent dependent work while
+retaining started sibling originals/results. Cancellation retains consumed roots
+and started receipts; it emits no compensating/stop effect. A stop requires a
+new separately authorized original. All-required joins complete only when every
+required branch completes. Aggregates preserve partial/unknown outcomes rather
+than rewriting them as a single success/failure. Run deadline or invalid time
+generation expires unsent continuation; already handed-off uncertainty remains.
+
+### Collection and arbitration contract
+
+Collection receives the complete bounded active Program list and a supplied
+membership basis. It checks exact list identities before evaluating all eligible
+definitions under one snapshot/time basis. The result still describes the
+supplied membership; only the host's current transaction can establish that this
+is the actual complete active set. A mismatched list refuses before proposals.
+
+Arbitration takes all eligible proposals, explicit consumer constraint/override
+dispositions and the same collection basis. Source data cannot assign authority
+or priority. Hard refusal/unknown constraints filter first, current authorized
+override dispositions next. Whole-resource domains then group compatible
+effects: equivalence requires equal installed semantics, operation/input and
+resolved participants. Equal-authority incompatible effects conflict without a
+winner. Equivalent contributors and root references remain intact. Only after
+this full-set result may the selected batch cutoff apply; discarded/suppressed
+work never refunds roots or silently becomes a later catch-up burst.
 
 Before implementation freeze the exact closed source/IR codecs, public types,
 errors, selected profile limits and host transition values in executable schemas
