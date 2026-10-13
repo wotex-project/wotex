@@ -90,12 +90,14 @@ defmodule Wotex.Routines.Registry do
   end
 
   defp acyclic(table) do
-    case visit_all(Enum.sort(Map.keys(table)), table, MapSet.new(), MapSet.new()) do
+    case visit_all(Enum.sort(Map.keys(table)), table, %{}, %{}) do
       {:ok, _} -> :ok
       error -> error
     end
   end
 
+  @spec visit_all([String.t()], map(), map(), map()) ::
+          {:ok, map()} | {:error, Error.t()}
   defp visit_all(ids, table, done, active) do
     Enum.reduce_while(ids, {:ok, done}, fn id, {:ok, done} ->
       case visit(id, table, done, active) do
@@ -105,19 +107,21 @@ defmodule Wotex.Routines.Registry do
     end)
   end
 
+  @spec visit(String.t(), map(), map(), map()) ::
+          {:ok, map()} | {:error, Error.t()}
   defp visit(id, table, done, active) do
     cond do
-      MapSet.member?(active, id) ->
+      Map.has_key?(active, id) ->
         Error.refusal(:cyclic_contract, "/requires")
 
-      MapSet.member?(done, id) ->
+      Map.has_key?(done, id) ->
         {:ok, done}
 
       true ->
         ids = Enum.map(table[id]["requires"], & &1["id"])
 
-        with {:ok, done} <- visit_all(ids, table, done, MapSet.put(active, id)) do
-          {:ok, MapSet.put(done, id)}
+        with {:ok, done} <- visit_all(ids, table, done, Map.put(active, id, true)) do
+          {:ok, Map.put(done, id, true)}
         end
     end
   end

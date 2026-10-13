@@ -86,6 +86,84 @@ defmodule Wotex.Routines.KernelTest do
     }
   end
 
+  test "foreign events and malformed receipt paths never reach retained transitions", c do
+    c = compile(c)
+    foreign = %{c.event | "program_digest" => "sha256:" <> String.duplicate("9", 64)}
+
+    assert {:error, %Error{code: :foreign_event}} =
+             Kernel.advance(
+               c.program,
+               foreign,
+               c.snapshot,
+               c.time,
+               %{"original" => nil, "busy" => nil, "edge" => nil},
+               c.profile,
+               c.limits
+             )
+
+    result = %{
+      "kind" => "result",
+      "original" => c.event["original"],
+      "program_digest" => c.program.data["ir_digest"],
+      "path" => [],
+      "ref" => "receipt:one",
+      "stage" => "protocol_response",
+      "outcome" => "accepted",
+      "report_contract" => nil
+    }
+
+    for invalid <- [
+          %{result | "path" => "not-an-array"},
+          %{result | "path" => List.duplicate(0, 33)},
+          %{result | "ref" => ""},
+          %{result | "report_contract" => %{}}
+        ] do
+      assert {:error, %Error{}} = Event.new(invalid, c.limits)
+    end
+
+    snapshot = put_in(c.snapshot, ["facts", "sensor"], %{"unrecognized" => true})
+
+    assert {:error, %Error{}} =
+             Kernel.advance(
+               c.program,
+               c.event,
+               snapshot,
+               c.time,
+               %{"original" => nil, "busy" => nil, "edge" => nil},
+               c.profile,
+               c.limits
+             )
+  end
+
+  test "forged retained history cannot change subjects, paths, branches or time coherence", c do
+    c = compile(c)
+    {:ok, first} = advance(c)
+    run = first["run"]
+    record = hd(run["steps"])
+
+    variants = [
+      %{run | "source_digest" => "sha256:" <> String.duplicate("9", 64)},
+      %{run | "program_digest" => "sha256:" <> String.duplicate("9", 64)},
+      %{run | "deadline_ms" => run["start_ms"] - 1},
+      %{run | "steps" => []},
+      %{run | "steps" => [record, record]},
+      %{run | "steps" => [%{record | "started_ms" => run["deadline_ms"] + 1}]},
+      %{run | "steps" => [%{record | "deadline_ms" => run["deadline_ms"] + 1}]},
+      %{run | "steps" => [%{record | "branch" => "other"}]},
+      %{run | "steps" => [%{record | "status" => "completed"}]},
+      %{run | "status" => "completed"},
+      %{run | "window" => %{}},
+      %{run | "spent" => [%{"original" => record["original"], "ref" => "unearned:held"}]}
+    ]
+
+    for forged <- variants do
+      assert {:error, %Error{}} = Run.new(forged, c.program, c.profile, c.limits)
+      assert {:error, %Error{}} = advance(c, forged)
+    end
+
+    assert Run.to_map(run, c.program, c.profile, c.limits) == {:ok, run}
+  end
+
   test "one inert proposal retains complete basis and duplicate original never proposes twice", c do
     c = compile(c)
     assert {:ok, first} = advance(c)

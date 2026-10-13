@@ -71,6 +71,140 @@ defmodule Wotex.Routines.CompilerTest do
     %{corpus: corpus, limits: limits, profile: profile, context: context}
   end
 
+  test "closed compiler context rejects foreign, duplicate, missing and over-capacity members", c do
+    child = %{
+      @source
+      | "id" => "child"
+    }
+
+    contexts = [
+      %{c.context | "bases" => nil},
+      %{c.context | "bases" => [hd(c.context["bases"]) | c.context["bases"]]},
+      %{c.context | "bases" => [Map.put(hd(c.context["bases"]), "extra", true)]},
+      %{c.context | "definitions" => nil},
+      %{c.context | "definitions" => [child, child]},
+      %{c.context | "definitions" => [Map.put(child, "extra", true)]},
+      %{c.context | "definitions" => Enum.map(1..64, &%{child | "id" => "child:#{&1}"})},
+      put_in(c.context, ["arguments", "enabled"], "not-a-boolean"),
+      put_in(c.context, ["bindings", "actuator", "thing_id"], "relative"),
+      put_in(c.context, ["bindings", "actuator", "resource_roles"], %{})
+    ]
+
+    for context <- contexts do
+      assert {:error, %Error{}} = Compiler.compile(@source, context, c.profile, c.limits)
+    end
+
+    context = %{c.context | "bases" => []}
+
+    assert {:error, %Error{code: :unknown_binding_basis}} =
+             Compiler.compile(@source, context, c.profile, c.limits)
+  end
+
+  test "predicate, argument, parallel and waiting limits refuse unsupported source before compilation",
+       c do
+    noop = %{"id" => "leaf", "kind" => "noop"}
+
+    sources = [
+      %{@source | "parameters" => []},
+      %{@source | "trigger" => %{"kind" => "unimplemented"}},
+      %{@source | "condition" => %{"op" => "unimplemented"}},
+      %{
+        @source
+        | "condition" => %{"op" => "all", "args" => List.duplicate(@source["condition"], 65)}
+      },
+      %{
+        @source
+        | "steps" => %{
+            "id" => "parallel",
+            "kind" => "parallel",
+            "branches" => Enum.map(1..5, &%{noop | "id" => "leaf:#{&1}"})
+          }
+      },
+      %{
+        @source
+        | "steps" => %{
+            "id" => "call",
+            "kind" => "invoke",
+            "routine_id" => "child",
+            "revision" => "1",
+            "arguments" => []
+          }
+      },
+      put_in(@source, ["steps", "input"], %{"unsupported" => true}),
+      %{@source | "steps" => %{"id" => "delay", "kind" => "delay", "duration_ms" => 60_001}},
+      %{
+        @source
+        | "steps" => %{
+            "id" => "wait",
+            "kind" => "wait",
+            "condition" => %{"op" => "unsupported"},
+            "timeout_ms" => 100
+          }
+      }
+    ]
+
+    for source <- sources do
+      assert {:error, %Error{}} = Compiler.compile(source, c.context, c.profile, c.limits)
+    end
+
+    {:ok, smaller} = Profile.new(%{c.profile.data | "waits" => 1})
+
+    for kind <- ~w(wait delay) do
+      first =
+        if kind == "wait",
+          do: %{
+            "id" => "first",
+            "kind" => kind,
+            "condition" => @source["condition"],
+            "timeout_ms" => 10
+          },
+          else: %{"id" => "first", "kind" => kind, "duration_ms" => 10}
+
+      source = %{
+        @source
+        | "steps" => %{
+            "id" => "sequence",
+            "kind" => "sequence",
+            "steps" => [first, %{first | "id" => "second"}]
+          }
+      }
+
+      assert {:error, %Error{code: :wait_bound}} =
+               Compiler.compile(source, c.context, smaller, c.limits)
+    end
+  end
+
+  test "enum and integer argument contracts never coerce malformed or out-of-domain values", c do
+    for contract <- [
+          %{"type" => "enum", "unit" => nil, "enum" => ["enabled", "disabled"]},
+          %{"type" => "integer", "unit" => hd(c.corpus["bases"])["value"]["unit"], "enum" => []}
+        ] do
+      source = %{
+        @source
+        | "parameters" => %{"enabled" => contract},
+          "steps" => %{"id" => "none", "kind" => "noop"}
+      }
+
+      for value <- [true, nil, %{}, "not-enumerated"] do
+        assert {:error, %Error{}} =
+                 Compiler.compile(
+                   source,
+                   put_in(c.context, ["arguments", "enabled"], value),
+                   c.profile,
+                   c.limits
+                 )
+      end
+    end
+
+    for contract <- [
+          %{"type" => "boolean", "unit" => %{}, "enum" => []},
+          %{"type" => "integer", "unit" => %{}, "enum" => []}
+        ] do
+      source = %{@source | "parameters" => %{"enabled" => contract}}
+      assert {:error, %Error{}} = Compiler.compile(source, c.context, c.profile, c.limits)
+    end
+  end
+
   test "full compilation resolves literals, complete basis and deterministic identities", context do
     assert {:ok, program} =
              Compiler.compile(@source, context.context, context.profile, context.limits)

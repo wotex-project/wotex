@@ -42,6 +42,34 @@ defmodule Wotex.Routines.TemporalTest do
     %{corpus: corpus, limits: limits, profile: profile, time: time}
   end
 
+  test "malformed calendar rules and native schedule values cannot become an empty successful page",
+       c do
+    raw = %{
+      "format" => "wotex.routines.schedule@1",
+      "kind" => "calendar",
+      "schedule_id" => "schedule:one",
+      "definition_digest" => "sha256:" <> String.duplicate("0", 64),
+      "late_window_ms" => 1000,
+      "rule" => String.duplicate("x", 4097),
+      "dtstart" => "2026-10-13T07:00:00Z",
+      "time_zone" => "Etc/UTC",
+      "time_zone_basis" => "sha256:" <> String.duplicate("6", 64),
+      "producer_basis" => "sha256:" <> String.duplicate("7", 64)
+    }
+
+    assert {:error, %Error{code: :rule_bound}} = Schedule.new(raw, c.limits)
+
+    unsupported =
+      raw
+      |> Map.take(~w(format kind schedule_id definition_digest late_window_ms))
+      |> Map.put("kind", "unregistered")
+
+    assert {:error, %Error{code: :unsupported_schedule}} = Schedule.new(unsupported, c.limits)
+    assert {:error, %Error{code: :invalid_type}} = Schedule.semantic_digest(nil, c.limits)
+    assert {:error, %Error{}} = Schedule.semantic_digest(struct!(Schedule, data: nil), c.limits)
+    assert {:error, %Error{}} = Schedule.new(%{raw | "dtstart" => "not-a-time"}, c.limits)
+  end
+
   test "cadence pages preserve global ordinals, horizon boundaries and unclipped originals", c do
     schedule = schedule(c, "interval", %{"first_due_ms" => 1000, "period_ms" => 1000})
     query = %{"from_ms" => 2500, "until_ms" => 5000, "limit" => 1}

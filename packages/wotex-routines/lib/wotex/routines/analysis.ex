@@ -38,7 +38,8 @@ defmodule Wotex.Routines.Analysis do
   defp options(_), do: Error.refusal(:invalid_analysis_options)
 
   defp search(bytes, query, options) do
-    if Code.ensure_loaded?(ExMaude.Verification.SearchRun) and
+    if File.regular?(Keyword.fetch!(options, :maude_path)) and
+         Code.ensure_loaded?(ExMaude.Verification.SearchRun) and
          to_string(Application.spec(:ex_maude, :vsn)) == "0.5.0" do
       arguments = [bytes, query, options]
       apply(ExMaude.Verification.SearchRun, :run, arguments)

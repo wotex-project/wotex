@@ -109,6 +109,15 @@ defmodule Wotex.Routines.AnalysisTest do
     %{model: model, request: request, prepared: prepared}
   end
 
+  test "the public runner classifies an unavailable executable without copying its path", c do
+    options = %{options() | maude_path: "/definitely-missing-routine-interpreter"}
+    assert {:ok, result} = Analysis.run(c.model, c.request, options, c.profile, c.limits)
+    assert result.data["execution"] == "unavailable"
+    assert result.data["reason"] == "backend_unavailable"
+    assert result.data["findings"] == []
+    refute inspect(result) =~ options.maude_path
+  end
+
   test "every expected subject and the entire native model are checked before any backend", c do
     for key <- Map.keys(c.request["binding"]) do
       changed = put_in(c.request, ["binding", key], digest("changed"))

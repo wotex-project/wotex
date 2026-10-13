@@ -107,6 +107,53 @@ defmodule Wotex.Routines.WitnessTest do
     }
   end
 
+  test "concrete replay checks completion evidence throughout every composite tree kind", c do
+    effect = c.source["steps"]
+    child = %{c.source | "id" => "child"}
+
+    steps = [
+      %{
+        "id" => "sequence",
+        "kind" => "sequence",
+        "steps" => [effect, %{effect | "id" => "second"}]
+      },
+      %{
+        "id" => "parallel",
+        "kind" => "parallel",
+        "branches" => [effect, %{effect | "id" => "second"}]
+      },
+      %{
+        "id" => "choose",
+        "kind" => "if",
+        "condition" => c.source["condition"],
+        "then" => effect,
+        "else" => %{"id" => "none", "kind" => "noop"}
+      },
+      %{
+        "id" => "call",
+        "kind" => "invoke",
+        "routine_id" => "child",
+        "revision" => "1",
+        "arguments" => %{}
+      }
+    ]
+
+    for step <- steps do
+      context =
+        if step["kind"] == "invoke", do: %{c.context | "definitions" => [child]}, else: c.context
+
+      source = %{c.source | "steps" => step}
+      {:ok, program} = Compiler.compile(source, context, c.profile, c.limits)
+      snapshot = %{c.snapshot | "active_programs" => [program.data["ir_digest"]]}
+      selected = %{c | program: program, snapshot: snapshot}
+      input = witness(selected, "completion_evidence", [frame(selected, "manual")])
+      assert {:ok, result} = Witness.replay(program, input, c.profile, c.limits)
+      assert result["reproduced"] == false
+      assert length(result["transitions"]) == 1
+      assert hd(result["transitions"])["proposals"] != []
+    end
+  end
+
   test "a complete staged/cancelled trace does not reproduce a false software violation", c do
     frames = [
       frame(c, "manual"),

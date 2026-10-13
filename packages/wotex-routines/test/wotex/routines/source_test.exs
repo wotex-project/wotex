@@ -68,6 +68,21 @@ defmodule Wotex.Routines.SourceTest do
     %{profile: profile, limits: limits, schema: ExJsonSchema.Schema.resolve(schema)}
   end
 
+  test "explicit limit ceilings and forged native limit maps cannot widen source admission", c do
+    assert Limits.to_map(c.limits) == {:ok, c.limits.data}
+
+    for selected <- [
+          %{c.limits.data | "max_bytes" => 0},
+          %{c.limits.data | "max_depth" => 33},
+          %{c.limits.data | "max_integer" => 9_223_372_036_854_775_808},
+          Map.delete(c.limits.data, "max_nodes"),
+          Map.put(c.limits.data, "extra", 1)
+        ] do
+      assert {:error, %Error{code: :invalid_limits}} = Limits.new(selected)
+      assert {:error, %Error{}} = Codec.decode_source("{}", c.profile, selected)
+    end
+  end
+
   test "every declared structural step survives complete canonical round trip", context do
     nodes = [
       @effect,

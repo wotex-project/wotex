@@ -108,7 +108,7 @@ defmodule Wotex.Routines.CompilationContext do
            Validation.each(Map.values(graph), fn refs ->
              Validation.each(refs, &revision(&1, definitions))
            end),
-         {:ok, _} <- visit_all(Enum.sort(Map.keys(graph)), graph, MapSet.new(), MapSet.new()) do
+         {:ok, _} <- visit_all(Enum.sort(Map.keys(graph)), graph, %{}, %{}) do
       Validation.each(Map.values(definitions), &validate_calls(&1, definitions, limits))
     end
   end
@@ -165,20 +165,22 @@ defmodule Wotex.Routines.CompilationContext do
 
   defp invocations(_), do: []
 
+  @spec visit_all([String.t()], map(), map(), map()) ::
+          {:ok, map()} | {:error, Error.t()}
   defp visit_all(ids, graph, done, active) do
     Enum.reduce_while(ids, {:ok, done}, fn id, {:ok, done} ->
       cond do
-        MapSet.member?(active, id) ->
+        Map.has_key?(active, id) ->
           {:halt, Error.refusal(:recursive_invocation, "/definitions")}
 
-        MapSet.member?(done, id) ->
+        Map.has_key?(done, id) ->
           {:cont, {:ok, done}}
 
         true ->
           children = Enum.map(graph[id], &elem(&1, 0))
 
-          case visit_all(children, graph, done, MapSet.put(active, id)) do
-            {:ok, done} -> {:cont, {:ok, MapSet.put(done, id)}}
+          case visit_all(children, graph, done, Map.put(active, id, true)) do
+            {:ok, done} -> {:cont, {:ok, Map.put(done, id, true)}}
             error -> {:halt, error}
           end
       end

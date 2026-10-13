@@ -278,7 +278,10 @@ defmodule Wotex.Routines.Driver do
 
   @impl GenServer
   @doc false
-  @spec format_status(map()) :: map()
+  @spec format_status(map()) :: %{
+          required(:state) => :private_consumer_state,
+          optional(term()) => term()
+        }
   def format_status(status), do: Map.put(status, :state, :private_consumer_state)
 
   defp next(%{worker: nil, retiring: nil} = state) do
