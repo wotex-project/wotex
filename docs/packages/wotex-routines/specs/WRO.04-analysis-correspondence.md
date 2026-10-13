@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.0. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.1. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -108,4 +108,45 @@ that a witness was concretely validated. The producer adapter/replay seam must
 establish that validation; the host independently owns evidence custody and
 final admission. A caller-built native result is not trusted merely by its type.
 
-Implemented result-boundary evidence is `analysis_result_test.exs`: completed bounded/empty search cannot authorize, abstract witnesses remain inconclusive, every correspondence subject invalidates reuse, and budget/axis/native-value inconsistencies refuse. Projection, concrete replay, scoped model/mutation corpus and optional backend execution remain obligations.
+Implemented result-boundary evidence is `analysis_result_test.exs`: completed bounded/empty search cannot authorize, abstract witnesses remain inconclusive, every correspondence subject invalidates reuse, and budget/axis/native-value inconsistencies refuse. Projection, generic witness replay, additional scoped reference/mutation profiles and optional backend execution remain obligations.
+
+## Independent transition reference profile
+
+The first transition reference consumes original source AST, explicit pinned
+child definitions, prequalified predicate values, binding effect deadlines and
+a finite sequence of caller-supplied events/times. It never consumes compiled
+IR or calls production compilation, truth, receipt, execution or arbitration
+helpers. The test harness alone compiles the same source for the public Kernel
+and compares the two results. Source/definition validation, exact unit
+conversion, fact qualification and calendar expansion have their own acceptance
+lanes; they are not inferred from prequalified oracle inputs.
+
+The finite reference profile covers manual roots; literal/comparison and nested
+three-valued predicates; absolute effects; sequence; all-required parallel;
+sticky conditional choice; finite waits/delays; and parameter-free pinned child
+invocation with its own condition/duration. Parameter unit conversion, temporal
+trigger identity, edge qualification and collection arbitration remain separate
+reference profiles. Unsupported reference input fails the harness explicitly;
+it never supplies an expected no-op.
+
+Compare every transition's aggregate outcome/reason, canonical step paths and
+kinds, statuses, selected branches, start/deadline coordinates, retained receipt
+references/outcomes, spent root references and ordered proposal binding/input/
+completion. Check original identities for stability and uniqueness separately;
+the reference does not call the production identity hash. Include duplicate,
+out-of-order and conflicting receipts, admission refusal, below-threshold ACK,
+unknown/failure, cancellation before/after handoff, later historical evidence,
+deadline equality/regression/generation change, and definition removal.
+
+Behavioral mutation checks run isolated production-module replacements against
+the same assertions. A baseline run must pass first. Each declared single-site
+mutation must compile and reach ExUnit, then fail an assertion; missing mutation
+sites, compile errors, crashes or timeouts are harness errors. Initial mutations
+drop unknown under comparison, advance on a protocol ACK below a reported-match
+threshold, omit a parallel branch, ignore the root elapsed deadline, discard
+held spend, and allow effects through a false/unknown root gate. These checks
+establish sensitivity only to those mutations in the declared finite profile.
+They do not complete model projection, calendar/reference-set mutations, native
+containment, consumer transaction evidence or physical qualification.
+
+Executed finite-reference evidence is `correspondence_test.exs` and the independent predicate cases in `evaluation_test.exs`. `bin/check_correspondence.exs` executes a passing baseline and six isolated replacements; its formatter distinguishes assertion failures from harness errors. These are software correspondence checks for this reference profile, not a completed analysis/admission gate.
