@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.10. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.11. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -325,7 +325,7 @@ condition construct that deliberately waits for future facts.
 The transition is a closed object with run, proposals, basis, outcome and edge. Run
 is a checked Run value, or null for skipped-busy; outcome is its status or
 skipped-busy. Basis contains program_digest, source_digest, compiler_basis,
-event, snapshot and time, preserving the
+event, prior, snapshot and time, preserving the
 complete supplied collection, observation and clock data. Each inert proposal
 has original (root), step_original, program_digest, path, binding,
 installed_basis, thing_id, resource_roles, resource_domains, operation, input, completion and
@@ -502,3 +502,10 @@ reconciles removed originals through the direct Kernel seam and its durable
 original indexes.
 
 Unqualified input clears edge qualification before comparing retained identity. A caller reclassifying the same report as unknown/stale/lost never retains an old false baseline and never replaces the original sample digest. A conflicting qualified identity still refuses. On validation refusal that prevents a returned transition, the host must invalidate the affected edge baseline before future admission; an old baseline is not evidence that the rejected interval remained continuous.
+
+The transition basis also requires prior: the complete checked original/busy/edge
+input before this event. The consumer compares that history (or its exact Store
+revision/digest) inside the committing transaction as well as membership, facts,
+resources and clock. Admission/result/cancellation races cannot overwrite a
+newer held spend or handoff with a transition calculated from an older run.
+A matching resource snapshot alone does not establish original/run/edge currency.

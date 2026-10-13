@@ -48,6 +48,7 @@ defmodule Wotex.Routines.Kernel do
           "source_digest" => program["source_digest"],
           "compiler_basis" => program["context"]["compiler_basis"],
           "event" => event,
+          "prior" => prior,
           "snapshot" => snapshot,
           "time" => time
         }

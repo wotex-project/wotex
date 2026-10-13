@@ -95,10 +95,12 @@ defmodule Wotex.Routines.KernelTest do
     assert proposal["resource_domains"] == ["resource:1", "urn:workcell:output"]
     assert first["basis"]["snapshot"] == c.snapshot
     assert first["basis"]["event"] == c.event
+    assert first["basis"]["prior"] == %{"original" => nil, "busy" => nil, "edge" => nil}
     assert step(first, []) == "proposed"
     assert {:ok, repeat} = advance(c, first["run"])
     assert repeat["proposals"] == []
     assert repeat["run"] == first["run"]
+    assert repeat["basis"]["prior"]["original"] == first["run"]
     assert Run.to_map(first["run"], c.program, c.profile, c.limits) == {:ok, first["run"]}
 
     schema =
@@ -150,7 +152,9 @@ defmodule Wotex.Routines.KernelTest do
     event = receipt(c, "admission", [], %{"outcome" => "held"})
     assert {:ok, held} = advance(%{c | event: event}, first["run"])
     assert {:ok, duplicate} = advance(%{c | event: event}, held["run"])
-    assert held == duplicate
+    assert held["run"] == duplicate["run"]
+    assert held["proposals"] == duplicate["proposals"]
+    assert duplicate["basis"]["prior"]["original"] == held["run"]
 
     assert {:error, %Error{code: :conflicting_receipt}} =
              advance(%{c | event: %{event | "ref" => "different"}}, held["run"])

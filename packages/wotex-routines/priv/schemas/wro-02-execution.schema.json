@@ -1749,6 +1749,9 @@
         },
         "time": {
           "$ref": "#/definitions/time"
+        },
+        "prior": {
+          "$ref": "#/definitions/prior"
         }
       },
       "required": [
@@ -1757,7 +1760,8 @@
         "compiler_basis",
         "event",
         "snapshot",
-        "time"
+        "time",
+        "prior"
       ],
       "additionalProperties": false
     },
