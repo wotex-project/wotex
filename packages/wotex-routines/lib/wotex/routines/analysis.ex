@@ -1,6 +1,6 @@
 defmodule Wotex.Routines.Analysis do
   @moduledoc """
-  Explicit, deadline-bound execution of regenerated inert proposal-prefix models.
+  Explicit, deadline-bound execution of regenerated inert proposal/receipt-prefix models.
 
   The consumer owns the task, bounded queue and concurrency. Establish the VM
   monotonic deadline before queueing; preparation and both disposable searches

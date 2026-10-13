@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.5. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.6. Updated: 2026-10-14. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -324,7 +324,7 @@ is not a hard real-time or OS containment guarantee. Caller loss is handled by
 ExMaude's public per-search retirement contract; consumer supervision owns caller
 lifecycle. A failed/uncertain session is never reused or automatically replayed.
 
-This scope has exactly three reachable prefix states and five declared rewrite
+The proposal-prefix scope has exactly three reachable prefix states and five declared rewrite
 edges, including self-loops. These are model-profile counts, not undocumented
 backend transition statistics. max_states<3, max_transitions<5 or max_depth<2
 returns truncated/inconclusive/budget_exhausted before native work. The fixed
@@ -346,7 +346,7 @@ Generated model bytes obey max_model_bytes; oversize work returns truncated.
 Complete returned JSON obeys both Limits and max_output_bytes; if even the
 bounded result cannot fit, return analysis_output_bound without partial output.
 No raw native stdout, private executable path or backend error payload is copied
-into evidence. Unsupported receipt/time/composition/complete-set projections,
+into evidence. Unsupported wider receipt-history/time/composition/complete-set projections,
 concrete model-witness translation and OS containment retain their own gates.
 
 Acceptance includes expired queued requests with no backend invocation, shared
@@ -410,9 +410,26 @@ outside this scope, while its stopped-proposal claim covers manual/cancel input.
 All model symbols and rules are installed syntax. Only the checked Boolean
 literal enters code; receipt/Thing/author/ref strings never become executable
 text. Model regeneration, size/identity and current-scope checks apply unchanged.
-The initial Analysis runner supports proposal-prefix only and explicitly refuses
-receipt-prefix with unsupported_analysis_scope before search; new model support
-must not accidentally select an old query/module or claim the old counts.
+The additive receipt Analysis runner uses only ROUTINE-RECEIPT-PREFIX with
+initial state(fresh, 0, 0, false, none, false), pattern S:State, depth 5 and
+solution limit 13. A second fixed requested/B:Bool query retains the exact
+source Boolean. Its independent finite alphabet in
+priv/vectors/wro-04-receipt-prefix.json has 12 reachable states and 37 labelled
+state-transition edges including self-loops; the longest shortest-state path is
+five transitions. These are installed profile counts, separate from native
+backend statistics and the 30 schematic rewrite rules. Every returned state
+must match the complete canonical tuple set exactly, with no duplicate, missing
+or foreign states. The native order is irrelevant. Completion requires both
+checked receipts and the source literal. max_states<12, max_transitions<37 or
+max_depth<5 refuses as truncated/inconclusive/budget_exhausted before search.
+
+Successful bounded enumeration returns counts 12/37, null reason, no findings
+and inconclusive admission. Changed runtime/binding, held-spend/evidence/root
+state or Boolean literal returns correspondence_failed with cleared counts.
+Shared queue-inclusive deadline, output/model bounds, timeout/truncation/backend
+absence and redaction follow the runner contract above. Unknown scopes refuse before search; a receipt scope cannot select the proposal module,
+query or counts. No counter-state is classified as a concrete incident until a
+separately supported translation and actual Witness replay establish it.
 
 Acceptance interprets the emitted literal rules, compares every modeled state
 component to the public Kernel and independent source AST under the same explicit
@@ -426,7 +443,7 @@ Wider time/composition/complete-set projections and physical evidence remain ope
 Implemented receipt-prefix evidence is `receipt_model_test.exs`: eighteen finite
 traces (both Boolean values over nine staged/cancel/failure paths) compare every
 emitted state component with both the public Kernel and independent source AST.
-Unsupported installed completion thresholds and the older runner explicitly
+Unsupported installed completion thresholds and incomplete runner requests
 refuse; regenerated native model forgery fails. The extracted native model
 consumer additionally enumerates this scope, retains held/ACK/cancel distinctions,
 and finds an ACK-completion mutation's abstract counter-state. Those native
@@ -437,3 +454,11 @@ execution and independent finite-prefix evidence to its exact source/archives.
 
 The [quality milestone](../provenance/quality-milestone-2026-10.md) passes the
 unchanged full gate and renews all four exact-archive consumer lanes together.
+
+The receipt Analysis runner now passes three additional focused groups over both
+Boolean literals, its independent 12-state/37-edge oracle, distinct query/budget
+selection, queue expiry and state mutations for ACK completion, lost held spend,
+stopped roots and duplicate/missing state sets. The renewed archive consumer
+executes both literal values through Analysis.run/5; it keeps completed bounded
+results inconclusive. Wider receipt history/time/composition/complete-set and
+concrete witness translation obligations remain open.

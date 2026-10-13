@@ -166,7 +166,7 @@ defmodule Wotex.Routines.ReceiptModelTest do
     end
   end
 
-  test "unsupported receipt threshold and old analysis runner never acquire this scope", c do
+  test "unsupported receipt thresholds and incomplete analysis requests refuse", c do
     {:ok, program} = Compiler.compile(c.source, c.context, c.profile, c.limits)
     {:ok, model} = Model.compile(program, c.scope, c.profile, c.limits)
 
@@ -180,7 +180,7 @@ defmodule Wotex.Routines.ReceiptModelTest do
 
     options = %{maude_path: "/explicit", deadline_ms: System.monotonic_time(:millisecond) + 1000}
 
-    assert {:error, %Error{code: :unsupported_analysis_scope}} =
+    assert {:error, %Error{code: :missing_field}} =
              Analysis.run(model, request, options, c.profile, c.limits)
 
     source = put_in(c.source, ["steps", "completion"], "protocol_response")

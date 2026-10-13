@@ -3,8 +3,6 @@ defmodule Wotex.Routines.AnalysisExecution do
 
   alias Wotex.Routines.{AnalysisResult, Error, Validation}
 
-  @states MapSet.new(["state(fresh,0)", "state(proposed,1)", "state(cancelled,1)"])
-
   @doc false
   @spec run(map(), String.t(), integer(), (binary(), map(), keyword() -> term())) ::
           {:ok, AnalysisResult.t()} | {:error, Error.t()}
@@ -14,22 +12,26 @@ defmodule Wotex.Routines.AnalysisExecution do
     outcome =
       cond do
         expired?(deadline) -> {:timeout, "budget_exhausted"}
-        not fits?(prepared.model, selection) -> {:truncated, "budget_exhausted"}
+        not fits?(prepared, selection) -> {:truncated, "budget_exhausted"}
         true -> execute(prepared, path, deadline, search)
       end
 
     finish(prepared, outcome, deadline)
   end
 
-  defp fits?(model, selection) do
-    selection["max_states"] >= 3 and selection["max_transitions"] >= 5 and
-      selection["max_depth"] >= 2 and
-      byte_size(model["model_bytes"]) <= selection["max_model_bytes"]
+  defp fits?(prepared, selection) do
+    profile = prepared.query_profile
+
+    selection["max_states"] >= MapSet.size(profile.states) and
+      selection["max_transitions"] >= profile.transitions and
+      selection["max_depth"] >= profile.depth and
+      byte_size(prepared.model["model_bytes"]) <= selection["max_model_bytes"]
   end
 
   defp execute(prepared, path, deadline, search) do
-    with {:ok, states} <- query(prepared, path, deadline, search, "state(fresh, 0)", "S:State"),
-         :ok <- states(states),
+    with {:ok, states} <-
+           query(prepared, path, deadline, search, prepared.query_profile.initial, "S:State"),
+         :ok <- states(states, prepared.query_profile),
          {:ok, literal} <- query(prepared, path, deadline, search, "requested", "B:Bool"),
          :ok <- literal(literal, prepared.model) do
       {:completed_bounded, nil}
@@ -45,11 +47,11 @@ defmodule Wotex.Routines.AnalysisExecution do
       {:error, {:timeout, "budget_exhausted"}}
     else
       query = %{
-        module: "ROUTINE-PROPOSAL-PREFIX",
+        module: prepared.query_profile.module,
         initial: initial,
         pattern: pattern,
-        max_depth: 2,
-        max_solutions: 4
+        max_depth: prepared.query_profile.depth,
+        max_solutions: prepared.query_profile.solutions
       }
 
       options = [
@@ -108,10 +110,10 @@ defmodule Wotex.Routines.AnalysisExecution do
   defp completion(%{termination: :timeout}), do: {:error, {:timeout, "budget_exhausted"}}
   defp completion(_), do: {:error, {:error, "incomplete"}}
 
-  defp states(%{solutions: solutions}) do
+  defp states(%{solutions: solutions}, profile) do
     values = Enum.map(solutions, &substitution(&1, "S:State"))
 
-    if length(values) == 3 and MapSet.new(values) == @states,
+    if length(values) == MapSet.size(profile.states) and MapSet.new(values) == profile.states,
       do: :ok,
       else: {:error, {:error, "correspondence_failed"}}
   end
@@ -148,7 +150,10 @@ defmodule Wotex.Routines.AnalysisExecution do
       "execution" => Atom.to_string(execution),
       "admission" => "inconclusive",
       "reason" => reason,
-      "counts" => %{"states" => if(complete, do: 3), "transitions" => if(complete, do: 5)}
+      "counts" => %{
+        "states" => if(complete, do: MapSet.size(prepared.query_profile.states)),
+        "transitions" => if(complete, do: prepared.query_profile.transitions)
+      }
     }
 
     with {:ok, checked} <- AnalysisResult.new(result, prepared.limits),

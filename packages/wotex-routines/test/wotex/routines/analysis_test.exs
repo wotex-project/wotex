@@ -311,6 +311,135 @@ defmodule Wotex.Routines.AnalysisTest do
     assert result.data["counts"] == %{"states" => nil, "transitions" => nil}
   end
 
+  test "receipt prefix uses its complete independent state set, literal and separate query bounds",
+       c do
+    for value <- [false, true] do
+      c = receipt_context(%{c | source: put_in(c.source, ["steps", "input"], value)})
+      owner = self()
+      deadline = System.monotonic_time(:millisecond) + 1000
+
+      backend = fn _, query, options ->
+        send(owner, {:receipt_query, query})
+        assert options[:deadline_ms] == deadline
+        {:ok, receipt(c, query)}
+      end
+
+      assert {:ok, result} = AnalysisExecution.run(c.prepared, "/explicit", deadline, backend)
+
+      assert_receive {:receipt_query,
+                      %{
+                        module: "ROUTINE-RECEIPT-PREFIX",
+                        initial: "state(fresh, 0, 0, false, none, false)",
+                        max_depth: 5,
+                        max_solutions: 13
+                      }}
+
+      assert_receive {:receipt_query,
+                      %{module: "ROUTINE-RECEIPT-PREFIX", initial: "requested", pattern: "B:Bool"}}
+
+      assert result.data["execution"] == "completed_bounded"
+      assert result.data["counts"] == %{"states" => 12, "transitions" => 37}
+      assert result.data["admission"] == "inconclusive"
+      assert result.data["findings"] == []
+    end
+  end
+
+  test "receipt prefix selected budgets and queue expiry refuse before backend work", c do
+    c = receipt_context(c)
+
+    for {key, value} <- [{"max_states", 11}, {"max_transitions", 36}, {"max_depth", 4}] do
+      request =
+        c.request
+        |> put_in(["effective_limits", key], value)
+        |> rebind_budget()
+
+      {:ok, prepared} = AnalysisRequest.prepare(c.model, request, c.profile, c.limits)
+
+      assert {:ok, result} =
+               execute(prepared, fn _, _, _ -> flunk("receipt scope exceeded its budget") end)
+
+      assert result.data["execution"] == "truncated"
+      assert result.data["counts"] == %{"states" => nil, "transitions" => nil}
+    end
+
+    assert {:ok, result} =
+             AnalysisExecution.run(
+               c.prepared,
+               "/explicit",
+               System.monotonic_time(:millisecond) - 1,
+               fn _, _, _ -> flunk("expired receipt scope reached backend") end
+             )
+
+    assert result.data["execution"] == "timeout"
+  end
+
+  test "receipt state evidence, held spend, stopped root and duplicates cannot be omitted or invented",
+       c do
+    c = receipt_context(c)
+    good = Enum.map(c.expected_states, &%{substitution: %{"S:State" => &1}})
+
+    for changed <- [
+          tl(good),
+          [hd(good) | good],
+          [hd(good) | tl(good)] |> List.replace_at(1, hd(good)),
+          Enum.map(
+            good,
+            &update_in(&1, [:substitution, "S:State"], fn state ->
+              String.replace(state, "completed,1,1,true,match,true", "completed,1,1,true,ack,true")
+            end)
+          ),
+          Enum.map(
+            good,
+            &update_in(&1, [:substitution, "S:State"], fn state ->
+              String.replace(
+                state,
+                "reserved,1,1,false,none,false",
+                "reserved,1,0,false,none,false"
+              )
+            end)
+          ),
+          Enum.map(
+            good,
+            &update_in(&1, [:substitution, "S:State"], fn state ->
+              String.replace(state, "unknown,1,1,true,ack,true", "unknown,1,1,true,ack,false")
+            end)
+          )
+        ] do
+      backend = fn _, query, _ -> {:ok, %{receipt(c, query) | solutions: changed}} end
+      assert {:ok, result} = execute(c.prepared, backend)
+      assert result.data["execution"] == "error"
+      assert result.data["reason"] == "correspondence_failed"
+      assert result.data["findings"] == []
+    end
+  end
+
+  defp receipt_context(c) do
+    vector =
+      c.root
+      |> Path.join("vectors/wro-04-receipt-prefix.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    {:ok, program} = Compiler.compile(c.source, c.context, c.profile, c.limits)
+    {:ok, model} = Model.compile(program, vector["scope"], c.profile, c.limits)
+
+    request =
+      request(model)
+      |> put_in(["effective_limits", "max_states"], 12)
+      |> put_in(["effective_limits", "max_transitions"], 37)
+      |> put_in(["effective_limits", "max_depth"], 5)
+      |> rebind_budget()
+
+    {:ok, prepared} = AnalysisRequest.prepare(model, request, c.profile, c.limits)
+
+    states =
+      Enum.map(vector["runner"]["states"], fn fields ->
+        "state(" <> Enum.map_join(fields, ",", &to_string/1) <> ")"
+      end)
+
+    Map.merge(c, %{model: model, request: request, prepared: prepared, expected_states: states})
+  end
+
   defp execute(prepared, backend),
     do:
       AnalysisExecution.run(
@@ -326,10 +455,16 @@ defmodule Wotex.Routines.AnalysisTest do
   defp receipt(c, query) do
     solutions =
       if query.initial == "requested",
-        do: [%{substitution: %{"B:Bool" => "false"}}],
+        do: [
+          %{substitution: %{"B:Bool" => to_string(c.model.data["program"]["ir"]["steps"]["input"])}}
+        ],
         else:
           Enum.map(
-            ["state(fresh, 0)", "state(proposed, 1)", "state(cancelled, 1)"],
+            Map.get(c, :expected_states, [
+              "state(fresh, 0)",
+              "state(proposed, 1)",
+              "state(cancelled, 1)"
+            ]),
             &%{substitution: %{"S:State" => &1}}
           )
 

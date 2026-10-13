@@ -22,5 +22,817 @@
       "physical_effects"
     ],
     "policy_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "runner": {
+    "oracle": "Independent finite alphabet transition function; breadth-first traversal, no model text or package code",
+    "module": "ROUTINE-RECEIPT-PREFIX",
+    "initial": "state(fresh, 0, 0, false, none, false)",
+    "max_depth": 5,
+    "max_solutions": 13,
+    "state_count": 12,
+    "labelled_edge_count": 37,
+    "states": [
+      [
+        "cancelled",
+        1,
+        0,
+        false,
+        "none",
+        true
+      ],
+      [
+        "cancelled",
+        1,
+        1,
+        false,
+        "none",
+        true
+      ],
+      [
+        "completed",
+        1,
+        1,
+        true,
+        "match",
+        true
+      ],
+      [
+        "failed",
+        1,
+        1,
+        true,
+        "none",
+        true
+      ],
+      [
+        "fresh",
+        0,
+        0,
+        false,
+        "none",
+        false
+      ],
+      [
+        "handed",
+        1,
+        1,
+        true,
+        "ack",
+        false
+      ],
+      [
+        "handed",
+        1,
+        1,
+        true,
+        "none",
+        false
+      ],
+      [
+        "proposed",
+        1,
+        0,
+        false,
+        "none",
+        false
+      ],
+      [
+        "refused",
+        1,
+        0,
+        false,
+        "none",
+        true
+      ],
+      [
+        "reserved",
+        1,
+        1,
+        false,
+        "none",
+        false
+      ],
+      [
+        "unknown",
+        1,
+        1,
+        true,
+        "ack",
+        true
+      ],
+      [
+        "unknown",
+        1,
+        1,
+        true,
+        "none",
+        true
+      ]
+    ],
+    "edges": [
+      {
+        "from": [
+          "fresh",
+          0,
+          0,
+          false,
+          "none",
+          false
+        ],
+        "event": "manual",
+        "to": [
+          "proposed",
+          1,
+          0,
+          false,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "proposed",
+          1,
+          0,
+          false,
+          "none",
+          false
+        ],
+        "event": "manual",
+        "to": [
+          "proposed",
+          1,
+          0,
+          false,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "proposed",
+          1,
+          0,
+          false,
+          "none",
+          false
+        ],
+        "event": "held",
+        "to": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "proposed",
+          1,
+          0,
+          false,
+          "none",
+          false
+        ],
+        "event": "refused",
+        "to": [
+          "refused",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "proposed",
+          1,
+          0,
+          false,
+          "none",
+          false
+        ],
+        "event": "cancel",
+        "to": [
+          "cancelled",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ],
+        "event": "manual",
+        "to": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ],
+        "event": "held",
+        "to": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ],
+        "event": "handoff",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "reserved",
+          1,
+          1,
+          false,
+          "none",
+          false
+        ],
+        "event": "cancel",
+        "to": [
+          "cancelled",
+          1,
+          1,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "refused",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "refused",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "refused",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "refused",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "cancelled",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "cancelled",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "cancelled",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "cancelled",
+          1,
+          0,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "manual",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "held",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "handoff",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "ack",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "match",
+        "to": [
+          "completed",
+          1,
+          1,
+          true,
+          "match",
+          true
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "failed",
+        "to": [
+          "failed",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "unknown",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "none",
+          false
+        ],
+        "event": "cancel",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "cancelled",
+          1,
+          1,
+          false,
+          "none",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "cancelled",
+          1,
+          1,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "cancelled",
+          1,
+          1,
+          false,
+          "none",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "cancelled",
+          1,
+          1,
+          false,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ],
+        "event": "manual",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ],
+        "event": "held",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ],
+        "event": "handoff",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ],
+        "event": "ack",
+        "to": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ],
+        "event": "match",
+        "to": [
+          "completed",
+          1,
+          1,
+          true,
+          "match",
+          true
+        ]
+      },
+      {
+        "from": [
+          "handed",
+          1,
+          1,
+          true,
+          "ack",
+          false
+        ],
+        "event": "cancel",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "ack",
+          true
+        ]
+      },
+      {
+        "from": [
+          "completed",
+          1,
+          1,
+          true,
+          "match",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "completed",
+          1,
+          1,
+          true,
+          "match",
+          true
+        ]
+      },
+      {
+        "from": [
+          "completed",
+          1,
+          1,
+          true,
+          "match",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "completed",
+          1,
+          1,
+          true,
+          "match",
+          true
+        ]
+      },
+      {
+        "from": [
+          "failed",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "failed",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "failed",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "failed",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "unknown",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "unknown",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "none",
+          true
+        ]
+      },
+      {
+        "from": [
+          "unknown",
+          1,
+          1,
+          true,
+          "ack",
+          true
+        ],
+        "event": "manual",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "ack",
+          true
+        ]
+      },
+      {
+        "from": [
+          "unknown",
+          1,
+          1,
+          true,
+          "ack",
+          true
+        ],
+        "event": "cancel",
+        "to": [
+          "unknown",
+          1,
+          1,
+          true,
+          "ack",
+          true
+        ]
+      }
+    ]
   }
 }

@@ -1,7 +1,16 @@
 defmodule Wotex.Routines.AnalysisRequest do
   @moduledoc false
 
-  alias Wotex.Routines.{AnalysisResult, Error, Limits, Model, Profile, Time, Validation}
+  alias Wotex.Routines.{
+    AnalysisProfile,
+    AnalysisResult,
+    Error,
+    Limits,
+    Model,
+    Profile,
+    Time,
+    Validation
+  }
 
   @fields ~w(format binding effective_limits runtime time_basis)
   @runtime ~w(ex_maude_version ex_maude_digest executable_digest executable_version parser_version backend)
@@ -15,18 +24,22 @@ defmodule Wotex.Routines.AnalysisRequest do
          :ok <-
            Validation.choice(request["format"], ["wotex.routines.analysis.request@1"], "/format"),
          {:ok, model} <- Model.to_map(model, profile, limits),
-         :ok <- runner_scope(model),
+         {:ok, query_profile} <- AnalysisProfile.select(model),
          :ok <- runtime(request["runtime"]),
          {:ok, time} <- Time.to_map(request["time_basis"], limits),
          {:ok, binding} <- binding(model, request, time, limits),
          :ok <- matches(binding, request["binding"]),
          {:ok, _} <- AnalysisResult.new(result(binding, request["effective_limits"]), limits) do
-      {:ok, %{model: model, request: request, binding: binding, limits: limits}}
+      {:ok,
+       %{
+         model: model,
+         request: request,
+         binding: binding,
+         limits: limits,
+         query_profile: query_profile
+       }}
     end
   end
-
-  defp runner_scope(%{"scope" => %{"profile" => "proposal-prefix@1"}}), do: :ok
-  defp runner_scope(_), do: Error.refusal(:unsupported_analysis_scope)
 
   defp runtime(data) do
     with :ok <- Validation.fields(data, @runtime),

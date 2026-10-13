@@ -252,6 +252,65 @@ defmodule ProposalModelArchiveConsumerTest do
     assert counter.model_digest != model.data["model_digest"]
   end
 
+  test "public receipt runner executes its own complete scope and preserves both requested literals",
+       c do
+    scope =
+      :wotex_routines
+      |> :code.priv_dir()
+      |> List.to_string()
+      |> Path.join("vectors/wro-04-receipt-prefix.json")
+      |> File.read!()
+      |> JSON.decode!()
+      |> Map.fetch!("scope")
+
+    for value <- [false, true] do
+      {:ok, program} =
+        Compiler.compile(
+          put_in(c.source, ["steps", "input"], value),
+          c.context,
+          c.profile,
+          c.limits
+        )
+
+      {:ok, model} = Model.compile(program, scope, c.profile, c.limits)
+
+      query = %{
+        module: "ROUTINE-RECEIPT-PREFIX",
+        initial: "requested",
+        pattern: "B:Bool",
+        max_depth: 5,
+        max_solutions: 13
+      }
+
+      path = System.fetch_env!("WOTEX_ROUTINES_MAUDE_PATH")
+
+      native = [
+        maude_path: path,
+        timeout: 2000,
+        max_response_bytes: 65_536,
+        deadline_ms: System.monotonic_time(:millisecond) + 2000
+      ]
+
+      assert {:ok, identity} =
+               ExMaude.Verification.SearchRun.run(model.data["model_bytes"], query, native)
+
+      request = analysis_request(model, identity)
+      options = %{maude_path: path, deadline_ms: System.monotonic_time(:millisecond) + 5000}
+      assert {:ok, result} = Analysis.run(model, request, options, c.profile, c.limits)
+      assert result.data["execution"] == "completed_bounded", inspect(result)
+      assert result.data["admission"] == "inconclusive"
+      assert result.data["counts"] == %{"states" => 12, "transitions" => 37}
+      assert result.data["findings"] == []
+      expired = %{options | deadline_ms: System.monotonic_time(:millisecond) - 1}
+      assert {:ok, timeout} = Analysis.run(model, request, expired, c.profile, c.limits)
+      assert timeout.data["execution"] == "timeout"
+      stale = put_in(request, ["binding", "runtime_digest"], digest("changed"))
+
+      assert {:error, %Error{code: :stale_analysis_binding}} =
+               Analysis.run(model, stale, options, c.profile, c.limits)
+    end
+  end
+
   defp search(bytes, initial, pattern, condition) do
     query = %{
       module: "ROUTINE-PROPOSAL-PREFIX",
@@ -327,11 +386,14 @@ defmodule ProposalModelArchiveConsumerTest do
       "utc_high_ms" => nil
     }
 
+    {states, transitions, depth} =
+      if model.data["scope"]["profile"] == "receipt-prefix@1", do: {12, 37, 5}, else: {3, 5, 2}
+
     limits = %{
       "total_ms" => 5000,
-      "max_states" => 3,
-      "max_transitions" => 5,
-      "max_depth" => 2,
+      "max_states" => states,
+      "max_transitions" => transitions,
+      "max_depth" => depth,
       "max_model_bytes" => 65_536,
       "max_output_bytes" => 65_536
     }
