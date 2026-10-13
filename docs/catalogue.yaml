@@ -403,6 +403,10 @@ packages:
         version: "0.2.5"
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.04-analysis-correspondence.md"
+      - id: "WRO.05"
+        version: "0.1.1"
+        implementation_status: "planned"
+        path: "docs/packages/wotex-routines/specs/WRO.05-external-profile-inputs.md"
   wotex-runtime:
     app: "wotex_runtime"
     catalogue: "docs/packages/wotex-runtime/specs/catalogue.yaml"

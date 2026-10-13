@@ -1,0 +1,308 @@
+{
+  "basis": {
+    "affordance": {
+      "name": "scalar",
+      "operation": "readproperty",
+      "type": "property"
+    },
+    "analysis": {
+      "classification": "unsupported",
+      "profile": null,
+      "properties": []
+    },
+    "annotations": {
+      "title": "scalar"
+    },
+    "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "effects": {
+      "partial_possible": false,
+      "repeat": "never",
+      "resource_roles": [],
+      "stop": "unsupported",
+      "supersession": "block_until_known",
+      "unknown_possible": true
+    },
+    "evidence": {
+      "completion": "correlated_report",
+      "continuity": "continuous",
+      "freshness_ms": 1000,
+      "report_contract": {
+        "id": "qualified-report",
+        "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "version": "1"
+      },
+      "require_source_time": true,
+      "sources": [
+        "device_report"
+      ]
+    },
+    "format": "wotex.routines.basis@1",
+    "id": "example.scalar",
+    "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "lifecycle_contract": {
+      "id": "interaction-lifecycle",
+      "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "version": "1"
+    },
+    "output": {
+      "enum": [],
+      "type": "integer",
+      "unit": {
+        "dimension": "temperature",
+        "max": 100000,
+        "min": -27315,
+        "name": "centidegree-C",
+        "offset_d": 100,
+        "offset_n": 27315,
+        "scale_d": 100,
+        "scale_n": 1
+      }
+    },
+    "required_contracts": [],
+    "security_contract": {
+      "id": "interaction-security",
+      "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "version": "1"
+    },
+    "semantic_digest": "sha256:ce4f001727d316aee807ccef0a278c9e70ba03c68e2600e7854713abf3367b2d",
+    "timing": {
+      "cooldown_ms": 0,
+      "deadline_ms": 15000,
+      "duration_ms": 0,
+      "dwell_ms": 0,
+      "uncertainty": "block"
+    },
+    "value": {
+      "enum": [],
+      "type": "integer",
+      "unit": {
+        "dimension": "temperature",
+        "max": 100000,
+        "min": -27315,
+        "name": "centidegree-C",
+        "offset_d": 100,
+        "offset_n": 27315,
+        "scale_d": 100,
+        "scale_n": 1
+      }
+    },
+    "version": "1"
+  },
+  "cases": [
+    {
+      "expected_error": null,
+      "expected_integer": 2510,
+      "source_d": "10",
+      "source_n": "251"
+    },
+    {
+      "expected_error": null,
+      "expected_integer": -4000,
+      "source_d": "1",
+      "source_n": "-40"
+    },
+    {
+      "expected_error": null,
+      "expected_integer": 0,
+      "source_d": "1",
+      "source_n": "0"
+    },
+    {
+      "expected_error": null,
+      "expected_integer": 10000,
+      "source_d": "1",
+      "source_n": "100"
+    },
+    {
+      "expected_error": "inexact_conversion",
+      "expected_integer": null,
+      "source_d": "3",
+      "source_n": "1"
+    },
+    {
+      "expected_error": "inexact_conversion",
+      "expected_integer": null,
+      "source_d": "1000",
+      "source_n": "1001"
+    }
+  ],
+  "external_unit": {
+    "dimension": [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    "offset_d": "100",
+    "offset_n": "27315",
+    "quantity_kind": "urn:example:quantity:thermodynamic-temperature",
+    "scale_d": "1",
+    "scale_n": "1"
+  },
+  "limits": {
+    "max_bytes": 1048576,
+    "max_collection_size": 1024,
+    "max_depth": 32,
+    "max_integer": 9223372036854775807,
+    "max_nodes": 100000,
+    "max_string_bytes": 65536
+  },
+  "metadata": {
+    "affordance_name": "scalar",
+    "affordance_type": "property",
+    "continuity": "continuous",
+    "contributors": [],
+    "derivation_digest": null,
+    "expires_ms": 1010,
+    "id": "sample:7",
+    "profile_digest": "sha256:ce4f001727d316aee807ccef0a278c9e70ba03c68e2600e7854713abf3367b2d",
+    "receipt_epoch": "boot:1",
+    "receipt_ms": 10,
+    "received_at": "2026-10-13T07:00:01Z",
+    "replay": "fresh",
+    "sequence": 7,
+    "source_class": "device_report",
+    "source_epoch": "connection:1",
+    "source_id": "sensor:1",
+    "source_time": "2026-10-13T07:00:00Z",
+    "source_time_basis": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "source_time_trust": "trusted",
+    "source_uncertainty_ms": 10,
+    "thing_id": "urn:workcell:station-1"
+  },
+  "oracle": "Python 3 fractions.Fraction; Celsius coordinate to centidegree-C; no package constructors",
+  "registry": [
+    {
+      "id": "interaction-security",
+      "requires": [],
+      "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "version": "1"
+    },
+    {
+      "id": "interaction-lifecycle",
+      "requires": [],
+      "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "version": "1"
+    },
+    {
+      "id": "example.scalar",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "version": "1"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "version": "1"
+        },
+        {
+          "id": "qualified-report",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "version": "1"
+        }
+      ],
+      "semantic_digest": "sha256:ce4f001727d316aee807ccef0a278c9e70ba03c68e2600e7854713abf3367b2d",
+      "version": "1"
+    },
+    {
+      "id": "example.event",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "version": "1"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "version": "1"
+        },
+        {
+          "id": "qualified-report",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "version": "1"
+        }
+      ],
+      "semantic_digest": "sha256:e6438dfa2dc1a46ef9e552a56792f5527874ea6783e1c5ea50d35c989dde658a",
+      "version": "1"
+    },
+    {
+      "id": "example.fast",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "version": "1"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "version": "1"
+        },
+        {
+          "id": "qualified-report",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "version": "1"
+        }
+      ],
+      "semantic_digest": "sha256:41d12098912edeeb0e14d6a01f3599f90c22e002dd4bd9ef7dd1b0b175e5f740",
+      "version": "1"
+    },
+    {
+      "id": "example.slow",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "version": "1"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "version": "1"
+        },
+        {
+          "id": "qualified-report",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "version": "1"
+        }
+      ],
+      "semantic_digest": "sha256:7bdc2d38e4319acb5e86d69d766367b6298dbd12f689e7d0f84a742165acf427",
+      "version": "1"
+    },
+    {
+      "id": "example.media",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "version": "1"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "version": "1"
+        },
+        {
+          "id": "qualified-report",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "version": "1"
+        }
+      ],
+      "semantic_digest": "sha256:2422b727d75166480e2bc64e7c76930998433188f697a9064539cda3ea0b5b4a",
+      "version": "1"
+    },
+    {
+      "id": "qualified-report",
+      "requires": [],
+      "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "version": "1"
+    }
+  ]
+}
