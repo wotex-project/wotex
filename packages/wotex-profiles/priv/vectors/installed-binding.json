@@ -1,0 +1,36 @@
+{
+  "capture_fields": [
+    "model"
+  ],
+  "codec_contracts": [],
+  "id": "urn:example:binding:register",
+  "operations": [
+    "readproperty"
+  ],
+  "raw_value_contract": {
+    "id": "urn:example:decoder:register-output",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "version": "1.0.0"
+  },
+  "raw_value_schema": {
+    "maximum": 32767,
+    "minimum": -32768,
+    "type": "integer"
+  },
+  "selector_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "register": {
+        "maximum": 65535,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "register"
+    ],
+    "type": "object"
+  },
+  "sha256": "c18cc5f31d87c9b48322791f5f894e3e544de489777804b59aad93a5a1f80a1c",
+  "version": "1.0.0"
+}

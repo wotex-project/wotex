@@ -100,7 +100,7 @@ defmodule Wotex.Profiles.MixProject do
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-profiles"
       },
       files:
-        ~w(lib priv/schemas priv/vectors .formatter.exs mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
+        ~w(lib priv/schemas priv/vectors priv/contracts .formatter.exs mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
     ]
   end
 

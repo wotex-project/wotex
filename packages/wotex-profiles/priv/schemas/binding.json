@@ -310,10 +310,19 @@
           "queryaction",
           "cancelaction",
           "subscribeevent",
-          "unsubscribeevent"
+          "unsubscribeevent",
+          "readallproperties",
+          "writeallproperties",
+          "readmultipleproperties",
+          "writemultipleproperties",
+          "observeallproperties",
+          "unobserveallproperties",
+          "queryallactions",
+          "subscribeallevents",
+          "unsubscribeallevents"
         ]
       },
-      "maxItems": 9,
+      "maxItems": 18,
       "minItems": 1,
       "type": "array",
       "uniqueItems": true

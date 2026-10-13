@@ -49,6 +49,9 @@ The reader supports the closed mechanical DataSchema subset in
 [the external-profile contract](../../docs/packages/wotex-profiles/specs/WPF.01-external-profile-language.md).
 `Unit.convert/4` supplies exact rational conversion between matching quantity
 URI/dimension pairs and refuses repeating fractions or arithmetic overflow.
+`Binding.digest/2` and `Binding.new/2` prepare and verify explicit installed
+selector/raw-value registrations. Digest verification does not qualify a decoder
+or device, and a reference never loads its implementation.
 Compilation, capture matching, report interpretation and authoring are separate
 planned contracts; the package catalogue records their current evidence.
 

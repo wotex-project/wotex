@@ -19,6 +19,9 @@ catalogue records implementation status separately.
   not establish equal meaning, calibration, model truth or device support.
 - Loading the library starts no process and performs no I/O. References are
   opaque identities, not fetch locations or module names.
+- Verify installer-owned registrations with `Binding.new/2`; changed selector,
+  operation, capture or raw-value contracts cannot retain the old digest.
+  Independently qualify their actual decoder correspondence.
 - A reader value, match, normalized proposal or authoring report grants no
   authority. Consumers own installed bindings, current capture, qualification,
   credentials, canonical Thing state, persistence and effects.

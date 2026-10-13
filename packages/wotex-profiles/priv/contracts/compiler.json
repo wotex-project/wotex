@@ -1,0 +1,10 @@
+{
+  "arithmetic": "wotex.profile.rational@1",
+  "capture": "wotex.profile.capture@1",
+  "definition": "wotex.semantic@1",
+  "format": "wotex.profile.compiler@1",
+  "mechanical_schema": "wotex.profile.schema@1",
+  "profile": "wotex.profile@1",
+  "projection": "wotex.profile.projection@1",
+  "version": "1.0.0"
+}

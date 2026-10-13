@@ -56,4 +56,40 @@ defmodule Wotex.Profiles.StructuralSchemaTest do
     |> Jason.decode!()
     |> ExJsonSchema.Schema.resolve()
   end
+
+  test "frozen capture and report documents are offline structural contracts" do
+    for name <- ~w(capture checked projection report proposal) do
+      assert %ExJsonSchema.Schema.Root{} = schema(name)
+    end
+
+    assert :ok = ExJsonSchema.Validator.validate(schema("binding"), F.json("installed-binding"))
+    assert :ok = ExJsonSchema.Validator.validate(schema("capture"), F.json("capture"))
+
+    report = %{
+      "channel_id" => "sample",
+      "profile_sha256" => String.duplicate("a", 64),
+      "binding" => F.json("capture")["binding"],
+      "capture_epoch" => String.duplicate("c", 32),
+      "source_ref" => "synthetic-source",
+      "source_epoch" => String.duplicate("e", 32),
+      "sequence" => nil,
+      "source_time" => nil,
+      "receipt_time" => %{"epoch" => String.duplicate("f", 32), "monotonic_us" => "0"},
+      "continuity" => "retained",
+      "quality" => "unknown",
+      "quality_reason" => "missing",
+      "value" => %{"type" => "null"}
+    }
+
+    assert :ok = ExJsonSchema.Validator.validate(schema("report"), report)
+
+    assert {:error, _} =
+             ExJsonSchema.Validator.validate(schema("report"), Map.put(report, "foreign", true))
+
+    assert {:error, _} =
+             ExJsonSchema.Validator.validate(
+               schema("report"),
+               Map.put(report, "sequence", String.duplicate("1", 21))
+             )
+  end
 end

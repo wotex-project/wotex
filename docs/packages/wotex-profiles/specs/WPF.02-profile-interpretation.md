@@ -1,8 +1,9 @@
 # WPF.02 — Bounded profile compilation and interpretation
 
-Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
-Implementation: partial exact Unit.convert/4. Evidence: independent Fraction
-vectors and focused conversion tests; compiler/report interpretation remains planned.
+Version: 0.2.3. Updated: 2026-10-13. Status: accepted target.
+Implementation: partial exact Unit.convert/4 and Binding constructors.
+Evidence: independent numeric/registration vectors and focused tests;
+compiler/capture/report interpretation remains planned.
 
 ## Scope and required inputs
 
@@ -28,7 +29,7 @@ The external definition can be read without routines, media or a transport host.
 
 ## Explicit binding registration and compiler
 
-**WPF02-01 — Registration.** Planned Binding.new/2 accepts exactly id, version,
+**WPF02-01 — Registration.** Binding.new/2 accepts exactly id, version,
 sha256, selector_schema, operations, capture_fields, raw_value_contract,
 raw_value_schema and codec_contracts.
 References and DataSchema constraints use WPF.01. Capture_fields is a sorted
@@ -94,7 +95,9 @@ Closure_sha256 is SHA-256 of UTF-8 wotex.profile.closure@1 followed by newline
 and core deterministic JSON of sorted exact selected references, including the
 profile, definitions, binding and installed required contracts. Compiler identity
 is separate, not silently folded into raw profile identity.
-Compiler_ref is the installed exact compiler identity. Channel plans retain
+Compiler_ref is the installed exact compiler-contract identity. Consumer
+producer-release/archive pins remain separate; this contract digest is not
+the digest of executable code or a Hex archive. Channel plans retain
 original channel/affordance IDs, descriptor/reference/selector/conversion,
 supported operations and unsupported optional interpretation reasons.
 A required unsupported channel/closure refuses the whole compilation. Optional
@@ -245,3 +248,127 @@ coefficient overflow and caller-selected arithmetic limits before code.
 Executed exact-unit and two-consumer evidence is retained in
 [the arithmetic milestone](../provenance/exact-units-2026-10.md). This establishes
 Unit.convert/4, not compiler, report interpretation or admission completion.
+
+
+## Compiler and interpreter value freeze
+
+The following is implementation-entry behavior, still planned. The native
+backing values are explicit immutable input, never a private registry or
+claim of source/device authenticity.
+
+| Public value | Exact native fields besides struct tag | Checked data |
+| --- | --- | --- |
+| Binding | data | WPF02-01 registration, including its verified sha256 |
+| Capture | data | binding, capture_epoch, fields, digest |
+| Checked | data, inputs | WPF02-02 six checked fields |
+| Projection | data, inputs | WPF02-02 seven projection fields |
+
+Checked inputs contain exactly profile, closure and limits. Projection inputs
+contain exactly profile, closure, capture and limits. These retain normalized
+WPF input maps, not paths/callbacks or original-byte custody claims. Limits are
+the complete selected WPF.01 map. `Checked.to_map/2` and `Projection.to_map/2`
+require those exact native shapes, revalidate retained input and regenerate
+through Compiler using the same limits. A changed limit selection or mismatch
+between supplied data and regenerated data refuses stale_basis. Unknown/native
+fields refuse invalid_input. Serialization returns only data; a serialized
+projection alone is inert inspection data and cannot replace the native inputs
+needed by Interpreter. The consumer must recompile from its current inputs.
+
+`Binding.digest/2` accepts the exact WPF02-01 registration minus sha256 and
+returns its computed digest, enabling an installer to prepare a registration
+without bypassing its checker. `Binding.new/2` requires the complete registration
+and refuses reference_conflict for a syntactically valid but different digest.
+`Binding.to_map/2` and reference/2 revalidate; native fields are never trusted.
+Binding operations are sorted unique TD 1.1 strings, including Thing-level
+strings if declared; a channel still selects only operations of its own kind.
+
+`Capture.digest/3` accepts exactly binding, capture_epoch and fields, plus the
+selected Binding and Limits, and computes the WPF02-02 capture digest.
+`Capture.new/3` accepts the complete four-field capture and verifies that digest.
+`Capture.to_map/3` revalidates the native one-data-field value. Fields are a
+subset of the selected binding's capture_fields, with no unknown keys and only
+fingerprint-compatible C02 scalar nodes. A missing fingerprint operand yields
+fingerprint_mismatch, never an inferred value. A supplied binding mismatch is
+stale_basis; malformed capture/foreign field errors point at the known parent.
+
+`Compiler.identity/0` returns the exact reference for the frozen compiler ABI
+manifest in priv/contracts/compiler.json. Its id is urn:wotex:profiles:compiler,
+version 1.0.0, and digest is SHA-256 of wotex.profile.compiler@1 plus newline
+and core deterministic JSON of that manifest. This compile-time literal
+contract identity starts no process and reads no runtime file. It is separate
+from the consumer's actual installed artifact/source identity and qualification.
+Changing these semantic mechanics requires an explicit ABI manifest successor.
+
+The closure is exactly definitions, bindings and contracts. All explicitly
+supplied entries receive bounded structural/native validation before use; the
+caller selects that array outside the compiler. Only reachable references enter
+the compiled closure identity and dependency traversal, so adding unrelated
+valid entries does not change a projection. Duplicate id/version keys, including
+cross-kind aliases, refuse reference_conflict. An existing key with a different
+exact digest also refuses reference_conflict; an absent key refuses
+missing_reference. Requires may select definitions or installed contracts;
+profile.binding separately selects its one Binding. Binding raw_value_contract
+and codec_contracts, and nonnull definition behaviour, must be exact references
+in the explicit installed contracts. No reference selects or loads code.
+
+Reference traversal includes profile, selected binding, reachable definitions
+and installed contracts within max_dependencies, memoizing an exact reference
+once. Reachable definition cycles always refuse cyclic_reference, including
+optional channels; they are malformed closure, not an unsupported mechanic.
+The common input budget applies to the whole normalized input envelope. It
+bounds admitted nodes, not a claim that each public validator visits a node
+only once. Output construction stops before exceeding the same selected
+byte/node/depth envelope; channel plans cannot expand one repeated definition
+into an unbounded result.
+
+Each channel plan contains exactly channel_id, affordance, semantic, definition,
+operations, selector, conversion, invalid_values, required, disposition and
+reason. Definition is the normalized descriptor without annotations, or null
+when an optional semantic reference is missing. Disposition is supported or
+excluded. Supported has reason=null and its declared operations. Excluded has
+operations=[] and one installed error-code string explaining why. No raw
+foreign key/value enters reason. Plans are sorted by channel_id. Global bounds,
+identity conflicts and cycles refuse before optional exclusion. Profile requires
+are always required. A missing optional descriptor or unsupported optional
+channel may be excluded; an equivalent required channel refuses the whole call.
+An excluded report channel returns unsupported_semantics, never empty success.
+
+Static checks validate selector instances against the selected closed binding
+schema. Affine maps require numeric root raw/target schemas; tables validate
+both their source literals against the raw schema and targets against the
+semantic schema. Invalid sentinels must belong to the installed raw schema.
+A nonnull semantic unit requires an integer/number target schema. Unconverted
+schemas must have compatible root types; number/integer are compatible and
+structured values are validated at report time, without subsumption guessing.
+C02 byte operands are inspectable reader data but not an executable v1
+DataSchema byte-domain projection: a selected channel requiring them refuses
+codec_required (or is explicitly excluded when optional).
+
+Interpreter.project/3 accepts a revalidated native Projection, one closed
+WPF02-03 report map and the same selected Limits. It returns {:ok, proposal_map}
+or Error; proposal_map has exactly WPF02-05 fields. It regenerates projection
+before checking report identity, then validates the report's closed fields and
+C02 syntax. Usable quality requires quality_reason=null. Other declared quality
+states retain their original reason and produce null normalized_value, bypassing
+raw/target instance-domain validation; their interpretation is unconverted.
+No invalid sample is relabeled usable because it happens to fit a schema.
+
+For usable samples, validate raw domain, test exact raw sentinels, convert when
+declared, then validate target domain. A sentinel produces null/invalid with
+profile_sentinel and unconverted interpretation. Domain failure is out_of_domain;
+a missing table source is unsupported_semantics. Schema integer/number compares
+C02 integer/decimal values as exact fractions; const/enum numbers use the same
+logical equality. Strings require C02 text, never bytes. Arrays/objects retain
+order, closed properties and required fields; no coercion, default or clipping.
+Absent sequence/source_time remains null. Source time is a UTC RFC3339 string
+at most 35 bytes, ISO year 0..9999, at most six fractional digits and explicit
+Z or +00:00 offset. The parsed offset must be zero. No current-time comparison
+or source-clock trust upgrade occurs. Report quality/continuity is retained;
+usable plus retained/replayed/gap does not imply fresh consumer state.
+
+Compile/check regenerate the selected closure, binding, schema and operation
+checks on every call. compile additionally revalidates capture and all literal
+fingerprint predicates; failure yields fingerprint_mismatch. The library
+observes no current external registry or device. A replaced installed basis can
+only become current through explicit new consumer input and recompilation;
+old projections/proposals remain historical, inert values.

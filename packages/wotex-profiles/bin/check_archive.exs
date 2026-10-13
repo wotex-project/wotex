@@ -1,6 +1,6 @@
 # Builds the Hex archive without sibling path dependencies and verifies
 # that it ships code, README.md, usage-rules.md, CHANGELOG.md, LICENSE and
-# NOTICE plus the frozen offline schemas/vectors.
+# NOTICE plus the frozen offline schemas/vectors/contracts.
 # Runs in the full gate: `mix run --no-start bin/check_archive.exs`.
 
 defmodule Wotex.Profiles.Check.Archive do
@@ -78,7 +78,10 @@ defmodule Wotex.Profiles.Check.Archive do
 
   defp allowed?(file) do
     file in (@required ++ [".formatter.exs"]) or
-      Enum.any?(~w(lib/ priv/schemas/ priv/vectors/), &String.starts_with?(file, &1))
+      Enum.any?(
+        ~w(lib/ priv/schemas/ priv/vectors/ priv/contracts/),
+        &String.starts_with?(file, &1)
+      )
   end
 
   defp consumers!(temporary, archive) do
