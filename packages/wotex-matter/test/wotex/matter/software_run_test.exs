@@ -116,6 +116,11 @@ defmodule Wotex.Matter.SoftwareRunTest do
       bootstrap = Path.join([Path.dirname(path), lane, "dependency-bootstrap", "mix.lock"])
       assert File.read!(bootstrap) == File.read!(Path.join(context.source, "mix.lock"))
       assert Bitwise.band(File.stat!(Path.dirname(bootstrap)).mode, 0o777) == 0o700
+      receipt = Path.join([Path.dirname(path), lane, "acceptance.json"])
+      assert SoftwareManifest.read(receipt)["status"] == "passed"
+
+      assert result["lanes"] |> Enum.find(&(&1["name"] == lane)) |> Map.fetch!("acceptance_sha256") ==
+               SoftwareManifest.digest(receipt)
     end
   end
 
@@ -270,6 +275,12 @@ defmodule Wotex.Matter.SoftwareRunTest do
         ;;
       exec)
         #{execute}
+        ;;
+      cp)
+        name=${2%%:*}
+        directory=$(cat "$root/$name")
+        test "${2#*:}" = "/run/fixtures/acceptance.json" || exit 33
+        /bin/cp "$directory/fixtures/acceptance.json" "$3"
         ;;
       rm)
         /bin/rm -- "$root/$3"

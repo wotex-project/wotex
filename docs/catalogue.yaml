@@ -272,7 +272,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.07-wotex-integration.md"
       - id: "WMA.08"
-        version: "1.0.9"
+        version: "1.0.10"
         implementation_status: "implemented"
         path: "docs/packages/wotex-matter/specs/WMA.08-native-backend.md"
       - id: "WMA.09"

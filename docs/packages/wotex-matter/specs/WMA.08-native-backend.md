@@ -3,9 +3,9 @@ spec:
   id: WMA.08
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.9
+  version: 1.0.10
   owner: wotex-matter
-  updated: 2026-09-21
+  updated: 2026-10-13
 ---
 
 # WMA.08 Native backend, build and IPC contract
@@ -76,6 +76,15 @@ an architecture mismatch fails before execution. Additional architectures are
 separate evidenced lanes. BEAM matrix: Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4. The software runner executes the native client and real
 Runtime calls in both lanes, independently of physical hardware.
+
+Software fixture directories and commissioning stores remain private to the
+container owner. Before container cleanup the runner copies only the passing
+lane's `acceptance.json` to its host-owned lane directory, then applies the
+same source/runtime/status checks to that copy. Copy failure or missing/malformed
+receipt fails the lane; process exit alone is not acceptance. Diagnostic
+retention reads host-owned lane logs and receipt files at their exact depth,
+never recursively traverses private fixture or key directories. Permissions
+on private inputs are not relaxed to make artifact upload succeed.
 
 The test-only example peers compile with
 `CHIP_CONFIG_SECURE_SESSION_POOL_SIZE=2048`. The pool is heap-backed on the Linux

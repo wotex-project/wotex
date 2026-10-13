@@ -569,7 +569,10 @@ jobs:
             ${{ runner.temp }}/native-${{ matrix.package }}/*manifest.json
             ${{ runner.temp }}/software-${{ matrix.package }}/logs/
             ${{ runner.temp }}/software-${{ matrix.package }}/software-run/
-            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/**/*.log
-            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/**/result.json
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*.log
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*.json
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/*.log
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/result.json
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/acceptance.json
             ${{ runner.temp }}/software-${{ matrix.package }}/*.log
             ${{ runner.temp }}/software-${{ matrix.package }}/*.json

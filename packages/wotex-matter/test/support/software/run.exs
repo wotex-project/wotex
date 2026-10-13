@@ -109,7 +109,19 @@ defmodule Wotex.Matter.SoftwareRun do
         start_container(context)
         prepare(context)
         inside(context, "acceptance", ["mix", "run", "test/support/software/lane.exs"], 3_300_000)
-        receipt = SoftwareManifest.read(Path.join(directory, "fixtures/acceptance.json"))
+
+        command(
+          context,
+          "acceptance-receipt-copy",
+          [
+            "cp",
+            context.name <> ":/run/fixtures/acceptance.json",
+            Path.join(directory, "acceptance.json")
+          ],
+          30_000
+        )
+
+        receipt = SoftwareManifest.read(Path.join(directory, "acceptance.json"))
 
         unless receipt["status"] == "passed" and receipt["elixir"] == lane["elixir"] and
                  receipt["otp"] == lane["otp"] and
@@ -125,8 +137,7 @@ defmodule Wotex.Matter.SoftwareRun do
     Map.merge(lane, %{
       "status" => "passed",
       "acceptance" => receipt,
-      "acceptance_sha256" =>
-        SoftwareManifest.digest(Path.join(directory, "fixtures/acceptance.json")),
+      "acceptance_sha256" => SoftwareManifest.digest(Path.join(directory, "acceptance.json")),
       "log_sha256" => SoftwareManifest.digest(Path.join(directory, "acceptance.log")),
       "owned_containers_after_cleanup" => 0,
       "owned_networks_after_cleanup" => 0
