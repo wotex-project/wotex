@@ -13,7 +13,12 @@ defmodule Wotex.Routines.Check.Archive do
   def main do
     {opts, rest, invalid} =
       OptionParser.parse(System.argv(),
-        strict: [occurrence_archive: :string, composition_consumers: :boolean]
+        strict: [
+          occurrence_archive: :string,
+          composition_consumers: :boolean,
+          model_consumer: :boolean,
+          maude_path: :string
+        ]
       )
 
     if rest != [] or invalid != [], do: throw({:archive, "unsupported archive arguments"})
@@ -50,10 +55,14 @@ defmodule Wotex.Routines.Check.Archive do
   defp consumers!(opts, archive, temporary) do
     producer = opts[:occurrence_archive]
 
-    if producer || opts[:composition_consumers] do
+    if opts[:model_consumer] and not is_binary(opts[:maude_path]),
+      do: throw({:archive, "model consumer requires an explicit interpreter path"})
+
+    if producer || opts[:composition_consumers] || opts[:model_consumer] do
       paths = artifacts!(producer, archive, temporary)
       if producer, do: calendar_consumer!(producer, archive, paths, temporary)
       if opts[:composition_consumers], do: composition_consumers!(archive, paths, temporary)
+      if opts[:model_consumer], do: model_consumer!(archive, paths, temporary, opts[:maude_path])
     end
 
     :ok
@@ -174,6 +183,43 @@ defmodule Wotex.Routines.Check.Archive do
     source = Path.expand("../" <> relative, __DIR__)
     File.cp!(source, destination)
     IO.puts("#{relative} consumer source sha256: #{sha256(source)}")
+  end
+
+  defp model_consumer!(archive, paths, temporary, maude_path) do
+    consumer = Path.join(temporary, "consumer-model")
+    tests = Path.join(consumer, "test")
+    File.mkdir_p!(tests)
+
+    dependencies =
+      Enum.map(paths, fn {app, path} ->
+        {app, [path: path, env: :prod, override: true]}
+      end) ++ [{:ex_maude, "== 0.5.0"}]
+
+    File.write!(Path.join(consumer, "mix.exs"), consumer_project(dependencies))
+    File.write!(Path.join(tests, "test_helper.exs"), "ExUnit.start()\n")
+    copy_fixture!("test/support/archive/model_consumer.exs", Path.join(tests, "model_test.exs"))
+
+    copy_fixture!(
+      "test/support/archive/identity_consumer.exs",
+      Path.join(tests, "identity_test.exs")
+    )
+
+    environment = [
+      {"WOTEX_PATH_DEPS", nil},
+      {"MIX_ENV", "test"},
+      {"MIX_BUILD_PATH", nil},
+      {"MIX_BUILD_ROOT", nil},
+      {"MIX_DEPS_PATH", nil},
+      {"EX_MAUDE_BUILD_CNODE", "0"},
+      {"WOTEX_ROUTINES_CONSUMER_ROOT", consumer},
+      {"WOTEX_ROUTINES_COMPILER_BASIS", "sha256:" <> sha256(archive)},
+      {"WOTEX_ROUTINES_MAUDE_PATH", Path.expand(maude_path)}
+    ]
+
+    run!(["deps.get"], consumer, environment)
+    run!(["compile", "--warnings-as-errors"], consumer, environment)
+    run!(["test", "--warnings-as-errors"], consumer, environment)
+    IO.puts("model consumer lock sha256: #{sha256(Path.join(consumer, "mix.lock"))}")
   end
 
   defp build_sibling!(name, temporary) do

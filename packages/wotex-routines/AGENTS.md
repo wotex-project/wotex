@@ -50,3 +50,5 @@ profile or container lane.
 The archive check accepts `--occurrence-archive /absolute/archive/ex_booking.tar` to build the exact WoTEx cohort and execute the isolated public calendar consumer. Supply an inspected producer archive with SP.08; the released 0.2.3 dependency deliberately exercises unavailability instead. This lane does not qualify a host clock, store transaction or device.
 
 `bin/check_archive.exs --composition-consumers` runs two independent extracted-archive composition consumers: source-AST transition correspondence and a consumer-owned journal/arbitration harness. The paired profile and provenance in the owning documentation distinguish these software checks from production host/physical qualification.
+
+`bin/check_archive.exs --model-consumer --maude-path /absolute/maude` runs the explicitly selected proposal-prefix native archive consumer against exact Hex ExMaude 0.5.0. The interpreter remains separately provisioned; this Port lane does not build the C-Node or qualify containment, execution admission or wider models.

@@ -1,0 +1,215 @@
+defmodule ProposalModelArchiveConsumerTest do
+  @moduledoc false
+
+  use ExUnit.Case, async: true
+
+  alias Wotex.Routines.{Compiler, Limits, Model, Profile, Witness}
+
+  setup_all do
+    root =
+      :wotex_routines
+      |> :code.priv_dir()
+      |> List.to_string()
+
+    corpus =
+      root
+      |> Path.join("vectors/wro-01.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    scope =
+      root
+      |> Path.join("vectors/wro-04-proposal-prefix.json")
+      |> File.read!()
+      |> JSON.decode!()
+      |> Map.fetch!("scope")
+
+    {:ok, limits} = Limits.new(corpus["limits"])
+
+    {:ok, profile} =
+      Profile.new(%{
+        "source_bytes" => 65_536,
+        "source_depth" => 32,
+        "expanded_nodes" => 64,
+        "predicate_nodes" => 64,
+        "invocation_depth" => 4,
+        "parallel_width" => 4,
+        "effects" => 16,
+        "waits" => 16,
+        "active_definitions" => 64,
+        "active_runs" => 64,
+        "pending_work" => 64,
+        "run_ms" => 86_400_000
+      })
+
+    basis = Enum.at(corpus["bases"], 2)
+
+    source = %{
+      "format" => "wotex.routines.source@1",
+      "profile" => "bounded-composition@1",
+      "id" => "procedure",
+      "revision" => "1",
+      "parameters" => %{},
+      "bindings" => ["output"],
+      "trigger" => %{"kind" => "manual"},
+      "condition" => %{"op" => "literal", "value" => true},
+      "steps" => %{
+        "id" => "apply",
+        "kind" => "effect",
+        "binding" => "output",
+        "input" => false,
+        "completion" => "reported_match"
+      },
+      "overlap" => "reject",
+      "run_ms" => 1000
+    }
+
+    context = %{
+      "registry" => corpus["registry"],
+      "bases" => corpus["bases"],
+      "bindings" => %{
+        "output" => %{
+          "basis" => Map.take(basis, ~w(id version semantic_digest)),
+          "thing_id" => "urn:cell:output",
+          "resource_roles" => %{"target" => "cell:1"}
+        }
+      },
+      "definitions" => [],
+      "arguments" => %{},
+      "compiler_basis" => System.fetch_env!("WOTEX_ROUTINES_COMPILER_BASIS")
+    }
+
+    %{
+      source: source,
+      context: context,
+      scope: scope,
+      profile: profile,
+      limits: limits,
+      basis: basis
+    }
+  end
+
+  test "released public search facade executes both generated model literals and finite prefixes",
+       c do
+    for value <- [false, true] do
+      {:ok, program} =
+        Compiler.compile(
+          put_in(c.source, ["steps", "input"], value),
+          c.context,
+          c.profile,
+          c.limits
+        )
+
+      {:ok, model} = Model.compile(program, c.scope, c.profile, c.limits)
+      receipt = search(model.data["model_bytes"], "state(fresh, 0)", "S:State", nil)
+      assert receipt.termination == :completed_declared_bound
+      assert length(receipt.solutions) == 3
+
+      assert receipt.model_digest == model.data["model_digest"]
+
+      literal = search(model.data["model_bytes"], "requested", "B:Bool", nil)
+      assert length(literal.solutions) == 1
+      assert hd(literal.solutions).substitution["B:Bool"] == to_string(value)
+
+      IO.write(
+        "native model runtime: #{receipt.executable_version}; " <>
+          "executable sha256: #{receipt.executable_digest}\n"
+      )
+    end
+  end
+
+  test "a native mutated-model counterexample cannot become a concretely validated runtime incident",
+       c do
+    {:ok, program} = Compiler.compile(c.source, c.context, c.profile, c.limits)
+    {:ok, model} = Model.compile(program, c.scope, c.profile, c.limits)
+
+    original =
+      search(model.data["model_bytes"], "state(fresh, 0)", "state(P:Phase, 2)", nil)
+
+    assert original.solutions == []
+
+    assert original.termination == :completed_declared_bound,
+           inspect(Map.take(original, [:error, :depth_probe]))
+
+    mutated =
+      String.replace(
+        model.data["model_bytes"],
+        "state(proposed, 1) => state(proposed, 1)",
+        "state(proposed, 1) => state(proposed, 2)"
+      )
+
+    receipt = search(mutated, "state(fresh, 0)", "state(P:Phase, 2)", nil)
+    assert length(receipt.solutions) >= 1
+    assert receipt.model_digest != original.model_digest
+    frame = frame(c, program)
+
+    witness = %{
+      "format" => "wotex.routines.witness@1",
+      "property" => "proposal_once",
+      "program_digest" => program.data["ir_digest"],
+      "source_digest" => program.data["source_digest"],
+      "compiler_basis" => program.data["context"]["compiler_basis"],
+      "max_steps" => 2,
+      "max_originals" => 1,
+      "initial" => %{"runs" => [], "edge" => nil},
+      "frames" => [frame, frame]
+    }
+
+    assert {:ok, replay} = Witness.replay(program, witness, c.profile, c.limits)
+    assert replay["reproduced"] == false
+  end
+
+  defp search(bytes, initial, pattern, condition) do
+    query = %{
+      module: "ROUTINE-PROPOSAL-PREFIX",
+      initial: initial,
+      pattern: pattern,
+      max_depth: 8,
+      max_solutions: 16
+    }
+
+    query = if condition, do: Map.put(query, :condition, condition), else: query
+
+    assert {:ok, receipt} =
+             ExMaude.Verification.SearchRun.run(bytes, query,
+               maude_path: System.fetch_env!("WOTEX_ROUTINES_MAUDE_PATH"),
+               timeout: 2000,
+               max_response_bytes: 65_536,
+               deadline_ms: System.monotonic_time(:millisecond) + 2000
+             )
+
+    receipt
+  end
+
+  defp frame(c, program) do
+    %{
+      "event" => %{
+        "kind" => "manual",
+        "original" => "original:1",
+        "program_digest" => program.data["ir_digest"]
+      },
+      "time" => %{
+        "epoch" => "boot:1",
+        "elapsed_ms" => 0,
+        "clock_generation" => "clock:1",
+        "utc_low_ms" => nil,
+        "utc_high_ms" => nil
+      },
+      "snapshot" => %{
+        "id" => "snapshot:1",
+        "membership_generation" => "membership:1",
+        "active_programs" => [program.data["ir_digest"]],
+        "resource_revisions" => %{"urn:cell:output" => 1, "cell:1" => 1},
+        "binding_bases" => %{
+          "output" => %{
+            "profile_digest" => c.basis["semantic_digest"],
+            "source_id" => "source:1",
+            "source_epoch" => "connection:1",
+            "source_time_basis" => nil
+          }
+        },
+        "facts" => %{"output" => nil}
+      }
+    }
+  end
+end
