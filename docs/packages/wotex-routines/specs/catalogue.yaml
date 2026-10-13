@@ -30,11 +30,11 @@ specifications:
     executable_evidence: ["test/wotex/routines/temporal_test.exs", "test/wotex/routines/calendar_test.exs", "test/wotex/routines/driver_test.exs", "test/support/archive/calendar_consumer.exs", "bin/check_archive.exs"]
     compatibility_classification: "Closed immutable schedules, UTC interval/one-shot and boot-scoped countdown pages plus explicit program binding implemented. Direct optional calendar adapter and published-version unavailability implemented; one exact development producer archive/calendar consumer exercised; bounded explicitly started driver lifecycle implemented; real host transactions and independent composition consumers remain obligations; ExBooking SP.08 producer is unreleased."
   - id: "WRO.04"
-    version: "0.2.2"
+    version: "0.2.3"
     path: "docs/specs/WRO.04-analysis-correspondence.md"
     implementation_status: "partial"
     standards: []
     requires: ["WRO.01", "WRO.02", "WRO.03"]
-    implementation_modules: ["Wotex.Routines.AnalysisResult", "Wotex.Routines.Witness"]
-    executable_evidence: ["test/wotex/routines/analysis_result_test.exs", "test/wotex/routines/evaluation_test.exs", "test/wotex/routines/correspondence_test.exs", "bin/check_correspondence.exs", "test/wotex/routines/witness_test.exs"]
-    compatibility_classification: "Closed bounded result axes, witness assertions and full correspondence binding implemented. Independent source predicate and finite manual composition transition references plus six isolated behavioral mutations implemented. Bounded concrete Witness replay with explicit original history and four independent runtime-property checks implemented. Projection, calendar/complete-set reference mutations and optional ExMaude execution remain obligations; bounded absence never supplies positive admission."
+    implementation_modules: ["Wotex.Routines.AnalysisResult", "Wotex.Routines.Witness", "Wotex.Routines.Model"]
+    executable_evidence: ["test/wotex/routines/analysis_result_test.exs", "test/wotex/routines/evaluation_test.exs", "test/wotex/routines/correspondence_test.exs", "bin/check_correspondence.exs", "test/wotex/routines/witness_test.exs", "test/wotex/routines/model_test.exs"]
+    compatibility_classification: "Closed bounded result axes, witness assertions and full correspondence binding implemented. Independent source predicate and finite manual composition transition references plus six isolated behavioral mutations implemented. Bounded concrete Witness replay with explicit original history and four independent runtime-property checks implemented. Explicit frozen-time proposal-only Model projection with complete regeneration implemented. Wider receipt/temporal/composition projections, calendar/complete-set reference mutations and optional ExMaude execution remain obligations; bounded absence never supplies positive admission."

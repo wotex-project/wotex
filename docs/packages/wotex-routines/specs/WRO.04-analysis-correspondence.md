@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.2. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.3. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -217,4 +217,63 @@ property-violating returned-record mutations caught by these checks. Public
 replay integration and property-check sensitivity remain separate evidence;
 an invalid forged Run is not a concrete counterexample.
 
-Implemented replay evidence is `witness_test.exs`: public replay validates finite trace/history/subject bindings, rejects false or malformed claims, retains staged/cancelled history and enforces amplification bounds. Separate returned-record mutation tests exercise all four property checks; their forged records deliberately refuse public replay. The shipped `wro-04-witness.schema.json` reconciles WRO.02 execution definitions offline and describes both input and output. Model projection and analysis-adapter correspondence are still unimplemented.
+Implemented replay evidence is `witness_test.exs`: public replay validates finite trace/history/subject bindings, rejects false or malformed claims, retains staged/cancelled history and enforces amplification bounds. Separate returned-record mutation tests exercise all four property checks; their forged records deliberately refuse public replay. The shipped `wro-04-witness.schema.json` reconciles WRO.02 execution definitions offline and describes both input and output. Wider model projection and analysis-adapter correspondence remain open.
+
+## First inert proposal projection
+
+`Model.compile(program, scope, profile, limits)` is pure compilation to an inert
+model artifact, not a search or admission. The first projection profile is
+proposal-prefix@1, purpose proposal_generation_only. It supports exactly one
+manual, unconditional literal-true, parameter-free Boolean writeproperty effect
+at root path []; overlap is reject. There is one declared/resolved binding and
+no child definitions. Unsupported predicate/trigger/type/operation/step/closure
+refuses explicitly; no effect or unknown predicate becomes a no-op model.
+
+Scope is a closed required object: profile, purpose, initial_history,
+time_policy, environment, claims, omissions and policy_digest. Required values
+are proposal-prefix@1, proposal_generation_only, no_existing_run,
+frozen_before_deadline, and manual_and_cancel_one_original, respectively.
+claims is exactly [proposal_once, fixed_absolute_proposal]. omissions is exactly
+[admission, handoff, receipts, time_progress, fact_changes, multi_original_overlap,
+authority, complete_set_arbitration, physical_effects]. policy_digest is an
+explicit consumer-verified SHA-256 assumption identity, not a grant.
+
+The finite environment starts with no original history, one active current
+program, unchanged source/mapping and a fixed valid elapsed/clock epoch before
+the root/effect deadline. Its valid trace alphabet is manual submission/replay,
+and cancellation once an original exists. No admission or handoff ever occurs.
+Unknown/partial physical outcomes and device-behaviour analysis are outside
+this pre-admission horizon; the installed basis's device model classification
+is not promoted. No fairness, time progress or liveness property is claimed.
+Any receipt, time/environment change or other-original trace needs another
+declared supported projection; this artifact cannot evidence those obligations.
+
+The transition model has fresh/count0, proposed/count1 and cancelled/count1
+states. The first manual event emits the exact compiled absolute Boolean and
+fixed target/basis. Duplicate manual events emit nothing and keep count1.
+Cancellation emits nothing and preserves count1; manual/cancel replay after
+cancellation cannot produce another effect. Cancel with no original is a
+Kernel refusal and outside the valid alphabet. Model count denotes emitted
+inert proposals, not held-root spend. The full effect descriptor and complete
+current Program remain in the artifact; source/IR/compiler identities stay
+distinct. Model symbols are installed static syntax; no source/profile/Thing
+string becomes Maude code or an include path.
+
+Artifact has exactly format (wotex.routines.model@1), program, scope,
+scope_digest, model_bytes and model_digest. Digests bind canonical scope and
+exact generated model bytes, respectively. Full regeneration in Model.to_map/3
+and Model.current/5 rejects altered native artifacts even with recomputed
+digests. The complete output/model bytes obey JSON Limits. Scope is not inferred
+from a backend query or default. Optional execution budgets and full evidence
+binding are supplied by the separately owned analysis runner; loading/compiling
+this artifact starts no worker or filesystem operation.
+
+Acceptance compares model prefix transitions/values against independent source
+and public Kernel cases for both Boolean inputs, manual duplicates and
+cancellation. Test unsupported unknown/timer/invocation/parallel/parameter
+profiles, changed policy/source/compiler and recomputed forged model bytes.
+Native checker execution, widened temporal/receipt/composition projections and
+complete-set/physical properties remain separate obligations. A completed
+bounded query with no counterexample remains inconclusive for admission.
+
+Implemented prefix projection evidence is `model_test.exs`: both Boolean values and actual emitted model-transition syntax agree with public Kernel prefixes; unknown/timer/invocation/composition/parameter profiles refuse; changed subjects and recomputed forged bytes fail regeneration. This is pure model syntax/transition evidence; native checker execution and wider projections are still separate obligations.

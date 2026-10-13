@@ -1,0 +1,26 @@
+{
+  "format": "wotex.routines.model.vector@1",
+  "scope": {
+    "profile": "proposal-prefix@1",
+    "purpose": "proposal_generation_only",
+    "initial_history": "no_existing_run",
+    "time_policy": "frozen_before_deadline",
+    "environment": "manual_and_cancel_one_original",
+    "claims": [
+      "proposal_once",
+      "fixed_absolute_proposal"
+    ],
+    "omissions": [
+      "admission",
+      "handoff",
+      "receipts",
+      "time_progress",
+      "fact_changes",
+      "multi_original_overlap",
+      "authority",
+      "complete_set_arbitration",
+      "physical_effects"
+    ],
+    "policy_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  }
+}

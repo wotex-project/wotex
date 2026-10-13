@@ -1,0 +1,2501 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wotex.io/contracts/routines/model/v1",
+  "title": "Inert proposal prefix model",
+  "definitions": {
+    "reference": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "semantic_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "semantic_digest"
+      ],
+      "additionalProperties": false
+    },
+    "unit": {
+      "type": "object",
+      "properties": {
+        "dimension": {
+          "enum": [
+            "temperature",
+            "fraction",
+            "illuminance",
+            "power",
+            "energy",
+            "time",
+            "electric_potential"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "scale_n": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "scale_d": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "offset_n": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        },
+        "offset_d": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "min": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        },
+        "max": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": [
+        "dimension",
+        "name",
+        "scale_n",
+        "scale_d",
+        "offset_n",
+        "offset_d",
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "basis": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "wotex.routines.basis@1"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "byte_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "implementation_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "compiler_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "affordance": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": [
+                "property",
+                "action",
+                "event"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "operation": {
+              "enum": [
+                "readproperty",
+                "writeproperty",
+                "observeproperty",
+                "invokeaction",
+                "subscribeevent"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "name",
+            "operation"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "property"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "readproperty",
+                      "writeproperty",
+                      "observeproperty"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "action"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "invokeaction"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "event"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "subscribeevent"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "value": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": [
+                "boolean",
+                "integer",
+                "enum"
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/unit"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "enum": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 65536
+              },
+              "uniqueItems": true,
+              "minItems": 0,
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "type",
+            "unit",
+            "enum"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "boolean"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unit": {
+                    "type": "null"
+                  },
+                  "enum": {
+                    "maxItems": 0
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "integer"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unit": {
+                    "$ref": "#/definitions/unit"
+                  },
+                  "enum": {
+                    "maxItems": 0
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "enum"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unit": {
+                    "type": "null"
+                  },
+                  "enum": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "security_contract": {
+          "$ref": "#/definitions/reference"
+        },
+        "lifecycle_contract": {
+          "$ref": "#/definitions/reference"
+        },
+        "required_contracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/reference"
+          },
+          "uniqueItems": true,
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "sources": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "device_report",
+                  "derived_report",
+                  "protocol_response"
+                ]
+              },
+              "uniqueItems": true,
+              "minItems": 1,
+              "maxItems": 1024
+            },
+            "freshness_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "require_source_time": {
+              "type": "boolean"
+            },
+            "continuity": {
+              "enum": [
+                "continuous",
+                "snapshot"
+              ]
+            },
+            "completion": {
+              "enum": [
+                "local_queue",
+                "protocol_response",
+                "correlated_report",
+                "reported_match"
+              ]
+            },
+            "report_contract": {
+              "$ref": "#/definitions/reference"
+            }
+          },
+          "required": [
+            "sources",
+            "freshness_ms",
+            "require_source_time",
+            "continuity",
+            "completion",
+            "report_contract"
+          ],
+          "additionalProperties": false
+        },
+        "effects": {
+          "type": "object",
+          "properties": {
+            "resource_roles": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 65536
+              },
+              "uniqueItems": true,
+              "minItems": 0,
+              "maxItems": 1024
+            },
+            "repeat": {
+              "enum": [
+                "never",
+                "after_known_failure",
+                "after_reported_safe"
+              ]
+            },
+            "stop": {
+              "enum": [
+                "unsupported",
+                "separate_effect"
+              ]
+            },
+            "supersession": {
+              "const": "block_until_known"
+            },
+            "partial_possible": {
+              "type": "boolean"
+            },
+            "unknown_possible": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "resource_roles",
+            "repeat",
+            "stop",
+            "supersession",
+            "partial_possible",
+            "unknown_possible"
+          ],
+          "additionalProperties": false
+        },
+        "timing": {
+          "type": "object",
+          "properties": {
+            "deadline_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "dwell_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "cooldown_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "uncertainty": {
+              "const": "block"
+            }
+          },
+          "required": [
+            "deadline_ms",
+            "duration_ms",
+            "dwell_ms",
+            "cooldown_ms",
+            "uncertainty"
+          ],
+          "additionalProperties": false
+        },
+        "analysis": {
+          "type": "object",
+          "properties": {
+            "classification": {
+              "enum": [
+                "supported",
+                "unsupported"
+              ]
+            },
+            "profile": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/reference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "properties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 65536
+              },
+              "uniqueItems": true,
+              "minItems": 0,
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "classification",
+            "profile",
+            "properties"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "classification": {
+                    "const": "supported"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "profile": {
+                    "$ref": "#/definitions/reference"
+                  },
+                  "properties": {
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "classification": {
+                    "const": "unsupported"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "profile": {
+                    "type": "null"
+                  },
+                  "properties": {
+                    "maxItems": 0
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "annotations": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 65536
+              },
+              "uniqueItems": true,
+              "minItems": 0,
+              "maxItems": 1024
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "enum": [
+                    "boolean",
+                    "integer",
+                    "enum"
+                  ]
+                },
+                "unit": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/unit"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "enum": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536
+                  },
+                  "uniqueItems": true,
+                  "minItems": 0,
+                  "maxItems": 1024
+                }
+              },
+              "required": [
+                "type",
+                "unit",
+                "enum"
+              ],
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "boolean"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "unit": {
+                        "type": "null"
+                      },
+                      "enum": {
+                        "maxItems": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "integer"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "unit": {
+                        "$ref": "#/definitions/unit"
+                      },
+                      "enum": {
+                        "maxItems": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "enum"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "unit": {
+                        "type": "null"
+                      },
+                      "enum": {
+                        "minItems": 1
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "format",
+        "id",
+        "version",
+        "byte_digest",
+        "semantic_digest",
+        "implementation_digest",
+        "compiler_digest",
+        "affordance",
+        "value",
+        "security_contract",
+        "lifecycle_contract",
+        "required_contracts",
+        "evidence",
+        "effects",
+        "timing",
+        "analysis",
+        "annotations",
+        "output"
+      ],
+      "additionalProperties": false
+    },
+    "fact": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "thing_id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "affordance_type": {
+          "enum": [
+            "property",
+            "event"
+          ]
+        },
+        "affordance_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "value": {},
+        "unit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/unit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality": {
+          "enum": [
+            "usable",
+            "stale",
+            "invalid",
+            "unknown"
+          ]
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "source_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "source_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "receipt_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "receipt_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "profile_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "replay": {
+          "enum": [
+            "fresh",
+            "retained",
+            "replayed"
+          ]
+        },
+        "continuity": {
+          "enum": [
+            "continuous",
+            "baseline",
+            "lost"
+          ]
+        },
+        "expires_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "derivation_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "contributors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/contributor"
+          },
+          "uniqueItems": true,
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "source_class": {
+          "enum": [
+            "device_report",
+            "derived_report",
+            "protocol_response"
+          ]
+        },
+        "source_time_trust": {
+          "enum": [
+            "trusted",
+            "untrusted",
+            "unknown"
+          ]
+        },
+        "source_time_basis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_uncertainty_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "thing_id",
+        "affordance_type",
+        "affordance_name",
+        "value",
+        "unit",
+        "quality",
+        "source_id",
+        "source_epoch",
+        "sequence",
+        "source_time",
+        "received_at",
+        "receipt_epoch",
+        "receipt_ms",
+        "profile_digest",
+        "replay",
+        "continuity",
+        "expires_ms",
+        "derivation_digest",
+        "contributors",
+        "source_class",
+        "source_time_trust",
+        "source_time_basis",
+        "source_uncertainty_ms"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "source_time_trust": {
+                "const": "trusted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "source_time_basis": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "source_uncertainty_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source_class": {
+                "const": "derived_report"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "derivation_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "contributors": {
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "derivation_digest": {
+                "type": "null"
+              },
+              "contributors": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality": {
+                "const": "usable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "contributor": {
+      "type": "object",
+      "properties": {
+        "fact_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "source_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "receipt_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "expires_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": [
+        "fact_id",
+        "source_id",
+        "source_epoch",
+        "sequence",
+        "receipt_epoch",
+        "expires_ms"
+      ],
+      "additionalProperties": false
+    },
+    "registry": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "semantic_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/reference"
+            },
+            "uniqueItems": true,
+            "minItems": 0,
+            "maxItems": 1024
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "semantic_digest",
+          "requires"
+        ],
+        "additionalProperties": false
+      },
+      "uniqueItems": true,
+      "minItems": 0,
+      "maxItems": 1024
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "max_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "max_string_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536
+        },
+        "max_collection_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "max_integer": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": [
+        "max_bytes",
+        "max_depth",
+        "max_nodes",
+        "max_string_bytes",
+        "max_collection_size",
+        "max_integer"
+      ],
+      "additionalProperties": false
+    },
+    "argument": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "integer",
+            "string"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "parameter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            }
+          },
+          "required": [
+            "parameter"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "predicate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "literal"
+            },
+            "value": {
+              "enum": [
+                true,
+                false,
+                "unknown"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "eq"
+            },
+            "binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "value": {
+              "$ref": "#/definitions/argument"
+            }
+          },
+          "required": [
+            "op",
+            "binding",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "gt"
+            },
+            "binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "value": {
+              "$ref": "#/definitions/argument"
+            }
+          },
+          "required": [
+            "op",
+            "binding",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "lt"
+            },
+            "binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "value": {
+              "$ref": "#/definitions/argument"
+            }
+          },
+          "required": [
+            "op",
+            "binding",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "not"
+            },
+            "arg": {
+              "$ref": "#/definitions/predicate"
+            }
+          },
+          "required": [
+            "op",
+            "arg"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "all"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/predicate"
+              },
+              "minItems": 1,
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "any"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/predicate"
+              },
+              "minItems": 1,
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "noop"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "effect"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "input": {
+              "$ref": "#/definitions/argument"
+            },
+            "completion": {
+              "enum": [
+                "local_queue",
+                "protocol_response",
+                "correlated_report",
+                "reported_match"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "binding",
+            "input",
+            "completion"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "sequence"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/node"
+              },
+              "minItems": 1,
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "steps"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "parallel"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "branches": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/node"
+              },
+              "minItems": 1,
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "branches"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "if"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "condition": {
+              "$ref": "#/definitions/predicate"
+            },
+            "then": {
+              "$ref": "#/definitions/node"
+            },
+            "else": {
+              "$ref": "#/definitions/node"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "condition",
+            "then",
+            "else"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "wait"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "condition": {
+              "$ref": "#/definitions/predicate"
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 604800000
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "condition",
+            "timeout_ms"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "delay"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 604800000
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "duration_ms"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "invoke"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "routine_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "arguments": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/argument"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "routine_id",
+            "revision",
+            "arguments"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "trigger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "manual"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "due"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "schedule_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "kind",
+            "schedule_id",
+            "schedule_basis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "edge"
+            },
+            "binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "direction": {
+              "enum": [
+                "rising",
+                "falling"
+              ]
+            },
+            "debounce_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "cooldown_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "hysteresis": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "enter": {
+                      "type": "integer"
+                    },
+                    "exit": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "enter",
+                    "exit"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "binding",
+            "direction",
+            "debounce_ms",
+            "cooldown_ms",
+            "hysteresis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "countdown"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "schedule_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "kind",
+            "schedule_id",
+            "schedule_basis"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "wotex.routines.source@1"
+        },
+        "profile": {
+          "const": "bounded-composition@1"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/value_contract"
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "minItems": 0,
+          "maxItems": 1024,
+          "uniqueItems": true
+        },
+        "trigger": {
+          "$ref": "#/definitions/trigger"
+        },
+        "condition": {
+          "$ref": "#/definitions/predicate"
+        },
+        "steps": {
+          "$ref": "#/definitions/node"
+        },
+        "overlap": {
+          "const": "reject"
+        },
+        "run_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 604800000
+        }
+      },
+      "required": [
+        "format",
+        "profile",
+        "id",
+        "revision",
+        "parameters",
+        "bindings",
+        "trigger",
+        "condition",
+        "steps",
+        "overlap",
+        "run_ms"
+      ],
+      "additionalProperties": false
+    },
+    "value_contract": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "boolean",
+            "integer",
+            "enum"
+          ]
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/unit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "uniqueItems": true,
+          "minItems": 0,
+          "maxItems": 1024
+        }
+      },
+      "required": [
+        "type",
+        "unit",
+        "enum"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "boolean"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "unit": {
+                "type": "null"
+              },
+              "enum": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "integer"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "unit": {
+                "$ref": "#/definitions/unit"
+              },
+              "enum": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "enum"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "unit": {
+                "type": "null"
+              },
+              "enum": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "source_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "source_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "expanded_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "predicate_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "invocation_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "parallel_width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "effects": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "waits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "active_definitions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "active_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "pending_work": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "run_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 604800000
+        }
+      },
+      "required": [
+        "source_bytes",
+        "source_depth",
+        "expanded_nodes",
+        "predicate_nodes",
+        "invocation_depth",
+        "parallel_width",
+        "effects",
+        "waits",
+        "active_definitions",
+        "active_runs",
+        "pending_work",
+        "run_ms"
+      ],
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "registry": {
+          "$ref": "#/definitions/registry"
+        },
+        "bases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/basis"
+          },
+          "maxItems": 1024
+        },
+        "bindings": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "basis": {
+                "$ref": "#/definitions/reference"
+              },
+              "thing_id": {
+                "type": "string",
+                "format": "uri"
+              },
+              "resource_roles": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "maxProperties": 1024
+              }
+            },
+            "required": [
+              "basis",
+              "thing_id",
+              "resource_roles"
+            ],
+            "additionalProperties": false
+          },
+          "maxProperties": 1024
+        },
+        "definitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/source"
+          },
+          "maxItems": 1024
+        },
+        "arguments": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "integer",
+              "string"
+            ]
+          },
+          "maxProperties": 1024
+        },
+        "compiler_basis": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "registry",
+        "bases",
+        "bindings",
+        "definitions",
+        "arguments",
+        "compiler_basis"
+      ],
+      "additionalProperties": false
+    },
+    "instruction": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": [
+          "boolean",
+          "integer",
+          "string"
+        ]
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/instruction"
+      },
+      "maxItems": 1024
+    },
+    "ir_node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "noop"
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "effect"
+            },
+            "binding": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "input": {
+              "type": [
+                "boolean",
+                "integer",
+                "string"
+              ]
+            },
+            "completion": {
+              "enum": [
+                "local_queue",
+                "protocol_response",
+                "correlated_report",
+                "reported_match"
+              ]
+            },
+            "evidence_contract": {
+              "$ref": "#/definitions/reference"
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "binding",
+            "input",
+            "completion",
+            "evidence_contract"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "sequence"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ir_node"
+              },
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "steps"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "parallel"
+            },
+            "branches": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ir_node"
+              },
+              "maxItems": 1024
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "branches"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "if"
+            },
+            "condition": {
+              "$ref": "#/definitions/instructions"
+            },
+            "then": {
+              "$ref": "#/definitions/ir_node"
+            },
+            "else": {
+              "$ref": "#/definitions/ir_node"
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "condition",
+            "then",
+            "else"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "wait"
+            },
+            "condition": {
+              "$ref": "#/definitions/instructions"
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "condition",
+            "timeout_ms"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "delay"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "duration_ms"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "maxItems": 1024
+            },
+            "kind": {
+              "const": "invoke"
+            },
+            "routine_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "arguments": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 65536
+              },
+              "additionalProperties": {
+                "type": [
+                  "boolean",
+                  "integer",
+                  "string"
+                ]
+              },
+              "maxProperties": 1024
+            },
+            "condition": {
+              "$ref": "#/definitions/instructions"
+            },
+            "run_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "body": {
+              "$ref": "#/definitions/ir_node"
+            }
+          },
+          "required": [
+            "id",
+            "path",
+            "kind",
+            "routine_id",
+            "revision",
+            "arguments",
+            "condition",
+            "run_ms",
+            "body"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ir": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "$ref": "#/definitions/instructions"
+        },
+        "trigger": {
+          "$ref": "#/definitions/trigger"
+        },
+        "steps": {
+          "$ref": "#/definitions/ir_node"
+        },
+        "run_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "overlap": {
+          "const": "reject"
+        }
+      },
+      "required": [
+        "condition",
+        "trigger",
+        "steps",
+        "run_ms",
+        "overlap"
+      ],
+      "additionalProperties": false
+    },
+    "program": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "wotex.routines.program@1"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "context": {
+          "$ref": "#/definitions/context"
+        },
+        "profile": {
+          "$ref": "#/definitions/profile"
+        },
+        "json_limits": {
+          "$ref": "#/definitions/limits"
+        },
+        "compiler_profile": {
+          "const": "wotex.routines.compiler@1"
+        },
+        "source_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "ir": {
+          "$ref": "#/definitions/ir"
+        },
+        "ir_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "format",
+        "source",
+        "context",
+        "profile",
+        "json_limits",
+        "compiler_profile",
+        "source_digest",
+        "ir",
+        "ir_digest"
+      ],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string",
+          "const": "proposal-prefix@1"
+        },
+        "purpose": {
+          "type": "string",
+          "const": "proposal_generation_only"
+        },
+        "initial_history": {
+          "type": "string",
+          "const": "no_existing_run"
+        },
+        "time_policy": {
+          "type": "string",
+          "const": "frozen_before_deadline"
+        },
+        "environment": {
+          "type": "string",
+          "const": "manual_and_cancel_one_original"
+        },
+        "claims": {
+          "const": [
+            "proposal_once",
+            "fixed_absolute_proposal"
+          ]
+        },
+        "omissions": {
+          "const": [
+            "admission",
+            "handoff",
+            "receipts",
+            "time_progress",
+            "fact_changes",
+            "multi_original_overlap",
+            "authority",
+            "complete_set_arbitration",
+            "physical_effects"
+          ]
+        },
+        "policy_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "profile",
+        "purpose",
+        "initial_history",
+        "time_policy",
+        "environment",
+        "claims",
+        "omissions",
+        "policy_digest"
+      ],
+      "additionalProperties": false
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "wotex.routines.model@1"
+        },
+        "program": {
+          "$ref": "#/definitions/program"
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "scope_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "model_bytes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "model_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "format",
+        "program",
+        "scope",
+        "scope_digest",
+        "model_bytes",
+        "model_digest"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/definitions/scope"
+    },
+    {
+      "$ref": "#/definitions/model"
+    }
+  ]
+}
