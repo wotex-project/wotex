@@ -1,0 +1,18 @@
+{
+  "industrial-definition": {
+    "raw_sha256": "8c385cc31a3129565bb23be3ad564d0f7ebc11e5db28575b7dd8ab656ab92be7",
+    "semantic_sha256": "80940db78b293ec37d9cbedd8386a3a8c75a25bebf831f6497d209e8e88eac36"
+  },
+  "industrial-profile": {
+    "raw_sha256": "a50e154133bf4e0c93d2924e06c72ade83473857a64398d68f581b2f13505f02",
+    "semantic_sha256": "b132f09267425daf93747257474862b1a106c0ce8dcf622094f15aced8267e15"
+  },
+  "research-definition": {
+    "raw_sha256": "94475866b7baad00bd7b5f5665865419af1e7cbf47805dd1834fbc99bc17345c",
+    "semantic_sha256": "7252266861556c30ab59708e53bc4fd01669991414f1309d81e9c0f8006f59be"
+  },
+  "research-profile": {
+    "raw_sha256": "d5c7070b1ec46191316f4ad464131052c31925749dbd97b71b948acfc3a2e2d4",
+    "semantic_sha256": "bc775535471d8e153232da65e834af50dfcb472c34a5250847b144d371a232c6"
+  }
+}

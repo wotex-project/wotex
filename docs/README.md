@@ -34,6 +34,11 @@ All three are planned. Existing consumers need no extension descriptor or
 loader; process profiles, independent interoperability and hardware support
 require their own evidence.
 
+The optional [external-profile reader](../packages/wotex-profiles/README.md)
+validates explicitly supplied consumer data under complete limits. Its
+[catalogue](packages/wotex-profiles/specs/catalogue.yaml) separates reader
+constructors and identity vectors from compiler, capture and authoring work.
+
 ## The complete Thing interaction path
 
 A consumer may obtain a Thing Description directly or through

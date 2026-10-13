@@ -310,7 +310,7 @@ defmodule Wotex.Workspace.ManifestTest do
     test "loads, starts with wotex and ends with wotex-lab" do
       manifest = Manifest.load!()
       order = Manifest.topological_order(manifest)
-      assert length(order) == 19
+      assert length(order) == 20
       assert hd(order) == "wotex"
 
       # Every package follows all of its dependencies.
@@ -325,7 +325,7 @@ defmodule Wotex.Workspace.ManifestTest do
 
       assert Enum.sort(Manifest.transitive_dependents("wotex-runtime", manifest)) ==
                ~w(wotex-bacnet wotex-binding-http wotex-binding-mqtt wotex-ble wotex-coap
-                  wotex-lab wotex-matter wotex-modbus wotex-opcua wotex-thread)
+                  wotex-lab wotex-matter wotex-modbus wotex-opcua wotex-profiles wotex-thread)
 
       assert Manifest.transitive_dependents("wotex-coap", manifest) == []
       assert {:ok, _} = Manifest.lane("minimum", manifest)

@@ -107,6 +107,12 @@ Defines bounded installed behaviour and observation values for an optional
 pure routine kernel. The catalogue separates this foundation from the planned
 kernel, temporal host and analysis obligations.
 
+### [`wotex-profiles`](packages/wotex-profiles/README.md)
+
+Reads bounded external profiles and consumer-supplied semantic descriptors.
+The catalogue separates reader evidence from planned interpretation/authoring;
+consumers own data, installed bindings, trust and physical qualification.
+
 ### [`wotex-zigbee`](packages/wotex-zigbee/README.md)
 
 Provides a bounded TI ZNP coordinator host and a finite ZCL attribute codec.

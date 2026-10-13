@@ -1264,3 +1264,6 @@ packages:
   wotex-routines:
     app: wotex_routines
     depends_on: [wotex, wotex-continuum]
+  wotex-profiles:
+    app: wotex_profiles
+    depends_on: [wotex, wotex-runtime]

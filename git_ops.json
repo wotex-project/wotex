@@ -26,6 +26,7 @@
     "packages/wotex-thread": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
     "packages/wotex-udp": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
     "packages/wotex-zigbee": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
-    "packages/wotex-routines": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]}
+    "packages/wotex-routines": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]},
+    "packages/wotex-profiles": {"exclude_paths": ["bench"], "managed_files": [{"path": "mix.exs", "type": "mix"}]}
   }
 }

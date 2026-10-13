@@ -1,0 +1,31 @@
+{
+  "format": "wotex.semantic@1",
+  "id": "urn:example:semantic:industrial",
+  "version": "1.0.0",
+  "value_schema": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 900000
+  },
+  "unit": {
+    "quantity_kind": "urn:example:quantity:particle-number-density",
+    "dimension": [
+      -3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "scale_n": "1",
+    "scale_d": "1",
+    "offset_n": "0",
+    "offset_d": "1"
+  },
+  "behaviour": null,
+  "requires": [],
+  "annotations": {
+    "source": "synthetic independent conformance fixture"
+  }
+}

@@ -367,6 +367,22 @@ packages:
         version: "1.1.88"
         implementation_status: "implemented"
         path: "docs/packages/wotex-opcua/specs/WOP.07-native-executable.md"
+  wotex-profiles:
+    app: "wotex_profiles"
+    catalogue: "docs/packages/wotex-profiles/specs/catalogue.yaml"
+    specifications:
+      - id: "WPF.01"
+        version: "0.2.2"
+        implementation_status: "partial"
+        path: "docs/packages/wotex-profiles/specs/WPF.01-external-profile-language.md"
+      - id: "WPF.02"
+        version: "0.2.1"
+        implementation_status: "planned"
+        path: "docs/packages/wotex-profiles/specs/WPF.02-profile-interpretation.md"
+      - id: "WPF.03"
+        version: "0.1.0"
+        implementation_status: "planned"
+        path: "docs/packages/wotex-profiles/specs/WPF.03-profile-authoring-contract.md"
   wotex-routines:
     app: "wotex_routines"
     catalogue: "docs/packages/wotex-routines/specs/catalogue.yaml"

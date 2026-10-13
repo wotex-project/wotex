@@ -1,0 +1,51 @@
+{
+  "format": "wotex.profile@1",
+  "id": "urn:example:profile:industrial",
+  "version": "1.0.0",
+  "binding": {
+    "id": "urn:example:binding:register",
+    "version": "1.0.0",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "fingerprint": [
+    {
+      "field": "model",
+      "operator": "eq",
+      "values": [
+        {
+          "type": "text",
+          "value": "synthetic-industrial"
+        }
+      ]
+    }
+  ],
+  "channels": [
+    {
+      "id": "sample",
+      "affordance": {
+        "kind": "property",
+        "name": "sample"
+      },
+      "semantic": {
+        "id": "urn:example:semantic:industrial",
+        "version": "1.0.0",
+        "sha256": "80940db78b293ec37d9cbedd8386a3a8c75a25bebf831f6497d209e8e88eac36"
+      },
+      "operations": [
+        "readproperty"
+      ],
+      "selector": {
+        "register": 4
+      },
+      "conversion": null,
+      "invalid_values": [
+        {
+          "type": "sint",
+          "value": "-1"
+        }
+      ],
+      "required": true
+    }
+  ],
+  "requires": []
+}

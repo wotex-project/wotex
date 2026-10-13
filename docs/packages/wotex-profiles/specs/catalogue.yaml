@@ -1,0 +1,33 @@
+schema_version: "1.1.0"
+package: "wotex_profiles"
+status: "registered"
+status_note: "Consumer-owned profiles; generic reader, contract export/finalization/validation contracts; source package registered, execution evidence tracked per contract."
+completion_plan: "docs/plans/wotex-profiles-completion.md"
+specifications:
+  - id: "WPF.01"
+    version: "0.2.2"
+    path: "docs/specs/WPF.01-external-profile-language.md"
+    implementation_status: "partial"
+    standards: []
+    requires: ["wotex:WTX.02", "wotex_runtime:WRT.06"]
+    implementation_modules: ["Wotex.Profiles.Profile", "Wotex.Profiles.Definition", "Wotex.Profiles.Definitions", "Wotex.Profiles.Unit", "Wotex.Profiles.Limits"]
+    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs"]
+    compatibility_classification: "Consumer-owned profile/semantic descriptors and bounded generic units; no required shared catalogue"
+  - id: "WPF.02"
+    version: "0.2.1"
+    path: "docs/specs/WPF.02-profile-interpretation.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WPF.01", "wotex_runtime:WRT.06"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Pure selected-closure compilation and inert report interpretation; consumer owns current trust, identity, state and authority"
+  - id: "WPF.03"
+    version: "0.1.0"
+    path: "docs/specs/WPF.03-profile-authoring-contract.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WPF.01", "WPF.02"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Pure installed-contract export, draft-reference finalization and shared validation diagnostics; consumer owns authoring/AI/review"

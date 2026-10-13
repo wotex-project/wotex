@@ -1,6 +1,6 @@
 # WoTEx repository contract
 
-This is the canonical repository contract for the WoTEx package family: 19
+This is the canonical repository contract for the WoTEx package family: 20
 independent Mix projects under `packages/` and a root tooling project. Read
 `packages/<name>/AGENTS.md` before changing a package or its documentation;
 it owns package-specific boundaries, source locations and test selection.
