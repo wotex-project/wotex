@@ -1,5 +1,8 @@
 # Wotex Routines usage rules
 
+These rules describe the completed public target contract. The package
+catalogue records implementation status separately.
+
 - Supply explicit limits and an immutable offline installed contract closure.
   Basis data may select installed meanings; it cannot install implementations,
   choose credentials, authorize an interaction or qualify a device.

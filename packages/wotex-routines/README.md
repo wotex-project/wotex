@@ -10,6 +10,10 @@ and a lossless Continuum observation adapter, complete source compilation, quali
 values starts no routine, network operation or timer. Complete provided-set evaluation and whole-resource arbitration are also implemented; UTC interval/one-shot and boot-scoped countdown calculation are implemented; the optional direct calendar adapter refuses unavailable producer capability; the explicitly started bounded wakeup driver is implemented; real host transactions, wider analysis models and consumer runtime adoption remain accepted successors; consult the
 [catalogue](../../docs/packages/wotex-routines/specs/catalogue.yaml) for status.
 
+Wotex Routines 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.18 through Elixir
+1.20.2 with Erlang/OTP 29.0.4, the minimum and current toolchain lanes
+in [`tooling/packages.yaml`](https://github.com/wotex-project/wotex/blob/main/tooling/packages.yaml).
+
 ## Consumption
 
 The family is unpublished. Follow the repository's
