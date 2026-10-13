@@ -5,7 +5,7 @@ status_note: "Consumer-owned profiles; generic reader, contract export/finalizat
 completion_plan: "docs/plans/wotex-profiles-completion.md"
 specifications:
   - id: "WPF.01"
-    version: "0.2.2"
+    version: "0.2.3"
     path: "docs/specs/WPF.01-external-profile-language.md"
     implementation_status: "partial"
     standards: []

@@ -1,6 +1,6 @@
 # WPF.01 — External device profiles and semantic descriptors
 
-Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.3. Updated: 2026-10-13. Status: accepted target.
 Implementation: partial reader. Evidence: reader/structural-schema suites;
 two isolated archive consumers passed. Closure/selector compilation remains open.
 
@@ -235,3 +235,11 @@ Executed reader and two-consumer evidence is retained in
 [the archive milestone](../provenance/reader-2026-10.md). Closure, selector and
 mechanical interpretation acceptance remains owned by WPF.02; those cases are
 not established by the reader milestone.
+
+
+The WPF.01 scalar literal subset includes C02 null, Boolean, text, bytes,
+signed/unsigned integer and normalized decimal. Fingerprint operands remain
+only text/Boolean/signed/unsigned. Byte sentinels and finite table operands are
+inert literal data; reading them does not establish a DataSchema byte-domain
+projection, decode base64 into ordinary text, or make a channel executable.
+Required unsupported interpretation still refuses under WPF.02.

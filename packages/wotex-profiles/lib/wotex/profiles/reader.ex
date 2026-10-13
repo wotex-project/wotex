@@ -3,7 +3,7 @@ defmodule Wotex.Profiles.Reader do
 
   alias Wotex.Profiles.{Error, Grammar, Numeric, Schema, Unit}
 
-  @scalars ~w(null boolean text sint uint decimal)
+  @scalars ~w(null boolean text bytes sint uint decimal)
   @fingerprint ~w(boolean text sint uint)
   @operations Map.new(Wotex.Runtime.operations(), fn operation ->
                 {Atom.to_string(operation), Wotex.Runtime.interaction_type(operation)}

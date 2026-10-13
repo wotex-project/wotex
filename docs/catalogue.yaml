@@ -372,7 +372,7 @@ packages:
     catalogue: "docs/packages/wotex-profiles/specs/catalogue.yaml"
     specifications:
       - id: "WPF.01"
-        version: "0.2.2"
+        version: "0.2.3"
         implementation_status: "partial"
         path: "docs/packages/wotex-profiles/specs/WPF.01-external-profile-language.md"
       - id: "WPF.02"

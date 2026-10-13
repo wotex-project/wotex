@@ -361,7 +361,7 @@ defmodule Wotex.Profiles.ReaderTest do
           %{"kind" => "table", "entries" => [%{}]},
           %{
             "kind" => "table",
-            "entries" => [Map.put(a, "source", %{"type" => "bytes", "base64" => ""})]
+            "entries" => [Map.put(a, "source", %{"type" => "bytes", "base64" => "AB=="})]
           },
           %{
             "kind" => "table",
@@ -371,6 +371,25 @@ defmodule Wotex.Profiles.ReaderTest do
       assert {:error, %Error{}} =
                Profile.new(
                  put_in(F.profile(), ["channels", Access.at(0), "conversion"], conversion),
+                 F.limits()
+               )
+    end
+  end
+
+  test "byte scalar literals remain inert sentinels and table operands" do
+    bytes = %{"type" => "bytes", "base64" => "AA=="}
+    data = put_in(F.profile(), ["channels", Access.at(0), "invalid_values"], [bytes])
+    assert {:ok, _} = Profile.new(data, F.limits())
+
+    for {source, target} <- [
+          {bytes, %{"type" => "text", "value" => "literal"}},
+          {%{"type" => "boolean", "value" => false}, bytes}
+        ] do
+      conversion = %{"kind" => "table", "entries" => [%{"source" => source, "target" => target}]}
+
+      assert {:ok, _} =
+               Profile.parse(
+                 F.encode(put_in(data, ["channels", Access.at(0), "conversion"], conversion)),
                  F.limits()
                )
     end

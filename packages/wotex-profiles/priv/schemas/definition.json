@@ -210,6 +210,23 @@
             "exponent"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "base64": {
+              "maxLength": 5464,
+              "type": "string"
+            },
+            "type": {
+              "const": "bytes"
+            }
+          },
+          "required": [
+            "type",
+            "base64"
+          ],
+          "type": "object"
         }
       ]
     },
