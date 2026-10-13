@@ -217,6 +217,7 @@ defmodule Wotex.Modbus.SoftwareRun do
       port = endpoint(context, cid)
 
       env = [
+        {"MIX_ENV", "test"},
         {"WOTEX_REQUIRE_SOFTWARE", "1"},
         {"WOTEX_MODBUS_INTEROP_HOST", "127.0.0.1"},
         {"WOTEX_MODBUS_INTEROP_PORT", Integer.to_string(port)},

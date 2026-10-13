@@ -251,6 +251,7 @@ defmodule Wotex.BACnet.SoftwareRun do
       :ok = control_ready(control_port)
 
       env = [
+        {"MIX_ENV", "test"},
         {"WOTEX_REQUIRE_SOFTWARE", "1"},
         {"WOTEX_BACNET_INTEROP_PORT", Integer.to_string(port)},
         {"WOTEX_BACNET_RESULTS_DIR", context.lane},
