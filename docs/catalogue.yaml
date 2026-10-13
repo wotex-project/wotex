@@ -115,6 +115,10 @@ packages:
         version: "1.0.27"
         implementation_status: "implemented"
         path: "docs/packages/wotex-ble/specs/WBL.07-native-backend.md"
+      - id: "WBL.08"
+        version: "0.1.0"
+        implementation_status: "planned"
+        path: "docs/packages/wotex-ble/specs/WBL.08-write-modes-and-native-hosts.md"
   wotex-coap:
     app: "wotex_coap"
     catalogue: "docs/packages/wotex-coap/specs/catalogue.yaml"

@@ -2,6 +2,15 @@ schema_version: "1.1.0"
 package: "wotex_ble"
 completion_plan: "docs/plans/wotex-ble-completion.md"
 specifications:
+  - id: "WBL.08"
+    version: "0.1.0"
+    path: "docs/specs/WBL.08-write-modes-and-native-hosts.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WBL.02", "WBL.03", "WBL.07"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Additive explicit write modes and independently qualified native macOS host; existing acknowledged BlueZ profile unchanged"
   - id: "WBL.01"
     version: "1.1.10"
     path: "docs/specs/WBL.01-library-contract.md"

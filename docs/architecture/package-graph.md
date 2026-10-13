@@ -2,6 +2,13 @@
 
 ## Dependency graph
 
+The prospective optional `wotex-routines` target is described in
+[WRO.01–04](../packages/wotex-routines/specs/WRO.01-capability-behaviour.md)
+and its [completion contract](../packages/wotex-routines/plans/wotex-routines-completion.md).
+It is not yet a source package or manifest dependency. Its intended dependencies
+are public core/Continuum values and direct ExBooking calculations, with optional
+ExMaude analysis. Core, Runtime and protocol packages never depend on it.
+
 ```text
                          wotex
                            |

@@ -1,0 +1,40 @@
+schema_version: "1.1.0"
+package: "wotex_routines"
+completion_plan: "docs/plans/wotex-routines-completion.md"
+specifications:
+  - id: "WRO.01"
+    version: "0.1.0"
+    path: "docs/specs/WRO.01-capability-behaviour.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.04", "wotex_continuum:WCT.02"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Prospective optional package; installed semantics and inert values only; no current package or runtime authority"
+  - id: "WRO.02"
+    version: "0.1.0"
+    path: "docs/specs/WRO.02-source-kernel.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WRO.01"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Closed bounded successor source/IR; no change to existing core or Runtime APIs"
+  - id: "WRO.03"
+    version: "0.1.0"
+    path: "docs/specs/WRO.03-temporal-host.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WRO.01", "WRO.02"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Direct generic recurrence calculation; external ExBooking SP.08 producer; consumer-owned clock, writer, driver and effects"
+  - id: "WRO.04"
+    version: "0.1.0"
+    path: "docs/specs/WRO.04-analysis-correspondence.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WRO.01", "WRO.02", "WRO.03"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Optional scoped analysis; external ExMaude producer; no positive admission from bounded absence"

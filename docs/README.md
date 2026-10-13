@@ -12,6 +12,13 @@ the package specification and completion plan.
 
 ## Optional implementation delivery
 
+The prospective [optional routines contracts](packages/wotex-routines/specs/WRO.01-capability-behaviour.md)
+define a generic behaviour basis, pure source/IR kernel, direct temporal
+calculation and scoped analysis. Their [completion contract](packages/wotex-routines/plans/wotex-routines-completion.md)
+keeps the package unimplemented/unregistered until scaffolding. They do not
+change the current eighteen-package graph. New specs use the
+[authoring template](templates/spec-base.md).
+
 The [portable delivery decision](architecture/portable-delivery-decision.md)
 keeps independent libraries and explicit consumer registration, while defining
 a bounded optional path for data, codecs and native hosts. The
