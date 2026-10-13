@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.0. Updated: 2026-10-13. Status: accepted target; implementation planned.
+Version: 0.2.1. Updated: 2026-10-13. Status: accepted target; implementation planned.
 
 ## Inputs, outputs and authority
 
@@ -108,6 +108,13 @@ can widen the other. Whole closure bytes and every possible expanded path count
 before execution. Invocation copies count again at each call site; both paths
 of a conditional count. A consumer may select the narrower product bounds.
 
+`Profile.to_map/1` revalidates before projection. `Truth.negate/1` accepts only
+true, false or the string unknown. `Truth.combine/4` accepts all/any, a nonempty
+array of those truths, explicit Profile and JSON Limits. False dominates all,
+true dominates any, and unknown remains otherwise; unknown negates to unknown.
+Malformed truth/operator/array and exceeded predicate_nodes refuse. These pure
+primitives supply no fact qualification or execution admission.
+
 `Source.new/3` and `Codec.decode_source/3` take source data/bytes, Profile and
 JSON Limits. The closed root requires `format`, `profile`, `id`, `revision`,
 `parameters`, `bindings`, `trigger`, `condition`, `steps`, `overlap`, `run_ms`.
@@ -197,7 +204,12 @@ Receipt freshness and source age remain separate checks. Replayed/retained or
 baseline/lost continuity cannot create an edge.
 
 Events identify the exact program revision and original. Manual, due, fact,
-result and cancel are separate kinds. A due event additionally retains original
+admission, handoff, result and cancel are separate kinds. An admission receipt
+records held/refused after the consumer's transaction. Held work changes a
+proposed step to reserved and records its committed charge references; refusal
+retains the original with a terminal refused outcome. Handoff is a distinct
+consumer receipt after its durable handoff marker, rather than a protocol ACK.
+A due event additionally retains original
 due_ms, late_window_ms, schedule/clock identities; its whole UTC confidence
 interval must fit `[due_ms, due_ms + late_window_ms)`. A result names the original
 step/path and a retained result reference, with separate stage and outcome.
@@ -210,7 +222,8 @@ not an arbitrary report authenticated by the kernel.
 Run state binds original, program/compiler identities, time epoch/generation,
 start/deadline, each expanded path's original/status/result reference, edge
 baseline/stability/cooldown and consumed-root references. Step states distinguish
-unsent, proposed, handed_off, waiting, completed, failed, unknown and cancelled.
+unsent, proposed, reserved, handed_off, waiting, completed, refused, failed,
+unknown and cancelled.
 Proposal generation changes unsent to proposed so retained-state recomputation
 cannot emit it again. Handoff is an explicit host receipt after durable commit;
 local queue and protocol responses remain below reported completion thresholds.

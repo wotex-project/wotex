@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wotex.io/contracts/routines/profile/v1",
+  "title": "Explicit bounded composition limits",
+  "definitions": {
+    "profile": {
+      "type": "object",
+      "properties": {
+        "source_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "source_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "expanded_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "predicate_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "invocation_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "parallel_width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "effects": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "waits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "active_definitions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "active_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "pending_work": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "run_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 604800000
+        }
+      },
+      "required": [
+        "source_bytes",
+        "source_depth",
+        "expanded_nodes",
+        "predicate_nodes",
+        "invocation_depth",
+        "parallel_width",
+        "effects",
+        "waits",
+        "active_definitions",
+        "active_runs",
+        "pending_work",
+        "run_ms"
+      ],
+      "additionalProperties": false
+    },
+    "truth": {
+      "enum": [
+        true,
+        false,
+        "unknown"
+      ]
+    }
+  },
+  "$ref": "#/definitions/profile"
+}
