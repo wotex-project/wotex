@@ -1710,6 +1710,15 @@
         },
         "evidence_contract": {
           "$ref": "#/definitions/reference"
+        },
+        "resource_roles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "maxProperties": 1024
         }
       },
       "required": [
@@ -1724,7 +1733,8 @@
         "operation",
         "input",
         "completion",
-        "evidence_contract"
+        "evidence_contract",
+        "resource_roles"
       ],
       "additionalProperties": false
     },

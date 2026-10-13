@@ -92,7 +92,7 @@ defmodule Wotex.Routines.KernelTest do
     assert first["outcome"] == "running"
     assert [proposal] = first["proposals"]
     assert proposal["input"] == false
-    assert proposal["resource_domains"] == ["resource:1"]
+    assert proposal["resource_domains"] == ["resource:1", "urn:workcell:output"]
     assert first["basis"]["snapshot"] == c.snapshot
     assert first["basis"]["event"] == c.event
     assert step(first, []) == "proposed"

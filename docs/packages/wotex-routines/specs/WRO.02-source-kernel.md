@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.6. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.7. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -329,9 +329,8 @@ skipped-busy. Basis contains program_digest, source_digest, compiler_basis,
 event, snapshot and time, preserving the
 complete supplied collection, observation and clock data. Each inert proposal
 has original (root), step_original, program_digest, path, binding,
-installed_basis, thing_id, resource_domains, operation, input, completion and
-evidence_contract. Domains are the sorted distinct complete resolved resource
-role IDs. Data contains no priority, permission or transport handle. The host
+installed_basis, thing_id, resource_roles, resource_domains, operation, input, completion and
+evidence_contract. Domains are the sorted distinct resolved Thing and complete resource-role IDs. Data contains no priority, permission or transport handle. The host
 must recheck this entire basis in its transaction before admitting work.
 The host must persist skipped-busy against the event's original as well. A
 busy Run from another program revision refuses correspondence; the host must
@@ -384,7 +383,7 @@ execution. An old format never accepts a new operator by accident.
 | WRO02-T4 | 02, 06 | ACK-only sequence, partial parallel failure, deadline and post-handoff cancellation never fabricate completion, compensation or resend |
 | WRO02-T5 | 01–06 | Independent archive consumers execute the same scalar/event/slow-actuator procedure without shared private modules, schema or consumer terminology |
 
-Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported-edge qualification now has executable `edge_test.exs` traces. Complete-set collection/arbitration and independent transition/archive consumers remain unimplemented obligations.
+Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported-edge qualification now has executable `edge_test.exs` traces. Complete-set collection/arbitration is exercised in `arbitration_test.exs`; independent transition/archive consumers remain unimplemented obligations.
 
 ### Closed reported-edge retention
 
@@ -431,3 +430,59 @@ skipped-busy and cannot be caught up later. Existing original runs may continue
 on their fact event without a new edge. Original durability and complete report
 continuity remain consumer obligations; this bounded retained value is not a
 replacement for either.
+
+### Closed collection and disposition seam
+
+`Collection.evaluate(input, profile, limits)` takes the closed input membership,
+entries and time. Membership has generation and programs (distinct complete IR
+digests). Entries contains exactly one closed program, event, snapshot and prior
+record per listed digest. Event is explicit null when the host has no trigger
+or continuation for that definition; all other members remain mandatory. Every
+Program, Snapshot and Prior is checked even for an idle entry. Entries are raw
+JSON data; nested native objects refuse at this whole-set boundary. Snapshot
+id, membership_generation and active_programs are identical across entries and
+match membership; shared resource revisions and shared Thing/affordance/operation
+observation slots must agree completely. Each local binding name remains scoped
+to its program. Time is one complete common Time. This supplied membership and
+these supplied events are host assertions; the library cannot prove omissions
+against an external active-definition or event index.
+
+The checked Collection has exactly format (wotex.routines.collection@1), input,
+profile, json_limits, transitions, proposals and collection_digest. Transitions
+are ordered program_digest/result records; idle result is null. Proposals are
+ordered by program digest and integer path, after evaluating the entire set.
+The total proposal count must fit pending_work before any batch limit. The distinct current nonterminal runs across retained and advanced records must fit active_runs; an advanced record replaces its retained identity for that count. Conflicting copies of one retained original refuse.
+Collection.to_map/3 regenerates the entire result from retained inputs, rather
+than trusting a digest or supplied proposal. Whole-set bytes/nodes/collections
+obey JSON Limits in addition to Profile. Any malformed member or mismatched
+basis refuses the whole collection without a partial admission result.
+
+Proposals also retain exact resource_roles. Resource domains include the whole
+resolved Thing ID and every distinct role resource ID. Role assignment is part
+of equivalence; swapping role participants cannot be hidden by sorting domains.
+
+`Arbitration.decide(collection, dispositions, batch_limit, profile, limits)`
+requires one closed disposition per step_original: constraint allowed/refused/
+unknown and override none/selected/suppressed. These are explicit current
+consumer policy assertions, never source priorities or grants. batch_limit is
+positive and no greater than pending_work. Constraints filter first, then
+suppressed overrides. A selected override suppresses an incompatible ordinary
+proposal sharing a whole-resource domain. Conflicting selected overrides remain
+conflicts. Equivalent selected/ordinary proposals may share a dispatch while
+retaining every contributor. No numerical authority rank is accepted.
+
+Compatibility requires equality of installed_basis, operation, input, thing_id,
+resource_roles, resource_domains, completion and evidence_contract. Any two
+remaining incompatible effects sharing a domain mark their equivalence groups
+conflicted; stable sorting never chooses a winner. After all pair comparisons,
+nonconflicting equivalent groups are ordered by their earliest canonical
+contributor and the batch limit applies. Each group retains full proposals as
+contributors. Every step receives exactly one decision: constraint-refused,
+constraint-unknown, override-suppressed, conflict, selected, coalesced or
+batch-deferred. Result has collection_digest, dispositions, batch_limit,
+selected and decisions. Selected contains contributor groups; decisions has
+step_original and outcome. The complete Collection is retained by the host for
+basis revalidation. The host persists every outcome against original ledgers
+and supplies admission refusal for terminally rejected proposed steps; deferred
+work follows explicit host bounded pending-work policy, never hidden catch-up.
+Arbitration performs no charging, refund, override authentication or dispatch.

@@ -1,10 +1,10 @@
 # Optional routines completion contract
 
-Version: 0.2.1. Updated: 2026-10-13. Accepted programme; the basis is partially implemented.
+Version: 0.2.2. Updated: 2026-10-13. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
-offline schemas and independent values are implemented. Closed source/IR regeneration, qualified snapshot evaluation and retained composition transitions are implemented with focused software evidence. Reported-edge traces, complete-set collection/arbitration, independent transition/archive consumers, temporal driver and analysis remain separate obligations. No core
+offline schemas and independent values are implemented. Closed source/IR regeneration, qualified snapshot evaluation and retained composition transitions are implemented with focused software evidence. Reported-edge qualification and complete provided-set collection/arbitration are implemented with focused traces. Independent transition/archive consumers, temporal driver and analysis remain separate obligations. No core
 or protocol package depends on routines.
 
 | Stage | Required artifact | Completion |

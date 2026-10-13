@@ -235,6 +235,7 @@ defmodule Wotex.Routines.Execution do
       "binding" => node["binding"],
       "installed_basis" => ref,
       "thing_id" => binding["thing_id"],
+      "resource_roles" => binding["resource_roles"],
       "resource_domains" => domains(binding),
       "operation" => basis["affordance"]["operation"],
       "input" => node["input"],
@@ -244,8 +245,7 @@ defmodule Wotex.Routines.Execution do
   end
 
   defp domains(binding) do
-    binding["resource_roles"]
-    |> Map.values()
+    [binding["thing_id"] | Map.values(binding["resource_roles"])]
     |> Enum.uniq()
     |> Enum.sort()
   end

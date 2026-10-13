@@ -7,6 +7,7 @@ defmodule Wotex.Routines.Kernel do
     Error,
     Event,
     Execution,
+    ExecutionPrior,
     ExecutionTree,
     Limits,
     ObservationView,
@@ -31,7 +32,7 @@ defmodule Wotex.Routines.Kernel do
          {:ok, event} <- Event.to_map(event, limits),
          {:ok, snapshot} <- Snapshot.to_map(snapshot, program, profile, limits),
          {:ok, time} <- Time.to_map(time, limits),
-         {:ok, prior} <- prior(prior, program, profile, limits),
+         {:ok, prior} <- ExecutionPrior.new(prior, program, profile, limits),
          :ok <- correspondence(program, event, snapshot, prior),
          {:ok, edge} <- edge(program, event, snapshot, time, prior, profile, limits),
          {:ok, run, proposals, outcome} <-
@@ -67,28 +68,10 @@ defmodule Wotex.Routines.Kernel do
     end
   end
 
-  defp prior(input, program, profile, limits) do
-    with {:ok, data, _} <- Validation.admit(input, limits, nil),
-         :ok <- Validation.fields(data, ~w(original busy edge)),
-         {:ok, original} <- retained(data["original"], program, profile, limits),
-         {:ok, busy} <- retained(data["busy"], program, profile, limits),
-         {:ok, edge} <- retained_edge(data["edge"], program, profile, limits) do
-      {:ok, %{"original" => original, "busy" => busy, "edge" => edge}}
-    end
-  end
-
-  defp retained_edge(nil, _, _, _), do: {:ok, nil}
-
-  defp retained_edge(edge, program, profile, limits),
-    do: Edge.to_map(edge, program, profile, limits)
-
   defp edge(program, %{"kind" => "fact"} = event, snapshot, time, prior, profile, limits),
     do: Edge.advance(program, event, snapshot, time, prior["edge"], profile, limits)
 
   defp edge(_, _, _, _, prior, _, _), do: {:ok, %{"edge" => prior["edge"], "eligible" => true}}
-
-  defp retained(nil, _, _, _), do: {:ok, nil}
-  defp retained(run, program, profile, limits), do: Run.to_map(run, program, profile, limits)
 
   defp correspondence(program, event, snapshot, prior) do
     cond do

@@ -7,7 +7,7 @@ observations, clocks, persistence and effects.
 The source currently provides explicit limits, offline contract closure,
 behaviour basis, exact dimensional conversion, qualified-fact representation
 and a lossless Continuum observation adapter, complete source compilation, qualified snapshot evaluation, retained composition transitions and continuous reported-edge qualification. Loading or constructing these
-values starts no routine, network operation or timer. Complete-set collection/arbitration, temporal driver and analysis contracts remain accepted successors; consult the
+values starts no routine, network operation or timer. Complete provided-set evaluation and whole-resource arbitration are also implemented; temporal driver and analysis remain accepted successors; consult the
 [catalogue](../../docs/packages/wotex-routines/specs/catalogue.yaml) for status.
 
 ## Consumption
