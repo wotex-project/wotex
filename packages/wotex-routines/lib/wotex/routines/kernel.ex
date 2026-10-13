@@ -3,6 +3,7 @@ defmodule Wotex.Routines.Kernel do
 
   alias Wotex.Routines.{
     Compiler,
+    Edge,
     Error,
     Event,
     Execution,
@@ -32,12 +33,14 @@ defmodule Wotex.Routines.Kernel do
          {:ok, time} <- Time.to_map(time, limits),
          {:ok, prior} <- prior(prior, program, profile, limits),
          :ok <- correspondence(program, event, snapshot, prior),
+         {:ok, edge} <- edge(program, event, snapshot, time, prior, profile, limits),
          {:ok, run, proposals, outcome} <-
-           transition(program, event, snapshot, time, prior, profile, limits) do
+           transition(program, event, snapshot, time, prior, edge, profile, limits) do
       result = %{
         "run" => run,
         "proposals" => proposals,
         "outcome" => outcome,
+        "edge" => edge["edge"],
         "basis" => %{
           "program_digest" => program["ir_digest"],
           "source_digest" => program["source_digest"],
@@ -69,13 +72,20 @@ defmodule Wotex.Routines.Kernel do
          :ok <- Validation.fields(data, ~w(original busy edge)),
          {:ok, original} <- retained(data["original"], program, profile, limits),
          {:ok, busy} <- retained(data["busy"], program, profile, limits),
-         true <- data["edge"] == nil do
-      {:ok, %{"original" => original, "busy" => busy, "edge" => nil}}
-    else
-      false -> Error.refusal(:unsupported_edge_state)
-      error -> error
+         {:ok, edge} <- retained_edge(data["edge"], program, profile, limits) do
+      {:ok, %{"original" => original, "busy" => busy, "edge" => edge}}
     end
   end
+
+  defp retained_edge(nil, _, _, _), do: {:ok, nil}
+
+  defp retained_edge(edge, program, profile, limits),
+    do: Edge.to_map(edge, program, profile, limits)
+
+  defp edge(program, %{"kind" => "fact"} = event, snapshot, time, prior, profile, limits),
+    do: Edge.advance(program, event, snapshot, time, prior["edge"], profile, limits)
+
+  defp edge(_, _, _, _, prior, _, _), do: {:ok, %{"edge" => prior["edge"], "eligible" => true}}
 
   defp retained(nil, _, _, _), do: {:ok, nil}
   defp retained(run, program, profile, limits), do: Run.to_map(run, program, profile, limits)
@@ -100,13 +110,16 @@ defmodule Wotex.Routines.Kernel do
     end
   end
 
-  defp transition(program, event, snapshot, time, prior, profile, limits) do
+  defp transition(program, event, snapshot, time, prior, edge, profile, limits) do
     cond do
       prior["original"] != nil ->
         continue(prior["original"], program, event, snapshot, time, profile, limits)
 
       event["kind"] in ~w(admission handoff result cancel) ->
         Error.refusal(:missing_original)
+
+      not edge["eligible"] ->
+        {:ok, nil, [], "no-edge"}
 
       busy?(prior["busy"], event) ->
         {:ok, nil, [], "skipped-busy"}
@@ -149,6 +162,9 @@ defmodule Wotex.Routines.Kernel do
   end
 
   defp trigger(%{"kind" => "manual"}, %{"kind" => "manual"}), do: :ok
+
+  defp trigger(%{"kind" => "edge", "binding" => binding}, %{"kind" => "fact", "binding" => binding}),
+       do: :ok
 
   defp trigger(%{"kind" => "due", "schedule_id" => id}, %{"kind" => "due", "schedule_id" => id}),
     do: :ok

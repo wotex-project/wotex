@@ -112,6 +112,7 @@ defmodule Wotex.Routines.KernelTest do
 
     assert ExJsonSchema.Validator.validate(schema, first["run"]) == :ok
     assert ExJsonSchema.Validator.validate(schema, c.event) == :ok
+    assert ExJsonSchema.Validator.validate(schema, first) == :ok
   end
 
   test "queue and ACK do not satisfy a reported-match sequence", c do

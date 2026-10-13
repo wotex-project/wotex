@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.5. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.6. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -263,7 +263,7 @@ not an arbitrary report authenticated by the kernel. Report-stage receipts
 retain the exact installed WRO.01 report_contract reference; a missing or
 mismatched reference refuses even if its stage says match.
 
-Run state binds original, program/compiler identities, time epoch/generation,
+Retained execution state binds original, program/compiler identities, time epoch/generation,
 start/deadline, each expanded path's original/status/result reference, edge
 baseline/stability/cooldown and consumed-root references. Step states distinguish
 unsent, proposed, reserved, handed_off, waiting, completed, refused, failed,
@@ -323,7 +323,7 @@ are rechecked before each new unsent effect. Selected if paths stay fixed;
 no later condition change switches a partly executed branch. Wait is the only
 condition construct that deliberately waits for future facts.
 
-The transition is a closed object with run, proposals, basis and outcome. Run
+The transition is a closed object with run, proposals, basis, outcome and edge. Run
 is a checked Run value, or null for skipped-busy; outcome is its status or
 skipped-busy. Basis contains program_digest, source_digest, compiler_basis,
 event, snapshot and time, preserving the
@@ -384,4 +384,50 @@ execution. An old format never accepts a new operator by accident.
 | WRO02-T4 | 02, 06 | ACK-only sequence, partial parallel failure, deadline and post-handoff cancellation never fabricate completion, compensation or resend |
 | WRO02-T5 | 01–06 | Independent archive consumers execute the same scalar/event/slow-actuator procedure without shared private modules, schema or consumer terminology |
 
-Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported edges, complete-set collection/arbitration and independent transition/archive consumers remain unimplemented obligations.
+Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported-edge qualification now has executable `edge_test.exs` traces. Complete-set collection/arbitration and independent transition/archive consumers remain unimplemented obligations.
+
+### Closed reported-edge retention
+
+`Edge.advance/7` takes the same Program/Event/Snapshot/Time/Profile/Limits as
+Kernel and a null or retained Edge. It returns a closed object with edge,
+eligible and reason. Reason is baseline, duplicate, unqualified, stable,
+debouncing, cooldown or eligible. The event must be fact for the trigger's
+binding and identify the complete snapshot Fact. No missing Fact is inferred.
+
+Edge format is wotex.routines.edge@1. Its exact members are format,
+program_digest, binding, binding_basis (the complete Snapshot binding-basis
+record), epoch, clock_generation, last_elapsed_ms, last_receipt_ms,
+last_sequence, last_fact_id, last_fact_digest, baseline, candidate_since_ms,
+cooldown_until_ms and last_original. Baseline is true/false/null: true means
+the trigger's active side, false its inactive side, null no qualified baseline.
+Sequence/fact/digest/receipt coordinates and last_original are explicit null
+until established. Candidate is a nullable elapsed coordinate; cooldown is a
+nonnegative elapsed coordinate. Native values, identities, coordinate ordering
+and coupled null members are revalidated before use.
+
+A fresh continuous qualified sample establishes the first baseline and emits
+no edge. Boolean active means true for rising and false for falling. Integer
+active means value >= enter for rising, <= enter for falling; inactive means
+value <= exit for rising, >= exit for falling. Between thresholds retains the
+existing baseline, or null without a baseline. Thresholds use exact installed
+units. Binding/source/clock replacement, elapsed or receipt regression,
+non-increasing conflicting sequence, replay, expiry, unknown or lost continuity
+resets qualification; none can create a transition. An exact repeated Fact is
+idempotent and cannot advance debounce. A sequence/fact identity reused with
+changed content refuses rather than replaces the retained sample.
+
+An inactive-to-active sample starts debounce. Eligibility requires another
+qualified continuous active sample at or after the explicit interval, except
+zero debounce is immediate. An inactive or unqualified sample clears the
+candidate. Only caller-supplied new reports advance this interval. Eligibility
+sets the active baseline and generation-bound cooldown. A transition during
+cooldown is suppressed and sets the active baseline; it never becomes a delayed
+catch-up edge. Durations and coordinates remain within selected number bounds.
+
+Kernel transitions additionally retain edge (explicit null for other triggers).
+A fact input advances the edge before overlap arbitration. No edge returns
+run=null, no proposals and outcome no-edge; a busy eligible edge is retained as
+skipped-busy and cannot be caught up later. Existing original runs may continue
+on their fact event without a new edge. Original durability and complete report
+continuity remain consumer obligations; this bounded retained value is not a
+replacement for either.
