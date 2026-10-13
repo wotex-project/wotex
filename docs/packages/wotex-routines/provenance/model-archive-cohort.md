@@ -33,7 +33,7 @@ inconclusive. No forged model artifact or abstract witness supplies admission.
 | wotex_routines archive | `1d4b9d9fbe4fe5693a44a1f725add52d495d7774552d9ae1469b77679c039c56` |
 | bin/check_archive.exs | `df68395b2a721d60ee826b4fa6bc67eb54c76b233aae21ab5165a74cabb704e8` |
 | model consumer mix.lock | `5fd2d033262026c71ad5312bfef24e5ee45faa72dba4b4bf9964825b0da9c764` |
-| test/support/archive/model_consumer.exs | `ace90a9be54ff94754407852a5d65f268133b456d1019d66a58933ac48118489` |
+| test/support/archive/model_consumer.exs | `c47838c48d3404cdabc3707afd8a945232a376436d6d81e0f5d06fb897d83c33` |
 | test/support/archive/identity_consumer.exs | `6774e6653c550b7510010d53a7049394bc48d2870a79e780dc76f0e176f94345` |
 | Maude 3.5.1 executable | `266eed04679fde6029a18e5e2b1828223d4a7169ac55503aa15d67e126792fbf` |
 
@@ -42,13 +42,15 @@ producer archives with WOTEX_PATH_DEPS unset and dependency env=prod. No produce
 checkout path entered the consumer. This is a new model-bearing routines archive;
 the earlier composition/calendar and Home-shadow archive remains historical.
 
-The first attempted conditional query `state(P:Phase, N:Nat)` with condition
-`N > 1` or `N:Nat > 1` returned parser_error/missing_command_echo from the
-released facade. This refusal is not a counterexample or completed query. The
-declared finite profile uses an exact `state(P:Phase, 2)` pattern, which is
-sufficient for its one-site count1-to-count2 mutation and passed. General
-conditional-query correspondence needs producer diagnosis/evidence before
-adoption; this record makes no claim for that seam.
+The first attempted abbreviated Boolean conditions `N > 1` and `N:Nat > 1`
+returned parser_error/missing_command_echo. Direct interpreter inspection showed
+that Maude expands a Boolean condition by appending `= true`; the producer
+correctly retained its exact-token echo guard. The canonical explicit condition
+`N:Nat > 1 = true` then passed through released SearchRun for both original
+bounded absence and the count1-to-count2 model mutation. The 3-test archive lane
+was rerun with this conditional pattern. No producer guard was weakened. This
+record establishes that exact conditional form; arbitrary conditional syntax
+still needs its own correspondence evidence.
 
 This lane exercises public native query/retirement and scoped model/replay
 correspondence. It does not establish full analysis queue/preparation/result

@@ -124,7 +124,12 @@ defmodule ProposalModelArchiveConsumerTest do
     {:ok, model} = Model.compile(program, c.scope, c.profile, c.limits)
 
     original =
-      search(model.data["model_bytes"], "state(fresh, 0)", "state(P:Phase, 2)", nil)
+      search(
+        model.data["model_bytes"],
+        "state(fresh, 0)",
+        "state(P:Phase, N:Nat)",
+        "N:Nat > 1 = true"
+      )
 
     assert original.solutions == []
 
@@ -138,7 +143,7 @@ defmodule ProposalModelArchiveConsumerTest do
         "state(proposed, 1) => state(proposed, 2)"
       )
 
-    receipt = search(mutated, "state(fresh, 0)", "state(P:Phase, 2)", nil)
+    receipt = search(mutated, "state(fresh, 0)", "state(P:Phase, N:Nat)", "N:Nat > 1 = true")
     assert length(receipt.solutions) >= 1
     assert receipt.model_digest != original.model_digest
     frame = frame(c, program)
