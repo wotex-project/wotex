@@ -45,6 +45,13 @@ Calendar consumers explicitly construct `Wotex.Routines.CalendarRequest` with a 
 
 ## Development
 
+`InputMapping.new/3` checks a consumer-installed exact scalar correspondence.
+`Input.project/4` joins a public Profiles proposal with explicit metadata and
+registry/limits/reader_limits context into a Fact and witnesses. Mapping and
+source/receipt clock mismatches refuse; no rounding, renewed freshness or effect
+authority follows. The optional Profiles dependency can be absent during ordinary
+routine use. See the [input contract](../../docs/packages/wotex-routines/specs/WRO.05-external-profile-inputs.md).
+
 The [completion contract](../../docs/packages/wotex-routines/plans/wotex-routines-completion.md)
 orders the accepted programme. From the repository root run focused tests with
 `mix pkg wotex-routines test test/wotex/routines/basis_test.exs`, then

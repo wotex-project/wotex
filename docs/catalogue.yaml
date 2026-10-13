@@ -405,7 +405,7 @@ packages:
         path: "docs/packages/wotex-routines/specs/WRO.04-analysis-correspondence.md"
       - id: "WRO.05"
         version: "0.1.1"
-        implementation_status: "planned"
+        implementation_status: "implemented"
         path: "docs/packages/wotex-routines/specs/WRO.05-external-profile-inputs.md"
   wotex-runtime:
     app: "wotex_runtime"

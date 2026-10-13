@@ -1,9 +1,10 @@
 # External profile-reader completion contract
 
-Version: 0.2.5. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.6. Updated: 2026-10-14. Status: accepted target.
 Implementation: bounded v1 reader/compiler/interpreter. Evidence: focused suites
-and two independent archive consumers; authoring v1 implemented, routine join
-and consumer admission remain open.
+and two independent archive consumers; authoring v1 and the public Proposal
+representation are implemented. The qualified scalar routine join is owned by
+WRO.05; consumer admission remains open.
 
 This optional producer reads consumer-owned device/semantic definitions.
 It ships no world's-sensors catalogue or vendor-model selection authority.

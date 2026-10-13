@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.9. Updated: 2026-10-13. Accepted programme; the basis is partially implemented.
+Version: 0.2.11. Updated: 2026-10-14. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -28,3 +28,21 @@ actuator operation are additional consumer evidence, never inferred from a
 successful simulation or catalogue check. No reference to a product/customer,
 mandatory AI, external workflow service, storage engine or booking facade
 belongs in this package.
+
+## External definition join
+
+[WRO.05](../specs/WRO.05-external-profile-inputs.md) implements an explicitly
+installed exact scalar join to the public WPF Proposal/Unit seams. Mapping
+identity binds the full Basis, selected reader/compiler/profile/closure/capture,
+source scope and explicit clock correspondence. Different dimensions, unsupported
+shapes, missing sequence/continuity and stale basis refuse. Non-usable qualities
+remain null, and replay cannot renew freshness. Two independent archive consumers
+exercise temperature and an unseen research ratio; a third proves optional-reader
+absence while ordinary routines remain usable. The owning focused suites, 147-test
+package milestone and archive consumers establish software behavior; current
+consumer transactions/adoption and physical qualification remain open.
+
+External quantity/model data remains consumer-owned. A richer execution/analysis
+representation needs a new owning contract before code and must accept supplied
+semantic identities rather than a global sensor enum. Current Unit/Basis/Fact
+and kernel representation keep their existing narrow meaning.

@@ -11,6 +11,10 @@ catalogue records implementation status separately.
 - Preserve dimensions, exact units, source/receipt epochs, sequence, freshness,
   replay, continuity and derivation. Unknown is distinct from false or zero.
 - Convert only exact in-domain integers. No rounding policy is installed.
+- Install the entire `InputMapping` identity before joining a Profiles proposal.
+  Supply both limit selections and an explicit qualified clock correspondence;
+  retain proposal/mapping/correspondence witnesses and recheck consumer admission.
+  Unsupported quantities/shapes cannot relabel a legacy dimension or add an operator.
 - Use the public Continuum adapter with explicit scope/evidence maps. Missing
   source time refuses conversion; receipt time cannot replace it.
 - Whole-resource effect domains remain conservative. A protocol response is

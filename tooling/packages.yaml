@@ -1263,7 +1263,7 @@ packages:
           PHOENIX_ASSETS_CANDIDATE: ""
   wotex-routines:
     app: wotex_routines
-    depends_on: [wotex, wotex-continuum]
+    depends_on: [wotex, wotex-continuum, wotex-profiles]
   wotex-profiles:
     app: wotex_profiles
     depends_on: [wotex, wotex-runtime]

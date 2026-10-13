@@ -43,6 +43,7 @@ defmodule Wotex.Routines.MixProject do
     [
       sibling(:wotex, "wotex"),
       sibling(:wotex_continuum, "wotex-continuum"),
+      sibling(:wotex_profiles, "wotex-profiles", optional: true),
       {:ex_booking, "== 0.2.3", optional: true},
       {:ex_maude, "== 0.5.0", optional: true},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
@@ -61,14 +62,18 @@ defmodule Wotex.Routines.MixProject do
   # test and docs environments: unset means the Hex requirement, 1 means
   # the sibling checkout under packages/, loaded in :dev so that its own
   # switch guard accepts it.
-  defp sibling(app, directory) do
+  defp sibling(app, directory, options \\ []) do
     case System.get_env("WOTEX_PATH_DEPS") do
       nil ->
-        {app, "~> 0.1.0"}
+        {app, "~> 0.1.0", options}
 
       "1" ->
         if Mix.env() in [:dev, :test, :docs] do
-          {app, path: Path.expand("../#{directory}", __DIR__), env: :dev, override: true}
+          {app,
+           Keyword.merge(
+             [path: Path.expand("../#{directory}", __DIR__), env: :dev, override: true],
+             options
+           )}
         else
           raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end

@@ -41,9 +41,9 @@ specifications:
   - id: "WRO.05"
     version: "0.1.1"
     path: "docs/specs/WRO.05-external-profile-inputs.md"
-    implementation_status: "planned"
+    implementation_status: "implemented"
     standards: []
     requires: ["WRO.01", "WRO.02", "wotex_profiles:WPF.01", "wotex_profiles:WPF.02"]
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules: ["Wotex.Routines.InputMapping", "Wotex.Routines.Input"]
+    executable_evidence: ["test/wotex/routines/input_mapping_test.exs", "test/wotex/routines/input_test.exs", "priv/vectors/wro-05-input.json", "test/support/archive/profile_consumer.exs", "test/support/archive/profile_absent_consumer.exs", "bin/check_archive.exs"]
     compatibility_classification: "Explicit qualified external-definition join or unsupported refusal; current routine types stay narrow and readers need no routine dependency"

@@ -16,6 +16,7 @@ defmodule Wotex.Routines.Check.Archive do
         strict: [
           occurrence_archive: :string,
           composition_consumers: :boolean,
+          profile_consumers: :boolean,
           model_consumer: :boolean,
           maude_path: :string
         ]
@@ -58,17 +59,18 @@ defmodule Wotex.Routines.Check.Archive do
     if opts[:model_consumer] == true and not is_binary(opts[:maude_path]),
       do: throw({:archive, "model consumer requires an explicit interpreter path"})
 
-    if producer || opts[:composition_consumers] || opts[:model_consumer] do
-      paths = artifacts!(producer, archive, temporary)
+    if producer || opts[:composition_consumers] || opts[:model_consumer] || opts[:profile_consumers] do
+      paths = artifacts!(producer, archive, temporary, opts[:profile_consumers])
       if producer, do: calendar_consumer!(producer, archive, paths, temporary)
       if opts[:composition_consumers], do: composition_consumers!(archive, paths, temporary)
       if opts[:model_consumer], do: model_consumer!(archive, paths, temporary, opts[:maude_path])
+      if opts[:profile_consumers], do: profile_consumers!(paths, temporary)
     end
 
     :ok
   end
 
-  defp artifacts!(producer, archive, temporary) do
+  defp artifacts!(producer, archive, temporary, profiles) do
     if producer && not File.regular?(producer),
       do: throw({:archive, "missing supplied producer archive"})
 
@@ -83,12 +85,69 @@ defmodule Wotex.Routines.Check.Archive do
 
     roots = if producer, do: roots ++ [{:ex_booking, Path.expand(producer)}], else: roots
 
+    roots =
+      if profiles,
+        do:
+          roots ++
+            [
+              {:wotex_runtime, build_sibling!("wotex-runtime", temporary)},
+              {:wotex_profiles, build_sibling!("wotex-profiles", temporary)}
+            ],
+        else: roots
+
     Enum.map(roots, fn {app, archive} ->
       destination = Path.join(artifacts, Atom.to_string(app))
       unpack!(archive, destination)
       IO.puts("#{app} archive sha256: #{sha256(archive)}")
       {app, destination}
     end)
+  end
+
+  defp profile_consumers!(paths, temporary) do
+    for family <- ~w(industrial research absent) do
+      consumer = Path.join(temporary, "consumer-profile-" <> family)
+      test_root = Path.join(consumer, "test")
+      File.mkdir_p!(test_root)
+
+      selected =
+        if family == "absent",
+          do: Enum.reject(paths, fn {app, _} -> app in [:wotex_profiles, :wotex_runtime] end),
+          else: paths
+
+      dependencies =
+        Enum.map(selected, fn {app, path} -> {app, [path: path, env: :prod, override: true]} end)
+
+      File.write!(Path.join(consumer, "mix.exs"), consumer_project(dependencies))
+      File.write!(Path.join(test_root, "test_helper.exs"), "ExUnit.start()\n")
+
+      source =
+        if family == "absent", do: "profile_absent_consumer.exs", else: "profile_consumer.exs"
+
+      copy_fixture!(
+        "test/support/archive/" <> source,
+        Path.join(test_root, "profile_consumer_test.exs")
+      )
+
+      copy_fixture!("priv/vectors/wro-05-input.json", Path.join(consumer, "input.json"))
+
+      environment = [
+        {"WOTEX_PATH_DEPS", nil},
+        {"MIX_ENV", "test"},
+        {"MIX_BUILD_PATH", nil},
+        {"MIX_BUILD_ROOT", nil},
+        {"MIX_DEPS_PATH", nil},
+        {"WOTEX_ROUTINES_INPUT_FAMILY", family}
+      ]
+
+      IO.puts("profile consumer: " <> family)
+      run!(["deps.get"], consumer, environment)
+      run!(["compile", "--warnings-as-errors"], consumer, environment)
+      run!(["test", "--warnings-as-errors"], consumer, environment)
+
+      IO.puts(
+        family <> " profile consumer lock sha256: " <> sha256(Path.join(consumer, "mix.lock"))
+      )
+    end
   end
 
   defp calendar_consumer!(producer, archive, paths, temporary) do

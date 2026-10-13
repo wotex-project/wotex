@@ -325,7 +325,7 @@ defmodule Wotex.Workspace.ManifestTest do
 
       assert Enum.sort(Manifest.transitive_dependents("wotex-runtime", manifest)) ==
                ~w(wotex-bacnet wotex-binding-http wotex-binding-mqtt wotex-ble wotex-coap
-                  wotex-lab wotex-matter wotex-modbus wotex-opcua wotex-profiles wotex-thread)
+                  wotex-lab wotex-matter wotex-modbus wotex-opcua wotex-profiles wotex-routines wotex-thread)
 
       assert Manifest.transitive_dependents("wotex-coap", manifest) == []
       assert {:ok, _} = Manifest.lane("minimum", manifest)

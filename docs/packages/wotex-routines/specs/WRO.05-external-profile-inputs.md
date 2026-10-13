@@ -1,7 +1,8 @@
 # WRO.05 — Explicit joins from externally defined sensor capabilities
 
 Version: 0.1.1. Updated: 2026-10-14. Status: accepted target.
-Implementation: planned. Evidence: missing.
+Implementation: closed scalar join implemented. Evidence: focused tests and
+three extracted-archive consumers; consumer admission/physical qualification remain separate.
 
 ## Scope and current representation
 
@@ -94,7 +95,7 @@ new operation or decoder. Digest equality is not qualification.
 
 **WRO05-02 — Input bridge.** Input.project/4 takes the WPF.02 Proposal,
 InputMapping, explicit observation metadata and selected Limits/Registry.
-The fourth argument is a closed context with exactly registry, limits and reader_limits,
+The fourth argument is a closed string-keyed context with exactly registry, limits and reader_limits,
 revalidated WRO.01 values and complete WPF Limits. Observation metadata contains exactly the WRO.01 Fact members other than value,
 unit and quality; all are required and their types/bounds are inherited unchanged. In particular the
 consumer supplies enrolled thing/affordance identity, source class/epoch/sequence,
@@ -115,7 +116,7 @@ WRO bounds; null stays null. No other rounding is allowed.
 Receipt epoch must equal receipt_clock.source_epoch. Compute delta as supplied
 monotonic_us minus source_origin_us; delta must be an exact multiple of 1000.
 metadata receipt_epoch must equal target_epoch and receipt_ms must equal
- target_origin_ms + delta/1000, nonnegative and bounded. Inexact conversion
+target_origin_ms + delta/1000, nonnegative and bounded. Inexact conversion
 refuses inexact_conversion; different coordinates refuse stale_basis. received_at
 and expires_ms remain explicit consumer data validated by Fact, with expiry not
 before receipt; this bridge does not relate UTC to monotonic time implicitly.
@@ -188,5 +189,9 @@ as a documentation side effect.
 | WRO05-T4 | 01–04 | Changed definition/mapping before evaluation/handoff, over-budget closure and missing reader | Bounded refusal; current consumer guards still required |
 | WRO05-T5 | 01–04 | Industrial and independent second consumer, reader used with routines absent | Separate catalogues/policy; no package catalogue/mandatory engine |
 
-Cases are obligations, not implementation evidence. The
+The two scalar archive consumers and optional-producer-absent consumer establish
+software representation and join behavior. Focused suites exercise exact
+conversion, forged values, aggregate limits, replacement, replay and clock
+refusals. They do not establish consumer installation or device qualification.
+The
 [completion contract](../plans/wotex-routines-completion.md) owns the join stage.
