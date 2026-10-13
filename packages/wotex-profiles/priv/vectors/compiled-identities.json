@@ -1,0 +1,9 @@
+{
+  "closure_sha256": "38f654bc219b3a22d2fc199dae7e603968e60941ac392c345034aa7695065786",
+  "compiler_ref": {
+    "id": "urn:wotex:profiles:compiler",
+    "sha256": "ead09982767c77ac3a497e86f7251a17a7e568f6a193bb89223b22e0b38b8c2b",
+    "version": "1.0.0"
+  },
+  "profile_sha256": "8eae050eccc8fd2a00a798a118b8e7d86e8ba31f5f8867042a79242c766151a8"
+}

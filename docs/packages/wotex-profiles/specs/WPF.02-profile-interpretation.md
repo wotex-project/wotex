@@ -1,9 +1,9 @@
 # WPF.02 — Bounded profile compilation and interpretation
 
-Version: 0.2.3. Updated: 2026-10-13. Status: accepted target.
-Implementation: partial exact Unit.convert/4 and Binding constructors.
-Evidence: independent numeric/registration vectors and focused tests;
-compiler/capture/report interpretation remains planned.
+Version: 0.2.6. Updated: 2026-10-13. Status: accepted target.
+Implementation: bounded v1 compiler, capture and report interpretation.
+Evidence: independent identity/math/domain vectors and focused tests;
+archive correspondence is retained in owning provenance.
 
 ## Scope and required inputs
 
@@ -64,7 +64,7 @@ Profile/definition references match recomputed semantic identity; custody/approv
 retain their raw-byte identity separately. Native-map constructors cannot claim
 original byte identity, and cannot satisfy a consumer raw-artifact pin.
 
-**WPF02-02 — Check and compile.** Planned Compiler.check/3 takes Profile,
+**WPF02-02 — Check and compile.** Compiler.check/3 takes Profile,
 explicit Definition/Binding/Contract closure and Limits. It revalidates the
 profile and supplied values, exact reference/closure identities, installed
 required mechanics, selectors, operations, raw/normalized schema and unit/
@@ -77,7 +77,7 @@ Checked is inert; it cannot establish model truth, approval or physical support.
 [WPF.03](WPF.03-profile-authoring-contract.md) consumes this same checker.
 Required unsupported channels/closure refuse; optional exclusions remain explicit.
 
-Planned Compiler.compile/4 always revalidates the same static checks and takes Profile, explicit
+Compiler.compile/4 always revalidates the same static checks and takes Profile, explicit
 Definition/Binding closure, current immutable capture and Limits, returning
 {:ok, Projection} or WPF.01 Error. Capture is exactly binding reference,
 capture_epoch (32 lowercase hex), fields (bounded object over capture_fields)
@@ -111,7 +111,7 @@ The consumer supplies immutable offline bytes/values; no URL fetch or solver.
 
 ## Reports, normalization and outputs
 
-**WPF02-03 — Report.** Planned Interpreter.project/3 takes Projection, one
+**WPF02-03 — Report.** Interpreter.project/3 takes Projection, one
 decoded Report and Limits. Report has exactly channel_id, profile_sha256,
 binding reference, capture_epoch, source_ref, source_epoch, sequence, source_time,
 receipt_time, continuity, quality, quality_reason and value. Ref/epoch/digest use WPF.01/02.
@@ -252,7 +252,7 @@ Unit.convert/4, not compiler, report interpretation or admission completion.
 
 ## Compiler and interpreter value freeze
 
-The following is implementation-entry behavior, still planned. The native
+The following is implemented bounded v1 behavior. The native
 backing values are explicit immutable input, never a private registry or
 claim of source/device authenticity.
 
@@ -372,3 +372,30 @@ fingerprint predicates; failure yields fingerprint_mismatch. The library
 observes no current external registry or device. A replaced installed basis can
 only become current through explicit new consumer input and recompilation;
 old projections/proposals remain historical, inert values.
+
+
+Capture identity mismatch returns stale_basis at /capture/digest; it is never
+silently repaired by a constructor. Matching a newly computed digest checks
+internal correspondence only. String length constraints use Unicode code points,
+not UTF-8 byte count or grapheme count; the separate C02/input byte limits remain.
+Instance numeric constraints and numeric const/enum equality use bounded reduced
+fractions, checking cross-products before allocation. Numeric observations outside
+-18..18 decimal exponent are inspectable C02 values, but a required mechanical
+comparison or conversion returns numeric_limit rather than approximate comparison.
+
+
+Reachable definition cycles are detected in the declared id/version graph
+before verifying edge digests. Content-addressed cyclic definitions cannot be
+finalized as a finite DAG; a fabricated edge hash must not hide that cycle behind
+optional exclusion. Missing keys terminate that cycle inspection and are handled
+by the subsequent exact-reference checks. Global cross-kind key conflicts still
+refuse before graph inspection; both graph passes remain memoized and bounded.
+
+
+UTC parsing supports ordinary ISO seconds 0..59; leap-second spellings refuse
+invalid_input. A mechanically unsupported optional channel whose semantic
+closure resolves successfully retains that closure in closure_sha256. An
+optional channel with an incomplete semantic closure remains excluded; its
+requested reference stays bound by profile identity, without installing an
+incomplete dependency set. Supplied descriptor data may remain inert inspection
+information in that excluded plan. Required equivalents refuse.

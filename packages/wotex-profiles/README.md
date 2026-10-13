@@ -52,8 +52,13 @@ URI/dimension pairs and refuses repeating fractions or arithmetic overflow.
 `Binding.digest/2` and `Binding.new/2` prepare and verify explicit installed
 selector/raw-value registrations. Digest verification does not qualify a decoder
 or device, and a reference never loads its implementation.
-Compilation, capture matching, report interpretation and authoring are separate
-planned contracts; the package catalogue records their current evidence.
+`Compiler.check/3` validates a selected installed closure; `compile/4` also
+matches explicit capture. `Interpreter.project/3` revalidates its retained
+projection and maps a supplied decoded report into an inert proposal. Raw
+domain, sentinel, exact conversion and target-domain checks stay distinct.
+Invalid quality remains null; retained/replayed data never acquires source time
+from receipt time. Authoring remains a separate planned contract; the catalogue
+records current evidence.
 
 ## Development
 

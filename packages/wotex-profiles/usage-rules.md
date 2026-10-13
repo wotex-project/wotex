@@ -25,6 +25,13 @@ catalogue records implementation status separately.
 - A reader value, match, normalized proposal or authoring report grants no
   authority. Consumers own installed bindings, current capture, qualification,
   credentials, canonical Thing state, persistence and effects.
+- Supply the complete explicit definitions/bindings/contracts closure to
+  `Compiler.check/3` or `compile/4`; only the latter matches supplied capture.
+  Optional exclusions are explicit. `Interpreter.project/3` regenerates native
+  projection inputs; serialized plans cannot replace their retained basis.
+- Keep raw-domain, sentinel, conversion and target-domain checks distinct.
+  Invalid/missing quality yields null with original provenance; no sample is
+  rounded, clipped, relabeled fresh or made authoritative.
 - Use the documented public APIs, preserve source/quality provenance and
-  match errors by their fixed code/path. Planned compiler and authoring APIs
+  match errors by their fixed code/path. Planned authoring APIs
   remain separately identified in the specification catalogue.

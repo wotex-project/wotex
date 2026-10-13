@@ -1,0 +1,51 @@
+{
+  "binding": {
+    "id": "urn:example:binding:register",
+    "sha256": "c18cc5f31d87c9b48322791f5f894e3e544de489777804b59aad93a5a1f80a1c",
+    "version": "1.0.0"
+  },
+  "channels": [
+    {
+      "affordance": {
+        "kind": "property",
+        "name": "sample"
+      },
+      "conversion": null,
+      "id": "sample",
+      "invalid_values": [
+        {
+          "type": "sint",
+          "value": "-1"
+        }
+      ],
+      "operations": [
+        "readproperty"
+      ],
+      "required": true,
+      "selector": {
+        "register": 4
+      },
+      "semantic": {
+        "id": "urn:example:semantic:industrial",
+        "sha256": "80940db78b293ec37d9cbedd8386a3a8c75a25bebf831f6497d209e8e88eac36",
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "fingerprint": [
+    {
+      "field": "model",
+      "operator": "eq",
+      "values": [
+        {
+          "type": "text",
+          "value": "synthetic-industrial"
+        }
+      ]
+    }
+  ],
+  "format": "wotex.profile@1",
+  "id": "urn:example:profile:industrial",
+  "requires": [],
+  "version": "1.0.0"
+}

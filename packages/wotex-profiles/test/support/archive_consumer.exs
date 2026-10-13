@@ -2,7 +2,18 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
-  alias Wotex.Profiles.{Definition, Definitions, Profile, Unit}
+
+  alias Wotex.Profiles.{
+    Binding,
+    Capture,
+    Compiler,
+    Definition,
+    Definitions,
+    Interpreter,
+    Profile,
+    Projection,
+    Unit
+  }
 
   test "original bytes and unseen quantity survive the public archive boundary" do
     limits = Jason.decode!(File.read!("limits.json"))
@@ -70,6 +81,81 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
                %{"type" => "sint", "value" => "1"},
                Map.put(unit, "scale_d", "3"),
                unit,
+               limits
+             )
+  end
+
+  test "multi-channel compile and report interpretation use only public archived contracts" do
+    limits = Jason.decode!(File.read!("limits.json"))
+    definition = Jason.decode!(File.read!("definition.json"))
+    profile = Jason.decode!(File.read!("profile.json"))
+    binding = Jason.decode!(File.read!("installed-binding.json"))
+    contracts = Jason.decode!(File.read!("installed-contracts.json"))
+    assert {:ok, bref} = Binding.reference(binding, limits)
+    [channel] = profile["channels"]
+
+    channel =
+      if definition["value_schema"]["type"] == "number" do
+        Map.put(channel, "conversion", %{
+          "kind" => "affine",
+          "scale_n" => "1",
+          "scale_d" => "100",
+          "offset_n" => "0",
+          "offset_d" => "1"
+        })
+      else
+        channel
+      end
+
+    auxiliary = Map.merge(channel, %{"id" => "auxiliary", "selector" => %{"register" => 5}})
+    profile = Map.merge(profile, %{"binding" => bref, "channels" => [auxiliary, channel]})
+    model = hd(hd(profile["fingerprint"])["values"])
+
+    capture = %{
+      "binding" => bref,
+      "capture_epoch" => String.duplicate("c", 32),
+      "fields" => %{"model" => model}
+    }
+
+    assert {:ok, digest} = Capture.digest(capture, binding, limits)
+    capture = Map.put(capture, "digest", digest)
+    closure = %{"definitions" => [definition], "bindings" => [binding], "contracts" => contracts}
+    assert {:ok, projection} = Compiler.compile(profile, closure, capture, limits)
+    assert {:ok, plan} = Projection.to_map(projection, limits)
+    assert Enum.map(plan["channel_plans"], & &1["channel_id"]) == ["auxiliary", "sample"]
+
+    value = %{"type" => "sint", "value" => "25"}
+
+    expected =
+      if definition["value_schema"]["type"] == "integer",
+        do: value,
+        else: %{"type" => "decimal", "coefficient" => "25", "exponent" => -2}
+
+    report = %{
+      "channel_id" => "auxiliary",
+      "profile_sha256" => plan["profile_sha256"],
+      "binding" => bref,
+      "capture_epoch" => capture["capture_epoch"],
+      "source_ref" => "synthetic-source",
+      "source_epoch" => String.duplicate("e", 32),
+      "sequence" => nil,
+      "source_time" => nil,
+      "receipt_time" => %{"epoch" => String.duplicate("f", 32), "monotonic_us" => "1"},
+      "continuity" => "retained",
+      "quality" => "usable",
+      "quality_reason" => nil,
+      "value" => value
+    }
+
+    assert {:ok, proposal} = Interpreter.project(projection, report, limits)
+    assert proposal["normalized_value"] == expected
+    assert proposal["continuity"] == "retained"
+    assert proposal["source_time"] == nil
+
+    assert {:error, %Wotex.Profiles.Error{code: :stale_basis}} =
+             Interpreter.project(
+               projection,
+               Map.put(report, "capture_epoch", String.duplicate("a", 32)),
                limits
              )
   end

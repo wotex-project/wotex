@@ -121,6 +121,12 @@ defmodule Wotex.Profiles.Check.Archive do
       end
 
       File.cp!("priv/vectors/limits.json", Path.join(consumer, "limits.json"))
+      File.cp!("priv/vectors/installed-binding.json", Path.join(consumer, "installed-binding.json"))
+
+      File.cp!(
+        "priv/vectors/installed-contracts.json",
+        Path.join(consumer, "installed-contracts.json")
+      )
 
       File.write!(
         Path.join(consumer, "identities.json"),
