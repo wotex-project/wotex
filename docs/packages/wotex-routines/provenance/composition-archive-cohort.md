@@ -2,6 +2,7 @@
 
 Executed 2026-10-13. Producer runtime/source: WoTEx commit `5bf61912`,
 `packages/wotex-routines`, `packages/wotex` and `packages/wotex-continuum`.
+Acceptance harness: WoTEx commit `d7e2ef00`, under `packages/wotex-routines`.
 The acceptance harness is identified independently by the exact source digests
 below. Documentation and harness files do not enter the package archives.
 

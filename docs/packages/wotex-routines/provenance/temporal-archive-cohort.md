@@ -50,3 +50,15 @@ consumer. Changed source, producer, dependencies or database data require a fres
 run; the historical digests above are retained as evidence for their cohort.
 This one calendar consumer does not fulfill the two-consumer composition/host
 milestone or the independent AST/transition oracle obligation.
+
+## Renewed composition cohort
+
+The same 8 calendar tests passed again on 2026-10-13 against WoTEx runtime
+source `5bf61912` and the archive harness committed as `d7e2ef00` under
+`packages/wotex-routines`. The routines archive SHA-256 is now
+`a17ec97a464ca6b8edfbf615e32b6fd638803b8fdb839a8f33f3578c97b91ef5`.
+Core, Continuum, ExBooking `0418a06`, toolchain and resolved lock retain the
+identities listed above. This executed renewal covers the refactored archive
+selection seam; the original cohort remains historical evidence. The paired
+[composition consumers](composition-archive-cohort.md) passed in their separate
+lane. Real host/clock/transaction qualification remains open.
