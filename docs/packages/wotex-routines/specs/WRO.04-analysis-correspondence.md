@@ -431,3 +431,6 @@ refuse; regenerated native model forgery fails. The extracted native model
 consumer additionally enumerates this scope, retains held/ACK/cancel distinctions,
 and finds an ACK-completion mutation's abstract counter-state. Those native
 counter-states are not concrete runtime incidents or admission.
+
+The [receipt-model cohort](../provenance/receipt-model-cohort.md) binds native
+execution and independent finite-prefix evidence to its exact source/archives.

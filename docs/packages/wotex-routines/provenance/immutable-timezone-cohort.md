@@ -39,3 +39,17 @@ obligations. This renewal establishes the declared adapter seam only; real
 consumer Store races, installed clocks, OS containment, physical effects and
 wider quality/completion milestones remain open. Earlier temporal cohorts stay
 historical evidence, rather than acquiring new capabilities by changing a digest.
+
+## Producer refusal hardening renewal
+
+The same nine calendar cases pass against ExBooking `28dadca`, whose helpers
+normalize all foreign callback refusal payloads to time_zone_provider_refused.
+The producer archive SHA-256 is
+`8e6ffb60050e0ecf77cb68720b62eeef36ba568036a80fb6dfa0f6db38870b65`.
+WoTEx source/harness `2bb4c455` and the same routines archive
+`9efd2ccb4963c28719506a965838c138e9a109105ba94e0861275d05b6eb4e58`
+were exercised, with unchanged other artifacts, fixture/harness digests, native
+calendar toolchain and lock. This historical renewal predates the receipt-model
+addition; it does not promote its routines artifact to the newer model cohort.
+ExBooking's complete local gate passes 411 tests, 97.0% coverage and all required
+components; the privacy canary failed before the fix and passes afterward.
