@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.2. Updated: 2026-10-13. Status: accepted target; implementation planned.
+Version: 0.2.3. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -169,7 +169,8 @@ starts a timer or expands a participant set at runtime.
 context: `registry`, `bases`, `bindings`, `definitions`, `arguments` and
 `compiler_basis`. Registry and bases use WRO.01 values; no module/class name or
 transport callback is data. Context bindings map each name to an exact installed
-basis reference, an absolute thing_id and every resource-role binding. The
+basis reference under `basis`, an absolute `thing_id` and every resource-role
+binding under `resource_roles`. The
 consumer supplies reviewed instance mappings and owns their trust. Definitions
 are exact version-pinned child sources. Arguments bind every root parameter;
 invoke binds child arguments from literals/parent parameters before expansion.
@@ -183,6 +184,20 @@ regenerates from retained source/context under the selected profile/limits and
 compares the entire result; a recomputed digest on modified IR is insufficient.
 Compiler basis identifies the selected build/dependency cohort and remains a
 consumer-verified artifact fact, rather than an authenticity assertion by a hash.
+
+The first Program data has exactly `format`, `source`, `context`, `profile`,
+`json_limits`, `compiler_profile`, `source_digest`, `ir`, `ir_digest`.
+Format is wotex.routines.program@1 and compiler_profile is
+wotex.routines.compiler@1. IR has exactly `condition`, `trigger`, `steps`,
+`run_ms`, `overlap`. Compiled nodes retain source members plus a `path` integer
+vector; effect input arguments are resolved literals and retain the exact
+`evidence_contract`. Invoke additionally retains its bound `condition`, `run_ms`
+and expanded `body`. Predicates compile to finite postfix arrays: literal/value,
+eq/gt/lt with binding/value, not, and all/any with explicit positive operand count.
+Every comparison is typed against an observable Property/Event basis; Action
+input cannot stand in for an observation. Every invocation's argument names
+and declared types are screened across the closure, then actual bound values
+are validated before expansion. No incomplete provided IR is accepted as source.
 
 ### Explicit execution and receipt values
 
