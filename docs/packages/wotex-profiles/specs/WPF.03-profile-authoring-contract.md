@@ -316,3 +316,9 @@ numeric admission are not promoted to supported behavior. Resource limits fail
 before a partial compatible result. A finalized bundle is checked in WPF.01
 canonical set order; validation does not silently repair it. Finalization alone
 normalizes a draft's declared set order while rejecting duplicates.
+
+
+Executed contract/finalizer/validator, independent structural cells and actual
+CLI archive correspondence is retained in
+[the authoring milestone](../provenance/authoring-2026-10.md). Current consumer
+admission and actual source/model qualification are outside that evidence.

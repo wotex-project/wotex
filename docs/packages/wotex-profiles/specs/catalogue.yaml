@@ -29,5 +29,5 @@ specifications:
     standards: []
     requires: ["WPF.01", "WPF.02"]
     implementation_modules: ["Wotex.Profiles.Artifacts", "Wotex.Profiles.AuthoringLimits", "Wotex.Profiles.Contract", "Wotex.Profiles.Draft", "Wotex.Profiles.Finalized", "Wotex.Profiles.Validation", "Wotex.Profiles.ValidationReport", "Mix.Tasks.Wotex.Profiles.Validate", "Mix.Tasks.Wotex.Profiles.Finalize"]
-    executable_evidence: ["test/wotex/contract_test.exs", "test/wotex/shape_test.exs", "test/wotex/authoring_test.exs", "test/wotex/cli_test.exs", "test/support/draft7/manifest.json", "priv/vectors/authoring-identities.json", "bin/check_archive.exs"]
+    executable_evidence: ["test/wotex/contract_test.exs", "test/wotex/shape_test.exs", "test/wotex/authoring_test.exs", "test/wotex/cli_test.exs", "test/support/draft7/manifest.json", "priv/vectors/authoring-identities.json", "bin/check_archive.exs", "docs/provenance/authoring-2026-10.md"]
     compatibility_classification: "Pure installed-contract export, draft-reference finalization and shared validation diagnostics; consumer owns authoring/AI/review"
