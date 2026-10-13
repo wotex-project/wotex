@@ -37,6 +37,8 @@ The pure `Wotex.Routines.Kernel.advance/7` takes an explicit Event, complete Sna
 
 Calendar consumers explicitly construct `Wotex.Routines.CalendarRequest` with a finite query and their immutable database module. ExBooking is pinned to optional `== 0.2.3`; its published archive lacks the occurrence API and returns unavailable. Our unreleased producer archive implements that generic API. The catalogue separates adapter code, actual archive adoption and host evidence. No availability interval supplies an original trigger.
 
+`Wotex.Routines.AnalysisResult` keeps validity, findings, completion and admission separate. `Wotex.Routines.Witness.replay/4` checks a finite claimed counterexample against the pure kernel with explicit frames and retained originals. A nonviolating prefix supplies no universal safety proof; model projection and optional backend execution remain planned. See the [analysis contract](../../docs/packages/wotex-routines/specs/WRO.04-analysis-correspondence.md).
+
 ## Development
 
 The [completion contract](../../docs/packages/wotex-routines/plans/wotex-routines-completion.md)

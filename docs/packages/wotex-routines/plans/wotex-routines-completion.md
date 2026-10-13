@@ -1,10 +1,10 @@
 # Optional routines completion contract
 
-Version: 0.2.3. Updated: 2026-10-13. Accepted programme; the basis is partially implemented.
+Version: 0.2.4. Updated: 2026-10-13. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
-offline schemas and independent values are implemented. Closed source/IR regeneration, qualified snapshot evaluation and retained composition transitions are implemented with focused software evidence. Reported-edge qualification and complete provided-set collection/arbitration are implemented with focused traces. Independent source predicate and finite manual-transition references plus six behavioral mutations now pass. Scalar temporal pages, the direct optional calendar adapter and explicitly supervised driver lifecycle are implemented; an exact development archive/calendar join passes. Independent composition/archive consumers, real host transactions and model projection/backend execution remain separate obligations. No core
+offline schemas and independent values are implemented. Closed source/IR regeneration, qualified snapshot evaluation and retained composition transitions are implemented with focused software evidence. Reported-edge qualification and complete provided-set collection/arbitration are implemented with focused traces. Independent source predicate and finite manual-transition references plus six behavioral mutations now pass. Scalar temporal pages, the direct optional calendar adapter and explicitly supervised driver lifecycle are implemented; an exact development archive/calendar join passes. Bounded concrete witness replay checks four declared runtime properties against retained transition records. Independent composition/archive consumers, real host transactions and model projection/backend execution remain separate obligations. No core
 or protocol package depends on routines.
 
 | Stage | Required artifact | Completion |

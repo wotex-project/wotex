@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.1. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.2. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -150,3 +150,71 @@ They do not complete model projection, calendar/reference-set mutations, native
 containment, consumer transaction evidence or physical qualification.
 
 Executed finite-reference evidence is `correspondence_test.exs` and the independent predicate cases in `evaluation_test.exs`. `bin/check_correspondence.exs` executes a passing baseline and six isolated replacements; its formatter distinguishes assertion failures from harness errors. These are software correspondence checks for this reference profile, not a completed analysis/admission gate.
+
+## Bounded concrete witness replay
+
+`Witness.replay(program, witness, profile, limits)` is an opt-in pure check of
+one finite claimed runtime-property counterexample. It invokes the public
+Kernel with the supplied frames and its own bounded mathematical original
+ledger. It is not a model search, a calendar oracle or an authenticated Store.
+All facts/time/receipts remain explicit caller assertions. Reproducing a
+violation establishes that this trace violates the named software property
+under those inputs; it does not establish that a device or host experienced it.
+
+Witness is closed JSON with exactly format, property, program_digest,
+source_digest, compiler_basis, max_steps, max_originals, initial and frames.
+Format is wotex.routines.witness@1. The three program subjects must match the
+complete current regenerated Program. max_steps is positive and <=256;
+max_originals is positive and <=1024. Both also obey JSON Limits. frames is a
+nonempty ordered array no longer than max_steps; each frame has exactly event,
+snapshot and time, using WRO.02's complete values. There is no implicit clock,
+empty snapshot, receipt, original or authority. initial has exactly runs and
+edge: runs is a bounded array of fully checked Runs for distinct originals of
+this Program, with at most one nonterminal run; edge is explicit null or its
+fully checked Edge. Total retained originals never exceeds max_originals.
+Unknown members, stale subjects, invalid retained values, incoherent histories,
+unsupported properties and exceeded input/work/output bounds refuse.
+
+Before each frame choose its retained original and the sole current busy run;
+call Kernel once and retain its returned Run/Edge before the next frame. A
+Kernel refusal ends replay with its typed refusal and no reproduced finding.
+Only returned transitions are evidence; callers cannot supply claimed outputs.
+Terminal originals stay in this replay ledger. It performs no compaction,
+Store operation, admission callback or physical repetition.
+
+The initial property vocabulary is finite, rather than executable caller text:
+
+| Property | Concrete violation |
+| --- | --- |
+| proposal_once | A step original is proposed twice, including one already started in initial retained history |
+| held_spend_retained | A previously held exact original/ref pair disappears or changes on that original's next transition |
+| stopped_continuation | A previously completed/refused/failed/unknown/cancelled/expired/partial root produces a new proposal |
+| completion_evidence | A completed effect lacks its handoff or accepted receipt at/above its installed completion threshold |
+
+Property checks inspect returned public records independently of production
+receipt/execution helpers. The effect paths/thresholds come from the complete
+current IR; all possible paths, including invoked/conditional copies, count.
+This vocabulary does not claim liveness, fairness, physical causation,
+authority validity, completeness of environmental inputs or complete-set safety.
+Those require independently declared projection/property profiles.
+
+Successful output has exactly format (wotex.routines.replay@1), property,
+trace_digest, program_digest, source_digest, compiler_basis, reproduced,
+violation_step and transitions. The trace digest binds the complete checked
+Witness; it is not authenticity. reproduced is Boolean; violation_step is the
+first zero-based violating frame or explicit null when none. Continue the finite
+trace after a violation so receipts/history remain reviewable; any later refusal
+invalidates the complete claimed trace. transitions retains all complete Kernel
+results in frame order. The whole output obeys JSON Limits. A valid finite trace
+with reproduced=false is not positive admission or proof of universal safety.
+An analysis adapter may mark a finding concretely validated only after matching
+its complete model/assumption binding and reproduced=true for the named property.
+
+Acceptance covers valid nonviolating staged/cancelled/history traces, a false
+witness claim, stale program subjects, empty/extra/over-budget input, invalid or
+foreign retained histories, complete output/digest stability, and deliberate
+property-violating returned-record mutations caught by these checks. Public
+replay integration and property-check sensitivity remain separate evidence;
+an invalid forged Run is not a concrete counterexample.
+
+Implemented replay evidence is `witness_test.exs`: public replay validates finite trace/history/subject bindings, rejects false or malformed claims, retains staged/cancelled history and enforces amplification bounds. Separate returned-record mutation tests exercise all four property checks; their forged records deliberately refuse public replay. The shipped `wro-04-witness.schema.json` reconciles WRO.02 execution definitions offline and describes both input and output. Model projection and analysis-adapter correspondence are still unimplemented.
