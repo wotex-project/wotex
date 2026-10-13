@@ -154,7 +154,16 @@ defmodule Wotex.Routines.BasisTest do
       assert {:ok, ^data} = Fact.to_map(value, context.limits)
     end
 
-    unknown = %{fact | "value" => nil, "quality" => "unknown", "source_time" => nil}
+    unknown = %{
+      fact
+      | "value" => nil,
+        "quality" => "unknown",
+        "source_time" => nil,
+        "source_time_trust" => "unknown",
+        "source_time_basis" => nil,
+        "source_uncertainty_ms" => nil
+    }
+
     assert {:ok, %Fact{data: %{"value" => nil}}} = Fact.new(unknown, context.limits)
 
     assert {:error, %Error{code: :invalid_quality}} =
@@ -201,6 +210,26 @@ defmodule Wotex.Routines.BasisTest do
              Fact.new(%{derived | "contributors" => [contributor, contributor]}, context.limits)
   end
 
+  test "invalid sentinels and source-clock uncertainty survive without gaining usability",
+       context do
+    raw = context.corpus["fact"]
+    sentinel = raw["unit"]["max"] + 1
+
+    assert {:ok, %Fact{data: %{"value" => ^sentinel, "quality" => "invalid"}}} =
+             Fact.new(%{raw | "value" => sentinel, "quality" => "invalid"}, context.limits)
+
+    assert {:error, %Error{code: :out_of_domain}} =
+             Fact.new(%{raw | "value" => sentinel}, context.limits)
+
+    for key <- ~w(source_time source_time_basis source_uncertainty_ms) do
+      assert {:error, %Error{code: :missing_clock_basis}} =
+               Fact.new(Map.put(raw, key, nil), context.limits)
+    end
+
+    assert {:ok, %Fact{data: %{"source_time_trust" => "untrusted"}}} =
+             Fact.new(%{raw | "source_time_trust" => "untrusted"}, context.limits)
+  end
+
   test "Continuum retains every required field and refuses missing source time", context do
     data = context.corpus["fact"]
 
@@ -232,7 +261,18 @@ defmodule Wotex.Routines.BasisTest do
              )
 
     assert {:error, %Error{code: :missing_source_time}} =
-             Continuum.to_observation(%{data | "source_time" => nil}, scope, [], context.limits)
+             Continuum.to_observation(
+               %{
+                 data
+                 | "source_time" => nil,
+                   "source_time_trust" => "unknown",
+                   "source_time_basis" => nil,
+                   "source_uncertainty_ms" => nil
+               },
+               scope,
+               [],
+               context.limits
+             )
   end
 
   test "selected native bounds apply before semantic construction", context do

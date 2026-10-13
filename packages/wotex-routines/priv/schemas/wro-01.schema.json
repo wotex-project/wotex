@@ -732,6 +732,36 @@
             "derived_report",
             "protocol_response"
           ]
+        },
+        "source_time_trust": {
+          "enum": [
+            "trusted",
+            "untrusted",
+            "unknown"
+          ]
+        },
+        "source_time_basis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_uncertainty_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -755,9 +785,88 @@
         "expires_ms",
         "derivation_digest",
         "contributors",
-        "source_class"
+        "source_class",
+        "source_time_trust",
+        "source_time_basis",
+        "source_uncertainty_ms"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "source_time_trust": {
+                "const": "trusted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "source_time_basis": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "source_uncertainty_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source_class": {
+                "const": "derived_report"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "derivation_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "contributors": {
+                "minItems": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "derivation_digest": {
+                "type": "null"
+              },
+              "contributors": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "quality": {
+                "const": "usable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      ]
     },
     "contributor": {
       "type": "object",

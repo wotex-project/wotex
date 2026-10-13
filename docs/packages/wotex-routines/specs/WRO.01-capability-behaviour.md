@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.1. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -158,7 +158,8 @@ outcomes; absolute input alone never changes the installed repeat rule.
 
 `Fact.new/2` requires `id`, `thing_id`, `affordance_type`, `affordance_name`,
 `value`, `unit`, `quality`, `source_class`, `source_id`, `source_epoch`, `sequence`,
-`source_time`, `received_at`, `receipt_epoch`, `receipt_ms`, `profile_digest`,
+`source_time`, `source_time_trust`, `source_time_basis`, `source_uncertainty_ms`,
+`received_at`, `receipt_epoch`, `receipt_ms`, `profile_digest`,
 `replay`, `continuity`, `expires_ms`, `derivation_digest` and `contributors`.
 Thing identity is an absolute IRI; affordance_type is property/event. Quality
 is usable/stale/invalid/unknown. Sequence and receipt/expiry coordinates are
@@ -168,7 +169,17 @@ Source class is device_report/derived_report/protocol_response and must later
 match the installed basis's accepted sources. The class is explicit data,
 never inferred from a source ID or timestamp. Replay is fresh/retained/replayed;
 continuity is continuous/baseline/lost.
-Unit is null or a validated Unit. Value is bounded JSON; null is an explicit
+Source time trust is trusted/untrusted/unknown. Trusted requires a non-null
+source_time, a source_time_basis digest and nonnegative source_uncertainty_ms.
+Other classifications preserve a null or known basis/uncertainty explicitly.
+The source clock's interval is source_time plus/minus its stated uncertainty;
+kernel freshness must use that interval and its selected trust basis, rather
+than treating a timestamp's presence as clock qualification. Receipt UTC time
+cannot renew the source clock's age. Source trust fields are data supplied by
+the consumer; construction cannot establish their truth.
+Unit is null or a validated Unit. Usable unit-bearing values must be exact
+in-domain integers; invalid/stale/unknown values retain bounded raw sentinels
+without making them usable. Value is bounded JSON; null is an explicit
 unknown/invalid value and is never transformed into zero or false.
 
 Raw facts have null derivation_digest and no contributors; derived_report
@@ -195,6 +206,7 @@ references. They convey no credentials or authority.
 | id | proposal_id |
 | thing_id, affordance_type, affordance_name, value | Same members |
 | source_time | observed_at, normalized UTC; null refuses conversion as missing_source_time |
+| source_time_trust, source_time_basis, source_uncertainty_ms | Closed extension members; all required even when explicitly null/unknown |
 | sequence | sequence, mandatory for this adapter |
 | quality | quality.routine_quality; exactly the four Fact classifications |
 | unit, source_class, source_id/epoch, received_at, receipt_epoch/ms, profile_digest | Closed extension members with the same names |

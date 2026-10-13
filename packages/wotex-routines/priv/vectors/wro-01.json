@@ -475,7 +475,10 @@
     "expires_ms": 1010,
     "derivation_digest": null,
     "contributors": [],
-    "source_class": "device_report"
+    "source_class": "device_report",
+    "source_time_trust": "trusted",
+    "source_time_basis": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "source_uncertainty_ms": 10
   },
   "conversions": [
     {

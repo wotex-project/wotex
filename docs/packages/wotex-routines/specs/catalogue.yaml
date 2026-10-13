@@ -3,7 +3,7 @@ package: "wotex_routines"
 completion_plan: "docs/plans/wotex-routines-completion.md"
 specifications:
   - id: "WRO.01"
-    version: "0.2.1"
+    version: "0.2.2"
     path: "docs/specs/WRO.01-capability-behaviour.md"
     implementation_status: "partial"
     standards: []
