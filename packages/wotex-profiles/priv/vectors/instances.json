@@ -1,0 +1,296 @@
+{
+  "cases": [
+    {
+      "name": "integer",
+      "schema": {
+        "type": "integer"
+      },
+      "valid": true,
+      "value": {
+        "type": "sint",
+        "value": "5"
+      }
+    },
+    {
+      "name": "logical-integer-decimal",
+      "schema": {
+        "type": "integer"
+      },
+      "valid": true,
+      "value": {
+        "coefficient": "5",
+        "exponent": 1,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "fraction-not-integer",
+      "schema": {
+        "type": "integer"
+      },
+      "valid": false,
+      "value": {
+        "coefficient": "5",
+        "exponent": -1,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "exact-decimal-bound",
+      "schema": {
+        "maximum": 1.1,
+        "minimum": 1.1,
+        "type": "number"
+      },
+      "valid": true,
+      "value": {
+        "coefficient": "11",
+        "exponent": -1,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "exact-decimal-below",
+      "schema": {
+        "minimum": 1.1,
+        "type": "number"
+      },
+      "valid": false,
+      "value": {
+        "coefficient": "109",
+        "exponent": -2,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "exclusive-lower",
+      "schema": {
+        "exclusiveMinimum": 1.1,
+        "type": "number"
+      },
+      "valid": false,
+      "value": {
+        "coefficient": "11",
+        "exponent": -1,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "exclusive-upper",
+      "schema": {
+        "exclusiveMaximum": 1.1,
+        "type": "number"
+      },
+      "valid": false,
+      "value": {
+        "coefficient": "11",
+        "exponent": -1,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "exact-multiple",
+      "schema": {
+        "multipleOf": 0.1,
+        "type": "number"
+      },
+      "valid": true,
+      "value": {
+        "coefficient": "3",
+        "exponent": -1,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "not-multiple",
+      "schema": {
+        "multipleOf": 0.1,
+        "type": "number"
+      },
+      "valid": false,
+      "value": {
+        "coefficient": "31",
+        "exponent": -2,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "logical-number-enum",
+      "schema": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "number"
+      },
+      "valid": true,
+      "value": {
+        "coefficient": "1",
+        "exponent": 0,
+        "type": "decimal"
+      }
+    },
+    {
+      "name": "boolean-distinct-number",
+      "schema": {
+        "const": true,
+        "type": "boolean"
+      },
+      "valid": false,
+      "value": {
+        "type": "sint",
+        "value": "1"
+      }
+    },
+    {
+      "name": "unicode-codepoints",
+      "schema": {
+        "maxLength": 2,
+        "minLength": 2,
+        "type": "string"
+      },
+      "valid": true,
+      "value": {
+        "type": "text",
+        "value": "é"
+      }
+    },
+    {
+      "name": "array-items",
+      "schema": {
+        "items": {
+          "type": "integer"
+        },
+        "maxItems": 2,
+        "minItems": 1,
+        "type": "array"
+      },
+      "valid": true,
+      "value": {
+        "items": [
+          {
+            "type": "uint",
+            "value": "2"
+          }
+        ],
+        "type": "list"
+      }
+    },
+    {
+      "name": "array-wrong-child",
+      "schema": {
+        "items": {
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "valid": false,
+      "value": {
+        "items": [
+          {
+            "type": "boolean",
+            "value": false
+          }
+        ],
+        "type": "list"
+      }
+    },
+    {
+      "name": "closed-object",
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x"
+        ],
+        "type": "object"
+      },
+      "valid": true,
+      "value": {
+        "entries": [
+          {
+            "key": "x",
+            "value": {
+              "type": "sint",
+              "value": "2"
+            }
+          }
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "missing-required",
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x"
+        ],
+        "type": "object"
+      },
+      "valid": false,
+      "value": {
+        "entries": [],
+        "type": "object"
+      }
+    },
+    {
+      "name": "unknown-key",
+      "schema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "valid": false,
+      "value": {
+        "entries": [
+          {
+            "key": "foreign",
+            "value": {
+              "type": "null"
+            }
+          }
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "nested-logical-const",
+      "schema": {
+        "const": [
+          1,
+          2.5
+        ],
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "valid": true,
+      "value": {
+        "items": [
+          {
+            "type": "uint",
+            "value": "1"
+          },
+          {
+            "coefficient": "25",
+            "exponent": -1,
+            "type": "decimal"
+          }
+        ],
+        "type": "list"
+      }
+    }
+  ],
+  "oracle": "Independent logical-domain examples; exact decimal/rational comparison, Unicode code points"
+}
