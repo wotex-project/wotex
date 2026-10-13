@@ -3,7 +3,7 @@ defmodule ProposalModelArchiveConsumerTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Routines.{Compiler, Limits, Model, Profile, Witness}
+  alias Wotex.Routines.{Analysis, Compiler, Error, Limits, Model, Profile, Witness}
 
   setup_all do
     root =
@@ -164,6 +164,40 @@ defmodule ProposalModelArchiveConsumerTest do
     assert replay["reproduced"] == false
   end
 
+  test "public runner binds actual native identity and all phases without positive admission", c do
+    for value <- [false, true] do
+      {:ok, program} =
+        Compiler.compile(
+          put_in(c.source, ["steps", "input"], value),
+          c.context,
+          c.profile,
+          c.limits
+        )
+
+      {:ok, model} = Model.compile(program, c.scope, c.profile, c.limits)
+      identity = search(model.data["model_bytes"], "requested", "B:Bool", nil)
+      request = analysis_request(model, identity)
+
+      options = %{
+        maude_path: System.fetch_env!("WOTEX_ROUTINES_MAUDE_PATH"),
+        deadline_ms: System.monotonic_time(:millisecond) + 5000
+      }
+
+      assert {:ok, result} = Analysis.run(model, request, options, c.profile, c.limits)
+      assert result.data["execution"] == "completed_bounded", inspect(result)
+      assert result.data["admission"] == "inconclusive"
+      assert result.data["counts"] == %{"states" => 3, "transitions" => 5}
+      assert result.data["findings"] == []
+      expired = %{options | deadline_ms: System.monotonic_time(:millisecond) - 1}
+      assert {:ok, result} = Analysis.run(model, request, expired, c.profile, c.limits)
+      assert result.data["execution"] == "timeout"
+      stale = put_in(request, ["binding", "runtime_digest"], digest("changed"))
+
+      assert {:error, %Error{code: :stale_analysis_binding}} =
+               Analysis.run(model, stale, options, c.profile, c.limits)
+    end
+  end
+
   defp search(bytes, initial, pattern, condition) do
     query = %{
       module: "ROUTINE-PROPOSAL-PREFIX",
@@ -217,4 +251,64 @@ defmodule ProposalModelArchiveConsumerTest do
       }
     }
   end
+
+  defp analysis_request(model, receipt) do
+    program = model.data["program"]
+    context = program["context"]
+
+    runtime = %{
+      "ex_maude_version" => "0.5.0",
+      "ex_maude_digest" => digest(File.read!("mix.lock")),
+      "executable_digest" => receipt.executable_digest,
+      "executable_version" => receipt.executable_version,
+      "parser_version" => "ex_maude.search-run.v3",
+      "backend" => "port"
+    }
+
+    time = %{
+      "epoch" => "boot:1",
+      "elapsed_ms" => 0,
+      "clock_generation" => "clock:1",
+      "utc_low_ms" => nil,
+      "utc_high_ms" => nil
+    }
+
+    limits = %{
+      "total_ms" => 5000,
+      "max_states" => 3,
+      "max_transitions" => 5,
+      "max_depth" => 2,
+      "max_model_bytes" => 65_536,
+      "max_output_bytes" => 65_536
+    }
+
+    binding = %{
+      "scope_digest" => model.data["scope_digest"],
+      "model_digest" => model.data["model_digest"],
+      "source_digest" => program["source_digest"],
+      "ir_digest" => program["ir_digest"],
+      "compiler_basis" => context["compiler_basis"],
+      "behaviour_digest" => hash(context["bases"]),
+      "mapping_digest" => hash(Map.take(context, ~w(registry bindings))),
+      "runtime_digest" => hash(runtime),
+      "policy_digest" => model.data["scope"]["policy_digest"],
+      "time_basis_digest" => hash(time),
+      "budget_digest" => hash(limits)
+    }
+
+    %{
+      "format" => "wotex.routines.analysis.request@1",
+      "binding" => binding,
+      "effective_limits" => limits,
+      "runtime" => runtime,
+      "time_basis" => time
+    }
+  end
+
+  defp hash(value) do
+    {:ok, bytes} = Wotex.JSON.encode(value)
+    digest(bytes)
+  end
+
+  defp digest(bytes), do: "sha256:" <> Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
 end

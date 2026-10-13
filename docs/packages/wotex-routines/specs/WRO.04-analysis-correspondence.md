@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.3. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.4. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -278,4 +278,88 @@ bounded query with no counterexample remains inconclusive for admission.
 
 Implemented prefix projection evidence is `model_test.exs`: both Boolean values and actual emitted model-transition syntax agree with public Kernel prefixes; unknown/timer/invocation/composition/parameter profiles refuse; changed subjects and recomputed forged bytes fail regeneration. Native prefix execution is separately exercised by the exact archive lane below; wider projections remain separate obligations.
 
-The opt-in archive lane `bin/check_archive.exs --model-consumer --maude-path /absolute/maude` selects exact released ExMaude 0.5.0 in a fresh consumer and supplies explicit per-search absolute deadlines/response bounds. [Its cohort record](../provenance/model-archive-cohort.md) binds three passing native/code-identity tests and the abstract model mutation that actual Witness replay does not reproduce. It does not implement a package analysis runner or its complete budgets/containment. The initially refused abbreviated Boolean query was diagnosed and rerun successfully with explicit `= true`, preserving the producer exact-token echo guard. Only the recorded canonical form has executed evidence.
+The opt-in archive lane `bin/check_archive.exs --model-consumer --maude-path /absolute/maude` selects exact released ExMaude 0.5.0 in a fresh consumer and supplies explicit per-search absolute deadlines/response bounds. [Its cohort record](../provenance/model-archive-cohort.md) binds three passing native/code-identity tests and the abstract model mutation that actual Witness replay does not reproduce. This historical lane predates the package runner below and does not establish its complete budgets/containment. The initially refused abbreviated Boolean query was diagnosed and rerun successfully with explicit `= true`, preserving the producer exact-token echo guard. Only the recorded canonical form has executed evidence.
+
+## Explicit proposal-prefix execution boundary
+
+`Analysis.run(model, request, options, profile, limits)` is an explicitly invoked,
+synchronous, opt-in operation. The consumer runs it in its own supervised task
+and bounds its admission queue/concurrency. The package starts no persistent
+worker, queue, registry or callback. Each public ExMaude search uses a separate
+retired Port session. Loading routines does not select or start ExMaude.
+The optional backend requirement is exact released ExMaude 0.5.0; absence returns
+unavailable evidence. No consumer may supply raw model/query/include text here.
+
+Request is closed JSON with exactly format, binding, effective_limits, runtime
+and time_basis. Format is wotex.routines.analysis.request@1. binding and
+effective_limits have the exact AnalysisResult vocabulary above. runtime is
+closed: ex_maude_version (0.5.0), ex_maude_digest (consumer-retained exact package
+closure SHA-256), executable_digest, executable_version, parser_version
+(ex_maude.search-run.v3) and backend (port). The latter executable identities
+are checked against every actual SearchRun receipt; package version is checked
+against the selected loaded dependency. Package closure custody/authenticity
+remains the consumer's responsibility. runtime_digest hashes this complete
+record. time_basis is the complete WRO.02 Time supplied for the frozen prefix;
+time_basis_digest hashes it. This operational analysis clock is distinct from
+that semantic time assertion.
+
+The runner regenerates the full Model before backend use. scope/model/source/IR/
+compiler/policy bindings come from that artifact. behaviour_digest hashes all
+retained installed bases; mapping_digest hashes the complete registry and
+binding map; budget_digest hashes the selected effective_limits. Every expected
+binding must match, including runtime/time. Unknown members, unsupported models,
+stale subjects, malformed native inputs or impossible selections return a
+payload-free refusal before search. No supplied result/native artifact is trusted
+by struct type alone.
+
+Options is a closed native map with maude_path (explicit absolute UTF-8 path)
+and deadline_ms (signed timestamp from this VM's monotonic millisecond clock).
+The consumer establishes this deadline before its queue using the selected
+total_ms. At entry the runner also caps it at entry+total_ms; it never extends a
+queued request's deadline. Queue expiry, regeneration, preparation, each native
+query, parsing and construction share this deadline. Expiry clears findings and
+counts and returns timeout/inconclusive/budget_exhausted. Checks before and after
+each phase prevent late evidence reuse; filesystem/cleanup/scheduler latency
+is not a hard real-time or OS containment guarantee. Caller loss is handled by
+ExMaude's public per-search retirement contract; consumer supervision owns caller
+lifecycle. A failed/uncertain session is never reused or automatically replayed.
+
+This scope has exactly three reachable prefix states and five declared rewrite
+edges, including self-loops. These are model-profile counts, not undocumented
+backend transition statistics. max_states<3, max_transitions<5 or max_depth<2
+returns truncated/inconclusive/budget_exhausted before native work. The fixed
+native query enumerates the three states at depth 2 with solution limit 4, so a
+solution cutoff cannot masquerade as exhaustion. A second fixed query checks
+the requested Boolean literal. Every query passes the shared absolute deadline,
+remaining timeout and max_output_bytes to SearchRun. A completed result requires
+both complete receipts, the exact three canonical states and the exact requested
+literal. Changed executable/parser/model identity or mismatched correspondence
+returns error/inconclusive/correspondence_failed, with no findings or counts.
+Timeout, unavailable, worker/parser failure and truncation remain distinct.
+Backend truncation or unsupported receipt shapes never become completion.
+
+The runner emits only checked AnalysisResult values, with no positive admission.
+This initial profile emits no concrete counterexample: unexpected native states
+are correspondence failure, not a concretely validated runtime incident.
+Completed bounded absence has null reason, counts 3/5 and inconclusive admission.
+Generated model bytes obey max_model_bytes; oversize work returns truncated.
+Complete returned JSON obeys both Limits and max_output_bytes; if even the
+bounded result cannot fit, return analysis_output_bound without partial output.
+No raw native stdout, private executable path or backend error payload is copied
+into evidence. Unsupported receipt/time/composition/complete-set projections,
+concrete model-witness translation and OS containment retain their own gates.
+
+Acceptance includes expired queued requests with no backend invocation, shared
+remaining deadlines, both Boolean values through the released native facade,
+all eleven changed binding subjects, regenerated model forgery, low model/state/
+transition/depth/output budgets, backend absence/loss/parser/output cutoff,
+changed runtime identity and unexpected state/literal correspondence. Bounded
+absence never becomes admission; adverse fake backend tests establish adapter
+control flow, while extracted-archive native tests establish the selected public
+producer seam. Neither establishes hard real-time or physical qualification.
+
+Implemented runner evidence is `analysis_test.exs`: seven focused groups cover
+all bindings, forgery, queue expiry, shared deadlines, selected work/output limits,
+backend loss/truncation and changed native identities/correspondence. The shipped
+`wro-04-request.schema.json` describes the complete offline request. Native
+runner evidence is recorded separately through the extracted archive lane.

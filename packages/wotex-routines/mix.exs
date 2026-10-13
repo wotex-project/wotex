@@ -44,6 +44,7 @@ defmodule Wotex.Routines.MixProject do
       sibling(:wotex, "wotex"),
       sibling(:wotex_continuum, "wotex-continuum"),
       {:ex_booking, "== 0.2.3", optional: true},
+      {:ex_maude, "== 0.5.0", optional: true},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
       {:benchee_markdown, "~> 0.3.4", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

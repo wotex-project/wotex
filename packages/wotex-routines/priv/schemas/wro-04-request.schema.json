@@ -1,0 +1,212 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Explicit bounded proposal-prefix analysis request",
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": "wotex.routines.analysis.request@1"
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "scope_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "model_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "source_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "ir_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "compiler_basis": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "behaviour_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "mapping_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "runtime_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "policy_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "time_basis_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "budget_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "scope_digest",
+        "model_digest",
+        "source_digest",
+        "ir_digest",
+        "compiler_basis",
+        "behaviour_digest",
+        "mapping_digest",
+        "runtime_digest",
+        "policy_digest",
+        "time_basis_digest",
+        "budget_digest"
+      ],
+      "additionalProperties": false
+    },
+    "effective_limits": {
+      "type": "object",
+      "properties": {
+        "total_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000
+        },
+        "max_states": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "max_transitions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "max_model_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      },
+      "required": [
+        "total_ms",
+        "max_states",
+        "max_transitions",
+        "max_depth",
+        "max_model_bytes",
+        "max_output_bytes"
+      ],
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "ex_maude_version": {
+          "const": "0.5.0"
+        },
+        "ex_maude_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "executable_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "executable_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parser_version": {
+          "const": "ex_maude.search-run.v3"
+        },
+        "backend": {
+          "const": "port"
+        }
+      },
+      "required": [
+        "ex_maude_version",
+        "ex_maude_digest",
+        "executable_digest",
+        "executable_version",
+        "parser_version",
+        "backend"
+      ],
+      "additionalProperties": false
+    },
+    "time_basis": {
+      "type": "object",
+      "properties": {
+        "epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "clock_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "utc_low_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9223372036854775807,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "utc_high_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9223372036854775807,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "epoch",
+        "elapsed_ms",
+        "clock_generation",
+        "utc_low_ms",
+        "utc_high_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "format",
+    "binding",
+    "effective_limits",
+    "runtime",
+    "time_basis"
+  ],
+  "additionalProperties": false
+}
