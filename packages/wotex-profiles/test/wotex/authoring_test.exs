@@ -223,4 +223,38 @@ defmodule Wotex.Profiles.AuthoringTest do
     assert {:error, %Error{code: :report_limit}} =
              Validation.check("{}", contract(%{"max_report_bytes" => 1}), nil)
   end
+
+  test "draft literal tables normalize canonical source order without merging duplicate entries" do
+    c = contract()
+    draft = F.json("authoring-draft")
+
+    entry = fn source, target ->
+      %{
+        "source" => %{"type" => "sint", "value" => source},
+        "target" => %{"type" => "sint", "value" => target}
+      }
+    end
+
+    conversion = %{"kind" => "table", "entries" => [entry.("2", "20"), entry.("1", "10")]}
+    draft = put_in(draft, ["profile", "channels", Access.at(0), "conversion"], conversion)
+    assert {:ok, %Finalized{} = result} = Draft.finalize(F.encode(draft), c)
+    bundle = Jason.decode!(result.bundle_bytes)
+
+    assert hd(bundle["profile"]["channels"])["conversion"]["entries"] == [
+             entry.("1", "10"),
+             entry.("2", "20")
+           ]
+
+    assert {:ok, report} = Validation.check(result.bundle_bytes, c, nil)
+    assert disposition(report, c)["disposition"] == "compatible"
+
+    duplicate =
+      put_in(draft, ["profile", "channels", Access.at(0), "conversion", "entries"], [
+        entry.("1", "10"),
+        entry.("1", "20")
+      ])
+
+    assert {:ok, %ValidationReport{} = report} = Draft.finalize(F.encode(duplicate), c)
+    assert disposition(report, c)["disposition"] == "invalid"
+  end
 end

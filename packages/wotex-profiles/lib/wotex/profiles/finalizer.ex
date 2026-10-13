@@ -200,7 +200,10 @@ defmodule Wotex.Profiles.Finalizer do
                 "operations" => Enum.sort(channel["operations"])
               })
 
-            {:cont, {:ok, [channel | acc], state}}
+            case table(channel) do
+              {:ok, channel} -> {:cont, {:ok, [channel | acc], state}}
+              error -> {:halt, error}
+            end
 
           error ->
             {:halt, error}
@@ -212,6 +215,27 @@ defmodule Wotex.Profiles.Finalizer do
       error -> error
     end
   end
+
+  defp table(%{"conversion" => %{"kind" => "table", "entries" => entries} = conversion} = channel) do
+    result =
+      Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, acc} ->
+        case Wotex.Runtime.Codec.Value.encode(entry["source"]) do
+          {:ok, bytes} -> {:cont, {:ok, [{bytes, entry} | acc]}}
+          _ -> {:halt, Error.refusal(:invalid_input, "/profile/channels")}
+        end
+      end)
+
+    with {:ok, entries} <- result do
+      sorted =
+        entries
+        |> Enum.sort_by(&elem(&1, 0))
+        |> Enum.map(&elem(&1, 1))
+
+      {:ok, Map.put(channel, "conversion", Map.put(conversion, "entries", sorted))}
+    end
+  end
+
+  defp table(channel), do: {:ok, channel}
 
   defp normalize_schema(data) do
     Map.update!(data, "value_schema", &schema/1)
