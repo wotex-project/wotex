@@ -59,3 +59,5 @@ The live source query clears the named CVEs but retains OSV-2022-150, whose
 published Git range has no fixed endpoint. This unresolved report still fails
 the advisory gate; no exception or suppression was added. Full refreshed
 interop/SDK and distribution gates remain milestone obligations.
+
+The optional routines calendar seam selects exact ExBooking 0.2.3 with locked Tz 0.28.4 and NimbleOptions 1.1.1. The reviewed producer changelog fixes isolated consumer build roots and exact BEAM PLT identities; it contains no occurrence API release. Tz ships IANA 2026d and fixes offsets near finite boundaries. Its updater/watcher remain explicit consumer children; the adapter selects an immutable database module and basis and starts neither. The unreleased producer implementation requires separate inspected archive evidence before calendar adoption.

@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.0. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.1. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -145,4 +145,53 @@ projection refuses reuse; a fresh page may project the same original under the
 new generation. Cursor positions outside the query's candidate-index range
 refuse; an internally consistent cursor is still no proof of prior processing.
 
-Implemented evidence: `temporal_test.exs` covers an independent finite UTC tick oracle, global ordinal paging, far-future closed-form calculation, immutable schedule binding, cursor/clock replacement, exact elapsed windows and overflow. The calendar producer adapter, owned driver and real host transaction/archive adoption remain obligations.
+Implemented evidence: `temporal_test.exs` covers an independent finite UTC tick oracle, global ordinal paging, far-future closed-form calculation, immutable schedule binding, cursor/clock replacement, exact elapsed windows and overflow. The direct optional calendar adapter is implemented with exact request/page regeneration and published-producer unavailability tests. Actual producer archive adoption, owned driver and real host transactions remain obligations.
+
+## Calendar adapter and native continuation
+
+`CalendarRequest.new(schedule, query, database, cursor, limits)` accepts a
+calendar Schedule, closed query (from/until offset-bearing ISO timestamps,
+limit 1–1024, work_limit 1–100000), an explicit existing TimeZoneDatabase module
+and null or the returned CalendarCursor. Query bounds normalize to UTC and are
+increasing. The request has exactly schedule, query, database and cursor;
+caller-built native requests are revalidated. No string becomes a module/atom.
+CalendarCursor has exactly basis_digest, clock_generation and producer_cursor.
+The final member is the native SP.08 continuation, never an invented wire token.
+Its producer validates its position/prefix within work_limit. Adapter basis
+binds the full schedule, canonical horizon and explicit database module; limit
+and work_limit may change between pages. Changed clock/basis refuses reuse.
+
+`Calendar.page(request, time, limits)` reconstructs DTSTART in the explicit zone,
+checks its supplied offset against the database, and calls only the public
+ExBooking.occurrences/3 facade with every bound/option explicit. It returns a
+CalendarPage with request, time, occurrences and next_cursor. Projection retains
+original nominal/UTC time, ordinal, unique/first_fold/second_fold resolution,
+producer and zone bases. Kernel time coordinates are integral milliseconds;
+submillisecond starts explicitly refuse unsupported_temporal_precision rather
+than round or change an original. Native producer errors map to payload-free
+recurrence_refused, recurrence_work_bound, stale_calendar_cursor,
+recurrence_unavailable or producer_contract_error. No availability fallback or
+replacement recurrence implementation is permitted.
+
+Each projected occurrence has original, ordinal, due_ms, nominal, starts_at,
+resolution, schedule_digest, time_zone_basis, producer_basis and event. Original
+hashes the immutable schedule digest and all original coordinate/resolution
+members, excluding mutable clock projection generation. Event is an inert UTC
+due descriptor with schedule_basis and no program_digest.
+
+`Calendar.to_map(page, limits)` regenerates the full native page from retained
+request/time before projecting occurrences and has_more. It does not serialize
+or authenticate the opaque cursor. `Calendar.event(page, occurrence, program,
+time, profile, limits)` also regenerates the page, requires an exact member,
+current clock projection and matching compiled schedule_id/schedule_basis, then
+returns a complete checked Event. Whole output bounds apply before delivery.
+A native cursor is only reusable under its exact producer/database cohort;
+portable restore must recompute bounded pages and preserve host original ledgers.
+
+ExBooking is an optional exact `== 0.2.3` dependency, the latest published release
+reviewed on 2026-10-13. That archive lacks SP.08 and returns unavailable at this
+seam. Integration evidence must select the unreleased producer implementation
+through an explicitly built and inspected exact archive cohort. Publishing a
+successor and selecting its version are human release steps. This conditional
+adapter does not claim that the existing Hex release implements occurrence
+enumeration; ordinary scalar temporal calculation works without that capability.

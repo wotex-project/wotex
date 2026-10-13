@@ -437,6 +437,175 @@
         "next_cursor"
       ],
       "additionalProperties": false
+    },
+    "calendar_occurrence": {
+      "type": "object",
+      "properties": {
+        "original": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "due_ms": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        },
+        "event": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "due"
+                },
+                "original": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "schedule_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "due_ms": {
+                  "type": "integer",
+                  "minimum": -9223372036854775807,
+                  "maximum": 9223372036854775807
+                },
+                "late_window_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9223372036854775807
+                },
+                "clock_generation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "time_zone_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "schedule_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "kind",
+                "original",
+                "schedule_id",
+                "due_ms",
+                "late_window_ms",
+                "clock_generation",
+                "time_zone_basis",
+                "schedule_basis"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "nominal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "starts_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "resolution": {
+          "enum": [
+            "unique",
+            "first_fold",
+            "second_fold"
+          ]
+        },
+        "schedule_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "time_zone_basis": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "producer_basis": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "original",
+        "ordinal",
+        "due_ms",
+        "event",
+        "nominal",
+        "starts_at",
+        "resolution",
+        "schedule_digest",
+        "time_zone_basis",
+        "producer_basis"
+      ],
+      "additionalProperties": false
+    },
+    "calendar_page": {
+      "type": "object",
+      "properties": {
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/calendar_occurrence"
+          },
+          "maxItems": 1024
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "occurrences",
+        "has_more"
+      ],
+      "additionalProperties": false
+    },
+    "calendar_query": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "until": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "work_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "from",
+        "until",
+        "limit",
+        "work_limit"
+      ],
+      "additionalProperties": false
     }
   },
   "oneOf": [
@@ -454,6 +623,15 @@
     },
     {
       "$ref": "#/definitions/occurrence"
+    },
+    {
+      "$ref": "#/definitions/calendar_occurrence"
+    },
+    {
+      "$ref": "#/definitions/calendar_page"
+    },
+    {
+      "$ref": "#/definitions/calendar_query"
     }
   ]
 }

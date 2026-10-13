@@ -7,7 +7,7 @@ observations, clocks, persistence and effects.
 The source currently provides explicit limits, offline contract closure,
 behaviour basis, exact dimensional conversion, qualified-fact representation
 and a lossless Continuum observation adapter, complete source compilation, qualified snapshot evaluation, retained composition transitions and continuous reported-edge qualification. Loading or constructing these
-values starts no routine, network operation or timer. Complete provided-set evaluation and whole-resource arbitration are also implemented; UTC interval/one-shot and boot-scoped countdown calculation are implemented; calendar adoption, temporal driver and analysis remain accepted successors; consult the
+values starts no routine, network operation or timer. Complete provided-set evaluation and whole-resource arbitration are also implemented; UTC interval/one-shot and boot-scoped countdown calculation are implemented; the optional direct calendar adapter refuses unavailable producer capability; archive adoption, temporal driver and analysis remain accepted successors; consult the
 [catalogue](../../docs/packages/wotex-routines/specs/catalogue.yaml) for status.
 
 ## Consumption
@@ -34,6 +34,8 @@ actuator and media examples and hand-calculated conversions are in
 Checked projections revalidate caller-built structs against explicit limits.
 
 The pure `Wotex.Routines.Kernel.advance/7` takes an explicit Event, complete Snapshot/Time and retained original/busy/edge slots. It returns inert proposals with their complete revalidation basis; the consumer persists originals and receipts, rechecks authority atomically and owns every handoff. Queue/protocol receipts never satisfy a higher installed report threshold. See the [source/kernel contract](../../docs/packages/wotex-routines/specs/WRO.02-source-kernel.md) and shipped `wro-02-*.schema.json` contracts.
+
+Calendar consumers explicitly construct `Wotex.Routines.CalendarRequest` with a finite query and their immutable database module. ExBooking is pinned to optional `== 0.2.3`; its published archive lacks the occurrence API and returns unavailable. Our unreleased producer archive implements that generic API. The catalogue separates adapter code, actual archive adoption and host evidence. No availability interval supplies an original trigger.
 
 ## Development
 
