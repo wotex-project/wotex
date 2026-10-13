@@ -124,12 +124,17 @@ defmodule Wotex.BLE.NativeBusTest do
   end
 
   test "WBL-B01/S02 typed snapshots, private ownership and exact replies", context do
+    # This executable composes every bus component suite, including the
+    # 1,000-launch custody churn. Budget the complete harness separately from
+    # the unchanged per-operation deadlines asserted inside the executable.
+    options = Keyword.put(context.options, :timeout, NativeLane.timeout(60_000))
+
     assert {:ok, "native bus ownership invariants passed\n", 0} =
              NativeCommand.run(
                context.guardian,
                context.executable,
                [context.daemon, context.config],
-               context.options
+               options
              )
   end
 
