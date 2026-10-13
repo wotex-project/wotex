@@ -7,11 +7,11 @@ specifications:
   - id: "WPF.01"
     version: "0.2.3"
     path: "docs/specs/WPF.01-external-profile-language.md"
-    implementation_status: "partial"
+    implementation_status: "implemented"
     standards: []
     requires: ["wotex:WTX.02", "wotex_runtime:WRT.06"]
     implementation_modules: ["Wotex.Profiles.Profile", "Wotex.Profiles.Definition", "Wotex.Profiles.Definitions", "Wotex.Profiles.Unit", "Wotex.Profiles.Limits"]
-    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md"]
+    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
     compatibility_classification: "Consumer-owned profile/semantic descriptors and bounded generic units; no required shared catalogue"
   - id: "WPF.02"
     version: "0.2.6"
@@ -20,7 +20,7 @@ specifications:
     standards: []
     requires: ["WPF.01", "wotex_runtime:WRT.06"]
     implementation_modules: ["Wotex.Profiles.Unit", "Wotex.Profiles.Binding", "Wotex.Profiles.Capture", "Wotex.Profiles.Compiler", "Wotex.Profiles.Checked", "Wotex.Profiles.Projection", "Wotex.Profiles.Interpreter"]
-    executable_evidence: ["test/wotex/unit_conversion_test.exs", "test/wotex/binding_test.exs", "test/wotex/capture_test.exs", "test/wotex/compiler_test.exs", "test/wotex/instance_test.exs", "test/wotex/interpreter_test.exs", "priv/vectors/unit-conversion.json", "priv/vectors/installed-binding.json", "bin/check_archive.exs", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md"]
+    executable_evidence: ["test/wotex/unit_conversion_test.exs", "test/wotex/binding_test.exs", "test/wotex/capture_test.exs", "test/wotex/compiler_test.exs", "test/wotex/instance_test.exs", "test/wotex/interpreter_test.exs", "priv/vectors/unit-conversion.json", "priv/vectors/installed-binding.json", "bin/check_archive.exs", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
     compatibility_classification: "Pure selected-closure compilation and inert report interpretation; consumer owns current trust, identity, state and authority"
   - id: "WPF.03"
     version: "0.1.0"

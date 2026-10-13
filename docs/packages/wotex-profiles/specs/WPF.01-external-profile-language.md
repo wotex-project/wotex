@@ -1,8 +1,9 @@
 # WPF.01 — External device profiles and semantic descriptors
 
 Version: 0.2.3. Updated: 2026-10-13. Status: accepted target.
-Implementation: partial reader. Evidence: reader/structural-schema suites;
-two isolated archive consumers passed. Closure/selector compilation remains open.
+Implementation: bounded v1 reader. Evidence: reader/structural-schema suites
+and two isolated archive consumers; WPF.02 closes selected-closure/selector
+checks separately.
 
 ## Scope and ownership
 
@@ -233,8 +234,9 @@ establishes the association with the exact bytes passed in that call.
 
 Executed reader and two-consumer evidence is retained in
 [the archive milestone](../provenance/reader-2026-10.md). Closure, selector and
-mechanical interpretation acceptance remains owned by WPF.02; those cases are
-not established by the reader milestone.
+mechanical interpretation evidence is retained in the successor
+[compilation milestone](../provenance/compilation-2026-10.md), rather than
+attributed to the historical reader milestone.
 
 
 The WPF.01 scalar literal subset includes C02 null, Boolean, text, bytes,

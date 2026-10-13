@@ -399,3 +399,8 @@ optional channel with an incomplete semantic closure remains excluded; its
 requested reference stays bound by profile identity, without installing an
 incomplete dependency set. Supplied descriptor data may remain inert inspection
 information in that excluded plan. Required equivalents refuse.
+
+
+Executed compiler, report and independent archive evidence is retained in
+[the compilation milestone](../provenance/compilation-2026-10.md). The installed
+ABI remains distinct from the exact archive/source identity in that record.

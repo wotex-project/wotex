@@ -373,7 +373,7 @@ packages:
     specifications:
       - id: "WPF.01"
         version: "0.2.3"
-        implementation_status: "partial"
+        implementation_status: "implemented"
         path: "docs/packages/wotex-profiles/specs/WPF.01-external-profile-language.md"
       - id: "WPF.02"
         version: "0.2.6"
