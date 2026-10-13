@@ -283,6 +283,8 @@ The output obeys the caller's complete envelope budget. References remain inert
 identities; the caller may compare its selected custody set without duplicating
 the producer's closure walker. No capture, custody, source authenticity or
 consumer admission is established. Errors match check/3's fixed code/path.
+Executed reference and archive checks are retained in
+[the closure-reference evidence](../provenance/closure-references-2026-10.md).
 
 The following is implemented bounded v1 behavior. The native
 backing values are explicit immutable input, never a private registry or
