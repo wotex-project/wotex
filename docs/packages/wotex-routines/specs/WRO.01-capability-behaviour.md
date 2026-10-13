@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.3. Updated: 2026-10-13. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -138,15 +138,22 @@ installing a proposal; calculation alone does not admit a basis:
 | `semantic_digest` | SHA-256 of core's sorted-key JSON encoding after excluding these four digest fields |
 | `affordance` | `type`, `name`, `operation`; Property admits readproperty/writeproperty/observeproperty, Action invokeaction, Event subscribeevent |
 | `value` | `type`, `unit`, `enum`; boolean has null unit/empty enum, integer has a Unit/empty enum, enum has null unit/nonempty distinct string alternatives |
+| `output` | Explicit protocol-output value contract of the same closed shape, or null for no output; it does not imply a canonical observation |
 | `security_contract`, `lifecycle_contract`, `required_contracts` | Exact installed references; closure checked offline |
-| `evidence` | `sources`, `freshness_ms`, `require_source_time`, `continuity`, `completion`; sources are device_report/derived_report/protocol_response, continuity is continuous/snapshot, completion is local_queue/protocol_response/correlated_report/reported_match |
+| `evidence` | `sources`, `freshness_ms`, `require_source_time`, `continuity`, `completion`, `report_contract`; sources are device_report/derived_report/protocol_response, continuity is continuous/snapshot, completion is local_queue/protocol_response/correlated_report/reported_match; report_contract is an exact installed reference |
 | `effects` | `resource_roles`, `repeat`, `stop`, `supersession`, `partial_possible`, `unknown_possible`; repeat is never/after_known_failure/after_reported_safe, stop is unsupported/separate_effect, supersession is block_until_known |
 | `timing` | Positive deadline_ms; nonnegative duration_ms/dwell_ms/cooldown_ms; uncertainty exactly block |
 | `analysis` | classification supported/unsupported, profile and properties; unsupported requires null profile/empty properties, supported requires an installed profile reference and nonempty distinct properties |
 | `annotations` | Only optional title, description and distinct string tags; all inert |
 
 The registry must contain the basis's computed semantic identity and every
-required/security/lifecycle/model reference. A caller-declared digest that does
+required/security/lifecycle/report/model reference. The report contract owns
+the relationship among operation original, report affordance/type, instance,
+correlation, quality and match qualification. A consumer supplies receipts only
+after applying that installed contract; the kernel's stage handling cannot
+qualify an arbitrary report. Action input/output and related Property reports
+are separate. An unknown report contract refuses before use.
+A caller-declared digest that does
 not equal the complete projection rejects. This establishes integrity against
 the supplied installed registry, not authenticity or device qualification.
 Data cannot change the installed table. `Basis.domains(basis, bindings, registry,

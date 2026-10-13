@@ -32,6 +32,8 @@ defmodule Wotex.Routines.BasisTest do
     assert fast["evidence"]["completion"] == "reported_match"
     assert slow["timing"]["duration_ms"] == 120_000
     assert media["value"]["enum"] == ["play", "stop"]
+    assert media["output"] == nil
+    assert slow["evidence"]["report_contract"]["id"] == "qualified-report"
   end
 
   test "uninstalled semantics and altered caller-built structs cannot widen the basis", context do
@@ -42,6 +44,15 @@ defmodule Wotex.Routines.BasisTest do
 
     assert {:error, %Error{code: :unknown_required_contract}} =
              Basis.new(unknown, context.registry, context.limits)
+
+    report = put_in(data, ["evidence", "report_contract", "id"], "uninstalled-report")
+    {:ok, digest} = Basis.semantic_digest(report, context.limits)
+    report = Map.put(report, "semantic_digest", digest)
+    roots = Enum.reject(context.registry.data, &(&1["id"] == report["id"]))
+    root = Map.take(report, ~w(id version semantic_digest)) |> Map.put("requires", [])
+
+    assert {:error, %Error{code: :unknown_required_contract}} =
+             Basis.new(report, [root | roots], context.limits)
 
     assert {:error, %Error{code: :semantic_digest_mismatch}} =
              Basis.new(

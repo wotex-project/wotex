@@ -23,7 +23,7 @@
     {
       "id": "example.scalar",
       "version": "1",
-      "semantic_digest": "sha256:2f1a79b5351c20f4b03097c6b5c26f3c1543920c69134bd7078f0ce77be02ab4",
+      "semantic_digest": "sha256:ce4f001727d316aee807ccef0a278c9e70ba03c68e2600e7854713abf3367b2d",
       "requires": [
         {
           "id": "interaction-security",
@@ -34,13 +34,18 @@
           "id": "interaction-lifecycle",
           "version": "1",
           "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
         }
       ]
     },
     {
       "id": "example.event",
       "version": "1",
-      "semantic_digest": "sha256:cfcf9f4fd0c8a3e4429d3303d9b56540ad4c327da319d18f8cc71f78fcbd8b9b",
+      "semantic_digest": "sha256:e6438dfa2dc1a46ef9e552a56792f5527874ea6783e1c5ea50d35c989dde658a",
       "requires": [
         {
           "id": "interaction-security",
@@ -51,13 +56,18 @@
           "id": "interaction-lifecycle",
           "version": "1",
           "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
         }
       ]
     },
     {
       "id": "example.fast",
       "version": "1",
-      "semantic_digest": "sha256:b9a402998767525cfe881404591fca2cb753af1f969841f2c8918a0fe2d843a3",
+      "semantic_digest": "sha256:41d12098912edeeb0e14d6a01f3599f90c22e002dd4bd9ef7dd1b0b175e5f740",
       "requires": [
         {
           "id": "interaction-security",
@@ -68,13 +78,18 @@
           "id": "interaction-lifecycle",
           "version": "1",
           "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
         }
       ]
     },
     {
       "id": "example.slow",
       "version": "1",
-      "semantic_digest": "sha256:1e39cb5ca2eef947b3c8838171137f31e08592e9167754ba8386a36d259a5d09",
+      "semantic_digest": "sha256:7bdc2d38e4319acb5e86d69d766367b6298dbd12f689e7d0f84a742165acf427",
       "requires": [
         {
           "id": "interaction-security",
@@ -85,13 +100,18 @@
           "id": "interaction-lifecycle",
           "version": "1",
           "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
         }
       ]
     },
     {
       "id": "example.media",
       "version": "1",
-      "semantic_digest": "sha256:9898385d9d42e7f826529917ed1b781b59a9eefe43cb1dd4abf3440abf962a11",
+      "semantic_digest": "sha256:2422b727d75166480e2bc64e7c76930998433188f697a9064539cda3ea0b5b4a",
       "requires": [
         {
           "id": "interaction-security",
@@ -102,8 +122,19 @@
           "id": "interaction-lifecycle",
           "version": "1",
           "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
         }
       ]
+    },
+    {
+      "id": "qualified-report",
+      "version": "1",
+      "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "requires": []
     }
   ],
   "bases": [
@@ -112,7 +143,7 @@
       "id": "example.scalar",
       "version": "1",
       "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "semantic_digest": "sha256:2f1a79b5351c20f4b03097c6b5c26f3c1543920c69134bd7078f0ce77be02ab4",
+      "semantic_digest": "sha256:ce4f001727d316aee807ccef0a278c9e70ba03c68e2600e7854713abf3367b2d",
       "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
       "affordance": {
@@ -152,7 +183,12 @@
         "freshness_ms": 1000,
         "require_source_time": true,
         "continuity": "continuous",
-        "completion": "correlated_report"
+        "completion": "correlated_report",
+        "report_contract": {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
       },
       "effects": {
         "resource_roles": [],
@@ -176,6 +212,20 @@
       },
       "annotations": {
         "title": "scalar"
+      },
+      "output": {
+        "type": "integer",
+        "unit": {
+          "dimension": "temperature",
+          "name": "centidegree-C",
+          "scale_n": 1,
+          "scale_d": 100,
+          "offset_n": 27315,
+          "offset_d": 100,
+          "min": -27315,
+          "max": 100000
+        },
+        "enum": []
       }
     },
     {
@@ -183,7 +233,7 @@
       "id": "example.event",
       "version": "1",
       "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "semantic_digest": "sha256:cfcf9f4fd0c8a3e4429d3303d9b56540ad4c327da319d18f8cc71f78fcbd8b9b",
+      "semantic_digest": "sha256:e6438dfa2dc1a46ef9e552a56792f5527874ea6783e1c5ea50d35c989dde658a",
       "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
       "affordance": {
@@ -214,7 +264,12 @@
         "freshness_ms": 1000,
         "require_source_time": true,
         "continuity": "continuous",
-        "completion": "correlated_report"
+        "completion": "correlated_report",
+        "report_contract": {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
       },
       "effects": {
         "resource_roles": [],
@@ -238,6 +293,11 @@
       },
       "annotations": {
         "title": "event"
+      },
+      "output": {
+        "type": "boolean",
+        "unit": null,
+        "enum": []
       }
     },
     {
@@ -245,7 +305,7 @@
       "id": "example.fast",
       "version": "1",
       "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "semantic_digest": "sha256:b9a402998767525cfe881404591fca2cb753af1f969841f2c8918a0fe2d843a3",
+      "semantic_digest": "sha256:41d12098912edeeb0e14d6a01f3599f90c22e002dd4bd9ef7dd1b0b175e5f740",
       "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
       "affordance": {
@@ -276,7 +336,12 @@
         "freshness_ms": 1000,
         "require_source_time": true,
         "continuity": "continuous",
-        "completion": "reported_match"
+        "completion": "reported_match",
+        "report_contract": {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
       },
       "effects": {
         "resource_roles": [
@@ -302,14 +367,15 @@
       },
       "annotations": {
         "title": "fast"
-      }
+      },
+      "output": null
     },
     {
       "format": "wotex.routines.basis@1",
       "id": "example.slow",
       "version": "1",
       "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "semantic_digest": "sha256:1e39cb5ca2eef947b3c8838171137f31e08592e9167754ba8386a36d259a5d09",
+      "semantic_digest": "sha256:7bdc2d38e4319acb5e86d69d766367b6298dbd12f689e7d0f84a742165acf427",
       "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
       "affordance": {
@@ -349,7 +415,12 @@
         "freshness_ms": 1000,
         "require_source_time": true,
         "continuity": "continuous",
-        "completion": "reported_match"
+        "completion": "reported_match",
+        "report_contract": {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
       },
       "effects": {
         "resource_roles": [
@@ -375,14 +446,15 @@
       },
       "annotations": {
         "title": "slow"
-      }
+      },
+      "output": null
     },
     {
       "format": "wotex.routines.basis@1",
       "id": "example.media",
       "version": "1",
       "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "semantic_digest": "sha256:9898385d9d42e7f826529917ed1b781b59a9eefe43cb1dd4abf3440abf962a11",
+      "semantic_digest": "sha256:2422b727d75166480e2bc64e7c76930998433188f697a9064539cda3ea0b5b4a",
       "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
       "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
       "affordance": {
@@ -416,7 +488,12 @@
         "freshness_ms": 1000,
         "require_source_time": true,
         "continuity": "continuous",
-        "completion": "correlated_report"
+        "completion": "correlated_report",
+        "report_contract": {
+          "id": "qualified-report",
+          "version": "1",
+          "semantic_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
       },
       "effects": {
         "resource_roles": [
@@ -442,7 +519,8 @@
       },
       "annotations": {
         "title": "media"
-      }
+      },
+      "output": null
     }
   ],
   "fact": {
@@ -469,7 +547,7 @@
     "received_at": "2026-10-13T07:00:01Z",
     "receipt_epoch": "boot:1",
     "receipt_ms": 10,
-    "profile_digest": "sha256:2f1a79b5351c20f4b03097c6b5c26f3c1543920c69134bd7078f0ce77be02ab4",
+    "profile_digest": "sha256:ce4f001727d316aee807ccef0a278c9e70ba03c68e2600e7854713abf3367b2d",
     "replay": "fresh",
     "continuity": "continuous",
     "expires_ms": 1010,

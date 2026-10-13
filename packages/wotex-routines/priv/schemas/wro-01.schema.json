@@ -379,6 +379,9 @@
                 "correlated_report",
                 "reported_match"
               ]
+            },
+            "report_contract": {
+              "$ref": "#/definitions/reference"
             }
           },
           "required": [
@@ -386,7 +389,8 @@
             "freshness_ms",
             "require_source_time",
             "continuity",
-            "completion"
+            "completion",
+            "report_contract"
           ],
           "additionalProperties": false
         },
@@ -578,6 +582,111 @@
           },
           "required": [],
           "additionalProperties": false
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "enum": [
+                    "boolean",
+                    "integer",
+                    "enum"
+                  ]
+                },
+                "unit": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/unit"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "enum": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536
+                  },
+                  "uniqueItems": true,
+                  "minItems": 0,
+                  "maxItems": 1024
+                }
+              },
+              "required": [
+                "type",
+                "unit",
+                "enum"
+              ],
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "boolean"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "unit": {
+                        "type": "null"
+                      },
+                      "enum": {
+                        "maxItems": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "integer"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "unit": {
+                        "$ref": "#/definitions/unit"
+                      },
+                      "enum": {
+                        "maxItems": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "enum"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "unit": {
+                        "type": "null"
+                      },
+                      "enum": {
+                        "minItems": 1
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -597,7 +706,8 @@
         "effects",
         "timing",
         "analysis",
-        "annotations"
+        "annotations",
+        "output"
       ],
       "additionalProperties": false
     },

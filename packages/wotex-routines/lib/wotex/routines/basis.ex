@@ -1,10 +1,10 @@
 defmodule Wotex.Routines.Basis do
   @moduledoc "Installed, closed behaviour semantics. A basis supplies no device identity or authority."
 
-  alias Wotex.Routines.{Error, Limits, Registry, Unit, Validation}
+  alias Wotex.Routines.{Error, Limits, Registry, Validation, ValueContract}
 
   @fields ~w(format id version byte_digest semantic_digest implementation_digest compiler_digest
-    affordance value security_contract lifecycle_contract required_contracts evidence effects
+    affordance value output security_contract lifecycle_contract required_contracts evidence effects
     timing analysis annotations)
   @digests ~w(byte_digest semantic_digest implementation_digest compiler_digest)
   @operations %{
@@ -27,6 +27,7 @@ defmodule Wotex.Routines.Basis do
          :ok <- Validation.each(@digests, &Validation.digest(data[&1], "/" <> &1)),
          :ok <- affordance(data["affordance"]),
          :ok <- value(data["value"], limits),
+         :ok <- output(data["output"], limits),
          :ok <- evidence(data["evidence"], limits),
          :ok <- effects(data["effects"]),
          :ok <- timing(data["timing"], limits),
@@ -84,33 +85,16 @@ defmodule Wotex.Routines.Basis do
     end
   end
 
-  defp value(data, limits) do
-    with :ok <- Validation.fields(data, ~w(type unit enum), [], "/value"),
-         :ok <- Validation.choice(data["type"], ~w(boolean integer enum), "/value/type") do
-      case data do
-        %{"type" => "boolean", "unit" => nil, "enum" => []} ->
-          :ok
+  defp value(data, limits), do: ValueContract.validate(data, limits)
 
-        %{"type" => "integer", "enum" => [], "unit" => unit} ->
-          case Unit.new(unit, limits) do
-            {:ok, _} -> :ok
-            error -> error
-          end
-
-        %{"type" => "enum", "unit" => nil, "enum" => values} ->
-          Validation.strings(values, "/value/enum", true)
-
-        _ ->
-          Error.refusal(:invalid_value_contract, "/value")
-      end
-    end
-  end
+  defp output(nil, _), do: :ok
+  defp output(data, limits), do: value(data, limits)
 
   defp evidence(data, limits) do
     with :ok <-
            Validation.fields(
              data,
-             ~w(sources freshness_ms require_source_time continuity completion),
+             ~w(sources freshness_ms require_source_time continuity completion report_contract),
              [],
              "/evidence"
            ),
@@ -218,7 +202,12 @@ defmodule Wotex.Routines.Basis do
 
         Registry.require_all(
           registry,
-          [root, data["security_contract"], data["lifecycle_contract"]] ++ required ++ model,
+          [
+            root,
+            data["security_contract"],
+            data["lifecycle_contract"],
+            data["evidence"]["report_contract"]
+          ] ++ required ++ model,
           limits
         )
 
