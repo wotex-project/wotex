@@ -11,7 +11,7 @@ specifications:
     standards: []
     requires: ["wotex:WTX.02", "wotex_runtime:WRT.06"]
     implementation_modules: ["Wotex.Profiles.Profile", "Wotex.Profiles.Definition", "Wotex.Profiles.Definitions", "Wotex.Profiles.Unit", "Wotex.Profiles.Limits"]
-    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md"]
+    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md", "docs/provenance/exact-units-2026-10.md"]
     compatibility_classification: "Consumer-owned profile/semantic descriptors and bounded generic units; no required shared catalogue"
   - id: "WPF.02"
     version: "0.2.2"
@@ -20,7 +20,7 @@ specifications:
     standards: []
     requires: ["WPF.01", "wotex_runtime:WRT.06"]
     implementation_modules: ["Wotex.Profiles.Unit"]
-    executable_evidence: ["test/wotex/unit_conversion_test.exs", "priv/vectors/unit-conversion.json", "bin/check_archive.exs"]
+    executable_evidence: ["test/wotex/unit_conversion_test.exs", "priv/vectors/unit-conversion.json", "bin/check_archive.exs", "docs/provenance/exact-units-2026-10.md"]
     compatibility_classification: "Pure selected-closure compilation and inert report interpretation; consumer owns current trust, identity, state and authority"
   - id: "WPF.03"
     version: "0.1.0"

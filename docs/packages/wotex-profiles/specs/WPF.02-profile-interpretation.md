@@ -240,3 +240,8 @@ Independent exact Fraction vectors in `priv/vectors/unit-conversion.json`
 freeze identity, fractional scales, positive/negative offsets, temperature
 coordinate changes, incompatible quantity/dimension, repeating fractions,
 coefficient overflow and caller-selected arithmetic limits before code.
+
+
+Executed exact-unit and two-consumer evidence is retained in
+[the arithmetic milestone](../provenance/exact-units-2026-10.md). This establishes
+Unit.convert/4, not compiler, report interpretation or admission completion.
