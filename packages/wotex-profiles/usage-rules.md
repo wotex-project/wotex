@@ -32,6 +32,9 @@ catalogue records implementation status separately.
 - Keep raw-domain, sentinel, conversion and target-domain checks distinct.
   Invalid/missing quality yields null with original provenance; no sample is
   rounded, clipped, relabeled fresh or made authoritative.
+- Revalidate serialized interpretation with `Proposal.new/2` or `to_map/2`.
+  Its contract identity verifies representation; consumer-owned current basis,
+  producer custody and semantic qualification still require their own checks.
 - Use the documented public APIs, preserve source/quality provenance and
   match errors by their fixed code/path. Authoring reports remain separate
   from consumer source review, admission and physical qualification.

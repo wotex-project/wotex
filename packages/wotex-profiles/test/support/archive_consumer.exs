@@ -151,6 +151,9 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
     assert proposal["normalized_value"] == expected
     assert proposal["continuity"] == "retained"
     assert proposal["source_time"] == nil
+    assert {:ok, proposal_value} = Wotex.Profiles.Proposal.new(proposal, limits)
+    assert {:ok, ^proposal} = Wotex.Profiles.Proposal.to_map(proposal_value, limits)
+    assert Wotex.Profiles.Proposal.identity()["id"] == "urn:wotex:profiles:proposal"
 
     assert {:error, %Wotex.Profiles.Error{code: :stale_basis}} =
              Interpreter.project(

@@ -11,10 +11,18 @@ defmodule Wotex.Profiles.Report do
   def header(data, limits) do
     with {:ok, data, _} <- Grammar.admit(data, limits),
          :ok <- Grammar.fields(data, @fields, "/report"),
-         :ok <- Grammar.key(data["channel_id"], "/report/channel_id"),
-         :ok <- Grammar.digest(data["profile_sha256"], "/report/profile_sha256"),
          :ok <- Grammar.reference(data["binding"], "/report/binding"),
          :ok <- epoch(data["capture_epoch"], "/report/capture_epoch"),
+         :ok <- provenance(data) do
+      {:ok, data}
+    end
+  end
+
+  @doc false
+  @spec provenance(map()) :: :ok | {:error, Error.t()}
+  def provenance(data) do
+    with :ok <- Grammar.key(data["channel_id"], "/report/channel_id"),
+         :ok <- Grammar.digest(data["profile_sha256"], "/report/profile_sha256"),
          :ok <- Grammar.text(data["source_ref"], 128, "/report/source_ref"),
          :ok <- epoch(data["source_epoch"], "/report/source_epoch"),
          :ok <- optional_uint(data["sequence"], "/report/sequence"),
@@ -24,7 +32,7 @@ defmodule Wotex.Profiles.Report do
          true <- data["quality"] in ~w(usable invalid unknown stale),
          true <- data["quality_reason"] in @reasons,
          true <- data["quality"] != "usable" or data["quality_reason"] == nil do
-      {:ok, data}
+      :ok
     else
       false -> Error.refusal(:invalid_input, "/report")
       error -> error

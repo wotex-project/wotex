@@ -1,6 +1,6 @@
 # WPF.02 — Bounded profile compilation and interpretation
 
-Version: 0.2.6. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.7. Updated: 2026-10-14. Status: accepted target.
 Implementation: bounded v1 compiler, capture and report interpretation.
 Evidence: independent identity/math/domain vectors and focused tests;
 archive correspondence is retained in owning provenance.
@@ -174,6 +174,25 @@ or unconverted, never authenticated/qualified. Preserve source/quality provenanc
 normalization does not establish physical truth or freshness. The proposal is
 inert. A consumer rechecks current definition/profile/enrollment before accepting
 it into canonical state or authorizing dependent work.
+
+`Proposal.new/2` and `Proposal.to_map/2` revalidate this exact 18-member
+string-keyed map or a native Proposal containing only `data`, under complete
+WPF Limits. They check references, digests, Unit, C02 syntax and the same source,
+receipt, quality and continuity grammar as Interpreter. Affordance contains
+exactly kind (property/action/event) and name (the WPF local-key grammar).
+Non-usable quality requires normalized_value null and interpretation unconverted;
+usable quality requires a non-null value and null quality_reason. No schema or
+custody claim is reconstructed from these fields: this constructor verifies
+representation only. It cannot establish that Interpreter produced the map.
+
+`Proposal.identity/0` returns the installed representation reference with ID
+urn:wotex:profiles:proposal, version 1.0.0 and lower-hex SHA-256 of
+`wotex.profile.proposal-contract@1`, newline and core deterministic JSON of the shipped
+priv/contracts/proposal.json manifest. This is a contract identity, separate from
+the consumer's selected source/archive digest. Interpreter continues returning
+the same map and validates it through Proposal before returning success.
+Unknown fields, malformed/foreign structs and inconsistent quality refuse
+invalid_input; selected envelope/numeric limits retain input_limit/numeric_limit.
 
 ## Changes and implementation entry
 

@@ -7,6 +7,10 @@ Wotex Profiles is a passive library in the WoTEx family. Consumers own profile
 data, installed protocol bindings, trust, device qualification and effects.
 Reading a document does not enroll a Thing or authorize an interaction.
 
+`Proposal.new/2` and `Proposal.to_map/2` revalidate complete interpretation maps
+and native values. `Proposal.identity/0` identifies that inert representation
+contract; consumers separately select producer artifacts and qualify semantics.
+
 ## Installation
 
 Wotex Profiles 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.18 through Elixir

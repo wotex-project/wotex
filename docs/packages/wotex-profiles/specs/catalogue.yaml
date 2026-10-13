@@ -14,13 +14,13 @@ specifications:
     executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
     compatibility_classification: "Consumer-owned profile/semantic descriptors and bounded generic units; no required shared catalogue"
   - id: "WPF.02"
-    version: "0.2.6"
+    version: "0.2.7"
     path: "docs/specs/WPF.02-profile-interpretation.md"
     implementation_status: "implemented"
     standards: []
     requires: ["WPF.01", "wotex_runtime:WRT.06"]
-    implementation_modules: ["Wotex.Profiles.Unit", "Wotex.Profiles.Binding", "Wotex.Profiles.Capture", "Wotex.Profiles.Compiler", "Wotex.Profiles.Checked", "Wotex.Profiles.Projection", "Wotex.Profiles.Interpreter"]
-    executable_evidence: ["test/wotex/unit_conversion_test.exs", "test/wotex/binding_test.exs", "test/wotex/capture_test.exs", "test/wotex/compiler_test.exs", "test/wotex/instance_test.exs", "test/wotex/interpreter_test.exs", "priv/vectors/unit-conversion.json", "priv/vectors/installed-binding.json", "bin/check_archive.exs", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
+    implementation_modules: ["Wotex.Profiles.Unit", "Wotex.Profiles.Binding", "Wotex.Profiles.Capture", "Wotex.Profiles.Compiler", "Wotex.Profiles.Checked", "Wotex.Profiles.Projection", "Wotex.Profiles.Interpreter", "Wotex.Profiles.Proposal"]
+    executable_evidence: ["test/wotex/unit_conversion_test.exs", "test/wotex/binding_test.exs", "test/wotex/capture_test.exs", "test/wotex/compiler_test.exs", "test/wotex/instance_test.exs", "test/wotex/interpreter_test.exs", "test/wotex/proposal_test.exs", "priv/vectors/unit-conversion.json", "priv/vectors/installed-binding.json", "bin/check_archive.exs", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
     compatibility_classification: "Pure selected-closure compilation and inert report interpretation; consumer owns current trust, identity, state and authority"
   - id: "WPF.03"
     version: "0.1.2"

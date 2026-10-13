@@ -1,0 +1,30 @@
+{
+  "affordance": "wotex.profile.affordance@1",
+  "authority": "inert-representation-only",
+  "fields": [
+    "channel_id",
+    "affordance",
+    "semantic",
+    "unit",
+    "normalized_value",
+    "quality",
+    "quality_reason",
+    "continuity",
+    "source_ref",
+    "source_epoch",
+    "sequence",
+    "source_time",
+    "receipt_time",
+    "profile_sha256",
+    "closure_sha256",
+    "capture_digest",
+    "compiler_ref",
+    "interpretation"
+  ],
+  "format": "wotex.profile.proposal-contract@1",
+  "provenance": "wotex.profile.report@1",
+  "quality": "nonusable-null-unconverted;usable-nonnull-no-reason",
+  "unit": "wotex.profile.unit@1",
+  "value": "wotex.runtime.c02@1",
+  "version": "1.0.0"
+}

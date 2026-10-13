@@ -7,7 +7,7 @@ defmodule Wotex.Profiles.Interpreter do
   claim. No transport, clock, store, registry or effect is consulted.
   """
 
-  alias Wotex.Profiles.{Arithmetic, Binding, Error, Grammar, Instance, Limits, Projection, Report}
+  alias Wotex.Profiles.{Arithmetic, Binding, Error, Instance, Limits, Projection, Proposal, Report}
 
   @identity %{"scale_n" => "1", "scale_d" => "1", "offset_n" => "0", "offset_d" => "1"}
   @provenance ~w(channel_id quality quality_reason continuity source_ref source_epoch sequence source_time receipt_time profile_sha256)
@@ -43,7 +43,7 @@ defmodule Wotex.Profiles.Interpreter do
              "compiler_ref" => data["compiler_ref"],
              "interpretation" => interpretation
            }),
-         {:ok, _, _} <- Grammar.admit(output, limits) do
+         {:ok, _} <- Proposal.new(output, limits) do
       {:ok, output}
     end
   end
