@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.8. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.9. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -487,3 +487,16 @@ work follows explicit host bounded pending-work policy, never hidden catch-up.
 Arbitration performs no charging, refund, override authentication or dispatch.
 
 Countdown sources use a distinct elapsed_due event/window. The exact epoch and clock generation must match and elapsed_ms must be inside [due_elapsed_ms, due_elapsed_ms + late_window_ms); UTC confidence is never manufactured for countdowns. Both temporal trigger kinds require Event schedule_basis to match the complete compiled source. `temporal_test.exs` exercises these distinctions and schedule-basis replacement.
+
+### Removed definitions and historical receipts
+
+A program absent from Snapshot.active_programs cannot begin a new original.
+For an already retained original, removal cancels all future unsent work with
+reason inactive_program while preserving held spend and started uncertainty.
+Exact duplicate or later qualified receipts may still be retained for the
+original under its stored program/report contract. They cannot reactivate the
+removed definition or advance a sequence into new effects. Historical terminal
+outcomes remain interpretable; receipt retention supplies no current grant.
+Collection still accepts only the current complete active set, so the host
+reconciles removed originals through the direct Kernel seam and its durable
+original indexes.

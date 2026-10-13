@@ -509,6 +509,33 @@ defmodule Wotex.Routines.KernelTest do
     assert repeat["proposals"] == []
   end
 
+  test "removed programs retain historical receipts without beginning or continuing effects", c do
+    c =
+      compile(c, %{"id" => "ordered", "kind" => "sequence", "steps" => [effect("a"), effect("b")]})
+
+    {:ok, first} = advance(c)
+
+    handed =
+      first
+      |> then(&receive(c, &1, "admission", [0], %{"outcome" => "held"}))
+      |> then(&receive(c, &1, "handoff", [0]))
+
+    removed = %{c | snapshot: %{c.snapshot | "active_programs" => []}}
+    assert {:error, %Error{code: :inactive_program}} = advance(removed)
+    assert {:ok, cancelled} = advance(removed, handed["run"])
+    assert cancelled["outcome"] == "cancelled"
+    assert cancelled["run"]["reason"] == "inactive_program"
+    assert step(cancelled, [0]) == "unknown"
+    assert step(cancelled, [1]) == "cancelled"
+    assert cancelled["run"]["spent"] == handed["run"]["spent"]
+    matched = result(removed, cancelled, [0], "reported_match")
+    assert matched["outcome"] == "cancelled"
+    assert step(matched, [0]) == "completed"
+    assert matched["proposals"] == []
+    assert {:ok, repeat} = advance(removed, matched["run"])
+    assert repeat["proposals"] == []
+  end
+
   defp compile(c, steps \\ nil) do
     source = if steps, do: %{c.source | "steps" => steps}, else: c.source
     {:ok, program} = Compiler.compile(source, c.context, c.profile, c.limits)

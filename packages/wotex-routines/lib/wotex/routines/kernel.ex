@@ -79,7 +79,7 @@ defmodule Wotex.Routines.Kernel do
       program["ir_digest"] != event["program_digest"] ->
         Error.refusal(:foreign_event)
 
-      program["ir_digest"] not in snapshot["active_programs"] ->
+      program["ir_digest"] not in snapshot["active_programs"] and prior["original"] == nil ->
         Error.refusal(:inactive_program)
 
       prior["original"] != nil and prior["original"]["original"] != event["original"] ->
@@ -176,6 +176,10 @@ defmodule Wotex.Routines.Kernel do
       cond do
         event["kind"] == "cancel" ->
           run = Execution.halt(run, "cancelled", "cancelled")
+          {:ok, run, [], run["status"]}
+
+        program["ir_digest"] not in snapshot["active_programs"] and run["status"] not in @terminal ->
+          run = Execution.halt(run, "cancelled", "inactive_program")
           {:ok, run, [], run["status"]}
 
         reason != nil and run["status"] not in @terminal ->

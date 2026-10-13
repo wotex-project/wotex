@@ -7,7 +7,7 @@ defmodule Wotex.Routines.Run do
   @statuses ~w(running blocked partial completed refused failed unknown cancelled expired)
   @step_statuses ~w(unsent proposed reserved handed_off waiting completed refused failed unknown cancelled)
   @slots ~w(admission handoff local_queue protocol_response correlated_report reported_match terminal)
-  @reasons ~w(condition_blocked child_condition_blocked receipt_refused effect_failed effect_unknown wait_timeout clock_changed clock_regressed deadline_elapsed window_closed cancelled)
+  @reasons ~w(condition_blocked child_condition_blocked receipt_refused effect_failed effect_unknown wait_timeout clock_changed clock_regressed deadline_elapsed window_closed cancelled inactive_program)
   @enforce_keys [:data]
   defstruct [:data]
   @type t :: %__MODULE__{data: map()}

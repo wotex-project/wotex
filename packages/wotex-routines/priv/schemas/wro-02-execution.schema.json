@@ -1292,7 +1292,8 @@
                 "clock_regressed",
                 "deadline_elapsed",
                 "window_closed",
-                "cancelled"
+                "cancelled",
+                "inactive_program"
               ]
             },
             {
