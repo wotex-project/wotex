@@ -55,7 +55,7 @@ defmodule Wotex.Routines.Check.Archive do
   defp consumers!(opts, archive, temporary) do
     producer = opts[:occurrence_archive]
 
-    if opts[:model_consumer] and not is_binary(opts[:maude_path]),
+    if opts[:model_consumer] == true and not is_binary(opts[:maude_path]),
       do: throw({:archive, "model consumer requires an explicit interpreter path"})
 
     if producer || opts[:composition_consumers] || opts[:model_consumer] do
