@@ -462,3 +462,5 @@ stopped roots and duplicate/missing state sets. The renewed archive consumer
 executes both literal values through Analysis.run/5; it keeps completed bounded
 results inconclusive. Wider receipt history/time/composition/complete-set and
 concrete witness translation obligations remain open.
+The [receipt-runner cohort](../provenance/receipt-runner-2026-10.md) retains its
+exact source, archives, interpreter, lock and executed checks.
