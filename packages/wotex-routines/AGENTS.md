@@ -46,3 +46,5 @@ Before changing a public function, list its callers with
 `mix refs Wotex.Routines fun` and the tests to run with
 `mix impact Wotex.Routines fun`. This package has no native build, software
 profile or container lane.
+
+The archive check accepts `--occurrence-archive /absolute/archive/ex_booking.tar` to build the exact WoTEx cohort and execute the isolated public calendar consumer. Supply an inspected producer archive with SP.08; the released 0.2.3 dependency deliberately exercises unavailability instead. This lane does not qualify a host clock, store transaction or device.

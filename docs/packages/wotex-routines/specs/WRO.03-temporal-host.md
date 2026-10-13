@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.1. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.2. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -145,7 +145,7 @@ projection refuses reuse; a fresh page may project the same original under the
 new generation. Cursor positions outside the query's candidate-index range
 refuse; an internally consistent cursor is still no proof of prior processing.
 
-Implemented evidence: `temporal_test.exs` covers an independent finite UTC tick oracle, global ordinal paging, far-future closed-form calculation, immutable schedule binding, cursor/clock replacement, exact elapsed windows and overflow. The direct optional calendar adapter is implemented with exact request/page regeneration and published-producer unavailability tests. Actual producer archive adoption, owned driver and real host transactions remain obligations.
+Implemented evidence: `temporal_test.exs` covers an independent finite UTC tick oracle, global ordinal paging, far-future closed-form calculation, immutable schedule binding, cursor/clock replacement, exact elapsed windows and overflow. The direct optional calendar adapter is implemented with exact request/page regeneration and published-producer unavailability tests. The exact development producer archive was adopted in one isolated calendar consumer with eight passing cases; see the temporal archive provenance. Owned driver, real host transactions and independent composition consumers remain obligations.
 
 ## Calendar adapter and native continuation
 
