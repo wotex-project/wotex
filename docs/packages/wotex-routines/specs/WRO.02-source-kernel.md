@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.1. Updated: 2026-10-13. Status: accepted target; implementation planned.
+Version: 0.2.2. Updated: 2026-10-13. Status: accepted target; implementation planned.
 
 ## Inputs, outputs and authority
 
@@ -151,7 +151,9 @@ copies after invocation expansion; no string concatenation ambiguity is allowed.
 Root `steps` is one node, usually sequence/parallel. Explicit noop is a real
 declared construct; unsupported syntax never becomes noop. Child triggers are
 not started by invoke: only their bound step tree executes under the root's
-original, duration and spend. All supplied child sources must pass structural
+original, duration and spend. The child's condition gates its invoked tree;
+it is never omitted. Child run_ms narrows the inherited remaining duration.
+All supplied child sources must pass structural
 validation; the complete invocation graph must be acyclic, including unused
 definitions. Missing/mismatched child versions and arguments refuse.
 
@@ -217,7 +219,9 @@ Stages are local_queue/protocol_response/correlated_report/reported_match;
 outcomes are accepted/failed/unknown. Stages do not fabricate cause. A stale,
 foreign, duplicate-conflicting or out-of-order result refuses; an exact duplicate
 retains its original outcome. Report-stage input is consumer-qualified data,
-not an arbitrary report authenticated by the kernel.
+not an arbitrary report authenticated by the kernel. Report-stage receipts
+retain the exact installed WRO.01 report_contract reference; a missing or
+mismatched reference refuses even if its stage says match.
 
 Run state binds original, program/compiler identities, time epoch/generation,
 start/deadline, each expanded path's original/status/result reference, edge
