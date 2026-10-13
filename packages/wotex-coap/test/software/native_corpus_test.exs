@@ -11,7 +11,7 @@ defmodule Wotex.CoAP.NativeCorpusTest do
   @moduletag :interop
   @moduletag :software
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
   @fixture_path Path.expand("../../priv/fixtures/native-v1.json", __DIR__)
   @external_resource @fixture_path
   @command_cases ~w(WCO-N-F16 WCO-N-F17 WCO-N-F18 WCO-N-F19 WCO-N-F20)

@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.NativeWorkerTest do
 
   use ExUnit.Case, async: false
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
   @source_files ~w(
     native/oscore/main.c
     native/oscore/worker.c

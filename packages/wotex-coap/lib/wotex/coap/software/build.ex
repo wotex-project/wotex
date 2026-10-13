@@ -14,7 +14,7 @@ defmodule Wotex.CoAP.Software.Build do
 
   alias Wotex.CoAP.Native.{Build, BuildOperations, Workspace}
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
   @independent_peer %{
     stack: "Eclipse Californium",
     name: "cf-plugtest-server",
@@ -355,7 +355,7 @@ defmodule Wotex.CoAP.Software.Build do
          "peer" => %{
            "name" => "coap-server",
            "backend" => "libcoap",
-           "version" => "4.3.5",
+           "version" => "4.3.5b",
            "revision" => @revision,
            "features" => features
          },

@@ -13,7 +13,7 @@
     "first_party": ["native/oscore", "test/native", "test/interop", "test/software", "lib/wotex/coap/software", "lib/mix/tasks/wotex.coap.software.build.ex", "lib/mix/tasks/wotex.coap.software.run.ex"],
     "upstream": [
       {"name": "californium", "url": "https://repo1.maven.org/maven2/org/eclipse/californium/cf-plugtest-server/3.14.0/cf-plugtest-server-3.14.0.jar", "revision": "3.14.0", "sha256": "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"},
-      {"name": "libcoap", "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28", "revision": "7cf7465b784baded4de183290c547d582becfd28", "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"}
+      {"name": "libcoap", "url": "https://codeload.github.com/obgm/libcoap/tar.gz/2dae53cede20d30fda9a243b7ebc4472ee1871bf", "revision": "2dae53cede20d30fda9a243b7ebc4472ee1871bf", "sha256": "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0"}
     ]
   },
   "patches": [],

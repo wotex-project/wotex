@@ -1,7 +1,7 @@
 defmodule Wotex.CoAP.Bench.LibcoapPeer do
   @moduledoc false
 
-  # The same-stack OSCORE peer of the native benchmarks: libcoap 4.3.5's
+  # The same-stack OSCORE peer of the native benchmarks: libcoap 4.3.5b's
   # coap-server, built as the software lane builds its peer (the verified
   # archive of the native workspace, unpatched, with the lane's CMake options)
   # and configured as the lane's OSCORE peer, with warnings-only logging so

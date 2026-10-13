@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.Test.NativeRuntimeFixture do
 
   alias Wotex.CoAP.Security
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
 
   @type fixture :: %{
           root: binary(),
@@ -85,7 +85,7 @@ defmodule Wotex.CoAP.Test.NativeRuntimeFixture do
   defp manifest(hash) do
     Jason.encode!(%{
       "schema" => "wotex.coap.native@1",
-      "backend" => %{"name" => "libcoap", "version" => "4.3.5", "revision" => @revision},
+      "backend" => %{"name" => "libcoap", "version" => "4.3.5b", "revision" => @revision},
       "executables" => %{"wotex-coap-oscore" => %{"sha256" => hash}}
     })
   end

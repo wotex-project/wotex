@@ -5,8 +5,8 @@ defmodule Wotex.CoAP.Native.ArchiveTest do
 
   alias Wotex.CoAP.Native.Archive
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
-  @source_sha256 "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
+  @source_sha256 "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0"
 
   setup do
     root =

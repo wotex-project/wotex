@@ -12,7 +12,7 @@ static void rejected(struct wco_json *json, const char *input, enum wco_json_sta
 }
 
 static void syntax_and_keys(struct wco_json *json) {
-    const char *ready = "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n";
+    const char *ready = "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n";
     const char *allowed[] = {"version", "event", "backend", "revision"};
     yyjson_val *root;
     uint64_t version;
@@ -22,7 +22,7 @@ static void syntax_and_keys(struct wco_json *json) {
     assert(wco_json_uint(yyjson_obj_get(root, "version"), 1, &version) && version == 1);
     assert(wco_json_string(yyjson_obj_get(root, "event"), "ready"));
     assert(wco_json_string(yyjson_obj_get(root, "backend"), "libcoap"));
-    assert(wco_json_string(yyjson_obj_get(root, "revision"), "7cf7465b784baded4de183290c547d582becfd28"));
+    assert(wco_json_string(yyjson_obj_get(root, "revision"), "2dae53cede20d30fda9a243b7ebc4472ee1871bf"));
     assert(!wco_json_keys(root, allowed, 3));
     rejected(json, "{\"version\":1,\"version\":1}\n", WCO_JSON_DUPLICATE);
     rejected(json, "{\"version\":1,\"\\u0076ersion\":1}\n", WCO_JSON_DUPLICATE);

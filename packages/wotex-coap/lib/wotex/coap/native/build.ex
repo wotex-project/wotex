@@ -11,10 +11,10 @@ defmodule Wotex.CoAP.Native.Build do
 
   alias Wotex.CoAP.Native.{BuildOperations, Toolchain, Workspace}
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
-  @version "4.3.5"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
+  @version "4.3.5b"
   @source_url "https://codeload.github.com/obgm/libcoap/tar.gz/#{@revision}"
-  @source_sha256 "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"
+  @source_sha256 "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0"
   @archive_root "libcoap-#{@revision}"
   @project_root Path.expand("../../../..", __DIR__)
   @native_root Path.join(@project_root, "native/oscore")
@@ -58,7 +58,7 @@ defmodule Wotex.CoAP.Native.Build do
                "tool-versions",
                "download"
              ] ++
-               Enum.map(1..10, &("patch-" <> String.pad_leading(Integer.to_string(&1), 2, "0"))) ++
+               Enum.map(1..9, &("patch-" <> String.pad_leading(Integer.to_string(&1), 2, "0"))) ++
                ~w(cmake-configure cmake-build feature-probe-build feature-probe worker-build
                  worker-probe-build worker-probe dynamic-dependencies)
   @artifacts ~w(bin/build-command bin/wotex-coap-oscore downloads/libcoap.tar.gz
@@ -172,10 +172,10 @@ defmodule Wotex.CoAP.Native.Build do
     end
   end
 
-  defp valid_patches?(patches) when is_list(patches) and length(patches) == 10 do
+  defp valid_patches?(patches) when is_list(patches) and length(patches) == 9 do
     paths = Enum.map(patches, & &1["path"])
 
-    length(Enum.uniq(paths)) == 10 and
+    length(Enum.uniq(paths)) == 9 and
       Enum.all?(patches, fn
         %{"path" => "patches/" <> path, "sha256" => hash} when is_binary(path) ->
           path != "" and not String.contains?(path, ["/", "\\", "..", <<0>>]) and hash?(hash)

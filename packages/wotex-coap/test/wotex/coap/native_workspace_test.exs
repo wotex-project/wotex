@@ -5,7 +5,7 @@ defmodule Wotex.CoAP.Native.WorkspaceTest do
 
   alias Wotex.CoAP.{Native.Workspace, NativeBackend}
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
 
   setup do
     root =
@@ -308,7 +308,7 @@ defmodule Wotex.CoAP.Native.WorkspaceTest do
   defp base_manifest(executable_hash) do
     %{
       "schema" => "wotex.coap.native@1",
-      "backend" => %{"name" => "libcoap", "version" => "4.3.5", "revision" => @revision},
+      "backend" => %{"name" => "libcoap", "version" => "4.3.5b", "revision" => @revision},
       "executables" => %{"wotex-coap-oscore" => %{"sha256" => executable_hash}},
       "build" => %{"features" => ["oscore"]}
     }

@@ -3,9 +3,9 @@ spec:
   id: WCO.08
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.9.6
+  version: 1.9.7
   owner: wotex-coap
-  updated: 2026-09-21
+  updated: 2026-10-13
 ---
 
 # WCO.08 Native OSCORE owner, builds and software evidence
@@ -37,10 +37,23 @@ and native peer evidence separately.
 
 ## WCO-N01 — Reproducible native builds
 
-The native source is libcoap 4.3.5 at commit
-`7cf7465b784baded4de183290c547d582becfd28`, archive SHA-256
-`d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd`, from
-`https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28`.
+The native source is the libcoap 4.3.5b maintenance cohort at exact commit
+`2dae53cede20d30fda9a243b7ebc4472ee1871bf`, archive SHA-256
+`62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0`, from
+`https://codeload.github.com/obgm/libcoap/tar.gz/2dae53cede20d30fda9a243b7ebc4472ee1871bf`.
+This immutable maintenance snapshot includes the upstream configuration,
+OSCORE/CBOR and URI boundary fixes. The ordered local patches must retain the
+same sender persistence, 1 MiB whole-body, authenticated-response and Observe
+obligations under the upstream locked/internal function split. The upstream
+empty-byte copy guard replaces local patch 0002; it is not applied twice.
+The source/manifest cohort name is `4.3.5b`; upstream CMake's public
+`coap_package_version()` remains `libcoap 4.3.5`. The probe checks that actual
+library string separately from the immutable source revision and manifest.
+Historical 4.3.5 artifacts remain historical; source and focused patch checks
+do not transfer native or interoperability qualification. The live source
+audit still blocks release adoption while OSV-2022-150 has no accepted fixed
+disposition. No source substitution or advisory suppression may make that
+unresolved report pass.
 The [public 4.3.5 OSCORE API](https://libcoap.net/doc/reference/4.3.5/man_coap_oscore.html)
 owns configuration, exchange context and sender-sequence callbacks. No private
 SDK layout or Python bridge is part of the interface.
@@ -139,7 +152,7 @@ The source package includes first-party C source, build tasks and license
 notices; generated helpers, SDK downloads, credentials and caches remain outside.
 Runtime content binding reads `schema`, `backend` and `executables` from this
 manifest. `schema` is exactly `wotex.coap.native@1`; `backend` names `libcoap`,
-version `4.3.5` and revision `7cf7465b784baded4de183290c547d582becfd28`;
+version `4.3.5b` and revision `2dae53cede20d30fda9a243b7ebc4472ee1871bf`;
 `executables.wotex-coap-oscore.sha256` is the lowercase SHA-256 of the selected
 file. Other manifest members retain the build evidence listed above.
 

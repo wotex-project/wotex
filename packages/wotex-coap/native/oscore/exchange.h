@@ -46,7 +46,7 @@ struct wco_exchange_callbacks {
 };
 
 /* The production implementation is compiled with WCO_WITH_LIBCOAP and pinned
- * public libcoap 4.3.5 headers. Open copies all configuration synchronously;
+ * public libcoap 4.3.5b headers. Open copies all configuration synchronously;
  * callers can erase credential input immediately after return. The returned
  * error string is finite and contains no peer or credential material. */
 const char *wco_exchange_open(const char *host, uint16_t port,

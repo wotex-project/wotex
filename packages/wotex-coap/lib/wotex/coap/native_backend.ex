@@ -6,7 +6,7 @@ defmodule Wotex.CoAP.NativeBackend do
   identify ordinary files rather than symbolic links. The executable retains
   its existing permission bits and must already be executable. The manifest is
   bounded before reading, decoded with Wotex JSON limits, and bound to libcoap
-  4.3.5 at the specified source revision. Its lowercase SHA-256 identity must
+  4.3.5b at the specified source revision. Its lowercase SHA-256 identity must
   match the selected executable.
 
   Verification starts no Port, changes no permission, searches no executable
@@ -20,8 +20,8 @@ defmodule Wotex.CoAP.NativeBackend do
   @backend "libcoap"
   @executable_name "wotex-coap-oscore"
   @manifest_schema "wotex.coap.native@1"
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
-  @version "4.3.5"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
+  @version "4.3.5b"
   @maximum_manifest_bytes 1_048_576
   @maximum_path_bytes 4_096
   @json_limits [

@@ -1,6 +1,6 @@
 --- a/src/coap_oscore.c
 +++ b/src/coap_oscore.c
-@@ -843,6 +843,8 @@
+@@ -847,6 +847,8 @@
    uint8_t external_aad_buffer[100];
    coap_bin_const_t external_aad;
    oscore_sender_ctx_t *snd_ctx = NULL;
@@ -9,20 +9,14 @@
  #if COAP_CLIENT_SUPPORT
    coap_pdu_t *sent_pdu = NULL;
  #endif /* COAP_CLIENT_SUPPORT */
-@@ -1067,6 +1069,12 @@
-                             session);
-       goto error;
-     }
+@@ -1082,0 +1085,6 @@
 +    if (cose->partial_iv.length > sizeof(response_partial_iv))
 +      goto error;
 +    response_partial_iv_length = cose->partial_iv.length;
 +    if (response_partial_iv_length)
 +      memcpy(response_partial_iv, cose->partial_iv.s,
 +             response_partial_iv_length);
-     association = oscore_find_association(session, &pdu_token);
-     if (association) {
-       rcp_ctx = association->recipient_ctx;
-@@ -1538,14 +1546,15 @@
+@@ -1568,14 +1576,15 @@
        break;
      case COAP_OPTION_OBSERVE:
        if (!coap_request) {

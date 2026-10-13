@@ -467,7 +467,7 @@ static void stale_observation(const char *executable) {
     stage = "stale ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":2,\"security\":{"
@@ -557,7 +557,7 @@ static void owner_eof_observation(const char *executable) {
     stage = "owner eof ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":8,\"security\":{"
@@ -658,7 +658,7 @@ static void terminated_observation(const char *executable) {
     stage = "terminated ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
                     "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
                     "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":9,\"security\":{"
@@ -751,7 +751,7 @@ static void saturated_owner_eof_observation(const char *executable) {
     stage = "saturated owner ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":10,\"security\":{"
@@ -879,7 +879,7 @@ static void renewal_fault_observation(const char *executable, int mode,
     stage = "fault ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":3,\"security\":{"
@@ -977,7 +977,7 @@ static void renewal_cancel_observation(const char *executable) {
     stage = "renew cancel ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":7,\"security\":{"
@@ -1088,7 +1088,7 @@ static void intervening_cancel_observation(const char *executable, int confirmed
     stage = "intervening ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":11,\"security\":{"
@@ -1215,7 +1215,7 @@ static void intervening_renewal_observation(const char *executable) {
     stage = "intervening renewal ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":12,\"security\":{"
@@ -1338,7 +1338,7 @@ static void pending_owner_eof_observation(const char *executable, int phase) {
     stage = "pending owner ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":9,\"security\":{"
@@ -1457,7 +1457,7 @@ static void overloaded_observation(const char *executable, int event_kind) {
     stage = "overload ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":%u,\"security\":{"
@@ -1605,7 +1605,7 @@ static void wraparound_observation(const char *executable) {
     stage = "wrap ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":6,\"security\":{"
@@ -1715,7 +1715,7 @@ int main(int argc, char **argv) {
     stage = "ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+          "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n");
     assert(snprintf(command, sizeof(command),
         "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
         "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":1,\"security\":{"

@@ -9,7 +9,7 @@
 
 static const char ready[] =
     "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
-    "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n";
+    "\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n";
 
 static int read_exact(int descriptor, char *bytes, size_t length) {
     size_t used = 0;

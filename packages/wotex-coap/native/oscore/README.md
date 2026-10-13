@@ -1,6 +1,6 @@
 # Native OSCORE sources
 
-The native target uses libcoap 4.3.5, identified by the archive, ordered patch
+The native target uses libcoap 4.3.5b, identified by the archive, ordered patch
 hashes and resulting source hashes in [source.json](source.json). Builds must
 verify all three stages; an unmodified upstream build is not this target.
 [WCO.08](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-coap/specs/WCO.08-native-build-and-software-evidence.md) owns the

@@ -21,7 +21,7 @@ defmodule Wotex.CoAP.Native.Archive do
   @expanded_limit 128 * 1024 * 1024
   @member_limit 32 * 1024 * 1024
   @entry_limit 20_000
-  @libcoap_sha256 "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"
+  @libcoap_sha256 "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0"
   @libcoap_links %{
     "README" => "README.md",
     "examples/contiki/coap_config.h" => "../../coap_config.h.contiki"

@@ -32,7 +32,7 @@
 #define WCO_OUTPUT_FRAMES 128u
 #define WCO_INITIAL_BOUNDARY 32u
 #define WCO_EXIT_CANCEL_MS 20
-#define WCO_REVISION "7cf7465b784baded4de183290c547d582becfd28"
+#define WCO_REVISION "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
 #define WCO_RESPONSE_BODY_ID "response-body"
 #define WCO_REPORT_BODY_ID "report-body"
 #define WCO_TERMINATED 143

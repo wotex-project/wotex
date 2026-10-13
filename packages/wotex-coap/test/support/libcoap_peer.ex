@@ -17,7 +17,7 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
     {version, _} = System.cmd(executable, ["-?"], stderr_to_stdout: true, env: clean_environment())
     assert version =~ "4.3.5" and version =~ "OpenSSL"
     digest = :crypto.hash(:sha256, File.read!(executable)) |> Base.encode16(case: :lower)
-    Mix.shell().info("independent libcoap 4.3.5/OpenSSL server sha256: #{digest}")
+    Mix.shell().info("independent libcoap 4.3.5b/OpenSSL server sha256: #{digest}")
     executable
   end
 

@@ -1,21 +1,17 @@
 {
   "schema": "wotex.coap.libcoap-source@1",
-  "version": "4.3.5",
-  "commit": "7cf7465b784baded4de183290c547d582becfd28",
-  "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
-  "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+  "version": "4.3.5b",
+  "commit": "2dae53cede20d30fda9a243b7ebc4472ee1871bf",
+  "url": "https://codeload.github.com/obgm/libcoap/tar.gz/2dae53cede20d30fda9a243b7ebc4472ee1871bf",
+  "sha256": "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0",
   "patches": [
     {
       "path": "patches/0001-reject-unsaved-sender-sequences.patch",
       "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
     },
     {
-      "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
-      "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
-    },
-    {
       "path": "patches/0003-limit-whole-body-assembly.patch",
-      "sha256": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7"
+      "sha256": "8a7e54726823e9dab614285c5e33e937b897613573663454bcf29e9342a6fce3"
     },
     {
       "path": "patches/0004-reject-representation-restart.patch",
@@ -31,7 +27,7 @@
     },
     {
       "path": "patches/0007-preserve-oscore-observe-sequence.patch",
-      "sha256": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9"
+      "sha256": "c5889f59ed5aec2a30b2c21c9b3abf98d79b5ed47e4cfee8919f85958b9409d9"
     },
     {
       "path": "patches/0008-drop-oscore-client-send-hold.patch",
@@ -39,7 +35,7 @@
     },
     {
       "path": "patches/0009-keep-association-after-unverified-response.patch",
-      "sha256": "e218e7db735231d0d507323e939dab7085592f0a0057b1545ae49970d3bbc8c2"
+      "sha256": "2fc5c30dd599d7edf54824ce6b9280d5f1944a1ea4680c263735a9150dd4385d"
     },
     {
       "path": "patches/0010-ignore-uncorrelated-plaintext-responses.patch",
@@ -47,9 +43,9 @@
     }
   ],
   "patched_sources": {
-    "src/coap_oscore.c": "59089f1d3cd06a31b47c0fb76f5b03342405855552d2c2a03e89e4e8894c621b",
-    "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
-    "src/coap_block.c": "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6",
-    "src/coap_net.c": "5b69423ac2e04a9dba89750cf6342658b3d7a31d7fb4801b11be314380e7b6b0"
+    "src/coap_oscore.c": "230f2a93d75123e067da5b850e033f7b1ce4f0cfa65c217dbef0163180fc8ae8",
+    "src/oscore/oscore_cbor.c": "2632d708c38080e38e572d19ef5d57374c2f74bee04a3802af6fe6dc14cad98c",
+    "src/coap_block.c": "010c4ee6d6e385d6dc0716c8045c59126f91db711b1d86a76b57bce263c2b0b3",
+    "src/coap_net.c": "207c60d345f2e0b4a1824f06048b3d8cc9126b39556cf235f85c13d73a3ed18f"
   }
 }

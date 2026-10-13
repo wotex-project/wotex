@@ -197,7 +197,7 @@ still applies inside authenticated datagrams.
 
 ## WCO-S06 — OSCORE adapter and durable state
 
-Use pinned libcoap 4.3.5, commit `7cf7465b784baded4de183290c547d582becfd28`, in an
+Use the WCO.08-pinned libcoap 4.3.5b maintenance cohort, commit `2dae53cede20d30fda9a243b7ebc4472ee1871bf`, in an
 optional caller-selected C bridge with the WCO-C07 framed contract. Its own CoAP
 engine performs exchanges/Observe/blockwise; do not wrap its operations in a
 second native retransmission loop. Use `coap_new_oscore_conf`,

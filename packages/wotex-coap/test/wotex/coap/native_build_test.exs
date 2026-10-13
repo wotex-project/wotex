@@ -8,7 +8,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
   alias Mix.Tasks.Wotex.Coap.Native.Build, as: BuildTask
   alias Wotex.CoAP.{Native.Build, Native.BuildOperations, Native.Workspace, NativeBackend}
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
 
   defmodule TaskBuild do
     @moduledoc false
@@ -28,15 +28,15 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     alias Wotex.CoAP.Native.Workspace
 
-    @revision "7cf7465b784baded4de183290c547d582becfd28"
+    @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
 
     @independent_peer_sha256 "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"
     @patched %{
-      "src/coap_oscore.c" => "59089f1d3cd06a31b47c0fb76f5b03342405855552d2c2a03e89e4e8894c621b",
+      "src/coap_oscore.c" => "230f2a93d75123e067da5b850e033f7b1ce4f0cfa65c217dbef0163180fc8ae8",
       "src/oscore/oscore_cbor.c" =>
-        "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
-      "src/coap_block.c" => "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6",
-      "src/coap_net.c" => "5b69423ac2e04a9dba89750cf6342658b3d7a31d7fb4801b11be314380e7b6b0"
+        "2632d708c38080e38e572d19ef5d57374c2f74bee04a3802af6fe6dc14cad98c",
+      "src/coap_block.c" => "010c4ee6d6e385d6dc0716c8045c59126f91db711b1d86a76b57bce263c2b0b3",
+      "src/coap_net.c" => "207c60d345f2e0b4a1824f06048b3d8cc9126b39556cf235f85c13d73a3ed18f"
     }
 
     @spec resolve() :: {:ok, map()}
@@ -216,7 +216,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
     defp peer(_) do
       {:error, :build_command_failed,
        %{
-         output: "coap-server v4.3.5\nDTLS and TLS support\n(Have OSCORE)\n",
+         output: "coap-server v4.3.5b\nDTLS and TLS support\n(Have OSCORE)\n",
          exit_status: 1
        }}
     end
@@ -297,7 +297,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     assert {:error, :invalid_build_workspace} = Build.run(nil, Operations)
     assert {:error, :invalid_build_workspace} = Build.run_resolved(nil, %{}, Operations)
-    assert length(Build.artifacts()) == 25
+    assert length(Build.artifacts()) == 24
     assert_raise Mix.Error, ~r/usage:/, fn -> BuildTask.run(["--workspace", "relative"]) end
     assert Mix.Project.config()[:aliases][:"wotex.native.build"] == "wotex.coap.native.build"
   end
@@ -308,16 +308,16 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     assert manifest["backend"] == %{
              "name" => "libcoap",
-             "version" => "4.3.5",
+             "version" => "4.3.5b",
              "revision" => @revision
            }
 
     assert manifest["build"]["feature_probe"]["oscore"]
     assert manifest["build"]["worker_probe"]["event"] == "ready"
-    assert length(manifest["build"]["steps"]) == 20
+    assert length(manifest["build"]["steps"]) == 19
     assert manifest["build"]["sanitizers"] == []
     assert length(manifest["build"]["dynamic_dependencies"]) == 1
-    assert length(manifest["build"]["source"]["patches"]) == 10
+    assert length(manifest["build"]["source"]["patches"]) == 9
     assert map_size(manifest["build"]["tools"]["versions"]) == 7
 
     executable = Path.join(root, "bin/wotex-coap-oscore")

@@ -6,17 +6,17 @@
     {
       "id": "WCO-N-F01",
       "operation": "decode_line",
-      "input": "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n",
+      "input": "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n",
       "expected": {
         "event": "ready",
         "backend": "libcoap",
-        "revision": "7cf7465b784baded4de183290c547d582becfd28"
+        "revision": "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
       }
     },
     {
       "id": "WCO-N-F02",
       "operation": "decode_line",
-      "input": "{\"version\":1,\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n",
+      "input": "{\"version\":1,\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"2dae53cede20d30fda9a243b7ebc4472ee1871bf\"}\n",
       "expected": {
         "error": "native_protocol_error",
         "effect": "none",

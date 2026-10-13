@@ -6,7 +6,7 @@ defmodule Wotex.CoAP.NativeWireTest do
 
   alias Wotex.CoAP.{Error, Message, Native.Wire}
 
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
   @fixture_path Path.expand("../../../priv/fixtures/native-v1.json", __DIR__)
   @fixture Jason.decode!(File.read!(@fixture_path))
 

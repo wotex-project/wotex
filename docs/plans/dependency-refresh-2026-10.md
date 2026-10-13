@@ -41,3 +41,21 @@ The observed hosted failures also require explicit test environment selection
 for nested BACnet/Modbus software suites and a separate aggregate BLE harness
 budget. Independent native-source advisories and the OPC UA peer Cargo lock
 remain separate remediation inputs; the Hex refresh does not close them.
+
+The subsequent native refresh selects OpenSSL 3.5.9 and yoke-derive 0.8.4,
+replaces the fixture's unmaintained YAML parser through a documented maintained
+API re-export, and keeps the strict Cargo audit. Seventeen OPC UA source/recipe
+tests, two YAML configuration tests, the actual async-opcua-core consumer
+compile, native source digest checks and live OPC UA/Cargo audits passed.
+Matter's five focused runner tests bind copied host-owned acceptance receipts
+and exact container/network cleanup; diagnostic retention avoids private trees.
+
+CoAP selects the immutable 4.3.5b maintenance source, includes the upstream
+empty-byte guard and renews the nine remaining exact patches. Fresh extraction
+and zero-fuzz application reproduce all four source hashes. The patched
+library and actual feature, whole-body and sender-persistence probes passed.
+Focused build/value/owner tests passed after renewing their cohort fixtures.
+The live source query clears the named CVEs but retains OSV-2022-150, whose
+published Git range has no fixed endpoint. This unresolved report still fails
+the advisory gate; no exception or suppression was added. Full refreshed
+interop/SDK and distribution gates remain milestone obligations.

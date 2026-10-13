@@ -22,7 +22,7 @@ defmodule Wotex.CoAP.Native.Wire do
   @maximum_frame_bytes @maximum_line_bytes - 1
   @maximum_inline_bytes 32_768
   @maximum_body_bytes 1_048_576
-  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @revision "2dae53cede20d30fda9a243b7ebc4472ee1871bf"
   @json_limits [
     max_bytes: @maximum_frame_bytes,
     max_depth: 8,

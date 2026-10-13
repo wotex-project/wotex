@@ -198,7 +198,7 @@ Both forms dispatch `wotex.coap.native.build`. Supported hosts are Linux
 x86-64/AArch64 and macOS AArch64. The build resolves and fingerprints a C11
 compiler (`cc` or `$CC`), CMake (`cmake` or `$CMAKE`), OpenSSL 3 (`openssl` on
 the `PATH` or `$OPENSSL_ROOT_DIR`), `curl`, `patch`, `pkg-config` and `ldd`
-(Linux) or `otool` (macOS). It downloads the pinned libcoap 4.3.5 archive,
+(Linux) or `otool` (macOS). It downloads the pinned libcoap 4.3.5b archive,
 verifies it against `native/oscore/source.json`, applies the ordered patches in
 `native/oscore/patches/`, builds a static libcoap and the worker from
 `native/oscore/`, probes them and publishes `native-manifest.json` within a
