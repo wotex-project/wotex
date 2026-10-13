@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.9. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.10. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -411,7 +411,7 @@ existing baseline, or null without a baseline. Thresholds use exact installed
 units. Binding/source/clock replacement, elapsed or receipt regression,
 non-increasing conflicting sequence, replay, expiry, unknown or lost continuity
 resets qualification; none can create a transition. An exact repeated Fact is
-idempotent and cannot advance debounce. A sequence/fact identity reused with
+idempotent and cannot advance debounce. A qualified sequence/fact identity reused with
 changed content refuses rather than replaces the retained sample.
 
 An inactive-to-active sample starts debounce. Eligibility requires another
@@ -500,3 +500,5 @@ outcomes remain interpretable; receipt retention supplies no current grant.
 Collection still accepts only the current complete active set, so the host
 reconciles removed originals through the direct Kernel seam and its durable
 original indexes.
+
+Unqualified input clears edge qualification before comparing retained identity. A caller reclassifying the same report as unknown/stale/lost never retains an old false baseline and never replaces the original sample digest. A conflicting qualified identity still refuses. On validation refusal that prevents a returned transition, the host must invalidate the affected edge baseline before future admission; an old baseline is not evidence that the rejected interval remained continuous.

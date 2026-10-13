@@ -12,7 +12,7 @@ specifications:
     executable_evidence: ["test/wotex/routines/basis_test.exs", "test/wotex/routines/schema_test.exs", "bin/check_archive.exs", "bin/check_application_free.exs"]
     compatibility_classification: "Registered optional package with closed installed semantics, exact units and Continuum facts; no runtime authority. Kernel completion/repeat joins and independent consumer adoption remain obligations."
   - id: "WRO.02"
-    version: "0.2.9"
+    version: "0.2.10"
     path: "docs/specs/WRO.02-source-kernel.md"
     implementation_status: "partial"
     standards: []

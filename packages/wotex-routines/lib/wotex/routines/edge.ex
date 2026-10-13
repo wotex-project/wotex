@@ -150,14 +150,14 @@ defmodule Wotex.Routines.Edge do
     qualified = fact["continuity"] == "continuous" and values[edge["binding"]] != :unknown
 
     cond do
+      not qualified ->
+        output(reset(retained), false, "unqualified")
+
       conflict?(replaced, prior, fact, digest) ->
         Error.refusal(:conflicting_edge_fact)
 
       elapsed_regressed?(replaced, prior, time) ->
         output(reset(prior), false, "unqualified")
-
-      not qualified ->
-        output(reset(retained), false, "unqualified")
 
       duplicate?(replaced, prior, fact) ->
         output(%{prior | "last_elapsed_ms" => time["elapsed_ms"]}, false, "duplicate")

@@ -169,6 +169,26 @@ defmodule Wotex.Routines.EdgeTest do
     assert no_catchup["outcome"] == "no-edge"
   end
 
+  test "reclassifying a retained sample as unusable clears qualification before identity checks",
+       c do
+    c = fixture(c, "rising", 0)
+    baseline = advance(c, nil, 1, 10, 1000)
+    sample = with_sample(c, 1, 20, 1000, 10)
+
+    sample = %{
+      sample
+      | snapshot: put_in(sample.snapshot, ["facts", "sensor", "quality"], "unknown")
+    }
+
+    assert {:ok, reset} = evaluate(sample, baseline["edge"])
+    assert reset["reason"] == "unqualified"
+    assert reset["edge"]["baseline"] == nil
+    assert reset["edge"]["last_fact_digest"] == baseline["edge"]["last_fact_digest"]
+    next = advance(c, reset["edge"], 2, 30, 3000)
+    assert next["reason"] == "baseline"
+    assert next["eligible"] == false
+  end
+
   test "malformed retained edges and foreign fact events refuse without replacing state", c do
     c = fixture(c)
     baseline = advance(c, nil, 1, 10, 1000)
