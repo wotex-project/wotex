@@ -10,6 +10,8 @@ Reading a document does not enroll a Thing or authorize an interaction.
 `Proposal.new/2` and `Proposal.to_map/2` revalidate complete interpretation maps
 and native values. `Proposal.identity/0` identifies that inert representation
 contract; consumers separately select producer artifacts and qualify semantics.
+`Compiler.references/3` returns its exact reachable closure, allowing a consumer
+to compare selected custody records without implementing another closure walker.
 
 ## Installation
 

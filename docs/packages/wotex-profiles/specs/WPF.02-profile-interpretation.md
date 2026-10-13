@@ -1,6 +1,6 @@
 # WPF.02 — Bounded profile compilation and interpretation
 
-Version: 0.2.7. Updated: 2026-10-14. Status: accepted target.
+Version: 0.2.8. Updated: 2026-10-14. Status: accepted target.
 Implementation: bounded v1 compiler, capture and report interpretation.
 Evidence: independent identity/math/domain vectors and focused tests;
 archive correspondence is retained in owning provenance.
@@ -272,6 +272,17 @@ Unit.convert/4, not compiler, report interpretation or admission completion.
 
 
 ## Compiler and interpreter value freeze
+
+`Compiler.references/3` takes the same profile, explicit closure and Limits as
+check/3. It performs the same static channel/closure checks and returns the
+complete reachable reference array used by closure_sha256, sorted by ID/version.
+This includes the profile, selected binding and reached definitions/contracts;
+valid optional semantic closure stays included even when the channel mechanic
+is excluded. Unreached supplied entries are validated but absent from this array.
+The output obeys the caller's complete envelope budget. References remain inert
+identities; the caller may compare its selected custody set without duplicating
+the producer's closure walker. No capture, custody, source authenticity or
+consumer admission is established. Errors match check/3's fixed code/path.
 
 The following is implemented bounded v1 behavior. The native
 backing values are explicit immutable input, never a private registry or

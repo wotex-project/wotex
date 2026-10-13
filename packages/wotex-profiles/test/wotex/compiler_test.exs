@@ -51,6 +51,32 @@ defmodule Wotex.Profiles.CompilerTest do
     assert native_checked.data == first.data
   end
 
+  test "reachable references expose the exact independently frozen closure while excluding unused data" do
+    assert {:ok, references} = Compiler.references(profile(), closure(), F.limits())
+
+    assert Enum.map(references, & &1["id"]) == [
+             "urn:example:binding:register",
+             "urn:example:decoder:register-output",
+             "urn:example:profile:industrial",
+             "urn:example:semantic:industrial"
+           ]
+
+    {:ok, bytes} = Wotex.JSON.encode(references)
+
+    digest =
+      Base.encode16(:crypto.hash(:sha256, "wotex.profile.closure@1\n" <> bytes), case: :lower)
+
+    assert digest == F.json("compiled-identities")["closure_sha256"]
+    expanded = put_in(closure(), ["definitions"], [F.json("research-definition"), F.definition()])
+    assert {:ok, ^references} = Compiler.references(profile(), expanded, F.limits())
+
+    assert {:error, %Error{code: :missing_reference}} =
+             Compiler.references(profile(), Map.put(closure(), "definitions", []), F.limits())
+
+    assert {:error, %Error{code: :input_limit}} =
+             Compiler.references(profile(), closure(), Map.put(F.limits(), "max_dependencies", 2))
+  end
+
   test "missing or conflicting exact closure refuses without alias repair" do
     for changed <- [
           Map.put(closure(), "definitions", []),

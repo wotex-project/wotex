@@ -14,7 +14,7 @@ specifications:
     executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
     compatibility_classification: "Consumer-owned profile/semantic descriptors and bounded generic units; no required shared catalogue"
   - id: "WPF.02"
-    version: "0.2.7"
+    version: "0.2.8"
     path: "docs/specs/WPF.02-profile-interpretation.md"
     implementation_status: "implemented"
     standards: []

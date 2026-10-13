@@ -27,6 +27,17 @@ defmodule Wotex.Profiles.Compiler do
   @spec identity() :: %{String.t() => String.t()}
   def identity, do: @identity
 
+  @doc "Checks static mechanics and returns the exact reachable reference array used by closure identity."
+  @spec references(term(), term(), term()) :: {:ok, [map()]} | {:error, Error.t()}
+  def references(profile, closure, limits) do
+    with {:ok, state} <- Closure.prepare(profile, closure, limits),
+         {:ok, _, state} <- channels(state),
+         references = Closure.references(state),
+         {:ok, _, _} <- Grammar.admit(references, state.limits) do
+      {:ok, references}
+    end
+  end
+
   @doc "Checks installed closure, selectors and mechanics without capture or I/O."
   @spec check(term(), term(), term()) :: {:ok, Checked.t()} | {:error, Error.t()}
   def check(profile, closure, limits) do

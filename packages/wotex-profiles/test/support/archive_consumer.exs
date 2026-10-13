@@ -148,6 +148,8 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
     }
 
     assert {:ok, proposal} = Interpreter.project(projection, report, limits)
+    assert {:ok, references} = Compiler.references(profile, closure, limits)
+    assert Enum.any?(references, &(&1 == channel["semantic"]))
     assert proposal["normalized_value"] == expected
     assert proposal["continuity"] == "retained"
     assert proposal["source_time"] == nil

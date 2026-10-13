@@ -376,7 +376,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-profiles/specs/WPF.01-external-profile-language.md"
       - id: "WPF.02"
-        version: "0.2.7"
+        version: "0.2.8"
         implementation_status: "implemented"
         path: "docs/packages/wotex-profiles/specs/WPF.02-profile-interpretation.md"
       - id: "WPF.03"
