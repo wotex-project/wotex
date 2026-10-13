@@ -12,14 +12,14 @@ specifications:
     executable_evidence: ["test/wotex/routines/basis_test.exs", "test/wotex/routines/schema_test.exs", "bin/check_archive.exs", "bin/check_application_free.exs"]
     compatibility_classification: "Registered optional package with closed installed semantics, exact units and Continuum facts; no runtime authority. Kernel completion/repeat joins and independent consumer adoption remain obligations."
   - id: "WRO.02"
-    version: "0.2.3"
+    version: "0.2.4"
     path: "docs/specs/WRO.02-source-kernel.md"
     implementation_status: "partial"
     standards: []
     requires: ["WRO.01"]
-    implementation_modules: ["Wotex.Routines.Profile", "Wotex.Routines.Truth", "Wotex.Routines.Source", "Wotex.Routines.Codec", "Wotex.Routines.Compiler", "Wotex.Routines.Program"]
-    executable_evidence: ["test/wotex/routines/truth_test.exs", "test/wotex/routines/source_test.exs", "test/wotex/routines/compiler_test.exs"]
-    compatibility_classification: "Closed profile bounds, three-valued truth and complete structural source codecs implemented; exact binding and child closure resolution plus whole IR regeneration implemented; qualified evaluation, pure transitions and full-set arbitration remain obligations. No existing core or Runtime API change."
+    implementation_modules: ["Wotex.Routines.Profile", "Wotex.Routines.Truth", "Wotex.Routines.Source", "Wotex.Routines.Codec", "Wotex.Routines.Compiler", "Wotex.Routines.Program", "Wotex.Routines.Time", "Wotex.Routines.Snapshot", "Wotex.Routines.Evaluation"]
+    executable_evidence: ["test/wotex/routines/truth_test.exs", "test/wotex/routines/source_test.exs", "test/wotex/routines/compiler_test.exs", "test/wotex/routines/evaluation_test.exs"]
+    compatibility_classification: "Closed profile bounds, three-valued truth and complete structural source codecs implemented; exact binding and child closure resolution plus whole IR regeneration implemented; qualified snapshot/root-condition evaluation implemented; run transitions and full-set arbitration remain obligations. No existing core or Runtime API change."
   - id: "WRO.03"
     version: "0.1.0"
     path: "docs/specs/WRO.03-temporal-host.md"

@@ -376,7 +376,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.01-capability-behaviour.md"
       - id: "WRO.02"
-        version: "0.2.3"
+        version: "0.2.4"
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.02-source-kernel.md"
       - id: "WRO.03"

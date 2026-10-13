@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.3. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.4. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -209,16 +209,41 @@ nonterminal busy Run for overlap checks. Selecting, persisting and compacting
 originals are host obligations; passing nil does not prove an original is new.
 The kernel never expires a no-repeat ledger or authorizes physical replay.
 
-Snapshot requires identity, membership generation, active program identities,
-resource revisions, current binding/profile/source/clock identities and complete
-Fact data for provided bindings. Time requires epoch, elapsed_ms, clock_generation
+Snapshot has exactly id, membership_generation, active_programs,
+resource_revisions, binding_bases and facts. Active programs are distinct IR
+digests. Resource revisions include every resolved Thing and resource domain;
+values are nonnegative integers. binding_bases has exactly every compilation
+binding name; each record has profile_digest, source_id, source_epoch and
+source_time_basis. The profile must equal its compiled installed basis.
+facts has those exact names and a complete WRO.01 Fact or explicit null for
+absence. Extra/missing slots refuse. A supplied stale Fact remains data and
+evaluates unknown; it does not update the expected binding basis.
+Time has exactly epoch, elapsed_ms, clock_generation
 and explicit UTC low/high millisecond coordinates (or both null). UTC coordinates
 are ordered; elapsed regression or epoch change expires unsent elapsed waits.
 Trusted source age uses WRO.01's clock basis/uncertainty and the complete current
 UTC interval. Missing trust/basis, future source intervals, incompatible units,
 expired receipts, unusable quality or unaccepted source classes produce unknown.
+Fact identity must match the binding's Thing, observable affordance/name,
+profile and expected source identity/epoch. Receipt epoch must match Time epoch;
+elapsed age is nonnegative and no greater than the installed freshness bound,
+with elapsed_ms strictly below expires_ms. Where source time is required,
+trusted source basis must match the selected binding basis, source interval's
+upper endpoint cannot exceed current UTC lower endpoint, and worst-case age
+cannot exceed freshness_ms. Missing UTC confidence makes that test unknown.
 Receipt freshness and source age remain separate checks. Replayed/retained or
 baseline/lost continuity cannot create an edge.
+
+`Evaluation.evaluate(program, snapshot, time, profile, limits)` revalidates all
+inputs and returns the root condition's true/false/unknown result. It does not
+match a trigger or authorize a proposal. The initial evaluation profile uses
+only fresh reports. Lost continuity is unusable; continuous contracts also
+require continuous facts, while snapshot contracts may use a baseline for a
+condition. Edge generation separately always requires fresh continuous input.
+Comparisons convert qualified integer facts exactly into the installed unit;
+conversion/type errors yield unknown, and negation never converts unknown into
+false. Boolean/enum values must match their installed domains. Malformed
+postfix instructions or stack shape return a typed error rather than truth.
 
 Events identify the exact program revision and original. Manual, due, fact,
 admission, handoff, result and cancel are separate kinds. An admission receipt
