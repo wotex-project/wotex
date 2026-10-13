@@ -6,6 +6,7 @@ defmodule Wotex.Routines.Execution do
   @terminal ~w(completed refused failed unknown cancelled)
   @stopped ~w(completed refused failed unknown cancelled expired partial)
 
+  @doc false
   @spec advance(map(), map(), map(), map(), Profile.t(), Limits.t()) ::
           {:ok, map(), [map()]} | {:error, Error.t()}
   def advance(run, program, values, time, profile, limits) do
@@ -43,6 +44,7 @@ defmodule Wotex.Routines.Execution do
     end)
   end
 
+  @doc false
   @spec halt(map(), String.t(), String.t()) :: map()
   def halt(run, status, reason) do
     steps = Enum.map(run["steps"], &stop_record/1)

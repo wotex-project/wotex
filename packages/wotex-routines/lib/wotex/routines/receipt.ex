@@ -5,6 +5,7 @@ defmodule Wotex.Routines.Receipt do
 
   @stages ~w(local_queue protocol_response correlated_report reported_match)
 
+  @doc false
   @spec apply(map(), map(), map(), Limits.t()) :: {:ok, map()} | {:error, Error.t()}
   def apply(run, %{"kind" => kind} = event, program, limits)
       when kind in ~w(admission handoff result) do

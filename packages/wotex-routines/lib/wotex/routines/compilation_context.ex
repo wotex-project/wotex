@@ -5,6 +5,7 @@ defmodule Wotex.Routines.CompilationContext do
 
   @fields ~w(registry bases bindings definitions arguments compiler_basis)
 
+  @doc false
   @spec new(term(), Source.t(), Profile.t(), Limits.t()) ::
           {:ok, map()} | {:error, Error.t()}
   def new(input, source, profile, limits) do
@@ -30,6 +31,7 @@ defmodule Wotex.Routines.CompilationContext do
     end
   end
 
+  @doc false
   @spec arguments(map(), term(), Limits.t()) :: :ok | {:error, Error.t()}
   def arguments(parameters, values, limits) do
     with :ok <- Validation.fields(values, Map.keys(parameters)) do

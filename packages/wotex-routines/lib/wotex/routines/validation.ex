@@ -5,6 +5,7 @@ defmodule Wotex.Routines.Validation do
 
   @type checked :: :ok | {:error, Error.t()}
 
+  @doc false
   @spec admit(term(), term(), module() | nil) ::
           {:ok, term(), Limits.t()} | {:error, Error.t()}
   def admit(input, limits, module) do
@@ -15,6 +16,7 @@ defmodule Wotex.Routines.Validation do
     end
   end
 
+  @doc false
   @spec bounded(term(), Limits.t()) :: checked()
   def bounded(data, %Limits{data: limits}) do
     opts = json_options(limits)
@@ -42,6 +44,7 @@ defmodule Wotex.Routines.Validation do
 
   defp integer_magnitudes(_, _), do: :ok
 
+  @doc false
   @spec json_options(map()) :: keyword(pos_integer())
   def json_options(limits) do
     Enum.map(~w(max_bytes max_depth max_nodes max_string_bytes max_collection_size)a, fn key ->
@@ -49,6 +52,7 @@ defmodule Wotex.Routines.Validation do
     end)
   end
 
+  @doc false
   @spec unpack(term(), module() | nil) :: {:ok, term()} | {:error, Error.t()}
   def unpack(%{__struct__: module, data: data} = value, module)
       when module != nil and map_size(value) == 2,
@@ -57,6 +61,7 @@ defmodule Wotex.Routines.Validation do
   def unpack(value, _) when is_struct(value), do: Error.refusal(:invalid_struct)
   def unpack(value, _), do: {:ok, value}
 
+  @doc false
   @spec fields(term(), [String.t()], [String.t()], String.t()) :: checked()
   def fields(data, required, optional \\ [], path \\ "") do
     cond do
@@ -74,6 +79,7 @@ defmodule Wotex.Routines.Validation do
     end
   end
 
+  @doc false
   @spec text(term(), String.t()) :: checked()
   def text(value, path) do
     if is_binary(value) and byte_size(value) > 0 and String.valid?(value),
@@ -81,6 +87,7 @@ defmodule Wotex.Routines.Validation do
       else: Error.refusal(:invalid_string, path)
   end
 
+  @doc false
   @spec digest(term(), String.t()) :: checked()
   def digest(value, path) do
     if is_binary(value) and Regex.match?(~r/^sha256:[0-9a-f]{64}$/, value),
@@ -88,6 +95,7 @@ defmodule Wotex.Routines.Validation do
       else: Error.refusal(:invalid_digest, path)
   end
 
+  @doc false
   @spec integer(term(), Limits.t(), String.t(), integer() | nil) :: checked()
   def integer(value, %Limits{data: limits}, path, minimum \\ nil) do
     cond do
@@ -98,16 +106,19 @@ defmodule Wotex.Routines.Validation do
     end
   end
 
+  @doc false
   @spec choice(term(), list(), String.t()) :: checked()
   def choice(value, choices, path) do
     if value in choices, do: :ok, else: Error.refusal(:unsupported_value, path)
   end
 
+  @doc false
   @spec boolean(term(), String.t()) :: checked()
   def boolean(value, path) do
     if is_boolean(value), do: :ok, else: Error.refusal(:invalid_type, path)
   end
 
+  @doc false
   @spec strings(term(), String.t(), boolean()) :: checked()
   def strings(values, path, nonempty \\ false) do
     cond do
@@ -118,6 +129,7 @@ defmodule Wotex.Routines.Validation do
     end
   end
 
+  @doc false
   @spec each(term(), (term() -> checked())) :: checked()
   def each(values, fun) when is_list(values) do
     Enum.reduce_while(values, :ok, fn value, :ok ->
@@ -130,6 +142,7 @@ defmodule Wotex.Routines.Validation do
 
   def each(_, _), do: Error.refusal(:invalid_type)
 
+  @doc false
   @spec timestamp(term(), String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def timestamp(value, path) do
     if is_binary(value) do
@@ -142,6 +155,7 @@ defmodule Wotex.Routines.Validation do
     end
   end
 
+  @doc false
   @spec iri(term(), String.t()) :: checked()
   def iri(value, path) do
     with :ok <- text(value, path),
@@ -152,6 +166,7 @@ defmodule Wotex.Routines.Validation do
     end
   end
 
+  @doc false
   @spec hash(term(), Limits.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def hash(data, limits) do
     case Wotex.JSON.encode(data, json_options(limits.data)) do

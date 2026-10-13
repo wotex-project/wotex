@@ -3,6 +3,7 @@ defmodule Wotex.Routines.PredicateMachine do
 
   alias Wotex.Routines.{Error, Limits, Profile, Truth}
 
+  @doc false
   @spec run(term(), map(), Profile.t(), Limits.t()) ::
           {:ok, boolean() | String.t()} | {:error, Error.t()}
   def run(code, values, profile, limits) when is_list(code) do

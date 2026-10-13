@@ -3,6 +3,7 @@ defmodule Wotex.Routines.ObservationView do
 
   alias Wotex.Routines.{Limits, Unit}
 
+  @doc false
   @spec values(map(), map(), map(), Limits.t()) :: map()
   def values(program, snapshot, time, limits) do
     bases = Map.new(program["context"]["bases"], &{&1["id"], &1})

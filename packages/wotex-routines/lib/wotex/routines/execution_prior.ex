@@ -3,6 +3,7 @@ defmodule Wotex.Routines.ExecutionPrior do
 
   alias Wotex.Routines.{Edge, Error, Limits, Profile, Run, Validation}
 
+  @doc false
   @spec new(term(), term(), Profile.t(), Limits.t()) :: {:ok, map()} | {:error, Error.t()}
   def new(input, program, profile, limits) do
     with {:ok, data, _} <- Validation.admit(input, limits, nil),

@@ -5,9 +5,11 @@ defmodule Wotex.Routines.ExecutionTree do
 
   @slots ~w(admission handoff local_queue protocol_response correlated_report reported_match terminal)
 
+  @doc false
   @spec nodes(map()) :: [map()]
   def nodes(node), do: [node | Enum.flat_map(children(node), &nodes/1)]
 
+  @doc false
   @spec children(map()) :: [map()]
   def children(%{"kind" => "sequence", "steps" => children}), do: children
   def children(%{"kind" => "parallel", "branches" => children}), do: children
@@ -15,6 +17,7 @@ defmodule Wotex.Routines.ExecutionTree do
   def children(%{"kind" => "invoke", "body" => body}), do: [body]
   def children(_), do: []
 
+  @doc false
   @spec basis(map(), map()) :: map() | nil
   def basis(program, %{"kind" => "effect", "binding" => name}) do
     ref = program["context"]["bindings"][name]["basis"]
@@ -23,6 +26,7 @@ defmodule Wotex.Routines.ExecutionTree do
 
   def basis(_, _), do: nil
 
+  @doc false
   @spec identity(map(), String.t(), [non_neg_integer()], Limits.t()) ::
           {:ok, String.t()} | {:error, Wotex.Routines.Error.t()}
   def identity(program, original, path, limits) do
@@ -32,6 +36,7 @@ defmodule Wotex.Routines.ExecutionTree do
     )
   end
 
+  @doc false
   @spec records(map(), String.t(), Limits.t()) ::
           {:ok, [map()]} | {:error, Wotex.Routines.Error.t()}
   def records(program, original, limits) do

@@ -3,6 +3,7 @@ defmodule Wotex.Routines.Expansion do
 
   alias Wotex.Routines.{CompilationContext, Error, Limits, Profile, Source, Unit, ValueContract}
 
+  @doc false
   @spec build(Source.t(), map(), Profile.t(), Limits.t()) ::
           {:ok, map()} | {:error, Error.t()}
   def build(source, context, profile, limits) do

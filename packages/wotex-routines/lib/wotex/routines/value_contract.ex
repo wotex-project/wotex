@@ -3,6 +3,7 @@ defmodule Wotex.Routines.ValueContract do
 
   alias Wotex.Routines.{Error, Limits, Unit, Validation}
 
+  @doc false
   @spec validate(term(), Limits.t()) :: :ok | {:error, Error.t()}
   def validate(data, limits) do
     with :ok <- Validation.fields(data, ~w(type unit enum), [], "/value"),
@@ -26,6 +27,7 @@ defmodule Wotex.Routines.ValueContract do
     end
   end
 
+  @doc false
   @spec accepts(term(), term(), Limits.t()) :: :ok | {:error, Error.t()}
   def accepts(contract, value, limits) do
     with {:ok, contract, _} <- Validation.admit(contract, limits, nil),
