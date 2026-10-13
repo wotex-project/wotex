@@ -277,3 +277,6 @@ Implemented immutable-provider evidence is the ninth case in the extracted
 calendar consumer: both DST zones preserve exact module/provider coordinates;
 changed context and native over-bound/extra fields refuse. The ordinary package
 calendar tests retain the released 0.2.3 unavailable behavior.
+
+The [immutable-provider cohort](../provenance/immutable-timezone-cohort.md) binds
+the executed ninth archive case to its exact producer/runtime/harness source.
