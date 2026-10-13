@@ -3,7 +3,7 @@ defmodule Wotex.Routines.Fact do
 
   alias Wotex.Routines.{Error, Limits, Unit, Validation}
 
-  @fields ~w(id thing_id affordance_type affordance_name value unit quality source_id source_epoch
+  @fields ~w(id thing_id affordance_type affordance_name value unit quality source_class source_id source_epoch
     sequence source_time received_at receipt_epoch receipt_ms profile_digest replay continuity
     expires_ms derivation_digest contributors)
   @enforce_keys [:data]
@@ -23,6 +23,12 @@ defmodule Wotex.Routines.Fact do
          :ok <- Validation.iri(data["thing_id"], "/thing_id"),
          :ok <- Validation.choice(data["affordance_type"], ~w(property event), "/affordance_type"),
          :ok <- Validation.choice(data["quality"], ~w(usable stale invalid unknown), "/quality"),
+         :ok <-
+           Validation.choice(
+             data["source_class"],
+             ~w(device_report derived_report protocol_response),
+             "/source_class"
+           ),
          :ok <- Validation.choice(data["replay"], ~w(fresh retained replayed), "/replay"),
          :ok <- Validation.choice(data["continuity"], ~w(continuous baseline lost), "/continuity"),
          :ok <-
@@ -81,10 +87,12 @@ defmodule Wotex.Routines.Fact do
       else: Error.refusal(:invalid_expiry, "/expires_ms")
   end
 
-  defp derivation(%{"derivation_digest" => nil, "contributors" => []}, _), do: :ok
+  defp derivation(%{"derivation_digest" => nil, "contributors" => [], "source_class" => source}, _)
+       when source in ["device_report", "protocol_response"], do: :ok
 
   defp derivation(data, limits) do
-    with :ok <- Validation.digest(data["derivation_digest"], "/derivation_digest"),
+    with :ok <- Validation.choice(data["source_class"], ["derived_report"], "/source_class"),
+         :ok <- Validation.digest(data["derivation_digest"], "/derivation_digest"),
          contributors when is_list(contributors) and contributors != [] <- data["contributors"],
          :ok <- Validation.each(contributors, &contributor(&1, data, limits)),
          ids = Enum.map(contributors, & &1["fact_id"]),

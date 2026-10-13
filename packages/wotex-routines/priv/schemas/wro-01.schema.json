@@ -725,6 +725,13 @@
           "uniqueItems": true,
           "minItems": 0,
           "maxItems": 1024
+        },
+        "source_class": {
+          "enum": [
+            "device_report",
+            "derived_report",
+            "protocol_response"
+          ]
         }
       },
       "required": [
@@ -747,7 +754,8 @@
         "continuity",
         "expires_ms",
         "derivation_digest",
-        "contributors"
+        "contributors",
+        "source_class"
       ],
       "additionalProperties": false
     },

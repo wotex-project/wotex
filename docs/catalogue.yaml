@@ -372,7 +372,7 @@ packages:
     catalogue: "docs/packages/wotex-routines/specs/catalogue.yaml"
     specifications:
       - id: "WRO.01"
-        version: "0.2.0"
+        version: "0.2.1"
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.01-capability-behaviour.md"
       - id: "WRO.02"

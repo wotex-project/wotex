@@ -474,7 +474,8 @@
     "continuity": "continuous",
     "expires_ms": 1010,
     "derivation_digest": null,
-    "contributors": []
+    "contributors": [],
+    "source_class": "device_report"
   },
   "conversions": [
     {

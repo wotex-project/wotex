@@ -6,7 +6,7 @@ defmodule Wotex.Routines.Continuum do
 
   @extension "https://wotex.io/contracts/routines/fact/v1"
   @mapped ~w(id thing_id affordance_type affordance_name value source_time sequence quality)
-  @extension_fields ~w(unit source_id source_epoch received_at receipt_epoch receipt_ms
+  @extension_fields ~w(unit source_class source_id source_epoch received_at receipt_epoch receipt_ms
     profile_digest replay continuity expires_ms derivation_digest contributors)
 
   @doc "Builds an inert observation proposal from a complete fact and caller-supplied scope/evidence maps."

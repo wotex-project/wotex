@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.0. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.1. Updated: 2026-10-13. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -157,18 +157,22 @@ concurrency scope is installed yet. Effect-bearing bases must admit unknown
 outcomes; absolute input alone never changes the installed repeat rule.
 
 `Fact.new/2` requires `id`, `thing_id`, `affordance_type`, `affordance_name`,
-`value`, `unit`, `quality`, `source_id`, `source_epoch`, `sequence`,
+`value`, `unit`, `quality`, `source_class`, `source_id`, `source_epoch`, `sequence`,
 `source_time`, `received_at`, `receipt_epoch`, `receipt_ms`, `profile_digest`,
 `replay`, `continuity`, `expires_ms`, `derivation_digest` and `contributors`.
 Thing identity is an absolute IRI; affordance_type is property/event. Quality
 is usable/stale/invalid/unknown. Sequence and receipt/expiry coordinates are
 nonnegative integers; expiry cannot precede receipt. Source time is a
 normalized UTC RFC3339 value or explicit null; receipt UTC time is mandatory.
-Replay is fresh/retained/replayed; continuity is continuous/baseline/lost.
+Source class is device_report/derived_report/protocol_response and must later
+match the installed basis's accepted sources. The class is explicit data,
+never inferred from a source ID or timestamp. Replay is fresh/retained/replayed;
+continuity is continuous/baseline/lost.
 Unit is null or a validated Unit. Value is bounded JSON; null is an explicit
 unknown/invalid value and is never transformed into zero or false.
 
-Raw facts have null derivation_digest and no contributors. Derived facts require
+Raw facts have null derivation_digest and no contributors; derived_report
+requires the derived form. Derived facts have source_class derived_report and require
 a digest and a nonempty list of closed contributors `{fact_id, source_id,
 source_epoch, sequence, receipt_epoch, expires_ms}`; every contributor uses the
 same receipt epoch as the derived fact, and expiry is no later than any
@@ -193,7 +197,7 @@ references. They convey no credentials or authority.
 | source_time | observed_at, normalized UTC; null refuses conversion as missing_source_time |
 | sequence | sequence, mandatory for this adapter |
 | quality | quality.routine_quality; exactly the four Fact classifications |
-| unit, source_id/epoch, received_at, receipt_epoch/ms, profile_digest | Closed extension members with the same names |
+| unit, source_class, source_id/epoch, received_at, receipt_epoch/ms, profile_digest | Closed extension members with the same names |
 | replay, continuity, expires_ms, derivation_digest, contributors | Closed extension members with the same names |
 
 `Continuum.to_observation(fact, scope_map, evidence_maps, limits)` returns the

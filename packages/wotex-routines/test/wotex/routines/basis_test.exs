@@ -140,6 +140,12 @@ defmodule Wotex.Routines.BasisTest do
   test "unknown, replay, baseline and source epochs remain separate facts", context do
     fact = context.corpus["fact"]
 
+    assert {:error, %Error{code: :missing_field}} =
+             Fact.new(Map.delete(fact, "source_class"), context.limits)
+
+    assert {:error, %Error{}} =
+             Fact.new(%{fact | "source_class" => "derived_report"}, context.limits)
+
     for quality <- ~w(usable stale invalid unknown),
         replay <- ~w(fresh retained replayed),
         continuity <- ~w(continuous baseline lost) do
@@ -170,7 +176,13 @@ defmodule Wotex.Routines.BasisTest do
       "expires_ms" => 1010
     }
 
-    derived = %{raw | "derivation_digest" => raw["profile_digest"], "contributors" => [contributor]}
+    derived = %{
+      raw
+      | "source_class" => "derived_report",
+        "derivation_digest" => raw["profile_digest"],
+        "contributors" => [contributor]
+    }
+
     assert {:ok, _} = Fact.new(derived, context.limits)
 
     assert {:error, %Error{code: :invalid_derivation_basis}} =
