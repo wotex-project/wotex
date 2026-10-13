@@ -280,3 +280,7 @@ calendar tests retain the released 0.2.3 unavailable behavior.
 
 The [immutable-provider cohort](../provenance/immutable-timezone-cohort.md) binds
 the executed ninth archive case to its exact producer/runtime/harness source.
+
+The [quality milestone](../provenance/quality-milestone-2026-10.md) also exercises
+malformed producer adapter outcomes, with real recurrence semantics checked by
+the separate nine-case extracted calendar lane.

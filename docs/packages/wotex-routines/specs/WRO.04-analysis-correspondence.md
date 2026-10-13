@@ -434,3 +434,6 @@ counter-states are not concrete runtime incidents or admission.
 
 The [receipt-model cohort](../provenance/receipt-model-cohort.md) binds native
 execution and independent finite-prefix evidence to its exact source/archives.
+
+The [quality milestone](../provenance/quality-milestone-2026-10.md) passes the
+unchanged full gate and renews all four exact-archive consumer lanes together.
