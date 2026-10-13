@@ -12,7 +12,7 @@ defmodule Wotex.OPCUA.Native.SourceTest do
     manifest = Jason.decode!(bytes)
     assert Source.manifest_digest() == Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
 
-    for {name, root} <- [open62541: "open62541-1.5.7", openssl: "openssl-openssl-3.5.8"] do
+    for {name, root} <- [open62541: "open62541-1.5.7", openssl: "openssl-openssl-3.5.9"] do
       {:ok, source} = Source.fetch(name)
       recorded = Enum.find(manifest["sources"], &(&1["name"] == Atom.to_string(name)))
       assert source.root == root

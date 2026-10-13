@@ -27,7 +27,7 @@ defmodule Wotex.OPCUA.Native.Source do
   @digest Base.encode16(:crypto.hash(:sha256, @bytes), case: :lower)
   @sources Jason.decode!(@bytes)["sources"]
   @names %{open62541: "open62541", openssl: "openssl"}
-  @roots %{open62541: "open62541-1.5.7", openssl: "openssl-openssl-3.5.8"}
+  @roots %{open62541: "open62541-1.5.7", openssl: "openssl-openssl-3.5.9"}
 
   @typedoc "An exact reviewed archive and its one permitted extraction root."
   @type t :: %{

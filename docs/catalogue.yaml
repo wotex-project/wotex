@@ -364,7 +364,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-opcua/specs/WOP.06-wotex-integration.md"
       - id: "WOP.07"
-        version: "1.1.87"
+        version: "1.1.88"
         implementation_status: "implemented"
         path: "docs/packages/wotex-opcua/specs/WOP.07-native-executable.md"
   wotex-runtime:

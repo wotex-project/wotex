@@ -15,7 +15,7 @@ set(OPENSSL_CRYPTO_LIBRARY "${WOTEX_OPENSSL_PREFIX}/lib/libcrypto.a")
 # disabling executable discovery and all pkg-config hints.
 set(PKG_CONFIG_EXECUTABLE "" CACHE FILEPATH "No ambient pkg-config executable" FORCE)
 set(PKG_CONFIG_ARGN "" CACHE STRING "No ambient pkg-config arguments" FORCE)
-find_package(OpenSSL 3.5.8 EXACT REQUIRED)
+find_package(OpenSSL 3.5.9 EXACT REQUIRED)
 find_package(open62541 1.5.7 EXACT CONFIG REQUIRED NO_DEFAULT_PATH
              PATHS "${WOTEX_SDK_PREFIX}/lib/cmake/open62541")
 

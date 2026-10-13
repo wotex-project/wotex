@@ -50,8 +50,10 @@ declared by their Cargo manifests. The fixture patches:
 - disable postcard's unused default heapless feature so the lock contains no
   target-inactive, unmaintained `atomic-polyfill` dependency.
 
-The unmodified crates remain registry dependencies. Only these two patched
-crates are overridden by `[patch.crates-io]`.
+The remaining unmodified crates are registry dependencies. A third first-party
+compatibility crate replaces deprecated serde_yaml with the maintained
+yaml_serde 0.10.7 API through a re-export. It contains no copied upstream YAML
+parser; its own tests cover configuration round trips and refusal.
 
 The peer accepts the exact copied client leaf through async-opcua's fixture
 trust switch after certificate validation. That setting is deliberately scoped

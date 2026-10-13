@@ -113,7 +113,7 @@ Property truth.
 
 ## Native build
 
-Build the pinned open62541 1.5.7 and OpenSSL 3.5.8 helper in a new, empty or
+Build the pinned open62541 1.5.7 and OpenSSL 3.5.9 helper in a new, empty or
 previously verified absolute workspace:
 
 ```console

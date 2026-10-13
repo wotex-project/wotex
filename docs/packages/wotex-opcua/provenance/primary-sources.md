@@ -23,7 +23,7 @@ identity, not successful compilation. WOP.07 defines all required build lanes.
 - [Typed asynchronous service API](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client_highlevel_async.h): request ID/response callbacks and cancellation primitives. WOP uses bounded asynchronous services; synchronous Cancel does not satisfy the event-loop budget.
 - [Native types](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/types.h): signed integer UA_DateTime and complete UA_DataValue/UA_Variant fields. Native IPC retains 100 ns ticks.
 - [Build options](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/CMakeLists.txt): explicit OpenSSL backend, subscriptions and reduced namespace generation.
-- [OpenSSL 3.5.8](https://github.com/openssl/openssl/tree/f4dc4d58b48d346a8270183f89acf826d459b0ca): pinned cryptographic implementation. Its [release notes](https://openssl-library.org/news/openssl-3.5-notes/) identify the security maintenance release; dependency audit remains mandatory for every evidence cohort.
+- [OpenSSL 3.5.9](https://github.com/openssl/openssl/tree/45e844fa2a14ec92d146bd8f5778ac130b6625fb): pinned cryptographic implementation. Its [release notes](https://openssl-library.org/news/openssl-3.5-notes/) identify the security maintenance release; dependency audit remains mandatory for every evidence cohort.
 - [Erlang Ports](https://www.erlang.org/doc/system/c_port.html): external executable ownership. Correct native EOF handling is required for executable termination; a Port alone is not descendant containment.
 
 ## Reuse assessment

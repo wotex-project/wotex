@@ -3,9 +3,9 @@ spec:
   id: WOP.07
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.87
+  version: 1.1.88
   owner: wotex-opcua
-  updated: 2026-09-21
+  updated: 2026-10-13
 ---
 
 # WOP.07 Native OPC UA executable and software acceptance
@@ -367,7 +367,23 @@ and the compatibility projection.
 
 The source authority is [native-sources-v1.json](../../../../packages/wotex-opcua/priv/fixtures/native-sources-v1.json).
 open62541 1.5.7 is commit `d1173ccc31560ffc60c29e24ce8adb19f8c3c686`;
-OpenSSL 3.5.8 is commit `f4dc4d58b48d346a8270183f89acf826d459b0ca`.
+OpenSSL 3.5.9 is commit `45e844fa2a14ec92d146bd8f5778ac130b6625fb`,
+with codeload tag archive SHA-256
+`796831ec533bf41998eaaee9d632d921b8a69f57394fa4086ff01a941113d26d`.
+This security maintenance cohort replaces 3.5.8 without changing the admitted
+services or credential policy. Historical 3.5.8 executable, peer and platform
+receipts retain their original identity; they do not qualify the new build.
+The Rust software peer lock must contain no yanked dependency; the selected
+`yoke-derive` maintenance revision is 0.8.4. Source admission, recipe and live
+advisory checks establish this refresh; fresh SDK/peer builds are milestone
+evidence and are not inferred from source checks.
+The disposable Rust peer replaces deprecated `serde_yaml`/`unsafe-libyaml`
+with YAML organization's `yaml_serde` 0.10.7 through a local API re-export
+crate. This fixture-only compatibility crate declares its replacement and
+ships its own source and notice; it is not an upstream serde_yaml archive.
+Structured configuration round trips and malformed YAML refusal must pass,
+and the strict existing Cargo audit still rejects every warning apart from
+the already scoped RSA vulnerability exception below.
 Neither a mutable branch nor a host-installed SDK satisfies the reference build.
 Source archive hashes are checked before extraction; tar traversal, symlinks
 outside the workspace and unexpected roots fail. Native assets have separate

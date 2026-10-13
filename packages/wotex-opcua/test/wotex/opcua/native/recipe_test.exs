@@ -94,7 +94,7 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
     {:ok, [configure | _]} =
       Recipe.new("/work with spaces", "/package/native", @tools, {:linux, :x86_64})
 
-    assert hd(configure.args) == "/work with spaces/sources/openssl/openssl-openssl-3.5.8/Configure"
+    assert hd(configure.args) == "/work with spaces/sources/openssl/openssl-openssl-3.5.9/Configure"
     assert "--prefix=/work with spaces/openssl-prefix" in configure.args
   end
 end

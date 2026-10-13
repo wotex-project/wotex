@@ -13,10 +13,10 @@
     },
     {
       "name": "openssl",
-      "version": "3.5.8",
-      "commit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
-      "url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.8",
-      "sha256": "59f86483992995df5a213df38d93f31eeafe3b34599309b3e088ba67ca0aad9c"
+      "version": "3.5.9",
+      "commit": "45e844fa2a14ec92d146bd8f5778ac130b6625fb",
+      "url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.9",
+      "sha256": "796831ec533bf41998eaaee9d632d921b8a69f57394fa4086ff01a941113d26d"
     }
   ],
   "sdk_patches": [

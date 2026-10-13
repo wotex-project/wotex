@@ -1,0 +1,13 @@
+[package]
+name = "serde_yaml"
+version = "0.9.34+compat"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+description = "Fixture-only compatibility re-export of maintained yaml_serde"
+
+[dependencies]
+yaml_serde = "=0.10.7"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }

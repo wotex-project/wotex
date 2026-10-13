@@ -22,8 +22,8 @@
 #if UA_OPEN62541_VER_MAJOR != 1 || UA_OPEN62541_VER_MINOR != 5 || UA_OPEN62541_VER_PATCH != 7
 #error "The native source requires open62541 1.5.7"
 #endif
-#if OPENSSL_VERSION_NUMBER != 0x30500080L
-#error "The native source requires OpenSSL 3.5.8"
+#if OPENSSL_VERSION_NUMBER != 0x30500090L
+#error "The native source requires OpenSSL 3.5.9"
 #endif
 
 #define WOTEX_SDK_REVISION "d1173ccc31560ffc60c29e24ce8adb19f8c3c686"

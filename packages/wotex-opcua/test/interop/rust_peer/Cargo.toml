@@ -5,11 +5,16 @@ edition = "2021"
 license = "Apache-2.0"
 publish = false
 
+[workspace]
+members = ["vendor/serde_yaml"]
+resolver = "2"
+
 [dependencies]
 async-opcua = { version = "=0.19.0", features = ["server"] }
 tokio = { version = "1", features = ["io-std", "io-util", "macros", "net", "rt-multi-thread", "time"] }
 
 [patch.crates-io]
+serde_yaml = { path = "vendor/serde_yaml" }
 async-opcua-nodes = { path = "vendor/async-opcua-nodes" }
 async-opcua-server = { path = "vendor/async-opcua-server" }
 

@@ -28,7 +28,7 @@ server hosting and a native BEAM security stack are separate profiles.
 No certification is claimed.
 
 The first-party `Wotex.OPCUA.Open62541` adapter owns an external C executable
-using open62541 1.5.7 and OpenSSL 3.5.8. WOP.07 fixes source digests, build flags,
+using open62541 1.5.7 and OpenSSL selected by WOP.07. WOP.07 fixes source digests, build flags,
 IPC, SDK integration and executable acceptance. Runtime operation and
 repository-owned peer execution require no Python interpreter or Python
 packages. The compiled C fixture peer is same-stack open62541 evidence; a
