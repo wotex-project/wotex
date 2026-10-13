@@ -1,0 +1,752 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "type": "sint",
+        "value": "7"
+      },
+      "max_numeric_digits": 128,
+      "name": "identity",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "7"
+      }
+    },
+    {
+      "expected": {
+        "coefficient": "25",
+        "exponent": -2,
+        "type": "decimal"
+      },
+      "max_numeric_digits": 128,
+      "name": "centimetre-to-metre",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "100",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "25"
+      }
+    },
+    {
+      "expected": {
+        "coefficient": "25315",
+        "exponent": -2,
+        "type": "decimal"
+      },
+      "max_numeric_digits": 128,
+      "name": "negative-coordinate",
+      "source": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "offset_d": "20",
+        "offset_n": "5463",
+        "quantity_kind": "urn:example:quantity:absolute-temperature",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:absolute-temperature",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "-20"
+      }
+    },
+    {
+      "expected": {
+        "coefficient": "29315",
+        "exponent": -2,
+        "type": "decimal"
+      },
+      "max_numeric_digits": 128,
+      "name": "offset-coordinate",
+      "source": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "offset_d": "20",
+        "offset_n": "5463",
+        "quantity_kind": "urn:example:quantity:absolute-temperature",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:absolute-temperature",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "20"
+      }
+    },
+    {
+      "expected": {
+        "type": "sint",
+        "value": "0"
+      },
+      "max_numeric_digits": 128,
+      "name": "fahrenheit-coordinate",
+      "source": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "offset_d": "180",
+        "offset_n": "45967",
+        "quantity_kind": "urn:example:quantity:absolute-temperature",
+        "scale_d": "9",
+        "scale_n": "5"
+      },
+      "target": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "offset_d": "20",
+        "offset_n": "5463",
+        "quantity_kind": "urn:example:quantity:absolute-temperature",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "32"
+      }
+    },
+    {
+      "expected": {
+        "coefficient": "51",
+        "exponent": -3,
+        "type": "decimal"
+      },
+      "max_numeric_digits": 128,
+      "name": "decimal-input",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "100",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "coefficient": "51",
+        "exponent": -1,
+        "type": "decimal"
+      }
+    },
+    {
+      "expected": {
+        "type": "sint",
+        "value": "200"
+      },
+      "max_numeric_digits": 128,
+      "name": "target-scale",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "100",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "2"
+      }
+    },
+    {
+      "expected": {
+        "type": "uint",
+        "value": "18446744073709551615"
+      },
+      "max_numeric_digits": 128,
+      "name": "uint-integral",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "uint",
+        "value": "18446744073709551615"
+      }
+    },
+    {
+      "expected": {
+        "coefficient": "3689348814741910323",
+        "exponent": 1,
+        "type": "decimal"
+      },
+      "max_numeric_digits": 128,
+      "name": "large-integral-decimal",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "2"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "uint",
+        "value": "18446744073709551615"
+      }
+    },
+    {
+      "expected": {
+        "error": "inexact_conversion"
+      },
+      "max_numeric_digits": 128,
+      "name": "repeating-fraction",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "3",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "1"
+      }
+    },
+    {
+      "expected": {
+        "error": "numeric_limit"
+      },
+      "max_numeric_digits": 128,
+      "name": "coefficient-overflow",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "2"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "-9223372036854775808"
+      }
+    },
+    {
+      "expected": {
+        "error": "unsupported_semantics"
+      },
+      "max_numeric_digits": 128,
+      "name": "quantity-mismatch",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:distance",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "1"
+      }
+    },
+    {
+      "expected": {
+        "error": "unsupported_semantics"
+      },
+      "max_numeric_digits": 128,
+      "name": "dimension-mismatch",
+      "source": {
+        "dimension": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "1"
+      }
+    },
+    {
+      "expected": {
+        "error": "numeric_limit"
+      },
+      "max_numeric_digits": 1,
+      "name": "selected-integer-budget",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "30"
+      }
+    },
+    {
+      "expected": {
+        "error": "numeric_limit"
+      },
+      "max_numeric_digits": 2,
+      "name": "intermediate-sum-budget",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "99",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "99",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "sint",
+        "value": "1"
+      }
+    },
+    {
+      "expected": {
+        "error": "unsupported_semantics"
+      },
+      "max_numeric_digits": 128,
+      "name": "non-numeric",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "type": "boolean",
+        "value": true
+      }
+    },
+    {
+      "expected": {
+        "error": "numeric_limit"
+      },
+      "max_numeric_digits": 128,
+      "name": "decimal-exponent-budget",
+      "source": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "target": {
+        "dimension": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "offset_d": "1",
+        "offset_n": "0",
+        "quantity_kind": "urn:example:quantity:length",
+        "scale_d": "1",
+        "scale_n": "1"
+      },
+      "value": {
+        "coefficient": "1",
+        "exponent": 19,
+        "type": "decimal"
+      }
+    }
+  ],
+  "oracle": "Python Fraction; no floating arithmetic"
+}

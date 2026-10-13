@@ -1,13 +1,14 @@
 # External profile-reader completion contract
 
-Version: 0.2.1. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
 Implementation: partial reader. Evidence: focused reader/structural-schema suites.
 
 This optional producer reads consumer-owned device/semantic definitions.
 It ships no world's-sensors catalogue or vendor-model selection authority.
 The independent optional package is registered. WPF.01 reader constructors,
 limits, numeric admission, offline schemas and independent identity fixtures
-are implemented; compiler, interpretation and authoring remain planned.
+are implemented. Exact bounded Unit.convert/4 is implemented; compiler,
+report interpretation and authoring remain planned.
 Two isolated reader consumers passed against exact archives; full compiler,
 interpretation and authoring acceptance remains open. See
 [reader evidence](../provenance/reader-2026-10.md).

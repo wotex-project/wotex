@@ -12,6 +12,9 @@ catalogue records implementation status separately.
 - Keep original byte custody separate from semantic identity. Native values
   revalidate and rehash, clearing raw identity; annotations do not affect the
   semantic digest.
+- Use `Unit.convert/4` only for exact C02 integer/decimal coordinates.
+  Repeating fractions and budget/coefficient overflow refuse; no rounding or
+  primitive coercion is installed.
 - Quantity kinds and model data belong to the consumer. Equal dimensions do
   not establish equal meaning, calibration, model truth or device support.
 - Loading the library starts no process and performs no I/O. References are

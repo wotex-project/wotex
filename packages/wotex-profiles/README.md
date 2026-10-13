@@ -47,7 +47,9 @@ would round during normalization refuse `numeric_limit`.
 
 The reader supports the closed mechanical DataSchema subset in
 [the external-profile contract](../../docs/packages/wotex-profiles/specs/WPF.01-external-profile-language.md).
-Compilation, capture matching, interpretation and authoring are separate
+`Unit.convert/4` supplies exact rational conversion between matching quantity
+URI/dimension pairs and refuses repeating fractions or arithmetic overflow.
+Compilation, capture matching, report interpretation and authoring are separate
 planned contracts; the package catalogue records their current evidence.
 
 ## Development

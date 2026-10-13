@@ -7,7 +7,7 @@ defmodule Wotex.Profiles.Unit do
   Construction checks canonical reduced signed-64 rationals; it grants no trust.
   """
 
-  alias Wotex.Profiles.{Error, Grammar, Numeric}
+  alias Wotex.Profiles.{Arithmetic, Error, Grammar, Limits, Numeric}
 
   @enforce_keys [:data]
   defstruct [:data]
@@ -37,6 +37,35 @@ defmodule Wotex.Profiles.Unit do
   @spec to_map(term(), term()) :: {:ok, map()} | {:error, Error.t()}
   def to_map(value, limits) do
     with {:ok, checked} <- new(value, limits), do: {:ok, checked.data}
+  end
+
+  @doc """
+  Converts a C02 integer/decimal exactly between equal supplied quantities.
+
+  Source and target quantity URI/dimension must both match. Reduced rational
+  arithmetic refuses budget overflow or repeating fractions; no rounding,
+  calibration, primitive coercion or consumer authority is inferred.
+  """
+  @spec convert(term(), term(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def convert(value, source, target, limits) do
+    with {:ok, limits} <- Limits.new(limits),
+         {:ok, source} <- new(source, limits),
+         {:ok, target} <- new(target, limits),
+         {:ok, _, _} <-
+           Grammar.admit(
+             %{"source" => source.data, "target" => target.data, "value" => value},
+             limits
+           ),
+         true <-
+           source.data["quantity_kind"] == target.data["quantity_kind"] and
+             source.data["dimension"] == target.data["dimension"],
+         {:ok, value} <- Wotex.Runtime.Codec.Value.validate(value) do
+      Arithmetic.coordinates(value, source.data, target.data, limits)
+    else
+      false -> Error.refusal(:unsupported_semantics, "/unit")
+      {:error, %Error{}} = error -> error
+      _ -> Error.refusal(:invalid_input, "/value")
+    end
   end
 
   defp dimension(values) when is_list(values) and length(values) == 7 do

@@ -1,7 +1,8 @@
 # WPF.02 — Bounded profile compilation and interpretation
 
-Version: 0.2.1. Updated: 2026-10-13. Status: accepted target.
-Implementation: planned. Evidence: missing.
+Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
+Implementation: partial exact Unit.convert/4. Evidence: independent Fraction
+vectors and focused conversion tests; compiler/report interpretation remains planned.
 
 ## Scope and required inputs
 
@@ -151,7 +152,7 @@ using exact arithmetic, never a binary-float tolerance. Unsupported schema/shape
 refuses; an explicit invalid/missing report becomes a null value with its original
 quality/reason, never usable zero/false. No library-defined sensor-name rules exist.
 
-Planned Unit.convert/4 takes value, supplied source Unit, target Unit and Limits.
+Unit.convert/4 takes value, supplied source Unit, target Unit and Limits.
 It requires equal supplied quantity kind/dimension, applies their exact rational
 coordinate maps and obeys the same budgets. Unknown quantity IDs do not imply
 unknown mathematical operators; the installed operator set stays finite.
@@ -202,3 +203,40 @@ Numeric DataSchema literals use WPF.01's lossless normalized-decimal admission.
 Mechanical comparison converts their checked canonical decimal spelling to an
 exact rational, under the selected exponent/digit budget, before comparison.
 It does not compare a C02 decimal with an approximate IEEE float threshold.
+
+
+## Exact unit-arithmetic freeze
+
+`Unit.convert/4` revalidates its complete Limits, source/target Units and C02
+value. The selected byte/depth/node envelope covers the two coordinate maps
+and value together. Quantity URI and dimension must both match, or conversion
+refuses `unsupported_semantics` at `/unit`. A valid nonnumeric C02 node refuses
+`unsupported_semantics` at `/value`; malformed C02/native inputs refuse
+`invalid_input`. Numeric decimal input exponent outside -18..18 refuses
+`numeric_limit`. There is no primitive/float coercion.
+
+Calculations use reduced integer fractions. At every operation, numerator
+absolute magnitude and positive denominator must be at most
+10^max_numeric_digits-1. Multiplication cross-cancels reduced fractions before
+checking either integer product. Addition uses the denominator gcd and checks
+each cross product, common denominator and signed sum before allocation, then
+reduces. A refused intermediate is not retried in a different operation order.
+The fixed coordinate calculation uses multiplication, addition, subtraction
+and division: at most eight rational operations including representation work.
+No Decimal precision context, float tolerance or ambient rounding policy applies.
+
+Output has a deterministic representation: an integral result in signed-64 is
+`sint`; an integral positive result above signed-64 but within uint64 is `uint`.
+Other exactly representable results are normalized C02 decimals, including
+integers beyond uint64 whose normalized signed-64 coefficient fits. A denominator
+with a prime factor other than 2 or 5 refuses `inexact_conversion`. Work or
+C02 coefficient overflow refuses `numeric_limit`; zero is normalized as sint 0.
+Finite decimal conversion factors denominator powers using bounded integer work,
+and output is revalidated through public C02 validation. This representation
+rule applies to converted values; unconverted interpretation preserves its
+original C02 type. No field is a physical calibration claim.
+
+Independent exact Fraction vectors in `priv/vectors/unit-conversion.json`
+freeze identity, fractional scales, positive/negative offsets, temperature
+coordinate changes, incompatible quantity/dimension, repeating fractions,
+coefficient overflow and caller-selected arithmetic limits before code.

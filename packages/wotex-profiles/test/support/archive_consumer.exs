@@ -47,4 +47,30 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
     assert {:error, %Wotex.Profiles.Error{code: :unsupported_schema}} =
              Definition.new(put_in(data, ["value_schema", "pattern"], "execute"), limits)
   end
+
+  test "generic exact coordinates and quantity refusal survive both archived consumers" do
+    limits = Jason.decode!(File.read!("limits.json"))
+    unit = Jason.decode!(File.read!("definition.json"))["unit"]
+    source = Map.merge(unit, %{"scale_n" => "1", "scale_d" => "100"})
+    value = %{"type" => "sint", "value" => "25"}
+
+    assert {:ok, %{"type" => "decimal", "coefficient" => "25", "exponent" => -2}} =
+             Unit.convert(value, source, unit, limits)
+
+    assert {:error, %Wotex.Profiles.Error{code: :unsupported_semantics}} =
+             Unit.convert(
+               value,
+               Map.put(source, "quantity_kind", "urn:example:quantity:unrelated"),
+               unit,
+               limits
+             )
+
+    assert {:error, %Wotex.Profiles.Error{code: :inexact_conversion}} =
+             Unit.convert(
+               %{"type" => "sint", "value" => "1"},
+               Map.put(unit, "scale_d", "3"),
+               unit,
+               limits
+             )
+  end
 end
