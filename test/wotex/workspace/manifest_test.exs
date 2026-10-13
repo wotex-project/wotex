@@ -310,7 +310,7 @@ defmodule Wotex.Workspace.ManifestTest do
     test "loads, starts with wotex and ends with wotex-lab" do
       manifest = Manifest.load!()
       order = Manifest.topological_order(manifest)
-      assert length(order) == 18
+      assert length(order) == 19
       assert hd(order) == "wotex"
 
       # Every package follows all of its dependencies.

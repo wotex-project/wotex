@@ -3,14 +3,14 @@ package: "wotex_routines"
 completion_plan: "docs/plans/wotex-routines-completion.md"
 specifications:
   - id: "WRO.01"
-    version: "0.1.0"
+    version: "0.2.0"
     path: "docs/specs/WRO.01-capability-behaviour.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: []
     requires: ["wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.04", "wotex_continuum:WCT.02"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Prospective optional package; installed semantics and inert values only; no current package or runtime authority"
+    implementation_modules: ["Wotex.Routines.Limits", "Wotex.Routines.Registry", "Wotex.Routines.Unit", "Wotex.Routines.Basis", "Wotex.Routines.Fact", "Wotex.Routines.Continuum", "Wotex.Routines.Error"]
+    executable_evidence: ["test/wotex/routines/basis_test.exs", "test/wotex/routines/schema_test.exs", "bin/check_archive.exs", "bin/check_application_free.exs"]
+    compatibility_classification: "Registered optional package with closed installed semantics, exact units and Continuum facts; no runtime authority. Kernel completion/repeat joins and independent consumer adoption remain obligations."
   - id: "WRO.02"
     version: "0.1.0"
     path: "docs/specs/WRO.02-source-kernel.md"

@@ -14,7 +14,7 @@
 
 WoTEx represents W3C Web of Things descriptions as Elixir values and connects
 their Properties, Actions and Events to protocol-specific code. The repository
-contains eighteen independent Mix projects: the value model, a runtime,
+contains nineteen independent Mix projects: the value model, a runtime,
 bindings, protocol packages, conformance tools and a consumer laboratory.
 
 This is a development monorepo, not an umbrella application. Each package has
@@ -100,6 +100,12 @@ Inspects Thread networks and manages the OpenThread SDK.
 
 Provides bounded datagram transport with explicit socket ownership. Its
 catalogue records the remaining interoperability evidence.
+
+### [`wotex-routines`](packages/wotex-routines/README.md)
+
+Defines bounded installed behaviour and observation values for an optional
+pure routine kernel. The catalogue separates this foundation from the planned
+kernel, temporal host and analysis obligations.
 
 ### [`wotex-zigbee`](packages/wotex-zigbee/README.md)
 

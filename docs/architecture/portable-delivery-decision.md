@@ -1,6 +1,6 @@
 # Optional implementation delivery
 
-Decision `PD-ADR@1.3.0`, 2026-10-08. Accepted design direction; implementation
+Decision `PD-ADR@1.3.1`, 2026-10-13. Accepted design direction; implementation
 status is recorded by the package catalogue. Source review baseline:
 `c8c727a7c8c18fec82d80cc5ba88d246af3c67fc`. This decision reconciles
 [extension research](../research/runtime-extension-architecture.md) at
@@ -11,13 +11,17 @@ historical proposals; this decision and the package contracts define the target.
 
 ## Decision and scope
 
-Keep the 18 independent Mix projects, Hex dependency requirements and explicit
+Keep independent Mix projects, Hex dependency requirements and explicit
 consumer registration. A normal library consumer needs no extension manifest,
 loader or registry. A selected implementation may additionally be delivered as
 an exact local data or executable artifact when it solves a demonstrated
 replacement or dependency problem. This decision authorizes specification of
 that optional boundary, not a marketplace, online installer or mandatory
 extension manager.
+
+The optional routines package extends the inventory to nineteen independent
+projects. Core and protocol libraries acquire no routines dependency; explicit
+consumer selection and the remaining boundaries in this decision are preserved.
 
 Runtime owns common immutable admission and lifecycle values. A binding owns
 its domain mapping, IPC and process custody. Root tooling owns native build

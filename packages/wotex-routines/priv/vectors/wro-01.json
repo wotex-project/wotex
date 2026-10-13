@@ -1,0 +1,745 @@
+{
+  "limits": {
+    "max_bytes": 1048576,
+    "max_depth": 32,
+    "max_nodes": 100000,
+    "max_string_bytes": 65536,
+    "max_collection_size": 1024,
+    "max_integer": 9223372036854775807
+  },
+  "registry": [
+    {
+      "id": "interaction-security",
+      "version": "1",
+      "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "requires": []
+    },
+    {
+      "id": "interaction-lifecycle",
+      "version": "1",
+      "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "requires": []
+    },
+    {
+      "id": "example.scalar",
+      "version": "1",
+      "semantic_digest": "sha256:2f1a79b5351c20f4b03097c6b5c26f3c1543920c69134bd7078f0ce77be02ab4",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "version": "1",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "version": "1",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    {
+      "id": "example.event",
+      "version": "1",
+      "semantic_digest": "sha256:cfcf9f4fd0c8a3e4429d3303d9b56540ad4c327da319d18f8cc71f78fcbd8b9b",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "version": "1",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "version": "1",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    {
+      "id": "example.fast",
+      "version": "1",
+      "semantic_digest": "sha256:b9a402998767525cfe881404591fca2cb753af1f969841f2c8918a0fe2d843a3",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "version": "1",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "version": "1",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    {
+      "id": "example.slow",
+      "version": "1",
+      "semantic_digest": "sha256:1e39cb5ca2eef947b3c8838171137f31e08592e9167754ba8386a36d259a5d09",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "version": "1",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "version": "1",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    {
+      "id": "example.media",
+      "version": "1",
+      "semantic_digest": "sha256:9898385d9d42e7f826529917ed1b781b59a9eefe43cb1dd4abf3440abf962a11",
+      "requires": [
+        {
+          "id": "interaction-security",
+          "version": "1",
+          "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        {
+          "id": "interaction-lifecycle",
+          "version": "1",
+          "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    }
+  ],
+  "bases": [
+    {
+      "format": "wotex.routines.basis@1",
+      "id": "example.scalar",
+      "version": "1",
+      "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantic_digest": "sha256:2f1a79b5351c20f4b03097c6b5c26f3c1543920c69134bd7078f0ce77be02ab4",
+      "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "affordance": {
+        "type": "property",
+        "name": "scalar",
+        "operation": "readproperty"
+      },
+      "value": {
+        "type": "integer",
+        "unit": {
+          "dimension": "temperature",
+          "name": "centidegree-C",
+          "scale_n": 1,
+          "scale_d": 100,
+          "offset_n": 27315,
+          "offset_d": 100,
+          "min": -27315,
+          "max": 100000
+        },
+        "enum": []
+      },
+      "security_contract": {
+        "id": "interaction-security",
+        "version": "1",
+        "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "lifecycle_contract": {
+        "id": "interaction-lifecycle",
+        "version": "1",
+        "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "required_contracts": [],
+      "evidence": {
+        "sources": [
+          "device_report"
+        ],
+        "freshness_ms": 1000,
+        "require_source_time": true,
+        "continuity": "continuous",
+        "completion": "correlated_report"
+      },
+      "effects": {
+        "resource_roles": [],
+        "repeat": "never",
+        "stop": "unsupported",
+        "supersession": "block_until_known",
+        "partial_possible": false,
+        "unknown_possible": true
+      },
+      "timing": {
+        "deadline_ms": 15000,
+        "duration_ms": 0,
+        "dwell_ms": 0,
+        "cooldown_ms": 0,
+        "uncertainty": "block"
+      },
+      "analysis": {
+        "classification": "unsupported",
+        "profile": null,
+        "properties": []
+      },
+      "annotations": {
+        "title": "scalar"
+      }
+    },
+    {
+      "format": "wotex.routines.basis@1",
+      "id": "example.event",
+      "version": "1",
+      "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantic_digest": "sha256:cfcf9f4fd0c8a3e4429d3303d9b56540ad4c327da319d18f8cc71f78fcbd8b9b",
+      "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "affordance": {
+        "type": "event",
+        "name": "event",
+        "operation": "subscribeevent"
+      },
+      "value": {
+        "type": "boolean",
+        "unit": null,
+        "enum": []
+      },
+      "security_contract": {
+        "id": "interaction-security",
+        "version": "1",
+        "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "lifecycle_contract": {
+        "id": "interaction-lifecycle",
+        "version": "1",
+        "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "required_contracts": [],
+      "evidence": {
+        "sources": [
+          "device_report"
+        ],
+        "freshness_ms": 1000,
+        "require_source_time": true,
+        "continuity": "continuous",
+        "completion": "correlated_report"
+      },
+      "effects": {
+        "resource_roles": [],
+        "repeat": "never",
+        "stop": "unsupported",
+        "supersession": "block_until_known",
+        "partial_possible": false,
+        "unknown_possible": true
+      },
+      "timing": {
+        "deadline_ms": 15000,
+        "duration_ms": 0,
+        "dwell_ms": 0,
+        "cooldown_ms": 0,
+        "uncertainty": "block"
+      },
+      "analysis": {
+        "classification": "unsupported",
+        "profile": null,
+        "properties": []
+      },
+      "annotations": {
+        "title": "event"
+      }
+    },
+    {
+      "format": "wotex.routines.basis@1",
+      "id": "example.fast",
+      "version": "1",
+      "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantic_digest": "sha256:b9a402998767525cfe881404591fca2cb753af1f969841f2c8918a0fe2d843a3",
+      "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "affordance": {
+        "type": "property",
+        "name": "fast",
+        "operation": "writeproperty"
+      },
+      "value": {
+        "type": "boolean",
+        "unit": null,
+        "enum": []
+      },
+      "security_contract": {
+        "id": "interaction-security",
+        "version": "1",
+        "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "lifecycle_contract": {
+        "id": "interaction-lifecycle",
+        "version": "1",
+        "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "required_contracts": [],
+      "evidence": {
+        "sources": [
+          "device_report"
+        ],
+        "freshness_ms": 1000,
+        "require_source_time": true,
+        "continuity": "continuous",
+        "completion": "reported_match"
+      },
+      "effects": {
+        "resource_roles": [
+          "target"
+        ],
+        "repeat": "never",
+        "stop": "separate_effect",
+        "supersession": "block_until_known",
+        "partial_possible": true,
+        "unknown_possible": true
+      },
+      "timing": {
+        "deadline_ms": 15000,
+        "duration_ms": 0,
+        "dwell_ms": 0,
+        "cooldown_ms": 0,
+        "uncertainty": "block"
+      },
+      "analysis": {
+        "classification": "unsupported",
+        "profile": null,
+        "properties": []
+      },
+      "annotations": {
+        "title": "fast"
+      }
+    },
+    {
+      "format": "wotex.routines.basis@1",
+      "id": "example.slow",
+      "version": "1",
+      "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantic_digest": "sha256:1e39cb5ca2eef947b3c8838171137f31e08592e9167754ba8386a36d259a5d09",
+      "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "affordance": {
+        "type": "action",
+        "name": "slow",
+        "operation": "invokeaction"
+      },
+      "value": {
+        "type": "integer",
+        "unit": {
+          "dimension": "fraction",
+          "name": "ppm",
+          "scale_n": 1,
+          "scale_d": 1000000,
+          "offset_n": 0,
+          "offset_d": 1,
+          "min": 0,
+          "max": 1000000
+        },
+        "enum": []
+      },
+      "security_contract": {
+        "id": "interaction-security",
+        "version": "1",
+        "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "lifecycle_contract": {
+        "id": "interaction-lifecycle",
+        "version": "1",
+        "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "required_contracts": [],
+      "evidence": {
+        "sources": [
+          "device_report"
+        ],
+        "freshness_ms": 1000,
+        "require_source_time": true,
+        "continuity": "continuous",
+        "completion": "reported_match"
+      },
+      "effects": {
+        "resource_roles": [
+          "target"
+        ],
+        "repeat": "never",
+        "stop": "separate_effect",
+        "supersession": "block_until_known",
+        "partial_possible": true,
+        "unknown_possible": true
+      },
+      "timing": {
+        "deadline_ms": 15000,
+        "duration_ms": 120000,
+        "dwell_ms": 0,
+        "cooldown_ms": 0,
+        "uncertainty": "block"
+      },
+      "analysis": {
+        "classification": "unsupported",
+        "profile": null,
+        "properties": []
+      },
+      "annotations": {
+        "title": "slow"
+      }
+    },
+    {
+      "format": "wotex.routines.basis@1",
+      "id": "example.media",
+      "version": "1",
+      "byte_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "semantic_digest": "sha256:9898385d9d42e7f826529917ed1b781b59a9eefe43cb1dd4abf3440abf962a11",
+      "implementation_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "compiler_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "affordance": {
+        "type": "action",
+        "name": "media",
+        "operation": "invokeaction"
+      },
+      "value": {
+        "type": "enum",
+        "unit": null,
+        "enum": [
+          "play",
+          "stop"
+        ]
+      },
+      "security_contract": {
+        "id": "interaction-security",
+        "version": "1",
+        "semantic_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "lifecycle_contract": {
+        "id": "interaction-lifecycle",
+        "version": "1",
+        "semantic_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "required_contracts": [],
+      "evidence": {
+        "sources": [
+          "device_report"
+        ],
+        "freshness_ms": 1000,
+        "require_source_time": true,
+        "continuity": "continuous",
+        "completion": "correlated_report"
+      },
+      "effects": {
+        "resource_roles": [
+          "target"
+        ],
+        "repeat": "never",
+        "stop": "separate_effect",
+        "supersession": "block_until_known",
+        "partial_possible": true,
+        "unknown_possible": true
+      },
+      "timing": {
+        "deadline_ms": 15000,
+        "duration_ms": 1000,
+        "dwell_ms": 0,
+        "cooldown_ms": 0,
+        "uncertainty": "block"
+      },
+      "analysis": {
+        "classification": "unsupported",
+        "profile": null,
+        "properties": []
+      },
+      "annotations": {
+        "title": "media"
+      }
+    }
+  ],
+  "fact": {
+    "id": "sample:7",
+    "thing_id": "urn:workcell:station-1",
+    "affordance_type": "property",
+    "affordance_name": "scalar",
+    "value": 2500,
+    "unit": {
+      "dimension": "temperature",
+      "name": "centidegree-C",
+      "scale_n": 1,
+      "scale_d": 100,
+      "offset_n": 27315,
+      "offset_d": 100,
+      "min": -27315,
+      "max": 100000
+    },
+    "quality": "usable",
+    "source_id": "sensor:1",
+    "source_epoch": "connection:1",
+    "sequence": 7,
+    "source_time": "2026-10-13T07:00:00Z",
+    "received_at": "2026-10-13T07:00:01Z",
+    "receipt_epoch": "boot:1",
+    "receipt_ms": 10,
+    "profile_digest": "sha256:2f1a79b5351c20f4b03097c6b5c26f3c1543920c69134bd7078f0ce77be02ab4",
+    "replay": "fresh",
+    "continuity": "continuous",
+    "expires_ms": 1010,
+    "derivation_digest": null,
+    "contributors": []
+  },
+  "conversions": [
+    {
+      "from": {
+        "dimension": "temperature",
+        "name": "centidegree-C",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 27315,
+        "offset_d": 100,
+        "min": -27315,
+        "max": 100000
+      },
+      "to": {
+        "dimension": "temperature",
+        "name": "millikelvin",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 2000000
+      },
+      "input": 2500,
+      "output": 298150
+    },
+    {
+      "from": {
+        "dimension": "temperature",
+        "name": "centidegree-C",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 27315,
+        "offset_d": 100,
+        "min": -27315,
+        "max": 100000
+      },
+      "to": {
+        "dimension": "temperature",
+        "name": "millikelvin",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 2000000
+      },
+      "input": 0,
+      "output": 273150
+    },
+    {
+      "from": {
+        "dimension": "temperature",
+        "name": "centidegree-C",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 27315,
+        "offset_d": 100,
+        "min": -27315,
+        "max": 100000
+      },
+      "to": {
+        "dimension": "temperature",
+        "name": "millikelvin",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 2000000
+      },
+      "input": -27315,
+      "output": 0
+    },
+    {
+      "from": {
+        "dimension": "temperature",
+        "name": "degree-F",
+        "scale_n": 5,
+        "scale_d": 9,
+        "offset_n": 45967,
+        "offset_d": 180,
+        "min": -459,
+        "max": 1000
+      },
+      "to": {
+        "dimension": "temperature",
+        "name": "millikelvin",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 2000000
+      },
+      "input": 32,
+      "output": 273150
+    },
+    {
+      "from": {
+        "dimension": "temperature",
+        "name": "degree-F",
+        "scale_n": 5,
+        "scale_d": 9,
+        "offset_n": 45967,
+        "offset_d": 180,
+        "min": -459,
+        "max": 1000
+      },
+      "to": {
+        "dimension": "temperature",
+        "name": "millikelvin",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 2000000
+      },
+      "input": 212,
+      "output": 373150
+    },
+    {
+      "from": {
+        "dimension": "fraction",
+        "name": "ppm",
+        "scale_n": 1,
+        "scale_d": 1000000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 1000000
+      },
+      "to": {
+        "dimension": "fraction",
+        "name": "percent",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 100
+      },
+      "input": 250000,
+      "output": 25
+    },
+    {
+      "from": {
+        "dimension": "fraction",
+        "name": "percent",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 100
+      },
+      "to": {
+        "dimension": "fraction",
+        "name": "ppm",
+        "scale_n": 1,
+        "scale_d": 1000000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 1000000
+      },
+      "input": 100,
+      "output": 1000000
+    },
+    {
+      "from": {
+        "dimension": "temperature",
+        "name": "degree-F",
+        "scale_n": 5,
+        "scale_d": 9,
+        "offset_n": 45967,
+        "offset_d": 180,
+        "min": -459,
+        "max": 1000
+      },
+      "to": {
+        "dimension": "temperature",
+        "name": "millikelvin",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 2000000
+      },
+      "input": 33,
+      "error": "inexact_conversion"
+    },
+    {
+      "from": {
+        "dimension": "electric_potential",
+        "name": "millivolt",
+        "scale_n": 1,
+        "scale_d": 1000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 1000000
+      },
+      "to": {
+        "dimension": "fraction",
+        "name": "ppm",
+        "scale_n": 1,
+        "scale_d": 1000000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 1000000
+      },
+      "input": 3000,
+      "error": "incompatible_dimension"
+    },
+    {
+      "from": {
+        "dimension": "fraction",
+        "name": "ppm",
+        "scale_n": 1,
+        "scale_d": 1000000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 1000000
+      },
+      "to": {
+        "dimension": "fraction",
+        "name": "percent",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 100
+      },
+      "input": 250001,
+      "error": "inexact_conversion"
+    },
+    {
+      "from": {
+        "dimension": "fraction",
+        "name": "ppm",
+        "scale_n": 1,
+        "scale_d": 1000000,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 1000000
+      },
+      "to": {
+        "dimension": "fraction",
+        "name": "percent",
+        "scale_n": 1,
+        "scale_d": 100,
+        "offset_n": 0,
+        "offset_d": 1,
+        "min": 0,
+        "max": 100
+      },
+      "input": 1000001,
+      "error": "out_of_domain"
+    }
+  ]
+}

@@ -1261,3 +1261,6 @@ packages:
           DOC_SHELL_CANDIDATE: ""
           MIX_TARGET: host
           PHOENIX_ASSETS_CANDIDATE: ""
+  wotex-routines:
+    app: wotex_routines
+    depends_on: [wotex, wotex-continuum]
