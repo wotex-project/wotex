@@ -307,6 +307,88 @@ defmodule CalendarArchiveConsumerTest do
              Adapter.page(precise, c.time, c.limits)
   end
 
+  defmodule ImmutableZone do
+    @moduledoc false
+
+    @behaviour ExBooking.TimeZoneProvider
+
+    @impl ExBooking.TimeZoneProvider
+    def resolve(nominal, zone, _) do
+      case DateTime.from_naive(nominal, zone, Tz.TimeZoneDatabase) do
+        {:gap, _, _} -> :gap
+        result -> result
+      end
+    end
+
+    @impl ExBooking.TimeZoneProvider
+    def localize(datetime, zone, _),
+      do: DateTime.shift_zone(datetime, zone, Tz.TimeZoneDatabase)
+  end
+
+  test "immutable provider pages match module originals and changed context fences cursors", c do
+    for {start, zone, from, until} <- [
+          {"2026-03-28T02:30:00+01:00", "Europe/Stockholm", "2026-03-28T00:00:00Z",
+           "2026-04-01T00:00:00Z"},
+          {"2026-10-31T01:30:00-04:00", "America/New_York", "2026-10-31T00:00:00Z",
+           "2026-11-04T00:00:00Z"}
+        ] do
+      module_request = request(c, start, zone, from, until, "FREQ=DAILY;COUNT=3", 1)
+      {:ok, provider} = ExBooking.TimeZoneProvider.new(ImmutableZone, "immutable-fixture-one")
+
+      assert {:ok, provider_request} =
+               CalendarRequest.new(
+                 module_request.schedule,
+                 module_request.query,
+                 provider,
+                 nil,
+                 c.limits
+               )
+
+      assert {:ok, module_page} = Adapter.page(module_request, c.time, c.limits)
+      assert {:ok, first} = Adapter.page(provider_request, c.time, c.limits)
+      assert first.occurrences == module_page.occurrences
+      assert {:ok, _} = Adapter.to_map(first, c.limits)
+
+      assert {:ok, second} =
+               Adapter.page(%{provider_request | cursor: first.next_cursor}, c.time, c.limits)
+
+      assert {:ok, module_second} =
+               Adapter.page(%{module_request | cursor: module_page.next_cursor}, c.time, c.limits)
+
+      assert second.occurrences == module_second.occurrences
+
+      changed = %{
+        provider_request
+        | database: %{provider | context: "immutable-fixture-two"},
+          cursor: first.next_cursor
+      }
+
+      assert {:error, %Error{code: :stale_calendar_cursor}} =
+               Adapter.page(changed, c.time, c.limits)
+
+      assert {:error, %Error{code: :invalid_calendar_request}} =
+               CalendarRequest.new(
+                 module_request.schedule,
+                 module_request.query,
+                 Map.put(provider, :extra, true),
+                 nil,
+                 c.limits
+               )
+
+      {:ok, small} = Limits.new(%{c.limits.data | "max_bytes" => 16_384})
+      oversized = %{provider | context: :binary.copy(<<0>>, 16_385)}
+
+      assert {:error, %Error{code: :invalid_calendar_request}} =
+               CalendarRequest.new(
+                 module_request.schedule,
+                 module_request.query,
+                 oversized,
+                 nil,
+                 small
+               )
+    end
+  end
+
   defp request(c, dtstart, zone, from, until, rule, limit \\ 10) do
     raw = %{
       "format" => "wotex.routines.schedule@1",

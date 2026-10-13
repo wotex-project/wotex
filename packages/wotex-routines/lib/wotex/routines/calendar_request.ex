@@ -9,17 +9,18 @@ defmodule Wotex.Routines.CalendarRequest do
   @type t :: %__MODULE__{
           schedule: map(),
           query: map(),
-          database: module(),
+          database: module() | map(),
           cursor: CalendarCursor.t() | nil
         }
 
   @doc "Checks a calendar schedule, canonical finite query, explicit database module and cursor envelope."
   @spec new(term(), term(), term(), term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
   def new(schedule, query, database, cursor, limits) do
-    with {:ok, schedule} <- Schedule.to_map(schedule, limits),
+    with {:ok, limits} <- Limits.new(limits),
+         {:ok, schedule} <- Schedule.to_map(schedule, limits),
          true <- schedule["kind"] == "calendar",
          {:ok, query} <- query(query, limits),
-         true <- is_atom(database) and database != nil,
+         true <- database?(database, limits),
          :ok <- cursor(cursor, limits) do
       {:ok, %__MODULE__{schedule: schedule, query: query, database: database, cursor: cursor}}
     else
@@ -34,6 +35,20 @@ defmodule Wotex.Routines.CalendarRequest do
     do: new(request.schedule, request.query, request.database, request.cursor, limits)
 
   def current(_, _), do: Error.refusal(:invalid_calendar_request)
+
+  defp database?(database, _) when is_atom(database), do: database != nil
+
+  defp database?(%{__struct__: ExBooking.TimeZoneProvider, context: context} = provider, limits)
+       when is_binary(context) do
+    arguments = [provider]
+
+    byte_size(context) <= limits.data["max_bytes"] and
+      apply(ExBooking.TimeZoneProvider, :valid?, arguments)
+  rescue
+    _ -> false
+  end
+
+  defp database?(_, _), do: false
 
   defp query(input, limits) do
     with {:ok, data, limits} <- Validation.admit(input, limits, nil),

@@ -380,7 +380,7 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.02-source-kernel.md"
       - id: "WRO.03"
-        version: "0.2.3"
+        version: "0.2.4"
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.03-temporal-host.md"
       - id: "WRO.04"

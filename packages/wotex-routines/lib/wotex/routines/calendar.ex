@@ -79,10 +79,20 @@ defmodule Wotex.Routines.Calendar do
       %{
         "schedule_digest" => request.schedule["definition_digest"],
         "horizon" => Map.take(request.query, ~w(from until)),
-        "database" => Atom.to_string(request.database)
+        "database" => database_basis(request.database)
       },
       limits
     )
+  end
+
+  defp database_basis(database) when is_atom(database), do: Atom.to_string(database)
+
+  defp database_basis(%{module: module, context: context}) do
+    %{
+      "provider" => "ExBooking.TimeZoneProvider",
+      "module" => Atom.to_string(module),
+      "context_digest" => "sha256:" <> Base.encode16(:crypto.hash(:sha256, context), case: :lower)
+    }
   end
 
   defp cursor(nil, _, _), do: {:ok, nil}
@@ -95,7 +105,7 @@ defmodule Wotex.Routines.Calendar do
 
   defp start(request) do
     with {:ok, utc, supplied_offset} <- DateTime.from_iso8601(request.schedule["dtstart"]),
-         {:ok, local} <- DateTime.shift_zone(utc, request.schedule["time_zone"], request.database),
+         {:ok, local} <- localize(utc, request.schedule["time_zone"], request.database),
          true <- local.utc_offset + local.std_offset == supplied_offset do
       {:ok, local}
     else
@@ -103,6 +113,14 @@ defmodule Wotex.Routines.Calendar do
     end
   rescue
     _ -> Error.refusal(:invalid_calendar_start)
+  end
+
+  defp localize(utc, zone, database) when is_atom(database),
+    do: DateTime.shift_zone(utc, zone, database)
+
+  defp localize(utc, zone, provider) do
+    arguments = [utc, zone, provider]
+    apply(ExBooking.TimeZoneProvider, :shift_zone, arguments)
   end
 
   defp enumerate(request, start, from, until, cursor) do

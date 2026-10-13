@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.3. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.4. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -151,14 +151,14 @@ Implemented evidence: `temporal_test.exs` covers an independent finite UTC tick 
 
 `CalendarRequest.new(schedule, query, database, cursor, limits)` accepts a
 calendar Schedule, closed query (from/until offset-bearing ISO timestamps,
-limit 1–1024, work_limit 1–100000), an explicit existing TimeZoneDatabase module
+limit 1–1024, work_limit 1–100000), an explicit existing TimeZoneDatabase module or checked ExBooking.TimeZoneProvider
 and null or the returned CalendarCursor. Query bounds normalize to UTC and are
 increasing. The request has exactly schedule, query, database and cursor;
 caller-built native requests are revalidated. No string becomes a module/atom.
 CalendarCursor has exactly basis_digest, clock_generation and producer_cursor.
 The final member is the native SP.08 continuation, never an invented wire token.
 Its producer validates its position/prefix within work_limit. Adapter basis
-binds the full schedule, canonical horizon and explicit database module; limit
+binds the full schedule, canonical horizon and explicit database module/provider identity; limit
 and work_limit may change between pages. Changed clock/basis refuses reuse.
 
 `Calendar.page(request, time, limits)` reconstructs DTSTART in the explicit zone,
@@ -243,3 +243,37 @@ reactivates restored definitions. Higher-risk response capacity is a separate
 host lane; this driver does not borrow it.
 
 Driver lifecycle evidence is `driver_test.exs`: bounded concurrent admission, FIFO wakeups, timeout/exception retirement, polling coalescence, parent death, private-state redaction and a result/retirement race. These instrumented callbacks do not establish the host transaction contract; real consumer store-race and composition/archive evidence remain separate obligations.
+
+## Immutable provider join
+
+The optional producer successor also accepts SP.08's public TimeZoneProvider.
+Its exact native module/context is revalidated through the public provider API;
+context bytes obey both the producer's 1 MiB ceiling and Limits.max_bytes.
+No data string becomes a module. CalendarRequest stores that native immutable
+value, never a wrapper process or an application-environment database. DTSTART
+localization uses the producer's public shift_zone/3 helper for provider input;
+ordinary module input retains DateTime's existing explicit database call.
+A published producer lacking this additive provider seam remains unavailable.
+
+Calendar cursor basis identifies provider kind, installed callback module and
+SHA-256 of the exact opaque context, alongside the full schedule and query.
+Changing context rejects old continuations even if a consumer reuses its
+zone-basis name. Provider context is not included in the projected occurrence,
+event or JSON cursor identity. ExBooking independently retains/checks its full
+native provider in the inner cursor. This identity is attribution, not code/data
+authentication; the consumer owns immutable custody and installed callbacks.
+
+The adapter never parses timezone data or supplies default DST policy. Invalid
+provider shape/code/seam returns invalid_calendar_request; malformed provider
+results fail the existing start/producer-contract checks. Producer gaps/folds,
+COUNT, work bounds and millisecond precision retain their prior semantics.
+Ordinary scalar calculations do not require a provider. The original released
+0.2.3 absence test and existing module-based calendar corpus remain acceptance
+requirements. The native archive consumer additionally compares explicit
+provider and module pages, retained original coordinates and changed-context
+cursor refusal through only the public producer API.
+
+Implemented immutable-provider evidence is the ninth case in the extracted
+calendar consumer: both DST zones preserve exact module/provider coordinates;
+changed context and native over-bound/extra fields refuse. The ordinary package
+calendar tests retain the released 0.2.3 unavailable behavior.
