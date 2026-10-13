@@ -384,8 +384,8 @@ packages:
         implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.03-temporal-host.md"
       - id: "WRO.04"
-        version: "0.1.0"
-        implementation_status: "planned"
+        version: "0.2.0"
+        implementation_status: "partial"
         path: "docs/packages/wotex-routines/specs/WRO.04-analysis-correspondence.md"
   wotex-runtime:
     app: "wotex_runtime"

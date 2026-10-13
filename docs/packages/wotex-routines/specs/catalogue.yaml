@@ -30,11 +30,11 @@ specifications:
     executable_evidence: ["test/wotex/routines/temporal_test.exs", "test/wotex/routines/calendar_test.exs", "test/wotex/routines/driver_test.exs", "test/support/archive/calendar_consumer.exs", "bin/check_archive.exs"]
     compatibility_classification: "Closed immutable schedules, UTC interval/one-shot and boot-scoped countdown pages plus explicit program binding implemented. Direct optional calendar adapter and published-version unavailability implemented; one exact development producer archive/calendar consumer exercised; bounded explicitly started driver lifecycle implemented; real host transactions and independent composition consumers remain obligations; ExBooking SP.08 producer is unreleased."
   - id: "WRO.04"
-    version: "0.1.0"
+    version: "0.2.0"
     path: "docs/specs/WRO.04-analysis-correspondence.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: []
     requires: ["WRO.01", "WRO.02", "WRO.03"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Optional scoped analysis; external ExMaude producer; no positive admission from bounded absence"
+    implementation_modules: ["Wotex.Routines.AnalysisResult"]
+    executable_evidence: ["test/wotex/routines/analysis_result_test.exs"]
+    compatibility_classification: "Closed bounded result axes, witness assertions and full correspondence binding implemented. Projection, independent concrete/mutation corpus and optional ExMaude execution remain obligations; bounded absence never supplies positive admission."

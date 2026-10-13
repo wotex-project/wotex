@@ -1,0 +1,243 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Bounded analysis result with separate axes",
+  "type": "object",
+  "properties": {
+    "format": {
+      "enum": [
+        "wotex.routines.analysis.result@1"
+      ]
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "scope_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "model_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "source_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "ir_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "compiler_basis": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "behaviour_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "mapping_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "runtime_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "policy_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "time_basis_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "budget_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "scope_digest",
+        "model_digest",
+        "source_digest",
+        "ir_digest",
+        "compiler_basis",
+        "behaviour_digest",
+        "mapping_digest",
+        "runtime_digest",
+        "policy_digest",
+        "time_basis_digest",
+        "budget_digest"
+      ],
+      "additionalProperties": false
+    },
+    "validity": {
+      "enum": [
+        "valid",
+        "invalid",
+        "unsupported"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "counterexample"
+            ]
+          },
+          "property": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "trace_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "concrete": {
+            "enum": [
+              "validated",
+              "unvalidated"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "property",
+          "trace_digest",
+          "concrete"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1024
+    },
+    "execution": {
+      "enum": [
+        "completed_bounded",
+        "truncated",
+        "timeout",
+        "unavailable",
+        "unsupported",
+        "error"
+      ]
+    },
+    "admission": {
+      "enum": [
+        "inconclusive",
+        "blocked"
+      ]
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "model_invalid",
+            "scope_unsupported",
+            "budget_exhausted",
+            "backend_unavailable",
+            "counterexample",
+            "incomplete",
+            "correspondence_failed",
+            "stale_evidence"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transitions": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "states",
+        "transitions"
+      ],
+      "additionalProperties": false
+    },
+    "effective_limits": {
+      "type": "object",
+      "properties": {
+        "total_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000
+        },
+        "max_states": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "max_transitions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "max_model_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      },
+      "required": [
+        "total_ms",
+        "max_states",
+        "max_transitions",
+        "max_depth",
+        "max_model_bytes",
+        "max_output_bytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "format",
+    "binding",
+    "validity",
+    "findings",
+    "execution",
+    "admission",
+    "reason",
+    "counts",
+    "effective_limits"
+  ],
+  "additionalProperties": false
+}

@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.1.0. Updated: 2026-10-13. Status: accepted target; implementation planned.
+Version: 0.2.0. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -61,3 +61,51 @@ load and pure decision evaluation.
 | WRO04-T2 | 02–04 | Independent finite traces agree on every declared runtime property; listed behavior-changing mutations produce asserting refusals |
 | WRO04-T3 | 03 | Change source, model, compiler, behaviour, time basis or policy after cache warming; affected evidence refuses reuse |
 | WRO04-T4 | 05 | Worker failure/replacement/output bound cannot reuse stale evidence or starve ordinary control; native retirement and containment proved separately |
+
+## Closed evidence/result boundary
+
+`AnalysisResult.new/2` takes a complete closed JSON result and explicit Limits.
+Format is wotex.routines.analysis.result@1. Exact members are format, binding,
+validity, findings, execution, admission, reason, counts and effective_limits.
+Binding has exactly scope_digest, model_digest, source_digest, ir_digest,
+compiler_basis, behaviour_digest, mapping_digest, runtime_digest, policy_digest,
+time_basis_digest and budget_digest; every member is a SHA-256 identity. They
+bind different subjects and cannot substitute for one another.
+
+Validity is valid/invalid/unsupported. Execution is completed_bounded/truncated/
+timeout/unavailable/unsupported/error. Admission is only inconclusive/blocked;
+this generic result carries no positive authorization. Findings is a finite
+array of closed kind/property/trace_digest/concrete records. Kind is
+counterexample; property is a nonempty bounded name; concrete is validated or
+unvalidated. A validated concrete counterexample requires blocked admission even if execution
+was truncated, but an abstract witness alone remains inconclusive. Invalid or
+unsupported validity has no findings and cannot claim completed search.
+Unsupported validity requires unsupported execution. Validated-witness findings
+require valid input/model and completed_bounded or truncated execution. No
+absence, zero count or schema validation becomes a positive finding.
+
+Counts has states and transitions, each explicit null or nonnegative bounded
+integer. Completed bounded execution requires both counts; other completion
+states may lack them. Effective limits has exactly total_ms, max_states,
+max_transitions, max_depth, max_model_bytes and max_output_bytes. All are explicit
+positive selections: total_ms <=60000, max_states <=100000,
+max_transitions <=1000000, max_depth <=256; byte bounds are no greater than
+Limits.max_bytes. Reported counts cannot exceed their selected bounds. budget_digest is the canonical SHA-256 of effective_limits; altered selections cannot retain the old budget binding.
+
+Reason is explicit null or model_invalid, scope_unsupported, budget_exhausted,
+backend_unavailable, counterexample, incomplete, correspondence_failed or
+stale_evidence. Completed bounded absence has null reason/inconclusive admission;
+blocked admission requires a validated concrete witness and counterexample
+reason. Unknown fields/axes, unsupported combinations, duplicate property/trace
+identities and exceeded bounds refuse with payload-free Error.
+
+`AnalysisResult.to_map/2` revalidates. `AnalysisResult.current/3` additionally
+requires the complete expected binding and compares every subject before reuse;
+changing policy, time basis or budget invalidates cached correspondence just as
+changing source or runtime does. Constructors verify bounded shape and declared
+consistency, not authenticity of supplied evidence or a consumer's assertion
+that a witness was concretely validated. The producer adapter/replay seam must
+establish that validation; the host independently owns evidence custody and
+final admission. A caller-built native result is not trusted merely by its type.
+
+Implemented result-boundary evidence is `analysis_result_test.exs`: completed bounded/empty search cannot authorize, abstract witnesses remain inconclusive, every correspondence subject invalidates reuse, and budget/axis/native-value inconsistencies refuse. Projection, concrete replay, scoped model/mutation corpus and optional backend execution remain obligations.
