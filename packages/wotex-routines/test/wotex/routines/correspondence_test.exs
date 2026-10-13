@@ -65,7 +65,9 @@ defmodule Wotex.Routines.CorrespondenceTest do
       },
       "definitions" => [],
       "arguments" => %{},
-      "compiler_basis" => "sha256:" <> String.duplicate("7", 64)
+      "compiler_basis" =>
+        System.get_env("WOTEX_ROUTINES_COMPILER_BASIS") ||
+          "sha256:" <> String.duplicate("7", 64)
     }
 
     %{

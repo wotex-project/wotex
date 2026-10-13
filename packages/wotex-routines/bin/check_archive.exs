@@ -11,7 +11,11 @@ defmodule Wotex.Routines.Check.Archive do
 
   @spec main() :: :ok
   def main do
-    {opts, rest, invalid} = OptionParser.parse(System.argv(), strict: [occurrence_archive: :string])
+    {opts, rest, invalid} =
+      OptionParser.parse(System.argv(),
+        strict: [occurrence_archive: :string, composition_consumers: :boolean]
+      )
+
     if rest != [] or invalid != [], do: throw({:archive, "unsupported archive arguments"})
     version = Mix.Project.config()[:version]
     suffix = Integer.to_string(System.unique_integer([:positive]))
@@ -23,7 +27,7 @@ defmodule Wotex.Routines.Check.Archive do
       try do
         build!(archive)
         verify!(files(archive, temporary))
-        maybe_consumer!(opts[:occurrence_archive], archive, temporary)
+        consumers!(opts, archive, temporary)
         {:ok, sha256(archive)}
       catch
         :throw, {:archive, message} -> {:error, message}
@@ -43,29 +47,42 @@ defmodule Wotex.Routines.Check.Archive do
     end
   end
 
-  defp maybe_consumer!(nil, _, _), do: :ok
+  defp consumers!(opts, archive, temporary) do
+    producer = opts[:occurrence_archive]
 
-  defp maybe_consumer!(producer, archive, temporary) do
-    producer = Path.expand(producer)
-    unless File.regular?(producer), do: throw({:archive, "missing supplied producer archive"})
+    if producer || opts[:composition_consumers] do
+      paths = artifacts!(producer, archive, temporary)
+      if producer, do: calendar_consumer!(producer, archive, paths, temporary)
+      if opts[:composition_consumers], do: composition_consumers!(archive, paths, temporary)
+    end
+
+    :ok
+  end
+
+  defp artifacts!(producer, archive, temporary) do
+    if producer && not File.regular?(producer),
+      do: throw({:archive, "missing supplied producer archive"})
+
     artifacts = Path.join(temporary, "artifacts")
     File.mkdir_p!(artifacts)
 
     roots = [
       {:wotex_routines, archive},
       {:wotex, build_sibling!("wotex", temporary)},
-      {:wotex_continuum, build_sibling!("wotex-continuum", temporary)},
-      {:ex_booking, producer}
+      {:wotex_continuum, build_sibling!("wotex-continuum", temporary)}
     ]
 
-    paths =
-      Enum.map(roots, fn {app, archive} ->
-        destination = Path.join(artifacts, Atom.to_string(app))
-        unpack!(archive, destination)
-        IO.puts("#{app} archive sha256: #{sha256(archive)}")
-        {app, destination}
-      end)
+    roots = if producer, do: roots ++ [{:ex_booking, Path.expand(producer)}], else: roots
 
+    Enum.map(roots, fn {app, archive} ->
+      destination = Path.join(artifacts, Atom.to_string(app))
+      unpack!(archive, destination)
+      IO.puts("#{app} archive sha256: #{sha256(archive)}")
+      {app, destination}
+    end)
+  end
+
+  defp calendar_consumer!(producer, archive, paths, temporary) do
     consumer = Path.join(temporary, "consumer")
     test_root = Path.join(consumer, "test")
     File.mkdir_p!(test_root)
@@ -95,6 +112,68 @@ defmodule Wotex.Routines.Check.Archive do
     run!(["compile", "--warnings-as-errors"], consumer, environment)
     run!(["test", "--warnings-as-errors"], consumer, environment)
     IO.puts("consumer lock sha256: #{sha256(Path.join(consumer, "mix.lock"))}")
+  end
+
+  defp composition_consumers!(archive, paths, temporary) do
+    groups = [
+      {"source-trace", ["test/wotex/routines/correspondence_test.exs"],
+       ["test/support/source_truth_oracle.exs", "test/support/source_transition_oracle.exs"]},
+      {"private-journal", ["test/support/archive/journal_consumer.exs"], []}
+    ]
+
+    Enum.each(groups, fn {name, tests, support} ->
+      consumer = Path.join(temporary, "consumer-" <> name)
+      test_root = Path.join(consumer, "test")
+      File.mkdir_p!(test_root)
+
+      dependencies =
+        Enum.map(paths, fn {app, path} ->
+          {app, [path: path, env: :prod, override: true]}
+        end)
+
+      File.write!(Path.join(consumer, "mix.exs"), consumer_project(dependencies))
+
+      helper =
+        Enum.map(support, fn relative ->
+          support_root = Path.join(consumer, "support")
+          File.mkdir_p!(support_root)
+          copy_fixture!(relative, Path.join(support_root, Path.basename(relative)))
+          "Code.require_file(#{inspect("../support/" <> Path.basename(relative))}, __DIR__)\n"
+        end)
+
+      File.write!(Path.join(test_root, "test_helper.exs"), ["ExUnit.start()\n" | helper])
+
+      Enum.each(Enum.with_index(tests), fn {relative, index} ->
+        copy_fixture!(relative, Path.join(test_root, "consumer_#{index}_test.exs"))
+      end)
+
+      copy_fixture!(
+        "test/support/archive/identity_consumer.exs",
+        Path.join(test_root, "identity_test.exs")
+      )
+
+      environment = [
+        {"WOTEX_PATH_DEPS", nil},
+        {"MIX_ENV", "test"},
+        {"MIX_BUILD_PATH", nil},
+        {"MIX_BUILD_ROOT", nil},
+        {"MIX_DEPS_PATH", nil},
+        {"WOTEX_ROUTINES_CONSUMER_ROOT", consumer},
+        {"WOTEX_ROUTINES_COMPILER_BASIS", "sha256:" <> sha256(archive)}
+      ]
+
+      IO.puts("composition consumer: #{name}")
+      run!(["deps.get"], consumer, environment)
+      run!(["compile", "--warnings-as-errors"], consumer, environment)
+      run!(["test", "--warnings-as-errors"], consumer, environment)
+      IO.puts("#{name} consumer lock sha256: #{sha256(Path.join(consumer, "mix.lock"))}")
+    end)
+  end
+
+  defp copy_fixture!(relative, destination) do
+    source = Path.expand("../" <> relative, __DIR__)
+    File.cp!(source, destination)
+    IO.puts("#{relative} consumer source sha256: #{sha256(source)}")
   end
 
   defp build_sibling!(name, temporary) do
