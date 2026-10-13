@@ -235,6 +235,52 @@ defmodule Wotex.Routines.EvaluationTest do
              )
   end
 
+  test "an independent source AST oracle agrees with compiled nested three-valued predicates",
+       context do
+    literals = Enum.map([true, false, "unknown"], &%{"op" => "literal", "value" => &1})
+
+    combinations =
+      for left <- literals, right <- literals, operation <- ~w(all any) do
+        %{"op" => operation, "args" => [%{"op" => "not", "arg" => left}, right]}
+      end
+
+    comparisons =
+      for operator <- ~w(eq lt gt), expected <- [1000, 2500, 3000] do
+        %{"op" => operator, "binding" => "sensor", "value" => expected}
+      end
+
+    nested =
+      for comparison <- comparisons do
+        %{
+          "op" => "all",
+          "args" => [
+            %{"op" => "not", "arg" => %{"op" => "literal", "value" => false}},
+            %{"op" => "any", "args" => [comparison, %{"op" => "literal", "value" => "unknown"}]}
+          ]
+        }
+      end
+
+    for predicate <- Enum.concat([literals, combinations, comparisons, nested]),
+        value <- [1000, 2500, 3000, nil] do
+      source = %{@source | "condition" => predicate}
+
+      assert {:ok, program} =
+               Compiler.compile(source, context.context, context.profile, context.limits)
+
+      snapshot = %{context.snapshot | "active_programs" => [program.data["ir_digest"]]}
+
+      snapshot =
+        if value == nil,
+          do: put_in(snapshot, ["facts", "sensor"], nil),
+          else: put_in(snapshot, ["facts", "sensor", "value"], value)
+
+      expected = Wotex.Routines.SourceTruthOracle.evaluate(predicate, %{"sensor" => value})
+
+      assert Evaluation.evaluate(program, snapshot, context.time, context.profile, context.limits) ==
+               {:ok, expected}
+    end
+  end
+
   defp evaluate(context, snapshot, time) do
     Evaluation.evaluate(context.program, snapshot, time, context.profile, context.limits)
   end
