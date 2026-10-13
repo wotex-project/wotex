@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.9. Contract: accepted. Source status: the workspace
+Specification version: 0.9.10. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -284,7 +284,9 @@ try it. Real hardware availability is an evidence prerequisite, not a fabricated
 result or removal from scope.
 
 `hosts/nerves/` names only the `rpi4` target and pins Nerves 1.15.0,
-`nerves_system_rpi4` 2.1.1 and its aarch64 15.3.1 toolchain closure. Firmware
+`nerves_system_rpi4` 2.1.2 and its aarch64 15.3.1 toolchain closure. The prior
+2.1.1 cross-compilation record does not qualify this system; refreshed
+firmware and device evidence are still required. Firmware
 boot starts one eight-child Lab instance but no experiment, listener,
 discovery, model or effect. `WotexLabNerves.Smoke.run/0` is operator-invoked:
 it runs the BinaryBackend thermal baseline and reads a simulated Property

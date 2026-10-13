@@ -3,13 +3,13 @@ defmodule Wotex.DependencySecurityTest do
 
   use ExUnit.Case, async: true
 
-  @decimal_lock {:hex, :decimal, "3.1.1",
-                 "430d87b04011ce6cbd4fd205be758311a81f87d552d40904abd00f015935b1d0", [:mix], [],
-                 "hexpm", "c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6"}
+  @decimal_lock {:hex, :decimal, "3.2.0",
+                 "f1235f05d841a211fda78a08fdb9777f2ff51a71f18455233fae186ff76187c6", [:mix], [],
+                 "hexpm", "190bca80580ce61aa69bb0eacadd7677710205c770225c2c2c07e32a5c31b234"}
 
   test "the reviewed Decimal cohort is exact and has no advisory suppression" do
     assert Mix.Dep.Lock.read()[:decimal] == @decimal_lock
-    assert Application.spec(:decimal, :vsn) == ~c"3.1.1"
+    assert Application.spec(:decimal, :vsn) == ~c"3.2.0"
 
     assert [] ==
              Mix.Project.config()
@@ -45,6 +45,35 @@ defmodule Wotex.DependencySecurityTest do
       assert {:ok, :ok} = Task.yield(task, 1_000)
     after
       Task.shutdown(task, :brutal_kill)
+    end
+  end
+
+  test "attacker-controlled rounding scales complete under a small heap and retain numeric meaning" do
+    owner = self()
+    tag = make_ref()
+
+    {pid, monitor} =
+      spawn_monitor(fn ->
+        Process.flag(:max_heap_size, %{size: 262_144, kill: true, error_logger: false})
+        number = Decimal.new("1.5")
+
+        assert_raise Decimal.Error, fn -> Decimal.round(number, -10_000_000) end
+        assert_raise Decimal.Error, fn -> Decimal.round(number, 10_000_000) end
+        Decimal.Context.set(%{Decimal.Context.get() | emin: :infinity, emax: :infinity})
+        zero = Decimal.round(number, -10_000_000)
+        assert zero.coef == 0
+        assert Decimal.to_integer(zero) == 0
+        assert Decimal.to_float(zero) == 0.0
+        assert_raise Decimal.Error, fn -> Decimal.round(number, 10_000_000) end
+        send(owner, {tag, :bounded})
+      end)
+
+    try do
+      assert_receive {^tag, :bounded}, 5_000
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}, 1_000
+    after
+      if Process.alive?(pid), do: Process.exit(pid, :kill)
+      Process.demonitor(monitor, [:flush])
     end
   end
 end

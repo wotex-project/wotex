@@ -53,7 +53,7 @@ defmodule WotexLabWorkbench.MixProject do
       wotex_dependency(:wotex_continuum, "wotex-continuum"),
       wotex_dependency(:wotex_binding_http, "wotex-binding-http"),
       wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt"),
-      {:ex_maude, "~> 0.4.1"},
+      {:ex_maude, "== 0.5.0"},
       {:nx, "~> 0.13.1"},
       {:explorer, "~> 0.12.0"},
       {:telemetry, "~> 1.3"},

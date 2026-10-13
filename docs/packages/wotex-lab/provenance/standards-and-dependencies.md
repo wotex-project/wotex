@@ -52,7 +52,7 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [EMQTT 1.16.0](https://hex.pm/packages/emqtt/1.16.0) | Chosen MQTT 5 client behind the optional `{:emqtt, "~> 1.15"}` requirement, resolved to 1.16.0 by `mix.lock`; credential custody and no-automatic-reconnect are asserted against this revision, and wire/session behaviour beyond the exercised cases is not claimed |
 | [eclipse-mosquitto 2](https://hub.docker.com/_/eclipse-mosquitto) | Disposable local MQTT broker for the WLB.04 broker lane, selected by tag; not a digest-pinned release artifact and not a broker conformance claim |
 | [Exqlite 0.40.0](https://hexdocs.pm/exqlite/0.40.0/Exqlite.html) | Chosen SQLite access, pinned by `mix.lock`; the transactions, conditional SQL and conflict mapping belong to the independent Lab adapter |
-| [ExMaude 0.4.1](https://hex.pm/packages/ex_maude/0.4.1) | Optional `{:ex_maude, "~> 0.4.1"}` requirement, MIT; the Lab uses `ExMaude.Pool.child_spec/1`, `ExMaude.Pool.transaction/2` and `ExMaude.Server.execute/3` with the port backend only. Its compile step fetches a precompiled NIF for the unused native backend through rustler_precompiled; the Lab never selects that backend |
+| [ExMaude 0.5.0](https://hex.pm/packages/ex_maude/0.5.0) | Optional `{:ex_maude, "== 0.5.0"}` requirement, MIT; the Lab uses `ExMaude.Pool.child_spec/1`, `ExMaude.Pool.transaction/2` and `ExMaude.Server.execute/3` with the port backend only. Its compile step fetches a precompiled NIF for the unused native backend through rustler_precompiled; the Lab never selects that backend |
 | [Maude 3.5.1](https://github.com/maude-lang/Maude/releases/tag/Maude3.5.1) | Rewriting logic engine, GPL-2.0, provisioned by the operator and pinned by digest as a profile input; the macOS arm64 release archive inspected on 2026-09-08 has SHA-256 `95851274f57b3853aab833674e2b770ed800f38fb1f3d03c97dcac56346c13dc`. Finite-model claims and the executable license are separate from WoT standards |
 | [Livebook](https://livebook.dev/) and [Nerves Livebook](https://github.com/livebook-dev/nerves_livebook) | Executable notebooks and bootable embedded adoption convention; Lab supplies its own tested artifacts |
 | [ExDoc 0.40.4](https://hexdocs.pm/ex_doc/0.40.4/readme.html) | Markdown/llms documentation inputs, not a replacement for normative catalogues |
@@ -468,3 +468,7 @@ the newest or compatible. Runtime dependencies are pinned by `mix.lock`; full
 profile dependency and binary cohorts are admitted by WLB.08. Changing a source
 revision requires checking its spec/API/claim differences and renewing affected
 evidence. External standards schemas are linked, not copied into Lab fixtures.
+
+The current source selects ExMaude 0.5.0 and Nerves Pi system 2.1.2. The
+older archive, cross-compilation and device observations above retain their
+original inputs; upgrading a requirement does not transfer that evidence.

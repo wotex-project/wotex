@@ -1,7 +1,7 @@
 # WoTEx Lab Nerves host
 
 This is the explicit Raspberry Pi 4 firmware source owned by WLB.08. It pins
-Nerves 1.15.0, `nerves_system_rpi4` 2.1.1 and the aarch64 toolchain closure in
+Nerves 1.15.0, `nerves_system_rpi4` 2.1.2 and the aarch64 toolchain closure in
 `mix.lock`. Boot starts one bounded `Wotex.Lab` instance and nothing else: no
 experiment, listener, device discovery, model, database or physical effect.
 

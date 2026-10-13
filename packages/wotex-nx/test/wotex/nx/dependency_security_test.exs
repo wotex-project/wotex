@@ -4,7 +4,7 @@ defmodule Wotex.Nx.DependencySecurityTest do
   use ExUnit.Case, async: true
 
   test "the Decimal parser regression runs against the reviewed version without advisory waivers" do
-    assert Application.spec(:decimal, :vsn) == ~c"3.1.1"
+    assert Application.spec(:decimal, :vsn) == ~c"3.2.0"
 
     assert Mix.Project.config()
            |> Keyword.get(:hex, [])

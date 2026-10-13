@@ -18,9 +18,9 @@ defmodule Wotex.Lab.Check.NervesSource do
 
   @pins [
     ~s({:nerves, "1.15.0", runtime: false}),
-    ~s({:nerves_system_rpi4, "2.1.1", runtime: false, targets: :rpi4}),
+    ~s({:nerves_system_rpi4, "2.1.2", runtime: false, targets: :rpi4}),
     ~s("nerves": {:hex, :nerves, "1.15.0"),
-    ~s("nerves_system_rpi4": {:hex, :nerves_system_rpi4, "2.1.1"),
+    ~s("nerves_system_rpi4": {:hex, :nerves_system_rpi4, "2.1.2"),
     ~s("nerves_toolchain_aarch64_nerves_linux_gnu": {:hex, :nerves_toolchain_aarch64_nerves_linux_gnu, "15.3.1")
   ]
 

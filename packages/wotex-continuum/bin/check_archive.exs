@@ -845,7 +845,7 @@ defmodule WotexContinuum.CheckArchive do
     end
 
     expected_versions = %{
-      decimal: "3.1.1",
+      decimal: "3.2.0",
       ex_json_schema: "0.11.5",
       jason: expected_jason,
       wotex: @core_package_version,

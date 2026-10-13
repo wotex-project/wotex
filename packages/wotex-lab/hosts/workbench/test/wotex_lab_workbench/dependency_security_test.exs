@@ -4,7 +4,7 @@ defmodule WotexLabWorkbench.DependencySecurityTest do
   use ExUnit.Case, async: true
 
   test "the exact reviewed Decimal cohort rejects the advisory payload with default limits" do
-    assert Application.spec(:decimal, :vsn) == ~c"3.1.1"
+    assert Application.spec(:decimal, :vsn) == ~c"3.2.0"
 
     task =
       Task.async(fn ->

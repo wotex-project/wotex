@@ -65,7 +65,7 @@ defmodule WotexLab.MixProject do
       {:telemetry, "~> 1.3"},
       {:exqlite, "~> 0.40", optional: true},
       {:req, "~> 0.7.4", optional: true},
-      {:ex_maude, "~> 0.4.1", optional: true},
+      {:ex_maude, "== 0.5.0", optional: true},
       {:bandit, "~> 1.12", only: :test},
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

@@ -4,7 +4,7 @@ defmodule Wotex.Binding.HTTP.DependencySecurityTest do
   use ExUnit.Case, async: true
 
   test "the parser regression runs against the reviewed Decimal version without a waiver" do
-    assert Application.spec(:decimal, :vsn) == ~c"3.1.1"
+    assert Application.spec(:decimal, :vsn) == ~c"3.2.0"
 
     assert [] ==
              Mix.Project.config()

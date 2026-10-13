@@ -32,7 +32,7 @@ defmodule WotexLabNerves.MixProject do
       {:nerves, "1.15.0", runtime: false},
       {:shoehorn, "~> 0.9.1"},
       {:nerves_runtime, "~> 0.13.0"},
-      {:nerves_system_rpi4, "2.1.1", runtime: false, targets: :rpi4},
+      {:nerves_system_rpi4, "2.1.2", runtime: false, targets: :rpi4},
       wotex_dependency(:wotex, "wotex"),
       wotex_dependency(:wotex_nx, "wotex-nx"),
       wotex_dependency(:wotex_runtime, "wotex-runtime"),
