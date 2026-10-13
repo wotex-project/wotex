@@ -16,24 +16,12 @@ defmodule Wotex.Profiles.Parser do
     else
       {:error, %Error{}} = error -> error
       false -> Error.refusal(:input_limit)
-      {:error, %Wotex.Error{code: code}} -> core_refusal(code)
+      {:error, %Wotex.Error{code: code}} -> Grammar.core_refusal(code)
       _ -> Error.refusal(:invalid_input)
     end
   end
 
   def decode(_, _), do: Error.refusal(:invalid_input)
-
-  defp core_refusal(code)
-       when code in [
-              :byte_limit_exceeded,
-              :depth_limit_exceeded,
-              :node_limit_exceeded,
-              :string_limit_exceeded,
-              :collection_limit_exceeded
-            ],
-       do: Error.refusal(:input_limit)
-
-  defp core_refusal(_), do: Error.refusal(:invalid_input)
 
   defp scan(<<>>, _, _), do: :ok
   defp scan(<<?\\, _, rest::binary>>, true, limits), do: scan(rest, true, limits)

@@ -442,4 +442,24 @@ defmodule Wotex.Profiles.ReaderTest do
                Profile.new(Map.put(F.profile(), "annotations", value), F.limits())
     end
   end
+
+  test "malformed native JSON is distinct from a selected resource limit" do
+    for value <- [
+          :foreign,
+          {1, 2},
+          <<255>>,
+          %{non_string_key: 1},
+          URI.new!("urn:example:value"),
+          [1 | :foreign]
+        ] do
+      data = put_in(F.profile(), ["channels", Access.at(0), "selector"], value)
+      assert {:error, %Error{code: :invalid_input}} = Profile.new(data, F.limits())
+    end
+
+    assert {:error, %Error{code: :input_limit}} =
+             Profile.new(
+               F.profile(),
+               Map.put(F.limits(), "max_nodes", 1)
+             )
+  end
 end

@@ -13,9 +13,24 @@ defmodule Wotex.Profiles.Grammar do
       {:ok, data, limits}
     else
       {:error, %Error{}} = error -> error
-      _ -> Error.refusal(:input_limit)
+      {:error, %Wotex.Error{code: code}} -> core_refusal(code)
+      false -> Error.refusal(:input_limit)
     end
   end
+
+  @doc false
+  @spec core_refusal(atom()) :: {:error, Error.t()}
+  def core_refusal(code)
+      when code in [
+             :byte_limit_exceeded,
+             :depth_limit_exceeded,
+             :node_limit_exceeded,
+             :string_limit_exceeded,
+             :collection_limit_exceeded
+           ],
+      do: Error.refusal(:input_limit)
+
+  def core_refusal(_), do: Error.refusal(:invalid_input)
 
   @doc false
   @spec options(Limits.t()) :: keyword()
