@@ -362,4 +362,5 @@ Implemented runner evidence is `analysis_test.exs`: seven focused groups cover
 all bindings, forgery, queue expiry, shared deadlines, selected work/output limits,
 backend loss/truncation and changed native identities/correspondence. The shipped
 `wro-04-request.schema.json` describes the complete offline request. Native
-runner evidence is recorded separately through the extracted archive lane.
+runner evidence is recorded in the [runner cohort](../provenance/analysis-runner-cohort.md)
+through the extracted archive lane.
