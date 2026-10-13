@@ -8,7 +8,9 @@ It ships no world's-sensors catalogue or vendor-model selection authority.
 The independent optional package is registered. WPF.01 reader constructors,
 limits, numeric admission, offline schemas and independent identity fixtures
 are implemented; compiler, interpretation and authoring remain planned.
-Archive consumer and full mechanism acceptance are separate obligations.
+Two isolated reader consumers passed against exact archives; full compiler,
+interpretation and authoring acceptance remains open. See
+[reader evidence](../provenance/reader-2026-10.md).
 
 1. Freeze WPF.01 profile/definition/registration schemas, limits and canonical
    vectors. Show an unseen quantity without adding a reader enum.

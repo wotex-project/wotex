@@ -2,7 +2,7 @@
 
 Version: 0.2.2. Updated: 2026-10-13. Status: accepted target.
 Implementation: partial reader. Evidence: reader/structural-schema suites;
-closure/selector compilation and archive consumer obligations remain open.
+two isolated archive consumers passed. Closure/selector compilation remains open.
 
 ## Scope and ownership
 
@@ -161,11 +161,11 @@ not internal validators. No global registry/consumer source is an archive input.
 
 | Case | Requirements | Stimulus and falsifier | Evidence |
 | --- | --- | --- | --- |
-| WPF01-T1 | 01–04 | Independent unseen quantity/model definitions and reordered objects; exact identities/units, no sensor-name switch | Pure independent encoder |
+| WPF01-T1 | 01–04 | Independent unseen quantity/model definitions and reordered objects; exact identities/units, no sensor-name switch | Independent fixtures and reader/schema tests; archive provenance below |
 | WPF01-T2 | 01–02 | Unknown selector/operator/required schema, duplicate/cyclic/missing closure and forged native structs | Bounded typed refusal before callback |
 | WPF01-T3 | 02–03 | Same-dimensional different-kind values, invalid rational pairs and nonlinear claim | No implicit conversion or control support |
 | WPF01-T4 | 01–04 | At/above every limit, giant unrelated catalogue supplied externally, secret annotations and reference URLs | Selected closure only, no fetch/load/logging |
-| WPF01-T5 | 01–04 | Two independent consumers build values from their own profiles without a shared repository, routines or runtime host | Public archive/passive load |
+| WPF01-T5 | 01–04 | Two independent consumers build values from their own profiles without a shared repository, routines or runtime host | Two isolated archive consumers; provenance below |
 
 All cases are obligations. The [completion plan](../plans/wotex-profiles-completion.md)
 owns order; no example establishes actual device support.
@@ -229,3 +229,9 @@ Definition-array admission applies the selected byte/node/depth budgets to the
 whole array before validating its members. Native reconstruction clears raw
 identity even when supplied hash strings are syntactically valid; only parse
 establishes the association with the exact bytes passed in that call.
+
+
+Executed reader and two-consumer evidence is retained in
+[the archive milestone](../provenance/reader-2026-10.md). Closure, selector and
+mechanical interpretation acceptance remains owned by WPF.02; those cases are
+not established by the reader milestone.

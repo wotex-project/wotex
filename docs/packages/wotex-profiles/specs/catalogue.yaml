@@ -11,7 +11,7 @@ specifications:
     standards: []
     requires: ["wotex:WTX.02", "wotex_runtime:WRT.06"]
     implementation_modules: ["Wotex.Profiles.Profile", "Wotex.Profiles.Definition", "Wotex.Profiles.Definitions", "Wotex.Profiles.Unit", "Wotex.Profiles.Limits"]
-    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs"]
+    executable_evidence: ["test/wotex/reader_test.exs", "test/wotex/schema_test.exs", "test/wotex/structural_schema_test.exs", "bin/check_archive.exs", "docs/provenance/reader-2026-10.md"]
     compatibility_classification: "Consumer-owned profile/semantic descriptors and bounded generic units; no required shared catalogue"
   - id: "WPF.02"
     version: "0.2.1"
