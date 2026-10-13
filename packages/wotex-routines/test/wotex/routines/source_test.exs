@@ -188,7 +188,14 @@ defmodule Wotex.Routines.SourceTest do
 
     assert {:ok, _} =
              Source.new(
-               %{@source | "trigger" => %{"kind" => "due", "schedule_id" => "schedule:1"}},
+               %{
+                 @source
+                 | "trigger" => %{
+                     "kind" => "due",
+                     "schedule_id" => "schedule:1",
+                     "schedule_basis" => "sha256:" <> String.duplicate("6", 64)
+                   }
+               },
                context.profile,
                context.limits
              )

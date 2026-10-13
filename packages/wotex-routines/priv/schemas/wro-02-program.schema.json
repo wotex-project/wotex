@@ -1519,11 +1519,16 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 65536
+            },
+            "schedule_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
             }
           },
           "required": [
             "kind",
-            "schedule_id"
+            "schedule_id",
+            "schedule_basis"
           ],
           "additionalProperties": false
         },
@@ -1547,12 +1552,12 @@
             "debounce_ms": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 604800000
+              "maximum": 9223372036854775807
             },
             "cooldown_ms": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 604800000
+              "maximum": 9223372036854775807
             },
             "hysteresis": {
               "anyOf": [
@@ -1585,6 +1590,29 @@
             "debounce_ms",
             "cooldown_ms",
             "hysteresis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "countdown"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "schedule_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "kind",
+            "schedule_id",
+            "schedule_basis"
           ],
           "additionalProperties": false
         }

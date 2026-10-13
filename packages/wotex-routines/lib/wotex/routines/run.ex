@@ -311,20 +311,22 @@ defmodule Wotex.Routines.Run do
   defp order(_, _, _), do: :ok
 
   defp window(%{"window" => nil}, %{"ir" => %{"trigger" => %{"kind" => kind}}}, _)
-       when kind != "due", do: :ok
+       when kind not in ~w(due countdown), do: :ok
 
   defp window(
          %{"window" => window} = data,
-         %{"ir" => %{"trigger" => %{"kind" => "due"} = trigger}},
+         %{"ir" => %{"trigger" => %{"kind" => kind} = trigger}},
          limits
        )
-       when is_map(window) do
+       when is_map(window) and kind in ~w(due countdown) do
     event = Map.merge(window, Map.take(data, ~w(original program_digest)))
-    event = Map.put(event, "kind", "due")
+    event = Map.put(event, "kind", if(kind == "due", do: "due", else: "elapsed_due"))
 
     with {:ok, event} <- Event.new(event, limits),
-         true <- event.data["schedule_id"] == trigger["schedule_id"] do
-      Validation.integer(event.data["due_ms"] + event.data["late_window_ms"], limits, "/window")
+         true <-
+           event.data["schedule_id"] == trigger["schedule_id"] and
+             event.data["schedule_basis"] == trigger["schedule_basis"] do
+      :ok
     else
       false -> Error.refusal(:stale_due_window)
       error -> error

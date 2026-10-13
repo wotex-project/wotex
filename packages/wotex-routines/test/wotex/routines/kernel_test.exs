@@ -270,13 +270,22 @@ defmodule Wotex.Routines.KernelTest do
   end
 
   test "full due confidence must fit the original half-open window and cannot drift", c do
-    source = %{c.source | "trigger" => %{"kind" => "due", "schedule_id" => "calendar:1"}}
+    source = %{
+      c.source
+      | "trigger" => %{
+          "kind" => "due",
+          "schedule_id" => "calendar:1",
+          "schedule_basis" => "sha256:" <> String.duplicate("6", 64)
+        }
+    }
+
     c = compile(%{c | source: source})
 
     due =
       Map.merge(c.event, %{
         "kind" => "due",
         "schedule_id" => "calendar:1",
+        "schedule_basis" => "sha256:" <> String.duplicate("6", 64),
         "due_ms" => 1000,
         "late_window_ms" => 100,
         "clock_generation" => "clock:1",

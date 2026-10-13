@@ -1,0 +1,459 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Explicit scalar temporal calculation values",
+  "definitions": {
+    "schedule": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "wotex.routines.schedule@1"
+            },
+            "kind": {
+              "const": "one_shot"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "definition_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "late_window_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "due_ms": {
+              "type": "integer",
+              "minimum": -9223372036854775807,
+              "maximum": 9223372036854775807
+            },
+            "time_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "format",
+            "kind",
+            "schedule_id",
+            "definition_digest",
+            "late_window_ms",
+            "due_ms",
+            "time_basis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "wotex.routines.schedule@1"
+            },
+            "kind": {
+              "const": "interval"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "definition_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "late_window_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "first_due_ms": {
+              "type": "integer",
+              "minimum": -9223372036854775807,
+              "maximum": 9223372036854775807
+            },
+            "period_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "time_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "format",
+            "kind",
+            "schedule_id",
+            "definition_digest",
+            "late_window_ms",
+            "first_due_ms",
+            "period_ms",
+            "time_basis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "wotex.routines.schedule@1"
+            },
+            "kind": {
+              "const": "countdown"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "definition_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "late_window_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "due_elapsed_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "epoch": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "clock_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "time_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "format",
+            "kind",
+            "schedule_id",
+            "definition_digest",
+            "late_window_ms",
+            "due_elapsed_ms",
+            "epoch",
+            "clock_generation",
+            "time_basis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "wotex.routines.schedule@1"
+            },
+            "kind": {
+              "const": "calendar"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "definition_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "late_window_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "dtstart": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "time_zone": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "time_zone_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "producer_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "format",
+            "kind",
+            "schedule_id",
+            "definition_digest",
+            "late_window_ms",
+            "rule",
+            "dtstart",
+            "time_zone",
+            "time_zone_basis",
+            "producer_basis"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "cursor": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "wotex.routines.temporal.cursor@1"
+        },
+        "schedule_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "query_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "next_ordinal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": [
+        "format",
+        "schedule_digest",
+        "query_digest",
+        "next_ordinal"
+      ],
+      "additionalProperties": false
+    },
+    "occurrence": {
+      "type": "object",
+      "properties": {
+        "original": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "due_ms": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        },
+        "event": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "due"
+                },
+                "original": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "schedule_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "due_ms": {
+                  "type": "integer",
+                  "minimum": -9223372036854775807,
+                  "maximum": 9223372036854775807
+                },
+                "late_window_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9223372036854775807
+                },
+                "clock_generation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "time_zone_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "schedule_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "kind",
+                "original",
+                "schedule_id",
+                "due_ms",
+                "late_window_ms",
+                "clock_generation",
+                "time_zone_basis",
+                "schedule_basis"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "elapsed_due"
+                },
+                "original": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "schedule_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "schedule_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "due_elapsed_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9223372036854775807
+                },
+                "late_window_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9223372036854775807
+                },
+                "epoch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "clock_generation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "time_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "kind",
+                "original",
+                "schedule_id",
+                "schedule_basis",
+                "due_elapsed_ms",
+                "late_window_ms",
+                "epoch",
+                "clock_generation",
+                "time_basis"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "original",
+        "ordinal",
+        "due_ms",
+        "event"
+      ],
+      "additionalProperties": false
+    },
+    "query": {
+      "type": "object",
+      "properties": {
+        "from_ms": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        },
+        "until_ms": {
+          "type": "integer",
+          "minimum": -9223372036854775807,
+          "maximum": 9223372036854775807
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        }
+      },
+      "required": [
+        "from_ms",
+        "until_ms",
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "page": {
+      "type": "object",
+      "properties": {
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/occurrence"
+          },
+          "maxItems": 1024
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/cursor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "occurrences",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/definitions/schedule"
+    },
+    {
+      "$ref": "#/definitions/query"
+    },
+    {
+      "$ref": "#/definitions/cursor"
+    },
+    {
+      "$ref": "#/definitions/page"
+    },
+    {
+      "$ref": "#/definitions/occurrence"
+    }
+  ]
+}

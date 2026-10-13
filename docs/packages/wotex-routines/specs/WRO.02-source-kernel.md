@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.7. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.8. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -157,8 +157,8 @@ All supplied child sources must pass structural
 validation; the complete invocation graph must be acyclic, including unused
 definitions. Missing/mismatched child versions and arguments refuse.
 
-Triggers are closed manual, due or reported-edge descriptors. Manual has only
-kind. Due has kind and schedule_id; WRO.03 supplies its original coordinate.
+Triggers are closed manual, due, countdown or reported-edge descriptors. Manual has only
+kind. Due/countdown have kind, schedule_id and schedule_basis (the exact immutable WRO.03 schedule digest); WRO.03 supplies original UTC or elapsed coordinates.
 Edge has kind, binding, direction (rising/falling), debounce_ms, cooldown_ms and
 hysteresis. Boolean edges require null hysteresis. Integer hysteresis is the
 closed `{enter, exit}` pair in the installed unit; rising requires enter > exit,
@@ -289,8 +289,7 @@ No absent original is inferred from an empty cache. The host selects these
 records from its durable original/current-run indexes.
 
 Event requires kind, original and program_digest plus only its kind's members:
-manual/cancel have no others; due has schedule_id, due_ms, late_window_ms,
-clock_generation and time_zone_basis; fact has binding and fact_id; admission
+manual/cancel have no others; due has schedule_id, schedule_basis, due_ms, late_window_ms, clock_generation and time_zone_basis; elapsed_due has schedule_id, schedule_basis, due_elapsed_ms, late_window_ms, epoch, clock_generation and time_basis; fact has binding and fact_id; admission
 has path, ref and outcome (held/refused); handoff has path and ref; result has
 path, ref, stage, outcome and report_contract. Result report_contract is null
 for queue/protocol stages and the exact installed reference for report stages.
@@ -300,7 +299,7 @@ author, target, clock, grant or participant mapping.
 Run has exactly format, original, program_digest, source_digest,
 compiler_basis, epoch, clock_generation, start_ms, last_ms, deadline_ms,
 status, steps, spent, window and reason. Format is wotex.routines.run@1.
-Window is explicit null or the complete retained due descriptor. reason is
+Window is explicit null or the complete retained UTC due/elapsed_due descriptor selected by the compiled trigger. reason is
 explicit null or a fixed bounded refusal code. Spent is the nonrefundable list
 of held step originals and admission references, not a library-authenticated
 claim about an external store. Each expanded node has one record in steps:
@@ -336,8 +335,8 @@ The host must persist skipped-busy against the event's original as well. A
 busy Run from another program revision refuses correspondence; the host must
 resolve revision replacement before supplying an executable current program.
 
-For an existing original, repeating its original manual/due event is an explicit
-elapsed reevaluation, not another trigger. A due descriptor must remain exactly
+For an existing original, repeating its original manual/due/elapsed_due event is an explicit
+elapsed reevaluation, not another trigger. A UTC/elapsed due descriptor must remain exactly
 the retained descriptor. Admission and handoff receipts refer to that original's
 effect path; results require a retained handoff. Stage order is monotone:
 local_queue, protocol_response, correlated_report, reported_match. A higher
@@ -486,3 +485,5 @@ basis revalidation. The host persists every outcome against original ledgers
 and supplies admission refusal for terminally rejected proposed steps; deferred
 work follows explicit host bounded pending-work policy, never hidden catch-up.
 Arbitration performs no charging, refund, override authentication or dispatch.
+
+Countdown sources use a distinct elapsed_due event/window. The exact epoch and clock generation must match and elapsed_ms must be inside [due_elapsed_ms, due_elapsed_ms + late_window_ms); UTC confidence is never manufactured for countdowns. Both temporal trigger kinds require Event schedule_basis to match the complete compiled source. `temporal_test.exs` exercises these distinctions and schedule-basis replacement.

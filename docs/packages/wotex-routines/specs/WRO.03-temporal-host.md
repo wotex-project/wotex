@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.1.0. Updated: 2026-10-13. Status: accepted target; implementation planned.
+Version: 0.2.0. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -77,3 +77,72 @@ is implied by this target. The package has no storage engine or application.
 
 Software clock fixtures do not qualify a host oscillator, sleep behavior or
 physical response. Every consumer records those evidence layers separately.
+
+## Closed schedule and scalar temporal calculation
+
+`Schedule.new/2` requires a closed JSON record with format
+wotex.routines.schedule@1, kind, schedule_id, definition_digest and
+late_window_ms. Kind one_shot adds due_ms and time_basis; interval adds
+first_due_ms, period_ms and time_basis; countdown adds due_elapsed_ms, epoch,
+clock_generation and time_basis; calendar adds rule, dtstart, time_zone,
+time_zone_basis and producer_basis. Identities/bases are nonempty strings or
+SHA-256 digests respectively. UTC coordinates may be signed; elapsed coordinates
+are nonnegative. Period/window are positive integers. Calendar rule is at most
+4096 bytes; DTSTART is an explicit offset-bearing ISO DateTime. Calendar semantic
+validation additionally requires the explicit database and producer operation.
+No schedule reads now or infers an operating-system time zone.
+
+`Temporal.page(schedule, query, time, cursor, limits)` handles one_shot, interval
+and countdown. Query has exactly from_ms, until_ms and limit (1–1024); horizon
+is increasing and half-open. Limit/work and JSON integer/byte bounds all apply.
+Time is the complete explicit WRO.02 Time. UTC candidates do not require trusted
+now for calculation; the emitted due event still requires the entire UTC
+confidence interval at execution. Countdown instead requires the schedule's
+exact epoch/clock_generation and emits elapsed_due for a countdown source
+trigger. Its window is [due_elapsed_ms, due_elapsed_ms + late_window_ms), checked
+against elapsed time with the same epoch/generation, never fabricated UTC.
+
+Interval ordinals are global, beginning at 1 for first_due_ms. Candidate n is
+first_due_ms + (n - 1) * period_ms. Closed-form index bounds precede the bounded
+page loop; a far-future horizon does not scan preceding ticks. One-shot/countdown
+have ordinal 1 only. A cursor is null or exactly format
+wotex.routines.temporal.cursor@1, schedule_digest, query_digest and next_ordinal.
+It binds the full schedule, horizon, time generation and countdown epoch; page
+limit may change. Altered cursor basis/position refuses. A cursor is an inert
+calculation continuation and provides no considered-through or no-repeat proof.
+
+Result has occurrences and next_cursor. Each occurrence has original, ordinal,
+due_ms and event. Original hashes schedule_digest, ordinal and exact due
+coordinate, excluding the mutable clock projection generation for UTC sources.
+Clock correction cannot manufacture a new original for the same scheduled tick.
+Due event binds the selected program separately at the consumer's explicit
+projection seam; calculation alone returns a candidate with no program grant.
+Candidates outside the horizon are never clipped into it. Overflow refuses;
+empty pages and elapsed windows do not establish admission or a missed ledger.
+
+The countdown Event has kind elapsed_due, original, program_digest, schedule_id,
+due_elapsed_ms, late_window_ms, epoch, clock_generation and time_basis. Source
+trigger countdown has kind and schedule_id. Retained windows are disjoint closed
+UTC due or elapsed_due descriptors selected by the current program trigger.
+Elapsed generation replacement expires pending work; restart is not a timer
+restart instruction. Calendar cursors remain the producer's native continuation,
+wrapped with the adapter's exact schedule/query basis; no undocumented producer
+serialization or private recurrence access is permitted.
+
+Definition digest is the canonical SHA-256 of every schedule member except
+its definition_digest field; Schedule.semantic_digest/2 supplies only that
+bounded projection, and Schedule.new/2 checks it. Source due/countdown triggers
+and complete due/elapsed_due Events require schedule_basis equal to that digest.
+Changing cadence, zone, producer basis or window cannot retain the old compiled
+trigger correspondence. This hash binds data, not authority or installed
+producer authenticity.
+
+An occurrence's event member is an inert descriptor lacking program_digest.
+`Temporal.event(schedule, occurrence, program, time, profile, limits)` regenerates
+the full occurrence, matches the current program's schedule_id/schedule_basis
+and trigger kind, and returns a checked complete Event. A changed clock
+projection refuses reuse; a fresh page may project the same original under the
+new generation. Cursor positions outside the query's candidate-index range
+refuse; an internally consistent cursor is still no proof of prior processing.
+
+Implemented evidence: `temporal_test.exs` covers an independent finite UTC tick oracle, global ordinal paging, far-future closed-form calculation, immutable schedule binding, cursor/clock replacement, exact elapsed windows and overflow. The calendar producer adapter, owned driver and real host transaction/archive adoption remain obligations.

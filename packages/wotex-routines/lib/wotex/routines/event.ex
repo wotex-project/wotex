@@ -4,7 +4,8 @@ defmodule Wotex.Routines.Event do
   alias Wotex.Routines.{Error, Limits, Validation}
 
   @common ~w(kind original program_digest)
-  @due ~w(schedule_id due_ms late_window_ms clock_generation time_zone_basis)
+  @due ~w(schedule_id schedule_basis due_ms late_window_ms clock_generation time_zone_basis)
+  @elapsed ~w(schedule_id schedule_basis due_elapsed_ms late_window_ms epoch clock_generation time_basis)
   @stages ~w(local_queue protocol_response correlated_report reported_match)
   @enforce_keys [:data]
   defstruct [:data]
@@ -30,6 +31,7 @@ defmodule Wotex.Routines.Event do
 
   defp fields(%{"kind" => kind}) when kind in ~w(manual cancel), do: []
   defp fields(%{"kind" => "due"}), do: @due
+  defp fields(%{"kind" => "elapsed_due"}), do: @elapsed
   defp fields(%{"kind" => "fact"}), do: ~w(binding fact_id)
   defp fields(%{"kind" => "admission"}), do: ~w(path ref outcome)
   defp fields(%{"kind" => "handoff"}), do: ~w(path ref)
@@ -42,11 +44,30 @@ defmodule Wotex.Routines.Event do
   defp event(%{"kind" => "due"} = data, limits) do
     with :ok <- Validation.fields(data, @common ++ @due),
          :ok <- Validation.text(data["schedule_id"], "/event/schedule_id"),
+         :ok <- Validation.digest(data["schedule_basis"], "/event/schedule_basis"),
          :ok <- Validation.integer(data["due_ms"], limits, "/event/due_ms"),
          :ok <- Validation.integer(data["late_window_ms"], limits, "/event/late_window_ms", 1),
          :ok <- Validation.text(data["clock_generation"], "/event/clock_generation"),
          :ok <- Validation.integer(data["due_ms"] + data["late_window_ms"], limits, "/event/window") do
       Validation.digest(data["time_zone_basis"], "/event/time_zone_basis")
+    end
+  end
+
+  defp event(%{"kind" => "elapsed_due"} = data, limits) do
+    with :ok <- Validation.fields(data, @common ++ @elapsed),
+         :ok <- Validation.text(data["schedule_id"], "/event/schedule_id"),
+         :ok <- Validation.digest(data["schedule_basis"], "/event/schedule_basis"),
+         :ok <- Validation.integer(data["due_elapsed_ms"], limits, "/event/due_elapsed_ms", 0),
+         :ok <- Validation.integer(data["late_window_ms"], limits, "/event/late_window_ms", 1),
+         :ok <-
+           Validation.integer(
+             data["due_elapsed_ms"] + data["late_window_ms"],
+             limits,
+             "/event/window"
+           ),
+         :ok <- Validation.text(data["epoch"], "/event/epoch"),
+         :ok <- Validation.text(data["clock_generation"], "/event/clock_generation") do
+      Validation.digest(data["time_basis"], "/event/time_basis")
     end
   end
 

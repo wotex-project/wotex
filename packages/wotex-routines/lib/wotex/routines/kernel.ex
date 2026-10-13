@@ -20,7 +20,8 @@ defmodule Wotex.Routines.Kernel do
   }
 
   @terminal ~w(partial completed refused failed unknown cancelled expired)
-  @due ~w(schedule_id due_ms late_window_ms clock_generation time_zone_basis)
+  @due ~w(schedule_id schedule_basis due_ms late_window_ms clock_generation time_zone_basis)
+  @elapsed ~w(schedule_id schedule_basis due_elapsed_ms late_window_ms epoch clock_generation time_basis)
 
   @doc "Checks complete inputs and advances one original without performing or authorizing any effect."
   @spec advance(term(), term(), term(), term(), term(), Profile.t(), Limits.t()) ::
@@ -136,7 +137,7 @@ defmodule Wotex.Routines.Kernel do
         "status" => "running",
         "steps" => steps,
         "spent" => [],
-        "window" => if(event["kind"] == "due", do: Map.take(event, @due), else: nil),
+        "window" => window(event),
         "reason" => nil
       }
 
@@ -149,8 +150,19 @@ defmodule Wotex.Routines.Kernel do
   defp trigger(%{"kind" => "edge", "binding" => binding}, %{"kind" => "fact", "binding" => binding}),
        do: :ok
 
-  defp trigger(%{"kind" => "due", "schedule_id" => id}, %{"kind" => "due", "schedule_id" => id}),
-    do: :ok
+  defp trigger(%{"kind" => "due", "schedule_id" => id, "schedule_basis" => basis}, %{
+         "kind" => "due",
+         "schedule_id" => id,
+         "schedule_basis" => basis
+       }),
+       do: :ok
+
+  defp trigger(%{"kind" => "countdown", "schedule_id" => id, "schedule_basis" => basis}, %{
+         "kind" => "elapsed_due",
+         "schedule_id" => id,
+         "schedule_basis" => basis
+       }),
+       do: :ok
 
   defp trigger(_, _), do: Error.refusal(:trigger_mismatch)
 
@@ -179,9 +191,10 @@ defmodule Wotex.Routines.Kernel do
     end
   end
 
-  defp repeat_trigger(run, program, %{"kind" => kind} = event) when kind in ~w(manual due fact) do
+  defp repeat_trigger(run, program, %{"kind" => kind} = event)
+       when kind in ~w(manual due elapsed_due fact) do
     with :ok <- trigger(program["ir"]["trigger"], event) do
-      if kind != "due" or Map.take(event, @due) == run["window"],
+      if kind not in ~w(due elapsed_due) or window(event) == run["window"],
         do: :ok,
         else: Error.refusal(:stale_due_window)
     end
@@ -213,6 +226,11 @@ defmodule Wotex.Routines.Kernel do
 
   defp window_open?(nil, _), do: true
 
+  defp window_open?(%{"due_elapsed_ms" => due} = window, time) do
+    window["epoch"] == time["epoch"] and window["clock_generation"] == time["clock_generation"] and
+      time["elapsed_ms"] >= due and time["elapsed_ms"] < due + window["late_window_ms"]
+  end
+
   defp window_open?(window, time) do
     low = time["utc_low_ms"]
     high = time["utc_high_ms"]
@@ -220,4 +238,8 @@ defmodule Wotex.Routines.Kernel do
     is_integer(low) and is_integer(high) and window["clock_generation"] == time["clock_generation"] and
       low >= window["due_ms"] and high < window["due_ms"] + window["late_window_ms"]
   end
+
+  defp window(%{"kind" => "due"} = event), do: Map.take(event, @due)
+  defp window(%{"kind" => "elapsed_due"} = event), do: Map.take(event, @elapsed)
+  defp window(_), do: nil
 end

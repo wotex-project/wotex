@@ -487,6 +487,10 @@
             "time_zone_basis": {
               "type": "string",
               "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "schedule_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
             }
           },
           "required": [
@@ -497,7 +501,8 @@
             "due_ms",
             "late_window_ms",
             "clock_generation",
-            "time_zone_basis"
+            "time_zone_basis",
+            "schedule_basis"
           ],
           "additionalProperties": false
         },
@@ -685,6 +690,69 @@
             "stage",
             "outcome",
             "report_contract"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "elapsed_due"
+            },
+            "original": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "program_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "schedule_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "schedule_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "due_elapsed_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            },
+            "late_window_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9223372036854775807
+            },
+            "epoch": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "clock_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65536
+            },
+            "time_basis": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "kind",
+            "original",
+            "program_digest",
+            "schedule_id",
+            "schedule_basis",
+            "due_elapsed_ms",
+            "late_window_ms",
+            "epoch",
+            "clock_generation",
+            "time_basis"
           ],
           "additionalProperties": false
         }
@@ -1141,6 +1209,10 @@
                 "time_zone_basis": {
                   "type": "string",
                   "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "schedule_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
                 }
               },
               "required": [
@@ -1148,12 +1220,61 @@
                 "due_ms",
                 "late_window_ms",
                 "clock_generation",
-                "time_zone_basis"
+                "time_zone_basis",
+                "schedule_basis"
               ],
               "additionalProperties": false
             },
             {
               "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "schedule_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "schedule_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "due_elapsed_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9223372036854775807
+                },
+                "late_window_ms": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9223372036854775807
+                },
+                "epoch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "clock_generation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "time_basis": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "schedule_id",
+                "schedule_basis",
+                "due_elapsed_ms",
+                "late_window_ms",
+                "epoch",
+                "clock_generation",
+                "time_basis"
+              ],
+              "additionalProperties": false
             }
           ]
         },

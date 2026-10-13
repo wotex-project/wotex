@@ -75,9 +75,10 @@ defmodule Wotex.Routines.Source do
 
   defp trigger(%{"kind" => "manual"} = data, _), do: Validation.fields(data, ~w(kind))
 
-  defp trigger(%{"kind" => "due"} = data, _) do
-    with :ok <- Validation.fields(data, ~w(kind schedule_id)) do
-      Validation.text(data["schedule_id"], "/trigger/schedule_id")
+  defp trigger(%{"kind" => kind} = data, _) when kind in ~w(due countdown) do
+    with :ok <- Validation.fields(data, ~w(kind schedule_id schedule_basis)),
+         :ok <- Validation.text(data["schedule_id"], "/trigger/schedule_id") do
+      Validation.digest(data["schedule_basis"], "/trigger/schedule_basis")
     end
   end
 
