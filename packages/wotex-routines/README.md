@@ -7,7 +7,7 @@ observations, clocks, persistence and effects.
 The source currently provides explicit limits, offline contract closure,
 behaviour basis, exact dimensional conversion, qualified-fact representation
 and a lossless Continuum observation adapter, complete source compilation, qualified snapshot evaluation, retained composition transitions and continuous reported-edge qualification. Loading or constructing these
-values starts no routine, network operation or timer. Complete provided-set evaluation and whole-resource arbitration are also implemented; UTC interval/one-shot and boot-scoped countdown calculation are implemented; the optional direct calendar adapter refuses unavailable producer capability; archive adoption, temporal driver and analysis remain accepted successors; consult the
+values starts no routine, network operation or timer. Complete provided-set evaluation and whole-resource arbitration are also implemented; UTC interval/one-shot and boot-scoped countdown calculation are implemented; the optional direct calendar adapter refuses unavailable producer capability; the explicitly started bounded wakeup driver is implemented; real host transactions, independent composition/archive adoption and analysis remain accepted successors; consult the
 [catalogue](../../docs/packages/wotex-routines/specs/catalogue.yaml) for status.
 
 ## Consumption

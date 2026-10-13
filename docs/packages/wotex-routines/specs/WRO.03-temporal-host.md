@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.2. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.3. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -195,3 +195,51 @@ through an explicitly built and inspected exact archive cohort. Publishing a
 successor and selecting its version are human release steps. This conditional
 adapter does not claim that the existing Hex release implements occurrence
 enumeration; ordinary scalar temporal calculation works without that capability.
+
+## Explicit bounded wakeup driver
+
+`Driver.specification/1` validates a closed native option map with id, host,
+context, capacity, poll_ms and work_timeout_ms, returning an OTP worker child
+specification or Error. id is a nonempty UTF-8 string of at most 256 bytes; host
+is an existing consumer module implementing DriverHost.wakeup/3; context is
+opaque trusted consumer data, never forwarded to Kernel. Capacity is 1–64
+accepted wakeups including active work. poll_ms is explicit null (no polling)
+or 1–604800000; work_timeout_ms is 1–60000. Loading the library starts nothing,
+registers no global name and creates no timer. The returned child uses transient restart so normal retirement does not restart it. The consumer starts it and owns any explicit supervision/restart override.
+
+Driver.start_link/1 is the child start seam. Driver.handle/2 takes its PID and
+an explicit positive call timeout, returning an opaque DriverHandle containing
+pid, token, counter and capacity. Driver.notify/2 admits only the closed causes
+manual, basis_changed or poll. Atomic capacity admission precedes mailbox
+submission; saturation returns an Error and creates no accepted queued work.
+The capacity bounds accepted work through this API; arbitrary direct messages
+and OS process/memory containment remain consumer host obligations. No cause
+carries a calendar original, clock confidence, grant, credential or transport
+handle. The consumer obtains a fresh complete snapshot/time and accounts missed
+ranges when it handles a wakeup; notification is not occurrence admission.
+
+The host callback receives context, cause and the explicit work budget, returning
+:ok or a payload-free failure. :ok means wakeup processing finished, not that a
+transaction or physical effect succeeded. DriverHost documents all WRO03-03
+atomic reserve/claim/handoff/settle and current-basis obligations; an unconditional
+success host does not meet them. Host exceptions are caught without logging
+private context. Runtime status formatting also redacts it.
+
+One monitored worker runs at a time. Queued manual notifications retain FIFO
+order but do not retain semantic proposals. Polling coalesces while busy and
+never catches up elapsed timer ticks. Poll/watchdog timers schedule lifecycle
+work only; they never supply trusted UTC/elapsed eligibility. A timeout kills
+the callback worker, drops pending notifications and waits for its DOWN before
+reuse; originals/committed or uncertain effects remain in the host ledger.
+Failures likewise drop pending work. No failed notification is automatically
+replayed. A fresh wakeup must recompute current eligibility and recover originals.
+
+Driver.status/2 reports bounded operational counts without exposing context.
+Driver.retire/2 closes admission, cancels polling, drops pending work, retires an
+active worker and acknowledges only after its DOWN; it creates no stop effect,
+compensation or root refund. A later explicit supervised restart receives a new
+handle, while the host retains original/no-repeat history. Driver restart never
+reactivates restored definitions. Higher-risk response capacity is a separate
+host lane; this driver does not borrow it.
+
+Driver lifecycle evidence is `driver_test.exs`: bounded concurrent admission, FIFO wakeups, timeout/exception retirement, polling coalescence, parent death, private-state redaction and a result/retirement race. These instrumented callbacks do not establish the host transaction contract; real consumer store-race and composition/archive evidence remain separate obligations.
