@@ -2,13 +2,13 @@ defmodule Wotex.Routines.Model do
   @moduledoc """
   Inert, source-bound projections with explicit assumptions and omissions.
 
-  The first profile models a single Boolean manual proposal prefix under frozen
-  time, before any admission or handoff. It does not model device behaviour or
-  prove execution safety. Unsupported source or scope refuses before generation.
+  The supported profiles model one Boolean manual proposal prefix or staged
+  software-receipt prefix under frozen time. They do not model device behaviour
+  or prove execution safety. Unsupported source or scope refuses before generation.
   Compilation starts no worker and reads no filesystem, clock or configuration.
   """
 
-  alias Wotex.Routines.{Compiler, Error, Limits, Profile, Validation}
+  alias Wotex.Routines.{Compiler, Error, Limits, Profile, ReceiptModel, Validation}
 
   @scope %{
     "profile" => "proposal-prefix@1",
@@ -19,6 +19,16 @@ defmodule Wotex.Routines.Model do
     "claims" => ~w(proposal_once fixed_absolute_proposal),
     "omissions" =>
       ~w(admission handoff receipts time_progress fact_changes multi_original_overlap authority complete_set_arbitration physical_effects)
+  }
+  @receipt_scope %{
+    "profile" => "receipt-prefix@1",
+    "purpose" => "software_receipt_transitions_only",
+    "initial_history" => "no_existing_run",
+    "time_policy" => "frozen_before_deadline",
+    "environment" => "manual_staged_receipts_one_original",
+    "claims" => ~w(proposal_once held_spend_retained completion_evidence stopped_continuation),
+    "omissions" =>
+      ~w(authority time_progress fact_changes multi_original_overlap complete_set_arbitration historical_receipts physical_effects)
   }
   @fields ~w(format program scope scope_digest model_bytes model_digest)
   @enforce_keys [:data]
@@ -32,8 +42,10 @@ defmodule Wotex.Routines.Model do
          {:ok, scope, limits} <- Validation.admit(scope, limits, nil),
          :ok <- scope(scope),
          {:ok, value} <- supported(program),
+         :ok <- receipt_threshold(program, scope),
          {:ok, scope_digest} <- Validation.hash(scope, limits) do
-      bytes = bytes(value)
+      bytes =
+        if scope["profile"] == "receipt-prefix@1", do: ReceiptModel.bytes(value), else: bytes(value)
 
       data = %{
         "format" => "wotex.routines.model@1",
@@ -70,11 +82,19 @@ defmodule Wotex.Routines.Model do
   defp scope(data) do
     with :ok <- Validation.fields(data, ["policy_digest" | Map.keys(@scope)]),
          :ok <- Validation.digest(data["policy_digest"], "/policy_digest") do
-      if Map.drop(data, ["policy_digest"]) == @scope,
+      if Map.drop(data, ["policy_digest"]) in [@scope, @receipt_scope],
         do: :ok,
         else: Error.refusal(:unsupported_model_scope, "/scope")
     end
   end
+
+  defp receipt_threshold(program, %{"profile" => "receipt-prefix@1"}) do
+    if program["ir"]["steps"]["completion"] == "reported_match",
+      do: :ok,
+      else: Error.refusal(:unsupported_model_scope, "/program")
+  end
+
+  defp receipt_threshold(_, _), do: :ok
 
   defp supported(program) do
     source = program["source"]

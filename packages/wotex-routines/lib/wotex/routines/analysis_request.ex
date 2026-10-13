@@ -15,6 +15,7 @@ defmodule Wotex.Routines.AnalysisRequest do
          :ok <-
            Validation.choice(request["format"], ["wotex.routines.analysis.request@1"], "/format"),
          {:ok, model} <- Model.to_map(model, profile, limits),
+         :ok <- runner_scope(model),
          :ok <- runtime(request["runtime"]),
          {:ok, time} <- Time.to_map(request["time_basis"], limits),
          {:ok, binding} <- binding(model, request, time, limits),
@@ -23,6 +24,9 @@ defmodule Wotex.Routines.AnalysisRequest do
       {:ok, %{model: model, request: request, binding: binding, limits: limits}}
     end
   end
+
+  defp runner_scope(%{"scope" => %{"profile" => "proposal-prefix@1"}}), do: :ok
+  defp runner_scope(_), do: Error.refusal(:unsupported_analysis_scope)
 
   defp runtime(data) do
     with :ok <- Validation.fields(data, @runtime),

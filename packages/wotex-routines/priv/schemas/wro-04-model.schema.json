@@ -2395,63 +2395,121 @@
       "additionalProperties": false
     },
     "scope": {
-      "type": "object",
-      "properties": {
-        "profile": {
-          "type": "string",
-          "const": "proposal-prefix@1"
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "profile": {
+              "type": "string",
+              "const": "proposal-prefix@1"
+            },
+            "purpose": {
+              "type": "string",
+              "const": "proposal_generation_only"
+            },
+            "initial_history": {
+              "type": "string",
+              "const": "no_existing_run"
+            },
+            "time_policy": {
+              "type": "string",
+              "const": "frozen_before_deadline"
+            },
+            "environment": {
+              "type": "string",
+              "const": "manual_and_cancel_one_original"
+            },
+            "claims": {
+              "const": [
+                "proposal_once",
+                "fixed_absolute_proposal"
+              ]
+            },
+            "omissions": {
+              "const": [
+                "admission",
+                "handoff",
+                "receipts",
+                "time_progress",
+                "fact_changes",
+                "multi_original_overlap",
+                "authority",
+                "complete_set_arbitration",
+                "physical_effects"
+              ]
+            },
+            "policy_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "profile",
+            "purpose",
+            "initial_history",
+            "time_policy",
+            "environment",
+            "claims",
+            "omissions",
+            "policy_digest"
+          ],
+          "additionalProperties": false
         },
-        "purpose": {
-          "type": "string",
-          "const": "proposal_generation_only"
-        },
-        "initial_history": {
-          "type": "string",
-          "const": "no_existing_run"
-        },
-        "time_policy": {
-          "type": "string",
-          "const": "frozen_before_deadline"
-        },
-        "environment": {
-          "type": "string",
-          "const": "manual_and_cancel_one_original"
-        },
-        "claims": {
-          "const": [
-            "proposal_once",
-            "fixed_absolute_proposal"
-          ]
-        },
-        "omissions": {
-          "const": [
-            "admission",
-            "handoff",
-            "receipts",
-            "time_progress",
-            "fact_changes",
-            "multi_original_overlap",
-            "authority",
-            "complete_set_arbitration",
-            "physical_effects"
-          ]
-        },
-        "policy_digest": {
-          "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+        {
+          "type": "object",
+          "properties": {
+            "profile": {
+              "const": "receipt-prefix@1"
+            },
+            "purpose": {
+              "const": "software_receipt_transitions_only"
+            },
+            "initial_history": {
+              "const": "no_existing_run"
+            },
+            "time_policy": {
+              "const": "frozen_before_deadline"
+            },
+            "environment": {
+              "const": "manual_staged_receipts_one_original"
+            },
+            "claims": {
+              "const": [
+                "proposal_once",
+                "held_spend_retained",
+                "completion_evidence",
+                "stopped_continuation"
+              ]
+            },
+            "omissions": {
+              "const": [
+                "authority",
+                "time_progress",
+                "fact_changes",
+                "multi_original_overlap",
+                "complete_set_arbitration",
+                "historical_receipts",
+                "physical_effects"
+              ]
+            },
+            "policy_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "profile",
+            "purpose",
+            "initial_history",
+            "time_policy",
+            "environment",
+            "claims",
+            "omissions",
+            "policy_digest"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "profile",
-        "purpose",
-        "initial_history",
-        "time_policy",
-        "environment",
-        "claims",
-        "omissions",
-        "policy_digest"
-      ],
-      "additionalProperties": false
+      ]
     },
     "model": {
       "type": "object",

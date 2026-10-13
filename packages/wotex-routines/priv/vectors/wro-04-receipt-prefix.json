@@ -1,0 +1,26 @@
+{
+  "format": "wotex.routines.model.vector@1",
+  "scope": {
+    "profile": "receipt-prefix@1",
+    "purpose": "software_receipt_transitions_only",
+    "initial_history": "no_existing_run",
+    "time_policy": "frozen_before_deadline",
+    "environment": "manual_staged_receipts_one_original",
+    "claims": [
+      "proposal_once",
+      "held_spend_retained",
+      "completion_evidence",
+      "stopped_continuation"
+    ],
+    "omissions": [
+      "authority",
+      "time_progress",
+      "fact_changes",
+      "multi_original_overlap",
+      "complete_set_arbitration",
+      "historical_receipts",
+      "physical_effects"
+    ],
+    "policy_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  }
+}

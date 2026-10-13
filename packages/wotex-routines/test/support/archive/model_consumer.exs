@@ -198,6 +198,60 @@ defmodule ProposalModelArchiveConsumerTest do
     end
   end
 
+  test "native staged-receipt model preserves held spend and completion threshold", c do
+    scope =
+      :wotex_routines
+      |> :code.priv_dir()
+      |> List.to_string()
+      |> Path.join("vectors/wro-04-receipt-prefix.json")
+      |> File.read!()
+      |> JSON.decode!()
+      |> Map.fetch!("scope")
+
+    {:ok, program} = Compiler.compile(c.source, c.context, c.profile, c.limits)
+    {:ok, model} = Model.compile(program, scope, c.profile, c.limits)
+
+    query = %{
+      module: "ROUTINE-RECEIPT-PREFIX",
+      initial: "state(fresh, 0, 0, false, none, false)",
+      pattern: "S:State",
+      max_depth: 8,
+      max_solutions: 64
+    }
+
+    options = [
+      maude_path: System.fetch_env!("WOTEX_ROUTINES_MAUDE_PATH"),
+      timeout: 2000,
+      max_response_bytes: 65_536,
+      deadline_ms: System.monotonic_time(:millisecond) + 2000
+    ]
+
+    assert {:ok, receipt} =
+             ExMaude.Verification.SearchRun.run(model.data["model_bytes"], query, options)
+
+    assert receipt.termination == :completed_declared_bound,
+           inspect(Map.take(receipt, [:error, :depth_probe]))
+
+    states = Enum.map(receipt.solutions, &String.replace(&1.substitution["S:State"], ~r/\s+/, ""))
+    assert "state(completed,1,1,true,match,true)" in states
+    assert "state(unknown,1,1,true,ack,true)" in states
+    refute "state(completed,1,1,true,ack,true)" in states
+
+    mutant =
+      String.replace(
+        model.data["model_bytes"],
+        "state(handed, 1, 1, true, none, false) => state(handed, 1, 1, true, ack, false)",
+        "state(handed, 1, 1, true, none, false) => state(completed, 1, 1, true, ack, true)"
+      )
+
+    assert mutant != model.data["model_bytes"]
+    counter_query = %{query | pattern: "state(completed, N:Nat, S:Nat, H:Bool, ack, true)"}
+    options = Keyword.put(options, :deadline_ms, System.monotonic_time(:millisecond) + 2000)
+    assert {:ok, counter} = ExMaude.Verification.SearchRun.run(mutant, counter_query, options)
+    assert length(counter.solutions) >= 1
+    assert counter.model_digest != model.data["model_digest"]
+  end
+
   defp search(bytes, initial, pattern, condition) do
     query = %{
       module: "ROUTINE-PROPOSAL-PREFIX",

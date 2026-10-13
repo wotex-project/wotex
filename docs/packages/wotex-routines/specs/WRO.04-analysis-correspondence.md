@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.4. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.5. Updated: 2026-10-13. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -364,3 +364,70 @@ backend loss/truncation and changed native identities/correspondence. The shippe
 `wro-04-request.schema.json` describes the complete offline request. Native
 runner evidence is recorded in the [runner cohort](../provenance/analysis-runner-cohort.md)
 through the extracted archive lane.
+
+## Staged software-receipt projection
+
+The additive `receipt-prefix@1` Model scope has purpose
+software_receipt_transitions_only, initial_history no_existing_run,
+time_policy frozen_before_deadline and environment
+manual_staged_receipts_one_original. It retains the same closed eight scope
+fields as proposal-prefix. Claims are exactly proposal_once, held_spend_retained,
+completion_evidence and stopped_continuation. Omissions are exactly
+[authority, time_progress, fact_changes, multi_original_overlap,
+complete_set_arbitration, historical_receipts, physical_effects]. Policy digest
+remains an explicit consumer assertion. Installed device-analysis support is
+not promoted: this model describes the software kernel receiving qualified
+host assertions, rather than a device producing them.
+
+Source support is the same single manual unconditional parameter-free Boolean
+writeproperty effect, additionally requiring completion reported_match. No
+sequence, wait, invocation, other threshold or unknown predicate is approximated.
+The environment has one unchanged active program/binding, a fixed valid clock
+before every deadline and immutable references for each accepted receipt stage.
+Its finite alphabet is manual (including duplicates), held/refused admission,
+handoff, accepted protocol_response, accepted reported_match, failed/unknown
+protocol_response, and cancellation. Result stages require held/handoff;
+reported_match may skip protocol_response. Repeated receipts must be exact
+logical duplicates. All post-terminal receipts (including duplicates), local_queue, correlated_report,
+other stages/outcomes, grant checks and changed environmental inputs are outside
+this declared profile, not inferred successful transitions.
+
+A state records effect phase, emitted-proposal count, retained-held count,
+handoff Boolean, evidence (none/ack/match) and stopped-root Boolean. Effect
+phases are fresh/proposed/reserved/handed/completed/refused/failed/unknown/
+cancelled; they are normalized step phases, not an aggregate physical outcome.
+Manual creates one proposed effect; duplicates emit none. Held adds one retained
+spend; refusal adds none. Handoff changes only a reserved effect. ACK leaves
+handed status/evidence ack; reported_match completes it with evidence match.
+Failed/unknown protocol_response outcomes before any accepted ACK stop the root
+and retain held/handoff/evidence. An accepted ACK cannot be changed to a conflicting
+outcome under the same immutable receipt slot. Cancel
+changes proposed/reserved to cancelled and handed to unknown, preserving spend;
+already terminal step records stay unchanged. Cancellation/manual duplicates
+never emit a new proposal. Historical post-terminal receipt evolution remains
+outside this scope, while its stopped-proposal claim covers manual/cancel input.
+
+All model symbols and rules are installed syntax. Only the checked Boolean
+literal enters code; receipt/Thing/author/ref strings never become executable
+text. Model regeneration, size/identity and current-scope checks apply unchanged.
+The initial Analysis runner supports proposal-prefix only and explicitly refuses
+receipt-prefix with unsupported_analysis_scope before search; new model support
+must not accidentally select an old query/module or claim the old counts.
+
+Acceptance interprets the emitted literal rules, compares every modeled state
+component to the public Kernel and independent source AST under the same explicit
+valid finite alphabet, and covers held/handoff/ACK/report, skipped ACK, refusal,
+failure/unknown, cancellation before/after handoff and manual/cancel duplicates.
+Both Boolean values retain their exact proposal. Native scope execution and a
+mutated ACK-completion counter-state require separate extracted-archive evidence;
+abstract violations require actual Witness reproduction before incident claims.
+Wider time/composition/complete-set projections and physical evidence remain open.
+
+Implemented receipt-prefix evidence is `receipt_model_test.exs`: eighteen finite
+traces (both Boolean values over nine staged/cancel/failure paths) compare every
+emitted state component with both the public Kernel and independent source AST.
+Unsupported installed completion thresholds and the older runner explicitly
+refuse; regenerated native model forgery fails. The extracted native model
+consumer additionally enumerates this scope, retains held/ACK/cancel distinctions,
+and finds an ACK-completion mutation's abstract counter-state. Those native
+counter-states are not concrete runtime incidents or admission.
