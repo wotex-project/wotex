@@ -193,6 +193,8 @@ the consumer's selected source/archive digest. Interpreter continues returning
 the same map and validates it through Proposal before returning success.
 Unknown fields, malformed/foreign structs and inconsistent quality refuse
 invalid_input; selected envelope/numeric limits retain input_limit/numeric_limit.
+Executed Proposal and qualified-join checks are retained in
+[the cross-package software evidence](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-routines/provenance/profile-inputs-2026-10.md).
 
 ## Changes and implementation entry
 

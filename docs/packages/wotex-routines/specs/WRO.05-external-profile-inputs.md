@@ -193,5 +193,7 @@ The two scalar archive consumers and optional-producer-absent consumer establish
 software representation and join behavior. Focused suites exercise exact
 conversion, forged values, aggregate limits, replacement, replay and clock
 refusals. They do not establish consumer installation or device qualification.
+Exact commits, archives, locks and executed checks are retained in
+[the software evidence](../provenance/profile-inputs-2026-10.md).
 The
 [completion contract](../plans/wotex-routines-completion.md) owns the join stage.
