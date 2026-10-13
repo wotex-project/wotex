@@ -1,0 +1,478 @@
+{
+  "$id": "urn:wotex:profiles:authoring:profile:1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "reference": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "scalar": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "null"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "value": {
+              "maxLength": 4096,
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "sint",
+                "uint"
+              ]
+            },
+            "value": {
+              "pattern": "^(0|-?[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "coefficient": {
+              "pattern": "^(0|-?[1-9][0-9]*)$",
+              "type": "string"
+            },
+            "exponent": {
+              "maximum": 32767,
+              "minimum": -32768,
+              "type": "integer"
+            },
+            "type": {
+              "const": "decimal"
+            }
+          },
+          "required": [
+            "type",
+            "coefficient",
+            "exponent"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "base64": {
+              "maxLength": 5464,
+              "type": "string"
+            },
+            "type": {
+              "const": "bytes"
+            }
+          },
+          "required": [
+            "type",
+            "base64"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "unit": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "items": {
+            "maximum": 32,
+            "minimum": -32,
+            "type": "integer"
+          },
+          "maxItems": 7,
+          "minItems": 7,
+          "type": "array"
+        },
+        "offset_d": {
+          "pattern": "^[1-9][0-9]*$",
+          "type": "string"
+        },
+        "offset_n": {
+          "pattern": "^(0|-?[1-9][0-9]*)$",
+          "type": "string"
+        },
+        "quantity_kind": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "scale_d": {
+          "pattern": "^[1-9][0-9]*$",
+          "type": "string"
+        },
+        "scale_n": {
+          "pattern": "^[1-9][0-9]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quantity_kind",
+        "dimension",
+        "scale_n",
+        "scale_d",
+        "offset_n",
+        "offset_d"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "maxLength": 1024,
+        "type": "string"
+      },
+      "maxProperties": 16,
+      "propertyNames": {
+        "maxLength": 128,
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "binding": {
+      "$ref": "#/definitions/reference"
+    },
+    "channels": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "affordance": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "property",
+                  "action",
+                  "event"
+                ]
+              },
+              "name": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "name"
+            ],
+            "type": "object"
+          },
+          "conversion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "affine"
+                  },
+                  "offset_d": {
+                    "pattern": "^[1-9][0-9]*$",
+                    "type": "string"
+                  },
+                  "offset_n": {
+                    "pattern": "^(0|-?[1-9][0-9]*)$",
+                    "type": "string"
+                  },
+                  "scale_d": {
+                    "pattern": "^[1-9][0-9]*$",
+                    "type": "string"
+                  },
+                  "scale_n": {
+                    "pattern": "^[1-9][0-9]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "scale_n",
+                  "scale_d",
+                  "offset_n",
+                  "offset_d"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "entries": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "source": {
+                          "$ref": "#/definitions/scalar"
+                        },
+                        "target": {
+                          "$ref": "#/definitions/scalar"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "target"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 256,
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "kind": {
+                    "const": "table"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "entries"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "id": {
+            "pattern": "^[a-zA-Z0-9._-]{1,128}$",
+            "type": "string"
+          },
+          "invalid_values": {
+            "items": {
+              "$ref": "#/definitions/scalar"
+            },
+            "maxItems": 32,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operations": {
+            "items": {
+              "enum": [
+                "readproperty",
+                "writeproperty",
+                "observeproperty",
+                "unobserveproperty",
+                "invokeaction",
+                "queryaction",
+                "cancelaction",
+                "subscribeevent",
+                "unsubscribeevent"
+              ]
+            },
+            "maxItems": 9,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "selector": {
+            "type": "object"
+          },
+          "semantic": {
+            "$ref": "#/definitions/reference"
+          }
+        },
+        "required": [
+          "id",
+          "affordance",
+          "semantic",
+          "operations",
+          "selector",
+          "conversion",
+          "invalid_values",
+          "required"
+        ],
+        "type": "object"
+      },
+      "maxItems": 1024,
+      "minItems": 1,
+      "type": "array"
+    },
+    "fingerprint": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "pattern": "^[a-zA-Z0-9._-]{1,128}$",
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              "eq",
+              "one_of"
+            ]
+          },
+          "values": {
+            "items": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "boolean"
+                    },
+                    "value": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "text"
+                    },
+                    "value": {
+                      "maxLength": 4096,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "sint",
+                        "uint"
+                      ]
+                    },
+                    "value": {
+                      "pattern": "^(0|-?[1-9][0-9]*)$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "value"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "field",
+          "operator",
+          "values"
+        ],
+        "type": "object"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+    },
+    "format": {
+      "const": "wotex.profile@1"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "type": "string"
+    },
+    "requires": {
+      "items": {
+        "$ref": "#/definitions/reference"
+      },
+      "maxItems": 1024,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "format",
+    "id",
+    "version",
+    "binding",
+    "fingerprint",
+    "channels",
+    "requires"
+  ],
+  "type": "object"
+}

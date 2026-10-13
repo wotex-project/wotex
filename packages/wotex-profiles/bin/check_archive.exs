@@ -79,7 +79,7 @@ defmodule Wotex.Profiles.Check.Archive do
   defp allowed?(file) do
     file in (@required ++ [".formatter.exs"]) or
       Enum.any?(
-        ~w(lib/ priv/schemas/ priv/vectors/ priv/contracts/),
+        ~w(lib/ priv/schemas/ priv/vectors/ priv/contracts/ priv/authoring/),
         &String.starts_with?(file, &1)
       )
   end
@@ -121,6 +121,7 @@ defmodule Wotex.Profiles.Check.Archive do
       end
 
       File.cp!("priv/vectors/limits.json", Path.join(consumer, "limits.json"))
+      File.cp!("priv/vectors/authoring-limits.json", Path.join(consumer, "authoring-limits.json"))
       File.cp!("priv/vectors/installed-binding.json", Path.join(consumer, "installed-binding.json"))
 
       File.cp!(

@@ -23,11 +23,11 @@ specifications:
     executable_evidence: ["test/wotex/unit_conversion_test.exs", "test/wotex/binding_test.exs", "test/wotex/capture_test.exs", "test/wotex/compiler_test.exs", "test/wotex/instance_test.exs", "test/wotex/interpreter_test.exs", "priv/vectors/unit-conversion.json", "priv/vectors/installed-binding.json", "bin/check_archive.exs", "docs/provenance/exact-units-2026-10.md", "docs/provenance/installed-binding-2026-10.md", "docs/provenance/compilation-2026-10.md"]
     compatibility_classification: "Pure selected-closure compilation and inert report interpretation; consumer owns current trust, identity, state and authority"
   - id: "WPF.03"
-    version: "0.1.0"
+    version: "0.1.2"
     path: "docs/specs/WPF.03-profile-authoring-contract.md"
-    implementation_status: "planned"
+    implementation_status: "implemented"
     standards: []
     requires: ["WPF.01", "WPF.02"]
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules: ["Wotex.Profiles.Artifacts", "Wotex.Profiles.AuthoringLimits", "Wotex.Profiles.Contract", "Wotex.Profiles.Draft", "Wotex.Profiles.Finalized", "Wotex.Profiles.Validation", "Wotex.Profiles.ValidationReport", "Mix.Tasks.Wotex.Profiles.Validate", "Mix.Tasks.Wotex.Profiles.Finalize"]
+    executable_evidence: ["test/wotex/contract_test.exs", "test/wotex/shape_test.exs", "test/wotex/authoring_test.exs", "test/wotex/cli_test.exs", "test/support/draft7/manifest.json", "priv/vectors/authoring-identities.json", "bin/check_archive.exs"]
     compatibility_classification: "Pure installed-contract export, draft-reference finalization and shared validation diagnostics; consumer owns authoring/AI/review"

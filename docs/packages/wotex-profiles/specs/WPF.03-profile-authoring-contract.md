@@ -1,7 +1,9 @@
 # WPF.03 — Consumer-owned profile authoring and validation
 
-Version: 0.1.0. Updated: 2026-10-13. Status: accepted target.
-Implementation: planned. Evidence: missing. Source package is registered; this authoring seam remains planned.
+Version: 0.1.2. Updated: 2026-10-13. Status: accepted target.
+Implementation: bounded v1 export/finalization/validation and CLI adapters.
+Evidence: focused suites, independent identity vectors and pinned structural cells;
+exact archive execution is retained separately.
 
 ## Scope and inherited behavior
 
@@ -22,7 +24,7 @@ Consumers ship selected public model templates in their own release or retain
 private drafts in their own custody. Cross-consumer sharing is an explicit
 data import. Reader loading cannot discover, scan, fetch or install collections.
 
-All public seams below are planned exports under Wotex.Profiles. Native
+All public seams below are exports under Wotex.Profiles. Native
 structs/maps are revalidated. No function reads files, clocks, environment,
 networks, loaded providers or ambient registries. Release artifacts, schemas,
 bindings, contracts, bytes and optional capture are explicit immutable inputs.
@@ -54,7 +56,7 @@ does not claim to meter hidden instructions inside another public function.
 
 ## Requirements
 
-**WPF03-01 — Contract export.** Planned Contract.export/4 takes Bindings,
+**WPF03-01 — Contract export.** Contract.export/4 takes Bindings,
 Contracts, authoring limits and release artifacts, returning a revalidated
 Contract or typed error. Its document contains exactly format, producer,
 schemas, semantic_rules, bindings, contracts and limits. Format is
@@ -71,12 +73,12 @@ newline and core deterministic sorted-key JSON of the complete document.
 Any schema, rule, binding, contract or limit change changes this identity.
 Contract.encode/1 returns those document bytes; identity is returned separately,
 never a self-hashed field. Release artifacts are inert data, not executable
-callbacks or paths. Planned Artifacts.current/0 returns the installed producer's
+callbacks or paths. Artifacts.current/0 returns the installed producer's
 compile-time literal release identity, four schemas and rule table without I/O.
 Export/parse compare schemas/rules/producer identity to that exact installed
 artifact set before any schema execution; substitutions return invalid_contract.
 Bindings/contracts/limits remain explicit trusted consumer inputs.
-Planned Contract.parse/1 admits the bounded serialized document, reconstructs
+Contract.parse/1 admits the bounded serialized document, reconstructs
 its native values and recomputes its identity; parsing grants no trust in the
 supplied binding registrations or deployment. Runtime admission requires the
 consumer's current Contract.export/4 identity, not a draft-supplied contract. An incompatible artifact/registration refuses invalid_contract.
@@ -85,7 +87,8 @@ The first structural export declares JSON Schema draft-07. Its closed keyword
 set is $schema, $id, $ref, definitions, type, properties, required,
 additionalProperties, items, minItems, maxItems, uniqueItems, enum, const,
 anyOf, oneOf, allOf, not, minimum, maximum, exclusiveMinimum, exclusiveMaximum,
-multipleOf, minLength, maxLength, pattern, title, description and examples.
+multipleOf, minLength, maxLength, minProperties, maxProperties, propertyNames,
+pattern, title, description and examples.
 Alternatives have at most 16 branches. References use only fragment-local
 JSON pointers, with no remote resolution, cycles or custom keyword execution.
 Patterns are the exact installed schema artifact's finite ASCII grammar
@@ -116,7 +119,7 @@ References. No other field permits omission, an unresolved placeholder,
 expression, template or generated module. Definitions carry their ordinary
 WPF.01 IDs/versions; there is no second catalogue key space.
 
-Planned Draft.finalize/2 takes original draft bytes and Contract. It validates
+Draft.finalize/2 takes original draft bytes and Contract. It validates
 bounds/closed draft shape, resolves the definition DAG, normalizes sets in the
 WPF.01 order, computes each definition's WPF.01 semantic identity and substitutes
 only local references. It verifies every supplied exact hash; it never repairs
@@ -133,7 +136,7 @@ It changes neither grants nor current observations. Failure returns a bounded
 WPF03-03 invalid report when a bounded candidate is available; invalid API
 arguments/resource excess return a typed Error before a result is constructed.
 
-**WPF03-03 — Validation and diagnostics.** Planned Validation.check/3 takes
+**WPF03-03 — Validation and diagnostics.** Validation.check/3 takes
 bundle bytes, Contract and optional Capture. It runs byte/shape checks, WPF
 semantic/reference checks, WPF.02 Compiler.check/3 against the explicit installed
 closure, then Compiler.compile/4 only if Capture was supplied. No check starts
@@ -209,8 +212,10 @@ Before implementation freeze the four schemas, rule table, planned public value
 shapes, CLI adapter contract and independent finalization/diagnostic vectors in
 the prospective package's priv/schemas and priv/vectors. Pin the exact independent
 draft-07 test subset and compatible notice from the JSON Schema Test Suite.
-No schema/compiler copy is placed in a consumer. These authoring artifacts do not exist yet; the registered reader package
-does not establish authoring support, runtime adoption or acceptance evidence.
+No schema/compiler copy is placed in a consumer. The four frozen schemas,
+rule table, native value contracts and independent identity/diagnostic fixtures
+are retained in this package. Source implementation and bounded tests do not
+establish current consumer admission or physical qualification.
 
 ## Acceptance obligations
 
@@ -236,3 +241,78 @@ pins the inspected standards/research and explains why consumer ownership,
 schema-plus-semantic validation and optional generation were chosen. Draft-07
 is a declared authoring serialization baseline, not a complete validator or
 provider conformance claim. No AI provider is selected by this contract.
+
+
+## Executable authoring freeze
+
+Authoring Limits is a native value with exactly data; data is the five-field
+map above. Contract has exactly data and sha256; data is its seven-field export.
+Contract.new/1 revalidates a native Contract by rebuilding export and comparing
+its supplied identity; a mismatch returns invalid_contract. Contract.encode/1
+and identity/1 use that same revalidation. Serialized/native contracts compare
+the entire producer/schema/rule artifact set with Artifacts.current/0 before
+schema execution. Native reconstruction never establishes source authenticity.
+
+Artifacts.current/0 returns producer, schemas and semantic_rules as compile-time
+literal data. Producer id is urn:wotex:profiles:authoring, version 1.0.0, and
+sha256 is the hash of wotex.profile.authoring-release@1 plus newline and core
+sorted-key JSON of the four schemas and rule table. This semantic release
+identity is separate from the exact source/archive digest retained by a consumer.
+The four acyclic fragment-only schemas are frozen in priv/authoring; the
+DataSchema description graph is finitely unrolled to eight levels. Existing
+reader envelope/semantic checks remain authoritative; unrolling adds no reader
+operator. The rule table covers source syntax, closed shape, value grammar,
+exact references, DAG closure, installed mechanics and capture basis.
+
+Finalized has exactly bundle_bytes, draft_sha256, bundle_sha256 and
+contract_sha256. ValidationReport has exactly data; ValidationReport.to_map/2
+and encode/2 revalidate safe report fields under the supplied Contract. Reports
+are inert historical diagnostics, never current consumer admission. nil is the
+only absent optional capture. Draft.finalize/2 returns a Finalized on success
+or a ValidationReport with invalid disposition for an admitted invalid candidate;
+API/contract/input/work/report resource failure returns Error. Validation.check/3
+returns ValidationReport for both compatible and admitted invalid candidates.
+
+The bounded shape evaluator consumes one step at entry to each schema node and
+one per evaluated assertion keyword; local-reference traversal consumes one
+additional step. Every alternative is evaluated, including branches that fail;
+all visited steps count. Object properties use UTF-8 key order and arrays use
+ascending indexes. The finalizer additionally spends one step for each first
+definition visit and each exact/local reference expansion. Step exhaustion is
+input_limit; all dependent stages stop. The separately bounded public reader
+and compiler calls are not presented as metered instructions.
+
+Structural diagnostics use rule INPUT_SHAPE, syntax SOURCE_SYNTAX, semantic
+VALUE_GRAMMAR or EXACT_REFERENCES/DAG_CLOSURE as applicable, binding
+INSTALLED_BINDING and capture CAPTURE_BASIS. The installed rule table is the
+only source of rule identifiers. A pointer through additional/property-name
+schemas reports the known parent; candidate keys never become pointer segments.
+Diagnostics may collect independent structural failures; later dependent phases
+stop at the first failure. Ordering/truncation follows WPF03-03. With supplied
+capture, an earlier failure is not_checked; only a reached capture check can
+produce matched/mismatch.
+
+The CLI Mix task is mix wotex.profiles.validate --contract FILE --candidate FILE
+with optional --capture FILE, and mix wotex.profiles.finalize --contract FILE
+--candidate FILE --output FILE. Arguments are exact, duplicate/unknown/missing
+arguments fail with exit 2. Adapters do bounded local file reads, invoke only
+these public pure functions, and emit canonical JSON on stdout; they perform
+no network or install. Finalize writes the derived bundle only after success.
+Validation report exit meanings remain 0 compatible, 1 invalid and 2 failure.
+CLI path/I/O errors emit only a fixed Error code, never a path or exception.
+
+Independent draft-07 source is JSON Schema Test Suite revision
+8568bcc477cc3aaeed5bc397c9c8648e631317fc. The selected files, exact digests and
+MIT license are retained in test/support/draft7/manifest.json and LICENSE.
+Only the declared bounded keyword cells are selected; this is not a complete
+JSON Schema conformance claim. Byte/work boundaries, finalization identities,
+report ordering and CLI parity require their own package vectors/tests.
+
+
+The independent structural selection contains 462 test cells at the pinned
+revision, with exact selected group/case indexes and upstream file digests in
+the manifest. Unsupported keyword combinations and inputs outside the declared
+numeric admission are not promoted to supported behavior. Resource limits fail
+before a partial compatible result. A finalized bundle is checked in WPF.01
+canonical set order; validation does not silently repair it. Finalization alone
+normalizes a draft's declared set order while rejecting duplicates.

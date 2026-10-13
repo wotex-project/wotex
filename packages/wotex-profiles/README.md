@@ -57,8 +57,26 @@ matches explicit capture. `Interpreter.project/3` revalidates its retained
 projection and maps a supplied decoded report into an inert proposal. Raw
 domain, sentinel, exact conversion and target-domain checks stay distinct.
 Invalid quality remains null; retained/replayed data never acquires source time
-from receipt time. Authoring remains a separate planned contract; the catalogue
-records current evidence.
+from receipt time. `Artifacts.current/0` and `Contract.export/4` expose installed
+mechanics with explicit consumer selections. `Draft.finalize/2` derives exact
+local-reference identities; `Validation.check/3` invokes the same compiler and
+optional capture checker. Reports establish compatibility only, never admission.
+The catalogue records current evidence.
+
+## Offline authoring CLI
+
+Use an explicit exported contract and candidate; no source collection or provider
+is discovered. Paths and private input stay in caller custody.
+
+```console
+mix wotex.profiles.finalize --contract contract.json --candidate draft.json --output bundle.json
+mix wotex.profiles.validate --contract contract.json --candidate bundle.json
+```
+
+Both commands emit canonical JSON. Exit 0 indicates successful finalization or
+mechanical compatibility, 1 an invalid candidate, and 2 API/contract/resource/I/O
+failure. The finalized file is derived data; retain original drafts and current
+review/admission basis separately.
 
 ## Development
 

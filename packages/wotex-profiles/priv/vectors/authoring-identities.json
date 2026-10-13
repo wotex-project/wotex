@@ -1,0 +1,10 @@
+{
+  "bundle_sha256": "a941a20181d716d67947da92ae7d04e97c1dedb7da7f82c2fb88384a6a4c7774",
+  "contract_sha256": "2a575bbb48dea43b88d2868eb7e99f5208c71346af4f930a7f35d88ef425156b",
+  "draft_sha256": "b2506e09fe3fdc94b0f40c77e14e041e704ce0ed8f5434f615d074aa98b78b3e",
+  "producer": {
+    "id": "urn:wotex:profiles:authoring",
+    "sha256": "95079ac80bd5a690a3098b858787346492c47b1acdd529d3b71639ea425bff1f",
+    "version": "1.0.0"
+  }
+}

@@ -1,8 +1,9 @@
 # External profile-reader completion contract
 
-Version: 0.2.4. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.5. Updated: 2026-10-13. Status: accepted target.
 Implementation: bounded v1 reader/compiler/interpreter. Evidence: focused suites
-and two independent archive consumers; authoring and routine join remain open.
+and two independent archive consumers; authoring v1 implemented, routine join
+and consumer admission remain open.
 
 This optional producer reads consumer-owned device/semantic definitions.
 It ships no world's-sensors catalogue or vendor-model selection authority.
@@ -10,7 +11,8 @@ The independent optional package is registered. WPF.01 reader constructors,
 limits, numeric admission, offline schemas and independent identity fixtures
 are implemented. Exact bounded Unit.convert/4 and installed Binding constructors
 are implemented. Bounded selected-closure compilation, explicit capture matching
-and report interpretation are implemented; authoring remains planned.
+and report interpretation are implemented. Contract export, draft finalization,
+shared validation and explicit CLI adapters are implemented.
 The archive lane exercises reader, exact units, multi-channel compilation and
 report interpretation in two independent consumers. Authoring and consumer
 admission remain separate open obligations. See

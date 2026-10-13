@@ -33,5 +33,11 @@ catalogue records implementation status separately.
   Invalid/missing quality yields null with original provenance; no sample is
   rounded, clipped, relabeled fresh or made authoritative.
 - Use the documented public APIs, preserve source/quality provenance and
-  match errors by their fixed code/path. Planned authoring APIs
-  remain separately identified in the specification catalogue.
+  match errors by their fixed code/path. Authoring reports remain separate
+  from consumer source review, admission and physical qualification.
+- Export only explicit installed bindings/contracts/limits with the exact
+  `Artifacts.current/0` set. Draft local references resolve only included
+  definitions; exact hashes are verified, never guessed or repaired.
+- Use the shared `Validation.check/3` from manual authoring, imports, CI and
+  optional AI drafts. No generator or provider can install a mechanic or transfer
+  approval. A report against an older contract is historical, inert evidence.

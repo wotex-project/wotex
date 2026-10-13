@@ -1,0 +1,16 @@
+{
+  "max_bundle_bytes": 1048576,
+  "max_check_steps": 1000000,
+  "max_diagnostics": 256,
+  "max_report_bytes": 65536,
+  "reader": {
+    "max_bindings": 64,
+    "max_bytes": 1048576,
+    "max_channels": 1024,
+    "max_definitions": 1024,
+    "max_dependencies": 1024,
+    "max_depth": 16,
+    "max_nodes": 100000,
+    "max_numeric_digits": 128
+  }
+}

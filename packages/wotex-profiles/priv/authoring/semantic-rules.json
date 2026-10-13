@@ -1,0 +1,30 @@
+[
+  {
+    "id": "CAPTURE_BASIS",
+    "summary": "Revalidate current supplied capture, binding identity and fingerprint; no authenticity or admission claim."
+  },
+  {
+    "id": "DAG_CLOSURE",
+    "summary": "Resolve only included selected definitions, refuse cycles, missing or unreachable nodes and preserve exact dependency identities."
+  },
+  {
+    "id": "EXACT_REFERENCES",
+    "summary": "Recompute profile/definition/registration identities; reject conflicting id/version or supplied hashes without repairing them."
+  },
+  {
+    "id": "INPUT_SHAPE",
+    "summary": "Apply the installed bounded structural dialect, closed fields, native shapes, Unicode and byte/node/work budgets."
+  },
+  {
+    "id": "INSTALLED_BINDING",
+    "summary": "Use explicit installed binding/decoder/codec contracts, selectors and supported mechanics through the shared compiler."
+  },
+  {
+    "id": "SOURCE_SYNTAX",
+    "summary": "Reject duplicate JSON names, malformed source and numeric rounding before constructing a candidate."
+  },
+  {
+    "id": "VALUE_GRAMMAR",
+    "summary": "Apply URI/version/order/rational/C02 and mechanical DataSchema rules; opaque data never selects executable code."
+  }
+]

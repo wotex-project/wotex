@@ -380,8 +380,8 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-profiles/specs/WPF.02-profile-interpretation.md"
       - id: "WPF.03"
-        version: "0.1.0"
-        implementation_status: "planned"
+        version: "0.1.2"
+        implementation_status: "implemented"
         path: "docs/packages/wotex-profiles/specs/WPF.03-profile-authoring-contract.md"
   wotex-routines:
     app: "wotex_routines"

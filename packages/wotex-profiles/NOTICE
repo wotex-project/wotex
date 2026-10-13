@@ -6,3 +6,8 @@ Apache License, Version 2.0 (see LICENSE).
 
 W3C Web of Things names and specification references identify external
 standards. They do not imply W3C endorsement or certification.
+
+Repository-only JSON Schema Test Suite fixtures are retained under
+ test/support/draft7 with their upstream MIT license and exact source/digest
+manifest. Copyright (c) 2012 Julian Berman. Those fixtures are not shipped in
+this package archive; no full JSON Schema conformance claim is made.

@@ -23,6 +23,47 @@ defmodule Wotex.Profiles.Parser do
 
   def decode(_, _), do: Error.refusal(:invalid_input)
 
+  @doc false
+  @spec guard_numbers(binary(), pos_integer()) :: :ok | {:error, Error.t()}
+  def guard_numbers(bytes, maximum),
+    do: scan(bytes, false, %Limits{data: %{"max_numeric_digits" => maximum}})
+
+  @doc false
+  @spec decode_envelope(binary(), keyword()) :: {:ok, term()} | {:error, Error.t()}
+  def decode_envelope(bytes, options) do
+    limits = %Limits{data: %{"max_numeric_digits" => 128}}
+
+    with :ok <- guard_numbers(bytes, 128),
+         {:ok, data} <- Wotex.JSON.decode(bytes, options),
+         {:ok, exact} <- Jason.decode(bytes, floats: :decimals),
+         :ok <- unchanged(exact, data, limits),
+         do: {:ok, data},
+         else: (
+           {:error, %Wotex.Error{code: code}} -> Grammar.core_refusal(code)
+           error -> error
+         )
+  end
+
+  @doc false
+  @spec native_numbers(term()) :: :ok | {:error, Error.t()}
+  def native_numbers(value) when is_integer(value) do
+    if abs(value) < Integer.pow(10, 128), do: :ok, else: Error.refusal(:numeric_limit)
+  end
+
+  def native_numbers(value) when is_float(value) do
+    case Numeric.decimal(value, %Limits{data: %{"max_numeric_digits" => 128}}, "") do
+      {:ok, _} -> :ok
+      error -> error
+    end
+  end
+
+  def native_numbers(values) when is_list(values), do: Grammar.each(values, &native_numbers/1)
+
+  def native_numbers(value) when is_map(value),
+    do: Grammar.each(Map.values(value), &native_numbers/1)
+
+  def native_numbers(_), do: :ok
+
   defp scan(<<>>, _, _), do: :ok
   defp scan(<<?\\, _, rest::binary>>, true, limits), do: scan(rest, true, limits)
   defp scan(<<?", rest::binary>>, inside, limits), do: scan(rest, not inside, limits)

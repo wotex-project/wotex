@@ -159,4 +159,94 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
                limits
              )
   end
+
+  test "manual authoring, pure reports and actual CLI exit codes agree across archived consumers" do
+    alias Wotex.Profiles.{Artifacts, Contract, Draft, Finalized, Validation, ValidationReport}
+    limits = Jason.decode!(File.read!("authoring-limits.json"))
+    binding = Jason.decode!(File.read!("installed-binding.json"))
+    contracts = Jason.decode!(File.read!("installed-contracts.json"))
+    definition = Jason.decode!(File.read!("definition.json"))
+    profile = Jason.decode!(File.read!("profile.json"))
+    assert {:ok, ref} = Binding.reference(binding, limits["reader"])
+    profile = Map.put(profile, "binding", ref)
+
+    profile =
+      put_in(profile, ["channels", Access.at(0), "semantic"], %{
+        "local" => Map.take(definition, ~w(id version))
+      })
+
+    draft = %{
+      "format" => "wotex.profile.draft@1",
+      "profile" => profile,
+      "definitions" => [definition]
+    }
+
+    assert {:ok, contract} = Contract.export([binding], contracts, limits, Artifacts.current())
+    assert {:ok, contract_bytes} = Contract.encode(contract)
+    assert {:ok, ^contract} = Contract.parse(contract_bytes)
+    assert {:ok, %Finalized{} = final} = Draft.finalize(Jason.encode!(draft), contract)
+    assert {:ok, report} = Validation.check(final.bundle_bytes, contract, nil)
+    assert {:ok, report_bytes} = ValidationReport.encode(report, contract)
+    assert report.data["disposition"] == "compatible"
+    File.write!("contract.json", contract_bytes)
+    File.write!("candidate.json", final.bundle_bytes)
+    File.write!("draft.json", Jason.encode!(draft))
+
+    {output, 0} =
+      System.cmd(
+        "mix",
+        ["wotex.profiles.validate", "--contract", "contract.json", "--candidate", "candidate.json"],
+        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        stderr_to_stdout: true
+      )
+
+    assert String.trim(output) == report_bytes
+
+    {output, 0} =
+      System.cmd(
+        "mix",
+        [
+          "wotex.profiles.finalize",
+          "--contract",
+          "contract.json",
+          "--candidate",
+          "draft.json",
+          "--output",
+          "derived.json"
+        ],
+        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        stderr_to_stdout: true
+      )
+
+    assert Jason.decode!(output)["bundle_sha256"] == final.bundle_sha256
+    assert File.read!("derived.json") == final.bundle_bytes
+    File.write!("candidate.json", "{}")
+
+    {output, 1} =
+      System.cmd(
+        "mix",
+        ["wotex.profiles.validate", "--contract", "contract.json", "--candidate", "candidate.json"],
+        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        stderr_to_stdout: true
+      )
+
+    assert Jason.decode!(output)["disposition"] == "invalid"
+
+    {output, 2} =
+      System.cmd(
+        "mix",
+        [
+          "wotex.profiles.validate",
+          "--contract",
+          "missing-private-path",
+          "--candidate",
+          "candidate.json"
+        ],
+        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        stderr_to_stdout: true
+      )
+
+    refute output =~ "missing-private-path"
+    assert Jason.decode!(output)["error"]["code"] == "invalid_input"
+  end
 end
