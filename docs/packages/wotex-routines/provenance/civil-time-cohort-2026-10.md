@@ -88,3 +88,65 @@ paths, including failed attempts. Local PLTs are excluded from the Routines
 archive and the archive check refuses them. Generated documentation/coverage
 reports are disposable; locked dependency and small build/type caches remain
 local. No Docker image, container or volume was created by these checks.
+
+## Complete-ambiguity renewal
+
+The preceding cohort remains historical evidence for its exact inputs. This
+renewal executes WRO03-09/T9 against runtime/harness source `f3e77a43`, package
+`packages/wotex-routines/`, and separate ExBooking producer source `16a9d0d`.
+The source and producer toolchains, resolved dependency versions and exact
+released optional requirement are unchanged. No released pin is selected.
+
+| Exact artifact | SHA-256 |
+| --- | --- |
+| Routines archive | `f37bce173a6e738a1c14f2768a958054093575bd4629eed9d2be7bb773fad5d2` |
+| Core archive | `77c742b0b76c3d4d9d4c9d5e5b47e65755a351021de1ddba73369647b96fee61` |
+| Continuum archive | `db7077c5f0ad92426c94a077a4f58f9b7334df25de8c2a1b8ed25143bab6efb5` |
+| ExBooking archive | `5e1b12fbe5fa9e72f02ff7e79674dd35e415fb4aea87222f7ea01cfa50ae1fb2` |
+| Fresh consumer lock | `79bb3746c94f2f858f6586eacccfe22eb7ebd51f6d574320b6ec25956a2b439b` |
+| Civil archive fixture | `dd8d53f0e5cd6029aeb0c57d66105a8b890c9210c6eb86b45debd50fef928f90` |
+| Shared civil fixture | `58ee1dc575588ed336a41d605615a62ed23d80e5640b9ad28c38685273f4f886` |
+
+The same explicit source-archive command above passed 19 cases (seed 761529):
+ten civil cases plus the unchanged nine-case SP.08 corpus. Its separate query
+again left Routines, ExBooking and Tz unstarted. The new actual provider has a
+refusing legacy resolver and an optional complete resolver. Literal threefold
+UTC coordinates project as first_fold, second_fold and `["fold", 3]`; every
+policy, filtered third identity, clock reprojection, schema, regenerated page
+and checked compiled Event pass. No civil query invokes the legacy resolver.
+The public legacy helper still refuses its unsupported legacy result.
+
+A 732-alternative label preserves all literal integer UTC coordinates and the
+final `["fold", 732]`. Two 366-alternative labels use exactly 732 localizations.
+Two 367-alternative labels return civil_work_bound after two resolutions and
+367 localizations, before any localization of the second label, with no partial
+page or implicit retry. Selecting first does not refund candidate work.
+A 733-candidate provider result refuses before localization.
+
+The focused civil files passed ten tests (seed 692259). Their synthetic producer
+also rejects native tuple indices 2/733/fractional, wire arrays in native output,
+duplicate/decreasing local positions and mixed unique/fold labels; missing
+positions after filtering remain valid. Only the exact producer work-limit tuple
+gets the distinct refusal. These fixtures establish adapter validation/control
+flow; actual resolution semantics are exercised by the extracted producer.
+
+`mix check.fast --package wotex-routines` passed 160 tests (seed 259903).
+`mix pkg wotex-routines check --no-retry` passed all package components, including
+160 tests with 95.3% coverage (seed 996670), warnings-as-errors, formatting,
+strict Credo, locked dependencies/audits, Dialyzer, Doctor, ExDoc, boundary,
+default archive and application-free checks. Doctor reports 100% docs,
+moduledocs and public specs. The final subsequent moduledoc-only refinement
+preserved every non-moduledoc byte; scoped formatting and warnings-as-errors
+ExDoc passed again before the final source/archive commit above.
+
+`mix affected --base b5bdd137 --detail` selected all twenty packages because of
+unrelated working research changes. The broad root gate was not run; the owning
+package milestone and exact archive cohort provide this slice's evidence.
+Minimum-toolchain, native, firmware, containment, installed-host transaction and
+physical qualification lanes remain unrun for this addition.
+
+The archive verifier removed the inner cohort and a `finally` block removed the
+separate producer archive root. The documentation agent's private patch was
+applied and its directory removed; generated docs/coverage were removed after
+review. No Docker resources were created. Locked build/type caches remain local
+and PLTs remain excluded from the package archive.

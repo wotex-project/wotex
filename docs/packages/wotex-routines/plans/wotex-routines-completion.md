@@ -68,5 +68,9 @@ query-independent originals and share all regeneration/event/output checks.
 The producer's exact total-work refusal projects to civil_work_bound without
 partial pages or implicit retries. WRO03-T9 requires malformed-position checks,
 independent extracted threefold/maximum/work-budget cases and the retained
-SP.08 calendar corpus. Implementation and renewed evidence remain pending;
-no released dependency or consumer runtime selection changes here.
+SP.08 calendar corpus. The implementation passes 160 package tests and the full
+owning milestone (95.3% coverage); the renewed exact cohort passes ten civil plus
+nine retained calendar cases, including actual callback counts and no-start
+calculation. The [cohort record](../provenance/civil-time-cohort-2026-10.md#complete-ambiguity-renewal)
+binds source/artifact identities and scope. No released dependency or consumer
+runtime selection changes here; current host transactions remain obligations.

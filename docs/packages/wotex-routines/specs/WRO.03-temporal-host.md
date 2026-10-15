@@ -371,8 +371,9 @@ validation errors retain their code/path. No native callback error/exception
 payload enters output or logs. Retry regenerates from the same immutable inputs;
 changed retained request/time/points cannot pass checked page projection.
 
-The pure civil adapter is implemented. Its eight-case extracted consumer and
-the retained nine-case SP.08 corpus pass against one exact producer cohort.
+The pure civil adapter is implemented. Its original eight-case extracted consumer
+and the retained nine-case SP.08 corpus passed against the initial exact cohort;
+the renewed complete-ambiguity cohort below passes ten civil plus nine calendar cases.
 Existing Calendar/SP.08
 semantics and native cursors, scalar Temporal pages and Driver lifecycle remain
 unchanged. The optional exact released ExBooking 0.2.3 still lacks this public
@@ -418,9 +419,10 @@ same immutable request repeats the same result; callers may explicitly split
 its local span while retaining the producer's policies and original identities.
 Legacy Calendar/SP.08 and ordinary scalar temporal behavior are unchanged.
 
-This extension is accepted; implementation and renewed archive evidence are
-pending. Its producer contract is ExBooking SP.09 CIV-06, implemented at source
-`16a9d0d`; the earlier civil cohort below remains evidence for its recorded inputs.
+This extension is implemented with focused checks and the
+[renewed exact archive cohort](../provenance/civil-time-cohort-2026-10.md#complete-ambiguity-renewal).
+Its producer contract is ExBooking SP.09 CIV-06, implemented at source `16a9d0d`;
+the earlier civil cohort remains historical evidence for its recorded inputs.
 
 | Case | Requirements | Setup/stimulus | Expected observation / falsifier | Evidence level |
 | --- | --- | --- | --- | --- |
@@ -433,10 +435,11 @@ pending. Its producer contract is ExBooking SP.09 CIV-06, implemented at source
 The executable temporal schema and a civil vector freeze this additive shape
 before implementation. The producer contract is ExBooking
 `docs/specs/SP.09-civil-occurrences.md`, implemented at its separately owned
-source commit `dd82677`. Source review establishes the intended seam; only the
+initial source commit `dd82677`, with complete ambiguity added at `16a9d0d`.
+Source review establishes the intended seam; only the
 cases above establish this adapter's executed evidence.
 
 The [civil archive cohort](../provenance/civil-time-cohort-2026-10.md) records the
-exact producer/runtime archives, eight civil plus nine retained calendar cases,
-quality-component results and cleanup boundaries. Consumer-host transaction,
+initial and renewed exact producer/runtime archives, ten current civil plus nine
+retained calendar cases, quality-component results and cleanup boundaries. Consumer-host transaction,
 clock and physical obligations remain open.
