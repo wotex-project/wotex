@@ -428,7 +428,6 @@ pending. Its producer contract is ExBooking SP.09 CIV-06, implemented at source
 | WRO03-T6 | 07–08 | Exact extracted producer/core/Continuum/Routines archives; literal Stockholm/New York folds/gaps, fractional horizons, wide signed offsets | Original UTC/nominal/resolution preserved without ordinals; policy before filtering; no narrower-helper fallback; old calendar corpus still passes | Archive |
 | WRO03-T7 | 07–08 | Independent Gregorian finite weekday oracle, overlapping/partitioned queries, clock change, provider context change, forged page/member/program | Same point keeps original across query/clock; provider/pattern change changes original; stale generation/member/program refuses; regeneration defeats tampering | Pure/archive |
 | WRO03-T8 | 07–08 | 366-date/732-point maximum, reduced output Limits, malformed/duplicate/unordered/late producer refusal and private-canary faults | Finite complete result or fixed error only; no partial output/private payload; scalar and SP.08 regressions unchanged | Pure/archive |
-
 | WRO03-T9 | 07–09 | Exact extracted complete-ambiguity producer; threefold and maximum 732 alternatives, filtered third fold, every policy, forged positions and 732/733 work boundaries | Literal UTC/tag projection and schema agree; no ordinal or renumbering; query-independent originals and checked regeneration/events persist; fixed work refusal has no partial result or fallback; old calendar corpus passes | Pure/archive |
 
 The executable temporal schema and a civil vector freeze this additive shape

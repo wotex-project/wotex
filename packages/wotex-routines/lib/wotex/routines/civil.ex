@@ -7,7 +7,8 @@ defmodule Wotex.Routines.Civil do
   a `Wotex.Routines.CivilPage`; failures are `{:error, error}` containing a
   `Wotex.Routines.Error`. The adapter calls only ExBooking's public civil
   operation. If that operation is absent, the error code is `:civil_unavailable`;
-  a producer refusal uses `:civil_refused`, and other producer exceptions become
+  its total-work limit uses `:civil_work_bound`, other refusals use
+  `:civil_refused`, and producer exceptions become
   `:producer_contract_error`. There is no availability or recurrence fallback.
   Ordinary scalar temporal calculation does not require this optional producer.
 
@@ -21,6 +22,19 @@ defmodule Wotex.Routines.Civil do
   The producer's civil offset profile permits each component within
   `-93_599..93_599` seconds and their total within `-89_999..93_599` seconds;
   this adapter does not pass results through narrower timezone helpers.
+  Complete ambiguities retain the existing `"first_fold"`/`"second_fold"`
+  resolution strings; local positions 3–732 project as `["fold", index]`.
+  Positions belong to the complete resolution of one nominal label and are never
+  renumbered after filtering: a surviving third alternative keeps `["fold", 3]`.
+  They are not recurrence ordinals; only the `"both"` policy admits positions 3–732.
+
+  The producer's 732-localization work budget covers the whole query and counts
+  every candidate before policy selection or UTC filtering. `:civil_work_bound`
+  refuses the entire page, without partial output, continuation, retry or automatic
+  query splitting. Consumers may explicitly split the local-date span while
+  retaining the policies and original identities, and own the combined ordering.
+  Existing `Wotex.Routines.Calendar` and scalar `Wotex.Routines.Temporal` behavior
+  remains unchanged.
 
   Each original hashes the schedule digest, original coordinate/resolution and
   declared bases together with the database basis. A module database is identified
@@ -153,6 +167,7 @@ defmodule Wotex.Routines.Civil do
 
     case apply(ExBooking, :civil_occurrences, arguments) do
       {:ok, values} -> {:ok, values}
+      {:error, {:limit, :civil_occurrences, :work}} -> Error.refusal(:civil_work_bound)
       {:error, _} -> Error.refusal(:civil_refused)
       _ -> Error.refusal(:producer_contract_error)
     end
@@ -191,9 +206,7 @@ defmodule Wotex.Routines.Civil do
 
   defp occurrence(%{__struct__: ExBooking.CivilOccurrence} = raw, request, time, basis, limits)
        when map_size(raw) == 4 do
-    with :ok <- coordinates(raw, request),
-         :ok <-
-           Validation.choice(raw.resolution, [:unique, :first_fold, :second_fold], "/resolution") do
+    with :ok <- coordinates(raw, request) do
       projected(raw, request.schedule, time, basis, limits)
     end
   rescue
@@ -252,6 +265,7 @@ defmodule Wotex.Routines.Civil do
   defp selected_resolution?(:unique, _), do: true
   defp selected_resolution?(:first_fold, policy), do: policy in ["first", "both"]
   defp selected_resolution?(:second_fold, policy), do: policy in ["second", "both"]
+  defp selected_resolution?({:fold, index}, "both") when index in 3..732, do: true
   defp selected_resolution?(_, _), do: false
 
   defp projected(raw, schedule, time, database_basis, limits) do
@@ -261,7 +275,7 @@ defmodule Wotex.Routines.Civil do
       "due_ms" => due,
       "nominal" => NaiveDateTime.to_iso8601(raw.nominal),
       "starts_at" => DateTime.to_iso8601(raw.starts_at),
-      "resolution" => Atom.to_string(raw.resolution),
+      "resolution" => resolution_wire(raw.resolution),
       "schedule_digest" => schedule["definition_digest"],
       "time_zone_basis" => schedule["time_zone_basis"],
       "producer_basis" => schedule["producer_basis"],
@@ -286,17 +300,40 @@ defmodule Wotex.Routines.Civil do
     end
   end
 
+  defp resolution_wire({:fold, index}), do: ["fold", index]
+  defp resolution_wire(value), do: Atom.to_string(value)
+
   defp ordered({:ok, points}) do
     points = Enum.reverse(points)
 
-    if points
-       |> Enum.chunk_every(2, 1, :discard)
-       |> Enum.all?(fn [a, b] -> a["due_ms"] < b["due_ms"] end),
-       do: {:ok, points},
-       else: Error.refusal(:producer_contract_error)
+    increasing? =
+      points
+      |> Enum.chunk_every(2, 1, :discard)
+      |> Enum.all?(fn [a, b] -> a["due_ms"] < b["due_ms"] end)
+
+    if increasing? and fold_positions?(points, %{}),
+      do: {:ok, points},
+      else: Error.refusal(:producer_contract_error)
   end
 
   defp ordered(error), do: error
+
+  defp fold_positions?([], _), do: true
+
+  defp fold_positions?([point | rest], seen) do
+    nominal = point["nominal"]
+    position = fold_position(point["resolution"])
+    previous = Map.get(seen, nominal)
+
+    (is_nil(previous) or
+       (is_integer(previous) and is_integer(position) and previous < position)) and
+      fold_positions?(rest, Map.put(seen, nominal, position))
+  end
+
+  defp fold_position("unique"), do: :unique
+  defp fold_position("first_fold"), do: 1
+  defp fold_position("second_fold"), do: 2
+  defp fold_position(["fold", index]), do: index
 
   defp matches(program, schedule) do
     trigger = program["ir"]["trigger"]

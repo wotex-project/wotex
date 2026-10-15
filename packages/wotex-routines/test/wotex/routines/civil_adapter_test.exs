@@ -43,9 +43,28 @@ defmodule Wotex.Routines.CivilAdapterTest do
     F.load()
   end
 
-  @spec producer(atom(), keyword()) :: term()
+  @spec producer(term(), keyword()) :: term()
   def producer(:refuse, _), do: {:error, {:private, "PRIVATE_CIVIL_CANARY"}}
   def producer(:wrong, _), do: :unexpected
+  def producer(:work, _), do: {:error, {:limit, :civil_occurrences, :work}}
+  def producer(:other_limit, _), do: {:error, {:limit, :civil_occurrences, :other}}
+
+  def producer({:folds, resolutions}, opts) do
+    values =
+      for {resolution, index} <- Enum.with_index(resolutions, 1),
+          instant = DateTime.add(~U[2026-07-13 09:00:00Z], index - length(resolutions)),
+          DateTime.compare(instant, opts[:from]) != :lt,
+          DateTime.compare(instant, opts[:until]) == :lt,
+          do: %{
+            __struct__: ExBooking.CivilOccurrence,
+            nominal: ~N[2026-07-13 09:00:00],
+            starts_at: instant,
+            resolution: resolution
+          }
+
+    {:ok, values}
+  end
+
   def producer(:raise, _), do: raise("PRIVATE_CIVIL_CANARY")
 
   def producer(:undef, _),
@@ -225,6 +244,71 @@ defmodule Wotex.Routines.CivilAdapterTest do
 
     {:ok, small_window} = Limits.new(%{c.limits.data | "max_integer" => due + 999})
     assert {:error, %Error{code: :integer_overflow}} = Civil.page(request(c), c.time, small_window)
+  end
+
+  test "complete local fold positions project without renumbering and regenerate", c do
+    Process.put({__MODULE__, :mode}, {:folds, [:first_fold, :second_fold, {:fold, 3}]})
+    schedule = F.schedule(c, %{"fold_policy" => "both"})
+    request = %{request(c, %{"from" => "2026-07-13T00:00:00Z"}) | schedule: schedule}
+    assert {:ok, page} = Civil.page(request, c.time, c.limits)
+
+    assert Enum.map(page.occurrences, & &1["resolution"]) ==
+             ["first_fold", "second_fold", ["fold", 3]]
+
+    assert {:ok, wire} = Civil.to_map(page, c.limits)
+    assert :ok == ExJsonSchema.Validator.validate(c.schema, wire)
+    third = List.last(page.occurrences)
+    filtered = %{request | query: %{request.query | "from" => "2026-07-13T09:00:00Z"}}
+    assert {:ok, %{occurrences: [^third]}} = Civil.page(filtered, c.time, c.limits)
+    program = F.program(c, schedule)
+    assert {:ok, event} = Civil.event(page, third, program, c.time, c.profile, c.limits)
+    assert event.data["original"] == third["original"]
+
+    for resolution <- [["fold", 2], ["fold", 733], ["fold", 3.5], ["fold", 3, 4]] do
+      assert {:error, _} =
+               ExJsonSchema.Validator.validate(c.schema, %{third | "resolution" => resolution})
+    end
+  end
+
+  test "malformed or inconsistent local positions refuse the complete producer result", c do
+    schedule = F.schedule(c, %{"fold_policy" => "both"})
+    request = %{request(c, %{"from" => "2026-07-13T00:00:00Z"}) | schedule: schedule}
+
+    for resolutions <- [
+          [{:fold, 2}],
+          [{:fold, 733}],
+          [{:fold, 3.5}],
+          [["fold", 3]],
+          [{:fold, 3, 4}],
+          [:first_fold, :first_fold],
+          [{:fold, 4}, {:fold, 3}],
+          [:unique, :second_fold],
+          [:first_fold, :unique]
+        ] do
+      Process.put({__MODULE__, :mode}, {:folds, resolutions})
+
+      assert {:error, %Error{code: :producer_contract_error}} =
+               Civil.page(request, c.time, c.limits)
+    end
+
+    Process.put({__MODULE__, :mode}, {:folds, [:first_fold, {:fold, 732}]})
+    assert {:ok, page} = Civil.page(request, c.time, c.limits)
+    assert List.last(page.occurrences)["resolution"] == ["fold", 732]
+    assert {:ok, wire} = Civil.to_map(page, c.limits)
+    assert :ok == ExJsonSchema.Validator.validate(c.schema, wire)
+
+    first = %{request | schedule: F.schedule(c, %{"fold_policy" => "first"})}
+    assert {:error, %Error{code: :producer_contract_error}} = Civil.page(first, c.time, c.limits)
+  end
+
+  test "only the exact producer work limit has a distinct refusal and no implicit retry", c do
+    request = request(c)
+    Process.put({__MODULE__, :mode}, :work)
+    assert {:error, %Error{code: :civil_work_bound} = error} = Civil.page(request, c.time, c.limits)
+    assert Civil.page(request, c.time, c.limits) == {:error, error}
+    assert Process.get({__MODULE__, :calls}) == 2
+    Process.put({__MODULE__, :mode}, :other_limit)
+    assert {:error, %Error{code: :civil_refused}} = Civil.page(request, c.time, c.limits)
   end
 
   defp request(c, changes \\ %{}) do

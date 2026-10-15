@@ -62,6 +62,37 @@ defmodule CivilArchiveProvider do
   end
 end
 
+defmodule CompleteCivilArchiveProvider do
+  @moduledoc false
+
+  @behaviour ExBooking.TimeZoneProvider
+
+  @impl ExBooking.TimeZoneProvider
+  def resolve(_, _, context) do
+    count(context, :legacy)
+    {:error, :legacy_unsupported}
+  end
+
+  @impl ExBooking.TimeZoneProvider
+  def resolve_civil(nominal, zone, <<size::16>> = context) do
+    count(context, :resolve)
+    wall = DateTime.from_naive!(nominal, "Etc/UTC")
+    {:ambiguous, for(index <- 1..size, do: %{wall | time_zone: zone, utc_offset: size - index})}
+  end
+
+  @impl ExBooking.TimeZoneProvider
+  def localize(instant, zone, context) do
+    count(context, :localize)
+    offset = 9 * 3600 - (instant.hour * 3600 + instant.minute * 60 + instant.second)
+    {:ok, %{DateTime.add(instant, offset) | time_zone: zone, utc_offset: offset}}
+  end
+
+  defp count(context, kind) do
+    key = {__MODULE__, context, kind}
+    Process.put(key, Process.get(key, 0) + 1)
+  end
+end
+
 defmodule CivilArchiveConsumerTest do
   @moduledoc false
 
@@ -362,6 +393,115 @@ defmodule CivilArchiveConsumerTest do
                %{good | context: :binary.copy(<<0>>, 16_385)},
                small
              )
+  end
+
+  test "complete ambiguities retain literal originals, policies and filtered third positions", c do
+    {:ok, db} = ExBooking.TimeZoneProvider.new(CompleteCivilArchiveProvider, <<3::16>>)
+    schedule = F.schedule(c, %{"fold_policy" => "both", "time_zone" => "Synthetic/Multiple"})
+    query = %{"days" => 1, "from" => "2026-07-13T00:00:00Z", "until" => "2026-07-14T00:00:00Z"}
+    request = request(c, query, db, schedule)
+    assert {:ok, page} = Civil.page(request, c.time, c.limits)
+
+    assert Enum.map(page.occurrences, & &1["starts_at"]) ==
+             ["2026-07-13T08:59:58Z", "2026-07-13T08:59:59Z", "2026-07-13T09:00:00Z"]
+
+    assert Enum.map(page.occurrences, & &1["resolution"]) ==
+             ["first_fold", "second_fold", ["fold", 3]]
+
+    assert {:ok, wire} = Civil.to_map(page, c.limits)
+    assert :ok == ExJsonSchema.Validator.validate(c.schema, wire)
+    third = List.last(page.occurrences)
+
+    assert {:ok, event} =
+             Civil.event(page, third, F.program(c, schedule), c.time, c.profile, c.limits)
+
+    assert event.data["original"] == third["original"]
+    filtered = %{request | query: %{request.query | "from" => "2026-07-13T09:00:00Z"}}
+    assert {:ok, %{occurrences: [^third]}} = Civil.page(filtered, c.time, c.limits)
+    changed = %{c.time | "clock_generation" => "clock:2"}
+    assert {:ok, fresh} = Civil.page(filtered, changed, c.limits)
+    assert hd(fresh.occurrences)["original"] == third["original"]
+
+    for {policy, expected} <- [
+          {"first", "2026-07-13T08:59:58Z"},
+          {"second", "2026-07-13T08:59:59Z"}
+        ] do
+      selected = F.schedule(c, Map.put(schedule, "fold_policy", policy))
+
+      assert {:ok, %{occurrences: [point]}} =
+               Civil.page(%{request | schedule: selected}, c.time, c.limits)
+
+      assert point["starts_at"] == expected
+
+      assert {:ok, %{occurrences: []}} =
+               Civil.page(%{filtered | schedule: selected}, c.time, c.limits)
+    end
+
+    reject = F.schedule(c, Map.put(schedule, "fold_policy", "reject"))
+
+    assert {:error, %Error{code: :civil_refused}} =
+             Civil.page(%{filtered | schedule: reject}, c.time, c.limits)
+
+    assert {:error, %Error{code: :stale_civil_page}} =
+             Civil.to_map(%{page | occurrences: [third]}, c.limits)
+
+    assert Process.get({CompleteCivilArchiveProvider, <<3::16>>, :legacy}, 0) == 0
+
+    assert {:error, :time_zone_provider_refused} =
+             ExBooking.TimeZoneProvider.from_naive(
+               ~N[2026-07-13 09:00:00],
+               "Synthetic/Multiple",
+               db
+             )
+  end
+
+  test "complete sets preserve the 732-point and total-work ceilings without partial output", c do
+    schedule =
+      F.schedule(c, %{
+        "weekdays" => [1, 2],
+        "fold_policy" => "both",
+        "time_zone" => "Synthetic/Multiple"
+      })
+
+    query = %{"days" => 1, "from" => "2026-07-13T00:00:00Z", "until" => "2026-07-15T00:00:00Z"}
+    {:ok, db} = ExBooking.TimeZoneProvider.new(CompleteCivilArchiveProvider, <<732::16>>)
+    request = request(c, query, db, schedule)
+    assert {:ok, page} = Civil.page(request, c.time, c.limits)
+    base = DateTime.to_unix(~U[2026-07-13 09:00:00Z], :millisecond)
+
+    assert Enum.map(page.occurrences, & &1["due_ms"]) ==
+             for(index <- 1..732, do: base - (732 - index) * 1000)
+
+    assert List.last(page.occurrences)["resolution"] == ["fold", 732]
+    assert Process.get({CompleteCivilArchiveProvider, <<732::16>>, :localize}) == 732
+    assert {:ok, wire} = Civil.to_map(page, c.limits)
+    assert :ok == ExJsonSchema.Validator.validate(c.schema, wire)
+
+    {:ok, exact} = ExBooking.TimeZoneProvider.new(CompleteCivilArchiveProvider, <<366::16>>)
+    both_days = %{request | database: exact, query: %{request.query | "days" => 2}}
+    assert {:ok, %{occurrences: points}} = Civil.page(both_days, c.time, c.limits)
+    assert length(points) == 732
+    assert Process.get({CompleteCivilArchiveProvider, <<366::16>>, :resolve}) == 2
+    assert Process.get({CompleteCivilArchiveProvider, <<366::16>>, :localize}) == 732
+
+    {:ok, over} = ExBooking.TimeZoneProvider.new(CompleteCivilArchiveProvider, <<367::16>>)
+    limited = %{both_days | database: over}
+    assert {:error, %Error{code: :civil_work_bound} = error} = Civil.page(limited, c.time, c.limits)
+    assert Process.get({CompleteCivilArchiveProvider, <<367::16>>, :resolve}) == 2
+    assert Process.get({CompleteCivilArchiveProvider, <<367::16>>, :localize}) == 367
+    assert Process.get({CompleteCivilArchiveProvider, <<367::16>>, :legacy}, 0) == 0
+    assert Civil.page(limited, c.time, c.limits) == {:error, error}
+    first = F.schedule(c, Map.put(schedule, "fold_policy", "first"))
+
+    assert {:error, %Error{code: :civil_work_bound}} =
+             Civil.page(%{limited | schedule: first}, c.time, c.limits)
+
+    {:ok, too_many} = ExBooking.TimeZoneProvider.new(CompleteCivilArchiveProvider, <<733::16>>)
+
+    assert {:error, %Error{code: :civil_refused}} =
+             Civil.page(%{request | database: too_many}, c.time, c.limits)
+
+    assert Process.get({CompleteCivilArchiveProvider, <<733::16>>, :localize}, 0) == 0
   end
 
   defp provider(context) do
