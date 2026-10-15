@@ -19,7 +19,8 @@ defmodule Wotex.Routines.ObservationView do
   defp qualify(nil, _, _, _, _, _), do: :unknown
 
   defp qualify(fact, binding, basis, expected, time, limits) do
-    if identity?(fact, binding, basis, expected) and freshness?(fact, basis, expected, time) do
+    if identity?(fact, binding, basis, expected) and external_source?(fact, expected) and
+         freshness?(fact, basis, expected, time) do
       value(fact, basis["value"], limits)
     else
       :unknown
@@ -41,6 +42,14 @@ defmodule Wotex.Routines.ObservationView do
       fact["source_epoch"] == expected["source_epoch"] and
       fact["source_class"] in evidence["sources"]
   end
+
+  defp external_source?(fact, %{"format" => "wotex.routines.external-binding@1"} = expected) do
+    fact["source_class"] == expected["input_mapping"]["observation"]["source_class"] and
+      fact["source_time_basis"] == expected["source_time_basis"] and
+      fact["receipt_epoch"] == expected["input_mapping"]["receipt_clock"]["target_epoch"]
+  end
+
+  defp external_source?(_, _), do: true
 
   defp freshness?(fact, basis, expected, time) do
     freshness = basis["evidence"]["freshness_ms"]

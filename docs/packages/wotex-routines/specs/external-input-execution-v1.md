@@ -1,10 +1,11 @@
 # External input execution join v1
 
-Version: 0.1.1. Updated: 2026-10-15. Status: accepted successor target.
+Version: 0.1.2. Updated: 2026-10-15. Status: accepted successor target.
 Owner: WRO.01 observation metadata; WRO.02 snapshots/edges; WRO.05 input joins.
-Implementation: entry schemas/vectors frozen; runtime changes planned. Evidence: three
-[public-API gaps reproduced](../provenance/external-input-execution-2026-10.md);
-the successor's positive/runtime/archive acceptance has not executed.
+Implementation: native execution join implemented. Evidence: the
+[native execution record](../provenance/external-input-execution-2026-10.md) covers
+EIX-T1–T5; extracted execution consumers/mutations and the full owning package
+milestone remain pending. Current host/source/clock qualification is separate.
 
 ## Result and boundaries
 
@@ -115,7 +116,10 @@ fields, digest substitution, missing installation, source drift or a different
 Basis refuse; no alternate registry is taken from the snapshot.
 
 ObservationView must compare an external Fact with this external profile/source
-basis and the Mapping's source_class. Preserve the Fact's profile_digest;
+basis and the Mapping's source_class. Its receipt_epoch must also equal the
+Mapping's receipt_clock.target_epoch as well as the supplied Time epoch; a
+matching numeric coordinate in a different elapsed incarnation is unknown.
+Preserve the Fact's profile_digest;
 rewriting it to a Basis digest is forbidden. Keep the existing Thing, affordance,
 quality, replay, continuity, unit, freshness and source-age checks. A matching
 representation still does not authenticate the Fact value or establish that the

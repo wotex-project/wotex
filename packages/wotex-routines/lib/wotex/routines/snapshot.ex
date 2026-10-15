@@ -14,19 +14,30 @@ defmodule Wotex.Routines.Snapshot do
   every compiled Thing and resource role. Both binding maps must contain exactly
   the compiled binding names, with an explicit `nil` fact for each absent input.
 
-  Each binding basis supplies its installed profile digest, expected source
-  identity/epoch and optional source-clock basis. Each non-null fact must be a
-  complete `Wotex.Routines.Fact`; its presence does not make it usable. Evaluation
-  separately checks identity, quality, continuity, receipt freshness and any
-  required source-time confidence against the supplied time. Stale facts remain
-  data and cannot replace the expected binding basis.
+  A legacy four-member binding basis supplies the installed Basis semantic
+  digest, expected source identity/epoch and optional source-clock basis.
+  External inputs instead use the six-member record returned by
+  `Wotex.Routines.Input.binding_basis/3`. It preserves the external profile digest
+  and complete `"input_mapping"`; the Fact is not relabelled with a Basis digest.
+  The embedded mapping is revalidated against the regenerated program's registry,
+  exact selected Basis and Limits. Outer identity fields must match its complete
+  reconstruction. Each embedded occurrence counts against aggregate bounds.
+
+  Each non-null fact must be a complete `Wotex.Routines.Fact`, including explicit
+  `nil` receipt UTC where unavailable. Its presence does not make it usable or
+  prove that the installed input projection produced it. Evaluation separately
+  checks identity, accepted source class, quality, continuity, elapsed receipt
+  freshness and any required source-time confidence. Stale facts remain data
+  and cannot replace the expected binding basis. Invalid external installation
+  or correspondence refuses with `:stale_binding_basis` or a structured
+  validation error; a snapshot never supplies an alternate registry.
 
   The consumer owns atomic collection and current membership/resource checks.
   Constructing a snapshot does not prove that its generations, observations or
   active set describe current authority, nor does it admit an effect.
   """
 
-  alias Wotex.Routines.{Compiler, Error, Fact, Limits, Profile, Validation}
+  alias Wotex.Routines.{Compiler, Error, ExternalBinding, Fact, Limits, Profile, Validation}
 
   @enforce_keys [:data]
   defstruct [:data]
@@ -48,7 +59,7 @@ defmodule Wotex.Routines.Snapshot do
          :ok <- active_bound(data["active_programs"], profile),
          :ok <- Validation.each(data["active_programs"], &Validation.digest(&1, "/active_programs")),
          :ok <- resources(data["resource_revisions"], program, limits),
-         :ok <- binding_bases(data["binding_bases"], program),
+         :ok <- binding_bases(data["binding_bases"], program, limits),
          :ok <- facts(data["facts"], Map.keys(program["context"]["bindings"]), limits) do
       {:ok, %__MODULE__{data: data}}
     end
@@ -78,13 +89,20 @@ defmodule Wotex.Routines.Snapshot do
     end
   end
 
-  defp binding_bases(data, program) do
+  defp binding_bases(data, program, limits) do
     with :ok <- Validation.fields(data, Map.keys(program["context"]["bindings"])) do
-      Validation.each(Map.to_list(data), &binding_basis(&1, program))
+      Validation.each(Map.to_list(data), &binding_basis(&1, program, limits))
     end
   end
 
-  defp binding_basis({name, basis}, program) do
+  defp binding_basis(
+         {name, %{"format" => "wotex.routines.external-binding@1"} = basis},
+         program,
+         limits
+       ),
+       do: ExternalBinding.validate(basis, name, program, limits, :stale_binding_basis)
+
+  defp binding_basis({name, basis}, program, _) do
     with :ok <- Validation.fields(basis, @basis_fields),
          :ok <- Validation.digest(basis["profile_digest"], "/binding_bases"),
          :ok <- Validation.text(basis["source_id"], "/binding_bases"),

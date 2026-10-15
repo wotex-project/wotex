@@ -173,6 +173,24 @@ defmodule Wotex.Routines.InputMapping do
   defp optional_basis(nil), do: :ok
   defp optional_basis(value), do: Validation.digest(value, "/observation/source_time_basis")
 
+  defp clock(%{"format" => "wotex.routines.receipt-clock@1"} = data, limits) do
+    with :ok <-
+           Validation.fields(
+             data,
+             ~w(format projection source_epoch source_origin_us target_epoch target_origin_ms)
+           ),
+         :ok <-
+           Validation.choice(data["projection"], ["floor_millisecond"], "/receipt_clock/projection"),
+         :ok <-
+           InputValidation.text(
+             data["target_epoch"],
+             limits.data["max_string_bytes"],
+             "/receipt_clock/target_epoch"
+           ) do
+      clock(Map.drop(data, ~w(format projection)), limits)
+    end
+  end
+
   defp clock(data, limits) do
     with :ok <-
            Validation.fields(data, ~w(source_epoch source_origin_us target_epoch target_origin_ms)),

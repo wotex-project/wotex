@@ -1,7 +1,7 @@
 # WRO.05 — Explicit joins from externally defined sensor capabilities
 
-Version: 0.2.0. Updated: 2026-10-15. Status: accepted target.
-Implementation: scalar representation join implemented; external execution successor planned.
+Version: 0.2.1. Updated: 2026-10-15. Status: accepted target.
+Implementation: scalar representation and native external execution join implemented; extracted execution acceptance pending.
 Evidence: focused tests and three extracted-archive representation consumers;
 consumer admission/physical qualification remain separate.
 
@@ -205,9 +205,10 @@ The
 [external input execution contract](external-input-execution-v1.md) defines
 explicit missing receipt UTC, a separately selected conservative receipt-clock
 projection and a qualified external binding for Snapshot/Edge. These additions
-are planned. Existing scalar representation/archive evidence does not establish
-that a joined Fact is usable by the public evaluator or kernel.
+are implemented with native integer/Boolean/enum reader-to-kernel and retained
+edge checks. The old scalar representation/archive evidence retains its scope;
+new extracted execution acceptance remains pending.
 
 | Case | Requirements | Stimulus and falsifier | Evidence |
 | --- | --- | --- | --- |
-| WRO05-T6 | 01–05 | Complete public reader/Input/binding/Compiler/Snapshot/Kernel and edge traces, unaligned receipt, missing UTC and changed mapping | EIX-T1–T6; planned, no identity rewrite or fabricated clock/edge |
+| WRO05-T6 | 01–05 | Complete public reader/Input/binding/Compiler/Snapshot/Kernel and edge traces, unaligned receipt, missing UTC and changed mapping | EIX-T1–T5 native checks pass; EIX-T6 archive/mutation work pending; no identity rewrite or fabricated clock/edge |

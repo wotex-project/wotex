@@ -4,8 +4,18 @@ defmodule Wotex.Routines.InputExecutionSchemaTest do
   use ExUnit.Case, async: true
 
   setup_all do
-    root = :wotex_routines |> :code.priv_dir() |> List.to_string()
-    read = fn path -> root |> Path.join(path) |> File.read!() |> JSON.decode!() end
+    root =
+      :wotex_routines
+      |> :code.priv_dir()
+      |> List.to_string()
+
+    read = fn path ->
+      root
+      |> Path.join(path)
+      |> File.read!()
+      |> JSON.decode!()
+    end
+
     corpus = read.("vectors/wro-05-input-execution.json")
     entry = read.("schemas/wro-05-input-execution.schema.json")
     %{root: root, corpus: corpus, entry: ExJsonSchema.Schema.resolve(entry)}
@@ -70,7 +80,10 @@ defmodule Wotex.Routines.InputExecutionSchemaTest do
     assert fact["received_at"] == nil
 
     for path <- Path.wildcard(Path.join(c.root, "schemas/*.json")),
-        schema = path |> File.read!() |> JSON.decode!(),
+        schema =
+          path
+          |> File.read!()
+          |> JSON.decode!(),
         Map.has_key?(Map.get(schema, "definitions", %{}), "fact") do
       schema = definition(schema, "fact")
       assert :ok = ExJsonSchema.Validator.validate(schema, fact), path
@@ -88,7 +101,13 @@ defmodule Wotex.Routines.InputExecutionSchemaTest do
 
   test "new clock is accepted only as its complete nested mapping variant", c do
     path = Path.join(c.root, "schemas/wro-05-input.schema.json")
-    schema = path |> File.read!() |> JSON.decode!() |> ExJsonSchema.Schema.resolve()
+
+    schema =
+      path
+      |> File.read!()
+      |> JSON.decode!()
+      |> ExJsonSchema.Schema.resolve()
+
     mapping = c.corpus["join"]["mapping"]
     assert :ok = ExJsonSchema.Validator.validate(schema, mapping)
 
@@ -130,7 +149,10 @@ defmodule Wotex.Routines.InputExecutionSchemaTest do
     }
 
     for path <- Path.wildcard(Path.join(c.root, "schemas/*.json")),
-        schema = path |> File.read!() |> JSON.decode!(),
+        schema =
+          path
+          |> File.read!()
+          |> JSON.decode!(),
         {name, value} <- [{"snapshot", snapshot}, {"edge", edge}],
         Map.has_key?(Map.get(schema, "definitions", %{}), name) do
       resolved = definition(schema, name)

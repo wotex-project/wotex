@@ -1,5 +1,33 @@
 defmodule Wotex.Routines.Fact do
-  @moduledoc "Bounded observation data retaining source and receipt continuity, quality and provenance."
+  @moduledoc """
+  Retains bounded observation data with source, receipt and provenance metadata.
+
+  `new/2` takes a complete fact map or native value and explicit
+  `Wotex.Routines.Limits`, returning `{:ok, fact}` or `{:error, error}` with a
+  `Wotex.Routines.Error`. `to_map/2` repeats validation and returns the complete
+  normalized data. Source identity, source class, quality, replay and continuity
+  remain explicit; none is inferred from an identifier or timestamp.
+
+  `"received_at"` is required, but may be an ISO-8601 timestamp or explicit
+  `nil` when receipt UTC is unavailable. Null stays null: construction never
+  substitutes source time, evaluation time or an epoch. Receipt freshness uses
+  `"receipt_epoch"`, `"receipt_ms"` and exclusive `"expires_ms"` during
+  evaluation. Receipt UTC does not renew that lifetime or establish confidence.
+  Trusted source time separately requires its timestamp, clock basis and
+  uncertainty; a missing receipt timestamp does not change those requirements.
+
+  For external input, `"profile_digest"` keeps the external profile identity,
+  rather than the installed behaviour Basis digest. Use
+  `Wotex.Routines.Input.binding_basis/3` to construct the corresponding installed
+  snapshot/edge binding. Fact construction alone does not establish that the
+  value came from that mapping or that its source is trustworthy.
+
+  A null value cannot be `"usable"`. Nonusable data remains bounded data, not
+  zero or false. Derived provenance must retain distinct contributors in the
+  same receipt epoch and cannot outlive their expiry. All members obey the
+  selected aggregate JSON and integer bounds. Qualification, current snapshot
+  collection and execution admission remain consumer responsibilities.
+  """
 
   alias Wotex.Routines.{Error, Limits, Unit, Validation}
 
@@ -41,7 +69,7 @@ defmodule Wotex.Routines.Fact do
          :ok <- null_quality(data),
          {:ok, source_time} <- source_time(data["source_time"]),
          :ok <- source_clock(data, limits),
-         {:ok, received_at} <- Validation.timestamp(data["received_at"], "/received_at"),
+         {:ok, received_at} <- received_at(data["received_at"]),
          :ok <- expiry(data),
          :ok <- derivation(data, limits) do
       normalized =
@@ -81,6 +109,9 @@ defmodule Wotex.Routines.Fact do
 
   defp source_time(nil), do: {:ok, nil}
   defp source_time(time), do: Validation.timestamp(time, "/source_time")
+
+  defp received_at(nil), do: {:ok, nil}
+  defp received_at(time), do: Validation.timestamp(time, "/received_at")
 
   defp source_clock(data, limits) do
     with :ok <-

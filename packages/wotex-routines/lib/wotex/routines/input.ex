@@ -2,11 +2,45 @@ defmodule Wotex.Routines.Input do
   @moduledoc """
   Exact inert joins from qualified external profile proposals to routine Facts.
 
-  All clocks, source identities, mapping installation and metadata are explicit.
-  A successful Fact grants no admission, current-state or physical-effect claim.
+  `project/4` takes the original external proposal, an installed
+  `Wotex.Routines.InputMapping`, complete fact metadata and a context with exactly
+  `"registry"`, `"limits"` and `"reader_limits"`. It revalidates the reader,
+  mapping, source and clock correspondences, returning `{:ok, result}` or
+  `{:error, error}` with a `Wotex.Routines.Error`. The result has `"fact"`
+  containing a `Wotex.Routines.Fact`, plus `"source_proposal_sha256"`,
+  `"mapping_ref"` and `"correspondence_ref"` witnesses.
+
+  Scalar value conversion remains exact. Receipt-clock conversion is separately
+  selected in the mapping: the original four-member clock requires a delta
+  divisible by 1000 microseconds, otherwise `:inexact_conversion`. The explicit
+  `wotex.routines.receipt-clock@1` / `floor_millisecond` alternative requires
+  `receipt_ms = target_origin_ms + floor((receipt_us - source_origin_us) / 1000)`,
+  including floor toward negative infinity. Its expiry cannot exceed that
+  projected coordinate plus the installed freshness bound. Exceeding that expiry
+  or mismatching the epoch/projected coordinate returns `:stale_basis`.
+  Out-of-range floor coordinates or expiry addition return `:input_limit`.
+  No processing-time substitution occurs.
+
+  Metadata may explicitly retain `nil` for `"received_at"`; it is never filled
+  from source time or a clock read. Source-time trust and uncertainty remain
+  separate checks. Projection does not rewrite the original proposal or its
+  digest to align receipt precision.
+
+  `binding_basis/3` takes `Wotex.Routines.InputMapping`, `Wotex.Routines.Registry`
+  and `Wotex.Routines.Limits`, returning `{:ok, basis}` for snapshot/edge binding
+  slots. This closed external record retains the external profile digest,
+  expected source/clock identity and complete revalidated mapping. The mapping's
+  installed Basis identity remains separate;
+  replacing the Fact's profile digest with that Basis digest is not a join.
+
+  Missing reader capability returns `:missing_producer`; other refusals retain
+  their bounded structured codes and no fallback runs. The consumer qualifies
+  the source and actual clock relation, supplies the current registry and
+  metadata, and owns collection/admission. A successful Fact or binding grants
+  no current-state, clock-trust or physical-effect claim.
   """
 
-  alias Wotex.Routines.{Error, Fact, InputMapping, InputValidation, Limits, Validation}
+  alias Wotex.Routines.{Error, Fact, InputMapping, InputValidation, Limits, Registry, Validation}
 
   @metadata ~w(id thing_id affordance_type affordance_name source_class source_id source_epoch sequence source_time source_time_trust source_time_basis source_uncertainty_ms received_at receipt_epoch receipt_ms profile_digest replay continuity expires_ms derivation_digest contributors)
   @continuity %{
@@ -16,6 +50,26 @@ defmodule Wotex.Routines.Input do
     "retained" => {"lost", "retained"},
     "replayed" => {"lost", "replayed"}
   }
+
+  @doc "Builds an inert external snapshot/edge binding from a completely installed mapping."
+  @spec binding_basis(term(), Registry.t(), Limits.t()) :: {:ok, map()} | {:error, Error.t()}
+  def binding_basis(mapping, registry, limits) do
+    with {:ok, limits} <- Limits.new(limits),
+         {:ok, mapping} <- InputMapping.to_map(mapping, registry, limits),
+         basis = %{
+           "format" => "wotex.routines.external-binding@1",
+           "profile_digest" => "sha256:" <> mapping["profile_sha256"],
+           "source_id" => mapping["observation"]["source_ref"],
+           "source_epoch" => mapping["observation"]["source_epoch"],
+           "source_time_basis" => mapping["observation"]["source_time_basis"],
+           "input_mapping" => mapping
+         },
+         :ok <- Validation.bounded(basis, limits) do
+      {:ok, basis}
+    else
+      error -> InputValidation.refusal(error)
+    end
+  end
 
   @doc "Revalidates current reader/mapping/source/clock basis and returns a Fact with exact witnesses."
   @spec project(term(), term(), term(), map()) :: {:ok, map()} | {:error, Error.t()}
@@ -164,6 +218,17 @@ defmodule Wotex.Routines.Input do
       source["epoch"] != clock["source_epoch"] or metadata["receipt_epoch"] != clock["target_epoch"] ->
         Error.refusal(:stale_basis, "/metadata/receipt_epoch")
 
+      clock["format"] == "wotex.routines.receipt-clock@1" ->
+        expected = clock["target_origin_ms"] + Integer.floor_div(delta, 1000)
+
+        with :ok <- floor_coordinate(expected, limits, "/metadata/receipt_ms"),
+             maximum_expiry = expected + mapping["basis"]["evidence"]["freshness_ms"],
+             :ok <- floor_coordinate(maximum_expiry, limits, "/metadata/expires_ms") do
+          if metadata["receipt_ms"] == expected and metadata["expires_ms"] <= maximum_expiry,
+            do: :ok,
+            else: Error.refusal(:stale_basis, "/metadata/receipt_ms")
+        end
+
       rem(delta, 1000) != 0 ->
         Error.refusal(:inexact_conversion, "/proposal/receipt_time")
 
@@ -176,6 +241,12 @@ defmodule Wotex.Routines.Input do
             else: Error.refusal(:stale_basis, "/metadata/receipt_ms")
         end
     end
+  end
+
+  defp floor_coordinate(value, limits, path) do
+    if value in 0..limits.data["max_integer"],
+      do: :ok,
+      else: Error.refusal(:input_limit, path)
   end
 
   defp value(%{"quality" => quality}, _, _, _) when quality != "usable", do: {:ok, nil}

@@ -97,3 +97,65 @@ The final command `mix pkg wotex-routines test test/wotex/routines/input_executi
 passed **8 tests**, seed **652228**, in **0.1 seconds**. Scoped formatting and Git
 whitespace checks passed. Runtime constructors, public binding/execution joins
 and archive/mutation cases remain unimplemented; these are entry-shape checks.
+
+
+## Native execution slice
+
+The native implementation accompanies this record, descending from entry artifact
+commit 1fd215a7. The eight changed production modules are Edge, ExternalBinding,
+Fact, Input, InputMapping, InputValidation, ObservationView and Snapshot under
+packages/wotex-routines/lib/wotex/routines/. Their source manifest SHA-256 is
+8f92907a96b9dd7b145da251032bc05e6fd510a7dac344b55b4c7f38e84af785. Reproduce it by sorting those repository-relative
+paths, concatenating each path, NUL, its lowercase file SHA-256 and newline, then
+hashing the UTF-8 concatenation. No producer version, consumer pin or lock changed.
+
+Fact keeps required-but-null receipt UTC through Input and an actual Continuum
+round trip; unknown source UTC still refuses exchange. Input's explicit floor
+clock passes all eleven independent integer vectors, checked expiry and closed
+clock grammar refusals. The old exact clock still refuses unaligned input.
+Input.binding_basis/3 embeds the fully revalidated installed Mapping. Snapshot
+and Edge compare its entire Basis body, outer identity and regenerated program
+Registry. ObservationView retains the external profile and requires exact mapped
+class, source clock basis and target receipt epoch. A foreign receipt incarnation
+cannot become current by pairing it with an equally foreign Time epoch.
+
+The new input_execution_test.exs suite uses actual public Profiles compiler and
+interpreter output for integer, Boolean and enum evaluation/completed inert
+Kernel runs. It executes the frozen five-row external edge trace through both
+Edge and Kernel, plus expiry, restored/retained/replayed input, source/clock
+replacement, outer/native forgery, complete Basis and aggregate-bound refusals.
+An otherwise permissive Basis demonstrates that changed source class/clock
+becomes unknown specifically at the external correspondence guard. Existing
+analysis scopes explicitly refuse this external-input program. The new schema
+suite remains shape evidence, separate from these executed public transitions.
+
+The final focused command selected input_execution, input_execution_schema,
+input, input_mapping, basis, evaluation, edge and model test files with
+--warnings-as-errors: **63 passed**, seed **626045**, **4.4 seconds**. Earlier
+runs exposed invalid test scope/evidence and raw Limits fixtures, then a bound
+fixture which changed the compiler's selected Limits identity. Those fixtures
+were corrected without broadening the owning APIs; the final bound case
+regenerates its Program under the narrowed Limits before testing the Snapshot.
+The first fast gate exposed pipe formatting, unused-variable convention and
+complexity issues. Fact identity and external correspondence remain separate
+small checks; no warning suppression was added. The final
+`mix check.fast --package wotex-routines` passes compilation, formatting, strict
+Credo and **179 tests**, seed **929185**, **7.8 seconds** for tests (**11.4 seconds**
+for the gate). `mix dialyzer.pkg wotex-routines` reuses the current PLT and reports
+**zero errors**, **1.76 seconds** analysis. All commands used Elixir 1.20.2 /
+OTP 29.0.4 from the repository toolchain.
+
+EIX-T1–T5 have native software checks; EIX-T6's two extracted execution consumers,
+behavioral identity/rounding mutations and renewed producer-absence path remain
+pending. The owning full package milestone is deferred to that coherent archive
+slice. The shared working tree contains unrelated research, so affected-package
+discovery at HEAD names all twenty packages; checks deliberately select only
+Routines. No native/container lane, host admission or physical qualification is
+claimed. Temporary metadata projections and generated documentation are removed
+after validation; reusable dependency/build/PLT caches are retained.
+
+The updated ExDoc build passes --warnings-as-errors with its output in a
+context-managed temporary directory, removed on completion. `mix docs.check`
+passes all 517 tracked Markdown files and the current 103-entry family catalogue.
+The indexed catalogue is separately generated and checked from projected indexed
+owning documents, preserving unrelated research changes.

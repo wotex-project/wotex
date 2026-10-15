@@ -1,10 +1,44 @@
 defmodule Wotex.Routines.Edge do
-  @moduledoc "Retained reported-edge qualification over explicit continuous facts and caller-owned elapsed time."
+  @moduledoc """
+  Advances retained reported-edge state over explicit facts and elapsed time.
+
+  `advance/7` takes a compiled program, its fact event, complete snapshot,
+  explicit time, prior edge data or `nil`, `Wotex.Routines.Profile` and
+  `Wotex.Routines.Limits`. It returns `{:ok, result}` containing `"edge"`,
+  `"eligible"` and `"reason"`, or `{:error, error}` with a
+  `Wotex.Routines.Error`. Retain the returned edge data even when eligibility
+  is false. `new/4` and `to_map/4` revalidate retained state against the complete
+  regenerated program, returning `{:ok, edge}` and `{:ok, data}` respectively.
+
+  Eligibility requires a new, qualified continuous report. The first qualified
+  sample establishes a baseline; unknown, lost, retained or replayed input
+  cannot invent an edge. Under the same binding/clock basis, exact qualified
+  duplicates remain duplicates; a reused fact/sequence identity with changed
+  qualified payload refuses with `:conflicting_edge_fact`. Debounce, hysteresis
+  and cooldown use the supplied elapsed coordinate and installed trigger,
+  without starting timers.
+
+  Retained binding identity accepts the legacy Basis record or the complete
+  external record from `Wotex.Routines.Input.binding_basis/3`. The latter keeps
+  its external profile identity and embedded installed mapping, which is fully
+  revalidated against the current program registry and selected Basis. A valid
+  binding/source or clock replacement resets the baseline. A stale program or
+  invalid retained mapping instead refuses with `:stale_edge` or a structured
+  validation error; the caller must explicitly supply `nil` to start fresh under
+  valid new inputs. Neither path reuses an earlier positive edge.
+
+  Absent receipt UTC remains explicit null. Freshness still requires the elapsed
+  receipt basis and, where selected, independent source-time confidence. The
+  consumer owns continuity after reconnect/restore, current source and clock
+  qualification, durable custody and execution admission. Eligibility is inert
+  and authorizes no effect.
+  """
 
   alias Wotex.Routines.{
     Compiler,
     Error,
     Event,
+    ExternalBinding,
     Limits,
     ObservationView,
     Profile,
@@ -26,7 +60,7 @@ defmodule Wotex.Routines.Edge do
     with {:ok, program} <- Compiler.to_map(program, profile, limits),
          {:ok, data, limits} <- Validation.admit(input, limits, __MODULE__),
          :ok <- Validation.fields(data, @fields),
-         :ok <- identity(data, program),
+         :ok <- identity(data, program, limits),
          :ok <- coordinates(data, limits),
          :ok <- sample(data, limits) do
       {:ok, %__MODULE__{data: data}}
@@ -59,7 +93,7 @@ defmodule Wotex.Routines.Edge do
   defp retained(nil, _, _, _), do: {:ok, nil}
   defp retained(prior, program, profile, limits), do: to_map(prior, program, profile, limits)
 
-  defp identity(data, program) do
+  defp identity(data, program, limits) do
     trigger = program["ir"]["trigger"]
     basis = data["binding_basis"]
 
@@ -67,15 +101,32 @@ defmodule Wotex.Routines.Edge do
            trigger["kind"] == "edge" and data["binding"] == trigger["binding"] and
              data["program_digest"] == program["ir_digest"],
          :ok <- Validation.choice(data["format"], ["wotex.routines.edge@1"], "/format"),
-         :ok <- Validation.fields(basis, @basis),
+         :ok <- binding_basis(basis, data["binding"], program, limits),
+         :ok <- Validation.text(data["epoch"], "/epoch"),
+         :ok <- Validation.text(data["clock_generation"], "/clock_generation") do
+      :ok
+    else
+      false -> Error.refusal(:stale_edge)
+      error -> error
+    end
+  end
+
+  defp binding_basis(
+         %{"format" => "wotex.routines.external-binding@1"} = basis,
+         name,
+         program,
+         limits
+       ),
+       do: ExternalBinding.validate(basis, name, program, limits, :stale_edge)
+
+  defp binding_basis(basis, name, program, _) do
+    with :ok <- Validation.fields(basis, @basis),
          :ok <- Validation.text(basis["source_id"], "/binding_basis/source_id"),
          :ok <- Validation.text(basis["source_epoch"], "/binding_basis/source_epoch"),
          :ok <- optional_digest(basis["source_time_basis"]),
-         :ok <- Validation.text(data["epoch"], "/epoch"),
-         :ok <- Validation.text(data["clock_generation"], "/clock_generation"),
          true <-
            basis["profile_digest"] ==
-             program["context"]["bindings"][data["binding"]]["basis"]["semantic_digest"] do
+             program["context"]["bindings"][name]["basis"]["semantic_digest"] do
       :ok
     else
       false -> Error.refusal(:stale_edge)

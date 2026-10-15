@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.4. Updated: 2026-10-15. Status: accepted target.
+Version: 0.2.5. Updated: 2026-10-15. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -256,6 +256,10 @@ are separate consumer evidence. Standards vocabulary source:
 
 The [external input execution successor](external-input-execution-v1.md) owns
 explicit missing receipt UTC and conservative sub-millisecond receipt projection.
-These additions are planned; the existing constructor/schema evidence above
-retains its original non-null received_at scope. Source-time requirements,
-freshness, source identity, units and current consumer qualification are separate.
+Native constructors now retain explicit null received_at, and the input adapter
+implements the explicitly selected conservative clock. The execution suite covers
+null preservation through Continuum without supplying missing source UTC. The
+[successor evidence](../provenance/external-input-execution-2026-10.md) separates
+these native checks from pending extracted execution consumers. Source-time
+requirements, freshness, source identity, units and current consumer qualification
+remain separate.

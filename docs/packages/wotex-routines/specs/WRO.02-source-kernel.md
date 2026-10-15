@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.12. Updated: 2026-10-15. Status: accepted target; implementation partial.
+Version: 0.2.13. Updated: 2026-10-15. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -516,5 +516,9 @@ The [external input execution successor](external-input-execution-v1.md) defines
 an explicitly installed external binding carrying the complete WRO.05 Mapping.
 External profile identity and installed Basis identity remain distinct. Snapshot
 and retained Edge must validate that correspondence before using a Fact; rewriting
-the Fact profile digest is forbidden. This extension is planned. Existing
+the Fact profile digest is forbidden. Native Snapshot/Edge and ObservationView
+now enforce the complete installed correspondence, including exact class and
+source/receipt clock basis. Independent native reader-to-kernel and edge traces
+pass; extracted execution consumers remain pending in the
+[successor evidence](../provenance/external-input-execution-2026-10.md). Existing
 four-member binding records and their execution evidence retain their exact scope.

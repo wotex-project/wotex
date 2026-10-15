@@ -4,7 +4,7 @@ defmodule Wotex.Routines.InputValidation do
   alias Wotex.Routines.{Error, Limits, Validation}
 
   @path_fields ~w(proposal metadata id version sha256 semantic semantic_ref reader_contract_ref compiler_ref
-    legacy_basis_ref basis correspondence_ref projection enum_table channel_id affordance kind name type
+    legacy_basis_ref basis correspondence_ref projection enum_table channel_id affordance kind name type input_mapping
     profile_sha256 closure_sha256 capture_digest external_unit quantity_kind dimension scale_n scale_d offset_n offset_d
     observation receipt_clock source_ref source_epoch source_class source_time_basis source_origin_us target_epoch target_origin_ms
     sequence continuity replay receipt_time epoch monotonic_us source_time utc trust uncertainty_us normalized_value

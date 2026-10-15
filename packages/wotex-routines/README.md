@@ -59,9 +59,18 @@ archive and `--civil-consumer`. Calculation grants no effect authority.
 `InputMapping.new/3` checks a consumer-installed exact scalar correspondence.
 `Input.project/4` joins a public Profiles proposal with explicit metadata and
 registry/limits/reader_limits context into a Fact and witnesses. Mapping and
-source/receipt clock mismatches refuse; no rounding, renewed freshness or effect
-authority follows. The optional Profiles dependency can be absent during ordinary
-routine use. See the [input contract](../../docs/packages/wotex-routines/specs/WRO.05-external-profile-inputs.md).
+source/receipt clock mismatches refuse. Scalar conversion stays exact. Receipt
+precision uses either the original exact clock or an explicitly installed
+`floor_millisecond` clock, with expiry capped by the installed freshness bound.
+`received_at` may remain explicit null; source UTC is never substituted.
+
+`Input.binding_basis/3` returns the qualified external binding for Snapshot/Edge.
+It preserves the Fact's external profile digest and embeds the complete installed
+Mapping; the selected Basis identity remains separate. Snapshot/Edge revalidate
+both against the current program, and mismatched Fact identities become unknown.
+These pure joins grant no source trust or effect authority. The optional Profiles
+dependency can be absent during ordinary routine use. See the [input contract](../../docs/packages/wotex-routines/specs/WRO.05-external-profile-inputs.md)
+and [execution join](../../docs/packages/wotex-routines/specs/external-input-execution-v1.md).
 
 The [completion contract](../../docs/packages/wotex-routines/plans/wotex-routines-completion.md)
 orders the accepted programme. From the repository root run focused tests with
