@@ -1,0 +1,39 @@
+{
+  "schedule": {
+    "format": "wotex.routines.schedule@1",
+    "kind": "civil",
+    "schedule_id": "civil:1",
+    "late_window_ms": 1000,
+    "time": "09:00:00",
+    "weekdays": [
+      1,
+      3
+    ],
+    "time_zone": "Etc/UTC",
+    "time_zone_basis": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+    "producer_basis": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "gap_policy": "skip",
+    "fold_policy": "first",
+    "definition_digest": "sha256:8c6101f4c1fab18e5233590f2721a0eadc98fe6955cb4d412f063f684426b991"
+  },
+  "query": {
+    "first_date": "2026-07-13",
+    "days": 5,
+    "from": "2026-07-13T09:00:00.000001Z",
+    "until": "2026-07-17T00:00:00Z"
+  },
+  "time": {
+    "epoch": "boot:1",
+    "elapsed_ms": 1000,
+    "clock_generation": "clock:1",
+    "utc_low_ms": null,
+    "utc_high_ms": null
+  },
+  "expected": [
+    {
+      "nominal": "2026-07-15T09:00:00",
+      "starts_at": "2026-07-15T09:00:00Z",
+      "resolution": "unique"
+    }
+  ]
+}

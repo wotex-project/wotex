@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.4. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.5. Updated: 2026-10-15. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -284,3 +284,107 @@ the executed ninth archive case to its exact producer/runtime/harness source.
 The [quality milestone](../provenance/quality-milestone-2026-10.md) also exercises
 malformed producer adapter outcomes, with real recurrence semantics checked by
 the separate nine-case extracted calendar lane.
+
+## Bounded civil calendar adapter
+
+**WRO03-06 — Distinct finite calculation.** `CivilRequest.new(schedule, query,
+database, limits)` accepts the additive `civil` Schedule kind. Its complete
+schedule has the common format/kind/schedule_id/definition_digest/late_window_ms
+members and exactly time, weekdays, time_zone, time_zone_basis, producer_basis,
+gap_policy and fold_policy. Time is exactly `HH:MM:SS` (00:00:00–23:59:59);
+weekdays is a nonempty ascending unique list of ISO integers 1–7; zone is valid
+UTF-8, 1–256 bytes. Policies are explicit strings skip/reject and
+first/second/both/reject respectively. Bases are SHA-256 digests. The canonical
+schedule digest includes every policy/pattern member. No DTSTART, RRULE, COUNT,
+ordinal, cursor or defaults are invented for this operation.
+
+The query has exactly first_date (`YYYY-MM-DD`, ISO years 0000–9999), days
+(integer 1–366), from and until (explicit offset-bearing ISO DateTimes). The
+whole inclusive local span must fit that year range. Normalize UTC boundaries
+while retaining fractional precision, require from < until and reject normalized
+UTC coordinates outside those years. The local span and UTC horizon are
+independent. JSON Limits apply to all inputs. A selected database is an existing
+Calendar.TimeZoneDatabase module with both callbacks, or a valid immutable
+ExBooking.TimeZoneProvider whose context also fits Limits.max_bytes. Provider
+shape and callback availability are checked through the public producer seam;
+no string becomes an atom, module or ambient database. CivilRequest has exactly
+schedule, query and database; `CivilRequest.current/2` reconstructs caller-built
+native requests. It supplies no authorization or host clock.
+
+**WRO03-07 — Direct producer and original coordinates.** `Civil.page(request,
+time, limits)` validates the complete explicit Time and retained request, then
+calls only public `ExBooking.civil_occurrences/3` with all eight options explicit.
+This consumes ExBooking SP.09's civil contract: at most 366 selected-date
+resolutions and 732 localizations; gaps skip or reject; both ordered fold
+alternatives round-trip before policy/filter; policy precedes half-open UTC
+filtering; no snapping, clipping, alternate-fold substitution or partial list.
+This profile supports timezone offset components within ±93599 seconds and
+totals [-89999, 93599], independently of the older provider helper bounds.
+The adapter must not localize via those narrower helpers or implement recurrence
+itself. Callback work/runtime and immutable data custody remain consumer-owned.
+The producer's complete maximum is 732 points, not a pagination instruction.
+
+The native CivilPage has exactly request, time and occurrences. Its strictly
+UTC-ordered occurrences each have exactly original, due_ms, nominal, starts_at,
+resolution, schedule_digest, time_zone_basis, producer_basis, database_basis and
+event. There is no ordinal. Each point must have the exact public
+CivilOccurrence native shape and valid ISO original nominal/UTC coordinates,
+match the requested civil span, time, weekday and fold policy, and satisfy the
+original UTC horizon. Duplicate or unordered UTC points refuse. Millisecond
+coordinates/window endpoints must fit Limits.max_integer; submillisecond
+instants refuse rather than round. Every output and the complete result must
+fit the caller's Limits, including max_collection_size/bytes; overflow refuses
+the entire result. Empty means only no matching point in this explicit span.
+
+The original is the canonical SHA-256 of all coordinate members listed above
+except original and event. Database_basis hashes the Atom.to_string module name for a
+database module; for a provider it hashes exactly the JSON map with kind
+`ExBooking.TimeZoneProvider`, module (Atom.to_string) and context_digest
+(SHA-256 of the exact context bytes, with the `sha256:` prefix). Context bytes never enter projected
+output. Query boundaries/span and Time generation are excluded from original.
+Overlapping queries and clock reprojection preserve the same original;
+changing schedule, declared bases or actual provider identity changes it. These
+hashes identify supplied data, not installed callback code authenticity, immutable
+custody or any permission. Consumers retain and revalidate those obligations.
+
+**WRO03-08 — Regeneration and event binding.** `Civil.to_map(page, limits)`
+recomputes the complete page from retained request/time and requires exact native
+page equality before returning the closed JSON map with only occurrences.
+There is no continuation or global-exhaustion flag. `Civil.event(page,
+occurrence, program, time, profile, limits)` additionally requires an exact page
+member, the same current clock_generation and a regenerated compiled due trigger
+with the schedule's exact schedule_id/schedule_basis. It returns a checked Event
+by binding program_digest to the inert descriptor. The descriptor has the same
+UTC due fields as the calendar adapter: kind, original, schedule_id,
+schedule_basis, due_ms, late_window_ms, clock_generation and time_zone_basis.
+Calculation works with null UTC confidence; execution still requires the complete
+current time/window and transaction obligations of WRO03-02–05.
+
+Missing public civil API returns payload-free civil_unavailable, any producer
+refusal returns civil_refused, and malformed producer values or implementation
+exceptions return producer_contract_error. Other fixed refusals include
+invalid_civil_request/query/page, stale_civil_page, stale_temporal_projection,
+schedule_program_mismatch and unsupported_temporal_precision. Existing bounded
+validation errors retain their code/path. No native callback error/exception
+payload enters output or logs. Retry regenerates from the same immutable inputs;
+changed retained request/time/points cannot pass checked page projection.
+
+This addition is accepted and not yet implemented. Existing Calendar/SP.08
+semantics and native cursors, scalar Temporal pages and Driver lifecycle remain
+unchanged. The optional exact released ExBooking 0.2.3 still lacks this public
+operation and must refuse unavailable, with no fallback. Development evidence
+must supply an inspected exact SP.09 producer archive through the existing
+explicit archive lane. No publication or dependency selection is implied.
+
+| Case | Requirements | Setup/stimulus | Expected observation / falsifier | Evidence level |
+| --- | --- | --- | --- | --- |
+| WRO03-T5 | 06–08 | Closed civil schedule/query, invalid native shapes, day/year/weekday/byte/Limit boundaries, released producer | Independent schema vectors and constructors agree on closed shapes; invalid preflight sends no producer call; missing API refuses | Pure |
+| WRO03-T6 | 07–08 | Exact extracted producer/core/Continuum/Routines archives; literal Stockholm/New York folds/gaps, fractional horizons, wide signed offsets | Original UTC/nominal/resolution preserved without ordinals; policy before filtering; no narrower-helper fallback; old calendar corpus still passes | Archive |
+| WRO03-T7 | 07–08 | Independent Gregorian finite weekday oracle, overlapping/partitioned queries, clock change, provider context change, forged page/member/program | Same point keeps original across query/clock; provider/pattern change changes original; stale generation/member/program refuses; regeneration defeats tampering | Pure/archive |
+| WRO03-T8 | 07–08 | 366-date/732-point maximum, reduced output Limits, malformed/duplicate/unordered/late producer refusal and private-canary faults | Finite complete result or fixed error only; no partial output/private payload; scalar and SP.08 regressions unchanged | Pure/archive |
+
+The executable temporal schema and a civil vector freeze this additive shape
+before implementation. The producer contract is ExBooking
+`docs/specs/SP.09-civil-occurrences.md`, implemented at its separately owned
+source commit `dd82677`. Source review establishes the intended seam; only the
+cases above establish this adapter's executed evidence.

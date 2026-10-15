@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.12. Updated: 2026-10-14. Accepted programme; the basis is partially implemented.
+Version: 0.2.13. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -46,3 +46,15 @@ External quantity/model data remains consumer-owned. A richer execution/analysis
 representation needs a new owning contract before code and must accept supplied
 semantic identities rather than a global sensor enum. Current Unit/Basis/Fact
 and kernel representation keep their existing narrow meaning.
+
+## Civil temporal addition
+
+WRO.03 now accepts a distinct bounded civil Schedule/Request/Page adapter to the
+public ExBooking SP.09 query. It preserves query-independent original points
+without inventing DTSTART ordinals; explicit policies, immutable database basis,
+checked regeneration and full finite output Limits precede event binding.
+The closed schema/vector is the entry artifact. Implement the public seam,
+then execute WRO03-T5–T8 through focused constructor/control-flow checks and the
+exact extracted archive lane, retaining the SP.08 calendar corpus. This target
+is not yet implemented; real host transactions, clock and physical qualification
+remain separate. The released optional producer is unchanged.
