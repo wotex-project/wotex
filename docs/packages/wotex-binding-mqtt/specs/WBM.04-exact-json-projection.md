@@ -132,7 +132,8 @@ separate consumer/protocol obligations. Full quality gates are milestone evidenc
 ## Executed software evidence
 
 Contract and 31 literal projection vectors were frozen before code in source
-`37ce7aad`. Implementation is
+`37ce7aad`. Implementation source is commit
+`1188c8f42c1baf35b531de5897d833822fbe204f`; its module is
 `packages/wotex-binding-mqtt/lib/wotex/binding/mqtt/json_projection.ex`; ordinary
 public API cases are in `test/wotex/binding/mqtt/json_projection_test.exs` under
 that package. The explicit integration fixture is
@@ -158,6 +159,10 @@ sibling development sources:
 - Package `compile --warnings-as-errors`, `format --check-formatted`,
   `credo --strict` and `docs --warnings-as-errors`: passed.
   `mix wotex.boundary --package wotex-binding-mqtt`: no sibling findings.
+  `elixir packages/wotex-binding-mqtt/bin/check_boundary.exs
+  packages/wotex-binding-mqtt`: package source boundary passed.
+- `mix docs.check`: all 514 tracked Markdown links resolve and the generated
+  family catalogue is current. Both worktree and staged `git diff --check` pass.
 
 Reproduce JP-T4 from the repository root after the ordinary focused test build:
 
