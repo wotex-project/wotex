@@ -34,3 +34,12 @@ specifications:
     implementation_modules: ["Wotex.Binding.MQTT.Transport", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.Error"]
     executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/client_lifecycle_test.exs", "test/wotex/binding/mqtt/limits_security_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
     compatibility_classification: "Reviewed 0.1 contract: passive Runtime callbacks, owner messages, result statuses/metadata and failure normalization require compatibility review; production broker interoperability remains external"
+  - id: "WBM.04"
+    version: "0.1.0"
+    path: "docs/specs/WBM.04-exact-json-projection.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WBM.01", "wotex_runtime:WRT.06"]
+    implementation_modules: []
+    executable_evidence: ["test/support/json_projection_vectors.json", "test/support/json_projection_oracle.py"]
+    compatibility_classification: "optional exact C02 field projection contract; connection, receipt clock, source continuity and semantic registration remain consumer-owned; existing native JSON transport unchanged"

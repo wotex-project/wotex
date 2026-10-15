@@ -1,9 +1,9 @@
 # Wotex MQTT binding completion contract
 
-Plan `WBM-C@1.1.0`; package baseline `wotex_binding_mqtt 0.1.0`. This tracked
+Plan `WBM-C@1.2.0`; package baseline `wotex_binding_mqtt 0.1.0`. This tracked
 document fixes durable work scope, prerequisites and acceptance, not mutable
 approval. Catalogue `docs/packages/wotex-binding-mqtt/specs/catalogue.yaml`
-assigns WBM.01–03 identities, versions and evidence. Changes are reviewed
+assigns WBM.01–04 identities, versions and evidence. Changes are reviewed
 revisions, not retroactive changes to historical evidence.
 
 ## Ownership and compatibility
@@ -32,6 +32,18 @@ envelope, callbacks, mapping/defaults or errors needs compatibility vectors.
 | WBM-C04 | WBM-C02, WBM-C03 | Exact archive/reference consumer | Rebuild declared artifacts without live source; supplied client exercised through actual Runtime supervisor and paired Forms |
 | WBM-C05 | WBM-C04 | Public release candidate | Package contents, docs, metadata/license/security, dependency installation and claims pass all applicable gates |
 | WBM-C06 | WBM-C05 | Compatibility decision | Public values, errors, defaults, callbacks, and draft-sensitive choices have positive, negative, and boundary behavior evidence plus migration decisions |
+
+## Optional exact JSON observation projection
+
+[WBM.04](../specs/WBM.04-exact-json-projection.md) adds an exact, process-free
+JSON field projection beside the existing transport's native JSON output.
+Delivery/selector validation, whole-payload exact decoding, bounded contextual
+field/index selection and metadata preservation precede any consumer publication.
+The consumer must qualify its explicit WPF registration and allowed topics;
+connection custody, actual receipt clocks and continuity are not library facts.
+Frozen independent vectors precede code. JP-T1–T4 require public projection
+success/refusal/boundary/regression and actual WPF compiler/interpreter integration.
+No new client, application, connection manager or semantic catalogue is required.
 
 ## Five evidence gates
 

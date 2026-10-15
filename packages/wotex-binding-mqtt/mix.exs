@@ -130,6 +130,7 @@ defmodule WotexBindingMQTT.MixProject do
           {doc("specs/WBM.01-values-and-client-port.md"), title: "Values and client port"},
           {doc("specs/WBM.02-form-mapping.md"), title: "Form mapping"},
           {doc("specs/WBM.03-runtime-transport.md"), title: "Runtime transport"},
+          {doc("specs/WBM.04-exact-json-projection.md"), title: "Exact JSON projection"},
           {doc("plans/WBM-C01-operation-inventory.md"), title: "Operation inventory"},
           {doc("plans/WBM-C02-client-lifecycle.md"), title: "Client lifecycle proof"},
           {doc("plans/WBM-C03-limits-security.md"), title: "Limits and security"},

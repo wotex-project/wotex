@@ -83,6 +83,10 @@ packages:
         version: "1.1.0"
         implementation_status: "implemented"
         path: "docs/packages/wotex-binding-mqtt/specs/WBM.03-runtime-transport.md"
+      - id: "WBM.04"
+        version: "0.1.0"
+        implementation_status: "planned"
+        path: "docs/packages/wotex-binding-mqtt/specs/WBM.04-exact-json-projection.md"
   wotex-ble:
     app: "wotex_ble"
     catalogue: "docs/packages/wotex-ble/specs/catalogue.yaml"

@@ -1,0 +1,484 @@
+{
+  "format": "wotex-mqtt.json-projection-v1",
+  "cases": [
+    {
+      "id": "valid-00",
+      "payload": "null",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "expected": {
+        "type": "null"
+      }
+    },
+    {
+      "id": "valid-01",
+      "payload": "true",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": true,
+      "expected": {
+        "type": "boolean",
+        "value": true
+      }
+    },
+    {
+      "id": "valid-02",
+      "payload": "false",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 2,
+      "retain": false,
+      "expected": {
+        "type": "boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "valid-03",
+      "payload": "\"\"",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": true,
+      "expected": {
+        "type": "text",
+        "value": ""
+      }
+    },
+    {
+      "id": "valid-04",
+      "payload": "\"12\"",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": false,
+      "expected": {
+        "type": "text",
+        "value": "12"
+      }
+    },
+    {
+      "id": "valid-05",
+      "payload": "0",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 2,
+      "retain": true,
+      "expected": {
+        "type": "sint",
+        "value": "0"
+      }
+    },
+    {
+      "id": "valid-06",
+      "payload": "-9223372036854775808",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "expected": {
+        "type": "sint",
+        "value": "-9223372036854775808"
+      }
+    },
+    {
+      "id": "valid-07",
+      "payload": "18446744073709551615",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": true,
+      "expected": {
+        "type": "uint",
+        "value": "18446744073709551615"
+      }
+    },
+    {
+      "id": "valid-08",
+      "payload": "9007199254740993.1",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 2,
+      "retain": false,
+      "expected": {
+        "type": "decimal",
+        "coefficient": "90071992547409931",
+        "exponent": -1
+      }
+    },
+    {
+      "id": "valid-09",
+      "payload": "-0.0e9",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": true,
+      "expected": {
+        "type": "decimal",
+        "coefficient": "0",
+        "exponent": 0
+      }
+    },
+    {
+      "id": "valid-10",
+      "payload": "[]",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": false,
+      "expected": {
+        "type": "list",
+        "items": []
+      }
+    },
+    {
+      "id": "valid-11",
+      "payload": "{}",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 2,
+      "retain": true,
+      "expected": {
+        "type": "object",
+        "entries": []
+      }
+    },
+    {
+      "id": "valid-12",
+      "payload": "{\"x\":[0,false,null,1.2300e2]}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "x",
+          "0"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "expected": {
+        "type": "sint",
+        "value": "0"
+      }
+    },
+    {
+      "id": "valid-13",
+      "payload": "{\"x\":[0,false,null,1.2300e2]}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "x",
+          "1"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": true,
+      "expected": {
+        "type": "boolean",
+        "value": false
+      }
+    },
+    {
+      "id": "valid-14",
+      "payload": "{\"x\":[0,false,null,1.2300e2]}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "x",
+          "2"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 2,
+      "retain": false,
+      "expected": {
+        "type": "null"
+      }
+    },
+    {
+      "id": "valid-15",
+      "payload": "{\"x\":[0,false,null,1.2300e2]}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "x",
+          "3"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": true,
+      "expected": {
+        "type": "decimal",
+        "coefficient": "123",
+        "exponent": 0
+      }
+    },
+    {
+      "id": "valid-16",
+      "payload": " {\"a/b\":{\"~1\":{\"01\":42}},\"x\":99} ",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "a/b",
+          "~1",
+          "01"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": false,
+      "expected": {
+        "type": "sint",
+        "value": "42"
+      }
+    },
+    {
+      "id": "valid-17",
+      "payload": "{\"\u00e9\":\"\ud83d\ude00\",\"e\u0301\":\"different\"}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "\u00e9"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 2,
+      "retain": true,
+      "expected": {
+        "type": "text",
+        "value": "\ud83d\ude00"
+      }
+    },
+    {
+      "id": "valid-18",
+      "payload": "{\"a\":{\"b\":[]}}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "a"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "expected": {
+        "type": "object",
+        "entries": [
+          {
+            "key": "b",
+            "value": {
+              "type": "list",
+              "items": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "valid-19",
+      "payload": "[1,{\"v\":-0.00012}]",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "1",
+          "v"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 1,
+      "retain": true,
+      "expected": {
+        "type": "decimal",
+        "coefficient": "-12",
+        "exponent": -5
+      }
+    },
+    {
+      "id": "refusal-20",
+      "payload": "null",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "a"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "profile_value_missing"
+    },
+    {
+      "id": "refusal-21",
+      "payload": "{\"a\":null}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "missing"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "profile_value_missing"
+    },
+    {
+      "id": "refusal-22",
+      "payload": "[0]",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "01"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "profile_value_missing"
+    },
+    {
+      "id": "refusal-23",
+      "payload": "[0]",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "-"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "profile_value_missing"
+    },
+    {
+      "id": "refusal-24",
+      "payload": "[0]",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "1"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "profile_value_missing"
+    },
+    {
+      "id": "refusal-25",
+      "payload": "{\"a\":1,\"a\":2}",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "json_invalid_input"
+    },
+    {
+      "id": "refusal-26",
+      "payload": "{\"a\":1,\"unselected\":1e32768}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "a"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "json_unsupported_value"
+    },
+    {
+      "id": "refusal-27",
+      "payload": "{\"a\":1,\"unselected\":[1,]}",
+      "selector": {
+        "topic": "samples/value",
+        "path": [
+          "a"
+        ]
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "json_invalid_input"
+    },
+    {
+      "id": "refusal-28",
+      "payload": "1e32768",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "json_unsupported_value"
+    },
+    {
+      "id": "refusal-29",
+      "payload": "100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "samples/value",
+      "qos": 0,
+      "retain": false,
+      "error": "json_output_limit"
+    },
+    {
+      "id": "ignore",
+      "payload": "private-canary invalid JSON",
+      "selector": {
+        "topic": "samples/value",
+        "path": []
+      },
+      "topic": "other/value",
+      "qos": 1,
+      "retain": true,
+      "ignore": true
+    }
+  ]
+}
