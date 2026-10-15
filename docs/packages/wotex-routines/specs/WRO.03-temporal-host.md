@@ -392,3 +392,8 @@ before implementation. The producer contract is ExBooking
 `docs/specs/SP.09-civil-occurrences.md`, implemented at its separately owned
 source commit `dd82677`. Source review establishes the intended seam; only the
 cases above establish this adapter's executed evidence.
+
+The [civil archive cohort](../provenance/civil-time-cohort-2026-10.md) records the
+exact producer/runtime archives, eight civil plus nine retained calendar cases,
+quality-component results and cleanup boundaries. Consumer-host transaction,
+clock and physical obligations remain open.
