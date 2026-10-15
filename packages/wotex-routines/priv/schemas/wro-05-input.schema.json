@@ -824,8 +824,15 @@
           "type": "integer"
         },
         "received_at": {
-          "format": "date-time",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "replay": {
           "enum": [
@@ -1196,34 +1203,78 @@
           "type": "object"
         },
         "receipt_clock": {
-          "additionalProperties": false,
-          "properties": {
-            "source_epoch": {
-              "pattern": "^[0-9a-f]{32}$",
-              "type": "string"
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "source_epoch": {
+                  "pattern": "^[0-9a-f]{32}$",
+                  "type": "string"
+                },
+                "source_origin_us": {
+                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                  "type": "string"
+                },
+                "target_epoch": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "target_origin_ms": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "source_epoch",
+                "source_origin_us",
+                "target_epoch",
+                "target_origin_ms"
+              ],
+              "type": "object"
             },
-            "source_origin_us": {
-              "pattern": "^(0|-?[1-9][0-9]*)$",
-              "type": "string"
-            },
-            "target_epoch": {
-              "maxLength": 65536,
-              "minLength": 1,
-              "type": "string"
-            },
-            "target_origin_ms": {
-              "maximum": 9223372036854775807,
-              "minimum": 0,
-              "type": "integer"
+            {
+              "additionalProperties": false,
+              "properties": {
+                "format": {
+                  "const": "wotex.routines.receipt-clock@1"
+                },
+                "projection": {
+                  "const": "floor_millisecond"
+                },
+                "source_epoch": {
+                  "pattern": "^[0-9a-f]{32}$",
+                  "type": "string"
+                },
+                "source_origin_us": {
+                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                  "type": "string",
+                  "maxLength": 20
+                },
+                "target_epoch": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string",
+                  "pattern": "^[^\\x00]+$"
+                },
+                "target_origin_ms": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "format",
+                "projection",
+                "source_epoch",
+                "source_origin_us",
+                "target_epoch",
+                "target_origin_ms"
+              ],
+              "type": "object"
             }
-          },
-          "required": [
-            "source_epoch",
-            "source_origin_us",
-            "target_epoch",
-            "target_origin_ms"
-          ],
-          "type": "object"
+          ]
         },
         "semantic_ref": {
           "additionalProperties": false,

@@ -1,8 +1,8 @@
 # External input execution join v1
 
-Version: 0.1.0. Updated: 2026-10-15. Status: accepted successor target.
+Version: 0.1.1. Updated: 2026-10-15. Status: accepted successor target.
 Owner: WRO.01 observation metadata; WRO.02 snapshots/edges; WRO.05 input joins.
-Implementation: planned. Evidence: three
+Implementation: entry schemas/vectors frozen; runtime changes planned. Evidence: three
 [public-API gaps reproduced](../provenance/external-input-execution-2026-10.md);
 the successor's positive/runtime/archive acceptance has not executed.
 

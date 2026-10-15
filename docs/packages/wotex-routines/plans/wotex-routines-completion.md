@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.15. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
+Version: 0.2.16. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -91,3 +91,7 @@ milestone run the full affected package gate and extracted independent
 reader-to-evaluation/kernel/edge consumers with identity/rounding mutations.
 Consumer policy, storage, clocks and physical qualification stay outside the
 package. No dependency release or consumer pin is selected by this plan.
+
+Entry artifacts are now frozen: the new execution schema/vector and all
+embedded Fact/snapshot/edge schemas have eight passing shape/closure cases.
+This does not establish the planned native/public execution or archive joins.

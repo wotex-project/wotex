@@ -77,3 +77,23 @@ indexed catalogues. Both Git whitespace checks passed.
 The metadata projection was removed. No dependency download, application suite,
 Dialyzer, native build, Docker resource or physical campaign ran. The executed
 probe is negative evidence; none of EIX-T1–T6 is promoted by these prose checks.
+
+## Frozen entry artifacts
+
+The new wro-05-input-execution schema defines disjoint exact/floor clocks and
+legacy/external bindings. Existing embedded Fact/snapshot/edge definitions are
+updated consistently in all eight affected schemas, using local references only.
+The independent vector retains the complete mapping/registry/proposal, expected
+Fact/binding and original proposal hash. Eleven frozen signed-floor cases cover
+sub-millisecond boundaries, a 65-bit difference, negative projection and expiry
+overflow. Python's integer floor division and sorted UTF-8 JSON SHA-256 supplied
+the oracle; its serializer first reproduced the previous mapping digest exactly.
+
+The first schema run (seed 325491) passed the two existing cases but invalidated
+six new cases because the validator does not accept a JavaScript Unicode escape
+in a regex. Replacing it with the equivalent hex escape corrected the offline
+meta-schema; a fixture assertion message was also corrected to a string.
+The final command `mix pkg wotex-routines test test/wotex/routines/input_execution_schema_test.exs test/wotex/routines/schema_test.exs --warnings-as-errors`
+passed **8 tests**, seed **652228**, in **0.1 seconds**. Scoped formatting and Git
+whitespace checks passed. Runtime constructors, public binding/execution joins
+and archive/mutation cases remain unimplemented; these are entry-shape checks.

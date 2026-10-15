@@ -762,8 +762,15 @@
           ]
         },
         "received_at": {
-          "type": "string",
-          "format": "date-time"
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "receipt_epoch": {
           "type": "string",
@@ -3285,41 +3292,48 @@
           "maxLength": 65536
         },
         "binding_basis": {
-          "type": "object",
-          "properties": {
-            "profile_digest": {
-              "type": "string",
-              "pattern": "^sha256:[0-9a-f]{64}$"
-            },
-            "source_id": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 65536
-            },
-            "source_epoch": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 65536
-            },
-            "source_time_basis": {
-              "anyOf": [
-                {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "profile_digest": {
                   "type": "string",
                   "pattern": "^sha256:[0-9a-f]{64}$"
                 },
-                {
-                  "type": "null"
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "source_epoch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 65536
+                },
+                "source_time_basis": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
-              ]
+              },
+              "required": [
+                "profile_digest",
+                "source_id",
+                "source_epoch",
+                "source_time_basis"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/definitions/eix_external_binding"
             }
-          },
-          "required": [
-            "profile_digest",
-            "source_id",
-            "source_epoch",
-            "source_time_basis"
-          ],
-          "additionalProperties": false
+          ]
         },
         "epoch": {
           "type": "string",
@@ -3604,41 +3618,48 @@
             "maxLength": 65536
           },
           "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "profile_digest": {
-                "type": "string",
-                "pattern": "^sha256:[0-9a-f]{64}$"
-              },
-              "source_id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 65536
-              },
-              "source_epoch": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 65536
-              },
-              "source_time_basis": {
-                "anyOf": [
-                  {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "profile_digest": {
                     "type": "string",
                     "pattern": "^sha256:[0-9a-f]{64}$"
                   },
-                  {
-                    "type": "null"
+                  "source_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536
+                  },
+                  "source_epoch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65536
+                  },
+                  "source_time_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
-                ]
+                },
+                "required": [
+                  "profile_digest",
+                  "source_id",
+                  "source_epoch",
+                  "source_time_basis"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "$ref": "#/definitions/eix_external_binding"
               }
-            },
-            "required": [
-              "profile_digest",
-              "source_id",
-              "source_epoch",
-              "source_time_basis"
-            ],
-            "additionalProperties": false
+            ]
           },
           "maxProperties": 1024
         },
@@ -4148,6 +4169,1150 @@
         "decisions"
       ],
       "additionalProperties": false
+    },
+    "eix_external_binding": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "wotex.routines.external-binding@1"
+        },
+        "profile_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\x00]+$"
+        },
+        "source_epoch": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "source_time_basis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_mapping": {
+          "$ref": "#/definitions/eix_input_mapping"
+        }
+      },
+      "required": [
+        "format",
+        "profile_digest",
+        "source_id",
+        "source_epoch",
+        "source_time_basis",
+        "input_mapping"
+      ],
+      "additionalProperties": false
+    },
+    "eix_input_mapping": {
+      "additionalProperties": false,
+      "properties": {
+        "affordance": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "property",
+                "event"
+              ]
+            },
+            "name": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "type": "object"
+        },
+        "basis": {
+          "$ref": "#/definitions/eix_basis"
+        },
+        "capture_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "channel_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "closure_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "compiler_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "version": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "correspondence_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "version": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "enum_table": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "target": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source",
+                  "target"
+                ],
+                "type": "object"
+              },
+              "maxItems": 256,
+              "minItems": 1,
+              "type": "array"
+            }
+          ]
+        },
+        "external_unit": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dimension": {
+                  "items": {
+                    "maximum": 32,
+                    "minimum": -32,
+                    "type": "integer"
+                  },
+                  "maxItems": 7,
+                  "minItems": 7,
+                  "type": "array"
+                },
+                "offset_d": {
+                  "pattern": "^[1-9][0-9]*$",
+                  "type": "string"
+                },
+                "offset_n": {
+                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                  "type": "string"
+                },
+                "quantity_kind": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "scale_d": {
+                  "pattern": "^[1-9][0-9]*$",
+                  "type": "string"
+                },
+                "scale_n": {
+                  "pattern": "^[1-9][0-9]*$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quantity_kind",
+                "dimension",
+                "scale_n",
+                "scale_d",
+                "offset_n",
+                "offset_d"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "legacy_basis_ref": {
+          "$ref": "#/definitions/eix_reference"
+        },
+        "observation": {
+          "additionalProperties": false,
+          "properties": {
+            "source_class": {
+              "enum": [
+                "device_report",
+                "derived_report",
+                "protocol_response"
+              ]
+            },
+            "source_epoch": {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            "source_ref": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "source_time_basis": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^sha256:[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "source_ref",
+            "source_epoch",
+            "source_class",
+            "source_time_basis"
+          ],
+          "type": "object"
+        },
+        "profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "projection": {
+          "enum": [
+            "exact_integer",
+            "boolean",
+            "enum"
+          ]
+        },
+        "reader_contract_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "version": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "receipt_clock": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "source_epoch": {
+                  "pattern": "^[0-9a-f]{32}$",
+                  "type": "string"
+                },
+                "source_origin_us": {
+                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                  "type": "string"
+                },
+                "target_epoch": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "target_origin_ms": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "source_epoch",
+                "source_origin_us",
+                "target_epoch",
+                "target_origin_ms"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "format": {
+                  "const": "wotex.routines.receipt-clock@1"
+                },
+                "projection": {
+                  "const": "floor_millisecond"
+                },
+                "source_epoch": {
+                  "pattern": "^[0-9a-f]{32}$",
+                  "type": "string"
+                },
+                "source_origin_us": {
+                  "pattern": "^(0|-?[1-9][0-9]*)$",
+                  "type": "string",
+                  "maxLength": 20
+                },
+                "target_epoch": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string",
+                  "pattern": "^[^\\x00]+$"
+                },
+                "target_origin_ms": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "format",
+                "projection",
+                "source_epoch",
+                "source_origin_us",
+                "target_epoch",
+                "target_origin_ms"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "semantic_ref": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "version": {
+              "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "sha256"
+          ],
+          "type": "object"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "sha256",
+        "semantic_ref",
+        "reader_contract_ref",
+        "compiler_ref",
+        "legacy_basis_ref",
+        "basis",
+        "correspondence_ref",
+        "projection",
+        "enum_table",
+        "channel_id",
+        "affordance",
+        "profile_sha256",
+        "closure_sha256",
+        "capture_digest",
+        "external_unit",
+        "observation",
+        "receipt_clock"
+      ],
+      "type": "object"
+    },
+    "eix_basis": {
+      "additionalProperties": false,
+      "properties": {
+        "affordance": {
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "property"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "readproperty",
+                      "writeproperty",
+                      "observeproperty"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "action"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "invokeaction"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "event"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "operation": {
+                    "enum": [
+                      "subscribeevent"
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "name": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "enum": [
+                "readproperty",
+                "writeproperty",
+                "observeproperty",
+                "invokeaction",
+                "subscribeevent"
+              ]
+            },
+            "type": {
+              "enum": [
+                "property",
+                "action",
+                "event"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "name",
+            "operation"
+          ],
+          "type": "object"
+        },
+        "analysis": {
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "classification": {
+                    "const": "supported"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "profile": {
+                    "$ref": "#/definitions/eix_reference"
+                  },
+                  "properties": {
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "classification": {
+                    "const": "unsupported"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "profile": {
+                    "type": "null"
+                  },
+                  "properties": {
+                    "maxItems": 0
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "classification": {
+              "enum": [
+                "supported",
+                "unsupported"
+              ]
+            },
+            "profile": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/eix_reference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "properties": {
+              "items": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 1024,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "classification",
+            "profile",
+            "properties"
+          ],
+          "type": "object"
+        },
+        "annotations": {
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "tags": {
+              "items": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 1024,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "title": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "byte_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "compiler_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "effects": {
+          "additionalProperties": false,
+          "properties": {
+            "partial_possible": {
+              "type": "boolean"
+            },
+            "repeat": {
+              "enum": [
+                "never",
+                "after_known_failure",
+                "after_reported_safe"
+              ]
+            },
+            "resource_roles": {
+              "items": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 1024,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "stop": {
+              "enum": [
+                "unsupported",
+                "separate_effect"
+              ]
+            },
+            "supersession": {
+              "const": "block_until_known"
+            },
+            "unknown_possible": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "resource_roles",
+            "repeat",
+            "stop",
+            "supersession",
+            "partial_possible",
+            "unknown_possible"
+          ],
+          "type": "object"
+        },
+        "evidence": {
+          "additionalProperties": false,
+          "properties": {
+            "completion": {
+              "enum": [
+                "local_queue",
+                "protocol_response",
+                "correlated_report",
+                "reported_match"
+              ]
+            },
+            "continuity": {
+              "enum": [
+                "continuous",
+                "snapshot"
+              ]
+            },
+            "freshness_ms": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "report_contract": {
+              "$ref": "#/definitions/eix_reference"
+            },
+            "require_source_time": {
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "enum": [
+                  "device_report",
+                  "derived_report",
+                  "protocol_response"
+                ]
+              },
+              "maxItems": 1024,
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "sources",
+            "freshness_ms",
+            "require_source_time",
+            "continuity",
+            "completion",
+            "report_contract"
+          ],
+          "type": "object"
+        },
+        "format": {
+          "const": "wotex.routines.basis@1"
+        },
+        "id": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        },
+        "implementation_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "lifecycle_contract": {
+          "$ref": "#/definitions/eix_reference"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "boolean"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "enum": {
+                        "maxItems": 0
+                      },
+                      "unit": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "integer"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "enum": {
+                        "maxItems": 0
+                      },
+                      "unit": {
+                        "$ref": "#/definitions/eix_unit"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "enum"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "enum": {
+                        "minItems": 1
+                      },
+                      "unit": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                }
+              ],
+              "properties": {
+                "enum": {
+                  "items": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 1024,
+                  "minItems": 0,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "type": {
+                  "enum": [
+                    "boolean",
+                    "integer",
+                    "enum"
+                  ]
+                },
+                "unit": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/eix_unit"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "unit",
+                "enum"
+              ],
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required_contracts": {
+          "items": {
+            "$ref": "#/definitions/eix_reference"
+          },
+          "maxItems": 1024,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "security_contract": {
+          "$ref": "#/definitions/eix_reference"
+        },
+        "semantic_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "timing": {
+          "additionalProperties": false,
+          "properties": {
+            "cooldown_ms": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "deadline_ms": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "duration_ms": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "dwell_ms": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "uncertainty": {
+              "const": "block"
+            }
+          },
+          "required": [
+            "deadline_ms",
+            "duration_ms",
+            "dwell_ms",
+            "cooldown_ms",
+            "uncertainty"
+          ],
+          "type": "object"
+        },
+        "value": {
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "boolean"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "enum": {
+                    "maxItems": 0
+                  },
+                  "unit": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "integer"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "enum": {
+                    "maxItems": 0
+                  },
+                  "unit": {
+                    "$ref": "#/definitions/eix_unit"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "enum"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "enum": {
+                    "minItems": 1
+                  },
+                  "unit": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "enum": {
+              "items": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 1024,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "type": {
+              "enum": [
+                "boolean",
+                "integer",
+                "enum"
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/eix_unit"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "unit",
+            "enum"
+          ],
+          "type": "object"
+        },
+        "version": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "format",
+        "id",
+        "version",
+        "byte_digest",
+        "semantic_digest",
+        "implementation_digest",
+        "compiler_digest",
+        "affordance",
+        "value",
+        "security_contract",
+        "lifecycle_contract",
+        "required_contracts",
+        "evidence",
+        "effects",
+        "timing",
+        "analysis",
+        "annotations",
+        "output"
+      ],
+      "type": "object"
+    },
+    "eix_external_reference": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "eix_reference": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        },
+        "semantic_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "semantic_digest"
+      ],
+      "type": "object"
+    },
+    "eix_unit": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "enum": [
+            "temperature",
+            "fraction",
+            "illuminance",
+            "power",
+            "energy",
+            "time",
+            "electric_potential"
+          ]
+        },
+        "max": {
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775807,
+          "type": "integer"
+        },
+        "min": {
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775807,
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        },
+        "offset_d": {
+          "maximum": 9223372036854775807,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset_n": {
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775807,
+          "type": "integer"
+        },
+        "scale_d": {
+          "maximum": 9223372036854775807,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "scale_n": {
+          "maximum": 9223372036854775807,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dimension",
+        "name",
+        "scale_n",
+        "scale_d",
+        "offset_n",
+        "offset_d",
+        "min",
+        "max"
+      ],
+      "type": "object"
     }
   },
   "oneOf": [
