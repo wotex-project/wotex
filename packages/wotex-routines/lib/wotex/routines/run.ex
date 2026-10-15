@@ -1,5 +1,29 @@
 defmodule Wotex.Routines.Run do
-  @moduledoc "Closed retained execution state. Validation establishes correspondence, not durable custody."
+  @moduledoc """
+  Validates retained execution state for one original and program revision.
+
+  `new/4` takes a complete run map or native value, its compiled program,
+  `Wotex.Routines.Profile` and `Wotex.Routines.Limits`. It returns `{:ok, run}`
+  or `{:error, error}` with a `Wotex.Routines.Error`. `to_map/4` repeats these
+  checks before returning the complete retained representation.
+
+  Validation regenerates every expanded node's path and original, then checks
+  program/source/compiler identities, elapsed coordinates and deadlines,
+  selected branches, sequence/join coherence, receipt stages and spent admission
+  references. Missing or altered records cannot be repaired by updating only a
+  digest. Admission, handoff, local queue, protocol response and qualified report
+  receipts remain separate slots with distinct completion meanings.
+
+  Obtain transitions from `Wotex.Routines.Kernel.advance/7`, retain the returned
+  run data, and supply it in the next call's original/busy prior state as
+  appropriate. Retain the returned edge baseline separately. These constructors
+  validate correspondence; they do not select the correct original from history
+  or establish that receipts were committed by a trusted consumer.
+
+  The consumer owns durable custody, no-repeat indexes and receipt qualification.
+  Retained spent references and handed-off uncertainty do not become refundable
+  or safe to repeat because a run is cancelled, expired, restored or revalidated.
+  """
 
   alias Wotex.Routines.{Compiler, Error, Event, ExecutionTree, Limits, Profile, Validation}
 

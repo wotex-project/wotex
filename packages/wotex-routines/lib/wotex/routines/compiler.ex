@@ -1,5 +1,31 @@
 defmodule Wotex.Routines.Compiler do
-  @moduledoc "Complete offline source/context compilation and full IR regeneration. Compilation grants no admission."
+  @moduledoc """
+  Compiles complete routine sources and regenerates retained programs offline.
+
+  `compile/4` takes a `Wotex.Routines.Source` or source map, an explicit context,
+  `Wotex.Routines.Profile` and `Wotex.Routines.Limits`. It returns
+  `{:ok, program}` with a `Wotex.Routines.Program`, or `{:error, error}` with a
+  `Wotex.Routines.Error`. No binding, participant, child revision or parameter
+  value is discovered at execution time.
+
+  The context requires `"registry"`, `"bases"`, `"bindings"`, `"definitions"`,
+  `"arguments"` and `"compiler_basis"`, including explicit empty collections
+  where appropriate. Installed contracts and exact instance/resource mappings
+  are supplied by the consumer. Child sources must form an acyclic, version-pinned
+  closure. Expansion counts every possible path, including both conditional
+  branches and each invocation copy, against the selected bounds.
+
+  `current/4` recompiles the retained source with the supplied current context,
+  profile and limits, then compares the entire regenerated program. It returns
+  `:ok` or `{:error, error}`; recomputing hashes on altered IR cannot bypass this
+  check. `to_map/3` performs the same regeneration using the retained context
+  before returning `{:ok, data}`. That projection alone does not establish that
+  the consumer's installed context is still current.
+
+  Source, IR and compiler-basis digests identify distinct inputs. Their integrity
+  does not authenticate installed code, qualify a device or admit execution.
+  The consumer owns those checks and the custody of the supplied offline closure.
+  """
 
   alias Wotex.Routines.{
     CompilationContext,

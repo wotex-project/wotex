@@ -1,5 +1,6 @@
 defmodule Wotex.Routines.KernelTest do
   @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Routines.{Compiler, Error, Event, Kernel, Limits, Profile, Run}

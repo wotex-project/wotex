@@ -1,5 +1,30 @@
 defmodule Wotex.Routines.Snapshot do
-  @moduledoc "Complete caller-supplied immutable snapshot basis. Its data does not establish current authority."
+  @moduledoc """
+  Validates the complete immutable input snapshot for a compiled routine.
+
+  `new/4` takes snapshot data, the program, `Wotex.Routines.Profile` and
+  `Wotex.Routines.Limits`, returning `{:ok, snapshot}` or `{:error, error}` with
+  a `Wotex.Routines.Error`. `to_map/4` repeats validation before returning the
+  complete data map. The program is regenerated before snapshot correspondence
+  is checked.
+
+  Required fields are `"id"`, `"membership_generation"`, `"active_programs"`,
+  `"resource_revisions"`, `"binding_bases"` and `"facts"`. Active programs are
+  distinct IR digests within the selected definition bound. Revisions must cover
+  every compiled Thing and resource role. Both binding maps must contain exactly
+  the compiled binding names, with an explicit `nil` fact for each absent input.
+
+  Each binding basis supplies its installed profile digest, expected source
+  identity/epoch and optional source-clock basis. Each non-null fact must be a
+  complete `Wotex.Routines.Fact`; its presence does not make it usable. Evaluation
+  separately checks identity, quality, continuity, receipt freshness and any
+  required source-time confidence against the supplied time. Stale facts remain
+  data and cannot replace the expected binding basis.
+
+  The consumer owns atomic collection and current membership/resource checks.
+  Constructing a snapshot does not prove that its generations, observations or
+  active set describe current authority, nor does it admit an effect.
+  """
 
   alias Wotex.Routines.{Compiler, Error, Fact, Limits, Profile, Validation}
 

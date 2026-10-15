@@ -1,5 +1,34 @@
 defmodule Wotex.Routines.Kernel do
-  @moduledoc "Pure retained-run transitions and inert proposals. The consumer owns admission, clocks and effects."
+  @moduledoc """
+  Advances retained routine state and returns ordered, inert effect proposals.
+
+  Call `advance/7` with a compiled `Wotex.Routines.Program`, a
+  `Wotex.Routines.Event`, a complete `Wotex.Routines.Snapshot`, explicit
+  `Wotex.Routines.Time`, prior state, `Wotex.Routines.Profile` and
+  `Wotex.Routines.Limits`. Every input is revalidated before transition.
+  Success is `{:ok, result}`; invalid inputs or correspondence failures return
+  `{:error, error}` with a `Wotex.Routines.Error`.
+
+  Prior state has exactly `"original"`, `"busy"` and `"edge"`. The first two
+  contain complete retained run data or explicit `nil`; the last contains the
+  retained reported-edge baseline or `nil`. The consumer retrieves the original's
+  history and any busy run. Supplying `nil` does not prove an original is new.
+  A different original while a run is nonterminal produces `"skipped-busy"`.
+
+  The result contains `"run"`, `"proposals"`, `"outcome"`, `"edge"` and
+  `"basis"`. Run data is absent for `"no-edge"` and `"skipped-busy"` outcomes;
+  the updated edge baseline still needs retention. Otherwise the returned run
+  preserves step identities, receipts and spent admission references. Admission,
+  handoff and result events advance distinct stages; a protocol response does
+  not complete a step requiring a reported match.
+
+  Retain the complete transition before acting on its proposals, and supply
+  that state on the next call. The consumer owns durable originals, skipped
+  events, atomic revalidation/admission and physical handoff. Cancellation or
+  clock/deadline expiry stops unsent continuation without reversing handoffs or
+  refunding spent roots. Recomputing a transition is not an instruction to repeat
+  a physical effect. This module performs no I/O, clock reads or persistence.
+  """
 
   alias Wotex.Routines.{
     Compiler,

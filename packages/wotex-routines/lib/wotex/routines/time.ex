@@ -1,5 +1,26 @@
 defmodule Wotex.Routines.Time do
-  @moduledoc "Explicit caller-owned elapsed coordinate and UTC confidence interval. No clock is read."
+  @moduledoc """
+  Carries an explicit elapsed coordinate and optional UTC confidence interval.
+
+  `new/2` validates a complete map or native value under
+  `Wotex.Routines.Limits`, returning `{:ok, time}` or `{:error, error}` with a
+  `Wotex.Routines.Error`. The five required fields are `"epoch"`,
+  `"elapsed_ms"`, `"clock_generation"`, `"utc_low_ms"` and `"utc_high_ms"`.
+  Epoch and generation are nonempty identities; elapsed milliseconds are
+  nonnegative. UTC bounds are ordered signed integer milliseconds or both
+  explicitly `nil`. All integers obey the selected magnitude bound.
+
+  `to_map/2` revalidates before returning the complete data map. Neither operation
+  reads a clock, infers a timezone or establishes the truth of supplied confidence.
+  The consumer owns sampling, epoch replacement and clock qualification.
+
+  `Wotex.Routines.Kernel.advance/7` uses this basis for elapsed deadlines and
+  freshness. A UTC due window requires the entire supplied confidence interval
+  to fit its half-open bounds. Absent UTC confidence is valid input, but cannot
+  satisfy that check or a fact's required source-age check. Clock-generation or
+  epoch replacement and elapsed regression expire unsent continuation of an
+  ongoing run; they do not authorize repeating handed-off work.
+  """
 
   alias Wotex.Routines.{Error, Limits, Validation}
 

@@ -1,5 +1,29 @@
 defmodule Wotex.Routines.Basis do
-  @moduledoc "Installed, closed behaviour semantics. A basis supplies no device identity or authority."
+  @moduledoc """
+  Describes the installed semantics of one supported interaction affordance.
+
+  `new/3` validates a complete basis map or native value against an explicit
+  `Wotex.Routines.Registry` and `Wotex.Routines.Limits`, returning
+  `{:ok, basis}` or `{:error, error}` with a `Wotex.Routines.Error`.
+  The closed contract covers the operation, typed input/output, evidence and
+  completion threshold, resource roles, timing, repeat policy and unknown
+  outcomes. Required security, lifecycle, report and analysis contracts must
+  match the supplied offline registry exactly.
+
+  `semantic_digest/2` hashes the semantic projection after excluding
+  `"byte_digest"`, `"semantic_digest"`, `"implementation_digest"` and
+  `"compiler_digest"`. Computing that digest does not validate or install the
+  complete basis; `new/3` checks it against the contract and registry.
+  `to_map/3` repeats full validation before returning the complete data map.
+
+  `domains/4` requires an exact role-to-resource map and returns sorted, distinct
+  whole-resource identities. Missing or additional role bindings refuse; this
+  profile does not install a narrower concurrency scope.
+
+  A basis describes behaviour, not a particular device or a control grant.
+  The consumer owns installed artifact authenticity, instance mappings, report
+  qualification and admission against current whole-resource history.
+  """
 
   alias Wotex.Routines.{Error, Limits, Registry, Validation, ValueContract}
 

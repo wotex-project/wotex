@@ -19,6 +19,7 @@ defmodule Wotex.Routines.CalendarAdapterTest do
           """
           defmodule ExBooking do
             @moduledoc false
+
             def occurrences("work", _, _), do: {:error, {:limit, :occurrences, :work}}
             def occurrences("cursor", _, _), do: {:error, {:stale, :occurrences, :cursor_basis}}
             def occurrences("refuse", _, _), do: {:error, {:private, "PRIVATE_PRODUCER_CANARY"}}
