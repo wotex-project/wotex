@@ -1,6 +1,6 @@
 # Wotex Runtime completion contract
 
-Plan `WRT-C@1.5.0` governs package `wotex_runtime 0.1.0`. It defines durable
+Plan `WRT-C@1.6.0` governs package `wotex_runtime 0.1.0`. It defines durable
 requirements, not mutable approval or progress. Requirement changes need review
 and a plan revision; historical Git content remains immutable. The normative
 catalogue is `docs/packages/wotex-runtime/specs/catalogue.yaml`.
@@ -47,7 +47,7 @@ acquire an SDK dependency or native process manager.
 
 ## Optional implementation delivery
 
-WRT.04–05 at 1.1.0 and WRT.06 at 1.3.0 are optional contracts with specified APIs and receipt
+WRT.04–05 at 1.1.0 and WRT.06 at 1.4.0 are optional contracts with specified APIs and receipt
 formats. WRT.04 admission, WRT.05 lifecycle values and WRT.06's trusted BEAM
 codec seam are implemented; their native and independent-consumer qualification
 remain open in the package
@@ -74,6 +74,12 @@ the specification/catalogue first. Planned vectors and schemas are not executed
 evidence. Promote each specification only after its own complete obligation
 set and real integration pass; leave unavailable platform, independent
 adoption and physical evidence explicitly unproven.
+
+The [generic exact JSON decoder](../specs/WRT.06-json-values-v1.md) is an owned
+WRT-C09 addition. It is a pure fixed-format implementation of the existing codec
+port with independent literal vectors and registered BEAM execution evidence;
+it does not supply transport/session custody or close independent native
+implementation and process-memory qualification obligations.
 
 ## Five evidence gates
 

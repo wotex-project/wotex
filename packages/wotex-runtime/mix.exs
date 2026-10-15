@@ -122,6 +122,7 @@ defmodule WotexRuntime.MixProject do
           {docs_path("specs/WRT.05-implementation-lifecycle.md"),
            title: "Implementation Lifecycle"},
           {docs_path("specs/WRT.06-bounded-codec.md"), title: "Bounded Codec"},
+          {docs_path("specs/WRT.06-json-values-v1.md"), title: "Exact JSON Values"},
           {"CHANGELOG.md", title: "Changelog"},
           {"../../docs/packages/wotex-runtime/security.md", title: "Security"},
           {"LICENSE", title: "License"}

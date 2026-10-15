@@ -1,6 +1,6 @@
 # WRT.06: Bounded, inert codec profile
 
-Specification `WRT.06@1.3.0`. Package owner: `wotex_runtime`.
+Specification `WRT.06@1.4.0`. Package owner: `wotex_runtime`.
 Contract: accepted optional specification; implementation status: `partial`.
 This optional profile defines deterministic decoding of explicit bytes and
 metadata into inert typed values. It is not a transport, device enrollment,
@@ -41,6 +41,14 @@ The public target API below defines decoding, values and return shapes now.
 The process grammar is also specified now; independent implementations must
 prove they follow it. WoTEx is unreleased. Interface design does not wait for
 post-release compatibility analysis or certification.
+
+## Generic JSON value decoding
+
+The owned [exact JSON decoder](WRT.06-json-values-v1.md) specifies
+`Wotex.Runtime.Codec.JSON.decode/1` and its `Decoder.decode/3` implementation.
+It maps bounded RFC 8259 bytes into this unchanged C02 algebra without native
+floats, refuses duplicate decoded keys and requires empty metadata/configuration.
+It owns no transport, source freshness, registration or consumer semantics.
 
 ## Public target API
 
@@ -314,6 +322,12 @@ exercises this public seam. These tests do not establish independent
 process-codec interoperability or consumer usefulness. Live handshake/exchange,
 native custody/enforcement and independent implementations remain open. The
 optional Modbus projection is specified separately by its owner in WMB.09.
+
+The generic `JSON` decoder is implemented under its owned specification.
+`test/wotex/runtime/codec_json_test.exs` compares complete values/canonical bytes
+against 57 independently generated literal JSON vectors, checks exact/one-over
+bounds and exercises the ordinary registered BEAM path. It does not qualify a
+network publisher or widen this profile's independent/native claims.
 
 Required evidence, stored under the package's `priv/` or `test/support/`:
 

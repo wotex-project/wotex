@@ -1,12 +1,13 @@
 # WRT.06 — Exact JSON value decoder
 
-Version: 0.1.0. Updated: 2026-10-15. Status: accepted owned successor.
-Owner: WRT.06 C01/C02/C03/C05. Implementation: planned. Evidence: missing.
+Version: 0.1.1. Updated: 2026-10-15. Status: accepted owned successor.
+Owner: WRT.06 C01/C02/C03/C05. Implementation: implemented pure decoder.
+Evidence: independent vectors and focused software/executor checks below.
 
 ## Result and boundary
 
 `Wotex.Runtime.Codec.JSON` decodes RFC 8259 JSON bytes into the existing C02
-inert value algebra. It implements `Wotex.Runtime.Codec.Decoder.decode/3` and
+inert value algebra. It implements `c:Wotex.Runtime.Codec.Decoder.decode/3` and
 provides `decode/1` for the same pure operation with empty metadata/configuration.
 It never converts a number through a native float. This utility owns one generic
 byte format; it owns no protocol, selector, semantic unit, device, clock, source
@@ -63,12 +64,18 @@ choice; this is not an RFC 8785 number-normalization operation.
 depth 8, 1024 typed nodes, 256 members per collection, 4096 decoded UTF-8 bytes
 per text and 128 per key, and at most 65,536 bytes after `Value.encode/1`.
 Count containers and values, not object keys or the C02 wrapper members. Reject
-before retaining an excess member/node or entering excess container depth.
+before retaining an excess member/node or constructing a C02 container beyond
+the depth ceiling.
 A primitive child also increases typed depth. Check the complete input byte
 ceiling before parsing and numeric token length before numeric conversion.
 Decoded strings are bounded before retaining their C02 representation. Parsing
 may transiently hold a single scalar within the fixed input ceiling; these are
 engineering allocation bounds, not a measured native-memory qualification.
+OTP catches exceptions around some numeric/escaped-string continuations. Therefore
+callbacks carry a fixed internal refusal through parsing, clear retained values
+in a refused frame and build no further C02 members in it. The parser may finish
+scanning the bounded input and retaining its own grammar stack; C02 depth is not
+a hard bound on that parser stack. No process dictionary or ambient state is used.
 
 ## Failure and compatibility
 
@@ -78,7 +85,10 @@ unsupported_format, unsupported_value or output_limit. Syntax/UTF-8/duplicates/
 nonbinary/empty input give invalid_input; unsupported numeric/key representation
 gives unsupported_value; byte/depth/node/member/text/token/output ceilings give
 output_limit. Fixed metadata/configuration mismatch takes precedence in decode/3.
-Malformed syntax may be refused before another limit when both are violated;
+For malformed input with multiple violations, syntax or an applicable bound may
+be refused first. The lexical pass bounds numeric candidates (maximal runs of
+numeric-token characters beginning with a digit or minus outside strings), so an
+oversized malformed candidate can return output_limit before full syntax checks;
 no partial value is returned. Exceptions, parser offsets, object names, source
 bytes and native error text never enter a refusal, inspection or telemetry.
 
@@ -87,7 +97,10 @@ no cache, clock, randomness or current environment. No retry, scheduling, file o
 lifecycle effect is introduced. C02 validation/encoding and old codec/wire formats
 retain their exact accepted grammar and bytes. OTP's public json:decode/3
 callbacks, available since OTP 27, supply syntax/UTF-8 decoding; exact numeric
-callbacks receive original tokens and never materialize binary floating point.
+callbacks preserve exact numeric spelling or insert a mathematically neutral
+`.0` before an exponent. A bounded lexical pass checks original numeric spans
+outside strings before parsing so this insertion cannot change the 128-byte
+input-token ceiling. Neither pass materializes binary floating point.
 
 ## Entry, independent vectors and acceptance
 
@@ -107,6 +120,32 @@ expected canonical bytes, not used to allocate them.
 Executed checks and remaining native-memory/host/independent-process obligations
 must be reported separately; none of these cases establishes a network publisher
 or physical evidence.
+
+## Executed software evidence
+
+Specification and 57 independent vectors were frozen in source commit
+`edd0b448` before implementation. Implementation paths are
+`packages/wotex-runtime/lib/wotex/runtime/codec/json.ex` and
+`packages/wotex-runtime/test/wotex/runtime/codec_json_test.exs` in this change.
+The literal vectors and independent checker are under that package's
+`test/support/codec_json_vectors.json` and `test/support/codec_json_oracle.py`.
+
+On 2026-10-15 with Elixir 1.20.2 / OTP 29.0.4 and `WOTEX_PATH_DEPS=1`:
+
+- `python3 packages/wotex-runtime/test/support/codec_json_oracle.py --check`:
+  all 57 independent vector records match the frozen file.
+- `mix pkg wotex-runtime test test/wotex/runtime/codec_json_test.exs
+  test/wotex/runtime/codec_test.exs test/wotex/runtime/codec_wire_test.exs
+  test/wotex/runtime/codec_beam_test.exs`: 30 tests passed. The JSON suite covers
+  every frozen row; exact/one-over limits; 65,536 bytes of grammar nesting;
+  escaped/numeric continuation refusals; repeated/concurrent calls; an explicitly
+  registered JSON contract through the existing BEAM executor with identity,
+  refusal and cleanup assertions. Existing value, facade, wire and BEAM cases pass.
+
+This evidence establishes J-T1–J-T3 software behavior on the stated toolchain.
+No native-memory measurement, independent process-codec implementation, network
+publisher, full platform matrix, archive consumer or physical qualification was
+run for this addition. Full-suite and Dialyzer gates remain milestone checks.
 
 ## Primary sources
 

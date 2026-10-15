@@ -70,6 +70,13 @@ v1 frames. Its immutable stream supports fragmented and coalesced input under
 explicit frame and queue limits. A valid frame establishes syntax only; the
 binding still owns handshake state, correlation, deadlines and process custody.
 
+`Wotex.Runtime.Codec.JSON.decode/1` maps bounded JSON bytes into the same inert
+algebra without native floats. Integral tokens retain exact signed/unsigned
+64-bit values; fractional and exponent tokens normalize into exact decimals.
+Duplicate decoded object keys refuse. `decode/3` implements the decoder port
+with empty metadata/configuration; execution still requires the consumer's
+explicit registered contract and admission.
+
 ## Installation
 
 Wotex Runtime 0.1 supports Elixir 1.18.4 with Erlang/OTP 27.3.4.18 through
