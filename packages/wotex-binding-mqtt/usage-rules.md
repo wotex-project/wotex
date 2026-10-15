@@ -1,6 +1,6 @@
 # Wotex MQTT Binding usage rules
 
-These rules describe the completed WBM.01–WBM.03 contract. The package
+These rules describe the completed WBM.01–WBM.03 contract and optional WBM.04 projection. The package
 catalogue records implementation status separately.
 
 - Obtain the binding profile from `Wotex.Binding.MQTT` and provide
@@ -18,3 +18,8 @@ catalogue records implementation status separately.
   effect or authenticated delivery.
 - Re-establish lost subscriptions only under consumer recovery policy and close
   each Runtime subscription through its specified lifecycle.
+- For exact inert profile values, use `Wotex.Binding.MQTT.JSONProjection` with
+  an explicit exact topic and bounded literal path; validate both its structural
+  schema and semantic selector. Qualify the installed raw-value contract and
+  allowed source topics separately. Preserve returned retained/QoS metadata;
+  projection cannot supply receive time, sequence, continuity or freshness.

@@ -157,6 +157,23 @@ error, and a valid delivery reaches the Runtime receiver as
  {:ok, payload, %{topic: topic, qos: qos, retained: retained?, operation: operation}}}
 ```
 
+## Exact profile value projection
+
+`Wotex.Binding.MQTT.JSONProjection` provides a separate optional exact-value path.
+Give `project/2` a native `Delivery` and a selector such as
+`%{"topic" => "samples/value", "path" => ["readings", "0", "value"]}`.
+It matches the Topic Name exactly, validates the complete JSON payload through
+`Wotex.Runtime.Codec.JSON`, then returns the selected C02 subtree with unchanged
+topic/QoS/retained metadata. Large integers and decimals remain exact. Missing
+values refuse and are distinct from null, false and empty text.
+
+Use `selector_schema/0` for structural WPF registration and
+`validate_selector/1` for semantic/UTF-8 byte checks before live use. The consumer
+explicitly qualifies its raw-value schema/contract and restricts the source's
+allowed topics. Connection custody, receive clocks, sequence, continuity,
+freshness and authority remain consumer-owned. Existing `Transport` results
+retain their native JSON representation.
+
 ## Boundary
 
 The 0.1 series implements the bounded mapping recorded in the

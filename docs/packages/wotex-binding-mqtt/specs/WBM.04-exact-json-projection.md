@@ -1,7 +1,8 @@
 # WBM.04 — Exact JSON payload projection
 
-Version: 0.1.0. Updated: 2026-10-15. Status: accepted optional target.
-Implementation: planned. Evidence: frozen independent software vectors only.
+Version: 0.1.1. Updated: 2026-10-15. Status: accepted optional target.
+Implementation: pure projection and structural selector export implemented.
+Evidence: 31 independent vectors, public API/regression and explicit WPF integration checks below.
 Owner: wotex_binding_mqtt; requires WBM.01 and wotex_runtime WRT.06 exact JSON decoder.
 
 ## Result and ownership
@@ -124,10 +125,54 @@ APIs. A passing constructor or selected-field match cannot qualify a network sou
 | JP-T3 | 02/03 | Root and depth-7 path; index 0/255/256, leading zero/sign/long numeric path; duplicate keys; JSON decoder refusal parity; repeated/cross-process projection. Changed representation, float, unbounded index conversion or old-transport regression fails. | Software/regression |
 | JP-T4 | 01/04 | Explicit installed WPF Binding and multi-channel profile; validate selector structurally and semantically, compile through actual WPF public API and interpret actual projected reports. Wrong decoded/raw contract or accepted implicit route fails. | Producer integration |
 
-Required source/dependency/toolchain and executed cases are recorded here after
-implementation. Native-memory measurement, live broker/client custody, physical
+Native-memory measurement, live broker/client custody, physical
 source authenticity, host receive clocks and hardware qualification remain
 separate consumer/protocol obligations. Full quality gates are milestone evidence.
+
+## Executed software evidence
+
+Contract and 31 literal projection vectors were frozen before code in source
+`37ce7aad`. Implementation is
+`packages/wotex-binding-mqtt/lib/wotex/binding/mqtt/json_projection.ex`; ordinary
+public API cases are in `test/wotex/binding/mqtt/json_projection_test.exs` under
+that package. The explicit integration fixture is
+`test/support/json_projection_profiles.exs`, using producer-owned synthetic WPF
+vectors. It adds no production or test dependency on Profiles to this package.
+
+On 2026-10-15 with the repository-pinned Elixir 1.20.2 / OTP 29.0.4 and explicit
+sibling development sources:
+
+- `python3 packages/wotex-binding-mqtt/test/support/json_projection_oracle.py --check`:
+  31 independent records verified against the frozen file.
+- `mix pkg wotex-binding-mqtt test test/wotex/binding/mqtt/json_projection_test.exs
+  test/wotex/binding/mqtt/delivery_test.exs test/wotex/binding/mqtt/transport_test.exs
+  test/wotex/binding/mqtt/library_contract_test.exs`: 28 passed, including one
+  executable documentation example. JP-T1–T3 cover exact values/metadata, complete
+  refusal categories, closed/forged native inputs, equality/one-over bounds,
+  canonical indices, whole-payload validation, distinct missing/null, concurrency
+  and unchanged transport/passive-load cases.
+- The explicit JP-T4 lane below: three tests passed. One installed Binding feeds
+  two actual compiled channels through public Compiler/Projection/Interpreter;
+  retained provenance stays retained. Wrong raw type, changed binding identity,
+  absent installed raw contract and malformed structural selector refuse.
+- Package `compile --warnings-as-errors`, `format --check-formatted`,
+  `credo --strict` and `docs --warnings-as-errors`: passed.
+  `mix wotex.boundary --package wotex-binding-mqtt`: no sibling findings.
+
+Reproduce JP-T4 from the repository root after the ordinary focused test build:
+
+```sh
+mise exec -- mix pkg wotex-profiles compile --warnings-as-errors
+mise exec -- elixir \
+  -pa 'packages/wotex-binding-mqtt/_build/test/lib/*/ebin' \
+  -pa packages/wotex-profiles/_build/dev/lib/wotex_profiles/ebin \
+  packages/wotex-binding-mqtt/test/support/json_projection_profiles.exs \
+  packages/wotex-profiles/priv/vectors
+```
+
+These are live-source software checks, not exact-archive/registry installation,
+a client/broker interoperability claim or a host publisher. Full-suite, coverage,
+Dialyzer, archive and minimum-toolchain gates remain milestone obligations.
 
 ## Sources and interpretations
 
