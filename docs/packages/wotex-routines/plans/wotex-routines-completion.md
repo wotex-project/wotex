@@ -53,8 +53,9 @@ WRO.03 now accepts a distinct bounded civil Schedule/Request/Page adapter to the
 public ExBooking SP.09 query. It preserves query-independent original points
 without inventing DTSTART ordinals; explicit policies, immutable database basis,
 checked regeneration and full finite output Limits precede event binding.
-The closed schema/vector is the entry artifact. Implement the public seam,
-then execute WRO03-T5–T8 through focused constructor/control-flow checks and the
-exact extracted archive lane, retaining the SP.08 calendar corpus. This target
-is not yet implemented; real host transactions, clock and physical qualification
+The closed schema/vector and public seam are implemented. WRO03-T5–T8 have
+focused constructor/control-flow checks and eight real civil archive cases;
+the same extracted cohort retains the nine-case SP.08 calendar corpus and
+executes a civil query without application startup. The package fast gate
+passes 157 tests. Real host transactions, clock and physical qualification
 remain separate. The released optional producer is unchanged.

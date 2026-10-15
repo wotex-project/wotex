@@ -1,5 +1,47 @@
 defmodule Wotex.Routines.Schedule do
-  @moduledoc "Closed immutable calendar, UTC cadence and boot-scoped countdown definitions. Schedules grant no execution authority."
+  @moduledoc """
+  Closed immutable definitions for UTC, elapsed and local-calendar schedules.
+
+  Compute `semantic_digest/2` over the definition without its digest, put the result in
+  `"definition_digest"`, then call `new/2` with explicit `Wotex.Routines.Limits`.
+  Hashing alone does not validate the schedule. `new/2` checks the closed selected
+  shape and exact digest; `to_map/2` repeats validation before projection.
+  Successful operations return `{:ok, value}`; refusals contain a
+  `Wotex.Routines.Error` in `{:error, error}`.
+
+  Every definition has `"format"` equal to `"wotex.routines.schedule@1"`,
+  `"kind"`, `"schedule_id"`, `"definition_digest"` and positive `"late_window_ms"`.
+  Supported kinds add exactly these fields:
+
+    * `"one_shot"`: `"due_ms"` (UTC) and `"time_basis"`.
+    * `"interval"`: `"first_due_ms"`, positive `"period_ms"` and `"time_basis"`.
+    * `"countdown"`: nonnegative `"due_elapsed_ms"`, `"epoch"`,
+      `"clock_generation"` and `"time_basis"`, bound to one boot.
+    * `"calendar"`: `"rule"` (RRULE, at most 4,096 bytes), offset-bearing
+      `"dtstart"`, `"time_zone"`, `"time_zone_basis"` and `"producer_basis"`;
+      enumerate through `Wotex.Routines.Calendar`.
+    * `"civil"`: `"time"` (exact `HH:MM:SS`), `"weekdays"` (nonempty ascending
+      unique ISO integers 1–7), `"time_zone"` (UTF-8, 1–256 bytes),
+      `"time_zone_basis"`, `"producer_basis"`, `"gap_policy"` and `"fold_policy"`;
+      enumerate through `Wotex.Routines.Civil` using an independent finite query.
+
+  Digests use `sha256:` followed by 64 lowercase hex characters. UTC coordinates
+  may be signed; elapsed coordinates are nonnegative. The selected Limits bound
+  every input member.
+
+  Civil gap policy is explicitly `"skip"` or `"reject"`; fold policy is `"first"`,
+  `"second"`, `"both"` or `"reject"`. There are no civil policy defaults. A civil
+  definition has no DTSTART, RRULE or ordinal. Calendar/civil construction does
+  not resolve timezones or prove the optional producer operation is available.
+  Use `Wotex.Routines.Temporal` for scalar UTC and elapsed calculation.
+
+  The definition digest covers every member except itself, including policy,
+  pattern, declared bases and late window. Changing those values changes the
+  compiled trigger correspondence. A digest identifies data; it grants no
+  producer authenticity, trusted clock, scheduling process or execution authority.
+  Consumers own immutable database/code custody, current guards, persistence and
+  effects.
+  """
 
   alias Wotex.Routines.{Error, Limits, Validation}
 
@@ -50,6 +92,9 @@ defmodule Wotex.Routines.Schedule do
   defp fields(%{"kind" => "calendar"}),
     do: ~w(rule dtstart time_zone time_zone_basis producer_basis)
 
+  defp fields(%{"kind" => "civil"}),
+    do: ~w(time weekdays time_zone time_zone_basis producer_basis gap_policy fold_policy)
+
   defp fields(_), do: []
 
   defp schedule(%{"kind" => "one_shot"} = data, limits) do
@@ -89,5 +134,32 @@ defmodule Wotex.Routines.Schedule do
     end
   end
 
+  defp schedule(%{"kind" => "civil"} = data, _) do
+    with true <- civil_time?(data["time"]),
+         true <- weekdays?(data["weekdays"], 0, 0),
+         :ok <- Validation.text(data["time_zone"], "/time_zone"),
+         true <- byte_size(data["time_zone"]) <= 256,
+         :ok <- Validation.digest(data["time_zone_basis"], "/time_zone_basis"),
+         :ok <- Validation.digest(data["producer_basis"], "/producer_basis"),
+         :ok <- Validation.choice(data["gap_policy"], ~w(skip reject), "/gap_policy") do
+      Validation.choice(data["fold_policy"], ~w(first second both reject), "/fold_policy")
+    else
+      false -> Error.refusal(:out_of_domain)
+      error -> error
+    end
+  end
+
   defp schedule(_, _), do: Error.refusal(:unsupported_schedule)
+
+  defp civil_time?(value) when is_binary(value) and byte_size(value) == 8,
+    do: match?({:ok, %Time{microsecond: {0, 0}}}, Time.from_iso8601(value))
+
+  defp civil_time?(_), do: false
+
+  defp weekdays?([], _, count), do: count > 0
+
+  defp weekdays?([day | rest], previous, count) when day in 1..7 and day > previous and count < 7,
+    do: weekdays?(rest, day, count + 1)
+
+  defp weekdays?(_, _, _), do: false
 end

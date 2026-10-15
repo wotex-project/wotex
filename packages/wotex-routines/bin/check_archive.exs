@@ -7,7 +7,7 @@ defmodule Wotex.Routines.Check.Archive do
   @moduledoc false
 
   @required ~w(mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
-  @forbidden ~w(docs test bin config .check.exs .credo.exs .doctor.exs coveralls.json .agents .claude .codex AGENTS.md CLAUDE.md)
+  @forbidden ~w(docs test bin config priv/plts .check.exs .credo.exs .doctor.exs coveralls.json .agents .claude .codex AGENTS.md CLAUDE.md)
 
   @spec main() :: :ok
   def main do
@@ -15,6 +15,7 @@ defmodule Wotex.Routines.Check.Archive do
       OptionParser.parse(System.argv(),
         strict: [
           occurrence_archive: :string,
+          civil_consumer: :boolean,
           composition_consumers: :boolean,
           profile_consumers: :boolean,
           model_consumer: :boolean,
@@ -56,12 +57,18 @@ defmodule Wotex.Routines.Check.Archive do
   defp consumers!(opts, archive, temporary) do
     producer = opts[:occurrence_archive]
 
+    if opts[:civil_consumer] == true and is_nil(producer),
+      do: throw({:archive, "civil consumer requires an explicit producer archive"})
+
     if opts[:model_consumer] == true and not is_binary(opts[:maude_path]),
       do: throw({:archive, "model consumer requires an explicit interpreter path"})
 
     if producer || opts[:composition_consumers] || opts[:model_consumer] || opts[:profile_consumers] do
       paths = artifacts!(producer, archive, temporary, opts[:profile_consumers])
-      if producer, do: calendar_consumer!(producer, archive, paths, temporary)
+
+      if producer,
+        do: calendar_consumer!(producer, archive, paths, temporary, opts[:civil_consumer])
+
       if opts[:composition_consumers], do: composition_consumers!(archive, paths, temporary)
       if opts[:model_consumer], do: model_consumer!(archive, paths, temporary, opts[:maude_path])
       if opts[:profile_consumers], do: profile_consumers!(paths, temporary)
@@ -150,7 +157,7 @@ defmodule Wotex.Routines.Check.Archive do
     end
   end
 
-  defp calendar_consumer!(producer, archive, paths, temporary) do
+  defp calendar_consumer!(producer, archive, paths, temporary, civil?) do
     consumer = Path.join(temporary, "consumer")
     test_root = Path.join(consumer, "test")
     File.mkdir_p!(test_root)
@@ -165,6 +172,29 @@ defmodule Wotex.Routines.Check.Archive do
     source = Path.expand("../test/support/archive/calendar_consumer.exs", __DIR__)
     File.cp!(source, Path.join(test_root, "calendar_consumer_test.exs"))
 
+    if civil? do
+      copy_fixture!(
+        "test/support/archive/civil_consumer.exs",
+        Path.join(test_root, "civil_consumer_test.exs")
+      )
+
+      copy_fixture!("test/support/civil_fixtures.exs", Path.join(consumer, "civil_fixtures.exs"))
+
+      File.write!(Path.join(consumer, "civil_without_start.exs"), """
+      false = Enum.any?(Application.started_applications(), fn {app, _, _} -> app in [:wotex_routines, :ex_booking, :tz] end)
+      priv = :wotex_routines |> :code.priv_dir() |> List.to_string()
+      corpus = priv |> Path.join("vectors/wro-01.json") |> File.read!() |> JSON.decode!()
+      vector = priv |> Path.join("vectors/wro-03-civil.json") |> File.read!() |> JSON.decode!()
+      {:ok, limits} = Wotex.Routines.Limits.new(corpus["limits"])
+      {:ok, request} = Wotex.Routines.CivilRequest.new(vector["schedule"], vector["query"], Calendar.UTCOnlyTimeZoneDatabase, limits)
+      {:ok, %{occurrences: [point]}} = Wotex.Routines.Civil.page(request, vector["time"], limits)
+      false = Map.has_key?(point, "ordinal")
+      "2026-07-15T09:00:00Z" = point["starts_at"]
+      false = Enum.any?(Application.started_applications(), fn {app, _, _} -> app in [:wotex_routines, :ex_booking, :tz] end)
+      IO.puts("Civil archive query without application startup passed.")
+      """)
+    end
+
     environment = [
       {"WOTEX_PATH_DEPS", nil},
       {"MIX_ENV", "test"},
@@ -178,6 +208,15 @@ defmodule Wotex.Routines.Check.Archive do
 
     run!(["deps.get"], consumer, environment)
     run!(["compile", "--warnings-as-errors"], consumer, environment)
+
+    if civil?,
+      do:
+        run!(
+          ["run", "--no-start", "--no-compile", "civil_without_start.exs"],
+          consumer,
+          environment
+        )
+
     run!(["test", "--warnings-as-errors"], consumer, environment)
     IO.puts("consumer lock sha256: #{sha256(Path.join(consumer, "mix.lock"))}")
   end

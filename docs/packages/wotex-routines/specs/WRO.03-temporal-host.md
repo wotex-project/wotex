@@ -305,7 +305,8 @@ while retaining fractional precision, require from < until and reject normalized
 UTC coordinates outside those years. The local span and UTC horizon are
 independent. JSON Limits apply to all inputs. A selected database is an existing
 Calendar.TimeZoneDatabase module with both callbacks, or a valid immutable
-ExBooking.TimeZoneProvider whose context also fits Limits.max_bytes. Provider
+ExBooking.TimeZoneProvider with 0–1048576 binary context bytes, also bounded by
+Limits.max_bytes. Provider
 shape and callback availability are checked through the public producer seam;
 no string becomes an atom, module or ambient database. CivilRequest has exactly
 schedule, query and database; `CivilRequest.current/2` reconstructs caller-built
@@ -313,7 +314,7 @@ native requests. It supplies no authorization or host clock.
 
 **WRO03-07 — Direct producer and original coordinates.** `Civil.page(request,
 time, limits)` validates the complete explicit Time and retained request, then
-calls only public `ExBooking.civil_occurrences/3` with all eight options explicit.
+calls only public ExBooking.civil_occurrences/3 with all eight options explicit.
 This consumes ExBooking SP.09's civil contract: at most 366 selected-date
 resolutions and 732 localizations; gaps skip or reject; both ordered fold
 alternatives round-trip before policy/filter; policy precedes half-open UTC
@@ -369,12 +370,15 @@ validation errors retain their code/path. No native callback error/exception
 payload enters output or logs. Retry regenerates from the same immutable inputs;
 changed retained request/time/points cannot pass checked page projection.
 
-This addition is accepted and not yet implemented. Existing Calendar/SP.08
+The pure civil adapter is implemented. Its eight-case extracted consumer and
+the retained nine-case SP.08 corpus pass against one exact producer cohort.
+Existing Calendar/SP.08
 semantics and native cursors, scalar Temporal pages and Driver lifecycle remain
 unchanged. The optional exact released ExBooking 0.2.3 still lacks this public
 operation and must refuse unavailable, with no fallback. Development evidence
 must supply an inspected exact SP.09 producer archive through the existing
-explicit archive lane. No publication or dependency selection is implied.
+explicit archive lane with `--civil-consumer`; omitting that flag preserves
+the SP.08-only lane. No publication or dependency selection is implied.
 
 | Case | Requirements | Setup/stimulus | Expected observation / falsifier | Evidence level |
 | --- | --- | --- | --- | --- |

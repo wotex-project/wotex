@@ -59,3 +59,9 @@ The archive check accepts `--occurrence-archive /absolute/archive/ex_booking.tar
 through exact extracted core/Continuum/Runtime/Profiles/Routines archives. A third
 consumer checks optional-producer absence. Current consumer admission and physical
 qualification remain separate.
+
+`bin/check_archive.exs --occurrence-archive /absolute/archive/ex_booking.tar --civil-consumer`
+adds the distinct finite civil adapter corpus and a no-application-start query.
+This opt-in lane requires the exact SP.09 producer archive; ordinary SP.08
+archive checks retain their previous producer requirement. All temporary archive,
+extracted dependency and consumer files are removed after the check.

@@ -20,6 +20,11 @@ catalogue records implementation status separately.
 - Whole-resource effect domains remain conservative. A protocol response is
   not reported equality or physical cause; uncertain absolute operations are
   governed by the installed repeat contract.
+- Use civil queries for explicit finite weekday/time spans. Supply every policy
+  and an immutable database; points have no DTSTART ordinal or continuation.
+  Preserve original coordinates and database basis, regenerate checked pages,
+  and reproject after clock-generation changes. Output overflow refuses the
+  whole result. Missing producer capability never falls back to availability.
 - Kernel proposals and analysis are inert. The consumer owns collection,
   admission, durable originals, policy, clocks, supervision and effects.
 - The normative specifications define the entire accepted programme; the

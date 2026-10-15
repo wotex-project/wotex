@@ -41,6 +41,17 @@ The pure `Wotex.Routines.Kernel.advance/7` takes an explicit Event, complete Sna
 
 Calendar consumers explicitly construct `Wotex.Routines.CalendarRequest` with a finite query and their immutable database module. ExBooking is pinned to optional `== 0.2.3`; its published archive lacks the occurrence API and returns unavailable. Our unreleased producer archive implements that generic API. The catalogue separates adapter code, actual archive adoption and host evidence. No availability interval supplies an original trigger.
 
+Civil weekday/time patterns use `Wotex.Routines.CivilRequest.new/4` and
+`Wotex.Routines.Civil.page/3`. Supply an explicit local span of at most 366 dates,
+an independent half-open UTC horizon, immutable database and gap/fold policies.
+Points have no DTSTART ordinal; their original identities bind the pattern and
+database basis independently of query boundaries and clock generation.
+`Civil.to_map/2` and `Civil.event/6` regenerate retained input before projection
+or program binding. Output Limits refuse the complete result, never truncate it.
+This optional seam needs ExBooking SP.09; the selected released 0.2.3 returns
+`civil_unavailable`. The opt-in archive lane requires a supplied exact producer
+archive and `--civil-consumer`. Calculation grants no effect authority.
+
 `Wotex.Routines.AnalysisResult` keeps validity, findings, completion and admission separate. `Wotex.Routines.Witness.replay/4` checks a finite claimed counterexample against the pure kernel with explicit frames and retained originals. A nonviolating prefix supplies no universal safety proof; `Wotex.Routines.Model.compile/4` regenerates explicit frozen-time proposal and staged software-receipt projections. `Wotex.Routines.Analysis.run/5` runs the explicitly selected proposal or staged software-receipt prefix profile with a complete expected binding, an explicit interpreter and a queue-inclusive monotonic deadline. ExMaude is optional and pinned to exact Hex 0.5.0. Wider models and OS containment remain separate obligations. See the [analysis contract](../../docs/packages/wotex-routines/specs/WRO.04-analysis-correspondence.md).
 
 ## Development

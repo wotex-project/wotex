@@ -104,6 +104,7 @@ defmodule Wotex.Routines.MixProject do
         "Changelog" => "#{@source_url}/blob/main/packages/wotex-routines/CHANGELOG.md",
         "Specifications" => "#{@source_url}/tree/main/docs/packages/wotex-routines"
       },
+      exclude_patterns: [~r{\Apriv/plts(?:/|\z)}],
       files:
         ~w(lib priv .formatter.exs mix.exs README.md usage-rules.md CHANGELOG.md LICENSE NOTICE)
     ]

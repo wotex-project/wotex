@@ -1,0 +1,241 @@
+Code.require_file("../../support/civil_fixtures.exs", __DIR__)
+
+defmodule Wotex.Routines.CivilAdapterTest do
+  @moduledoc false
+
+  # Only adapter validation/control flow uses this synthetic producer. The
+  # independent extracted-archive lane exercises actual SP.09 semantics.
+  use ExUnit.Case, async: false
+  alias Wotex.Routines.{Civil, CivilRequest, Error, Limits}
+  alias Wotex.Routines.Test.CivilFixtures, as: F
+
+  setup_all do
+    Code.ensure_loaded!(ExBooking)
+    {ExBooking, original, file} = :code.get_object_code(ExBooking)
+
+    {_, diagnostics} =
+      Code.with_diagnostics([log: false], fn ->
+        Code.compile_string(
+          """
+          defmodule ExBooking do
+            @moduledoc false
+
+            def civil_occurrences(_, _, opts) do
+              key = {Wotex.Routines.CivilAdapterTest, :calls}
+              Process.put(key, Process.get(key, 0) + 1)
+              Wotex.Routines.CivilAdapterTest.producer(Process.get({Wotex.Routines.CivilAdapterTest, :mode}, :good), opts)
+            end
+          end
+          """,
+          "synthetic-civil-producer.ex"
+        )
+      end)
+
+    assert [%{severity: :warning, message: message}] = diagnostics
+    assert String.contains?(message, "redefining module ExBooking")
+
+    on_exit(fn ->
+      :code.purge(ExBooking)
+      :code.delete(ExBooking)
+      {:module, ExBooking} = :code.load_binary(ExBooking, file, original)
+    end)
+
+    F.load()
+  end
+
+  @spec producer(atom(), keyword()) :: term()
+  def producer(:refuse, _), do: {:error, {:private, "PRIVATE_CIVIL_CANARY"}}
+  def producer(:wrong, _), do: :unexpected
+  def producer(:raise, _), do: raise("PRIVATE_CIVIL_CANARY")
+
+  def producer(:undef, _),
+    do: raise(UndefinedFunctionError, module: UnknownProducer, function: :private_canary, arity: 0)
+
+  def producer(mode, opts) do
+    values =
+      for instant <- [~U[2026-07-13 09:00:00Z], ~U[2026-07-15 09:00:00Z]],
+          DateTime.compare(instant, opts[:from]) != :lt,
+          DateTime.compare(instant, opts[:until]) == :lt,
+          do: %{
+            __struct__: ExBooking.CivilOccurrence,
+            nominal: DateTime.to_naive(instant),
+            starts_at: instant,
+            resolution: :unique
+          }
+
+    {:ok, selected(mode, values)}
+  end
+
+  defp selected(:empty, _), do: []
+  defp selected(:improper, [first | _]), do: [first | :improper]
+  defp selected(:many, [first | _]), do: List.duplicate(first, 733)
+  defp selected(:duplicate, [first | _]), do: [first, first]
+  defp selected(:extra, [first | _]), do: [Map.put(first, :extra, nil)]
+  defp selected(:missing, [first | _]), do: [Map.delete(first, :nominal)]
+
+  defp selected(:bad_date, [first | _]),
+    do: [put_in(first, [Access.key(:nominal), Access.key(:month)], 13)]
+
+  defp selected(:bad_zone, [first | _]),
+    do: [put_in(first, [Access.key(:starts_at), Access.key(:time_zone)], "UTC")]
+
+  defp selected(:offset, [first | _]),
+    do: [put_in(first, [Access.key(:starts_at), Access.key(:utc_offset)], 1)]
+
+  defp selected(:precision, [first | _]),
+    do: [put_in(first, [Access.key(:starts_at), Access.key(:microsecond)], {1, 6})]
+
+  defp selected(:milliseconds, [first | _]),
+    do: [put_in(first, [Access.key(:starts_at), Access.key(:microsecond)], {1000, 6})]
+
+  defp selected(:outside, [first | _]),
+    do: [Map.put(first, :starts_at, ~U[2027-01-01 00:00:00Z])]
+
+  defp selected(:nominal, [first | _]),
+    do: [Map.put(first, :nominal, ~N[2026-07-14 09:00:00])]
+
+  defp selected(:resolution, [first | _]), do: [Map.put(first, :resolution, :shifted)]
+  defp selected(:late, [first | _]), do: [first, %{}]
+  defp selected(:reverse, values), do: Enum.reverse(values)
+  defp selected(_, values), do: values
+
+  test "checked JSON and events regenerate, preserve originals and bind current programs", c do
+    request = request(c)
+    assert {:ok, page} = Civil.page(request, c.time, c.limits)
+    assert [one] = page.occurrences
+    assert Map.take(one, ~w(nominal starts_at resolution)) == hd(c.vector["expected"])
+    refute Map.has_key?(one, "ordinal")
+    assert {:ok, wire} = Civil.to_map(page, c.limits)
+    assert Map.keys(wire) == ["occurrences"]
+    for value <- [wire, one], do: assert(:ok == ExJsonSchema.Validator.validate(c.schema, value))
+    assert {:error, _} = ExJsonSchema.Validator.validate(c.schema, Map.put(one, "ordinal", 1))
+    program = F.program(c, c.schedule)
+    assert {:ok, event} = Civil.event(page, one, program, c.time, c.profile, c.limits)
+    assert event.data["original"] == one["original"]
+    assert event.data["program_digest"] == program.data["ir_digest"]
+    changed = %{c.time | "clock_generation" => "clock:2"}
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Civil.event(page, one, program, changed, c.profile, c.limits)
+
+    assert {:ok, fresh} = Civil.page(request, changed, c.limits)
+    assert hd(fresh.occurrences)["original"] == one["original"]
+    assert hd(fresh.occurrences)["event"]["clock_generation"] == "clock:2"
+
+    shifted = %{
+      request
+      | query: %{
+          request.query
+          | "first_date" => "2026-07-15",
+            "days" => 1,
+            "from" => "2026-07-15T00:00:00Z"
+        }
+    }
+
+    assert {:ok, overlap} = Civil.page(shifted, c.time, c.limits)
+    assert hd(overlap.occurrences) == one
+    changed_schedule = F.schedule(c, %{"late_window_ms" => 2000})
+    assert {:ok, other} = Civil.page(%{request | schedule: changed_schedule}, c.time, c.limits)
+    refute hd(other.occurrences)["original"] == one["original"]
+    other_program = F.program(c, changed_schedule)
+
+    assert {:error, %Error{code: :schedule_program_mismatch}} =
+             Civil.event(page, one, other_program, c.time, c.profile, c.limits)
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Civil.event(
+               page,
+               Map.put(one, "original", "forged"),
+               program,
+               c.time,
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_civil_page}} =
+             Civil.to_map(%{page | occurrences: []}, c.limits)
+
+    assert {:error, %Error{code: :invalid_civil_page}} =
+             Civil.to_map(Map.put(page, :extra, nil), c.limits)
+
+    assert {:error, %Error{}} = Civil.event(page, one, program, %{}, c.profile, c.limits)
+  end
+
+  test "malformed producer outcomes never become partial or privately detailed results", c do
+    request = request(c, %{"from" => "2026-07-13T00:00:00Z"})
+
+    for mode <- [
+          :wrong,
+          :raise,
+          :undef,
+          :improper,
+          :many,
+          :duplicate,
+          :reverse,
+          :extra,
+          :missing,
+          :bad_date,
+          :bad_zone,
+          :offset,
+          :milliseconds,
+          :outside,
+          :nominal,
+          :resolution,
+          :late
+        ] do
+      Process.put({__MODULE__, :mode}, mode)
+
+      assert {:error, %Error{code: :producer_contract_error}} =
+               Civil.page(request, c.time, c.limits),
+             inspect(mode)
+    end
+
+    Process.put({__MODULE__, :mode}, :precision)
+
+    assert {:error, %Error{code: :unsupported_temporal_precision}} =
+             Civil.page(request, c.time, c.limits)
+
+    Process.put({__MODULE__, :mode}, :refuse)
+    assert {:error, %Error{code: :civil_refused} = error} = Civil.page(request, c.time, c.limits)
+    refute inspect(error) =~ "PRIVATE_CIVIL_CANARY"
+    Process.put({__MODULE__, :mode}, :empty)
+    assert {:ok, %{occurrences: []}} = Civil.page(request, c.time, c.limits)
+  end
+
+  test "invalid preflight invokes no producer and complete output obeys selected limits", c do
+    request = request(c, %{"from" => "2026-07-13T00:00:00Z"})
+
+    for value <- [
+          %{request | query: Map.put(request.query, "days", 367)},
+          Map.put(request, :extra, nil),
+          %{}
+        ] do
+      assert {:error, %Error{}} = Civil.page(value, c.time, c.limits)
+    end
+
+    assert Process.get({__MODULE__, :calls}, 0) == 0
+    {:ok, small} = Limits.new(%{c.limits.data | "max_bytes" => 1400})
+    assert {:error, %Error{code: :limit_or_json_error}} = Civil.page(request, c.time, small)
+    {:ok, small_integer} = Limits.new(%{c.limits.data | "max_integer" => 1000})
+    assert {:error, %Error{code: :integer_overflow}} = Civil.page(request, c.time, small_integer)
+
+    {:ok, due} =
+      DateTime.from_iso8601("2026-07-15T09:00:00Z")
+      |> then(fn {:ok, t, _} -> {:ok, DateTime.to_unix(t, :millisecond)} end)
+
+    {:ok, small_window} = Limits.new(%{c.limits.data | "max_integer" => due + 999})
+    assert {:error, %Error{code: :integer_overflow}} = Civil.page(request(c), c.time, small_window)
+  end
+
+  defp request(c, changes \\ %{}) do
+    {:ok, request} =
+      CivilRequest.new(
+        c.schedule,
+        Map.merge(c.query, changes),
+        Calendar.UTCOnlyTimeZoneDatabase,
+        c.limits
+      )
+
+    request
+  end
+end
