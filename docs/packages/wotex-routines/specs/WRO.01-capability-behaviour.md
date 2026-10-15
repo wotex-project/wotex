@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.3. Updated: 2026-10-13. Status: accepted target.
+Version: 0.2.4. Updated: 2026-10-15. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -251,3 +251,11 @@ in the package's basis/schema tests. Runtime completion and repeat decisions
 join WRO.02 and remain separate obligations. Installed-host and physical qualification
 are separate consumer evidence. Standards vocabulary source:
 [TD 1.1 Recommendation, 5 December 2023](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/).
+
+## External receipt metadata successor
+
+The [external input execution successor](external-input-execution-v1.md) owns
+explicit missing receipt UTC and conservative sub-millisecond receipt projection.
+These additions are planned; the existing constructor/schema evidence above
+retains its original non-null received_at scope. Source-time requirements,
+freshness, source identity, units and current consumer qualification are separate.

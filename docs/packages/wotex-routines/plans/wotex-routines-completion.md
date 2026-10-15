@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.14. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
+Version: 0.2.15. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -74,3 +74,20 @@ nine retained calendar cases, including actual callback counts and no-start
 calculation. The [cohort record](../provenance/civil-time-cohort-2026-10.md#complete-ambiguity-renewal)
 binds source/artifact identities and scope. No released dependency or consumer
 runtime selection changes here; current host transactions remain obligations.
+
+## External input execution addition
+
+Implement [the accepted execution join](../specs/external-input-execution-v1.md)
+before a consumer adopts the external Fact path. Current public probes show
+three concrete gaps: non-aligned receipt conversion refuses, absent receipt UTC
+refuses, and external profile identity cannot qualify under the legacy snapshot
+Basis identity. The previous scalar/archive stages remain representation evidence.
+
+First freeze the closed receipt-clock/external-binding schema and independent
+vectors. Then implement nullable receipt UTC and explicit conservative precision,
+followed by the qualified binding seam and snapshot/edge checks. Preserve exact
+legacy input/model behavior. Run focused tests per mechanism; at the package
+milestone run the full affected package gate and extracted independent
+reader-to-evaluation/kernel/edge consumers with identity/rounding mutations.
+Consumer policy, storage, clocks and physical qualification stay outside the
+package. No dependency release or consumer pin is selected by this plan.

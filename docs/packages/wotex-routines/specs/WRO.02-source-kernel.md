@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.11. Updated: 2026-10-13. Status: accepted target; implementation partial.
+Version: 0.2.12. Updated: 2026-10-15. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -509,3 +509,12 @@ revision/digest) inside the committing transaction as well as membership, facts,
 resources and clock. Admission/result/cancellation races cannot overwrite a
 newer held spend or handoff with a transition calculated from an older run.
 A matching resource snapshot alone does not establish original/run/edge currency.
+
+## External input binding successor
+
+The [external input execution successor](external-input-execution-v1.md) defines
+an explicitly installed external binding carrying the complete WRO.05 Mapping.
+External profile identity and installed Basis identity remain distinct. Snapshot
+and retained Edge must validate that correspondence before using a Fact; rewriting
+the Fact profile digest is forbidden. This extension is planned. Existing
+four-member binding records and their execution evidence retain their exact scope.

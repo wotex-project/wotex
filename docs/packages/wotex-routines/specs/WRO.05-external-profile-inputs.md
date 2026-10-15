@@ -1,8 +1,9 @@
 # WRO.05 — Explicit joins from externally defined sensor capabilities
 
-Version: 0.1.1. Updated: 2026-10-14. Status: accepted target.
-Implementation: closed scalar join implemented. Evidence: focused tests and
-three extracted-archive consumers; consumer admission/physical qualification remain separate.
+Version: 0.2.0. Updated: 2026-10-15. Status: accepted target.
+Implementation: scalar representation join implemented; external execution successor planned.
+Evidence: focused tests and three extracted-archive representation consumers;
+consumer admission/physical qualification remain separate.
 
 ## Scope and current representation
 
@@ -197,3 +198,16 @@ Exact commits, archives, locks and executed checks are retained in
 [the software evidence](../provenance/profile-inputs-2026-10.md).
 The
 [completion contract](../plans/wotex-routines-completion.md) owns the join stage.
+
+## Reader-to-execution successor
+
+**WRO05-05 — Complete execution join.** The
+[external input execution contract](external-input-execution-v1.md) defines
+explicit missing receipt UTC, a separately selected conservative receipt-clock
+projection and a qualified external binding for Snapshot/Edge. These additions
+are planned. Existing scalar representation/archive evidence does not establish
+that a joined Fact is usable by the public evaluator or kernel.
+
+| Case | Requirements | Stimulus and falsifier | Evidence |
+| --- | --- | --- | --- |
+| WRO05-T6 | 01–05 | Complete public reader/Input/binding/Compiler/Snapshot/Kernel and edge traces, unaligned receipt, missing UTC and changed mapping | EIX-T1–T6; planned, no identity rewrite or fabricated clock/edge |
