@@ -126,7 +126,8 @@ or physical evidence.
 Specification and 57 independent vectors were frozen in source commit
 `edd0b448` before implementation. Implementation paths are
 `packages/wotex-runtime/lib/wotex/runtime/codec/json.ex` and
-`packages/wotex-runtime/test/wotex/runtime/codec_json_test.exs` in this change.
+`packages/wotex-runtime/test/wotex/runtime/codec_json_test.exs` at source commit
+`0caed876b55adff86b628e9994a5692b226dce98`.
 The literal vectors and independent checker are under that package's
 `test/support/codec_json_vectors.json` and `test/support/codec_json_oracle.py`.
 
@@ -141,6 +142,11 @@ On 2026-10-15 with Elixir 1.20.2 / OTP 29.0.4 and `WOTEX_PATH_DEPS=1`:
   escaped/numeric continuation refusals; repeated/concurrent calls; an explicitly
   registered JSON contract through the existing BEAM executor with identity,
   refusal and cleanup assertions. Existing value, facade, wire and BEAM cases pass.
+- `mix pkg wotex-runtime compile --warnings-as-errors`, `format --check-formatted`,
+  `credo --strict` and `docs --warnings-as-errors`: all passed.
+- `mix wotex.boundary --package wotex-runtime`: no sibling-boundary findings.
+- `mix docs.check`: all 513 tracked Markdown links resolve and the generated
+  family catalogue matches. `git diff --check` and the staged diff check passed.
 
 This evidence establishes J-T1–J-T3 software behavior on the stated toolchain.
 No native-memory measurement, independent process-codec implementation, network
