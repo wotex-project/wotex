@@ -1,0 +1,516 @@
+{
+  "format": "wotex-runtime.codec-json-v1",
+  "cases": [
+    {
+      "id": "valid-00",
+      "input": "null",
+      "expected": {
+        "type": "null"
+      },
+      "canonical": "{\"type\":\"null\"}",
+      "sha256": "bcde375ebd4cbacf651311181173836b169d5a360c6ac158c6a2cdaf49be3f61"
+    },
+    {
+      "id": "valid-01",
+      "input": "true",
+      "expected": {
+        "type": "boolean",
+        "value": true
+      },
+      "canonical": "{\"type\":\"boolean\",\"value\":true}",
+      "sha256": "c1466d227c8330ba7021438b7e54a2ec8cc07c6fe2155a9afa8992ba4329ab1b"
+    },
+    {
+      "id": "valid-02",
+      "input": "false",
+      "expected": {
+        "type": "boolean",
+        "value": false
+      },
+      "canonical": "{\"type\":\"boolean\",\"value\":false}",
+      "sha256": "2f4a086d1a347063b02c63aa13852c5eae4523f5c97953f1bc9573998a642e63"
+    },
+    {
+      "id": "valid-03",
+      "input": "\"\"",
+      "expected": {
+        "type": "text",
+        "value": ""
+      },
+      "canonical": "{\"type\":\"text\",\"value\":\"\"}",
+      "sha256": "eb45a39780cd2b298dbe33247640f63158b0a1a33137dac5e5700c1863cfd90c"
+    },
+    {
+      "id": "valid-04",
+      "input": "\"42\"",
+      "expected": {
+        "type": "text",
+        "value": "42"
+      },
+      "canonical": "{\"type\":\"text\",\"value\":\"42\"}",
+      "sha256": "d2148c0e69d7a72dd6967884a38b7770c4af1ec8e45faa32fbd4ffbd21dd7541"
+    },
+    {
+      "id": "valid-05",
+      "input": "\"\\u0000\u00e9\ud83d\ude00\"",
+      "expected": {
+        "type": "text",
+        "value": "\u0000\u00e9\ud83d\ude00"
+      },
+      "canonical": "{\"type\":\"text\",\"value\":\"\\u0000\u00e9\ud83d\ude00\"}",
+      "sha256": "d9749823cc67428bc5b5b4105dec7bcadabc63f808a3373087983171fc941393"
+    },
+    {
+      "id": "valid-06",
+      "input": "[]",
+      "expected": {
+        "type": "list",
+        "items": []
+      },
+      "canonical": "{\"items\":[],\"type\":\"list\"}",
+      "sha256": "510eeed9abe9e0d9c1fcb08e0e8c0b88d013bd091224f52333f2fc7c395eb218"
+    },
+    {
+      "id": "valid-07",
+      "input": "{}",
+      "expected": {
+        "type": "object",
+        "entries": []
+      },
+      "canonical": "{\"entries\":[],\"type\":\"object\"}",
+      "sha256": "b4646e393684d1f22b4c98d69cb80eaa28550fa7b8d220947d232a2c12c5c497"
+    },
+    {
+      "id": "valid-08",
+      "input": "0",
+      "expected": {
+        "type": "sint",
+        "value": "0"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"0\"}",
+      "sha256": "9ee053598b8a9403874819204104c8e056d1ed79231c9a965478e350b52124f7"
+    },
+    {
+      "id": "valid-09",
+      "input": "-0",
+      "expected": {
+        "type": "sint",
+        "value": "0"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"0\"}",
+      "sha256": "9ee053598b8a9403874819204104c8e056d1ed79231c9a965478e350b52124f7"
+    },
+    {
+      "id": "valid-10",
+      "input": "1",
+      "expected": {
+        "type": "sint",
+        "value": "1"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"1\"}",
+      "sha256": "e512800e287cbd9d363ca3f81a3e8b3cf256538d554d985d2fca522dd86daec4"
+    },
+    {
+      "id": "valid-11",
+      "input": "-1",
+      "expected": {
+        "type": "sint",
+        "value": "-1"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"-1\"}",
+      "sha256": "973f877ea30184c55b48a4099f5a22f6aa9d85417bf25ca80e370f7be8ddb6b8"
+    },
+    {
+      "id": "valid-12",
+      "input": "-9223372036854775808",
+      "expected": {
+        "type": "sint",
+        "value": "-9223372036854775808"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"-9223372036854775808\"}",
+      "sha256": "bfc162c7afa6658834a8153a009698a23276ee12e035eccdb6a4a043b776be9e"
+    },
+    {
+      "id": "valid-13",
+      "input": "9223372036854775807",
+      "expected": {
+        "type": "sint",
+        "value": "9223372036854775807"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"9223372036854775807\"}",
+      "sha256": "bf79aa421da1b586463d0a7e1228c9124b21e0a2cdae9dac726b9fc546612a26"
+    },
+    {
+      "id": "valid-14",
+      "input": "9223372036854775808",
+      "expected": {
+        "type": "uint",
+        "value": "9223372036854775808"
+      },
+      "canonical": "{\"type\":\"uint\",\"value\":\"9223372036854775808\"}",
+      "sha256": "b09ccf2f6465ffd02ea823de15dac9c51f1f1d90117a546f87f6d68753f95f23"
+    },
+    {
+      "id": "valid-15",
+      "input": "18446744073709551615",
+      "expected": {
+        "type": "uint",
+        "value": "18446744073709551615"
+      },
+      "canonical": "{\"type\":\"uint\",\"value\":\"18446744073709551615\"}",
+      "sha256": "f528d7cadd90d434143af9e50a5d52744c8f5368be2975c3769f6521017ca330"
+    },
+    {
+      "id": "valid-16",
+      "input": "9007199254740993",
+      "expected": {
+        "type": "sint",
+        "value": "9007199254740993"
+      },
+      "canonical": "{\"type\":\"sint\",\"value\":\"9007199254740993\"}",
+      "sha256": "dd516576d4357a31bf871b2db741c766c30dc720075bcc975fc36d2802b2d220"
+    },
+    {
+      "id": "valid-17",
+      "input": "0.0",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "0",
+        "exponent": 0
+      },
+      "canonical": "{\"coefficient\":\"0\",\"exponent\":0,\"type\":\"decimal\"}",
+      "sha256": "c8013f8276a27dc2d90d3a63aa8202005e3032b81061ca1753921ce9d18efa92"
+    },
+    {
+      "id": "valid-18",
+      "input": "-0.0e999999",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "0",
+        "exponent": 0
+      },
+      "canonical": "{\"coefficient\":\"0\",\"exponent\":0,\"type\":\"decimal\"}",
+      "sha256": "c8013f8276a27dc2d90d3a63aa8202005e3032b81061ca1753921ce9d18efa92"
+    },
+    {
+      "id": "valid-19",
+      "input": "1.2300e2",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "123",
+        "exponent": 0
+      },
+      "canonical": "{\"coefficient\":\"123\",\"exponent\":0,\"type\":\"decimal\"}",
+      "sha256": "e56917c3f6db7eca631120aff83157d57c7365d5f14cb4a7292613c06c0cf0af"
+    },
+    {
+      "id": "valid-20",
+      "input": "1000.000",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "1",
+        "exponent": 3
+      },
+      "canonical": "{\"coefficient\":\"1\",\"exponent\":3,\"type\":\"decimal\"}",
+      "sha256": "ff37567de1d1dfe653bba350fb95353cfb13f7eb7b0c1427a5d87878b1bf69f3"
+    },
+    {
+      "id": "valid-21",
+      "input": "1e-32768",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "1",
+        "exponent": -32768
+      },
+      "canonical": "{\"coefficient\":\"1\",\"exponent\":-32768,\"type\":\"decimal\"}",
+      "sha256": "e1b73180114419552603c0926c69760c98cc8ee5f3ccf7375fd73ff5ae99c7ac"
+    },
+    {
+      "id": "valid-22",
+      "input": "1e32767",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "1",
+        "exponent": 32767
+      },
+      "canonical": "{\"coefficient\":\"1\",\"exponent\":32767,\"type\":\"decimal\"}",
+      "sha256": "42d9185cd9ecfc168218d86a125df9987568b90a6de6490a6410722853df04f5"
+    },
+    {
+      "id": "valid-23",
+      "input": "10e-32769",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "1",
+        "exponent": -32768
+      },
+      "canonical": "{\"coefficient\":\"1\",\"exponent\":-32768,\"type\":\"decimal\"}",
+      "sha256": "e1b73180114419552603c0926c69760c98cc8ee5f3ccf7375fd73ff5ae99c7ac"
+    },
+    {
+      "id": "valid-24",
+      "input": "9007199254740993.1",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "90071992547409931",
+        "exponent": -1
+      },
+      "canonical": "{\"coefficient\":\"90071992547409931\",\"exponent\":-1,\"type\":\"decimal\"}",
+      "sha256": "eca4717c189a11c8e2dccd645699f03eef3deb31edf2f61e908f1032661ec751"
+    },
+    {
+      "id": "valid-25",
+      "input": "-9223372036854775808.0",
+      "expected": {
+        "type": "decimal",
+        "coefficient": "-9223372036854775808",
+        "exponent": 0
+      },
+      "canonical": "{\"coefficient\":\"-9223372036854775808\",\"exponent\":0,\"type\":\"decimal\"}",
+      "sha256": "4bb6c785de53e9de0ac017d643b0dc11af65a8df6dea2cf4e93a71591075d433"
+    },
+    {
+      "id": "valid-26",
+      "input": "{\"z\":[true,null,0.1],\"a\":{\"b\":\"text\"}}",
+      "expected": {
+        "type": "object",
+        "entries": [
+          {
+            "key": "a",
+            "value": {
+              "type": "object",
+              "entries": [
+                {
+                  "key": "b",
+                  "value": {
+                    "type": "text",
+                    "value": "text"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "key": "z",
+            "value": {
+              "type": "list",
+              "items": [
+                {
+                  "type": "boolean",
+                  "value": true
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "decimal",
+                  "coefficient": "1",
+                  "exponent": -1
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "canonical": "{\"entries\":[{\"key\":\"a\",\"value\":{\"entries\":[{\"key\":\"b\",\"value\":{\"type\":\"text\",\"value\":\"text\"}}],\"type\":\"object\"}},{\"key\":\"z\",\"value\":{\"items\":[{\"type\":\"boolean\",\"value\":true},{\"type\":\"null\"},{\"coefficient\":\"1\",\"exponent\":-1,\"type\":\"decimal\"}],\"type\":\"list\"}}],\"type\":\"object\"}",
+      "sha256": "34fafd23335a195c1b44408dfd8fad173ac9f6135a8e868339d9d960c78e4378"
+    },
+    {
+      "id": "valid-27",
+      "input": "{\"\ud83d\ude00\":1,\"\u00e9\":2,\"a\":3,\"\\uE000\":4}",
+      "expected": {
+        "type": "object",
+        "entries": [
+          {
+            "key": "a",
+            "value": {
+              "type": "sint",
+              "value": "3"
+            }
+          },
+          {
+            "key": "\u00e9",
+            "value": {
+              "type": "sint",
+              "value": "2"
+            }
+          },
+          {
+            "key": "\ue000",
+            "value": {
+              "type": "sint",
+              "value": "4"
+            }
+          },
+          {
+            "key": "\ud83d\ude00",
+            "value": {
+              "type": "sint",
+              "value": "1"
+            }
+          }
+        ]
+      },
+      "canonical": "{\"entries\":[{\"key\":\"a\",\"value\":{\"type\":\"sint\",\"value\":\"3\"}},{\"key\":\"\u00e9\",\"value\":{\"type\":\"sint\",\"value\":\"2\"}},{\"key\":\"\ue000\",\"value\":{\"type\":\"sint\",\"value\":\"4\"}},{\"key\":\"\ud83d\ude00\",\"value\":{\"type\":\"sint\",\"value\":\"1\"}}],\"type\":\"object\"}",
+      "sha256": "8bea71ceb9cfeaa5f16239f0759acc91498c54a7b0cf42891fbcb55779f09d18"
+    },
+    {
+      "id": "valid-28",
+      "input": " \t\r\n {\"a\":1} \t\r\n",
+      "expected": {
+        "type": "object",
+        "entries": [
+          {
+            "key": "a",
+            "value": {
+              "type": "sint",
+              "value": "1"
+            }
+          }
+        ]
+      },
+      "canonical": "{\"entries\":[{\"key\":\"a\",\"value\":{\"type\":\"sint\",\"value\":\"1\"}}],\"type\":\"object\"}",
+      "sha256": "ca1a5dcac67f8e8e22025a5ad1a0048ac475113edecb926985669ede280a13d5"
+    },
+    {
+      "id": "invalid-29",
+      "input": "",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-30",
+      "input": " ",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-31",
+      "input": "{",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-32",
+      "input": "[1,]",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-33",
+      "input": "{\"a\":1,}",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-34",
+      "input": "{\"a\":1,\"a\":2}",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-35",
+      "input": "{\"a\":1,\"\\u0061\":2}",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-36",
+      "input": "01",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-37",
+      "input": "+1",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-38",
+      "input": "NaN",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-39",
+      "input": "Infinity",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-40",
+      "input": "1 2",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-41",
+      "input": "/* x */ 1",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-42",
+      "input": "\"\\uD800\"",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-43",
+      "input": "\"\\uDC00\"",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-44",
+      "input": "\ufeff1",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-45",
+      "input": "truex",
+      "error": "invalid_input"
+    },
+    {
+      "id": "invalid-46",
+      "input": "-9223372036854775809",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-47",
+      "input": "18446744073709551616",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-48",
+      "input": "1e32768",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-49",
+      "input": "1e-32769",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-50",
+      "input": "9223372036854775808.1",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-51",
+      "input": "{\"\":1}",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-52",
+      "input": "{\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\":0}",
+      "error": "unsupported_value"
+    },
+    {
+      "id": "invalid-53",
+      "input": "100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "error": "output_limit"
+    },
+    {
+      "id": "invalid-54",
+      "input": "\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+      "error": "output_limit"
+    },
+    {
+      "id": "invalid-55",
+      "input": "[[[[[[[[[]]]]]]]]]",
+      "error": "output_limit"
+    },
+    {
+      "id": "invalid-56",
+      "input": "[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]",
+      "error": "output_limit"
+    }
+  ]
+}
