@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.5. Updated: 2026-10-15. Status: accepted target; implementation partial.
+Version: 0.2.6. Updated: 2026-10-15. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -316,8 +316,8 @@ native requests. It supplies no authorization or host clock.
 time, limits)` validates the complete explicit Time and retained request, then
 calls only public ExBooking.civil_occurrences/3 with all eight options explicit.
 This consumes ExBooking SP.09's civil contract: at most 366 selected-date
-resolutions and 732 localizations; gaps skip or reject; both ordered fold
-alternatives round-trip before policy/filter; policy precedes half-open UTC
+resolutions and 732 localizations; gaps skip or reject; every ordered fold
+alternative round-trips before policy/filter; policy precedes half-open UTC
 filtering; no snapping, clipping, alternate-fold substitution or partial list.
 This profile supports timezone offset components within ±93599 seconds and
 totals [-89999, 93599], independently of the older provider helper bounds.
@@ -362,7 +362,8 @@ Calculation works with null UTC confidence; execution still requires the complet
 current time/window and transaction obligations of WRO03-02–05.
 
 Missing public civil API returns payload-free civil_unavailable, any producer
-refusal returns civil_refused, and malformed producer values or implementation
+refusal returns civil_refused except the fixed work-limit result described below;
+malformed producer values or implementation
 exceptions return producer_contract_error. Other fixed refusals include
 invalid_civil_request/query/page, stale_civil_page, stale_temporal_projection,
 schedule_program_mismatch and unsupported_temporal_precision. Existing bounded
@@ -380,12 +381,55 @@ must supply an inspected exact SP.09 producer archive through the existing
 explicit archive lane with `--civil-consumer`; omitting that flag preserves
 the SP.08-only lane. No publication or dependency selection is implied.
 
+## Complete bounded civil ambiguity
+
+**WRO03-09 — Lossless local fold positions and work refusal.** A producer
+implementing SP.09 CIV-06 may select an immutable provider's optional
+`resolve_civil/3` callback. It returns every alternative, with at most 732
+candidates per label and at most 732 total round-trip localizations per query.
+The adapter still calls only the public civil facade; it never selects callbacks,
+truncates an ambiguity, retries the legacy resolver or splits a refused query.
+The producer validates the whole candidate set before policy/UTC filtering.
+The explicit first/second policies retain local positions 1/2; both retains all
+alternatives; reject refuses any ambiguity, including outside the UTC window.
+Consumers own explicit smaller-query composition and wider ordering/identity.
+
+Existing native resolution atoms `:unique`, `:first_fold` and `:second_fold`
+keep their JSON strings. Native `{:fold, index}`, with integer index 3–732,
+projects exactly to the two-member JSON array `["fold", index]`. The index is
+its position in the complete UTC-ordered resolution of one nominal label,
+never a DTSTART ordinal or the position in a filtered page. A surviving third
+alternative keeps `["fold", 3]` after earlier alternatives are filtered out.
+Additional folds are valid only under both policy. Unsupported tuple shapes,
+indices or wire arrays supplied as native resolutions refuse with
+producer_contract_error. For each nominal label, retained fold positions must
+strictly increase and unique cannot coexist with any other occurrence of that
+label. Missing positions after filtering are valid. This check retains at most
+732 nominal-label entries. Whole UTC ordering and all previous output Limits
+continue to apply. The exact projected resolution participates in original
+hashing; existing atom-resolution originals retain the same hash algorithm.
+Regeneration and checked event binding apply equally to every local position.
+
+Exactly `{:error, {:limit, :civil_occurrences, :work}}` from the producer maps
+to payload-free civil_work_bound. This refuses the entire page; no continuation,
+partial result or implicit retry is returned. Every other producer error retains
+civil_refused. Producer faults remain producer_contract_error. Repeating the
+same immutable request repeats the same result; callers may explicitly split
+its local span while retaining the producer's policies and original identities.
+Legacy Calendar/SP.08 and ordinary scalar temporal behavior are unchanged.
+
+This extension is accepted; implementation and renewed archive evidence are
+pending. Its producer contract is ExBooking SP.09 CIV-06, implemented at source
+`16a9d0d`; the earlier civil cohort below remains evidence for its recorded inputs.
+
 | Case | Requirements | Setup/stimulus | Expected observation / falsifier | Evidence level |
 | --- | --- | --- | --- | --- |
 | WRO03-T5 | 06–08 | Closed civil schedule/query, invalid native shapes, day/year/weekday/byte/Limit boundaries, released producer | Independent schema vectors and constructors agree on closed shapes; invalid preflight sends no producer call; missing API refuses | Pure |
 | WRO03-T6 | 07–08 | Exact extracted producer/core/Continuum/Routines archives; literal Stockholm/New York folds/gaps, fractional horizons, wide signed offsets | Original UTC/nominal/resolution preserved without ordinals; policy before filtering; no narrower-helper fallback; old calendar corpus still passes | Archive |
 | WRO03-T7 | 07–08 | Independent Gregorian finite weekday oracle, overlapping/partitioned queries, clock change, provider context change, forged page/member/program | Same point keeps original across query/clock; provider/pattern change changes original; stale generation/member/program refuses; regeneration defeats tampering | Pure/archive |
 | WRO03-T8 | 07–08 | 366-date/732-point maximum, reduced output Limits, malformed/duplicate/unordered/late producer refusal and private-canary faults | Finite complete result or fixed error only; no partial output/private payload; scalar and SP.08 regressions unchanged | Pure/archive |
+
+| WRO03-T9 | 07–09 | Exact extracted complete-ambiguity producer; threefold and maximum 732 alternatives, filtered third fold, every policy, forged positions and 732/733 work boundaries | Literal UTC/tag projection and schema agree; no ordinal or renumbering; query-independent originals and checked regeneration/events persist; fixed work refusal has no partial result or fallback; old calendar corpus passes | Pure/archive |
 
 The executable temporal schema and a civil vector freeze this additive shape
 before implementation. The producer contract is ExBooking

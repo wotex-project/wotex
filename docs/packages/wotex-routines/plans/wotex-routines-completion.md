@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.13. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
+Version: 0.2.14. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -59,3 +59,14 @@ the same extracted cohort retains the nine-case SP.08 calendar corpus and
 executes a civil query without application startup. The package fast gate
 passes 157 tests. Real host transactions, clock and physical qualification
 remain separate. The released optional producer is unchanged.
+
+## Complete civil ambiguity addition
+
+WRO03-09 accepts complete civil ambiguities without narrowing supported provider
+multiplicity. Native local positions 3–732 project as `["fold", index]`, retain
+query-independent originals and share all regeneration/event/output checks.
+The producer's exact total-work refusal projects to civil_work_bound without
+partial pages or implicit retries. WRO03-T9 requires malformed-position checks,
+independent extracted threefold/maximum/work-budget cases and the retained
+SP.08 calendar corpus. Implementation and renewed evidence remain pending;
+no released dependency or consumer runtime selection changes here.

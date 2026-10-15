@@ -799,10 +799,32 @@
           "maxLength": 65536
         },
         "resolution": {
-          "enum": [
-            "unique",
-            "first_fold",
-            "second_fold"
+          "oneOf": [
+            {
+              "enum": [
+                "unique",
+                "first_fold",
+                "second_fold"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "fold"
+                  ]
+                },
+                {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 732
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2,
+              "additionalItems": false
+            }
           ]
         },
         "schedule_digest": {
