@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.5. Updated: 2026-10-15. Status: accepted target.
+Version: 0.2.6. Updated: 2026-10-15. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -260,6 +260,6 @@ Native constructors now retain explicit null received_at, and the input adapter
 implements the explicitly selected conservative clock. The execution suite covers
 null preservation through Continuum without supplying missing source UTC. The
 [successor evidence](../provenance/external-input-execution-2026-10.md) separates
-these native checks from pending extracted execution consumers. Source-time
+native checks, passing extracted execution consumers and the full package gate. Source-time
 requirements, freshness, source identity, units and current consumer qualification
 remain separate.

@@ -1,8 +1,9 @@
 # WRO.05 — Explicit joins from externally defined sensor capabilities
 
-Version: 0.2.1. Updated: 2026-10-15. Status: accepted target.
-Implementation: scalar representation and native external execution join implemented; extracted execution acceptance pending.
-Evidence: focused tests and three extracted-archive representation consumers;
+Version: 0.2.2. Updated: 2026-10-15. Status: accepted target.
+Implementation: bounded scalar representation and external execution join implemented.
+Evidence: native tests, full package gate and three extracted-archive consumers,
+including public execution paths and behavioral identity/rounding mutations;
 consumer admission/physical qualification remain separate.
 
 ## Scope and current representation
@@ -38,7 +39,7 @@ closed Mapping, explicit WRO.01 Registry and Limits. Mapping contains exactly th
 | profile_sha256, closure_sha256, capture_digest | Exact selected reader basis digests |
 | external_unit | Complete WPF Unit for integer; explicit null for boolean/enum |
 | observation | Exactly source_ref, source_epoch, source_class, source_time_basis |
-| receipt_clock | Exactly source_epoch, source_origin_us, target_epoch, target_origin_ms |
+| receipt_clock | Original exact four-member clock below, or EIX-02's closed six-member floor clock |
 
 External references have id/version/sha256; IDs are absolute URIs ≤256 bytes,
 version x.y.z with each component 0..65535 and no leading zero, digest lower
@@ -79,6 +80,9 @@ trusted proposal time requires a non-null installed correspondence here.
 receipt_clock.source_origin_us is a canonical signed-64 decimal string,
 target_epoch is a nonempty WRO string and target_origin_ms a nonnegative WRO
 integer. This explicit clock correspondence is consumer qualification data.
+The separately discriminated EIX-02 alternative adds exactly format and
+projection, uses mathematical floor at receipt precision and caps exclusive
+expiry. It changes the complete Mapping digest, not its outer member grammar.
 
 Integer units must have the SI dimension vector corresponding to the selected
 legacy dimension: temperature [0,0,0,0,1,0,0]; fraction all zero; illuminance
@@ -112,15 +116,20 @@ WRO max_integer is unsupported_representation. Source time compares UTC instants
 and exact trust; metadata source_time_basis equals the mapping. Null source_time
 requires null metadata time, unknown trust and null basis/uncertainty. A supplied
 uncertainty string u is preserved as ceil(u/1000) milliseconds, checked against
-WRO bounds; null stays null. No other rounding is allowed.
+WRO bounds; null stays null. Scalar conversion stays exact. Receipt precision is
+separately selected by the Mapping's explicit clock grammar.
 
-Receipt epoch must equal receipt_clock.source_epoch. Compute delta as supplied
+Receipt epoch must equal receipt_clock.source_epoch. For the original exact
+four-member clock, compute delta as supplied
 monotonic_us minus source_origin_us; delta must be an exact multiple of 1000.
 metadata receipt_epoch must equal target_epoch and receipt_ms must equal
 target_origin_ms + delta/1000, nonnegative and bounded. Inexact conversion
 refuses inexact_conversion; different coordinates refuse stale_basis. received_at
 and expires_ms remain explicit consumer data validated by Fact, with expiry not
 before receipt; this bridge does not relate UTC to monotonic time implicitly.
+EIX-01 permits required-but-null received_at. The six-member EIX-02 clock applies
+its separately specified floor and bounded freshness cap instead of requiring
+an aligned delta. Neither alternative reads a clock or refreshes old input.
 
 Map continuity exactly: continuous -> continuous/fresh; baseline -> baseline/fresh;
 gap -> lost/fresh; retained -> lost/retained; replayed -> lost/replayed.
@@ -206,9 +215,12 @@ The
 explicit missing receipt UTC, a separately selected conservative receipt-clock
 projection and a qualified external binding for Snapshot/Edge. These additions
 are implemented with native integer/Boolean/enum reader-to-kernel and retained
-edge checks. The old scalar representation/archive evidence retains its scope;
-new extracted execution acceptance remains pending.
+edge checks. Two independent extracted consumers also execute the public
+reader/evaluator/Kernel/edge join with null receipt UTC and signed fractional
+receipts; both catch profile-identity and floor mutations through assertions.
+The absent-reader consumer still completes an ordinary inert Kernel run.
+The old scalar representation/archive evidence retains its historical scope.
 
 | Case | Requirements | Stimulus and falsifier | Evidence |
 | --- | --- | --- | --- |
-| WRO05-T6 | 01–05 | Complete public reader/Input/binding/Compiler/Snapshot/Kernel and edge traces, unaligned receipt, missing UTC and changed mapping | EIX-T1–T5 native checks pass; EIX-T6 archive/mutation work pending; no identity rewrite or fabricated clock/edge |
+| WRO05-T6 | 01–05 | Complete public reader/Input/binding/Compiler/Snapshot/Kernel and edge traces, unaligned receipt, missing UTC and changed mapping | EIX-T1–T6 software checks and full package gate pass; no identity rewrite or fabricated clock/edge |

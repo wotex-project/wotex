@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.17. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
+Version: 0.2.18. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -95,6 +95,10 @@ package. No dependency release or consumer pin is selected by this plan.
 Entry artifacts are frozen. Native Fact/Input/binding/Snapshot/Edge checks now
 pass, including actual public integer/Boolean/enum reader-to-kernel paths and
 the independent five-row edge trace. The package fast gate passes 179 tests;
-scoped Dialyzer reports zero errors. Extracted execution consumers, behavioral
-identity/rounding mutations and the owning full package milestone remain pending.
-Current consumer admission and physical qualification are separate obligations.
+scoped Dialyzer reports zero errors. The full package gate now passes all 179
+tests at 95.4% coverage, audits, docs, boundary, passive loading and archive checks.
+Two extracted execution consumers each pass five cases and catch profile-identity
+and signed-floor mutations exclusively through assertions. A third passes actual
+ordinary Kernel execution with the optional reader absent. WRO.05's bounded
+software contract is implemented; current consumer admission, wider analysis and
+physical qualification are separate obligations.

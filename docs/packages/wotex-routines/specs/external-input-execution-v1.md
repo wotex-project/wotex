@@ -1,11 +1,12 @@
 # External input execution join v1
 
-Version: 0.1.2. Updated: 2026-10-15. Status: accepted successor target.
+Version: 0.1.3. Updated: 2026-10-15. Status: accepted successor target.
 Owner: WRO.01 observation metadata; WRO.02 snapshots/edges; WRO.05 input joins.
-Implementation: native execution join implemented. Evidence: the
-[native execution record](../provenance/external-input-execution-2026-10.md) covers
-EIX-T1–T5; extracted execution consumers/mutations and the full owning package
-milestone remain pending. Current host/source/clock qualification is separate.
+Implementation: bounded execution join implemented. Evidence: the
+[execution record](../provenance/external-input-execution-2026-10.md) covers native
+EIX-T1–T5, two extracted EIX-T6 consumers with behavioral identity/rounding
+mutations, optional-producer absence and the full owning package gate. Current
+host/source/clock qualification and wider analysis profiles remain separate.
 
 ## Result and boundaries
 

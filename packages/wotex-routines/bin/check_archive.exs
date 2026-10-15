@@ -137,6 +137,11 @@ defmodule Wotex.Routines.Check.Archive do
 
       copy_fixture!("priv/vectors/wro-05-input.json", Path.join(consumer, "input.json"))
 
+      copy_fixture!(
+        "priv/vectors/wro-05-input-execution.json",
+        Path.join(consumer, "input-execution.json")
+      )
+
       environment = [
         {"WOTEX_PATH_DEPS", nil},
         {"MIX_ENV", "test"},
@@ -154,6 +159,80 @@ defmodule Wotex.Routines.Check.Archive do
       IO.puts(
         family <> " profile consumer lock sha256: " <> sha256(Path.join(consumer, "mix.lock"))
       )
+
+      if family != "absent", do: profile_mutations!(paths, consumer, environment, family)
+    end
+  end
+
+  defp profile_mutations!(paths, consumer, environment, family) do
+    script = Path.join(consumer, "profile_mutations.exs")
+    copy_fixture!("test/support/archive/profile_mutation_consumer.exs", script)
+    baseline = profile_mutation_run!(consumer, environment, script, "baseline")
+
+    unless baseline.status == 0 and baseline.result["total"] == 5 and
+             baseline.result["failures"] == 0,
+           do: throw({:archive, "profile mutation baseline failed: " <> family})
+
+    mutations = [
+      {"profile_identity", "observation_view.ex",
+       "fact[\"profile_digest\"] == expected[\"profile_digest\"] and", "true and"},
+      {"signed_floor", "input.ex", "Integer.floor_div(delta, 1000)", "div(delta, 1000)"}
+    ]
+
+    for {name, filename, from, to} <- mutations do
+      source =
+        paths
+        |> Keyword.fetch!(:wotex_routines)
+        |> Path.join("lib/wotex/routines/" <> filename)
+        |> File.read!()
+
+      unless length(String.split(source, from)) == 2,
+        do: throw({:archive, "profile mutation site changed: " <> name})
+
+      replacement = Path.join(consumer, "mutant-" <> filename)
+      File.write!(replacement, String.replace(source, from, to, global: false))
+      result = profile_mutation_run!(consumer, environment, script, replacement)
+
+      unless result.status == 1 and result.result["total"] == baseline.result["total"] and
+               result.result["failures"] > 0 and result.assertions["assertions"] > 0 and
+               result.assertions["errors"] == 0,
+             do:
+               throw(
+                 {:archive,
+                  "profile mutation survived or harness failed: " <> family <> "/" <> name}
+               )
+
+      IO.puts(
+        family <> "/" <> name <> ": #{result.result["failures"]} behavioral assertion failures"
+      )
+    end
+  end
+
+  defp profile_mutation_run!(consumer, environment, script, replacement) do
+    {output, status} =
+      System.cmd("mix", ["run", "--no-start", "--no-compile", script, replacement],
+        cd: consumer,
+        env: environment,
+        stderr_to_stdout: true
+      )
+
+    result = profile_marker!(output, "PROFILE_RESULT=")
+    assertions = profile_marker!(output, "PROFILE_ASSERTIONS=")
+    %{status: status, result: result, assertions: assertions}
+  end
+
+  defp profile_marker!(output, prefix) do
+    case output
+         |> String.split("\n")
+         |> Enum.find(&String.starts_with?(&1, prefix)) do
+      nil ->
+        IO.write(output)
+        throw({:archive, "profile mutation process/formatter failed"})
+
+      line ->
+        line
+        |> String.replace_prefix(prefix, "")
+        |> JSON.decode!()
     end
   end
 

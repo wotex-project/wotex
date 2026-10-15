@@ -3,7 +3,7 @@ package: "wotex_routines"
 completion_plan: "docs/plans/wotex-routines-completion.md"
 specifications:
   - id: "WRO.01"
-    version: "0.2.5"
+    version: "0.2.6"
     path: "docs/specs/WRO.01-capability-behaviour.md"
     implementation_status: "partial"
     standards: []
@@ -12,7 +12,7 @@ specifications:
     executable_evidence: ["test/wotex/routines/basis_test.exs", "test/wotex/routines/schema_test.exs", "test/wotex/routines/input_execution_test.exs", "bin/check_archive.exs", "bin/check_application_free.exs"]
     compatibility_classification: "Registered optional package with closed installed semantics, exact units and Continuum facts; no runtime authority. Kernel completion/repeat joins and independent consumer adoption remain obligations."
   - id: "WRO.02"
-    version: "0.2.13"
+    version: "0.2.14"
     path: "docs/specs/WRO.02-source-kernel.md"
     implementation_status: "partial"
     standards: []
@@ -39,11 +39,11 @@ specifications:
     executable_evidence: ["test/wotex/routines/analysis_result_test.exs", "test/wotex/routines/evaluation_test.exs", "test/wotex/routines/correspondence_test.exs", "bin/check_correspondence.exs", "test/wotex/routines/witness_test.exs", "test/wotex/routines/model_test.exs", "test/wotex/routines/receipt_model_test.exs", "test/wotex/routines/analysis_test.exs", "test/support/archive/model_consumer.exs", "bin/check_archive.exs", "docs/provenance/receipt-runner-2026-10.md"]
     compatibility_classification: "Closed bounded result axes, witness assertions and full correspondence binding implemented. Independent source predicate and finite manual composition transition references plus six isolated behavioral mutations implemented. Bounded concrete Witness replay with explicit original history and four independent runtime-property checks implemented. Explicit frozen-time proposal and single-effect software-receipt Model projections with complete regeneration implemented; receipt scope matches independent source/public Kernel traces and native ACK-threshold mutation. Explicit opt-in proposal and staged receipt-prefix runner validates complete bindings and queue-inclusive deadlines with isolated public ExMaude searches. Exact released ExMaude 0.5.0 native proposal/receipt-prefix archive consumer passes; abstract repeated-proposal mutation is not reproduced by concrete replay. Wider receipt history/temporal/composition projections, calendar/complete-set reference mutations and wider analysis runner scopes remain obligations; bounded absence never supplies positive admission."
   - id: "WRO.05"
-    version: "0.2.1"
+    version: "0.2.2"
     path: "docs/specs/WRO.05-external-profile-inputs.md"
-    implementation_status: "partial"
+    implementation_status: "implemented"
     standards: []
     requires: ["WRO.01", "WRO.02", "wotex_profiles:WPF.01", "wotex_profiles:WPF.02"]
     implementation_modules: ["Wotex.Routines.InputMapping", "Wotex.Routines.Input"]
-    executable_evidence: ["test/wotex/routines/input_mapping_test.exs", "test/wotex/routines/input_test.exs", "priv/vectors/wro-05-input.json", "test/support/archive/profile_consumer.exs", "test/support/archive/profile_absent_consumer.exs", "bin/check_archive.exs", "docs/provenance/profile-inputs-2026-10.md", "test/wotex/routines/input_execution_schema_test.exs", "test/wotex/routines/input_execution_test.exs", "priv/schemas/wro-05-input-execution.schema.json", "priv/vectors/wro-05-input-execution.json"]
-    compatibility_classification: "Qualified scalar and native external execution joins implemented with complete installed mapping, null receipt UTC and explicit conservative precision; extracted execution consumers/mutations remain pending. Current routine types stay narrow and readers need no routine dependency"
+    executable_evidence: ["test/wotex/routines/input_mapping_test.exs", "test/wotex/routines/input_test.exs", "priv/vectors/wro-05-input.json", "test/support/archive/profile_consumer.exs", "test/support/archive/profile_absent_consumer.exs", "test/support/archive/profile_mutation_consumer.exs", "bin/check_archive.exs", "docs/provenance/profile-inputs-2026-10.md", "test/wotex/routines/input_execution_schema_test.exs", "test/wotex/routines/input_execution_test.exs", "priv/schemas/wro-05-input-execution.schema.json", "priv/vectors/wro-05-input-execution.json"]
+    compatibility_classification: "Bounded scalar and external execution joins implemented with complete installed mappings, null receipt UTC and explicit conservative precision. Native integer/Boolean/enum execution, two extracted execution/edge consumers, four identity/rounding mutants and ordinary Kernel execution with the reader absent pass; the full package gate passes 179 tests at 95.4% coverage. Wider analysis remains outside this bounded contract; consumers still own current host/source/clock qualification and physical effects. Readers need no routine dependency"

@@ -55,10 +55,13 @@ The archive check accepts `--occurrence-archive /absolute/archive/ex_booking.tar
 
 `bin/check_archive.exs --model-consumer --maude-path /absolute/maude` runs the explicitly selected proposal-prefix native archive consumer against exact Hex ExMaude 0.5.0. The interpreter remains separately provisioned; this Port lane does not build the C-Node or qualify containment, execution admission or wider models.
 
-`bin/check_archive.exs --profile-consumers` joins two independent scalar consumers
-through exact extracted core/Continuum/Runtime/Profiles/Routines archives. A third
-consumer checks optional-producer absence. Current consumer admission and physical
-qualification remain separate.
+`bin/check_archive.exs --profile-consumers` runs two independent scalar consumers
+through exact extracted core/Continuum/Runtime/Profiles/Routines archives, including
+complete evaluation/Kernel/edge joins with unaligned original receipts and null
+receipt UTC. Both families must catch isolated profile-identity and signed-floor
+mutations through assertions. A third consumer checks ordinary Kernel execution
+and explicit input refusal with the optional producer absent. Current consumer
+admission and physical qualification remain separate.
 
 `bin/check_archive.exs --occurrence-archive /absolute/archive/ex_booking.tar --civil-consumer`
 adds the distinct finite civil adapter corpus and a no-application-start query.

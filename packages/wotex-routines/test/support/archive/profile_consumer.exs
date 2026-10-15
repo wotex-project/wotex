@@ -5,6 +5,21 @@ defmodule ProfileArchiveConsumerTest do
   alias Wotex.Profiles.{Compiler, Definition, Interpreter}
   alias Wotex.Routines.{Basis, Error, Input, InputMapping}
 
+  @execution_profile %{
+    "source_bytes" => 65_536,
+    "source_depth" => 32,
+    "expanded_nodes" => 64,
+    "predicate_nodes" => 64,
+    "invocation_depth" => 4,
+    "parallel_width" => 4,
+    "effects" => 16,
+    "waits" => 16,
+    "active_definitions" => 64,
+    "active_runs" => 64,
+    "pending_work" => 64,
+    "run_ms" => 86_400_000
+  }
+
   defp fixture do
     v = Jason.decode!(File.read!("input.json"))
 
@@ -82,7 +97,7 @@ defmodule ProfileArchiveConsumerTest do
 
   defp replace_ref(ref, basis_ref), do: if(ref["id"] == basis_ref["id"], do: basis_ref, else: ref)
 
-  defp interpreted(v) do
+  defp interpreted(v, raw \\ "251") do
     {:ok, projection} =
       Compiler.compile(v["profile"], v["closure"], v["capture"], v["reader_limits"])
 
@@ -95,7 +110,7 @@ defmodule ProfileArchiveConsumerTest do
         "profile_sha256" => projection.data["profile_sha256"],
         "binding" => v["capture"]["binding"],
         "capture_epoch" => v["capture"]["capture_epoch"],
-        "value" => %{"type" => "sint", "value" => "251"}
+        "value" => %{"type" => "sint", "value" => raw}
       })
 
     {:ok, proposal} = Interpreter.project(projection, report, v["reader_limits"])
@@ -187,4 +202,253 @@ defmodule ProfileArchiveConsumerTest do
     assert {:error, %Error{code: :unsupported_mapping}} =
              Input.project(proposal, mapping, metadata, missing)
   end
+
+  test "full external execution preserves null UTC, signed precision and independent profile identity" do
+    {v, expected} = execution_fixture()
+    {fact, mapping, context} = execution_input(v, "-1001", 9998, 1, "continuous", "251")
+    assert fact["value"] == expected
+    assert fact["received_at"] == nil
+    assert fact["receipt_ms"] == 9998
+    assert fact["expires_ms"] == 10_998
+    assert fact["profile_digest"] == "sha256:" <> mapping["profile_sha256"]
+    refute fact["profile_digest"] == mapping["basis"]["semantic_digest"]
+    f = execution_program(fact, mapping, context, expected)
+    assert {:ok, true} = evaluate(f, context)
+    assert {:ok, %{"outcome" => "completed", "proposals" => []}} = advance(f, context, nil)
+
+    # This must be unknown even though every other identity and freshness field matches.
+    forged =
+      put_in(f.snapshot, ["facts", "sensor", "profile_digest"], mapping["basis"]["semantic_digest"])
+
+    assert {:ok, "unknown"} = evaluate(%{f | snapshot: forged}, context)
+
+    assert {:ok, %{"outcome" => "blocked", "proposals" => []}} =
+             advance(%{f | snapshot: forged}, context, nil)
+
+    expired = %{f | time: Map.put(f.time, "elapsed_ms", 10_998)}
+    assert {:ok, "unknown"} = evaluate(expired, context)
+
+    legacy =
+      f.snapshot["binding_bases"]["sensor"]
+      |> Map.take(~w(profile_digest source_id source_epoch source_time_basis))
+
+    stale = put_in(f.snapshot, ["binding_bases", "sensor"], legacy)
+
+    assert {:error, %{code: :stale_binding_basis}} =
+             Wotex.Routines.Snapshot.new(stale, f.program, @execution_profile, context["limits"])
+
+    absent = Enum.reject(context["registry"], &(&1["id"] == mapping["id"]))
+    assert {:error, _} = Input.binding_basis(mapping, absent, context["limits"])
+  end
+
+  test "external edge history agrees with independent baseline, transition, duplicate and gap outcomes" do
+    {v, expected} = execution_fixture()
+
+    rows = [
+      {1, "-1001", 9998, "100", "continuous", "baseline"},
+      {2, "999", 10_000, "300", "continuous", "eligible"},
+      {2, "999", 10_000, "300", "continuous", "duplicate"},
+      {3, "1999", 10_001, "300", "gap", "unqualified"},
+      {4, "2999", 10_002, "300", "continuous", "baseline"}
+    ]
+
+    Enum.reduce(rows, nil, fn {sequence, us, ms, raw, continuity, outcome}, prior ->
+      {fact, mapping, context} = execution_input(v, us, ms, sequence, continuity, raw)
+      f = execution_program(fact, mapping, context, expected, true)
+
+      assert {:ok, edge_result} =
+               Wotex.Routines.Edge.advance(
+                 f.program,
+                 f.event,
+                 f.snapshot,
+                 f.time,
+                 prior,
+                 @execution_profile,
+                 context["limits"]
+               )
+
+      assert edge_result["reason"] == outcome
+      assert {:ok, transition} = advance(f, context, prior)
+      assert transition["edge"] == edge_result["edge"]
+      assert transition["outcome"] == if(outcome == "eligible", do: "completed", else: "no-edge")
+      assert transition["proposals"] == []
+      assert transition["edge"]["binding_basis"] == f.snapshot["binding_bases"]["sensor"]
+
+      assert {:ok, edge} =
+               Wotex.Routines.Edge.new(
+                 transition["edge"],
+                 f.program,
+                 @execution_profile,
+                 context["limits"]
+               )
+
+      assert {:ok, _} =
+               Wotex.Routines.Edge.to_map(edge, f.program, @execution_profile, context["limits"])
+
+      if sequence == 1, do: assert(transition["edge"]["last_original"] == nil)
+      if sequence == 4, do: assert(transition["edge"]["last_original"] == "original:2")
+      transition["edge"]
+    end)
+  end
+
+  defp execution_fixture do
+    {v, expected} = fixture()
+    corpus = Jason.decode!(File.read!("input-execution.json"))
+    # Frozen independent negative fraction: -1001 us at 0 us/10000 ms -> 9998 ms.
+    [clock | _] = corpus["clock_cases"]
+    assert clock["source_receipt_us"] == "-1001"
+    assert clock["expected_receipt_ms"] == 9998
+
+    receipt_clock = %{
+      "format" => "wotex.routines.receipt-clock@1",
+      "projection" => "floor_millisecond",
+      "source_epoch" => v["mapping"]["receipt_clock"]["source_epoch"],
+      "source_origin_us" => clock["source_origin_us"],
+      "target_epoch" => v["mapping"]["receipt_clock"]["target_epoch"],
+      "target_origin_ms" => clock["target_origin_ms"]
+    }
+
+    {put_in(v, ["mapping", "receipt_clock"], receipt_clock), expected}
+  end
+
+  defp execution_input(v, us, ms, sequence, continuity, raw) do
+    proposal =
+      v["proposal"]
+      |> Map.merge(%{"sequence" => Integer.to_string(sequence), "continuity" => continuity})
+      |> put_in(["receipt_time", "monotonic_us"], us)
+
+    metadata =
+      Map.merge(v["metadata"], %{
+        "id" => "external-fact:#{sequence}",
+        "sequence" => sequence,
+        "received_at" => nil,
+        "receipt_ms" => ms,
+        "expires_ms" => ms + 1000,
+        "continuity" => if(continuity == "gap", do: "lost", else: continuity)
+      })
+
+    {proposal, mapping, metadata, context} =
+      interpreted(Map.merge(v, %{"proposal" => proposal, "metadata" => metadata}), raw)
+
+    assert {:ok, result} = Input.project(proposal, mapping, metadata, context)
+    {:ok, limits} = Wotex.Routines.Limits.new(context["limits"])
+    {result["fact"].data, mapping, Map.put(context, "limits", limits)}
+  end
+
+  defp execution_program(fact, mapping, context, expected, edge \\ false) do
+    {enter, exit} = Map.fetch!(%{2510 => {2500, 1500}, 251_000 => {250_000, 150_000}}, expected)
+
+    trigger =
+      if edge do
+        %{
+          "kind" => "edge",
+          "binding" => "sensor",
+          "direction" => "rising",
+          "debounce_ms" => 0,
+          "cooldown_ms" => 0,
+          "hysteresis" => %{"enter" => enter, "exit" => exit}
+        }
+      else
+        %{"kind" => "manual"}
+      end
+
+    condition =
+      if edge,
+        do: %{"op" => "literal", "value" => true},
+        else: %{"op" => "gt", "binding" => "sensor", "value" => enter}
+
+    source = %{
+      "format" => "wotex.routines.source@1",
+      "profile" => "bounded-composition@1",
+      "id" => "external-execution",
+      "revision" => "1",
+      "parameters" => %{},
+      "bindings" => ["sensor"],
+      "trigger" => trigger,
+      "condition" => condition,
+      "steps" => %{"id" => "end", "kind" => "noop"},
+      "overlap" => "reject",
+      "run_ms" => 1000
+    }
+
+    compiler_context = %{
+      "registry" => context["registry"],
+      "bases" => [mapping["basis"]],
+      "bindings" => %{
+        "sensor" => %{
+          "basis" => mapping["legacy_basis_ref"],
+          "thing_id" => fact["thing_id"],
+          "resource_roles" => %{}
+        }
+      },
+      "definitions" => [],
+      "arguments" => %{},
+      "compiler_basis" => "sha256:" <> String.duplicate("7", 64)
+    }
+
+    assert {:ok, program} =
+             Wotex.Routines.Compiler.compile(
+               source,
+               compiler_context,
+               @execution_profile,
+               context["limits"]
+             )
+
+    assert {:ok, binding} = Input.binding_basis(mapping, context["registry"], context["limits"])
+
+    snapshot = %{
+      "id" => "snapshot:external",
+      "membership_generation" => "membership:1",
+      "active_programs" => [program.data["ir_digest"]],
+      "resource_revisions" => %{fact["thing_id"] => 1},
+      "binding_bases" => %{"sensor" => binding},
+      "facts" => %{"sensor" => fact}
+    }
+
+    {:ok, date, _} = DateTime.from_iso8601(fact["source_time"])
+    utc = DateTime.to_unix(date, :millisecond) + 10
+
+    time = %{
+      "epoch" => fact["receipt_epoch"],
+      "elapsed_ms" => fact["receipt_ms"],
+      "clock_generation" => "clock:1",
+      "utc_low_ms" => utc,
+      "utc_high_ms" => utc
+    }
+
+    event = %{
+      "kind" => "manual",
+      "original" => "original:#{fact["sequence"]}",
+      "program_digest" => program.data["ir_digest"]
+    }
+
+    event =
+      if edge,
+        do: Map.merge(event, %{"kind" => "fact", "binding" => "sensor", "fact_id" => fact["id"]}),
+        else: event
+
+    %{program: program, snapshot: snapshot, time: time, event: event}
+  end
+
+  defp evaluate(f, context),
+    do:
+      Wotex.Routines.Evaluation.evaluate(
+        f.program,
+        f.snapshot,
+        f.time,
+        @execution_profile,
+        context["limits"]
+      )
+
+  defp advance(f, context, edge),
+    do:
+      Wotex.Routines.Kernel.advance(
+        f.program,
+        f.event,
+        f.snapshot,
+        f.time,
+        %{"original" => nil, "busy" => nil, "edge" => edge},
+        @execution_profile,
+        context["limits"]
+      )
 end

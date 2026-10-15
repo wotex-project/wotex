@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.13. Updated: 2026-10-15. Status: accepted target; implementation partial.
+Version: 0.2.14. Updated: 2026-10-15. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -519,6 +519,7 @@ and retained Edge must validate that correspondence before using a Fact; rewriti
 the Fact profile digest is forbidden. Native Snapshot/Edge and ObservationView
 now enforce the complete installed correspondence, including exact class and
 source/receipt clock basis. Independent native reader-to-kernel and edge traces
-pass; extracted execution consumers remain pending in the
+pass. Two extracted execution/edge consumers, identity/rounding mutations and the
+full package gate also pass in the
 [successor evidence](../provenance/external-input-execution-2026-10.md). Existing
 four-member binding records and their execution evidence retain their exact scope.
