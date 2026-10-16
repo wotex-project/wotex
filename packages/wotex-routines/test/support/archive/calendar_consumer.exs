@@ -263,6 +263,63 @@ defmodule CalendarArchiveConsumerTest do
     assert hd(fresh.occurrences)["original"] == occurrence["original"]
   end
 
+  test "real calendar Time@2 pages bind UTC generation and refuse grammar reuse", c do
+    request =
+      request(
+        c,
+        "2026-10-13T07:00:00Z",
+        "Etc/UTC",
+        "2026-10-13T00:00:00Z",
+        "2026-10-17T00:00:00Z",
+        "FREQ=DAILY",
+        1
+      )
+
+    utc = DateTime.to_unix(~U[2026-10-13 07:00:00Z], :millisecond)
+
+    time =
+      Map.merge(c.time, %{
+        "format" => "wotex.routines.time@2",
+        "clock_generation" => "elapsed:archive",
+        "utc_generation" => "utc:archive",
+        "utc_low_ms" => utc,
+        "utc_high_ms" => utc
+      })
+
+    legacy =
+      time
+      |> Map.drop(~w(format utc_generation))
+      |> Map.put("clock_generation", "utc:archive")
+
+    assert {:ok, old} = Adapter.page(request, legacy, c.limits)
+    assert {:ok, page} = Adapter.page(request, time, c.limits)
+    assert coordinates(page) == coordinates(old)
+    assert page.time == time
+    assert hd(page.occurrences)["original"] == hd(old.occurrences)["original"]
+    occurrence = hd(page.occurrences)
+    compiled = program(c, request.schedule)
+    elapsed = %{time | "clock_generation" => "elapsed:replacement"}
+    assert {:ok, event} = Adapter.event(page, occurrence, compiled, elapsed, c.profile, c.limits)
+    assert event.data["clock_generation"] == "utc:archive"
+    assert {:ok, _} = Adapter.page(%{request | cursor: page.next_cursor}, elapsed, c.limits)
+    corrected = %{time | "utc_generation" => "utc:replacement"}
+
+    assert {:error, %Error{code: :stale_calendar_cursor}} =
+             Adapter.page(%{request | cursor: page.next_cursor}, corrected, c.limits)
+
+    assert {:error, %Error{code: :stale_calendar_cursor}} =
+             Adapter.page(%{request | cursor: page.next_cursor}, legacy, c.limits)
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Adapter.event(page, occurrence, compiled, corrected, c.profile, c.limits)
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Adapter.event(page, occurrence, compiled, legacy, c.profile, c.limits)
+
+    missing = %{time | "utc_generation" => nil, "utc_low_ms" => nil, "utc_high_ms" => nil}
+    assert {:error, %Error{code: :missing_utc_basis}} = Adapter.page(request, missing, c.limits)
+  end
+
   test "producer grammar/work refusals and submillisecond starts stay explicit", c do
     request =
       request(

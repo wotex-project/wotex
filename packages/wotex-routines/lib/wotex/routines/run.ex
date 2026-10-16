@@ -2,10 +2,11 @@ defmodule Wotex.Routines.Run do
   @moduledoc """
   Validates retained execution state for one original and program revision.
 
-  `new/4` takes a complete run map or native value, its compiled program,
-  `Wotex.Routines.Profile` and `Wotex.Routines.Limits`. It returns `{:ok, run}`
-  or `{:error, error}` with a `Wotex.Routines.Error`. `to_map/4` repeats these
-  checks before returning the complete retained representation.
+  `Wotex.Routines.Run.new/4` takes a complete run map or native value, its
+  compiled program, `Wotex.Routines.Profile` and `Wotex.Routines.Limits`.
+  It returns `{:ok, run}` or `{:error, error}` with a `Wotex.Routines.Error`.
+  `Wotex.Routines.Run.to_map/4` repeats these checks before returning the
+  complete retained representation.
 
   Validation regenerates every expanded node's path and original, then checks
   program/source/compiler identities, elapsed coordinates and deadlines,
@@ -13,6 +14,29 @@ defmodule Wotex.Routines.Run do
   references. Missing or altered records cannot be repaired by updating only a
   digest. Admission, handoff, local queue, protocol response and qualified report
   receipts remain separate slots with distinct completion meanings.
+
+  The original `"wotex.routines.run@1"` representation retains its exact outer
+  members and seven receipt slots. `"wotex.routines.run@2"` adds a required
+  `"time_format"`, selected as `"wotex.routines.time@1"` or
+  `"wotex.routines.time@2"`, and an eighth `"satisfied"` receipt slot on every
+  step. That slot is `nil` or a closed `"ref"`/`"digest"`/`"outcome"` record
+  with outcome `"matched"`. The kernel hashes the complete satisfied Event for
+  that digest. A satisfied effect must be completed, target an absolute
+  Property write requiring
+  `"reported_match"`, and have no handoff or result-stage receipts. Admission
+  is absent or held, with its exact retained spend. Mixed receipt stages,
+  satisfied non-effect nodes and missing held spend refuse coherence checks.
+  Construction preserves the supplied format and never upgrades history.
+
+  A new kernel run under Time@2 is Run@2 with Time@2 correspondence. A new run
+  under the original five-member Time remains Run@1. Continuation must use the
+  run's retained time grammar; `Wotex.Routines.Kernel.advance/7` refuses
+  `:clock_format_mismatch` before changing history when the grammar differs.
+  A generation replacement within that grammar follows ordinary clock expiry.
+  Only an accepted current-state satisfaction promotes a kernel Run@1 to
+  Run@2 with `"time_format" => "wotex.routines.time@1"`. It adds nil satisfied
+  slots to the other steps and preserves their identities, receipts, branches
+  and spent references; resume and ordinary receipts do not promote a run.
 
   Obtain transitions from `Wotex.Routines.Kernel.advance/7`, retain the returned
   run data, and supply it in the next call's original/busy prior state as
@@ -41,9 +65,9 @@ defmodule Wotex.Routines.Run do
   def new(input, program, profile, limits) do
     with {:ok, program} <- Compiler.to_map(program, profile, limits),
          {:ok, data, limits} <- Validation.admit(input, limits, __MODULE__),
-         :ok <- Validation.fields(data, @fields),
+         :ok <- fields(data),
          :ok <- header(data, program, limits),
-         {:ok, expected} <- ExecutionTree.records(program, data["original"], limits),
+         {:ok, expected} <- ExecutionTree.records(program, data["original"], limits, data["format"]),
          :ok <- steps(data, expected, program, limits),
          :ok <- spent(data),
          :ok <- tree_coherence(data, program),
@@ -58,8 +82,25 @@ defmodule Wotex.Routines.Run do
     with {:ok, run} <- new(run, program, profile, limits), do: {:ok, run.data}
   end
 
+  defp fields(%{"format" => "wotex.routines.run@2"} = data) do
+    with :ok <- Validation.fields(data, ["time_format" | @fields]) do
+      Validation.choice(
+        data["time_format"],
+        ~w(wotex.routines.time@1 wotex.routines.time@2),
+        "/time_format"
+      )
+    end
+  end
+
+  defp fields(data), do: Validation.fields(data, @fields)
+
   defp header(data, program, limits) do
-    with :ok <- Validation.choice(data["format"], ["wotex.routines.run@1"], "/format"),
+    with :ok <-
+           Validation.choice(
+             data["format"],
+             ~w(wotex.routines.run@1 wotex.routines.run@2),
+             "/format"
+           ),
          :ok <- Validation.text(data["original"], "/original"),
          :ok <- Validation.text(data["epoch"], "/epoch"),
          :ok <- Validation.text(data["clock_generation"], "/clock_generation"),
@@ -99,22 +140,22 @@ defmodule Wotex.Routines.Run do
       nodes = ExecutionTree.nodes(program["ir"]["steps"])
 
       Validation.each(Enum.zip([actual, expected, nodes]), fn {record, expected, node} ->
-        record(record, expected, node, data, limits)
+        record(record, expected, node, data, program, limits)
       end)
     else
       Error.refusal(:invalid_run_paths)
     end
   end
 
-  defp record(record, expected, node, run, limits) do
+  defp record(record, expected, node, run, program, limits) do
     with :ok <- Validation.fields(record, Map.keys(expected)),
          true <-
            Map.take(record, ~w(path original kind)) == Map.take(expected, ~w(path original kind)),
          :ok <- Validation.choice(record["status"], @step_statuses, "/steps/status"),
          :ok <- step_time(record, run, limits),
          :ok <- branch(record),
-         :ok <- receipts(record["receipts"]) do
-      coherence(record, node, run)
+         :ok <- receipts(record["receipts"], run) do
+      coherence(record, node, run, program)
     else
       false -> Error.refusal(:invalid_run_paths)
       error -> error
@@ -141,8 +182,10 @@ defmodule Wotex.Routines.Run do
   defp branch(%{"kind" => kind, "branch" => nil}) when kind != "if", do: :ok
   defp branch(_), do: Error.refusal(:incoherent_branch)
 
-  defp receipts(data) do
-    with :ok <- Validation.fields(data, @slots) do
+  defp receipts(data, run) do
+    slots = if run["format"] == "wotex.routines.run@2", do: ["satisfied" | @slots], else: @slots
+
+    with :ok <- Validation.fields(data, slots) do
       Validation.each(Map.to_list(data), &receipt/1)
     end
   end
@@ -155,6 +198,7 @@ defmodule Wotex.Routines.Run do
         "admission" -> ~w(held refused)
         "handoff" -> ["marked"]
         "terminal" -> ~w(failed unknown)
+        "satisfied" -> ["matched"]
         _ -> ~w(accepted failed unknown)
       end
 
@@ -165,7 +209,33 @@ defmodule Wotex.Routines.Run do
     end
   end
 
-  defp coherence(%{"kind" => "effect"} = record, node, run) do
+  defp coherence(
+         %{"kind" => "effect", "receipts" => %{"satisfied" => receipt}} = record,
+         node,
+         run,
+         program
+       )
+       when is_map(receipt) do
+    admission = record["receipts"]["admission"]
+    affordance = ExecutionTree.basis(program, node)["affordance"]
+
+    valid =
+      run["format"] == "wotex.routines.run@2" and record["status"] == "completed" and
+        node["completion"] == "reported_match" and
+        Map.take(affordance, ~w(type operation)) == %{
+          "type" => "property",
+          "operation" => "writeproperty"
+        } and
+        (admission == nil or admission["outcome"] == "held") and
+        Enum.all?(
+          ~w(handoff local_queue protocol_response correlated_report reported_match terminal),
+          &(record["receipts"][&1] == nil)
+        )
+
+    if valid, do: :ok, else: Error.refusal(:incoherent_receipts)
+  end
+
+  defp coherence(%{"kind" => "effect"} = record, node, run, _) do
     receipts = record["receipts"]
     admission = receipts["admission"]
     held = is_map(admission) and admission["outcome"] == "held"
@@ -175,14 +245,15 @@ defmodule Wotex.Routines.Run do
       Enum.map(~w(local_queue protocol_response correlated_report reported_match), &receipts[&1])
 
     valid =
-      (not handoff or held) and
+      receipts["satisfied"] == nil and
+        (not handoff or held) and
         (not Enum.any?(stages, &(&1 != nil)) or handoff) and
         effect_status(record, node, held, handoff, run) and terminal_matches(receipts)
 
     if valid, do: :ok, else: Error.refusal(:incoherent_receipts)
   end
 
-  defp coherence(record, _, _) do
+  defp coherence(record, _, _, _) do
     if Enum.all?(Map.values(record["receipts"]), &is_nil/1) and
          record["status"] not in ~w(proposed reserved handed_off refused),
        do: :ok,

@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.6. Updated: 2026-10-15. Status: accepted target; implementation partial.
+Version: 0.2.10. Updated: 2026-10-16. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -443,3 +443,25 @@ The [civil archive cohort](../provenance/civil-time-cohort-2026-10.md) records t
 initial and renewed exact producer/runtime archives, ten current civil plus nine
 retained calendar cases, quality-component results and cleanup boundaries. Consumer-host transaction,
 clock and physical obligations remain open.
+
+## Independent clock continuation successor
+
+The [bounded run continuation contract](bounded-run-continuation-v1.md) owns
+Time@2, elapsed Edge@2, retained Run@2 time-format correspondence and grammar-bound
+temporal projections. These native foundations now pass fourteen new clock and
+adapter cases in the 137-case affected caller run. UTC correction/loss preserves
+otherwise qualified elapsed work; UTC-window runs compare their original
+window with utc_generation. Both retain whole-window and no-repeat requirements.
+
+Time@2 UTC pages refuse missing_utc_basis before producer work. Countdown pages
+use elapsed epoch/generation. Scalar occurrences retain an explicit Time@2
+marker; native calendar/civil pages keep their complete checked Time, and
+cursors cannot cross grammars even if generation strings match. Existing
+Time@1 calculations, cursors and original identities are unchanged. This selects
+no ExBooking release, qualifies no host clock and rebases no retained run.
+The [bounded continuation milestone](../provenance/bounded-continuation-2026-10.md) now passes 21 real
+calendar/civil archive cases, including Time@2 UTC-generation/grammar binding,
+with the exact development ExBooking archive. Both independent continuation
+consumers and all ten assertion-only mutations pass; the full owning gate passes
+241 tests at 95.5% coverage. Broader temporal hosts, installed clock qualification
+and physical effects remain separate obligations.

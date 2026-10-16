@@ -37,9 +37,11 @@ defmodule Wotex.Routines.ExecutionTree do
   end
 
   @doc false
-  @spec records(map(), String.t(), Limits.t()) ::
+  @spec records(map(), String.t(), Limits.t(), String.t()) ::
           {:ok, [map()]} | {:error, Wotex.Routines.Error.t()}
-  def records(program, original, limits) do
+  def records(program, original, limits, format \\ "wotex.routines.run@1") do
+    slots = if format == "wotex.routines.run@2", do: ["satisfied" | @slots], else: @slots
+
     program["ir"]["steps"]
     |> nodes()
     |> Enum.reduce_while({:ok, []}, fn node, {:ok, records} ->
@@ -53,7 +55,7 @@ defmodule Wotex.Routines.ExecutionTree do
             "started_ms" => nil,
             "deadline_ms" => nil,
             "branch" => nil,
-            "receipts" => Map.new(@slots, &{&1, nil})
+            "receipts" => Map.new(slots, &{&1, nil})
           }
 
           {:cont, {:ok, [record | records]}}

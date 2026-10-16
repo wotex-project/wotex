@@ -26,6 +26,8 @@ defmodule Wotex.Routines.CalendarAdapterTest do
             def occurrences("wrong", _, _), do: :unexpected
             def occurrences("raise", _, _), do: raise("PRIVATE_PRODUCER_CANARY")
             def occurrences(rule, start, options) do
+              key = {Wotex.Routines.CalendarAdapterTest, :calls}
+              Process.put(key, Process.get(key, 0) + 1)
               offset = if options[:cursor], do: options[:cursor].next_offset_days, else: 0
               values = for index <- offset..2 do
                 utc = DateTime.add(start, index * 86400, :second, Calendar.UTCOnlyTimeZoneDatabase)
@@ -117,6 +119,118 @@ defmodule Wotex.Routines.CalendarAdapterTest do
     assert {:error, %Error{code: :stale_calendar_page}} =
              Adapter.to_map(%{first | occurrences: []}, c.limits)
 
+    program = program(c, request)
+
+    assert {:ok, event} =
+             Adapter.event(first, hd(first.occurrences), program, c.time, c.profile, c.limits)
+
+    assert event.data["original"] == hd(first.occurrences)["original"]
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Adapter.event(
+               first,
+               hd(first.occurrences),
+               program,
+               %{c.time | "clock_generation" => "clock:2"},
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Adapter.event(first, hd(second.occurrences), program, c.time, c.profile, c.limits)
+  end
+
+  test "Time@2 calendar pages and cursors bind UTC generation and selected grammar", c do
+    request = request(c, "good", 1)
+
+    time =
+      Map.merge(c.time, %{
+        "format" => "wotex.routines.time@2",
+        "utc_generation" => "utc:1",
+        "utc_low_ms" => 0,
+        "utc_high_ms" => 0
+      })
+
+    legacy = %{c.time | "clock_generation" => "utc:1"}
+    {:ok, page} = Adapter.page(request, time, c.limits)
+    {:ok, old} = Adapter.page(request, legacy, c.limits)
+    assert page.time == time
+    assert hd(page.occurrences)["original"] == hd(old.occurrences)["original"]
+    assert hd(page.occurrences)["event"]["clock_generation"] == "utc:1"
+    assert page.next_cursor.clock_generation == "utc:1"
+    assert page.next_cursor.basis_digest != old.next_cursor.basis_digest
+    continued = %{request | cursor: page.next_cursor}
+    assert {:ok, _} = Adapter.page(continued, %{time | "clock_generation" => "elapsed:2"}, c.limits)
+
+    assert {:error, %Error{code: :stale_calendar_cursor}} =
+             Adapter.page(continued, %{time | "utc_generation" => "utc:2"}, c.limits)
+
+    assert {:error, %Error{code: :stale_calendar_cursor}} =
+             Adapter.page(continued, legacy, c.limits)
+
+    assert {:error, %Error{code: :stale_calendar_cursor}} =
+             Adapter.page(%{request | cursor: old.next_cursor}, time, c.limits)
+
+    program = program(c, request)
+    one = hd(page.occurrences)
+
+    assert {:ok, _} =
+             Adapter.event(
+               page,
+               one,
+               program,
+               %{time | "clock_generation" => "elapsed:2"},
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Adapter.event(
+               page,
+               one,
+               program,
+               %{time | "utc_generation" => "utc:2"},
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Adapter.event(page, one, program, legacy, c.profile, c.limits)
+  end
+
+  test "missing Time@2 UTC basis refuses before the calendar producer is called", c do
+    time = Map.merge(c.time, %{"format" => "wotex.routines.time@2", "utc_generation" => nil})
+    assert Process.get({__MODULE__, :calls}, 0) == 0
+
+    assert {:error, %Error{code: :missing_utc_basis}} =
+             Adapter.page(request(c, "good", 1), time, c.limits)
+
+    assert Process.get({__MODULE__, :calls}, 0) == 0
+  end
+
+  test "foreign producer output and faults stay typed and payload free", c do
+    for {rule, expected} <- [
+          {"work", :recurrence_work_bound},
+          {"cursor", :stale_calendar_cursor},
+          {"refuse", :recurrence_refused},
+          {"wrong", :producer_contract_error},
+          {"raise", :producer_contract_error},
+          {"many", :producer_contract_error},
+          {"bad-list", :producer_contract_error},
+          {"bad-shape", :producer_contract_error},
+          {"bad-coordinate", :producer_contract_error},
+          {"precision", :unsupported_temporal_precision},
+          {"bad-resolution", :unsupported_value},
+          {"bad-cursor", :producer_contract_error}
+        ] do
+      assert {:error, %Error{code: ^expected}} = Adapter.page(request(c, rule, 1), c.time, c.limits)
+    end
+
+    assert {:error, %Error{code: :producer_contract_error}} =
+             Adapter.page(request(c, "bad-order", 3), c.time, c.limits)
+  end
+
+  defp program(c, request) do
     source = %{
       "format" => "wotex.routines.source@1",
       "profile" => "bounded-composition@1",
@@ -146,45 +260,7 @@ defmodule Wotex.Routines.CalendarAdapterTest do
 
     {:ok, program} = Compiler.compile(source, context, c.profile, c.limits)
 
-    assert {:ok, event} =
-             Adapter.event(first, hd(first.occurrences), program, c.time, c.profile, c.limits)
-
-    assert event.data["original"] == hd(first.occurrences)["original"]
-
-    assert {:error, %Error{code: :stale_temporal_projection}} =
-             Adapter.event(
-               first,
-               hd(first.occurrences),
-               program,
-               %{c.time | "clock_generation" => "clock:2"},
-               c.profile,
-               c.limits
-             )
-
-    assert {:error, %Error{code: :stale_temporal_projection}} =
-             Adapter.event(first, hd(second.occurrences), program, c.time, c.profile, c.limits)
-  end
-
-  test "foreign producer output and faults stay typed and payload free", c do
-    for {rule, expected} <- [
-          {"work", :recurrence_work_bound},
-          {"cursor", :stale_calendar_cursor},
-          {"refuse", :recurrence_refused},
-          {"wrong", :producer_contract_error},
-          {"raise", :producer_contract_error},
-          {"many", :producer_contract_error},
-          {"bad-list", :producer_contract_error},
-          {"bad-shape", :producer_contract_error},
-          {"bad-coordinate", :producer_contract_error},
-          {"precision", :unsupported_temporal_precision},
-          {"bad-resolution", :unsupported_value},
-          {"bad-cursor", :producer_contract_error}
-        ] do
-      assert {:error, %Error{code: ^expected}} = Adapter.page(request(c, rule, 1), c.time, c.limits)
-    end
-
-    assert {:error, %Error{code: :producer_contract_error}} =
-             Adapter.page(request(c, "bad-order", 3), c.time, c.limits)
+    program
   end
 
   defp request(c, rule, limit) do

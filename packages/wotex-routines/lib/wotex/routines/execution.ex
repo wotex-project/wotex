@@ -1,7 +1,7 @@
 defmodule Wotex.Routines.Execution do
   @moduledoc false
 
-  alias Wotex.Routines.{Error, ExecutionTree, Limits, PredicateMachine, Profile}
+  alias Wotex.Routines.{Error, ExecutionTree, Limits, PredicateMachine, Profile, Proposal}
 
   @terminal ~w(completed refused failed unknown cancelled)
   @stopped ~w(completed refused failed unknown cancelled expired partial)
@@ -37,7 +37,9 @@ defmodule Wotex.Routines.Execution do
     end
   end
 
-  defp expired_step?(run, time) do
+  @doc false
+  @spec expired_step?(map(), map()) :: boolean()
+  def expired_step?(run, time) do
     Enum.any?(run["steps"], fn record ->
       record["kind"] in ~w(effect invoke) and record["status"] not in @terminal and
         is_integer(record["deadline_ms"]) and time["elapsed_ms"] >= record["deadline_ms"]
@@ -99,7 +101,7 @@ defmodule Wotex.Routines.Execution do
   defp execute(%{"kind" => "effect"} = node, _, state) do
     case state.records[node["path"]]["status"] do
       "unsent" ->
-        proposal = proposal(node, state)
+        proposal = Proposal.from_step(state.program, state.run, node, state.records[node["path"]])
         state = status(state, node, "proposed")
         {:ok, %{state | proposals: [proposal | state.proposals]}}
 
@@ -222,35 +224,6 @@ defmodule Wotex.Routines.Execution do
     do: put(state, node, %{state.records[node["path"]] | "status" => status})
 
   defp fail(node, state), do: status(state, node, "failed")
-
-  defp proposal(node, state) do
-    binding = state.program["context"]["bindings"][node["binding"]]
-    ref = binding["basis"]
-
-    basis = ExecutionTree.basis(state.program, node)
-
-    %{
-      "original" => state.run["original"],
-      "step_original" => state.records[node["path"]]["original"],
-      "program_digest" => state.program["ir_digest"],
-      "path" => node["path"],
-      "binding" => node["binding"],
-      "installed_basis" => ref,
-      "thing_id" => binding["thing_id"],
-      "resource_roles" => binding["resource_roles"],
-      "resource_domains" => domains(binding),
-      "operation" => basis["affordance"]["operation"],
-      "input" => node["input"],
-      "completion" => node["completion"],
-      "evidence_contract" => node["evidence_contract"]
-    }
-  end
-
-  defp domains(binding) do
-    [binding["thing_id"] | Map.values(binding["resource_roles"])]
-    |> Enum.uniq()
-    |> Enum.sort()
-  end
 
   defp finish(state) do
     steps = Enum.map(state.run["steps"], &state.records[&1["path"]])

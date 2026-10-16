@@ -118,6 +118,60 @@ defmodule Wotex.Routines.CivilAdapterTest do
   defp selected(:reverse, values), do: Enum.reverse(values)
   defp selected(_, values), do: values
 
+  test "Time@2 civil projections retain UTC generation independently of elapsed changes", c do
+    request = request(c)
+
+    time =
+      Map.merge(c.time, %{
+        "format" => "wotex.routines.time@2",
+        "utc_generation" => "utc:1",
+        "utc_low_ms" => 0,
+        "utc_high_ms" => 0
+      })
+
+    legacy = %{c.time | "clock_generation" => "utc:1"}
+    {:ok, page} = Civil.page(request, time, c.limits)
+    {:ok, old} = Civil.page(request, legacy, c.limits)
+    one = hd(page.occurrences)
+    assert page.time == time
+    assert one["event"]["clock_generation"] == "utc:1"
+    assert one["original"] == hd(old.occurrences)["original"]
+    program = F.program(c, c.schedule)
+
+    assert {:ok, _} =
+             Civil.event(
+               page,
+               one,
+               program,
+               %{time | "clock_generation" => "elapsed:2"},
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Civil.event(
+               page,
+               one,
+               program,
+               %{time | "utc_generation" => "utc:2"},
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Civil.event(page, one, program, legacy, c.profile, c.limits)
+
+    assert {:ok, fresh} = Civil.page(request, %{time | "utc_generation" => "utc:2"}, c.limits)
+    assert hd(fresh.occurrences)["original"] == one["original"]
+  end
+
+  test "missing Time@2 UTC basis refuses before the civil producer is called", c do
+    time = Map.merge(c.time, %{"format" => "wotex.routines.time@2", "utc_generation" => nil})
+    assert Process.get({__MODULE__, :calls}, 0) == 0
+    assert {:error, %Error{code: :missing_utc_basis}} = Civil.page(request(c), time, c.limits)
+    assert Process.get({__MODULE__, :calls}, 0) == 0
+  end
+
   test "checked JSON and events regenerate, preserve originals and bind current programs", c do
     request = request(c)
     assert {:ok, page} = Civil.page(request, c.time, c.limits)

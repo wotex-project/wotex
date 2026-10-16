@@ -17,6 +17,7 @@ defmodule Wotex.Routines.Check.Archive do
           occurrence_archive: :string,
           civil_consumer: :boolean,
           composition_consumers: :boolean,
+          continuation_consumers: :boolean,
           profile_consumers: :boolean,
           model_consumer: :boolean,
           maude_path: :string
@@ -63,13 +64,15 @@ defmodule Wotex.Routines.Check.Archive do
     if opts[:model_consumer] == true and not is_binary(opts[:maude_path]),
       do: throw({:archive, "model consumer requires an explicit interpreter path"})
 
-    if producer || opts[:composition_consumers] || opts[:model_consumer] || opts[:profile_consumers] do
+    if producer || opts[:composition_consumers] || opts[:continuation_consumers] ||
+         opts[:model_consumer] || opts[:profile_consumers] do
       paths = artifacts!(producer, archive, temporary, opts[:profile_consumers])
 
       if producer,
         do: calendar_consumer!(producer, archive, paths, temporary, opts[:civil_consumer])
 
       if opts[:composition_consumers], do: composition_consumers!(archive, paths, temporary)
+      if opts[:continuation_consumers], do: continuation_consumers!(archive, paths, temporary)
       if opts[:model_consumer], do: model_consumer!(archive, paths, temporary, opts[:maude_path])
       if opts[:profile_consumers], do: profile_consumers!(paths, temporary)
     end
@@ -234,6 +237,180 @@ defmodule Wotex.Routines.Check.Archive do
         |> String.replace_prefix(prefix, "")
         |> JSON.decode!()
     end
+  end
+
+  defp continuation_consumers!(archive, paths, temporary) do
+    for family <- ~w(source journal) do
+      consumer = Path.join(temporary, "continuation-" <> family)
+      tests = Path.join(consumer, "test")
+      File.mkdir_p!(tests)
+
+      dependencies =
+        Enum.map(paths, fn {app, path} -> {app, [path: path, env: :prod, override: true]} end)
+
+      File.write!(Path.join(consumer, "mix.exs"), consumer_project(dependencies))
+      File.write!(Path.join(tests, "test_helper.exs"), "ExUnit.start()\n")
+
+      copy_fixture!(
+        "test/support/archive/continuation_#{family}_consumer.exs",
+        Path.join(tests, "continuation_consumer_test.exs")
+      )
+
+      copy_fixture!(
+        "test/support/archive/identity_consumer.exs",
+        Path.join(tests, "identity_test.exs")
+      )
+
+      script = Path.join(consumer, "continuation_mutations.exs")
+      copy_fixture!("test/support/archive/continuation_mutation_consumer.exs", script)
+
+      environment = [
+        {"WOTEX_PATH_DEPS", nil},
+        {"MIX_ENV", "test"},
+        {"MIX_BUILD_PATH", nil},
+        {"MIX_BUILD_ROOT", nil},
+        {"MIX_DEPS_PATH", nil},
+        {"WOTEX_ROUTINES_CONSUMER_ROOT", consumer},
+        {"WOTEX_ROUTINES_COMPILER_BASIS", "sha256:" <> sha256(archive)}
+      ]
+
+      IO.puts("continuation consumer: " <> family)
+      run!(["deps.get"], consumer, environment)
+      run!(["compile", "--warnings-as-errors"], consumer, environment)
+      run!(["test", "--warnings-as-errors"], consumer, environment)
+
+      IO.puts(
+        family <> " continuation consumer lock sha256: " <> sha256(Path.join(consumer, "mix.lock"))
+      )
+
+      baseline = continuation_run!(consumer, environment, script, "baseline")
+
+      unless baseline.status == 0 and baseline.result["total"] == 4 and
+               baseline.result["failures"] == 0 and baseline.assertions["errors"] == 0 do
+        IO.write(baseline.output)
+        throw({:archive, "continuation mutation baseline failed: " <> family})
+      end
+
+      IO.puts(family <> " continuation mutation baseline: 4 cases, 0 failures, 0 errors")
+
+      for {name, filename, changes} <- continuation_mutations() do
+        source =
+          paths
+          |> Keyword.fetch!(:wotex_routines)
+          |> Path.join("lib/wotex/routines/" <> filename)
+          |> File.read!()
+
+        changed =
+          Enum.reduce(changes, source, fn {from, to}, bytes ->
+            unless length(String.split(bytes, from)) == 2,
+              do: throw({:archive, "continuation mutation site changed: " <> name})
+
+            String.replace(bytes, from, to, global: false)
+          end)
+
+        replacement = Path.join(consumer, name <> ".ex")
+        File.write!(replacement, changed)
+        mutant = continuation_run!(consumer, environment, script, replacement)
+
+        unless mutant.status == 1 and mutant.result["total"] == 4 and mutant.result["failures"] > 0 and
+                 mutant.assertions["assertions"] > 0 and mutant.assertions["errors"] == 0 do
+          IO.write(mutant.output)
+
+          throw(
+            {:archive,
+             "continuation mutation survived or harness failed: " <> family <> "/" <> name}
+          )
+        end
+
+        IO.puts(
+          family <>
+            "/" <>
+            name <>
+            ": #{mutant.result["failures"]} assertion failures, #{mutant.assertions["errors"]} errors across #{mutant.result["total"]} cases"
+        )
+      end
+    end
+  end
+
+  defp continuation_run!(consumer, environment, script, replacement) do
+    {output, status} =
+      System.cmd("mix", ["run", "--no-start", "--no-compile", script, replacement],
+        cd: consumer,
+        env: environment,
+        stderr_to_stdout: true
+      )
+
+    result = continuation_marker!(output, "CONTINUATION_RESULT=")
+    assertions = continuation_marker!(output, "CONTINUATION_ASSERTIONS=")
+    %{status: status, result: result, assertions: assertions, output: output}
+  end
+
+  defp continuation_marker!(output, prefix) do
+    case output |> String.split("\n") |> Enum.find(&String.starts_with?(&1, prefix)) do
+      nil ->
+        IO.write(output)
+        throw({:archive, "continuation process/formatter failed"})
+
+      line ->
+        line |> String.replace_prefix(prefix, "") |> JSON.decode!()
+    end
+  end
+
+  defp continuation_mutations do
+    fake_stages = """
+    steps = Enum.map(steps, fn record ->
+      if record["path"] == event["path"] do
+        receipts = record["receipts"]
+        admission = receipts["admission"] || %{ "ref" => "invented:charge", "digest" => receipts["satisfied"]["digest"], "outcome" => "held" }
+        report = %{receipts["satisfied"] | "outcome" => "accepted"}
+        record |> put_in(["receipts", "admission"], admission) |> put_in(["receipts", "handoff"], %{report | "outcome" => "marked"}) |> put_in(["receipts", "reported_match"], report) |> put_in(["receipts", "satisfied"], nil)
+      else
+        record
+      end
+    end)
+    spent = Enum.flat_map(steps, fn record ->
+      case record["receipts"]["admission"] do
+        %{ "outcome" => "held", "ref" => ref } -> [%{ "original" => record["original"], "ref" => ref }]
+        _ -> []
+      end
+    end)
+    {:ok, %{run | "steps" => steps, "spent" => spent}}
+    """
+
+    refund = """
+    steps = Enum.map(steps, fn record ->
+      if record["path"] == event["path"], do: put_in(record, ["receipts", "admission"], nil), else: record
+    end)
+    spent = Enum.flat_map(steps, fn record ->
+      case record["receipts"]["admission"] do
+        %{ "outcome" => "held", "ref" => ref } -> [%{ "original" => record["original"], "ref" => ref }]
+        _ -> []
+      end
+    end)
+    {:ok, %{run | "steps" => steps, "spent" => spent}}
+    """
+
+    [
+      {"root_creation", "kernel.ex",
+       [
+         {":ok <- correspondence(program, event, snapshot, prior, time),",
+          "event <- if(event[\"kind\"] == \"resume\" and prior[\"original\"] == nil, do: %{event | \"kind\" => \"manual\"}, else: event),\n         :ok <- correspondence(program, event, snapshot, prior, time),"}
+       ]},
+      {"utc_elapsed", "kernel.ex",
+       [
+         {"run[\"clock_generation\"] != time[\"clock_generation\"]",
+          "run[\"clock_generation\"] != ClockBasis.utc_generation(time)"}
+       ]},
+      {"fake_handoff", "satisfaction.ex", [{"{:ok, %{run | \"steps\" => steps}}", fake_stages}]},
+      {"refunded_spend", "satisfaction.ex", [{"{:ok, %{run | \"steps\" => steps}}", refund}]},
+      {"pending_omission", "collection.ex",
+       [
+         {"defp pending(entry, %{\"run\" => run}, time, profile, limits) do",
+          "defp pending(entry, %{\"run\" => run} = result, time, profile, limits) do"},
+         {"{:ok, proposals, states}\n    end\n  end\n\n  defp pending_bound",
+          "proposals = Enum.filter(proposals, &(&1 in result[\"proposals\"]))\n      ids = Enum.map(proposals, & &1[\"step_original\"])\n      states = Enum.filter(states, &(&1[\"step_original\"] in ids))\n      {:ok, proposals, states}\n    end\n  end\n\n  defp pending_bound"}
+       ]}
+    ]
   end
 
   defp calendar_consumer!(producer, archive, paths, temporary, civil?) do

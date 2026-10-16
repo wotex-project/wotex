@@ -2,13 +2,21 @@ defmodule Wotex.Routines.Edge do
   @moduledoc """
   Advances retained reported-edge state over explicit facts and elapsed time.
 
-  `advance/7` takes a compiled program, its fact event, complete snapshot,
-  explicit time, prior edge data or `nil`, `Wotex.Routines.Profile` and
+  `Wotex.Routines.Edge.advance/7` takes a compiled program, its fact event,
+  complete snapshot, explicit time, prior edge data or `nil`,
+  `Wotex.Routines.Profile` and
   `Wotex.Routines.Limits`. It returns `{:ok, result}` containing `"edge"`,
   `"eligible"` and `"reason"`, or `{:error, error}` with a
   `Wotex.Routines.Error`. Retain the returned edge data even when eligibility
-  is false. `new/4` and `to_map/4` revalidate retained state against the complete
-  regenerated program, returning `{:ok, edge}` and `{:ok, data}` respectively.
+  is false. `Wotex.Routines.Edge.new/4` and `Wotex.Routines.Edge.to_map/4`
+  revalidate retained state against the complete regenerated program, returning
+  `{:ok, edge}` and `{:ok, data}` respectively.
+
+  An advance with Time@2 returns `"wotex.routines.edge@2"`, adding
+  `"time_format" => "wotex.routines.time@2"` to the original edge member set.
+  Its `"epoch"` and `"clock_generation"` retain only the elapsed clock basis.
+  The original five-member Time produces the unchanged Edge@1 representation.
+  Constructors preserve the selected edge format.
 
   Eligibility requires a new, qualified continuous report. The first qualified
   sample establishes a baseline; unknown, lost, retained or replayed input
@@ -22,8 +30,12 @@ defmodule Wotex.Routines.Edge do
   external record from `Wotex.Routines.Input.binding_basis/3`. The latter keeps
   its external profile identity and embedded installed mapping, which is fully
   revalidated against the current program registry and selected Basis. A valid
-  binding/source or clock replacement resets the baseline. A stale program or
-  invalid retained mapping instead refuses with `:stale_edge` or a structured
+  binding/source, elapsed-clock or time-grammar replacement resets the baseline
+  and consumes no old candidate or cooldown. A Time@2 UTC generation correction
+  alone preserves elapsed qualification. Current source-age requirements still
+  apply: missing required UTC confidence makes the value unknown and resets
+  qualification. A stale program or invalid retained mapping instead refuses
+  with `:stale_edge` or a structured
   validation error; the caller must explicitly supply `nil` to start fresh under
   valid new inputs. Neither path reuses an earlier positive edge.
 
@@ -35,6 +47,7 @@ defmodule Wotex.Routines.Edge do
   """
 
   alias Wotex.Routines.{
+    ClockBasis,
     Compiler,
     Error,
     Event,
@@ -59,7 +72,7 @@ defmodule Wotex.Routines.Edge do
   def new(input, program, profile, limits) do
     with {:ok, program} <- Compiler.to_map(program, profile, limits),
          {:ok, data, limits} <- Validation.admit(input, limits, __MODULE__),
-         :ok <- Validation.fields(data, @fields),
+         :ok <- fields(data),
          :ok <- identity(data, program, limits),
          :ok <- coordinates(data, limits),
          :ok <- sample(data, limits) do
@@ -93,6 +106,14 @@ defmodule Wotex.Routines.Edge do
   defp retained(nil, _, _, _), do: {:ok, nil}
   defp retained(prior, program, profile, limits), do: to_map(prior, program, profile, limits)
 
+  defp fields(%{"format" => "wotex.routines.edge@2"} = data) do
+    with :ok <- Validation.fields(data, ["time_format" | @fields]) do
+      Validation.choice(data["time_format"], ["wotex.routines.time@2"], "/time_format")
+    end
+  end
+
+  defp fields(data), do: Validation.fields(data, @fields)
+
   defp identity(data, program, limits) do
     trigger = program["ir"]["trigger"]
     basis = data["binding_basis"]
@@ -100,7 +121,12 @@ defmodule Wotex.Routines.Edge do
     with true <-
            trigger["kind"] == "edge" and data["binding"] == trigger["binding"] and
              data["program_digest"] == program["ir_digest"],
-         :ok <- Validation.choice(data["format"], ["wotex.routines.edge@1"], "/format"),
+         :ok <-
+           Validation.choice(
+             data["format"],
+             ~w(wotex.routines.edge@1 wotex.routines.edge@2),
+             "/format"
+           ),
          :ok <- binding_basis(basis, data["binding"], program, limits),
          :ok <- Validation.text(data["epoch"], "/epoch"),
          :ok <- Validation.text(data["clock_generation"], "/clock_generation") do
@@ -193,8 +219,8 @@ defmodule Wotex.Routines.Edge do
 
     replaced =
       prior == nil or
-        Map.take(prior, ~w(binding_basis epoch clock_generation)) !=
-          Map.take(edge, ~w(binding_basis epoch clock_generation))
+        Map.take(prior, ~w(format binding_basis epoch clock_generation)) !=
+          Map.take(edge, ~w(format binding_basis epoch clock_generation))
 
     retained = if replaced, do: edge, else: prior
     values = ObservationView.values(program, snapshot, time, limits)
@@ -248,8 +274,13 @@ defmodule Wotex.Routines.Edge do
   defp initial(program, snapshot, time) do
     binding = program["ir"]["trigger"]["binding"]
 
-    %{
-      "format" => "wotex.routines.edge@1",
+    format =
+      if ClockBasis.format(time) == "wotex.routines.time@2",
+        do: "wotex.routines.edge@2",
+        else: "wotex.routines.edge@1"
+
+    edge = %{
+      "format" => format,
       "program_digest" => program["ir_digest"],
       "binding" => binding,
       "binding_basis" => snapshot["binding_bases"][binding],
@@ -265,6 +296,8 @@ defmodule Wotex.Routines.Edge do
       "cooldown_until_ms" => 0,
       "last_original" => nil
     }
+
+    ClockBasis.bind_format(edge, time)
   end
 
   defp remember(edge, fact, digest, time),

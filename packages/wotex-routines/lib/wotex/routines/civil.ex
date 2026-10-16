@@ -2,7 +2,8 @@ defmodule Wotex.Routines.Civil do
   @moduledoc """
   Adapts finite civil calendar queries into original routine points.
 
-  Construct a `Wotex.Routines.CivilRequest`, then call `page/3` with explicit
+  Construct a `Wotex.Routines.CivilRequest`, then call
+  `Wotex.Routines.Civil.page/3` with explicit
   `Wotex.Routines.Time` and `Wotex.Routines.Limits`. Success is `{:ok, page}` with
   a `Wotex.Routines.CivilPage`; failures are `{:error, error}` containing a
   `Wotex.Routines.Error`. The adapter calls only ExBooking's public civil
@@ -33,8 +34,8 @@ defmodule Wotex.Routines.Civil do
   refuses the entire page, without partial output, continuation, retry or automatic
   query splitting. Consumers may explicitly split the local-date span while
   retaining the policies and original identities, and own the combined ordering.
-  Existing `Wotex.Routines.Calendar` and scalar `Wotex.Routines.Temporal` behavior
-  remains unchanged.
+  Original-occurrence and scalar schedules use the separate
+  `Wotex.Routines.Calendar` and `Wotex.Routines.Temporal` adapters.
 
   Each original hashes the schedule digest, original coordinate/resolution and
   declared bases together with the database basis. A module database is identified
@@ -44,19 +45,26 @@ defmodule Wotex.Routines.Civil do
   original. These identities do not authenticate callback code or database data;
   the consumer owns immutable custody and callback work/runtime bounds.
 
-  `to_map/2` regenerates the page from retained inputs and requires exact equality
-  before returning an occurrences-only map. `event/6` also requires an exact
-  member, the current clock generation and a matching compiled due trigger's
-  schedule identity/basis, then binds the program digest to a checked
-  `Wotex.Routines.Event`.
-  Calculation permits absent UTC confidence. Neither a page, descriptor nor
-  checked Event supplies current clock trust, atomic admission, durable no-repeat
+  `Wotex.Routines.Civil.to_map/2` regenerates the page from retained inputs
+  and requires exact equality before returning an occurrences-only map.
+  `Wotex.Routines.Civil.event/6` also requires an exact member, matching current
+  time grammar/UTC generation and a compiled due trigger's schedule identity
+  and basis, then binds the program digest to a checked `Wotex.Routines.Event`.
+
+  The native page retains its complete checked Time. With Time@2, due
+  descriptors use `"utc_generation"`; elapsed-generation changes alone do not
+  stale that UTC projection. Absent Time@2 UTC confidence refuses
+  `:missing_utc_basis` before database localization or enumeration. The original
+  five-member Time retains its single-generation behavior and permits inert
+  calculation without UTC confidence. Neither a page, descriptor nor checked
+  Event supplies current clock trust, atomic admission, durable no-repeat
   history or effect authority; those remain consumer responsibilities.
   """
 
   alias Wotex.Routines.{
     CivilPage,
     CivilRequest,
+    ClockBasis,
     Compiler,
     Error,
     Event,
@@ -79,8 +87,9 @@ defmodule Wotex.Routines.Civil do
   @spec page(term(), term(), Limits.t()) :: {:ok, CivilPage.t()} | {:error, Error.t()}
   def page(request, time, limits) do
     with {:ok, limits} <- Limits.new(limits),
-         {:ok, request} <- CivilRequest.current(request, limits),
          {:ok, time} <- Time.to_map(time, limits),
+         :ok <- ClockBasis.require_utc(time),
+         {:ok, request} <- CivilRequest.current(request, limits),
          {:ok, database_basis} <- database_basis(request.database, limits),
          {:ok, raw} <- enumerate(request),
          {:ok, occurrences} <- project(raw, request, time, database_basis, limits),
@@ -111,7 +120,7 @@ defmodule Wotex.Routines.Civil do
          {:ok, time} <- Time.to_map(time, limits),
          true <-
            occurrence in page.occurrences and
-             time["clock_generation"] == page.time["clock_generation"],
+             ClockBasis.utc_projection(time) == ClockBasis.utc_projection(page.time),
          :ok <- matches(program, page.request.schedule) do
       Event.new(Map.put(occurrence["event"], "program_digest", program["ir_digest"]), limits)
     else
@@ -292,7 +301,7 @@ defmodule Wotex.Routines.Civil do
         "schedule_basis" => schedule["definition_digest"],
         "due_ms" => due,
         "late_window_ms" => schedule["late_window_ms"],
-        "clock_generation" => time["clock_generation"],
+        "clock_generation" => ClockBasis.utc_generation(time),
         "time_zone_basis" => schedule["time_zone_basis"]
       }
 

@@ -51,6 +51,18 @@ defmodule Wotex.Routines.WitnessProperties do
   end
 
   defp missing_evidence?(record, threshold) do
+    not satisfied?(record, threshold) and missing_staged_evidence?(record, threshold)
+  end
+
+  defp satisfied?(record, "reported_match") do
+    match?(%{"outcome" => "matched"}, record["receipts"]["satisfied"]) and
+      record["receipts"]["handoff"] == nil and
+      Enum.all?(@ranks, fn {stage, _} -> record["receipts"][stage] == nil end)
+  end
+
+  defp satisfied?(_, _), do: false
+
+  defp missing_staged_evidence?(record, threshold) do
     record["receipts"]["handoff"] == nil or
       not Enum.any?(@ranks, fn {stage, rank} ->
         rank >= @ranks[threshold] and

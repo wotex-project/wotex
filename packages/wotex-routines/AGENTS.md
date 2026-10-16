@@ -53,6 +53,15 @@ The archive check accepts `--occurrence-archive /absolute/archive/ex_booking.tar
 
 `bin/check_archive.exs --composition-consumers` runs two independent extracted-archive composition consumers: source-AST transition correspondence and a consumer-owned journal/arbitration harness. The paired profile and provenance in the owning documentation distinguish these software checks from production host/physical qualification.
 
+`bin/check_archive.exs --continuation-consumers` runs independent source and
+journal consumers against one extracted core/Continuum/Routines cohort. Each
+has four behavioural cases and the cohort identity check. Five isolated
+dependency mutations in each family must fail through assertions with zero
+harness errors; compiler/loader failures do not count. The lane covers delayed
+edge-origin resume, Time@2, current-state satisfaction and retained complete
+pending arbitration. Archives, mutants and consumer builds are disposable and
+removed on exit. This software lane does not qualify a host or physical effect.
+
 `bin/check_archive.exs --model-consumer --maude-path /absolute/maude` runs the explicitly selected proposal-prefix native archive consumer against exact Hex ExMaude 0.5.0. The interpreter remains separately provisioned; this Port lane does not build the C-Node or qualify containment, execution admission or wider models.
 
 `bin/check_archive.exs --profile-consumers` runs two independent scalar consumers

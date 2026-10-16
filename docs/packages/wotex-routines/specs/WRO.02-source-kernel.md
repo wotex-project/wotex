@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.14. Updated: 2026-10-15. Status: accepted target; implementation partial.
+Version: 0.2.22. Updated: 2026-10-16. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -218,7 +218,7 @@ source_time_basis. The profile must equal its compiled installed basis.
 facts has those exact names and a complete WRO.01 Fact or explicit null for
 absence. Extra/missing slots refuse. A supplied stale Fact remains data and
 evaluates unknown; it does not update the expected binding basis.
-Time has exactly epoch, elapsed_ms, clock_generation
+Legacy Time@1 has exactly epoch, elapsed_ms, clock_generation
 and explicit UTC low/high millisecond coordinates (or both null). UTC coordinates
 are ordered; elapsed regression or epoch change expires unsent elapsed waits.
 Trusted source age uses WRO.01's clock basis/uncertainty and the complete current
@@ -245,8 +245,8 @@ conversion/type errors yield unknown, and negation never converts unknown into
 false. Boolean/enum values must match their installed domains. Malformed
 postfix instructions or stack shape return a typed error rather than truth.
 
-Events identify the exact program revision and original. Manual, due, fact,
-admission, handoff, result and cancel are separate kinds. An admission receipt
+Events identify the exact program revision and original. Manual, due, elapsed_due, fact,
+admission, handoff, result, cancel and resume are separate kinds. An admission receipt
 records held/refused after the consumer's transaction. Held work changes a
 proposed step to reserved and records its committed charge references; refusal
 retains the original with a terminal refused outcome. Handoff is a distinct
@@ -289,14 +289,14 @@ No absent original is inferred from an empty cache. The host selects these
 records from its durable original/current-run indexes.
 
 Event requires kind, original and program_digest plus only its kind's members:
-manual/cancel have no others; due has schedule_id, schedule_basis, due_ms, late_window_ms, clock_generation and time_zone_basis; elapsed_due has schedule_id, schedule_basis, due_elapsed_ms, late_window_ms, epoch, clock_generation and time_basis; fact has binding and fact_id; admission
+manual/cancel/resume have no others; due has schedule_id, schedule_basis, due_ms, late_window_ms, clock_generation and time_zone_basis; elapsed_due has schedule_id, schedule_basis, due_elapsed_ms, late_window_ms, epoch, clock_generation and time_basis; fact has binding and fact_id; admission
 has path, ref and outcome (held/refused); handoff has path and ref; result has
 path, ref, stage, outcome and report_contract. Result report_contract is null
 for queue/protocol stages and the exact installed reference for report stages.
 Every path is a nonnegative integer vector of at most 32 members; compilation refuses a longer expanded path. No receipt sets a new program,
 author, target, clock, grant or participant mapping.
 
-Run has exactly format, original, program_digest, source_digest,
+Run@1 has exactly format, original, program_digest, source_digest,
 compiler_basis, epoch, clock_generation, start_ms, last_ms, deadline_ms,
 status, steps, spent, window and reason. Format is wotex.routines.run@1.
 Window is explicit null or the complete retained UTC due/elapsed_due descriptor selected by the compiled trigger. reason is
@@ -523,3 +523,42 @@ pass. Two extracted execution/edge consumers, identity/rounding mutations and th
 full package gate also pass in the
 [successor evidence](../provenance/external-input-execution-2026-10.md). Existing
 four-member binding records and their execution evidence retain their exact scope.
+
+## Bounded continuation successor
+
+The [bounded run continuation contract](bounded-run-continuation-v1.md) owns
+neutral resume, separate elapsed/UTC Time, closed Run@2 unsent satisfaction and
+an opt-in complete pending Collection@2. Explicit aggregate Limits and resume
+are implemented with the 59-case focused foundation. Time@2, elapsed Edge@2,
+Run@2 and grammar-bound temporal projection are implemented; fourteen new
+clock/adapter cases join a 137-case affected caller run. Run and cursor grammar
+switches cannot reinterpret retained history.
+
+Time@2 keeps elapsed deadlines/countdown/edge qualification independent from UTC
+generation, while UTC-window work uses utc_generation and complete confidence.
+Scalar Time@2 occurrences explicitly retain time_format; native calendar/civil
+pages retain the complete checked Time. Missing required UTC basis refuses
+before producer work. Old Time@1/Run@1/Edge@1 and temporal originals remain
+unchanged. Concrete Witness frames retain the full selected Time and Run.
+
+Current-state satisfaction and exact Run@1 promotion are implemented. Eighteen
+native satisfaction cases cover typed matching, exact unit conversion, current
+root/invocation conditions, fixed paths, preserved reservation/spend, duplicate
+history and concrete Witness/schema replay. Two late-receipt regressions verify
+that recording completion cannot conceal a preexisting step deadline or refund
+a held charge.
+
+Complete pending Collection@2 is implemented with a separate opt-in input and
+parallel proposal_states. Sixteen native cases preserve proposed/reserved work
+and exact originals across repeated cuts, count all 1,024 effects from 64
+sixteen-effect members before a 16-group cutoff, retain charges/contributors,
+exclude current ineligible paths and reject hidden live history or rehashed
+forged proposals/states. Existing whole-set arbitration checks retained
+conflicts before batching. Shared Time@2 tests now cover both Collection
+formats. The [bounded continuation milestone](../provenance/bounded-continuation-2026-10.md) now passes both
+independent archives, all ten assertion-only mutation runs, 21 real calendar/
+civil archive cases and the full 241-test owning package gate at 95.5% coverage.
+BRC-T1–T8 close this bounded software successor. A v1 collection still reports
+newly emitted proposals; callers select Collection@2 for the complete eligible
+pending cut. Current consumer adoption and physical dispatch retain their own
+contracts and qualification obligations.

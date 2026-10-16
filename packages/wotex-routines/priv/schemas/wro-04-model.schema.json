@@ -1059,17 +1059,17 @@
         "max_bytes": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 1048576
+          "maximum": 67108864
         },
         "max_depth": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 32
+          "maximum": 64
         },
         "max_nodes": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 100000
+          "maximum": 2000000
         },
         "max_string_bytes": {
           "type": "integer",
@@ -1079,7 +1079,7 @@
         "max_collection_size": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 1024
+          "maximum": 8192
         },
         "max_integer": {
           "type": "integer",

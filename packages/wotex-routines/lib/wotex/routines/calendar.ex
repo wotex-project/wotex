@@ -1,10 +1,49 @@
 defmodule Wotex.Routines.Calendar do
-  @moduledoc "Direct optional SP.08 calendar adapter. Producer/database custody, original ledgers and execution remain consumer-owned."
+  @moduledoc """
+  Adapts an optional original-occurrence producer into bounded routine pages.
+
+  Construct a request with `Wotex.Routines.CalendarRequest.new/5`, explicitly
+  selecting the calendar schedule, finite UTC query, immutable database and
+  native continuation or `nil`. `Wotex.Routines.Calendar.page/3` takes that
+  request, `Wotex.Routines.Time` and `Wotex.Routines.Limits`. It returns
+  `{:ok, page}` with a `Wotex.Routines.CalendarPage`, or `{:error, error}` with
+  a `Wotex.Routines.Error`. It calls ExBooking's public original-occurrence
+  operation; an absent operation refuses `:recurrence_unavailable`. Work-bound
+  exhaustion refuses `:recurrence_work_bound`, other producer refusals use
+  `:recurrence_refused`, and malformed producer results or exceptions use
+  `:producer_contract_error`.
+
+  Requests select 1 through 1,024 results and at most 100,000 producer work
+  units in a half-open UTC horizon. Output limits cover the complete result.
+  Returned originals retain their schedule, original coordinate/ordinal,
+  resolution and declared bases. No availability interval supplies a trigger.
+  Submillisecond instants refuse rather than round.
+
+  With Time@2, UTC descriptors and the native cursor use `"utc_generation"`;
+  cursor correspondence also binds the selected time grammar. Absent Time@2
+  UTC confidence refuses `:missing_utc_basis` before database localization or
+  enumeration. The original five-member Time keeps its single-generation
+  behavior and permits inert calculation without UTC confidence. A page retains
+  its complete checked Time; changing only the elapsed generation does not
+  stale a Time@2 UTC projection.
+
+  `Wotex.Routines.Calendar.to_map/2` regenerates the native page and returns
+  `{:ok, data}` containing only `"occurrences"` and `"has_more"`. The native
+  cursor has no wire codec. `Wotex.Routines.Calendar.event/6` regenerates the
+  page, requires an exact member, matching time grammar/UTC generation and
+  matching compiled schedule, then returns a checked `Wotex.Routines.Event`.
+  A changed cursor or projection refuses instead of retrying on a new basis.
+
+  The consumer owns database and callback custody/work bounds, trusted clock
+  sampling, original ledgers and atomic execution admission. A page or Event
+  reads no ambient clock and supplies no physical handoff or effect authority.
+  """
 
   alias Wotex.Routines.{
     CalendarCursor,
     CalendarPage,
     CalendarRequest,
+    ClockBasis,
     Compiler,
     Error,
     Event,
@@ -18,9 +57,10 @@ defmodule Wotex.Routines.Calendar do
   @spec page(term(), term(), Limits.t()) :: {:ok, CalendarPage.t()} | {:error, Error.t()}
   def page(request, time, limits) do
     with {:ok, limits} <- Limits.new(limits),
-         {:ok, request} <- CalendarRequest.current(request, limits),
          {:ok, time} <- Time.to_map(time, limits),
-         {:ok, digest} <- basis(request, limits),
+         :ok <- ClockBasis.require_utc(time),
+         {:ok, request} <- CalendarRequest.current(request, limits),
+         {:ok, digest} <- basis(request, time, limits),
          {:ok, cursor} <- cursor(request.cursor, digest, time),
          {:ok, start} <- start(request),
          {:ok, from, _} <- DateTime.from_iso8601(request.query["from"]),
@@ -55,7 +95,7 @@ defmodule Wotex.Routines.Calendar do
          {:ok, time} <- Time.to_map(time, limits),
          true <-
            occurrence in page.occurrences and
-             time["clock_generation"] == page.time["clock_generation"],
+             ClockBasis.utc_projection(time) == ClockBasis.utc_projection(page.time),
          :ok <- matches(program, page.request.schedule) do
       Event.new(Map.put(occurrence["event"], "program_digest", program["ir_digest"]), limits)
     else
@@ -74,13 +114,16 @@ defmodule Wotex.Routines.Calendar do
   defp current(_, _), do: Error.refusal(:invalid_calendar_page)
   defp wire(page), do: %{"occurrences" => page.occurrences, "has_more" => page.next_cursor != nil}
 
-  defp basis(request, limits) do
+  defp basis(request, time, limits) do
     Validation.hash(
-      %{
-        "schedule_digest" => request.schedule["definition_digest"],
-        "horizon" => Map.take(request.query, ~w(from until)),
-        "database" => database_basis(request.database)
-      },
+      ClockBasis.bind_format(
+        %{
+          "schedule_digest" => request.schedule["definition_digest"],
+          "horizon" => Map.take(request.query, ~w(from until)),
+          "database" => database_basis(request.database)
+        },
+        time
+      ),
       limits
     )
   end
@@ -98,7 +141,7 @@ defmodule Wotex.Routines.Calendar do
   defp cursor(nil, _, _), do: {:ok, nil}
 
   defp cursor(cursor, digest, time) do
-    if cursor.basis_digest == digest and cursor.clock_generation == time["clock_generation"],
+    if cursor.basis_digest == digest and cursor.clock_generation == ClockBasis.utc_generation(time),
       do: {:ok, cursor.producer_cursor},
       else: Error.refusal(:stale_calendar_cursor)
   end
@@ -255,7 +298,7 @@ defmodule Wotex.Routines.Calendar do
         "schedule_basis" => schedule["definition_digest"],
         "due_ms" => due,
         "late_window_ms" => schedule["late_window_ms"],
-        "clock_generation" => time["clock_generation"],
+        "clock_generation" => ClockBasis.utc_generation(time),
         "time_zone_basis" => schedule["time_zone_basis"]
       }
 
@@ -270,7 +313,7 @@ defmodule Wotex.Routines.Calendar do
     {:ok,
      %CalendarCursor{
        basis_digest: digest,
-       clock_generation: time["clock_generation"],
+       clock_generation: ClockBasis.utc_generation(time),
        producer_cursor: cursor
      }}
   end

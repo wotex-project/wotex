@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.18. Updated: 2026-10-15. Accepted programme; the basis is partially implemented.
+Version: 0.2.27. Updated: 2026-10-16. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -102,3 +102,55 @@ and signed-floor mutations exclusively through assertions. A third passes actual
 ordinary Kernel execution with the optional reader absent. WRO.05's bounded
 software contract is implemented; current consumer admission, wider analysis and
 physical qualification are separate obligations.
+
+## Complete retained continuation addition
+
+[The accepted continuation successor](../specs/bounded-run-continuation-v1.md)
+owns the generic prerequisites for complete composed pending arbitration.
+Its closed clock/run/edge/event/collection alternatives and independent vectors
+are frozen in executable package paths. Schema checks establish shape; synthetic
+digests do not establish program, receipt or consumer correspondence.
+
+Explicit aggregate Limits and neutral resume are implemented with the 59-case
+focused foundation, including full 16/32/64-member results, a 1 MiB-only output
+refusal, delayed manual/edge/UTC/countdown and unknown-wait continuation, current
+expiry/membership and preserved handoff/spend. Time@2, elapsed Edge@2, Run@2 and
+grammar-bound temporal projections are implemented.
+Fourteen new clock/adapter cases join a 137-case affected caller run. They cover
+shared elapsed/UTC continuation, source-age independence, cross-grammar refusal,
+unchanged originals, missing-basis refusal before producer callbacks and complete
+Time@2 concrete Witness retention. These are native software checks; calendar/
+civil control-flow fixtures do not establish real producer semantics or clocks.
+
+Current-state satisfaction and exact Run@1 promotion now pass eighteen native
+cases, including typed/exact-unit matching, live conditions, fixed paths,
+sequence/parallel progression, duplicate history, held-spend/native coherence and
+concrete Witness/schema replay. Two late-receipt regressions retain receipt and
+charge history while preventing an expired step from enabling later work.
+Frozen staged models refuse a requested satisfaction environment.
+
+Complete pending Collection@2 and retained-set arbitration now pass sixteen
+native cases. The 64-member, sixteen-effect case preserves every one of 1,024
+pending identities across repeated cuts before a 16-group cutoff; narrowing to
+1,023 pending entries refuses. Reserved equivalents retain contributors and
+charges; current predicates/selected paths exclude ineligible work; missing live
+continuation and rehashed proposal/state forgeries refuse. Shared Time@2 tests
+cover both Collection formats. Requests to include complete-pending arbitration
+in the frozen staged model explicitly refuse unsupported_model_scope.
+
+The [bounded continuation milestone](../provenance/bounded-continuation-2026-10.md) closes this bounded successor:
+all 15 owning checks pass, with 241 tests, 95.5% coverage and clean package
+Dialyzer; each independent archive consumer passes five cases, and all five
+isolated mutations fail through assertions in each family with zero harness
+errors. Real calendar/civil archives pass 21 cases, including separate clocks.
+Exact source/cohort/locks, commands and artifact cleanup are recorded there.
+
+Continue the broader completion stages above and require the consumer's complete
+persistence/admission contracts before adoption. Frozen model omissions remain
+explicit; this bounded milestone does not complete WRO.01–04 or select a release
+or consumer dependency pin.
+
+Current consumer admission, durable roots, installed clocks/source continuity and
+physical qualification remain consumer obligations. No release or dependency pin
+changes from this plan. Keep the broader WRO.01–04 catalogue partial, use focused
+checks between logical commits and remove every disposable workspace on exit.

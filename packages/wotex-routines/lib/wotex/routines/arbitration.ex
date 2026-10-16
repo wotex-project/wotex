@@ -1,5 +1,44 @@
 defmodule Wotex.Routines.Arbitration do
-  @moduledoc "Whole-set conflict and equivalence decisions from explicit consumer constraints and overrides."
+  @moduledoc """
+  Resolves whole-set constraints, equivalence and resource conflicts before batching.
+
+  `Wotex.Routines.Arbitration.decide/5` takes a complete v1 or v2
+  `Wotex.Routines.Collection`, explicit dispositions, a positive batch limit,
+  `Wotex.Routines.Profile` and `Wotex.Routines.Limits`. It first regenerates
+  the collection through `Wotex.Routines.Collection.to_map/3`. Success returns
+  `{:ok, result}`; malformed inputs, stale correspondence and exceeded bounds
+  return `{:error, error}` with a `Wotex.Routines.Error`.
+
+  Dispositions have exactly one member per proposal's `"step_original"`.
+  Each value contains `"constraint"` selected from `"allowed"`, `"refused"`
+  or `"unknown"`, and `"override"` selected from `"none"`, `"selected"` or
+  `"suppressed"`. All proposals undergo those checks before equivalent
+  proposals are grouped and every eligible group's resource domains are
+  compared. A conflict beyond the eventual batch cutoff still affects the
+  decision. Only then is the batch limit applied to nonconflicting groups;
+  the limit counts groups, must not exceed the Profile's `"pending_work"`
+  selection, and cannot replace the collection's full proposal bound.
+
+  The result has exactly `"collection_digest"`, `"dispositions"`,
+  `"batch_limit"`, `"selected"` and `"decisions"`. Selected entries are groups
+  containing every eligible equivalent original contributor, including
+  reserved contributors from Collection@2. Decisions retain one outcome per
+  original: `"selected"`, `"coalesced"`, `"conflict"`, `"constraint-refused"`,
+  `"constraint-unknown"`, `"override-suppressed"` or `"batch-deferred"`.
+  The complete result must fit the supplied JSON limits.
+
+  Retain the complete regenerated collection separately: its digest binds the
+  input, transitions, proposals and v2 proposal states, while this result stores
+  only that digest. Join by `"step_original"` to reconcile proposed versus
+  already reserved contributors. A deferred proposal remains retained and may
+  participate in a later complete cut without a new original or trigger.
+
+  Selection is inert. The consumer owns actual membership, current authority,
+  durable charges, held resource claims and physical handoff. Reconcile those
+  atomically before acting; a selected reserved contributor grants no repeated
+  admission charge or handoff. This module performs no I/O, admission,
+  persistence or dispatch.
+  """
 
   alias Wotex.Routines.{Collection, Error, Limits, Profile, Validation}
 

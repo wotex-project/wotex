@@ -1403,17 +1403,17 @@
       "additionalProperties": false,
       "properties": {
         "max_bytes": {
-          "maximum": 1048576,
+          "maximum": 67108864,
           "minimum": 1,
           "type": "integer"
         },
         "max_collection_size": {
-          "maximum": 1024,
+          "maximum": 8192,
           "minimum": 1,
           "type": "integer"
         },
         "max_depth": {
-          "maximum": 32,
+          "maximum": 64,
           "minimum": 1,
           "type": "integer"
         },
@@ -1423,7 +1423,7 @@
           "type": "integer"
         },
         "max_nodes": {
-          "maximum": 100000,
+          "maximum": 2000000,
           "minimum": 1,
           "type": "integer"
         },

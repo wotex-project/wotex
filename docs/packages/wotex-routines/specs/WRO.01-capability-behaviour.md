@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.6. Updated: 2026-10-15. Status: accepted target.
+Version: 0.2.9. Updated: 2026-10-16. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -86,11 +86,11 @@ boundaries do not raise. Repeated construction is deterministic and inert.
 
 | Member | Allowed positive ceiling |
 | --- | --- |
-| `max_bytes` | 1048576 |
-| `max_depth` | 32 |
-| `max_nodes` | 100000 |
+| `max_bytes` | 67108864 |
+| `max_depth` | 64 |
+| `max_nodes` | 2000000 |
 | `max_string_bytes` | 65536 |
-| `max_collection_size` | 1024 |
+| `max_collection_size` | 8192 |
 | `max_integer` | 9223372036854775807 |
 
 The caller chooses each positive value at or below its ceiling. Core's public
@@ -263,3 +263,16 @@ null preservation through Continuum without supplying missing source UTC. The
 native checks, passing extracted execution consumers and the full package gate. Source-time
 requirements, freshness, source identity, units and current consumer qualification
 remain separate.
+
+## Bounded continuation successor
+
+The [bounded run continuation contract](bounded-run-continuation-v1.md) owns
+larger explicitly selected aggregate Limits. Those ceilings are now implemented
+as shown above; existing selections and all value, installation and qualification
+meanings stay unchanged. The 59-case focused foundation includes exact native
+ceiling/refusal checks and complete 16/32/64-member collections. The caller still
+selects its own envelope; maximum-sized members need not fit one aggregate.
+The [bounded continuation milestone](../provenance/bounded-continuation-2026-10.md) passes its independent
+archives, all ten assertion-only mutation runs and the full 241-test package gate
+at 95.5% coverage. This closes the bounded successor; wider capability, consumer
+admission and physical obligations remain separate.

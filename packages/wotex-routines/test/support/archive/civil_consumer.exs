@@ -265,6 +265,61 @@ defmodule CivilArchiveConsumerTest do
     end
   end
 
+  test "real civil Time@2 pages retain originals and fence their UTC grammar", c do
+    request = request(c)
+    utc = DateTime.to_unix(~U[2026-07-15 09:00:00Z], :millisecond)
+
+    time =
+      Map.merge(c.time, %{
+        "format" => "wotex.routines.time@2",
+        "clock_generation" => "elapsed:civil",
+        "utc_generation" => "utc:civil",
+        "utc_low_ms" => utc,
+        "utc_high_ms" => utc
+      })
+
+    legacy =
+      time
+      |> Map.drop(~w(format utc_generation))
+      |> Map.put("clock_generation", "utc:civil")
+
+    assert {:ok, old} = Civil.page(request, legacy, c.limits)
+    assert {:ok, page} = Civil.page(request, time, c.limits)
+    assert page.time == time
+    assert coordinates(page) == coordinates(old)
+    [point] = page.occurrences
+    assert point["original"] == hd(old.occurrences)["original"]
+    compiled = F.program(c, c.schedule)
+
+    assert {:ok, event} =
+             Civil.event(
+               page,
+               point,
+               compiled,
+               %{time | "clock_generation" => "elapsed:replacement"},
+               c.profile,
+               c.limits
+             )
+
+    assert event.data["clock_generation"] == "utc:civil"
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Civil.event(
+               page,
+               point,
+               compiled,
+               %{time | "utc_generation" => "utc:replacement"},
+               c.profile,
+               c.limits
+             )
+
+    assert {:error, %Error{code: :stale_temporal_projection}} =
+             Civil.event(page, point, compiled, legacy, c.profile, c.limits)
+
+    missing = %{time | "utc_generation" => nil, "utc_low_ms" => nil, "utc_high_ms" => nil}
+    assert {:error, %Error{code: :missing_utc_basis}} = Civil.page(request, missing, c.limits)
+  end
+
   test "database context and schedule bind originals while query and clock do not", c do
     request = request(c)
     assert {:ok, page} = Civil.page(request, c.time, c.limits)

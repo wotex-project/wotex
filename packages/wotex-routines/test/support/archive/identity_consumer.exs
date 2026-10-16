@@ -13,6 +13,11 @@ defmodule CompositionArchiveIdentityTest do
     for module <- [
           Wotex.Routines.Compiler,
           Wotex.Routines.Kernel,
+          Wotex.Routines.Collection,
+          Wotex.Routines.Arbitration,
+          Wotex.Routines.Time,
+          Wotex.Routines.Event,
+          Wotex.Routines.Run,
           Wotex.Routines.Witness,
           Wotex.JSON,
           WotexContinuum

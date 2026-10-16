@@ -1,11 +1,35 @@
 defmodule Wotex.Routines.Witness do
   @moduledoc """
-  Bounded, pure concrete replay of an explicitly supplied runtime counterexample.
+  Replays a finite supplied counterexample through the pure routine kernel.
 
-  Replay retains a mathematical original ledger and calls the public kernel for
-  each complete event/snapshot/time frame. It checks four declared software
-  properties against the returned records. Inputs assert a finite environment;
-  they supply no authenticated history, model search, physical evidence or grant.
+  `Wotex.Routines.Witness.replay/4` takes a compiled program, closed witness
+  map, `Wotex.Routines.Profile` and `Wotex.Routines.Limits`. The witness binds
+  the exact program/source/compiler identities, selects a software property,
+  and supplies initial retained runs/edge plus complete event/snapshot/time
+  frames. It selects at most 256 frames and 1,024 originals, further bounded
+  by the caller's Limits. Initial state may contain at most one live run.
+
+  Replay retains an original ledger, calls `Wotex.Routines.Kernel.advance/7`
+  for each frame and checks `"proposal_once"`, `"held_spend_retained"`,
+  `"stopped_continuation"` or `"completion_evidence"`. Success returns
+  `{:ok, result}` with the trace/program identities, complete transitions,
+  `"reproduced"` and the first zero-based `"violation_step"` or `nil`.
+  Invalid inputs or failed transition correspondence return `{:error, error}`
+  with a `Wotex.Routines.Error`; full nested results must fit the supplied
+  limits without truncation.
+
+  The completion-evidence property accepts a coherent satisfied receipt for an
+  unsent absolute Property write requiring `"reported_match"`, as well as the
+  existing qualified handoff/result stages. `Wotex.Routines.Run` still checks
+  receipt, path and held-spend coherence, and a fresh satisfaction frame must
+  pass the kernel's current Fact qualification. A retained receipt is history;
+  replay does not manufacture handoff or refund admission spend. This concrete
+  replay support does not broaden `Wotex.Routines.Model`'s frozen model scopes.
+
+  The consumer supplies the finite environment, authentic originals, qualified
+  observations and clock bases. Replay performs no model search, persistence
+  or physical effect. A nonviolating trace proves no universal safety claim,
+  and neither result authenticates history or grants execution authority.
   """
 
   alias Wotex.Routines.{

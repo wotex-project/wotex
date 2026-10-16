@@ -73,7 +73,7 @@ defmodule Wotex.Routines.SourceTest do
 
     for selected <- [
           %{c.limits.data | "max_bytes" => 0},
-          %{c.limits.data | "max_depth" => 33},
+          %{c.limits.data | "max_depth" => 65},
           %{c.limits.data | "max_integer" => 9_223_372_036_854_775_808},
           Map.delete(c.limits.data, "max_nodes"),
           Map.put(c.limits.data, "extra", 1)

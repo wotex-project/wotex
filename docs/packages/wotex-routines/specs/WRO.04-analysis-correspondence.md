@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.6. Updated: 2026-10-14. Status: accepted target; implementation partial.
+Version: 0.2.12. Updated: 2026-10-16. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -464,3 +464,28 @@ results inconclusive. Wider receipt history/time/composition/complete-set and
 concrete witness translation obligations remain open.
 The [receipt-runner cohort](../provenance/receipt-runner-2026-10.md) retains its
 exact source, archives, interpreter, lock and executed checks.
+
+## Continuation correspondence successor
+
+The [bounded run continuation contract](bounded-run-continuation-v1.md) adds
+explicit Time@2/Run@2, unsent satisfaction and complete pending Collection@2.
+Model and Witness boundaries must either preserve the complete supported
+semantics or return unsupported scope; omission, clock relabelling, a fabricated
+handoff or loss of retained pending contributors cannot establish correspondence.
+Concrete Witness replay now retains complete Time@2 frames and Run@2 results;
+its native delay/resume case passes in the 137-case affected caller run.
+Concrete satisfaction replay now checks all four runtime properties without
+fabricating handoff evidence; actual accepted Runs and replay frames/results
+validate against the frozen schemas. A requested satisfaction environment
+explicitly refuses unsupported_model_scope in the existing frozen staged Model.
+These are native cases in `test/wotex/routines/satisfaction_test.exs`.
+A requested complete-pending arbitration environment also explicitly refuses
+unsupported_model_scope, exercised in
+`test/wotex/routines/pending_collection_test.exs`. Frozen model identities retain
+their exact omissions. The [bounded continuation milestone](../provenance/bounded-continuation-2026-10.md) now passes
+independent source/journal continuation consumers and all ten assertion-only
+mutations with zero harness errors. The full owning gate passes 241 tests at
+95.5% coverage, including package Dialyzer. This closes the bounded successor's
+explicit concrete/unsupported-scope correspondence. Wider supported models,
+model/witness translations, containment and current consumer admission retain
+their broader obligations.

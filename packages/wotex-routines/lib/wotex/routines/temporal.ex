@@ -1,7 +1,51 @@
 defmodule Wotex.Routines.Temporal do
-  @moduledoc "Bounded scalar schedule pages and explicit program binding. Calculation neither reads a clock nor starts a timer."
+  @moduledoc """
+  Enumerates bounded scalar schedule pages and binds exact original events.
 
-  alias Wotex.Routines.{Compiler, Error, Event, Limits, Profile, Schedule, Time, Validation}
+  `Wotex.Routines.Temporal.page/5` takes a checked scalar
+  `Wotex.Routines.Schedule`, a string-keyed `"from_ms"`/`"until_ms"`/`"limit"`
+  query, explicit `Wotex.Routines.Time`, a returned cursor or `nil`, and
+  `Wotex.Routines.Limits`. One-shot, interval and countdown schedules use a
+  half-open finite horizon and a page limit of 1 through 1,024. Success is
+  `{:ok, result}` with `"occurrences"` and `"next_cursor"`; failures return
+  `{:error, error}` with a `Wotex.Routines.Error`. The complete page and cursor
+  must fit the supplied limits; a bound failure returns no partial result.
+
+  Each occurrence retains its original identity, ordinal, due coordinate and
+  inert event descriptor. A Time@2 occurrence additionally carries
+  `"time_format" => "wotex.routines.time@2"`. Originals bind schedule and due
+  coordinates independently of the query or clock projection. Reuse a cursor
+  only with its original schedule, horizon, time grammar and relevant clock
+  basis; a mismatch refuses `:stale_temporal_cursor`.
+
+  UTC schedules use Time@2's `"utc_generation"` for descriptors and cursor
+  binding. Absent Time@2 UTC confidence refuses `:missing_utc_basis` before
+  enumeration. Countdown schedules use only elapsed epoch/generation and may
+  operate without UTC. The original five-member Time retains its existing
+  single-generation behavior, including inert UTC calculation without confidence.
+
+  `Wotex.Routines.Temporal.event/6` takes the schedule, an exact occurrence,
+  compiled program, current Time, Profile and Limits. It regenerates the
+  occurrence and checks the compiled trigger, selected time grammar and
+  relevant generation before returning `{:ok, event}` with a
+  `Wotex.Routines.Event`. A stale projection is refused, never silently rebased.
+
+  Calculation reads no clock and starts no timer or effect. The consumer owns
+  clock trust, immutable schedule bases, cursor custody, durable no-repeat
+  originals and atomic execution admission.
+  """
+
+  alias Wotex.Routines.{
+    ClockBasis,
+    Compiler,
+    Error,
+    Event,
+    Limits,
+    Profile,
+    Schedule,
+    Time,
+    Validation
+  }
 
   @doc "Enumerates original UTC or elapsed coordinates in a finite horizon using closed-form cadence indices."
   @spec page(term(), term(), term(), term(), Limits.t()) :: {:ok, map()} | {:error, Error.t()}
@@ -28,7 +72,7 @@ defmodule Wotex.Routines.Temporal do
   def event(schedule, occurrence, program, time, profile, limits) do
     with {:ok, schedule} <- Schedule.to_map(schedule, limits),
          {:ok, occurrence, limits} <- Validation.admit(occurrence, limits, nil),
-         :ok <- Validation.fields(occurrence, ~w(original ordinal due_ms event)),
+         :ok <- occurrence_fields(occurrence),
          :ok <- Validation.integer(occurrence["ordinal"], limits, "/ordinal", 1),
          {:ok, program} <- Compiler.to_map(program, profile, limits),
          {:ok, time} <- Time.to_map(time, limits),
@@ -42,6 +86,12 @@ defmodule Wotex.Routines.Temporal do
       error -> error
     end
   end
+
+  defp occurrence_fields(%{"time_format" => "wotex.routines.time@2"} = occurrence),
+    do: Validation.fields(occurrence, ~w(original ordinal due_ms event time_format))
+
+  defp occurrence_fields(occurrence),
+    do: Validation.fields(occurrence, ~w(original ordinal due_ms event))
 
   defp query(data, schedule, limits) do
     minimum = if schedule["kind"] == "countdown", do: 0, else: nil
@@ -65,16 +115,19 @@ defmodule Wotex.Routines.Temporal do
        else: Error.refusal(:changed_time_basis)
   end
 
-  defp time_basis(_, _), do: :ok
+  defp time_basis(_, time), do: ClockBasis.require_utc(time)
+
+  defp generation(%{"kind" => "countdown"}, time), do: time["clock_generation"]
+  defp generation(_, time), do: ClockBasis.utc_generation(time)
 
   defp basis(schedule, query, time, limits) do
     projection = %{
       "horizon" => Map.take(query, ~w(from_ms until_ms)),
-      "clock_generation" => time["clock_generation"],
+      "clock_generation" => generation(schedule, time),
       "epoch" => if(schedule["kind"] == "countdown", do: time["epoch"], else: nil)
     }
 
-    with {:ok, digest} <- Validation.hash(projection, limits) do
+    with {:ok, digest} <- Validation.hash(ClockBasis.bind_format(projection, time), limits) do
       {:ok,
        %{
          "format" => "wotex.routines.temporal.cursor@1",
@@ -153,11 +206,19 @@ defmodule Wotex.Routines.Temporal do
         "schedule_id" => schedule["schedule_id"],
         "schedule_basis" => schedule["definition_digest"],
         "late_window_ms" => schedule["late_window_ms"],
-        "clock_generation" => time["clock_generation"]
+        "clock_generation" => generation(schedule, time)
       }
 
       descriptor = descriptor(schedule, due, descriptor)
-      {:ok, %{"original" => original, "ordinal" => ordinal, "due_ms" => due, "event" => descriptor}}
+
+      occurrence = %{
+        "original" => original,
+        "ordinal" => ordinal,
+        "due_ms" => due,
+        "event" => descriptor
+      }
+
+      {:ok, ClockBasis.bind_format(occurrence, time)}
     end
   end
 
