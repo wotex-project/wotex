@@ -1,6 +1,6 @@
 # WRO.01 — Capability and behaviour basis
 
-Version: 0.2.9. Updated: 2026-10-16. Status: accepted target.
+Version: 0.2.10. Updated: 2026-10-16. Status: accepted target.
 Implementation: closed basis and fact foundation implemented; execution joins partial.
 
 ## Scope and ownership
@@ -16,6 +16,18 @@ A capability is an installed typed interaction contract. A behaviour defines
 its preconditions, transitions, effect domains and outcome evidence. A mapping
 selects installed semantics. A concrete enrolled instance and its qualification
 remain consumer decisions. All four identities remain distinct.
+
+## External profile and sensor scope
+
+This first executable representation is not a worldwide sensor ontology.
+WPF.01–02 own reading explicitly supplied external profiles/semantic
+definitions; ordinary interpretation does not depend on routines. Publishers/
+consumers supply meanings/model data, while this package retains its installed
+behavior/operator contracts. [WRO.05](WRO.05-external-profile-inputs.md) defines
+explicit correspondence or unsupported refusal into the current Unit/Basis/Fact
+representation. New quantity/schema/operator support must not relabel existing
+dimensions, widen v1 or duplicate a generic reader in each consumer. Existing
+constructors, schemas and evidence below retain their actual implemented scope.
 
 ## Required basis
 

@@ -1,0 +1,24 @@
+schema_version: "1.1.0"
+package: "wotex_streams"
+status: "prospective-unregistered"
+status_note: "Neutral stream/protocol targets only; no media-processing engine, source package or executed evidence."
+completion_plan: "docs/plans/wotex-streams-completion.md"
+specifications:
+  - id: "WST.01"
+    version: "0.1.0"
+    path: "docs/specs/WST.01-stream-values-and-lifecycle.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["wotex_runtime:WRT.01", "wotex_runtime:WRT.05"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Neutral descriptors/frames, consumer-owned finite session lifecycle and truthful protocol delivery"
+  - id: "WST.02"
+    version: "0.1.0"
+    path: "docs/specs/WST.02-protocol-profile-allocation.md"
+    implementation_status: "planned"
+    standards: []
+    requires: ["WST.01"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Exact separately qualified streaming protocols; no automatic decoder, renderer, surveillance or worldwide device profiles"

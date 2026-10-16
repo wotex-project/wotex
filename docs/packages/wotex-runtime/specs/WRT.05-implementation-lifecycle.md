@@ -1,6 +1,6 @@
 # WRT.05: Admitted instance lifecycle and replacement
 
-Specification `WRT.05@1.1.0`. Package owner: `wotex_runtime`.
+Specification `WRT.05@1.1.1`. Package owner: `wotex_runtime`.
 Contract: accepted optional specification; implementation status: `partial`.
 This optional contract applies to instances admitted under WRT.04. It adds
 immutable lifecycle decisions and binding obligations, not a Runtime process
@@ -185,6 +185,14 @@ shared device effects; the profile MUST name that scope and MUST NOT promise
 tenant isolation. Closing one consumer's borrowed connection/notification
 session must not tear down another consumer's resources. Shared mutable native
 stores are outside v1; the consumer must provide exclusive store custody.
+
+Prospective WST.01–02 reuse this lifecycle boundary for selected streaming
+protocols. They do not redefine Runtime subscriptions or infer audio/video
+processing, recording, surveillance or physical render synchronization from
+delivery. Protocol owners keep exact framing/clock/security/cleanup; consumers
+select processing and actual output qualification. A neutral stream descriptor
+is not an auto-start source or mandatory media dependency. External WPF profile
+definitions remain data outside Runtime's package inventory.
 
 ## L06 — Replacement and rollback
 

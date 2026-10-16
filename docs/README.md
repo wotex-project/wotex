@@ -30,14 +30,29 @@ separate source findings from unexecuted experiments.
 Runtime's new target contracts cover [admission](packages/wotex-runtime/specs/WRT.04-implementation-admission.md),
 [lifecycle/replacement](packages/wotex-runtime/specs/WRT.05-implementation-lifecycle.md)
 and [bounded codecs](packages/wotex-runtime/specs/WRT.06-bounded-codec.md).
-All three are planned. Existing consumers need no extension descriptor or
+Their catalogues distinguish implemented values from remaining binding evidence.
+Existing consumers need no extension descriptor or
 loader; process profiles, independent interoperability and hardware support
 require their own evidence.
 
+The [profile/stream allocation](architecture/profile-and-stream-boundary.md)
+and [generic delivery plan](architecture/generic-protocol-profile-delivery.md)
+keep device/sensor/semantic definitions in consumer-owned collections.
+[WPF.01–02](packages/wotex-profiles/specs/WPF.01-external-profile-language.md)
+define only how explicitly supplied profiles are read/interpreted;
+[WST.01–02](packages/wotex-streams/specs/WST.01-stream-values-and-lifecycle.md)
+define neutral streaming values and exact protocol allocation. The profile
+reader, compiler and authoring package is registered; streams remain unregistered
+targets outside the generated catalogue. Playback/DSP/capture/
+recording/surveillance components are allocated separately; no full-engine audio
+package or worldwide sensor catalogue is introduced.
+[WRO.05](packages/wotex-routines/specs/WRO.05-external-profile-inputs.md) records
+the planned exact/unsupported join into the current bounded routine representation.
+
 The optional [external-profile reader](../packages/wotex-profiles/README.md)
 validates explicitly supplied consumer data under complete limits. Its
-[catalogue](packages/wotex-profiles/specs/catalogue.yaml) separates reader
-constructors and identity vectors from compiler, capture and authoring work.
+[catalogue](packages/wotex-profiles/specs/catalogue.yaml) records the implemented reader, compiler, capture and authoring surfaces and
+their bounded software evidence.
 
 ## The complete Thing interaction path
 
@@ -594,6 +609,7 @@ package at `packages/<name>/`.
 ## Family documents
 
 - [Package graph and ownership boundaries](architecture/package-graph.md)
+- [Consumer-owned profile authoring research](architecture/consumer-profile-authoring-research.md)
 - [Consuming WoTEx packages](guides/consumer.md)
 - [Development workflow](guides/development.md)
 - [Releasing a package](guides/release.md)

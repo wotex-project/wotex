@@ -47,7 +47,7 @@ acquire an SDK dependency or native process manager.
 
 ## Optional implementation delivery
 
-WRT.04–05 at 1.1.0 and WRT.06 at 1.4.0 are optional contracts with specified APIs and receipt
+WRT.04–05 at 1.1.1 and WRT.06 at 1.4.0 are optional contracts with specified APIs and receipt
 formats. WRT.04 admission, WRT.05 lifecycle values and WRT.06's trusted BEAM
 codec seam are implemented; their native and independent-consumer qualification
 remain open in the package

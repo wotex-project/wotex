@@ -1,6 +1,6 @@
 # WoTEx
 
-**W3C Web of Things building blocks for Elixir.**
+**Reusable IoT protocols and W3C Web of Things building blocks for Elixir.**
 
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -14,13 +14,29 @@
 
 WoTEx represents W3C Web of Things descriptions as Elixir values and connects
 their Properties, Actions and Events to protocol-specific code. The repository
-contains nineteen independent Mix projects: the value model, a runtime,
+contains twenty independent Mix projects: the value model, a runtime,
 bindings, protocol packages, conformance tools and a consumer laboratory.
 
 This is a development monorepo, not an umbrella application. Each package has
 its own version, dependencies, tests and release archive. No package from this
 repository has been published to Hex yet. Until that changes, use a pinned
 repository commit as described under [Using WoTEx](#using-wotex).
+
+## Protocols, external profiles and processing
+
+The family serves industrial and other IoT consumers. Protocol/session mechanics
+and generic profile-reading/authoring tools belong here; consumers own model/
+quantity templates and private drafts. Optional data exports require local
+import/review; no definitions repo or AI provider is required. Adding a supported
+model should add data and qualification, not a sensor-name branch in Runtime.
+The [profile/stream allocation](docs/architecture/profile-and-stream-boundary.md)
+defines this boundary and its [delivery plan](docs/architecture/generic-protocol-profile-delivery.md).
+The profile-reader is registered in the twenty-package graph; its catalogue
+records the implemented bounded reader, compiler and authoring APIs. Protocol-stream
+targets remain prospective. Streaming protocols preserve packets,
+clock information and lifecycle; DSP, capture/render, recording, surveillance
+analysis and deployment policy belong to separately selected components/consumers.
+Matter is one optional protocol, not the family-wide IoT capability vocabulary.
 
 ## From a description to an exchange
 

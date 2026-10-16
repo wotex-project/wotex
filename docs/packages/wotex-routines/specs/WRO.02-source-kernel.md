@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.28. Updated: 2026-10-16. Status: accepted target; implementation partial.
+Version: 0.2.29. Updated: 2026-10-16. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -48,6 +48,14 @@ Count all expanded possible paths before admission. Each transition returns a
 finite result with stable step/path ordering; map or timer arrival order cannot
 choose an effect. The initial overlap policy is reject: a different original
 while a run is nonterminal returns skipped-busy; the same original is retained.
+
+External profile input uses [WRO.05](WRO.05-external-profile-inputs.md) exact
+correspondence. A reader-supported sensor is not automatically supported by
+this executable source/model profile. Unknown quantity/shapes/operators refuse
+before compilation/evaluation; they never become a sensor-name branch, unit
+relabel or no-op. Source/IR/analysis extensions must be explicitly versioned
+before code. WPF readers and WST stream protocols remain independent of this
+optional kernel; processing and consumer policy are not inferred from payloads.
 
 ## Evaluation, arbitration and outcomes
 

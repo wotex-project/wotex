@@ -1,6 +1,6 @@
 # Optional implementation delivery
 
-Decision `PD-ADR@1.3.1`, 2026-10-13. Accepted design direction; implementation
+Decision `PD-ADR@1.4.0`, 2026-10-13. Accepted design direction; implementation
 status is recorded by the package catalogue. Source review baseline:
 `c8c727a7c8c18fec82d80cc5ba88d246af3c67fc`. This decision reconciles
 [extension research](../research/runtime-extension-architecture.md) at
@@ -19,8 +19,8 @@ replacement or dependency problem. This decision authorizes specification of
 that optional boundary, not a marketplace, online installer or mandatory
 extension manager.
 
-The optional routines package extends the inventory to nineteen independent
-projects. Core and protocol libraries acquire no routines dependency; explicit
+The optional routines and profiles packages extend the inventory to twenty
+independent projects. Core and protocol libraries acquire no routines dependency; explicit
 consumer selection and the remaining boundaries in this decision are preserved.
 
 Runtime owns common immutable admission and lifecycle values. A binding owns
@@ -40,13 +40,24 @@ WoTEx is unreleased. Current API names, layouts and defaults are not a released
 compatibility obligation; change them when the target design requires it,
 revising owning specifications/catalogues and affected callers together. Keep
 package ownership and consumer authority because they serve the design, not
-because of a presumed installed user base. WRT.04–05 at 1.1.0 and WRT.06
-at 1.3.0 define exact
+because of a presumed installed user base. WRT.04–05 at 1.1.1 and WRT.06
+at 1.3.1 define exact
 target APIs and record formats now; tests prove the target rather than choose it.
 Implementation must revise a protocol's own contract before adding a profile
 or changing its process protocol. See the [delivery plan](portable-delivery-plan.md)
 for dependency order and the [gap analysis](../research/portable-delivery-gap-analysis.md)
 for source evidence and unresolved qualification.
+
+## Generic profile and stream refinement
+
+[GP-ADR@1.0.0](profile-and-stream-boundary.md) controls new profile/stream
+allocation. Generic WPF reader mechanics interpret explicitly supplied external
+model/sensor/semantic definitions; no catalogue or exhaustive sensor enum ships
+with WoTEx. WST owns protocol delivery/security/timing/lifecycle. DSP, media
+capture/render, recording and surveillance analysis are selected components.
+Existing TD/TM and WRT descriptor/codec formats retain their exact scopes.
+Data cannot install an operator, protocol, executable or active rule. The former
+full-engine audio proposal is superseded without a source/manifest change.
 
 ## Options considered
 

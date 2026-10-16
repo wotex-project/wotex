@@ -39,7 +39,7 @@ specifications:
     executable_evidence: ["test/wotex/runtime/consumed_thing_test.exs", "test/wotex/runtime/exposed_thing_test.exs", "test/wotex/runtime/form_selector_test.exs"]
     compatibility_classification: "aggregate operations are explicit opt-in profile capabilities"
   - id: "WRT.04"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WRT.04-implementation-admission.md"
     implementation_status: "partial"
     standards: []
@@ -48,7 +48,7 @@ specifications:
     executable_evidence: ["test/wotex/runtime/implementation_admission_test.exs", "test/wotex/runtime/implementation_boundary_test.exs"]
     compatibility_classification: "closed bounded admission, registration, verification, trust, policy and plan constructors implemented; execution revalidation compares current decision identities; binding pre-spawn integration and target qualification remain planned; receipts do not perform verification"
   - id: "WRT.05"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WRT.05-implementation-lifecycle.md"
     implementation_status: "partial"
     standards: []

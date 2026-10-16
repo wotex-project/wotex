@@ -1,7 +1,7 @@
 # WTX.04: Thing Model 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
-**Specification version**: 1.1.0
+**Specification version**: 1.1.1
 
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.03  
@@ -18,6 +18,16 @@ It does not instantiate a Thing Model as an operational Thing Description,
 resolve `tm:ref` across documents, allocate identifiers, select optional
 affordances, own a model registry, persist versions, execute Forms, or decide
 which model a Thing implements. A consumer owns those decisions.
+
+## External definition allocation
+
+Core parses/preserves the W3C model and extensions; it is not a worldwide sensor
+ontology, device registry, profile compiler or vendor catalogue. Registered
+WPF.01–02 own reading caller-supplied external profile/semantic data and inert
+projections. Their quantity meanings, supported model definitions and actual
+instance selection remain externally supplied/consumer-owned. Core does not
+instantiate/fetch a model, select a binding or start a stream as a parse effect.
+This allocation clarifies ownership; the implemented public API below is unchanged.
 
 ## Requirements
 

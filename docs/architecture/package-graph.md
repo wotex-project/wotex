@@ -1,95 +1,88 @@
 # Package graph and boundaries
 
-## Dependency graph
+Version: 1.2.0. Updated: 2026-10-16. Registered implementation graph:
+`tooling/packages.yaml`; prospective targets are listed separately.
 
-The prospective optional `wotex-routines` target is described in
-[WRO.01–04](../packages/wotex-routines/specs/WRO.01-capability-behaviour.md)
-and its [completion contract](../packages/wotex-routines/plans/wotex-routines-completion.md).
-It is not yet a source package or manifest dependency. Its intended dependencies
-are public core/Continuum values and direct ExBooking calculations, with optional
-ExMaude analysis. Core, Runtime and protocol packages never depend on it.
+## Registered family and optional targets
+
+The current family has twenty independent Mix projects. Core supplies TD/TM
+values; Runtime uses core; bindings/protocol integrations use public Runtime/core
+ports. UDP and Zigbee have independently usable protocol foundations. Routines
+is a registered optional package using core/Continuum and direct selected
+recurrence calculations. Core, Runtime and protocol packages do not depend on it.
+Catalogues own actual partial/implemented/evidence scope.
 
 ```text
-                         wotex
-                           |
-      +-------------+------+------+----------------+
-      v             v             v                v
-wotex-runtime  wotex-directory  wotex-nx     wotex-continuum
-      |
-      +--> bindings:  wotex-binding-http, wotex-binding-mqtt
-      +--> protocols: wotex-bacnet, wotex-ble, wotex-coap, wotex-matter,
-                      wotex-modbus, wotex-opcua, wotex-thread
+Consumer selects:
+  wotex -> TD/TM values
+  wotex-runtime -> selected binding/protocol port -> owned backend/device
+  wotex-directory / continuum / nx -> optional values and consumer ports
+  wotex-routines -> optional pure kernel/host callbacks
+  wotex-profiles -> bounded external reader/compiler/authoring values
+                    core + public Runtime typed-value algebra
+  wotex-udp / zigbee -> independently usable protocol foundations
 
-wotex-conformance      no WoTEx dependency
-wotex-udp              no WoTEx dependency (partial WUD.01)
-wotex-zigbee           no WoTEx dependency (partial WZG.01-WZG.03)
+Prospective, NOT registered:
+  wotex-streams  -> public Runtime lifecycle/interaction ports
+                    exact separately qualified streaming profiles
 
-wotex-lab      --> wotex, wotex-nx; optional wotex-runtime, wotex-directory,
-                   wotex-binding-http, wotex-binding-mqtt, wotex-continuum;
-                   wotex-conformance in dev and test
+Outside WoTEx:
+  consumer-owned model/semantic profiles and private authoring/AI workflows
+  consumer policy, instances, credentials, canonical state and database
+  selected DSP/playback/capture/render/recording/surveillance components
 ```
 
-No package depends on a binding or protocol adapter. `wotex-lab` is the only
-package that depends on more than two siblings, and it is the family's
-consumer laboratory: it proves that the other packages work as released
-archives, not as path dependencies.
+[WPF.01–03](../packages/wotex-profiles/specs/WPF.01-external-profile-language.md)
+own the registered reader/compiler/authoring implementation and its exact bounds.
+[WST.01–02](../packages/wotex-streams/specs/WST.01-stream-values-and-lifecycle.md)
+remain target-only documentation outside the manifest/generated family catalogue.
+Register streams explicitly before source delivery. The former full-engine `wotex_audio` allocation is
+superseded by the [profile/stream decision](profile-and-stream-boundary.md).
 
-## What a change affects
+## Dependency and ownership rules
 
-| Changed package | Packages whose gate must run |
-| --- | --- |
-| `wotex` | every package except `wotex-conformance`, `wotex-udp` and `wotex-zigbee` |
-| `wotex-runtime` | both bindings, all seven protocol adapters, `wotex-lab` |
-| `wotex-directory`, `wotex-nx`, `wotex-continuum`, `wotex-conformance`, a binding | itself and `wotex-lab` |
-| a protocol adapter | itself only |
-| `wotex-lab` | itself only |
-| `wotex-udp` | itself only |
-| `wotex-zigbee` | itself only |
-| repository-level files matching `select_all_on` in `tooling/packages.yaml` (`tooling/`, `.github/`, root `mix.exs`, `mix.lock`, `lib/`, `test/`, `mise.toml`, `.gitignore`) | every package |
+Packages use only public documented sibling APIs and exact declared dependencies.
+The root is tooling, never an umbrella/runtime dependency or release.
+`WOTEX_PATH_DEPS=1` explicitly selects sibling sources in dev/test/docs; ordinary
+consumption uses reviewed released requirements or a coherent pinned Git cohort.
+No neighbouring checkout, ambient registry or loaded module selects an implementation.
 
-## Boundaries between packages
+Library loading starts no process or network/filesystem activity. Consumers pass
+transports, credentials, clocks, registration, identity, limits and supervision
+explicitly. Core/Runtime cannot import heavy protocol/media/sensor engines to
+make a descriptor work. Data definitions select installed bounded mechanics;
+they cannot install a protocol, operator, privileged module or authority.
 
-- A package uses only the public, documented API of a sibling: modules
-  without `@moduledoc false`, functions without `@doc false`. A call into a
-  sibling's hidden module compiles but is a boundary violation.
-- Sibling dependencies are declared in `mix.exs` and resolved either from Hex
-  (default) or, with `WOTEX_PATH_DEPS=1`, from `packages/<name>` for
-  development, test and documentation builds only. A sibling path dependency
-  declares `env: :dev`, so the sibling's own `mix.exs` is evaluated in `dev`
-  and its switch guard, which refuses every other environment with
-  "WOTEX_PATH_DEPS is allowed only in development, test or docs", accepts it.
-- Library packages start no process, read no application environment and
-  perform no network or filesystem access on load. Long-lived work is returned
-  to the consumer as child specifications.
-- Transports implement `Wotex.Runtime.Transport`; credentials implement
-  `Wotex.Runtime.Credentials`. Nothing is discovered from application
-  environment or a global registry; the consumer passes implementations
-  explicitly.
-- Consumer products, companies and customers are never named. Integration
-  boundaries say `consumer` or `consumer host`.
+Consumers own model/firmware/quantity mappings and source notices. Public
+templates can ship with the application; private drafts remain in its custody.
+Optional exported bundles do not require a shared collection repository.
+Generic reader/stream mechanics belong here; consumer application meaning,
+risk/grants, enrollment, storage and business workflows remain outside.
+Standard protocol vocabularies and minimal evidence vectors are not a worldwide
+sensor/model catalogue. Independent consumers prove reusable seams before shared
+code/dependencies are extracted.
 
-The [optional implementation delivery decision](portable-delivery-decision.md)
-retains this graph. Planned Runtime WRT.04–06 contracts add admission/lifecycle
-values and a bounded codec seam without mandatory descriptors, a runtime
-registry or root-tooling dependency. Protocol packages retain process custody
-and IPC; native artifact provisioning remains separate from runtime execution.
+WRO.01's current closed Unit/Basis/Fact profile remains one bounded representation.
+[WRO.05](../packages/wotex-routines/specs/WRO.05-external-profile-inputs.md) is a
+planned exact input join, not a broader implemented ontology. Readers/ordinary
+protocols work with routines absent. Protocol clock/delivery cannot become a
+physical render/actuator-success claim.
 
-## Consumers outside the repository
+## Change impact and delivery
 
-Products and third-party adapters depend on published packages. Until
-publication they depend on one commit of this repository, declaring every
-WoTEx package they use with `git:` and `sparse: "packages/<name>"` at the same
-`ref`, with `override: true`, or with path dependencies into
-`../wotex/packages/<name>` for local development.
+Use the actual manifest and existing impact/check tooling to determine registered
+dependents; prose tables cannot override that graph. Focused mechanism tests
+accompany code; full changed-package and native gates belong to stable milestones.
+Documentation changes require metadata/reference/boundary checks, not unrelated
+all-package suites. New prospective specs introduce no compile/dependency change.
 
+The [portable delivery decision](portable-delivery-decision.md) preserves explicit
+implementation admission/lifecycle. The
+[generic reader/stream plan](generic-protocol-profile-delivery.md) orders external
+profile interpretation, independent industrial/second consumers, exact stream
+protocols and separately selected processing components.
 
-## Protocol enablers
-
-The following target specifications describe generic protocol gaps. The
-catalogues own each implementation status:
-
-- `wotex-udp`: partially implemented generic bounded datagram infrastructure defined by [WUD](../packages/wotex-udp/specs/WUD-index.md). UDP itself is not a WoT binding.
-- `wotex-zigbee`: a partial TI ZNP coordinator host and finite ZCL codec defined by [WZG](../packages/wotex-zigbee/specs/WZG-index.md).
-- `wotex-matter` WMA.09: partial endpoint custody for an additive exposed Matter bridge/server role. Existing WMA.01-WMA.08 remain controller-side.
-
-Product/vendor semantics remain outside this repository. See [home consumer enablers](home-consumer-enablers.md) for the ownership rationale.
+Products consume published packages or a coherent pinned repository commit.
+Catalogues, build/codec identities, independent protocol evidence and physical
+qualification remain distinct. A supported subset is explicit; missing required
+profile/codec/operator refuses, without silent fallback or automatic replay.

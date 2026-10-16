@@ -3,7 +3,7 @@ package: "wotex_routines"
 completion_plan: "docs/plans/wotex-routines-completion.md"
 specifications:
   - id: "WRO.01"
-    version: "0.2.9"
+    version: "0.2.10"
     path: "docs/specs/WRO.01-capability-behaviour.md"
     implementation_status: "partial"
     standards: []
@@ -12,7 +12,7 @@ specifications:
     executable_evidence: ["test/wotex/routines/basis_test.exs", "test/wotex/routines/schema_test.exs", "test/wotex/routines/input_execution_test.exs", "bin/check_archive.exs", "bin/check_application_free.exs", "test/wotex/routines/continuation_test.exs", "test/wotex/routines/continuation_schema_test.exs", "docs/provenance/bounded-continuation-2026-10.md"]
     compatibility_classification: "Registered optional package with closed installed semantics, exact units and Continuum facts; no runtime authority. Kernel completion/repeat joins and independent consumer adoption remain obligations. Larger explicitly selected aggregate Limits are implemented with native ceiling/refusal and complete 16/32/64-member cases in the 59-test focused foundation. The bounded continuation successor passes two independent archive consumers, ten assertion-only mutation runs and all 15 owning checks: 241 tests at 95.5% coverage. Wider capability and consumer adoption remain separate obligations."
   - id: "WRO.02"
-    version: "0.2.28"
+    version: "0.2.29"
     path: "docs/specs/WRO.02-source-kernel.md"
     implementation_status: "partial"
     standards: []

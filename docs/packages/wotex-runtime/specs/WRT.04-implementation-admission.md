@@ -1,11 +1,21 @@
 # WRT.04: Optional implementation admission
 
-Specification `WRT.04@1.1.0`. Package owner: `wotex_runtime`.
+Specification `WRT.04@1.1.1`. Package owner: `wotex_runtime`.
 Contract: accepted optional specification; implementation status: `partial`.
 The uppercase MUST, MUST NOT, SHOULD and MAY state obligations of this optional
 profile. The A07 pure values are implemented; binding qualification remains open. WRT.01–03 consumers remain
 usable without this profile or a descriptor. This is a WoTEx extension contract,
 not a W3C Thing Description field or standards-conformance claim.
+
+## Profile/stream allocation
+
+A device profile, semantic descriptor and WRT implementation descriptor are
+different formats. WPF.01–02 read externally supplied device/
+semantic data; this owner admits an explicitly registered implementation. Neither
+format can register code, pick a module/route or activate itself. Runtime owns
+no sensor/model catalogue. WST stream profiles remain optional separately
+qualified bindings; no media-processing engine or new dependency follows.
+Existing A07 value exports/grammars retain their implemented scope.
 
 ## A01 — Ownership and inputs
 

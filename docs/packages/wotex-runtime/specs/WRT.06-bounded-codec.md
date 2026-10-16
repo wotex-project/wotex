@@ -42,6 +42,17 @@ The process grammar is also specified now; independent implementations must
 prove they follow it. WoTEx is unreleased. Interface design does not wait for
 post-release compatibility analysis or certification.
 
+## Generic reader allocation
+
+WPF.01–02 consume this public typed-value algebra without making
+a device/sensor catalogue part of Runtime. The existing C02/C03 representation
+and limits remain authoritative; reading a larger profile never widens a codec
+call. Unrepresented floats, nonlinear math or required schema operations need
+an explicit owning projection contract before code, not silent coercion. Stream
+payload delivery under WST is separately bounded; bulk media/waveforms cannot
+bypass this codec profile's byte/node budgets. Ordinary profile parsing and
+protocol streaming require no DSP, decoder or surveillance engine by default.
+
 ## Generic JSON value decoding
 
 The owned [exact JSON decoder](WRT.06-json-values-v1.md) specifies

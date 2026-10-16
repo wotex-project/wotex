@@ -1,13 +1,23 @@
 # Portable implementation delivery programme
 
-Plan `PD-P@1.3.0`, 2026-10-08. Target specifications: WRT.04–05 at 1.1.0
-and WRT.06 at 1.3.0, including its explicit consumer-supervised BEAM executor
+Plan `PD-P@1.4.0`, 2026-10-13. Target specifications: WRT.04–05 at 1.1.1
+and WRT.06 at 1.3.1, including its explicit consumer-supervised BEAM executor
 and pure process-frame API.
 Source-review baseline: `c8c727a7c8c18fec82d80cc5ba88d246af3c67fc`.
 This is a dependency-ordered completion contract, not an execution tracker.
 Runtime admission, lifecycle values and the trusted BEAM codec seam are implemented.
 The package catalogue records
 implementation status; native and independent-consumer qualification remains open.
+
+## Reader and stream boundary
+
+The [generic profile/stream plan](generic-protocol-profile-delivery.md) separately
+orders WPF/WST targets and external industrial/second consumers. It extends
+reading/delivery mechanics without importing model catalogues or media engines.
+This programme retains existing exact codec/lifecycle/native obligations;
+profile data cannot widen their operator, payload or authority limits. Native
+packetization/clock work stays protocol-owned; decode/render/inference and
+consumer policies require separately selected component contracts.
 
 ## Target and stop conditions
 
