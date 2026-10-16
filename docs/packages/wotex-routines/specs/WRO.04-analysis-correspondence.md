@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.12. Updated: 2026-10-16. Status: accepted target; implementation partial.
+Version: 0.2.19. Updated: 2026-10-16. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -489,3 +489,67 @@ mutations with zero harness errors. The full owning gate passes 241 tests at
 explicit concrete/unsupported-scope correspondence. Wider supported models,
 model/witness translations, containment and current consumer admission retain
 their broader obligations.
+
+## Independent decision verification target
+
+[The verified-decision successor](verified-decision-v1.md) owns independent
+point transition/complete pending/arbitration checks and canonical time-cell
+correspondence. It verifies supplied conclusions without calling the forward
+transition engine. Isolated forbidden-call checks, independent source/receipt
+and all-pairs oracles, two extracted consumers and assertion-only mutations
+are required. Full VD-T1–T14 remain open; existing replay/archive evidence does
+not prove this verification scope. Frozen Model/Analysis profiles retain their
+explicit unsupported boundaries and supply no consumer admission.
+
+The successor entry schema and vectors now pass five native representation
+checks, including 52 malformed/missing-field cases and all six clock-cell
+alternatives. This is representation evidence; it does not establish runtime
+correspondence.
+
+The public Transition.verify/8 point checker now validates complete normalized
+arguments, qualified observations, edge state, receipts/spend, step motion,
+terminal outcomes and ordered proposals independently of forward execution.
+A 113-case affected corpus checks 1,152 complete point transitions and 72 direct
+edge relations with all eight prohibited forward functions disabled during
+proof. Six isolated point mutations fail through assertions with zero harness
+errors. The [point record](../provenance/verified-transitions-2026-10.md) binds
+source/test identities and exact direct scope; that record alone does not
+establish the complete-decision layer or current consumer authority.
+
+Public Decision.verify_point/4, new/3, to_map/3 and check/4 now independently
+verify complete Collection@2 membership, retained pending state, canonical
+cells/digests, exact current input and whole-set arbitration before cutoff.
+The guarded native lane passes 41 tests with all nine forward seams disabled
+during proof, including 70 prepared complete collections and seven arbitration
+relations. Fifteen new cases include an independent all-pairs oracle over 162
+policy/batch combinations, 1,024 contributors with a final supplied conflict,
+a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
+The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
+this native evidence. Independent raw-source/journal archive consumers,
+complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
+open. No consumer authority, host/physical qualification or wider Model scope
+is supplied.
+
+The [verified-decision archive profile](../decisions/verified-decision-archive-profile.md)
+now freezes distinct source/journal oracles, complete finite case counts, exact
+cohort/lock/source identities, all six assertion-only semantic mutations in both
+families and owned-workspace cleanup. This is accepted implementation entry;
+the new archive lane and its evidence remain unimplemented.
+
+The source-family oracle/consumer now passes all seven local native preflight
+cases, including full raw-source relations, independent all-pairs arbitration,
+1,024 contributors and negative delay/wait/Fact/window cuts. The
+[source preflight record](../provenance/decision-source-preflight-2026-10.md)
+binds its exact sources and checks. Journal archive execution, the opt-in runner,
+cohort identity, both extracted projects, all twelve mutation runs and full
+verifier milestone remain required; this is not archive evidence.
+
+The separate journal family now passes seven local native preflight cases.
+Its explicit row/receipt scripts and consumer-owned revision, original and charge
+ledger are independent of the source oracle and production execution helpers.
+Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
+policy/cutoff and exact public byte-bound cases pass. The
+[journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
+binds the sources and executed checks. Both families are still native preflight;
+the opt-in archive runner, cohort identity, extracted projects, twelve semantic
+mutation runs and owning verifier milestone remain required.

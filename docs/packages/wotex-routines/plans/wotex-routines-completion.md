@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.27. Updated: 2026-10-16. Accepted programme; the basis is partially implemented.
+Version: 0.2.35. Updated: 2026-10-16. Accepted programme; the basis is partially implemented.
 
 The WRO.01–04 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -154,3 +154,88 @@ Current consumer admission, durable roots, installed clocks/source continuity an
 physical qualification remain consumer obligations. No release or dependency pin
 changes from this plan. Keep the broader WRO.01–04 catalogue partial, use focused
 checks between logical commits and remove every disposable workspace on exit.
+
+## Verified decision delivery
+
+[The accepted decision contract](../specs/verified-decision-v1.md) closes the
+generic point-verification/current-time seam needed before consumer adoption.
+Its public direct-transition and complete-decision APIs are implemented with
+native evidence. Complete pending continuation is a prerequisite; execution
+checks alone do not establish independent verification. The delivery stages
+remain the following, with the complete archive/mutation milestone still open:
+
+1. Freeze closed decision/current-context/cell schemas, independent vectors and
+   refusal cases in package priv; schema checks prove representation only.
+2. Implement independent full transition and complete Collection@2 verification,
+   including receipts, edges, negative members and currently reserved work.
+   Disable all prohibited forward functions in isolated verification checks.
+3. Implement canonical complete-member time cells and independently verify full
+   arbitration before cutoff. Exercise inclusive/exclusive boundaries, relevant
+   UTC motion/loss, changed input and 1,024 pending contributors.
+4. Execute both independent extracted consumers and isolated semantic mutations,
+   then the owning package milestone. Record actual source/artifact identities
+   and keep broader host/model/physical obligations separate.
+
+Inert point retention and current effect eligibility remain distinct. Consumer
+journal contracts must preserve original delay starts through delayed publication
+and obtain a fresh complete cut before effects; no library proof grants authority.
+
+Entry schemas and vectors now pass five native representation checks, including
+52 negative shapes and all six clock-cell alternatives. This closes the
+representation entry, without establishing semantic correspondence.
+
+The internal complete-record time-cell foundation passes seventeen component
+cases in a 35-case affected run and catches four isolated native mutations
+through assertions with zero harness errors. Public Decision now owns the
+verified-point precondition and rederives this complete cell before use.
+The [foundation record](../provenance/verified-decision-foundation-2026-10.md)
+records source/test identities and limits; no broader VD case is closed.
+
+The public Transition.verify/8 point checker now validates complete normalized
+arguments, qualified observations, edge state, receipts/spend, step motion,
+terminal outcomes and ordered proposals independently of forward execution.
+A 113-case affected corpus checks 1,152 complete point transitions and 72 direct
+edge relations with all eight prohibited forward functions disabled during
+proof. Six isolated point mutations fail through assertions with zero harness
+errors. The [point record](../provenance/verified-transitions-2026-10.md) binds
+source/test identities and exact direct scope; that record alone does not
+establish the complete-decision layer or current consumer authority.
+
+Public Decision.verify_point/4, new/3, to_map/3 and check/4 now independently
+verify complete Collection@2 membership, retained pending state, canonical
+cells/digests, exact current input and whole-set arbitration before cutoff.
+The guarded native lane passes 41 tests with all nine forward seams disabled
+during proof, including 70 prepared complete collections and seven arbitration
+relations. Fifteen new cases include an independent all-pairs oracle over 162
+policy/batch combinations, 1,024 contributors with a final supplied conflict,
+a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
+The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
+this native evidence. Independent raw-source/journal archive consumers,
+complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
+open. No consumer authority, host/physical qualification or wider Model scope
+is supplied.
+
+The [archive entry profile](../decisions/verified-decision-archive-profile.md)
+is frozen before implementation: source and journal families each require seven
+behavioral cases plus cohort identity, the full capacity case and all six
+semantic mutation catches with zero harness errors. Implement the opt-in lane,
+run both families and record actual identities/counts/cleanup before the full
+verifier milestone. No archive or broader VD completion is claimed by entry.
+
+The source-family oracle/consumer now passes all seven local native preflight
+cases, including full raw-source relations, independent all-pairs arbitration,
+1,024 contributors and negative delay/wait/Fact/window cuts. The
+[source preflight record](../provenance/decision-source-preflight-2026-10.md)
+binds its exact sources and checks. Journal archive execution, the opt-in runner,
+cohort identity, both extracted projects, all twelve mutation runs and full
+verifier milestone remain required; this is not archive evidence.
+
+The separate journal family now passes seven local native preflight cases.
+Its explicit row/receipt scripts and consumer-owned revision, original and charge
+ledger are independent of the source oracle and production execution helpers.
+Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
+policy/cutoff and exact public byte-bound cases pass. The
+[journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
+binds the sources and executed checks. Both families are still native preflight;
+the opt-in archive runner, cohort identity, extracted projects, twelve semantic
+mutation runs and owning verifier milestone remain required.

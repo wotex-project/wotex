@@ -1,0 +1,1066 @@
+{
+  "format": "wotex.routines.verified-decision-vectors@1",
+  "scope": "Independent representation and literal partition examples only. Synthetic digests do not establish transition correspondence, canonical membership or authority. Semantic transition/arbitration/archive obligations remain unexecuted.",
+  "shapes": {
+    "decision": {
+      "format": "wotex.routines.decision@1",
+      "collection": {
+        "format": "wotex.routines.collection@2",
+        "input": {
+          "membership": {
+            "generation": "membership:1",
+            "programs": []
+          },
+          "entries": [],
+          "time": {
+            "epoch": "boot:1",
+            "elapsed_ms": 20,
+            "clock_generation": "elapsed:1",
+            "utc_low_ms": 1000,
+            "utc_high_ms": 1000,
+            "format": "wotex.routines.time@2",
+            "utc_generation": "utc:1"
+          },
+          "format": "wotex.routines.collection-input@2"
+        },
+        "profile": {
+          "source_bytes": 32768,
+          "source_depth": 16,
+          "expanded_nodes": 64,
+          "predicate_nodes": 64,
+          "invocation_depth": 4,
+          "parallel_width": 4,
+          "effects": 16,
+          "waits": 16,
+          "active_definitions": 64,
+          "active_runs": 64,
+          "pending_work": 1024,
+          "run_ms": 86400000
+        },
+        "json_limits": {
+          "max_bytes": 67108864,
+          "max_depth": 64,
+          "max_nodes": 2000000,
+          "max_string_bytes": 65536,
+          "max_collection_size": 8192,
+          "max_integer": 9223372036854775807
+        },
+        "transitions": [],
+        "proposals": [],
+        "collection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "proposal_states": []
+      },
+      "cell": {
+        "format": "wotex.routines.time-cell@1",
+        "time_format": "wotex.routines.time@2",
+        "epoch": "boot:1",
+        "clock_generation": "elapsed:1",
+        "utc_generation": null,
+        "utc_mode": "ignored",
+        "elapsed": {
+          "min": 20,
+          "max": 9223372036854775807
+        },
+        "utc_low": null,
+        "utc_high": null
+      },
+      "decision_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "current_context": {
+      "input": {
+        "membership": {
+          "generation": "membership:1",
+          "programs": []
+        },
+        "entries": [],
+        "time": {
+          "epoch": "boot:1",
+          "elapsed_ms": 20,
+          "clock_generation": "elapsed:1",
+          "utc_low_ms": 1000,
+          "utc_high_ms": 1000,
+          "format": "wotex.routines.time@2",
+          "utc_generation": "utc:1"
+        },
+        "format": "wotex.routines.collection-input@2"
+      },
+      "dispositions": {},
+      "batch_limit": 16,
+      "arbitration": {
+        "collection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dispositions": {},
+        "batch_limit": 16,
+        "selected": [],
+        "decisions": []
+      }
+    },
+    "checked_decision": {
+      "format": "wotex.routines.checked-decision@1",
+      "scope": "provided_membership_time_cell_only",
+      "decision_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "collection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "point_time": {
+        "epoch": "boot:1",
+        "elapsed_ms": 20,
+        "clock_generation": "elapsed:1",
+        "utc_low_ms": 1000,
+        "utc_high_ms": 1000,
+        "format": "wotex.routines.time@2",
+        "utc_generation": "utc:1"
+      },
+      "checked_time": {
+        "epoch": "boot:1",
+        "elapsed_ms": 20,
+        "clock_generation": "elapsed:1",
+        "utc_low_ms": null,
+        "utc_high_ms": null,
+        "format": "wotex.routines.time@2",
+        "utc_generation": null
+      },
+      "transitions": [],
+      "proposal_states": [],
+      "arbitration": {
+        "collection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dispositions": {},
+        "batch_limit": 16,
+        "selected": [],
+        "decisions": []
+      }
+    },
+    "point_request": {
+      "input": {
+        "membership": {
+          "generation": "membership:1",
+          "programs": []
+        },
+        "entries": [],
+        "time": {
+          "epoch": "boot:1",
+          "elapsed_ms": 20,
+          "clock_generation": "elapsed:1",
+          "utc_low_ms": 1000,
+          "utc_high_ms": 1000,
+          "format": "wotex.routines.time@2",
+          "utc_generation": "utc:1"
+        },
+        "format": "wotex.routines.collection-input@2"
+      },
+      "collection": {
+        "format": "wotex.routines.collection@2",
+        "input": {
+          "membership": {
+            "generation": "membership:1",
+            "programs": []
+          },
+          "entries": [],
+          "time": {
+            "epoch": "boot:1",
+            "elapsed_ms": 20,
+            "clock_generation": "elapsed:1",
+            "utc_low_ms": 1000,
+            "utc_high_ms": 1000,
+            "format": "wotex.routines.time@2",
+            "utc_generation": "utc:1"
+          },
+          "format": "wotex.routines.collection-input@2"
+        },
+        "profile": {
+          "source_bytes": 32768,
+          "source_depth": 16,
+          "expanded_nodes": 64,
+          "predicate_nodes": 64,
+          "invocation_depth": 4,
+          "parallel_width": 4,
+          "effects": 16,
+          "waits": 16,
+          "active_definitions": 64,
+          "active_runs": 64,
+          "pending_work": 1024,
+          "run_ms": 86400000
+        },
+        "json_limits": {
+          "max_bytes": 67108864,
+          "max_depth": 64,
+          "max_nodes": 2000000,
+          "max_string_bytes": 65536,
+          "max_collection_size": 8192,
+          "max_integer": 9223372036854775807
+        },
+        "transitions": [],
+        "proposals": [],
+        "collection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "proposal_states": []
+      },
+      "profile": {
+        "source_bytes": 32768,
+        "source_depth": 16,
+        "expanded_nodes": 64,
+        "predicate_nodes": 64,
+        "invocation_depth": 4,
+        "parallel_width": 4,
+        "effects": 16,
+        "waits": 16,
+        "active_definitions": 64,
+        "active_runs": 64,
+        "pending_work": 1024,
+        "run_ms": 86400000
+      },
+      "json_limits": {
+        "max_bytes": 67108864,
+        "max_depth": 64,
+        "max_nodes": 2000000,
+        "max_string_bytes": 65536,
+        "max_collection_size": 8192,
+        "max_integer": 9223372036854775807
+      }
+    },
+    "time_cell": {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@2",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": null,
+      "utc_mode": "ignored",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": null,
+      "utc_high": null
+    },
+    "decision_refusal": {
+      "code": "stale_decision_time",
+      "path": "/cell/elapsed"
+    }
+  },
+  "cell_variants": [
+    {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@1",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": null,
+      "utc_mode": "ignored",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": null,
+      "utc_high": null
+    },
+    {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@1",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": "utc:1",
+      "utc_mode": "absent",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": null,
+      "utc_high": null
+    },
+    {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@1",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": "utc:1",
+      "utc_mode": "present",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": {
+        "min": -100,
+        "max": 10
+      },
+      "utc_high": {
+        "min": 20,
+        "max": 9223372036854775807
+      }
+    },
+    {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@2",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": null,
+      "utc_mode": "ignored",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": null,
+      "utc_high": null
+    },
+    {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@2",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": null,
+      "utc_mode": "absent",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": null,
+      "utc_high": null
+    },
+    {
+      "format": "wotex.routines.time-cell@1",
+      "time_format": "wotex.routines.time@2",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "utc_generation": "utc:1",
+      "utc_mode": "present",
+      "elapsed": {
+        "min": 20,
+        "max": 9223372036854775807
+      },
+      "utc_low": {
+        "min": -100,
+        "max": 10
+      },
+      "utc_high": {
+        "min": 20,
+        "max": 9223372036854775807
+      }
+    }
+  ],
+  "inherited_shapes": {
+    "time1": {
+      "epoch": "boot:1",
+      "elapsed_ms": 20,
+      "clock_generation": "elapsed:1",
+      "utc_low_ms": null,
+      "utc_high_ms": null
+    },
+    "time2": {
+      "epoch": "boot:1",
+      "elapsed_ms": 20,
+      "clock_generation": "elapsed:1",
+      "utc_low_ms": 1000,
+      "utc_high_ms": 1000,
+      "format": "wotex.routines.time@2",
+      "utc_generation": "utc:1"
+    },
+    "time2_without_utc": {
+      "epoch": "boot:1",
+      "elapsed_ms": 20,
+      "clock_generation": "elapsed:1",
+      "utc_low_ms": null,
+      "utc_high_ms": null,
+      "format": "wotex.routines.time@2",
+      "utc_generation": null
+    },
+    "run1": {
+      "format": "wotex.routines.run@1",
+      "original": "example:original",
+      "program_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "compiler_basis": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "start_ms": 20,
+      "last_ms": 20,
+      "deadline_ms": 1020,
+      "status": "running",
+      "steps": [
+        {
+          "path": [],
+          "original": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "kind": "effect",
+          "status": "proposed",
+          "started_ms": 20,
+          "deadline_ms": 1020,
+          "branch": null,
+          "receipts": {
+            "admission": null,
+            "handoff": null,
+            "local_queue": null,
+            "protocol_response": null,
+            "correlated_report": null,
+            "reported_match": null,
+            "terminal": null
+          }
+        }
+      ],
+      "spent": [],
+      "window": null,
+      "reason": null
+    },
+    "run2": {
+      "format": "wotex.routines.run@2",
+      "original": "example:original",
+      "program_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "compiler_basis": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "start_ms": 20,
+      "last_ms": 20,
+      "deadline_ms": 1020,
+      "status": "running",
+      "steps": [
+        {
+          "path": [],
+          "original": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "kind": "effect",
+          "status": "proposed",
+          "started_ms": 20,
+          "deadline_ms": 1020,
+          "branch": null,
+          "receipts": {
+            "admission": null,
+            "handoff": null,
+            "local_queue": null,
+            "protocol_response": null,
+            "correlated_report": null,
+            "reported_match": null,
+            "terminal": null,
+            "satisfied": null
+          }
+        }
+      ],
+      "spent": [],
+      "window": null,
+      "reason": null,
+      "time_format": "wotex.routines.time@2"
+    },
+    "edge1": {
+      "format": "wotex.routines.edge@1",
+      "program_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "binding": "sensor",
+      "binding_basis": {
+        "profile_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_id": "sensor:1",
+        "source_epoch": "source:1",
+        "source_time_basis": null
+      },
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "last_elapsed_ms": 20,
+      "last_receipt_ms": null,
+      "last_sequence": null,
+      "last_fact_id": null,
+      "last_fact_digest": null,
+      "baseline": null,
+      "candidate_since_ms": null,
+      "cooldown_until_ms": 0,
+      "last_original": null
+    },
+    "edge2": {
+      "format": "wotex.routines.edge@2",
+      "program_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "binding": "sensor",
+      "binding_basis": {
+        "profile_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_id": "sensor:1",
+        "source_epoch": "source:1",
+        "source_time_basis": null
+      },
+      "epoch": "boot:1",
+      "clock_generation": "elapsed:1",
+      "last_elapsed_ms": 20,
+      "last_receipt_ms": null,
+      "last_sequence": null,
+      "last_fact_id": null,
+      "last_fact_digest": null,
+      "baseline": null,
+      "candidate_since_ms": null,
+      "cooldown_until_ms": 0,
+      "last_original": null,
+      "time_format": "wotex.routines.time@2"
+    }
+  },
+  "invalid_shapes": [
+    {
+      "shape": "decision",
+      "path": [
+        "format"
+      ],
+      "operation": "put",
+      "value": "wotex.routines.decision@2"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "collection",
+        "format"
+      ],
+      "operation": "put",
+      "value": "wotex.routines.collection@1"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "collection",
+        "input",
+        "format"
+      ],
+      "operation": "put",
+      "value": "wotex.routines.collection-input@1"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "decision_digest"
+      ],
+      "operation": "put",
+      "value": "sha256:bad"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "authority"
+      ],
+      "operation": "put",
+      "value": true
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_mode"
+      ],
+      "operation": "put",
+      "value": "qualified"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_low"
+      ],
+      "operation": "put",
+      "value": {
+        "min": 0,
+        "max": 1
+      }
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_generation"
+      ],
+      "operation": "put",
+      "value": "unrequested"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "elapsed",
+        "min"
+      ],
+      "operation": "put",
+      "value": -1
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "elapsed",
+        "max"
+      ],
+      "operation": "put",
+      "value": 9223372036854775808
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "elapsed",
+        "max"
+      ],
+      "operation": "put",
+      "value": 0.5
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "elapsed",
+        "infinity"
+      ],
+      "operation": "put",
+      "value": true
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "time_format"
+      ],
+      "operation": "put",
+      "value": "wotex.routines.time@3"
+    },
+    {
+      "shape": "current_context",
+      "path": [
+        "batch_limit"
+      ],
+      "operation": "put",
+      "value": 0
+    },
+    {
+      "shape": "current_context",
+      "path": [
+        "arbitration",
+        "decisions"
+      ],
+      "operation": "put",
+      "value": [
+        {
+          "step_original": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "outcome": "authorized"
+        }
+      ]
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "scope"
+      ],
+      "operation": "put",
+      "value": "current_effect_authorized"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "checked_time",
+        "utc_generation"
+      ],
+      "operation": "put",
+      "value": "utc:invented"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "permission"
+      ],
+      "operation": "put",
+      "value": true
+    },
+    {
+      "shape": "decision_refusal",
+      "path": [
+        "code"
+      ],
+      "operation": "put",
+      "value": "execute_anyway"
+    },
+    {
+      "shape": "decision_refusal",
+      "path": [
+        "payload"
+      ],
+      "operation": "put",
+      "value": {
+        "secret": "never retained"
+      }
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "format"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "collection"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "cell"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "decision",
+      "path": [
+        "decision_digest"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "current_context",
+      "path": [
+        "input"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "current_context",
+      "path": [
+        "dispositions"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "current_context",
+      "path": [
+        "batch_limit"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "current_context",
+      "path": [
+        "arbitration"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "format"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "scope"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "decision_digest"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "collection_digest"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "point_time"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "checked_time"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "transitions"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "proposal_states"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "checked_decision",
+      "path": [
+        "arbitration"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "point_request",
+      "path": [
+        "input"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "point_request",
+      "path": [
+        "collection"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "point_request",
+      "path": [
+        "profile"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "point_request",
+      "path": [
+        "json_limits"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "format"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "time_format"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "epoch"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "clock_generation"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_generation"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_mode"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "elapsed"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_low"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "time_cell",
+      "path": [
+        "utc_high"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "decision_refusal",
+      "path": [
+        "code"
+      ],
+      "operation": "delete"
+    },
+    {
+      "shape": "decision_refusal",
+      "path": [
+        "path"
+      ],
+      "operation": "delete"
+    }
+  ],
+  "partition_cases": [
+    {
+      "name": "forward delay boundary",
+      "minimum": 0,
+      "maximum": 100,
+      "point": 5,
+      "cuts": [
+        0,
+        10,
+        100
+      ],
+      "forward": true,
+      "expected": {
+        "min": 5,
+        "max": 9
+      }
+    },
+    {
+      "name": "at exclusive delay boundary",
+      "minimum": 0,
+      "maximum": 100,
+      "point": 10,
+      "cuts": [
+        0,
+        10,
+        100
+      ],
+      "forward": true,
+      "expected": {
+        "min": 10,
+        "max": 99
+      }
+    },
+    {
+      "name": "UTC both directions",
+      "minimum": -100,
+      "maximum": 100,
+      "point": 0,
+      "cuts": [
+        -50,
+        10
+      ],
+      "forward": false,
+      "expected": {
+        "min": -50,
+        "max": 9
+      }
+    },
+    {
+      "name": "empty cuts",
+      "minimum": -100,
+      "maximum": 100,
+      "point": 0,
+      "cuts": [],
+      "forward": false,
+      "expected": {
+        "min": -100,
+        "max": 100
+      }
+    },
+    {
+      "name": "duplicate and outside cuts",
+      "minimum": 0,
+      "maximum": 9223372036854775807,
+      "point": 9223372036854775806,
+      "cuts": [
+        -1,
+        0,
+        9223372036854775807,
+        9223372036854775807,
+        9223372036854775808,
+        18446744073709551615
+      ],
+      "forward": true,
+      "expected": {
+        "min": 9223372036854775806,
+        "max": 9223372036854775806
+      }
+    },
+    {
+      "name": "maximum coordinate",
+      "minimum": 0,
+      "maximum": 9223372036854775807,
+      "point": 9223372036854775807,
+      "cuts": [
+        9223372036854775807,
+        9223372036854775808
+      ],
+      "forward": true,
+      "expected": {
+        "min": 9223372036854775807,
+        "max": 9223372036854775807
+      }
+    },
+    {
+      "name": "signed minimum boundary",
+      "minimum": -9223372036854775807,
+      "maximum": 9223372036854775807,
+      "point": -9223372036854775807,
+      "cuts": [
+        -9223372036854775808,
+        -9223372036854775807,
+        -9223372036854775806
+      ],
+      "forward": false,
+      "expected": {
+        "min": -9223372036854775807,
+        "max": -9223372036854775807
+      }
+    },
+    {
+      "name": "inclusive freshness expires after boundary",
+      "minimum": 0,
+      "maximum": 100,
+      "point": 15,
+      "cuts": [
+        5,
+        16,
+        20
+      ],
+      "forward": true,
+      "expected": {
+        "min": 15,
+        "max": 15
+      }
+    },
+    {
+      "name": "exclusive expiry does not include boundary",
+      "minimum": 0,
+      "maximum": 100,
+      "point": 19,
+      "cuts": [
+        5,
+        16,
+        20
+      ],
+      "forward": true,
+      "expected": {
+        "min": 19,
+        "max": 19
+      }
+    }
+  ],
+  "semantic_refusals": [
+    {
+      "code": "invalid_transition",
+      "path": "",
+      "obligation": "VD-T1",
+      "status": "planned"
+    },
+    {
+      "code": "invalid_collection_decision",
+      "path": "",
+      "obligation": "VD-T2",
+      "status": "planned"
+    },
+    {
+      "code": "unsupported_decision_scope",
+      "path": "",
+      "obligation": "VD-T3",
+      "status": "planned"
+    },
+    {
+      "code": "stale_decision_input",
+      "path": "",
+      "obligation": "VD-T4",
+      "status": "planned"
+    },
+    {
+      "code": "stale_decision_time",
+      "path": "",
+      "obligation": "VD-T5",
+      "status": "planned"
+    },
+    {
+      "code": "stale_decision_arbitration",
+      "path": "",
+      "obligation": "VD-T6",
+      "status": "planned"
+    }
+  ]
+}

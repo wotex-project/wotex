@@ -1,6 +1,6 @@
 # WRO.02 — Bounded routine source and pure kernel
 
-Version: 0.2.22. Updated: 2026-10-16. Status: accepted target; implementation partial.
+Version: 0.2.28. Updated: 2026-10-16. Status: accepted target; implementation partial.
 
 ## Inputs, outputs and authority
 
@@ -562,3 +562,62 @@ BRC-T1–T8 close this bounded software successor. A v1 collection still reports
 newly emitted proposals; callers select Collection@2 for the complete eligible
 pending cut. Current consumer adoption and physical dispatch retain their own
 contracts and qualification obligations.
+
+## Verified decision successor
+
+[Verified transitions and time-stable decisions](verified-decision-v1.md) defines
+independent checking of the complete before/after relation and an opt-in
+Collection@2 certificate with canonical elapsed/UTC validity cells. Every member,
+including members with no proposal, contributes relevant time boundaries before
+arbitration and batching. Current non-time input and complete arbitration must
+still match. Point verification permits no current effect or consumer authority.
+
+The target forbids delegating verification to forward execution/regeneration.
+Full VD-T1–T14, independent archive consumers and the owning milestone remain
+open; the existing continuation milestone does not establish this successor.
+
+The successor entry schema and vectors now pass five native representation
+checks, including 52 malformed/missing-field cases and all six clock-cell
+alternatives. This is representation evidence; it does not establish runtime
+correspondence.
+
+The internal canonical time-cell component now passes seventeen native cases
+within a 35-case affected run, including negative membership and all 1,024
+pending effects. Four isolated native mutations are caught through assertions
+with zero harness errors. The [foundation record](../provenance/verified-decision-foundation-2026-10.md)
+limits this evidence to cut derivation/current-Time comparison over prevalidated
+point data; it supplies no independent point or arbitration check.
+
+The public Transition.verify/8 point checker now validates complete normalized
+arguments, qualified observations, edge state, receipts/spend, step motion,
+terminal outcomes and ordered proposals independently of forward execution.
+A 113-case affected corpus checks 1,152 complete point transitions and 72 direct
+edge relations with all eight prohibited forward functions disabled during
+proof. Six isolated point mutations fail through assertions with zero harness
+errors. The [point record](../provenance/verified-transitions-2026-10.md) binds
+source/test identities and exact direct scope; that record alone does not
+establish the complete-decision layer or current consumer authority.
+
+Public Decision.verify_point/4, new/3, to_map/3 and check/4 now independently
+verify complete Collection@2 membership, retained pending state, canonical
+cells/digests, exact current input and whole-set arbitration before cutoff.
+The guarded native lane passes 41 tests with all nine forward seams disabled
+during proof, including 70 prepared complete collections and seven arbitration
+relations. Fifteen new cases include an independent all-pairs oracle over 162
+policy/batch combinations, 1,024 contributors with a final supplied conflict,
+a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
+The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
+this native evidence. Independent raw-source/journal archive consumers,
+complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
+open. No consumer authority, host/physical qualification or wider Model scope
+is supplied.
+
+The separate journal family now passes seven local native preflight cases.
+Its explicit row/receipt scripts and consumer-owned revision, original and charge
+ledger are independent of the source oracle and production execution helpers.
+Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
+policy/cutoff and exact public byte-bound cases pass. The
+[journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
+binds the sources and executed checks. Both families are still native preflight;
+the opt-in archive runner, cohort identity, extracted projects, twelve semantic
+mutation runs and owning verifier milestone remain required.
