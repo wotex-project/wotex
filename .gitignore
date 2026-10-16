@@ -17,6 +17,11 @@ erl_crash.dump
 *.dump
 mix.lock.bak
 __pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.cache/
+.DS_Store
 .archive-check.*/
 .graph-check.*/
 .wotex-thread-*/
