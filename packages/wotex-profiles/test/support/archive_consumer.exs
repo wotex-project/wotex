@@ -197,11 +197,19 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
     File.write!("candidate.json", final.bundle_bytes)
     File.write!("draft.json", Jason.encode!(draft))
 
+    # Keep Mix informational output out of the task's JSON stdout.
+    command_env = [
+      {"HEX_API_KEY", nil},
+      {"GITHUB_TOKEN", nil},
+      {"GH_TOKEN", nil},
+      {"MIX_QUIET", "1"}
+    ]
+
     {output, 0} =
       System.cmd(
         "mix",
         ["wotex.profiles.validate", "--contract", "contract.json", "--candidate", "candidate.json"],
-        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        env: command_env,
         stderr_to_stdout: true
       )
 
@@ -219,7 +227,7 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
           "--output",
           "derived.json"
         ],
-        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        env: command_env,
         stderr_to_stdout: true
       )
 
@@ -231,7 +239,7 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
       System.cmd(
         "mix",
         ["wotex.profiles.validate", "--contract", "contract.json", "--candidate", "candidate.json"],
-        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        env: command_env,
         stderr_to_stdout: true
       )
 
@@ -247,7 +255,7 @@ defmodule Wotex.Profiles.ArchiveConsumerTest do
           "--candidate",
           "candidate.json"
         ],
-        env: [{"HEX_API_KEY", nil}, {"GITHUB_TOKEN", nil}, {"GH_TOKEN", nil}],
+        env: command_env,
         stderr_to_stdout: true
       )
 
