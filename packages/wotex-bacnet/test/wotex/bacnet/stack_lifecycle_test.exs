@@ -142,6 +142,10 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     receiver = self()
 
     for {failed, index} <- Enum.with_index(phases), mode <- [:error, :raise, :exit] do
+      {:ok, reservation} = :gen_udp.open(0, [:binary, active: false])
+      {:ok, {_, port}} = :inet.sockname(reservation)
+      :gen_udp.close(reservation)
+
       acquire = fn name, start ->
         if name == failed do
           case mode do
@@ -158,7 +162,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
 
       assert {:error, %{code: :startup_failed}} =
                StackOwner.start_link(
-                 [local_ip: :none, local_port: 55_816, timeout: 5000, owner: self()],
+                 [local_ip: :none, local_port: port, timeout: 5000, owner: self()],
                  acquire
                )
 
@@ -167,7 +171,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
         refute Process.alive?(pid)
       end
 
-      {:ok, socket} = :gen_udp.open(55_816, [:binary])
+      {:ok, socket} = :gen_udp.open(port, [:binary])
       :gen_udp.close(socket)
     end
   end
