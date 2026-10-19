@@ -54,9 +54,17 @@ defmodule Wotex.Binding.MQTT.Delivery do
 
   @doc "Validates a delivery value received across the consumer client boundary."
   @spec normalize(term()) :: {:ok, t()} | {:error, Error.t()}
-  def normalize(%__MODULE__{} = delivery), do: {:ok, delivery}
+  def normalize(%__MODULE__{payload: payload, topic: topic, qos: qos, retain: retain} = delivery)
+      when map_size(delivery) == 5 do
+    case new(payload, topic: topic, qos: qos, retain: retain) do
+      {:ok, ^delivery} -> {:ok, delivery}
+      _ -> invalid_delivery()
+    end
+  end
 
-  def normalize(_) do
+  def normalize(_), do: invalid_delivery()
+
+  defp invalid_delivery do
     {:error,
      Error.new(
        :invalid_delivery,

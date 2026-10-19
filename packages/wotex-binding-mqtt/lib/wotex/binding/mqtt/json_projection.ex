@@ -52,6 +52,9 @@ defmodule Wotex.Binding.MQTT.JSONProjection do
   alias Wotex.Binding.MQTT.{Delivery, Error, Topic}
   alias Wotex.Runtime.Codec.{JSON, Value}
 
+  # Elixir types cannot name the literal string keys and values of a JSON schema.
+  @dialyzer {:no_underspecs, selector_schema: 0}
+
   @doc "Returns the structural selector schema; semantic validation remains explicit."
   @spec selector_schema() :: map()
   def selector_schema do
@@ -115,18 +118,17 @@ defmodule Wotex.Binding.MQTT.JSONProjection do
   defp text?(value, min, max),
     do: is_binary(value) and byte_size(value) in min..max and String.valid?(value)
 
-  defp delivery(%Delivery{payload: payload, topic: topic, qos: qos, retain: retain} = value)
-       when map_size(value) == 5 do
-    case Delivery.new(payload, topic: topic, qos: qos, retain: retain) do
-      {:ok, ^value} ->
-        if byte_size(value.payload) <= 65_536, do: :ok, else: failure(:json_output_limit)
+  defp delivery(value) do
+    case Delivery.normalize(value) do
+      {:ok, delivery} ->
+        if byte_size(Delivery.payload(delivery)) <= 65_536,
+          do: :ok,
+          else: failure(:json_output_limit)
 
       _ ->
         failure(:invalid_delivery)
     end
   end
-
-  defp delivery(_), do: failure(:invalid_delivery)
 
   defp decode(payload) do
     case JSON.decode(payload) do

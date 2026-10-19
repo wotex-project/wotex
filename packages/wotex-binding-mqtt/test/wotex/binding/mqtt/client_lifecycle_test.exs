@@ -72,12 +72,29 @@ defmodule Wotex.Binding.MQTT.ClientLifecycleTest do
     {:ok, state} = LifecycleClient.start_link(self())
     on_exit(fn -> if Process.alive?(state), do: Agent.stop(state) end)
 
-    config = lifecycle_config(state, %{subscribe_return: {:error, :broker_unavailable}})
+    test_pid = self()
+    release = make_ref()
+
+    config =
+      lifecycle_config(state, %{
+        subscribe_return: fn ->
+          send(test_pid, {:subscribe_pending, self()})
+
+          receive do
+            ^release -> {:error, :broker_unavailable}
+          after
+            1_000 -> exit(:test_subscribe_not_released)
+          end
+        end
+      })
+
     id = {:open_failure, make_ref()}
     owner = start_observation(config, id, restart: :temporary)
     monitor = Process.monitor(owner)
 
     assert_receive {:lifecycle_subscribe_attempt, ^owner, ["things/properties/+"]}
+    assert_receive {:subscribe_pending, callback}
+    send(callback, release)
 
     assert_receive {:wotex_runtime, ^id,
                     {:error,

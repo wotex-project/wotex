@@ -53,6 +53,9 @@ defmodule Wotex.Binding.MQTT.Test.LifecycleClient do
         send(config.test_pid, {:lifecycle_subscribed, handle, owner})
         {:ok, handle}
 
+      return when is_function(return, 0) ->
+        return.()
+
       return ->
         return
     end
