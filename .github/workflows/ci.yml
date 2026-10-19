@@ -484,13 +484,14 @@ jobs:
     timeout-minutes: 180
     needs: [manifest, affected]
     if: >-
+      needs.affected.outputs.any_native == 'true' && (
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.native == 'true') ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'native'))
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'native')))
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJSON(needs.manifest.outputs.native) }}
+        package: ${{ fromJSON(needs.affected.outputs.native) }}
     env:
       WOTEX_PATH_DEPS: "1"
     steps:

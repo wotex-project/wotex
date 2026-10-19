@@ -147,7 +147,8 @@ defmodule Wotex.Workspace.ToolchainTest do
     refute ci =~ channel
 
     assert ci =~ "lane: ${{ fromJSON(needs.manifest.outputs.lanes) }}"
-    assert ci =~ "package: ${{ fromJSON(needs.manifest.outputs.native) }}"
+    assert ci =~ "package: ${{ fromJSON(needs.affected.outputs.native) }}"
+    assert ci =~ "needs.affected.outputs.any_native == 'true'"
     assert ci =~ "yq -o=json -I=0 '.lanes | keys' \"$manifest\""
   end
 
