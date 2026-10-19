@@ -16,7 +16,20 @@
 +    if (response_partial_iv_length)
 +      memcpy(response_partial_iv, cose->partial_iv.s,
 +             response_partial_iv_length);
-@@ -1568,14 +1576,15 @@
+@@ -1305,6 +1313,11 @@
+     /* External AAD */
+     cose_encrypt0_set_key_id(cose, snd_ctx->sender_id);
+-    if (association->is_observe && association->obs_partial_iv && got_resp_piv) {
++    /* An in-flight notification binds to the registration, while a cancel
++     * response binds to the new request (RFC 8613 sections 4.1.3.5.1 and 8.4).
++     * Both can carry a response Partial IV. Authentication still verifies the
++     * selected request binding before any response reaches the application. */
++    if (association->is_observe && association->obs_partial_iv && got_resp_piv &&
++        coap_check_option(pdu, COAP_OPTION_OBSERVE, &opt_iter)) {
+       cose_encrypt0_set_partial_iv(cose, association->obs_partial_iv);
+     } else {
+       cose_encrypt0_set_partial_iv(cose, association->partial_iv);
+@@ -1568,14 +1581,15 @@
        break;
      case COAP_OPTION_OBSERVE:
        if (!coap_request) {

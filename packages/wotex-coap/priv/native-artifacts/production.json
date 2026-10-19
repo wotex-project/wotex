@@ -22,7 +22,7 @@
     {"id": "reject-representation-restart", "path": "native/oscore/patches/0004-reject-representation-restart.patch", "sha256": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767"},
     {"id": "reject-unprotected-responses", "path": "native/oscore/patches/0005-reject-unprotected-responses.patch", "sha256": "483292e9eab1ee9c970698734901b89cb12ac846a74a2c225101c032e79635ad"},
     {"id": "release-whole-body-first-response", "path": "native/oscore/patches/0006-release-whole-body-first-response.patch", "sha256": "d3e20f9cbb199639634cd0ddc2a90f4d6efeebd14fa9fd9010471065f3d5e2ec"},
-    {"id": "preserve-oscore-observe-sequence", "path": "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch", "sha256": "c5889f59ed5aec2a30b2c21c9b3abf98d79b5ed47e4cfee8919f85958b9409d9"},
+    {"id": "preserve-oscore-observe-sequence", "path": "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch", "sha256": "8725ac5f62e09e17b6f7f2d4df653471f03e453e73c6b1ce85ba32caaea73a6d"},
     {"id": "drop-oscore-client-send-hold", "path": "native/oscore/patches/0008-drop-oscore-client-send-hold.patch", "sha256": "01a3be4fa8174891e1b72a07e35b41ccd696714439624775c8755415a12650e8"},
     {"id": "keep-association-after-unverified-response", "path": "native/oscore/patches/0009-keep-association-after-unverified-response.patch", "sha256": "2fc5c30dd599d7edf54824ce6b9280d5f1944a1ea4680c263735a9150dd4385d"},
     {"id": "ignore-uncorrelated-plaintext-responses", "path": "native/oscore/patches/0010-ignore-uncorrelated-plaintext-responses.patch", "sha256": "191bf1dd87239b3247a6f91cd8493b2793d7284df713836c32561dd7d01e1f00"}

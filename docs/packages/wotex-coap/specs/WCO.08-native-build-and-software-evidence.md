@@ -71,7 +71,12 @@ after authenticated Block2 assembly so a following request is not delayed by
 the internal five-second guard. The OSCORE Observe patch preserves the response
 Partial IV before libcoap temporarily substitutes the request Partial IV for AAD
 calculation, so the decrypted 24-bit Observe value advances with authenticated
-notifications. The send-hold patch removes the OSCORE client hold that libcoap
+notifications. During cancellation it uses the registration request binding
+only for an in-flight Observe notification; a response without Observe uses
+the cancellation request binding even when it carries its own Partial IV.
+The selected binding still requires AEAD authentication, as specified by
+[RFC 8613 sections 4.1.3.5.1 and 8.4](https://datatracker.ietf.org/doc/html/rfc8613#section-4.1.3.5.1).
+The send-hold patch removes the OSCORE client hold that libcoap
 re-armed on every `coap_send`, because a client recipient context never leaves
 its initial replay state; while a request lacked a response, the next PDU
 construction otherwise blocked the worker for up to five seconds. The worker

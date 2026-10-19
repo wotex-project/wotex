@@ -32,7 +32,7 @@ defmodule Wotex.CoAP.NativeBuildTest do
 
     @independent_peer_sha256 "0bf82d45791eeebbf9d781d0e66f47ddafe67ba36984a432771127f1ee6dd7d5"
     @patched %{
-      "src/coap_oscore.c" => "230f2a93d75123e067da5b850e033f7b1ce4f0cfa65c217dbef0163180fc8ae8",
+      "src/coap_oscore.c" => "6b1f5b64a04450316a34811280a7347d19c11dd8a056af1d73c17d51f400cec4",
       "src/oscore/oscore_cbor.c" =>
         "2632d708c38080e38e572d19ef5d57374c2f74bee04a3802af6fe6dc14cad98c",
       "src/coap_block.c" => "010c4ee6d6e385d6dc0716c8045c59126f91db711b1d86a76b57bce263c2b0b3",

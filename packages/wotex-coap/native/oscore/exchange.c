@@ -400,6 +400,10 @@ const char *wco_exchange_open(const char *host, uint16_t port,
         coap_free_context(exchange->context); free(exchange); coap_cleanup();
         return "security_handshake_failed";
     }
+    /* The worker owns cancellation and its deadline. A notification received
+     * while cancellation is pending can restore libcoap's observe tracking;
+     * releasing that session must not send a second cancellation. */
+    coap_session_set_no_observe_cancel(exchange->session);
     {
         /* libcoap starts every session's token counter at one. RFC 7252
          * section 5.3.1 asks clients to use at least 32 random token bits, and

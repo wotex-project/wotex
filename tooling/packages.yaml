@@ -499,12 +499,12 @@ packages:
         build: wotex.coap.software.build
         prepare:
           - [tar, -xzf, "{workspace}/native/downloads/libcoap.tar.gz", -C, "{scratch}"]
-          - [cmake, -S, "{scratch}/libcoap-7cf7465b784baded4de183290c547d582becfd28", -B, "{scratch}/libcoap", -DENABLE_OSCORE=ON, -DENABLE_DTLS=ON, -DDTLS_BACKEND=openssl, -DBUILD_SHARED_LIBS=OFF, -DENABLE_DOCS=OFF, -DENABLE_EXAMPLES=OFF, -DENABLE_TESTS=OFF]
+          - [cmake, -S, "{scratch}/libcoap-2dae53cede20d30fda9a243b7ebc4472ee1871bf", -B, "{scratch}/libcoap", -DENABLE_OSCORE=ON, -DENABLE_DTLS=ON, -DDTLS_BACKEND=openssl, -DBUILD_SHARED_LIBS=OFF, -DENABLE_DOCS=OFF, -DENABLE_EXAMPLES=OFF, -DENABLE_TESTS=OFF]
         compile:
           - files: ["native/oscore/*.c"]
-            flags: [-std=c11, -DWCO_WITH_LIBCOAP, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "-I{scratch}/libcoap/include", "-I{scratch}/libcoap-7cf7465b784baded4de183290c547d582becfd28/include", "pkg-config:openssl"]
+            flags: [-std=c11, -DWCO_WITH_LIBCOAP, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "-I{scratch}/libcoap/include", "-I{scratch}/libcoap-2dae53cede20d30fda9a243b7ebc4472ee1871bf/include", "pkg-config:openssl"]
           - files: ["test/native/*.c"]
-            flags: [-std=c11, -DWCO_STORE_TEST, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "-I{scratch}/libcoap/include", "-I{scratch}/libcoap-7cf7465b784baded4de183290c547d582becfd28/include", "pkg-config:openssl"]
+            flags: [-std=c11, -DWCO_STORE_TEST, -DYYJSON_DISABLE_NON_STANDARD=1, -DYYJSON_DISABLE_UTILS=1, -DYYJSON_DISABLE_INCR_READER=1, "-I{package}/native/oscore", "-I{scratch}/libcoap/include", "-I{scratch}/libcoap-2dae53cede20d30fda9a243b7ebc4472ee1871bf/include", "pkg-config:openssl"]
         test:
           - ["{workspace}/bin/faults/oscore-json"]
           - ["{workspace}/bin/faults/oscore-frame"]
