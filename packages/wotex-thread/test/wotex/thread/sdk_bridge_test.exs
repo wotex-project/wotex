@@ -249,6 +249,35 @@ defmodule Wotex.Thread.SdkBridgeTest do
     end
   end
 
+  test "WTH-C03 ready queued before expiry is still a timeout when processed after it", context do
+    File.write!(Path.join(context.directory, "mode"), "startup_wait")
+    assert {:ok, pid} = OpenThread.start_link(Keyword.put(context.options, :timeout, 5_000))
+    %{port: port, deadline: deadline, status: :starting} = :sys.get_state(pid)
+    :ok = :sys.suspend(pid)
+    waiter = Task.async(fn -> OpenThread.session(pid) end)
+
+    try do
+      File.write!(Path.join(context.directory, "release"), "yes")
+
+      eventually(
+        fn ->
+          {:messages, messages} = Process.info(pid, :messages)
+          Enum.any?(messages, &match?({^port, {:data, {:eol, _}}}, &1))
+        end,
+        400
+      )
+
+      assert System.monotonic_time(:millisecond) < deadline
+      Process.sleep(max(deadline - System.monotonic_time(:millisecond), 0) + 1)
+    after
+      :sys.resume(pid)
+    end
+
+    assert {:error, %Error{code: :timeout}} = Task.await(waiter)
+    refute Process.alive?(pid)
+    assert File.read!(Path.join(context.directory, "exited")) == "done"
+  end
+
   test "WTH-C07 wrong backend identity and open replies fail without returning a Session",
        context do
     cases = [

@@ -196,7 +196,14 @@ dispatches the same native build; inside the package the short aliases
   the leader, joiner, daemon, sleepy sensor and light, plus the daemon socket
   and application resources.
 - The software run requires Linux, `mix` on `PATH` and a completed software
-  workspace; it never builds. It runs the sanitizer native tests, then the full
+  workspace; it never builds. The real POSIX SDK also requires `/dev/net/tun`
+  and permission to create its configured interfaces. Run the fixtures in an
+  isolated network namespace or VM with explicit network administration
+  privileges. CI supplies a private network namespace for the software run;
+  the library does not acquire privileges. The application fixture routes
+  peer destinations through the leader's TUN with its unicast source and
+  serves CoAP in each peer's internal Thread UDP stack. It runs the sanitizer
+  native tests, then the full
   suite with `--include interop --include software --exclude hardware` against
   the normal host and the software, native-contract and OpenThread-network
   tests against the sanitizer host, with `WOTEX_REQUIRE_SOFTWARE=1`. The network

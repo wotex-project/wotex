@@ -210,7 +210,12 @@ defmodule Wotex.Thread.Software.Run do
     guardian = Path.join(workspace, "bin/build-command")
     executables = Build.executables(workspace)
     fixture = Build.fixture(workspace)
-    native = Enum.map(executables.native_tests, &native_test(guardian, output, &1))
+
+    native =
+      Enum.map(
+        executables.native_tests,
+        &native_test(guardian, output, &1, environment.project_root)
+      )
 
     lanes =
       for {lane, host, arguments, extra} <- [
@@ -264,14 +269,19 @@ defmodule Wotex.Thread.Software.Run do
     }
   end
 
-  defp native_test(guardian, output, executable) do
+  defp native_test(guardian, output, executable, project_root) do
     name = Path.basename(executable)
+
+    arguments =
+      if name == "wotex-thread-management-test",
+        do: [Path.join(project_root, "priv/fixtures/contract-v1.json")],
+        else: []
 
     step = %{
       id: :native_test,
       executable: executable,
       cwd: output,
-      args: [],
+      args: arguments,
       env: [{"PATH", "/usr/bin:/bin"}, {"LC_ALL", "C"} | @sanitizer_options],
       timeout_ms: @native_timeout,
       output_bytes: 1_048_576,

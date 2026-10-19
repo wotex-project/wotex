@@ -68,22 +68,27 @@ defmodule Wotex.Thread.SoftwareNetwork do
       radio_url(:daemon)
     ]
 
-    with {:ok, process} <- start_process(executable, args) do
+    with {:error, :enoent} <- File.lstat(socket),
+         {:ok, process} <- start_process(executable, args) do
       process = Map.put(process, :pids, [process.os_pid | descendants(process.os_pid)])
 
-      case await_path(socket, process.port, 10_000) do
-        :ok ->
-          {:ok,
-           Map.merge(process, %{
-             socket: socket,
-             interface: @interfaces.daemon,
-             pids: [process.os_pid | descendants(process.os_pid)]
-           })}
-
+      with :ok <- await_path(socket, process.port, 10_000),
+           {:ok, identity} <- socket_identity(socket) do
+        {:ok,
+         Map.merge(process, %{
+           socket: socket,
+           socket_identity: identity,
+           interface: @interfaces.daemon,
+           pids: [process.os_pid | descendants(process.os_pid)]
+         })}
+      else
         {:error, _} = error ->
           stop_process(process)
           error
       end
+    else
+      {:ok, _} -> {:error, :daemon_socket_exists}
+      {:error, _} = error -> error
     end
   end
 
@@ -140,8 +145,8 @@ defmodule Wotex.Thread.SoftwareNetwork do
   end
 
   @doc "Stops one owned daemon or application process and waits for all recorded descendants."
-  @spec stop_process(owned_process()) :: :ok | {:error, :timeout}
-  def stop_process(%{port: port, os_pid: pid, executable: executable, pids: pids}) do
+  @spec stop_process(owned_process()) :: :ok | {:error, atom()}
+  def stop_process(%{port: port, os_pid: pid, executable: executable, pids: pids} = process) do
     if owned_process?(pid, executable), do: signal(pid, "-TERM")
 
     case eventually(fn -> Enum.all?(pids, &(not File.exists?("/proc/#{&1}"))) end, 5_000) do
@@ -154,7 +159,27 @@ defmodule Wotex.Thread.SoftwareNetwork do
 
     result = eventually(fn -> Enum.all?(pids, &(not File.exists?("/proc/#{&1}"))) end, 5_000)
     close_port(port)
-    result
+    if result == :ok, do: remove_owned_socket(process), else: result
+  end
+
+  defp remove_owned_socket(%{socket: path, socket_identity: identity}) do
+    case socket_identity(path) do
+      {:ok, ^identity} -> File.rm(path)
+      {:error, :enoent} -> :ok
+      _ -> {:error, :daemon_socket_changed}
+    end
+  end
+
+  defp remove_owned_socket(_), do: :ok
+
+  defp socket_identity(path) do
+    with {:ok, stat} <- File.lstat(path),
+         true <- Bitwise.band(stat.mode, 0o170000) == 0o140000 do
+      {:ok, {stat.major_device, stat.inode}}
+    else
+      {:error, _} = error -> error
+      false -> {:error, :invalid_daemon_socket}
+    end
   end
 
   @doc "Reads the finite application report written during graceful shutdown."

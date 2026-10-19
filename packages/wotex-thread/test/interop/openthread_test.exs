@@ -64,6 +64,9 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
 
         assert {:ok, ^active} = Thread.get_dataset(leader, :active, 2_000)
 
+        assert {:ok, %State{ipv6_enabled: true, thread_enabled: false}} =
+                 Thread.set_enabled(joiner, %{ipv6: true, thread: false}, 2_000)
+
         assert {:ok, subscription} =
                  Thread.subscribe(joiner, %{type: :state, max_queue_length: 64, timeout: 2_000})
 
@@ -98,7 +101,7 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
                   details: %{status: wrong_status}
                 }} = Thread.joiner_start(joiner, wrong, 60_000)
 
-        assert is_integer(wrong_status)
+        assert wrong_status == 8
 
         assert {:error, %Error{code: :dataset_not_found}} =
                  Thread.get_dataset(joiner, :active, 2_000)
@@ -121,32 +124,24 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
                  )
 
         assert_role_report(reference)
-        assert {:ok, ^active} = Thread.get_dataset(joiner, :active, 2_000)
+        assert dataset_matches?(joiner, active)
 
-        pending = pending_dataset(active, 2, 3, 5_000)
+        pending = pending_dataset(active, 2, 3, 30_000)
 
         assert {:ok, %{accepted: true, effective: :not_verified}} =
                  Thread.management_pending_set(leader, %{dataset: pending}, 10_000)
 
         assert {:ok, ^active} = Thread.get_dataset(leader, :active, 2_000)
-        assert {:ok, ^active} = Thread.get_dataset(joiner, :active, 2_000)
+        assert dataset_matches?(joiner, active)
         activated = active_dataset(2)
-        assert_dataset_on_both(leader, joiner, activated, 20_000)
+        assert_dataset_on_both(leader, joiner, activated, 45_000)
 
-        late = active_dataset(3)
+        updated = active_dataset(3)
 
-        assert {:error,
-                %Error{
-                  code: :timeout,
-                  class: :permanent,
-                  effect: :unknown,
-                  retryable: false
-                }} = Thread.management_active_set(leader, %{dataset: late}, 1)
+        assert {:ok, %{accepted: true, effective: :not_verified}} =
+                 Thread.management_active_set(leader, %{dataset: updated}, 10_000)
 
-        assert {:error, %Error{code: :busy, class: :rate_limited, effect: :none}} =
-                 Thread.management_active_set(leader, %{dataset: active_dataset(4)}, 2_000)
-
-        assert_dataset_on_both(leader, joiner, late, 20_000)
+        assert_dataset_on_both(leader, joiner, updated, 20_000)
 
         final = active_dataset(4)
 
@@ -162,6 +157,36 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
 
         assert {:ok, %{state: :disabled}} = Thread.commissioner_stop(leader, timeout: 2_000)
         assert :ok = Thread.unsubscribe(joiner, subscription)
+
+        # Stop this owned worker so the BEAM deadline wins deterministically.
+        # The SDK clock test separately covers a late callback retaining busy.
+        [_, worker | _] = leader_pids
+        executable = System.fetch_env!("WOTEX_THREAD_HOST")
+        assert SoftwareNetwork.owned_process?(worker, executable)
+
+        assert {_, 0} =
+                 System.cmd("/bin/kill", ["-STOP", Integer.to_string(worker)], env: command_env())
+
+        try do
+          assert :ok =
+                   SoftwareNetwork.eventually(fn ->
+                     case File.read("/proc/#{worker}/status") do
+                       {:ok, status} -> Regex.match?(~r/^State:\s+T/m, status)
+                       _ -> false
+                     end
+                   end)
+
+          assert {:error, %Error{code: :timeout, effect: :unknown, retryable: false}} =
+                   Thread.management_active_set(leader, %{dataset: active_dataset(5)}, 50)
+
+          assert {:error, %Error{code: :connection_closed}} =
+                   Thread.inspect_state(leader, timeout: 2_000)
+
+          assert_native_cleanup(leader_pids, "wthleader")
+        after
+          if SoftwareNetwork.owned_process?(worker, executable),
+            do: System.cmd("/bin/kill", ["-CONT", Integer.to_string(worker)], env: command_env())
+        end
       after
         assert :ok = Thread.disconnect(joiner)
         assert_native_cleanup(joiner_pids, "wthjoiner")
@@ -262,6 +287,7 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
 
         try do
           refute light.sleepy
+          route_applications([sensor, light])
           result = run_coap_client(context.root, sensor.address, light.address)
 
           assert result == %{
@@ -292,34 +318,34 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
                  }
         after
           assert :ok = SoftwareNetwork.stop_process(light)
-          assert {:ok, report} = SoftwareNetwork.application_report(light)
-
-          assert report == %{
-                   "format" => "wotex.thread.coap-peer",
-                   "version" => 1,
-                   "mode" => "light",
-                   "get_requests" => 2,
-                   "put_requests" => 1,
-                   "final" => "1"
-                 }
-
           refute File.exists?("/sys/class/net/#{light.interface}")
         end
-      after
-        assert :ok = SoftwareNetwork.stop_process(sensor)
-        assert {:ok, report} = SoftwareNetwork.application_report(sensor)
+
+        assert {:ok, report} = SoftwareNetwork.application_report(light)
 
         assert report == %{
                  "format" => "wotex.thread.coap-peer",
                  "version" => 1,
-                 "mode" => "sensor",
-                 "get_requests" => 1,
-                 "put_requests" => 0,
-                 "final" => "21.50"
+                 "mode" => "light",
+                 "get_requests" => 2,
+                 "put_requests" => 1,
+                 "final" => "1"
                }
-
+      after
+        assert :ok = SoftwareNetwork.stop_process(sensor)
         refute File.exists?("/sys/class/net/#{sensor.interface}")
       end
+
+      assert {:ok, report} = SoftwareNetwork.application_report(sensor)
+
+      assert report == %{
+               "format" => "wotex.thread.coap-peer",
+               "version" => 1,
+               "mode" => "sensor",
+               "get_requests" => 1,
+               "put_requests" => 0,
+               "final" => "21.50"
+             }
     after
       assert :ok = Thread.disconnect(leader)
       assert_native_cleanup(leader_pids, "wthleader")
@@ -361,11 +387,17 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
     assert :ok =
              SoftwareNetwork.eventually(
                fn ->
-                 Thread.get_dataset(leader, :active, 2_000) == {:ok, expected} and
-                   Thread.get_dataset(joiner, :active, 2_000) == {:ok, expected}
+                 dataset_matches?(leader, expected) and dataset_matches?(joiner, expected)
                end,
                timeout
              )
+  end
+
+  defp dataset_matches?(session, expected) do
+    case Thread.get_dataset(session, :active, 2_000) do
+      {:ok, actual} -> Map.new(actual.entries) == Map.new(expected.entries)
+      _ -> false
+    end
   end
 
   defp assert_role_report(reference) do
@@ -406,6 +438,63 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
     }
   end
 
+  defp command_env do
+    Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
+  end
+
+  defp route_applications(peers) do
+    {addresses, 0} =
+      System.cmd("/usr/sbin/ip", ["-6", "-j", "addr", "show", "dev", "wthleader"],
+        env: command_env()
+      )
+
+    assert [leader] = Jason.decode!(addresses)
+
+    assert %{"local" => source} =
+             Enum.find(leader["addr_info"], fn address ->
+               address["scope"] == "global" and
+                 not String.contains?(address["local"], ":0:ff:fe00:")
+             end)
+
+    # The kernel owns every simulated peer address in this namespace. Remove
+    # local delivery and select the leader's unicast source so the client uses
+    # its TUN and the real Thread radios, rather than another peer's address.
+    for peer <- peers do
+      assert {_, 0} =
+               System.cmd(
+                 "/usr/sbin/ip",
+                 [
+                   "-6",
+                   "route",
+                   "del",
+                   "local",
+                   peer.address,
+                   "dev",
+                   peer.interface,
+                   "table",
+                   "local"
+                 ],
+                 env: command_env()
+               )
+
+      assert {_, 0} =
+               System.cmd(
+                 "/usr/sbin/ip",
+                 [
+                   "-6",
+                   "route",
+                   "replace",
+                   peer.address <> "/128",
+                   "dev",
+                   "wthleader",
+                   "src",
+                   source
+                 ],
+                 env: command_env()
+               )
+    end
+  end
+
   defp run_coap_client(root, sensor, light) do
     mix = System.find_executable("mix") || flunk("mix executable is unavailable")
     project = Path.expand("../../../wotex-coap", __DIR__)
@@ -413,7 +502,7 @@ defmodule Wotex.Thread.OpenThreadInteropTest do
     result = Path.join(root, "coap-composition.json")
 
     {output, status} =
-      System.cmd(mix, ["run", script, "--", sensor, light, result],
+      System.cmd(mix, ["run", script, sensor, light, result],
         cd: project,
         stderr_to_stdout: true,
         env: [{"MIX_ENV", "test"}, {"WOTEX_PATH_DEPS", "1"}]

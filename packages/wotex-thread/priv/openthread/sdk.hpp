@@ -152,9 +152,14 @@ class Sdk final {
     const bool ipv6 = parameters.at("ipv6").get<bool>(), thread = parameters.at("thread").get<bool>();
     if (thread && !ipv6) throw SdkError("invalid_state");
     if (thread) {
-      otOperationalDatasetTlvs active {};
+      otOperationalDatasetTlvs active{};
+      // A successful authenticated join stores only Network Key, PAN ID and
+      // channel until attachment learns the full Dataset. Only this live
+      // instance's terminal join callback permits that partial state.
       if (otDatasetGetActiveTlvs(instance_, &active) != OT_ERROR_NONE ||
-          !DatasetValue(dataset_envelope(active)).valid(true)) throw SdkError("dataset_required");
+          (!DatasetValue(dataset_envelope(active)).valid(true) && !joiner_->joined())) {
+        throw SdkError("dataset_required");
+      }
     }
     // Disable Thread before its IP interface; enable IP before Thread.
     if (!thread && otThreadGetDeviceRole(instance_) != OT_DEVICE_ROLE_DISABLED) {

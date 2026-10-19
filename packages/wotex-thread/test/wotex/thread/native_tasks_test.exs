@@ -108,6 +108,12 @@ defmodule Wotex.Thread.NativeTasksTest do
     end
 
     for path <- ~w(mix.exs mix.lock), do: File.write!(Path.join(project, path), "disposable\n")
+
+    File.cp!(
+      Application.app_dir(:wotex_thread, "priv/fixtures/contract-v1.json"),
+      Path.join(project, "priv/fixtures/contract-v1.json")
+    )
+
     required = [%{"module" => "M", "name" => "one"}]
 
     inventory = %{

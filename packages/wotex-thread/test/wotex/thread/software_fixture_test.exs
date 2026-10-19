@@ -49,6 +49,17 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     assert {:ok, %{reused: false, manifest: manifest}} = Build.run(workspace, environment)
     assert manifest["schema"] == "wotex.software-build"
 
+    assert "-DOT_PLATFORM_UDP=OFF" in manifest["arguments"]["flow_configure"]
+
+    maximum =
+      manifest["arguments"]["rcp_configure"]
+      |> Enum.find(&String.starts_with?(&1, "-DOT_SIMULATION_MAX_NETWORK_SIZE="))
+      |> String.split("=")
+      |> List.last()
+      |> String.to_integer()
+
+    assert Enum.all?(Build.fixture(workspace).node_ids, fn {_, node} -> node in 1..maximum end)
+
     assert manifest["build_features"] == %{
              "application" => %{
                "executable" => "wotex-thread-coap-peer",
@@ -119,6 +130,10 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     assert result["schema"] == "wotex.thread.software-run" and result["status"] == "passed"
     assert result["source_unchanged"]
     assert Enum.map(result["native_tests"], & &1["exit_status"]) == [0, 0, 0, 0, 0, 0, 0]
+
+    assert File.read!(Path.join(Path.dirname(path), "wotex-thread-management-test.log")) ==
+             Path.join(project, "priv/fixtures/contract-v1.json") <> "\n"
+
     assert Enum.map(result["lanes"], & &1["lane"]) == ["normal", "sanitized"]
     assert Enum.all?(result["lanes"], & &1["evaluation"]["accepted"])
     assert result["cleanup"] == %{"survivors" => 0}
@@ -246,6 +261,12 @@ defmodule Wotex.Thread.SoftwareFixtureTest do
     end
 
     for path <- ~w(mix.exs mix.lock), do: File.write!(Path.join(project, path), "disposable\n")
+
+    File.cp!(
+      Application.app_dir(:wotex_thread, "priv/fixtures/contract-v1.json"),
+      Path.join(project, "priv/fixtures/contract-v1.json")
+    )
+
     File.write!(Path.join(project, "test/software/acceptance.json"), Jason.encode!(inventory()))
     project
   end

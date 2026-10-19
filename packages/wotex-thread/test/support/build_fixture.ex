@@ -137,7 +137,9 @@ defmodule Wotex.Thread.BuildFixture do
     end
 
     {_, 0} =
-      System.cmd("/usr/bin/tar", ["czf", path, "-C", tree, root], env: [{"PATH", "/usr/bin:/bin"}])
+      System.cmd("/usr/bin/tar", ["--format=ustar", "-czf", path, "-C", tree, root],
+        env: [{"PATH", "/usr/bin:/bin"}, {"COPYFILE_DISABLE", "1"}]
+      )
 
     File.rm_rf!(tree)
   end
@@ -235,6 +237,9 @@ defmodule Wotex.Thread.BuildFixture do
             mkdir -p "$build/src/posix"
             printf '#!/bin/sh\\nexit 0\\n' > "$build/src/posix/ot-daemon"
             chmod 755 "$build/src/posix/ot-daemon" ;;
+          wotex-thread-management-test)
+            printf '%s\\n' '#!/bin/sh' '[ "$#" -eq 1 ] && [ -f "$1" ] || exit 64' 'printf "%s\\n" "$1"' > "$build/$argument"
+            chmod 755 "$build/$argument" ;;
           *)
             printf '#!/bin/sh\\nexit 0\\n' > "$build/$argument"
             chmod 755 "$build/$argument" ;;

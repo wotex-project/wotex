@@ -39,8 +39,11 @@ defmodule Wotex.Thread.Software.Build do
   @build_modules [__MODULE__, Mix.Tasks.Wotex.Thread.Software.Build]
   @tool_bytes 100_000_000
   @node_ids %{leader: 41, joiner: 42, daemon: 43, sensor: 44, light: 45}
+  # The pinned simulator defaults to 33 nodes; every assigned fixture node
+  # must be admitted by the RCP that represents it.
   @rcp_options ~w(-DOT_PLATFORM=simulation -DOT_APP_CLI=OFF -DOT_APP_NCP=OFF -DOT_APP_RCP=ON
-    -DOT_FTD=OFF -DOT_MTD=OFF -DOT_RCP=ON -DOT_COMPILE_WARNING_AS_ERROR=ON -DBUILD_TESTING=OFF)
+    -DOT_FTD=OFF -DOT_MTD=OFF -DOT_RCP=ON -DOT_SIMULATION_MAX_NETWORK_SIZE=45
+    -DOT_COMPILE_WARNING_AS_ERROR=ON -DBUILD_TESTING=OFF)
 
   @doc "Validates exactly one absolute `--workspace` argument."
   @spec arguments(term()) :: {:ok, Path.t()} | {:error, :invalid_software_build_arguments}
@@ -399,6 +402,8 @@ defmodule Wotex.Thread.Software.Build do
       "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
       "-DWOTEX_NATIVE_SANITIZERS=OFF",
       "-DOT_COAP=ON",
+      # Simulated peers own separate radio-backed CoAP endpoints on port 5683.
+      "-DOT_PLATFORM_UDP=OFF",
       "-DWOTEX_JSON_HEADER=#{Path.join(workspace, "native/downloads/json.hpp")}",
       "-DWOTEX_OPENTHREAD_SOURCE=#{Path.join([workspace, "native/sources/openthread", @sdk])}",
       "-DWOTEX_NATIVE_TEST_SOURCE=#{tests}",

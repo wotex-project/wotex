@@ -182,9 +182,13 @@ a report, return the uncertain failure without inventing a state snapshot.
 Native `set_enabled/3` selects explicit Boolean IPv6 and Thread states. Thread
 enabled with IPv6 disabled is invalid. Disabling Thread does not erase Dataset
 or credentials. Enabling Thread requires an existing active Dataset that passes
-SDK and profile validation; otherwise return `dataset_required` before changing
-IPv6 or Thread. This prevents enable from bypassing the explicit formation
-permission: the pinned
+SDK and profile validation. A successful authenticated join in the same live
+SDK instance also permits its existing partial active Dataset: the pinned
+Joiner stores Network Key, PAN ID and channel before attachment learns the full
+Dataset. Failed, stopped or stale callbacks do not grant this permission, and
+it does not survive instance shutdown. Otherwise return `dataset_required`
+before changing IPv6 or Thread. This prevents enable from bypassing the
+explicit formation permission: the pinned
 [Mle::Start implementation](https://github.com/openthread/openthread/blob/f34c5e5476829d9205e80b37fccc2bdfe97e1dab/src/core/thread/mle.cpp)
 can choose a PAN ID and start attachment without an installed Dataset.
 C07 `set_enabled` parameters are exactly `ipv6: boolean` and `thread: boolean`;

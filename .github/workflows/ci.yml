@@ -524,6 +524,23 @@ jobs:
               mix "$task" --workspace "$workspace" \
                 --core-archive "$RUNNER_TEMP/wotex.tar" \
                 --runtime-archive "$RUNNER_TEMP/wotex-runtime.tar"
+            elif [[ "$task" == *.thread.software.run ]]; then
+              # The real POSIX SDK creates TUN interfaces. Keep its explicitly
+              # privileged test processes inside a private network namespace.
+              sudo apt-get install -y iproute2
+              trap 'sudo chown -R "$(id -u):$(id -g)" "$workspace" _build deps' EXIT
+              sudo env "PATH=$PATH" "HOME=$HOME" \
+                "MIX_HOME=${MIX_HOME:-$HOME/.mix}" \
+                "HEX_HOME=${HEX_HOME:-$HOME/.hex}" \
+                "MIX_ARCHIVES=${MIX_ARCHIVES:-$HOME/.mix/archives}" \
+                "ERL_FLAGS=${ERL_FLAGS:-}" WOTEX_PATH_DEPS=1 \
+                unshare --net --mount --propagation private -- /bin/bash -c \
+                  'set -euo pipefail
+                   mount -t sysfs -o ro,nosuid,nodev,noexec sysfs /sys
+                   ip link set lo up multicast on
+                   ip route add 224.0.0.0/4 dev lo
+                   exec "$@"' \
+                  thread-software mix "$task" --workspace "$workspace"
             else
               mix "$task" --workspace "$workspace"
             fi

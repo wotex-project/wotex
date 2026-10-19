@@ -48,6 +48,7 @@ class JoinerOwner final {
     // NOLINTNEXTLINE(bugprone-std-exception-baseclass): the OpenThread status is reported as bounded remote_error data
     if (identity_status != OT_ERROR_NONE) throw identity_status;
 
+    joined_ = false;
     active_ = std::make_unique<Attempt>();
     active_->owner = this;
     active_->generation = ++generation_;
@@ -80,7 +81,10 @@ class JoinerOwner final {
     return status;
   }
 
+  bool joined() const { return joined_; }
+
   void close() {
+    joined_ = false;
     stop();
     result_.reset();
   }
@@ -103,6 +107,7 @@ class JoinerOwner final {
         owner->generation_ != attempt->generation)
       return;
     attempt->retired = true;
+    owner->joined_ = status == OT_ERROR_NONE;
     owner->result_ = Result{attempt->generation, status};
     owner->retired_ = std::move(owner->active_);
   }
@@ -138,6 +143,7 @@ class JoinerOwner final {
 
   otInstance *instance_;
   std::uint64_t generation_ = 0;
+  bool joined_ = false;
   std::unique_ptr<Attempt> active_;
   std::unique_ptr<Attempt> retired_;
   std::optional<Result> result_;

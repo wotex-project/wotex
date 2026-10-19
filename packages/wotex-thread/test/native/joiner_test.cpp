@@ -68,6 +68,7 @@ int main() {
   invalid["extra"] = true;
   assert(fails_with(owner, invalid, "invalid_joiner_config"));
   assert(starts == 0);
+  assert(!owner.joined());
 
   commissioned = true;
   assert(fails_with(owner, parameters(), "dataset_exists"));
@@ -95,14 +96,25 @@ int main() {
   const Callback current = callbacks.back();
   retired.function(OT_ERROR_NONE, retired.context);
   assert(!owner.take_result());
+  assert(!owner.joined());
   current.function(OT_ERROR_SECURITY, current.context);
   assert(owner.take_result() == OT_ERROR_SECURITY);
+  assert(!owner.joined());
 
   owner.start(parameters());
   callbacks.back().function(OT_ERROR_NONE, callbacks.back().context);
   assert(fails_with(owner, parameters(), "busy"));
   assert(owner.take_result() == OT_ERROR_NONE);
+  assert(owner.joined());
+  owner.start(parameters());
+  assert(!owner.joined());
+  const Callback stopped = callbacks.back();
+  owner.stop();
+  stopped.function(OT_ERROR_NONE, stopped.context);
+  assert(!owner.joined());
+  assert(!owner.take_result());
   owner.close();
-  assert(stops == 1);
+  assert(!owner.joined());
+  assert(stops == 2);
   return 0;
 }

@@ -52,7 +52,7 @@ defmodule Wotex.Thread.NativeSourceTest do
     File.write!(Path.join(tree, "root/run"), "data")
     File.chmod!(Path.join(tree, "root/run"), 0o755)
     archive = Path.join(root, "safe.tar.gz")
-    assert {_, 0} = tar(["czf", archive, "-C", tree, "root"])
+    assert {_, 0} = tar(["--format=ustar", "-czf", archive, "-C", tree, "root"])
     assert {:ok, _} = Source.validate_archive(archive, "root")
     destination = Path.join(root, "output")
     assert :ok = Source.extract(archive, destination, "root")
@@ -63,7 +63,7 @@ defmodule Wotex.Thread.NativeSourceTest do
     File.ln_s!("run", Path.join(tree, "root/link"))
     assert {:error, :invalid_source_file} = Source.digest(Path.join(tree, "root/link"))
     linked = Path.join(root, "linked.tar.gz")
-    assert {_, 0} = tar(["czf", linked, "-C", tree, "root"])
+    assert {_, 0} = tar(["--format=ustar", "-czf", linked, "-C", tree, "root"])
     assert {:error, :invalid_source_archive} = Source.validate_archive(linked, "root")
     refute File.exists?(Path.join(root, "linked-output"))
     File.ln_s!(destination, Path.join(root, "output-link"))
@@ -151,7 +151,8 @@ defmodule Wotex.Thread.NativeSourceTest do
   defp hash(bytes), do: Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
 
   defp tar(args) do
-    System.cmd("tar", args, env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end))
+    environment = System.get_env() |> Map.new(fn {key, _} -> {key, nil} end)
+    System.cmd("tar", args, env: Map.put(environment, "COPYFILE_DISABLE", "1"))
   end
 
   defp crafted_archive(name, type) do

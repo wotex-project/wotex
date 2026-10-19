@@ -465,25 +465,30 @@ defmodule Wotex.Thread.OpenThread.Connection do
   defp validate(_), do: {:error, Error.new(:invalid_handle)}
 
   defp frame(message, %{status: :starting} = state) do
-    if Frame.ready?(message) and now() < state.deadline do
-      parameters = %{
-        radio_url: state.config.radio_url,
-        interface: state.config.interface,
-        storage_path: state.config.storage_path,
-        storage_mode: Atom.to_string(state.config.storage_mode),
-        allow_network_creation: state.config.allow_network_creation
-      }
+    cond do
+      not Frame.ready?(message) ->
+        close(state, Error.new(:invalid_response))
 
-      # Flow initialization precedes open; its generation identifies this IPC session only.
-      if send_line(state.port, %{
-           version: 1,
-           event: "flow_open",
-           session_generation: state.session_generation
-         }) and send_frame(state.port, "open", "open", parameters, state.deadline),
-         do: %{state | status: :opening},
-         else: close(state, Error.new(:connection_closed))
-    else
-      close(state, Error.new(:invalid_response))
+      now() >= state.deadline ->
+        close(state, Error.new(:timeout))
+
+      true ->
+        parameters = %{
+          radio_url: state.config.radio_url,
+          interface: state.config.interface,
+          storage_path: state.config.storage_path,
+          storage_mode: Atom.to_string(state.config.storage_mode),
+          allow_network_creation: state.config.allow_network_creation
+        }
+
+        # Flow initialization precedes open; its generation identifies this IPC session only.
+        if send_line(state.port, %{
+             version: 1,
+             event: "flow_open",
+             session_generation: state.session_generation
+           }) and send_frame(state.port, "open", "open", parameters, state.deadline),
+           do: %{state | status: :opening},
+           else: close(state, Error.new(:connection_closed))
     end
   end
 
