@@ -11,7 +11,9 @@ defmodule Mix.Tasks.Wotex.Native.Advisories do
   `--package` may be repeated to query only those packages' pins. Without
   it, every native package and the repository's tooling pins are queried.
   `--offline` performs no query and succeeds. The task fails on any
-  advisory or failed query. The root alias is `mix native.advisories`.
+  unreviewed advisory or failed query. Exact source-bound accepted exceptions
+  remain in the result and manifest but are muted in the console report.
+  The root alias is `mix native.advisories`.
   """
 
   use Mix.Task
@@ -67,8 +69,14 @@ defmodule Mix.Tasks.Wotex.Native.Advisories do
     do: Mix.shell().info("#{describe(pin)}: no advisories")
 
   defp print(%{pin: pin, result: {:ok, vulnerabilities}}) do
-    Mix.shell().error("#{describe(pin)}: #{length(vulnerabilities)} advisory(ies)")
-    Enum.each(vulnerabilities, &Mix.shell().error("  #{&1.id} #{&1.summary}"))
+    blocking = Enum.reject(vulnerabilities, &Map.has_key?(&1, :review))
+
+    if blocking == [] do
+      Mix.shell().info("#{describe(pin)}: no blocking advisories")
+    else
+      Mix.shell().error("#{describe(pin)}: #{length(blocking)} advisory(ies)")
+      Enum.each(blocking, &Mix.shell().error("  #{&1.id} #{&1.summary}"))
+    end
   end
 
   defp print(%{pin: pin, result: {:error, message}}),

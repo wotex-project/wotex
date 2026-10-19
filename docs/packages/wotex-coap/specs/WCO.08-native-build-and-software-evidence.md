@@ -50,10 +50,24 @@ The source/manifest cohort name is `4.3.5b`; upstream CMake's public
 `coap_package_version()` remains `libcoap 4.3.5`. The probe checks that actual
 library string separately from the immutable source revision and manifest.
 Historical 4.3.5 artifacts remain historical; source and focused patch checks
-do not transfer native or interoperability qualification. The live source
-audit still blocks release adoption while OSV-2022-150 has no accepted fixed
-disposition. No source substitution or advisory suppression may make that
-unresolved report pass.
+do not transfer native or interoperability qualification.
+
+The source manifest records an owner-authorized CI exception for
+[OSV-2022-150](https://osv.dev/vulnerability/OSV-2022-150), whose git range
+records the introducing commit without a fixed endpoint. This exception is
+bound to this source commit and archive digest and does not claim that the
+advisory has been resolved. Upstream's
+[URI bound fix](https://github.com/obgm/libcoap/commit/c0572443dcfe544071ef2f66f0059ebd7b01311b)
+rejects a zero-length URI before dereferencing its pointer and is an ancestor
+of this pin. The native feature probe passes a protected page as that pointer
+and requires rejection without a read. A local negative control using the
+introducing revision's URI function at `-O0` faults on this input; the pinned
+library rejects it. This is a separate URI bounds regression; the original
+private OSS-Fuzz testcase was unavailable and has not been replayed. The source
+audit still queries OSV and retains this finding and its review in its result;
+the owner-authorized exception mutes it in the console report. The review matches only
+this advisory, source commit and archive digest; a changed pin, another
+finding or a failed query fails the audit.
 The [public 4.3.5 OSCORE API](https://libcoap.net/doc/reference/4.3.5/man_coap_oscore.html)
 owns configuration, exchange context and sender-sequence callbacks. No private
 SDK layout or Python bridge is part of the interface.

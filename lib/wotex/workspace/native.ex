@@ -23,7 +23,7 @@ defmodule Wotex.Workspace.Native do
   `tooling/native/**/source.json` of the same shape (nanobench, for
   `mix native.bench`), follow as one report named `tooling`.
 
-  `advisories/3` queries OSV for every pin. `build/4` dispatches a
+  `advisories/2` queries OSV for every pin. `build/4` dispatches a
   package's own `native_task` with an absolute workspace.
   """
 
@@ -34,6 +34,7 @@ defmodule Wotex.Workspace.Native do
   @osv_url "https://api.osv.dev/v1/query"
 
   @type pin :: %{
+          optional(:advisory_reviews) => [map()],
           name: String.t(),
           version: String.t() | nil,
           commit: String.t() | nil,
@@ -52,7 +53,11 @@ defmodule Wotex.Workspace.Native do
           problems: [String.t()]
         }
 
-  @type vulnerability :: %{id: String.t(), summary: String.t()}
+  @type vulnerability :: %{
+          required(:id) => String.t(),
+          required(:summary) => String.t(),
+          optional(:review) => map()
+        }
 
   @type advisory_result :: %{pin: pin(), result: {:ok, [vulnerability()]} | {:error, String.t()}}
 
@@ -77,6 +82,10 @@ defmodule Wotex.Workspace.Native do
   @doc """
   Queries OSV for every pin of `reports`. `query:` replaces the HTTP query
   (tests); `offline: true` performs no query and returns `[]`.
+
+  Source manifests may record an owner-accepted exception bound to the exact
+  commit and archive digest. Matching findings retain their identifier and review;
+  other pins, advisories and failed queries remain failures.
   """
   @spec advisories([report()], keyword()) :: [advisory_result()]
   def advisories(reports, opts \\ []) do
@@ -87,7 +96,7 @@ defmodule Wotex.Workspace.Native do
 
       reports
       |> pins()
-      |> Enum.map(&%{pin: &1, result: query.(&1)})
+      |> Enum.map(&%{pin: &1, result: reviewed_advisories(&1, query.(&1))})
     end
   end
 
@@ -99,10 +108,46 @@ defmodule Wotex.Workspace.Native do
     |> Enum.uniq_by(&{&1.name, &1.version, &1.commit})
   end
 
-  @doc "Whether advisory results contain a vulnerability or a failed query."
+  @doc "Whether every finding has an exact source exception and every query succeeded."
   @spec advisories_clean?([advisory_result()]) :: boolean()
   def advisories_clean?(results) do
-    Enum.all?(results, &match?(%{result: {:ok, []}}, &1))
+    Enum.all?(results, fn
+      %{result: {:ok, findings}} -> Enum.all?(findings, &Map.has_key?(&1, :review))
+      _ -> false
+    end)
+  end
+
+  defp reviewed_advisories(pin, {:ok, findings}) do
+    {:ok,
+     Enum.map(findings, fn finding ->
+       finding = Map.delete(finding, :review)
+
+       case exception_review(pin, finding.id) do
+         nil -> finding
+         review -> Map.put(finding, :review, review)
+       end
+     end)}
+  end
+
+  defp reviewed_advisories(_, result), do: result
+
+  defp exception_review(pin, id) do
+    Enum.find(List.wrap(Map.get(pin, :advisory_reviews)), fn
+      %{
+        "id" => ^id,
+        "decision" => "accepted_exception",
+        "commit" => commit,
+        "archive_sha256" => digest,
+        "reason" => reason
+      } ->
+        is_binary(commit) and Regex.match?(~r/\A[0-9a-f]{40}\z/, commit) and
+          is_binary(digest) and Regex.match?(~r/\A[0-9a-f]{64}\z/, digest) and
+          commit == pin.commit and digest == pin.sha256 and
+          is_binary(reason) and String.trim(reason) != ""
+
+      _ ->
+        false
+    end)
   end
 
   @doc "The OSV request body for a pin: by commit when pinned, else by name and version."
@@ -273,6 +318,7 @@ defmodule Wotex.Workspace.Native do
   defp extract({:source_json, upstream}, json, relative, absolute) do
     dir = Path.dirname(absolute)
     pin = pin(upstream, json["version"], json["commit"], json["url"], json["sha256"], relative)
+    pin = Map.put(pin, :advisory_reviews, json["advisory_reviews"] || [])
 
     digests =
       entries(json["patches"], dir) ++

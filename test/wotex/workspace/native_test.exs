@@ -231,6 +231,75 @@ defmodule Wotex.Workspace.NativeTest do
       assert Native.osv_body(%{name: "libcoap", version: "4.3.5", commit: nil}) ==
                %{"version" => "4.3.5", "package" => %{"name" => "libcoap"}}
     end
+
+    test "accepted exceptions retain findings and bind to the exact source", %{
+      root: root,
+      manifest: manifest
+    } do
+      path = "packages/sourced/native/up/source.json"
+
+      source =
+        root
+        |> Path.join(path)
+        |> File.read!()
+        |> JSON.decode!()
+
+      commit = String.duplicate("a", 40)
+
+      review = %{
+        "id" => "OSV-accepted",
+        "decision" => "accepted_exception",
+        "commit" => commit,
+        "archive_sha256" => source["sha256"],
+        "reason" => "Owner accepted this advisory for this immutable source pin."
+      }
+
+      write = fn entry ->
+        Fixtures.write!(
+          root,
+          path,
+          JSON.encode!(
+            Map.merge(source, %{
+              "commit" => commit,
+              "advisory_reviews" => [entry]
+            })
+          )
+        )
+
+        Native.sources(manifest, root)
+      end
+
+      query = fn
+        %{name: "upstream"} -> {:ok, [%{id: "OSV-accepted", summary: "old range"}]}
+        _ -> {:ok, []}
+      end
+
+      results = Native.advisories(write.(review), query: query)
+      assert Native.advisories_clean?(results)
+
+      assert %{result: {:ok, [%{id: "OSV-accepted", review: ^review}]}} =
+               Enum.find(results, &(&1.pin.name == "upstream"))
+
+      for changed <- [
+            Map.put(review, "commit", String.duplicate("c", 40)),
+            Map.put(review, "archive_sha256", String.duplicate("1", 64)),
+            Map.put(review, "decision", "ignored"),
+            Map.put(review, "decision", "fixed_in_pin"),
+            Map.put(review, "reason", ""),
+            Map.put(review, "id", "OSV-other")
+          ] do
+        refute Native.advisories_clean?(Native.advisories(write.(changed), query: query))
+      end
+
+      reports = write.(review)
+
+      unknown = fn _ -> {:ok, [%{id: "OSV-new", summary: "new", review: review}]} end
+      refute Native.advisories_clean?(Native.advisories(reports, query: unknown))
+
+      refute Native.advisories_clean?(
+               Native.advisories(reports, query: fn _ -> {:error, "offline"} end)
+             )
+    end
   end
 
   describe "build/4" do

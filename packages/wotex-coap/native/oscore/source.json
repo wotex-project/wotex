@@ -4,6 +4,15 @@
   "commit": "2dae53cede20d30fda9a243b7ebc4472ee1871bf",
   "url": "https://codeload.github.com/obgm/libcoap/tar.gz/2dae53cede20d30fda9a243b7ebc4472ee1871bf",
   "sha256": "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0",
+  "advisory_reviews": [
+    {
+      "id": "OSV-2022-150",
+      "decision": "accepted_exception",
+      "commit": "2dae53cede20d30fda9a243b7ebc4472ee1871bf",
+      "archive_sha256": "62c4a0614af099701b6f2aac6c97bc8d22031acf71e6b15875cc5ca2f68620f0",
+      "reason": "Owner-authorized CI exception for the introduced-only OSV range. The original OSS-Fuzz testcase is unavailable, so this is not an upstream resolution. The pinned URI guard is exercised independently by the protected-page build probe."
+    }
+  ],
   "patches": [
     {
       "path": "patches/0001-reject-unsaved-sender-sequences.patch",
