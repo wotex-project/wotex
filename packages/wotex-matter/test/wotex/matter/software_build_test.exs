@@ -52,6 +52,42 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "server case command separates receipts from concurrent diagnostics", %{root: root} do
+    timeout = Path.join(root, "timeout")
+    File.write!(timeout, "#!/bin/sh\nshift\nexec \"$@\"\n")
+    File.chmod!(timeout, 0o700)
+    receipt = "server startup and shutdown probe passed"
+
+    for status <- [0, 70] do
+      program = """
+      printf '[SDK] ' >&2
+      printf '%s\n' "$1"
+      printf 'diagnostic\n' >&2
+      exit "$2"
+      """
+
+      arguments = ["/bin/sh", "-c", program, "fixture", receipt, Integer.to_string(status)]
+      [executable | command] = SoftwareBridgeBuild.case_command(status, arguments)
+
+      {output, 0} =
+        System.cmd(executable, command,
+          env: [{"PATH", root <> ":/usr/bin:/bin"}],
+          stderr_to_stdout: true
+        )
+
+      assert output == "[SDK] diagnostic\n" <> receipt <> "\n\nbridge server exit: #{status}\n"
+      assert :ok = SoftwareBridgeBuild.verify_case!(output, status, receipt)
+
+      [executable | command] = SoftwareBridgeBuild.case_command(status + 1, arguments)
+
+      assert {_, 1} =
+               System.cmd(executable, command,
+                 env: [{"PATH", root <> ":/usr/bin:/bin"}],
+                 stderr_to_stdout: true
+               )
+    end
+  end
+
   test "SDK lifecycle receipts require fixed output and the actual expected exit" do
     healthy = "owned SDK bootstrap resource lifecycle passed\n\nbridge bootstrap exit: 0\n"
     fatal = "\nbridge bootstrap exit: 70\n"

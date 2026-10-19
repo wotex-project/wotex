@@ -101,8 +101,11 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @exit_check """
   expected=$1
   shift
-  timeout 20 "$@"
+  # Keep fixed stdout receipts separate while SDK diagnostics write stderr.
+  # Replay them after child exit so merged streams cannot split a receipt.
+  receipts=$(timeout 20 "$@")
   actual=$?
+  if [ -n "$receipts" ]; then printf '%s\n' "$receipts"; fi
   printf '\nbridge server exit: %s\n' "$actual"
   test "$actual" -eq "$expected"
   """
@@ -300,16 +303,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             output =
               inside.(
                 directory <> "-case-" <> mode,
-                [
-                  "/bin/sh",
-                  "-c",
-                  @exit_check,
-                  "bridge-server-test",
-                  Integer.to_string(expected),
-                  binary,
-                  directory_path,
-                  mode
-                ],
+                case_command(expected, [binary, directory_path, mode]),
                 @environment
               )
 
@@ -631,6 +625,11 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
       do: Mix.raise("bridge_configuration_test_failed")
 
     :ok
+  end
+
+  @spec case_command(integer(), [String.t()]) :: [String.t()]
+  def case_command(expected, arguments) do
+    ["/bin/sh", "-c", @exit_check, "bridge-server-test", Integer.to_string(expected) | arguments]
   end
 
   @spec verify_case!(binary(), integer(), String.t() | [String.t()] | nil) :: :ok

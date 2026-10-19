@@ -237,7 +237,14 @@ defmodule Wotex.Matter.SoftwarePeerTest do
   defp reaped?(child), do: reaped?(child, System.monotonic_time(:millisecond) + 1_000)
 
   defp find_port(executable, deadline) do
-    case Enum.find(Port.list(), &(Port.info(&1, :name) == {:name, String.to_charlist(executable)})) do
+    name = String.to_charlist(executable)
+
+    case Enum.find(Port.list(), fn port ->
+           case {Port.info(port, :name), Port.info(port, :os_pid)} do
+             {{:name, ^name}, {:os_pid, child}} when child > 0 -> true
+             _ -> false
+           end
+         end) do
       nil ->
         if System.monotonic_time(:millisecond) < deadline do
           Process.sleep(5)

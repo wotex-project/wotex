@@ -119,8 +119,8 @@ defmodule Wotex.Matter.SoftwareRunTest do
       receipt = Path.join([Path.dirname(path), lane, "acceptance.json"])
       assert SoftwareManifest.read(receipt)["status"] == "passed"
 
-      assert result["lanes"] |> Enum.find(&(&1["name"] == lane)) |> Map.fetch!("acceptance_sha256") ==
-               SoftwareManifest.digest(receipt)
+      lane_result = Enum.find(result["lanes"], &(&1["name"] == lane))
+      assert Map.fetch!(lane_result, "acceptance_sha256") == SoftwareManifest.digest(receipt)
     end
   end
 
