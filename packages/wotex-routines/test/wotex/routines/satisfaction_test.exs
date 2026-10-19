@@ -1,19 +1,20 @@
-Code.require_file("../../support/continuation_fixtures.exs", __DIR__)
+Code.require_file("../../support/decision_fixtures.exs", __DIR__)
 
 defmodule Wotex.Routines.SatisfactionTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Routines.{Basis, Error, Event, Model, Run, Witness}
+  alias Wotex.Routines.{Basis, Error, Event, Model, Run, Transition, Witness}
   alias Wotex.Routines.Test.ContinuationFixtures, as: F
+  alias Wotex.Routines.Test.DecisionFixtures, as: D
 
   test "matching Boolean, integer and enum facts complete an unsent property without stage receipts" do
     for {type, input} <- [{"boolean", false}, {"integer", 2500}, {"enum", "off"}] do
       c = fixture(type: type, input: input)
-      {:ok, first} = F.advance(c)
+      {:ok, first} = advance(c)
       matched = satisfaction(c)
-      assert {:ok, result} = F.advance(matched, first["run"])
+      assert {:ok, result} = advance(matched, first["run"])
       assert result["outcome"] == "completed"
       assert result["proposals"] == []
       assert result["run"]["format"] == "wotex.routines.run@2"
@@ -43,10 +44,10 @@ defmodule Wotex.Routines.SatisfactionTest do
     }
 
     c = fixture(source: %{"steps" => steps})
-    {:ok, first} = F.advance(c)
-    {:ok, held} = F.advance(receipt(c, "admission", [0]), first["run"])
+    {:ok, first} = advance(c)
+    {:ok, held} = advance(receipt(c, "admission", [0]), first["run"])
     matched = satisfaction(c, [0])
-    assert {:ok, result} = F.advance(matched, held["run"])
+    assert {:ok, result} = advance(matched, held["run"])
     assert result["run"]["spent"] == held["run"]["spent"]
     assert [%{"path" => [1]}] = result["proposals"]
     old = record(held["run"], [0])
@@ -78,9 +79,9 @@ defmodule Wotex.Routines.SatisfactionTest do
 
   test "exact terminal duplicates retain history after facts disappear but conflicts refuse" do
     c = fixture()
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(c)
-    {:ok, completed} = F.advance(matched, first["run"])
+    {:ok, completed} = advance(matched, first["run"])
 
     missing = %{
       matched
@@ -88,18 +89,18 @@ defmodule Wotex.Routines.SatisfactionTest do
         time: %{c.time | "elapsed_ms" => 50_000}
     }
 
-    assert {:ok, duplicate} = F.advance(missing, completed["run"])
+    assert {:ok, duplicate} = advance(missing, completed["run"])
     assert duplicate["run"] == completed["run"]
     assert duplicate["proposals"] == []
 
     assert {:error, %Error{code: :conflicting_receipt}} =
-             F.advance(
+             advance(
                %{missing | event: %{missing.event | "ref" => "satisfied:2"}},
                completed["run"]
              )
 
     assert {:error, %Error{code: :out_of_order_receipt}} =
-             F.advance(%{matched | event: Map.put(matched.event, "fact_id", "other")}, %{
+             advance(%{matched | event: Map.put(matched.event, "fact_id", "other")}, %{
                first["run"]
                | "status" => "cancelled",
                  "reason" => "cancelled",
@@ -109,7 +110,7 @@ defmodule Wotex.Routines.SatisfactionTest do
 
   test "current qualification refuses stale or foreign facts and source-age uncertainty" do
     c = fixture()
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(c)
 
     changes = [
@@ -132,23 +133,23 @@ defmodule Wotex.Routines.SatisfactionTest do
       changed = update_in(matched.snapshot, ["facts", "actuator"], &Map.merge(&1, change))
 
       assert {:error, %Error{code: :invalid_satisfaction}} =
-               F.advance(%{matched | snapshot: changed}, first["run"])
+               advance(%{matched | snapshot: changed}, first["run"])
     end
 
     assert {:error, %Error{code: :invalid_satisfaction}} =
-             F.advance(
+             advance(
                %{matched | time: %{c.time | "utc_low_ms" => nil, "utc_high_ms" => nil}},
                first["run"]
              )
 
     assert {:error, %Error{code: :invalid_satisfaction}} =
-             F.advance(
+             advance(
                %{matched | snapshot: put_in(matched.snapshot, ["facts", "actuator"], nil)},
                first["run"]
              )
 
     assert {:error, %Error{code: :stale_report_contract}} =
-             F.advance(
+             advance(
                %{matched | event: put_in(matched.event, ["report_contract", "version"], "2")},
                first["run"]
              )
@@ -157,17 +158,17 @@ defmodule Wotex.Routines.SatisfactionTest do
   test "missing original and satisfaction after handoff refuse" do
     c = fixture()
     matched = satisfaction(c)
-    assert {:error, %Error{code: :missing_original}} = F.advance(matched)
-    {:ok, first} = F.advance(c)
-    assert {:error, %Error{code: :missing_original}} = F.advance(matched, nil, nil, first["run"])
-    {:ok, held} = F.advance(receipt(c, "admission"), first["run"])
-    {:ok, sent} = F.advance(receipt(c, "handoff"), held["run"])
-    assert {:error, %Error{code: :out_of_order_receipt}} = F.advance(matched, sent["run"])
+    assert {:error, %Error{code: :missing_original}} = advance(matched)
+    {:ok, first} = advance(c)
+    assert {:error, %Error{code: :missing_original}} = advance(matched, nil, nil, first["run"])
+    {:ok, held} = advance(receipt(c, "admission"), first["run"])
+    {:ok, sent} = advance(receipt(c, "handoff"), held["run"])
+    assert {:error, %Error{code: :out_of_order_receipt}} = advance(matched, sent["run"])
   end
 
   test "expiry and deactivation precede fresh satisfaction and never promote the old run" do
     c = fixture(source: %{"run_ms" => 20_000})
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(c)
 
     for time <- [
@@ -176,14 +177,14 @@ defmodule Wotex.Routines.SatisfactionTest do
           %{c.time | "clock_generation" => "other"},
           %{c.time | "elapsed_ms" => 19}
         ] do
-      assert {:ok, result} = F.advance(%{matched | time: time}, first["run"])
+      assert {:ok, result} = advance(%{matched | time: time}, first["run"])
       assert result["outcome"] == "expired"
       assert result["run"]["format"] == "wotex.routines.run@1"
       assert result["proposals"] == []
     end
 
     inactive = %{matched | snapshot: %{matched.snapshot | "active_programs" => []}}
-    assert {:ok, result} = F.advance(inactive, first["run"])
+    assert {:ok, result} = advance(inactive, first["run"])
     assert result["outcome"] == "cancelled"
     assert result["run"]["reason"] == "inactive_program"
     assert result["run"]["format"] == "wotex.routines.run@1"
@@ -226,12 +227,12 @@ defmodule Wotex.Routines.SatisfactionTest do
     }
 
     c = fixture(source: %{"steps" => steps})
-    {:ok, first} = F.advance(c)
-    assert {:ok, left} = F.advance(satisfaction(c, [0]), first["run"])
+    {:ok, first} = advance(c)
+    assert {:ok, left} = advance(satisfaction(c, [0]), first["run"])
     assert left["outcome"] == "running"
     assert left["proposals"] == []
     assert record(left["run"], [1])["status"] == "proposed"
-    assert {:ok, both} = F.advance(satisfaction(c, [1]), left["run"])
+    assert {:ok, both} = advance(satisfaction(c, [1]), left["run"])
     assert both["outcome"] == "completed"
     assert both["proposals"] == []
 
@@ -270,21 +271,21 @@ defmodule Wotex.Routines.SatisfactionTest do
 
       sample = F.sample(c, 1, 20, 3000)
       c = %{c | snapshot: sample.snapshot}
-      {:ok, first} = F.advance(c)
+      {:ok, first} = advance(c)
       path = if invoked, do: [0], else: []
       matched = satisfaction(c, path)
 
       for fact <- [nil, %{sample.snapshot["facts"]["sensor"] | "value" => 1000}] do
         blocked = %{matched | snapshot: put_in(matched.snapshot, ["facts", "sensor"], fact)}
-        assert {:error, %Error{code: :invalid_satisfaction}} = F.advance(blocked, first["run"])
+        assert {:error, %Error{code: :invalid_satisfaction}} = advance(blocked, first["run"])
       end
 
-      assert {:ok, completed} = F.advance(matched, first["run"])
+      assert {:ok, completed} = advance(matched, first["run"])
       assert completed["outcome"] == "completed"
 
       if invoked do
         assert {:ok, expired} =
-                 F.advance(%{matched | time: %{c.time | "elapsed_ms" => 120}}, first["run"])
+                 advance(%{matched | time: %{c.time | "elapsed_ms" => 120}}, first["run"])
 
         assert expired["outcome"] == "expired"
         assert expired["run"]["format"] == "wotex.routines.run@1"
@@ -306,13 +307,13 @@ defmodule Wotex.Routines.SatisfactionTest do
     c = fixture(sensor: true, source: %{"steps" => steps})
     sample = F.sample(c, 1, 20, 3000)
     c = %{c | snapshot: sample.snapshot}
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     c = %{c | snapshot: put_in(c.snapshot, ["facts", "sensor", "value"], 1000)}
 
     assert {:error, %Error{code: :out_of_order_receipt}} =
-             F.advance(satisfaction(c, [1]), first["run"])
+             advance(satisfaction(c, [1]), first["run"])
 
-    assert {:ok, result} = F.advance(satisfaction(c, [0]), first["run"])
+    assert {:ok, result} = advance(satisfaction(c, [0]), first["run"])
     assert result["outcome"] == "completed"
     assert record(result["run"], [])["branch"] == "then"
     assert record(result["run"], [1])["status"] == "unsent"
@@ -326,15 +327,15 @@ defmodule Wotex.Routines.SatisfactionTest do
     }
 
     c = fixture(source: %{"steps" => steps, "run_ms" => 20_000})
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(c, [0])
-    {:ok, next} = F.advance(matched, first["run"])
+    {:ok, next} = advance(matched, first["run"])
     missing = %{matched | snapshot: put_in(matched.snapshot, ["facts", "actuator"], nil)}
-    assert {:ok, duplicate} = F.advance(missing, next["run"])
+    assert {:ok, duplicate} = advance(missing, next["run"])
     assert duplicate["run"] == next["run"]
     assert duplicate["proposals"] == []
     late = %{missing | time: %{c.time | "elapsed_ms" => 15_020}}
-    assert {:ok, expired} = F.advance(late, next["run"])
+    assert {:ok, expired} = advance(late, next["run"])
     assert expired["outcome"] == "expired"
     assert expired["proposals"] == []
     assert record(expired["run"], [0])["receipts"] == record(next["run"], [0])["receipts"]
@@ -343,7 +344,7 @@ defmodule Wotex.Routines.SatisfactionTest do
 
   test "integer matches convert exactly and refuse inexact, missing or incompatible units" do
     c = fixture(type: "integer", input: 2500)
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(c)
 
     unit = %{
@@ -360,7 +361,7 @@ defmodule Wotex.Routines.SatisfactionTest do
         &Map.merge(&1, %{"unit" => unit, "value" => 25_000})
       )
 
-    assert {:ok, result} = F.advance(%{matched | snapshot: exact}, first["run"])
+    assert {:ok, result} = advance(%{matched | snapshot: exact}, first["run"])
     assert result["outcome"] == "completed"
 
     for fact <- [
@@ -370,7 +371,7 @@ defmodule Wotex.Routines.SatisfactionTest do
           %{exact["facts"]["actuator"] | "value" => true, "unit" => nil}
         ] do
       assert {:error, %Error{code: :invalid_satisfaction}} =
-               F.advance(
+               advance(
                  %{matched | snapshot: put_in(matched.snapshot, ["facts", "actuator"], fact)},
                  first["run"]
                )
@@ -392,18 +393,18 @@ defmodule Wotex.Routines.SatisfactionTest do
           source: %{"steps" => %{F.effect("apply") | "completion" => completion}}
         )
 
-      {:ok, first} = F.advance(c)
+      {:ok, first} = advance(c)
 
       assert {:error, %Error{code: :invalid_satisfaction}} =
-               F.advance(satisfaction(c), first["run"])
+               advance(satisfaction(c), first["run"])
     end
   end
 
   test "retained validation refuses mixed stages, forged status, removed spend and changed paths" do
     c = fixture()
-    {:ok, first} = F.advance(c)
-    {:ok, held} = F.advance(receipt(c, "admission"), first["run"])
-    {:ok, matched} = F.advance(satisfaction(c), held["run"])
+    {:ok, first} = advance(c)
+    {:ok, held} = advance(receipt(c, "admission"), first["run"])
+    {:ok, matched} = advance(satisfaction(c), held["run"])
     run = matched["run"]
     receipt = hd(run["steps"])["receipts"]["satisfied"]
 
@@ -426,23 +427,23 @@ defmodule Wotex.Routines.SatisfactionTest do
       assert {:error, %Error{}} = Run.to_map(%Run{data: bad}, c.program, c.profile, c.limits)
     end
 
-    assert {:error, %Error{code: :out_of_order_receipt}} = F.advance(receipt(c, "handoff"), run)
+    assert {:error, %Error{code: :out_of_order_receipt}} = advance(receipt(c, "handoff"), run)
   end
 
   test "Time@2 satisfaction retains its selected grammar through UTC correction and restart" do
     c = fixture()
     time = Map.merge(c.time, %{"format" => "wotex.routines.time@2", "utc_generation" => "utc:1"})
     c = %{c | time: time}
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(%{c | time: %{time | "utc_generation" => "utc:2"}})
-    assert {:ok, result} = F.advance(matched, first["run"])
+    assert {:ok, result} = advance(matched, first["run"])
     assert result["run"]["time_format"] == "wotex.routines.time@2"
 
     assert {:error, %Error{code: :clock_format_mismatch}} =
-             F.advance(%{matched | time: Map.drop(time, ~w(format utc_generation))}, result["run"])
+             advance(%{matched | time: Map.drop(time, ~w(format utc_generation))}, result["run"])
 
     restarted = %{F.resume(c) | time: %{time | "epoch" => "boot:2"}}
-    assert {:ok, retained} = F.advance(restarted, result["run"])
+    assert {:ok, retained} = advance(restarted, result["run"])
     assert retained["run"] == result["run"]
     assert retained["proposals"] == []
   end
@@ -487,7 +488,7 @@ defmodule Wotex.Routines.SatisfactionTest do
       })
 
     c = %{c | event: due}
-    {:ok, first} = F.advance(c)
+    {:ok, first} = advance(c)
     matched = satisfaction(c)
 
     time = %{
@@ -496,13 +497,41 @@ defmodule Wotex.Routines.SatisfactionTest do
         "utc_high_ms" => c.time["utc_high_ms"] + 500
     }
 
-    assert {:ok, expired} = F.advance(%{matched | time: time}, first["run"])
+    assert {:ok, expired} = advance(%{matched | time: time}, first["run"])
     assert expired["outcome"] == "expired"
     assert expired["run"]["reason"] == "window_closed"
     assert expired["run"]["format"] == "wotex.routines.run@1"
     assert expired["proposals"] == []
-    assert {:ok, completed} = F.advance(matched, first["run"])
+    assert {:ok, completed} = advance(matched, first["run"])
     assert completed["run"]["window"] == first["run"]["window"]
+  end
+
+  defp advance(c, original \\ nil, edge \\ nil, busy \\ nil) do
+    result = F.advance(c, original, edge, busy)
+
+    case result do
+      {:ok, claimed} ->
+        prior = %{"original" => original, "busy" => busy, "edge" => edge}
+
+        assert :ok ==
+                 D.proof(fn ->
+                   Transition.verify(
+                     c.program,
+                     c.event,
+                     c.snapshot,
+                     c.time,
+                     prior,
+                     claimed,
+                     c.profile,
+                     c.limits
+                   )
+                 end)
+
+      {:error, _} ->
+        :ok
+    end
+
+    result
   end
 
   defp fixture(options \\ []) do

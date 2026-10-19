@@ -1,8 +1,11 @@
+Code.require_file("../../support/decision_fixtures.exs", __DIR__)
+
 defmodule Wotex.Routines.TemporalTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
-  alias Wotex.Routines.{Compiler, Error, Kernel, Limits, Profile, Schedule, Temporal}
+  alias Wotex.Routines.{Compiler, Error, Kernel, Limits, Profile, Schedule, Temporal, Transition}
+  alias Wotex.Routines.Test.DecisionFixtures, as: D
 
   setup_all do
     corpus =
@@ -331,14 +334,39 @@ defmodule Wotex.Routines.TemporalTest do
       "facts" => %{}
     }
 
-    Kernel.advance(
-      program,
-      event,
-      snapshot,
-      time,
-      %{"original" => nil, "busy" => nil, "edge" => nil},
-      c.profile,
-      c.limits
-    )
+    result =
+      Kernel.advance(
+        program,
+        event,
+        snapshot,
+        time,
+        %{"original" => nil, "busy" => nil, "edge" => nil},
+        c.profile,
+        c.limits
+      )
+
+    case result do
+      {:ok, claimed} ->
+        prior = %{"original" => nil, "busy" => nil, "edge" => nil}
+
+        assert :ok ==
+                 D.proof(fn ->
+                   Transition.verify(
+                     program,
+                     event,
+                     snapshot,
+                     time,
+                     prior,
+                     claimed,
+                     c.profile,
+                     c.limits
+                   )
+                 end)
+
+      {:error, _} ->
+        :ok
+    end
+
+    result
   end
 end

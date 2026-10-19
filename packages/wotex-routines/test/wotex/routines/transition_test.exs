@@ -6,6 +6,7 @@ defmodule Wotex.Routines.TransitionTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Routines.{Edge, Error, Event, Limits, Run, Snapshot, Time, Transition, Validation}
+  alias Wotex.Routines.SourceTruthOracle
   alias Wotex.Routines.Test.ContinuationFixtures, as: F
 
   test "all structural instruction forms verify under both time grammars" do
@@ -38,6 +39,37 @@ defmodule Wotex.Routines.TransitionTest do
       c = F.fixture() |> F.compile(%{"steps" => steps})
       c = if grammar == 2, do: %{c | time: time2(c.time)}, else: c
       assert :ok == verify(frame(c))
+    end
+  end
+
+  test "point verification preserves nested three-valued source predicates" do
+    literals = Enum.map([true, false, "unknown"], &literal/1)
+
+    combinations =
+      for left <- literals, right <- literals, operation <- ~w(all any) do
+        %{"op" => operation, "args" => [%{"op" => "not", "arg" => left}, right]}
+      end
+
+    comparisons =
+      for operator <- ~w(eq lt gt), expected <- [1000, 2000, 3000] do
+        %{"op" => operator, "binding" => "sensor", "value" => expected}
+      end
+
+    for predicate <- combinations ++ comparisons, value <- [1000, 2500, nil] do
+      c = F.fixture(sensor: true) |> F.compile(%{"condition" => predicate})
+
+      c =
+        if value == nil do
+          c
+        else
+          sampled = F.sample(c, 1, 20, value)
+          %{sampled | event: c.event}
+        end
+
+      expected = SourceTruthOracle.evaluate(predicate, %{"sensor" => value})
+      result = frame(c)
+      assert length(result.result["proposals"]) == if(expected == true, do: 1, else: 0)
+      assert :ok == verify(result)
     end
   end
 
