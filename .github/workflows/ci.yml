@@ -305,6 +305,19 @@ jobs:
           for build_env in dev test docs; do
             env MIX_ENV="$build_env" mix compile --warnings-as-errors
           done
+      - name: Recheck restored analysis caches
+        if: matrix.lane == 'current'
+        working-directory: packages/${{ matrix.package }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Dialyxir hashes locks and app names, excluding sibling source.
+          # Keep the PLTs, but recheck current BEAM inputs in every project.
+          for build in _build hosts/*/_build; do
+            if [ -d "$build" ]; then
+              find "$build" -type f -name '*.plt.hash' -delete
+            fi
+          done
       - name: Package gate
         # Fail behaviour, coverage, archive and analysis checks before starting
         # SDK validation. Native checks remain required in native_check.
