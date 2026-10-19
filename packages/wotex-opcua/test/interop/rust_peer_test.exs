@@ -20,6 +20,10 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
   # Its fixture methods report the server's own live browse continuation points
   # across every Session and the number of requests its Cancel service found.
   setup context do
+    # Owner death closes the preceding test's Port before its custody process
+    # finishes reaping. Capture each baseline only after that teardown completes.
+    assert eventually(fn -> native_descendants() == [] end)
+
     peer = Jason.decode!(File.read!(System.fetch_env!("WOTEX_OPCUA_RUST_CONFIG")))
     fixture = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG") |> Path.dirname()
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
