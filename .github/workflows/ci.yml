@@ -505,6 +505,12 @@ jobs:
       - name: Package dependencies
         working-directory: packages/${{ matrix.package }}
         run: mix deps.get --check-locked
+      - name: Prepare Thread application client
+        if: matrix.package == 'wotex-thread'
+        working-directory: packages/wotex-coap
+        run: |
+          env MIX_ENV=test mix deps.get --check-locked
+          env MIX_ENV=test mix compile --warnings-as-errors
       - name: Native build
         shell: bash
         run: |
