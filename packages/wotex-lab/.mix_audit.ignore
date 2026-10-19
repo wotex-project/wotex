@@ -1,18 +1,6 @@
-# Advisories acknowledged for the optional `emqtt` dependency cohort. The
-# Cowboy/Gun HTTP, cookie, link-header and HPACK/QPACK code paths are reached
-# only through emqtt's WebSocket and QUIC transports; the Lab MQTT adapter
-# selects `emqtt_sock` (plain TCP) exclusively. No patched cowlib or gun
-# release existed on 2026-09-08. See docs/packages/wotex-lab/provenance/standards-and-dependencies.md.
+# MixAudit combines Cowboy's < 2.16.0 range with Gun's < 2.4.0 range.
+# Locked Gun 2.7.0 rejects CR/LF headers with its default request options;
+# dependency_security_test.exs exercises that guard. The Lab MQTT adapter
+# also uses emqtt's TCP/TLS connection, without Gun HTTP transports.
+# Reviewed 2026-10-19; see the owning dependency provenance document.
 GHSA-w4f7-4cxr-rv3c
-GHSA-g2wm-735q-3f56
-CVE-2026-43966
-CVE-2026-43969
-CVE-2026-43971
-CVE-2026-59248
-
-# Decimal 3.1.1 enforces the decimal128 input limits introduced in 3.0.0. The
-# EEF/OSV record nevertheless included 3.x releases on 2026-09-08, contrary to
-# its own affected-range text and the upstream/GitHub patched range. A bounded
-# regression test exercises the reported exponent payload. See provenance.
-EEF-CVE-2026-32686
-CVE-2026-32686

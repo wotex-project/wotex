@@ -66,7 +66,7 @@ defmodule WotexLabWorkbench.MixProject do
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},
       {:phoenix_pubsub, "~> 2.1"},
-      {:bandit, "~> 1.12"},
+      {:bandit, "~> 1.13.1"},
       {:jason, "~> 1.4"},
       {:req, "~> 0.5"},
       {:lazy_html, "~> 0.1.13", only: :test},

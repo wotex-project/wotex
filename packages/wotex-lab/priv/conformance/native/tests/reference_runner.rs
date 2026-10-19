@@ -2,8 +2,11 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::{Command, Output},
+    sync::atomic::{AtomicUsize, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static NEXT: AtomicUsize = AtomicUsize::new(0);
 
 fn private_directory() -> PathBuf {
     let nonce = SystemTime::now()
@@ -11,8 +14,9 @@ fn private_directory() -> PathBuf {
         .unwrap()
         .as_nanos();
     let path = std::env::temp_dir().join(format!(
-        "wotex-reference-runner-test-{}-{nonce}",
-        std::process::id()
+        "wotex-reference-runner-test-{}-{nonce}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
     ));
     fs::create_dir(&path).unwrap();
     path

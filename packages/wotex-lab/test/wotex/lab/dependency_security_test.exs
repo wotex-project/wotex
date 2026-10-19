@@ -3,6 +3,18 @@ defmodule Wotex.Lab.DependencySecurityTest do
 
   use ExUnit.Case, async: true
 
+  test "the locked Gun rejects injected headers before dispatch with default options" do
+    for injection <- ["value\r\ninjected: true", "value\ninjected: true"] do
+      error =
+        assert_raise ErlangError, fn ->
+          :gun.get(self(), "/", [{"x-test", injection}])
+        end
+
+      assert {:invalid_request_header, "x-test", _} = error.original
+      refute_received {:"$gen_cast", _}
+    end
+  end
+
   test "the locked Decimal rejects the reported unbounded exponent payload" do
     task =
       Task.async(fn ->

@@ -443,6 +443,31 @@ claim that the advisories are invalid: a consumer that also uses gun or cowlib
 for HTTP is affected independently of Lab, and the acknowledgement must be
 removed once a patched release exists.
 
+### Dependency review, 2026-10-19
+
+The Lab test server and the Workbench and Storybook hosts select Bandit 1.13.1
+with Thousand Island 1.6.0. The
+[Bandit changelog](https://github.com/mtrudel/bandit/blob/1.13.1/CHANGELOG.md)
+records the security fixes in 1.13.0 and its connection regression fix in 1.13.1.
+No Bandit advisory is acknowledged.
+
+The unchanged optional MQTT cohort is emqtt 1.16.1, Gun 2.7.0 and cowlib 2.21.0.
+The current CNA ranges exclude that cowlib release from
+[the cookie advisory](https://cna.erlef.org/cves/CVE-2026-43969.html) and
+[the Link-header advisory](https://cna.erlef.org/cves/CVE-2026-43971.html).
+Their acknowledgements and the obsolete Decimal entries have been removed.
+
+An unfiltered MixAudit run reports only `GHSA-w4f7-4cxr-rv3c`: its record
+combines Cowboy's `< 2.16.0` range with Gun's `< 2.4.0` range. The
+[CNA record](https://cna.erlef.org/cves/CVE-2026-43966.html) identifies Gun's
+default outgoing-header guard from 2.4.0. The dependency security test verifies
+that locked Gun 2.7.0 rejects CR/LF injection before dispatch with default
+options. Only that MixAudit identifier remains acknowledged. Hex retains only
+`EEF-CVE-2026-43966` for cowlib's unbounded affected range. The adapter calls
+`emqtt:connect/1`, selecting its TCP/TLS socket path; it does not select the
+WebSocket or QUIC HTTP paths. This review covers that adapter and locked
+cohort, without clearing other consumers of cowlib's affected encoders.
+
 ### Decimal affected-range inconsistency
 
 Observation date: 2026-09-08. `decimal` 3.1.1 is reported as vulnerable by the

@@ -8,10 +8,7 @@ defmodule WotexLab.MixProject do
   # tests where the affected code is reachable. Renew them whenever the lock or
   # advisory records change.
   @acknowledged_advisories [
-    "GHSA-w4f7-4cxr-rv3c",
-    "EEF-CVE-2026-43966",
-    "EEF-CVE-2026-43969",
-    "EEF-CVE-2026-43971"
+    "EEF-CVE-2026-43966"
   ]
   @source_url "https://github.com/wotex-project/wotex"
   @docs "../../docs/packages/wotex-lab"
@@ -66,7 +63,7 @@ defmodule WotexLab.MixProject do
       {:exqlite, "~> 0.40", optional: true},
       {:req, "~> 0.7.4", optional: true},
       {:ex_maude, "== 0.5.0", optional: true},
-      {:bandit, "~> 1.12", only: :test},
+      {:bandit, "~> 1.13.1", only: :test},
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
