@@ -9,6 +9,7 @@ defmodule Wotex.Runtime.SubscriptionOpeningTest do
     {owner, receiver} = start_opening()
     assert_receive {:opening, callback, ^owner, resource}
     monitor = Process.monitor(owner)
+    assert %{active?: false, opening: %{}} = :sys.get_state(owner)
     Process.exit(receiver, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, :receiver_down}}, 500
     eventually(fn -> not Process.alive?(callback) and not Process.alive?(resource) end)
@@ -58,6 +59,7 @@ defmodule Wotex.Runtime.SubscriptionOpeningTest do
     {owner, receiver} = start_opening(credential_wait: true)
     assert_receive {:credential_wait, callback}
     monitor = Process.monitor(owner)
+    assert %{active?: false, opening: %{}} = :sys.get_state(owner)
     Process.exit(receiver, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, :receiver_down}}, 500
     eventually(fn -> not Process.alive?(callback) end)

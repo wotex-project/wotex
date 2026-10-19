@@ -247,5 +247,7 @@ defmodule Wotex.Runtime.Codec.JSON do
   defp whitespace?(""), do: true
   defp whitespace?(<<byte, rest::binary>>) when byte in [9, 10, 13, 32], do: whitespace?(rest)
   defp whitespace?(_), do: false
+
+  @spec refuse(Decoder.refusal()) :: no_return()
   defp refuse(code), do: throw({:json_refusal, code})
 end
