@@ -11,13 +11,29 @@ defmodule Wotex.Routines.TestDriverHost do
         ) :: :ok | {:error, atom()}
   def wakeup({owner, tag}, cause, budget) do
     send(owner, {tag, :entered, self(), cause, budget})
+    await_signal()
+  end
 
+  defp await_signal do
     receive do
-      :finish -> :ok
-      :fail -> {:error, :host_failure}
-      :raise -> raise "synthetic-private-context"
-      :throw -> throw(:synthetic_private_context)
-      :crash -> Process.exit(self(), :kill)
+      {:probe, owner, reference} ->
+        send(owner, {reference, :active})
+        await_signal()
+
+      :finish ->
+        :ok
+
+      :fail ->
+        {:error, :host_failure}
+
+      :raise ->
+        raise "synthetic-private-context"
+
+      :throw ->
+        throw(:synthetic_private_context)
+
+      :crash ->
+        Process.exit(self(), :kill)
     end
   end
 end

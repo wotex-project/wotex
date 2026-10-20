@@ -127,14 +127,25 @@ defmodule Wotex.Routines.DriverTest do
   end
 
   test "owner death retires the linked worker and status never reveals private context", c do
-    {pid, handle} = start(%{c.options | context: {self(), "synthetic-private-context"}})
+    {pid, handle} =
+      start(%{
+        c.options
+        | context: {self(), "synthetic-private-context"},
+          work_timeout_ms: 60_000
+      })
+
     assert :ok = Driver.notify(handle, :manual)
     assert_receive {"synthetic-private-context", :entered, worker, _, _}
-    refute inspect(:sys.get_status(pid)) =~ "synthetic-private-context"
-    Process.unlink(pid)
     monitor = Process.monitor(worker)
+    probe = make_ref()
+    send(worker, {:probe, self(), probe})
+    assert_receive {^probe, :active}, 1000
+    refute inspect(:sys.get_status(pid)) =~ "synthetic-private-context"
+    assert {:ok, %{active: true, timed_out: 0}} = Driver.status(handle, 1000)
+    assert Process.alive?(worker)
+    Process.unlink(pid)
     Process.exit(pid, :kill)
-    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}, 1000
     assert {:error, %Error{code: :retired_driver}} = Driver.status(handle, 1000)
   end
 
