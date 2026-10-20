@@ -120,6 +120,15 @@ Tests by area, under `test/wotex/ble/` unless noted:
 - Locked Decimal parser boundary: `dependency_security_test.exs`.
 - Package contents or `mix.exs` `package`: the full gate (archive check).
 
+`bin/check_archive.exs --write-mode-consumers` additionally builds exact
+core/Runtime/BLE archives and runs independent wire and Runtime consumers from
+separate extracted dependency/build trees. Each has one passive-loading case,
+five behavioral cases and two isolated assertion-only semantic mutations.
+The wire fixture uses explicitly selected Elixir/Erlang launchers through the
+guardian compiled from the archive; it is not a real BlueZ peer. The lane needs
+`cc`, records exact identities and removes its complete owned workspace on
+success or failure. Without the flag the ordinary archive check is unchanged.
+
 No sibling package depends on `wotex-ble`; it uses only the public APIs of
 `wotex` and `wotex-runtime`. Consumers call its public API, so list callers
 with `mix refs Wotex.BLE.Module fun` and the tests to run with

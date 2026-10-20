@@ -1,14 +1,16 @@
 # Wotex BLE completion contract
 
-Plan version: 1.2.0. Package baseline: 0.1.0.
+Plan version: 1.2.1. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
 evidence are implemented through the public API, Runtime and native bridge.
 The focused suite and real private D-Bus/native lane exercise these boundaries;
 their [exact evidence](../provenance/write-modes-2026-10.md) does not establish
-controller/RF behavior. Continue with independent archive/installed BlueZ
-qualification, then the explicitly selected CoreBluetooth host and installed
+controller/RF behavior. The independent [archive consumers](../provenance/write-mode-archives-2026-10.md)
+now pass passive loading, all ten behavioral cases and four assertion-only
+mutation runs against exact extracted packages. Continue with installed BlueZ
+qualification and the explicitly selected CoreBluetooth host and installed
 Mac lifecycle/readiness corpus. WBL08-T1–T5 remain the complete obligations.
 
 Graduate this library independently. Acceptance requires typed values and

@@ -3,14 +3,14 @@ package: "wotex_ble"
 completion_plan: "docs/plans/wotex-ble-completion.md"
 specifications:
   - id: "WBL.08"
-    version: "0.2.0"
+    version: "0.2.1"
     path: "docs/specs/WBL.08-write-modes-and-native-hosts.md"
     implementation_status: "partial"
     standards: []
     requires: ["WBL.02", "WBL.03", "WBL.07"]
     implementation_modules: ["Wotex.BLE", "Wotex.BLE.Procedure", "Wotex.BLE.Address", "Wotex.BLE.Mapping", "Wotex.BLE.Transport", "Wotex.BLE.BlueZ", "Wotex.BLE.BlueZ.Connection", "Wotex.BLE.BlueZ.Response"]
-    executable_evidence: ["test/wotex/ble/write_mode_test.exs", "test/wotex/ble/dbus_bridge_test.exs", "test/native/procedures_test.hpp", "test/interop/native_bus_test.exs", "docs/provenance/write-modes-2026-10.md"]
-    compatibility_classification: "Explicit persistent BlueZ request/command modes, closed queue evidence, write-only Form selection and Runtime accepted status implemented. Native command admission validates the distinct flag and explicit current MTU before submission; current MTU changes fence discovery generation. Focused and Linux private D-Bus/native cases pass. Independent archive/controller qualification, CoreBluetooth and installed Mac lifecycle/readiness remain open; no RF or physical-effect claim."
+    executable_evidence: ["bin/write_mode_consumers.exs", "test/support/archive/write_wire_consumer.exs", "test/support/archive/write_runtime_consumer.exs", "test/wotex/ble/archive_consumer_runner_test.exs", "docs/provenance/write-mode-archives-2026-10.md", "test/wotex/ble/write_mode_test.exs", "test/wotex/ble/dbus_bridge_test.exs", "test/native/procedures_test.hpp", "test/interop/native_bus_test.exs", "docs/provenance/write-modes-2026-10.md"]
+    compatibility_classification: "Explicit persistent BlueZ request/command modes, closed queue evidence, write-only Form selection and Runtime accepted status implemented. Native command admission validates the distinct flag and explicit current MTU before submission; current MTU changes fence discovery generation. Focused and Linux private D-Bus/native cases pass. Independent extracted wire/Runtime consumers pass two passive-loading and ten behavioral cases plus four assertion-only semantic mutations with zero harness errors. Installed controller qualification, CoreBluetooth and installed Mac lifecycle/readiness remain open; no RF or physical-effect claim."
   - id: "WBL.01"
     version: "1.2.0"
     path: "docs/specs/WBL.01-library-contract.md"

@@ -87,7 +87,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
   def discover(_, _, _), do: {:error, Error.new(:invalid_handle)}
 
   @doc "Executes a validated read or acknowledged write on this persistent sender."
-  @spec request(term(), term(), term()) :: {:ok, binary() | :written} | {:error, Error.t()}
+  @spec request(term(), term(), term()) ::
+          {:ok,
+           binary() | :written | %{write_mode: :without_response, evidence: :native_queue_accepted}}
+          | {:error, Error.t()}
   def request(%__MODULE__{pid: pid, reference: reference, generation: 1}, message, timeout)
       when is_pid(pid) and is_reference(reference) and is_integer(timeout) and
              timeout >= 1 and timeout <= 60_000 do

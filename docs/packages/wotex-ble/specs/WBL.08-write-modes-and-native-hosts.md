@@ -1,6 +1,6 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.2.0. Updated: 2026-10-20. Status: accepted target.
+Version: 0.2.1. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
 implemented. CoreBluetooth and installed-host qualification remain open.
 
@@ -99,6 +99,39 @@ CoreBluetooth implementation, freeze its exact native capability/security
 matrix, IPC and independent vectors. Old IPC peers
 reject new formats rather than ignoring mode. Historic BlueZ software evidence
 does not qualify macOS permissions or physical GATT/RF operation.
+
+### Independent archive entry
+
+`bin/check_archive.exs --write-mode-consumers` builds one exact core/Runtime/BLE
+archive cohort and creates separate wire and Runtime consumers, each with its
+own extracted dependencies (`env: :prod, override: true`), build and lock.
+Inherited sibling, Mix build/dependency and Erlang library paths are cleared.
+The ordinary archive check remains unchanged without the flag.
+
+Each consumer first checks public module origins and passive loading in a fresh
+VM, then runs five behavioral cases through public APIs. The wire family uses
+an independently written bounded Elixir process peer through the archive's
+compiled custody guardian. It checks mode/bytes, pre-dispatch refusal, legacy
+and malformed replies, original queued deadlines and separate owned instances.
+The Runtime family uses its own explicit Client/credential ports and checks
+mode, payload/status, selector refusal, malformed evidence and independent
+requests. Neither family imports production protocol/validation helpers.
+
+Each family catches two isolated semantic mutations through assertions with
+zero harness errors: command-to-request substitution and fabricated queue
+evidence for the wire family; lost accepted status and ignored read-selector
+applicability for Runtime. Missing/duplicate result markers, skipped cases,
+compiler failures, surviving mutations and incomplete cleanup fail the lane.
+Record archive, source, guardian, interpreter and lock identities and actual
+counts. The parent removes all owned projects, builds and artifacts on success
+or failure. These peers establish archive/software behavior, not real BlueZ,
+CoreBluetooth, installed controller or physical qualification.
+
+The [executed archive record](../provenance/write-mode-archives-2026-10.md)
+binds both passive-loading cases, ten behavioral cases and four assertion-only
+mutation catches to exact source/archive/launcher/guardian/lock identities.
+This closes the BlueZ archive portion of WBL08-T5; its CoreBluetooth and
+installed-controller portions remain open.
 
 | Case | Requirements | Expected observation / falsifier |
 | --- | --- | --- |

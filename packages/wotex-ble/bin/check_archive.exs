@@ -49,6 +49,10 @@ defmodule Wotex.BLE.Check.Archive do
 
   @spec main() :: :ok
   def main do
+    {opts, rest, invalid} =
+      OptionParser.parse(System.argv(), strict: [write_mode_consumers: :boolean])
+
+    if rest != [] or invalid != [], do: violation("unsupported archive arguments")
     project_root = File.cwd!()
     temporary = Path.join(System.tmp_dir!(), "wotex-ble-archive.#{unique()}")
     archive = Path.join(temporary, "wotex_ble-#{Mix.Project.config()[:version]}.tar")
@@ -62,11 +66,23 @@ defmodule Wotex.BLE.Check.Archive do
         )
 
         verify(project_root, archive, temporary)
+
+        if opts[:write_mode_consumers] do
+          Code.require_file("write_mode_consumers.exs", __DIR__)
+          Wotex.BLE.Check.WriteModeConsumers.run(archive, temporary)
+        end
+
+        :ok
       catch
         :throw, {:violation, message} -> {:violation, message}
       after
-        File.rm_rf!(Path.join(temporary, "package"))
-        File.rm_rf!(Path.join(temporary, "ebin"))
+        if opts[:write_mode_consumers] do
+          File.rm_rf!(temporary)
+          IO.puts("write-mode workspace cleanup: removed")
+        else
+          File.rm_rf!(Path.join(temporary, "package"))
+          File.rm_rf!(Path.join(temporary, "ebin"))
+        end
       end
 
     report(result)
