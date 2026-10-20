@@ -600,6 +600,10 @@ The driver MUST provide no default child receiver, example credentials or
 implicit request authorization. Its lifecycle fixture alone MUST NOT establish
 authenticated dispatch, approved-observation application or peer interoperability.
 
+The [SDK process-driver record](../provenance/bridge-sdk-process-2026-10.md)
+binds its exact committed source, sixteen actual SDK/pipe cases in both build
+modes, portable coordinator regressions, archive and qualification limits.
+
 
 ### Native callback custody
 

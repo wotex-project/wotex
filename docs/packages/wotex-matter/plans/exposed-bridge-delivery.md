@@ -31,6 +31,9 @@ cleanup refusal. The receiver fixture refuses child operations and supplies no
 authenticated consumer execution. Production executable assembly,
 approved-observation application and authenticated request integration remain
 required before this becomes an executable server.
+The [SDK process-driver record](../provenance/bridge-sdk-process-2026-10.md)
+binds the sixteen ordinary/sanitizer SDK cases, portable coordinator regressions,
+source/binary identities and qualification limits.
 The [process coordination record](../provenance/bridge-process-2026-10.md)
 binds its exact inputs, normal/sanitizer results on macOS and Linux ARM64,
 package/archive checks and qualification limits.
