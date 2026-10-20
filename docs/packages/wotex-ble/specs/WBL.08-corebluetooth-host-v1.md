@@ -245,7 +245,8 @@ or probe establishes no installed permission, peripheral or RF result.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds the current inputs, ten independent process cases, three actual macOS
 build cases, renewed forty-case sanitizer corpus and extracted archive
-compilation. Public Client/Runtime and installed-host obligations remain open.
+compilation. That record covers the native process/build; the public Client
+evidence is separate below. Installed-host obligations remain open.
 
 ## Public Client and point-operation entry
 
@@ -317,6 +318,11 @@ preserved, including conservative errors from untrusted custom clients.
 | CB-C3 | Queue flood, expiry, dead callers/owner, startup loss and native faults remain bounded; expired unsent work never appears on the wire |
 | CB-C4 | Marker/acknowledgement and error mutations cannot fabricate success or known-unsent evidence; cleanup and status remain private |
 | CB-C5 | Public Runtime reads/writes retain target binding, codecs, caller deadline and command status; unsupported profiles/security acquire nothing |
+
+The [public Client record](../provenance/corebluetooth-client-2026-10.md) binds
+thirteen process/facade/Runtime cases, the complete fast gate and extracted
+archive compilation to the exact committed source. Notification, sleep and
+installed-host obligations remain separate.
 
 The [Apple write API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/writevalue(_:for:type:)),
 [per-mode length API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/maximumwritevaluelength(for:))

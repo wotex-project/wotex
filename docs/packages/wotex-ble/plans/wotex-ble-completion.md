@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.5.0. Package baseline: 0.1.0.
+Plan version: 1.6.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -24,10 +24,15 @@ The native process now implements revision-1 bounded IPC, reserved nonblocking
 output, original deadlines, exact generation/route validation and joined close.
 Its explicit offline macOS builder embeds usage metadata, audits the binaries,
 probes closed-input startup and refuses altered artifact reuse. Ten independent
-process cases and three build cases cover these source paths. Continue with the
-public Client, notification/sleep/lifecycle and Runtime/archive joins. These
-components establish no public macOS session or installed permission/peripheral
-result.
+process cases and three build cases cover these source paths. The explicit
+public Client now joins pure private Peer/discovery values, bounded session
+ownership, typed reads, both write modes and point Runtime operations. Thirteen
+Client cases use an independent process peer and the production Host loop;
+the [Client record](../provenance/corebluetooth-client-2026-10.md) binds actual
+commands, committed source and limits. Continue with notifications, explicit
+sleep observation, independent CoreBluetooth archive consumers and installed
+Mac lifecycle/readiness qualification. Software point sessions establish no
+actual permission/peripheral or RF result.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds their exact source, archive and executed checks.
 

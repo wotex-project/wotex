@@ -119,6 +119,11 @@ usage metadata, audits architecture/system linkage and probes passive startup.
 Independent process tests and actual build/reuse/tamper tests establish these
 software paths; they establish no permission or peripheral result.
 
+The [public Client evidence](../provenance/corebluetooth-client-2026-10.md)
+records exact committed inputs, independent process faults, the production Host
+join and public Runtime point operations. Installed Mac qualification remains
+required before claiming actual permission, peripheral or RF behavior.
+
 ### Independent archive entry
 
 `bin/check_archive.exs --write-mode-consumers` builds one exact core/Runtime/BLE
