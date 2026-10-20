@@ -61,9 +61,15 @@ defmodule Wotex.BLE.Check.Archive do
   @spec main() :: :ok
   def main do
     {opts, rest, invalid} =
-      OptionParser.parse(System.argv(), strict: [write_mode_consumers: :boolean])
+      OptionParser.parse(System.argv(),
+        strict: [write_mode_consumers: :boolean, corebluetooth_consumers: :boolean]
+      )
 
     if rest != [] or invalid != [], do: violation("unsupported archive arguments")
+
+    if opts[:write_mode_consumers] && opts[:corebluetooth_consumers],
+      do: violation("choose one archive consumer lane")
+
     project_root = File.cwd!()
     temporary = Path.join(System.tmp_dir!(), "wotex-ble-archive.#{unique()}")
     archive = Path.join(temporary, "wotex_ble-#{Mix.Project.config()[:version]}.tar")
@@ -80,16 +86,32 @@ defmodule Wotex.BLE.Check.Archive do
 
         if opts[:write_mode_consumers] do
           Code.require_file("write_mode_consumers.exs", __DIR__)
-          Wotex.BLE.Check.WriteModeConsumers.run(archive, temporary)
+          apply(Wotex.BLE.Check.WriteModeConsumers, :run, [archive, temporary])
+        end
+
+        if opts[:corebluetooth_consumers] do
+          Code.require_file("corebluetooth_consumers.exs", __DIR__)
+          apply(Wotex.BLE.Check.CoreBluetoothConsumers, :run, [archive, temporary])
         end
 
         :ok
       catch
         :throw, {:violation, message} -> {:violation, message}
       after
-        if opts[:write_mode_consumers] do
-          File.rm_rf!(temporary)
-          IO.puts("write-mode workspace cleanup: removed")
+        if opts[:write_mode_consumers] || opts[:corebluetooth_consumers] do
+          case File.rm_rf(temporary) do
+            {:ok, _} -> :ok
+            {:error, _, _} -> violation("consumer workspace cleanup failed")
+          end
+
+          if File.exists?(temporary), do: violation("consumer workspace remains")
+
+          IO.puts(
+            if(opts[:corebluetooth_consumers],
+              do: "CoreBluetooth workspace cleanup: removed",
+              else: "write-mode workspace cleanup: removed"
+            )
+          )
         else
           File.rm_rf!(Path.join(temporary, "package"))
           File.rm_rf!(Path.join(temporary, "ebin"))

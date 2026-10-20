@@ -150,7 +150,8 @@ Tests by area, under `test/wotex/ble/` unless noted:
   missing retirement, queued expiry, receiver/owner loss, shared credit and real
   Runtime Property/Event delivery. `corebluetooth_stream_test.exs` independently
   checks literal mode cells, consumed prefixes, forged receipts, retained routes
-  and backend-specific Runtime metadata.
+  and backend-specific Runtime metadata. `corebluetooth_archive_runner_test.exs`
+  checks complete result accounting and assertion-only mutation classification.
 - Native build and software fixture tasks: `native_build_test.exs`,
   `native_source_test.exs`, `software_fixture_test.exs`.
 - Runtime integration, streams and error classes:
@@ -167,6 +168,19 @@ The wire fixture uses explicitly selected Elixir/Erlang launchers through the
 guardian compiled from the archive; it is not a real BlueZ peer. The lane needs
 `cc`, records exact identities and removes its complete owned workspace on
 success or failure. Without the flag the ordinary archive check is unchanged.
+
+`MIX_ENV=test mix pkg wotex-ble run --no-start bin/check_archive.exs --corebluetooth-consumers`
+runs the separate macOS CoreBluetooth archive lane. It requires the installed
+Apple SDK/toolchain and a provisioned offline Hex cache for the selected locked
+runtime dependencies; it uses cached dependencies and contacts no hardware.
+Separate Client and Runtime projects each run one passive-loading case, one
+actual archived native build and seven behavioral cases. Each family catches
+three isolated assertion-only semantic mutations. The independent C++ peer
+imports only the archived JSON syntax parser and runs through the archived
+guardian. No package-private validator or source-checkout test helper supplies
+consumer behavior. The runner records archives, locks, source/peer/native build
+identities and removes its complete owned workspace on success or failure.
+The two consumer flags are mutually exclusive.
 
 No sibling package depends on `wotex-ble`; it uses only the public APIs of
 `wotex` and `wotex-runtime`. Consumers call its public API, so list callers

@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.10.0. Package baseline: 0.1.0.
+Plan version: 1.11.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -54,8 +54,14 @@ An owned IOKit observer now acknowledges sleep queries without veto, retires the
 generation on sleep/wake and detaches its notifier/port/connection on the SDK
 queue. Seven power case families include partial registration, post-registration
 deadline/permission changes, point/stream retirement, cleanup faults, independent
-owners and production Host pipes. Continue with independent CoreBluetooth
-archive consumers and installed Mac lifecycle/readiness qualification. These
+owners and production Host pipes. Independent CoreBluetooth archive consumers
+now pass eighteen baseline cases across separate Client and Runtime projects:
+two passive-loading cases, two actual native builds and fourteen behavioral
+cases. Six isolated semantic mutations fail through assertions with zero harness
+errors. The C++ peer imports only the archive's JSON syntax parser; public APIs
+and literal trace expectations supply the behavior checks. Both extracted trees,
+native builds and peer processes are removed before lane completion. Continue
+with installed Mac lifecycle/readiness and BlueZ controller qualification. These
 software cases establish no actual permission/peripheral or RF result.
 The [system-power record](../provenance/corebluetooth-power-2026-10.md) binds the
 observer source, exact C API/selector tests, actual build and unexecuted installed

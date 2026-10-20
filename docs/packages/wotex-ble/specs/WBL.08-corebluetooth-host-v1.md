@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.8.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.9.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -637,3 +637,45 @@ The [system-power record](../provenance/corebluetooth-power-2026-10.md) binds th
 committed implementation, injected C API/selector cases, Host pipe join, actual
 offline build and archive checks. Installed power/peripheral behavior remains
 unqualified.
+
+## Independent CoreBluetooth archive consumers
+
+`bin/check_archive.exs --corebluetooth-consumers` owns a separate macOS-only
+archive lane. It builds one exact core/Runtime/BLE cohort with sibling source
+switches unset, then creates Client and Runtime consumers with separate extracted
+dependencies, locks and build trees. Inherited Mix build/dependency paths and
+Erlang library paths are cleared. The ordinary archive check is unchanged without
+an explicit consumer flag. All lane-owned artifacts are removed on success or
+failure; cleanup failure fails the lane.
+
+Each consumer first proves public module origins and passive loading in a fresh
+VM, then executes the archived public native builder in another VM. The build
+must verify IOKit/system linkage, power-observation metadata, the exact passive
+ready receipt and read-only reuse. Its archived guardian supervises a separately
+compiled C++ process peer that imports only the archive's JSON syntax parser;
+it imports no production framing, binding, codec or lifecycle helpers. Literal
+wire bytes and expected results belong to the independent consumer.
+
+Each family has seven behavioral cases, plus one identity and one actual build
+case. The Client family exercises public typed point operations, explicit write
+modes/evidence, pre-dispatch refusal, stream binding/credit/retirement, malformed
+replies, original queued deadlines and independent owner cleanup. The Runtime
+family exercises public point Results, Property/Event streams, exact target
+admission, backend-specific metadata, conservative failures, incompatible IPC
+and independent receiver/owner cleanup. Public callbacks may be invoked directly;
+private package validators and test helpers may not be imported.
+
+Each family catches three isolated semantic mutations with assertions and zero
+harness errors. Client mutations substitute an acknowledged write for a command,
+fabricate command queue evidence from null, or return report credit before final
+receiver admission. Runtime mutations discard accepted status, bypass target
+matching, or admit CoreBluetooth metadata under another backend. Every mutation
+runs all seven behavioral cases in a fresh VM against otherwise unchanged archive
+dependencies. Missing/duplicate result markers, wrong case totals, skips,
+compilation/runtime errors and surviving mutations fail the lane.
+
+Record all three archive digests, consumer locks, source/peer digests, actual
+native build artifacts, commands, case counts, mutation outcomes and cleanup.
+These are archive/software results; the independent peer does not execute real
+permission, peripheral, power or RF operations. Installed SDK/controller results
+remain separate WBL08-T4 obligations.
