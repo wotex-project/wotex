@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.3.0. Package baseline: 0.1.0.
+Plan version: 1.4.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -17,9 +17,12 @@ The [CoreBluetooth operation contract](../specs/WBL.08-corebluetooth-host-v1.md)
 and portable native component now supply mode/length/readiness admission,
 ticket-bound callbacks, an original deadline and confirmed-retirement gating.
 Fourteen independent scripted-port cases pass in ordinary and sanitizer builds.
-Continue with the actual SDK owner, explicit build and process/public Client,
-then discovery/notification/lifecycle and Runtime/archive joins. This component
-does not create a manager or establish a working macOS backend.
+The framework-linked SDK owner now implements explicit permission/pairing entry,
+bounded complete discovery, per-mode SDK submission and actual callback/object
+retirement. Sixteen injected-selector cases join the fourteen operation cases.
+Continue with the explicit build and process/public Client, then notification/
+sleep/lifecycle and Runtime/archive joins. These components establish no working
+public macOS backend or installed permission/peripheral result.
 
 Graduate this library independently. Acceptance requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension

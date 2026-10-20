@@ -14,7 +14,10 @@ defmodule Wotex.BLE.CoreBluetoothOperationTest do
     compiler = System.find_executable("c++") || flunk("CoreBluetooth operation tests require C++17")
 
     directory =
-      Path.join(System.tmp_dir!(), "wotex-ble-cb-op-#{System.unique_integer([:positive])}")
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-ble-cb-op-#{System.pid()}-#{System.unique_integer([:positive])}"
+      )
 
     File.mkdir!(directory)
     on_exit(fn -> File.rm_rf!(directory) end)

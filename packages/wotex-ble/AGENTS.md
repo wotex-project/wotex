@@ -13,7 +13,8 @@ root `AGENTS.md`.
 ## Invariants
 
 - Production protocol execution uses the first-party C/C++ Port specified in
-  WBL.07. Generic build/fixture orchestration and assertions use Mix/ExUnit.
+  WBL.07. The macOS CoreBluetooth SDK boundary uses Objective-C++17 with ARC.
+  Generic build/fixture orchestration and assertions use Mix/ExUnit.
   Repository-owned runtime and fixture code uses Elixir, C or C++; Python is
   limited to required upstream build generators and is never a fixture runtime.
 - Specifications state contracts declaratively; implementation status and
@@ -54,6 +55,8 @@ root `AGENTS.md`.
 - `priv/bluez/native/`: the C++17 host, C11 runtime guardian and command
   guardian sources, the vendored JSON header and the libdbus pin
   (`dependencies.json`).
+- `priv/corebluetooth/native/`: explicit-clock operation ownership and the
+  macOS Objective-C++ SDK owner; its process/public Client are not yet delivered.
 - Specifications: `docs/packages/wotex-ble/specs/` (WBL.01–WBL.03,
   WBL.04–WBL.07; `catalogue.yaml` owns status). Plans, the qualification
   runbook and evidence: `docs/packages/wotex-ble/plans/` and `provenance/`.
@@ -112,6 +115,13 @@ Tests by area, under `test/wotex/ble/` unless noted:
   `native_pages_test.exs`, `native_reports_test.exs`, `native_custody_test.exs`,
   `native_guardian_startup_test.exs`, `native_command_test.exs`,
   `native_contract_test.exs`.
+- CoreBluetooth: `corebluetooth_operation_test.exs` is portable;
+  `corebluetooth_sdk_test.exs` compiles the real SDK boundary against injected
+  NSObject selector implementations on macOS. It constructs no real manager and
+  makes no Bluetooth or permission request. The `corebluetooth` native suite in
+  `tooling/packages.yaml` selects `hosts: [darwin]`; Linux records it as not
+  applicable and supplies no Mac qualification. Its sources require the Apple
+  SDK, `-x objective-c++`, ARC and a macOS 14 minimum target.
 - Native build and software fixture tasks: `native_build_test.exs`,
   `native_source_test.exs`, `software_fixture_test.exs`.
 - Runtime integration, streams and error classes:

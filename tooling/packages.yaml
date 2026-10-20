@@ -297,6 +297,14 @@ packages:
             flags: [-std=c++17, "-I{package}/priv/bluez/native", -DWOTEX_FLOW_CALLBACKS=4, -DWOTEX_FLOW_VALUE_BYTES=20]
           - files: [test/interop/virtual/public_peer.cpp]
             flags: [-std=c++17, "-I{package}/priv/bluez/native/vendor", "pkg-config:gio-2.0"]
+      - suite: corebluetooth
+        hosts: [darwin]
+        compile:
+          - files: [priv/corebluetooth/native/sdk.cpp, test/native/corebluetooth_sdk_test.cpp]
+            flags: [-std=c++17, -x, objective-c++, -fobjc-arc, -mmacosx-version-min=14.0]
+        test:
+          - run: [mix, test, test/wotex/ble/corebluetooth_operation_test.exs, test/wotex/ble/corebluetooth_sdk_test.exs]
+            env: {MIX_ENV: test, WOTEX_PATH_DEPS: "1"}
       - suite: libdbus
         requires: [linux]
         build: wotex.ble.native.build

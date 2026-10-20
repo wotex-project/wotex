@@ -25,11 +25,17 @@ enum class Code {
   invalid_response,
   resource_limit,
   transport_error,
-  cleanup_timeout
+  cleanup_timeout,
+  peer_not_found
 };
 enum class Evidence { none, value, att_response, native_queue_accepted };
 enum class Retirement { pending, confirmed, unconfirmed };
 enum class Submission { accepted, refused, uncertain };
+struct SubmissionResult {
+  Submission status;
+  Code cause;
+  std::int64_t observed;
+};
 
 struct Ticket {
   std::uint64_t generation, request, route;
@@ -57,8 +63,8 @@ class Port {
   virtual bool current(const Route &) const noexcept = 0;
   virtual std::size_t maximum(Mode) const noexcept = 0;
   virtual bool ready() const noexcept = 0;
-  virtual Submission submit(Ticket, const Route &, Mode,
-                            const std::vector<std::uint8_t> &) noexcept = 0;
+  virtual SubmissionResult submit(Ticket, const Route &, Mode, const std::vector<std::uint8_t> &,
+                                  std::int64_t now, std::int64_t deadline) noexcept = 0;
   virtual void retire(Ticket) noexcept = 0;
   virtual Retirement retirement(Ticket) const noexcept = 0;
 };
@@ -139,9 +145,18 @@ class Operation {
       submitted_ = true;
     }
     state_ = State::reply;
-    const auto sent = port_.submit(ticket_, route_, mode_, bytes_);
-    if (sent != Submission::accepted) {
-      close(Code::transport_error, now);
+    const auto sent = port_.submit(ticket_, route_, mode_, bytes_, now, deadline_);
+    if (sent.observed < last_) {
+      close(Code::clock_regressed, last_);
+      return;
+    }
+    last_ = sent.observed;
+    if (last_ >= deadline_) {
+      close(Code::timeout, last_);
+      return;
+    }
+    if (sent.status != Submission::accepted) {
+      close(sent.cause == Code::ok ? Code::transport_error : sent.cause, last_);
       return;
     }
     if (mode_ == Mode::command) finish(Code::ok, Evidence::native_queue_accepted);
@@ -217,9 +232,8 @@ class Operation {
            std::move(bytes));
     return true;
   }
-  void cancel(std::int64_t now) noexcept {
-    if (state_ != State::idle && state_ != State::finished)
-      close(Code::disconnected, std::max(now, last_));
+  void cancel(std::int64_t now, Code cause = Code::disconnected) noexcept {
+    if (state_ != State::idle && state_ != State::finished) close(cause, std::max(now, last_));
   }
   bool finished() const noexcept { return state_ == State::finished; }
   bool active() const noexcept { return state_ != State::idle && state_ != State::finished; }

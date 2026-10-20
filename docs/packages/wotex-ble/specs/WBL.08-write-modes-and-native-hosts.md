@@ -1,8 +1,9 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.3.0. Updated: 2026-10-20. Status: accepted target.
+Version: 0.4.0. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
-implemented. CoreBluetooth and installed-host qualification remain open.
+implemented. The CoreBluetooth SDK owner is implemented with injected-selector
+evidence; its process/public Client and installed-host qualification remain open.
 
 ## Scope and operations
 
@@ -88,7 +89,7 @@ MTU, fragmentation, long command or retry is allowed.
 | --- | --- | --- |
 | Persistent BlueZ | Existing acknowledged procedure | Explicit command with current flag/MTU and native queue evidence |
 | One-shot busctl | Existing acknowledged procedure | `not_supported` before process invocation |
-| CoreBluetooth | Target only; no implementation claim | Target only; no implementation claim |
+| CoreBluetooth | SDK owner implemented; process/Client target | SDK owner implemented; process/Client target |
 
 The [pinned BlueZ characteristic API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst)
 owns the native command/request and MTU property vocabulary. It does not qualify
@@ -103,9 +104,11 @@ does not qualify macOS permissions or physical GATT/RF operation.
 The [CoreBluetooth delivery contract](WBL.08-corebluetooth-host-v1.md) freezes
 the explicit-clock operation port, per-mode size/readiness checks, callback
 identity and retirement boundary. That native operation component has an
-independent fourteen-case scripted-port corpus. Its implementation does not
-instantiate or supply the SDK adapter, host process or public Client; those
-remain required before the CoreBluetooth row above can claim support.
+independent fourteen-case scripted-port corpus. The SDK owner adds sixteen
+framework-linked injected-selector cases for explicit permission entry,
+bounded discovery, actual procedure selectors, late input, continuity loss,
+submission-time checks and retirement. The host process and public Client
+remain required before the CoreBluetooth row above can claim end-to-end support.
 
 ### Independent archive entry
 

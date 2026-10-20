@@ -37,11 +37,13 @@ struct FakePort final : Port {
     return mode == Mode::command ? command_max : write_max;
   }
   bool ready() const noexcept override { return writable; }
-  Submission submit(Ticket id, const Route &target, Mode mode,
-                    const std::vector<std::uint8_t> &bytes) noexcept override try {
+  SubmissionResult submit(Ticket id, const Route &target, Mode mode,
+                          const std::vector<std::uint8_t> &bytes, std::int64_t now,
+                          std::int64_t deadline) noexcept override try {
+    check(now < deadline);
     order.emplace_back("sdk");
     calls.push_back({id, target, mode, bytes});
-    return admission;
+    return {admission, Code::transport_error, now};
   } catch (...) {
     std::abort();
   }
