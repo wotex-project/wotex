@@ -32,12 +32,13 @@ static std::string bluetooth_uuid(CBUUID *uuid) {
   if (value.size() == 8) value += "-0000-1000-8000-00805f9b34fb";
   return peripheral_uuid(value) ? value : std::string{};
 }
-struct SDKState final : Port, Sink {
+struct SDKState final : Port, Sink, PowerSink {
   enum class Phase { fresh, opening, connecting, services, characteristics, open, closed };
   SDKClock &clock;
   SDKSink &sink;
   SDKEnvironment environment;
   dispatch_queue_t queue;
+  SystemPower power;
   CBCentralManager *central = nil;
   CBPeripheral *peripheral = nil;
   WotexCBDelegate *delegate = nil;
@@ -71,12 +72,19 @@ struct SDKState final : Port, Sink {
 
   SDKState(SDKClock &time, SDKSink &output, const SDKEnvironment &env)
       : clock(time), sink(output), environment(env),
-        queue(dispatch_queue_create("wotex.ble.corebluetooth", DISPATCH_QUEUE_SERIAL)) {
+        queue(dispatch_queue_create("wotex.ble.corebluetooth", DISPATCH_QUEUE_SERIAL)),
+        power(env.power, *this) {
     if (!queue) throw std::bad_alloc();
     dispatch_queue_set_specific(queue, this, this, nullptr);
   }
   void assert_external() const {
     if (dispatch_get_specific(this)) std::terminate();
+  }
+  void power_lost(Code code) noexcept override {
+    guard([&] {
+      const auto now = clock.sample();
+      fail(now < 0 || now < last_time ? Code::clock_regressed : code, std::max(now, last_time));
+    });
   }
   void loss(Code code) noexcept {
     if (opened && !loss_sent) {
@@ -94,6 +102,7 @@ struct SDKState final : Port, Sink {
       stream.sequence = stream.delivered;
     }
     retired = Retirement::confirmed;
+    if (!power.stop()) retired = Retirement::unconfirmed;
     delegate.owner = nullptr;
     @try {
       peripheral.delegate = nil;
@@ -224,6 +233,11 @@ struct SDKState final : Port, Sink {
         fail(Code::not_authorized, now);
         return;
       }
+      if (!power.start(queue)) {
+        fail(Code::transport_error, now);
+        return;
+      }
+      if (!tick(clock.sample())) return;
       NSString *text = [NSString stringWithUTF8String:input.identifier.c_str()];
       if (!text) {
         fail(Code::resource_limit, now);
@@ -718,7 +732,7 @@ SDK::SDK(SDKClock &clock, SDKSink &sink)
                                         options:@{
                                           CBCentralManagerOptionShowPowerAlertKey : @NO
                                         }];
-                         }}) {}
+                         }, PowerAPI::system()}) {}
 SDK::SDK(SDKClock &clock, SDKSink &sink, const SDKEnvironment &environment)
     : impl_(std::make_unique<SDKState>(clock, sink, environment)) {}
 SDK::~SDK() {

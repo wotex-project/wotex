@@ -3,6 +3,7 @@
 #import <CoreBluetooth/CoreBluetooth.h>
 #include <functional>
 #include "sdk.hpp"
+#include "power.hpp"
 
 namespace wotex::ble::corebluetooth {
 // Internal SDK construction seam. Normal execution uses CBManager authorization
@@ -10,5 +11,6 @@ namespace wotex::ble::corebluetooth {
 struct SDKEnvironment {
   std::function<CBManagerAuthorization()> authorization;
   std::function<CBCentralManager *(id<CBCentralManagerDelegate>, dispatch_queue_t)> central;
+  PowerAPI power;
 };
 } // namespace wotex::ble::corebluetooth

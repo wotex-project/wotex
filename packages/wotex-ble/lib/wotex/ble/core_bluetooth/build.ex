@@ -88,6 +88,7 @@ defmodule Wotex.BLE.CoreBluetooth.Build do
           "backend" => "corebluetooth-native",
           "revision" => "1",
           "minimum_macos" => "14.0",
+          "system_power_observation" => "iokit",
           "architecture" => tools.arch,
           "arc" => true,
           "sanitizers" => false
@@ -135,7 +136,11 @@ defmodule Wotex.BLE.CoreBluetooth.Build do
            {:ok, api} <-
              hashes(
                sdk_path,
-               Enum.map(@api, &"System/Library/Frameworks/CoreBluetooth.framework/Headers/#{&1}")
+               Enum.map(@api, &"System/Library/Frameworks/CoreBluetooth.framework/Headers/#{&1}") ++
+                 Enum.map(
+                   ~w(IOKitLib.h IOMessage.h pwr_mgt/IOPMLib.h),
+                   &"System/Library/Frameworks/IOKit.framework/Headers/#{&1}"
+                 )
              ),
            {:ok, compiler_version} <-
              capture(command, executables["clang"]["path"], ["--version"], directory),
@@ -246,6 +251,8 @@ defmodule Wotex.BLE.CoreBluetooth.Build do
             "Foundation",
             "-framework",
             "CoreBluetooth",
+            "-framework",
+            "IOKit",
             "--ld-path=#{executable.("ld")}",
             "-Xlinker",
             "-sectcreate",
@@ -296,6 +303,7 @@ defmodule Wotex.BLE.CoreBluetooth.Build do
          true <- outputs.host_arch == tools.arch and outputs.guardian_arch == tools.arch,
          true <- Enum.any?(host_deps, &String.contains?(&1, "/CoreBluetooth.framework/")),
          true <- Enum.any?(host_deps, &String.contains?(&1, "/Foundation.framework/")),
+         true <- Enum.any?(host_deps, &String.contains?(&1, "/IOKit.framework/")),
          :ok <-
            embedded_plist(
              Path.join(paths.workspace, @host),

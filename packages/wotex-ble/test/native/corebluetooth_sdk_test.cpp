@@ -174,6 +174,66 @@ struct Output final : SDKSink {
     std::abort();
   }
 };
+struct PowerFixture {
+  std::function<void()> on_dispatch;
+  int port_storage = 0;
+  void *context = nullptr;
+  IOServiceInterestCallback callback = nullptr;
+  dispatch_queue_t queue = nil;
+  unsigned starts = 0, stops = 0, destroys = 0, closes = 0;
+  unsigned refusal = 0;
+  bool fail_allow = false, fail_stop = false, fail_close = false, throw_destroy = false;
+  std::vector<intptr_t> allowed;
+  std::vector<std::string> events;
+  IONotificationPortRef port() { return reinterpret_cast<IONotificationPortRef>(&port_storage); }
+  PowerAPI api() {
+    return {[this](void *owner, IONotificationPortRef *output, IOServiceInterestCallback function,
+                   io_object_t *notifier) {
+      ++starts;
+      events.emplace_back("subscribe");
+      context = owner;
+      callback = function;
+      *output = refusal == 1 || refusal == 3 ? nullptr : port();
+      *notifier = refusal == 1 || refusal == 4 ? IO_OBJECT_NULL : 53;
+      return refusal == 1 || refusal == 2 ? IO_OBJECT_NULL : 47;
+    },
+            [this](IONotificationPortRef value, dispatch_queue_t target) {
+      check(value == port() && target);
+      queue = target;
+      events.emplace_back("dispatch");
+      if (on_dispatch) on_dispatch();
+    },
+            [this](io_connect_t connection, intptr_t token) {
+      check(connection == 47);
+      allowed.push_back(token);
+      events.emplace_back("allow");
+      return fail_allow ? kIOReturnError : kIOReturnSuccess;
+    },
+            [this](io_object_t *notifier) {
+      check(*notifier == 53);
+      ++stops;
+      events.emplace_back("unsubscribe");
+      *notifier = IO_OBJECT_NULL;
+      return fail_stop ? kIOReturnError : kIOReturnSuccess;
+    },
+            [this](IONotificationPortRef value) {
+      check(value == port());
+      ++destroys;
+      events.emplace_back("destroy");
+      if (throw_destroy) throw std::bad_alloc();
+    },
+            [this](io_connect_t connection) {
+      check(connection == 47);
+      ++closes;
+      events.emplace_back("close");
+      return fail_close ? kIOReturnError : kIOReturnSuccess;
+    }};
+  }
+  void event(natural_t message, intptr_t token = 19) {
+    check(queue && callback);
+    dispatch_sync(queue, ^{ callback(context, 0, message, reinterpret_cast<void *>(token)); });
+  }
+};
 struct Fixture {
   Clock clock;
   Output output;
@@ -184,6 +244,7 @@ struct Fixture {
   TestPeripheral *peripheral = [TestPeripheral new];
   TestService *service = [TestService new];
   TestCharacteristic *characteristic = [TestCharacteristic new];
+  PowerFixture power;
   std::unique_ptr<SDK> sdk;
   Fixture() {
     central.state = CBManagerStatePoweredOn;
@@ -210,7 +271,7 @@ struct Fixture {
       queue = target;
       central.delegate = delegate;
       return (CBCentralManager *)central;
-    }});
+    }, power.api()});
   }
   SDKConfig config() const {
     return {identifier, 7, Permission::require_authorized, Pairing::system};
@@ -286,7 +347,8 @@ static void permissions() {
                           CBManagerAuthorizationRestricted}) {
     Fixture f;
     f.auth = auth;
-    check(f.sdk->open(f.config(), 100, 200) == Code::ok && f.constructions == 0);
+    check(f.sdk->open(f.config(), 100, 200) == Code::ok && f.constructions == 0 &&
+          f.power.starts == 0);
     check(f.output.opens == std::vector<Code>{Code::not_authorized} && f.sdk->closed());
   }
   Fixture f;
@@ -991,7 +1053,147 @@ static void notification_aliases() {
   check(other.output.values.size() == 1 && other.output.losses.empty());
   other.close();
 }
-static void notification_host_join() {
+static void power_registration() {
+  Fixture passive;
+  check(passive.power.starts == 0);
+  passive.sdk->close(100);
+  check(passive.power.starts == 0 && passive.constructions == 0);
+  for (unsigned refusal = 1; refusal <= 4; ++refusal) {
+    Fixture f;
+    f.power.refusal = refusal;
+    check(f.sdk->open(f.config(), 100, 200) == Code::ok);
+    check(f.sdk->closed() && f.constructions == 0 && f.power.starts == 1);
+    check(f.output.opens == std::vector<Code>{Code::transport_error});
+    check(f.power.stops == (refusal == 1 || refusal == 4 ? 0u : 1u));
+    check(f.power.destroys == (refusal == 1 || refusal == 3 ? 0u : 1u));
+    check(f.power.closes == (refusal <= 2 ? 0u : 1u));
+    f.sdk->close(100);
+    check(f.power.starts == 1);
+  }
+  for (unsigned changed = 0; changed < 3; ++changed) {
+    Fixture f;
+    f.power.on_dispatch = [&] {
+      if (changed == 0) f.clock.now = 200;
+      if (changed == 1) f.clock.now = 99;
+      if (changed == 2) f.auth = CBManagerAuthorizationDenied;
+    };
+    check(f.sdk->open(f.config(), 100, 200) == Code::ok);
+    const Code expected[] = {Code::timeout, Code::clock_regressed, Code::not_authorized};
+    check(f.sdk->closed() && f.constructions == 0 &&
+          f.output.opens == std::vector<Code>{expected[changed]});
+    check(f.power.stops == 1 && f.power.destroys == 1 && f.power.closes == 1);
+  }
+  Fixture opening;
+  opening.begin();
+  opening.power.event(kIOMessageSystemWillSleep);
+  check(opening.sdk->closed() && opening.output.opens == std::vector<Code>{Code::disconnected});
+  check(opening.power.allowed == std::vector<intptr_t>{19});
+  check(opening.power.stops == 1 && opening.power.destroys == 1 && opening.power.closes == 1);
+}
+static void power_messages() {
+  Fixture f;
+  f.ready();
+  f.power.event(kIOMessageCanSystemSleep, 17);
+  f.power.event(kIOMessageSystemWillNotSleep);
+  f.power.event(UINT32_MAX);
+  check(f.power.allowed == std::vector<intptr_t>{17} && f.output.losses.empty() &&
+        !f.sdk->closed());
+  f.power.event(kIOMessageSystemWillSleep, 23);
+  check(f.power.allowed == std::vector<intptr_t>({17, 23}));
+  check(f.power.events ==
+        std::vector<std::string>(
+            {"subscribe", "dispatch", "allow", "allow", "unsubscribe", "destroy", "close"}));
+  check(f.sdk->closed() && f.output.losses == std::vector<Code>{Code::disconnected});
+  check(!f.central.delegate && !f.peripheral.delegate && f.central.cancels == 1);
+  f.power.event(kIOMessageCanSystemSleep);
+  f.power.event(kIOMessageSystemHasPoweredOn);
+  check(f.power.allowed.size() == 2 && f.output.losses.size() == 1);
+}
+static void power_operations() {
+  for (const auto mode : {Mode::read, Mode::write, Mode::command}) {
+    Fixture f;
+    f.ready();
+    f.peripheral.canSendWriteWithoutResponse = NO;
+    check(f.sdk->request(1, 1, mode, mode == Mode::read ? std::vector<std::uint8_t>{} : payload,
+                         100, 200) == Code::ok);
+    id<CBPeripheralDelegate> old = f.peripheral.delegate;
+    f.power.event(kIOMessageSystemWillSleep);
+    check(f.sdk->closed() && f.output.results.size() == 1);
+    const auto &result = f.output.results[0];
+    check(result.code == Code::disconnected && result.cleanup_confirmed &&
+          result.submitted == (mode == Mode::write));
+    check(f.peripheral.writes == (mode == Mode::write ? 1u : 0u));
+    f.peripheral.canSendWriteWithoutResponse = YES;
+    f.event(
+        [&] { [old peripheralIsReadyToSendWriteWithoutResponse:(CBPeripheral *)f.peripheral]; });
+    check(f.output.results.size() == 1 && f.peripheral.writes == (mode == Mode::write ? 1u : 0u));
+    check(f.sdk->request(2, 1, Mode::write, payload, 100, 200) == Code::disconnected);
+  }
+}
+static void power_notifications() {
+  for (unsigned phase = 0; phase < 3; ++phase) {
+    Fixture f;
+    f.notify_ready();
+    check(f.sdk->subscribe(1, 1, NotificationMode::notify, 2, 100, 200) == Code::ok);
+    if (phase > 0) {
+      f.notification_state(true);
+      f.notification_value(payload);
+    }
+    if (phase == 2) check(f.sdk->unsubscribe(2, 1, 100, 200) == Code::ok);
+    f.output.notifications.clear();
+    f.output.onState = [&](const NotificationResult &result) {
+      check(f.power.stops == 1 && f.power.destroys == 1 && f.power.closes == 1);
+      check(!f.central.delegate && !f.peripheral.delegate && result.cleanup_confirmed);
+    };
+    f.power.event(kIOMessageSystemHasPoweredOn);
+    check(f.sdk->closed() && f.output.losses == std::vector<Code>{Code::disconnected});
+    check(f.power.allowed.empty());
+    check(f.output.notifications.size() == (phase == 1 ? 0u : 1u));
+    if (!f.output.notifications.empty())
+      check(f.output.notifications[0].code == Code::disconnected);
+    const auto count = f.output.values.size();
+    f.notification_value(payload);
+    f.power.event(kIOMessageSystemWillPowerOn);
+    check(f.output.values.size() == count && f.output.losses.size() == 1);
+  }
+}
+static void power_cleanup() {
+  for (unsigned fault = 0; fault < 4; ++fault) {
+    Fixture f;
+    f.ready();
+    check(f.sdk->request(1, 1, Mode::write, payload, 100, 200) == Code::ok);
+    f.power.fail_stop = fault == 0;
+    f.power.fail_close = fault == 1;
+    f.power.throw_destroy = fault == 2;
+    f.power.fail_allow = fault == 3;
+    f.power.event(kIOMessageSystemWillSleep);
+    check(f.sdk->closed() && f.output.results.size() == 1);
+    const auto &result = f.output.results[0];
+    check(result.submitted && result.cleanup_confirmed == (fault == 3));
+    check(result.code == (fault == 3 ? Code::transport_error : Code::cleanup_timeout));
+    check(f.power.stops == 1 && f.power.destroys == 1 && f.power.closes == 1);
+    f.sdk->close(100);
+    check(f.power.stops == 1 && f.power.destroys == 1 && f.power.closes == 1);
+  }
+  Fixture regressed;
+  regressed.ready();
+  regressed.clock.now = 99;
+  regressed.power.event(kIOMessageSystemWillSleep);
+  check(regressed.output.losses == std::vector<Code>{Code::clock_regressed});
+}
+static void power_independent() {
+  for (const auto event : {kIOMessageSystemWillPowerOn, kIOMessageSystemHasPoweredOn}) {
+    Fixture first, second;
+    first.ready();
+    second.ready();
+    first.power.event(event);
+    check(first.sdk->closed() && first.power.allowed.empty());
+    check(!second.sdk->closed() && second.power.stops == 0 && second.output.losses.empty());
+    second.close();
+    check(second.power.stops == 1);
+  }
+}
+static void notification_host_join(bool sleep = false) {
   Fixture f;
   f.sdk.reset();
   f.characteristic.properties |= CBCharacteristicPropertyNotify;
@@ -1007,7 +1209,7 @@ static void notification_host_join() {
     f.central.delegate = delegate;
     constructed.set_value();
     return (CBCentralManager *)f.central;
-  }};
+  }, f.power.api()};
   std::function<void()> toggle = [&] { check(::write(toggles[1], "t", 1) == 1); };
   f.peripheral.onNotify = &toggle;
   std::thread owner([&] {
@@ -1112,39 +1314,52 @@ static void notification_host_join() {
            {"value", {{"type", "bytes"}, {"base64", "AAF/gP8="}}}});
   const auto submitted = frame();
   check(submitted["event"] == "write_submitted" && submitted["id"] == "3");
-  f.event([&] {
-    check(f.peripheral.writes == 1);
-    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
-        didWriteValueForCharacteristic:(CBCharacteristic *)f.characteristic
-                                 error:nil];
-  });
-  const auto written = frame();
-  check(written["id"] == "3" && written["ok"] == true && written["result"].is_null());
-  f.notification_value({});
-  f.notification_value(payload);
-  check(frame()["sequence"] == 2 && frame()["sequence"] == 3);
-  request("4", "unsubscribe", {{"stream_version", 1}, {"subscription_id", "1"}});
-  toggled();
-  f.notification_state(false);
-  const auto retired = frame();
-  check(retired["event"] == "notification_retired" && retired["last_sequence"] == 3);
-  const auto closed_stream = frame();
-  check(closed_stream["id"] == "4" && closed_stream["ok"] == true &&
-        closed_stream["result"].is_null());
-  send({{"version", 1},
-        {"generation", 7},
-        {"stream_version", 1},
-        {"event", "notification_ack"},
-        {"subscription_id", "1"},
-        {"sequence", 3}});
-  request("close", "close", Json::object());
-  const auto closed = frame();
-  check(closed["id"] == "close" && closed["ok"] == true && closed["result"].is_null());
-  check(stopped.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
-        stopped.get() == 0);
+  if (sleep) {
+    f.power.event(kIOMessageSystemWillSleep);
+    const auto result = frame();
+    check(result["id"] == "3" && result["ok"] == false &&
+          result["error"]["code"] == "disconnected" && result["error"]["submitted"] == true &&
+          result["error"]["cleanup_confirmed"] == true);
+    const auto loss = frame();
+    check(loss["event"] == "connection_lost" && loss["code"] == "disconnected");
+    check(stopped.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+          stopped.get() == 1);
+  } else {
+    f.event([&] {
+      check(f.peripheral.writes == 1);
+      [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+          didWriteValueForCharacteristic:(CBCharacteristic *)f.characteristic
+                                   error:nil];
+    });
+    const auto written = frame();
+    check(written["id"] == "3" && written["ok"] == true && written["result"].is_null());
+    f.notification_value({});
+    f.notification_value(payload);
+    check(frame()["sequence"] == 2 && frame()["sequence"] == 3);
+    request("4", "unsubscribe", {{"stream_version", 1}, {"subscription_id", "1"}});
+    toggled();
+    f.notification_state(false);
+    const auto retired = frame();
+    check(retired["event"] == "notification_retired" && retired["last_sequence"] == 3);
+    const auto closed_stream = frame();
+    check(closed_stream["id"] == "4" && closed_stream["ok"] == true &&
+          closed_stream["result"].is_null());
+    send({{"version", 1},
+          {"generation", 7},
+          {"stream_version", 1},
+          {"event", "notification_ack"},
+          {"subscription_id", "1"},
+          {"sequence", 3}});
+    request("close", "close", Json::object());
+    const auto closed = frame();
+    check(closed["id"] == "close" && closed["ok"] == true && closed["result"].is_null());
+    check(stopped.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+          stopped.get() == 0);
+  }
   owner.join();
   check(!f.central.delegate && !f.peripheral.delegate && f.central.cancels == 1 &&
-        f.peripheral.notifyCalls == 2 && f.peripheral.reads == 0);
+        f.peripheral.notifyCalls == (sleep ? 1u : 2u) && f.peripheral.reads == 0);
+  check(f.power.stops == 1 && f.power.destroys == 1 && f.power.closes == 1);
   for (const auto descriptor : {input[0], input[1], output[0], output[1], toggles[0], toggles[1]})
     close(descriptor);
 }
@@ -1178,6 +1393,13 @@ int main(int argc, char **argv) {
     else if (name == "notification_deadlines") notification_deadlines();
     else if (name == "notification_aliases") notification_aliases();
     else if (name == "notification_host_join") notification_host_join();
+    else if (name == "power_registration") power_registration();
+    else if (name == "power_messages") power_messages();
+    else if (name == "power_operations") power_operations();
+    else if (name == "power_notifications") power_notifications();
+    else if (name == "power_cleanup") power_cleanup();
+    else if (name == "power_independent") power_independent();
+    else if (name == "power_host_join") notification_host_join(true);
     else if (name == "unfinished_destruction") {
       std::set_terminate([] { _exit(73); });
       Fixture f;

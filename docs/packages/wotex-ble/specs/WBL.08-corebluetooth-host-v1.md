@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.7.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.8.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -141,7 +141,7 @@ suite is explicitly scoped to `darwin`; other hosts record no Mac qualification.
 Injected objects must implement the actual SDK selectors. Such tests establish
 adapter behavior under supplied callbacks, not real authorization, connection,
 pairing or radio behavior. The point Client/Runtime join is delivered below;
-public receiving is specified below; sleep observation and independent archive
+public receiving and sleep observation are specified below; independent archive
 qualification remain separate required host-delivery work.
 
 | Case | SDK stimulus and falsifier |
@@ -312,8 +312,8 @@ explicit `target` label and Peer configuration; the configured target must
 exactly match the Form target before acquisition. The label is a consumer
 binding, not an inferred native UUID, MAC address or authentication claim.
 Runtime retains command `:accepted` status. The GATT streaming profile joins
-the notification receiving entry below. Manual pairing and sleep observation
-remain unsupported. Existing BlueZ/custom-client behavior is
+the notification receiving entry below; sleep observation is specified separately
+below. Manual pairing remains unsupported. Existing BlueZ/custom-client behavior is
 preserved, including conservative errors from untrusted custom clients.
 
 | Case | Client stimulus and falsifier |
@@ -492,8 +492,8 @@ receiver admission or explicit retirement of those exact records.
 The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)
 binds the committed source, independent Driver processes, production SDK adapter
 join, sanitizer corpus and exact archive checks. Public Client/Runtime receiving
-is specified below; sleep observation and installed-host qualification remain
-separate obligations.
+and sleep observation are specified below; installed-host qualification remains
+a separate obligation.
 
 ## Public notification receiving
 
@@ -570,3 +570,65 @@ SDK route or private peripheral identity.
 The [public receiving record](../provenance/corebluetooth-receiving-2026-10.md)
 binds the committed implementation, independent process and production Host
 cases, Runtime receiving, exact archive compilation and remaining qualification.
+
+## System sleep and wake
+
+Each opened SDK owner requires one IOKit system-power observer, registered after
+permission admission and before constructing its central manager. Loading,
+construction without opening, invalid configuration and denied permission
+register nothing. Partial registration refuses before manager construction and
+releases every returned notifier, notification port and connection. Elapsed time
+and authorization are rechecked after registration under the original opening
+deadline; registration cannot renew that budget or permit a late manager.
+
+The observer uses `IORegisterForSystemPower` and dispatches its notification port
+onto the existing SDK serial queue. It requires no GUI run loop, additional
+thread, application callback or process-wide observer registry. An incomplete
+internal power API refuses; there is no unobserved fallback. The production
+environment supplies the actual IOKit C functions; software fixtures supply
+explicit implementations of those exact signatures.
+
+`kIOMessageCanSystemSleep` is acknowledged with `IOAllowPowerChange` and does not
+end the generation. It is a query, not evidence that sleep occurred. The observer
+never vetoes sleep. `kIOMessageSystemWillSleep` is acknowledged once with the exact
+opaque notification ID, then ends continuity. Either `kIOMessageSystemWillPowerOn`
+or `kIOMessageSystemHasPoweredOn` also ends continuity, including a wake observed
+without an earlier sleep callback. Wake, will-not-sleep and unrelated messages
+receive no power acknowledgement. A failed acknowledgement ends the generation
+with transport_error; a regressed clock preserves clock_regressed.
+
+Observed sleep/wake uses disconnected through the existing native/public error
+vocabulary. It closes opening, point-operation and notification-control admission,
+retires all streams, and preserves submitted uncertainty for an acknowledged
+write. A command still waiting for readiness sends nothing; a later readiness
+callback cannot revive it. Old delegate and power callbacks cannot create a new
+generation or settle another owner. New use requires explicit consumer startup
+with a fresh generation and policy; no reconnect, replay or synthesized value
+occurs on resume.
+
+Retirement fences observer callbacks before one ordered cleanup attempt:
+`IODeregisterForSystemPower`, `IONotificationPortDestroy`, then `IOServiceClose`.
+All acquired resources are attempted even after a refusal or exception. Failed
+cleanup stays unconfirmed and cannot become a successful retirement receipt.
+The observer remains allocated until SDK queue retirement, so queued callbacks
+can see its closed gate without entering retired SDK state. Pending point or
+control failures are published only after owned delegate/object cleanup; the
+Host joins driver destruction before reporting connection loss.
+
+The build links IOKit, records selected IOKit API-header digests and declares
+`system_power_observation: iokit` in its build features. Its passive probe still
+opens no manager or power observer. The installed SDK 27.0 headers define the
+power-message and cleanup contract. The reviewed
+[IOKitUser implementation](https://github.com/apple-oss-distributions/IOKitUser/blob/323ead896d04424f87184d8f6ff0cce811aab106/IOKitLib.c)
+informs dispatch cancellation; source review is not installed sleep/wake
+qualification. Shutdown/restart notification and physical link continuity are
+not established by these system-power messages.
+
+| Case | Power lifecycle falsifier |
+| --- | --- |
+| CB-P1 | Passive/denied startup, partial registration and changed time/permission construct no late or unobserved manager |
+| CB-P2 | Query/will-not-sleep/unknown/sleep/wake callbacks preserve exact acknowledgement rules and one cleanup sequence |
+| CB-P3 | Sleep during read/write/readiness wait preserves submitted versus unsent evidence and fences late delegates |
+| CB-P4 | Sleep/wake during stream start, active delivery or stop retires all ownership before pending failure |
+| CB-P5 | Acknowledgement, deregistration, port destruction, connection close and clock faults cannot claim confirmed cleanup |
+| CB-P6 | Independent owners and late callbacks cannot create continuity; real Host pipes preserve point failure before connection loss |

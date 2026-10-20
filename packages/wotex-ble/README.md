@@ -129,8 +129,9 @@ Runtime transport. Configure an exact `target` matching the Form's URI target
 and the explicit Peer independently; the target label is not a native identity
 or authentication claim. Property observations and Event subscriptions use
 `profile(:gatt)` and the same explicit CoreBluetooth configuration; the relay
-owns its private session, so omit `owner`. Manual pairing and sleep observation
-remain unsupported. Current process tests establish
+owns its private session, so omit `owner`. Manual pairing remains unsupported.
+An owned IOKit observer ends the generation on sleep or wake; resume requires
+explicit startup with a fresh generation. Current process tests establish
 software behavior; actual permissions, peripherals and RF remain unqualified.
 
 `subscribe/2` delivers `{:wotex_ble, reference, {:ok, value, metadata}}` messages

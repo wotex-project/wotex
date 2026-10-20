@@ -13,7 +13,8 @@ separately.
   Retain discovered route tokens when UUIDs repeat. Supervise explicit notification
   receivers, preserve `corebluetooth_value_update` metadata and cancel with the
   same session. Cancellation may close the generation while a point operation
-  occupies native control. Sleep observation remains a separate lifecycle obligation.
+  occupies native control. Sleep/wake ends the generation; explicitly reopen with
+  a fresh generation and current policy after resume.
 - Discover a bounded connected-peer snapshot and retain its generation. Do not
   infer a characteristic from display names, UUID alone or discovery order,
   and reject stale discovery addresses.

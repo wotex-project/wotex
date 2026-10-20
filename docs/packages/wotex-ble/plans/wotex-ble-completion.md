@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.9.0. Package baseline: 0.1.0.
+Plan version: 1.10.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -19,7 +19,7 @@ ticket-bound callbacks, an original deadline and confirmed-retirement gating.
 Fourteen independent scripted-port cases pass in ordinary and sanitizer builds.
 The framework-linked SDK owner now implements explicit permission/pairing entry,
 bounded complete discovery, per-mode SDK submission and actual callback/object
-retirement. Twenty-five injected-selector cases join the fourteen operation cases.
+retirement. Thirty-two injected-selector/API cases join the fourteen operation cases.
 The native process now implements revision-1 bounded IPC, reserved nonblocking
 output, original deadlines, exact generation/route validation and joined close.
 Its explicit offline macOS builder embeds usage metadata, audits the binaries,
@@ -50,7 +50,11 @@ cases preserve backend-specific metadata and close their private sessions.
 The [public receiving record](../provenance/corebluetooth-receiving-2026-10.md)
 binds 27 Client and five pure stream cases, the owning fast gate and exact archive
 compilation. Its source-qualified software result leaves installed behavior open.
-Continue with explicit sleep observation, independent CoreBluetooth
+An owned IOKit observer now acknowledges sleep queries without veto, retires the
+generation on sleep/wake and detaches its notifier/port/connection on the SDK
+queue. Seven power case families include partial registration, post-registration
+deadline/permission changes, point/stream retirement, cleanup faults, independent
+owners and production Host pipes. Continue with independent CoreBluetooth
 archive consumers and installed Mac lifecycle/readiness qualification. These
 software cases establish no actual permission/peripheral or RF result.
 The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)

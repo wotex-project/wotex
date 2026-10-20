@@ -126,8 +126,11 @@ Tests by area, under `test/wotex/ble/` unless noted:
   makes no Bluetooth or permission request. Its notification cases consume the
   literal mode/control corpus and exercise
   start/stop callbacks, early values, shared credits, retired-route fencing,
-  point/stream isolation and confirmed/unconfirmed cleanup. The `corebluetooth`
-  native suite in
+  point/stream isolation and confirmed/unconfirmed cleanup. System-power cases
+  inject exact IOKit C API signatures through `power.hpp`, exercise
+  query/sleep/wake acknowledgement and observer cleanup, and traverse Host pipes
+  during a submitted write. They trigger no real system sleep/wake. The
+  `corebluetooth` native suite in
   `tooling/packages.yaml` selects `hosts: [darwin]`; Linux records it as not
   applicable and supplies no Mac qualification. Its sources require the Apple
   SDK, `-x objective-c++`, ARC and a macOS 14 minimum target.

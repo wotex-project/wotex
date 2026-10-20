@@ -1,12 +1,13 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.9.0. Updated: 2026-10-20. Status: accepted target.
+Version: 0.10.0. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
 implemented. The CoreBluetooth SDK owner, native process, explicit macOS build
 and public point Client/Runtime integration are implemented with scoped software
 evidence. The native notification path joins SDK ownership, finite report credits
-and Host IPC through public Client/Runtime receiving. Sleep observation and installed-host
-qualification remain open.
+and Host IPC through public Client/Runtime receiving. An owned IOKit observer
+retires the generation on sleep/wake. Independent CoreBluetooth archive consumers
+and installed-host qualification remain open.
 
 ## Scope and operations
 
@@ -107,7 +108,7 @@ does not qualify macOS permissions or physical GATT/RF operation.
 The [CoreBluetooth delivery contract](WBL.08-corebluetooth-host-v1.md) freezes
 the explicit-clock operation port, per-mode size/readiness checks, callback
 identity and retirement boundary. That native operation component has an
-independent fourteen-case scripted-port corpus. The SDK owner adds twenty-five
+independent fourteen-case scripted-port corpus. The SDK owner adds thirty-two
 framework-linked injected-selector cases for explicit permission entry,
 bounded discovery, actual procedure selectors, late input, continuity loss,
 submission-time checks and retirement. The public Client joins artifact admission,

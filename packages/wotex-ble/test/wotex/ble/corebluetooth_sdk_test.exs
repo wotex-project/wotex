@@ -13,7 +13,8 @@ defmodule Wotex.BLE.CoreBluetoothSDKTest do
               operation_refusal submission_boundary read_callbacks released_objects callback_identity
               continuity_loss cleanup_fault independent notification_modes notification_controls
               notification_values notification_credit notification_capacity notification_faults
-              notification_deadlines notification_aliases notification_host_join)
+              notification_deadlines notification_aliases notification_host_join
+              power_registration power_messages power_operations power_notifications power_cleanup power_independent power_host_join)
 
     setup_all do
       directory =
@@ -42,6 +43,8 @@ defmodule Wotex.BLE.CoreBluetoothSDKTest do
               "Foundation",
               "-framework",
               "CoreBluetooth",
+              "-framework",
+              "IOKit",
               "-o",
               executable
             ],

@@ -48,6 +48,18 @@ defmodule Wotex.BLE.CoreBluetoothBuildTest do
                ~s({"backend":"corebluetooth-native","event":"ready","revision":"1","version":1}\n)
 
       assert context.manifest["build_features"]["minimum_macos"] == "14.0"
+      assert context.manifest["build_features"]["system_power_observation"] == "iokit"
+      headers = context.manifest["upstream_sources"]["apple_sdk"]["api_headers"]
+
+      assert Map.has_key?(
+               headers,
+               "System/Library/Frameworks/IOKit.framework/Headers/pwr_mgt/IOPMLib.h"
+             )
+
+      assert Enum.any?(context.manifest["binaries"], fn binary ->
+               Enum.any?(binary["dependencies"], &String.contains?(&1, "/IOKit.framework/"))
+             end)
+
       artifacts = context.manifest["artifacts"]
       host = "output/bin/wotex-ble-corebluetooth"
       guardian = "output/bin/wotex-ble-guardian"
