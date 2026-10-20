@@ -763,11 +763,14 @@ denied/failed/unknown outcomes, original timeout, observation-before-completion,
 stale write versions, nullable/invalid writes, foreign decoders, PASE/missing ACL,
 invalid endpoints, sixteen-context exhaustion, pending close, ACL revocation and
 renderer failure. Actual SDK Groups execution uses an explicitly installed test
-fabric/group-key fixture and verifies persisted group membership. A separate
+fabric/group-key fixture and verifies actual group membership. A separate
 fresh-process pair verifies StartUpOnOff persistence. These direct callbacks use
 synthetic CASE principals. They establish no authenticated transport or consumer
 authorization, complete command renderer, production executable, independent
 controller/reporting peer or complete WMA.09 claim.
+The [guarded receiver record](../provenance/bridge-sdk-receiver-2026-10.md)
+binds the committed source, 52 receiver-case executions, 106 affected process/SDK
+regressions, exact archive and qualification limits.
 
 ## 4. Isolation and recovery
 

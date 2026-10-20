@@ -701,6 +701,10 @@ work outside SDK locks before calling receiver Finish under the SDK lock; partia
 attachment MUST support the same cleanup. Fabric attachments, guards and retained
 contexts MUST remain alive until all SDK callers retire and custody is drained.
 
+The [guarded receiver record](../provenance/bridge-sdk-receiver-2026-10.md) binds
+its direct synthetic-principal cases, actual SDK/pipe results and qualification
+limits. It MUST NOT be cited as authenticated transport or complete server evidence.
+
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated
 Tags and commissioning context, together with its exact path and operation

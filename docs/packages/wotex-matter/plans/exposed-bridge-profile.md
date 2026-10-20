@@ -478,6 +478,8 @@ while retaining SDK serialization; completion work joins before final cleanup.
 Synthetic callback principals supply no authenticated transport result.
 Production executable and complete native renderer assembly, authenticated
 transport and independent peer qualification remain open.
+The [guarded receiver record](../provenance/bridge-sdk-receiver-2026-10.md)
+binds those cases, affected regressions, source/artifact identities and limits.
 BEAM projection and consumer tests exercise conservative modeled expiry with
 independent clock epochs/rates, real ExposedThing policy/mapping/dispatch order,
 scope preservation, sixteen-slot backpressure, original-deadline expiry,
