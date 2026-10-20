@@ -22,6 +22,8 @@ defmodule Wotex.BLE.RuntimeRelay do
   alias Wotex.BLE.BlueZ.{Connection, Stream}
   alias Wotex.BLE.{Error, RuntimeFrame, Session, Subscription}
 
+  @opening_limit 64
+
   @derive {Inspect, only: []}
   @enforce_keys [:pid, :reference, :generation]
   defstruct @enforce_keys
@@ -48,6 +50,13 @@ defmodule Wotex.BLE.RuntimeRelay do
     end
   end
 
+  @doc false
+  @spec ready(term()) :: :ok
+  def ready(handle) do
+    if handle?(handle), do: GenServer.cast(handle.pid, {:ready, handle, self()})
+    :ok
+  end
+
   @impl GenServer
   def init({prepared, owner, limit, waiter}) do
     parent = self()
@@ -57,6 +66,7 @@ defmodule Wotex.BLE.RuntimeRelay do
     {:ok,
      %{
        status: :opening,
+       ready: false,
        owner: owner,
        owner_monitor: Process.monitor(owner),
        caller_monitor: Process.monitor(elem(waiter, 0)),
@@ -93,6 +103,15 @@ defmodule Wotex.BLE.RuntimeRelay do
   def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_subscription)}, state}
 
   @impl GenServer
+  def handle_cast(
+        {:ready, handle, owner},
+        %{handle: handle, owner: owner, status: :bound, ready: false} = state
+      ),
+      do: {:noreply, flush(%{state | ready: true})}
+
+  def handle_cast(_, state), do: {:noreply, state}
+
+  @impl GenServer
   def handle_info(
         {:relay_session, token, session},
         %{worker_token: token, status: :opening} = state
@@ -113,9 +132,9 @@ defmodule Wotex.BLE.RuntimeRelay do
     end
   end
 
-  def handle_info({:wotex_ble, reference, event}, %{status: :opening} = state)
-      when is_reference(reference) do
-    if state.buffered < 64 do
+  def handle_info({:wotex_ble, reference, event}, %{status: status, ready: false} = state)
+      when is_reference(reference) and status in [:opening, :bound] do
+    if state.buffered < @opening_limit do
       {:noreply,
        %{state | buffer: :queue.in({reference, event}, state.buffer), buffered: state.buffered + 1}}
     else
@@ -125,7 +144,7 @@ defmodule Wotex.BLE.RuntimeRelay do
 
   def handle_info(
         {:wotex_ble, reference, event},
-        %{status: :bound, subscription: %{reference: reference}} = state
+        %{status: :bound, ready: true, subscription: %{reference: reference}} = state
       ),
       do: {:noreply, deliver(state, event)}
 
@@ -188,8 +207,12 @@ defmodule Wotex.BLE.RuntimeRelay do
     if valid and now() < state.deadline do
       Process.cancel_timer(state.timer)
       Process.demonitor(state.caller_monitor, [:flush])
+
+      # Runtime decodes this control frame only after claiming its opening
+      # result. Keep reports in the bounded relay buffer until that handoff,
+      # so the opening notification never consumes a report's queue slot.
+      send(state.owner, {:wotex_transport_frame, {:ble_relay_ready, state.handle}})
       GenServer.reply(state.waiter, {:ok, state.handle})
-      buffer = :queue.to_list(state.buffer)
 
       state = %{
         state
@@ -198,23 +221,28 @@ defmodule Wotex.BLE.RuntimeRelay do
           subscription_monitor: Process.monitor(subscription.pid),
           waiter: nil,
           caller_monitor: nil,
-          timer: nil,
-          buffer: :queue.new(),
-          buffered: 0
+          timer: nil
       }
 
-      {:noreply,
-       Enum.reduce(buffer, state, fn
-         {reference, event}, %{status: :bound} = acc when reference == subscription.reference ->
-           deliver(acc, event)
-
-         _, acc ->
-           acc
-       end)}
+      {:noreply, state}
     else
       code = if now() >= state.deadline, do: :deadline_exceeded, else: :invalid_subscription
       {:noreply, begin_close(state, Error.new(code))}
     end
+  end
+
+  defp flush(state) do
+    buffer = :queue.to_list(state.buffer)
+    subscription = state.subscription
+    state = %{state | buffer: :queue.new(), buffered: 0}
+
+    Enum.reduce(buffer, state, fn
+      {reference, event}, %{status: :bound} = acc when reference == subscription.reference ->
+        deliver(acc, event)
+
+      _, acc ->
+        acc
+    end)
   end
 
   defp deliver(state, {:ok, bytes, metadata}) do
@@ -322,7 +350,10 @@ defmodule Wotex.BLE.RuntimeRelay do
             address: prepared.mapping.address,
             receiver: parent,
             mode: prepared.mapping.mode,
-            max_queue_length: limit,
+            # This mailbox belongs to the relay, which has its own bounded
+            # opening buffer and control messages. The consumer's queue limit
+            # applies separately when forwarding to the Runtime owner.
+            max_queue_length: max(limit, @opening_limit),
             value_type: :bytes,
             timeout: remaining
           })

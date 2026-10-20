@@ -61,6 +61,11 @@ defmodule Wotex.BLE.Transport do
   def unsubscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
 
   @impl Wotex.Runtime.Transport
+  def decode_frame({:ble_relay_ready, %RuntimeRelay{} = handle}, %Request{}, _) do
+    RuntimeRelay.ready(handle)
+    :ignore
+  end
+
   def decode_frame(frame, %Request{} = request, _) do
     with {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),

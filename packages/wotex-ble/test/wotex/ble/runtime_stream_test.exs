@@ -40,7 +40,8 @@ defmodule Wotex.BLE.RuntimeStreamTest do
       500
     )
 
-    refute_receive {:runtime_decode, ^owner, _, _}, 30
+    assert_receive {:runtime_decode, ^owner, {:ble_relay_ready, _}, _}, 1000
+    refute_receive {:runtime_decode, ^owner, {:value, _, _}, _}, 30
     refute_receive {:wotex_runtime, _, {:ok, _, _}}, 30
     assert :ok = Wotex.Runtime.Subscription.stop(owner)
     assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
@@ -71,6 +72,91 @@ defmodule Wotex.BLE.RuntimeStreamTest do
 
     assert :ok = Wotex.Runtime.Subscription.stop(owner)
     assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
+  end
+
+  test "the pending Runtime opening result does not consume the first report slot" do
+    {sample_options, _} = options("stream_runtime")
+    assert {:ok, sample} = BLE.connect([client: BlueZ, lifecycle: :persistent] ++ sample_options)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(sample, %{
+               address: %{service: "180f", characteristic: "2a19"},
+               receiver: self(),
+               value_type: :bytes
+             })
+
+    reference = subscription.reference
+    assert_receive {:wotex_ble, ^reference, {:ok, <<1, 0>>, metadata}}, 5000
+    assert :ok = BLE.unsubscribe(sample, subscription)
+    assert :ok = BLE.disconnect(sample)
+
+    gate = make_ref()
+    {native, record} = options("stream_runtime_silent")
+
+    {consumed, context} =
+      runtime_consumer([max_queue_length: 1] ++ native, :property, %{},
+        config_override: [opening_gate: {self(), gate}]
+      )
+
+    owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
+    assert_receive {^gate, :opening, callback}, 1000
+    :ok = :sys.suspend(owner)
+
+    try do
+      send(callback, {gate, :continue})
+      assert_receive {^gate, :opened, {:ok, handle}}, 5000
+
+      eventually(fn ->
+        case Process.info(owner, :message_queue_len) do
+          {:message_queue_len, count} -> count > 0
+          _ -> false
+        end
+      end)
+
+      state = :sys.get_state(handle.pid)
+
+      send(handle.pid, {:wotex_ble, state.subscription.reference, {:ok, <<1, 0>>, metadata}})
+
+      # This barrier follows the report while Runtime cannot claim its result.
+      assert %{ready: false, buffered: 1} = :sys.get_state(handle.pid)
+
+      GenServer.cast(handle.pid, {:ready, %{handle | reference: make_ref()}, owner})
+      assert :ok = Wotex.BLE.RuntimeRelay.ready(handle)
+      assert %{ready: false, buffered: 1} = :sys.get_state(handle.pid)
+    after
+      if Process.alive?(owner), do: :sys.resume(owner)
+    end
+
+    assert_receive {:runtime_decode, ^owner, {:value, <<1, 0>>, _}, _}, 5000
+    assert_receive {:wotex_runtime, _, {:ok, 1, _}}, 5000
+    assert Process.alive?(owner)
+    assert :ok = Wotex.Runtime.Subscription.stop(owner)
+    assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
+  end
+
+  @tag capture_log: true
+  test "Runtime owner death before the opening handoff closes the native session" do
+    gate = make_ref()
+    {native, record} = options("stream_runtime_silent")
+
+    {consumed, context} =
+      runtime_consumer(native, :property, %{}, config_override: [opening_gate: {self(), gate}])
+
+    owner = start_supervised!(runtime_spec(consumed, context, :property, self()))
+    assert_receive {^gate, :opening, callback}, 1000
+    :ok = :sys.suspend(owner)
+
+    try do
+      send(callback, {gate, :continue})
+      assert_receive {^gate, :opened, {:ok, handle}}, 5000
+      assert %{ready: false, status: :bound} = :sys.get_state(handle.pid)
+      monitor = Process.monitor(handle.pid)
+      Process.exit(owner, :kill)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+      assert closed(record) == %{"closed" => true, "streams" => 1, "pending" => []}
+    after
+      if Process.alive?(owner), do: :sys.resume(owner)
+    end
   end
 
   test "WBL-I05 final receiver death during pending StartNotify releases the complete native owner" do

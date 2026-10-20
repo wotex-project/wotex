@@ -22,8 +22,35 @@ defmodule Wotex.BLE.RuntimeRecordingTransport do
   end
 
   @impl Wotex.Runtime.Transport
-  def subscribe(request, owner, execution, config),
-    do: Wotex.BLE.Transport.subscribe(request, owner, execution, Keyword.delete(config, :test_pid))
+  def subscribe(request, owner, execution, config) do
+    gate = Keyword.get(config, :opening_gate)
+
+    if gate do
+      {receiver, reference} = gate
+      send(receiver, {reference, :opening, self()})
+
+      receive do
+        {^reference, :continue} -> :ok
+      after
+        5000 -> exit(:opening_gate_timeout)
+      end
+    end
+
+    result =
+      Wotex.BLE.Transport.subscribe(
+        request,
+        owner,
+        execution,
+        Keyword.drop(config, [:test_pid, :opening_gate])
+      )
+
+    if gate do
+      {receiver, reference} = gate
+      send(receiver, {reference, :opened, result})
+    end
+
+    result
+  end
 
   @impl Wotex.Runtime.Transport
   def unsubscribe(handle, request, execution, config) do

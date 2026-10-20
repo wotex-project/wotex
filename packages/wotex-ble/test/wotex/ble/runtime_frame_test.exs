@@ -134,6 +134,7 @@ defmodule Wotex.BLE.RuntimeFrameTest do
              RuntimeRelay.handle_call(:forged, {self(), make_ref()}, state)
 
     assert {:noreply, ^state} = RuntimeRelay.handle_info({:foreign, "CANARY"}, state)
+    assert :ok = RuntimeRelay.ready(nil)
   end
 
   defp fixture do
