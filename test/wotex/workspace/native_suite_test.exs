@@ -46,6 +46,17 @@ defmodule Wotex.Workspace.NativeSuiteTest do
     assert NativeSuite.parse_all("p", nil) == {:ok, []}
   end
 
+  test "host selection is explicit and closed, independently of prerequisites" do
+    assert {:ok, suite} = NativeSuite.parse("p", Map.put(@suite, "hosts", ["darwin"]))
+    assert NativeSuite.on_host?(suite, {:unix, :darwin})
+    refute NativeSuite.on_host?(suite, {:unix, :linux})
+    assert NativeSuite.on_host?(%NativeSuite{name: "portable"}, {:unix, :linux})
+    assert NativeSuite.on_host?(%NativeSuite{name: "portable"}, {:unix, :darwin})
+    assert {:error, message} = NativeSuite.parse("p", Map.put(@suite, "hosts", ["mac"]))
+    assert message =~ "unknown host(s) mac"
+    assert {:error, _} = NativeSuite.parse("p", Map.put(@suite, "hosts", "darwin"))
+  end
+
   test "rejects malformed suites with the package and suite named" do
     assert {:error, "package p: native_check must be a list"} = NativeSuite.parse_all("p", %{})
 

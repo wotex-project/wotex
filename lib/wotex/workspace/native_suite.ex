@@ -7,6 +7,7 @@ defmodule Wotex.Workspace.NativeSuite do
       native_check:
         - suite: sdk                      # name, unique within the package
           requires: [linux]               # host requirements: linux, docker
+          hosts: [linux]                  # optional scope: linux and/or darwin
           build: wotex.opcua.native.build # package task run with --workspace {workspace}
           prepare:                        # commands run after the build
             - [cmake, -S, "{package}/priv/native", -B, "{scratch}/db", ...]
@@ -43,6 +44,14 @@ defmodule Wotex.Workspace.NativeSuite do
   task's workspace, only when `build` is set) and `{scratch}` (a directory
   emptied before `prepare`). A `compile` flag of the form `pkg-config:NAME`
   expands to the output of `pkg-config --cflags NAME`.
+
+  `hosts` restricts a suite to the named operating systems (`linux`, `darwin`).
+  Omission or an empty list selects every host. A suite outside its host scope
+  is reported as not applicable, with no build, preparation, analysis or tests.
+  Its explicit `compile.files` declarations account for platform-only translation
+  units; undeclared units still fail the package's compile-command coverage check.
+  A host-scoped result supplies no qualification for another operating system.
+  `requires` continues to fail when a selected suite lacks a prerequisite.
   """
 
   @requirements ~w(linux docker tun)
@@ -72,6 +81,7 @@ defmodule Wotex.Workspace.NativeSuite do
   @type t :: %__MODULE__{
           name: String.t(),
           requires: [String.t()],
+          hosts: [String.t()],
           build: String.t() | nil,
           prepare: [command()],
           compile_commands: [String.t()],
@@ -84,6 +94,7 @@ defmodule Wotex.Workspace.NativeSuite do
   defstruct [
     :name,
     requires: [],
+    hosts: [],
     build: nil,
     prepare: [],
     compile_commands: [],
@@ -113,10 +124,11 @@ defmodule Wotex.Workspace.NativeSuite do
   @spec parse(String.t(), term()) :: {:ok, t()} | {:error, String.t()}
   def parse(package, %{"suite" => name} = entry) when is_binary(name) and name != "" do
     where = "package #{package}, native_check suite #{name}"
-    known = ~w(suite requires build prepare compile_commands compile test container)
+    known = ~w(suite requires hosts build prepare compile_commands compile test container)
 
     with :ok <- known_keys(where, entry, known),
          {:ok, requires} <- parse_requires(where, Map.get(entry, "requires", [])),
+         {:ok, hosts} <- hosts(where, Map.get(entry, "hosts", [])),
          {:ok, build} <- build(where, Map.get(entry, "build")),
          {:ok, prepare} <- commands(where, "prepare", Map.get(entry, "prepare", [])),
          {:ok, databases} <-
@@ -127,6 +139,7 @@ defmodule Wotex.Workspace.NativeSuite do
          suite = %__MODULE__{
            name: name,
            requires: requires,
+           hosts: hosts,
            build: build,
            prepare: prepare,
            compile_commands: databases,
@@ -141,6 +154,21 @@ defmodule Wotex.Workspace.NativeSuite do
 
   def parse(package, _),
     do: {:error, "package #{package}: every native_check entry needs a suite name"}
+
+  @doc "Whether a suite selects the supplied operating system (the current host by default)."
+  @spec on_host?(t(), {atom(), atom()}) :: boolean()
+  def on_host?(%__MODULE__{hosts: hosts}, os \\ :os.type()) do
+    hosts == [] or Atom.to_string(elem(os, 1)) in hosts
+  end
+
+  defp hosts(where, value) do
+    with {:ok, names} <- strings(where, "hosts", value) do
+      case names -- ~w(linux darwin) do
+        [] -> {:ok, Enum.uniq(names)}
+        unknown -> {:error, "#{where}: unknown host(s) #{Enum.join(unknown, ", ")}"}
+      end
+    end
+  end
 
   @doc """
   Replaces the placeholders in `text`. `values` maps placeholder names

@@ -171,6 +171,34 @@ defmodule Wotex.Workspace.NativeCheckTest do
     assert File.exists?(Path.join(check.cache, "p/tidy/compile_commands.json"))
   end
 
+  test "other-host suites do no work and cover only their explicitly declared units", %{
+    check: check
+  } do
+    other = if :os.type() == {:unix, :darwin}, do: "linux", else: "darwin"
+
+    suite = %NativeSuite{
+      name: "platform",
+      hosts: [other],
+      build: "nonexistent.build",
+      prepare: [%{run: ["nonexistent-prepare"], env: [], cd: nil, stdout: nil}],
+      compile: [%{files: ["native/*.c"], flags: ["pkg-config:nonexistent"]}],
+      test: [%{run: ["nonexistent-test"], env: [], cd: nil, stdout: nil}]
+    }
+
+    tool = %{tool: :clang_tidy, path: "/nonexistent/clang-tidy", version: "23", major: 23}
+    scoped = %{check | suites: [suite]}
+    assert NativeCheck.test(scoped) == :ok
+    assert NativeCheck.tidy_suite(scoped, suite, tool: tool) == :not_applicable
+    assert NativeCheck.tidy(scoped, tool: tool) == :error
+    messages = for {:mix_shell, :error, [message]} <- flush(), do: message
+    assert Enum.any?(messages, &(&1 =~ "no compile command for 1 translation unit(s)"))
+    assert "  packages/p/test/native/t.cpp" in messages
+    refute "  packages/p/native/a.c" in messages
+    refute File.exists?(Path.join(check.cache, "p/platform"))
+    assert NativeCheck.tidy(%{scoped | sources: ["packages/p/native/a.c"]}, tool: tool) == :ok
+    refute File.exists?(tool.path)
+  end
+
   test "writes stdout of a prepare command to a file and synthesizes compile commands", %{
     check: check
   } do

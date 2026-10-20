@@ -24,6 +24,8 @@ defmodule Wotex.Workspace.NativeCheck do
   (`Wotex.Workspace.NativeContainer`); or nowhere, with a message naming
   what is missing. Nothing is skipped silently. A suite with `container`
   runs its commands and clang-tidy in that container.
+  A suite's explicit `hosts` scope reports other operating systems as not
+  applicable; its declared platform-only units supply no analysis evidence here.
 
   clang-tidy results are cached per translation unit
   (`Wotex.Workspace.NativeTidy`): a unit whose inputs match its last clean
@@ -249,7 +251,11 @@ defmodule Wotex.Workspace.NativeCheck do
 
     local = CompileDb.files(merged)
     covered = MapSet.union(local, state.contained)
-    uncovered = Enum.reject(units, &MapSet.member?(covered, real(context, &1)))
+    outside_host = outside_host_units(context)
+
+    uncovered =
+      Enum.reject(units, &(MapSet.member?(covered, real(context, &1)) or &1 in outside_host))
+
     database = CompileDb.write!(Path.join([context.cache, context.name, "tidy"]), merged)
 
     missing_ok? = report_uncovered(context, uncovered, state.failures)
@@ -281,6 +287,9 @@ defmodule Wotex.Workspace.NativeCheck do
 
         :error ->
           %{state | failures: state.failures + 1}
+
+        :not_applicable ->
+          state
       end
     end)
   end
@@ -291,7 +300,7 @@ defmodule Wotex.Workspace.NativeCheck do
   suite runs on this host. Returns the real paths of the analysed units
   with the outcome, or `:error` when the suite did not run.
   """
-  @spec tidy_suite(context(), NativeSuite.t(), [option()]) :: analysed() | :error
+  @spec tidy_suite(context(), NativeSuite.t(), [option()]) :: analysed() | :error | :not_applicable
   def tidy_suite(context, suite, opts) do
     covered = Keyword.get(opts, :covered, MapSet.new())
 
@@ -320,7 +329,16 @@ defmodule Wotex.Workspace.NativeCheck do
   @spec test(context(), [option()]) :: :ok | :error
   def test(context, opts \\ []) do
     results = Enum.map(context.suites, &run_suite(context, &1, :test, opts))
-    if Enum.all?(results, &(&1 == :ok)), do: :ok, else: :error
+    if Enum.all?(results, &(&1 in [:ok, :not_applicable])), do: :ok, else: :error
+  end
+
+  defp outside_host_units(context) do
+    for suite <- suites(context),
+        not NativeSuite.on_host?(suite),
+        rule <- suite.compile,
+        file <- matching(context, rule.files),
+        into: MapSet.new(),
+        do: Path.join(context.relative, file)
   end
 
   @doc """
@@ -396,6 +414,18 @@ defmodule Wotex.Workspace.NativeCheck do
   end
 
   defp run_suite(context, suite, mode, opts) do
+    if NativeSuite.on_host?(suite) do
+      run_selected_suite(context, suite, mode, opts)
+    else
+      info(
+        "#{context.name} suite #{suite.name}: not applicable on this host (hosts: #{Enum.join(suite.hosts, ", ")}); no qualification recorded"
+      )
+
+      :not_applicable
+    end
+  end
+
+  defp run_selected_suite(context, suite, mode, opts) do
     case placement(suite) do
       :host ->
         run_here(context, suite, mode, opts)

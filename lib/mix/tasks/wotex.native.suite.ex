@@ -118,6 +118,9 @@ defmodule Mix.Tasks.Wotex.Native.Suite do
 
       :error ->
         CLI.fail("#{context.name} suite #{suite.name} did not run")
+
+      :not_applicable ->
+        write_result(opts[:result], context.root, MapSet.new(), :not_applicable)
     end
   end
 
