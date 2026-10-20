@@ -110,7 +110,8 @@ returns `{:ok, %{write_mode: :without_response, evidence: :native_queue_accepted
 It requires the command flag and a current MTU; it supplies no ATT acknowledgement
 or physical completion. The Form extension `wotex:bleWriteMode` selects the same
 procedure, with a Runtime Result status of `:accepted` for command queue evidence.
-The one-shot backend refuses command mode. CoreBluetooth remains planned.
+The one-shot backend refuses command mode. The CoreBluetooth native process and
+macOS build are available; its public Client/Runtime integration remains planned.
 
 `subscribe/2` delivers `{:wotex_ble, reference, {:ok, value, metadata}}` messages
 to the selected receiver. Cancel with `unsubscribe/2` on the same session.
@@ -200,6 +201,16 @@ Debian 12 image used for the recorded runs (`BEAM_LANE=lower` or `upper`).
 ```console
 mix wotex.native.build --package wotex-ble --workspace /absolute/disposable/dir
 mix pkg wotex-ble wotex.ble.native.build --workspace /absolute/disposable/dir
+```
+
+The CoreBluetooth native process builds offline on macOS with an installed
+Apple SDK and toolchain. It targets macOS 14, embeds a generic Bluetooth usage
+description and writes its host, runtime guardian and identity manifest. The
+closed-input probe makes no permission request or peripheral connection. This
+build supplies the native process; a public CoreBluetooth Client is still required.
+
+```console
+mix pkg wotex-ble wotex.ble.corebluetooth.build --workspace /absolute/disposable/dir
 ```
 
 Native component lanes rerun the tests that compile component executables

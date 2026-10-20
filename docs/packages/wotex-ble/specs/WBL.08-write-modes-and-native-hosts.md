@@ -1,9 +1,10 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.4.0. Updated: 2026-10-20. Status: accepted target.
+Version: 0.5.0. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
-implemented. The CoreBluetooth SDK owner is implemented with injected-selector
-evidence; its process/public Client and installed-host qualification remain open.
+implemented. The CoreBluetooth SDK owner, native process and explicit macOS build
+are implemented with scoped software evidence. Its public Client, notification/
+sleep joins and installed-host qualification remain open.
 
 ## Scope and operations
 
@@ -89,7 +90,7 @@ MTU, fragmentation, long command or retry is allowed.
 | --- | --- | --- |
 | Persistent BlueZ | Existing acknowledged procedure | Explicit command with current flag/MTU and native queue evidence |
 | One-shot busctl | Existing acknowledged procedure | `not_supported` before process invocation |
-| CoreBluetooth | SDK owner implemented; process/Client target | SDK owner implemented; process/Client target |
+| CoreBluetooth | Native process/SDK implemented; Client target | Native process/SDK implemented; Client target |
 
 The [pinned BlueZ characteristic API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst)
 owns the native command/request and MTU property vocabulary. It does not qualify
@@ -107,8 +108,14 @@ identity and retirement boundary. That native operation component has an
 independent fourteen-case scripted-port corpus. The SDK owner adds sixteen
 framework-linked injected-selector cases for explicit permission entry,
 bounded discovery, actual procedure selectors, late input, continuity loss,
-submission-time checks and retirement. The host process and public Client
-remain required before the CoreBluetooth row above can claim end-to-end support.
+submission-time checks and retirement. The public Client
+remains required before the CoreBluetooth row above can claim end-to-end support.
+The native process now supplies bounded revision-1 IPC, explicit generation/route
+validation, one active operation, reserved nonblocking output and joined
+retirement. Its explicit macOS build ships the complete source closure, embeds
+usage metadata, audits architecture/system linkage and probes passive startup.
+Independent process tests and actual build/reuse/tamper tests establish these
+software paths; they establish no permission or peripheral result.
 
 ### Independent archive entry
 

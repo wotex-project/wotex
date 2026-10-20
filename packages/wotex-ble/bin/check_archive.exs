@@ -36,7 +36,14 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/native/objects.hpp",
     "priv/bluez/native/discovery.hpp",
     "priv/bluez/native/vendor/json.hpp",
-    "priv/bluez/native/vendor/LICENSE.MIT"
+    "priv/bluez/native/vendor/LICENSE.MIT",
+    "priv/corebluetooth/native/Info.plist",
+    "priv/corebluetooth/native/main.cpp",
+    "priv/corebluetooth/native/host.hpp",
+    "priv/corebluetooth/native/operation.hpp",
+    "priv/corebluetooth/native/sdk.cpp",
+    "priv/corebluetooth/native/sdk.hpp",
+    "priv/corebluetooth/native/sdk_environment.hpp"
   ]
   @development ~w(.agents .claude .codex .git AGENTS.md CLAUDE.md deps _build)
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]

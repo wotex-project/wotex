@@ -510,7 +510,8 @@ void SDK::close(std::int64_t now) {
   state->assert_external();
   dispatch_sync(state->queue, ^{
     @autoreleasepool {
-      state->fail(Code::disconnected, now);
+      if (state->phase == SDKState::Phase::fresh) state->retire_native();
+      else state->fail(Code::disconnected, now);
     }
   });
 }

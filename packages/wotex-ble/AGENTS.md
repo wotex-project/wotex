@@ -56,7 +56,8 @@ root `AGENTS.md`.
   guardian sources, the vendored JSON header and the libdbus pin
   (`dependencies.json`).
 - `priv/corebluetooth/native/`: explicit-clock operation ownership and the
-  macOS Objective-C++ SDK owner; its process/public Client are not yet delivered.
+  macOS Objective-C++ SDK owner and native process. The explicit builder is
+  `lib/wotex/ble/core_bluetooth/build.ex`; its public Client remains undelivered.
 - Specifications: `docs/packages/wotex-ble/specs/` (WBL.01–WBL.03,
   WBL.04–WBL.07; `catalogue.yaml` owns status). Plans, the qualification
   runbook and evidence: `docs/packages/wotex-ble/plans/` and `provenance/`.
@@ -122,6 +123,11 @@ Tests by area, under `test/wotex/ble/` unless noted:
   `tooling/packages.yaml` selects `hosts: [darwin]`; Linux records it as not
   applicable and supplies no Mac qualification. Its sources require the Apple
   SDK, `-x objective-c++`, ARC and a macOS 14 minimum target.
+  `corebluetooth_host_test.exs` runs portable independent Driver processes through
+  the real framing/output loop and guardian, including unread stdout and active
+  close. `corebluetooth_build_test.exs` runs an actual offline macOS build, its
+  passive ready probe, read-only reuse and artifact-tamper refusal. This build
+  test starts no manager or peripheral operation.
 - Native build and software fixture tasks: `native_build_test.exs`,
   `native_source_test.exs`, `software_fixture_test.exs`.
 - Runtime integration, streams and error classes:
@@ -152,6 +158,8 @@ absolute workspace; the README Development section lists their prerequisites.
 mix wotex.native.build --package wotex-ble --workspace /absolute/disposable/dir
 # Sanitizer component lanes (leak_audit is Linux only)
 WOTEX_BLE_NATIVE_LANE=sanitizers mix pkg wotex-ble test <native component test files>
+# CoreBluetooth process: macOS, installed Apple SDK/toolchain, no network or hardware
+mix pkg wotex-ble wotex.ble.corebluetooth.build --workspace /absolute/disposable/dir
 # Built host and private bus (tag interop), against a completed native workspace
 WOTEX_BLE_NATIVE_WORKSPACE=/absolute/disposable/dir \
   mix pkg wotex-ble test --only interop test/interop/native_host_test.exs

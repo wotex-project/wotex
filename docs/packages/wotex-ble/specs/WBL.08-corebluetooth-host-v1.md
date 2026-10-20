@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.2.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.3.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -59,9 +59,9 @@ Destroying an unfinished operation is a native lifetime error, not silent cleanu
 
 The SDK adapter implements the port through CoreBluetooth on a dedicated
 serialized callback queue, using exact peripheral/characteristic object identity.
-The actual host, its explicit build inputs, public Client, permission policy,
-wire revision and independent peer cases must exist before claiming that this
-operation component is a usable macOS backend. Ordinary package loading must
+The public Client and installed permission/peripheral qualification must exist
+before claiming that these native components are a usable public macOS backend.
+Ordinary package loading must
 not instantiate a manager or prompt for permission.
 
 The adapter must consult maximumWriteValueLengthForType for the selected write
@@ -89,8 +89,8 @@ the ordinary/sanitizer runs, source identities, actual checks and omissions.
 entry below through the real framework selectors, including bounded complete
 discovery, command readiness, generation retirement and released object custody.
 Its injected-selector tests establish the adapter's software behavior. The
-process and public Client are still required before the package has a usable
-macOS backend.
+native process and explicit build entry below are implemented. A public Client
+is still required before the package has a usable macOS session.
 The [SDK record](../provenance/corebluetooth-sdk-2026-10.md) binds the current
 operation/SDK inputs, thirty ordinary/sanitizer cases and native suite results.
 
@@ -140,9 +140,8 @@ The SDK source is Objective-C++17 at the Apple framework boundary. Its native
 suite is explicitly scoped to `darwin`; other hosts record no Mac qualification.
 Injected objects must implement the actual SDK selectors. Such tests establish
 adapter behavior under supplied callbacks, not real authorization, connection,
-pairing or radio behavior. The process/public Client, permission usage metadata,
-sleep observation, notification receiving and Runtime/archive joins remain
-separate required host-delivery work.
+pairing or radio behavior. The public Client, sleep observation, notification
+receiving and Runtime/archive joins remain separate required host-delivery work.
 
 | Case | SDK stimulus and falsifier |
 | --- | --- |
@@ -161,6 +160,92 @@ separate required host-delivery work.
 | CB-OP3 | Readiness waits, duplicate and foreign callbacks, changed size/permission/route, clock regression and deadline equality cannot send unsent work |
 | CB-OP4 | Submitted timeout/cancellation preserves uncertainty; repeated cancellation cannot renew cleanup; late callbacks cannot complete a retired operation |
 | CB-OP5 | Pending/confirmed/unconfirmed retirement, exact 500 ms cleanup boundary, one result and unfinished destruction are distinguished |
+
+## Native process and build entry
+
+The CoreBluetooth process uses UTF-8 JSON lines, each at most 131,072 bytes
+including LF, with the existing bounded duplicate-key/depth/node parser.
+It emits exactly `{"version":1,"event":"ready","backend":"corebluetooth-native","revision":"1"}`
+before creating an SDK owner. This receipt supplies artifact/protocol identity,
+not permission or connection readiness. The process accepts no command-line
+options. Loading the package or running a closed-input build probe creates no
+manager and prompts for no permission.
+
+Requests have exactly `version`, `id`, `operation`, `parameters`, `timeout_ms`.
+Version is 1 and timeout is 1..60,000 ms. The first open uses id `open`; subsequent
+data IDs are strictly increasing canonical nonzero uint64 decimal strings;
+close uses id `close`. One generation is opened per process. Repeated open,
+reused IDs, malformed frames and unsupported operations end the process without
+fallback. Ordinary operations are `discover`, `read`, `write`, `write_command`
+and `health`; subscription/pairing commands have no implicit implementation.
+
+Open parameters are exactly `identifier` (canonical lowercase 36-byte private
+peripheral UUID), `generation` (nonzero uint64), `permission`
+(`require_authorized` or `request`) and `pairing` (`system`). Discovery, health
+and close take an empty object. Read takes exactly `address`; both writes take
+exactly `address` and a canonical 512-byte-bounded byte envelope. Address is
+exactly nonzero uint64 `generation` and `route`, matching the opened generation
+and a current discovered token. UUID matching and ambiguity policy belong to
+the public Client, not a fabricated D-Bus path or ATT handle.
+
+Successful replies have exactly `version`, `generation`, `id`, `ok: true` and
+`result`. Open returns `{"generation": G}`; discover returns
+`{"characteristics": [...]}` with up to 256 complete records. Each record has
+exactly `route`, `service_uuid`, `characteristic_uuid`, `read`, `write`,
+`write_without_response`, `notify` and `indicate`; tokens are 1..N in SDK discovery
+order and UUIDs are canonical 128-bit Bluetooth strings. Read returns the
+existing byte envelope, write returns null, command returns the existing exact
+native-queue evidence, health returns `{"connected":true,"services_resolved":true}`,
+and close returns null only after confirmed owned retirement.
+
+Errors replace result with exactly `error`, containing fixed `code`, `cause`,
+Boolean `submitted` and Boolean `cleanup_confirmed`; `ok` is false. No NSError
+domain/message or private identifier is returned. A malformed open may carry
+generation zero because no valid generation was admitted. A bounded
+`write_submitted` control contains exactly version, generation, event and id.
+It is admitted before the SDK call; loss of its delivery never establishes that
+a write was unsent. A `connection_lost` control has exactly version, generation,
+event and fixed code. Neither event establishes a physical outcome.
+
+The original native deadline starts when a complete frame is received and is
+retained through native dispatch and callbacks; no queue wait renews it. The
+Client separately owns its full startup/call deadline including transit and
+retires the process on expiry. Native elapsed coordinates do not qualify a
+BEAM/native clock relationship or guarantee physical completion by a wall time.
+A successful callback observed after its retained native deadline is withheld
+until retirement and returned as timeout, retaining submitted uncertainty.
+
+The process admits one SDK operation and at most 64 reply reservations, including
+queued output. Additional data requests while one is active return busy without
+SDK dispatch. Existing bounded native output reserves controls separately and
+flushes at most 65,536 bytes/64 attempts per turn. SDK callbacks enqueue through
+a prompt nonblocking lock attempt; contention or output failure fences the
+process. They never block waiting for stdout. Input/partial-input EOF, malformed
+input, consumer output loss, clock failure and owner loss retire the SDK owner.
+Explicit close can overtake active work and drains already admitted output for
+at most 500 ms. The independent existing C guardian enforces process-group
+retirement if the host stalls. There is no retry, reconnect or session reuse.
+
+The macOS build is explicit, offline and workspace-owned. It records actual
+compiler/SDK/tool and source identities, exact arguments, binary digests and
+closed-input ready probe. The executable embeds a generic Bluetooth usage
+description and links only Apple system frameworks and its C++ runtime; the
+separate runtime guardian is built from its pinned existing source. Immutable
+deployment files and their digests remain consumer inputs. A verified build
+or probe establishes no installed permission, peripheral or RF result.
+
+| Case | Process stimulus and falsifier |
+| --- | --- |
+| CB-H1 | Closed input emits only the pinned ready receipt; invalid input/private identifiers produce no manager or leaked error text |
+| CB-H2 | Independent process requests retain generation, exact bytes/mode, route bounds, increasing identity and one active procedure |
+| CB-H3 | Deadline/late callback, EOF, malformed frame and busy/output pressure cannot renew or silently replay work |
+| CB-H4 | Close overtakes active work, preserves uncertainty and confirms actual retirement before success; blocked output remains bounded |
+| CB-H5 | Exact build/reuse checks source/tool/argument/binary identity, rejects changed artifacts and packages the required source closure |
+
+The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
+binds the current inputs, ten independent process cases, three actual macOS
+build cases, renewed forty-case sanitizer corpus and extracted archive
+compilation. Public Client/Runtime and installed-host obligations remain open.
 
 The [Apple write API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/writevalue(_:for:type:)),
 [per-mode length API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/maximumwritevaluelength(for:))
