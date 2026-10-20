@@ -62,6 +62,14 @@ edge-origin resume, Time@2, current-state satisfaction and retained complete
 pending arbitration. Archives, mutants and consumer builds are disposable and
 removed on exit. This software lane does not qualify a host or physical effect.
 
+`bin/check_archive.exs --decision-consumers` runs the independent raw-source and
+journal decision consumers against one extracted core/Continuum/Routines cohort.
+Each has seven behavioral cases and a passive identity/query case. Both families
+must catch all six isolated verifier mutations through assertions, with no harness
+errors or skipped cases. The runner uses two fresh mutation VMs concurrently and
+joins them before archive cleanup. This lane does not qualify consumer authority,
+installed clocks, host transactions or physical effects.
+
 `bin/check_archive.exs --model-consumer --maude-path /absolute/maude` runs the explicitly selected proposal-prefix native archive consumer against exact Hex ExMaude 0.5.0. The interpreter remains separately provisioned; this Port lane does not build the C-Node or qualify containment, execution admission or wider models.
 
 `bin/check_archive.exs --profile-consumers` runs two independent scalar consumers

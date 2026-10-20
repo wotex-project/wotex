@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.35. Updated: 2026-10-16. Accepted programme; the basis is partially implemented.
+Version: 0.2.35. Updated: 2026-10-20. Accepted programme; the basis is partially implemented.
 
 The WRO.01–05 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -162,7 +162,8 @@ generic point-verification/current-time seam needed before consumer adoption.
 Its public direct-transition and complete-decision APIs are implemented with
 native evidence. Complete pending continuation is a prerequisite; execution
 checks alone do not establish independent verification. The delivery stages
-remain the following, with the complete archive/mutation milestone still open:
+remain the following; archive/mutation execution is recorded below and the
+broader verifier milestone remains open:
 
 1. Freeze closed decision/current-context/cell schemas, independent vectors and
    refusal cases in package priv; schema checks prove representation only.
@@ -210,32 +211,22 @@ relations. Fifteen new cases include an independent all-pairs oracle over 162
 policy/batch combinations, 1,024 contributors with a final supplied conflict,
 a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
 The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
-this native evidence. Independent raw-source/journal archive consumers,
-complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
-open. No consumer authority, host/physical qualification or wider Model scope
-is supplied.
+this native evidence. The independent archive lane below now supplies both
+consumers and complete-verifier mutations. Full VD-T1–T14 and the owning
+milestone remain open. No consumer authority, host/physical qualification or
+wider Model scope is supplied.
 
-The [archive entry profile](../decisions/verified-decision-archive-profile.md)
-is frozen before implementation: source and journal families each require seven
-behavioral cases plus cohort identity, the full capacity case and all six
-semantic mutation catches with zero harness errors. Implement the opt-in lane,
-run both families and record actual identities/counts/cleanup before the full
-verifier milestone. No archive or broader VD completion is claimed by entry.
+The [archive profile](../decisions/verified-decision-archive-profile.md) fixes
+separate source and journal families with seven behavioral cases plus cohort
+identity, full capacity and all six semantic defects. The implemented opt-in
+`bin/check_archive.exs --decision-consumers` now passes all eight extracted cases
+per family and all twelve assertion-only mutation runs, with zero harness
+errors, skips or exclusions. Both public queries execute without library
+startup. Two mutation VMs run concurrently and are joined before workspace
+cleanup; no replacement changes an installed archive or BEAM.
 
-The source-family oracle/consumer now passes all seven local native preflight
-cases, including full raw-source relations, independent all-pairs arbitration,
-1,024 contributors and negative delay/wait/Fact/window cuts. The
-[source preflight record](../provenance/decision-source-preflight-2026-10.md)
-binds its exact sources and checks. Journal archive execution, the opt-in runner,
-cohort identity, both extracted projects, all twelve mutation runs and full
-verifier milestone remain required; this is not archive evidence.
-
-The separate journal family now passes seven local native preflight cases.
-Its explicit row/receipt scripts and consumer-owned revision, original and charge
-ledger are independent of the source oracle and production execution helpers.
-Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
-policy/cutoff and exact public byte-bound cases pass. The
-[journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
-binds the sources and executed checks. Both families are still native preflight;
-the opt-in archive runner, cohort identity, extracted projects, twelve semantic
-mutation runs and owning verifier milestone remain required.
+The [archive record](../provenance/decision-archives-2026-10.md) binds actual
+source/archive/lock/runner identities, counts and cleanup. The current fast gate
+passes 292 tests and the guarded corpus passes 41 cases with all nine forward
+calls disabled during proof. The full VD-T1–T14 matrix and owning verifier
+milestone remain open; broader host/model/physical obligations are unchanged.

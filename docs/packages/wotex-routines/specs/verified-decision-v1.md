@@ -1,12 +1,12 @@
 # Verified transitions and time-stable decisions v1
 
-Version: 0.1.7. Updated: 2026-10-16. Status: accepted target; implementation partial.
+Version: 0.1.7. Updated: 2026-10-20. Status: accepted target; implementation partial.
 Owner: WRO.02 retained transitions/complete collection; WRO.03 time correspondence;
 WRO.04 independent validation scope.
 Implementation: public direct-transition and complete-decision APIs, canonical
 time cells and independent complete-set arbitration have native evidence.
-Independent archive consumers, complete-verifier mutations and the owning
-milestone remain open.
+Independent archive consumers and all twelve complete-verifier mutations now
+pass. The broader native matrix and owning milestone remain open.
 Complete VD-T1–T14 remain unexecuted obligations.
 
 ## Result and ownership
@@ -378,8 +378,8 @@ Mutations must fail through assertions; loader/compiler failures are not catches
 | VD-T13 | 02–06 | Isolated expiry-before-receipt, false edge, spend refund, omitted negative member, widened cell and pre-cutoff omission mutants are caught in both archive families through assertions with zero harness errors | Archive mutation |
 | VD-T14 | 05–08 | Frozen Model scope requests remain explicitly unsupported, forged current/authority labels cannot confer authorization, and existing source/Run/Collection@1 behavior and package boundaries remain unchanged | Native/archive compatibility |
 
-All complete cases remain open; the implemented subsets below do not close a
-combined native/archive obligation. Record exact source/build/profile/limits/fixtures,
+The full matrix remains open; the native and archive subsets below do not close
+every combined acceptance obligation. Record exact source/build/profile/limits/fixtures,
 archive hashes, commands, actual counts and environment for executed evidence.
 Pure point/time-cell correspondence is not consumer transaction, installed clock,
 source continuity, model containment or physical effect qualification.
@@ -402,7 +402,8 @@ wide intermediates and selected output bounds. Four isolated native mutations
 are caught through assertions with zero harness errors. The
 [foundation record](../provenance/verified-decision-foundation-2026-10.md) binds
 source/test identities and actual checks. These checks partially exercise
-VD-04/06; complete VD-T1–T14 and archive evidence remain open.
+VD-04/06. The later native and archive records below supply additional evidence;
+the complete VD-T1–T14 matrix remains open.
 
 ## Implemented direct point verification
 
@@ -459,9 +460,9 @@ strict numeric input equality and exact/one-under public byte envelopes.
 
 The [complete-decision record](../provenance/verified-decisions-2026-10.md)
 binds source/test/script identities and the executed checks. The independent
-raw-source and journal archive oracles, both extracted consumers, complete-
-verifier mutations, full VD-T1–T14 and owning milestone remain open. No current
-consumer adoption or host/physical qualification is inferred from this lane.
+archive evidence below complements this native lane. Full VD-T1–T14 and the
+owning milestone remain open. No current consumer adoption or host/physical
+qualification is inferred from either lane.
 
 ## Sources and decisions
 
@@ -474,30 +475,25 @@ receipt store or consumer ontology is introduced. Exact canonical time cells
 make time-only negative eligibility changes visible without a forward transition
 inside a consumer writer. Actual input authenticity and authority stay external.
 
-## Frozen archive entry
+## Extracted archive verification
 
 The [independent archive profile](../decisions/verified-decision-archive-profile.md)
 fixes two distinct source/journal oracles, seven behavioral cases plus cohort
 identity per family, the full 1,024-contributor case, six semantic defects caught
-in both families and exact result/cleanup obligations. Its accepted entry does
-not claim that the lane or archive evidence exists yet. Implement it without
-reducing the full VD-T1–T14 requirements or promoting native evidence to archive
-qualification.
+in both families and exact result/cleanup obligations. The opt-in
+`bin/check_archive.exs --decision-consumers` lane implements that profile without
+changing the ordinary archive gate or the runtime grammar.
 
-The source-family oracle/consumer now passes all seven local native preflight
-cases, including full raw-source relations, independent all-pairs arbitration,
-1,024 contributors and negative delay/wait/Fact/window cuts. The
-[source preflight record](../provenance/decision-source-preflight-2026-10.md)
-binds its exact sources and checks. Journal archive execution, the opt-in runner,
-cohort identity, both extracted projects, all twelve mutation runs and full
-verifier milestone remain required; this is not archive evidence.
+Both independent extracted projects pass all eight cases. Each family catches
+expiry-before-receipt, false edge, refunded spend, omitted negative member,
+noncanonical cell and cutoff omission through assertions, with seven executed
+cases per mutation and zero harness errors, skips or exclusions. Both public
+queries run without starting the libraries. The parent joins mutation VMs before
+removing all extracted projects, dependency builds and replacements.
 
-The separate journal family now passes seven local native preflight cases.
-Its explicit row/receipt scripts and consumer-owned revision, original and charge
-ledger are independent of the source oracle and production execution helpers.
-Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
-policy/cutoff and exact public byte-bound cases pass. The
-[journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
-binds the sources and executed checks. Both families are still native preflight;
-the opt-in archive runner, cohort identity, extracted projects, twelve semantic
-mutation runs and owning verifier milestone remain required.
+The [archive record](../provenance/decision-archives-2026-10.md) pins exact source,
+archive, runner and lock identities and actual counts. It also records the
+current 41-case guarded corpus and 292-test package fast gate. The complete
+VD-T1–T14 matrix and owning verifier milestone remain open; this profile does
+not close consumer transactions, actual clocks/source custody, wider models or
+physical authority.

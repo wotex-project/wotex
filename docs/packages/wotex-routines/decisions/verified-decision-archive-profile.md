@@ -1,7 +1,7 @@
 # Independent verified-decision archive profile
 
-Version: 0.1.2. Updated: 2026-10-16. Status: accepted implementation entry;
-the archive lane and its evidence are not implemented yet.
+Version: 0.1.2. Updated: 2026-10-20. Status: implemented archive lane;
+both extracted consumers and all twelve semantic mutations pass.
 Owner: [verified decisions](../specs/verified-decision-v1.md), principally
 VD-02–08 and VD-T11–T14. This profile makes those archive obligations concrete;
 it neither replaces the broader native matrix nor widens any runtime grammar.
@@ -143,20 +143,14 @@ criteria until those checks have run. It does not alone close all VD-T1–T14,
 the broad WRO.01–04 contracts, consumer adoption, current authority, installed
 clocks, source continuity, containment or physical qualification.
 
-The source-family oracle/consumer now passes all seven local native preflight
-cases, including full raw-source relations, independent all-pairs arbitration,
-1,024 contributors and negative delay/wait/Fact/window cuts. The
-[source preflight record](../provenance/decision-source-preflight-2026-10.md)
-binds its exact sources and checks. Journal archive execution, the opt-in runner,
-cohort identity, both extracted projects, all twelve mutation runs and full
-verifier milestone remain required; this is not archive evidence.
+The [archive record](../provenance/decision-archives-2026-10.md) supersedes the
+local-only preflight scope for these exact inputs. Both extracted projects pass
+all eight cases, including their independent cohort identity and public query
+without application startup. Each family catches all six defects through
+assertions across seven behavioral cases per mutation, with zero harness errors,
+skips or exclusions. The parent joins its two concurrent mutation VMs before
+removing the complete owned workspace.
 
-The separate journal family now passes seven local native preflight cases.
-Its explicit row/receipt scripts and consumer-owned revision, original and charge
-ledger are independent of the source oracle and production execution helpers.
-Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
-policy/cutoff and exact public byte-bound cases pass. The
-[journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
-binds the sources and executed checks. Both families are still native preflight;
-the opt-in archive runner, cohort identity, extracted projects, twelve semantic
-mutation runs and owning verifier milestone remain required.
+The broader VD-T1–T14 acceptance matrix and owning verifier milestone remain
+open. This archive result grants no current consumer authority, installed clock,
+host transaction, wider Model/Analysis or physical qualification.
