@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.28.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.29.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -19,8 +19,18 @@ fixture covers twenty-five case families, including independent processes,
 pre-ready input, consumer loss and watchdog termination with custody locked.
 Input loss and explicit close arm the cleanup deadline before custody can block;
 input retirement and later cleanup stages preserve that same deadline.
-The production SDK driver, approved-observation application and authenticated
-request integration remain required before this becomes an executable server.
+An internal SDK process driver now owns explicit private loading, SDK memory,
+configured resources and receiver attachment before event-loop startup. It joins
+the loop and retires resources, providers and private owners before memory
+shutdown. Its required receiver port owns partial-attachment cleanup and context
+draining under the SDK stack lock; input notifications remain bounded and take
+no SDK lock. Sixteen guarded real-pipe cases cover fresh/reopened stores, valid
+ready/probe/close, pending and resolved custody, missing private input, interface
+and attachment refusal, cancellation, pipe loss, stale generation and fatal
+cleanup refusal. The receiver fixture refuses child operations and supplies no
+authenticated consumer execution. Production executable assembly,
+approved-observation application and authenticated request integration remain
+required before this becomes an executable server.
 The [process coordination record](../provenance/bridge-process-2026-10.md)
 binds its exact inputs, normal/sanitizer results on macOS and Linux ARM64,
 package/archive checks and qualification limits.

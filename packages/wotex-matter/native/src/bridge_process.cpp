@@ -67,8 +67,9 @@ Exit Open(int descriptor, Time::time_point deadline, const std::atomic<bool> &ca
 
 class Session final : public BridgeResultSink, public BridgeOutputSink {
  public:
-  Session(BridgeProcessDriver &driver, Generation generation, Time::time_point deadline)
-      : driver(driver), generation(generation), deadline(deadline) {}
+  Session(BridgeProcessDriver &process_driver, Generation process_generation,
+          Time::time_point startup_deadline)
+      : driver(process_driver), generation(process_generation), deadline(startup_deadline) {}
   void Closing(bool requested) noexcept override {
     if (!requested) {
       int empty = 0;

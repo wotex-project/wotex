@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.29.0-target.
+Version: 0.30.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -580,6 +580,25 @@ it does not establish SDK process assembly, authentication or clock qualificatio
 The [process coordination record](../provenance/bridge-process-2026-10.md)
 binds the committed coordinator, twenty-five real-pipe case families on macOS
 and Linux ARM64, normal/sanitizer builds and exact archive/source identities.
+
+The internal SDK process driver MUST take one explicit private configuration
+path and one receiver composition port. Construction MUST start no SDK resource.
+After valid open, it MUST own SDK memory initialization, bounded private loading,
+configured resource initialization and receiver attachment before starting the
+event loop. It MUST observe cancellation between startup stages and admit no
+result notification before successful startup or after retirement.
+
+Receiver attachment and retirement MUST hold the SDK stack lock. Result-ready
+notification MUST remain bounded, nonblocking and independent of that lock.
+Retirement MUST support partial attachment, close and drain every retained
+context before stopping the event loop, and refuse success while request custody
+is open or pending. The driver MUST join the event loop before final resource
+release, retire borrowed providers and private owners before SDK memory shutdown,
+and preserve the coordinator's original cleanup deadline. Failed retirement or
+active destruction MUST terminate with 70 without a successful closed receipt.
+The driver MUST provide no default child receiver, example credentials or
+implicit request authorization. Its lifecycle fixture alone MUST NOT establish
+authenticated dispatch, approved-observation application or peer interoperability.
 
 
 ### Native callback custody

@@ -99,6 +99,17 @@ Repository-wide rules are in the root `AGENTS.md`.
   cleanup deadline before custody can block. These CMake tests need only
   `WOTEX_MATTER_JSON_INCLUDE`, not an SDK tree. The explicit full
   native build also runs them with its pinned JSON input in both build modes.
+- `native/include/wotex_matter/bridge_sdk_process.hpp` and
+  `native/src/bridge_sdk_process.cpp`: internal SDK implementation of the process
+  driver port, owning explicit private loading, receiver attachment, event-loop
+  startup and joined resource/private-owner retirement. Its mandatory receiver
+  port drains contexts under the SDK lock and accepts bounded result-ready
+  notifications without that lock. The guarded
+  `native/testing/sdk_bridge_process_test.*` fixture uses the actual SDK and real
+  pipes for sixteen lifecycle cases. It refuses child operations; production
+  executable assembly, authenticated dispatch and observation application remain
+  open. The explicit native build runs these cases in both build modes and
+  requires exact process-specific markers and exit statuses.
 - `native/{include/wotex_matter,src}/bridge_observation.*` and
   `lib/wotex/matter/bridge/observation.ex`: pure bounded approved-state transport
   and exact correlated receipts. The separate native allocation fixture and

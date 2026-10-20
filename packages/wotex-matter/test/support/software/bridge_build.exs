@@ -11,6 +11,33 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @observation "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-observation-test"
   @bootstrap "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-bootstrap-test"
   @lifecycle "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test"
+  @process_cases [
+    {"normal", 0},
+    {"reopen", 0},
+    {"missing-config", 0},
+    {"bad-interface", 0},
+    {"bad-open", 0},
+    {"missing-open", 0},
+    {"input-eof", 0},
+    {"cancel", 0},
+    {"attach-fail", 0},
+    {"finish-fail", 70},
+    {"result", 0},
+    {"result-refuse", 0},
+    {"pending", 0},
+    {"generation", 0},
+    {"output-lost", 0},
+    {"credentials", 0}
+  ]
+  @process_exit_check """
+  expected=$1
+  shift
+  receipts=$(timeout 20 "$@")
+  actual=$?
+  if [ -n "$receipts" ]; then printf '%s\\n' "$receipts"; fi
+  printf '\\nbridge SDK process exit: %s\\n' "$actual"
+  test "$actual" -eq "$expected"
+  """
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -269,6 +296,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             %{"mode" => mode, "exit_status" => expected}
           end
 
+        process = run_process_cases(workspace, directory, inside)
+
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
             source =
@@ -363,6 +392,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
                SoftwareManifest.digest(Path.join([workspace, directory, @lifecycle])),
              "cases" => lifecycle_cases
            },
+           "process" => process,
            "configuration" => %{
              "exit_status" => 0,
              "binary_sha256" =>
@@ -377,6 +407,28 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
       "model_sha256" => SoftwareBridgeModel.profile()["model_sha256"],
       "generated_sha256" => SoftwareBridgeModel.profile()["generated_sha256"],
       "builds" => Map.new(builds)
+    }
+  end
+
+  defp run_process_cases(workspace, directory, inside) do
+    cases =
+      for {mode, expected} <- @process_cases do
+        arguments = ["/work/" <> directory <> "/" <> @lifecycle, "process-" <> mode]
+
+        output =
+          inside.(
+            directory <> "-process-" <> mode,
+            process_command(expected, arguments),
+            @environment
+          )
+
+        verify_process!(output, expected)
+        %{"mode" => mode, "exit_status" => expected}
+      end
+
+    %{
+      "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @lifecycle])),
+      "cases" => cases
     }
   end
 
@@ -623,6 +675,25 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   def verify_configuration!(output) do
     unless output == "bounded bridge bootstrap configuration passed\n",
       do: Mix.raise("bridge_configuration_test_failed")
+
+    :ok
+  end
+
+  @spec process_cases() :: [{String.t(), non_neg_integer()}]
+  def process_cases, do: @process_cases
+
+  @spec process_command(non_neg_integer(), [String.t()]) :: [String.t()]
+  def process_command(expected, arguments),
+    do:
+      ["/bin/sh", "-c", @process_exit_check, "bridge-sdk-process", Integer.to_string(expected)] ++
+        arguments
+
+  @spec verify_process!(binary(), non_neg_integer()) :: :ok
+  def verify_process!(output, expected) do
+    receipt = if expected == 0, do: "owned SDK process driver and pipes passed\n", else: ""
+
+    unless expected in [0, 70] and output == receipt <> "\nbridge SDK process exit: #{expected}\n",
+      do: Mix.raise("bridge_sdk_process_test_failed")
 
     :ok
   end

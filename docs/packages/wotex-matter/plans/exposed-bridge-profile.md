@@ -1,11 +1,14 @@
 # Exposed bridge software profile
 
-Version: 1.25.0. Finite WMA.09 implementation target. The
+Version: 1.26.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
-coordination are implemented. The production SDK process host and authenticated
-request admission remain open.
+coordination are implemented. An internal SDK process driver owns explicit
+private loading, receiver attachment and joined SDK retirement through that
+coordinator. It requires an explicit child receiver and supplies no default
+request dispatch. Production executable assembly, authenticated request
+admission and approved-observation application remain open.
 
 ## Source and generated data
 

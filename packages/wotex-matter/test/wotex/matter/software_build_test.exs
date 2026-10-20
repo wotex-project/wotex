@@ -88,6 +88,29 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "SDK process receipts cannot be replaced by standalone lifecycle or fatal success markers" do
+    healthy = "owned SDK process driver and pipes passed\n\nbridge SDK process exit: 0\n"
+    fatal = "\nbridge SDK process exit: 70\n"
+    assert :ok = SoftwareBridgeBuild.verify_process!(healthy, 0)
+    assert :ok = SoftwareBridgeBuild.verify_process!(fatal, 70)
+
+    for {output, expected} <- [
+          {"", 0},
+          {healthy, 70},
+          {fatal, 0},
+          {healthy <> healthy, 0},
+          {String.replace(healthy, "process driver and pipes", "bootstrap resource lifecycle"), 0},
+          {String.trim_trailing(healthy), 0},
+          {"AddressSanitizer\n" <> healthy, 0},
+          {"runtime error\n" <> fatal, 70},
+          {"\nbridge SDK process exit: 71\n", 71}
+        ] do
+      assert_raise Mix.Error, "bridge_sdk_process_test_failed", fn ->
+        SoftwareBridgeBuild.verify_process!(output, expected)
+      end
+    end
+  end
+
   test "SDK lifecycle receipts require fixed output and the actual expected exit" do
     healthy = "owned SDK bootstrap resource lifecycle passed\n\nbridge bootstrap exit: 0\n"
     fatal = "\nbridge bootstrap exit: 70\n"
