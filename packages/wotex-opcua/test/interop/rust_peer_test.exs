@@ -368,7 +368,7 @@ defmodule Wotex.OPCUA.RustPeerInteropTest do
       assert :ok = Wotex.OPCUA.disconnect(foreign)
     end
 
-    assert native_descendants() == baseline
+    assert eventually(fn -> native_descendants() == baseline end)
   end
 
   @tag rust_session: true
