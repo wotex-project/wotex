@@ -327,6 +327,9 @@ neither SDK lock acquisition nor request progress may retry an application.
 Cleanup MUST stop/join publication and ordinary application before retiring
 receiver/endpoint resources. Progress MUST preserve the original request and
 cleanup deadlines and MUST NOT unlock a callback's borrowed SDK lifetime.
+The [synchronous progress record](../provenance/bridge-sdk-progress-2026-10.md)
+binds actual receipt-before-result SDK reads, unchanged absolute expiry, close,
+cancellation and borrowed-owner retirement to committed inputs.
 
 Consumer result input MUST use LF-delimited frames of at most 512 bytes,
 including LF. Each result frame MUST be one JSON object with exactly six scalar

@@ -733,6 +733,9 @@ the original deadline and drain the synchronous context. The fixed callback
 uses synthetic request metadata and supplies no fabric authentication or consumer
 authorization. The fixture now has thirty-three process families; authenticated
 receiver assembly remains a separate obligation.
+The [synchronous progress record](../provenance/bridge-sdk-progress-2026-10.md)
+binds the reproduced failure, committed fix, 66 SDK process-case executions,
+portable deadline/lifecycle checks and affected regression evidence.
 
 ## 4. Isolation and recovery
 
