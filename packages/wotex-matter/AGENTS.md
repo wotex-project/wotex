@@ -111,6 +111,16 @@ Repository-wide rules are in the root `AGENTS.md`.
   production executable assembly and authenticated
   dispatch remain open. The explicit native build runs these cases in both modes and
   requires exact process-specific markers and exit statuses.
+- `native/{include/wotex_matter,src}/bridge_sdk_receiver.*`: internal installed
+  consumer receiver joining current fabric/ACL/metadata guards, live opaque Thing
+  resolution and scoped request/result pipes. Synchronous read/write uses approved
+  observation progress; retained invokes use an explicit native renderer and one
+  completion worker. `Retire` joins the worker outside SDK locks before `Finish`
+  drains contexts under that lock. The guarded `sdk_bridge_receiver_test.*`
+  fixture covers twenty-six direct synthetic-principal/pipe cases in both modes,
+  including actual Groups execution, stale write versions and fresh-process
+  StartUpOnOff persistence. It establishes no authenticated transport or complete
+  production executable/command renderer.
 - `native/{include/wotex_matter,src}/bridge_observation.*` and
   `lib/wotex/matter/bridge/observation.ex`: pure bounded approved-state transport
   and exact correlated receipts. The separate native allocation fixture and

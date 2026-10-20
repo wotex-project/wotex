@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.31.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.32.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -27,7 +27,7 @@ draining under the SDK stack lock; input notifications remain bounded and take
 no SDK lock. Sixteen guarded real-pipe cases cover fresh/reopened stores, valid
 ready/probe/close, pending and resolved custody, missing private input, interface
 and attachment refusal, cancellation, pipe loss, stale generation and fatal
-cleanup refusal. The receiver fixture refuses child operations and supplies no
+cleanup refusal. The lifecycle receiver fixture refuses child operations and supplies no
 authenticated consumer execution. Production executable assembly and
 authenticated request integration remain required before this becomes an
 executable server. The internal SDK driver separately owns approved-observation
@@ -736,6 +736,38 @@ receiver assembly remains a separate obligation.
 The [synchronous progress record](../provenance/bridge-sdk-progress-2026-10.md)
 binds the reproduced failure, committed fix, 66 SDK process-case executions,
 portable deadline/lifecycle checks and affected regression evidence.
+
+### Installed guarded consumer receiver
+
+The internal `SdkBridgeConsumerReceiver` joins the installed provider to the
+existing scoped request/result pipes. Before admission it captures actual
+fabric/credential/ACL/metadata scope and resolves the current opaque Thing.
+Reads and copied finite scalar writes wait with observation progress, then
+revalidate current scope before native service. The receiver reconstructs a
+fresh decoder from the admitted scalar; it does not reuse the borrowed decoder.
+An approved external OnOff change now advances the SDK cluster data version,
+so an intervening observation invalidates a supplied stale write version.
+Native StartUpOnOff configuration persists before publication and restores in a
+fresh process. Consumer completion does not change canonical OnOff state.
+
+Invokes retain up to sixteen copied contexts and require an explicit native
+command renderer. A completion worker holds the SDK lock while consuming current
+results and validating/rendering; the custody mutex is released before native
+rendering or handler retirement. The input thread only notifies. Original expiry
+requires no consumer result. Cleanup retires and joins this worker outside SDK
+locks before final context/fabric cleanup under that lock, preserving the process
+cleanup deadline and observer lifetime.
+
+Twenty-six guarded real-pipe cases cover successful SDK read/write/invoke,
+denied/failed/unknown outcomes, original timeout, observation-before-completion,
+stale write versions, nullable/invalid writes, foreign decoders, PASE/missing ACL,
+invalid endpoints, sixteen-context exhaustion, pending close, ACL revocation and
+renderer failure. Actual SDK Groups execution uses an explicitly installed test
+fabric/group-key fixture and verifies persisted group membership. A separate
+fresh-process pair verifies StartUpOnOff persistence. These direct callbacks use
+synthetic CASE principals. They establish no authenticated transport or consumer
+authorization, complete command renderer, production executable, independent
+controller/reporting peer or complete WMA.09 claim.
 
 ## 4. Isolation and recovery
 

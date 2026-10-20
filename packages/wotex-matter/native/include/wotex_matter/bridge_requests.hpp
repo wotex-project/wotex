@@ -15,6 +15,8 @@
 
 namespace wotex::matter {
 
+class BridgeHandoffOwner;
+
 // An owned copy of callback metadata. An SDK OperationRequest itself borrows
 // its SubjectDescriptor and must not be retained across the callback. Capture
 // neither authenticates a supplied value nor grants consumer authorization.
@@ -117,6 +119,11 @@ class SdkBridgeInvokeContexts final {
   CHIP_ERROR Request(const BridgeConsumerHandoff::Ticket &ticket, BridgeInvocation &invocation,
                      BridgeFabricScope &fabric) const;
   CHIP_ERROR Respond(const BridgeConsumerHandoff::Ticket &ticket, std::uint64_t now_ms,
+                     BridgeInvokeReply &reply);
+  // Threaded composition: consume under this matching owner's mutex, then
+  // validate/render/release the retained context outside custody locking.
+  // The caller still holds the SDK lock and must not admit recursively.
+  CHIP_ERROR Respond(BridgeHandoffOwner &owner, const BridgeConsumerHandoff::Ticket &ticket,
                      BridgeInvokeReply &reply);
   CHIP_ERROR Finish(std::uint64_t now_ms);
   std::size_t pending() const;

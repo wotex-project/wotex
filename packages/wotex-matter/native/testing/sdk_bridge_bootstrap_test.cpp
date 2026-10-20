@@ -1,6 +1,7 @@
 #include "wotex_matter/bridge_bootstrap.hpp"
 #include "bridge_sdk_bootstrap_fixture.hpp"
 #include "sdk_bridge_process_test.hpp"
+#include "sdk_bridge_receiver_test.hpp"
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <credentials/examples/ExampleDACs.h>
 #include <lib/support/CHIPMem.h>
@@ -187,6 +188,10 @@ int main(int argc, char **argv) {
                                {"maximum_temperature", 4000}}})}};
   const auto encoded = configuration.dump();
   Write(root + "/configuration", encoded.data(), encoded.size());
+  if (mode.substr(0, 9) == "receiver-") {
+    Platform::MemoryShutdown();
+    return testing::RunSdkReceiverProbe(root, mode.substr(9));
+  }
   if (mode.substr(0, 8) == "process-") {
     Platform::MemoryShutdown();
     return testing::RunSdkProcessProbe(root, mode.substr(8));

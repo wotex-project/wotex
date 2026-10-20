@@ -44,6 +44,9 @@ class SdkBridgeEndpointBinding final {
   CHIP_ERROR Remove(const std::string &thing_id);
   CHIP_ERROR Observe(const std::string &thing_id, std::uint16_t endpoint,
                      const BridgeObservation &observation);
+  // Current live opaque identity; copied under the SDK lock. No alias or
+  // retired endpoint fallback. Failure preserves the caller's previous value.
+  CHIP_ERROR ResolveThing(chip::EndpointId endpoint, std::string &thing_id) const;
   void Finish();
   bool initialized() const;
 
@@ -52,6 +55,9 @@ class SdkBridgeEndpointBinding final {
   static chip::Protocols::InteractionModel::Status ReadExternal(
       chip::EndpointId endpoint, chip::ClusterId cluster, const EmberAfAttributeMetadata *attribute,
       std::uint8_t *buffer, std::uint16_t capacity);
+  static chip::Protocols::InteractionModel::Status WriteExternal(
+      chip::EndpointId endpoint, chip::ClusterId cluster, const EmberAfAttributeMetadata *attribute,
+      const std::uint8_t *buffer);
 
  private:
   class Impl;

@@ -111,6 +111,28 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "guarded receiver receipts require their own marker and successful actual exit" do
+    healthy = "guarded SDK receiver and consumer pipes passed\n\nbridge SDK receiver exit: 0\n"
+    assert :ok = SoftwareBridgeBuild.verify_receiver!(healthy)
+
+    for invalid <- [
+          "",
+          String.trim_trailing(healthy),
+          healthy <> healthy,
+          String.replace(
+            healthy,
+            "guarded SDK receiver and consumer pipes",
+            "owned SDK process driver and pipes"
+          ),
+          String.replace(healthy, "exit: 0", "exit: 134"),
+          "AddressSanitizer\n" <> healthy
+        ] do
+      assert_raise Mix.Error, "bridge_sdk_receiver_test_failed", fn ->
+        SoftwareBridgeBuild.verify_receiver!(invalid)
+      end
+    end
+  end
+
   test "SDK lifecycle receipts require fixed output and the actual expected exit" do
     healthy = "owned SDK bootstrap resource lifecycle passed\n\nbridge bootstrap exit: 0\n"
     fatal = "\nbridge bootstrap exit: 70\n"

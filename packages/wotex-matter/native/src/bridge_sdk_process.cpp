@@ -95,6 +95,7 @@ bool SdkBridgeProcessDriver::Stop() noexcept try {
   if (!used_ || stopped_) return false;
   stopped_ = true;
   accepting_.store(false);
+  if (attached_ && !receiver_.Retire()) return false;
   if (observations_) {
     observations_->Stop();
   }

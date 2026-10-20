@@ -222,6 +222,7 @@ if (chip_build_tools) {
       "src/bridge_private_file.cpp",
       "src/bridge_process.cpp",
       "src/bridge_sdk_process.cpp",
+      "src/bridge_sdk_receiver.cpp",
       "src/bridge_sdk_observations.cpp",
       "src/bridge_replies.cpp",
       "src/bridge_request_frame.cpp",
@@ -234,6 +235,7 @@ if (chip_build_tools) {
       "src/storage.cpp",
       "testing/sdk_bridge_bootstrap_test.cpp",
       "testing/sdk_bridge_process_test.cpp",
+      "testing/sdk_bridge_receiver_test.cpp",
     ]
     include_dirs = [ "include", "third_party" ]
     deps = [

@@ -3,6 +3,7 @@
 
 #include <app/AttributeValueEncoder.h>
 #include <app/SafeAttributePersistenceProvider.h>
+#include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/clusters/bridged-device-basic-information-server/BridgedDeviceBasicInformationCluster.h>
 #include <app/clusters/bridged-device-basic-information-server/BridgedDeviceBasicInformationDelegate.h>
 #include <app/clusters/temperature-measurement-server/TemperatureMeasurementCluster.h>
@@ -125,6 +126,8 @@ struct Child final {
   BridgeEndpoint endpoint;
   std::array<chip::DataVersion, 5> versions{};
   std::optional<bool> on_off;
+  std::uint16_t identify_time{0}, on_time{0}, off_wait_time{0};
+  std::uint8_t startup_on_off{0xFF};
   Clusters::BridgedDeviceBasicInformationCluster information;
   ServerClusterRegistration registration;
   std::unique_ptr<ServerClusterRegistration> restored_temperature;
@@ -263,7 +266,7 @@ class SdkBridgeEndpointBinding::Impl final {
       if (observation.temperature) return CHIP_ERROR_INVALID_ARGUMENT;
       if (child.on_off != observation.on_off) {
         child.on_off = observation.on_off;
-        MatterReportingAttributeChangeCallback(endpoint, 0x0006, 0);
+        emberAfAttributeChanged(endpoint, 0x0006, 0);
       }
     } else {
       if (observation.on_off || (observation.temperature && *observation.temperature < -27315)) {
@@ -280,6 +283,23 @@ class SdkBridgeEndpointBinding::Impl final {
     child.information.SetReachable(observation.reachable);
     Healthy();
     return CHIP_NO_ERROR;
+  }
+
+  CHIP_ERROR ResolveThing(chip::EndpointId endpoint, std::string &thing) const {
+    Healthy();
+    if (!initialized_) return CHIP_ERROR_INCORRECT_STATE;
+    for (const auto &child : children_) {
+      if (child && child->endpoint.endpoint == endpoint) {
+        try {
+          std::string copied(child->configuration.thing_id);
+          thing.swap(copied);
+          return CHIP_NO_ERROR;
+        } catch (const std::bad_alloc &) {
+          return CHIP_ERROR_NO_MEMORY;
+        }
+      }
+    }
+    return CHIP_ERROR_NOT_FOUND;
   }
 
   void Finish() {
@@ -334,13 +354,51 @@ class SdkBridgeEndpointBinding::Impl final {
     if (cluster == 0x0006 && attribute.attributeId == 0x4000) {
       return Encode<std::uint8_t>(1, buffer, capacity);
     }
-    if (cluster == 0x0006 && (attribute.attributeId == 0x4001 || attribute.attributeId == 0x4002)) {
-      return Encode<std::uint16_t>(0, buffer, capacity);
-    }
+    if (cluster == 0x0003 && attribute.attributeId == 0)
+      return Encode(child->identify_time, buffer, capacity);
+    if (cluster == 0x0006 && attribute.attributeId == 0x4001)
+      return Encode(child->on_time, buffer, capacity);
+    if (cluster == 0x0006 && attribute.attributeId == 0x4002)
+      return Encode(child->off_wait_time, buffer, capacity);
     if (cluster == 0x0006 && attribute.attributeId == 0x4003) {
-      return Encode<std::uint8_t>(0xFF, buffer, capacity);
+      return Encode(child->startup_on_off, buffer, capacity);
     }
     return Status::UnsupportedAttribute;
+  }
+
+  Status Write(chip::EndpointId endpoint, chip::ClusterId cluster,
+               const EmberAfAttributeMetadata &attribute, const std::uint8_t *buffer) {
+    Healthy();
+    if (!initialized_) return Status::Failure;
+    Child *child = nullptr;
+    for (auto &value : children_)
+      if (value && value->endpoint.endpoint == endpoint) child = value.get();
+    if (!child) return Status::UnsupportedEndpoint;
+    if (cluster == 3 && attribute.attributeId == 0 && attribute.size == 2 &&
+        attribute.attributeType == ZAP_TYPE(INT16U)) {
+      std::memcpy(&child->identify_time, buffer, 2);
+      return Status::Success;
+    }
+    if (!child->IsLight() || cluster != 6) return Status::UnsupportedWrite;
+    if ((attribute.attributeId == 0x4001 || attribute.attributeId == 0x4002) &&
+        attribute.size == 2 && attribute.attributeType == ZAP_TYPE(INT16U)) {
+      auto &value = attribute.attributeId == 0x4001 ? child->on_time : child->off_wait_time;
+      std::memcpy(&value, buffer, 2);
+      return Status::Success;
+    }
+    if (attribute.attributeId == 0x4003 && attribute.size == 1 &&
+        attribute.attributeType == ZAP_TYPE(ENUM8)) {
+      if (*buffer > 2 && *buffer != 0xFF) return Status::ConstraintError;
+      auto *store = chip::app::GetAttributePersistenceProvider();
+      if (!store) return Status::Failure;
+      const auto persisted = store->WriteValue({endpoint, cluster, attribute.attributeId},
+                                               chip::ByteSpan(buffer, 1));
+      Healthy();
+      if (persisted != CHIP_NO_ERROR) return Status::Failure;
+      child->startup_on_off = *buffer;
+      return Status::Success;
+    }
+    return Status::UnsupportedWrite;
   }
 
   bool initialized_{false};
@@ -353,6 +411,18 @@ class SdkBridgeEndpointBinding::Impl final {
 
   void Install(std::size_t slot) {
     auto &child = *children_[slot];
+    if (child.IsLight()) {
+      auto *store = chip::app::GetAttributePersistenceProvider();
+      if (!store) Failed();
+      std::uint8_t restored = 0xFF;
+      chip::MutableByteSpan value(&restored, 1);
+      const auto loaded = store->ReadValue({child.endpoint.endpoint, 6, 0x4003}, value);
+      Healthy();
+      if (loaded == CHIP_NO_ERROR) {
+        if (value.size() != 1 || (restored > 2 && restored != 0xFF)) Failed();
+        child.startup_on_off = restored;
+      } else if (!Absent(loaded)) Failed();
+    }
     const auto &model = BridgeEndpointModel(child.configuration.device_type);
     if (emberAfSetDynamicEndpoint(static_cast<std::uint16_t>(slot), child.endpoint.endpoint, &model,
                                   chip::Span<chip::DataVersion>(child.versions),
@@ -453,6 +523,11 @@ CHIP_ERROR SdkBridgeEndpointBinding::Observe(const std::string &thing_id, std::u
 
 void SdkBridgeEndpointBinding::Finish() { impl_->Finish(); }
 
+CHIP_ERROR SdkBridgeEndpointBinding::ResolveThing(chip::EndpointId endpoint,
+                                                  std::string &thing_id) const {
+  return impl_->ResolveThing(endpoint, thing_id);
+}
+
 bool SdkBridgeEndpointBinding::initialized() const { return impl_->initialized_; }
 
 Status SdkBridgeEndpointBinding::ReadExternal(chip::EndpointId endpoint, chip::ClusterId cluster,
@@ -464,6 +539,13 @@ Status SdkBridgeEndpointBinding::ReadExternal(chip::EndpointId endpoint, chip::C
   return active_endpoints->impl_->Read(endpoint, cluster, *attribute, buffer, capacity);
 }
 
+Status SdkBridgeEndpointBinding::WriteExternal(chip::EndpointId endpoint, chip::ClusterId cluster,
+                                               const EmberAfAttributeMetadata *attribute,
+                                               const std::uint8_t *buffer) {
+  if (!active_endpoints || !attribute || !buffer) return Status::UnsupportedAttribute;
+  return active_endpoints->impl_->Write(endpoint, cluster, *attribute, buffer);
+}
+
 } // namespace wotex::matter
 
 chip::Protocols::InteractionModel::Status emberAfExternalAttributeReadCallback(
@@ -471,4 +553,11 @@ chip::Protocols::InteractionModel::Status emberAfExternalAttributeReadCallback(
     std::uint8_t *buffer, std::uint16_t capacity) {
   return wotex::matter::SdkBridgeEndpointBinding::ReadExternal(endpoint, cluster, attribute, buffer,
                                                                capacity);
+}
+
+chip::Protocols::InteractionModel::Status emberAfExternalAttributeWriteCallback(
+    chip::EndpointId endpoint, chip::ClusterId cluster, const EmberAfAttributeMetadata *attribute,
+    std::uint8_t *buffer) {
+  return wotex::matter::SdkBridgeEndpointBinding::WriteExternal(endpoint, cluster, attribute,
+                                                                buffer);
 }

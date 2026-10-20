@@ -23,6 +23,10 @@ class BridgeSdkProcessReceiver : public BridgeReceiver {
   // Input-thread notification after result resolution, without custody/SDK
   // locks. Must be bounded and nonblocking; SDK work is separately scheduled.
   virtual bool ResultReady(const BridgeConsumerHandoff::Ticket &ticket) noexcept = 0;
+  // After input/custody closure, outside SDK locks. Stop/join owned completion
+  // work without releasing resources still borrowed by SDK callbacks. Must
+  // support partial Attach. Finish then runs under the SDK lock.
+  virtual bool Retire() noexcept { return true; }
   virtual CHIP_ERROR Finish() noexcept = 0;
 };
 

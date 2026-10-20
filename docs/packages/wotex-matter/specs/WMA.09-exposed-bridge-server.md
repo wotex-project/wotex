@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.32.0-target.
+Version: 0.33.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -644,7 +644,7 @@ configured resource initialization and receiver attachment before starting the
 event loop. It MUST observe cancellation between startup stages and admit no
 result notification before successful startup or after retirement.
 
-Receiver attachment and retirement MUST hold the SDK stack lock. Result-ready
+Receiver attachment and final context retirement MUST hold the SDK stack lock. Result-ready
 notification MUST remain bounded, nonblocking and independent of that lock.
 Retirement MUST support partial attachment, close and drain every retained
 context before stopping the event loop, and refuse success while request custody
@@ -662,6 +662,44 @@ modes, portable coordinator regressions, archive and qualification limits.
 
 
 ### Native callback custody
+
+The installed native consumer receiver MUST own an explicit SDK fabric-scope
+attachment, current attribute/invoke guards and at most sixteen retained command
+contexts sharing the process handoff. Its constructor MUST start no SDK, file or
+thread work. Attachment MUST precede event-loop/input startup. SDK callback
+principals MUST come from the installed provider, never from consumer result
+frames. Direct synthetic-principal fixtures MUST NOT establish transport
+authentication or consumer authorization.
+
+Before payload copying or request admission, the receiver MUST validate current
+fabric/ACL/path metadata and resolve the endpoint's current opaque Thing identity.
+Missing or retired endpoints MUST have no alias fallback. Every admitted read,
+finite scalar write or invoke MUST emit the existing scoped request frame with
+one original deadline no later than 500 ms. Output/encoding failure after custody
+admission MUST close the generation and drain its context without retry.
+
+Synchronous read/write waits MUST use the explicit observation progress port.
+Denial, expiry, failure, unknown outcome and closure MUST NOT render a completed
+operation. Completed reads/writes MUST revalidate their original fabric, ACL,
+metadata, supplied write version and Thing/endpoint mapping before native service.
+Reads MUST encode already approved state with the captured read flags. Finite
+writes MUST apply only the copied admitted scalar, preserving the original timed
+and data-version requirements; the consumed borrowed decoder MUST NOT be reused.
+An approved change to an externally stored OnOff value MUST advance the SDK
+cluster data version as well as notify reporting. StartUpOnOff MUST persist
+before publishing the new native configuration value and restore its configured
+value across normal shutdown and restart.
+
+Invokes MUST retain the copied metadata/arguments and SDK handler, return no
+automatic Success, and use an explicit native command-specific renderer only
+after completed consumer outcome and current guard revalidation. One separately
+owned completion worker MUST notify/drain these contexts without taking an SDK
+lock on the input thread. It MUST observe original expiry without requiring a
+consumer result. Completion/rendering failure MUST close the generation without
+retrying a consumer operation. The driver MUST retire/join receiver completion
+work outside SDK locks before calling receiver Finish under the SDK lock; partial
+attachment MUST support the same cleanup. Fabric attachments, guards and retained
+contexts MUST remain alive until all SDK callers retire and custody is drained.
 
 Before an SDK request callback returns, retained metadata MUST own the complete
 principal, including fabric, authentication mode, subject, CASE Authenticated

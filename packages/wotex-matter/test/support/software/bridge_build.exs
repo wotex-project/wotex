@@ -55,6 +55,17 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   printf '\\nbridge SDK process exit: %s\\n' "$actual"
   test "$actual" -eq "$expected"
   """
+  @receiver_cases ~w(read read-denied read-observe read-timeout read-failed read-unknown write write-denied write-version
+                    write-null write-invalid foreign-decoder invoke invoke-denied invoke-timeout
+                    invoke-revoked invoke-full invoke-closed invoke-render-error invoke-failed invoke-unknown
+                    pase missing-acl endpoint groups startup-reopen)
+  @receiver_exit_check """
+  receipts=$(timeout 20 "$@")
+  actual=$?
+  if [ -n "$receipts" ]; then printf '%s\\n' "$receipts"; fi
+  printf '\\nbridge SDK receiver exit: %s\\n' "$actual"
+  test "$actual" -eq 0
+  """
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -314,6 +325,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
           end
 
         process = run_process_cases(workspace, directory, inside)
+        receiver = run_receiver_cases(workspace, directory, inside)
 
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
@@ -410,6 +422,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
              "cases" => lifecycle_cases
            },
            "process" => process,
+           "receiver" => receiver,
            "configuration" => %{
              "exit_status" => 0,
              "binary_sha256" =>
@@ -441,6 +454,26 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
         verify_process!(output, expected)
         %{"mode" => mode, "exit_status" => expected}
+      end
+
+    %{
+      "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @lifecycle])),
+      "cases" => cases
+    }
+  end
+
+  defp run_receiver_cases(workspace, directory, inside) do
+    cases =
+      for mode <- @receiver_cases do
+        output =
+          inside.(
+            directory <> "-receiver-" <> mode,
+            receiver_command(["/work/" <> directory <> "/" <> @lifecycle, "receiver-" <> mode]),
+            @environment
+          )
+
+        verify_receiver!(output)
+        %{"mode" => mode, "exit_status" => 0}
       end
 
     %{
@@ -698,6 +731,22 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
   @spec process_cases() :: [{String.t(), non_neg_integer()}]
   def process_cases, do: @process_cases
+
+  @spec receiver_cases() :: [String.t()]
+  def receiver_cases, do: @receiver_cases
+
+  @spec receiver_command([String.t()]) :: [String.t()]
+  def receiver_command(arguments),
+    do: ["/bin/sh", "-c", @receiver_exit_check, "bridge-sdk-receiver"] ++ arguments
+
+  @spec verify_receiver!(binary()) :: :ok
+  def verify_receiver!(output) do
+    unless output ==
+             "guarded SDK receiver and consumer pipes passed\n\nbridge SDK receiver exit: 0\n",
+           do: Mix.raise("bridge_sdk_receiver_test_failed")
+
+    :ok
+  end
 
   @spec process_command(non_neg_integer(), [String.t()]) :: [String.t()]
   def process_command(expected, arguments),

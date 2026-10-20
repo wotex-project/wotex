@@ -1,5 +1,6 @@
 #include "wotex_matter/bridge_requests.hpp"
 #include "wotex_matter/bridge_server.hpp"
+#include "wotex_matter/bridge_handoff_owner.hpp"
 
 #include <lib/core/TLVWriter.h>
 
@@ -222,6 +223,12 @@ class SdkBridgeInvokeContexts::Impl final {
       // Another owner must not consume this owner's ticket behind its handle.
       std::_Exit(SdkBridgeServerBinding::kStartupFailureExit);
     }
+    return Complete(*entry, outcome, reply);
+  }
+
+  CHIP_ERROR Complete(Pending &pending, BridgeConsumerHandoff::Outcome outcome,
+                      BridgeInvokeReply &reply) {
+    auto *entry = &pending;
     CHIP_ERROR error = CHIP_NO_ERROR;
     if (auto *handler = entry->handle.Get()) {
       if (outcome == BridgeConsumerHandoff::Outcome::Completed) {
@@ -305,6 +312,26 @@ CHIP_ERROR SdkBridgeInvokeContexts::Request(const BridgeConsumerHandoff::Ticket 
 CHIP_ERROR SdkBridgeInvokeContexts::Respond(const BridgeConsumerHandoff::Ticket &ticket,
                                             std::uint64_t now_ms, BridgeInvokeReply &reply) {
   return impl_->Respond(ticket, now_ms, reply);
+}
+
+CHIP_ERROR SdkBridgeInvokeContexts::Respond(BridgeHandoffOwner &owner,
+                                            const BridgeConsumerHandoff::Ticket &ticket,
+                                            BridgeInvokeReply &reply) {
+  auto *entry = impl_->Find(ticket);
+  if (!entry) return CHIP_ERROR_NOT_FOUND;
+  BridgeConsumerHandoff::Outcome outcome = BridgeConsumerHandoff::Outcome::Unknown;
+  bool matching = false;
+  const auto taken = owner.With([&](auto &shared, auto now) {
+    matching = &shared == &impl_->handoff_;
+    return matching ? shared.Take(ticket, now, outcome)
+                    : BridgeConsumerHandoff::Consume::UnknownTicket;
+  });
+  if (!matching) return CHIP_ERROR_INVALID_ARGUMENT;
+  if (taken == BridgeConsumerHandoff::Consume::Pending) return CHIP_ERROR_BUSY;
+  if (taken == BridgeConsumerHandoff::Consume::InvalidClock) return CHIP_ERROR_INVALID_ARGUMENT;
+  if (taken != BridgeConsumerHandoff::Consume::Completed)
+    std::_Exit(SdkBridgeServerBinding::kStartupFailureExit);
+  return impl_->Complete(*entry, outcome, reply);
 }
 
 CHIP_ERROR SdkBridgeInvokeContexts::Finish(std::uint64_t now_ms) {

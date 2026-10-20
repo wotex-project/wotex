@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.28.0. Finite WMA.09 implementation target. The
+Version: 1.29.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -9,7 +9,10 @@ private loading, receiver attachment and joined SDK retirement through that
 coordinator. It requires an explicit child receiver and supplies no default
 request dispatch. It separately owns bounded approved-observation application
 and correlated receipts through a joined worker and sixty-four pre-reserved
-output slots. Production executable assembly and authenticated request admission
+output slots. An internal guarded consumer receiver joins current SDK
+fabric/ACL/metadata checks, opaque Thing resolution, synchronous read/write
+progress and retained invokes to the existing pipes. It requires an explicit
+native command renderer. Production executable assembly and authenticated request admission
 remain open.
 
 ## Source and generated data
@@ -465,8 +468,16 @@ The same SDK fixture exercises an internal synchronous attribute guard against
 actual readable/global/writable metadata, absent privileges, timed-write and
 data-version requirements, changed qualities, metadata errors, complete principal
 agreement, current ACL revocation and retired fabric scope. Capture and delayed
-validation change no request credit or approved state. Production receiver
-integration and authenticated transport qualification remain open.
+validation change no request credit or approved state. The installed guarded
+receiver now exercises these checks through actual provider callbacks and
+consumer pipes in twenty-six cases in both build modes. These include stale
+write-version refusal after an observation, retained command completion and
+real SDK Groups membership with explicit test keys. A fresh-process pair proves
+StartUpOnOff configuration persistence. Native rendering releases custody locking
+while retaining SDK serialization; completion work joins before final cleanup.
+Synthetic callback principals supply no authenticated transport result.
+Production executable and complete native renderer assembly, authenticated
+transport and independent peer qualification remain open.
 BEAM projection and consumer tests exercise conservative modeled expiry with
 independent clock epochs/rates, real ExposedThing policy/mapping/dispatch order,
 scope preservation, sixteen-slot backpressure, original-deadline expiry,
