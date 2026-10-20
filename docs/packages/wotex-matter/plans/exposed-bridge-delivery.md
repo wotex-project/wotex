@@ -21,6 +21,9 @@ Input loss and explicit close arm the cleanup deadline before custody can block;
 input retirement and later cleanup stages preserve that same deadline.
 The production SDK driver, approved-observation application and authenticated
 request integration remain required before this becomes an executable server.
+The [process coordination record](../provenance/bridge-process-2026-10.md)
+binds its exact inputs, normal/sanitizer results on macOS and Linux ARM64,
+package/archive checks and qualification limits.
 The [finite software profile](exposed-bridge-profile.md) pins the source,
 Matter 1.6 data model, root/aggregator layout, both bridged Device Types,
 mandatory light/sensor clusters, generated model artifacts, build options,

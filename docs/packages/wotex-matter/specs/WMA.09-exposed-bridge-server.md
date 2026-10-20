@@ -577,6 +577,10 @@ return MUST join reader, writer and watchdog and restore settable descriptor
 flags. An explicitly injected driver fixture proves this coordination only;
 it does not establish SDK process assembly, authentication or clock qualification.
 
+The [process coordination record](../provenance/bridge-process-2026-10.md)
+binds the committed coordinator, twenty-five real-pipe case families on macOS
+and Linux ARM64, normal/sanitizer builds and exact archive/source identities.
+
 
 ### Native callback custody
 
