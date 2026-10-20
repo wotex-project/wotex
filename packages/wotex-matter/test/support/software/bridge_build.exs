@@ -58,7 +58,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @receiver_cases ~w(read read-denied read-observe read-timeout read-failed read-unknown write write-denied write-version
                     write-null write-invalid foreign-decoder invoke invoke-denied invoke-timeout
                     invoke-revoked invoke-full invoke-closed invoke-render-error invoke-failed invoke-unknown
-                    pase missing-acl endpoint groups startup-reopen)
+                    pase missing-acl endpoint groups startup-reopen invoke-fields invoke-list
+                    invoke-duplicate invoke-recover)
   @receiver_exit_check """
   receipts=$(timeout 20 "$@")
   actual=$?
@@ -139,6 +140,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
      ]},
     {"guard", 0,
      [
+       "SDK finite command fields, scalar bounds and nested lists passed (22 commands, 35 required fields)",
        "SDK attribute guard metadata, version, timing and current ACL passed",
        "SDK invoke guard metadata errors, timing and current ACL passed",
        "SDK invoke guard revocation, credential rollback and endpoint retirement passed",

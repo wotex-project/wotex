@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.29.0. Finite WMA.09 implementation target. The
+Version: 1.30.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -14,6 +14,15 @@ fabric/ACL/metadata checks, opaque Thing resolution, synchronous read/write
 progress and retained invokes to the existing pipes. It requires an explicit
 native command renderer. Production executable assembly and authenticated request admission
 remain open.
+
+The installed invoke guard validates command fields after bounded copying and
+before request/handler admission. All 22 selected commands require their declared
+mandatory fields, unique context fields and SDK field types; nested lazy lists
+are traversed completely. Group/name, timed-command and scene scalar bounds and
+the scene value choice are checked before consumer execution. Unique unknown
+fields stay in the owned payload. This changes no native state or policy;
+stateful command semantics and responses belong to the native renderer after
+consumer completion.
 
 ## Source and generated data
 

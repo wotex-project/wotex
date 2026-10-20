@@ -54,6 +54,8 @@ class SdkBridgeInvokeGuard final : public BridgeInvokeGuard {
   SdkBridgeInvokeGuard(SdkBridgeFabricScopes &fabrics, chip::app::DataModel::Provider &provider);
   CHIP_ERROR Capture(const BridgeRequestMetadata &request,
                      BridgeInvokeScope &scope) noexcept override;
+  CHIP_ERROR ValidateArguments(const BridgeRequestMetadata &request,
+                               chip::TLV::TLVReader arguments) noexcept override;
   CHIP_ERROR Validate(const BridgeInvokeScope &scope) noexcept override;
 
  private:

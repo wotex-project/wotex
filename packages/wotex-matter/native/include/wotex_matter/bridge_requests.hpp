@@ -77,6 +77,10 @@ class BridgeInvokeGuard {
   virtual ~BridgeInvokeGuard() = default;
   virtual CHIP_ERROR Capture(const BridgeRequestMetadata &request,
                              BridgeInvokeScope &scope) noexcept = 0;
+  // Called after bounded argument copying and before custody/handle admission.
+  // Decode the owned copy without retaining it or invoking consumer/native work.
+  virtual CHIP_ERROR ValidateArguments(const BridgeRequestMetadata &request,
+                                       chip::TLV::TLVReader arguments) noexcept = 0;
   virtual CHIP_ERROR Validate(const BridgeInvokeScope &scope) noexcept = 0;
 };
 

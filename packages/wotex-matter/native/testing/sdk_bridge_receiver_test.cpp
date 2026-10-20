@@ -296,6 +296,17 @@ class Fixture final : public BridgeSdkProcessReceiver {
       return;
     }
     if (mode.substr(0, 6) == "invoke" || mode == "groups") {
+      if (mode == "invoke-recover") {
+        const std::uint8_t missing[]{0x15, 0x18};
+        TLV::TLVReader rejected;
+        rejected.Init(missing);
+        assert(rejected.Next() == CHIP_NO_ERROR);
+        const DataModel::InvokeRequest invalid({3, 6, 66}, principal);
+        const auto refusal = provider->InvokeCommand(invalid, rejected, &handlers[0]);
+        assert(refusal && refusal->GetStatusCode().GetStatus() == Status::InvalidCommand &&
+               handlers[0].held == 0 && handlers[0].statuses == 0 &&
+               owner->With([](auto &shared, auto) { return shared.pending() == 0; }));
+      }
       const unsigned count = mode == "invoke-full" ? 17 : 1;
       for (unsigned i = 0; i < count; ++i) {
         std::uint8_t bytes[64];
@@ -308,13 +319,43 @@ class Fixture final : public BridgeSdkProcessReceiver {
           assert(writer.Put(TLV::ContextTag(0), std::uint16_t{7}) == CHIP_NO_ERROR &&
                  writer.PutString(TLV::ContextTag(1), "") == CHIP_NO_ERROR);
         }
+        if (mode == "invoke-list") {
+          TLV::TLVType list;
+          assert(writer.StartContainer(TLV::ContextTag(0), TLV::kTLVType_Array, list) ==
+                     CHIP_NO_ERROR &&
+                 writer.Put(TLV::AnonymousTag(), std::uint16_t{7}) == CHIP_NO_ERROR &&
+                 writer.PutString(TLV::AnonymousTag(), "wrong member") == CHIP_NO_ERROR &&
+                 writer.EndContainer(list) == CHIP_NO_ERROR);
+        }
+        if (mode == "invoke-duplicate") {
+          assert(writer.Put(TLV::ContextTag(0), std::uint16_t{7}) == CHIP_NO_ERROR &&
+                 writer.Put(TLV::ContextTag(0), std::uint16_t{8}) == CHIP_NO_ERROR &&
+                 writer.PutString(TLV::ContextTag(1), "") == CHIP_NO_ERROR);
+        }
+        if (mode == "invoke-recover")
+          assert(writer.Put(TLV::ContextTag(250), std::uint8_t{42}) == CHIP_NO_ERROR);
         assert(writer.EndContainer(outer) == CHIP_NO_ERROR && writer.Finalize() == CHIP_NO_ERROR);
         TLV::TLVReader arguments;
         arguments.Init(bytes, writer.GetLengthWritten());
         assert(arguments.Next() == CHIP_NO_ERROR);
         const DataModel::InvokeRequest request(
-            {3, mode == "groups" ? 4U : 6U, mode == "groups" ? 0U : 1U}, principal);
+            {3, mode == "groups" || mode == "invoke-list" || mode == "invoke-duplicate" ? 4U : 6U,
+             mode == "groups" || mode == "invoke-duplicate" ? 0U
+                 : mode == "invoke-fields"                  ? 66U
+                 : mode == "invoke-list"                    ? 2U
+                                                            : 1U},
+            principal);
+        const auto original_position = arguments.GetLengthRead();
         const auto returned = provider->InvokeCommand(request, arguments, &handlers[i]);
+        if (mode == "invoke-fields" || mode == "invoke-list" || mode == "invoke-duplicate") {
+          assert(returned && !returned->IsSuccess() && handlers[i].held == 0 &&
+                 handlers[i].statuses == 0 && handlers[i].data == 0 &&
+                 arguments.GetLengthRead() == original_position &&
+                 owner->With([](auto &shared, auto) { return shared.pending() == 0; }));
+          work_status.store(static_cast<int>(returned->GetStatusCode().GetStatus()));
+          work_done.store(true);
+          return;
+        }
         if (i < 16)
           assert(!returned && handlers[i].held == 1 && handlers[i].statuses == 0 &&
                  handlers[i].data == 0);
@@ -421,6 +462,8 @@ void CheckFrame(const Json &frame, const Fixture &fixture, std::string_view oper
          frame["principal"]["auth_mode"] == "case" && frame["principal"]["subject"] == "42" &&
          frame["principal"]["cats"][0] == 0x00010002 &&
          frame["fabric_scope"]["fabric_id"] == "17" && frame["fabric_scope"]["bridge_node"] == "1");
+  if (fixture.mode == "invoke-recover")
+    assert(frame["payload"] == Json({{"kind", "tlv"}, {"value", "1524fa2a18"}}));
 }
 void Result(int descriptor, unsigned id, std::string_view outcome) {
   Send(descriptor,
@@ -459,13 +502,36 @@ int RunSdkReceiverProbe(const std::string &root, std::string_view mode) {
     std::cout << "guarded SDK receiver and consumer pipes passed\n";
     return 0;
   }
-  const std::array<std::string_view, 26> modes{
-      "read",          "read-denied",         "read-observe",   "read-timeout",   "write",
-      "write-denied",  "write-version",       "write-null",     "write-invalid",  "foreign-decoder",
-      "invoke",        "invoke-denied",       "invoke-timeout", "invoke-revoked", "invoke-full",
-      "invoke-closed", "invoke-render-error", "pase",           "missing-acl",    "endpoint",
-      "read-failed",   "read-unknown",        "invoke-failed",  "invoke-unknown", "startup-write",
-      "startup-read"};
+  const std::array<std::string_view, 30> modes{"read",
+                                               "read-denied",
+                                               "read-observe",
+                                               "read-timeout",
+                                               "write",
+                                               "write-denied",
+                                               "write-version",
+                                               "write-null",
+                                               "write-invalid",
+                                               "foreign-decoder",
+                                               "invoke",
+                                               "invoke-denied",
+                                               "invoke-timeout",
+                                               "invoke-revoked",
+                                               "invoke-full",
+                                               "invoke-closed",
+                                               "invoke-render-error",
+                                               "pase",
+                                               "missing-acl",
+                                               "endpoint",
+                                               "read-failed",
+                                               "read-unknown",
+                                               "invoke-failed",
+                                               "invoke-unknown",
+                                               "startup-write",
+                                               "startup-read",
+                                               "invoke-fields",
+                                               "invoke-list",
+                                               "invoke-duplicate",
+                                               "invoke-recover"};
   assert(std::find(modes.begin(), modes.end(), mode) != modes.end() || mode == "groups");
   std::signal(SIGPIPE, SIG_IGN);
   Fixture fixture(mode);
@@ -481,7 +547,8 @@ int RunSdkReceiverProbe(const std::string &root, std::string_view mode) {
     assert(chip::DeviceLayer::PlatformMgr().ScheduleWork(
                Fixture::WorkEntry, reinterpret_cast<intptr_t>(&fixture)) == CHIP_NO_ERROR);
     const bool rejected = mode == "pase" || mode == "missing-acl" || mode == "endpoint" ||
-        mode == "write-invalid" || mode == "foreign-decoder";
+        mode == "write-invalid" || mode == "foreign-decoder" || mode == "invoke-fields" ||
+        mode == "invoke-list" || mode == "invoke-duplicate";
     const bool invoke = mode.substr(0, 6) == "invoke" || mode == "groups";
     const unsigned count = mode == "invoke-full" ? 16 : 1;
     if (mode == "startup-read") {

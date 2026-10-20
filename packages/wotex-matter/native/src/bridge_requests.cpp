@@ -195,6 +195,10 @@ class SdkBridgeInvokeContexts::Impl final {
     if (guarded != CHIP_NO_ERROR) return guarded;
     const CHIP_ERROR copied = CopyArguments(arguments, invocation.arguments);
     if (copied != CHIP_NO_ERROR) return copied;
+    chip::TLV::TLVReader owned;
+    owned.Init(invocation.arguments.data(), invocation.arguments.size());
+    ReturnErrorOnFailure(owned.Next());
+    ReturnErrorOnFailure(guard_.ValidateArguments(invocation.request, owned));
     const CHIP_ERROR admitted = AdmissionError(
         handoff_.Reserve(now_ms, deadline_ms, invocation.ticket));
     if (admitted != CHIP_NO_ERROR) return admitted;

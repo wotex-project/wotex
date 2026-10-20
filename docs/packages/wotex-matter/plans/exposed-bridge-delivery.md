@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.32.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.33.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -771,6 +771,30 @@ controller/reporting peer or complete WMA.09 claim.
 The [guarded receiver record](../provenance/bridge-sdk-receiver-2026-10.md)
 binds the committed source, 52 receiver-case executions, 106 affected process/SDK
 regressions, exact archive and qualification limits.
+
+### Command field admission
+
+The retained invoke guard now has a required argument-validation phase between
+bounded copying and request/handler admission. The SDK implementation checks all
+22 selected Identify, Groups, On/Off and Scenes Management command schemas.
+Mandatory fields cannot become generated decoder defaults; duplicate context
+fields refuse, unique unknown fields remain in the copied payload, and the SDK
+decoders retain their type-error meanings. Every lazy typed list is traversed,
+including nested scene extension fields and attribute/value pairs. Selected
+group/name, timed-command and scene scalar bounds and the scene value choice
+are checked before consumer execution. This phase changes no native state and
+grants no consumer authority.
+
+The independent literal corpus exercises every command and every one of its
+35 required fields, including removal, duplication and incorrect type. Further
+cases cover range boundaries, nested required/choice/type failures, malformed
+list tails, optional nullable transition time and unknown fields. It explicitly
+shows that the pinned SDK decoder alone accepts an empty OnWithTimedOff payload
+as zero defaults. Four additional installed-provider/pipe families check missing
+fields, lazy-list type errors, duplicates and successful admission after refusal.
+The latter requires request ID 1 and exact retained unknown-field bytes.
+Complete command rendering, stateful scene/group availability and authenticated
+transport qualification remain separate obligations.
 
 ## 4. Isolation and recovery
 

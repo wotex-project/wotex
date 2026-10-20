@@ -72,6 +72,8 @@ defmodule Wotex.Matter.Check.Archive do
     "native/include/wotex_matter/bridge_guard.hpp",
     "native/src/bridge_guard.cpp",
     "native/testing/sdk_bridge_guard_test.cpp",
+    "native/testing/sdk_bridge_command_arguments_test.cpp",
+    "native/testing/sdk_bridge_command_arguments_test.hpp",
     "native/testing/sdk_bridge_guard_test.hpp",
     "native/testing/sdk_bridge_fixture_guard.hpp",
     "native/include/wotex_matter/bridge_writes.hpp",

@@ -1,4 +1,5 @@
 #include "sdk_bridge_guard_test.hpp"
+#include "sdk_bridge_command_arguments_test.hpp"
 #include "sdk_bridge_requests_test.hpp"
 #include "wotex_matter/bridge_guard.hpp"
 #include "wotex_matter/bridge_endpoints.hpp"
@@ -164,6 +165,7 @@ void VerifyBridgeGuard(SdkBridgeServerBinding &server, chip::app::DataModel::Pro
   principal.fabricIndex = index;
   ScopeMetadata metadata(provider);
   SdkBridgeInvokeGuard guard(scopes, metadata);
+  VerifyBridgeCommandArguments(guard, principal);
   BridgeRequestMetadata request;
   request.operation = BridgeRequestMetadata::Operation::Invoke;
   request.principal = principal;

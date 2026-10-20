@@ -3,12 +3,159 @@
 
 #include <access/AccessControl.h>
 #include <credentials/CHIPCert.h>
+#include <clusters/Identify/Commands.h>
+#include <clusters/Groups/Commands.h>
+#include <clusters/OnOff/Commands.h>
+#include <clusters/ScenesManagement/Commands.h>
 
 #include <algorithm>
+#include <bitset>
 #include <cstdlib>
 #include <new>
+#include <type_traits>
 
 namespace wotex::matter {
+namespace {
+namespace Clusters = chip::app::Clusters;
+using chip::TLV::TLVReader;
+constexpr CHIP_ERROR InvalidCommand = CHIP_IM_GLOBAL_STATUS(InvalidCommand);
+constexpr CHIP_ERROR ConstraintError = CHIP_IM_GLOBAL_STATUS(ConstraintError);
+
+// SDK generated decoders initialize missing members to defaults. Require the
+// selected model's fields independently, and remove duplicate-field ambiguity.
+// Unique unknown fields remain untouched in the owned request payload.
+CHIP_ERROR Fields(TLVReader reader, std::uint16_t required, std::uint16_t *present = nullptr) {
+  if (reader.GetType() != chip::TLV::kTLVType_Structure) return CHIP_ERROR_WRONG_TLV_TYPE;
+  chip::TLV::TLVType outer;
+  ReturnErrorOnFailure(reader.EnterContainer(outer));
+  std::bitset<256> seen;
+  std::uint16_t mask = 0;
+  CHIP_ERROR next;
+  while ((next = reader.Next()) == CHIP_NO_ERROR) {
+    if (!chip::TLV::IsContextTag(reader.GetTag())) continue;
+    const auto tag = chip::TLV::TagNumFromTag(reader.GetTag());
+    if (seen.test(tag)) return InvalidCommand;
+    seen.set(tag);
+    if (tag < 16) mask |= static_cast<std::uint16_t>(1U << tag);
+  }
+  if (next != CHIP_END_OF_TLV) return next;
+  ReturnErrorOnFailure(reader.ExitContainer(outer));
+  if ((mask & required) != required) return InvalidCommand;
+  if (present) *present = mask;
+  return CHIP_NO_ERROR;
+}
+CHIP_ERROR Field(TLVReader reader, unsigned tag, TLVReader &value) {
+  chip::TLV::TLVType outer;
+  ReturnErrorOnFailure(reader.EnterContainer(outer));
+  CHIP_ERROR next;
+  while ((next = reader.Next()) == CHIP_NO_ERROR) {
+    if (chip::TLV::IsContextTag(reader.GetTag()) &&
+        chip::TLV::TagNumFromTag(reader.GetTag()) == tag) {
+      value = reader;
+      return CHIP_NO_ERROR;
+    }
+  }
+  return next == CHIP_END_OF_TLV ? InvalidCommand : next;
+}
+CHIP_ERROR SceneFields(TLVReader reader) {
+  TLVReader list;
+  ReturnErrorOnFailure(Field(reader, 4, list));
+  if (list.GetType() != chip::TLV::kTLVType_Array) return CHIP_ERROR_SCHEMA_MISMATCH;
+  chip::TLV::TLVType outer;
+  ReturnErrorOnFailure(list.EnterContainer(outer));
+  CHIP_ERROR next;
+  while ((next = list.Next()) == CHIP_NO_ERROR) {
+    ReturnErrorOnFailure(Fields(list, 3));
+    TLVReader pairs;
+    ReturnErrorOnFailure(Field(list, 1, pairs));
+    if (pairs.GetType() != chip::TLV::kTLVType_Array) return CHIP_ERROR_SCHEMA_MISMATCH;
+    chip::TLV::TLVType nested;
+    ReturnErrorOnFailure(pairs.EnterContainer(nested));
+    CHIP_ERROR pair;
+    while ((pair = pairs.Next()) == CHIP_NO_ERROR) {
+      std::uint16_t mask;
+      ReturnErrorOnFailure(Fields(pairs, 1, &mask));
+      const auto choices = static_cast<unsigned>(mask & 0x1FEU);
+      if (choices == 0 || (choices & (choices - 1)) != 0) return InvalidCommand;
+    }
+    if (pair != CHIP_END_OF_TLV) return pair;
+    ReturnErrorOnFailure(pairs.ExitContainer(nested));
+  }
+  if (next != CHIP_END_OF_TLV) return next;
+  return list.ExitContainer(outer);
+}
+template <typename T> CHIP_ERROR Values(const T &) { return CHIP_NO_ERROR; }
+template <typename T> CHIP_ERROR GroupName(const T &value) {
+  return value.groupID != 0 && value.groupName.size() <= 16 ? CHIP_NO_ERROR : ConstraintError;
+}
+CHIP_ERROR Values(const Clusters::Groups::Commands::AddGroup::DecodableType &value) {
+  return GroupName(value);
+}
+CHIP_ERROR Values(const Clusters::Groups::Commands::AddGroupIfIdentifying::DecodableType &value) {
+  return GroupName(value);
+}
+CHIP_ERROR Values(const Clusters::Groups::Commands::ViewGroup::DecodableType &value) {
+  return value.groupID != 0 ? CHIP_NO_ERROR : ConstraintError;
+}
+CHIP_ERROR Values(const Clusters::Groups::Commands::RemoveGroup::DecodableType &value) {
+  return value.groupID != 0 ? CHIP_NO_ERROR : ConstraintError;
+}
+CHIP_ERROR Values(const Clusters::Groups::Commands::GetGroupMembership::DecodableType &value) {
+  auto groups = value.groupList.begin();
+  while (groups.Next())
+    if (groups.GetValue() == 0) return ConstraintError;
+  return groups.GetStatus();
+}
+CHIP_ERROR Values(const Clusters::OnOff::Commands::OnWithTimedOff::DecodableType &value) {
+  return value.onOffControl.Raw() <= 1 && value.onTime <= 0xFFFE && value.offWaitTime <= 0xFFFE
+      ? CHIP_NO_ERROR
+      : ConstraintError;
+}
+template <typename T> CHIP_ERROR SceneId(const T &value) {
+  return value.sceneID < 255 ? CHIP_NO_ERROR : ConstraintError;
+}
+CHIP_ERROR Values(const Clusters::ScenesManagement::Commands::ViewScene::DecodableType &value) {
+  return SceneId(value);
+}
+CHIP_ERROR Values(const Clusters::ScenesManagement::Commands::RemoveScene::DecodableType &value) {
+  return SceneId(value);
+}
+CHIP_ERROR Values(const Clusters::ScenesManagement::Commands::StoreScene::DecodableType &value) {
+  return SceneId(value);
+}
+CHIP_ERROR Values(const Clusters::ScenesManagement::Commands::RecallScene::DecodableType &value) {
+  ReturnErrorOnFailure(SceneId(value));
+  return !value.transitionTime.HasValue() || value.transitionTime.Value().IsNull() ||
+          value.transitionTime.Value().Value() <= 60000000
+      ? CHIP_NO_ERROR
+      : ConstraintError;
+}
+CHIP_ERROR Values(const Clusters::ScenesManagement::Commands::CopyScene::DecodableType &value) {
+  return value.sceneIdentifierFrom < 255 && value.sceneIdentifierTo < 255 ? CHIP_NO_ERROR
+                                                                          : ConstraintError;
+}
+CHIP_ERROR Values(const Clusters::ScenesManagement::Commands::AddScene::DecodableType &value) {
+  ReturnErrorOnFailure(SceneId(value));
+  if (value.transitionTime > 60000000 || value.sceneName.size() > 16) return ConstraintError;
+  auto fields = value.extensionFieldSetStructs.begin();
+  while (fields.Next()) {
+    auto pairs = fields.GetValue().attributeValueList.begin();
+    while (pairs.Next()) {} // Decode every lazy typed member, including optional values.
+    ReturnErrorOnFailure(pairs.GetStatus());
+  }
+  return fields.GetStatus();
+}
+template <typename T> CHIP_ERROR Decode(TLVReader reader, chip::FabricIndex fabric,
+                                        std::uint16_t required) {
+  ReturnErrorOnFailure(Fields(reader, required));
+  if constexpr (std::is_same_v<T, Clusters::ScenesManagement::Commands::AddScene::DecodableType>)
+    ReturnErrorOnFailure(SceneFields(reader));
+  T value;
+  if constexpr (T::kIsFabricScoped) ReturnErrorOnFailure(value.Decode(reader, fabric));
+  else ReturnErrorOnFailure(value.Decode(reader));
+  return Values(value);
+}
+}
 
 SdkBridgeFabricScopes::SdkBridgeFabricScopes(chip::FabricTable &table) : table_(table) {}
 SdkBridgeFabricScopes::~SdkBridgeFabricScopes() {
@@ -98,6 +245,81 @@ void SdkBridgeFabricScopes::OnFabricCommitted(const chip::FabricTable &, chip::F
 SdkBridgeInvokeGuard::SdkBridgeInvokeGuard(SdkBridgeFabricScopes &fabrics,
                                            chip::app::DataModel::Provider &provider)
     : fabrics_(fabrics), provider_(provider) {}
+
+CHIP_ERROR SdkBridgeInvokeGuard::ValidateArguments(const BridgeRequestMetadata &request,
+                                                   TLVReader arguments) noexcept try {
+  using namespace chip::app::Clusters;
+  const auto fabric = request.principal.fabricIndex;
+  if (request.operation != BridgeRequestMetadata::Operation::Invoke)
+    return CHIP_ERROR_INVALID_ARGUMENT;
+  switch (request.cluster) {
+  case Identify::Id:
+    switch (request.member) {
+    case 0:
+      return Decode<Identify::Commands::Identify::DecodableType>(arguments, fabric, 1);
+    case 64:
+      return Decode<Identify::Commands::TriggerEffect::DecodableType>(arguments, fabric, 3);
+    }
+    break;
+  case Groups::Id:
+    switch (request.member) {
+    case 0:
+      return Decode<Groups::Commands::AddGroup::DecodableType>(arguments, fabric, 3);
+    case 1:
+      return Decode<Groups::Commands::ViewGroup::DecodableType>(arguments, fabric, 1);
+    case 2:
+      return Decode<Groups::Commands::GetGroupMembership::DecodableType>(arguments, fabric, 1);
+    case 3:
+      return Decode<Groups::Commands::RemoveGroup::DecodableType>(arguments, fabric, 1);
+    case 4:
+      return Decode<Groups::Commands::RemoveAllGroups::DecodableType>(arguments, fabric, 0);
+    case 5:
+      return Decode<Groups::Commands::AddGroupIfIdentifying::DecodableType>(arguments, fabric, 3);
+    }
+    break;
+  case OnOff::Id:
+    switch (request.member) {
+    case 0:
+      return Decode<OnOff::Commands::Off::DecodableType>(arguments, fabric, 0);
+    case 1:
+      return Decode<OnOff::Commands::On::DecodableType>(arguments, fabric, 0);
+    case 2:
+      return Decode<OnOff::Commands::Toggle::DecodableType>(arguments, fabric, 0);
+    case 64:
+      return Decode<OnOff::Commands::OffWithEffect::DecodableType>(arguments, fabric, 3);
+    case 65:
+      return Decode<OnOff::Commands::OnWithRecallGlobalScene::DecodableType>(arguments, fabric, 0);
+    case 66:
+      return Decode<OnOff::Commands::OnWithTimedOff::DecodableType>(arguments, fabric, 7);
+    }
+    break;
+  case ScenesManagement::Id:
+    switch (request.member) {
+    case 0:
+      return Decode<ScenesManagement::Commands::AddScene::DecodableType>(arguments, fabric, 31);
+    case 1:
+      return Decode<ScenesManagement::Commands::ViewScene::DecodableType>(arguments, fabric, 3);
+    case 2:
+      return Decode<ScenesManagement::Commands::RemoveScene::DecodableType>(arguments, fabric, 3);
+    case 3:
+      return Decode<ScenesManagement::Commands::RemoveAllScenes::DecodableType>(arguments, fabric,
+                                                                                1);
+    case 4:
+      return Decode<ScenesManagement::Commands::StoreScene::DecodableType>(arguments, fabric, 3);
+    case 5:
+      return Decode<ScenesManagement::Commands::RecallScene::DecodableType>(arguments, fabric, 3);
+    case 6:
+      return Decode<ScenesManagement::Commands::GetSceneMembership::DecodableType>(arguments,
+                                                                                   fabric, 1);
+    case 64:
+      return Decode<ScenesManagement::Commands::CopyScene::DecodableType>(arguments, fabric, 31);
+    }
+    break;
+  }
+  return CHIP_IM_GLOBAL_STATUS(UnsupportedCommand);
+} catch (...) {
+  return CHIP_ERROR_NO_MEMORY;
+}
 
 CHIP_ERROR SdkBridgeInvokeGuard::Command(const BridgeRequestMetadata &request,
                                          chip::app::DataModel::AcceptedCommandEntry &command) {

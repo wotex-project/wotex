@@ -197,6 +197,11 @@ Repository-wide rules are in the root `AGENTS.md`.
   synchronous-attribute guards for exact fabric/credential scope, live metadata,
   timed/data-version requirements and current SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and
   synthetic principals, without transport or consumer-authorization evidence.
+  Its explicit argument guard runs after bounded copying and before custody or
+  handle admission. `native/testing/sdk_bridge_command_arguments_test.*` covers
+  all 22 selected command schemas, their 35 mandatory fields, scalar bounds,
+  unknown fields and nested lazy-list validation. Four receiver pipe families
+  check actual refusal before consumer delivery and preserved ID/payload custody.
 - `native/{include/wotex_matter,src}/bridge_replies.*`: scoped native rendering
   with copied principal/path/response-ID custody;
   `native/testing/sdk_bridge_replies_test.*` executes SDK Groups/Scenes with

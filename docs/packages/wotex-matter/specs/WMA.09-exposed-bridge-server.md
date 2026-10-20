@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.33.0-target.
+Version: 0.34.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -718,6 +718,20 @@ semantics may encode a completed consumer result; response-encoding failure
 MUST still release the consumed context. Closure MUST drain retained handles
 under the SDK stack lock before stopping the event loop. Destruction with a
 retained handle MUST terminate the process.
+
+After scope capture and bounded payload copying, the invoke guard MUST validate
+the owned argument copy before reserving request custody or retaining an SDK
+handler. The selected Identify, Groups, On/Off and Scenes Management command
+schemas MUST require their mandatory fields, reject duplicate context fields,
+decode every typed field and fully traverse typed lists, including nested scene
+extension fields and attribute/value pairs. Missing fields MUST NOT silently
+become SDK constructor defaults. The selected scalar ranges and scene value
+choice MUST be checked before consumer execution. Unknown unique fields MUST
+remain in the owned payload and MUST NOT supply missing mandatory fields.
+Validation MUST preserve the borrowed reader position, ticket output, request
+identity and handler ownership on refusal, and perform no stateful native or
+consumer operation. Stateful group/scene availability and native command
+responses remain separately owned renderer obligations.
 
 The retained invoke owner MUST require an explicit SDK guard before copying
 arguments or reserving custody. The guard MUST capture the exact fabric realm,

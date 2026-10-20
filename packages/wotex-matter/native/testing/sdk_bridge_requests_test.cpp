@@ -209,6 +209,16 @@ void Boundaries() {
           "non-structure command arguments admitted");
   auto arguments = Arguments();
   auto reader = ArgumentReader(arguments);
+  guard.argument_error = CHIP_ERROR_WRONG_TLV_TYPE;
+  const auto before_argument_check = reader.GetLengthRead();
+  Handoff::Ticket refused{{9}, 99};
+  Require(
+      contexts.Start(request, reader, handler, 100, 600, refused) == CHIP_ERROR_WRONG_TLV_TYPE &&
+          refused.id == 99 && refused.generation[0] == 9 && contexts.pending() == 0 &&
+          handoff.pending() == 0 && handler.retained.empty() &&
+          reader.GetLengthRead() == before_argument_check,
+      "argument guard refusal changed reader, ticket or handle custody");
+  guard.argument_error = CHIP_NO_ERROR;
   for (const auto &path : {ConcreteCommandPath(chip::kInvalidEndpointId, 6, 1),
                            ConcreteCommandPath(3, chip::kInvalidClusterId, 1),
                            ConcreteCommandPath(3, 6, chip::kInvalidCommandId)}) {

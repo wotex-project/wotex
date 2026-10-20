@@ -14,6 +14,8 @@ class FixtureInvokeGuard final : public BridgeInvokeGuard {
  public:
   CHIP_ERROR capture_error{CHIP_NO_ERROR};
   CHIP_ERROR validation_error{CHIP_NO_ERROR};
+  CHIP_ERROR argument_error{CHIP_NO_ERROR};
+  unsigned argument_checks{0};
   unsigned captures{0}, validations{0};
   std::uint64_t capture_epoch{7};
   BridgeInvokeScope last;
@@ -32,6 +34,11 @@ class FixtureInvokeGuard final : public BridgeInvokeGuard {
     ++validations;
     last = scope;
     return validation_error;
+  }
+  CHIP_ERROR ValidateArguments(const BridgeRequestMetadata &,
+                               chip::TLV::TLVReader) noexcept override {
+    ++argument_checks;
+    return argument_error;
   }
 };
 
