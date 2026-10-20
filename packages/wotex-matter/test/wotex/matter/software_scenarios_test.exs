@@ -38,15 +38,22 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
   test "controller setup starts and reaps only its seven preparation peers", %{directory: directory} do
     executable = script(directory, "printf 'Server Listening...'; exec sleep 60")
     host = Path.join(directory, "host")
-    File.write!(host, "#!/bin/sh\nexit 1\n")
+    File.write!(host, "#!/bin/sh\nprintf started > \"$0.started\"\nexit 1\n")
     File.chmod!(host, 0o500)
-    artifacts = Map.put(artifacts(executable), :host, host)
+
+    artifacts =
+      executable
+      |> artifacts()
+      |> Map.put(:host, host)
+      |> Map.put(:paa, directory)
+
     workspace = Path.join(directory, "fixtures")
 
     assert_raise Mix.Error, "software_controller_setup_failed", fn ->
       SoftwareScenarios.with_fixtures(artifacts, workspace, fn _ -> flunk("setup succeeded") end)
     end
 
+    assert File.read!(host <> ".started") == "started"
     assert_reaped(workspace, 7)
     assert length(Path.wildcard(Path.join(workspace, "*"))) == 18
     assert Path.wildcard(Path.join(workspace, "*-fixture.json")) == []

@@ -32,6 +32,7 @@ defmodule Wotex.Matter.NativeCommissioningTimeoutTest do
             Enum.map(
               [
                 :executable,
+                :executable_sha256,
                 :storage_path,
                 :vendor_id,
                 :fabric_id,

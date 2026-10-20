@@ -29,7 +29,7 @@ defmodule Wotex.Matter.NativeSubscriptionResourcesTest do
             timeout: 10_000
           ] ++
             Enum.map(
-              ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a,
+              ~w(executable executable_sha256 storage_path vendor_id fabric_id controller_node_id paa_trust_store)a,
               &{&1, Map.fetch!(fixture["controller"], Atom.to_string(&1))}
             )
 

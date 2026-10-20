@@ -26,7 +26,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
     {:lifecycle_stress, :lighting},
     {:lifecycle_open_close, :lighting}
   ]
-  @controller_keys ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
+  @controller_keys ~w(executable executable_sha256 storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
   @common_cases ~w(CLOSE CONTROL_PUMP INPUT_PRESSURE PENDING_LOSS
                    PENDING_SUBSCRIPTION_LOSS REQUEST_ID RUNTIME_LOSS STARTUP_RESOURCES STREAM_OWNER STRESS_FAILURES)
 
@@ -166,7 +166,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
             private_directory(directory)
 
             fixture
-            |> put_in(["controller", "executable"], context.artifacts.resource_host)
+            |> controller_executable(context.artifacts.resource_host)
             |> Map.put("resource_directory", directory)
           else
             fixture
@@ -204,7 +204,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
 
     flow =
       common
-      |> put_in(["controller", "executable"], context.artifacts.flow_host)
+      |> controller_executable(context.artifacts.flow_host)
       |> Map.put("directory", flow_directory)
 
     window =
@@ -276,6 +276,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
   defp controller(context, directory, index) do
     %{
       "executable" => context.artifacts.host,
+      "executable_sha256" => digest(context.artifacts.host),
       "storage_path" => Path.join(directory, "controller-#{index}"),
       "storage_mode" => "create_new",
       "authority" => "generate_root",
@@ -292,9 +293,18 @@ defmodule Wotex.Matter.SoftwareScenarios do
     private_directory(directory)
 
     fixture
-    |> put_in(["controller", "executable"], context.artifacts.resource_host)
+    |> controller_executable(context.artifacts.resource_host)
     |> Map.put("resource_directory", directory)
   end
+
+  defp controller_executable(fixture, executable) do
+    fixture
+    |> put_in(["controller", "executable"], executable)
+    |> put_in(["controller", "executable_sha256"], digest(executable))
+  end
+
+  defp digest(path),
+    do: :crypto.hash(:sha256, File.read!(path)) |> Base.encode16(case: :lower)
 
   defp lifecycle_fixture(context, stress, open_close) do
     stress = resource_fixture(context, stress, "stress-resources")

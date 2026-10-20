@@ -135,7 +135,15 @@ defmodule Wotex.Matter.NativeLightingInteropTest do
       timeout: 60_000
     ] ++
       Enum.map(
-        [:executable, :storage_path, :vendor_id, :fabric_id, :controller_node_id, :paa_trust_store],
+        [
+          :executable,
+          :executable_sha256,
+          :storage_path,
+          :vendor_id,
+          :fabric_id,
+          :controller_node_id,
+          :paa_trust_store
+        ],
         &{&1, Map.fetch!(controller, Atom.to_string(&1))}
       )
   end
