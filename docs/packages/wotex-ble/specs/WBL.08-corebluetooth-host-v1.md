@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.4.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.5.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -140,8 +140,9 @@ The SDK source is Objective-C++17 at the Apple framework boundary. Its native
 suite is explicitly scoped to `darwin`; other hosts record no Mac qualification.
 Injected objects must implement the actual SDK selectors. Such tests establish
 adapter behavior under supplied callbacks, not real authorization, connection,
-pairing or radio behavior. The public Client, sleep observation, notification
-receiving and Runtime/archive joins remain separate required host-delivery work.
+pairing or radio behavior. The point Client/Runtime join is delivered below;
+notification Host/Client receiving, sleep observation and independent archive
+qualification remain separate required host-delivery work.
 
 | Case | SDK stimulus and falsifier |
 | --- | --- |
@@ -329,3 +330,81 @@ The [Apple write API](https://developer.apple.com/documentation/corebluetooth/cb
 and [readiness API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/cansendwritewithoutresponse)
 provide SDK vocabulary. The installed macOS 27.0 SDK headers were inspected;
 that inspection does not qualify runtime permissions, a peripheral or RF behavior.
+
+## Native notification ownership
+
+The SDK owner adds explicit `subscribe(request, route, mode, credit, now,
+deadline)`, `unsubscribe(request, subscription, now, deadline)` and
+`acknowledge(subscription, sequence, now)` entry. These are internal native
+interfaces; public Client/IPC streaming remains a separate delivery. Calls share
+the existing serial queue, monotonic request namespace, generation and original
+1..60,000 ms control deadline. At most one point operation or notification
+control is outstanding, while established streams may receive alongside a point
+operation on another route. A read refuses a route being established, active,
+stopped or previously retired as a stream, because the SDK value callback has no
+request identity. Writes retain their separate callback/evidence path.
+
+Modes are auto, notify and indicate. Auto chooses notify when available,
+otherwise indicate. An indication-only characteristic admits auto/indicate;
+a notification-only characteristic admits auto/notify. For both properties the
+Apple API enables notifications only, so auto/notify select notify and explicit
+indicate refuses before SDK invocation. This is the
+[documented setNotifyValue behavior](https://developer.apple.com/documentation/corebluetooth/cbperipheral/setnotifyvalue(_:for:)),
+not the BlueZ mode-selection policy. An already notifying unowned characteristic
+refuses; the owner never adopts or disables another consumer's subscription.
+
+At most sixteen streams are live. Every successfully submitted start consumes
+its route for the connection generation, including a subsequently failed or
+stopped start; reuse needs an explicitly opened new generation. Subscription
+identity is its original nonzero request number, with the exact characteristic
+object/service/peripheral association. Establishment succeeds only after the
+matching notification-state callback, no error, unchanged properties and an
+enabled `isNotifying` state before the original deadline. Foreign/retired
+callbacks cannot establish another stream. Stop closes report admission before
+calling the SDK and succeeds only after the matching disabled callback. No
+automatic retry or mode substitution occurs.
+The control result's `enabled` field names the requested target; only `ok`
+establishes the matching observed state. A failure does not assert that the
+remote configuration changed or remained unchanged.
+
+Each stream reserves 1..64 report credits at start; all streams together reserve
+at most 64. Reports contain an owned 0..512-byte value and an increasing nonzero
+uint64 sequence. They describe `corebluetooth_value_update`, not a synthetic
+initial value, canonical Property truth or independent ATT-origin evidence.
+Before establishment, at most the reserved credit is retained, then published
+only after the successful establishment result. Equal and empty updates remain
+separate reports. A missing value, oversized update, changed association,
+notification failure, exhausted credit/sequence or refusing sink closes the
+generation with continuity loss; no unreported drop is success.
+
+Acknowledgement is cumulative, nondecreasing and no greater than the last
+successfully published sequence. Exact duplicate acknowledgement is inert;
+regression, future sequence and foreign subscription refuse without increasing
+credit. Retired streams retain their published, unacknowledged credit until
+acknowledged; stop cannot free credit still held downstream. Unpublished early
+values are discarded on failure/stop. There is no automatic acknowledgement at
+pipe write or native callback return. The later Host/Client join must return
+credit only after bounded final receiver admission or explicit retirement of
+those exact records.
+
+Permission/link/adapter/service/clock loss or control expiry retires all streams,
+detaches delegates and releases native objects before publishing a pending
+control failure. Failure or close retains actual confirmed/unconfirmed cleanup;
+old delegates cannot publish into another owner. Sleep observation remains a
+separate required lifecycle input.
+
+| Case | Native notification falsifier |
+| --- | --- |
+| CB-N1 | Independent selector cases cover all property/mode combinations; unsupported/foreign/duplicate selections invoke no SDK toggle |
+| CB-N2 | Start/stop use the exact SDK characteristic; matching state and original deadline are required before success |
+| CB-N3 | Early/equal/empty/512-byte updates preserve owned bytes and ordering after establishment; no initial read is performed |
+| CB-N4 | Exact/over credit, sixteen streams, future/regressing/duplicate acknowledgement and retired outstanding credit remain bounded |
+| CB-N5 | Value/state errors, missing/oversized values, changed association/properties and sink refusal close the generation once |
+| CB-N6 | Point reads cannot alias stream callbacks; writes and distinct-route reads retain their own exact result path |
+| CB-N7 | Deadline equality, backward clock, permission/adapter loss and close during start/stop release objects before pending failure |
+| CB-N8 | Retired/foreign callbacks, attempted route reuse and independent owners cannot create continuity or duplicate settlement |
+
+`priv/fixtures/corebluetooth-notifications-v1.json` supplies twelve literal
+property/mode outcomes and six control-state outcomes. The SDK fixture consumes
+every cell through actual injected selectors; vector presence alone proves none
+of these outcomes. The public Host/Client/Runtime streaming join remains open.

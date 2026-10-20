@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Compile this Apple SDK boundary as Objective-C++17 with ARC.
 #include "sdk_environment.hpp"
+#include <array>
 #include <cctype>
+#include <deque>
+#include <optional>
 
 using namespace wotex::ble::corebluetooth;
 @interface WotexCBDelegate : NSObject <CBCentralManagerDelegate, CBPeripheralDelegate>
@@ -54,6 +57,17 @@ struct SDKState final : Port, Sink {
   Mode mode = Mode::read;
   Retirement retired = Retirement::pending;
   bool opened = false, loss_sent = false;
+  struct Notification {
+    enum class State { vacant, starting, active, stopping, retired };
+    State state = State::vacant;
+    std::uint64_t subscription = 0, request = 0, sequence = 0, delivered = 0, acknowledged = 0;
+    NotificationMode requested = NotificationMode::automatic, effective = NotificationMode::notify;
+    unsigned credit = 0;
+    std::int64_t deadline = 0;
+    std::deque<std::vector<std::uint8_t>> early;
+  };
+  std::array<Notification, 256> notifications;
+  std::optional<std::size_t> notification_control;
 
   SDKState(SDKClock &time, SDKSink &output, const SDKEnvironment &env)
       : clock(time), sink(output), environment(env),
@@ -73,6 +87,12 @@ struct SDKState final : Port, Sink {
   void retire_native() noexcept {
     if (phase == Phase::closed) return;
     phase = Phase::closed;
+    notification_control.reset();
+    for (auto &stream : notifications) {
+      if (stream.state != Notification::State::vacant) stream.state = Notification::State::retired;
+      stream.early.clear();
+      stream.sequence = stream.delivered;
+    }
     retired = Retirement::confirmed;
     delegate.owner = nullptr;
     @try {
@@ -104,9 +124,26 @@ struct SDKState final : Port, Sink {
   void fail(Code code, std::int64_t now) noexcept {
     if (phase == Phase::fresh || phase == Phase::closed) return;
     const bool was_open = opened;
+    std::optional<NotificationResult> failed;
+    if (notification_control) {
+      const auto index = *notification_control;
+      const auto &stream = notifications[index];
+      failed = NotificationResult{{config.generation, stream.request, index + 1},
+                                  stream.subscription,
+                                  stream.requested,
+                                  stream.effective,
+                                  stream.state == Notification::State::starting,
+                                  code,
+                                  false};
+    }
     if (operation && operation->active()) operation->cancel(std::max(now, last_time), code);
     else {
       retire_native();
+      if (failed) {
+        failed->cleanup_confirmed = retired == Retirement::confirmed;
+        if (!failed->cleanup_confirmed) failed->code = Code::cleanup_timeout;
+        sink.notification_state(*failed);
+      }
       loss(retired == Retirement::confirmed ? code : Code::cleanup_timeout);
     }
     if (!was_open)
@@ -149,6 +186,23 @@ struct SDKState final : Port, Sink {
       return false;
     }
     if (operation && operation->active()) operation->poll(now);
+    if (phase == Phase::closed) return false;
+    if (notification_control && now >= notifications[*notification_control].deadline) {
+      fail(Code::timeout, now);
+      return false;
+    }
+    for (std::size_t index = 0; index < routes.size(); ++index) {
+      const auto state = notifications[index].state;
+      if (state == Notification::State::vacant || state == Notification::State::retired) continue;
+      if (!notification_current(index)) {
+        fail(Code::stale_discovery, now);
+        return false;
+      }
+      if (state == Notification::State::active && !characteristics[index].isNotifying) {
+        fail(Code::disconnected, now);
+        return false;
+      }
+    }
     return phase != Phase::closed;
   }
   Code open(const SDKConfig &input, std::int64_t now, std::int64_t deadline) {
@@ -319,7 +373,7 @@ struct SDKState final : Port, Sink {
   Code request(std::uint64_t number, std::uint64_t token, Mode kind,
                const std::vector<std::uint8_t> &bytes, std::int64_t now, std::int64_t deadline) {
     if (phase != Phase::open) return Code::disconnected;
-    if (operation && operation->active()) return Code::resource_limit;
+    if ((operation && operation->active()) || notification_control) return Code::resource_limit;
     if (!number || number <= last_request || !token || token > routes.size() ||
         bytes.size() > 512 ||
         (kind != Mode::read && kind != Mode::write && kind != Mode::command) ||
@@ -329,7 +383,9 @@ struct SDKState final : Port, Sink {
     if (!tick(now)) return Code::disconnected;
     selected = characteristics[token - 1];
     mode = kind;
-    if (kind == Mode::read && selected.isNotifying) return Code::not_supported;
+    if (kind == Mode::read &&
+        (selected.isNotifying || notifications[token - 1].state != Notification::State::vacant))
+      return Code::not_supported;
     auto next = std::make_unique<Operation>(*this, *this);
     ticket = {config.generation, number, token};
     last_request = number;
@@ -337,6 +393,195 @@ struct SDKState final : Port, Sink {
     if (!operation->start(ticket, routes[token - 1].route, kind, bytes, now, deadline))
       return Code::invalid_options;
     return Code::ok;
+  }
+  bool notification_current(std::size_t index) const noexcept {
+    if (phase != Phase::open || index >= routes.size()) return false;
+    CBCharacteristic *characteristic = characteristics[index];
+    const auto &route = routes[index];
+    const auto flags = characteristic.properties;
+    return characteristic.service == route_services[index] &&
+        characteristic.service.peripheral == peripheral &&
+        route.notify == ((flags & CBCharacteristicPropertyNotify) != 0) &&
+        route.indicate == ((flags & CBCharacteristicPropertyIndicate) != 0) &&
+        route.route.readable == ((flags & CBCharacteristicPropertyRead) != 0) &&
+        route.route.writable == ((flags & CBCharacteristicPropertyWrite) != 0) &&
+        route.route.command == ((flags & CBCharacteristicPropertyWriteWithoutResponse) != 0);
+  }
+  unsigned notification_reserved() const {
+    unsigned total = 0;
+    for (const auto &stream : notifications)
+      total += stream.state == Notification::State::retired
+          ? static_cast<unsigned>(stream.delivered - stream.acknowledged)
+          : stream.credit;
+    return total;
+  }
+  Code notification_entry(std::uint64_t number, std::int64_t now, std::int64_t deadline) {
+    if (phase != Phase::open) return Code::disconnected;
+    if ((operation && operation->active()) || notification_control) return Code::resource_limit;
+    if (!number || number <= last_request || now < 0 || deadline <= now || deadline - now > 60000)
+      return Code::invalid_options;
+    return tick(now) ? Code::ok : Code::disconnected;
+  }
+  Code subscribe(std::uint64_t number, std::uint64_t token, NotificationMode requested,
+                 unsigned credit, std::int64_t now, std::int64_t deadline) {
+    const auto admitted = notification_entry(number, now, deadline);
+    if (admitted != Code::ok) return admitted;
+    if (!token || token > routes.size() || !credit || credit > 64 ||
+        (requested != NotificationMode::automatic && requested != NotificationMode::notify &&
+         requested != NotificationMode::indicate))
+      return Code::invalid_options;
+    const auto index = static_cast<std::size_t>(token - 1);
+    auto &stream = notifications[index];
+    if (stream.state != Notification::State::vacant || characteristics[index].isNotifying)
+      return Code::not_permitted;
+    const auto &route = routes[index];
+    if (!route.notify && !route.indicate) return Code::not_supported;
+    const auto effective = route.notify ? NotificationMode::notify : NotificationMode::indicate;
+    if (requested != NotificationMode::automatic && requested != effective)
+      return Code::not_supported;
+    unsigned live = 0;
+    for (const auto &item : notifications)
+      if (item.state != Notification::State::vacant && item.state != Notification::State::retired)
+        ++live;
+    if (live == 16 || credit > 64 - notification_reserved()) return Code::resource_limit;
+    if (!notification_current(index)) return Code::stale_discovery;
+    stream.state = Notification::State::starting;
+    stream.subscription = number;
+    stream.request = number;
+    stream.requested = requested;
+    stream.effective = effective;
+    stream.credit = credit;
+    stream.deadline = deadline;
+    notification_control = index;
+    last_request = number;
+    @try {
+      const auto at = clock.sample();
+      if (at < last_time || at >= deadline || !tick(at)) {
+        if (phase != Phase::closed)
+          fail(at < last_time ? Code::clock_regressed : Code::timeout, at);
+        return Code::ok;
+      }
+      [peripheral setNotifyValue:YES forCharacteristic:characteristics[index]];
+      tick(clock.sample());
+    } @catch (NSException *) {
+      fail(Code::transport_error, last_time);
+    }
+    return Code::ok;
+  }
+  std::optional<std::size_t> notification_index(std::uint64_t subscription) const {
+    if (!subscription) return std::nullopt;
+    for (std::size_t index = 0; index < notifications.size(); ++index)
+      if (notifications[index].subscription == subscription) return index;
+    return std::nullopt;
+  }
+  Code unsubscribe(std::uint64_t number, std::uint64_t subscription, std::int64_t now,
+                   std::int64_t deadline) {
+    const auto admitted = notification_entry(number, now, deadline);
+    if (admitted != Code::ok) return admitted;
+    const auto index = notification_index(subscription);
+    if (!index || notifications[*index].state != Notification::State::active)
+      return Code::invalid_options;
+    auto &stream = notifications[*index];
+    stream.state = Notification::State::stopping;
+    stream.request = number;
+    stream.deadline = deadline;
+    notification_control = index;
+    last_request = number;
+    @try {
+      const auto at = clock.sample();
+      if (at < last_time || at >= deadline || !tick(at)) {
+        if (phase != Phase::closed)
+          fail(at < last_time ? Code::clock_regressed : Code::timeout, at);
+        return Code::ok;
+      }
+      [peripheral setNotifyValue:NO forCharacteristic:characteristics[*index]];
+      tick(clock.sample());
+    } @catch (NSException *) {
+      fail(Code::transport_error, last_time);
+    }
+    return Code::ok;
+  }
+  Code acknowledge(std::uint64_t subscription, std::uint64_t sequence, std::int64_t now) {
+    if (!tick(now) || phase != Phase::open) return Code::disconnected;
+    const auto index = notification_index(subscription);
+    if (!index) return Code::invalid_options;
+    auto &stream = notifications[*index];
+    if (sequence < stream.acknowledged || sequence > stream.delivered) return Code::invalid_options;
+    stream.acknowledged = sequence;
+    return Code::ok;
+  }
+  void notification_state(CBPeripheral *peer, CBCharacteristic *characteristic,
+                          NSError *error) noexcept {
+    if (peer != peripheral || phase != Phase::open) return;
+    guard([&] {
+      if (!tick(clock.sample())) return;
+      if (error) {
+        for (std::size_t index = 0; index < routes.size(); ++index)
+          if (characteristic == characteristics[index] &&
+              notifications[index].state != Notification::State::vacant &&
+              notifications[index].state != Notification::State::retired) {
+            fail(Code::transport_error, last_time);
+            return;
+          }
+      }
+      if (!notification_control || characteristic != characteristics[*notification_control]) return;
+      const auto index = *notification_control;
+      auto &stream = notifications[index];
+      const bool enabled = stream.state == Notification::State::starting;
+      if (error || characteristic.isNotifying != enabled) {
+        fail(error ? Code::transport_error : Code::invalid_response, last_time);
+        return;
+      }
+      notification_control.reset();
+      stream.state = enabled ? Notification::State::active : Notification::State::retired;
+      if (!sink.notification_state({{config.generation, stream.request, index + 1},
+                                    stream.subscription,
+                                    stream.requested,
+                                    stream.effective,
+                                    enabled,
+                                    Code::ok,
+                                    !enabled})) {
+        fail(Code::resource_limit, last_time);
+        return;
+      }
+      while (!stream.early.empty() && phase == Phase::open) {
+        auto bytes = std::move(stream.early.front());
+        stream.early.pop_front();
+        publish_notification(index, std::move(bytes), stream.delivered + 1);
+      }
+    });
+  }
+  void publish_notification(std::size_t index, std::vector<std::uint8_t> bytes,
+                            std::uint64_t sequence) {
+    if (!tick(clock.sample())) return;
+    auto &stream = notifications[index];
+    if (!sink.notification_value(
+            {config.generation, stream.subscription, index + 1, sequence, std::move(bytes)})) {
+      fail(Code::resource_limit, last_time);
+      return;
+    }
+    stream.delivered = sequence;
+  }
+  void notification_value(std::size_t index, CBCharacteristic *characteristic, NSError *error) {
+    auto &stream = notifications[index];
+    if (stream.state == Notification::State::stopping ||
+        stream.state == Notification::State::retired)
+      return;
+    if (!tick(clock.sample())) return;
+    NSData *value = characteristic.value;
+    if (error || !value || value.length > 512) {
+      fail(error ? Code::transport_error : Code::invalid_response, last_time);
+      return;
+    }
+    if (stream.sequence == UINT64_MAX || stream.sequence - stream.acknowledged == stream.credit) {
+      fail(Code::resource_limit, last_time);
+      return;
+    }
+    std::vector<std::uint8_t> bytes(value.length);
+    [value getBytes:bytes.data() length:bytes.size()];
+    ++stream.sequence;
+    if (stream.state == Notification::State::starting) stream.early.push_back(std::move(bytes));
+    else publish_notification(index, std::move(bytes), stream.sequence);
   }
   bool authorized() const noexcept override try {
     return environment.authorization() == CBManagerAuthorizationAllowedAlways;
@@ -414,6 +659,14 @@ struct SDKState final : Port, Sink {
     if (phase == Phase::closed) loss(code);
   }
   void value(CBPeripheral *peer, CBCharacteristic *characteristic, NSError *error) noexcept {
+    if (peer == peripheral && phase == Phase::open) {
+      for (std::size_t index = 0; index < routes.size(); ++index)
+        if (characteristic == characteristics[index] &&
+            notifications[index].state != Notification::State::vacant) {
+          guard([&] { notification_value(index, characteristic, error); });
+          return;
+        }
+    }
     if (peer != peripheral || characteristic != selected || mode != Mode::read || !operation ||
         !operation->active())
       return;
@@ -500,6 +753,38 @@ Code SDK::request(std::uint64_t number, std::uint64_t token, Mode mode,
   });
   return code;
 }
+Code SDK::subscribe(std::uint64_t number, std::uint64_t route, NotificationMode mode,
+                    unsigned credit, std::int64_t now, std::int64_t deadline) {
+  auto *state = impl_.get();
+  state->assert_external();
+  Code code = Code::resource_limit;
+  auto *output = &code;
+  dispatch_sync(state->queue, ^{
+    state->guard([&] { *output = state->subscribe(number, route, mode, credit, now, deadline); });
+  });
+  return code;
+}
+Code SDK::unsubscribe(std::uint64_t number, std::uint64_t subscription, std::int64_t now,
+                      std::int64_t deadline) {
+  auto *state = impl_.get();
+  state->assert_external();
+  Code code = Code::resource_limit;
+  auto *output = &code;
+  dispatch_sync(state->queue, ^{
+    state->guard([&] { *output = state->unsubscribe(number, subscription, now, deadline); });
+  });
+  return code;
+}
+Code SDK::acknowledge(std::uint64_t subscription, std::uint64_t sequence, std::int64_t now) {
+  auto *state = impl_.get();
+  state->assert_external();
+  Code code = Code::resource_limit;
+  auto *output = &code;
+  dispatch_sync(state->queue, ^{
+    state->guard([&] { *output = state->acknowledge(subscription, sequence, now); });
+  });
+  return code;
+}
 void SDK::poll(std::int64_t now) {
   auto *state = impl_.get();
   state->assert_external();
@@ -555,6 +840,11 @@ bool SDK::closed() const {
     didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
                               error:(NSError *)error {
   if (_owner) _owner->value(peripheral, characteristic, error);
+}
+- (void)peripheral:(CBPeripheral *)peripheral
+    didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic
+                                          error:(NSError *)error {
+  if (_owner) _owner->notification_state(peripheral, characteristic, error);
 }
 - (void)peripheral:(CBPeripheral *)peripheral
     didWriteValueForCharacteristic:(CBCharacteristic *)characteristic

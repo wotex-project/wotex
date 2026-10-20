@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "../../priv/corebluetooth/native/sdk_environment.hpp"
+#include "../../priv/bluez/native/vendor/json.hpp"
 #include <atomic>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <map>
 #include <sys/wait.h>
 #include <unistd.h>
 
 using namespace wotex::ble::corebluetooth;
-static void check(bool value) {
-  if (!value) std::abort();
+using Json = nlohmann::json;
+static void check(bool value, int line = __builtin_LINE()) {
+  if (!value) {
+    std::cerr << "failed check at line " << line << '\n';
+    std::abort();
+  }
 }
 static const std::string identifier = "01234567-89ab-cdef-0123-456789abcdef";
 static const std::vector<std::uint8_t> payload{0, 1, 127, 128, 255};
@@ -40,6 +47,10 @@ static const std::vector<std::uint8_t> payload{0, 1, 127, 128, 255};
 @property(nonatomic, weak) CBCharacteristic *lastTarget;
 @property(nonatomic) CBCharacteristicWriteType lastMode;
 @property(nonatomic, assign) std::vector<std::string> *events;
+@property(nonatomic) NSUInteger notifyCalls;
+@property(nonatomic) BOOL notifyEnabled, failNotify;
+@property(nonatomic, weak) CBCharacteristic *notifyTarget;
+@property(nonatomic, assign) std::function<void()> *onNotify;
 @end
 @implementation TestPeripheral
 - (NSUInteger)maximumWriteValueLengthForType:(CBCharacteristicWriteType)type {
@@ -66,6 +77,14 @@ static const std::vector<std::uint8_t> payload{0, 1, 127, 128, 255};
   _lastWrite = [data copy];
   _lastTarget = characteristic;
   _lastMode = type;
+}
+- (void)setNotifyValue:(BOOL)enabled forCharacteristic:(CBCharacteristic *)characteristic {
+  ++_notifyCalls;
+  _notifyEnabled = enabled;
+  _notifyTarget = characteristic;
+  if (_onNotify && *_onNotify) (*_onNotify)();
+  if (_failNotify)
+    @throw [NSException exceptionWithName:@"private-notify" reason:@"private" userInfo:nil];
 }
 @end
 @interface TestCentral : NSObject
@@ -105,6 +124,27 @@ struct Output final : SDKSink {
   std::vector<Code> opens, losses;
   std::vector<Characteristic> routes;
   std::vector<Result> results;
+  bool admitState = true, admitValue = true;
+  std::function<void(const NotificationResult &)> onState;
+  std::vector<NotificationResult> notifications;
+  std::vector<NotificationValue> values;
+  bool notification_state(NotificationResult value) noexcept override try {
+    if (!admitState) return false;
+    if (onState) onState(value);
+    events.emplace_back("state");
+    notifications.push_back(value);
+    return true;
+  } catch (...) {
+    std::abort();
+  }
+  bool notification_value(NotificationValue &&value) noexcept override try {
+    if (!admitValue) return false;
+    events.emplace_back("value");
+    values.push_back(std::move(value));
+    return true;
+  } catch (...) {
+    std::abort();
+  }
   bool opened(Code code, std::uint64_t generation,
               std::vector<Characteristic> values) noexcept override try {
     check(generation == 7);
@@ -199,12 +239,33 @@ struct Fixture {
           didDiscoverCharacteristicsForService:(CBService *)service
                                          error:nil];
     });
-    check(output.opens == std::vector<Code>{Code::ok} && output.routes.size() == 1);
+    check(output.opens == std::vector<Code>{Code::ok} &&
+          output.routes.size() == service.characteristics.count);
   }
   void ready() {
     begin();
     connect();
     discover();
+  }
+  void notify_ready() {
+    characteristic.properties |= CBCharacteristicPropertyNotify;
+    ready();
+  }
+  void notification_state(bool enabled, NSError *error = nil) {
+    characteristic.isNotifying = enabled;
+    event([&] {
+      [peripheral.delegate peripheral:(CBPeripheral *)peripheral
+          didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic
+                                                error:error];
+    });
+  }
+  void notification_value(const std::vector<std::uint8_t> &bytes, NSError *error = nil) {
+    characteristic.value = [NSData dataWithBytes:bytes.data() length:bytes.size()];
+    event([&] {
+      [peripheral.delegate peripheral:(CBPeripheral *)peripheral
+          didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic
+                                    error:error];
+    });
   }
   void close() {
     sdk->close(clock.sample());
@@ -500,7 +561,9 @@ static void released_objects() {
   __weak TestCharacteristic *characteristic;
   @autoreleasepool {
     f = std::make_unique<Fixture>();
-    f->ready();
+    f->notify_ready();
+    check(f->sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+    f->notification_state(true);
     central = f->central;
     peripheral = f->peripheral;
     service = f->service;
@@ -585,10 +648,352 @@ static void independent() {
   check(second.output.results[0].evidence == Evidence::native_queue_accepted);
   second.close();
 }
+static Json notification_vectors(const char *path) {
+  std::ifstream input(path);
+  Json value;
+  input >> value;
+  check(value["format"] == "wotex.ble.corebluetooth.notifications" && value["version"] == "1.0.0");
+  check(value["mode_cases"].size() == 12 && value["control_cases"].size() == 6);
+  return value;
+}
+static void notification_modes(const Json &vectors) {
+  const std::map<std::string, NotificationMode> modes{{"auto", NotificationMode::automatic},
+                                                      {"notify", NotificationMode::notify},
+                                                      {"indicate", NotificationMode::indicate}};
+  for (const auto &cell : vectors["mode_cases"]) {
+    Fixture f;
+    if (cell["notify"].get<bool>()) f.characteristic.properties |= CBCharacteristicPropertyNotify;
+    if (cell["indicate"].get<bool>())
+      f.characteristic.properties |= CBCharacteristicPropertyIndicate;
+    f.ready();
+    const auto mode = modes.at(cell["requested"].get<std::string>());
+    const bool supported = !cell["effective"].is_null();
+    check(f.sdk->subscribe(1, 1, mode, 4, 100, 200) ==
+          (supported ? Code::ok : Code::not_supported));
+    check(f.peripheral.notifyCalls == (supported ? 1u : 0u));
+    check(f.output.notifications.empty() && f.peripheral.reads == 0);
+    if (supported) {
+      check(f.peripheral.notifyEnabled &&
+            f.peripheral.notifyTarget == (CBCharacteristic *)f.characteristic);
+      f.notification_state(true);
+      check(f.output.notifications.size() == 1);
+      const auto &result = f.output.notifications[0];
+      check(result.code == Code::ok && result.enabled && result.requested == mode &&
+            result.effective == modes.at(cell["effective"].get<std::string>()));
+    }
+    f.close();
+  }
+  Fixture f;
+  f.notify_ready();
+  for (unsigned i = 0; i < 8; ++i) {
+    check(f.sdk->subscribe(i == 0 ? 0 : 1,
+                           i == 1       ? 0
+                               : i == 2 ? 257
+                                        : 1,
+                           // An unnamed fixed-underlying enum value deliberately tests refusal.
+                           // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+                           i == 3 ? static_cast<NotificationMode>(99) : NotificationMode::automatic,
+                           i == 4       ? 0
+                               : i == 5 ? 65
+                                        : 4,
+                           i == 6 ? -1 : 100, i == 7 ? 100 : 200) == Code::invalid_options);
+  }
+  f.characteristic.isNotifying = YES;
+  check(f.sdk->subscribe(1, 1, NotificationMode::automatic, 4, 100, 200) == Code::not_permitted);
+  check(f.peripheral.notifyCalls == 0);
+  f.close();
+}
+static void notification_controls(const Json &vectors) {
+  const std::map<std::string, Code> codes{{"ok", Code::ok},
+                                          {"invalid_response", Code::invalid_response},
+                                          {"transport_error", Code::transport_error}};
+  for (const auto &cell : vectors["control_cases"]) {
+    Fixture current;
+    current.notify_ready();
+    check(current.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+    if (!cell["enable"].get<bool>()) {
+      current.notification_state(true);
+      current.output.notifications.clear();
+      check(current.sdk->unsubscribe(2, 1, 100, 200) == Code::ok);
+    }
+    current.notification_state(
+        cell["callback_enabled"].get<bool>(),
+        cell["error"].get<bool>() ? [NSError errorWithDomain:@"private" code:1 userInfo:nil] : nil);
+    check(current.output.notifications.size() == 1 &&
+          current.output.notifications[0].code == codes.at(cell["code"].get<std::string>()));
+    check(current.sdk->closed() == (cell["code"] != "ok"));
+    current.close();
+  }
+  Fixture f;
+  f.notify_ready();
+  check(f.sdk->subscribe(1, 1, NotificationMode::automatic, 4, 100, 200) == Code::ok);
+  auto *foreign = [TestCharacteristic new];
+  f.event([&] {
+    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+        didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)foreign
+                                              error:nil];
+  });
+  check(f.output.notifications.empty());
+  f.notification_state(true);
+  check(f.output.notifications.size() == 1 && f.output.notifications[0].subscription == 1 &&
+        f.output.notifications[0].ticket == (Ticket{7, 1, 1}));
+  check(f.sdk->subscribe(2, 1, NotificationMode::notify, 4, 100, 200) == Code::not_permitted);
+  check(f.sdk->unsubscribe(2, 999, 100, 200) == Code::invalid_options);
+  check(f.sdk->unsubscribe(2, 1, 100, 200) == Code::ok);
+  check(f.peripheral.notifyCalls == 2 && !f.peripheral.notifyEnabled);
+  f.notification_value(payload);
+  check(f.output.values.empty());
+  f.notification_state(false);
+  check(f.output.notifications.size() == 2 && !f.output.notifications[1].enabled &&
+        f.output.notifications[1].ticket == (Ticket{7, 2, 1}) &&
+        f.output.notifications[1].cleanup_confirmed);
+  f.notification_state(false);
+  f.notification_value(payload);
+  check(f.output.notifications.size() == 2 && f.output.values.empty());
+  check(f.sdk->subscribe(3, 1, NotificationMode::notify, 4, 100, 200) == Code::not_permitted);
+  check(f.sdk->request(3, 1, Mode::read, {}, 100, 200) == Code::not_supported);
+  f.close();
+}
+static void notification_values() {
+  Fixture f;
+  f.notify_ready();
+  check(f.sdk->subscribe(1, 1, NotificationMode::automatic, 4, 100, 200) == Code::ok);
+  f.notification_value(payload);
+  f.notification_value(payload);
+  check(f.output.values.empty() && f.peripheral.reads == 0);
+  check(f.sdk->acknowledge(1, 1, 100) == Code::invalid_options);
+  f.notification_state(true);
+  check(f.output.events == std::vector<std::string>({"state", "value", "value"}));
+  check(f.output.values.size() == 2 && f.output.values[0].bytes == payload &&
+        f.output.values[1].bytes == payload);
+  f.notification_value({});
+  f.notification_value(std::vector<std::uint8_t>(512, 255));
+  check(f.output.values.size() == 4 && f.output.values[2].bytes.empty() &&
+        f.output.values[3].bytes == std::vector<std::uint8_t>(512, 255));
+  for (std::size_t i = 0; i < 4; ++i) {
+    const auto &value = f.output.values[i];
+    check(value.generation == 7 && value.route == 1 && value.subscription == 1 &&
+          value.sequence == i + 1);
+  }
+  check(f.sdk->acknowledge(1, 2, 100) == Code::ok);
+  f.notification_value({7});
+  f.notification_value({8});
+  check(f.output.values.size() == 6 && f.output.values[4].sequence == 5 &&
+        f.output.values[5].sequence == 6 && f.output.values[0].bytes == payload);
+  f.close();
+}
+static void notification_credit() {
+  Fixture f;
+  f.notify_ready();
+  check(f.sdk->subscribe(1, 1, NotificationMode::notify, 2, 100, 200) == Code::ok);
+  f.notification_state(true);
+  f.notification_value({1});
+  f.notification_value({2});
+  check(f.sdk->acknowledge(1, 3, 100) == Code::invalid_options);
+  check(f.sdk->acknowledge(999, 1, 100) == Code::invalid_options);
+  check(f.sdk->acknowledge(1, 1, 100) == Code::ok);
+  check(f.sdk->acknowledge(1, 1, 100) == Code::ok);
+  check(f.sdk->acknowledge(1, 0, 100) == Code::invalid_options);
+  f.notification_value({3});
+  check(f.output.values.size() == 3 && f.output.values.back().sequence == 3);
+  f.notification_value({4});
+  check(f.sdk->closed() && f.output.values.size() == 3 &&
+        f.output.losses == std::vector<Code>{Code::resource_limit});
+  Fixture early;
+  early.notify_ready();
+  check(early.sdk->subscribe(1, 1, NotificationMode::notify, 1, 100, 200) == Code::ok);
+  early.notification_value({1});
+  early.notification_value({2});
+  check(early.sdk->closed() && early.output.values.empty() &&
+        early.output.notifications.size() == 1 &&
+        early.output.notifications[0].code == Code::resource_limit &&
+        early.output.notifications[0].cleanup_confirmed);
+}
+static void notification_capacity() {
+  for (unsigned kind = 0; kind < 2; ++kind) {
+    Fixture f;
+    NSMutableArray<CBCharacteristic *> *items = [NSMutableArray new];
+    for (unsigned i = 0; i < 17; ++i) {
+      auto *item = [TestCharacteristic new];
+      item.service = (CBService *)f.service;
+      item.uuidValue = [CBUUID UUIDWithString:@"2A6E"];
+      item.properties = CBCharacteristicPropertyNotify;
+      [items addObject:(CBCharacteristic *)item];
+    }
+    f.service.characteristics = items;
+    f.ready();
+    const auto start = [&](std::uint64_t number, std::uint64_t route, unsigned credit) {
+      check(f.sdk->subscribe(number, route, NotificationMode::notify, credit, 100, 200) ==
+            Code::ok);
+      ((TestCharacteristic *)items[route - 1]).isNotifying = YES;
+      f.event([&] {
+        [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+            didUpdateNotificationStateForCharacteristic:items[route - 1]
+                                                  error:nil];
+      });
+    };
+    if (kind == 0) {
+      for (unsigned i = 1; i <= 16; ++i) start(i, i, 1);
+      check(f.sdk->subscribe(17, 17, NotificationMode::notify, 1, 100, 200) ==
+            Code::resource_limit);
+      check(f.peripheral.notifyCalls == 16);
+    } else {
+      start(1, 1, 64);
+      for (unsigned i = 0; i < 64; ++i) {
+        ((TestCharacteristic *)items[0]).value = [NSData data];
+        f.event([&] {
+          [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+              didUpdateValueForCharacteristic:items[0]
+                                        error:nil];
+        });
+      }
+      check(f.output.values.size() == 64);
+      check(f.sdk->subscribe(2, 2, NotificationMode::notify, 1, 100, 200) == Code::resource_limit);
+      check(f.sdk->unsubscribe(3, 1, 100, 200) == Code::ok);
+      ((TestCharacteristic *)items[0]).isNotifying = NO;
+      f.event([&] {
+        [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+            didUpdateNotificationStateForCharacteristic:items[0]
+                                                  error:nil];
+      });
+      check(f.sdk->subscribe(4, 2, NotificationMode::notify, 1, 100, 200) == Code::resource_limit);
+      check(f.sdk->acknowledge(1, 64, 100) == Code::ok);
+      start(5, 2, 64);
+      check(f.sdk->subscribe(6, 1, NotificationMode::notify, 1, 100, 200) == Code::not_permitted);
+    }
+    f.close();
+  }
+}
+static void notification_faults() {
+  for (unsigned kind = 0; kind < 10; ++kind) {
+    Fixture f;
+    f.notify_ready();
+    if (kind == 7) f.peripheral.failNotify = YES;
+    if (kind == 6) f.output.admitState = false;
+    check(f.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+    if (kind != 7) f.notification_state(true);
+    if (kind < 6) {
+      if (kind == 0) f.characteristic.value = nil;
+      else f.characteristic.value = [NSMutableData dataWithLength:kind == 1 ? 513 : 1];
+      if (kind == 3) f.characteristic.service = nil;
+      if (kind == 4) f.characteristic.properties = CBCharacteristicPropertyRead;
+      if (kind == 5) f.output.admitValue = false;
+      f.event([&] {
+        [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+            didUpdateValueForCharacteristic:(CBCharacteristic *)f.characteristic
+                                      error:kind == 2
+                                          ? [NSError errorWithDomain:@"private" code:1 userInfo:nil]
+                                          : nil];
+      });
+    }
+    if (kind == 8)
+      f.notification_state(true, [NSError errorWithDomain:@"private" code:1 userInfo:nil]);
+    if (kind == 9) f.notification_state(false);
+    check(f.sdk->closed() && f.output.losses.size() == 1 && f.central.cancels == 1 &&
+          f.output.values.empty());
+    check(!f.central.delegate && !f.peripheral.delegate);
+  }
+}
+static void notification_deadlines() {
+  for (unsigned kind = 0; kind < 7; ++kind) {
+    Fixture f;
+    f.notify_ready();
+    check(f.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+    if (kind == 5 || kind == 6) {
+      f.notification_state(true);
+      check(f.sdk->unsubscribe(2, 1, 100, 200) == Code::ok);
+      f.output.notifications.clear();
+    }
+    f.output.onState = [&](const NotificationResult &value) {
+      check(value.code != Code::ok && !f.central.delegate && !f.peripheral.delegate);
+    };
+    if (kind == 0 || kind == 5) f.clock.now = 200;
+    if (kind == 1) f.clock.now = 99;
+    if (kind == 2) f.auth = CBManagerAuthorizationDenied;
+    if (kind == 3) f.central.state = CBManagerStateResetting;
+    if (kind == 4 || kind == 6) f.sdk->close(100);
+    else f.sdk->poll(f.clock.sample());
+    const Code expected[] = {Code::timeout,      Code::clock_regressed, Code::not_authorized,
+                             Code::disconnected, Code::disconnected,    Code::timeout,
+                             Code::disconnected};
+    check(f.sdk->closed() && f.output.notifications.size() == 1 &&
+          f.output.notifications[0].code == expected[kind] &&
+          f.output.notifications[0].cleanup_confirmed);
+  }
+  Fixture f;
+  f.notify_ready();
+  std::function<void()> elapsed = [&] { f.clock.now = 200; };
+  f.peripheral.onNotify = &elapsed;
+  check(f.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+  check(f.sdk->closed() && f.output.notifications.size() == 1 &&
+        f.output.notifications[0].code == Code::timeout);
+  Fixture uncertain;
+  uncertain.notify_ready();
+  check(uncertain.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+  uncertain.central.failCleanup = YES;
+  uncertain.sdk->close(100);
+  check(uncertain.sdk->closed() && uncertain.output.notifications.size() == 1 &&
+        uncertain.output.notifications[0].code == Code::cleanup_timeout &&
+        !uncertain.output.notifications[0].cleanup_confirmed &&
+        uncertain.output.losses == std::vector<Code>{Code::cleanup_timeout});
+}
+static void notification_aliases() {
+  Fixture f, other;
+  auto *reader = [TestCharacteristic new];
+  reader.service = (CBService *)f.service;
+  reader.uuidValue = [CBUUID UUIDWithString:@"2A19"];
+  reader.properties = CBCharacteristicPropertyRead;
+  f.service.characteristics = @[ (CBCharacteristic *)f.characteristic, (CBCharacteristic *)reader ];
+  f.notify_ready();
+  other.notify_ready();
+  check(f.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+  check(f.sdk->request(2, 2, Mode::read, {}, 100, 200) == Code::resource_limit);
+  check(other.sdk->subscribe(1, 1, NotificationMode::notify, 4, 100, 200) == Code::ok);
+  other.notification_state(true);
+  check(f.output.notifications.empty());
+  f.notification_state(true);
+  check(f.sdk->request(2, 1, Mode::read, {}, 100, 200) == Code::not_supported);
+  check(f.sdk->request(2, 2, Mode::read, {}, 100, 200) == Code::ok);
+  f.notification_value(payload);
+  check(f.output.results.empty() && f.output.values.size() == 1);
+  reader.value = [NSData data];
+  f.event([&] {
+    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+        didUpdateValueForCharacteristic:(CBCharacteristic *)reader
+                                  error:nil];
+  });
+  check(f.output.results.size() == 1 && f.output.results[0].evidence == Evidence::value &&
+        f.output.results[0].bytes.empty());
+  check(f.sdk->request(3, 1, Mode::write, payload, 100, 200) == Code::ok);
+  f.notification_value({42});
+  check(f.output.results.size() == 1 && f.output.values.size() == 2);
+  f.event([&] {
+    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+        didWriteValueForCharacteristic:(CBCharacteristic *)f.characteristic
+                                 error:nil];
+  });
+  check(f.output.results.size() == 2 && f.output.results[1].evidence == Evidence::att_response);
+  id<CBPeripheralDelegate> retired = f.peripheral.delegate;
+  f.close();
+  f.event([&] {
+    [retired peripheral:(CBPeripheral *)f.peripheral
+        didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)f.characteristic
+                                              error:nil];
+    [retired peripheral:(CBPeripheral *)f.peripheral
+        didUpdateValueForCharacteristic:(CBCharacteristic *)f.characteristic
+                                  error:nil];
+  });
+  check(f.output.values.size() == 2 && f.output.notifications.size() == 1);
+  other.notification_value(payload);
+  check(other.output.values.size() == 1 && other.output.losses.empty());
+  other.close();
+}
 int main(int argc, char **argv) {
   @autoreleasepool {
-    if (argc != 2) return 2;
+    if (argc != 2 && argc != 3) return 2;
     const std::string name(argv[1]);
+    const bool vectors = name == "notification_modes" || name == "notification_controls";
+    if (argc != (vectors ? 3 : 2)) return 2;
     if (name == "permissions") permissions();
     else if (name == "invalid_options") invalid_options();
     else if (name == "discovery") discovery();
@@ -604,6 +1009,14 @@ int main(int argc, char **argv) {
     else if (name == "continuity_loss") continuity_loss();
     else if (name == "cleanup_fault") cleanup_fault();
     else if (name == "independent") independent();
+    else if (name == "notification_modes") notification_modes(notification_vectors(argv[2]));
+    else if (name == "notification_controls") notification_controls(notification_vectors(argv[2]));
+    else if (name == "notification_values") notification_values();
+    else if (name == "notification_credit") notification_credit();
+    else if (name == "notification_capacity") notification_capacity();
+    else if (name == "notification_faults") notification_faults();
+    else if (name == "notification_deadlines") notification_deadlines();
+    else if (name == "notification_aliases") notification_aliases();
     else if (name == "unfinished_destruction") {
       std::set_terminate([] { _exit(73); });
       Fixture f;

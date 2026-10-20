@@ -14,6 +14,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/fixtures/custody-contract-v1.json",
     "priv/fixtures/native-port-v1.json",
     "priv/fixtures/wotex-integration-v1.json",
+    "priv/fixtures/corebluetooth-notifications-v1.json",
     "priv/bluez/native/frame.hpp",
     "priv/bluez/native/bytes.hpp",
     "priv/bluez/native/agent.hpp",

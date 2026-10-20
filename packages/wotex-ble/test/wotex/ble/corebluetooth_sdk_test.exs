@@ -7,9 +7,13 @@ defmodule Wotex.BLE.CoreBluetoothSDKTest do
     alias Wotex.BLE.NativeLane
 
     @root Path.expand("../../..", __DIR__)
+    @vectors Path.join(@root, "priv/fixtures/corebluetooth-notifications-v1.json")
+    @external_resource @vectors
     @cases ~w(permissions invalid_options discovery discovery_refusal discovery_capacity missing_and_expired modes
               operation_refusal submission_boundary read_callbacks released_objects callback_identity
-              continuity_loss cleanup_fault independent)
+              continuity_loss cleanup_fault independent notification_modes notification_controls
+              notification_values notification_credit notification_capacity notification_faults
+              notification_deadlines notification_aliases)
 
     setup_all do
       directory =
@@ -51,7 +55,12 @@ defmodule Wotex.BLE.CoreBluetoothSDKTest do
 
     for name <- @cases do
       test "CoreBluetooth SDK #{name}", %{executable: executable} do
-        {output, status} = System.cmd(executable, [unquote(name)], env: NativeLane.environment([]))
+        arguments =
+          if unquote(name) in ["notification_modes", "notification_controls"],
+            do: [unquote(name), @vectors],
+            else: [unquote(name)]
+
+        {output, status} = System.cmd(executable, arguments, env: NativeLane.environment([]))
         assert status == 0, output
         assert output == "ok #{unquote(name)}\n"
       end

@@ -121,7 +121,11 @@ Tests by area, under `test/wotex/ble/` unless noted:
 - CoreBluetooth: `corebluetooth_operation_test.exs` is portable;
   `corebluetooth_sdk_test.exs` compiles the real SDK boundary against injected
   NSObject selector implementations on macOS. It constructs no real manager and
-  makes no Bluetooth or permission request. The `corebluetooth` native suite in
+  makes no Bluetooth or permission request. Its notification cases consume the
+  literal mode/control corpus and exercise
+  start/stop callbacks, early values, shared credits, retired-route fencing,
+  point/stream isolation and confirmed/unconfirmed cleanup. The `corebluetooth`
+  native suite in
   `tooling/packages.yaml` selects `hosts: [darwin]`; Linux records it as not
   applicable and supplies no Mac qualification. Its sources require the Apple
   SDK, `-x objective-c++`, ARC and a macOS 14 minimum target.

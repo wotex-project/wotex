@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.6.0. Package baseline: 0.1.0.
+Plan version: 1.7.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -19,7 +19,7 @@ ticket-bound callbacks, an original deadline and confirmed-retirement gating.
 Fourteen independent scripted-port cases pass in ordinary and sanitizer builds.
 The framework-linked SDK owner now implements explicit permission/pairing entry,
 bounded complete discovery, per-mode SDK submission and actual callback/object
-retirement. Sixteen injected-selector cases join the fourteen operation cases.
+retirement. Twenty-four injected-selector cases join the fourteen operation cases.
 The native process now implements revision-1 bounded IPC, reserved nonblocking
 output, original deadlines, exact generation/route validation and joined close.
 Its explicit offline macOS builder embeds usage metadata, audits the binaries,
@@ -29,9 +29,14 @@ public Client now joins pure private Peer/discovery values, bounded session
 ownership, typed reads, both write modes and point Runtime operations. Thirteen
 Client cases use an independent process peer and the production Host loop;
 the [Client record](../provenance/corebluetooth-client-2026-10.md) binds actual
-commands, committed source and limits. Continue with notifications, explicit
-sleep observation, independent CoreBluetooth archive consumers and installed
-Mac lifecycle/readiness qualification. Software point sessions establish no
+commands, committed source and limits. Native notification ownership now uses
+the actual SDK toggle/state/value selectors, explicit mode selection, one
+control deadline, sixteen live streams and 64 shared report credits. Early
+reports wait for establishment; cumulative acknowledgement and retained stopped
+credit prevent unbounded delivery. The literal mode/control corpus and eight
+notification case families exercise that SDK seam. Continue with the Host/Client
+streaming join, explicit sleep observation, independent CoreBluetooth archive
+consumers and installed Mac lifecycle/readiness qualification. Software point sessions establish no
 actual permission/peripheral or RF result.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds their exact source, archive and executed checks.

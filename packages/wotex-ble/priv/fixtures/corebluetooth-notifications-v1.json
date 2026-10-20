@@ -1,0 +1,26 @@
+{
+  "format": "wotex.ble.corebluetooth.notifications",
+  "version": "1.0.0",
+  "mode_cases": [
+    {"notify": false, "indicate": false, "requested": "auto", "effective": null},
+    {"notify": false, "indicate": false, "requested": "notify", "effective": null},
+    {"notify": false, "indicate": false, "requested": "indicate", "effective": null},
+    {"notify": true, "indicate": false, "requested": "auto", "effective": "notify"},
+    {"notify": true, "indicate": false, "requested": "notify", "effective": "notify"},
+    {"notify": true, "indicate": false, "requested": "indicate", "effective": null},
+    {"notify": false, "indicate": true, "requested": "auto", "effective": "indicate"},
+    {"notify": false, "indicate": true, "requested": "notify", "effective": null},
+    {"notify": false, "indicate": true, "requested": "indicate", "effective": "indicate"},
+    {"notify": true, "indicate": true, "requested": "auto", "effective": "notify"},
+    {"notify": true, "indicate": true, "requested": "notify", "effective": "notify"},
+    {"notify": true, "indicate": true, "requested": "indicate", "effective": null}
+  ],
+  "control_cases": [
+    {"enable": true, "callback_enabled": true, "error": false, "code": "ok"},
+    {"enable": true, "callback_enabled": false, "error": false, "code": "invalid_response"},
+    {"enable": true, "callback_enabled": true, "error": true, "code": "transport_error"},
+    {"enable": false, "callback_enabled": false, "error": false, "code": "ok"},
+    {"enable": false, "callback_enabled": true, "error": false, "code": "invalid_response"},
+    {"enable": false, "callback_enabled": false, "error": true, "code": "transport_error"}
+  ]
+}
