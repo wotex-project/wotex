@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.29.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.30.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -28,9 +28,12 @@ no SDK lock. Sixteen guarded real-pipe cases cover fresh/reopened stores, valid
 ready/probe/close, pending and resolved custody, missing private input, interface
 and attachment refusal, cancellation, pipe loss, stale generation and fatal
 cleanup refusal. The receiver fixture refuses child operations and supplies no
-authenticated consumer execution. Production executable assembly,
-approved-observation application and authenticated request integration remain
-required before this becomes an executable server.
+authenticated consumer execution. Production executable assembly and
+authenticated request integration remain required before this becomes an
+executable server. The internal SDK driver separately owns approved-observation
+input and application, with sixty-four receipt reservations retained through
+complete output transmission. A joined worker acquires SDK custody outside the
+input reader, preserving result/probe service while the SDK lock is held.
 The [SDK process-driver record](../provenance/bridge-sdk-process-2026-10.md)
 binds the sixteen ordinary/sanitizer SDK cases, portable coordinator regressions,
 source/binary identities and qualification limits.
@@ -446,7 +449,7 @@ retirement, invalid clocks/protocols and cleanup including trapped exits.
 They do not qualify real host clocks or authenticate Matter peers. The native
 Port owner must preserve admission order, qualify/authenticate probe exchange,
 monitor execution custody and close native custody on loss. That integration,
-live SDK checks and native approved-observation application remain open.
+live authenticated SDK checks remain open.
 
 [`ClockProbe`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/clock_probe.ex)
 supplies exact bounded probe/sample controls for an expected generation and
@@ -669,8 +672,39 @@ exact fixture order and fixed completion markers and records binary/input
 digests. [BEAM boundary tests](../../../../packages/wotex-matter/test/wotex/matter/bridge_observation_test.exs)
 cover nullable values, generation/ID correlation, malformed fields and framing.
 The BEAM connection separately owns observation credit, non-reused IDs and
-receipt deadlines. These codecs and scripted delivery tests supply no native SDK
-application, authenticated execution or physical-effect authority.
+receipt deadlines. These codecs and scripted delivery tests supply no
+authenticated execution or physical-effect authority.
+
+The native process reader now accepts the existing observation codec alongside
+the unchanged 512-byte result/clock/close controls. It validates current generation,
+clock and strictly increasing observation IDs before transferring owned values.
+The SDK driver's observation worker reserves one of sixty-four distinct output
+receipt slots before queue admission; the slot stays charged during SDK waiting,
+application and complete receipt transmission. Four control and sixteen request
+slots remain separate. The input reader takes no SDK lock, so queued observations
+cannot prevent delivery of a result needed by an SDK callback. Queue/output locks
+are released before SDK acquisition and descriptor I/O.
+
+The worker checks live custody under the SDK lock, applies the exact current
+Thing/endpoint/capability and emits applied/refused only after the endpoint owner
+returns. Semantic refusal preserves prior approved state and reachability.
+Invalid framing, generation, replay or full admission ends the process generation.
+Output/encoding loss after application closes without retry; a missing receipt
+retains an uncertain application outcome. Closure prevents queued application and
+joins the worker outside SDK locks before receiver or SDK cleanup. Terminal output
+discards unstarted reservations while completing an active frame through LF.
+
+The guarded SDK process fixture adds eleven observation case families to the sixteen
+lifecycle families. These cover nullable light/sensor state, a maximum-size opaque
+Thing identity beyond the result-frame bound, value bounds and semantic
+refusal, actual SDK attribute readback, sixty-four queued observations while the
+SDK lock is held, result/probe progress under that lock, sixty-fifth admission
+refusal, duplicate/generation/framing rejection and queued close/cancellation.
+The portable input/output fixtures cover exact 1024/512-byte limits, allocation
+refusal, separate ID namespaces, receipt reservations, stale tickets, isolated
+control/request capacity and active-receipt framing on a full real pipe.
+Authenticated consumer requests, independent reporting peers and production
+executable assembly remain open.
 
 ## 4. Isolation and recovery
 

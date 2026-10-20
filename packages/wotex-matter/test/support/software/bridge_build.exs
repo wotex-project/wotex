@@ -27,7 +27,18 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"pending", 0},
     {"generation", 0},
     {"output-lost", 0},
-    {"credentials", 0}
+    {"credentials", 0},
+    {"observations", 0},
+    {"observation-refused", 0},
+    {"observation-credit", 0},
+    {"observation-result", 0},
+    {"observation-replay", 0},
+    {"observation-generation", 0},
+    {"observation-malformed", 0},
+    {"observation-close", 0},
+    {"observation-full", 0},
+    {"observation-cancel", 0},
+    {"observation-long", 0}
   ]
   @process_exit_check """
   expected=$1

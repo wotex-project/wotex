@@ -72,6 +72,9 @@ bool SdkBridgeProcessDriver::Start(BridgeConsumerHandoff &custody, BridgeHandoff
   if (cancel.load() || runtime_->Start() != CHIP_NO_ERROR) return false;
   loop_ = true;
   if (cancel.load()) return false;
+  observations_ = std::make_unique<SdkBridgeObservationOwner>(*runtime_->endpoints(), owner,
+                                                              output);
+  if (!observations_->Start() || cancel.load()) return false;
   accepting_.store(true);
   return true;
 } catch (...) {
@@ -82,10 +85,19 @@ bool SdkBridgeProcessDriver::Ready(const BridgeConsumerHandoff::Ticket &ticket) 
   return accepting_.load() && receiver_.ResultReady(ticket);
 }
 
+bool SdkBridgeProcessDriver::Observe(const BridgeConsumerHandoff::Generation &generation,
+                                     BridgeObservationFrame &&frame) noexcept {
+  return accepting_.load() && observations_ && observations_->Submit(generation, std::move(frame));
+}
+
 bool SdkBridgeProcessDriver::Stop() noexcept try {
   if (!used_ || stopped_) return false;
   stopped_ = true;
   accepting_.store(false);
+  if (observations_) {
+    observations_->Stop();
+    observations_.reset();
+  }
   if (initialized_) {
     {
       StackLock lock;

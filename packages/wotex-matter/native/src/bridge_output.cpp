@@ -34,7 +34,8 @@ BridgeOutputOwner::Admission BridgeOutputOwner::Push(Kind kind, std::string_view
   if (state_ != State::Open || terminal_ != 0) return Admission::Closed;
   if (next_ == std::numeric_limits<std::uint64_t>::max()) return Admission::Exhausted;
   const std::size_t begin = kind == Kind::Request ? 0 : kRequestCapacity;
-  const std::size_t end = kind == Kind::Request ? kRequestCapacity : slots_.size();
+  const std::size_t end = kind == Kind::Request ? kRequestCapacity
+                                                : kRequestCapacity + kControlCapacity;
   for (std::size_t i = begin; i < end; ++i) {
     auto &slot = slots_[i];
     if (slot.state != SlotState::Free) continue;
@@ -51,6 +52,47 @@ BridgeOutputOwner::Admission BridgeOutputOwner::Push(Kind kind, std::string_view
     return Admission::Accepted;
   }
   return Admission::Full;
+}
+
+BridgeOutputOwner::Admission BridgeOutputOwner::ReserveObservation(ObservationTicket &ticket) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (state_ != State::Open || terminal_ != 0) return Admission::Closed;
+  if (next_ == std::numeric_limits<std::uint64_t>::max()) return Admission::Exhausted;
+  for (std::size_t i = kRequestCapacity + kControlCapacity; i < slots_.size(); ++i) {
+    auto &slot = slots_[i];
+    if (slot.state != SlotState::Free) continue;
+    slot.identity = ++next_;
+    slot.state = SlotState::Reserved;
+    ticket = {i, slot.identity};
+    return Admission::Accepted;
+  }
+  return Admission::Full;
+}
+
+BridgeOutputOwner::Admission BridgeOutputOwner::CommitObservation(const ObservationTicket &ticket,
+                                                                  std::string_view frame) {
+  if (frame.size() > kMaximumControlFrameBytes) return Admission::Oversized;
+  if (frame.empty() || frame.back() != '\n' ||
+      frame.substr(0, frame.size() - 1).find('\n') != std::string_view::npos ||
+      frame.find('\0') != std::string_view::npos || frame.find('\r') != std::string_view::npos ||
+      ticket.slot < kRequestCapacity + kControlCapacity || ticket.slot >= slots_.size() ||
+      ticket.identity == 0)
+    return Admission::Malformed;
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (state_ != State::Open || terminal_ != 0) return Admission::Closed;
+  auto &slot = slots_[ticket.slot];
+  if (slot.state != SlotState::Reserved || slot.identity != ticket.identity)
+    return Admission::Malformed;
+  try {
+    std::string owned(frame);
+    slot.frame.swap(owned);
+  } catch (const std::bad_alloc &) {
+    return Admission::NoMemory;
+  }
+  slot.bytes = frame.size();
+  slot.state = SlotState::Queued;
+  changed_.notify_one();
+  return Admission::Accepted;
 }
 
 BridgeOutputOwner::Admission BridgeOutputOwner::Finish(std::string_view frame) {
@@ -70,8 +112,8 @@ BridgeOutputOwner::Admission BridgeOutputOwner::Finish(std::string_view frame) {
   }
   // At most one slot is Writing, leaving at least three control slots.
   for (auto &slot : slots_)
-    if (slot.state == SlotState::Queued) slot = {};
-  for (std::size_t i = kRequestCapacity; i < slots_.size(); ++i) {
+    if (slot.state != SlotState::Writing) slot = {};
+  for (std::size_t i = kRequestCapacity; i < kRequestCapacity + kControlCapacity; ++i) {
     auto &slot = slots_[i];
     if (slot.state != SlotState::Free) continue;
     slot.frame.swap(owned);
@@ -99,8 +141,13 @@ std::optional<BridgeOutputOwner::Pending> BridgeOutputOwner::Take(const std::ato
     return state_ != State::Open || stop.load() || First(0, slots_.size()).has_value();
   });
   if (state_ != State::Open || stop.load()) return std::nullopt;
-  auto selected = First(kRequestCapacity, slots_.size());
-  if (!selected) selected = First(0, kRequestCapacity);
+  auto selected = First(kRequestCapacity, kRequestCapacity + kControlCapacity);
+  if (!selected) {
+    selected = First(0, kRequestCapacity);
+    const auto observation = First(kRequestCapacity + kControlCapacity, slots_.size());
+    if (observation && (!selected || slots_[*observation].identity < slots_[*selected].identity))
+      selected = observation;
+  }
   if (!selected) return std::nullopt;
   auto &slot = slots_[*selected];
   slot.state = SlotState::Writing;
@@ -126,7 +173,7 @@ BridgeOutputOwner::State BridgeOutputOwner::End(State state) {
     if (state_ == State::Open) {
       state_ = state;
       for (auto &slot : slots_)
-        if (slot.state == SlotState::Queued) slot = {};
+        if (slot.state != SlotState::Writing) slot = {};
       notify = true;
     }
     terminal = state_;

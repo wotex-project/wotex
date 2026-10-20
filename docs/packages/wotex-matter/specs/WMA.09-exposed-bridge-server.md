@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.30.0-target.
+Version: 0.31.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -245,6 +245,29 @@ Null MUST retain unavailable state. Decoding MUST NOT apply state, authorize
 dispatch, resolve request custody or infer a physical effect. The endpoint
 owner MUST separately validate the current Thing/endpoint and fixed capabilities.
 Observation IDs MUST occupy a separate, non-reused generation-scoped namespace.
+The native process input MUST require strictly increasing observation IDs,
+validate generation and current custody clock, and move owned observations into
+a separate finite SDK-work queue. It MUST NOT acquire the SDK stack lock or
+apply endpoint state on the input thread. Results and clock probes MUST remain
+serviceable while observation work waits for that lock.
+
+Before queue admission, the native owner MUST reserve one of sixty-four separate
+receipt slots. That reservation MUST remain charged through queued SDK work,
+application, queued output and complete receipt transmission or discard. Request
+and control capacity MUST remain separate. Full, closed or failed admission MUST
+end the generation without retrying an observation. Queue-only mutexes MUST NOT
+be held across SDK acquisition, custody callbacks or descriptor I/O.
+
+The owned observation worker MUST serialize endpoint application under the SDK
+stack lock and current custody. Closed custody MUST prevent later application.
+It MUST preserve observation order and emit Applied only after successful
+Thing/endpoint/capability validation and state application; a semantic refusal
+MUST emit Refused without changing prior approved state. Output or encoding
+failure after application MUST close the generation without retry or a claimed
+receipt. A missing receipt MUST NOT establish whether application happened.
+After input retirement, cleanup MUST stop/join observation work outside SDK
+locks before receiver, endpoint or SDK retirement. Queued unapplied work MAY be
+discarded on closure; the original single cleanup deadline MUST remain in force.
 
 The observation receipt MUST contain exactly six scalar fields and fit within
 512 bytes including LF: `v: 1`, `backend: "matter-bridge"`,
@@ -316,6 +339,11 @@ MUST include an active frame until its bytes are fully written or discarded.
 Queued controls MUST precede queued requests, with FIFO within each class and
 no interleaving of an already started frame. Writing a frame MUST NOT release
 the shared request context or establish consumer authorization.
+Observation receipts MUST use their sixty-four pre-reserved slots and the same
+512-byte framing bound. Controls MUST precede queued observation receipts;
+ready requests and observation receipts MUST otherwise follow output admission
+order. Terminal finish MUST discard unstarted observation reservations while
+preserving any active receipt through its final LF before the closed control.
 
 Cancellation, explicit closure or consumer loss, including loss while output
 is idle, MUST close output admission and shared custody, wake pending waits

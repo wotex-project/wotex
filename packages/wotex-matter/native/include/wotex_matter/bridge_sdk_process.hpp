@@ -3,6 +3,7 @@
 
 #include "wotex_matter/bridge_process.hpp"
 #include "wotex_matter/bridge_sdk_bootstrap.hpp"
+#include "wotex_matter/bridge_sdk_observations.hpp"
 
 namespace wotex::matter {
 
@@ -37,6 +38,8 @@ class SdkBridgeProcessDriver final : public BridgeProcessDriver {
   bool Start(BridgeConsumerHandoff &custody, BridgeHandoffOwner &owner, BridgeOutputOwner &output,
              const std::atomic<bool> &cancel) noexcept override;
   bool Ready(const BridgeConsumerHandoff::Ticket &ticket) noexcept override;
+  bool Observe(const BridgeConsumerHandoff::Generation &generation,
+               BridgeObservationFrame &&frame) noexcept override;
   bool Stop() noexcept override;
 
  private:
@@ -45,6 +48,7 @@ class SdkBridgeProcessDriver final : public BridgeProcessDriver {
   BridgeHandoffOwner *custody_{nullptr};
   std::unique_ptr<BridgeBootstrap> bootstrap_;
   std::unique_ptr<SdkBridgeBootstrap> runtime_;
+  std::unique_ptr<SdkBridgeObservationOwner> observations_;
   std::atomic<bool> accepting_{false};
   bool used_{false}, memory_{false}, initialized_{false}, attached_{false}, loop_{false},
       stopped_{false};

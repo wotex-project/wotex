@@ -106,17 +106,24 @@ Repository-wide rules are in the root `AGENTS.md`.
   port drains contexts under the SDK lock and accepts bounded result-ready
   notifications without that lock. The guarded
   `native/testing/sdk_bridge_process_test.*` fixture uses the actual SDK and real
-  pipes for sixteen lifecycle cases. It refuses child operations; production
-  executable assembly, authenticated dispatch and observation application remain
-  open. The explicit native build runs these cases in both build modes and
+  pipes for sixteen lifecycle and eleven approved-observation case families. It
+  refuses child operations; production executable assembly and authenticated
+  dispatch remain open. The explicit native build runs these cases in both modes and
   requires exact process-specific markers and exit statuses.
 - `native/{include/wotex_matter,src}/bridge_observation.*` and
   `lib/wotex/matter/bridge/observation.ex`: pure bounded approved-state transport
   and exact correlated receipts. The separate native allocation fixture and
   `test/wotex/matter/bridge_observation_test.exs` cover nullable values, strict
   framing and preserved refusal output. The explicit BEAM connection owns
-  sixty-four observation slots, non-reused IDs and receipt deadlines. Native
-  authenticated delivery and SDK application remain open.
+  sixty-four observation slots, non-reused IDs and receipt deadlines. The native
+  reader validates generation/clock/replay and moves observations into the SDK
+  driver's finite queue. `bridge_sdk_observations.*` owns one worker, reserves
+  output capacity before admission and joins outside SDK locks before cleanup.
+  `bridge_output.*` retains sixty-four receipt reservations through full output
+  transmission separately from four controls and sixteen requests. The SDK process
+  fixture checks actual state, refusal preservation and queue/result/probe progress
+  while the SDK lock is held. Authenticated delivery and independent reporting
+  peers remain open.
 - `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
   custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
   tests deadlines, generations and closure independently of the SDK.
@@ -152,7 +159,7 @@ Repository-wide rules are in the root `AGENTS.md`.
   ExposedThing dispatch; staged results retain credit until collection. Tests in
   `test/wotex/matter/bridge_{clock_projection,consumer}_test.exs` cover modeled
   expiry, policy, backpressure and cleanup. Native Port bootstrap, authenticated
-  admission, actual clock qualification and native approved-state application
+  admission, actual clock qualification and authenticated native state integration
   remain open; the explicit connection separately owns observation delivery.
 - `lib/wotex/matter/bridge/clock_probe.ex` and `native/src/bridge_input.cpp`:
   separate bounded clock controls, exact generation/probe correlation and native
@@ -167,7 +174,7 @@ Repository-wide rules are in the root `AGENTS.md`.
   and child cleanup. The real-pipe
   `bridge_{connection,connection_observation,control,port_process}_test.exs` tests
   use scripted hosts; the production SDK host, authenticated execution and
-  native observation application integration remain open.
+  independent reporting integration remain open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: retained-invoke and
   synchronous-attribute guards for exact fabric/credential scope, live metadata,
   timed/data-version requirements and current SDK ACL; `native/testing/sdk_bridge_guard_test.*` uses direct SDK APIs and

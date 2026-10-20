@@ -193,20 +193,34 @@ BridgeControlEncode EncodeBridgeControlReply(BridgeControlReply role,
   }
 }
 
-// The 511-byte input and fixed generation cannot reach string::max_size; bad_alloc is caught.
+// The 1023-byte input and fixed generation cannot reach string::max_size; bad_alloc is caught.
 // NOLINTNEXTLINE(bugprone-exception-escape)
 BridgeResultDecode DecodeBridgeInputFrame(std::string_view line,
                                           const BridgeConsumerHandoff::Generation &generation,
                                           BridgeInputFrame &frame) noexcept {
-  if (line.size() >= kMaximumBridgeResultFrameBytes) return BridgeResultDecode::Oversized;
+  if (line.size() >= kMaximumBridgeObservationFrameBytes) return BridgeResultDecode::Oversized;
   if (line.empty() || line.find('\0') != std::string_view::npos ||
       line.find('\n') != std::string_view::npos || line.find('\r') != std::string_view::npos)
     return BridgeResultDecode::Malformed;
   try {
-    InputSax sax(generation);
-    if (!nlohmann::json::sax_parse(line.begin(), line.end(), &sax) || !sax.finished())
-      return BridgeResultDecode::Malformed;
-    frame = sax.frame;
+    if (line.size() < kMaximumBridgeResultFrameBytes) {
+      InputSax sax(generation);
+      if (nlohmann::json::sax_parse(line.begin(), line.end(), &sax) && sax.finished()) {
+        frame = std::move(sax.frame);
+        return BridgeResultDecode::Decoded;
+      }
+    }
+    BridgeInputFrame observation;
+    std::string complete(line);
+    complete += '\n';
+    const auto decoded = DecodeBridgeObservationFrame(complete, generation,
+                                                      observation.observation);
+    if (decoded == BridgeObservationDecode::NoMemory) return BridgeResultDecode::NoMemory;
+    if (decoded != BridgeObservationDecode::Decoded)
+      return line.size() >= kMaximumBridgeResultFrameBytes ? BridgeResultDecode::Oversized
+                                                           : BridgeResultDecode::Malformed;
+    observation.kind = BridgeInputFrame::Kind::Observation;
+    frame = std::move(observation);
     return BridgeResultDecode::Decoded;
   } catch (const std::bad_alloc &) {
     return BridgeResultDecode::NoMemory;
@@ -216,6 +230,7 @@ BridgeResultDecode DecodeBridgeInputFrame(std::string_view line,
 BridgeResultDecode DecodeBridgeResultFrame(std::string_view line,
                                            const BridgeConsumerHandoff::Generation &generation,
                                            BridgeResultFrame &result) noexcept {
+  if (line.size() >= kMaximumBridgeResultFrameBytes) return BridgeResultDecode::Oversized;
   BridgeInputFrame frame;
   const auto decoded = DecodeBridgeInputFrame(line, generation, frame);
   if (decoded != BridgeResultDecode::Decoded) return decoded;
@@ -269,6 +284,18 @@ BridgeResultInput::State BridgeResultInput::Feed(std::string_view bytes) {
     }
     used_ = 0;
     const auto &parsed = frame.result;
+    if (frame.kind == BridgeInputFrame::Kind::Observation) {
+      if (frame.observation.id <= last_observation_id_) return Close(State::Malformed);
+      const auto sampled = owner_.With(
+          [&](auto &custody, auto now) { return custody.Sample(generation_, now); });
+      using Sample = BridgeConsumerHandoff::ClockSample;
+      if (sampled == Sample::InvalidGeneration) return Close(State::Malformed);
+      if (sampled == Sample::InvalidClock) return Close(State::Clock);
+      if (sampled == Sample::Closed) return Close(State::Ended);
+      last_observation_id_ = frame.observation.id;
+      if (!sink_.Observation(std::move(frame.observation))) return Close(State::Sink);
+      continue;
+    }
     if (frame.kind == BridgeInputFrame::Kind::Close) {
       NotifyClosing(true);
       const auto sampled = owner_.With(

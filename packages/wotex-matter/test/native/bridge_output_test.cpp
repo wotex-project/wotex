@@ -1,6 +1,7 @@
 #include "wotex_matter/bridge_output.hpp"
 
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <limits>
 #include <new>
+#include <poll.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -48,6 +50,14 @@ struct BridgeOutputOwnerTestAccess {
   static void Exhaust(BridgeOutputOwner &owner) {
     std::lock_guard<std::mutex> lock(owner.mutex_);
     owner.next_ = std::numeric_limits<std::uint64_t>::max();
+  }
+  static std::size_t ObservationCharge(BridgeOutputOwner &owner) {
+    std::lock_guard<std::mutex> lock(owner.mutex_);
+    std::size_t result = 0;
+    for (std::size_t i = owner.kRequestCapacity + owner.kControlCapacity; i < owner.slots_.size();
+         ++i)
+      if (owner.slots_[i].state != BridgeOutputOwner::SlotState::Free) ++result;
+    return result;
   }
   static BridgeOutputOwner::Admission Busy(BridgeOutputOwner &owner) {
     std::lock_guard<std::mutex> lock(owner.mutex_);
@@ -384,6 +394,93 @@ void MissingClose() {
   assert(waitpid(child, &status, 0) == child && WIFEXITED(status) &&
          WEXITSTATUS(status) == Output::kUnjoinedExit);
 }
+
+void ObservationReservations() {
+  Fixture fixture;
+  auto &output = fixture.output;
+  std::array<Output::ObservationTicket, Output::kObservationCapacity> receipts{};
+  for (auto &receipt : receipts) assert(output.ReserveObservation(receipt) == Admission::Accepted);
+  Output::ObservationTicket untouched{99, 999};
+  assert(output.ReserveObservation(untouched) == Admission::Full && untouched.identity == 999);
+  for (unsigned i = 0; i < Output::kRequestCapacity; ++i)
+    assert(output.Push(Kind::Request, "request\n") == Admission::Accepted);
+  for (unsigned i = 0; i < Output::kControlCapacity; ++i)
+    assert(output.Push(Kind::Control, "control\n") == Admission::Accepted);
+  assert(output.Push(Kind::Control, "extra\n") == Admission::Full);
+  auto forged = receipts[0];
+  ++forged.identity;
+  assert(output.CommitObservation(forged, "receipt\n") == Admission::Malformed);
+  assert(output.CommitObservation({}, "receipt\n") == Admission::Malformed);
+  assert(output.CommitObservation(receipts[0], "missing LF") == Admission::Malformed);
+  assert(output.CommitObservation(receipts[0], std::string(512, 'x') + '\n') ==
+         Admission::Oversized);
+  const std::string maximum = std::string(511, 'o') + '\n';
+  allocation_failure = true;
+  assert(output.CommitObservation(receipts[0], maximum) == Admission::NoMemory);
+  assert(output.CommitObservation(receipts[0], maximum) == Admission::Accepted);
+  assert(output.CommitObservation(receipts[0], maximum) == Admission::Malformed);
+  assert(output.ReserveObservation(untouched) == Admission::Full && untouched.identity == 999);
+  assert(BridgeOutputOwnerTestAccess::ObservationCharge(output) == 64);
+  output.Close();
+  assert(BridgeOutputOwnerTestAccess::ObservationCharge(output) == 0);
+  assert(output.ReserveObservation(untouched) == Admission::Closed);
+  assert(output.CommitObservation(receipts[1], "receipt\n") == Admission::Closed);
+
+  Fixture exhausted;
+  BridgeOutputOwnerTestAccess::Exhaust(exhausted.output);
+  assert(exhausted.output.ReserveObservation(untouched) == Admission::Exhausted);
+}
+
+void ActiveObservationFinish() {
+  Fixture fixture;
+  auto &output = fixture.output;
+  std::array<Output::ObservationTicket, Output::kObservationCapacity> receipts{};
+  for (auto &receipt : receipts) assert(output.ReserveObservation(receipt) == Admission::Accepted);
+  const std::string maximum = std::string(511, 'o') + '\n';
+  assert(output.CommitObservation(receipts[0], maximum) == Admission::Accepted);
+  int descriptors[2];
+  assert(pipe(descriptors) == 0 && fcntl(descriptors[1], F_SETFL, O_NONBLOCK) == 0);
+  std::array<char, 4096> padding{};
+  padding.fill('p');
+  std::size_t filled = 0;
+  while (filled < 1048576) {
+    const auto count = write(descriptors[1], padding.data(), padding.size());
+    if (count > 0) filled += static_cast<std::size_t>(count);
+    else {
+      assert(count == -1 && (errno == EAGAIN || errno == EWOULDBLOCK));
+      break;
+    }
+  }
+  assert(filled > 0 && filled < 1048576);
+  std::atomic<bool> stop{false};
+  State terminal = State::Open;
+  std::thread writer([&] { terminal = output.Run(descriptors[1], stop); });
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(6);
+  while (!BridgeOutputOwnerTestAccess::Writing(output) &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
+  assert(BridgeOutputOwnerTestAccess::Writing(output));
+  Output::ObservationTicket extra;
+  assert(output.ReserveObservation(extra) == Admission::Full);
+  assert(BridgeOutputOwnerTestAccess::ObservationCharge(output) == 64);
+  assert(output.Finish("closed\n") == Admission::Accepted);
+  assert(BridgeOutputOwnerTestAccess::ObservationCharge(output) == 1);
+  const std::string expected = std::string(filled, 'p') + maximum + "closed\n";
+  std::string received;
+  while (received.size() < expected.size() && std::chrono::steady_clock::now() < deadline) {
+    pollfd readable{descriptors[0], POLLIN, 0};
+    assert(poll(&readable, 1, 100) >= 0);
+    if (!(readable.revents & POLLIN)) continue;
+    const auto count = read(descriptors[0], padding.data(),
+                            std::min(padding.size(), expected.size() - received.size()));
+    assert(count > 0);
+    received.append(padding.data(), static_cast<std::size_t>(count));
+  }
+  assert(received == expected);
+  writer.join();
+  assert(terminal == State::Ended && BridgeOutputOwnerTestAccess::ObservationCharge(output) == 0);
+  assert(close(descriptors[0]) == 0 && close(descriptors[1]) == 0);
+}
 }
 
 int main() {
@@ -399,5 +496,7 @@ int main() {
   Concurrent();
   TerminalFrame();
   MissingClose();
+  ObservationReservations();
+  ActiveObservationFinish();
   std::cout << "bridge output credit, control ordering, cancellation and custody closure passed\n";
 }

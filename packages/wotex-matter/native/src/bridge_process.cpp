@@ -80,6 +80,9 @@ class Session final : public BridgeResultSink, public BridgeOutputSink {
   bool Ready(const BridgeConsumerHandoff::Ticket &ticket) noexcept override {
     return driver.Ready(ticket);
   }
+  bool Observation(BridgeObservationFrame &&frame) noexcept override {
+    return driver.Observe(generation, std::move(frame));
+  }
   bool ClockSample(const BridgeConsumerHandoff::Ticket &probe,
                    std::uint64_t now) noexcept override {
     std::string frame;

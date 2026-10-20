@@ -93,7 +93,7 @@ if(WOTEX_MATTER_JSON_INCLUDE)
   add_test(NAME wotex_matter_bridge_observation_test COMMAND wotex_matter_bridge_observation_test)
 
   # Bridge input is a separate role and frame contract from the controller.
-  add_library(wotex_matter_bridge_input STATIC src/bridge_input.cpp)
+  add_library(wotex_matter_bridge_input STATIC src/bridge_input.cpp src/bridge_observation.cpp)
   target_include_directories(wotex_matter_bridge_input SYSTEM PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
   target_link_libraries(wotex_matter_bridge_input PUBLIC wotex_matter_bridge_handoff)
   target_compile_options(wotex_matter_bridge_input PRIVATE -Wall -Wextra -Wpedantic -Werror)

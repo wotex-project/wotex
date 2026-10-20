@@ -2,6 +2,7 @@
 #define WOTEX_MATTER_BRIDGE_INPUT_HPP
 
 #include "wotex_matter/bridge_handoff_owner.hpp"
+#include "wotex_matter/bridge_observation.hpp"
 
 #include <atomic>
 #include <array>
@@ -20,17 +21,19 @@ struct BridgeResultFrame {
 enum class BridgeResultDecode { Decoded, Malformed, Oversized, NoMemory };
 
 struct BridgeInputFrame {
-  enum class Kind { Result, ClockProbe, Close, Open };
+  enum class Kind { Result, ClockProbe, Close, Open, Observation };
   Kind kind{Kind::Result};
   BridgeResultFrame result;
+  BridgeObservationFrame observation{};
 };
 
 // Results retain their exact six fields; clock-probe has exactly v, backend,
 // type, generation and a nonzero canonical uint64 decimal id. Probe identities
 // occupy a separate namespace. Close has only v, backend, type and generation;
 // open belongs only to the first-frame decoder and is refused after bootstrap.
-// All input is scalar-only and bounded to 512
-// bytes including LF. Failure preserves output, and probes grant no authority.
+// Observations retain their separate exact ten-field/1024-byte contract.
+// Other input remains scalar-only and bounded to 512 bytes including LF.
+// Failure preserves output, and probes grant no authority.
 BridgeResultDecode DecodeBridgeInputFrame(std::string_view line,
                                           const BridgeConsumerHandoff::Generation &generation,
                                           BridgeInputFrame &frame) noexcept;
@@ -65,6 +68,10 @@ class BridgeResultSink {
   // custody closure. Existing explicitly initialized sinks need no early hook.
   virtual void Closing(bool) noexcept {}
   virtual bool Ready(const BridgeConsumerHandoff::Ticket &ticket) noexcept = 0;
+  // Transfers one owned observation after generation/clock/replay checks.
+  // Queue admission may take short queue-only locks, never an SDK lock or I/O.
+  // No endpoint may be applied on the input thread. False closes the process.
+  virtual bool Observation(BridgeObservationFrame &&) noexcept { return false; }
   // Called after serialized clock sampling and custody unlock. Must copy a
   // bounded reply into reserved control capacity without SDK locking or I/O.
   // Refusal closes input/custody, including a full or failed control output.
@@ -111,9 +118,10 @@ class BridgeResultInput final {
   BridgeHandoffOwner &owner_;
   const BridgeConsumerHandoff::Generation generation_;
   BridgeResultSink &sink_;
-  std::array<char, kMaximumBridgeResultFrameBytes> buffer_{};
+  std::array<char, kMaximumBridgeObservationFrameBytes> buffer_{};
   std::size_t used_{0};
   std::uint64_t last_probe_id_{0};
+  std::uint64_t last_observation_id_{0};
   bool closing_notified_{false};
   State state_{State::Open};
 };

@@ -81,6 +81,8 @@ class ManualClock final : public BridgeHandoffClock {
 class Sink final : public BridgeResultSink {
  public:
   std::atomic<unsigned> ready{0}, closed{0};
+  unsigned observations{0};
+  BridgeObservationFrame observation;
   std::uint64_t probe_id{0}, probe_ms{0};
   bool refuse{false};
   bool Ready(const Handoff::Ticket &) noexcept override {
@@ -90,6 +92,11 @@ class Sink final : public BridgeResultSink {
   bool ClockSample(const Handoff::Ticket &probe, std::uint64_t native_ms) noexcept override {
     probe_id = probe.id;
     probe_ms = native_ms;
+    return !refuse;
+  }
+  bool Observation(BridgeObservationFrame &&frame) noexcept override {
+    observation = std::move(frame);
+    ++observations;
     return !refuse;
   }
   void Closed() noexcept override { ++closed; }
@@ -595,6 +602,79 @@ void ProcessControls() {
   BridgeResultInput foreign_stream(foreign_owner, generation, foreign_sink);
   assert(foreign_stream.Feed(closing.dump() + '\n') == State::Malformed);
 }
+void Observations() {
+  const Handoff::Generation generation{1};
+  Json object{{"v", 1},
+              {"backend", "matter-bridge"},
+              {"type", "observation"},
+              {"generation", Generation(generation)},
+              {"id", "1"},
+              {"thing", std::string(512, 'a')},
+              {"endpoint", 3},
+              {"reachable", true},
+              {"on_off", false},
+              {"temperature", nullptr}};
+  auto line = object.dump();
+  assert(line.size() > 512 && line.size() < 1024);
+  line.insert(line.size(), 1023 - line.size(), ' ');
+  BridgeInputFrame frame;
+  assert(DecodeBridgeInputFrame(line, generation, frame) == BridgeResultDecode::Decoded);
+  assert(frame.kind == BridgeInputFrame::Kind::Observation && frame.observation.id == 1 &&
+         frame.observation.thing == std::string(256, '\xAA') &&
+         frame.observation.value.on_off == false && !frame.observation.value.temperature);
+  assert(DecodeBridgeInputFrame(line + ' ', generation, frame) == BridgeResultDecode::Oversized);
+  auto duplicate = object.dump();
+  duplicate.insert(1, "\"id\":\"2\",");
+  assert(DecodeBridgeInputFrame(duplicate, generation, frame) != BridgeResultDecode::Decoded);
+
+  unsigned failures = 0;
+  bool decoded = false;
+  const auto source = object.dump();
+  for (int cut = 0; cut < 128; ++cut) {
+    BridgeInputFrame sentinel;
+    sentinel.result.ticket.id = 999;
+    allocation_failure = cut;
+    const auto result = DecodeBridgeInputFrame(source, generation, sentinel);
+    allocation_failure = -1;
+    if (result == BridgeResultDecode::Decoded) {
+      decoded = true;
+      break;
+    }
+    assert(result == BridgeResultDecode::NoMemory && sentinel.result.ticket.id == 999);
+    ++failures;
+  }
+  assert(decoded && failures > 5);
+
+  Handoff core(generation);
+  ManualClock clock;
+  BridgeHandoffOwner owner(core, clock);
+  Sink sink;
+  BridgeResultInput input(owner, generation, sink);
+  const auto ticket = Reserve(owner);
+  line += '\n';
+  for (const char byte : line) assert(input.Feed(std::string_view(&byte, 1)) == State::Open);
+  assert(sink.observations == 1 && sink.observation.id == 1);
+  assert(input.Feed(Frame(ticket) + ProbeFrame({generation, 1})) == State::Open);
+  assert(sink.ready == 1 && sink.probe_id == 1);
+  Drain(owner, ticket, Handoff::Outcome::Completed);
+  assert(input.Feed(object.dump() + '\n') == State::Malformed && sink.observations == 1);
+
+  for (const bool backwards : {false, true}) {
+    Handoff fresh(generation);
+    BridgeHandoffOwner fresh_owner(fresh, clock);
+    Sink refusal;
+    refusal.refuse = !backwards;
+    BridgeResultInput stream(fresh_owner, generation, refusal);
+    if (backwards) {
+      fresh_owner.With([&](auto &custody, auto now) {
+        assert(custody.Sample(generation, now) == Handoff::ClockSample::Sampled);
+      });
+      --clock.now;
+    }
+    assert(stream.Feed(object.dump() + '\n') == (backwards ? State::Clock : State::Sink));
+    assert(fresh.closed() && refusal.observations == (backwards ? 0 : 1));
+  }
+}
 } // namespace
 
 int main() {
@@ -606,8 +686,10 @@ int main() {
   AllocationFailure();
   Pipes();
   ProcessControls();
+  Observations();
   Refuse("\n", State::Malformed);
-  Refuse(std::string(512, ' '), State::Oversized);
+  Refuse(std::string(1024, ' '), State::Oversized);
+  Refuse(std::string(512, ' ') + '\n', State::Oversized);
   Refuse("{", State::Partial);
   Refuse("{}\n", State::Malformed);
   Refuse("", State::Sink, true);

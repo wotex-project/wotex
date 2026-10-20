@@ -2,6 +2,7 @@
 #define WOTEX_MATTER_BRIDGE_PROCESS_HPP
 
 #include "wotex_matter/bridge_output.hpp"
+#include "wotex_matter/bridge_observation.hpp"
 
 namespace wotex::matter {
 
@@ -22,6 +23,10 @@ class BridgeProcessDriver {
   virtual bool Start(BridgeConsumerHandoff &custody, BridgeHandoffOwner &owner,
                      BridgeOutputOwner &output, const std::atomic<bool> &cancel) noexcept = 0;
   virtual bool Ready(const BridgeConsumerHandoff::Ticket &ticket) noexcept = 0;
+  virtual bool Observe(const BridgeConsumerHandoff::Generation &,
+                       BridgeObservationFrame &&) noexcept {
+    return false;
+  }
   virtual bool Stop() noexcept = 0;
 };
 

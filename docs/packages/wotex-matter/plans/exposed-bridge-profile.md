@@ -1,14 +1,16 @@
 # Exposed bridge software profile
 
-Version: 1.26.0. Finite WMA.09 implementation target. The
+Version: 1.27.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
 coordination are implemented. An internal SDK process driver owns explicit
 private loading, receiver attachment and joined SDK retirement through that
 coordinator. It requires an explicit child receiver and supplies no default
-request dispatch. Production executable assembly, authenticated request
-admission and approved-observation application remain open.
+request dispatch. It separately owns bounded approved-observation application
+and correlated receipts through a joined worker and sixty-four pre-reserved
+output slots. Production executable assembly and authenticated request admission
+remain open.
 
 ## Source and generated data
 
@@ -155,6 +157,13 @@ belongs to the selected encoder. An active frame keeps its slot and byte credit
 until every byte is written or discarded. Queued controls have priority over
 queued requests; each class preserves FIFO, and frames never interleave.
 Queue admission and completed output do not release shared request custody.
+The SDK driver's observation path separately reserves sixty-four receipt slots
+before queueing owned observations. These slots stay charged through SDK work
+and complete receipt transmission, with a 512-byte frame bound. Observation
+submission and completion take short output-queue locks outside SDK/custody
+locks. They consume neither request nor control slots. Controls retain priority;
+other ready frames follow output admission order. Terminal finish cancels
+unstarted reservations and completes any active receipt before closed.
 
 The writer borrows an exclusive pipe or stream socket descriptor, temporarily
 enables nonblocking writes, restores settable file status flags and uses 50 ms
@@ -251,8 +260,12 @@ with native decoding and four native applied/refused receipts with BEAM checking
 in both builds. It checks malformed/duplicate input, bounds and real allocation
 cutpoints with preserved output. Encoding and decoding perform no state
 application, capability lookup or consumer authorization. The explicit BEAM
-connection owns bounded delivery and replay refusal; SDK application remains
-separate work.
+connection owns bounded delivery and replay refusal. The SDK driver now owns
+actual application through a joined worker with live custody checks, semantic
+refusal preserving prior state, strictly increasing IDs and separate receipt
+reservations. Input accepts 1024-byte observations while retaining the existing
+512-byte bound for result and clock controls. The worker waits for SDK ownership
+without blocking input result/probe delivery and retires before SDK cleanup.
 
 `Wotex.Matter.Bridge.Connection` coordinates an explicitly selected native
 process and its private consumer. Required options name a live local owner,
@@ -294,7 +307,7 @@ one correlated pending sample and one exact receipt per canceled observation
 without executing them. Failed close forces child cleanup. Temporary supervision
 never restarts a generation. Real-pipe scripted-host tests establish BEAM process
 ownership and observation delivery; the production SDK host, authenticated SDK
-dispatch, actual clock qualification and native observation application remain
+dispatch, actual clock qualification and independent reporting peers remain
 separate obligations.
 
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime

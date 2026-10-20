@@ -24,7 +24,8 @@ class BridgeOutputSink {
 
 // Explicit single-writer owner. SDK callbacks copy bounded frame bytes with
 // try-lock admission; they never wait for output or perform descriptor I/O.
-// Sixteen request slots and four reserved control slots include an active
+// Sixteen request slots, four control slots and sixty-four observation receipt
+// reservations include an active
 // write until every byte is sent or discarded. Controls precede queued requests
 // without interleaving an already started frame; each class preserves FIFO.
 // The borrowed custody/clock/sink outlive every caller. Close and join every
@@ -34,12 +35,17 @@ class BridgeOutputSink {
 class BridgeOutputOwner final {
  public:
   static constexpr std::size_t kRequestCapacity = 16, kControlCapacity = 4;
+  static constexpr std::size_t kObservationCapacity = 64;
   static constexpr std::size_t kMaximumRequestFrameBytes = 262144;
   static constexpr std::size_t kMaximumControlFrameBytes = 512;
   static constexpr int kUnjoinedExit = 70;
   enum class Kind { Request, Control };
   enum class Admission { Accepted, Busy, Full, Malformed, Oversized, Closed, NoMemory, Exhausted };
   enum class State { Open, Ended, Cancelled, Write, AlreadyRunning };
+  struct ObservationTicket {
+    std::size_t slot{0};
+    std::uint64_t identity{0};
+  };
 
   BridgeOutputOwner(BridgeHandoffOwner &custody, BridgeOutputSink &sink);
   ~BridgeOutputOwner();
@@ -51,6 +57,14 @@ class BridgeOutputOwner final {
   // Refusal retains no bytes; the SDK owner explicitly resolves or closes an
   // already admitted request rather than silently retrying or granting Success.
   Admission Push(Kind kind, std::string_view frame);
+  // Input-owner reservation before SDK work; capacity stays charged through
+  // full receipt transmission. These two operations may take the short output
+  // queue mutex, which is never held across SDK/custody calls or descriptor I/O.
+  // Never call them under an SDK/custody lock. Commit accepts only the exact
+  // live reservation and a bounded control-sized frame. Failure preserves it;
+  // the process owner closes on failed completion instead of retrying mutation.
+  Admission ReserveObservation(ObservationTicket &ticket);
+  Admission CommitObservation(const ObservationTicket &ticket, std::string_view receipt);
   // Shutdown-owner operation outside custody/SDK callbacks. Refuses new
   // output, discards frames whose writing has not started, completes the one
   // active frame and writes this final bounded control before ending. Unlike
@@ -71,7 +85,7 @@ class BridgeOutputOwner final {
 
  private:
   friend struct BridgeOutputOwnerTestAccess;
-  enum class SlotState { Free, Queued, Writing };
+  enum class SlotState { Free, Reserved, Queued, Writing };
   struct Slot {
     std::string frame;
     std::uint64_t identity{0};
@@ -93,7 +107,7 @@ class BridgeOutputOwner final {
   BridgeOutputSink &sink_;
   std::mutex mutex_;
   std::condition_variable changed_;
-  std::array<Slot, kRequestCapacity + kControlCapacity> slots_;
+  std::array<Slot, kRequestCapacity + kControlCapacity + kObservationCapacity> slots_;
   std::uint64_t next_{0};
   std::uint64_t terminal_{0};
   State state_{State::Open};
