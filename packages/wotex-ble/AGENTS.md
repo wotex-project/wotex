@@ -59,7 +59,9 @@ root `AGENTS.md`.
   macOS Objective-C++ SDK owner and native process. The explicit builder is
   `lib/wotex/ble/core_bluetooth/build.ex`. `core_bluetooth.ex` and
   `core_bluetooth/{peer,characteristic,options,response,connection}.ex` own the
-  explicit public point Client, native routes and bounded session lifecycle.
+  explicit public Client, native routes and bounded session lifecycle;
+  `core_bluetooth/{stream,report_flow}.ex` own stream admission and per-stream
+  receiver credits. Both backends share `bluez/subscription_owner.ex` delivery.
 - Specifications: `docs/packages/wotex-ble/specs/` (WBL.01–WBL.03,
   WBL.04–WBL.07; `catalogue.yaml` owns status). Plans, the qualification
   runbook and evidence: `docs/packages/wotex-ble/plans/` and `provenance/`.
@@ -141,6 +143,11 @@ Tests by area, under `test/wotex/ble/` unless noted:
   `corebluetooth_client_test.exs` exercises public facade/Runtime point operations,
   a separate independent process peer, the production Host loop, route ambiguity,
   marker faults, queue bounds, caller/owner loss and actual native retirement.
+  Its stream cases cover exact public claim, one-frame receiver admission,
+  missing retirement, queued expiry, receiver/owner loss, shared credit and real
+  Runtime Property/Event delivery. `corebluetooth_stream_test.exs` independently
+  checks literal mode cells, consumed prefixes, forged receipts, retained routes
+  and backend-specific Runtime metadata.
 - Native build and software fixture tasks: `native_build_test.exs`,
   `native_source_test.exs`, `software_fixture_test.exs`.
 - Runtime integration, streams and error classes:

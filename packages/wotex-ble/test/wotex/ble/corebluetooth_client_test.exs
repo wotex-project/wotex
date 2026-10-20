@@ -440,6 +440,361 @@ defmodule Wotex.BLE.CoreBluetoothClientTest do
     end
   end
 
+  test "public notifications retain generation, decode equal updates and retire only the selected route",
+       context do
+    {session, path} = connected(context, "stream")
+    assert {:ok, subscription} = BLE.subscribe(session, %{address: @unique, value_type: :uint16})
+    assert subscription.generation == 7
+    reference = subscription.reference
+
+    for _ <- 1..3 do
+      assert_receive {:wotex_ble, ^reference, {:ok, 65_280, metadata}}, 1000
+      assert metadata.source == :corebluetooth_value_update
+      assert metadata.characteristic.generation == 7
+      assert metadata.characteristic.route == 3
+      assert metadata.effective_mode == :notify
+    end
+
+    eventually(fn ->
+      Enum.any?(calls(path), &(&1["event"] == "notification_ack" and &1["sequence"] == 3))
+    end)
+
+    for forged <- [
+          %{subscription | generation: 8},
+          %{subscription | session_reference: make_ref()},
+          Map.put(subscription, :extra, true)
+        ] do
+      assert {:error, %Error{code: :invalid_subscription}} = BLE.unsubscribe(session, forged)
+    end
+
+    assert :ok = BLE.unsubscribe(session, subscription)
+    assert :ok = BLE.unsubscribe(session, subscription)
+
+    assert {:error, %Error{code: :invalid_subscription}} =
+             BLE.unsubscribe(session, %{subscription | reference: make_ref()})
+
+    assert {:error, %Error{code: :not_supported}} = BLE.read(session, @unique)
+    assert {:error, %Error{code: :not_permitted}} = BLE.subscribe(session, %{address: @unique})
+    assert {:ok, _} = BLE.health_check(session)
+    assert :ok = BLE.disconnect(session)
+    assert_retired(path)
+  end
+
+  test "the public receiver traverses concurrent production Host reports and point writes",
+       context do
+    {session, path} = connected(%{context | peer: context.host}, "notification-async")
+    assert {:ok, %{characteristics: [first, second | _]}} = BLE.discover(session)
+    assert {:ok, address} = Characteristic.address(first)
+    assert {:ok, other} = Characteristic.address(second)
+    parent = self()
+    receiver = spawn(fn -> drain_reports(parent, true) end)
+    on_exit(fn -> Process.exit(receiver, :kill) end)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(session, %{address: address, receiver: receiver, max_queue_length: 64})
+
+    assert_receive {:first_report, bytes, %{source: :corebluetooth_value_update}}, 1000
+
+    assert bytes == :binary.copy(<<255>>, 512)
+    assert {:ok, :written} = BLE.write(session, other, <<0, 255>>)
+    assert :ok = BLE.unsubscribe(session, subscription)
+    assert {:ok, _} = BLE.health_check(session)
+    assert :ok = BLE.disconnect(session)
+    assert_retired(path)
+  end
+
+  test "wrong bindings, early values and malformed reports end the exact native generation",
+       context do
+    for mode <-
+          ~w(stream-bad-binding stream-early stream-gap stream-foreign stream-stale stream-oversize) do
+      {session, path} = connected(context, mode)
+      monitor = Process.monitor(session.handle.pid)
+
+      case BLE.subscribe(session, %{address: @unique}) do
+        {:error, %Error{code: :invalid_response}} ->
+          :ok
+
+        {:ok, subscription} ->
+          reference = subscription.reference
+          assert_receive {:wotex_ble, ^reference, {:error, %Error{code: :invalid_response}}}, 1000
+      end
+
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 2000
+      assert_retired(path)
+    end
+  end
+
+  test "missing or false retirement fences cannot return successful cancellation", context do
+    for mode <- ~w(stream-no-retire stream-bad-retire stream-hold-stop) do
+      {session, path} = connected(context, mode)
+      assert {:ok, subscription} = BLE.subscribe(session, %{address: @unique})
+      assert {:error, %Error{}} = BLE.unsubscribe(session, subscription)
+      eventually(fn -> not Process.alive?(session.handle.pid) end)
+      assert_retired(path)
+    end
+  end
+
+  test "pending establishment expires and receiver loss joins native retirement", context do
+    {session, path} = connected(context, "stream-hold")
+
+    assert {:error, %Error{code: :timeout}} =
+             BLE.subscribe(session, %{address: @unique, timeout: 20})
+
+    assert_retired(path)
+    {session, path} = connected(context, "stream-hold")
+    receiver = spawn(fn -> receive do: (:stop -> :ok) end)
+    task = Task.async(fn -> BLE.subscribe(session, %{address: @unique, receiver: receiver}) end)
+    eventually(fn -> Enum.any?(calls(path), &(&1["operation"] == "subscribe")) end)
+    Process.exit(receiver, :kill)
+    assert {:error, %Error{code: :disconnected}} = Task.await(task)
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+    assert_retired(path)
+  end
+
+  test "cancellation during a submitted point write fences delivery and retains unknown effect",
+       context do
+    {session, path} = connected(context, "stream-point-hold")
+    assert {:ok, subscription} = BLE.subscribe(session, %{address: @unique})
+    task = Task.async(fn -> BLE.write(session, @unique, <<0, 255>>) end)
+    eventually(fn -> match?(%{active: %{submitted: true}}, :sys.get_state(session.handle.pid)) end)
+    assert :ok = BLE.unsubscribe(session, subscription)
+    assert {:error, %Error{code: :disconnected, effect: :unknown}} = Task.await(task)
+    assert_retired(path)
+  end
+
+  test "a queued stream deadline removes unsent custody while a point write remains active",
+       context do
+    {session, path} = connected(context, "stream-point-hold")
+    task = Task.async(fn -> BLE.write(session, @unique, <<0, 255>>) end)
+    eventually(fn -> match?(%{active: %{submitted: true}}, :sys.get_state(session.handle.pid)) end)
+
+    assert {:error, %Error{code: :timeout}} =
+             BLE.subscribe(session, %{address: @unique, timeout: 20})
+
+    assert :sys.get_state(session.handle.pid).subscriptions == %{}
+    refute Enum.any?(calls(path), &(&1["operation"] == "subscribe"))
+    assert :ok = BLE.disconnect(session)
+    assert {:error, %Error{effect: :unknown}} = Task.await(task)
+    assert_retired(path)
+  end
+
+  test "a dead queued establishing caller releases unsent custody without retiring an unrelated write",
+       context do
+    {session, path} = connected(context, "stream-point-hold")
+    task = Task.async(fn -> BLE.write(session, @unique, <<0, 255>>) end)
+    eventually(fn -> match?(%{active: %{submitted: true}}, :sys.get_state(session.handle.pid)) end)
+    caller = spawn(fn -> BLE.subscribe(session, %{address: @unique, receiver: self()}) end)
+    eventually(fn -> queue_size(session) == 1 end)
+    Process.exit(caller, :kill)
+    eventually(fn -> :sys.get_state(session.handle.pid).subscriptions == %{} end)
+    assert Process.alive?(session.handle.pid)
+    assert :sys.get_state(session.handle.pid).active.kind == :write
+    refute Enum.any?(calls(path), &(&1["operation"] == "subscribe"))
+    assert :ok = BLE.disconnect(session)
+    assert {:error, %Error{effect: :unknown}} = Task.await(task)
+  end
+
+  test "receiver overflow emits one terminal error and retires its stream without closing an idle session",
+       context do
+    {session, _} = connected(context, "stream")
+    receiver = spawn(fn -> receive do: (:stop -> :ok) end)
+    on_exit(fn -> Process.exit(receiver, :kill) end)
+    send(receiver, :occupied)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(session, %{address: @unique, receiver: receiver, max_queue_length: 1})
+
+    eventually(fn -> not Process.alive?(subscription.pid) end)
+    assert {:messages, messages} = Process.info(receiver, :messages)
+    assert [:occupied, {:wotex_ble, _, {:error, %Error{code: :receiver_overflow}}}] = messages
+    assert {:ok, _} = BLE.health_check(session)
+    assert :ok = BLE.disconnect(session)
+  end
+
+  test "real Runtime Property and Event streams decode CoreBluetooth metadata and join cleanup",
+       context do
+    for kind <- [:property, :event] do
+      {options, path} = options(context, "stream")
+      consumed = stream_consumer(Keyword.delete(options, :owner), kind)
+      request_context = Context.new!(request_id: "core-stream")
+
+      {:ok, spec} =
+        if kind == :property,
+          do:
+            ConsumedThing.observation_child_spec(consumed, "value", request_context,
+              id: make_ref(),
+              receiver: self(),
+              restart: :temporary
+            ),
+          else:
+            ConsumedThing.event_subscription_child_spec(consumed, "value", request_context,
+              id: make_ref(),
+              receiver: self(),
+              restart: :temporary
+            )
+
+      owner = start_supervised!(Map.put(spec, :id, make_ref()))
+
+      for _ <- 1..3 do
+        assert_receive {:wotex_runtime, _, {:ok, 65_280, metadata}}, 3000
+        assert metadata.source == :corebluetooth_value_update
+        assert metadata.characteristic.route == 3
+      end
+
+      assert :ok = Wotex.Runtime.Subscription.stop(owner)
+      assert List.last(calls(path))["operation"] == "close"
+      assert_retired(path)
+    end
+  end
+
+  test "a one-frame public receiver does not count its own opening reply as a report", context do
+    {session, _} = connected(context, "stream")
+    assert {:ok, subscription} = BLE.subscribe(session, %{address: @unique, max_queue_length: 1})
+    reference = subscription.reference
+    assert_receive {:wotex_ble, ^reference, {:ok, <<0, 255>>, _}}, 1000
+    refute_receive {:wotex_ble, ^reference, {:error, _}}, 20
+    assert :ok = BLE.unsubscribe(session, subscription)
+    assert :ok = BLE.disconnect(session)
+  end
+
+  test "public admission retains sixteen independent streams and their shared credit", context do
+    {session, path} = connected(context, "stream-capacity")
+    assert {:ok, %{characteristics: routes}} = BLE.discover(session)
+
+    addresses =
+      Enum.map(Enum.take(routes, 17), fn route ->
+        {:ok, address} = Characteristic.address(route)
+        address
+      end)
+
+    subscriptions =
+      Enum.map(Enum.take(addresses, 16), fn address ->
+        assert {:ok, subscription} =
+                 BLE.subscribe(session, %{address: address, max_queue_length: 4})
+
+        subscription
+      end)
+
+    assert {:error, %Error{code: :resource_limit}} =
+             BLE.subscribe(session, %{address: List.last(addresses), max_queue_length: 4})
+
+    assert :ok = BLE.unsubscribe(session, hd(subscriptions))
+
+    assert {:ok, last} =
+             BLE.subscribe(session, %{address: List.last(addresses), max_queue_length: 4})
+
+    assert :ok = BLE.unsubscribe(session, last)
+    assert :ok = BLE.disconnect(session)
+    assert_retired(path)
+    eventually(fn -> Enum.all?(subscriptions, &(not Process.alive?(&1.pid))) end)
+  end
+
+  defp drain_reports(parent, first) do
+    receive do
+      {:wotex_ble, _, {:ok, bytes, metadata}} ->
+        if first, do: send(parent, {:first_report, bytes, metadata})
+        drain_reports(parent, false)
+
+      {:wotex_ble, _, {:error, error}} ->
+        send(parent, {:receiver_error, error})
+    end
+  end
+
+  test "a killed delivery owner joins the actual native generation before cancellation succeeds",
+       context do
+    {session, path} = connected(context, "stream-silent")
+    assert {:ok, subscription} = BLE.subscribe(session, %{address: @unique})
+    :sys.suspend(session.handle.pid)
+    monitor = Process.monitor(subscription.pid)
+
+    try do
+      Process.exit(subscription.pid, :kill)
+      assert_receive {:DOWN, ^monitor, :process, _, :killed}, 1000
+      task = Task.async(fn -> BLE.unsubscribe(session, subscription) end)
+
+      eventually(fn ->
+        match?(
+          {:message_queue_len, length} when length >= 2,
+          Process.info(session.handle.pid, :message_queue_len)
+        )
+      end)
+
+      :sys.resume(session.handle.pid)
+      assert :ok = Task.await(task)
+      assert_retired(path)
+    after
+      if Process.alive?(session.handle.pid), do: :sys.resume(session.handle.pid)
+    end
+  end
+
+  @tag capture_log: true
+  test "Runtime owner death during native establishment closes the private CoreBluetooth session",
+       context do
+    {options, path} = options(context, "stream-hold")
+    consumed = stream_consumer(Keyword.delete(options, :owner), :property)
+
+    {:ok, spec} =
+      ConsumedThing.observation_child_spec(
+        consumed,
+        "value",
+        Context.new!(request_id: "core-owner-loss"),
+        id: make_ref(),
+        receiver: self(),
+        restart: :temporary
+      )
+
+    owner = start_supervised!(spec)
+    eventually(fn -> Enum.any?(calls(path), &(&1["operation"] == "subscribe")) end, 500)
+    monitor = Process.monitor(owner)
+    Process.exit(owner, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^owner, :killed}, 1000
+    eventually(fn -> Enum.any?(calls(path), &(&1["operation"] == "close")) end, 500)
+    assert_retired(path)
+    refute_received {:wotex_runtime, _, {:ok, _, _}}
+  end
+
+  defp stream_consumer(options, kind) do
+    {key, start, stop} =
+      if kind == :property,
+        do: {"properties", "observeproperty", "unobserveproperty"},
+        else: {"events", "subscribeevent", "unsubscribeevent"}
+
+    affordance = %{
+      "forms" => [
+        %{
+          "href" => "ble://route/181a/2a19",
+          "op" => [start, stop],
+          "wotex:bleValueType" => "uint16"
+        }
+      ]
+    }
+
+    affordance = if kind == :property, do: Map.put(affordance, "observable", true), else: affordance
+
+    {:ok, td} =
+      ThingDescription.from_map(%{
+        "@context" => "https://www.w3.org/2022/wot/td/v1.1",
+        "title" => "CoreBluetooth stream fixture",
+        "securityDefinitions" => %{"none" => %{"scheme" => "nosec"}},
+        "security" => ["none"],
+        key => %{"value" => affordance}
+      })
+
+    {:ok, profile} = BLE.profile(:gatt)
+
+    {:ok, consumed} =
+      ConsumedThing.new(td,
+        profiles: [profile],
+        credentials: {Wotex.BLE.RuntimeErrorPort, nil},
+        transports: %{
+          ble_gatt:
+            {Wotex.BLE.Transport, Keyword.merge([client: CoreBluetooth, target: "route"], options)}
+        }
+      )
+
+    consumed
+  end
+
   defp options(context, mode \\ "normal", generation \\ 7) do
     path = Path.join(context.directory, "instance-#{System.unique_integer([:positive])}")
     File.cp!(context.peer, path)

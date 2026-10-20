@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.8.0. Package baseline: 0.1.0.
+Plan version: 1.9.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -41,12 +41,17 @@ exact binding/sequence checks, a bounded callback inbox and per-stream transmitt
 credit/retirement. Twenty-five process cases include full stdout pipes,
 untransmitted acknowledgements, concurrent reports and conservative write results
 during close. A production SDK Driver case traverses start/report/ack/stop through
-real pipes against injected framework selectors. Continue with the public Client
-and Runtime receiving join, explicit sleep observation, independent CoreBluetooth
+real pipes against injected framework selectors. Public Client and Runtime
+receiving now retain exact native binding, a bounded per-stream credit ledger,
+explicit public handle claim and receiver-owned delivery. Cancellation validates
+the native retirement barrier; active point control or lost delivery ownership
+ends the generation with conservative write evidence. Real Runtime Property/Event
+cases preserve backend-specific metadata and close their private sessions.
+Continue with explicit sleep observation, independent CoreBluetooth
 archive consumers and installed Mac lifecycle/readiness qualification. These
 software cases establish no actual permission/peripheral or RF result.
 The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)
-binds the Host delivery and its remaining public receiving obligations.
+binds the Host delivery separately from the public receiving entry.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds their exact source, archive and executed checks.
 

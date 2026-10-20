@@ -9,7 +9,8 @@ defmodule Wotex.BLE.Transport do
   An explicit command write instead returns native queue evidence with Runtime
   status `:accepted`, retaining uncertainty about delivery and physical effects.
 
-  The `:ble_gatt` profile requires the first-party persistent BlueZ backend.
+  The `:ble_gatt` profile requires the first-party persistent BlueZ backend or
+  an explicitly configured CoreBluetooth backend.
   Property observation and Event subscriptions use `Wotex.BLE.RuntimeRelay`,
   which owns a session until cancellation or failure and forwards only
   validated value-change frames to the public Runtime owner. Cancellation
@@ -23,7 +24,7 @@ defmodule Wotex.BLE.Transport do
   """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.BLE
-  alias Wotex.BLE.{BlueZ, Error, Mapping, RuntimeFrame, RuntimeRelay, Value}
+  alias Wotex.BLE.{BlueZ, CoreBluetooth, Error, Mapping, RuntimeFrame, RuntimeRelay, Value}
   alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
 
   @impl Wotex.Runtime.Transport
@@ -68,10 +69,18 @@ defmodule Wotex.BLE.Transport do
     :ignore
   end
 
-  def decode_frame(frame, %Request{} = request, _) do
+  def decode_frame(frame, %Request{} = request, config) do
     with {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
-         do: RuntimeFrame.decode(frame, mapping)
+         do:
+           RuntimeFrame.decode(
+             frame,
+             Map.put(
+               mapping,
+               :backend,
+               if(Keyword.keyword?(config), do: Keyword.get(config, :client, BlueZ), else: BlueZ)
+             )
+           )
   end
 
   def decode_frame(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
@@ -149,7 +158,13 @@ defmodule Wotex.BLE.Transport do
   end
 
   defp streaming_options(config) do
-    if Keyword.get(config, :client) == BlueZ and Keyword.get(config, :lifecycle) == :persistent and
+    client = Keyword.get(config, :client)
+
+    persistent =
+      client == CoreBluetooth or
+        (client == BlueZ and Keyword.get(config, :lifecycle) == :persistent)
+
+    if persistent and
          not Keyword.has_key?(config, :owner),
        do: :ok,
        else: {:error, Error.new(:unsupported_profile)}

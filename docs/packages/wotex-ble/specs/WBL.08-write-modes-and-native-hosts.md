@@ -1,11 +1,11 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.8.0. Updated: 2026-10-20. Status: accepted target.
+Version: 0.9.0. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
 implemented. The CoreBluetooth SDK owner, native process, explicit macOS build
 and public point Client/Runtime integration are implemented with scoped software
 evidence. The native notification path joins SDK ownership, finite report credits
-and Host IPC. Public Client/Runtime receiving, sleep observation and installed-host
+and Host IPC through public Client/Runtime receiving. Sleep observation and installed-host
 qualification remain open.
 
 ## Scope and operations

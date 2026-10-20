@@ -3,7 +3,7 @@ defmodule Wotex.BLE.RuntimeFrame do
   Validates and decodes BLE subscription frames at the Runtime boundary.
 
   This implementation helper requires bounded raw bytes and exact
-  bluez_value_change metadata, revalidates the characteristic value and its
+  backend-specific value-update metadata, revalidates the characteristic value and its
   effective stream mode, and matches the selected address and requested mode.
   Well-formed frames for another characteristic are ignored; malformed frames
   return a structured invalid_response error.
@@ -13,10 +13,17 @@ defmodule Wotex.BLE.RuntimeFrame do
   mutation-effect classification, without forwarding arbitrary native details.
   The helper performs no I/O, timestamps no observations and does not infer
   notification origin or canonical Property state.
+
+  CoreBluetooth metadata uses `:corebluetooth_value_update`, its exact native
+  generation/route and Apple's notification-mode policy. The configured backend
+  must match; its metadata is not decoded as a BlueZ characteristic.
   """
 
   alias Wotex.BLE.BlueZ.Stream
   alias Wotex.BLE.{Characteristic, Error, Value}
+  alias Wotex.BLE.CoreBluetooth
+  alias Wotex.BLE.CoreBluetooth.Characteristic, as: CoreCharacteristic
+  alias Wotex.BLE.CoreBluetooth.Stream, as: CoreStream
 
   @fields [
     :service_uuid,
@@ -41,7 +48,8 @@ defmodule Wotex.BLE.RuntimeFrame do
         mapping
       )
       when map_size(metadata) == 4 do
-    with {:ok, bytes} <- Value.decode(bytes, :bytes, []),
+    with true <- Map.get(mapping, :backend, Wotex.BLE.BlueZ) == Wotex.BLE.BlueZ,
+         {:ok, bytes} <- Value.decode(bytes, :bytes, []),
          {:ok, characteristic} <- characteristic(characteristic),
          {:ok, ^effective} <- Stream.mode(characteristic.flags, requested) do
       if matches?(characteristic, mapping.address) and requested == mapping.mode do
@@ -52,6 +60,37 @@ defmodule Wotex.BLE.RuntimeFrame do
            requested_mode: requested,
            effective_mode: effective
          }}
+      else
+        :ignore
+      end
+    else
+      _ -> {:error, Error.new(:invalid_response)}
+    end
+  end
+
+  def validate(
+        bytes,
+        %{
+          source: :corebluetooth_value_update,
+          characteristic: characteristic,
+          requested_mode: requested,
+          effective_mode: effective
+        } = metadata,
+        mapping
+      )
+      when map_size(metadata) == 4 do
+    with true <- Map.get(mapping, :backend) == CoreBluetooth,
+         {:ok, bytes} <- Value.decode(bytes, :bytes, []),
+         {:ok, value} <- CoreCharacteristic.new(characteristic),
+         true <- characteristic === Map.from_struct(value),
+         {:ok, ^effective} <- CoreStream.mode(value, requested) do
+      address = mapping.address
+
+      if value.service == address.service and value.characteristic == address.characteristic and
+           address.generation in [nil, value.generation] and
+           address.native_route in [nil, {:core_bluetooth, value.route}] and
+           address.handle == nil and address.object_path == nil and requested == mapping.mode do
+        {:ok, bytes, metadata}
       else
         :ignore
       end

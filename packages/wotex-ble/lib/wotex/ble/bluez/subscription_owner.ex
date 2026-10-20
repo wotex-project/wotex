@@ -9,8 +9,10 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
   values, receiver overflow and connection loss end delivery with at most one
   terminal error.
 
-  Receiver death or explicit cancellation asks the connection's control lane
-  to release the original subscription. Cleanup has a one-second grace and at
+  BlueZ and CoreBluetooth share this delivery owner, whose handle preserves the
+  connection generation. Receiver death or explicit cancellation asks that
+  connection to release the original subscription. Cleanup has a configured
+  grace (one second for BlueZ, 1,600 ms for CoreBluetooth) and at
   most 64 simultaneous cancellation waiters. Closed owner processes retain no
   lifetime tombstone. Session membership is checked by the connection before
   this helper treats an already-dead handle as idempotently closed. Status
@@ -27,9 +29,14 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
 
   @doc false
   @spec cancel(Subscription.t()) :: :ok | {:error, Error.t()}
-  def cancel(handle) do
-    case call(handle.pid, {:cancel, handle}, 1100) do
-      {:error, %Error{code: :disconnected}} -> :ok
+  @spec cancel(Subscription.t(), timeout()) :: :ok | {:error, Error.t()}
+  def cancel(handle, timeout \\ 1100), do: cancel(handle, timeout, true)
+
+  @doc false
+  @spec cancel(Subscription.t(), timeout(), boolean()) :: :ok | {:error, Error.t()}
+  def cancel(handle, timeout, dead_success?) do
+    case call(handle.pid, {:cancel, handle}, timeout) do
+      {:error, %Error{code: :disconnected}} when dead_success? -> :ok
       result -> result
     end
   end
@@ -40,13 +47,13 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
      %{
        connection: connection,
        config: config,
-       caller: Process.monitor(elem(from, 0)),
+       caller: Process.monitor(Map.get(config, :establishing_caller, elem(from, 0))),
        receiver: Process.monitor(config.receiver),
        parent: Process.monitor(connection.pid),
        handle: %Subscription{
          pid: self(),
          reference: make_ref(),
-         generation: 1,
+         generation: Map.get(connection, :generation, 1),
          session_reference: connection.reference
        },
        status: :starting,
@@ -54,7 +61,12 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
        cancelers: [],
        token: token,
        native_id: nil,
-       timer: Process.send_after(self(), {:owner_deadline, token}, max(deadline - now(), 0) + 1000),
+       timer:
+         Process.send_after(
+           self(),
+           {:owner_deadline, token},
+           max(deadline - now(), 0) + Map.get(config, :cleanup_grace, 1000)
+         ),
        terminal: false,
        result: :ok
      }}
@@ -97,6 +109,19 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
       {:ok, nil} -> finish(state)
       {:error, error} -> {:noreply, %{state | result: {:error, error}}}
     end
+  end
+
+  def handle_info(
+        {:ble_stream_closed, reference, result},
+        %{connection: %{reference: reference}} = state
+      ) do
+    state =
+      case result do
+        {:error, error} -> if state.status == :active, do: terminal(state, error), else: state
+        :ok -> state
+      end
+
+    finish(%{state | result: if(result == :ok, do: state.result, else: result)})
   end
 
   def handle_info(
@@ -187,7 +212,13 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
   defp stop(state) do
     if state.timer, do: Process.cancel_timer(state.timer)
     token = make_ref()
-    timer = Process.send_after(self(), {:owner_deadline, token}, 1000)
+
+    timer =
+      Process.send_after(
+        self(),
+        {:owner_deadline, token},
+        Map.get(state.config, :cleanup_grace, 1000)
+      )
 
     GenServer.cast(
       state.connection.pid,

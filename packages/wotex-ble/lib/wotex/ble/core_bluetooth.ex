@@ -11,7 +11,9 @@ defmodule Wotex.BLE.CoreBluetooth do
   Startup verifies both immutable artifacts and discovers bounded routes under
   one deadline. Loading starts nothing. The consumer provisions artifacts,
   chooses permission policy and supervises the connection. No scan, retry,
-  automatic reconnect, manual pairing or notification support is implicit.
+  automatic reconnect or manual pairing is implicit. Explicit subscriptions
+  retain at most sixteen live streams and 64 shared report credits. Cancellation
+  can retire the generation when a point operation occupies native control.
   Writes preserve the selected response mode; queue evidence proves no physical
   effect. Private peripheral identifiers and executable paths are not diagnostics.
   """
@@ -43,4 +45,12 @@ defmodule Wotex.BLE.CoreBluetooth do
   @doc "Checks the live native owner without reconnecting."
   @spec health_check(term(), term()) :: {:ok, map()} | {:error, Error.t()}
   defdelegate health_check(handle, timeout), to: Connection
+
+  @doc "Starts an explicitly selected, bounded receiver-owned native stream."
+  @spec subscribe(term(), term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
+  defdelegate subscribe(handle, request, timeout), to: Connection
+
+  @doc "Fences delivery and joins native retirement for a same-session stream."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
+  defdelegate unsubscribe(handle, subscription), to: Connection
 end

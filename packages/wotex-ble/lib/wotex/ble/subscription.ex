@@ -3,7 +3,8 @@ defmodule Wotex.BLE.Subscription do
   Identifies one explicitly established native value-change subscription.
 
   The owning connection supplies the process, reference and generation only
-  after BlueZ acknowledges StartNotify. A separate session reference binds the
+  after the selected native backend confirms establishment. A separate session
+  reference binds the
   handle to its originating connection generation. Handles carry no value,
   credentials or receiver policy. Inspect omits both references. Construction alone establishes
   no subscription; the owner validates membership before cancellation.

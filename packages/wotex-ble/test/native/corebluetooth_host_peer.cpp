@@ -2,6 +2,7 @@
 #include "../../priv/corebluetooth/native/host.hpp"
 #include <csignal>
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <thread>
 #include <sys/wait.h>
@@ -353,7 +354,11 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (argc > 2) return 64;
-  const std::string behavior = argc == 2 ? argv[1] : "normal";
+  std::string behavior = argc == 2 ? argv[1] : "normal";
+  if (argc == 1) {
+    std::ifstream(std::string(argv[0]) + ".mode") >> behavior;
+    std::ofstream(std::string(argv[0]) + ".pid") << getpid();
+  }
   if (behavior != "normal" && behavior != "hold" && behavior != "late" &&
       behavior != "missing-marker" && behavior != "cleanup-failure" &&
       behavior.find("notification") != 0)

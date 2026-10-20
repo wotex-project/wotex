@@ -287,10 +287,13 @@ defmodule Wotex.BLE do
 
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
-  @doc "Subscribes a receiver to validated persistent BlueZ value changes."
+  @doc "Subscribes a receiver to validated BlueZ or CoreBluetooth value updates."
   @spec subscribe(term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
   def subscribe(%Session{client: Wotex.BLE.BlueZ} = session, request),
     do: Wotex.BLE.BlueZ.subscribe(session.handle, request, session.timeout)
+
+  def subscribe(%Session{client: Wotex.BLE.CoreBluetooth} = session, request),
+    do: Wotex.BLE.CoreBluetooth.subscribe(session.handle, request, session.timeout)
 
   def subscribe(%Session{}, _), do: {:error, Error.new(:not_supported)}
   def subscribe(_, _), do: {:error, Error.new(:invalid_session)}
@@ -299,6 +302,9 @@ defmodule Wotex.BLE do
   @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
   def unsubscribe(%Session{client: Wotex.BLE.BlueZ} = session, subscription),
     do: Wotex.BLE.BlueZ.unsubscribe(session.handle, subscription)
+
+  def unsubscribe(%Session{client: Wotex.BLE.CoreBluetooth} = session, subscription),
+    do: Wotex.BLE.CoreBluetooth.unsubscribe(session.handle, subscription)
 
   def unsubscribe(%Session{}, _), do: {:error, Error.new(:not_supported)}
   def unsubscribe(_, _), do: {:error, Error.new(:invalid_session)}

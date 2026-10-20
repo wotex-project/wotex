@@ -10,8 +10,10 @@ separately.
 - Select CoreBluetooth explicitly on macOS with its own Peer, fresh generation,
   system pairing policy and verified native artifacts. Choose permission-request
   policy explicitly; keep private peripheral identifiers out of portable profiles.
-  Retain discovered route tokens when UUIDs repeat. Notifications and sleep
-  observation require their separately delivered lifecycle support.
+  Retain discovered route tokens when UUIDs repeat. Supervise explicit notification
+  receivers, preserve `corebluetooth_value_update` metadata and cancel with the
+  same session. Cancellation may close the generation while a point operation
+  occupies native control. Sleep observation remains a separate lifecycle obligation.
 - Discover a bounded connected-peer snapshot and retain its generation. Do not
   infer a characteristic from display names, UUID alone or discovery order,
   and reject stale discovery addresses.

@@ -3,7 +3,8 @@ defmodule Wotex.BLE.RuntimeRelay do
   Owns a persistent BLE session for one Wotex Runtime subscription.
 
   This implementation process monitors the public Runtime owner and the
-  establishing caller while a worker opens the first-party BlueZ session.
+  establishing caller while a worker opens the explicitly selected first-party
+  BlueZ or CoreBluetooth session.
   It returns an opaque handle only after native subscription establishment,
   bounds early frames to 64, and validates each frame against the original
   mapping before forwarding it to Runtime. Equal values remain distinct
@@ -11,7 +12,8 @@ defmodule Wotex.BLE.RuntimeRelay do
 
   Owner loss, establishment expiry, native failure or bounded receiver-queue
   overflow closes the original session. Cancellation has a one-second local
-  cleanup grace and at most 64 concurrent waiters. The relay owns no reconnect
+  cleanup grace (1,700 ms for CoreBluetooth) and at most 64 concurrent waiters.
+  The relay owns no reconnect
   policy, credentials or final observation timestamp. Runtime owns public
   stream identity and result projection; the relay uses only its transport
   callback and owner-message contracts.
@@ -20,6 +22,9 @@ defmodule Wotex.BLE.RuntimeRelay do
   use GenServer
   alias Wotex.BLE
   alias Wotex.BLE.BlueZ.{Connection, Stream}
+  alias Wotex.BLE.CoreBluetooth
+  alias Wotex.BLE.CoreBluetooth.Connection, as: CoreConnection
+  alias Wotex.BLE.CoreBluetooth.Stream, as: CoreStream
   alias Wotex.BLE.{Error, RuntimeFrame, Session, Subscription}
 
   @opening_limit 64
@@ -35,7 +40,7 @@ defmodule Wotex.BLE.RuntimeRelay do
     token = make_ref()
 
     case GenServer.start(__MODULE__, {prepared, owner, limit, {self(), token}}) do
-      {:ok, pid} -> await(pid, token, prepared.deadline)
+      {:ok, pid} -> await(pid, token, prepared.deadline, cleanup_grace(prepared.options))
       _ -> {:error, Error.new(:transport_error)}
     end
   end
@@ -72,7 +77,8 @@ defmodule Wotex.BLE.RuntimeRelay do
        caller_monitor: Process.monitor(elem(waiter, 0)),
        waiter: waiter,
        handle: %__MODULE__{pid: self(), reference: make_ref(), generation: 1},
-       mapping: prepared.mapping,
+       mapping: Map.put(prepared.mapping, :backend, Keyword.get(prepared.options, :client)),
+       cleanup_grace: cleanup_grace(prepared.options),
        deadline: prepared.deadline,
        limit: limit,
        worker: worker,
@@ -200,7 +206,7 @@ defmodule Wotex.BLE.RuntimeRelay do
 
   defp bind(state, subscription) do
     valid =
-      Stream.handle?(subscription) and match?(%Session{handle: %Connection{}}, state.session) and
+      bound_session?(state.session, subscription) and
         subscription.session_reference == state.session.handle.reference and
         Process.alive?(subscription.pid)
 
@@ -312,7 +318,7 @@ defmodule Wotex.BLE.RuntimeRelay do
         buffered: 0,
         cleanup: worker,
         cleanup_token: token,
-        timer: Process.send_after(self(), {:close_deadline, token}, 1000)
+        timer: Process.send_after(self(), {:close_deadline, token}, state.cleanup_grace)
     }
   end
 
@@ -368,7 +374,7 @@ defmodule Wotex.BLE.RuntimeRelay do
     if left > 0, do: {:ok, left}, else: {:error, Error.new(:deadline_exceeded)}
   end
 
-  defp await(pid, token, deadline) do
+  defp await(pid, token, deadline, grace) do
     monitor = Process.monitor(pid)
 
     receive do
@@ -379,7 +385,7 @@ defmodule Wotex.BLE.RuntimeRelay do
       {:DOWN, ^monitor, :process, ^pid, _} ->
         {:error, Error.new(:disconnected)}
     after
-      max(deadline - now(), 0) + 1100 ->
+      max(deadline - now(), 0) + grace + 100 ->
         Process.demonitor(monitor, [:flush])
         send(pid, {:cancel_open, token})
         {:error, Error.new(:deadline_exceeded)}
@@ -392,7 +398,7 @@ defmodule Wotex.BLE.RuntimeRelay do
   defp handle?(_), do: false
 
   defp cancel(handle) do
-    GenServer.call(handle.pid, {:close, handle}, 1100)
+    GenServer.call(handle.pid, {:close, handle}, 1800)
   catch
     :exit, {:timeout, _} ->
       {:error, Error.new(:cleanup_timeout)}
@@ -400,6 +406,20 @@ defmodule Wotex.BLE.RuntimeRelay do
     :exit, _ ->
       if Process.alive?(handle.pid), do: {:error, Error.new(:invalid_subscription)}, else: :ok
   end
+
+  defp cleanup_grace(options),
+    do: if(Keyword.get(options, :client) == CoreBluetooth, do: 1700, else: 1000)
+
+  defp bound_session?(%Session{client: Wotex.BLE.BlueZ, handle: %Connection{}}, subscription),
+    do: Stream.handle?(subscription)
+
+  defp bound_session?(
+         %Session{client: CoreBluetooth, handle: %CoreConnection{generation: generation}},
+         subscription
+       ),
+       do: CoreStream.handle?(subscription) and subscription.generation === generation
+
+  defp bound_session?(_, _), do: false
 
   defp now, do: System.monotonic_time(:millisecond)
 end

@@ -112,7 +112,7 @@ or physical completion. The Form extension `wotex:bleWriteMode` selects the same
 procedure, with a Runtime Result status of `:accepted` for command queue evidence.
 The one-shot backend refuses command mode.
 
-For macOS point operations, select `client: Wotex.BLE.CoreBluetooth`, an explicit
+For macOS operations, select `client: Wotex.BLE.CoreBluetooth`, an explicit
 `Wotex.BLE.CoreBluetooth.Peer`, a fresh nonzero uint64 `generation`,
 `pairing: :system` and the native executable/guardian paths and digests from the
 CoreBluetooth build. `permission: :require_authorized` is the default;
@@ -127,8 +127,10 @@ sends nothing, while active expiry or caller loss retires the generation.
 CoreBluetooth point operations also use `profile/0` and the existing `:ble`
 Runtime transport. Configure an exact `target` matching the Form's URI target
 and the explicit Peer independently; the target label is not a native identity
-or authentication claim. CoreBluetooth notifications, manual pairing and sleep
-observation remain separate unsupported cells. Current process tests establish
+or authentication claim. Property observations and Event subscriptions use
+`profile(:gatt)` and the same explicit CoreBluetooth configuration; the relay
+owns its private session, so omit `owner`. Manual pairing and sleep observation
+remain unsupported. Current process tests establish
 software behavior; actual permissions, peripherals and RF remain unqualified.
 
 `subscribe/2` delivers `{:wotex_ble, reference, {:ok, value, metadata}}` messages
@@ -137,6 +139,15 @@ Metadata identifies BlueZ Value changes; it does not infer whether a change
 came from an ATT notification or a read. Equal changes remain distinct updates.
 BlueZ acknowledges indications. A characteristic supporting both notify and
 indicate requires `mode: :auto`, whose effective mode is `:bluez_selected`.
+
+CoreBluetooth subscriptions preserve the selected native generation/route and
+label metadata `:corebluetooth_value_update`. Auto chooses notify when both
+properties are present; explicit indicate refuses in that cell. Each stream
+reserves `min(16, max_queue_length)` credits, with sixteen live streams and 64
+shared credits per connection. Receiver overflow ends delivery. Cancellation
+fences delivery and joins native retirement; it closes the generation if a
+point operation occupies native control. Reads cannot reuse a streamed route
+within that generation. No initial read or automatic reconnect occurs.
 
 ## Wotex contract
 
@@ -225,7 +236,7 @@ The CoreBluetooth native process builds offline on macOS with an installed
 Apple SDK and toolchain. It targets macOS 14, embeds a generic Bluetooth usage
 description and writes its host, runtime guardian and identity manifest. The
 closed-input probe makes no permission request or peripheral connection. This
-build supplies the native process; a public CoreBluetooth Client is still required.
+build supplies the artifacts selected by the explicit CoreBluetooth Client above.
 
 ```console
 mix pkg wotex-ble wotex.ble.corebluetooth.build --workspace /absolute/disposable/dir

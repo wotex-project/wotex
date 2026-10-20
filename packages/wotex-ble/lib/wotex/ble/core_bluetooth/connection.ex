@@ -7,12 +7,18 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   deadlines and caller loss remove unsent work; active loss retires the entire
   generation. Close joins native retirement and guardian exit within 1,500 ms.
   The consumer must keep admitted artifact paths immutable through execution.
+
+  Explicit streams share 64 native report credits across sixteen live owners.
+  A public claim fences early reports; exact receiver admission returns credit.
+  Cancellation fences delivery before native stop and may close the generation
+  when another operation holds native control. At most 256 retired handles are
+  retained for exact idempotent cancellation within this generation.
   """
   use GenServer
 
   alias Wotex.BLE.{Address, Error}
-  alias Wotex.BLE.BlueZ.{Artifacts, Frame}
-  alias Wotex.BLE.CoreBluetooth.{Options, Response}
+  alias Wotex.BLE.BlueZ.{Artifacts, Frame, SubscriptionOwner}
+  alias Wotex.BLE.CoreBluetooth.{Options, ReportFlow, Response, Stream}
 
   @enforce_keys [:pid, :reference, :generation]
   @derive {Inspect, only: [:generation]}
@@ -77,6 +83,50 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   @spec health_check(term(), term()) :: {:ok, map()} | {:error, Error.t()}
   def health_check(handle, timeout), do: operation(handle, :health, timeout)
 
+  @doc "Starts a bounded receiver-owned notification or indication stream."
+  @spec subscribe(term(), term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
+  def subscribe(handle, request, timeout) do
+    with :ok <- valid_handle(handle),
+         {:ok, config} <- Stream.options(request, timeout, self()) do
+      result =
+        call(
+          handle.pid,
+          {:subscribe, handle, request, timeout, now() + config.timeout},
+          config.timeout + 1700
+        )
+
+      case result do
+        {:ok, subscription} ->
+          GenServer.cast(handle.pid, {:subscription_claimed, handle, subscription})
+
+        _ ->
+          :ok
+      end
+
+      result
+    end
+  end
+
+  @doc "Fences delivery and joins retirement of a same-generation subscription."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
+  def unsubscribe(handle, subscription) do
+    with :ok <- valid_handle(handle),
+         true <- Stream.handle?(subscription),
+         true <-
+           subscription.session_reference === handle.reference and
+             subscription.generation === handle.generation do
+      case SubscriptionOwner.cancel(subscription, 1700, false) do
+        {:error, %Error{code: :disconnected}} ->
+          call(handle.pid, {:retire_lost_subscription, handle, subscription}, 1700)
+
+        result ->
+          result
+      end
+    else
+      _ -> {:error, Error.new(:invalid_subscription)}
+    end
+  end
+
   @doc "Closes this generation and joins actual native retirement."
   @spec disconnect(term()) :: :ok | {:error, Error.t()}
   def disconnect(handle) do
@@ -133,6 +183,9 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
        queue: [],
        sequence: 0,
        routes: [],
+       subscriptions: %{},
+       retired_subscriptions: %{},
+       flow: ReportFlow.new(options.generation),
        close_waiters: [],
        close_ack: nil,
        reason: nil,
@@ -210,6 +263,108 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
     {:reply, {:error, Error.new(code)}, state}
   end
 
+  def handle_call({:subscribe, handle, request, timeout, deadline}, from, %{phase: :ready} = state) do
+    with true <- handle === state.handle,
+         true <- deadline > now(),
+         true <- length(state.queue) + if(state.active, do: 1, else: 0) < 64,
+         true <- map_size(state.subscriptions) < 16,
+         {:ok, config} <- Stream.options(request, timeout, elem(from, 0)),
+         :ok <- selection(config.address, state.handle.generation),
+         {:ok, route} <- route(config.address, state.routes),
+         {:ok, _} <- Stream.mode(route, config.requested_mode),
+         :ok <- available(state, route),
+         true <-
+           config.credit +
+             Enum.reduce(state.subscriptions, 0, fn {_, item}, total ->
+               total + item.config.credit
+             end) <= 64 do
+      token = make_ref()
+
+      owner_config = Map.put(config, :establishing_caller, elem(from, 0))
+
+      case SubscriptionOwner.start(state.handle, owner_config, {self(), token}, token, deadline) do
+        {:ok, pid} ->
+          parameters = %{
+            "stream_version" => 1,
+            "address" => %{"generation" => route.generation, "route" => route.route},
+            "mode" => Atom.to_string(config.requested_mode),
+            "credit" => config.credit
+          }
+
+          entry =
+            stream_entry(:subscribe, parameters, {pid, token}, deadline)
+            |> Map.merge(%{config: config, route: route})
+
+          record = %{
+            monitor: Process.monitor(pid),
+            config: config,
+            route: route,
+            id: nil,
+            waiter: from,
+            caller: Process.monitor(elem(from, 0)),
+            public_token: token,
+            public_handle: nil,
+            claimed: false,
+            deadline: deadline,
+            timer: nil,
+            buffer: [],
+            closing: false,
+            retired: false
+          }
+
+          state = %{
+            state
+            | subscriptions: Map.put(state.subscriptions, pid, record),
+              queue: Enum.concat(state.queue, [entry])
+          }
+
+          continue(dispatch(state))
+
+        _ ->
+          {:reply, {:error, Error.new(:transport_error)}, state}
+      end
+    else
+      {:error, _} = error ->
+        {:reply, error, state}
+
+      false when handle !== state.handle ->
+        {:reply, {:error, Error.new(:invalid_handle)}, state}
+
+      _ ->
+        {:reply, {:error, Error.new(if(deadline <= now(), do: :timeout, else: :resource_limit))},
+         state}
+    end
+  end
+
+  def handle_call({:subscribe, handle, _, _, _}, _, state),
+    do:
+      {:reply,
+       {:error, Error.new(if(handle === state.handle, do: :disconnected, else: :invalid_handle))},
+       state}
+
+  def handle_call(
+        {:retire_lost_subscription, handle, %Wotex.BLE.Subscription{} = subscription},
+        from,
+        state
+      ) do
+    cond do
+      handle !== state.handle ->
+        {:reply, {:error, Error.new(:invalid_subscription)}, state}
+
+      state.retired_subscriptions[{subscription.pid, subscription.reference}] === subscription ->
+        {:reply, :ok, state}
+
+      match?(%{public_handle: ^subscription}, state.subscriptions[subscription.pid]) and
+          length(state.close_waiters) < 64 ->
+        continue(
+          close(%{state | close_waiters: [from | state.close_waiters]}, Error.new(:disconnected))
+        )
+
+      true ->
+        {:reply, {:error, Error.new(:invalid_subscription)}, state}
+    end
+  end
+
   def handle_call({:close, handle}, from, state) do
     cond do
       handle !== state.handle ->
@@ -226,6 +381,37 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   end
 
   def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_request)}, state}
+
+  @impl GenServer
+  def handle_cast(
+        {:subscription_claimed, handle, %Wotex.BLE.Subscription{} = subscription},
+        %{handle: handle, phase: :ready} = state
+      ) do
+    case state.subscriptions[subscription.pid] do
+      %{public_handle: ^subscription, claimed: false} = item ->
+        if now() < item.deadline do
+          Process.demonitor(item.caller, [:flush])
+          Process.cancel_timer(item.timer)
+          Enum.each(Enum.reverse(item.buffer), &send(subscription.pid, &1))
+          item = %{item | claimed: true, caller: nil, timer: nil, public_token: nil, buffer: []}
+          {:noreply, %{state | subscriptions: Map.put(state.subscriptions, subscription.pid, item)}}
+        else
+          continue(close(state, Error.new(:timeout)))
+        end
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_cast(
+        {reference, :unsubscribe, pid, from},
+        %{handle: %{reference: reference}, phase: :ready} = state
+      ),
+      do: continue(cancel_subscription(state, pid, from))
+
+  def handle_cast({_, :unsubscribe, _, _}, state), do: {:noreply, state}
+  def handle_cast(_, state), do: {:noreply, state}
 
   @impl GenServer
   def handle_info({:verified, pid, result}, %{verifier: {pid, ref}, phase: :verifying} = state) do
@@ -275,11 +461,32 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
 
   def handle_info({:deadline, token}, state) do
     {expired, queue} = Enum.split_with(state.queue, &(&1.token == token))
+    state = drop_starting(state, expired, :timeout)
     Enum.each(expired, &reply(&1, {:error, Error.new(:timeout)}))
     {:noreply, %{state | queue: queue}}
   end
 
+  def handle_info({:subscription_claim_timeout, pid}, state) do
+    if match?(%{claimed: false}, state.subscriptions[pid]),
+      do: continue(close(state, Error.new(:timeout))),
+      else: {:noreply, state}
+  end
+
+  def handle_info({token, result}, state) when is_reference(token) do
+    case Enum.find(state.subscriptions, fn {_, item} ->
+           item.public_token === token and item.waiter != nil
+         end) do
+      {pid, item} ->
+        public_subscription(state, pid, item, result)
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
   def handle_info({:DOWN, ref, :process, _, _}, state) do
+    lost_subscriber = Enum.find(state.subscriptions, fn {_, item} -> item.caller == ref end)
+
     cond do
       ref in [state.owner, state.starter] ->
         continue(close(state, Error.new(:disconnected)))
@@ -294,10 +501,31 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
       state.active && state.active.monitor == ref ->
         continue(close(state, Error.new(:disconnected)))
 
+      lost_subscriber ->
+        {pid, _} = lost_subscriber
+        continue(cancel_dead_caller(state, pid))
+
+      Enum.any?(state.subscriptions, fn {_, item} -> item.monitor == ref end) ->
+        continue(close(state, Error.new(:disconnected)))
+
       true ->
         {removed, queue} = Enum.split_with(state.queue, &(&1.monitor == ref))
         Enum.each(removed, &release/1)
         {:noreply, %{state | queue: queue}}
+    end
+  end
+
+  def handle_info(
+        {:ble_report_consumed, reference, pid, sequence, token},
+        %{handle: %{reference: reference}, phase: :ready} = state
+      ) do
+    case state.subscriptions[pid] do
+      %{id: id, closing: false} when id != nil ->
+        {ack, flow} = ReportFlow.consume(state.flow, pid, id, sequence, token)
+        continue(acknowledge(%{state | flow: flow}, ack))
+
+      _ ->
+        {:noreply, state}
     end
   end
 
@@ -338,6 +566,10 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
          :ok <- selection(address, state.handle.generation),
          {:ok, route} <- route(address, state.routes),
          kind = kind(message),
+         true <-
+           kind != :read or
+             (not ReportFlow.used?(state.flow, route.route) and
+                Enum.all?(state.subscriptions, fn {_, item} -> item.route.route != route.route end)),
          true <- supported?(route, kind) do
       parameters = %{"address" => %{"generation" => route.generation, "route" => route.route}}
 
@@ -395,6 +627,49 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
     }
 
     startup_send(%{state | phase: :opening}, "open", :open, parameters)
+  end
+
+  defp frame(%{phase: :closing} = state, %{"event" => event})
+       when event in ["notification", "notification_retired"], do: state
+
+  defp frame(state, %{"event" => "notification"} = frame) do
+    case ReportFlow.report(state.flow, frame) do
+      {:ok, pid, id, receipt, event, flow} ->
+        state = %{state | flow: flow}
+        message = {:ble_stream, id, receipt, event}
+
+        case state.subscriptions[pid] do
+          %{closing: false, claimed: true} ->
+            send(pid, message)
+            state
+
+          %{closing: false} = item ->
+            if length(item.buffer) < item.config.credit,
+              do: put_in(state.subscriptions[pid].buffer, [message | item.buffer]),
+              else: close(state, Error.new(:invalid_response))
+
+          _ ->
+            state
+        end
+
+      _ ->
+        close(state, Error.new(:invalid_response))
+    end
+  end
+
+  defp frame(
+         %{active: %{kind: :unsubscribe, from: {pid, _}, parameters: %{"subscription_id" => id}}} =
+           state,
+         %{"event" => "notification_retired", "subscription_id" => id} = frame
+       ) do
+    case ReportFlow.retire(state.flow, frame) do
+      {:ok, ^id, ^pid, ack, flow} ->
+        state = put_in(state.subscriptions[pid].retired, true)
+        acknowledge(%{state | flow: flow}, ack)
+
+      _ ->
+        close(state, Error.new(:invalid_response))
+    end
   end
 
   defp frame(state, frame) do
@@ -456,7 +731,7 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   defp deliver_native(%{phase: :closing} = state, _, {:error, _}), do: state
 
   defp deliver_native(state, active, {:error, error} = outcome) do
-    if error.code in @fatal or active.kind == :open or state.waiter do
+    if error.code in @fatal or active.kind in [:open, :subscribe, :unsubscribe] or state.waiter do
       close(%{state | active: %{active | outcome: outcome}}, error)
     else
       reply(active, outcome)
@@ -465,6 +740,11 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   end
 
   defp deliver_native(state, _, _), do: close(state, Error.new(:invalid_response))
+
+  defp validated_result(%{kind: :subscribe} = active, {:ok, result}, _),
+    do: Stream.binding(result, active.id, active.config, active.route)
+
+  defp validated_result(%{kind: :unsubscribe}, {:ok, nil}, _), do: {:ok, :unsubscribed}
 
   defp validated_result(active, {:ok, result}, generation) do
     if active.kind in @writes and not active.submitted,
@@ -479,6 +759,58 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   end
 
   defp success(%{phase: :closing} = state, _), do: state
+
+  defp success(%{active: %{kind: :subscribe, from: {pid, _}} = active} = state, binding) do
+    case ReportFlow.open(state.flow, pid, binding) do
+      {:ok, flow} ->
+        state = put_in(state.subscriptions[pid].id, active.id)
+
+        state =
+          put_in(
+            state.subscriptions[pid].timer,
+            Process.send_after(
+              self(),
+              {:subscription_claim_timeout, pid},
+              max(active.deadline - now(), 0)
+            )
+          )
+
+        reply(active, {:ok, binding})
+        dispatch(%{state | active: nil, flow: flow})
+
+      _ ->
+        close(state, Error.new(:invalid_response))
+    end
+  end
+
+  defp success(%{active: %{kind: :unsubscribe, from: {pid, _}} = active} = state, :unsubscribed) do
+    case state.subscriptions[pid] do
+      %{retired: true} = item ->
+        release_subscription(item)
+        if item.waiter, do: GenServer.reply(item.waiter, {:error, Error.new(:disconnected)})
+        reply(active, :ok)
+
+        retired =
+          if item.public_handle,
+            do:
+              Map.put(
+                state.retired_subscriptions,
+                {pid, item.public_handle.reference},
+                item.public_handle
+              ),
+            else: state.retired_subscriptions
+
+        dispatch(%{
+          state
+          | active: nil,
+            subscriptions: Map.delete(state.subscriptions, pid),
+            retired_subscriptions: retired
+        })
+
+      _ ->
+        close(state, Error.new(:invalid_response))
+    end
+  end
 
   defp success(%{phase: :opening} = state, :opened) do
     startup_send(%{state | sequence: 1}, "1", :discover, %{})
@@ -534,9 +866,13 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
     cond do
       not Process.alive?(elem(entry.from, 0)) ->
         release(entry)
-        dispatch(state)
+
+        if entry.kind == :unsubscribe,
+          do: close(state, Error.new(:disconnected)),
+          else: dispatch(drop_starting(state, [entry]))
 
       entry.deadline <= now() ->
+        state = drop_starting(state, [entry], :timeout)
         reply(entry, {:error, Error.new(:timeout)})
         dispatch(state)
 
@@ -556,6 +892,133 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   end
 
   defp dispatch(state), do: state
+
+  defp available(state, route) do
+    if ReportFlow.used?(state.flow, route.route) or
+         Enum.any?(state.subscriptions, fn {_, item} -> item.route.route == route.route end),
+       do: {:error, Error.new(:not_permitted)},
+       else: :ok
+  end
+
+  defp public_subscription(state, pid, item, {:ok, subscription} = result) do
+    with true <- state.phase == :ready and now() < item.deadline,
+         true <- Stream.handle?(subscription),
+         true <- subscription.pid == pid and item.id != nil,
+         true <- subscription.session_reference === state.handle.reference,
+         true <- subscription.generation === state.handle.generation do
+      GenServer.reply(item.waiter, result)
+      item = %{item | waiter: nil, public_handle: subscription}
+      {:noreply, %{state | subscriptions: Map.put(state.subscriptions, pid, item)}}
+    else
+      _ ->
+        continue(
+          close(state, Error.new(if(now() >= item.deadline, do: :timeout, else: :invalid_response)))
+        )
+    end
+  end
+
+  defp public_subscription(state, _, _, {:error, %Error{} = error}),
+    do: continue(close(state, error))
+
+  defp public_subscription(state, _, _, _), do: continue(close(state, Error.new(:invalid_response)))
+
+  defp drop_starting(state, entries, code \\ :disconnected) do
+    Enum.reduce(entries, state, fn
+      %{kind: :subscribe, from: {pid, _}}, state ->
+        {item, subscriptions} = Map.pop(state.subscriptions, pid)
+
+        if item do
+          release_subscription(item)
+          if item.waiter, do: GenServer.reply(item.waiter, {:error, Error.new(code)})
+        end
+
+        %{state | subscriptions: subscriptions}
+
+      _, state ->
+        state
+    end)
+  end
+
+  defp cancel_dead_caller(state, pid) do
+    {removed, queue} =
+      Enum.split_with(state.queue, fn entry ->
+        entry.kind == :subscribe and elem(entry.from, 0) == pid
+      end)
+
+    if removed == [] do
+      close(state, Error.new(:disconnected))
+    else
+      state = drop_starting(%{state | queue: queue}, removed)
+      Enum.each(removed, &release/1)
+      send(pid, {:ble_stream_closed, state.handle.reference, {:error, Error.new(:disconnected)}})
+      dispatch(state)
+    end
+  end
+
+  defp stream_entry(kind, parameters, from, deadline) do
+    token = make_ref()
+
+    %{
+      token: token,
+      id: nil,
+      kind: kind,
+      parameters: parameters,
+      from: from,
+      monitor: Process.monitor(elem(from, 0)),
+      deadline: deadline,
+      submitted: false,
+      outcome: nil,
+      timer: Process.send_after(self(), {:deadline, token}, max(deadline - now(), 0))
+    }
+  end
+
+  defp cancel_subscription(state, pid, from) do
+    case state.subscriptions[pid] do
+      nil ->
+        GenServer.reply(from, :ok)
+        state
+
+      %{closing: true} ->
+        state
+
+      %{id: nil} = item ->
+        state = put_in(state.subscriptions[pid].closing, true)
+
+        if state.active && elem(state.active.from, 0) == pid do
+          close(state, Error.new(:disconnected))
+        else
+          {removed, queue} = Enum.split_with(state.queue, &(elem(&1.from, 0) == pid))
+          Enum.each(removed, &release/1)
+          release_subscription(item)
+          if item.waiter, do: GenServer.reply(item.waiter, {:error, Error.new(:disconnected)})
+          GenServer.reply(from, :ok)
+          dispatch(%{state | queue: queue, subscriptions: Map.delete(state.subscriptions, pid)})
+        end
+
+      %{id: id} ->
+        state = put_in(state.subscriptions[pid].closing, true)
+
+        if state.active do
+          close(state, Error.new(:disconnected))
+        else
+          entry =
+            stream_entry(
+              :unsubscribe,
+              %{"stream_version" => 1, "subscription_id" => id},
+              from,
+              now() + 500
+            )
+
+          dispatch(%{state | queue: [entry | state.queue]})
+        end
+    end
+  end
+
+  defp acknowledge(state, nil), do: state
+
+  defp acknowledge(state, frame) do
+    if send_control(state.port, frame), do: state, else: close(state, Error.new(:transport_error))
+  end
 
   defp close(%{phase: :closing} = state, %{code: code})
        when code in [:invalid_response, :response_limit],
@@ -592,6 +1055,14 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
     end
 
     result = if confirmed, do: :ok, else: {:error, Error.new(:cleanup_timeout)}
+
+    Enum.each(state.subscriptions, fn {pid, item} ->
+      if item.waiter, do: GenServer.reply(item.waiter, {:error, error})
+      release_subscription(item)
+      outcome = if item.closing, do: result, else: {:error, error}
+      send(pid, {:ble_stream_closed, state.handle.reference, outcome})
+    end)
+
     Enum.each(state.close_waiters, &GenServer.reply(&1, result))
     {:stop, :normal, state}
   end
@@ -608,6 +1079,12 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   defp release(entry) do
     if entry.timer, do: Process.cancel_timer(entry.timer)
     if entry.monitor, do: Process.demonitor(entry.monitor, [:flush])
+  end
+
+  defp release_subscription(item) do
+    Process.demonitor(item.monitor, [:flush])
+    if item.caller, do: Process.demonitor(item.caller, [:flush])
+    if item.timer, do: Process.cancel_timer(item.timer)
   end
 
   defp open_port(%{executable: executable, guardian: guardian}) do
@@ -638,6 +1115,12 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
         }) <> "\n",
         [:nosuspend]
       )
+  rescue
+    _ -> false
+  end
+
+  defp send_control(port, frame) do
+    Port.command(port, Jason.encode!(frame) <> "\n", [:nosuspend])
   rescue
     _ -> false
   end

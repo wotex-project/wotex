@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.6.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.7.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -141,7 +141,7 @@ suite is explicitly scoped to `darwin`; other hosts record no Mac qualification.
 Injected objects must implement the actual SDK selectors. Such tests establish
 adapter behavior under supplied callbacks, not real authorization, connection,
 pairing or radio behavior. The point Client/Runtime join is delivered below;
-notification Client receiving, sleep observation and independent archive
+public receiving is specified below; sleep observation and independent archive
 qualification remain separate required host-delivery work.
 
 | Case | SDK stimulus and falsifier |
@@ -311,9 +311,9 @@ The existing `:ble` Runtime point profile uses the same Client and codecs with
 explicit `target` label and Peer configuration; the configured target must
 exactly match the Form target before acquisition. The label is a consumer
 binding, not an inferred native UUID, MAC address or authentication claim.
-Runtime retains command `:accepted` status. The BlueZ streaming profile, manual
-pairing interface and notification/sleep cells remain unsupported until their
-own receiving/lifecycle delivery. Existing BlueZ/custom-client behavior is
+Runtime retains command `:accepted` status. The GATT streaming profile joins
+the notification receiving entry below. Manual pairing and sleep observation
+remain unsupported. Existing BlueZ/custom-client behavior is
 preserved, including conservative errors from untrusted custom clients.
 
 | Case | Client stimulus and falsifier |
@@ -340,7 +340,7 @@ that inspection does not qualify runtime permissions, a peripheral or RF behavio
 The SDK owner adds explicit `subscribe(request, route, mode, credit, now,
 deadline)`, `unsubscribe(request, subscription, now, deadline)` and
 `acknowledge(subscription, sequence, now)` entry. These are internal native
-interfaces; public Client streaming remains a separate delivery. Calls share
+interfaces; the public receiving entry below owns Client streaming. Calls share
 the existing serial queue, monotonic request namespace, generation and original
 1..60,000 ms control deadline. At most one point operation or notification
 control is outstanding, while established streams may receive alongside a point
@@ -411,7 +411,7 @@ separate required lifecycle input.
 `priv/fixtures/corebluetooth-notifications-v1.json` supplies twelve literal
 property/mode outcomes and six control-state outcomes. The SDK fixture consumes
 every cell through actual injected selectors; vector presence alone proves none
-of these outcomes. The public Client/Runtime streaming join remains open.
+of these outcomes. The public Client/Runtime streaming join is specified below.
 
 The [SDK notification record](../provenance/corebluetooth-notifications-2026-10.md)
 binds the 24-case SDK corpus, 48 sanitizer component cases, owning fast gate and
@@ -491,5 +491,78 @@ receiver admission or explicit retirement of those exact records.
 
 The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)
 binds the committed source, independent Driver processes, production SDK adapter
-join, sanitizer corpus and exact archive checks. Public Client/Runtime receiving,
-sleep observation and installed-host qualification remain separate obligations.
+join, sanitizer corpus and exact archive checks. Public Client/Runtime receiving
+is specified below; sleep observation and installed-host qualification remain
+separate obligations.
+
+## Public notification receiving
+
+The CoreBluetooth Client implements `subscribe/3` and `unsubscribe/2`; facade
+sessions use the existing `Wotex.BLE.subscribe/2` and `unsubscribe/2` calls.
+Subscription options contain exactly required `address` and optional `receiver`,
+`mode`, `max_queue_length`, `value_type`, `byte_order` and `timeout`. Receiver
+defaults to the caller and must be a local PID. Mode defaults to auto and follows
+the native Apple policy above. Queue length is 1..10,000, default 1,000; codec
+and timeout use the existing Procedure validators. A stream reserves the lesser
+of sixteen and its queue limit. Sixteen live or establishing streams and 64
+shared reserved credits include queued starts; local refusal sends no native
+request. Exact UUID/generation/route selection preserves duplicate routes.
+
+The subscription handle retains the actual connection generation and private
+session reference. One original deadline spans queueing, native establishment
+and public handle claim. The delivery owner monitors the establishing caller,
+receiver and connection. The connection relays opening results itself, so an
+exit cannot replace a specific native/timeout error with a monitor race. Early
+reports stay within their reserved credit until the caller consumes its handle
+reply and claims delivery; the opening reply does not consume a report slot.
+Caller loss after native handoff or expired claim retires the generation.
+Dead queued callers release unsent custody without dispatch. No synthetic
+initial read or automatic acknowledgement occurs.
+
+Reports require the exact closed native frame, generation, subscription, route,
+next per-stream sequence and canonical 0..512-byte value. Delivery metadata has
+exactly source `corebluetooth_value_update`, the complete discovered native
+Characteristic map, requested mode and effective mode. Equal and empty updates
+remain distinct. The source describes an SDK value callback, not independently
+qualified ATT origin, authority, a physical effect or canonical Property truth.
+Configured codecs run before delivery. Malformed values or receiver overflow
+end delivery with at most one terminal error.
+
+The BEAM ledger retains at most 64 report records. A private owner/token receipt
+returns credit only after bounded selected-receiver mailbox admission; forged,
+duplicate or foreign receipts create no credit. Only the consumed contiguous
+prefix of each stream advances its cumulative acknowledgement. Cancellation
+fences public delivery before requesting native stop. The exact ordered native
+retirement barrier releases that stream's remaining discarded records before
+the unsubscribe reply can succeed. Missing, changed or unsolicited barriers
+cannot establish cleanup. Route reuse and reads on previously streamed routes
+refuse for this generation; writes retain their separate evidence path.
+
+An idle connection stops the selected stream without ending other streams. If
+another native operation holds control, cancellation retires the entire
+generation and preserves uncertainty for a submitted write. Abnormal delivery
+owner loss also ends the generation. A dead delivery PID alone proves no native
+cleanup: cancellation joins the connection's actual retirement. A generation
+retains at most 256 exact retired handles, bounded by its discovery routes, for
+idempotent cancellation; forged references cannot claim that receipt. Connection
+cleanup keeps its 1,500 ms budget; the delivery owner allows 1,600 ms and the
+public cancellation call 1,700 ms. A stopped connection supplies no new receipt.
+
+The existing `:ble_gatt` Runtime profile accepts explicit CoreBluetooth options
+and the exact configured URI target independently of the private Peer. Its relay
+owns the connection; caller-supplied `owner` is rejected. Property observations
+and Event subscriptions use the same native receiving path, a 64-frame opening
+buffer and bounded Runtime-owner forwarding. Runtime metadata validation binds
+the configured backend, native characteristic and requested/effective mode;
+well-formed foreign routes are ignored and malformed metadata ends delivery.
+CoreBluetooth relay cleanup has a 1,700 ms grace. No portable Form invents an
+SDK route or private peripheral identity.
+
+| Case | Public receiving falsifier |
+| --- | --- |
+| CB-R1 | Literal mode cells, duplicate routes, forged handles and exact stream binding cannot retarget delivery |
+| CB-R2 | Equal/empty/max-size reports, per-stream sequence/credit and exact receiver receipts remain bounded |
+| CB-R3 | Opening handoff, queued expiry, caller/receiver loss and sixteen-stream/shared-credit admission preserve original custody |
+| CB-R4 | Missing/false retirement, stopped-route reuse, dead delivery owner and active-point cancellation cannot fabricate cleanup or unsent writes |
+| CB-R5 | Real Runtime Property/Event streams preserve backend-specific metadata, codecs and joined cleanup |
+| CB-R6 | Runtime owner loss, receiver overflow, malformed frames and private status cannot leak values or leave an unowned generation |
