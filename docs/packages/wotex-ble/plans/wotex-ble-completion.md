@@ -47,6 +47,9 @@ explicit public handle claim and receiver-owned delivery. Cancellation validates
 the native retirement barrier; active point control or lost delivery ownership
 ends the generation with conservative write evidence. Real Runtime Property/Event
 cases preserve backend-specific metadata and close their private sessions.
+The [public receiving record](../provenance/corebluetooth-receiving-2026-10.md)
+binds 27 Client and five pure stream cases, the owning fast gate and exact archive
+compilation. Its source-qualified software result leaves installed behavior open.
 Continue with explicit sleep observation, independent CoreBluetooth
 archive consumers and installed Mac lifecycle/readiness qualification. These
 software cases establish no actual permission/peripheral or RF result.

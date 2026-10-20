@@ -566,3 +566,7 @@ SDK route or private peripheral identity.
 | CB-R4 | Missing/false retirement, stopped-route reuse, dead delivery owner and active-point cancellation cannot fabricate cleanup or unsent writes |
 | CB-R5 | Real Runtime Property/Event streams preserve backend-specific metadata, codecs and joined cleanup |
 | CB-R6 | Runtime owner loss, receiver overflow, malformed frames and private status cannot leak values or leave an unowned generation |
+
+The [public receiving record](../provenance/corebluetooth-receiving-2026-10.md)
+binds the committed implementation, independent process and production Host
+cases, Runtime receiving, exact archive compilation and remaining qualification.
