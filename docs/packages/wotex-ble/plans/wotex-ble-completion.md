@@ -57,6 +57,9 @@ deadline/permission changes, point/stream retirement, cleanup faults, independen
 owners and production Host pipes. Continue with independent CoreBluetooth
 archive consumers and installed Mac lifecycle/readiness qualification. These
 software cases establish no actual permission/peripheral or RF result.
+The [system-power record](../provenance/corebluetooth-power-2026-10.md) binds the
+observer source, exact C API/selector tests, actual build and unexecuted installed
+qualification.
 The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)
 binds the Host delivery separately from the public receiving entry.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)

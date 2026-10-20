@@ -632,3 +632,8 @@ not established by these system-power messages.
 | CB-P4 | Sleep/wake during stream start, active delivery or stop retires all ownership before pending failure |
 | CB-P5 | Acknowledgement, deregistration, port destruction, connection close and clock faults cannot claim confirmed cleanup |
 | CB-P6 | Independent owners and late callbacks cannot create continuity; real Host pipes preserve point failure before connection loss |
+
+The [system-power record](../provenance/corebluetooth-power-2026-10.md) binds the
+committed implementation, injected C API/selector cases, Host pipe join, actual
+offline build and archive checks. Installed power/peripheral behavior remains
+unqualified.
