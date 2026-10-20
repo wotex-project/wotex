@@ -156,7 +156,8 @@ class NativeHost {
     if (operation == "open") { open(pending); return; }
     if (!opened_ || !owner_ || !owner_->active()) { fail(pending, "disconnected"); return; }
     if (operation == "discover") discovery(pending);
-    else if (operation == "read" || operation == "write" || operation == "health") {
+    else if (operation == "read" || operation == "write" || operation == "write_command" ||
+             operation == "health") {
       procedure_ = std::make_unique<NativeProcedure>(*owner_);
       if (!procedure_->start(operation, pending->parameters(), pending->number(), pending->deadline,
           [this](const Json &frame) { return emit(frame); }, [this, pending](ProcedureResult result) {

@@ -3,9 +3,9 @@ spec:
   id: WBL.05
   title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.1.11
+  version: 1.2.0
   owner: wotex-ble
-  updated: 2026-09-20
+  updated: 2026-10-20
 ---
 
 # WBL.05 Standalone central and protocol workflows
@@ -45,7 +45,7 @@ from the pinned BlueZ daemon's delayed link drain, tested separately in N03.
 | `connect(client: BlueZ, lifecycle: :persistent, peer: peer, connection: mode, bus_address: address, owner: pid, timeout: ms, executable: sdk, executable_sha256: sdk_hash, guardian: custody, guardian_sha256: custody_hash)` | `{:ok, %Session{}}` only after S02 ownership and ServicesResolved; explicit private/system bus address, no environment fallback; `mode` is `:owned` or `:borrowed`; both absolute executable paths and their hashes are mandatory under WBL.07 |
 | `discover(session, options)` | `{:ok, %{generation: integer, characteristics: [Characteristic.t()], cursor: binary_or_nil}}`; options allow `cursor` and `limit` (default 64, 1..64) only; bounded connected-peer snapshot, no radio scan |
 | `read(session, address, options)` | `{:ok, value}` or Error; options `value_type` (default `:bytes`), `byte_order` (default `:little`), `timeout`; raw bytes preserved when no codec selected |
-| `write(session, address, value, options)` | `{:ok, :written}` only after acknowledged WriteValue; same codec/options; no readback or write-without-response fallback |
+| `write(session, address, value, options)` | Default/`:with_response` returns `{:ok, :written}` only after acknowledged WriteValue; explicit `:without_response` returns WBL.08 native queue evidence; same value codecs, no readback or mode fallback |
 | `pair(session, request)` | `{:ok, %{paired: true}}` after the explicit Agent policy and Device1.Pair completion; S02 policy/request fields, no implicit pairing from reads |
 | `subscribe(session, request)` | S04 request plus optional explicit `value_type`/`byte_order`; `{:ok, %Subscription{}}` only after StartNotify succeeds |
 | `unsubscribe(session, subscription)` | C05 idempotent local closure, same sender StopNotify and listener cleanup |

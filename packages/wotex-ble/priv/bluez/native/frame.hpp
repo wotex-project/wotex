@@ -132,7 +132,7 @@ inline bool request(const Json &value) {
       !value["operation"].is_string() || !value["parameters"].is_object() ||
       !integer(value["timeout_ms"], 1, 60000)) return false;
   const auto &operation = value["operation"].get_ref<const std::string &>();
-  for (const char *known : {"open", "discover", "read", "write", "subscribe",
+  for (const char *known : {"open", "discover", "read", "write", "write_command", "subscribe",
                             "unsubscribe", "pair", "agent_reply", "health", "close"}) {
     if (operation == known) return true;
   }

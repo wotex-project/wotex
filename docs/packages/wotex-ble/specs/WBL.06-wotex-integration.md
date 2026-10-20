@@ -3,9 +3,9 @@ spec:
   id: WBL.06
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.3
+  version: 1.2.0
   owner: wotex-ble
-  updated: 2026-09-20
+  updated: 2026-10-20
 ---
 
 # WBL.06 Wotex integration and evidence contract
@@ -127,6 +127,13 @@ False, zero, empty binary, empty list and explicit null cannot be conflated with
 an absent response. Protocol type/status/timestamps remain the .10 projection.
 Binary payloads remain BEAM binaries; JSON fixture normalization uses the explicit
 `{"type":"bytes","base64":"..."}` envelope only for transport across the test harness.
+
+The package extension `wotex:bleWriteMode` applies only to Property writes and
+selects the exact [WBL.08](WBL.08-write-modes-and-native-hosts.md) procedure.
+The default `with_response` retains the existing `:written` payload and `:ok`
+status. Explicit `without_response` retains the complete native queue evidence
+map as payload and uses `:accepted`. A null or acknowledged result cannot settle
+that command. This result supplies no canonical Property value or physical truth.
 
 ## WBL-I04 — Errors, credentials and deadlines through Runtime
 

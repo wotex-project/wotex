@@ -209,7 +209,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
         from,
         %{handle: %{reference: reference}, status: :ready} = state
       )
-      when operation in ["discover", "read", "write", "health"] and is_map(parameters) and
+      when operation in ["discover", "read", "write", "write_command", "health"] and
+             is_map(parameters) and
              is_integer(deadline) do
     cond do
       deadline <= now() -> {:reply, {:error, Error.new(:timeout)}, state}
@@ -703,7 +704,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
        )
        when map_size(frame) == 3 and is_reference(id) do
     case state.pending[id] do
-      %{operation: "write", submitted: false, deadline: deadline} when is_integer(deadline) ->
+      %{operation: operation, submitted: false, deadline: deadline}
+      when operation in ["write", "write_command"] and is_integer(deadline) ->
         if now() < deadline do
           {:noreply, put_in(state.pending[id].submitted, true)}
         else
@@ -764,6 +766,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
       {:ok, %{connected: true, services_resolved: true} = health} ->
         {:noreply, advance(complete(state, id, {:ok, health}))}
 
+      {:ok, %{write_mode: :without_response, evidence: :native_queue_accepted} = value} ->
+        accept_write(state, id, value)
+
       {:ok, page} when is_map(page) ->
         accept_page(state, id, page)
 
@@ -779,7 +784,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp mark_unknown_write_effect(error, %{operation: "write"}), do: Error.unknown_effect(error)
+  defp mark_unknown_write_effect(error, %{operation: operation})
+       when operation in ["write", "write_command"],
+       do: Error.unknown_effect(error)
+
   defp mark_unknown_write_effect(error, _), do: error
 
   defp mark_unknown_submitted_effect(error, %{submitted: true}), do: Error.unknown_effect(error)
@@ -902,9 +910,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
       else: {:noreply, close(state, :invalid_response)}
   end
 
-  defp accept_write(state, id) do
+  defp accept_write(state, id, value \\ :written) do
     if state.pending[id].submitted,
-      do: {:noreply, advance(complete(state, id, {:ok, :written}))},
+      do: {:noreply, advance(complete(state, id, {:ok, value}))},
       else: {:noreply, close(state, :invalid_response)}
   end
 
@@ -1062,7 +1070,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
         error = Error.new(code)
 
         error =
-          if acc.active == id and acc.pending[id].operation == "write",
+          if acc.active == id and acc.pending[id].operation in ["write", "write_command"],
             do: Error.unknown_effect(error),
             else: error
 

@@ -43,6 +43,20 @@ defmodule Wotex.BLE.Procedure do
   end
 
   @doc false
+  @spec write_options(term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def write_options(options, default) do
+    with true <- Keyword.keyword?(options),
+         modes = Keyword.get_values(options, :write_mode),
+         true <- modes in [[], [:with_response], [:without_response]],
+         {:ok, config} <- options(Keyword.delete(options, :write_mode), default) do
+      {:ok, Map.put(config, :write_mode, Keyword.get(options, :write_mode, :with_response))}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_options)}
+    end
+  end
+
+  @doc false
   @spec parameters(term()) :: {:ok, String.t(), map()} | {:error, Error.t()}
   def parameters(message) do
     with :ok <- Address.validate_message(message),
@@ -62,7 +76,12 @@ defmodule Wotex.BLE.Procedure do
           do: Map.put(parameters, "value", bytes(message.value)),
           else: parameters
 
-      {:ok, Atom.to_string(message.type), parameters}
+      operation =
+        if message.type == :write and Map.get(message, :write_mode) == :without_response,
+          do: "write_command",
+          else: Atom.to_string(message.type)
+
+      {:ok, operation, parameters}
     end
   end
 

@@ -68,9 +68,20 @@ defmodule Wotex.BLE.Address do
     with {:ok, _} <- new(message) do
       value = Map.get(message, :value)
 
-      if type == :write and (not is_binary(value) or byte_size(value) > 512),
-        do: {:error, Error.new(:invalid_value)},
-        else: :ok
+      cond do
+        type == :read and Map.has_key?(message, :write_mode) ->
+          {:error, Error.new(:invalid_options)}
+
+        type == :write and
+            Map.get(message, :write_mode, :with_response) not in [:with_response, :without_response] ->
+          {:error, Error.new(:invalid_options)}
+
+        type == :write and (not is_binary(value) or byte_size(value) > 512) ->
+          {:error, Error.new(:invalid_value)}
+
+        true ->
+          :ok
+      end
     end
   end
 

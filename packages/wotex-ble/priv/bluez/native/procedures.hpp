@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// One bounded acknowledged GATT operation or live Device1 health query. The enclosing owner keeps discovery
+// One bounded GATT operation or live Device1 health query. The enclosing owner keeps discovery
 // alive through callbacks and polls this operation until its terminal result.
 #pragma once
 #include "address.hpp"
@@ -32,6 +32,7 @@ private:
     Emit emit;
     Completion completion;
     bool write_submitted = false;
+    bool writing() const { return operation == "write" || operation == "write_command"; }
     explicit State(LiveDiscovery &owner) : owner(owner) {}
     void complete() {
       if (phase == Phase::finished) return;
@@ -61,9 +62,12 @@ private:
       append(dbus_message_iter_close_container(&dictionary, &entry));
     }
     Message request(const std::string &path) {
-      Message message(dbus_message_new_method_call(owner.owner().c_str(), path.c_str(),
-        operation == "health" ? "org.freedesktop.DBus.Properties" : characteristic_interface,
-        operation == "health" ? "GetAll" : operation == "write" ? "WriteValue" : "ReadValue"));
+      Message message(dbus_message_new_method_call(
+          owner.owner().c_str(), path.c_str(),
+          operation == "health" ? "org.freedesktop.DBus.Properties" : characteristic_interface,
+          operation == "health" ? "GetAll"
+              : writing()       ? "WriteValue"
+                                : "ReadValue"));
       if (!message) throw std::runtime_error("resource_limit");
       if (operation == "health") {
         const char *interface = device_interface;
@@ -72,7 +76,7 @@ private:
       }
       DBusMessageIter root, array, options;
       dbus_message_iter_init_append(message.get(), &root);
-      if (operation == "write") {
+      if (writing()) {
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access): start() admitted bytes for a write.
         const auto &value = bytes->value();
         constexpr unsigned char empty = 0;
@@ -82,8 +86,9 @@ private:
         append(dbus_message_iter_close_container(&root, &array));
       }
       append(dbus_message_iter_open_container(&root, DBUS_TYPE_ARRAY, "{sv}", &options));
-      if (operation == "write") {
-        const char *type = "request"; dbus_uint16_t offset = 0;
+      if (writing()) {
+        const char *type = operation == "write_command" ? "command" : "request";
+        dbus_uint16_t offset = 0;
         option(options, "type", "s", DBUS_TYPE_STRING, &type);
         option(options, "offset", "q", DBUS_TYPE_UINT16, &offset);
       }
@@ -126,15 +131,29 @@ private:
           // NOLINTNEXTLINE(bugprone-unchecked-optional-access): start() admitted an address for it.
           const auto &item = address->select(*owner.snapshot(), owner.generation());
           const auto &flags = item.at("flags");
-          if (std::find(flags.begin(), flags.end(), operation) == flags.end()) {
+          const auto permission = operation == "write_command" ? "write-without-response"
+                                                               : operation;
+          if (std::find(flags.begin(), flags.end(), permission) == flags.end()) {
             fail(NativeFailure::local("not_permitted"), false); return;
           }
           path = item.at("object_path").get<std::string>();
+          if (operation == "write_command") {
+            const auto mtu = owner.snapshot()->mtus.find(path);
+            if (mtu == owner.snapshot()->mtus.end()) {
+              fail(NativeFailure::local("not_supported"), false);
+              return;
+            }
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access): start() admitted bytes for this write command.
+            if (bytes->value().size() > std::min<std::size_t>(512, mtu->second - 3)) {
+              fail(NativeFailure::local("invalid_value_length"), false);
+              return;
+            }
+          }
         }
         auto message = request(path);
         if (Clock::now() >= deadline) { fail(NativeFailure::local("timeout"), true); return; }
         phase = Phase::active;
-        if (operation == "write") {
+        if (writing()) {
           if (!emit({{"version", 1}, {"id", request_id}, {"event", "write_submitted"}})) {
             fail(NativeFailure::local("resource_limit"), false); return;
           }
@@ -142,34 +161,53 @@ private:
           write_submitted = true;
         }
         std::weak_ptr<State> weak = shared_from_this();
-        if (!owner.bus().call(message.get(), operation == "health" ? "a{sv}" : operation == "write" ? "" : "ay", deadline, [weak](BusReply reply) {
+        if (!owner.bus().call(message.get(),
+                              operation == "health" ? "a{sv}"
+                                  : writing()       ? ""
+                                                    : "ay",
+                              deadline, [weak](BusReply reply) {
           const auto state = weak.lock();
           if (!state || state->phase != Phase::active) return;
-          if (Clock::now() >= state->deadline) { state->fail(NativeFailure::local("timeout"), true); return; }
+          if (Clock::now() >= state->deadline) {
+            state->fail(NativeFailure::local("timeout"), true);
+            return;
+          }
           if (reply.error) {
             auto failure = NativeFailure::from(reply);
             const auto &code = failure.code();
             const bool terminal = code == "timeout" || code == "disconnected" || code == "invalid_response" ||
                                   code == "transport_error" || code == "owner_changed" || code == "resource_limit";
-            state->fail(std::move(failure), terminal); return;
+            state->fail(std::move(failure), terminal);
+            return;
           }
           try {
             if (state->operation == "read") state->result = read(reply.message.get());
-            else if (state->operation == "health") state->result = state->health(reply.message.get());
-          } catch (const InvalidObjects &error) { state->fail(NativeFailure::local(error.what()), true); return; }
-          catch (...) { state->fail(NativeFailure::local("invalid_response"), true); return; }
+            else if (state->operation == "health")
+              state->result = state->health(reply.message.get());
+            else if (state->operation == "write_command")
+              state->result = {{"write_mode", "without_response"},
+                               {"evidence", "native_queue_accepted"}};
+          } catch (const InvalidObjects &error) {
+            state->fail(NativeFailure::local(error.what()), true);
+            return;
+          } catch (...) {
+            state->fail(NativeFailure::local("invalid_response"), true);
+            return;
+          }
           state->complete();
-        })) fail(NativeFailure::local(Clock::now() >= deadline ? "timeout" : "resource_limit"), true);
+        }))
+          fail(NativeFailure::local(Clock::now() >= deadline ? "timeout" : "resource_limit"), true);
       } catch (const InvalidAddress &error) { fail(NativeFailure::local(error.what()), false); }
       catch (...) { fail(NativeFailure::local("resource_limit"), true); }
     }
     void start(const Json &parameters) {
-      const bool valid = operation == "health" ? fields(parameters, {}) : operation == "read" ? fields(parameters, {"address"}) :
-        operation == "write" && fields(parameters, {"address", "value"});
+      const bool valid = operation == "health" ? fields(parameters, {})
+          : operation == "read" ? fields(parameters, {"address"})
+                                : writing() && fields(parameters, {"address", "value"});
       if (!valid) { fail(NativeFailure::local("invalid_options"), false); return; }
       try {
         if (operation != "health") address.emplace(NativeAddress::from(parameters.at("address")));
-        if (operation == "write") bytes.emplace(AttributeBytes::from(parameters.at("value")));
+        if (writing()) bytes.emplace(AttributeBytes::from(parameters.at("value")));
       } catch (const InvalidAddress &) { fail(NativeFailure::local("invalid_address"), false); return; }
       catch (const InvalidValue &) { fail(NativeFailure::local("invalid_value"), false); return; }
       if (Clock::now() >= deadline) { fail(NativeFailure::local("timeout"), false); return; }

@@ -83,6 +83,13 @@ defmodule Wotex.BLE.BlueZ.Response do
   defp result("write", nil), do: {:ok, :written}
 
   defp result(
+         "write_command",
+         %{"write_mode" => "without_response", "evidence" => "native_queue_accepted"} = value
+       )
+       when map_size(value) == 2,
+       do: {:ok, %{write_mode: :without_response, evidence: :native_queue_accepted}}
+
+  defp result(
          "open",
          %{
            "generation" => generation,

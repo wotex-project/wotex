@@ -137,12 +137,13 @@ defmodule Wotex.BLE do
       case result do
         {:error, error} when type == :write ->
           if session.client == Wotex.BLE.BlueZ and
-               match?(%Wotex.BLE.BlueZ.Connection{}, session.handle),
+               (match?(%Wotex.BLE.BlueZ.Connection{}, session.handle) or
+                  match?(%Error{code: :not_supported}, error)),
              do: {:error, error},
              else: {:error, Error.unknown_effect(error)}
 
         {:ok, _} = result ->
-          result
+          write_result(result, message)
 
         {:error, _} = error ->
           error
@@ -151,6 +152,14 @@ defmodule Wotex.BLE do
   end
 
   def send(_, _), do: {:error, Error.new(:invalid_message)}
+
+  defp write_result({:ok, value} = result, %{type: :write, write_mode: :without_response}) do
+    if value === %{write_mode: :without_response, evidence: :native_queue_accepted},
+      do: result,
+      else: {:error, Error.unknown_effect(Error.new(:invalid_transport_return))}
+  end
+
+  defp write_result(result, _), do: result
 
   @doc "Reads raw bytes or an explicitly selected value codec from a GATT address."
   @spec read(term(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
@@ -167,20 +176,43 @@ defmodule Wotex.BLE do
 
   def read(_, _, _), do: {:error, Error.new(:invalid_session)}
 
-  @doc "Writes an explicit value codec and waits for acknowledged GATT completion."
-  @spec write(term(), term(), term(), term()) :: {:ok, :written} | {:error, Error.t()}
+  @doc """
+  Writes an explicit value codec with the selected GATT write procedure.
+
+  `write_mode: :with_response` is the default and returns `{:ok, :written}`.
+  `:without_response` returns only native queue evidence as
+  `{:ok, %{write_mode: :without_response, evidence: :native_queue_accepted}}`.
+  Unsupported modes refuse without fallback. Neither result proves a physical effect.
+  """
+  @spec write(term(), term(), term(), term()) ::
+          {:ok, :written | %{write_mode: :without_response, evidence: :native_queue_accepted}}
+          | {:error, Error.t()}
   def write(session, address, value, options \\ [])
 
   def write(%Session{} = session, address, value, options) do
-    with {:ok, config} <- Procedure.options(options, session.timeout),
+    with {:ok, config} <- Procedure.write_options(options, session.timeout),
          {:ok, address} <- Address.new(address),
          {:ok, bytes} <- Value.encode(value, config.type, config.codec) do
       message = Map.merge(Map.from_struct(address), %{type: :write, value: bytes})
 
+      message =
+        if config.write_mode == :without_response,
+          do: Map.put(message, :write_mode, :without_response),
+          else: message
+
       case send(%{session | timeout: config.timeout}, message) do
-        {:ok, :written} = result -> result
-        {:error, _} = error -> error
-        _ -> {:error, Error.unknown_effect(Error.new(:invalid_transport_return))}
+        {:ok, :written} = result when config.write_mode == :with_response ->
+          result
+
+        {:ok, %{write_mode: :without_response, evidence: :native_queue_accepted}} = result
+        when config.write_mode == :without_response ->
+          result
+
+        {:error, _} = error ->
+          error
+
+        _ ->
+          {:error, Error.unknown_effect(Error.new(:invalid_transport_return))}
       end
     end
   end

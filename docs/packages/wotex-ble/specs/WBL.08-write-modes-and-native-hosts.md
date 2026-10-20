@@ -1,7 +1,8 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.1.0. Updated: 2026-10-13. Status: accepted target.
-Implementation: planned. Evidence: missing. WBL.01–07 remain unchanged.
+Version: 0.2.0. Updated: 2026-10-20. Status: accepted target.
+Implementation: partial; explicit BlueZ modes and native queue evidence are
+implemented. CoreBluetooth and installed-host qualification remain open.
 
 ## Scope and operations
 
@@ -48,8 +49,54 @@ credentials never enter public errors, telemetry or portable profiles.
 
 ## Compatibility, entry and acceptance
 
-Before code freeze public option/result/error and IPC revisions, the exact
-BlueZ/CoreBluetooth capability matrix and independent vectors. Old IPC peers
+### Frozen BlueZ write interface
+
+`Wotex.BLE.write/4` accepts the duplicate-free option `write_mode` with exactly
+`:with_response` or `:without_response`; omission selects `:with_response`.
+The low-level write message carries that same optional atom-keyed member.
+Reads reject it. The package Form extension `wotex:bleWriteMode` accepts exactly
+`with_response` or `without_response`, applies only to Property writes and
+defaults to `with_response`. It is not a W3C field. Existing acknowledged
+messages, replies and Forms preserve their current representation.
+
+With-response success remains `{:ok, :written}`. Without-response success is
+exactly `{:ok, %{write_mode: :without_response, evidence: :native_queue_accepted}}`.
+Runtime retains that complete value as its Result payload with status `:accepted`.
+A null/`:written`
+response cannot settle a command. Neither result establishes canonical state
+or physical completion. Wrong/duplicate options, malformed result fields and
+unsupported selectors refuse; there is no command/request substitution.
+
+The persistent BlueZ host adds the closed version-1 operation `write_command`,
+with the same exact `address`/`value` parameters as `write`. Its success result
+is exactly `{"write_mode":"without_response","evidence":"native_queue_accepted"}`.
+Old peers reject the unknown operation. Existing `write` still requires the
+`write` flag and the request procedure. `write_command` requires the distinct
+`write-without-response` flag and sends precisely `type: "command"` and uint16
+`offset: 0` to WriteValue. Its normal empty D-Bus reply establishes only native
+queue acceptance. Both operations use the existing correlated `write_submitted`
+event and shared queue, deadline, cancellation, retirement and uncertainty rules.
+
+Before admitting a command, refresh and validate the characteristic's explicit
+uint16 MTU in 23..517. Missing MTU refuses `not_supported`; malformed MTU refuses
+`invalid_characteristic`. Its payload is at most `min(512, MTU - 3)` bytes;
+over-bound commands refuse `invalid_value_length` before the submission event
+or WriteValue call. MTU changes invalidate discovery generation. No implicit
+MTU, fragmentation, long command or retry is allowed.
+
+| Explicit backend | With response | Without response |
+| --- | --- | --- |
+| Persistent BlueZ | Existing acknowledged procedure | Explicit command with current flag/MTU and native queue evidence |
+| One-shot busctl | Existing acknowledged procedure | `not_supported` before process invocation |
+| CoreBluetooth | Target only; no implementation claim | Target only; no implementation claim |
+
+The [pinned BlueZ characteristic API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst)
+owns the native command/request and MTU property vocabulary. It does not qualify
+an installed controller or its radio behavior.
+
+The interface above freezes BlueZ option/result/error and IPC entry. Before
+CoreBluetooth implementation, freeze its exact native capability/security
+matrix, IPC and independent vectors. Old IPC peers
 reject new formats rather than ignoring mode. Historic BlueZ software evidence
 does not qualify macOS permissions or physical GATT/RF operation.
 

@@ -1,12 +1,15 @@
 # Wotex BLE completion contract
 
-Plan version: 1.1.1. Package baseline: 0.1.0.
+Plan version: 1.2.0. Package baseline: 0.1.0.
 
-The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is planned.
-Freeze mode/result/error and IPC contracts first, implement independent BlueZ
-write-mode peers, then the explicitly selected CoreBluetooth host and installed
-Mac lifecycle/readiness corpus. WBL08-T1–T5 are obligations; neither this target
-nor existing Linux software evidence qualifies the Mac or a physical device.
+The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
+Its explicit BlueZ modes, command flag/current-MTU admission and native queue
+evidence are implemented through the public API, Runtime and native bridge.
+The focused suite and real private D-Bus/native lane exercise these boundaries;
+their [exact evidence](../provenance/write-modes-2026-10.md) does not establish
+controller/RF behavior. Continue with independent archive/installed BlueZ
+qualification, then the explicitly selected CoreBluetooth host and installed
+Mac lifecycle/readiness corpus. WBL08-T1–T5 remain the complete obligations.
 
 Graduate this library independently. Acceptance requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension

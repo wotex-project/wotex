@@ -12,6 +12,8 @@ defmodule Wotex.BLE.Mapping do
   explicit media type. `wotex:bleValueType` defaults to bytes and
   `wotex:bleByteOrder` to little-endian. `wotex:bleMode` applies only to streams
   and defaults to auto. Invalid selectors fail without contacting a peer.
+  `wotex:bleWriteMode` applies only to writes and selects `with_response`
+  (the default) or `without_response`, preserving the latter in the message.
 
   Mapping performs no discovery, pairing, authorization or radio I/O. Success
   establishes syntax and package-profile compatibility, not that the target
@@ -34,6 +36,7 @@ defmodule Wotex.BLE.Mapping do
           )
   @orders %{"little" => :little, "big" => :big}
   @modes %{"auto" => :auto, "notify" => :notify, "indicate" => :indicate}
+  @write_modes %{"with_response" => :with_response, "without_response" => :without_response}
 
   @doc "Maps a contextual Form to a typed native operation without acquiring a peer."
   @spec command(Form.t(), atom(), term(), String.t() | nil) :: {:ok, map()} | {:error, Error.t()}
@@ -46,11 +49,18 @@ defmodule Wotex.BLE.Mapping do
          fields = Form.to_map(validated),
          :ok <- media(fields),
          :ok <- mode_applicability(fields, type),
+         :ok <- write_mode_applicability(fields, type),
          {:ok, value_type} <- selector(fields, "wotex:bleValueType", @codecs, :bytes),
          {:ok, byte_order} <- selector(fields, "wotex:bleByteOrder", @orders, :little),
          {:ok, mode} <- selector(fields, "wotex:bleMode", @modes, :auto),
+         {:ok, write_mode} <- selector(fields, "wotex:bleWriteMode", @write_modes, :with_response),
          {:ok, target, address} <- target(href || Form.href(validated)),
          {:ok, message} <- message(address, type, input, value_type, byte_order) do
+      message =
+        if type == :write and write_mode == :without_response,
+          do: Map.put(message, :write_mode, write_mode),
+          else: message
+
       {:ok,
        %{
          target: target,
@@ -96,6 +106,14 @@ defmodule Wotex.BLE.Mapping do
   end
 
   defp mode_applicability(_, _), do: :ok
+
+  defp write_mode_applicability(_, :write), do: :ok
+
+  defp write_mode_applicability(fields, _) do
+    if Map.has_key?(fields, "wotex:bleWriteMode"),
+      do: {:error, Error.new(:invalid_selector)},
+      else: :ok
+  end
 
   defp selector(fields, name, choices, default) do
     case Map.fetch(fields, name) do

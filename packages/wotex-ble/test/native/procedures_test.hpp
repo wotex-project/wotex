@@ -24,7 +24,7 @@ struct Fixture {
   std::string mode, error_name = "org.bluez.Error.NotPermitted";
   Message pending;
   unsigned completions = 0;
-  bool emit_ok = true, cancel_on_emit = false;
+  bool emit_ok = true, cancel_on_emit = false, command = false;
   explicit Fixture(const std::string &bus_address, bool owned = false) : session(bus_address, owned), operation(session.owner) {
     session.peer.objects.back().second[0].second.back().value = Json::array({"read", "write", "notify"});
     session.peer.on_other = [&](DBusMessage *request) {
@@ -68,7 +68,10 @@ struct Fixture {
         dbus_message_iter_next(&dictionary);
       }
       PROCEDURE_CHECK(!dbus_message_iter_next(&root));
-      PROCEDURE_CHECK(options == (member == "WriteValue" ? Json{{"type", "request"}, {"offset", 0}} : Json::object()));
+      PROCEDURE_CHECK(options ==
+                      (member == "WriteValue"
+                           ? Json{{"type", command ? "command" : "request"}, {"offset", 0}}
+                           : Json::object()));
       pending.reset(dbus_message_ref(request));
       if (mode == "held") return;
       if (mode == "remote") {
@@ -89,6 +92,7 @@ struct Fixture {
     };
   }
   void start(const std::string &name, const Json &parameters, int milliseconds = 2000) {
+    command = name == "write_command";
     PROCEDURE_CHECK(operation.start(name, parameters, 81, Clock::now() + std::chrono::milliseconds(milliseconds),
       [&](const Json &event) {
         events.push_back(event);
@@ -148,7 +152,9 @@ inline void admission(const std::string &bus_address) {
     Fixture fixture(bus_address); fixture.start("write", {{"address", address}, {"value", value}}); rejected(fixture, "invalid_value");
   }
   {
-    Fixture fixture(bus_address); fixture.start("write_command", write_parameters({1})); rejected(fixture, "invalid_options");
+    Fixture fixture(bus_address);
+    fixture.start("write_command", write_parameters({1}));
+    rejected(fixture, "not_permitted", 2);
   }
   {
     Fixture fixture(bus_address); fixture.start("read", {{"address", address}}, 0); rejected(fixture, "timeout");
@@ -186,7 +192,121 @@ inline void admission(const std::string &bus_address) {
     fixture.start("read", {{"address", selector}}); rejected(fixture, "stale_discovery", 2);
   }
 }
+inline void commands(const std::string &bus_address) {
+  const Json accepted{{"write_mode", "without_response"}, {"evidence", "native_queue_accepted"}};
+  {
+    Fixture fixture(bus_address);
+    fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+        {"write-without-response"});
+    fixture.session.peer.objects.back().second[0].second.push_back({"MTU", "q", 23});
+    fixture.start("write_command", write_parameters({1}));
+    fixture.until([&] { return bool(fixture.result); });
+    fixture.clean(true);
+    const auto generation = fixture.session.owner.generation();
+    fixture.session.peer.objects.back().second[0].second.back().value = 24;
+    auto parameters = write_parameters({2});
+    parameters["address"]["generation"] = generation;
+    NativeProcedure successor(fixture.session.owner);
+    std::optional<ProcedureResult> changed;
+    PROCEDURE_CHECK(successor.start("write_command", parameters, 82,
+                                    Clock::now() + std::chrono::seconds(2), [&](const Json &) {
+      PROCEDURE_CHECK(false);
+      return false;
+    }, [&](ProcedureResult result) {
+      PROCEDURE_CHECK(!changed);
+      changed.emplace(std::move(result));
+    }));
+    const auto deadline = Clock::now() + std::chrono::seconds(3);
+    while (!changed && Clock::now() < deadline) {
+      fixture.session.peer.poll();
+      std::vector<pollfd> none;
+      successor.poll(none, 1);
+    }
+    PROCEDURE_CHECK(changed && changed->failure && changed->failure->code() == "stale_discovery" &&
+                    !changed->write_submitted && fixture.methods.size() == 1 &&
+                    fixture.session.owner.generation() == generation + 1);
+  }
+  for (const unsigned mtu : {23, 24, 247, 517}) {
+    const unsigned bound = std::min(512U, mtu - 3);
+    for (const unsigned length : {0U, bound}) {
+      Fixture fixture(bus_address);
+      fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+          {"write-without-response"});
+      fixture.session.peer.objects.back().second[0].second.push_back({"MTU", "q", mtu});
+      const std::vector<unsigned char> bytes(length, 42);
+      fixture.start("write_command", write_parameters(bytes));
+      fixture.until([&] { return bool(fixture.result); });
+      fixture.clean(true);
+      PROCEDURE_CHECK(!fixture.result->failure && fixture.result->write_submitted &&
+                      fixture.result->value == accepted &&
+                      fixture.methods == std::vector<std::string>{"WriteValue"} &&
+                      fixture.events.size() == 1);
+    }
+    if (bound < 512) {
+      Fixture fixture(bus_address);
+      fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+          {"write-without-response"});
+      fixture.session.peer.objects.back().second[0].second.push_back({"MTU", "q", mtu});
+      fixture.start("write_command", write_parameters(std::vector<unsigned char>(bound + 1, 42)));
+      rejected(fixture, "invalid_value_length", 2);
+    }
+  }
+  {
+    Fixture fixture(bus_address);
+    fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+        {"write-without-response"});
+    fixture.start("write_command", write_parameters({1}));
+    rejected(fixture, "not_supported", 2);
+  }
+  for (const unsigned mtu : {0, 22, 518, 65535}) {
+    Fixture fixture(bus_address);
+    fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+        {"write-without-response"});
+    fixture.session.peer.objects.back().second[0].second.push_back({"MTU", "q", mtu});
+    fixture.start("write_command", write_parameters({1}));
+    fixture.until([&] { return bool(fixture.result); });
+    fixture.clean(false);
+    PROCEDURE_CHECK(
+        fixture.result->failure && fixture.result->failure->code() == "invalid_characteristic" &&
+        !fixture.result->write_submitted && fixture.methods.empty() && fixture.events.empty());
+  }
+  for (const auto &property :
+       {object_test::Property{"MTU", "b", true}, object_test::Property{"MTU", "s", "23"},
+        object_test::Property{"MTU", "u", 23}}) {
+    Fixture fixture(bus_address);
+    fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+        {"write-without-response"});
+    fixture.session.peer.objects.back().second[0].second.push_back(property);
+    fixture.start("write_command", write_parameters({1}));
+    fixture.until([&] { return bool(fixture.result); });
+    fixture.clean(false);
+    PROCEDURE_CHECK(
+        fixture.result->failure && fixture.result->failure->code() == "invalid_characteristic" &&
+        !fixture.result->write_submitted && fixture.methods.empty() && fixture.events.empty());
+  }
+  for (const bool cancel : {false, true}) {
+    Fixture fixture(bus_address);
+    fixture.mode = "held";
+    fixture.session.peer.objects.back().second[0].second.back().value = Json::array(
+        {"write-without-response"});
+    fixture.session.peer.objects.back().second[0].second.push_back({"MTU", "q", 23});
+    fixture.start("write_command", write_parameters({1}), 100);
+    fixture.until([&] { return bool(fixture.pending); });
+    if (cancel) fixture.operation.cancel(Clock::now() + std::chrono::milliseconds(100));
+    fixture.until([&] { return bool(fixture.result); });
+    fixture.clean(false);
+    PROCEDURE_CHECK(fixture.result->failure && fixture.result->failure->code() == "timeout" &&
+                    fixture.result->write_submitted && fixture.methods.size() == 1);
+    fixture.session.peer.empty_reply(fixture.pending.get());
+    fixture.session.peer.poll();
+    std::vector<pollfd> none;
+    fixture.operation.poll(none, 0);
+    PROCEDURE_CHECK(fixture.completions == 1 && fixture.methods.size() == 1);
+  }
+}
+
 inline void lifecycle(const std::string &bus_address) {
+  commands(bus_address);
   // WBL-V11: cancellation retires the original sender, with no write retry.
   for (const std::string name : {"read", "write"}) {
     for (const bool owned : {false, true}) {

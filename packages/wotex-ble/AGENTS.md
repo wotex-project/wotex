@@ -99,6 +99,9 @@ Tests by area, under `test/wotex/ble/` unless noted:
   `stream_value_test.exs`, `bluez_test.exs`.
 - Form mapping and the facade contract: `mapping_test.exs`, `contract_test.exs`,
   `contract_fixture_test.exs`, `port_test.exs`, `health_test.exs`.
+- Explicit write modes and Runtime queue evidence: `write_mode_test.exs`;
+  `test/native/procedures_test.hpp` exercises actual private D-Bus command flags,
+  exact MTU bounds, timeout/cancellation and late replies through the native lane.
 - BlueZ bridge and persistent connection: `bluez_schema_test.exs`,
   `dbus_bridge_test.exs`, `stream_bridge_test.exs`,
   `stream_response_test.exs`, `report_flow_test.exs`,

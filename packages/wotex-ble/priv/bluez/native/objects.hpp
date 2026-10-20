@@ -93,7 +93,7 @@ class ObjectReader {
     } else if (interface == characteristic_interface) {
       if (name == "Service") return DBUS_TYPE_OBJECT_PATH;
       if (name == "UUID") return DBUS_TYPE_STRING;
-      if (name == "Handle") return DBUS_TYPE_UINT16;
+      if (name == "Handle" || name == "MTU") return DBUS_TYPE_UINT16;
       if (name == "Flags") return DBUS_TYPE_ARRAY;
     }
     return DBUS_TYPE_INVALID;
@@ -142,7 +142,15 @@ class ObjectReader {
       if (!dbus_validate_member(name.c_str(), nullptr) || !seen.insert(name).second) throw InvalidObjects();
       next(pair); type(pair, DBUS_TYPE_VARIANT);
       const auto expected = property_type(interface, name);
-      if (expected != DBUS_TYPE_INVALID) result[name] = value(pair, expected);
+      if (expected != DBUS_TYPE_INVALID) {
+        try {
+          result[name] = value(pair, expected);
+        } catch (const InvalidObjects &) {
+          if (interface == characteristic_interface && name == "MTU")
+            throw InvalidObjects("invalid_characteristic");
+          throw;
+        }
+      }
       end(pair); dbus_message_iter_next(&item);
     }
     if (names) *names = std::move(seen);
@@ -255,6 +263,7 @@ struct Discovery {
   bool connected, services_resolved;
   Json characteristics;
   std::set<std::string> service_paths;
+  std::map<std::string, std::uint16_t> mtus;
 };
 
 class NativePeer {
@@ -312,6 +321,7 @@ inline Discovery discovery(const ObjectSnapshot &snapshot, const NativePeer &pee
     services.emplace(key, uuid_text(service.value("UUID", std::string())));
   }
   Json characteristics = Json::array();
+  std::map<std::string, std::uint16_t> mtus;
   for (const auto &[key, interfaces] : objects.items()) {
     if (!interfaces.contains(characteristic_interface)) continue;
     const auto &characteristic = interfaces.at(characteristic_interface);
@@ -321,6 +331,11 @@ inline Discovery discovery(const ObjectSnapshot &snapshot, const NativePeer &pee
     if (services.size() + characteristics.size() == 1024) throw InvalidObjects("object_limit");
     if (!characteristic.contains("Flags") || !characteristic.at("Flags").is_array())
       throw InvalidObjects("invalid_characteristic");
+    if (characteristic.contains("MTU")) {
+      if (!integer(characteristic.at("MTU"), 23, 517))
+        throw InvalidObjects("invalid_characteristic");
+      mtus.emplace(key, characteristic.at("MTU").get<std::uint16_t>());
+    }
     characteristics.push_back({{"service_uuid", found->second},
       {"characteristic_uuid", uuid_text(characteristic.value("UUID", std::string()))},
       {"service_path", service}, {"object_path", key},
@@ -333,6 +348,11 @@ inline Discovery discovery(const ObjectSnapshot &snapshot, const NativePeer &pee
   });
   std::set<std::string> service_paths;
   for (const auto &[key, unused] : services) { (void)unused; service_paths.insert(key); }
-  return {path, device.at("Connected"), device.at("ServicesResolved"), std::move(characteristics), std::move(service_paths)};
+  return {path,
+          device.at("Connected"),
+          device.at("ServicesResolved"),
+          std::move(characteristics),
+          std::move(service_paths),
+          std::move(mtus)};
 }
 } // namespace wotex::ble

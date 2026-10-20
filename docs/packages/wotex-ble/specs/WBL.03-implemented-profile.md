@@ -3,9 +3,9 @@ spec:
   id: WBL.03
   title: "Implemented BLE profile"
   status: accepted
-  version: 1.1.2
+  version: 1.2.0
   owner: wotex-ble
-  updated: 2026-09-20
+  updated: 2026-10-20
 ---
 
 # WBL.03 Implemented BLE profile
@@ -42,6 +42,12 @@ Typed Peer/Characteristic/Value APIs and Property/Event Runtime relays are
 implemented. `connection: :borrowed` preserves ordinary borrowed links; pending
 Pair sender loss can separately cause BlueZ to disconnect the peer. Explicit
 pairing never authorizes removing bonds or registering a default Agent.
+
+The additive [write-mode contract](WBL.08-write-modes-and-native-hosts.md) selects
+request or command explicitly. A command requires the current
+`write-without-response` flag and explicit MTU, and reports native queue
+acceptance without an ATT acknowledgement. The one-shot backend refuses command
+mode before process invocation. This addition does not qualify CoreBluetooth.
 
 The Mix-built host passes the 11 public BLE and Runtime tests and the 5 WBL-C09
 lifecycle stress tests against real BlueZ and virtual controllers in both BEAM

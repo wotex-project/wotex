@@ -3,9 +3,9 @@ spec:
   id: WBL.01
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.10
+  version: 1.2.0
   owner: wotex-ble
-  updated: 2026-09-20
+  updated: 2026-10-20
 ---
 
 # WBL.01 Software implementation rules
@@ -35,6 +35,11 @@ selectors, Runtime request/stream ownership, typed delivery and live native
 health. WBL-P07a accepts the complete WBL.06 consumer matrix through public core
 and Runtime APIs. WBL-P08 accepts the lifecycle, admission and forced-fault
 source suite and its exact software-runner contract.
+
+[WBL.08](WBL.08-write-modes-and-native-hosts.md) adds the explicit write-mode
+option and distinct native queue result. It owns command flag/MTU admission and
+the additive IPC operation; the acknowledged default and its evidence remain
+separate from command and CoreBluetooth qualification.
 
 WBL-P07 accepts the isolated BlueZ software workflow. Its immutable receipt
 binds its recorded source subject, native host, independent C++ GATT provider,

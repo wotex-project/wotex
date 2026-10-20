@@ -6,6 +6,8 @@ defmodule Wotex.BLE.Transport do
   deadline and exact configured target, then map the Form, open the client,
   perform one read or acknowledged write and close the session. Native value
   codecs decode reads; write completion is `:written`, not a readback value.
+  An explicit command write instead returns native queue evidence with Runtime
+  status `:accepted`, retaining uncertainty about delivery and physical effects.
 
   The `:ble_gatt` profile requires the first-party persistent BlueZ backend.
   Property observation and Event subscriptions use `Wotex.BLE.RuntimeRelay`,
@@ -167,10 +169,28 @@ defmodule Wotex.BLE.Transport do
          {:ok, value} <- BLE.send(session, prepared.mapping.message),
          {:ok, payload} <- decode(value, prepared.mapping),
          :ok <- completion(prepared.deadline, request.operation),
-         do: Result.new(request.request_id, request.operation, payload)
+         do:
+           Result.new(request.request_id, request.operation, payload,
+             status:
+               if(Map.get(prepared.mapping.message, :write_mode) == :without_response,
+                 do: :accepted,
+                 else: :ok
+               )
+           )
   end
 
-  defp decode(:written, %{message: %{type: :write}}), do: {:ok, :written}
+  defp decode(
+         %{write_mode: :without_response, evidence: :native_queue_accepted} = value,
+         %{message: %{type: :write, write_mode: :without_response}}
+       )
+       when map_size(value) == 2,
+       do: {:ok, value}
+
+  defp decode(:written, %{message: %{type: :write} = message}) do
+    if Map.get(message, :write_mode, :with_response) == :with_response,
+      do: {:ok, :written},
+      else: {:error, Error.unknown_effect(Error.new(:invalid_transport_return))}
+  end
 
   defp decode(_, %{message: %{type: :write}}),
     do: {:error, Error.unknown_effect(Error.new(:invalid_transport_return))}

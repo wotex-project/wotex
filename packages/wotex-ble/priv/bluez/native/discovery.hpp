@@ -172,8 +172,10 @@ class LiveDiscovery {
           if (state->linked && (!current.connected || !current.services_resolved)) {
             state->fail("disconnected"); return;
           }
-          if (state->snapshot && (state->dirty || current.characteristics != state->snapshot->characteristics ||
-                                  current.service_paths != state->snapshot->service_paths)) {
+          if (state->snapshot &&
+              (state->dirty || current.characteristics != state->snapshot->characteristics ||
+               current.service_paths != state->snapshot->service_paths ||
+               current.mtus != state->snapshot->mtus)) {
             if (state->generation == std::numeric_limits<std::uint64_t>::max()) {
               state->fail("generation_exhausted"); return;
             }

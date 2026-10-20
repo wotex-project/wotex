@@ -267,11 +267,14 @@ class Script {
     record_.write({{"submitted", event.at("id")}});
     emit(event);
   }
-  void write(const std::string &id, const Json &parameters) {
+  void write(const std::string &id, const Json &parameters, bool command = false) {
     const auto index = resolve(id, parameters.at("address"));
     if (!index) return;
     const auto &item = characteristics_[*index];
-    if (!flag(item.at("flags"), "write")) { fail(id, "not_permitted"); return; }
+    if (!flag(item.at("flags"), command ? "write-without-response" : "write")) {
+      fail(id, "not_permitted");
+      return;
+    }
     Json value;
     try { value = AttributeBytes::from(parameters.at("value")).envelope(); }
     catch (const InvalidValue &) { fail(id, "invalid_value"); return; }
@@ -284,9 +287,15 @@ class Script {
     if (mode("procedure_blocked")) return;
     if (mode("procedure_error")) { fail(id, scenario_.error); return; }
     if (mode("procedure_malformed")) { reply(id, true); return; }
-    values_[item.at("object_path").get<std::string>()] = value;
-    if (mode("procedure_slow")) { after(50, [this, id] { reply(id, nullptr); }); return; }
-    reply(id, nullptr);
+    if (!command) values_[item.at("object_path").get<std::string>()] = value;
+    const Json response = command
+        ? Json{{"write_mode", "without_response"}, {"evidence", "native_queue_accepted"}}
+        : Json(nullptr);
+    if (mode("procedure_slow")) {
+      after(50, [this, id, response] { reply(id, response); });
+      return;
+    }
+    reply(id, response);
   }
   void pair(const std::string &id) {
     challenge_ = id;
@@ -449,6 +458,7 @@ public:
     else if (operation == "health") health(id);
     else if (operation == "read") read(id, parameters);
     else if (operation == "write") write(id, parameters);
+    else if (operation == "write_command") write(id, parameters, true);
     else if (operation == "pair") pair(id);
     else if (operation == "agent_reply") agent_reply(id, parameters);
     else if (operation == "subscribe") subscribe(id, parameters);

@@ -172,6 +172,9 @@ defmodule Wotex.BLE.BlueZ do
 
   defp operation(%{type: :read}), do: {:ok, "ReadValue", "a{sv}", ["0"]}
 
+  defp operation(%{type: :write, write_mode: :without_response}),
+    do: {:error, Error.new(:not_supported)}
+
   defp operation(%{type: :write, value: value}) when is_binary(value) and byte_size(value) <= 512 do
     values = for <<byte <- value>>, do: Integer.to_string(byte)
 

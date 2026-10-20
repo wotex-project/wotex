@@ -3,9 +3,9 @@ spec:
   id: WBL.07
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.27
+  version: 1.1.0
   owner: wotex-ble
-  updated: 2026-09-21
+  updated: 2026-10-20
 ---
 
 # WBL.07 Native backend, build and IPC contract
@@ -670,6 +670,12 @@ checked before copying and encoding the canonical byte envelope. Write success
 requires an empty acknowledgement and returns null. There is no implicit readback,
 command-mode fallback, offset continuation or retry. Explicit readback is a
 separate read operation with a separate deadline.
+
+[WBL.08](WBL.08-write-modes-and-native-hosts.md) separately owns the additive
+`write_command` operation, current MTU admission and command queue evidence.
+Object snapshots retain typed MTU privately by characteristic path; MTU changes
+advance discovery generation without changing the seven-field public discovery
+representation. The existing `write` operation above never selects command mode.
 
 The write-submission event is admitted before WriteValue. Unavailable event
 capacity or cancellation during event delivery prevents the call. Once submitted,

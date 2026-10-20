@@ -104,6 +104,14 @@ explicit connection mode. `discover/2` returns paginated characteristic values;
 requires a consumer `Wotex.BLE.Agent` decision callback; no default acceptance
 or security-level assurance is inferred from a paired flag.
 
+`write/4` defaults to `write_mode: :with_response`. Explicit
+`write_mode: :without_response` uses the persistent BlueZ command procedure and
+returns `{:ok, %{write_mode: :without_response, evidence: :native_queue_accepted}}`.
+It requires the command flag and a current MTU; it supplies no ATT acknowledgement
+or physical completion. The Form extension `wotex:bleWriteMode` selects the same
+procedure, with a Runtime Result status of `:accepted` for command queue evidence.
+The one-shot backend refuses command mode. CoreBluetooth remains planned.
+
 `subscribe/2` delivers `{:wotex_ble, reference, {:ok, value, metadata}}` messages
 to the selected receiver. Cancel with `unsubscribe/2` on the same session.
 Metadata identifies BlueZ Value changes; it does not infer whether a change
