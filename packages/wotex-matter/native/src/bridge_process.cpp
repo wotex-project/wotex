@@ -69,6 +69,13 @@ class Session final : public BridgeResultSink, public BridgeOutputSink {
  public:
   Session(BridgeProcessDriver &driver, Generation generation, Time::time_point deadline)
       : driver(driver), generation(generation), deadline(deadline) {}
+  void Closing(bool requested) noexcept override {
+    if (!requested) {
+      int empty = 0;
+      failure.compare_exchange_strong(empty, static_cast<int>(Exit::Input));
+    }
+    Closed();
+  }
   bool Ready(const BridgeConsumerHandoff::Ticket &ticket) noexcept override {
     return driver.Ready(ticket);
   }
@@ -83,6 +90,7 @@ class Session final : public BridgeResultSink, public BridgeOutputSink {
   void Closed() noexcept override {
     {
       std::lock_guard<std::mutex> lock(mutex);
+      if (!starting) ArmCleanup();
       cancel.store(true);
     }
     changed.notify_all();
@@ -91,6 +99,7 @@ class Session final : public BridgeResultSink, public BridgeOutputSink {
     {
       std::lock_guard<std::mutex> lock(mutex);
       if (startup_only && !starting) return;
+      if (!starting) ArmCleanup();
       int empty = 0;
       failure.compare_exchange_strong(empty, static_cast<int>(reason));
       cancel.store(true);
@@ -105,9 +114,15 @@ class Session final : public BridgeResultSink, public BridgeOutputSink {
   void Phase(bool cleanup) {
     std::lock_guard<std::mutex> lock(mutex);
     starting = false;
-    cleaning = cleanup;
-    if (cleanup) deadline = Time::now() + std::chrono::seconds(1);
+    if (cleanup || cancel.load()) ArmCleanup();
     changed.notify_all();
+  }
+  // Called only with the session mutex. Input retirement, main-thread cleanup
+  // and later pipe loss share this deadline; none may renew it.
+  void ArmCleanup() {
+    if (cleaning) return;
+    cleaning = true;
+    deadline = Time::now() + std::chrono::seconds(1);
   }
   void Watch(int input_descriptor, int output_descriptor, const std::atomic<bool> &external) {
     std::unique_lock<std::mutex> lock(mutex);
@@ -121,12 +136,12 @@ class Session final : public BridgeResultSink, public BridgeOutputSink {
       const int written = poll(&outgoing, 1, 0);
       if ((written < 0 && errno != EINTR) || (outgoing.revents & (POLLERR | POLLHUP | POLLNVAL)))
         Fail(Exit::Output);
-      if (startup && !input_done.load()) {
+      if (!input_done.load()) {
         pollfd incoming{input_descriptor, POLLIN, 0};
         const int read = poll(&incoming, 1, 0);
-        if ((read < 0 && errno != EINTR) ||
-            (incoming.revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL)))
-          Fail(Exit::Input, true);
+        if ((read < 0 && errno != EINTR) || (incoming.revents & (POLLERR | POLLHUP | POLLNVAL)))
+          Fail(Exit::Input);
+        else if (startup && (incoming.revents & POLLIN)) Fail(Exit::Input, true);
       }
       lock.lock();
       changed.wait_for(lock, std::chrono::milliseconds(10));
@@ -209,8 +224,8 @@ BridgeProcessExit RunBridgeProcess(int input, int output, std::uint32_t startup_
   }
   session.Phase(true);
   session.reader_stop.store(true);
-  owner.Close();
   if (reader.joinable()) reader.join();
+  owner.Close();
   const bool cleaned = !entered || driver.Stop();
   bool terminal = false;
   if (!cleaned) std::_Exit(static_cast<int>(Exit::Cleanup));

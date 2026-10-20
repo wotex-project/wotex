@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.27.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.28.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -15,8 +15,10 @@ authenticated request integration and independent controller peer remain open.
 The internal native process coordinator joins bounded open/ready controls,
 separate result/clock input, reserved output, original startup time and one
 cleanup deadline through an explicit SDK composition port. Its real-pipe
-fixture covers twenty-two case families, including independent processes,
+fixture covers twenty-five case families, including independent processes,
 pre-ready input, consumer loss and watchdog termination with custody locked.
+Input loss and explicit close arm the cleanup deadline before custody can block;
+input retirement and later cleanup stages preserve that same deadline.
 The production SDK driver, approved-observation application and authenticated
 request integration remain required before this becomes an executable server.
 The [finite software profile](exposed-bridge-profile.md) pins the source,

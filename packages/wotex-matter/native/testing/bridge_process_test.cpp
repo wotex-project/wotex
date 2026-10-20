@@ -2,6 +2,7 @@
 #include "wotex_matter/bridge_process.hpp"
 #include <atomic>
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <fcntl.h>
@@ -41,6 +42,13 @@ class Driver final : public BridgeProcessDriver {
     assert(!started && custody.Sample({1}, 100) == BridgeConsumerHandoff::ClockSample::Sampled);
     started = true;
     this->owner = &owner;
+    if (mode == "stuck-running-lock")
+      worker = std::thread([&] {
+        owner.With([&](auto &, auto) {
+          assert(write(audit, "R", 1) == 1);
+          while (true) std::this_thread::sleep_for(10ms);
+        });
+      });
     if (mode == "slow-start") std::this_thread::sleep_for(60ms);
     if (mode == "stuck-start-lock")
       owner.With([&](auto &, auto) {
@@ -79,6 +87,7 @@ class Driver final : public BridgeProcessDriver {
   bool Stop() noexcept override {
     assert(started && !stopped);
     stopped = true;
+    if (worker.joinable()) worker.join();
     if (mode == "stuck-stop-lock")
       owner->With([&](auto &, auto) {
         assert(write(audit, "T", 1) == 1);
@@ -101,6 +110,7 @@ class Driver final : public BridgeProcessDriver {
   const int audit;
   BridgeHandoffOwner *owner{nullptr};
   BridgeConsumerHandoff::Ticket ticket;
+  std::thread worker;
   std::atomic<bool> consumed{false};
   bool started{false}, stopped{false};
 };
@@ -248,7 +258,8 @@ int main() {
     const auto open = Control("open");
     Send(child, open.substr(0, open.size() - 1));
     std::this_thread::sleep_for(120ms);
-    Send(child, "\n");
+    const auto sent = write(child.input, "\n", 1);
+    assert(sent == 1 || (sent < 0 && errno == EPIPE));
     assert(Line(child).empty());
     // Expiry before SDK entry is a safe refusal; expiry after entry is fatal.
     // Neither phase may reset the budget and publish ready after this delay.
@@ -323,6 +334,22 @@ int main() {
     assert(Line(second).find("\"native_ms\":\"100\"") != std::string::npos);
     Close(second);
   }
+  for (const auto *loss : {"eof", "close", "probe-eof"}) {
+    auto child = Spawn("stuck-running-lock");
+    Ready(child);
+    pollfd audit{child.audit, POLLIN, 0};
+    assert(poll(&audit, 1, 2000) > 0);
+    char mark = 0;
+    assert(read(child.audit, &mark, 1) == 1 && mark == 'R');
+    if (std::string(loss) == "close") Send(child, Control("close"));
+    else {
+      if (std::string(loss) == "probe-eof") Send(child, probe);
+      close(child.input);
+      child.input = -1;
+    }
+    assert(Line(child).empty());
+    Join(child, Exit::Cleanup);
+  }
   {
     auto child = Spawn("blocked-output");
     Ready(child);
@@ -332,5 +359,5 @@ int main() {
     Send(child, Control("close"));
     Join(child, Exit::Cleanup);
   }
-  std::cout << "bridge-process-cases=22\n";
+  std::cout << "bridge-process-cases=25\n";
 }

@@ -153,6 +153,8 @@ class InputSax final : public nlohmann::json_sax<nlohmann::json> {
 
 } // namespace
 
+// The 511-byte input and fixed generation cannot reach string::max_size; bad_alloc is caught.
+// NOLINTNEXTLINE(bugprone-exception-escape)
 BridgeResultDecode DecodeBridgeOpenFrame(std::string_view line,
                                          BridgeConsumerHandoff::Generation &generation) noexcept {
   if (line.size() >= kMaximumBridgeResultFrameBytes) return BridgeResultDecode::Oversized;
@@ -169,6 +171,8 @@ BridgeResultDecode DecodeBridgeOpenFrame(std::string_view line,
   }
 }
 
+// Fixed literals, two pinned identities and 32 hex digits stay below 512 bytes; bad_alloc is caught.
+// NOLINTNEXTLINE(bugprone-exception-escape)
 BridgeControlEncode EncodeBridgeControlReply(BridgeControlReply role,
                                              const BridgeConsumerHandoff::Generation &generation,
                                              std::string &output) noexcept {
@@ -189,6 +193,8 @@ BridgeControlEncode EncodeBridgeControlReply(BridgeControlReply role,
   }
 }
 
+// The 511-byte input and fixed generation cannot reach string::max_size; bad_alloc is caught.
+// NOLINTNEXTLINE(bugprone-exception-escape)
 BridgeResultDecode DecodeBridgeInputFrame(std::string_view line,
                                           const BridgeConsumerHandoff::Generation &generation,
                                           BridgeInputFrame &frame) noexcept {
@@ -218,6 +224,8 @@ BridgeResultDecode DecodeBridgeResultFrame(std::string_view line,
   return BridgeResultDecode::Decoded;
 }
 
+// Fixed literals, 32 hex digits and two uint64 decimals cannot reach max_size; bad_alloc is caught.
+// NOLINTNEXTLINE(bugprone-exception-escape)
 BridgeClockEncode EncodeBridgeClockSample(const BridgeConsumerHandoff::Generation &generation,
                                           std::uint64_t probe_id, std::uint64_t native_ms,
                                           std::string &output) noexcept {
@@ -262,6 +270,7 @@ BridgeResultInput::State BridgeResultInput::Feed(std::string_view bytes) {
     used_ = 0;
     const auto &parsed = frame.result;
     if (frame.kind == BridgeInputFrame::Kind::Close) {
+      NotifyClosing(true);
       const auto sampled = owner_.With(
           [&](auto &custody, auto now) { return custody.Sample(generation_, now); });
       if (sampled == BridgeConsumerHandoff::ClockSample::InvalidGeneration)
@@ -311,8 +320,14 @@ BridgeResultInput::State BridgeResultInput::Feed(std::string_view bytes) {
   }
   return state_;
 }
+void BridgeResultInput::NotifyClosing(bool requested) {
+  if (closing_notified_) return;
+  closing_notified_ = true;
+  sink_.Closing(requested);
+}
 BridgeResultInput::State BridgeResultInput::Close(State state) {
   if (state_ != State::Open) return state_;
+  NotifyClosing(state == State::Requested);
   owner_.Close();
   state_ = state;
   sink_.Closed();

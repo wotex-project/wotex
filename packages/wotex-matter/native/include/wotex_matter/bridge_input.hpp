@@ -58,6 +58,12 @@ BridgeResultDecode DecodeBridgeResultFrame(std::string_view line,
 class BridgeResultSink {
  public:
   virtual ~BridgeResultSink() = default;
+  // Called before custody closure can wait for its mutex. A process owner
+  // arms its cleanup budget here, independently of blocked SDK work. True
+  // means an exact close control; false means input loss/refusal. Must not
+  // block, acquire custody/SDK locks or perform cleanup. Closed follows actual
+  // custody closure. Existing explicitly initialized sinks need no early hook.
+  virtual void Closing(bool) noexcept {}
   virtual bool Ready(const BridgeConsumerHandoff::Ticket &ticket) noexcept = 0;
   // Called after serialized clock sampling and custody unlock. Must copy a
   // bounded reply into reserved control capacity without SDK locking or I/O.
@@ -100,6 +106,7 @@ class BridgeResultInput final {
   State Run(int descriptor, const std::atomic<bool> &stop);
 
  private:
+  void NotifyClosing(bool requested);
   State Close(State state);
   BridgeHandoffOwner &owner_;
   const BridgeConsumerHandoff::Generation generation_;
@@ -107,6 +114,7 @@ class BridgeResultInput final {
   std::array<char, kMaximumBridgeResultFrameBytes> buffer_{};
   std::size_t used_{0};
   std::uint64_t last_probe_id_{0};
+  bool closing_notified_{false};
   State state_{State::Open};
 };
 

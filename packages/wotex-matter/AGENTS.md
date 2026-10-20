@@ -93,9 +93,11 @@ Repository-wide rules are in the root `AGENTS.md`.
   explicit SDK driver port, with bounded open/ready admission, joined input,
   original startup time and one cleanup deadline. The independent watchdog
   never takes SDK/custody/output locks. `native/testing/bridge_process_test.cpp`
-  uses real pipes and child processes for twenty-two case families with a
-  scripted driver. It exercises no SDK, authentication or observation application. These CMake tests
-  need only `WOTEX_MATTER_JSON_INCLUDE`, not an SDK tree. The explicit full
+  uses real pipes and child processes for twenty-five case families with a
+  scripted driver. It exercises no SDK, authentication or observation application.
+  Early input-retirement notification and descriptor-loss monitoring arm one
+  cleanup deadline before custody can block. These CMake tests need only
+  `WOTEX_MATTER_JSON_INCLUDE`, not an SDK tree. The explicit full
   native build also runs them with its pinned JSON input in both build modes.
 - `native/{include/wotex_matter,src}/bridge_observation.*` and
   `lib/wotex/matter/bridge/observation.ex`: pure bounded approved-state transport
