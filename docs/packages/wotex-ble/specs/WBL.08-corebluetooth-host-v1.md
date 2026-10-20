@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.3.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.4.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -246,6 +246,77 @@ The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds the current inputs, ten independent process cases, three actual macOS
 build cases, renewed forty-case sanitizer corpus and extracted archive
 compilation. Public Client/Runtime and installed-host obligations remain open.
+
+## Public Client and point-operation entry
+
+`Wotex.BLE.CoreBluetooth` implements the existing Client callbacks and explicit
+`start_link/1`, `session/1`, `discover/2` and `health_check/2` ownership seams.
+Its pure `Peer.new/1` accepts exactly one UUID identifier, normalized lowercase;
+inspection hides it. Connection options require that Peer, nonzero uint64
+`generation`, `pairing: :system` and the complete native executable/digest/
+guardian/digest cohort. Optional permission is `:require_authorized` (default)
+or `:request`, timeout is 1..60,000 ms (default 5,000), and owner is a local PID
+(default the initiating caller). Duplicate/unknown options and unsupported
+policies refuse before executable verification or startup. No Linux selection
+or artifact discovery is implicit.
+
+The consumer-owned connection verifies both immutable artifacts in a monitored
+startup worker, pins the exact CoreBluetooth ready receipt, opens and validates
+the complete discovery result under one original startup deadline. An opaque
+handle binds local PID, private reference and consumer generation. The owner
+admits at most 64 calls, including one active native operation; queued expiry
+and caller loss remove unsent work. Active expiry/caller loss, owner death,
+malformed/mismatched output and native loss retire the generation without replay.
+Wire IDs are assigned only at dispatch. Public calls remain bounded even for a
+forged or unresponsive PID. Inspection/status and errors omit private routing
+identity, artifact paths, native text and request values.
+
+Discovery returns at most 256 immutable CoreBluetooth Characteristic values.
+Each carries exact service/characteristic UUIDs, generation, route token and
+read/write/command/notify/indicate properties. `Characteristic.address/1` produces
+the shared Address with `native_route: {:core_bluetooth, token}` and generation.
+This new optional Address selector is mutually exclusive with ATT handle and
+D-Bus path, requires nonzero generation and is never interpreted by BlueZ.
+Omission preserves existing facade/mapping message fields; it does not insert
+a nil selector into legacy messages or alter the BlueZ wire grammar.
+
+CoreBluetooth requests accept only read/write messages. Exact native routes
+must match their generation and both UUIDs in the admitted discovery snapshot.
+UUID-only requests select exactly one matching route; zero and multiple matches
+refuse. An optional supplied generation must match. BlueZ path/handle selectors
+refuse before native dispatch. Requested properties and byte/mode bounds are
+checked without mode substitution. Reads return bytes; acknowledged writes
+return `:written`; commands retain the exact native queue evidence. A write
+success requires one matching submitted marker; duplicate/malformed/foreign
+markers or acknowledgements cannot count as success. Errors preserve explicit
+not-submitted versus possible-submission classification; loss after handoff is
+unknown unless an exact native refusal establishes otherwise.
+
+Successful disconnect joins native close and actual guardian exit. Cooperative
+cleanup has a finite 1,500 ms allowance, including forced guardian retirement;
+failure stays explicit. Repeated disconnect has no additional effects; a handle
+whose owner has already stopped returns disconnected rather than inventing a
+new cleanup receipt. Startup failures and fatal operation outcomes wait for
+owned retirement before completion, retaining uncertainty when cleanup cannot
+be confirmed. No public operation performs an automatic retry.
+
+The facade accepts these sessions for typed read/write, discovery and health.
+The existing `:ble` Runtime point profile uses the same Client and codecs with
+explicit `target` label and Peer configuration; the configured target must
+exactly match the Form target before acquisition. The label is a consumer
+binding, not an inferred native UUID, MAC address or authentication claim.
+Runtime retains command `:accepted` status. The BlueZ streaming profile, manual
+pairing interface and notification/sleep cells remain unsupported until their
+own receiving/lifecycle delivery. Existing BlueZ/custom-client behavior is
+preserved, including conservative errors from untrusted custom clients.
+
+| Case | Client stimulus and falsifier |
+| --- | --- |
+| CB-C1 | Pure peer/options/characteristic boundaries reject malformed/forged input without startup; default permission and independent instances remain explicit |
+| CB-C2 | Facade discovery/read/request/command preserve exact route, bytes, generation and evidence through an independent native process |
+| CB-C3 | Queue flood, expiry, dead callers/owner, startup loss and native faults remain bounded; expired unsent work never appears on the wire |
+| CB-C4 | Marker/acknowledgement and error mutations cannot fabricate success or known-unsent evidence; cleanup and status remain private |
+| CB-C5 | Public Runtime reads/writes retain target binding, codecs, caller deadline and command status; unsupported profiles/security acquire nothing |
 
 The [Apple write API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/writevalue(_:for:type:)),
 [per-mode length API](https://developer.apple.com/documentation/corebluetooth/cbperipheral/maximumwritevaluelength(for:))

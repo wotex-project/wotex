@@ -186,7 +186,8 @@ defmodule Wotex.BLE.BlueZ do
 
   defp selection_supported(message, handle) do
     cond do
-      not is_nil(Map.get(message, :handle)) or not is_nil(Map.get(message, :generation)) ->
+      not is_nil(Map.get(message, :native_route)) or not is_nil(Map.get(message, :handle)) or
+          not is_nil(Map.get(message, :generation)) ->
         {:error, Error.new(:not_supported)}
 
       Map.get(message, :object_path) not in [nil, handle.path] ->

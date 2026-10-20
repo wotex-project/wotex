@@ -7,6 +7,11 @@ separately.
 - Use the first-party persistent BlueZ client with an explicit peer, bus,
   native executable and guardian identity. Choose owned or borrowed link
   lifecycle explicitly; loading the package starts none of them.
+- Select CoreBluetooth explicitly on macOS with its own Peer, fresh generation,
+  system pairing policy and verified native artifacts. Choose permission-request
+  policy explicitly; keep private peripheral identifiers out of portable profiles.
+  Retain discovered route tokens when UUIDs repeat. Notifications and sleep
+  observation require their separately delivered lifecycle support.
 - Discover a bounded connected-peer snapshot and retain its generation. Do not
   infer a characteristic from display names, UUID alone or discovery order,
   and reject stale discovery addresses.

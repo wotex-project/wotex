@@ -57,7 +57,9 @@ root `AGENTS.md`.
   (`dependencies.json`).
 - `priv/corebluetooth/native/`: explicit-clock operation ownership and the
   macOS Objective-C++ SDK owner and native process. The explicit builder is
-  `lib/wotex/ble/core_bluetooth/build.ex`; its public Client remains undelivered.
+  `lib/wotex/ble/core_bluetooth/build.ex`. `core_bluetooth.ex` and
+  `core_bluetooth/{peer,characteristic,options,response,connection}.ex` own the
+  explicit public point Client, native routes and bounded session lifecycle.
 - Specifications: `docs/packages/wotex-ble/specs/` (WBL.01–WBL.03,
   WBL.04–WBL.07; `catalogue.yaml` owns status). Plans, the qualification
   runbook and evidence: `docs/packages/wotex-ble/plans/` and `provenance/`.
@@ -128,6 +130,9 @@ Tests by area, under `test/wotex/ble/` unless noted:
   close. `corebluetooth_build_test.exs` runs an actual offline macOS build, its
   passive ready probe, read-only reuse and artifact-tamper refusal. This build
   test starts no manager or peripheral operation.
+  `corebluetooth_client_test.exs` exercises public facade/Runtime point operations,
+  a separate independent process peer, the production Host loop, route ambiguity,
+  marker faults, queue bounds, caller/owner loss and actual native retirement.
 - Native build and software fixture tasks: `native_build_test.exs`,
   `native_source_test.exs`, `software_fixture_test.exs`.
 - Runtime integration, streams and error classes:

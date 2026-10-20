@@ -8,6 +8,10 @@ defmodule Wotex.BLE.Address do
   instance. Construction validates these identities without discovering or
   contacting hardware.
 
+  A CoreBluetooth discovery address instead carries
+  `native_route: {:core_bluetooth, token}` with a nonzero generation. This
+  selector excludes ATT handles and D-Bus paths; BlueZ refuses it.
+
   `new/1` accepts an explicit map, while `from_topic/1` parses exactly two UUIDs
   separated by one slash. `validate_message/1` admits reads and acknowledged
   writes and enforces the 512-byte attribute-value limit.
@@ -20,14 +24,15 @@ defmodule Wotex.BLE.Address do
   """
   alias Wotex.BLE.{Error, ObjectPath, UUID}
   @enforce_keys [:service, :characteristic]
-  defstruct [:service, :characteristic, :handle, :object_path, :generation]
+  defstruct [:service, :characteristic, :handle, :object_path, :generation, :native_route]
 
   @type t :: %__MODULE__{
           service: String.t(),
           characteristic: String.t(),
           handle: 1..65_535 | nil,
           object_path: String.t() | nil,
-          generation: 0..0xFFFF_FFFF_FFFF_FFFF | nil
+          generation: 0..0xFFFF_FFFF_FFFF_FFFF | nil,
+          native_route: {:core_bluetooth, 1..256} | nil
         }
 
   @doc "Validates UUID identities and optional ATT handle without discovering hardware."
@@ -42,12 +47,23 @@ defmodule Wotex.BLE.Address do
          characteristic: characteristic,
          handle: Map.get(map, :handle),
          object_path: Map.get(map, :object_path),
-         generation: Map.get(map, :generation)
+         generation: Map.get(map, :generation),
+         native_route: Map.get(map, :native_route)
        }}
     end
   end
 
   def new(_), do: {:error, Error.new(:invalid_address)}
+
+  @doc false
+  @spec fields(t()) :: map()
+  def fields(%__MODULE__{native_route: nil} = address) do
+    address
+    |> Map.from_struct()
+    |> Map.delete(:native_route)
+  end
+
+  def fields(%__MODULE__{} = address), do: Map.from_struct(address)
 
   @doc "Parses exactly two UUIDs separated by one slash without default identities."
   @spec from_topic(term()) :: {:ok, t()} | {:error, Error.t()}
@@ -91,6 +107,7 @@ defmodule Wotex.BLE.Address do
     handle = Map.get(map, :handle)
     path = Map.get(map, :object_path)
     generation = Map.get(map, :generation)
+    route = Map.get(map, :native_route)
 
     cond do
       not (is_nil(handle) or (is_integer(handle) and handle in 1..65_535)) ->
@@ -103,8 +120,19 @@ defmodule Wotex.BLE.Address do
                (is_integer(generation) and generation in 0..0xFFFF_FFFF_FFFF_FFFF)) ->
         {:error, Error.new(:invalid_generation, :generation)}
 
+      not valid_native_route?(route, generation, handle, path) ->
+        {:error, Error.new(:invalid_address, :native_route)}
+
       true ->
         :ok
     end
   end
+
+  defp valid_native_route?(nil, _, _, _), do: true
+
+  defp valid_native_route?({:core_bluetooth, token}, generation, nil, nil)
+       when is_integer(token) and token in 1..256 and is_integer(generation) and generation > 0,
+       do: true
+
+  defp valid_native_route?(_, _, _, _), do: false
 end

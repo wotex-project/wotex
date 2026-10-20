@@ -60,7 +60,8 @@ defmodule Wotex.BLE.Procedure do
   @spec parameters(term()) :: {:ok, String.t(), map()} | {:error, Error.t()}
   def parameters(message) do
     with :ok <- Address.validate_message(message),
-         {:ok, address} <- Address.new(message) do
+         {:ok, address} <- Address.new(message),
+         :ok <- native_selection(address) do
       parameters = %{
         "address" => %{
           "service" => address.service,
@@ -99,6 +100,9 @@ defmodule Wotex.BLE.Procedure do
   end
 
   def decode_bytes(_), do: :invalid
+
+  defp native_selection(%Address{native_route: nil}), do: :ok
+  defp native_selection(_), do: {:error, Error.new(:not_supported)}
 
   defp bytes(value), do: %{"type" => "bytes", "base64" => Base.encode64(value)}
 end

@@ -62,6 +62,15 @@ defmodule Wotex.BLE do
   @spec capabilities(term()) :: {:ok, map()} | {:error, Error.t()}
   def capabilities(:oneshot), do: {:ok, capabilities()}
 
+  def capabilities(:core_bluetooth) do
+    {:ok,
+     Map.merge(capabilities(), %{
+       operations: [:read, :write, :discover, :health_check],
+       transport: :core_bluetooth,
+       discovery_capable: true
+     })}
+  end
+
   def capabilities(:gatt) do
     {:ok,
      Map.merge(capabilities(), %{
@@ -136,9 +145,11 @@ defmodule Wotex.BLE do
 
       case result do
         {:error, error} when type == :write ->
-          if session.client == Wotex.BLE.BlueZ and
-               (match?(%Wotex.BLE.BlueZ.Connection{}, session.handle) or
-                  match?(%Error{code: :not_supported}, error)),
+          if (session.client == Wotex.BLE.CoreBluetooth and
+                match?(%Wotex.BLE.CoreBluetooth.Connection{}, session.handle)) or
+               (session.client == Wotex.BLE.BlueZ and
+                  (match?(%Wotex.BLE.BlueZ.Connection{}, session.handle) or
+                     match?(%Error{code: :not_supported}, error))),
              do: {:error, error},
              else: {:error, Error.unknown_effect(error)}
 
@@ -168,7 +179,7 @@ defmodule Wotex.BLE do
   def read(%Session{} = session, address, options) do
     with {:ok, config} <- Procedure.options(options, session.timeout),
          {:ok, address} <- Address.new(address),
-         message = Map.put(Map.from_struct(address), :type, :read),
+         message = Map.put(Address.fields(address), :type, :read),
          {:ok, bytes} <- send(%{session | timeout: config.timeout}, message) do
       Value.decode(bytes, config.type, config.codec)
     end
@@ -193,7 +204,7 @@ defmodule Wotex.BLE do
     with {:ok, config} <- Procedure.write_options(options, session.timeout),
          {:ok, address} <- Address.new(address),
          {:ok, bytes} <- Value.encode(value, config.type, config.codec) do
-      message = Map.merge(Map.from_struct(address), %{type: :write, value: bytes})
+      message = Map.merge(Address.fields(address), %{type: :write, value: bytes})
 
       message =
         if config.write_mode == :without_response,
@@ -236,6 +247,9 @@ defmodule Wotex.BLE do
   def discover(%Session{client: Wotex.BLE.BlueZ} = session, options),
     do: Wotex.BLE.BlueZ.discover(session.handle, options, session.timeout)
 
+  def discover(%Session{client: Wotex.BLE.CoreBluetooth} = session, []),
+    do: Wotex.BLE.CoreBluetooth.discover(session.handle, session.timeout)
+
   def discover(%Session{}, _), do: {:error, Error.new(:not_supported)}
   def discover(_, _), do: {:error, Error.new(:invalid_session)}
 
@@ -267,6 +281,9 @@ defmodule Wotex.BLE do
   @spec health_check(term()) :: {:ok, map()} | {:error, Error.t()}
   def health_check(%Session{client: Wotex.BLE.BlueZ} = session),
     do: Wotex.BLE.BlueZ.health_check(session.handle, session.timeout)
+
+  def health_check(%Session{client: Wotex.BLE.CoreBluetooth} = session),
+    do: Wotex.BLE.CoreBluetooth.health_check(session.handle, session.timeout)
 
   def health_check(_), do: {:error, Error.new(:probe_required)}
 

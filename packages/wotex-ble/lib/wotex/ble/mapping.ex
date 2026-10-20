@@ -154,9 +154,9 @@ defmodule Wotex.BLE.Mapping do
 
   defp message(address, :write, input, type, order) do
     with {:ok, bytes} <- Value.encode(input, type, byte_order: order),
-         do: {:ok, Map.merge(Map.from_struct(address), %{type: :write, value: bytes})}
+         do: {:ok, Map.merge(Address.fields(address), %{type: :write, value: bytes})}
   end
 
   defp message(address, type, _, _, _),
-    do: {:ok, Map.put(Map.from_struct(address), :type, type)}
+    do: {:ok, Map.put(Address.fields(address), :type, type)}
 end

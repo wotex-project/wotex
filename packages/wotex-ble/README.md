@@ -110,8 +110,26 @@ returns `{:ok, %{write_mode: :without_response, evidence: :native_queue_accepted
 It requires the command flag and a current MTU; it supplies no ATT acknowledgement
 or physical completion. The Form extension `wotex:bleWriteMode` selects the same
 procedure, with a Runtime Result status of `:accepted` for command queue evidence.
-The one-shot backend refuses command mode. The CoreBluetooth native process and
-macOS build are available; its public Client/Runtime integration remains planned.
+The one-shot backend refuses command mode.
+
+For macOS point operations, select `client: Wotex.BLE.CoreBluetooth`, an explicit
+`Wotex.BLE.CoreBluetooth.Peer`, a fresh nonzero uint64 `generation`,
+`pairing: :system` and the native executable/guardian paths and digests from the
+CoreBluetooth build. `permission: :require_authorized` is the default;
+`:request` explicitly permits the SDK permission path. The local `owner` defaults
+to the caller. Startup verifies artifacts and discovers routes under one
+deadline. `discover/2` returns the complete bounded snapshot;
+`Wotex.BLE.CoreBluetooth.Characteristic.address/1` retains an exact route when
+UUIDs repeat. Typed reads, both write modes and health checks use the same facade.
+The connection admits 64 calls including one active procedure; queued expiry
+sends nothing, while active expiry or caller loss retires the generation.
+
+CoreBluetooth point operations also use `profile/0` and the existing `:ble`
+Runtime transport. Configure an exact `target` matching the Form's URI target
+and the explicit Peer independently; the target label is not a native identity
+or authentication claim. CoreBluetooth notifications, manual pairing and sleep
+observation remain separate unsupported cells. Current process tests establish
+software behavior; actual permissions, peripherals and RF remain unqualified.
 
 `subscribe/2` delivers `{:wotex_ble, reference, {:ok, value, metadata}}` messages
 to the selected receiver. Cancel with `unsubscribe/2` on the same session.
