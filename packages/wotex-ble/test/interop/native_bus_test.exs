@@ -139,12 +139,16 @@ defmodule Wotex.BLE.NativeBusTest do
   end
 
   test "WBL-B02/B04 actual SDK executable, owned input and opening cancellation", context do
+    # Repeated owned closes exercise the final cleanup turn. Each retains its
+    # original deadline; this budget covers the complete process harness.
+    options = Keyword.put(context.options, :timeout, NativeLane.timeout(30_000))
+
     assert {:ok, "native host process invariants passed\n", 0} =
              NativeCommand.run(
                context.guardian,
                context.executable,
                ["--host-executable", context.host, context.daemon, context.config] ++ leak_audit(),
-               context.options
+               options
              )
   end
 

@@ -76,11 +76,21 @@ class NativeHost {
     // cleanup completes. Only then may link ownership disconnect that sender.
   }
   void complete_close() {
+    // A deadline can pass after the regular component poll. Advance cleanup
+    // once without waiting before classifying that deadline's final state.
+    const bool expired = Clock::now() >= stop_by_;
+    if (expired) {
+      std::vector<pollfd> none;
+      if (owner_) owner_->poll(none, 0);
+      if (procedure_) procedure_->poll(none, 0);
+      if (pairing_) pairing_->poll(none, 0);
+      if (notifications_) notifications_->poll(none, 0);
+    }
     const bool protocol_active = (pairing_ && pairing_->active()) || (procedure_ && procedure_->active()) ||
                                 (notifications_ && notifications_->active_count());
     if (!protocol_active && owner_ && owner_->active()) owner_->close(stop_by_);
     const bool owner_active = owner_ && (owner_->active() || owner_->closing());
-    if ((!protocol_active && !owner_active) || Clock::now() >= stop_by_) {
+    if ((!protocol_active && !owner_active) || expired) {
       if (protocol_active || owner_active) status_ = 1;
       if (active_) fail(active_, "disconnected");
       for (const auto &[unused, pending] : controls_) { (void)unused; fail(pending, "disconnected"); }

@@ -167,7 +167,7 @@ inline void invariants(const std::string &address, const std::string &executable
     PROCESS_CHECK(process.status == 0 && process.response("close") && process.response("close")->at("ok") == true);
     PROCESS_CHECK(process.response("close")->at("result").is_null());
   }
-  {
+  for (unsigned iteration = 0; iteration < 16; ++iteration) {
     // BlueZ answers an owned Device1.Disconnect only after its postponed link
     // drain. The real event loop must report the submitted close as complete.
     auto &device = peer.objects[1].second[0].second;
@@ -184,11 +184,20 @@ inline void invariants(const std::string &address, const std::string &executable
     device[4].value = true; peer.changed({{"ServicesResolved", "b", true}}, device_interface, "/org/bluez/hci0/device");
     until(peer, process, [&] { return process.response("open"); });
     PROCESS_CHECK(process.response("open")->at("ok") == true && process.response("open")->at("result").at("link_owned") == true);
+    const auto sender = process.response("open")->at("result").at("sender").get<std::string>();
     const auto started = Clock::now();
     process.request("close", "close"); until(peer, process, [&] { return process.status.has_value(); });
     PROCESS_CHECK(bool(disconnect) && peer.methods.size() == 2 && peer.methods[1].first == "Disconnect");
     PROCESS_CHECK(Clock::now() - started <= std::chrono::milliseconds(700) + instrumentation);
-    PROCESS_CHECK(process.status == 0 && process.response("close") && process.response("close")->at("ok") == true);
+    if (process.status != 0 || !process.response("close") ||
+        process.response("close")->at("ok") != true) {
+      throw std::runtime_error(
+          "owned close status=" + (process.status ? std::to_string(*process.status) : "missing") +
+          " response=" +
+          (process.response("close") ? process.response("close")->dump() : "missing"));
+    }
+    PROCESS_CHECK(!dbus_bus_name_has_owner(peer.connection(), sender.c_str(), nullptr));
+    PROCESS_CHECK(dbus_bus_name_has_owner(peer.connection(), peer.sender().c_str(), nullptr));
     peer.on_method = {}; device[3].value = true;
   }
 }
