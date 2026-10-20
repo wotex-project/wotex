@@ -268,6 +268,9 @@ receipt. A missing receipt MUST NOT establish whether application happened.
 After input retirement, cleanup MUST stop/join observation work outside SDK
 locks before receiver, endpoint or SDK retirement. Queued unapplied work MAY be
 discarded on closure; the original single cleanup deadline MUST remain in force.
+The [SDK observation record](../provenance/bridge-sdk-observations-2026-10.md)
+binds actual application/readback, queue/result/probe progress under SDK locking,
+receipt capacity, closure and affected regression checks to committed inputs.
 
 The observation receipt MUST contain exactly six scalar fields and fit within
 512 bytes including LF: `v: 1`, `backend: "matter-bridge"`,

@@ -705,6 +705,9 @@ refusal, separate ID namespaces, receipt reservations, stale tickets, isolated
 control/request capacity and active-receipt framing on a full real pipe.
 Authenticated consumer requests, independent reporting peers and production
 executable assembly remain open.
+The [SDK observation record](../provenance/bridge-sdk-observations-2026-10.md)
+binds the committed source, 54 process-case executions, affected SDK regressions,
+portable normal/sanitizer builds, package/archive checks and qualification limits.
 
 ## 4. Isolation and recovery
 
