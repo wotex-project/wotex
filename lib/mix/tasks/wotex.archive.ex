@@ -9,11 +9,13 @@ defmodule Mix.Tasks.Wotex.Archive do
 
   For every package, in topological order:
 
-    1. `mix package` if the package's `mix.exs` defines a `package` alias,
-       else `mix hex.build`, with `WOTEX_PATH_DEPS` unset and `MIX_ENV=dev`;
-    2. `mix run --no-start bin/check_archive.exs` (or `bin/check_package.exs`)
-       with `WOTEX_PATH_DEPS=1`, when the script exists;
-    3. generated `*.tar` files in the package directory are removed.
+    1. `mix run --no-start bin/check_archive.exs` (or `bin/check_package.exs`)
+       with `WOTEX_PATH_DEPS=1`, when the script exists. The checker owns its
+       archive builds with the sibling switch cleared;
+    2. otherwise `mix package` if a package alias exists, else `mix hex.build`,
+       with `WOTEX_PATH_DEPS` unset;
+    3. commands use `MIX_ENV=dev`, and generated `*.tar` files in the package
+       directory are removed.
 
   A summary table follows; the task fails on the first failing package.
   """
@@ -71,18 +73,24 @@ defmodule Mix.Tasks.Wotex.Archive do
   def check_script(path), do: Enum.find(@scripts, &File.regular?(Path.join(path, &1)))
 
   defp archive(path) do
-    build =
-      if package_alias?(File.read!(Path.join(path, "mix.exs"))),
-        do: ["package"],
-        else: ["hex.build"]
+    {command, path_deps} =
+      case check_script(path) do
+        nil ->
+          build =
+            if package_alias?(File.read!(Path.join(path, "mix.exs"))),
+              do: ["package"],
+              else: ["hex.build"]
+
+          {build, false}
+
+        script ->
+          {["run", "--no-start", script], true}
+      end
 
     result =
-      with 0 <- Runner.run(path, build, path_deps: false, mix_env: "dev"),
-           :ok <- check(path) do
-        "ok"
-      else
-        status when is_integer(status) -> "#{hd(build)} failed (#{status})"
-        {:error, message} -> message
+      case Runner.run(path, command, path_deps: path_deps, mix_env: "dev") do
+        0 -> "ok"
+        status -> "#{Enum.join(command, " ")} failed (#{status})"
       end
 
     path
@@ -91,18 +99,5 @@ defmodule Mix.Tasks.Wotex.Archive do
     |> Enum.each(&File.rm/1)
 
     result
-  end
-
-  defp check(path) do
-    case check_script(path) do
-      nil ->
-        :ok
-
-      script ->
-        case Runner.run(path, ["run", "--no-start", script], path_deps: true) do
-          0 -> :ok
-          status -> {:error, "#{script} failed (#{status})"}
-        end
-    end
   end
 end
