@@ -63,6 +63,8 @@ and literal trace expectations supply the behavior checks. Both extracted trees,
 native builds and peer processes are removed before lane completion. Continue
 with installed Mac lifecycle/readiness and BlueZ controller qualification. These
 software cases establish no actual permission/peripheral or RF result.
+The [CoreBluetooth archive record](../provenance/corebluetooth-archives-2026-10.md)
+binds those consumers, exact artifacts, mutation outcomes and complete cleanup.
 The [system-power record](../provenance/corebluetooth-power-2026-10.md) binds the
 observer source, exact C API/selector tests, actual build and unexecuted installed
 qualification.

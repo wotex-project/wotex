@@ -168,6 +168,8 @@ This closes the BlueZ archive portion of WBL08-T5. The separate
 adds two isolated consumers with eighteen baseline cases, including two actual
 native builds, and six assertion-only semantic mutation catches. These archive
 results preserve the installed-controller and WBL08-T4 qualification obligations.
+The [CoreBluetooth archive record](../provenance/corebluetooth-archives-2026-10.md)
+binds their executed commands, exact artifacts, mutation outcomes and cleanup.
 
 | Case | Requirements | Expected observation / falsifier |
 | --- | --- | --- |

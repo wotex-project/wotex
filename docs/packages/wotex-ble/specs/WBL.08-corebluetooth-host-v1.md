@@ -679,3 +679,7 @@ native build artifacts, commands, case counts, mutation outcomes and cleanup.
 These are archive/software results; the independent peer does not execute real
 permission, peripheral, power or RF operations. Installed SDK/controller results
 remain separate WBL08-T4 obligations.
+
+The [archive execution record](../provenance/corebluetooth-archives-2026-10.md)
+binds the committed runner, exact cohort/build identities, eighteen baseline
+cases, six assertion-only mutation catches and complete workspace cleanup.
