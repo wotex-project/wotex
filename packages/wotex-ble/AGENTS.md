@@ -131,7 +131,11 @@ Tests by area, under `test/wotex/ble/` unless noted:
   SDK, `-x objective-c++`, ARC and a macOS 14 minimum target.
   `corebluetooth_host_test.exs` runs portable independent Driver processes through
   the real framing/output loop and guardian, including unread stdout and active
-  close. `corebluetooth_build_test.exs` runs an actual offline macOS build, its
+  close. Notification cases consume the literal wire/mode corpora, retain shared
+  credit through retirement, reject acknowledgements of unsent records and join
+  concurrent callbacks with point operations. `driver.hpp` owns the production
+  SDK/Host adapter; `notification_host_join` traverses it with actual injected
+  framework selectors and real pipes. `corebluetooth_build_test.exs` runs an actual offline macOS build, its
   passive ready probe, read-only reuse and artifact-tamper refusal. This build
   test starts no manager or peripheral operation.
   `corebluetooth_client_test.exs` exercises public facade/Runtime point operations,

@@ -8,6 +8,12 @@ defmodule Wotex.BLE.CoreBluetoothHostTest do
   alias Wotex.BLE.{NativeCommand, NativeLane}
 
   @root Path.expand("../../..", __DIR__)
+  @vectors Path.join(@root, "priv/fixtures/corebluetooth-notification-wire-v1.json")
+  @external_resource @vectors
+  @wire Jason.decode!(File.read!(@vectors))
+  @mode_vectors Path.join(@root, "priv/fixtures/corebluetooth-notifications-v1.json")
+  @external_resource @mode_vectors
+  @mode_cases Map.fetch!(Jason.decode!(File.read!(@mode_vectors)), "mode_cases")
   @identifier "01234567-89ab-cdef-0123-456789abcdef"
   @ready %{
     "version" => 1,
@@ -223,6 +229,354 @@ defmodule Wotex.BLE.CoreBluetoothHostTest do
                env: NativeLane.environment([])
              )
   end
+
+  test "literal stream frames preserve exact establishment, equal values and stop fencing",
+       context do
+    port = opened(context, "notifications")
+    assert @wire["format"] == "wotex.ble.corebluetooth.notification-wire"
+    send_frame(port, @wire["subscribe"])
+    assert frame(port) == @wire["established"]
+    assert frame(port) == @wire["first_report"]
+    assert frame(port) == Map.put(@wire["first_report"], "sequence", 2)
+    refute_receive {^port, {:data, _}}, 20
+    send_frame(port, @wire["unsubscribe"])
+    assert frame(port) == @wire["retired"]
+    assert frame(port) == success("2", nil)
+    send_frame(port, Map.put(@wire["ack"], "sequence", 2))
+    send_request(port, "3", "read", %{"address" => address()})
+
+    assert %{"id" => "3", "error" => %{"code" => "not_supported", "submitted" => false}} =
+             frame(port)
+
+    send_request(port, "4", "subscribe", subscription(1, 1))
+    assert %{"id" => "4", "error" => %{"code" => "not_permitted"}} = frame(port)
+    close(port)
+  end
+
+  test "mode selection is explicit and refused starts consume no route", context do
+    for cell <- @mode_cases do
+      route =
+        %{{false, false} => 4, {true, false} => 1, {false, true} => 2, {true, true} => 3}[
+          {cell["notify"], cell["indicate"]}
+        ]
+
+      port = opened(context, "notification-modes")
+
+      send_request(
+        port,
+        "1",
+        "subscribe",
+        Map.put(subscription(route, 1), "mode", cell["requested"])
+      )
+
+      if effective = cell["effective"] do
+        assert %{"ok" => true, "result" => %{"effective_mode" => ^effective, "route" => ^route}} =
+                 frame(port)
+
+        assert %{"event" => "notification", "route" => ^route, "sequence" => 1} = frame(port)
+      else
+        assert %{"error" => %{"code" => "not_supported", "submitted" => false}} = frame(port)
+      end
+
+      close(port)
+    end
+
+    port = opened(context, "notifications")
+    send_request(port, "1", "subscribe", Map.put(subscription(3, 1), "mode", "indicate"))
+    assert %{"id" => "1", "error" => %{"code" => "not_supported"}} = frame(port)
+    send_request(port, "2", "subscribe", Map.put(subscription(3, 1), "mode", "notify"))
+
+    assert %{
+             "id" => "2",
+             "result" => %{"requested_mode" => "notify", "effective_mode" => "notify", "route" => 3}
+           } = frame(port)
+
+    assert %{"event" => "notification", "subscription_id" => "2", "route" => 3, "sequence" => 1} =
+             frame(port)
+
+    send_request(port, "3", "subscribe", subscription(2, 1))
+    assert %{"id" => "3", "result" => %{"effective_mode" => "indicate", "route" => 2}} = frame(port)
+    assert %{"event" => "notification", "subscription_id" => "3", "route" => 2} = frame(port)
+    close(port)
+  end
+
+  test "malformed stream parameters refuse without consuming the selected route", context do
+    port = opened(context, "notifications")
+
+    invalid = [
+      Map.put(subscription(1, 2), "credit", 0),
+      Map.put(subscription(1, 2), "credit", 65),
+      Map.put(subscription(1, 2), "mode", "guess"),
+      Map.put(subscription(1, 2), "stream_version", 2),
+      Map.put(subscription(1, 2), "extra", true),
+      put_in(subscription(1, 2), ["address", "generation"], 8),
+      put_in(subscription(1, 2), ["address", "route"], 257)
+    ]
+
+    for {parameters, id} <- Enum.with_index(invalid, 1) do
+      send_request(port, Integer.to_string(id), "subscribe", parameters)
+      assert %{"error" => %{"code" => "invalid_options", "submitted" => false}} = frame(port)
+    end
+
+    send_request(port, "8", "subscribe", subscription(1, 1))
+    assert %{"id" => "8", "result" => %{"route" => 1, "credit" => 1}} = frame(port)
+    assert %{"event" => "notification", "subscription_id" => "8"} = frame(port)
+    close(port)
+  end
+
+  test "only actual cumulative acknowledgement returns credit and duplicate acknowledgement is inert",
+       context do
+    port = opened(context, "notifications")
+    send_frame(port, @wire["subscribe"])
+    assert frame(port) == @wire["established"]
+    assert frame(port) == @wire["first_report"]
+    assert frame(port) == Map.put(@wire["first_report"], "sequence", 2)
+    send_frame(port, @wire["ack"])
+    assert frame(port) == Map.put(@wire["first_report"], "sequence", 3)
+    send_frame(port, @wire["ack"])
+    refute_receive {^port, {:data, _}}, 20
+    send_frame(port, Map.put(@wire["ack"], "sequence", 3))
+    assert frame(port) == Map.put(@wire["first_report"], "sequence", 4)
+    assert frame(port) == Map.put(@wire["first_report"], "sequence", 5)
+    close(port)
+  end
+
+  test "the literal malformed acknowledgement corpus never grants credit", context do
+    assert length(@wire["invalid_acks"]) == 10
+
+    for cell <- @wire["invalid_acks"] do
+      port = opened(context, "notifications")
+      send_frame(port, @wire["subscribe"])
+      assert frame(port) == @wire["established"]
+      assert frame(port) == @wire["first_report"]
+      assert frame(port) == Map.put(@wire["first_report"], "sequence", 2)
+
+      if sequence = cell["after_ack"] do
+        send_frame(port, Map.put(@wire["ack"], "sequence", sequence))
+        assert frame(port) == Map.put(@wire["first_report"], "sequence", 3)
+      end
+
+      if raw = cell["raw"],
+        do: Port.command(port, raw),
+        else: send_frame(port, Map.merge(@wire["ack"], cell["changes"]))
+
+      assert %{"event" => "connection_lost"} = frame(port)
+      assert_exit(port, 2)
+    end
+  end
+
+  test "stopped reports retain the shared 64-credit reservation until acknowledged", context do
+    port = opened(context, "notifications")
+    send_request(port, "1", "subscribe", subscription(1, 64))
+    assert %{"id" => "1", "result" => %{"credit" => 64}} = frame(port)
+
+    for sequence <- 1..64,
+        do: assert(frame(port) == Map.put(@wire["first_report"], "sequence", sequence))
+
+    send_frame(port, @wire["unsubscribe"])
+    assert frame(port) == Map.put(@wire["retired"], "last_sequence", 64)
+    assert frame(port) == success("2", nil)
+    send_request(port, "3", "subscribe", subscription(2, 1))
+    assert %{"id" => "3", "error" => %{"code" => "resource_limit"}} = frame(port)
+    send_frame(port, Map.put(@wire["ack"], "sequence", 64))
+    send_request(port, "4", "subscribe", subscription(2, 1))
+    assert %{"id" => "4", "result" => %{"route" => 2, "credit" => 1}} = frame(port)
+    assert %{"event" => "notification", "subscription_id" => "4", "sequence" => 1} = frame(port)
+    close(port)
+  end
+
+  test "sixteen streams are distinct and the seventeenth is refused before native establishment",
+       context do
+    port = opened(context, "notifications")
+
+    for id <- 1..16 do
+      send_request(port, Integer.to_string(id), "subscribe", subscription(id, 1))
+      assert %{"ok" => true, "result" => %{"route" => ^id}} = frame(port)
+      assert %{"event" => "notification", "route" => ^id, "sequence" => 1} = frame(port)
+    end
+
+    send_request(port, "17", "subscribe", subscription(17, 1))
+    assert %{"id" => "17", "error" => %{"code" => "resource_limit"}} = frame(port)
+    close(port)
+  end
+
+  test "control timeout, active close and unconfirmed cleanup never return establishment success",
+       context do
+    for mode <- ["notification-hold", "notification-cleanup"] do
+      port = opened(context, mode)
+      send_request(port, "1", "subscribe", subscription(1, 2), 30)
+
+      if mode == "notification-hold" do
+        assert %{"id" => "1", "error" => %{"code" => "timeout", "cleanup_confirmed" => true}} =
+                 frame(port)
+
+        assert %{"event" => "connection_lost"} = frame(port)
+        assert_exit(port, 1)
+      else
+        send_request(port, "close", "close", %{})
+
+        assert %{
+                 "id" => "1",
+                 "error" => %{"code" => "cleanup_timeout", "cleanup_confirmed" => false}
+               } = frame(port)
+
+        assert %{"id" => "close", "error" => %{"code" => "cleanup_timeout"}} = frame(port)
+        assert_exit(port, 0)
+      end
+    end
+  end
+
+  test "early, substituted and gapped Driver events cannot publish a report", context do
+    for mode <- [
+          "notification-early",
+          "notification-wrong-state",
+          "notification-gap",
+          "notification-over-credit",
+          "notification-foreign",
+          "notification-oversize"
+        ] do
+      port = opened(context, mode)
+      send_frame(port, @wire["subscribe"])
+      first = frame(port)
+
+      if mode in ["notification-gap", "notification-over-credit", "notification-foreign"] do
+        assert first == @wire["established"]
+
+        if mode == "notification-over-credit" do
+          assert frame(port) == @wire["first_report"]
+          assert frame(port) == Map.put(@wire["first_report"], "sequence", 2)
+        end
+      else
+        assert %{"ok" => false} = first
+      end
+
+      assert %{"event" => "connection_lost"} = frame(port)
+      assert_exit(port, 70)
+    end
+  end
+
+  test "notification credits remain available during an active point operation and close overtakes both",
+       context do
+    port = opened(context, "notification-point-hold")
+    send_frame(port, @wire["subscribe"])
+    assert frame(port) == @wire["established"]
+    frame(port)
+    frame(port)
+    send_request(port, "2", "write", %{"address" => address(), "value" => value()})
+    assert %{"event" => "write_submitted", "id" => "2"} = frame(port)
+    send_request(port, "3", "unsubscribe", %{"stream_version" => 1, "subscription_id" => "1"})
+    assert %{"id" => "3", "error" => %{"code" => "busy"}} = frame(port)
+    send_frame(port, @wire["ack"])
+    assert %{"event" => "notification", "sequence" => 3} = frame(port)
+    send_request(port, "close", "close", %{})
+
+    assert %{"id" => "2", "error" => %{"submitted" => true, "cleanup_confirmed" => true}} =
+             frame(port)
+
+    assert frame(port) == success("close", nil)
+    assert_exit(port, 0)
+  end
+
+  test "serialized concurrent callbacks preserve 128 maximum-sized reports alongside control IO",
+       context do
+    port = opened(context, "notification-async")
+    send_request(port, "1", "subscribe", subscription(1, 64))
+    assert %{"id" => "1", "ok" => true} = frame(port)
+    expected = %{"type" => "bytes", "base64" => Base.encode64(:binary.copy(<<255>>, 512))}
+
+    for sequence <- 1..64 do
+      assert %{"event" => "notification", "sequence" => ^sequence, "value" => ^expected} =
+               frame(port)
+    end
+
+    send_frame(port, Map.put(@wire["ack"], "sequence", 64))
+    send_request(port, "2", "health", %{})
+    frames = for _ <- 1..65, do: frame(port)
+
+    assert Enum.count(
+             frames,
+             &(&1 == success("2", %{"connected" => true, "services_resolved" => true}))
+           ) == 1
+
+    reports = Enum.filter(frames, &(&1["event"] == "notification"))
+    assert Enum.map(reports, & &1["sequence"]) == Enum.to_list(65..128)
+    assert Enum.all?(reports, &(&1["value"] == expected))
+    close(port)
+  end
+
+  test "a native write success observed during close remains an uncertain cancelled operation",
+       context do
+    port = opened(context, "notification-close-success")
+    send_request(port, "1", "write", %{"address" => address(), "value" => value()})
+    assert %{"event" => "write_submitted", "id" => "1"} = frame(port)
+    send_request(port, "close", "close", %{})
+
+    assert %{
+             "id" => "1",
+             "ok" => false,
+             "error" => %{
+               "code" => "disconnected",
+               "submitted" => true,
+               "cleanup_confirmed" => true
+             }
+           } = frame(port)
+
+    assert frame(port) == success("close", nil)
+    assert_exit(port, 0)
+  end
+
+  test "empty native updates remain separate sequenced frames", context do
+    port = opened(context, "notification-empty")
+    send_frame(port, @wire["subscribe"])
+    assert frame(port) == @wire["established"]
+
+    for sequence <- 1..2 do
+      assert %{
+               "event" => "notification",
+               "sequence" => ^sequence,
+               "value" => %{"type" => "bytes", "base64" => ""}
+             } = frame(port)
+    end
+
+    close(port)
+  end
+
+  test "a full stdout pipe cannot block notification cleanup or admit credit for unsent records",
+       context do
+    for mode <- ["blocked-notifications", "unsent-notification-ack"] do
+      assert {:ok, output, 0} =
+               NativeCommand.run(context.command, context.peer, ["--" <> mode],
+                 cd: context.directory,
+                 timeout: NativeLane.timeout(5000),
+                 env: NativeLane.environment([])
+               )
+
+      assert output == "ok " <> mode <> "\n"
+    end
+  end
+
+  test "an unrepresentable cleanup clock fails closed without signed overflow", context do
+    assert {:ok, output, 70} =
+             NativeCommand.run(context.command, context.peer, ["--clock-overflow"],
+               cd: context.directory,
+               env: NativeLane.environment([])
+             )
+
+    frames = Enum.map(String.split(output, "\n", trim: true), &Jason.decode!/1)
+
+    assert [@ready, %{"event" => "connection_lost", "code" => "clock_regressed", "generation" => 0}] =
+             frames
+  end
+
+  defp subscription(route, credit),
+    do: %{
+      "stream_version" => 1,
+      "address" => %{"generation" => 7, "route" => route},
+      "mode" => "auto",
+      "credit" => credit
+    }
+
+  defp send_frame(port, frame), do: assert(Port.command(port, Jason.encode!(frame) <> "\n"))
 
   defp start(context, mode \\ "normal") do
     port =

@@ -1,6 +1,6 @@
 # CoreBluetooth host v1
 
-Version: 0.5.0. Updated: 2026-10-20. Status: accepted delivery contract.
+Version: 0.6.0. Updated: 2026-10-20. Status: accepted delivery contract.
 Owner: [WBL.08](WBL.08-write-modes-and-native-hosts.md), requirements 01–04.
 Implementation and executed evidence are recorded in the package catalogue.
 
@@ -141,7 +141,7 @@ suite is explicitly scoped to `darwin`; other hosts record no Mac qualification.
 Injected objects must implement the actual SDK selectors. Such tests establish
 adapter behavior under supplied callbacks, not real authorization, connection,
 pairing or radio behavior. The point Client/Runtime join is delivered below;
-notification Host/Client receiving, sleep observation and independent archive
+notification Client receiving, sleep observation and independent archive
 qualification remain separate required host-delivery work.
 
 | Case | SDK stimulus and falsifier |
@@ -219,9 +219,13 @@ until retirement and returned as timeout, retaining submitted uncertainty.
 The process admits one SDK operation and at most 64 reply reservations, including
 queued output. Additional data requests while one is active return busy without
 SDK dispatch. Existing bounded native output reserves controls separately and
-flushes at most 65,536 bytes/64 attempts per turn. SDK callbacks enqueue through
-a prompt nonblocking lock attempt; contention or output failure fences the
-process. They never block waiting for stdout. Input/partial-input EOF, malformed
+flushes at most 65,536 bytes/64 attempts per turn. Serialized SDK callbacks enqueue
+through a fixed bounded inbox without taking the output mutex. A one-use atomic
+submission gate checks the exact ticket, mode and original deadline before
+admitting a write marker; refusal prevents the SDK handoff. Accepted markers
+precede their point replies even if close overtakes result delivery. Inbox
+overflow or output failure fences the process. Callbacks never wait for stdout.
+Input/partial-input EOF, malformed
 input, consumer output loss, clock failure and owner loss retire the SDK owner.
 Explicit close can overtake active work and drains already admitted output for
 at most 500 ms. The independent existing C guardian enforces process-group
@@ -336,7 +340,7 @@ that inspection does not qualify runtime permissions, a peripheral or RF behavio
 The SDK owner adds explicit `subscribe(request, route, mode, credit, now,
 deadline)`, `unsubscribe(request, subscription, now, deadline)` and
 `acknowledge(subscription, sequence, now)` entry. These are internal native
-interfaces; public Client/IPC streaming remains a separate delivery. Calls share
+interfaces; public Client streaming remains a separate delivery. Calls share
 the existing serial queue, monotonic request namespace, generation and original
 1..60,000 ms control deadline. At most one point operation or notification
 control is outstanding, while established streams may receive alongside a point
@@ -407,8 +411,80 @@ separate required lifecycle input.
 `priv/fixtures/corebluetooth-notifications-v1.json` supplies twelve literal
 property/mode outcomes and six control-state outcomes. The SDK fixture consumes
 every cell through actual injected selectors; vector presence alone proves none
-of these outcomes. The public Host/Client/Runtime streaming join remains open.
+of these outcomes. The public Client/Runtime streaming join remains open.
 
 The [SDK notification record](../provenance/corebluetooth-notifications-2026-10.md)
 binds the 24-case SDK corpus, 48 sanitizer component cases, owning fast gate and
 archive/build checks to the exact committed inputs and their qualification limits.
+
+## Native notification IPC
+
+The revision-1 point handshake and point messages are unchanged. Notification
+entry is explicit and additive: older hosts reject the unsupported operation,
+and no stream report is sent to an ordinary point consumer. Requests retain
+the existing strictly increasing decimal request IDs and original deadlines.
+All notification objects require integer `stream_version: 1`.
+
+`subscribe` parameters contain exactly `stream_version`, `address` (the existing
+generation/route pair), `mode` (`auto`, `notify` or `indicate`) and integer
+`credit` in 1..64. Successful result contains exactly `stream_version`,
+`subscription_id` (the original request ID), `route`, `requested_mode`,
+`effective_mode` and `credit`. Generation remains in the outer reply. The exact
+discovery snapshot determines UUIDs and properties; acknowledgement cannot
+substitute a route, mode or credit. A refused, unsubmitted start consumes no
+native route; a submitted start consumes it for the generation.
+
+`unsubscribe` parameters contain exactly `stream_version` and the original
+`subscription_id`. The native SDK must confirm the disabled state. The Host
+then emits a retirement control before its null success reply. That control
+contains exactly `version`, `generation`, `stream_version`,
+`event: notification_retired`, `subscription_id`, `route` and `last_sequence`.
+It fences that stream, not other streams. No future callback may publish for
+the retired identity. At most one point operation or stream establishment/stop
+is active; another request receives busy. Whole-generation close still overtakes
+active work. Acknowledgements have their own bounded control path.
+
+Each report contains exactly `version`, `generation`, `stream_version`,
+`event: notification`, `subscription_id`, `route`, `sequence` and the canonical
+byte `value`. Sequences are increasing contiguous nonzero uint64 values per
+stream. Empty/equal updates remain distinct. The SDK publishes establishment
+before values; a Driver violating that order, a foreign identity, substituted
+route, sequence gap, unsupported value or over-credit report retires the
+generation without success. All emitted reports remain FIFO with replies and
+retirement controls, including under partial writes.
+
+The consumer sends an acknowledgement object with exactly `version`,
+`generation`, `stream_version`, `event: notification_ack`, `subscription_id`
+and `sequence`. It is not a request and does not consume a request ID or reply
+slot. Acknowledgement may advance only through records actually transmitted to
+stdout for that stream. Exact duplicates are inert; future, regressing, foreign,
+wrong-generation and malformed acknowledgements terminate the generation before
+credit reaches the SDK. Per-stream published/transmitted identity and a bounded
+global output ordinal prevent acknowledgement of merely queued output. No pipe
+write or callback automatically returns consumer credit.
+
+The Host retains at most sixteen live streams, 64 shared reserved credits and
+64 unacknowledged report records, including callback-inbox and output ownership.
+A stopped stream retains its published unacknowledged credit. Route state is
+bounded by the 256-entry discovery snapshot, not an unbounded lifetime registry.
+Serialized SDK callbacks use a fixed 80-entry single-producer inbox;
+the consumer drains at most 80 events per turn. Values reserve the shared
+64-record budget before entering that inbox and release it only on validated
+consumer acknowledgement or whole-generation disposal. Callback delivery never
+waits for stdout or the Host output mutex. Overflow refuses and ends continuity.
+
+Pending stream failures wait for native retirement and destruction before reply.
+Late successful controls cannot renew their original deadline or survive close.
+Cleanup exceptions remain unconfirmed. Native cleanup uses saturating deadline
+arithmetic; a failing cleanup clock cannot extend native output draining.
+The public Client/Runtime receiving join
+must validate these exact bindings and return credit only after bounded final
+receiver admission or explicit retirement of those exact records.
+
+| Case | Native notification process falsifier |
+| --- | --- |
+| CB-W1 | Explicit start/stop, all mode/property cells, exact bytes/binding and point compatibility traverse independent Driver processes |
+| CB-W2 | Early/foreign/gapped/over-credit Driver reports cannot publish success; valid empty/equal/max-size reports remain distinct |
+| CB-W3 | Missing/duplicate/future/regressing/foreign/unsent acknowledgement never fabricates credit; stopped outstanding records remain reserved |
+| CB-W4 | Busy, original deadline, late control, active close and cleanup refusal retain one result and actual retirement |
+| CB-W5 | Concurrent serialized callbacks, unread stdout, fragmented input and multiple streams remain bounded without callback/output-lock contention |

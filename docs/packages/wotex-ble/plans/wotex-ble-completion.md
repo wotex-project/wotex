@@ -1,6 +1,6 @@
 # Wotex BLE completion contract
 
-Plan version: 1.7.0. Package baseline: 0.1.0.
+Plan version: 1.8.0. Package baseline: 0.1.0.
 
 The [WBL.08 successor](../specs/WBL.08-write-modes-and-native-hosts.md) is partial.
 Its explicit BlueZ modes, command flag/current-MTU admission and native queue
@@ -19,7 +19,7 @@ ticket-bound callbacks, an original deadline and confirmed-retirement gating.
 Fourteen independent scripted-port cases pass in ordinary and sanitizer builds.
 The framework-linked SDK owner now implements explicit permission/pairing entry,
 bounded complete discovery, per-mode SDK submission and actual callback/object
-retirement. Twenty-four injected-selector cases join the fourteen operation cases.
+retirement. Twenty-five injected-selector cases join the fourteen operation cases.
 The native process now implements revision-1 bounded IPC, reserved nonblocking
 output, original deadlines, exact generation/route validation and joined close.
 Its explicit offline macOS builder embeds usage metadata, audits the binaries,
@@ -36,10 +36,15 @@ reports wait for establishment; cumulative acknowledgement and retained stopped
 credit prevent unbounded delivery. The literal mode/control corpus and eight
 notification case families exercise that SDK seam; the
 [SDK notification record](../provenance/corebluetooth-notifications-2026-10.md)
-binds the executed inputs and limits. Continue with the Host/Client streaming
-join, explicit sleep observation, independent CoreBluetooth archive consumers
-and installed Mac lifecycle/readiness qualification. Software point sessions establish no
-actual permission/peripheral or RF result.
+binds the executed inputs and limits. The Host now joins notification RPCs,
+exact binding/sequence checks, a bounded callback inbox and per-stream transmitted
+credit/retirement. Twenty-five process cases include full stdout pipes,
+untransmitted acknowledgements, concurrent reports and conservative write results
+during close. A production SDK Driver case traverses start/report/ack/stop through
+real pipes against injected framework selectors. Continue with the public Client
+and Runtime receiving join, explicit sleep observation, independent CoreBluetooth
+archive consumers and installed Mac lifecycle/readiness qualification. These
+software cases establish no actual permission/peripheral or RF result.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds their exact source, archive and executed checks.
 

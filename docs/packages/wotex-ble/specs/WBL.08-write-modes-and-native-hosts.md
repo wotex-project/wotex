@@ -1,12 +1,12 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.7.0. Updated: 2026-10-20. Status: accepted target.
+Version: 0.8.0. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
 implemented. The CoreBluetooth SDK owner, native process, explicit macOS build
 and public point Client/Runtime integration are implemented with scoped software
-evidence. The SDK adds native notification ownership and finite report credits;
-its Host/Client streaming join, sleep observation and installed-host qualification
-remain open.
+evidence. The native notification path joins SDK ownership, finite report credits
+and Host IPC. Public Client/Runtime receiving, sleep observation and installed-host
+qualification remain open.
 
 ## Scope and operations
 
@@ -107,13 +107,18 @@ does not qualify macOS permissions or physical GATT/RF operation.
 The [CoreBluetooth delivery contract](WBL.08-corebluetooth-host-v1.md) freezes
 the explicit-clock operation port, per-mode size/readiness checks, callback
 identity and retirement boundary. That native operation component has an
-independent fourteen-case scripted-port corpus. The SDK owner adds twenty-four
+independent fourteen-case scripted-port corpus. The SDK owner adds twenty-five
 framework-linked injected-selector cases for explicit permission entry,
 bounded discovery, actual procedure selectors, late input, continuity loss,
 submission-time checks and retirement. The public Client joins artifact admission,
 bounded session ownership and exact discovered routes through the native process.
 Independent process and public Runtime cases preserve both modes, codecs, target
 binding and effect uncertainty, with no hardware qualification inferred.
+Native notification IPC additionally preserves exact stream/mode/route binding,
+64 shared report credits, transmitted-record acknowledgement and per-stream
+retirement. Its serialized callback inbox does not wait for stdout; process
+cases include full-pipe cleanup and unsent-credit refusal. The production SDK
+Driver also traverses this Host path against injected framework selectors.
 The native process now supplies bounded revision-1 IPC, explicit generation/route
 validation, one active operation, reserved nonblocking output and joined
 retirement. Its explicit macOS build ships the complete source closure, embeds

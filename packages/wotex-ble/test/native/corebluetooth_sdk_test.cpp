@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "../../priv/corebluetooth/native/sdk_environment.hpp"
+#include "../../priv/corebluetooth/native/driver.hpp"
 #include "../../priv/bluez/native/vendor/json.hpp"
 #include <atomic>
 #include <cstdlib>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <map>
+#include <thread>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -275,7 +278,7 @@ struct Fixture {
     check(central.cancels == 1);
   }
   ~Fixture() {
-    if (!sdk->closed()) sdk->close(clock.sample());
+    if (sdk && !sdk->closed()) sdk->close(clock.sample());
   }
 };
 static void permissions() {
@@ -988,6 +991,163 @@ static void notification_aliases() {
   check(other.output.values.size() == 1 && other.output.losses.empty());
   other.close();
 }
+static void notification_host_join() {
+  Fixture f;
+  f.sdk.reset();
+  f.characteristic.properties |= CBCharacteristicPropertyNotify;
+  int input[2], output[2], toggles[2];
+  check(pipe(input) == 0 && pipe(output) == 0 && pipe(toggles) == 0);
+  std::promise<void> constructed;
+  std::promise<int> finished;
+  auto opened = constructed.get_future();
+  auto stopped = finished.get_future();
+  SDKEnvironment environment{[&] { return f.auth.load(); },
+                             [&](id<CBCentralManagerDelegate> delegate, dispatch_queue_t queue) {
+    f.queue = queue;
+    f.central.delegate = delegate;
+    constructed.set_value();
+    return (CBCentralManager *)f.central;
+  }};
+  std::function<void()> toggle = [&] { check(::write(toggles[1], "t", 1) == 1); };
+  f.peripheral.onNotify = &toggle;
+  std::thread owner([&] {
+    finished.set_value(run_host(f.clock, [&](SDKClock &clock, SDKSink &sink) {
+      return std::make_unique<SDKDriver>(clock, sink, environment);
+    }, input[0], output[1]));
+  });
+  const auto send = [&](const Json &value) {
+    const auto bytes = value.dump() + "\n";
+    check(::write(input[1], bytes.data(), bytes.size()) == static_cast<ssize_t>(bytes.size()));
+  };
+  const auto request = [&](const char *id, const char *operation, Json parameters) {
+    send({{"version", 1},
+          {"id", id},
+          {"operation", operation},
+          {"parameters", std::move(parameters)},
+          {"timeout_ms", 1000}});
+  };
+  const auto frame = [&] {
+    std::string bytes;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    for (;;) {
+      const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            deadline - std::chrono::steady_clock::now())
+                            .count();
+      check(left > 0 && bytes.size() < 131072);
+      pollfd descriptor{output[0], POLLIN, 0};
+      check(::poll(&descriptor, 1, static_cast<int>(left)) > 0);
+      char byte = 0;
+      check(::read(output[0], &byte, 1) == 1);
+      bytes.push_back(byte);
+      if (byte == '\n') return Json::parse(bytes);
+    }
+  };
+  const auto toggled = [&] {
+    pollfd descriptor{toggles[0], POLLIN, 0};
+    check(::poll(&descriptor, 1, 2000) > 0);
+    char byte = 0;
+    check(::read(toggles[0], &byte, 1) == 1 && byte == 't');
+  };
+  check(frame() ==
+        Json({{"version", 1},
+              {"event", "ready"},
+              {"backend", "corebluetooth-native"},
+              {"revision", "1"}}));
+  request("open", "open",
+          {{"identifier", identifier},
+           {"generation", 7},
+           {"permission", "require_authorized"},
+           {"pairing", "system"}});
+  check(opened.wait_for(std::chrono::seconds(2)) == std::future_status::ready);
+  f.event([&] {
+    [f.central.delegate centralManagerDidUpdateState:(CBCentralManager *)f.central];
+    f.peripheral.state = CBPeripheralStateConnected;
+    [f.central.delegate centralManager:(CBCentralManager *)f.central
+                  didConnectPeripheral:(CBPeripheral *)f.peripheral];
+    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral didDiscoverServices:nil];
+    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+        didDiscoverCharacteristicsForService:(CBService *)f.service
+                                       error:nil];
+  });
+  check(frame() ==
+        Json({{"version", 1},
+              {"generation", 7},
+              {"id", "open"},
+              {"ok", true},
+              {"result", {{"generation", 7}}}}));
+  request("1", "subscribe",
+          {{"stream_version", 1},
+           {"address", {{"generation", 7}, {"route", 1}}},
+           {"mode", "auto"},
+           {"credit", 2}});
+  toggled();
+  f.notification_state(true);
+  check(frame() ==
+        Json({{"version", 1},
+              {"generation", 7},
+              {"id", "1"},
+              {"ok", true},
+              {"result",
+               {{"stream_version", 1},
+                {"subscription_id", "1"},
+                {"route", 1},
+                {"requested_mode", "auto"},
+                {"effective_mode", "notify"},
+                {"credit", 2}}}}));
+  f.notification_value(payload);
+  const auto first = frame();
+  check(first.size() == 8 && first["sequence"] == 1 && first["generation"] == 7 &&
+        first["subscription_id"] == "1" &&
+        first["value"] == Json({{"type", "bytes"}, {"base64", "AAF/gP8="}}));
+  send({{"version", 1},
+        {"generation", 7},
+        {"stream_version", 1},
+        {"event", "notification_ack"},
+        {"subscription_id", "1"},
+        {"sequence", 1}});
+  request("2", "health", Json::object());
+  check(frame()["id"] == "2");
+  request("3", "write",
+          {{"address", {{"generation", 7}, {"route", 1}}},
+           {"value", {{"type", "bytes"}, {"base64", "AAF/gP8="}}}});
+  const auto submitted = frame();
+  check(submitted["event"] == "write_submitted" && submitted["id"] == "3");
+  f.event([&] {
+    check(f.peripheral.writes == 1);
+    [f.peripheral.delegate peripheral:(CBPeripheral *)f.peripheral
+        didWriteValueForCharacteristic:(CBCharacteristic *)f.characteristic
+                                 error:nil];
+  });
+  const auto written = frame();
+  check(written["id"] == "3" && written["ok"] == true && written["result"].is_null());
+  f.notification_value({});
+  f.notification_value(payload);
+  check(frame()["sequence"] == 2 && frame()["sequence"] == 3);
+  request("4", "unsubscribe", {{"stream_version", 1}, {"subscription_id", "1"}});
+  toggled();
+  f.notification_state(false);
+  const auto retired = frame();
+  check(retired["event"] == "notification_retired" && retired["last_sequence"] == 3);
+  const auto closed_stream = frame();
+  check(closed_stream["id"] == "4" && closed_stream["ok"] == true &&
+        closed_stream["result"].is_null());
+  send({{"version", 1},
+        {"generation", 7},
+        {"stream_version", 1},
+        {"event", "notification_ack"},
+        {"subscription_id", "1"},
+        {"sequence", 3}});
+  request("close", "close", Json::object());
+  const auto closed = frame();
+  check(closed["id"] == "close" && closed["ok"] == true && closed["result"].is_null());
+  check(stopped.wait_for(std::chrono::seconds(2)) == std::future_status::ready &&
+        stopped.get() == 0);
+  owner.join();
+  check(!f.central.delegate && !f.peripheral.delegate && f.central.cancels == 1 &&
+        f.peripheral.notifyCalls == 2 && f.peripheral.reads == 0);
+  for (const auto descriptor : {input[0], input[1], output[0], output[1], toggles[0], toggles[1]})
+    close(descriptor);
+}
 int main(int argc, char **argv) {
   @autoreleasepool {
     if (argc != 2 && argc != 3) return 2;
@@ -1017,6 +1177,7 @@ int main(int argc, char **argv) {
     else if (name == "notification_faults") notification_faults();
     else if (name == "notification_deadlines") notification_deadlines();
     else if (name == "notification_aliases") notification_aliases();
+    else if (name == "notification_host_join") notification_host_join();
     else if (name == "unfinished_destruction") {
       std::set_terminate([] { _exit(73); });
       Fixture f;

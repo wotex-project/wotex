@@ -1,0 +1,22 @@
+{
+  "format": "wotex.ble.corebluetooth.notification-wire",
+  "version": "1.0.0",
+  "subscribe": {"version": 1, "id": "1", "operation": "subscribe", "parameters": {"stream_version": 1, "address": {"generation": 7, "route": 1}, "mode": "auto", "credit": 2}, "timeout_ms": 1000},
+  "established": {"version": 1, "generation": 7, "id": "1", "ok": true, "result": {"stream_version": 1, "subscription_id": "1", "route": 1, "requested_mode": "auto", "effective_mode": "notify", "credit": 2}},
+  "first_report": {"version": 1, "generation": 7, "stream_version": 1, "event": "notification", "subscription_id": "1", "route": 1, "sequence": 1, "value": {"type": "bytes", "base64": "AP8="}},
+  "unsubscribe": {"version": 1, "id": "2", "operation": "unsubscribe", "parameters": {"stream_version": 1, "subscription_id": "1"}, "timeout_ms": 1000},
+  "retired": {"version": 1, "generation": 7, "stream_version": 1, "event": "notification_retired", "subscription_id": "1", "route": 1, "last_sequence": 2},
+  "ack": {"version": 1, "generation": 7, "stream_version": 1, "event": "notification_ack", "subscription_id": "1", "sequence": 1},
+  "invalid_acks": [
+    {"id": "generation", "changes": {"generation": 8}},
+    {"id": "revision", "changes": {"stream_version": 2}},
+    {"id": "foreign", "changes": {"subscription_id": "999"}},
+    {"id": "noncanonical", "changes": {"subscription_id": "01"}},
+    {"id": "future", "changes": {"sequence": 3}},
+    {"id": "negative", "changes": {"sequence": -1}},
+    {"id": "floating", "changes": {"sequence": 1.0}},
+    {"id": "extra", "changes": {"extra": true}},
+    {"id": "regression", "after_ack": 1, "changes": {"sequence": 0}},
+    {"id": "duplicate-key", "raw": "{\"version\":1,\"generation\":7,\"stream_version\":1,\"event\":\"notification_ack\",\"subscription_id\":\"1\",\"sequence\":1,\"sequence\":2}\n"}
+  ]
+}
