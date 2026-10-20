@@ -291,7 +291,7 @@ packages:
         compile:
           - files: [priv/bluez/native/build_command.c, priv/bluez/native/custody.c, "test/native/*.c", "test/interop/native/*.c"]
             flags: [-std=c11]
-          - files: [test/native/bytes_test.cpp, test/native/credit_test.cpp, test/native/frame_test.cpp, test/native/output_test.cpp, test/native/pages_test.cpp, test/native/reports_test.cpp, test/native/scripted_host.cpp]
+          - files: [test/native/bytes_test.cpp, test/native/corebluetooth_operation_test.cpp, test/native/credit_test.cpp, test/native/frame_test.cpp, test/native/output_test.cpp, test/native/pages_test.cpp, test/native/reports_test.cpp, test/native/scripted_host.cpp]
             flags: [-std=c++17, "-I{package}/priv/bluez/native"]
           - files: [test/native/flow_source.cpp]
             flags: [-std=c++17, "-I{package}/priv/bluez/native", -DWOTEX_FLOW_CALLBACKS=4, -DWOTEX_FLOW_VALUE_BYTES=20]

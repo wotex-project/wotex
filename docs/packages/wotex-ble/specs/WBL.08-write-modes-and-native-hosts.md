@@ -1,6 +1,6 @@
 # WBL.08 — Explicit write modes and native host parity
 
-Version: 0.2.1. Updated: 2026-10-20. Status: accepted target.
+Version: 0.3.0. Updated: 2026-10-20. Status: accepted target.
 Implementation: partial; explicit BlueZ modes and native queue evidence are
 implemented. CoreBluetooth and installed-host qualification remain open.
 
@@ -99,6 +99,13 @@ CoreBluetooth implementation, freeze its exact native capability/security
 matrix, IPC and independent vectors. Old IPC peers
 reject new formats rather than ignoring mode. Historic BlueZ software evidence
 does not qualify macOS permissions or physical GATT/RF operation.
+
+The [CoreBluetooth delivery contract](WBL.08-corebluetooth-host-v1.md) freezes
+the explicit-clock operation port, per-mode size/readiness checks, callback
+identity and retirement boundary. That native operation component has an
+independent fourteen-case scripted-port corpus. Its implementation does not
+instantiate or supply the SDK adapter, host process or public Client; those
+remain required before the CoreBluetooth row above can claim support.
 
 ### Independent archive entry
 
