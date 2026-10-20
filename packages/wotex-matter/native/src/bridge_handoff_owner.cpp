@@ -1,6 +1,7 @@
 #include "wotex_matter/bridge_handoff_owner.hpp"
 
 #include <chrono>
+#include <algorithm>
 #include <cstdlib>
 
 namespace wotex::matter {
@@ -23,17 +24,44 @@ BridgeConsumerHandoff::Reply BridgeHandoffOwner::Resolve(
 
 BridgeConsumerHandoff::Consume BridgeHandoffOwner::Wait(const BridgeConsumerHandoff::Ticket &ticket,
                                                         BridgeConsumerHandoff::Outcome &outcome) {
+  return Wait(ticket, outcome, nullptr);
+}
+
+BridgeConsumerHandoff::Consume BridgeHandoffOwner::Wait(const BridgeConsumerHandoff::Ticket &ticket,
+                                                        BridgeConsumerHandoff::Outcome &outcome,
+                                                        BridgeHandoffProgress &progress) {
+  return Wait(ticket, outcome, &progress);
+}
+
+BridgeConsumerHandoff::Consume BridgeHandoffOwner::Wait(const BridgeConsumerHandoff::Ticket &ticket,
+                                                        BridgeConsumerHandoff::Outcome &outcome,
+                                                        BridgeHandoffProgress *progress) {
   std::unique_lock<std::mutex> lock(mutex_);
   for (;;) {
-    const auto now = clock_.NowMs();
-    const auto result = custody_.Take(ticket, now, outcome);
+    auto now = clock_.NowMs();
+    auto result = custody_.Take(ticket, now, outcome);
     if (result != BridgeConsumerHandoff::Consume::Pending) return result;
     const auto deadline = custody_.Deadline(ticket);
     if (!deadline || *deadline <= now) std::_Exit(kUnconsumedExit);
+    if (progress) {
+      lock.unlock();
+      const bool advanced = progress->Advance();
+      lock.lock();
+      if (!advanced) {
+        custody_.Close();
+        changed_.notify_all();
+      }
+      // Progress may publish a result, close custody or consume real time.
+      // Recheck before sleeping, using the same original absolute deadline.
+      now = clock_.NowMs();
+      result = custody_.Take(ticket, now, outcome);
+      if (result != BridgeConsumerHandoff::Consume::Pending) return result;
+    }
     ++waiting_;
     // Recheck the original absolute deadline after every wake. Neither a
     // spurious wake nor a delayed staged result can extend admission.
-    changed_.wait_for(lock, std::chrono::milliseconds(*deadline - now));
+    const auto duration = progress ? std::min<std::uint64_t>(*deadline - now, 1) : *deadline - now;
+    changed_.wait_for(lock, std::chrono::milliseconds(duration));
     --waiting_;
   }
 }

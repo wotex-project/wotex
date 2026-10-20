@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.31.0-target.
+Version: 0.32.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -305,6 +305,28 @@ MUST close admission, drain contexts and join all callers before destroying
 the threaded owner or releasing its borrowed custody and clock. Destruction
 with unconsumed custody MUST terminate the process. These mechanics do not
 establish consumer authorization or schedule SDK completion work.
+
+A synchronous SDK wait MAY take an explicit bounded progress port. Its callback
+MUST run outside the custody mutex, on the waiting SDK owner while that owner
+retains its SDK stack lock. It MUST NOT wait for I/O, renew the request deadline,
+reenter the same wait or retain callback-scoped SDK values. The wait MUST sample
+and recheck the original absolute deadline after every progress callback and
+wake. Progress refusal MUST close custody and prevent a staged completion from
+becoming Success. Idle waits without an explicit progress port MUST retain their
+existing notification/deadline behavior.
+
+The SDK observation owner MUST support advancing at most one queued application
+from that synchronous SDK progress port. Its ordinary worker MUST NOT remove work
+from the queue while blocked on acquiring the SDK lock. A callback-held SDK lock
+MUST NOT prevent a completed observation's receipt from being encoded and sent:
+application and receipt publication MUST have separate bounded queues under the
+same sixty-four outstanding receipt reservations. Receipts MUST retain admission
+order whether application is advanced by the SDK callback or ordinary worker.
+Queued work MUST remain inert until one SDK owner applies it under live custody;
+neither SDK lock acquisition nor request progress may retry an application.
+Cleanup MUST stop/join publication and ordinary application before retiring
+receiver/endpoint resources. Progress MUST preserve the original request and
+cleanup deadlines and MUST NOT unlock a callback's borrowed SDK lifetime.
 
 Consumer result input MUST use LF-delimited frames of at most 512 bytes,
 including LF. Each result frame MUST be one JSON object with exactly six scalar

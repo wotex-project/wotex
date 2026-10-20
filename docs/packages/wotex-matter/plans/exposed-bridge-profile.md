@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.27.0. Finite WMA.09 implementation target. The
+Version: 1.28.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -266,6 +266,16 @@ refusal preserving prior state, strictly increasing IDs and separate receipt
 reservations. Input accepts 1024-byte observations while retaining the existing
 512-byte bound for result and clock controls. The worker waits for SDK ownership
 without blocking input result/probe delivery and retires before SDK cleanup.
+Synchronous callbacks can opt into the observation progress port without
+unlocking their SDK lifetime. The native wait advances at most one application
+outside custody locking, rechecks its original deadline and polls progress at a
+one-millisecond maximum sleep. The ordinary worker tries the SDK lock without
+removing blocked work. Applied/refused publication uses a separate finite queue
+and no SDK lock, so the consumer may receive an observation receipt before
+resolving the synchronous request. Both queues share the same sixty-four output
+reservations. The borrowed progress owner remains alive through receiver Finish
+and joined event-loop shutdown. Ordinary waits without a progress port preserve
+their existing notification/deadline behavior.
 
 `Wotex.Matter.Bridge.Connection` coordinates an explicitly selected native
 process and its private consumer. Required options name a live local owner,

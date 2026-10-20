@@ -13,10 +13,13 @@ namespace wotex::matter {
 // before the event loop stops. Finish must support partial Attach failure.
 // The receiver and its configuration outlive the driver. Queued SDK work must
 // observe retirement and must not outlive joined SDK shutdown.
+// The borrowed observation progress owner remains alive through receiver Finish
+// and joined SDK shutdown, including while a synchronous callback is returning.
 class BridgeSdkProcessReceiver : public BridgeReceiver {
  public:
   virtual CHIP_ERROR Attach(SdkBridgeBootstrap &runtime, BridgeConsumerHandoff &shared,
-                            BridgeHandoffOwner &custody, BridgeOutputOwner &output) noexcept = 0;
+                            BridgeHandoffOwner &custody, BridgeOutputOwner &output,
+                            SdkBridgeObservationOwner &observations) noexcept = 0;
   // Input-thread notification after result resolution, without custody/SDK
   // locks. Must be bounded and nonblocking; SDK work is separately scheduled.
   virtual bool ResultReady(const BridgeConsumerHandoff::Ticket &ticket) noexcept = 0;

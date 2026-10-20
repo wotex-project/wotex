@@ -38,7 +38,13 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
     {"observation-close", 0},
     {"observation-full", 0},
     {"observation-cancel", 0},
-    {"observation-long", 0}
+    {"observation-long", 0},
+    {"observation-wait", 0},
+    {"observation-wait-many", 0},
+    {"observation-wait-refused", 0},
+    {"observation-wait-timeout", 0},
+    {"observation-wait-close", 0},
+    {"observation-wait-cancel", 0}
   ]
   @process_exit_check """
   expected=$1

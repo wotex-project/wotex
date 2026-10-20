@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <future>
+#include <functional>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -64,6 +65,20 @@ class SamplingClock final : public Clock {
  private:
   std::atomic<bool> sampling_{false};
   std::uint64_t next_{100};
+};
+
+class Progress final : public wotex::matter::BridgeHandoffProgress {
+ public:
+  explicit Progress(std::function<bool()> callback) : callback_(std::move(callback)) {}
+  bool Advance() noexcept override try {
+    ++calls;
+    return callback_();
+  } catch (...) {
+    std::_Exit(1);
+  }
+  unsigned calls{0};
+ private:
+  const std::function<bool()> callback_;
 };
 
 Handoff::Ticket Reserve(Owner &owner, std::uint64_t duration = 500) {
@@ -251,6 +266,119 @@ void MissingDrain() {
           "destruction released unconsumed custody");
 }
 
+void SynchronousProgress() {
+  for (const bool refused : {false, true}) {
+    ControlledClock clock;
+    Handoff custody({7});
+    Owner owner(custody, clock);
+    const auto ticket = Reserve(owner);
+    Progress progress([&] {
+      // Reentry proves Advance runs after releasing the custody mutex.
+      owner.With(
+          [](auto &value, auto) { Require(value.pending() == 1, "progress lost request credit"); });
+      Require(owner.Resolve(ticket, Handoff::Outcome::Completed) == Handoff::Reply::Stored,
+              "progress could not publish completion");
+      return !refused;
+    });
+    Handoff::Outcome outcome = Handoff::Outcome::Unknown;
+    Require(owner.Wait(ticket, outcome, progress) == Handoff::Consume::Completed &&
+                outcome == (refused ? Handoff::Outcome::Closed : Handoff::Outcome::Completed),
+            "progress refusal promoted staged completion");
+    Require(progress.calls == 1 && custody.pending() == 0 && custody.closed() == refused,
+            "progress did not retain/consume exact custody");
+  }
+}
+
+void ProgressDeadlineAndClock() {
+  for (const auto finished_at : {599U, 600U}) {
+    ControlledClock clock;
+    Handoff custody({8});
+    Owner owner(custody, clock);
+    const auto ticket = Reserve(owner);
+    Progress progress([&] {
+      Require(owner.Resolve(ticket, Handoff::Outcome::Completed) == Handoff::Reply::Stored,
+              "progress completion not staged");
+      clock.now = finished_at;
+      return true;
+    });
+    Handoff::Outcome outcome = Handoff::Outcome::Unknown;
+    Require(owner.Wait(ticket, outcome, progress) == Handoff::Consume::Completed &&
+                outcome ==
+                    (finished_at == 599 ? Handoff::Outcome::Completed : Handoff::Outcome::TimedOut),
+            "progress extended the original absolute deadline");
+  }
+  ControlledClock clock;
+  Handoff custody({9});
+  Owner owner(custody, clock);
+  const auto ticket = Reserve(owner);
+  Progress backwards([&] {
+    clock.now = 99;
+    return true;
+  });
+  Handoff::Outcome outcome = Handoff::Outcome::Denied;
+  Require(owner.Wait(ticket, outcome, backwards) == Handoff::Consume::InvalidClock &&
+              outcome == Handoff::Outcome::Denied && custody.pending() == 1,
+          "progress clock regression changed output or consumed custody");
+  clock.now = 100;
+  owner.Close();
+  Require(owner.Wait(ticket, outcome) == Handoff::Consume::Completed &&
+              outcome == Handoff::Outcome::Closed,
+          "progress clock refusal could not retire custody");
+}
+
+void PeriodicProgressAndClosedCustody() {
+  ControlledClock clock;
+  Handoff custody({10});
+  Owner owner(custody, clock);
+  const auto ticket = Reserve(owner, 20);
+  Progress idle([&] {
+    clock.now += 5;
+    return true;
+  });
+  auto waiting = std::async(std::launch::async, [&] {
+    Handoff::Outcome outcome = Handoff::Outcome::Unknown;
+    Require(owner.Wait(ticket, outcome, idle) == Handoff::Consume::Completed &&
+                outcome == Handoff::Outcome::TimedOut,
+            "idle progress wait did not expire");
+  });
+  Require(waiting.wait_for(std::chrono::seconds(2)) == std::future_status::ready,
+          "progress required an external result notification");
+  waiting.get();
+  Require(idle.calls == 4, "progress did not recheck its original clock boundary");
+
+  const auto closing = Reserve(owner);
+  Progress close([&] {
+    owner.Close();
+    return true;
+  });
+  Handoff::Outcome outcome;
+  Require(owner.Wait(closing, outcome, close) == Handoff::Consume::Completed &&
+              outcome == Handoff::Outcome::Closed && close.calls == 1,
+          "progress closure deadlocked or escaped as Success");
+}
+
+void NoUnneededProgress() {
+  ControlledClock clock;
+  Handoff custody({11});
+  Owner owner(custody, clock);
+  Progress forbidden([] { return false; });
+  auto ticket = Reserve(owner);
+  auto foreign = ticket;
+  foreign.generation[0] = 12;
+  Handoff::Outcome outcome = Handoff::Outcome::Unknown;
+  Require(owner.Wait(foreign, outcome, forbidden) == Handoff::Consume::UnknownTicket,
+          "foreign ticket gained progress");
+  Require(owner.Resolve(ticket, Handoff::Outcome::Completed) == Handoff::Reply::Stored &&
+              owner.Wait(ticket, outcome, forbidden) == Handoff::Consume::Completed &&
+              outcome == Handoff::Outcome::Completed,
+          "ready custody called unnecessary progress");
+  ticket = Reserve(owner);
+  clock.now = 600;
+  Require(owner.Wait(ticket, outcome, forbidden) == Handoff::Consume::Completed &&
+              outcome == Handoff::Outcome::TimedOut && forbidden.calls == 0,
+          "expired custody invoked progress");
+}
+
 } // namespace
 
 int main() {
@@ -261,5 +389,9 @@ int main() {
   ClosureWake(false);
   ClosureWake(true);
   SpuriousWakeDeadline();
+  SynchronousProgress();
+  ProgressDeadlineAndClock();
+  PeriodicProgressAndClosedCustody();
+  NoUnneededProgress();
   std::cout << "bridge clocked custody, concurrent admission and synchronous deadlines passed\n";
 }

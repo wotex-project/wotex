@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.30.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.31.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -708,6 +708,31 @@ executable assembly remain open.
 The [SDK observation record](../provenance/bridge-sdk-observations-2026-10.md)
 binds the committed source, 54 process-case executions, affected SDK regressions,
 portable normal/sanitizer builds, package/archive checks and qualification limits.
+
+Synchronous SDK callbacks can explicitly pass the observation progress owner to
+their custody wait. Progress runs outside the custody mutex while retaining the
+callback's SDK lock and borrowed encoder/decoder lifetime. The wait checks its
+original deadline after every progress step and wake; refusal closes custody.
+The ordinary observer worker uses nonblocking SDK lock acquisition and leaves
+queued work available to the SDK callback. Each progress call applies at most
+one queued observation. A separate finite publication queue lets the worker
+encode/send its receipt without acquiring the callback-held SDK lock. Both queues
+share the original sixty-four outstanding receipt reservations and preserve order.
+
+The SDK driver supplies the passive observation owner during receiver attachment
+and starts its worker only after the event loop starts. Cleanup stops that worker
+before receiver retirement but keeps the borrowed owner alive through receiver
+Finish and joined SDK shutdown. A returning synchronous progress call cannot
+outlive its owner.
+
+Six additional process families execute a real installed-provider SDK read on
+the SDK event loop. Consumer completion follows an actual applied observation
+receipt, including a complete 64-observation sequence and a semantic refusal
+followed by valid state. Separate expiry, close and cancellation cases preserve
+the original deadline and drain the synchronous context. The fixed callback
+uses synthetic request metadata and supplies no fabric authentication or consumer
+authorization. The fixture now has thirty-three process families; authenticated
+receiver assembly remains a separate obligation.
 
 ## 4. Isolation and recovery
 

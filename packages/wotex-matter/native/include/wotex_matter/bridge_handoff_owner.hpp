@@ -18,6 +18,16 @@ class BridgeHandoffClock {
   virtual std::uint64_t NowMs() noexcept = 0;
 };
 
+// Explicit synchronous-owner progress, without custody locking. The caller
+// retains any required SDK lock. Advance performs one bounded step, never waits
+// for I/O, reenters Wait or retains borrowed callback values. False closes
+// custody. Progress grants no authority and cannot renew an absolute deadline.
+class BridgeHandoffProgress {
+ public:
+  virtual ~BridgeHandoffProgress() = default;
+  virtual bool Advance() noexcept = 0;
+};
+
 // Internal thread owner for borrowed request custody and its explicit clock.
 // SDK operations use With under the SDK stack lock; input resolution/closure
 // use only this owner's mutex. Wait releases that mutex while blocked, so a
@@ -51,12 +61,18 @@ class BridgeHandoffOwner final {
                                        BridgeConsumerHandoff::Outcome outcome);
   BridgeConsumerHandoff::Consume Wait(const BridgeConsumerHandoff::Ticket &ticket,
                                       BridgeConsumerHandoff::Outcome &outcome);
+  BridgeConsumerHandoff::Consume Wait(const BridgeConsumerHandoff::Ticket &ticket,
+                                      BridgeConsumerHandoff::Outcome &outcome,
+                                      BridgeHandoffProgress &progress);
   void Close();
 
  private:
   // Tests observe the wait handshake and inject spurious wakes; production
   // has no public waiter or notification controls.
   friend struct BridgeHandoffOwnerTestAccess;
+  BridgeConsumerHandoff::Consume Wait(const BridgeConsumerHandoff::Ticket &ticket,
+                                      BridgeConsumerHandoff::Outcome &outcome,
+                                      BridgeHandoffProgress *progress);
   BridgeConsumerHandoff &custody_;
   BridgeHandoffClock &clock_;
   std::mutex mutex_;

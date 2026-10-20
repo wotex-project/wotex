@@ -32,6 +32,7 @@ using Handoff = BridgeConsumerHandoff;
 using Status = chip::Protocols::InteractionModel::Status;
 using Exit = BridgeProcessExit;
 const std::string generation = "01000000000000000000000000000000";
+bool Waiting(std::string_view mode) { return mode.substr(0, 16) == "observation-wait"; }
 std::string Control(std::string_view role) {
   return "{\"v\":1,\"backend\":\"matter-bridge\",\"type\":\"" + std::string(role) +
       "\",\"generation\":\"" + generation + "\"}\n";
@@ -145,11 +146,15 @@ class Receiver final : public BridgeSdkProcessReceiver {
  public:
   explicit Receiver(std::string_view selection) : mode(selection) {}
   CHIP_ERROR Attach(SdkBridgeBootstrap &runtime, BridgeConsumerHandoff &shared,
-                    BridgeHandoffOwner &custody, BridgeOutputOwner &output) noexcept override try {
+                    BridgeHandoffOwner &custody, BridgeOutputOwner &output,
+                    SdkBridgeObservationOwner &observations) noexcept override try {
     assert(attached == 0 && finished == 0 && runtime.provider() && runtime.endpoints());
     assert(!shared.closed() && shared.pending() == 0);
     ++attached;
     owner = &custody;
+    outbound = &output;
+    provider = runtime.provider();
+    progress = &observations;
     assert(
         !chip::Server::GetInstance().GetCommissioningWindowManager().IsCommissioningWindowOpen());
     chip::ReadOnlyBufferBuilder<chip::app::DataModel::EndpointEntry> builder;
@@ -177,6 +182,10 @@ class Receiver final : public BridgeSdkProcessReceiver {
   }
   bool ResultReady(const Handoff::Ticket &received) noexcept override {
     assert(owner && received.id == ticket.id && received.generation == ticket.generation);
+    if (Waiting(mode)) {
+      ++results;
+      return true; // The synchronous SDK read owns consumption of this ticket.
+    }
     owner->With([&](auto &handoff, auto now) {
       Handoff::Outcome outcome;
       assert(handoff.Take(received, now, outcome) == Handoff::Consume::Completed);
@@ -191,7 +200,7 @@ class Receiver final : public BridgeSdkProcessReceiver {
     if (mode == "finish-fail") return CHIP_ERROR_INCORRECT_STATE;
     owner->With([&](auto &handoff, auto now) {
       assert(handoff.closed());
-      if (ticket.id && results.load() == 0) {
+      if (ticket.id && results.load() == 0 && !Waiting(mode)) {
         Handoff::Outcome outcome;
         assert(handoff.Take(ticket, now, outcome) == Handoff::Consume::Completed);
         assert(outcome == Handoff::Outcome::Closed);
@@ -201,7 +210,7 @@ class Receiver final : public BridgeSdkProcessReceiver {
     if (mode.substr(0, 11) == "observation") {
       const bool known_light = mode == "observation-long" || mode == "observation-refused" ||
           mode == "observation-credit" || mode == "observation-result" ||
-          mode == "observation-replay";
+          mode == "observation-replay" || Waiting(mode);
       CheckLight(known_light ? std::optional<bool>(true) : std::nullopt);
       CheckValue<std::int16_t>(4, 1026, 0,
                                mode == "observations" ? std::optional<std::int16_t>(4000)
@@ -209,11 +218,69 @@ class Receiver final : public BridgeSdkProcessReceiver {
                                    ? std::optional<std::int16_t>(1000)
                                    : std::nullopt);
     }
+    if (Waiting(mode)) {
+      assert(read_done.load());
+      assert(progress->Advance()); // Borrow remains alive after its worker stops.
+    }
     return CHIP_NO_ERROR;
   }
-  chip::app::DataModel::ActionReturnStatus Read(BridgeRequestMetadata,
-                                                chip::app::AttributeValueEncoder &) override {
-    return Status::UnsupportedAccess;
+  chip::app::DataModel::ActionReturnStatus Read(
+      BridgeRequestMetadata request, chip::app::AttributeValueEncoder &encoder) override {
+    if (!Waiting(mode)) return Status::UnsupportedAccess;
+    owner->With([&](auto &custody, auto now) {
+      assert(custody.Reserve(now, now + 500, ticket) == Handoff::Admission::Reserved);
+      assert(outbound->Push(BridgeOutputOwner::Kind::Request, "{\"fixture\":\"request\"}\n") ==
+             BridgeOutputOwner::Admission::Accepted);
+    });
+    Handoff::Outcome outcome;
+    assert(owner->Wait(ticket, outcome, *progress) == Handoff::Consume::Completed);
+    if (outcome == Handoff::Outcome::TimedOut) {
+      read_timeout.store(true);
+      return Status::Timeout;
+    }
+    if (outcome == Handoff::Outcome::Closed) read_closed.store(true);
+    if (outcome != Handoff::Outcome::Completed) return Status::Failure;
+    chip::app::DataModel::ReadAttributeRequest native(
+        chip::app::ConcreteAttributePath(request.endpoint, request.cluster, request.member),
+        request.principal);
+    return chip::app::CodegenDataModelProvider::Instance().ReadAttribute(native, encoder);
+  }
+  static void ReadWork(intptr_t context) {
+    auto &receiver = *reinterpret_cast<Receiver *>(context);
+    using namespace chip;
+    using namespace chip::app;
+    std::uint8_t bytes[512];
+    TLV::TLVWriter writer;
+    writer.Init(bytes);
+    AttributeReportIBs::Builder reports;
+    assert(reports.Init(&writer) == CHIP_NO_ERROR);
+    Access::SubjectDescriptor subject;
+    const ConcreteAttributePath path(3, 6, 0);
+    AttributeValueEncoder encoder(reports, subject, path, 0);
+    const DataModel::ReadAttributeRequest request(path, subject);
+    const auto status = receiver.provider->ReadAttribute(request, encoder);
+    if (receiver.read_timeout.load()) assert(status.GetStatusCode().GetStatus() == Status::Timeout);
+    if (receiver.read_closed.load()) assert(status.GetStatusCode().GetStatus() == Status::Failure);
+    if (status.IsSuccess()) {
+      assert(reports.EndOfAttributeReportIBs() == CHIP_NO_ERROR &&
+             writer.Finalize() == CHIP_NO_ERROR);
+      TLV::TLVReader reader;
+      reader.Init(bytes, writer.GetLengthWritten());
+      assert(reader.Next(TLV::kTLVType_Array, TLV::AnonymousTag()) == CHIP_NO_ERROR);
+      TLV::TLVType outer;
+      assert(reader.EnterContainer(outer) == CHIP_NO_ERROR);
+      assert(reader.Next(TLV::kTLVType_Structure, TLV::AnonymousTag()) == CHIP_NO_ERROR);
+      AttributeReportIB::Parser report;
+      AttributeDataIB::Parser data;
+      TLV::TLVReader value;
+      bool observed = false;
+      assert(report.Init(reader) == CHIP_NO_ERROR &&
+             report.GetAttributeData(&data) == CHIP_NO_ERROR &&
+             data.GetData(&value) == CHIP_NO_ERROR && value.Get(observed) == CHIP_NO_ERROR &&
+             observed);
+      receiver.read_success.store(true);
+    }
+    receiver.read_done.store(true);
   }
   chip::app::DataModel::ActionReturnStatus Write(BridgeRequestMetadata,
                                                  chip::app::AttributeValueDecoder &) override {
@@ -227,14 +294,60 @@ class Receiver final : public BridgeSdkProcessReceiver {
                         chip::app::DataModel::ListWriteOperation, chip::FabricIndex) override {}
   const std::string_view mode;
   BridgeHandoffOwner *owner{nullptr};
+  BridgeOutputOwner *outbound{nullptr};
+  SdkBridgeProviderBinding *provider{nullptr};
+  SdkBridgeObservationOwner *progress{nullptr};
   Handoff::Ticket ticket;
   std::atomic<unsigned> attached{0}, finished{0}, results{0};
+  std::atomic<bool> read_success{false}, read_done{false}, read_timeout{false}, read_closed{false};
 };
+
+void AwaitRead(Receiver &receiver, bool completed, bool timed_out = false, bool closed = false) {
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(6);
+  while (!receiver.read_done.load() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  assert(receiver.read_done.load() && receiver.read_success.load() == completed &&
+         receiver.read_timeout.load() == timed_out && receiver.read_closed.load() == closed);
+}
 
 void ExerciseObservations(std::string_view mode, int input, int output, Receiver &receiver,
                           std::atomic<bool> &cancel) {
   const auto send = [&](const Json &frame) { Send(input, frame.dump() + '\n'); };
-  if (mode == "observation-long") {
+  if (Waiting(mode)) {
+    assert(chip::DeviceLayer::PlatformMgr().ScheduleWork(
+               Receiver::ReadWork, reinterpret_cast<intptr_t>(&receiver)) == CHIP_NO_ERROR);
+    assert(Line(output) == "{\"fixture\":\"request\"}\n");
+    const unsigned count = mode == "observation-wait-many" ? 64 : 1;
+    if (mode == "observation-wait-refused") {
+      send(Observation(1, "0001", 3, false, 50));
+      Receipt(output, 1, false);
+      send(Observation(2));
+      Receipt(output, 2);
+    } else {
+      for (unsigned id = 1; id <= count; ++id)
+        send(Observation(id, "0001", 3, count == 1 || id % 2 == 0));
+      for (unsigned id = 1; id <= count; ++id) Receipt(output, id);
+    }
+    // Consumer completion depends on actual state publication while the SDK
+    // callback still retains the stack lock and its borrowed encoder.
+    if (mode == "observation-wait-close") {
+      Send(input, Control("close"));
+      assert(Line(output) == Control("closed") && Line(output).empty());
+      AwaitRead(receiver, false, false, true);
+      return;
+    }
+    if (mode == "observation-wait-cancel") {
+      cancel.store(true);
+      assert(Line(output).empty());
+      AwaitRead(receiver, false, false, true);
+      return;
+    }
+    if (mode == "observation-wait-timeout") AwaitRead(receiver, false, true);
+    Send(input,
+         "{\"v\":1,\"backend\":\"matter-bridge\",\"type\":\"result\",\"generation\":\"" +
+             generation + "\",\"id\":\"1\",\"outcome\":\"completed\"}\n");
+    if (mode != "observation-wait-timeout") AwaitRead(receiver, true);
+  } else if (mode == "observation-long") {
     send(Observation(1, std::string(512, 'a')));
     Receipt(output, 1);
     StackLock lock;
@@ -367,7 +480,7 @@ void ExerciseObservations(std::string_view mode, int input, int output, Receiver
 }
 
 int RunSdkProcessProbe(const std::string &root, std::string_view mode) {
-  const std::array<std::string_view, 27> modes{"normal",
+  const std::array<std::string_view, 33> modes{"normal",
                                                "reopen",
                                                "missing-config",
                                                "bad-interface",
@@ -393,7 +506,13 @@ int RunSdkProcessProbe(const std::string &root, std::string_view mode) {
                                                "observation-close",
                                                "observation-full",
                                                "observation-cancel",
-                                               "observation-long"};
+                                               "observation-long",
+                                               "observation-wait",
+                                               "observation-wait-many",
+                                               "observation-wait-refused",
+                                               "observation-wait-timeout",
+                                               "observation-wait-close",
+                                               "observation-wait-cancel"};
   assert(std::find(modes.begin(), modes.end(), mode) != modes.end());
   std::signal(SIGPIPE, SIG_IGN);
   const auto previous = std::filesystem::current_path();
@@ -504,15 +623,20 @@ int RunSdkProcessProbe(const std::string &root, std::string_view mode) {
       : mode == "missing-open" || mode == "missing-config" || mode == "credentials" ||
           mode == "bad-interface" || mode == "attach-fail"
       ? Exit::Startup
-      : mode == "cancel" || mode == "observation-cancel" ? Exit::Cancelled
-      : mode == "output-lost"                            ? Exit::Output
-                                                         : Exit::Closed;
+      : mode == "cancel" || mode == "observation-cancel" || mode == "observation-wait-cancel"
+      ? Exit::Cancelled
+      : mode == "output-lost" ? Exit::Output
+                              : Exit::Closed;
   assert(status == expected);
   const bool never_attached = mode == "bad-open" || mode == "missing-open" ||
       mode == "missing-config" || mode == "credentials" || mode == "bad-interface";
   assert(receiver.attached == (never_attached ? 0 : 1) && receiver.finished == receiver.attached);
   assert(receiver.results ==
-         (mode == "result" || mode == "result-refuse" || mode == "observation-result" ? 1 : 0));
+         (mode == "result" || mode == "result-refuse" || mode == "observation-result" ||
+                  mode == "observation-wait" || mode == "observation-wait-many" ||
+                  mode == "observation-wait-refused"
+              ? 1
+              : 0));
   assert(!driver.Ready({{1}, 1}) && !driver.Stop());
   assert(std::filesystem::current_path() == previous);
   if (!never_attached) {

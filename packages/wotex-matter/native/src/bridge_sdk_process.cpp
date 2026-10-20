@@ -63,17 +63,18 @@ bool SdkBridgeProcessDriver::Start(BridgeConsumerHandoff &custody, BridgeHandoff
   }
   if (cancel.load() || runtime_->Init() != CHIP_NO_ERROR) return false;
   initialized_ = true;
+  observations_ = std::make_unique<SdkBridgeObservationOwner>(*runtime_->endpoints(), owner,
+                                                              output);
   {
     StackLock lock;
     if (cancel.load()) return false;
     attached_ = true;
-    if (receiver_.Attach(*runtime_, custody, owner, output) != CHIP_NO_ERROR) return false;
+    if (receiver_.Attach(*runtime_, custody, owner, output, *observations_) != CHIP_NO_ERROR)
+      return false;
   }
   if (cancel.load() || runtime_->Start() != CHIP_NO_ERROR) return false;
   loop_ = true;
   if (cancel.load()) return false;
-  observations_ = std::make_unique<SdkBridgeObservationOwner>(*runtime_->endpoints(), owner,
-                                                              output);
   if (!observations_->Start() || cancel.load()) return false;
   accepting_.store(true);
   return true;
@@ -96,7 +97,6 @@ bool SdkBridgeProcessDriver::Stop() noexcept try {
   accepting_.store(false);
   if (observations_) {
     observations_->Stop();
-    observations_.reset();
   }
   if (initialized_) {
     {
@@ -111,12 +111,17 @@ bool SdkBridgeProcessDriver::Stop() noexcept try {
       if (runtime_->Stop() != CHIP_NO_ERROR) return false;
       loop_ = false;
     }
+    // SDK callbacks can still be returning from an explicit progress call
+    // after Stop joins the publication worker. Keep their borrowed owner alive
+    // through receiver retirement and the joined SDK event loop.
+    observations_.reset();
     // The SDK loop and input reader have joined. Holding custody during final
     // raw SDK checks now cannot reverse a live SDK->custody lock order, and
     // excludes the output writer's concurrent, idempotent closure.
     custody_->With([&](auto &, auto) { runtime_->Finish(); });
     initialized_ = false;
   }
+  observations_.reset();
   runtime_.reset();
   bootstrap_.reset();
   if (memory_) {

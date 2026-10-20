@@ -106,8 +106,9 @@ Repository-wide rules are in the root `AGENTS.md`.
   port drains contexts under the SDK lock and accepts bounded result-ready
   notifications without that lock. The guarded
   `native/testing/sdk_bridge_process_test.*` fixture uses the actual SDK and real
-  pipes for sixteen lifecycle and eleven approved-observation case families. It
-  refuses child operations; production executable assembly and authenticated
+  pipes for sixteen lifecycle, eleven approved-observation and six synchronous
+  progress case families. Fixed read callbacks use synthetic metadata;
+  production executable assembly and authenticated
   dispatch remain open. The explicit native build runs these cases in both modes and
   requires exact process-specific markers and exit statuses.
 - `native/{include/wotex_matter,src}/bridge_observation.*` and
@@ -122,7 +123,14 @@ Repository-wide rules are in the root `AGENTS.md`.
   `bridge_output.*` retains sixty-four receipt reservations through full output
   transmission separately from four controls and sixteen requests. The SDK process
   fixture checks actual state, refusal preservation and queue/result/probe progress
-  while the SDK lock is held. Authenticated delivery and independent reporting
+  while the SDK lock is held. An explicit `BridgeHandoffProgress` port lets a
+  synchronous SDK callback advance one observation while preserving its SDK lock
+  and original deadline. Separate publication runs without that lock, using the
+  same sixty-four receipt reservations. The ordinary worker leaves SDK-blocked
+  work queued; its borrowed progress owner remains alive through receiver Finish
+  and joined SDK shutdown. Owner tests and actual provider-read pipe cases cover
+  receipt-before-result, 64 observations, refusal, expiry and closure.
+  Authenticated delivery and independent reporting
   peers remain open.
 - `native/{include/wotex_matter,src}/bridge_handoff.*`: internal bounded request
   custody borrowed by the SDK server binding; `test/native/bridge_handoff_test.cpp`
