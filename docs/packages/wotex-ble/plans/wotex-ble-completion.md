@@ -34,9 +34,11 @@ the actual SDK toggle/state/value selectors, explicit mode selection, one
 control deadline, sixteen live streams and 64 shared report credits. Early
 reports wait for establishment; cumulative acknowledgement and retained stopped
 credit prevent unbounded delivery. The literal mode/control corpus and eight
-notification case families exercise that SDK seam. Continue with the Host/Client
-streaming join, explicit sleep observation, independent CoreBluetooth archive
-consumers and installed Mac lifecycle/readiness qualification. Software point sessions establish no
+notification case families exercise that SDK seam; the
+[SDK notification record](../provenance/corebluetooth-notifications-2026-10.md)
+binds the executed inputs and limits. Continue with the Host/Client streaming
+join, explicit sleep observation, independent CoreBluetooth archive consumers
+and installed Mac lifecycle/readiness qualification. Software point sessions establish no
 actual permission/peripheral or RF result.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds their exact source, archive and executed checks.

@@ -408,3 +408,7 @@ separate required lifecycle input.
 property/mode outcomes and six control-state outcomes. The SDK fixture consumes
 every cell through actual injected selectors; vector presence alone proves none
 of these outcomes. The public Host/Client/Runtime streaming join remains open.
+
+The [SDK notification record](../provenance/corebluetooth-notifications-2026-10.md)
+binds the 24-case SDK corpus, 48 sanitizer component cases, owning fast gate and
+archive/build checks to the exact committed inputs and their qualification limits.
