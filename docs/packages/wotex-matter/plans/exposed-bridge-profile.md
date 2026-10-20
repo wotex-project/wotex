@@ -23,6 +23,8 @@ the scene value choice are checked before consumer execution. Unique unknown
 fields stay in the owned payload. This changes no native state or policy;
 stateful command semantics and responses belong to the native renderer after
 consumer completion.
+The [command field record](../provenance/bridge-command-fields-2026-10.md)
+binds the literal corpus, native pipe checks and exact source/artifact identities.
 
 ## Source and generated data
 

@@ -795,6 +795,9 @@ fields, lazy-list type errors, duplicates and successful admission after refusal
 The latter requires request ID 1 and exact retained unknown-field bytes.
 Complete command rendering, stateful scene/group availability and authenticated
 transport qualification remain separate obligations.
+The [command field record](../provenance/bridge-command-fields-2026-10.md)
+binds the committed source, command corpus, 166 native case executions, exact
+archive and qualification limits.
 
 ## 4. Isolation and recovery
 

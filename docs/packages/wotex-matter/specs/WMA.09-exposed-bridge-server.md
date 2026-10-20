@@ -733,6 +733,10 @@ identity and handler ownership on refusal, and perform no stateful native or
 consumer operation. Stateful group/scene availability and native command
 responses remain separately owned renderer obligations.
 
+The [command field record](../provenance/bridge-command-fields-2026-10.md) binds
+the finite schema corpus and admission-order pipe checks. It MUST NOT establish
+complete native command semantics or authenticated transport admission.
+
 The retained invoke owner MUST require an explicit SDK guard before copying
 arguments or reserving custody. The guard MUST capture the exact fabric realm,
 a non-reused local epoch and operational-certificate digest, together with the
