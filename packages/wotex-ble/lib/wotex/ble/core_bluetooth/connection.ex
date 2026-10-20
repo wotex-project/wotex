@@ -285,7 +285,11 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
         continue(close(state, Error.new(:disconnected)))
 
       state.verifier && elem(state.verifier, 1) == ref ->
-        continue(close(%{state | verifier: nil}, Error.new(:transport_unavailable)))
+        state = %{state | verifier: nil}
+
+        if state.phase == :closing,
+          do: continue(state),
+          else: continue(close(state, Error.new(:transport_unavailable)))
 
       state.active && state.active.monitor == ref ->
         continue(close(state, Error.new(:disconnected)))
@@ -569,10 +573,10 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
       for {message, timeout} <- [cleanup_term: 650, cleanup_kill: 1250, cleanup_timeout: 1500],
           do: Process.send_after(self(), message, timeout)
 
-    %{state | phase: :closing, reason: reason, queue: [], verifier: nil, timers: timers}
+    %{state | phase: :closing, reason: reason, queue: [], timers: timers}
   end
 
-  defp continue(%{phase: :closing, port: nil} = state), do: finish(state, true)
+  defp continue(%{phase: :closing, port: nil, verifier: nil} = state), do: finish(state, true)
   defp continue(state), do: {:noreply, state}
 
   defp finish(state, confirmed) do
@@ -643,7 +647,8 @@ defmodule Wotex.BLE.CoreBluetooth.Connection do
   defp stop_verifier({pid, ref}) do
     Process.unlink(pid)
     Process.exit(pid, :kill)
-    Process.demonitor(ref, [:flush])
+    # Keep the monitor until DOWN joins retirement, or the cleanup budget expires.
+    ref
   end
 
   defp close_port(nil), do: :ok
