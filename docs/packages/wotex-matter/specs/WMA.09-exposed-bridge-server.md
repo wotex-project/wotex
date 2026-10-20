@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.27.0-target.
+Version: 0.28.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -558,6 +558,23 @@ be written once, followed by output retirement. Allocation or counter refusal
 MUST preserve the queue. Cancellation or consumer loss MUST abort the finish
 without promoting it to successful closure. Finishing output MUST NOT establish
 SDK cleanup or authorize a closed receipt before actual native cleanup.
+
+The internal native process coordinator MUST accept a startup budget from 1 to
+5000 milliseconds covering the original first-frame wait and ready admission.
+No SDK driver call may precede a complete valid open. Extra input before ready
+admission MUST refuse startup without resolving requests or sampling probes.
+SDK initialization owns custody before the input reader starts; concurrent pipe
+loss or cancellation MUST publish cancellation without racing those startup
+checks. Ready MUST precede any requests queued during initialization.
+
+The coordinator MUST close request admission and join its reader before invoking
+SDK cleanup. One cleanup deadline MUST cover driver drain, resource release and
+final output. A false cleanup result, stuck startup/cleanup or blocked final
+output MUST terminate the native process without a closed receipt. The watchdog
+MUST remain independent of custody/output locks held by SDK work. Successful
+return MUST join reader, writer and watchdog and restore settable descriptor
+flags. An explicitly injected driver fixture proves this coordination only;
+it does not establish SDK process assembly, authentication or clock qualification.
 
 ### Native callback custody
 

@@ -76,7 +76,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_test(NAME wotex_matter_bridge_private_file_fault_test COMMAND wotex_matter_bridge_private_file_fault_test)
 endif()
 
-if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
+if(WOTEX_MATTER_JSON_INCLUDE)
   add_library(wotex_matter_bridge_observation STATIC src/bridge_observation.cpp)
   target_include_directories(wotex_matter_bridge_observation PUBLIC include)
   target_include_directories(wotex_matter_bridge_observation SYSTEM PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
@@ -103,6 +103,16 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   target_compile_options(wotex_matter_bridge_input_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
   add_test(NAME wotex_matter_bridge_input_test COMMAND wotex_matter_bridge_input_test)
 
+  add_library(wotex_matter_bridge_process STATIC src/bridge_process.cpp)
+  target_link_libraries(wotex_matter_bridge_process PUBLIC wotex_matter_bridge_input wotex_matter_bridge_output)
+  target_compile_options(wotex_matter_bridge_process PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_executable(wotex_matter_bridge_process_test testing/bridge_process_test.cpp)
+  target_link_libraries(wotex_matter_bridge_process_test PRIVATE wotex_matter_bridge_process)
+  target_compile_options(wotex_matter_bridge_process_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_test(NAME wotex_matter_bridge_process_test COMMAND wotex_matter_bridge_process_test)
+endif()
+
+if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   set(WOTEX_MATTER_SDK_INCLUDES
     "${WOTEX_MATTER_SDK_ROOT}/src"
     "${WOTEX_MATTER_SDK_ROOT}/third_party/nlassert/repo/include"

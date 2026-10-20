@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.26.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.27.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -12,6 +12,13 @@ immutable bridge/model identity. An internal SDK server binding owns startup
 and shutdown resources. Bounded BEAM consumer execution and explicit BEAM
 process coordination are implemented; the production SDK process host,
 authenticated request integration and independent controller peer remain open.
+The internal native process coordinator joins bounded open/ready controls,
+separate result/clock input, reserved output, original startup time and one
+cleanup deadline through an explicit SDK composition port. Its real-pipe
+fixture covers twenty-two case families, including independent processes,
+pre-ready input, consumer loss and watchdog termination with custody locked.
+The production SDK driver, approved-observation application and authenticated
+request integration remain required before this becomes an executable server.
 The [finite software profile](exposed-bridge-profile.md) pins the source,
 Matter 1.6 data model, root/aggregator layout, both bridged Device Types,
 mandatory light/sensor clusters, generated model artifacts, build options,
