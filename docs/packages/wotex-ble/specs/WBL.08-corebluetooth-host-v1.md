@@ -488,3 +488,8 @@ receiver admission or explicit retirement of those exact records.
 | CB-W3 | Missing/duplicate/future/regressing/foreign/unsent acknowledgement never fabricates credit; stopped outstanding records remain reserved |
 | CB-W4 | Busy, original deadline, late control, active close and cleanup refusal retain one result and actual retirement |
 | CB-W5 | Concurrent serialized callbacks, unread stdout, fragmented input and multiple streams remain bounded without callback/output-lock contention |
+
+The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)
+binds the committed source, independent Driver processes, production SDK adapter
+join, sanitizer corpus and exact archive checks. Public Client/Runtime receiving,
+sleep observation and installed-host qualification remain separate obligations.

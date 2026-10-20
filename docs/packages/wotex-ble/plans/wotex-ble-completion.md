@@ -45,6 +45,8 @@ real pipes against injected framework selectors. Continue with the public Client
 and Runtime receiving join, explicit sleep observation, independent CoreBluetooth
 archive consumers and installed Mac lifecycle/readiness qualification. These
 software cases establish no actual permission/peripheral or RF result.
+The [native notification IPC record](../provenance/corebluetooth-notification-ipc-2026-10.md)
+binds the Host delivery and its remaining public receiving obligations.
 The [native process/build record](../provenance/corebluetooth-host-2026-10.md)
 binds their exact source, archive and executed checks.
 
