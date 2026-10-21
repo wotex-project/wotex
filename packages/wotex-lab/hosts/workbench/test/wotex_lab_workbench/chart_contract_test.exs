@@ -95,4 +95,20 @@ defmodule WotexLabWorkbench.ChartContractTest do
     assert html =~ "Preview truncated"
     assert length(hd(chart.series).points) == 2_000
   end
+
+  test "compact charts show measured endpoints and distinguish missing intervals" do
+    points = [{0, nil}, {1, -4}, {2, nil}, {3, -2}, {4, nil}]
+    {:ok, chart} = Chart.new(series: [%{name: "room", points: points}])
+    geometry = Chart.geometry(chart)
+    [series] = geometry.series
+    assert length(series.segments) == 2
+    assert length(series.bridges) == 1
+    assert length(series.points) == 2
+    assert hd(chart.series).points == points
+    html = render_component(&Component.chart/1, id: "compact", chart: chart, compact: true)
+    assert html =~ "wl-chart-compact"
+    assert html =~ "wl-chart-gap"
+    assert html =~ "<circle"
+    assert html =~ "Series (1)"
+  end
 end

@@ -749,6 +749,12 @@ body {
 .wl-chart-series circle { fill: var(--wl-series-color); }
 .wl-chart-series polygon { fill: var(--wl-series-color); fill-opacity: 0.2; stroke: var(--wl-series-color); }
 .wl-chart-series polyline { fill: none; stroke: var(--wl-series-color); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.2; }
+.wl-chart-series .wl-chart-gap { stroke-dasharray: 2 4; stroke-width: 1; opacity: 0.4; }
+.wl-chart-compact { margin: 8px 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.wl-chart-compact figcaption { margin: 0 0 8px; font-size: 12px; line-height: 16px; font-weight: 500; }
+.wl-chart-compact .wl-chart-plot { fill: transparent; stroke: none; }
+.wl-chart-compact .wl-chart-legend { display: grid; gap: 8px; overflow-wrap: anywhere; }
+.wl-chart-compact .wl-chart-series-details, .wl-chart-compact .wl-chart-table { margin-top: 8px; font-size: 11px; }
 
 .wl-series-1 { --wl-series-color: var(--wl-color-success); }
 .wl-series-2 { --wl-series-color: var(--wl-color-warning); }
@@ -1106,3 +1112,9 @@ body {
 .wl-shell .wl-page-header h1 { font-size: 24px; line-height: 32px; }
 .wl-shell-canvas .wl-main > .wl-flash { position: absolute; bottom: 20px; left: 50%; z-index: 30; width: min(420px, calc(100% - 40px)); transform: translateX(-50%); }
 .wotex-lab input, .wotex-lab select, .wotex-lab textarea { border-color: var(--wotex-semantic-color-control-border); }
+.wl-workbench-panel .wl-stack > .wl-button { width: max-content; justify-self: start; }
+.wl-metric-source { display: grid; gap: 8px; margin: 0; }
+.wl-metric-source > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 8px; }
+.wl-metric-source dt { color: var(--wl-color-muted); font-size: 11px; }
+.wl-metric-source dd { margin: 0; overflow-wrap: anywhere; }
+.wl-workbench-panel .wl-disclosure code { overflow-wrap: anywhere; }

@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.12.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.13.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -16,8 +16,10 @@ source now opens a full-viewport Svelte Flow canvas at `/`. Experiments, runs,
 metrics and selected-run evidence patch the same LiveView and open contextual
 panels. Thing inspection/import, experiment drafts, explicit readings, node
 positions and viewport survive those panel transitions. Reload/documentation
-restoration, live Thing subscriptions and the prompt-to-pin protocol remain
-incomplete.
+restoration for unsaved state, live Thing subscriptions and the prompt-to-pin
+protocol remain incomplete. Room-history Query → result → pin now retains
+source/query identity and missingness. Saved pin geometry and viewport restore
+within the signed session; restored pins pause until Resume.
 The [design contract](brand-and-lab-design.md) retains identity and native-file
 acceptance; [WLB.11](../specs/WLB.11-workbench-and-design-system.md) owns frontend
 behavior and [WLB.12](../specs/WLB.12-unified-documentation.md) owns documentation.

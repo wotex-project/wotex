@@ -31,7 +31,7 @@ defmodule WotexLabWorkbenchWeb.Islands do
       props={@props}
       generation="0"
       revision={to_string(@revision)}
-      capabilities={["inspect", "open"]}
+      capabilities={~w(inspect open save_layout pin_refresh pin_pause pin_resume pin_remove)}
     >
       <:fallback>{render_slot(@fallback)}</:fallback>
     </.island_boundary>

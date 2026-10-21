@@ -1,7 +1,14 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.16.0. Contract: accepted. Implementation status:
+Specification version: 0.17.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.17 adds session-owned room-history pins and saved canvas geometry.
+The query builder uses the closed metric catalogue and existing history ranges.
+Only an executed result with measured values can be pinned. Reload restores
+the cached pin definitions and saved geometry, paused until explicit Resume.
+BeamLens answer-to-pin composition, unsaved documentation round trips and the
+complete application qualification remain incomplete.
 
 Version 0.16 adopts the grayscale canvas direction and adds the registered
 `canvas` island. The initial source slice replaces the Thing card list with a
@@ -10,7 +17,7 @@ replaces the sidebar. `/` opens the canvas; `/experiments`, `/runs/:id`,
 `/metrics` and `/evidence` patch the same LiveView and keep that canvas mounted.
 Experiment drafts, explicit Thing readings and local canvas geometry survive
 panel transitions. Run evidence binds its selected session-owned run and returns
-to it. Metric pinning, full-reload/documentation restoration, live observation
+to it. Complete metric composition, documentation restoration, live observation
 subscriptions and complete browser journeys remain incomplete. No historical
 evidence qualifies those additions.
 DesignSystem 0.5 uses the supplied identity's grayscale roles, 4-pixel radii,
@@ -265,7 +272,8 @@ Evidence belongs to the selected subject rather than a persistent primary
 navigation item. Documentation opens the inert WLB.12 route without allocating
 a room. The source shell has the board menu and one Select/Pan/Add/Metrics/
 Experiments/Fit rail. Experiment selection, results and reports use contextual
-panels; metrics still needs the Ask/query/pin composition. Below 600 pixels the inspector clears the board control
+panels; metrics has a room query builder and pins while its BeamLens answer-to-pin
+composition remains incomplete. Below 600 pixels the inspector clears the board control
 with a 76-pixel top inset; its other canvas-edge insets remain 20 pixels.
 
 | View | Main content | Primary action |
@@ -411,7 +419,8 @@ geometry. Explicit Property reads alone populate values; simulator state is not
 an observation. The timestamp is the host read receipt, not a device event time.
 Registered Directory entries stay inert and use stable identities. The graph
 describes admitted experiment wiring rather than claiming a live subscription.
-Automatic Thing observation and persisted layout restoration remain unbuilt.
+Automatic Thing observation and unsaved presentation restoration through
+documentation remain unbuilt.
 
 Canvas `open` also carries only `id`. The host admits exactly `add`, `metrics`
 or `experiments` after verifying the signed session, instance and revision. It
@@ -420,6 +429,54 @@ queries metric history or runs an experiment. Inspecting the admitted smart-room
 process opens its configuration. The canvas mount identity remains stable across
 Workbench patches. Invalid/stale events cannot change the selected subject;
 revoked sessions remove the canvas. Documentation belongs to a separate LiveView.
+
+### Metric pins and layout
+
+Canvas additionally accepts optional `pins` (at most 16), `view` (zero or one
+viewport) and decimal-string `layout_revision` (at most 32 bytes). A pin has
+exactly `id`, `title`, `metric`, `source`, `range`, `unit`, `aggregation`, `state`, `auto_refresh`,
+`end_ms`, `series`, `x`, `y`, `width` and `height`. ID and metric use the node
+identifier grammar; title allows 128 UTF-8 bytes, source/aggregation/state 64,
+and unit 32. The range is `5m`, `15m` or `1h`. `end_ms` is a safe integer UTC
+range endpoint. `auto_refresh` is a boolean; the context menu uses it independently
+of cached/unavailable status text. Pin coordinates use the node bounds; width is 300–800 pixels
+and height 200–600. Each of at most eight uniquely named series has exactly
+`name` (128 UTF-8 bytes) and `points` (at most 61 `[x, y]` pairs). Coordinates
+are finite within ±10^100; only y may be null. Pin IDs and node IDs cannot
+collide. The viewport has exactly x/y (finite within ±100,000) and zoom
+(0.25–2). Both encoders validate these nested records.
+
+The host's builder queries one catalogue metric and one inherited history range
+on explicit Query. It fixes room scope and type-appropriate aggregation through
+`HistoryPanels`; browser data cannot supply scope, chart values or expressions.
+Pin retains the validated definition, result, query digests and data window.
+No samples disables Pin. A failed refresh keeps the previous timestamped chart
+with an unavailable indication. Dotted bridges annotate interior missing
+intervals between measured endpoints; they introduce no zero or numeric
+interpolation. All-missing series remain unavailable.
+
+Canvas events `pin_refresh`, `pin_pause`, `pin_resume` and `pin_remove` carry
+only an existing owned pin ID. `save_layout` carries only `layout`, containing
+exactly `positions` and `viewport`. At most 48 unique positions may name current
+nodes/pins; each has id/x/y and may include pin width/height together. Unknown
+identities, fields or bounds are refused without replacing the saved layout.
+These are presentation/read operations and convey no Action authority.
+
+Pin and Resume opt the connected workbench into local-history refresh. One
+owner task at a time shares a 1.5-second budget across at most sixteen pin
+definitions; a five-second tick rotates range priority. Signed-session and room
+identity are checked before starting and before applying its result. Automatic
+refresh does not extend the session TTL. Pause prevents later refreshes; an
+already-running read may finish. Removing a pin cannot be undone by a late
+result. No timer starts a model request, collector, database connection or
+Action. Reopening/reloading restores cached pins paused. Room death discards
+cached observations; expiry/revocation discards the session board.
+
+Saved geometry and canonical pin definitions belong to the bounded signed
+session. Save retains node/pin positions, pin sizes and viewport for later
+mounts in that session; it is not a frozen dataset or an authorization grant.
+It does not yet preserve unsaved presentation or experiment drafts through the
+separate documentation LiveView.
 
 The Workbench uses one LiveView lifecycle with bounded Svelte islands, not a
 LiveView page beside a Svelte single-page application. LiveView owns routes,

@@ -15,12 +15,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   use WotexLabWorkbenchWeb, :live_view
 
   import WotexLabWorkbenchWeb.Components.{HistoryPanels, Insights, MetricCatalogue}
+  import WotexLabWorkbenchWeb.Components.MetricComposer
 
   alias Phoenix.LiveView.JS
   alias Plug.Conn.Query
   alias Wotex.Lab.{Error, Telemetry}
 
   alias WotexLabWorkbench.{
+    Board,
+    BoardHistory,
     Canvas,
     Chart,
     Experiments,
@@ -62,6 +65,16 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:insights, nil)
       |> assign(:canvas_readings, %{})
       |> assign(:canvas_selection, nil)
+      |> assign(:board, Board.empty())
+      |> assign(:board_room, nil)
+      |> assign(:active_pins, MapSet.new())
+      |> assign(:pin_refresh_running, false)
+      |> assign(:pin_refresh_room, nil)
+      |> assign(:pin_refresh_rotation, 0)
+      |> assign(:metric_draft, %{metric: "nx_duration_seconds", range: "5m"})
+      |> assign(:metric_result, nil)
+      |> assign(:metric_room, nil)
+      |> assign(:selected_pin, nil)
       |> assign(:selected_experiment, "thermal")
       |> assign(:evidence_selected, false)
       |> assign(:answer, nil)
@@ -71,6 +84,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:disclosure, Disclosure.current())
       |> refresh()
 
+    if connected?(socket), do: Process.send_after(self(), :refresh_pins, 5_000)
     {:ok, socket}
   end
 
@@ -251,6 +265,56 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end)
   end
 
+  def handle_event("edit_metric_query", params, socket) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, draft} <- metric_draft(params) do
+      {:noreply, assign(socket, scope: scope, metric_draft: draft, metric_result: nil)}
+    else
+      {:error, error} -> reject_event(socket, error)
+    end
+  end
+
+  def handle_event("compose_metric", params, socket) do
+    command(socket, :query, fn scope ->
+      with {:ok, draft} <- metric_draft(params),
+           {:ok, binding} <- room_history(scope.room),
+           {:ok, result} <- HistoryPanels.load(binding, [draft.metric], draft.range) do
+        result = Map.put(result, :queried_at, System.system_time(:millisecond))
+        {:ok, scope, {:metric_result, result, draft, scope.room}}
+      end
+    end)
+  end
+
+  def handle_event("pin_metric", _, socket) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- is_pid(scope.room) and scope.room == socket.assigns.metric_room,
+         {:ok, board} <-
+           Sessions.change_board(scope.token, scope.room, {:pin, socket.assigns.metric_result}) do
+      [result] = socket.assigns.metric_result.panels
+      id = "pin-#{result.id}-#{socket.assigns.metric_result.range}"
+
+      {:noreply,
+       socket
+       |> assign(scope: scope, board: board)
+       |> update(:active_pins, &MapSet.put(&1, id))
+       |> revise_islands()
+       |> push_patch(to: "/")}
+    else
+      false ->
+        reject_event(socket, Error.new(:room_changed, :session, "Query this room before pinning"))
+
+      {:error, error} ->
+        reject_event(socket, error)
+    end
+  end
+
+  def handle_event("rename_pin", %{"pin_id" => id, "title" => title}, socket) do
+    case change_board(socket, {:rename, id, title}) do
+      {:ok, socket} -> {:noreply, socket}
+      {:error, error} -> reject_event(socket, error)
+    end
+  end
+
   def handle_event("load_history", %{"range" => range}, socket) do
     command(socket, :query, fn scope ->
       with {:ok, binding} <- room_history(scope.room),
@@ -388,7 +452,52 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     {:noreply, assign(socket, answer: answer, investigation: investigation)}
   end
 
+  def handle_info(:refresh_pins, socket) do
+    Process.send_after(self(), :refresh_pins, 5_000)
+
+    case Scope.verify(socket) do
+      {:ok, scope} ->
+        before = {socket.assigns.board, socket.assigns.active_pins}
+        socket = load_board(assign(socket, :scope, scope))
+
+        socket =
+          if before == {socket.assigns.board, socket.assigns.active_pins},
+            do: socket,
+            else: revise_islands(socket)
+
+        pins =
+          Enum.filter(socket.assigns.board.pins, &MapSet.member?(socket.assigns.active_pins, &1.id))
+
+        {:noreply, start_pin_refresh(socket, pins)}
+
+      {:error, error} ->
+        {:noreply, deny(socket, error)}
+    end
+  end
+
   def handle_info(_, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveView
+  def handle_async(:pin_refresh, {:ok, histories}, socket) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- scope.room == socket.assigns.pin_refresh_room,
+         {:ok, board} <- Sessions.change_board(scope.token, scope.room, {:refresh, histories}) do
+      {:noreply,
+       socket
+       |> assign(scope: scope, board: board, pin_refresh_running: false)
+       |> revise_islands()}
+    else
+      false -> {:noreply, assign(socket, pin_refresh_running: false, active_pins: MapSet.new())}
+      {:error, error} -> reject_event(assign(socket, :pin_refresh_running, false), error)
+    end
+  end
+
+  def handle_async(:pin_refresh, {:exit, _}, socket),
+    do:
+      reject_event(
+        assign(socket, :pin_refresh_running, false),
+        Error.new(:history_unavailable, :metrics, "Refresh failed; previous data retained")
+      )
 
   @impl Phoenix.LiveView
   def render(assigns) do
@@ -417,6 +526,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             things={@things}
             runs={@runs}
             readings={@canvas_readings}
+            board={@board}
+            active_pins={@active_pins}
             session_id={@scope.session_id}
             island_revision={@island_revision}
             empty={
@@ -463,15 +574,25 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               />
             <% :metrics -> %>
               <.tool_panel id="wl-metrics-panel" title="Metrics" menu_open={@sidebar_open}>
-                <.metrics_view
-                  metrics={@metrics}
-                  history={@history}
-                  history_range={@history_range}
+                <.metric_composer
                   room={@scope.room}
-                  dashboard_panels={@dashboard_panels}
-                  session_id={@scope.session_id}
-                  island_revision={@island_revision}
+                  draft={@metric_draft}
+                  result={@metric_result}
+                  pin={selected_pin(@board, @selected_pin)}
+                  selected_pin={@selected_pin}
                 />
+                <details :if={is_nil(@selected_pin)} class="wl-disclosure">
+                  <summary>Session measurements</summary>
+                  <.metrics_view
+                    metrics={@metrics}
+                    history={@history}
+                    history_range={@history_range}
+                    room={@scope.room}
+                    dashboard_panels={@dashboard_panels}
+                    session_id={@scope.session_id}
+                    island_revision={@island_revision}
+                  />
+                </details>
               </.tool_panel>
             <% :evidence -> %>
               <.tool_panel
@@ -519,9 +640,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:session_id, :string, required: true)
   attr(:island_revision, :integer, required: true)
   attr(:empty, :boolean, required: true)
+  attr(:board, :map, required: true)
+  attr(:active_pins, :any, required: true)
 
   defp canvas_view(assigns) do
-    assigns = assign(assigns, :props, Canvas.props(assigns.things, assigns.runs, assigns.readings))
+    props =
+      Canvas.props(assigns.things, assigns.runs, assigns.readings)
+      |> Board.decorate(assigns.board, assigns.active_pins)
+
+    assigns = assign(assigns, :props, props)
 
     ~H"""
     <Islands.canvas_island
@@ -992,16 +1119,6 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       assign(assigns, latest: latest, grid_columns: grid_columns, grid_rows: grid_rows)
 
     ~H"""
-    <header class="wl-page-header">
-      <div>
-        <p class="wl-eyebrow">Metrics</p><h1>Session measurements</h1>
-      </div><button :if={is_nil(@room)} class="wl-button wl-button-primary" phx-click="start_room">Start disposable room</button>
-    </header>
-    <.empty_state
-      :if={is_nil(@room)}
-      title="No room"
-      description="Start a room, then run an experiment to collect scoped measurements."
-    />
     <div :if={@room} class="wl-stack">
       <form id="metric-query" phx-submit="query_metrics" class="wl-filter-bar">
         <.field
@@ -1225,6 +1342,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp apply_effect(socket, {:history, history}),
     do: assign(socket, history: history, history_range: history.range)
 
+  defp apply_effect(socket, {:metric_result, result, draft, room}),
+    do: assign(socket, metric_result: result, metric_draft: draft, metric_room: room)
+
   defp apply_effect(socket, {:insights, insights}),
     do: assign(socket, insights: insights, charts: insights.charts)
 
@@ -1273,6 +1393,32 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
+  defp acknowledge_island_event(socket, "canvas", %{
+         "event" => "save_layout",
+         "payload" => %{"layout" => layout}
+       }) do
+    ids =
+      Enum.map(
+        Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)[
+          "nodes"
+        ],
+        & &1["id"]
+      )
+
+    case change_board(socket, {:layout, layout, ids}) do
+      {:ok, socket} -> {:reply, %{"status" => "accepted"}, socket}
+      {:error, error} -> rejected_island(socket, error)
+    end
+  end
+
+  defp acknowledge_island_event(socket, "canvas", %{"event" => event, "payload" => %{"id" => id}})
+       when event in ~w(pin_refresh pin_pause pin_resume pin_remove) do
+    case pin_action(socket, event, id) do
+      {:ok, socket} -> {:reply, %{"status" => "accepted"}, socket}
+      {:error, error} -> rejected_island(socket, error)
+    end
+  end
+
   defp acknowledge_island_event(socket, _, %{"command_id" => nil}) do
     {:reply, %{"status" => "accepted"}, socket}
   end
@@ -1284,6 +1430,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       commands = Enum.take([command_id | socket.assigns.island_commands], 64)
       {:reply, %{"status" => "accepted"}, assign(socket, :island_commands, commands)}
     end
+  end
+
+  defp rejected_island(socket, error) do
+    {:noreply, socket} = reject_event(socket, error)
+    {:reply, %{"status" => "rejected"}, socket}
   end
 
   defp island_descriptor(socket, session_id, instance_id) do
@@ -1304,6 +1455,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       id: Islands.id(session_id, "connected-things"),
       props:
         Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)
+        |> Board.decorate(socket.assigns.board, socket.assigns.active_pins)
     }
 
     descriptors = [canvas | contextual]
@@ -1311,6 +1463,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     case Enum.find(descriptors, &(&1 && &1.id == instance_id)) do
       nil -> {:error, :unknown_island}
       descriptor -> {:ok, descriptor}
+    end
+  end
+
+  defp select_canvas_node(socket, "pin-" <> _ = id) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, board} <- Sessions.board(scope.token),
+         {:ok, _} <- Board.fetch(board, id) do
+      {:ok,
+       socket
+       |> assign(scope: scope, board: board, selected_pin: id)
+       |> push_patch(to: "/metrics?" <> Query.encode(%{"pin" => id}))}
+    else
+      {:error, %Error{code: :unknown_pin}} -> :error
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -1437,8 +1603,134 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp revise_islands(socket), do: update(socket, :island_revision, &(&1 + 1))
 
+  defp selected_pin(_, nil), do: nil
+
+  defp selected_pin(board, id) do
+    case Board.fetch(board, id) do
+      {:ok, pin} -> pin
+      _ -> nil
+    end
+  end
+
+  defp metric_draft(params) when is_map(params) do
+    keys = Map.keys(params) -- ~w(_target _unused_metric _unused_range)
+    target? = not Map.has_key?(params, "_target") or params["_target"] in [["metric"], ["range"]]
+
+    unused? =
+      Enum.all?(
+        ~w(_unused_metric _unused_range),
+        &(not Map.has_key?(params, &1) or params[&1] == "")
+      )
+
+    with true <- Enum.sort(keys) == ~w(metric range) and target? and unused?,
+         true <- params["range"] in HistoryPanels.ranges(),
+         {:ok, [_]} <- Panels.select([params["metric"]]) do
+      {:ok, %{metric: params["metric"], range: params["range"]}}
+    else
+      _ ->
+        {:error,
+         Error.new(:invalid_metric_query, :metrics, "Choose a catalogue metric and supported range")}
+    end
+  end
+
+  defp metric_draft(_),
+    do: {:error, Error.new(:invalid_metric_query, :metrics, "Query is malformed")}
+
+  defp load_board(%{assigns: %{scope: %{token: token, room: room}}} = socket) do
+    case Sessions.board(token) do
+      {:ok, board} ->
+        active =
+          if socket.assigns.board_room == room, do: socket.assigns.active_pins, else: MapSet.new()
+
+        eligible = MapSet.new(for pin <- board.pins, not pin.paused, do: pin.id)
+
+        socket =
+          assign(socket,
+            board: board,
+            board_room: room,
+            active_pins: MapSet.intersection(active, eligible)
+          )
+
+        if socket.assigns.metric_room in [nil, room],
+          do: socket,
+          else: assign(socket, metric_result: nil, metric_room: nil)
+
+      _ ->
+        assign(socket, board: Board.empty(), active_pins: MapSet.new())
+    end
+  end
+
+  defp load_board(socket), do: socket
+
+  defp change_board(socket, operation) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, board} <- Sessions.change_board(scope.token, scope.room, operation) do
+      {:ok,
+       socket
+       |> assign(scope: scope, board: board)
+       |> revise_islands()}
+    end
+  end
+
+  defp pin_action(socket, event, id) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, board} <- Sessions.board(scope.token),
+         {:ok, pin} <- Board.fetch(board, id) do
+      socket = assign(socket, scope: scope, board: board)
+
+      case event do
+        "pin_remove" ->
+          with {:ok, socket} <- change_board(socket, {:remove, id}) do
+            socket = update(socket, :active_pins, &MapSet.delete(&1, id))
+
+            {:ok,
+             if(socket.assigns.selected_pin == id, do: push_patch(socket, to: "/"), else: socket)}
+          end
+
+        "pin_pause" ->
+          with {:ok, socket} <- change_board(socket, {:pause, id, true}) do
+            {:ok, update(socket, :active_pins, &MapSet.delete(&1, id))}
+          end
+
+        "pin_resume" ->
+          with {:ok, scope} <- Scope.admit(socket, :query),
+               {:ok, socket} <- change_board(assign(socket, :scope, scope), {:pause, id, false}) do
+            socket = update(socket, :active_pins, &MapSet.put(&1, id))
+            {:ok, start_pin_refresh(socket, [pin])}
+          end
+
+        "pin_refresh" ->
+          with {:ok, scope} <- Scope.admit(socket, :query),
+               do: {:ok, start_pin_refresh(assign(socket, :scope, scope), [pin])}
+      end
+    end
+  end
+
+  defp start_pin_refresh(%{assigns: %{pin_refresh_running: true}} = socket, _), do: socket
+  defp start_pin_refresh(socket, []), do: socket
+
+  defp start_pin_refresh(socket, pins) do
+    case room_history(socket.assigns.scope.room) do
+      {:ok, binding} ->
+        rotation = socket.assigns.pin_refresh_rotation
+
+        socket
+        |> assign(
+          pin_refresh_running: true,
+          pin_refresh_room: socket.assigns.scope.room,
+          pin_refresh_rotation: rotation + 1
+        )
+        |> start_async(:pin_refresh, fn -> BoardHistory.load(binding, pins, rotation) end)
+
+      {:error, _} ->
+        socket
+    end
+  end
+
   defp refresh(%{assigns: %{scope: %{room: room, session_id: session_id}}} = socket)
        when is_pid(room) do
+    socket = load_board(socket)
+
     if Process.alive?(room) do
       runs = safe(fn -> Room.runs(room) end, [])
       things = safe(fn -> Room.things(room) end, [])
@@ -1461,7 +1753,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  defp refresh(socket), do: empty_room(socket)
+  defp refresh(socket), do: empty_room(load_board(socket))
 
   defp empty_room(socket) do
     socket
@@ -1474,6 +1766,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> assign(:charts, [])
     |> assign(:insights, nil)
     |> assign(:canvas_readings, %{})
+    |> assign(:metric_result, nil)
+    |> assign(:metric_room, nil)
+    |> assign(:active_pins, MapSet.new())
+    |> update(:board, &Board.clear_results/1)
   end
 
   defp load_action(socket, :run, %{"id" => id} = params) do
@@ -1547,6 +1843,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         %{"panels" => panel_ids, "selection" => "custom"} when map_size(params) == 2 ->
           with {:ok, panels} <- Panels.select(panel_ids), do: {:ok, Enum.map(panels, & &1.id)}
 
+        %{"pin" => id} when map_size(params) == 1 ->
+          with {:ok, board} <- Sessions.board(socket.assigns.scope.token),
+               {:ok, _} <- Board.fetch(board, id),
+               do: {:ok, socket.assigns.scope.dashboard_panels}
+
         _ ->
           {:error, Error.new(:invalid_panels, :metrics, "metric deep link is not admitted")}
       end
@@ -1555,6 +1856,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, panel_ids} ->
         socket
         |> assign(:run_id, nil)
+        |> assign(:selected_pin, params["pin"])
         |> assign(:dashboard_panels, panel_ids)
         |> assign(:history, nil)
         |> refresh()
@@ -1562,6 +1864,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:error, error} ->
         socket
         |> assign(:run_id, nil)
+        |> assign(:selected_pin, params["pin"])
         |> assign(:dashboard_panels, socket.assigns.scope.dashboard_panels)
         |> refresh()
         |> error_flash(error)

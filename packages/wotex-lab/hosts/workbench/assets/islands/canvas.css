@@ -43,7 +43,7 @@
 .wl-canvas-tools button:disabled { opacity: 0.5; cursor: default; }
 .wl-canvas-tools button[aria-pressed="true"] { background: var(--wotex-semantic-color-accent); }
 .wl-canvas-tools button[aria-pressed="true"] img { filter: invert(1); }
-.wl-canvas-context { position: absolute; z-index: 10; width: 160px; padding: 4px; }
+.wl-canvas-context { position: absolute; z-index: 10; width: 200px; padding: 4px; }
 .wl-canvas-context button { display: block; width: 100%; height: 28px; padding: 0 8px; border: 0; border-radius: 4px; color: inherit; background: transparent; text-align: left; }
 .wl-canvas-context button:hover, .wl-canvas-context button:focus-visible { background: var(--wotex-semantic-color-canvas); }
 .wl-canvas-context button:disabled { cursor: default; opacity: 0.5; }
@@ -56,6 +56,27 @@
 [data-wotex-theme="dark"] .wl-connected-canvas {
   background-image: url("./canvas-assets/workbench-grid-dark.svg");
 }
+.wl-canvas-metric { display: flex; flex-direction: column; gap: 8px; width: 100%; height: 100%; min-height: 200px; overflow: auto; }
+.wl-canvas-metric header { flex: none; }
+.wl-canvas-metric p { margin: 0; }
+.wl-canvas-metric header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-metric-plot { display: flex; flex: 1; flex-direction: column; min-height: 60px; margin: 0; }
+.wl-metric-plot svg { display: block; flex: 1; width: 100%; height: 100%; min-height: 0; overflow: visible; }
+.wl-metric-plot text { fill: var(--wl-canvas-muted); font: 10px/14px Inter,system-ui,sans-serif; }
+.wl-plot-grid { stroke: var(--wl-canvas-border); stroke-width: 0.5; opacity: 0.5; }
+.wl-plot-series { color: var(--wl-canvas-text); }
+.wl-plot-series polyline { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.wl-plot-series circle { fill: currentColor; }
+.wl-plot-series .wl-plot-gap { stroke-dasharray: 2 4; opacity: 0.4; stroke-width: 1; }
+.wl-metric-plot figcaption { color: var(--wl-canvas-muted); font-size: 11px; }
+.wl-plot-empty { display: grid; place-items: center; min-height: 100px; color: var(--wl-canvas-muted); }
+.wl-canvas-metric footer { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.wl-canvas-metric footer:has(details[open]) { display: block; }
+.wl-pin-data { font-size: 11px; }
+.wl-pin-data summary { cursor: pointer; }
+.wl-pin-data-scroll { max-height: 160px; overflow: auto; }
+.wl-pin-data table { width: 100%; font-size: 11px; border-collapse: collapse; }
+.wl-pin-data th, .wl-pin-data td { padding: 4px; text-align: left; border-bottom: 1px solid var(--wl-canvas-border); }
 [data-wotex-theme="dark"] .wl-canvas-node img,
 [data-wotex-theme="dark"] .wl-canvas-tools img { filter: invert(1); }
 [data-wotex-theme="contrast"] .wl-connected-canvas {

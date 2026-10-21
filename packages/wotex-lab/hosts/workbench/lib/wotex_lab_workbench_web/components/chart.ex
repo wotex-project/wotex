@@ -16,6 +16,7 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
   attr :id, :string, required: true
   attr :chart, :any, required: true
   attr :permalink, :string, default: nil
+  attr :compact, :boolean, default: false
 
   @doc "Renders admitted chart geometry and the same points as an accessible table."
   @spec chart(map()) :: Phoenix.LiveView.Rendered.t()
@@ -29,15 +30,18 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
 
     assigns =
       assigns
-      |> assign(:geometry, Chart.geometry(chart))
+      |> assign(
+        :geometry,
+        Chart.geometry(chart, if(assigns.compact, do: [width: 360, height: 210], else: []))
+      )
       |> assign(:rows, rows)
       |> assign(:total, Enum.sum(Enum.map(chart.series, &length(&1.points))))
 
     ~H"""
-    <figure id={@id} class="wl-chart">
+    <figure id={@id} class={["wl-chart", @compact && "wl-chart-compact"]}>
       <figcaption id={"#{@id}-caption"}>{@chart.title}</figcaption>
       <a :if={@permalink} class="wl-chart-link" href={@permalink}>Exact chart link</a>
-      <p id={"#{@id}-description"}>
+      <p id={"#{@id}-description"} class={@compact && "wl-sr-only"}>
         {@chart.mark} chart. Horizontal axis: {@chart.x.title}; vertical axis: {@chart.y.title}.
         Missing values are gaps. The table below previews at most 100 points.
       </p>
@@ -101,6 +105,8 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
           <%= case @chart.mark do %>
             <% "line" -> %>
               <polyline :for={points <- series.segments} points={points} />
+              <polyline :for={points <- series.bridges} points={points} class="wl-chart-gap" />
+              <circle :for={point <- series.points} cx={point.x} cy={point.y} r="2" />
             <% "point" -> %>
               <circle :for={point <- series.points} cx={point.x} cy={point.y} r="3" />
             <% "area" -> %>
@@ -108,11 +114,14 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
           <% end %>
         </g>
       </svg>
-      <ul class="wl-chart-legend" aria-label="Series legend">
-        <li :for={{series, index} <- Enum.with_index(@geometry.series)} class={"wl-series-#{index}"}>
-          <span aria-hidden="true" class="wl-chart-swatch" />{series.name}: {series.gaps} missing
-        </li>
-      </ul>
+      <details class="wl-chart-series-details" open={!@compact}>
+        <summary :if={@compact}>Series ({length(@geometry.series)})</summary>
+        <ul class="wl-chart-legend" aria-label="Series legend">
+          <li :for={{series, index} <- Enum.with_index(@geometry.series)} class={"wl-series-#{index}"}>
+            <span aria-hidden="true" class="wl-chart-swatch" />{series.name}: {series.gaps} missing
+          </li>
+        </ul>
+      </details>
       <details class="wl-chart-table">
         <summary>Data table alternative ({length(@rows)} of {@total} points)</summary>
         <p :if={@total > length(@rows)}>Preview truncated; the chart retains the admitted points.</p>

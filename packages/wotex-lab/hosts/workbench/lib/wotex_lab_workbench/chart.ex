@@ -75,6 +75,12 @@ defmodule WotexLabWorkbench.Chart do
     %{
       name: series.name,
       segments: segments,
+      bridges:
+        chunks
+        |> Enum.chunk_every(2, 1, :discard)
+        |> Enum.map(fn [left, right] ->
+          Enum.map_join([List.last(left), hd(right)], " ", fn {x, y} -> pair(sx.(x), sy.(y)) end)
+        end),
       areas: areas,
       points: for({x, y} <- series.points, is_number(y), do: %{x: sx.(x), y: sy.(y)}),
       gaps: Enum.count(series.points, &is_nil(elem(&1, 1)))

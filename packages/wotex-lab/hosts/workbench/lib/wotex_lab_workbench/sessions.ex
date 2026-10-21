@@ -15,8 +15,7 @@ defmodule WotexLabWorkbench.Sessions do
   use GenServer
 
   alias Wotex.Lab.Error
-  alias WotexLabWorkbench.Observability.Panels
-  alias WotexLabWorkbench.Room
+  alias WotexLabWorkbench.{Board, Observability.Panels, Room}
 
   @commands ~w(start_room run cancel approve read register query export verify ask)a
   @themes ~w(system light dark contrast)
@@ -30,6 +29,7 @@ defmodule WotexLabWorkbench.Sessions do
           expires_at: integer(),
           theme: String.t(),
           dashboard_panels: [String.t()],
+          board: map(),
           room: pid() | nil
         }
 
@@ -73,6 +73,16 @@ defmodule WotexLabWorkbench.Sessions do
   def put_dashboard(server \\ __MODULE__, token, panel_ids),
     do: GenServer.call(server, {:dashboard, token, panel_ids})
 
+  @doc "Reads the current session's presentation without starting a room or query."
+  @spec board(GenServer.server(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def board(server \\ __MODULE__, token), do: GenServer.call(server, {:board, token})
+
+  @doc "Applies a bounded board operation only while the selected room identity still matches."
+  @spec change_board(GenServer.server(), term(), pid() | nil, term()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def change_board(server \\ __MODULE__, token, room, operation),
+    do: GenServer.call(server, {:board, token, room, operation})
+
   @doc "Revokes a session and stops its room, discarding pending work."
   @spec revoke(GenServer.server(), term()) :: :ok | {:error, Error.t()}
   def revoke(server \\ __MODULE__, token), do: GenServer.call(server, {:revoke, token})
@@ -112,6 +122,7 @@ defmodule WotexLabWorkbench.Sessions do
         expires_at: now + state.ttl_ms,
         theme: "system",
         dashboard_panels: Panels.defaults(),
+        board: Board.empty(),
         room: nil
       }
 
@@ -123,6 +134,32 @@ defmodule WotexLabWorkbench.Sessions do
     case live(state, token) do
       {:ok, session, state} -> {:reply, {:ok, session}, state}
       {:error, error, state} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:board, token}, _, state) do
+    case live(state, token) do
+      {:ok, session, state} -> {:reply, {:ok, session.board}, state}
+      {:error, error, state} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:board, token, room, operation}, _, state) do
+    with {:ok, session, state} <- live(state, token),
+         true <- session.room == room,
+         :ok <- board_room(session, operation),
+         {:ok, board} <- Board.change(session.board, operation) do
+      session = %{session | board: board}
+      {:reply, {:ok, board}, put_in(state, [:sessions, token], session)}
+    else
+      false ->
+        {:reply, {:error, Error.new(:room_changed, :session, "room identity changed")}, state}
+
+      {:error, %Error{} = error} ->
+        {:reply, {:error, error}, state}
+
+      {:error, error, state} ->
+        {:reply, {:error, error}, state}
     end
   end
 
@@ -196,8 +233,15 @@ defmodule WotexLabWorkbench.Sessions do
       {token, monitors} ->
         sessions =
           case Map.fetch(state.sessions, token) do
-            {:ok, session} -> Map.put(state.sessions, token, %{session | room: nil})
-            :error -> state.sessions
+            {:ok, session} ->
+              Map.put(state.sessions, token, %{
+                session
+                | room: nil,
+                  board: Board.clear_results(session.board)
+              })
+
+            :error ->
+              state.sessions
           end
 
         {:noreply, %{state | monitors: monitors, sessions: sessions}}
@@ -220,6 +264,14 @@ defmodule WotexLabWorkbench.Sessions do
 
   defp live(state, _),
     do: {:error, Error.new(:invalid_token, :session, "session token is malformed"), state}
+
+  defp board_room(%{room: room}, {operation, _}) when operation in [:pin, :refresh] do
+    if is_pid(room) and Process.alive?(room),
+      do: :ok,
+      else: {:error, Error.new(:no_room, :session, "Room is unavailable")}
+  end
+
+  defp board_room(_, _), do: :ok
 
   defp room_for(state, %{room: pid} = session, _) when is_pid(pid),
     do: {:ok, session, state}

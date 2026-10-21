@@ -18,8 +18,14 @@ and `/evidence` open contextual panels. Closing a panel returns to the board.
 The experiment drawer retains bounded drafts across these transitions. A run's
 evidence link selects that exact session-owned run; the separate session report
 export includes the session's records. Documentation keeps its own reading
-layout. Canvas arrangement across a full reload or documentation navigation,
-metric pinning and live Property observation are not yet implemented.
+layout. Metrics provides an explicit room-history query builder: choose a metric
+and range, query, then pin a measured result. Pins retain units, source, window
+and missing samples. Their context menu offers Rename / sources, Refresh,
+Pause / Resume and Remove. Save layout retains positions, pin sizes and viewport
+for reloads and documentation returns within the signed session. Restored pins
+stay paused until Resume; a failed refresh retains the previous timestamped data.
+Unsaved arrangement and experiment drafts across documentation navigation,
+BeamLens answer-to-pin composition and live Property observation remain unbuilt.
 
 ## Development
 
