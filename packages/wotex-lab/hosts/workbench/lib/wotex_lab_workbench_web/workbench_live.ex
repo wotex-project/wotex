@@ -6,6 +6,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   the signed session, and commands that need a room use the session registry's
   closed admission list. Running an experiment, approving an Action, exporting
   a dataset and asking for formal evidence are separate server commands.
+
+  Experiment drafts are bounded, local to this view and retained across
+  patches and validation errors. Change and form-recovery events validate
+  without allocating a room or running an experiment.
   """
 
   use WotexLabWorkbenchWeb, :live_view
@@ -52,6 +56,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     }
   ]
 
+  @parameter_bytes 32
+
   @impl Phoenix.LiveView
   def mount(_, _, socket) do
     socket =
@@ -59,6 +65,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign_new(:denied, fn -> nil end)
       |> assign(:sidebar_open, true)
       |> assign(:experiments, Experiments.all())
+      |> assign(:experiment_forms, experiment_forms())
       |> assign(:runs, [])
       |> assign(:things, [])
       |> assign(:snapshot, nil)
@@ -116,17 +123,41 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     command(socket, :start_room, fn scope -> {:ok, scope, nil} end)
   end
 
-  def handle_event("run", %{"experiment_id" => id, "params" => raw}, socket) do
-    command(socket, :run, fn scope ->
-      with {:ok, experiment} <- Experiments.fetch(id),
-           {:ok, params} <- Experiments.admit(experiment, raw),
-           {:ok, run} <- Room.start_run(scope.room, id, params) do
-        {:ok, scope, {:navigate, "/runs/#{run.id}"}}
+  def handle_event(event, %{"experiment_id" => id, "params" => raw}, socket)
+      when event in ["edit_experiment", "run"] do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, experiment} <- Experiments.fetch(id),
+         {:ok, draft} <- experiment_draft(experiment, raw) do
+      admission = Experiments.admit(experiment, draft)
+
+      error =
+        case admission do
+          {:ok, _} -> nil
+          {:error, error} -> error
+        end
+
+      socket =
+        socket
+        |> assign(:scope, scope)
+        |> update(:experiment_forms, &Map.put(&1, id, %{values: draft, error: error}))
+        |> clear_flash(:error)
+
+      case {event, admission} do
+        {"edit_experiment", _} ->
+          {:noreply, socket}
+
+        {"run", {:error, error}} ->
+          {:noreply, error_flash(socket, error)}
+
+        {"run", {:ok, params}} ->
+          command(socket, :run, &start_experiment(&1, id, params))
       end
-    end)
+    else
+      {:error, error} -> reject_event(socket, error)
+    end
   end
 
-  def handle_event("run", _, socket) do
+  def handle_event(event, _, socket) when event in ["edit_experiment", "run"] do
     reject_event(socket, Error.new(:invalid_parameters, :admission, "run form is malformed"))
   end
 
@@ -330,6 +361,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <% :experiments -> %>
             <.experiments_view
               experiments={@experiments}
+              forms={@experiment_forms}
               runs={@runs}
               room={@scope.room}
               session_id={@scope.session_id}
@@ -387,6 +419,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   attr(:experiments, :list, required: true)
+  attr(:forms, :map, required: true)
   attr(:runs, :list, required: true)
   attr(:room, :any, required: true)
   attr(:session_id, :string, required: true)
@@ -452,6 +485,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         </div>
         <form
           id={"run-#{experiment.id}"}
+          phx-change="edit_experiment"
           phx-submit="run"
           class="wl-stack wl-experiment-form"
         >
@@ -460,8 +494,14 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             :for={parameter <- experiment.parameters}
             experiment={experiment.id}
             parameter={parameter}
+            state={Map.fetch!(@forms, experiment.id)}
           />
-          <button class="wl-button wl-button-primary" type="submit" phx-disable-with="Running…">
+          <button
+            class="wl-button wl-button-primary"
+            type="submit"
+            disabled={not is_nil(Map.fetch!(@forms, experiment.id).error)}
+            phx-disable-with="Running…"
+          >
             Run experiment
           </button>
         </form>
@@ -488,18 +528,28 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   attr(:parameter, :map, required: true)
   attr(:experiment, :string, required: true)
+  attr(:state, :map, required: true)
 
   defp parameter_field(assigns) do
     parameter = assigns.parameter
+    value = Map.fetch!(assigns.state.values, parameter.name)
     options = Enum.map(parameter.options || [], fn {label, _} -> {label, label} end)
+
+    options =
+      if parameter.type == :select and not List.keymember?(options, value, 1),
+        do: [{"Unsupported selection", value} | options],
+        else: options
 
     assigns =
       assigns
       |> assign(
         :control_type,
-        if(parameter.type == :select, do: "select", else: Atom.to_string(parameter.type))
+        if(parameter.type == :select, do: "select", else: "number")
       )
       |> assign(:options, options)
+      |> assign(:value, value)
+      |> assign(:error, parameter_error(assigns.state.error, parameter))
+      |> assign(:step, parameter_step(parameter.type))
 
     ~H"""
     <.field
@@ -507,15 +557,64 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       name={"params[#{@parameter.name}]"}
       label={@parameter.label}
       type={@control_type}
-      value={@parameter.default}
+      value={@value}
       options={@options}
       help={@parameter.help}
+      error={@error}
       min={@parameter.min}
       max={@parameter.max}
-      step={if @parameter.type == :float, do: "any", else: nil}
+      step={@step}
     />
     """
   end
+
+  defp parameter_step(:integer), do: "1"
+  defp parameter_step(:float), do: "any"
+  defp parameter_step(:select), do: nil
+
+  defp experiment_forms do
+    Map.new(Experiments.all(), fn experiment ->
+      {experiment.id, %{values: Experiments.defaults(experiment), error: nil}}
+    end)
+  end
+
+  defp experiment_draft(experiment, raw) when is_map(raw) and not is_struct(raw) do
+    defaults = Experiments.defaults(experiment)
+
+    if map_size(raw) <= 2 * map_size(defaults) and
+         Enum.all?(raw, &draft_entry?(&1, defaults, raw)) do
+      {:ok, Map.merge(defaults, Map.take(raw, Map.keys(defaults)))}
+    else
+      malformed_experiment_draft()
+    end
+  end
+
+  defp experiment_draft(_, _), do: malformed_experiment_draft()
+
+  defp draft_entry?({"_unused_" <> name, ""}, defaults, raw),
+    do: Map.has_key?(defaults, name) and Map.has_key?(raw, name)
+
+  defp draft_entry?({name, value}, defaults, _),
+    do:
+      Map.has_key?(defaults, name) and is_binary(value) and
+        byte_size(value) <= @parameter_bytes and String.valid?(value)
+
+  defp malformed_experiment_draft do
+    {:error,
+     Error.new(:invalid_parameters, :admission, "run form requires bounded parameter strings")}
+  end
+
+  defp parameter_error(%Error{path: path}, parameter) do
+    if path == "/" <> parameter.name do
+      case parameter.type do
+        :select -> "Choose one of: " <> Enum.map_join(parameter.options, ", ", &elem(&1, 0))
+        :integer -> "Enter an integer from #{parameter.min} to #{parameter.max}."
+        :float -> "Enter a number from #{parameter.min} to #{parameter.max}."
+      end
+    end
+  end
+
+  defp parameter_error(_, _), do: nil
 
   attr(:run, :any, required: true)
   attr(:charts, :list, required: true)
@@ -856,6 +955,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       /><.answer_block :if={@answer} answer={@answer} />
     </div>
     """
+  end
+
+  defp start_experiment(scope, id, params) do
+    with {:ok, run} <- Room.start_run(scope.room, id, params) do
+      {:ok, scope, {:navigate, "/runs/#{run.id}"}}
+    end
   end
 
   defp command(socket, command, fun) do

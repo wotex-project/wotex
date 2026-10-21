@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.15.0. Contract: accepted. Implementation status:
+Specification version: 0.15.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 Version 0.15 adds editable brand identity and Lab page/flow deliverables under
@@ -8,6 +8,27 @@ the [design contract](../plans/brand-and-lab-design.md). The initial native
 files are drafts. Their remaining design acceptance makes this expanded
 specification partial without retracting the implemented host described below.
 Existing package APIs, tokens, routes and effect boundaries do not change.
+
+Version 0.15.1 repairs experiment-form retention and numeric controls. Each
+LiveView owns drafts for only the admitted experiments and parameters, with
+UTF-8 string values of at most 32 bytes. Missing keys use catalogue defaults;
+empty LiveView unused-field markers are accepted only beside their named
+admitted parameter and are discarded before draft storage. Other unknown
+fields are refused. Blank numeric values retain the existing default-admission
+behavior. Editing revalidates the signed session and parameters without
+allocating a room, extending command authority or starting a run. Malformed
+snapshots cannot replace the retained draft. A submission rejected by parameter
+admission keeps the bounded inputs,
+links the offending field to its error and disables Run until corrected.
+Unknown select values remain visibly unsupported, with no backend fallback.
+Number controls expose the admitted bounds and integer/float steps. Theme and
+sidebar updates preserve drafts; LiveView form recovery sends the inert change
+event rather than Run. A fresh view starts with defaults until its browser
+recovers the form. Only an explicitly submitted, re-admitted valid form can
+allocate its room and run. The focused `experiment_forms_test.exs` host suite
+covers refusal/correction, malformed input, replay, session/view isolation and
+revocation. Existing public library and control-API parameter admission is
+unchanged. Native design and broader browser acceptance remain partial.
 
 ## Implemented source and evidence boundary
 
