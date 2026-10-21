@@ -909,6 +909,9 @@ fabric preserve the other. Authenticated root fabric removal prevents subsequent
 consumer delivery from the removed controller, while the survivor still works.
 This shared-SDK cohort does not establish independent-stack or installed-host
 qualification, and does not renew the complete historical software-lane receipt.
+The [command and fabric record](../provenance/bridge-command-fabrics-2026-10.md)
+binds both new families and the four renewed consumer families in ordinary and
+sanitizer runs, with exact source and artifact identities.
 
 ## 4. Isolation and recovery
 

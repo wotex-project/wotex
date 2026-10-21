@@ -20,7 +20,9 @@ admission and selected authenticated requests are exercised by the live software
 cohort. A separate shared-SDK cohort exercises all twenty-two selected commands,
 response/state checks, two independently commissioned fabrics, scoped group/scene
 custody, consumer denial and root fabric removal. Wider independent-stack,
-report-flow and installed-host qualification remains open.
+report-flow and installed-host qualification remains open. The
+[command and fabric record](../provenance/bridge-command-fabrics-2026-10.md)
+binds the executed shared-SDK scope and exact identities.
 
 The installed invoke guard validates command fields after bounded copying and
 before request/handler admission. All 22 selected commands require their declared

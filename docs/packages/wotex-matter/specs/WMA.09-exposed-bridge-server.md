@@ -737,7 +737,10 @@ these conditions implicitly.
 
 The [authenticated consumer record](../provenance/bridge-consumer-2026-10.md)
 binds eight ordinary/sanitizer live case-family executions, the selected clock
-cohort, exact source/artifacts and remaining qualification limits.
+cohort, exact source/artifacts and remaining qualification limits. The
+[command and fabric record](../provenance/bridge-command-fabrics-2026-10.md)
+binds twelve ordinary/sanitizer family executions, including the complete
+selected command set and two-fabric custody/removal, to their exact source.
 
 ### Native callback custody
 
