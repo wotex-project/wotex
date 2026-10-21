@@ -13,12 +13,38 @@ defmodule Wotex.Routines.DecisionCorpus do
     {"arbitration", :decide, 5}
   ]
   @table :routines_transition_corpus_counts
+  @time_mutations %{
+    "negative_members" =>
+      {"defp entry(state, entry, result) do",
+       "defp entry(state, _entry, nil), do: state\n" <>
+         "  defp entry(state, _entry, %{\"proposals\" => []}), do: state\n" <>
+         "  defp entry(state, entry, result) do"},
+    "freshness_inclusive" =>
+      {"fact[\"receipt_ms\"] + evidence[\"freshness_ms\"] + 1",
+       "fact[\"receipt_ms\"] + evidence[\"freshness_ms\"]"},
+    "expiry_exclusive" =>
+      {"cut(:elapsed, fact[\"expires_ms\"])", "cut(:elapsed, fact[\"expires_ms\"] + 1)"},
+    "fractional_floor" =>
+      {"center = DateTime.to_unix(instant, :millisecond)",
+       "center = div(DateTime.to_unix(instant, :microsecond), 1000)"},
+    "prior_history" =>
+      {"[entry[\"prior\"][\"original\"], entry[\"prior\"][\"busy\"], result && result[\"run\"]]",
+       "[nil, nil, result && result[\"run\"]]"},
+    "utc_high_endpoint" =>
+      {"do: inside(cell[\"utc_high\"], time[\"utc_high_ms\"], \"/cell/utc_high\")", "do: :ok"},
+    "elapsed_generation" =>
+      {"equal(cell[\"clock_generation\"], time[\"clock_generation\"], \"/cell/clock_generation\")",
+       ":ok"},
+    "clamp_cuts" =>
+      {"cut < minimum or cut > maximum -> axis",
+       "cut < minimum or cut > maximum -> nearest(axis, max(minimum, min(maximum, cut)))"}
+  }
 
   # Opt-in fresh VM only. Every rewritten module is compiled in memory; no
   # source, BEAM, archive, dependency, temporary build or Docker object is written.
   @spec run() :: no_return()
   def run do
-    if System.argv() != [], do: raise("unsupported decision corpus arguments")
+    options = options!()
     Code.require_file("test/test_helper.exs")
     ExUnit.start(autorun: false, seed: 0)
     ExUnit.configure(autorun: false, seed: 0)
@@ -40,25 +66,11 @@ defmodule Wotex.Routines.DecisionCorpus do
 
     success =
       try do
-        Code.require_file("test/wotex/routines/decision_test.exs")
-        first = suite("public Decision cases", 15)
-        schemas!()
-
-        # Existing complete-pending and clock cases prepare their fixtures through
-        # forward evaluation. Check every successful v2 Collection/Arbitration
-        # under all guards after preparation, including nested regeneration.
-        instrument("collection", [{:evaluate, 3}, {:to_map, 3}], true)
-        instrument("arbitration", [{:decide, 5}], true)
-        Code.require_file("test/wotex/routines/pending_collection_test.exs")
-        Code.require_file("test/wotex/routines/time_basis_test.exs")
-        second = suite("existing complete-pending and clock corpus", 26)
-        counts = :ets.tab2list(@table) |> Enum.reject(fn {key, _} -> key == :corpus_owner end)
-
-        IO.inspect(Enum.sort(counts),
-          label: "Complete decision relations with forward calls disabled during proof"
-        )
-
-        first and second and Map.new(counts) == %{collection: 70, arbitration: 7}
+        if options[:time_only] || options[:time_mutant] do
+          time_matrix(options[:time_mutant])
+        else
+          complete_corpus()
+        end
       after
         :ets.delete(@table)
       end
@@ -66,7 +78,55 @@ defmodule Wotex.Routines.DecisionCorpus do
     System.halt(if success, do: 0, else: 1)
   end
 
-  defp suite(label, expected) do
+  defp options! do
+    {options, rest, invalid} =
+      OptionParser.parse(System.argv(), strict: [time_only: :boolean, time_mutant: :string])
+
+    if rest != [] or invalid != [], do: raise("unsupported decision corpus arguments")
+
+    if options[:time_mutant] && not Map.has_key?(@time_mutations, options[:time_mutant]),
+      do: raise("unknown decision time mutant")
+
+    options
+  end
+
+  defp complete_corpus do
+    Code.require_file("test/wotex/routines/decision_test.exs")
+    first = suite("public Decision cases", 15)
+    schemas!()
+    time_matrix = time_matrix(nil)
+
+    # Prepare through the forward API, then check every successful v2 relation
+    # with all guards active, including nested Collection regeneration.
+    instrument("collection", [{:evaluate, 3}, {:to_map, 3}], true)
+    instrument("arbitration", [{:decide, 5}], true)
+    Code.require_file("test/wotex/routines/pending_collection_test.exs")
+    Code.require_file("test/wotex/routines/time_basis_test.exs")
+    second = suite("existing complete-pending and clock corpus", 26)
+    counts = :ets.tab2list(@table) |> Enum.reject(fn {key, _} -> key == :corpus_owner end)
+
+    IO.inspect(Enum.sort(counts),
+      label: "Complete decision relations with forward calls disabled during proof"
+    )
+
+    first and time_matrix and second and Map.new(counts) == %{collection: 70, arbitration: 7}
+  end
+
+  defp time_matrix(mutant) do
+    if mutant do
+      path = "lib/wotex/routines/decision_cell.ex"
+      source = File.read!(path)
+      {from, to} = Map.fetch!(@time_mutations, mutant)
+      if length(String.split(source, from)) != 2, do: raise("time mutation target drift")
+      Code.compile_string(String.replace(source, from, to, global: false), path)
+    end
+
+    Code.require_file("test/wotex/routines/decision_time_matrix_test.exs")
+    label = "independent public Decision time matrix" <> if(mutant, do: " / " <> mutant, else: "")
+    suite(label, 9, mutant != nil)
+  end
+
+  defp suite(label, expected, mutant? \\ false) do
     stats = ExUnit.run()
 
     counts =
@@ -78,9 +138,13 @@ defmodule Wotex.Routines.DecisionCorpus do
 
     IO.inspect({label, stats, counts}, label: "Decision corpus phase")
 
-    stats.total == expected and
-      stats.failures == 0 and stats.skipped == 0 and stats.excluded == 0 and
-      counts.errors == 0 and counts.assertions == 0
+    caught =
+      if mutant?,
+        do: counts.assertions > 0 and stats.failures == counts.assertions,
+        else: stats.failures == 0 and counts.assertions == 0
+
+    stats.total == expected and stats.skipped == 0 and stats.excluded == 0 and
+      counts.errors == 0 and caught
   end
 
   defp schemas! do
