@@ -99,6 +99,15 @@ Repository-wide rules are in the root `AGENTS.md`.
   cleanup deadline before custody can block. These CMake tests need only
   `WOTEX_MATTER_JSON_INCLUDE`, not an SDK tree. The explicit full
   native build also runs them with its pinned JSON input in both build modes.
+- `native/src/bridge_host.cpp`: explicitly selected production bridge executable,
+  composing the configured SDK driver, guarded receiver and finite renderer.
+  It requires exactly `--configuration /absolute/private/configuration`, owns
+  checked monotonic clock and signal cancellation, and uses existing stdin/stdout
+  controls. `native/testing/bridge_host_test.*` executes the actual binary for
+  twenty-six argument/private-input, lifecycle, observation, signal and pipe-loss
+  families. The guarded bootstrap fixture supplies explicit development material;
+  the production target has no fixture hooks. Live authenticated SDK admission,
+  BEAM/SDK integration and independent controller/reporting qualification remain open.
 - `native/include/wotex_matter/bridge_sdk_process.hpp` and
   `native/src/bridge_sdk_process.cpp`: internal SDK implementation of the process
   driver port, owning explicit private loading, receiver attachment, event-loop
@@ -191,7 +200,7 @@ Repository-wide rules are in the root `AGENTS.md`.
   joined close. Configuration/Port helpers own validation, environment clearing
   and child cleanup. The real-pipe
   `bridge_{connection,connection_observation,control,port_process}_test.exs` tests
-  use scripted hosts; the production SDK host, authenticated execution and
+  use scripted hosts; live BEAM/SDK admission, authenticated execution and
   independent reporting integration remain open.
 - `native/{include/wotex_matter,src}/bridge_guard.*`: retained-invoke and
   synchronous-attribute guards for exact fabric/credential scope, live metadata,

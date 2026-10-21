@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.34.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.35.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -10,8 +10,8 @@ snapshots. The benchmark measures only BEAM-side custody. The native bridge
 store persists SDK values and endpoint custody together with a separate
 immutable bridge/model identity. An internal SDK server binding owns startup
 and shutdown resources. Bounded BEAM consumer execution and explicit BEAM
-process coordination are implemented; the production SDK process host,
-authenticated request integration and independent controller peer remain open.
+process coordination and the production SDK process host are implemented;
+authenticated request integration and independent controller peers remain open.
 The internal native process coordinator joins bounded open/ready controls,
 separate result/clock input, reserved output, original startup time and one
 cleanup deadline through an explicit SDK composition port. Its real-pipe
@@ -28,9 +28,9 @@ no SDK lock. Sixteen guarded real-pipe cases cover fresh/reopened stores, valid
 ready/probe/close, pending and resolved custody, missing private input, interface
 and attachment refusal, cancellation, pipe loss, stale generation and fatal
 cleanup refusal. The lifecycle receiver fixture refuses child operations and supplies no
-authenticated consumer execution. Production executable assembly and
-authenticated request integration remain required before this becomes an
-executable server. The internal SDK driver separately owns approved-observation
+authenticated consumer execution. The separate production entry below assembles
+the guarded receiver and renderer; authenticated request integration remains open.
+The internal SDK driver separately owns approved-observation
 input and application, with sixty-four receipt reservations retained through
 complete output transmission. A joined worker acquires SDK custody outside the
 input reader, preserving result/probe service while the SDK lock is held.
@@ -517,10 +517,10 @@ exercise owner-only delivery, independent credit, applied/refused correlation,
 non-reused and exhausted IDs, clock failure, original deadline preservation,
 replay, explicit close, owner/native loss and result ordering through public
 Runtime dispatch. These tests establish the BEAM coordinator against scripted
-hosts. A production SDK host implementing bootstrap and closed custody,
-authenticated SDK dispatch, native approved-state application, host-clock
-qualification and independent peer receipts remain open; scripted
-ready/principal fixtures supply none of that evidence.
+hosts. The separate production SDK executable owns bootstrap, closed custody
+and approved-state application. Live BEAM/SDK admission, authenticated SDK
+dispatch, host-clock qualification and independent peer receipts remain open;
+scripted ready/principal fixtures supply none of that evidence.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
@@ -829,10 +829,33 @@ state, timer expiry, active endpoint removal and two simultaneous lights with
 distinct scene snapshots. They require unchanged canonical OnOff until an explicit
 observation and absence of persisted inferred OnOff values. These direct synthetic
 principal cases supply no authenticated network or independent-controller result.
-Production executable assembly and peer qualification remain open.
+Authenticated process/probe admission, live BEAM/SDK integration, actual clock-rate
+qualification and independent controller/reporting peers remain open.
 The [command rendering record](../provenance/bridge-command-rendering-2026-10.md)
 binds the committed adapters, eleven ordinary/sanitizer command families,
 188 total native case-family executions, exact archive and qualification limits.
+
+### Production executable
+
+The explicit `wotex-matter-bridge-host` GN target joins the configured SDK driver,
+guarded consumer receiver and finite command renderer without fixture hooks.
+It requires exactly `--configuration /absolute/private/configuration`; private
+loading retains existing path/material custody. Stdin/stdout carry the existing
+protocol, with one five-second startup budget, checked monotonic samples and the
+coordinator's one-second cleanup deadline. SIGINT/SIGTERM only publish lock-free
+cancellation; SIGPIPE is ignored. Fixed diagnostics retain no private input.
+Renderer attachment precedes consumer attachment. Consumer work joins outside SDK
+locking, then both attachments finish under that lock before endpoint retirement.
+
+Twenty-six black-box families execute the actual binary with explicit development
+material, separate stdout/stderr pipes and bounded reaping. They cover argument
+refusal, first-open gating, startup expiry, private-file/credential/interface
+refusal, exact ready/probe/observation/closed receipts, semantic observation
+refusal, fresh/reopened/locked/existing stores, both signals before open and after
+ready, input/output loss, malformed/partial/generation input and probe replay.
+The native builder compiles this production target separately and records its
+binary/fixture digests and case receipts. These process cases establish no live
+authenticated request, independent report flow or actual clock-rate qualification.
 
 ## 4. Isolation and recovery
 

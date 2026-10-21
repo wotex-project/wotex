@@ -383,7 +383,7 @@ startup/store failures in both modes. Its endpoint tests restore sixteen
 light/sensor children with stable endpoint identity, exact cluster metadata,
 approved observations, nullable temperature bounds and fabric-scoped group
 cleanup. Restored labels and capabilities require explicit consumer
-configuration. This internal binding has no public native Port host yet.
+configuration. The separate production process is described below.
 Its handoff owner retains sixteen request contexts through delivery, expiry
 and closure, with generation-scoped IDs and a 500 ms absolute deadline.
 The SDK binding refuses startup with a closed or pending handoff and terminates
@@ -449,9 +449,9 @@ receipts, clock probes and sixteen ordered pending requests. It owns private
 consumer execution, collects each result once and closes on pipe pressure,
 protocol failure or owner/native/consumer loss. Owner-only close joins worker
 cleanup, the correlated receipt, zero native exit and Port release. Real-pipe
-tests exercise this coordinator with scripted hosts. The production SDK host,
-authenticated request integration, approved observations and host-clock
-qualification remain open.
+tests exercise this coordinator with scripted hosts. The separate production
+SDK executable owns native startup and approved-observation application; live
+BEAM/SDK admission, authenticated requests and host-clock qualification remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in
@@ -462,6 +462,22 @@ cover revocation, credential update/rollback, fabric-index reuse and endpoint
 retirement; supplied callback principals remain synthetic test fixtures.
 Commissioning, authenticated consumer command/write dispatch, subscription
 report flow and independent server peer workflows remain open.
+
+The explicit native build also produces `wotex-matter-bridge-host` in each
+bridge build's `obj/examples/wotex-matter-host/bin/` directory. Its manifest's
+`host` entry records the executable path, SHA-256, fixture SHA-256 and executed
+cases. Consumers select the immutable executable/digest explicitly and pass
+`["--configuration", "/absolute/private/configuration"]` as connection arguments.
+The private JSON configuration uses `wotex.matter.bridge-bootstrap@1` and must
+supply all identity, store, interface, commissioning and credential inputs.
+There is no default configuration or credential generation. The process uses
+stdin/stdout for bridge controls, requests/results and approved observations;
+its startup budget is five seconds and joined cleanup retains one second.
+SIGINT/SIGTERM cancel the generation. Diagnostics contain only fixed failure
+lines. The executable joins the configured driver, guarded consumer receiver
+and finite native renderer; it grants no consumer policy. Its black-box tests
+execute the actual binary with explicit development material and real pipes.
+Authenticated controller traffic and real reporting/clock qualification remain open.
 
 The per-packet native checks create their own temporary work directory, run in
 Docker and resolve sources from `packages/wotex-matter`:

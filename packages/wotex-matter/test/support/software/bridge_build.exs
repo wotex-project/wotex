@@ -11,6 +11,18 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   @observation "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-observation-test"
   @bootstrap "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-bootstrap-test"
   @lifecycle "obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test"
+  @host "obj/examples/wotex-matter-host/bin/wotex-matter-bridge-host"
+  @host_cases ~w(invocation missing-open bad-open partial-open oversize-open pre-ready startup-timeout
+    term-before-open interrupt-before-open missing-config missing-dac permissions symlink interface
+    normal reopen store-exists store-locked term interrupt output-lost input-eof partial-input
+    malformed generation replay)
+  @host_exit_check """
+  timeout 20 "$@"
+  actual=$?
+  printf '\\nbridge host exit: %s\\n' "$actual"
+  test "$actual" -eq 0
+  """
+
   @process_cases [
     {"normal", 0},
     {"reopen", 0},
@@ -267,7 +279,8 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
             @configuration,
             @observation,
             @bootstrap,
-            @lifecycle
+            @lifecycle,
+            @host
           ],
           []
         )
@@ -337,6 +350,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
         process = run_process_cases(workspace, directory, inside)
         receiver = run_receiver_cases(workspace, directory, inside)
         commands = run_command_cases(workspace, directory, inside)
+        host = run_host_cases(workspace, directory, inside)
 
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
@@ -435,6 +449,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
            "process" => process,
            "receiver" => receiver,
            "commands" => commands,
+           "host" => host,
            "configuration" => %{
              "exit_status" => 0,
              "binary_sha256" =>
@@ -737,6 +752,43 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   def verify_configuration!(output) do
     unless output == "bounded bridge bootstrap configuration passed\n",
       do: Mix.raise("bridge_configuration_test_failed")
+
+    :ok
+  end
+
+  defp run_host_cases(workspace, directory, inside) do
+    cases =
+      for mode <- @host_cases do
+        arguments = [
+          "/work/" <> directory <> "/" <> @lifecycle,
+          "host-" <> mode,
+          "/work/" <> directory <> "/" <> @host
+        ]
+
+        output = inside.(directory <> "-host-" <> mode, host_command(arguments), @environment)
+        verify_host!(output)
+        %{"mode" => mode, "exit_status" => 0}
+      end
+
+    %{
+      "binary" => @host,
+      "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @host])),
+      "fixture_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @lifecycle])),
+      "cases" => cases
+    }
+  end
+
+  @spec host_cases() :: [String.t()]
+  def host_cases, do: @host_cases
+
+  @spec host_command([String.t()]) :: [String.t()]
+  def host_command(arguments),
+    do: ["/bin/sh", "-c", @host_exit_check, "bridge-host"] ++ arguments
+
+  @spec verify_host!(binary()) :: :ok
+  def verify_host!(output) do
+    unless output == "production bridge executable and pipes passed\n\nbridge host exit: 0\n",
+      do: Mix.raise("bridge_host_test_failed")
 
     :ok
   end

@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.35.0-target.
+Version: 0.36.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -659,6 +659,37 @@ authenticated dispatch, approved-observation application or peer interoperabilit
 The [SDK process-driver record](../provenance/bridge-sdk-process-2026-10.md)
 binds its exact committed source, sixteen actual SDK/pipe cases in both build
 modes, portable coordinator regressions, archive and qualification limits.
+
+
+### Production process entry
+
+The explicit `wotex-matter-bridge-host` executable MUST accept exactly
+`--configuration /absolute/private/configuration`. The path MUST contain
+1–4096 bytes and no CR or LF; private loading MUST enforce the existing
+normalized-path and file-custody rules. No invocation default, environment
+configuration, credential discovery or generated identity is permitted.
+Invalid invocation MUST return 64 with only `invalid bridge invocation` and LF
+on stderr, before SDK or file work.
+
+The process MUST use stdin/stdout exclusively for the existing bridge protocol,
+a 5000 ms original startup budget and a checked `CLOCK_MONOTONIC` millisecond
+clock. A failed or invalid clock sample MUST terminate with 70. The executable
+MUST compose the configured SDK driver, guarded consumer receiver and finite
+command renderer without fixture hooks. Renderer attachment MUST precede
+consumer attachment; consumer completion work MUST join outside SDK locking,
+and both attachments MUST finish under SDK locking before endpoint retirement.
+Partial attachment MUST follow the same cleanup ordering.
+
+SIGPIPE MUST be ignored. SIGINT and SIGTERM MUST publish lock-free cancellation;
+signal handlers MUST perform no SDK, allocation or I/O work. Normal return MUST
+use the coordinator's exit code: closed 0, invalid 64, input 65, startup 69,
+cleanup 70, output 74 or cancellation 75. Nonzero coordinator return MUST write
+only `bridge process failed` and LF to stderr; fatal termination MAY omit that
+line. Diagnostics MUST include no configuration, credentials, paths or exception
+text. Successful close MUST emit the existing closed receipt only after joined
+SDK retirement. An executable pipe test establishes process assembly; live
+authenticated SDK admission, process/probe trust, actual clock-rate qualification
+and independent controller/reporting workflows remain separate obligations.
 
 
 ### Native callback custody

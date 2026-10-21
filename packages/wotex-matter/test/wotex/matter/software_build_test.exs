@@ -111,6 +111,29 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "production executable receipts require their own marker and successful actual exit" do
+    healthy = "production bridge executable and pipes passed\n\nbridge host exit: 0\n"
+    assert :ok = SoftwareBridgeBuild.verify_host!(healthy)
+
+    for invalid <- [
+          "",
+          String.trim_trailing(healthy),
+          healthy <> healthy,
+          String.replace(
+            healthy,
+            "production bridge executable and pipes",
+            "owned SDK process driver and pipes"
+          ),
+          String.replace(healthy, "exit: 0", "exit: 134"),
+          "AddressSanitizer\n" <> healthy,
+          "private-configuration-canary\n" <> healthy
+        ] do
+      assert_raise Mix.Error, "bridge_host_test_failed", fn ->
+        SoftwareBridgeBuild.verify_host!(invalid)
+      end
+    end
+  end
+
   test "guarded receiver receipts require their own marker and successful actual exit" do
     healthy = "guarded SDK receiver and consumer pipes passed\n\nbridge SDK receiver exit: 0\n"
     assert :ok = SoftwareBridgeBuild.verify_receiver!(healthy)

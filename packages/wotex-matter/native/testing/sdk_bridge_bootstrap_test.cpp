@@ -3,6 +3,7 @@
 #include "sdk_bridge_process_test.hpp"
 #include "sdk_bridge_receiver_test.hpp"
 #include "sdk_bridge_commands_test.hpp"
+#include "bridge_host_test.hpp"
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <credentials/examples/ExampleDACs.h>
 #include <lib/support/CHIPMem.h>
@@ -189,6 +190,11 @@ int main(int argc, char **argv) {
                                {"maximum_temperature", 4000}}})}};
   const auto encoded = configuration.dump();
   Write(root + "/configuration", encoded.data(), encoded.size());
+  if (mode.substr(0, 5) == "host-") {
+    assert(argc == 3);
+    Platform::MemoryShutdown();
+    return testing::RunBridgeHostProbe(root, mode.substr(5), argv[2]);
+  }
   if (mode.substr(0, 9) == "commands-") {
     Platform::MemoryShutdown();
     return testing::RunSdkCommandsProbe(root, mode.substr(9));

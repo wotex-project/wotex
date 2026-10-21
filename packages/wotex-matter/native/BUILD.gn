@@ -202,6 +202,57 @@ if (chip_build_tools) {
       "${chip_root}/src/platform",
     ]
   }
+  # Explicit production server process. No fixture hooks or test sources.
+  executable("wotex-matter-bridge-host") {
+    cflags = [
+      "-DCHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT=16",
+      "-isystem" + rebase_path("${chip_root}/src", root_build_dir),
+    ]
+    cflags_cc = [ "-std=c++17" ]
+    sources = [
+      "src/bridge_bootstrap.cpp",
+      "src/bridge_configuration.cpp",
+      "src/bridge_credentials.cpp",
+      "src/bridge_endpoint_model.cpp",
+      "src/bridge_endpoints.cpp",
+      "src/bridge_light.cpp",
+      "src/bridge_command_renderer.cpp",
+      "src/bridge_guard.cpp",
+      "src/bridge_handoff.cpp",
+      "src/bridge_handoff_owner.cpp",
+      "src/bridge_input.cpp",
+      "src/bridge_observation.cpp",
+      "src/bridge_logging.cpp",
+      "src/bridge_output.cpp",
+      "src/bridge_private_file.cpp",
+      "src/bridge_process.cpp",
+      "src/bridge_sdk_process.cpp",
+      "src/bridge_sdk_receiver.cpp",
+      "src/bridge_sdk_observations.cpp",
+      "src/bridge_replies.cpp",
+      "src/bridge_request_frame.cpp",
+      "src/bridge_requests.cpp",
+      "src/bridge_resources.cpp",
+      "src/bridge_server.cpp",
+      "src/bridge_storage.cpp",
+      "src/bridge_writes.cpp",
+      "src/sdk_storage.cpp",
+      "src/storage.cpp",
+      "src/bridge_host.cpp",
+    ]
+    include_dirs = [ "include", "third_party" ]
+    deps = [
+      ":bridge-model",
+      "${chip_root}/examples/platform/linux:linux-commissionable-data-provider",
+      "${chip_root}/src/app/clusters/bridged-device-basic-information-server",
+      "${chip_root}/src/app/clusters/on-off-server",
+      "${chip_root}/src/app/server",
+      "${chip_root}/src/credentials",
+      "${chip_root}/src/lib",
+      "${chip_root}/src/platform",
+      "${chip_root}/src/setup_payload",
+    ]
+  }
   # Separate configured SDK resource lifecycle fixture; no consumer Port.
   executable("wotex-matter-sdk-bridge-bootstrap-test") {
     cflags = [
@@ -240,6 +291,7 @@ if (chip_build_tools) {
       "src/sdk_storage.cpp",
       "src/storage.cpp",
       "testing/sdk_bridge_bootstrap_test.cpp",
+      "testing/bridge_host_test.cpp",
       "testing/sdk_bridge_process_test.cpp",
       "testing/sdk_bridge_receiver_test.cpp",
       "testing/sdk_bridge_commands_test.cpp",
