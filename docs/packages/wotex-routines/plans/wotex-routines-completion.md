@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.35. Updated: 2026-10-20. Accepted programme; the basis is partially implemented.
+Version: 0.2.36. Updated: 2026-10-21. Accepted programme; the basis is partially implemented.
 
 The WRO.01–05 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -226,7 +226,19 @@ startup. Two mutation VMs run concurrently and are joined before workspace
 cleanup; no replacement changes an installed archive or BEAM.
 
 The [archive record](../provenance/decision-archives-2026-10.md) binds actual
-source/archive/lock/runner identities, counts and cleanup. The current fast gate
-passes 292 tests and the guarded corpus passes 41 cases with all nine forward
+source/archive/lock/runner identities, counts and cleanup. Its recorded fast gate
+passed 292 tests and the guarded corpus passed 41 cases with all nine forward
 calls disabled during proof. The full VD-T1–T14 matrix and owning verifier
 milestone remain open; broader host/model/physical obligations are unchanged.
+
+The [public time-matrix record](../provenance/decision-time-matrix-2026-10.md)
+adds nine independent arithmetic/endpoint cases to the native Decision corpus.
+All fifty guarded cases pass, with the existing seventy complete-collection
+and seven arbitration relations. Eight separate time mutations execute all
+nine matrix cases each and fail through twenty-three assertions with zero
+harness errors, skips or exclusions. The additions cover raw cut neighbours,
+both uncertain UTC endpoints, signed fractional floors, retained starts,
+windows/edges/history and selected integer-domain limits. No library API or
+semantics changed. This strengthens parts of VD-T5/T7 while the full combined
+matrix and owning verifier milestone remain open; no archive or host evidence
+is promoted by the native result.

@@ -1,13 +1,14 @@
 # Verified transitions and time-stable decisions v1
 
-Version: 0.1.7. Updated: 2026-10-20. Status: accepted target; implementation partial.
+Version: 0.1.8. Updated: 2026-10-21. Status: accepted target; implementation partial.
 Owner: WRO.02 retained transitions/complete collection; WRO.03 time correspondence;
 WRO.04 independent validation scope.
 Implementation: public direct-transition and complete-decision APIs, canonical
 time cells and independent complete-set arbitration have native evidence.
 Independent archive consumers and all twelve complete-verifier mutations now
 pass. The broader native matrix and owning milestone remain open.
-Complete VD-T1–T14 remain unexecuted obligations.
+The complete combined VD-T1–T14 matrix remains open; native and archive subsets
+below have executed evidence.
 
 ## Result and ownership
 
@@ -464,6 +465,27 @@ archive evidence below complements this native lane. Full VD-T1–T14 and the
 owning milestone remain open. No current consumer adoption or host/physical
 qualification is inferred from either lane.
 
+## Independent public time matrix
+
+Nine additional public Decision cases independently partition declared raw
+Fact, Run, window and edge cuts. They cover adjacent receipt/freshness/expiry
+points, both uncertain UTC endpoints, signed fractional instants, relevant and
+irrelevant UTC changes, retained starts, shorter effect deadlines, terminal
+original/busy history and 65-bit/domain-edge arithmetic under both Time
+grammars. Current checks retain exact point data or refuse the whole decision.
+
+The renewed guarded corpus passes fifty tests with all nine forward seams
+disabled during proof, retaining seventy complete-collection and seven
+arbitration relations in the existing corpus. Eight isolated time mutations
+run all nine matrix cases each and are caught through twenty-three assertions
+with zero harness errors, skips or exclusions. The
+[time-matrix record](../provenance/decision-time-matrix-2026-10.md) binds the
+exact source, runner, fixtures, commands and counts.
+
+This strengthens VD-04–06 and parts of VD-T5/T7. It changes no public contract
+and does not close the full combined matrix, renew archive evidence or qualify
+consumer clocks, transactions or physical effects.
+
 ## Sources and decisions
 
 Reconciliation used package source 973fb32c: Kernel, Execution, Receipt, Edge,
@@ -493,7 +515,7 @@ removing all extracted projects, dependency builds and replacements.
 
 The [archive record](../provenance/decision-archives-2026-10.md) pins exact source,
 archive, runner and lock identities and actual counts. It also records the
-current 41-case guarded corpus and 292-test package fast gate. The complete
+then-current 41-case guarded corpus and 292-test package fast gate. The complete
 VD-T1–T14 matrix and owning verifier milestone remain open; this profile does
 not close consumer transactions, actual clocks/source custody, wider models or
 physical authority.
