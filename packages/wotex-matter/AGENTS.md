@@ -251,8 +251,8 @@ Repository-wide rules are in the root `AGENTS.md`.
   approved observations, subscription reports, current consumer/SDK denial,
   expiry, killed mutations, persistent restart and a separately built SDK
   `chip-tool` exercising all four writes. The guarded SDK bootstrap fixture
-  exports explicit private development material and removes a controller signing
-  key only for its refusal probe. The cohort checks/samples the Linux OS
+  exports explicit private development material and replaces/removes a controller
+  signing key only for its refusal probes. The cohort checks/samples the Linux OS
   `CLOCK_MONOTONIC` value directly; it supplies no default library clock or policy.
   Root software receipts include the production/material binaries and SDK peer.
 - Test support: `test/support/` (scripted clients, Runtime credentials and

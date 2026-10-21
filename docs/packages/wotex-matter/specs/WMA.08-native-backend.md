@@ -360,7 +360,9 @@ commissioning. Controller creation MUST allocate its operational key through the
 SDK FabricTable/operational-keystore CSR path, so commissioner setup commits
 that key with its NOC. It MUST NOT rely on a provided in-memory keypair for
 restart. Reopen MUST require a usable stored operational key before advertising
-readiness; it MUST NOT generate a replacement for an absent key. Existing
+readiness. It MUST sign a fresh local challenge and verify it against the stored
+NOC public key; presence alone MUST NOT establish usability. It MUST NOT
+generate a replacement for an absent, invalid or mismatched key. Existing
 authority/key/certificate mismatch is fatal. No external
 factory, test issuer credentials, unknown authority mode or default fabric is
 accepted. External PKI import is outside this profile.

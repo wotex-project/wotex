@@ -485,7 +485,8 @@ subscription reports. An independently built pinned SDK `chip-tool` exercises
 the four writable child attributes. Four live families include denial, SDK ACL
 refusal before consumer delivery, original expiry, process loss and stored
 fabric/endpoint reuse. Controller signing keys persist in the SDK operational
-keystore; an absent stored key refuses startup. The explicit Linux cohort checks
+keystore; a challenge verified against the NOC refuses absent or mismatched
+stored signing keys before readiness. The explicit Linux cohort checks
 and samples the OS `CLOCK_MONOTONIC` value directly in both domains with a rate
 ratio of one. This qualifies only that runtime/kernel/source cohort. Wider
 command/fabric/report workflows, independent ecosystems and installed platforms

@@ -2403,6 +2403,19 @@ class SdkControllerBackend::Impl final
       VerifyOrReturnError(match != chip::kUndefinedFabricIndex,
                           CHIP_ERROR_KEY_NOT_FOUND);
       VerifyOrReturnError(fabrics->HasOperationalKeyForFabric(match), CHIP_ERROR_KEY_NOT_FOUND);
+      std::uint8_t certificate_bytes[chip::Credentials::kMaxCHIPCertLength];
+      chip::MutableByteSpan certificate(certificate_bytes);
+      ReturnErrorOnFailure(fabrics->FetchNOCCert(match, certificate));
+      chip::Credentials::P256PublicKeySpan public_key_span;
+      ReturnErrorOnFailure(
+          chip::Credentials::ExtractPublicKeyFromChipCert(certificate, public_key_span));
+      const chip::Crypto::P256PublicKey public_key(public_key_span);
+      std::uint8_t challenge[32];
+      ReturnErrorOnFailure(chip::Crypto::DRBG_get_bytes(challenge, sizeof(challenge)));
+      chip::Crypto::P256ECDSASignature signature;
+      ReturnErrorOnFailure(fabrics->SignWithOpKeypair(match, chip::ByteSpan(challenge), signature));
+      ReturnErrorOnFailure(
+          public_key.ECDSA_validate_msg_signature(challenge, sizeof(challenge), signature));
       setup.fabricIndex.SetValue(match);
     }
 

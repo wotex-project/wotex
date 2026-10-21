@@ -6,6 +6,7 @@
 #include "bridge_host_test.hpp"
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <credentials/examples/ExampleDACs.h>
+#include <crypto/PersistentStorageOperationalKeystore.h>
 #include <lib/support/CHIPMem.h>
 #include <lib/support/DefaultStorageKeyAllocator.h>
 #include <platform/logging/LogV.h>
@@ -129,16 +130,32 @@ int main(int argc, char **argv) {
   LogPayload("caller-path-and-secret-canary: %s%n", "caller-payload-canary", &formatted);
   assert(formatted == 77);
   LogPayload(nullptr);
-  if (mode == "remove-controller-key") {
+  if (mode == "remove-controller-key" || mode == "replace-controller-key") {
     assert(argc == 3);
     std::unique_ptr<DurableStorage> store;
     assert(DurableStorage::Open(argv[2], StorageMode::OpenExisting, AuthorityMode::Stored,
                                 ControllerIdentity{55, 770001, 0xFFF1}, store) == CHIP_NO_ERROR);
-    assert(store->SyncDeleteKeyValue(DefaultStorageKeyAllocator::FabricOpKey(1).KeyName()) ==
-           CHIP_NO_ERROR);
+    if (mode == "remove-controller-key") {
+      assert(store->SyncDeleteKeyValue(DefaultStorageKeyAllocator::FabricOpKey(1).KeyName()) ==
+             CHIP_NO_ERROR);
+    } else {
+      PersistentStorageOperationalKeystore keystore;
+      assert(keystore.Init(store.get()) == CHIP_NO_ERROR);
+      std::uint8_t csr_bytes[Crypto::kMIN_CSR_Buffer_Size];
+      MutableByteSpan csr(csr_bytes);
+      Crypto::P256PublicKey public_key;
+      assert(keystore.NewOpKeypairForFabric(1, csr) == CHIP_NO_ERROR);
+      assert(Crypto::VerifyCertificateSigningRequest(csr.data(), csr.size(), public_key) ==
+             CHIP_NO_ERROR);
+      assert(keystore.ActivateOpKeypairForFabric(1, public_key) == CHIP_NO_ERROR);
+      assert(keystore.CommitOpKeypairForFabric(1) == CHIP_NO_ERROR);
+      keystore.Finish();
+    }
     store.reset();
     Platform::MemoryShutdown();
-    std::cout << "controller operational key removed for refusal probe\n";
+    std::cout << (mode == "remove-controller-key"
+                      ? "controller operational key removed for refusal probe\n"
+                      : "controller operational key replaced for refusal probe\n");
     return 0;
   }
   char path[] = "/tmp/wotex-bootstrap-private-XXXXXX";

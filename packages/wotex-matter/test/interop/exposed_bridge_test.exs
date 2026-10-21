@@ -157,6 +157,14 @@ defmodule Wotex.Matter.ExposedBridgeInteropTest do
       assert_read(session, @sensor, :i16, 2100)
     end)
 
+    assert {"controller operational key replaced for refusal probe\n", 0} =
+             ProcessCommand.run(
+               fixture["material"],
+               ["replace-controller-key", Path.join(root, "controller")], stderr_to_stdout: true)
+
+    assert {:error, %Error{effect: :none}} =
+             Matter.connect(SoftwareExposedBridge.controller_options(fixture, root, true))
+
     assert {"controller operational key removed for refusal probe\n", 0} =
              ProcessCommand.run(
                fixture["material"],

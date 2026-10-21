@@ -877,7 +877,9 @@ use the same SDK revision; this establishes no independent-stack claim.
 The controller's own operational key is generated through the SDK keystore CSR
 path and committed with its NOC. A fresh controller process establishes CASE
 against a fresh bridge process using stored authority and stable endpoints;
-removing the controller key causes startup refusal without regeneration.
+replacing it with another valid key or removing it causes startup refusal
+without regeneration. Startup signs a fresh local challenge and verifies it
+against the stored NOC public key.
 
 The cohort's explicit clock samples the documented ERTS OS monotonic-time value,
 checks its function, clock ID, range and resolution, and converts native units
