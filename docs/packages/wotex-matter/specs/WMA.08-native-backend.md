@@ -367,6 +367,10 @@ authority/key/certificate mismatch is fatal. No external
 factory, test issuer credentials, unknown authority mode or default fabric is
 accepted. External PKI import is outside this profile.
 
+The [authenticated consumer record](../provenance/bridge-consumer-2026-10.md)
+binds actual stored-controller CASE reuse and missing/mismatched-key startup
+refusal to the committed signing-key implementation and exact binaries.
+
 The first-party operational-credentials delegate issues NOCs only for the exact
 configured fabric and commissioning operation using its owned persisted root.
 It validates node/vendor ranges and the requested identity before signing, uses

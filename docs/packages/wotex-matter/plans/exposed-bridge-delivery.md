@@ -889,6 +889,8 @@ clock is not substituted. This qualification applies only to the selected
 runtime/kernel/source cohort; other deployments require their own evidence.
 The software inventory has forty cases including these four. Focused execution
 of the new cohort does not renew the complete historical software-lane receipt.
+The [authenticated consumer record](../provenance/bridge-consumer-2026-10.md)
+binds these eight live executions, signing-key refusals and exact cohort/artifacts.
 
 ## 4. Isolation and recovery
 

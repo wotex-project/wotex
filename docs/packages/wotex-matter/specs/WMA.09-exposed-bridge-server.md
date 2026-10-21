@@ -720,6 +720,10 @@ monotonic clock, infer a bound from shared units/one exchange, or qualify anothe
 runtime, clock source, namespace or deployment. The library MUST select none of
 these conditions implicitly.
 
+The [authenticated consumer record](../provenance/bridge-consumer-2026-10.md)
+binds eight ordinary/sanitizer live case-family executions, the selected clock
+cohort, exact source/artifacts and remaining qualification limits.
+
 ### Native callback custody
 
 The installed native consumer receiver MUST own an explicit SDK fabric-scope
