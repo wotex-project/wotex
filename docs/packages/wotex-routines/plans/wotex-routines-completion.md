@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.36. Updated: 2026-10-21. Accepted programme; the basis is partially implemented.
+Version: 0.2.37. Updated: 2026-10-21. Accepted programme; the basis is partially implemented.
 
 The WRO.01–05 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -233,7 +233,7 @@ milestone remain open; broader host/model/physical obligations are unchanged.
 
 The [public time-matrix record](../provenance/decision-time-matrix-2026-10.md)
 adds nine independent arithmetic/endpoint cases to the native Decision corpus.
-All fifty guarded cases pass, with the existing seventy complete-collection
+That cohort passed all fifty guarded cases, with the existing seventy complete-collection
 and seven arbitration relations. Eight separate time mutations execute all
 nine matrix cases each and fail through twenty-three assertions with zero
 harness errors, skips or exclusions. The additions cover raw cut neighbours,
@@ -242,3 +242,14 @@ windows/edges/history and selected integer-domain limits. No library API or
 semantics changed. This strengthens parts of VD-T5/T7 while the full combined
 matrix and owning verifier milestone remain open; no archive or host evidence
 is promoted by the native result.
+
+The [public resource-bound record](../provenance/decision-resource-bounds-2026-10.md)
+adds exact/one-under bytes, depth, nodes, UTF-8 strings and container widths
+through all four Decision operations and Transition.verify/8, across both Time
+grammars, three UTC modes and native/plain arguments. Eight new cases include
+repeated-copy aggregate overflow and certificate-output refusal after input
+admission. The guarded corpus passes 58 cases; seven isolated bounds mutations
+run all eight new cases each and fail through fourteen assertions, with zero
+harness errors, skips or exclusions. No library contract or behavior changes.
+This strengthens VD-T10's native boundary evidence; the full combined matrix,
+complexity/resource qualification and owning verifier milestone remain open.

@@ -1,6 +1,6 @@
 # Verified transitions and time-stable decisions v1
 
-Version: 0.1.8. Updated: 2026-10-21. Status: accepted target; implementation partial.
+Version: 0.1.9. Updated: 2026-10-21. Status: accepted target; implementation partial.
 Owner: WRO.02 retained transitions/complete collection; WRO.03 time correspondence;
 WRO.04 independent validation scope.
 Implementation: public direct-transition and complete-decision APIs, canonical
@@ -474,10 +474,10 @@ irrelevant UTC changes, retained starts, shorter effect deadlines, terminal
 original/busy history and 65-bit/domain-edge arithmetic under both Time
 grammars. Current checks retain exact point data or refuse the whole decision.
 
-The renewed guarded corpus passes fifty tests with all nine forward seams
+That record's guarded corpus passed fifty tests with all nine forward seams
 disabled during proof, retaining seventy complete-collection and seven
 arbitration relations in the existing corpus. Eight isolated time mutations
-run all nine matrix cases each and are caught through twenty-three assertions
+ran all nine matrix cases each and were caught through twenty-three assertions
 with zero harness errors, skips or exclusions. The
 [time-matrix record](../provenance/decision-time-matrix-2026-10.md) binds the
 exact source, runner, fixtures, commands and counts.
@@ -485,6 +485,27 @@ exact source, runner, fixtures, commands and counts.
 This strengthens VD-04–06 and parts of VD-T5/T7. It changes no public contract
 and does not close the full combined matrix, renew archive evidence or qualify
 consumer clocks, transactions or physical effects.
+
+## Independent public resource bounds
+
+Eight additional cases cover exact and one-under byte, depth, node, UTF-8 string
+and container-width selections through all four Decision operations and
+Transition.verify/8. An independent native-JSON writer/counter measures complete
+arguments and outputs across both Time grammars, all three UTC modes and native/
+plain inputs. Repeated embedded copies count in full. Separate cases require
+aggregate refusal when every argument fits alone, certificate-output byte
+refusal after the input fits, and byte-correct Unicode/escape handling.
+
+The renewed guarded corpus passes 58 cases with all nine forward seams disabled
+during proof. Seven isolated argument/output/limit-selection mutations run all
+eight bounds cases each and are caught through fourteen assertions, with zero
+harness errors, skips or exclusions. The
+[resource-bound record](../provenance/decision-resource-bounds-2026-10.md) binds
+exact source/test/reference/runner inputs and the executed checks.
+
+This supplies native boundary evidence toward VD-T10 without changing library
+behavior. The full combined matrix, worst-case resource/complexity qualification,
+archive renewal, consumer transactions and physical authority remain open.
 
 ## Sources and decisions
 
