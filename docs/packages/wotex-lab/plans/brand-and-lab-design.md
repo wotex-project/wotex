@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.2.0. Contract: accepted. Design status: under revision.
+Plan version: 1.3.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -36,7 +36,7 @@ file retains those historical studies alongside the selected supplied mark.
 | File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected supplied-logo master plus four historical study pages. Earlier boards and treatment families remain draft history. |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Seven pages; sixty prior screen/state references and fourteen new proposal states. The prior component families, three native Specs and prototype starts remain historical; new control studies and partial Play coverage are described in the canvas proposal. |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, fourteen new proposal states and a compact component library. The prior component families, three native Specs and prototype starts remain historical; current component and Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.
@@ -91,6 +91,15 @@ Spacing/minimum sizes, lockups, channel exports, voice and recovery acceptance
 remain required work.
 
 ## Lab pages, states and flows
+
+The current [compact library](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52)
+adds nine native core control families with fifty variants, Light/Dark/Contrast
+semantic modes, six Inter text styles and linked instance reviews. The new
+documentation proposal now connects search, results, guide reading and return
+to the same board; its ordinary, Enter and Escape paths were exercised in Play.
+Container components, remaining journeys and recovery/responsive coverage are
+still required. These checks describe native design fixtures, not implemented
+host behavior.
 
 The existing source exposes the six functional families below. WLB-C16 retains
 their behavior and state coverage; the new proposal examines how those tasks

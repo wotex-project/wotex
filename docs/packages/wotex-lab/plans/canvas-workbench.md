@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.2.0. Status: proposed for design review. Implementation: not
+Plan version: 0.3.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -60,7 +60,9 @@ Use Inter and the supplied logo's cool grays: `#181D27`, `#303644`, `#818A9D`,
 edges, charts and states use this family; text and line styles retain meaning
 without a colored status dot. Preserve the supplied logo's vector geometry and
 gradients, with no tile, border or added caption. Earlier blue/beige treatments
-are historical studies. Dark/Contrast variants remain to be designed.
+are historical studies. The compact control library now has Light, Dark and
+Contrast modes; complete journey compositions in those modes remain to be
+designed and reviewed.
 
 Keep room identity and optional counts in the board menu, and selection on the
 node. Remove floating page summaries, tutorial legends, pin hints and generic
@@ -83,6 +85,13 @@ Live updates change values without moving nodes or stealing focus.
 Context menus reflect the selected source's capabilities. Unsupported
 configuration, streaming or connection operations show a reason instead of
 opening an empty task or implying that an adapter exists.
+
+The sample Thermostat declares only the read-only `temperature` Property.
+Its operations menu offers Read temperature. The sample Actuator owns
+`setTarget`; that Action belongs to its admitted proposal and explicit review
+journey. Registering a Thing Description creates a Directory entry; it does not
+establish a transport connection. These distinctions also govern the import,
+unavailable-metrics and configuration states.
 
 ## Journey 1: establish and inspect a connected system
 
@@ -286,12 +295,14 @@ The 2026-10-21 edition adds two pages to the existing editable Design file:
 | --- | --- |
 | [Canvas journeys — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-2) | Start a sample room, connected Things, Thing context menu, Thing inspector; Ask, admitted metric result, pinned chart, pin/layout actions; experiment configuration and result/Action review |
 | [Find answers — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-212) | Documentation search, results, article reading and return to the same workbench context |
+| [Compact system](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52) | Nine reusable core control families, semantic colour modes, named text styles and linked instance reviews |
 
 These are fourteen expanded 1440 × 900 compositions with illustrative data,
 editable text/vector layers and existing Button/Field instances. Compact
 floating controls, typed topology edges, a contextual inspector and a metric
-pin establish the proposed workspace. Shared-control studies are present but
-have not been qualified as complete native component families. The initial
+pin establish the proposed workspace. The separate compact library now supplies
+core control families; the loose container studies are not complete component
+coverage. The initial
 edition used a draft W tile; the subsequent visual revision uses the supplied
 mark and compact grayscale direction above.
 
@@ -312,6 +323,15 @@ instance internals were retained. Representative A2/A3/B3 and D2 renders were
 reviewed; the connect/inspect and Ask/result/pin paths were exercised again in
 Play. Submenu, responsive and recovery qualification remains separate work.
 
+The compact library contains fifty variants across Button, Icon button, Field,
+Tab item, Menu item, Status, Tool rail, Board control and Menu surface. It uses
+semantic aliases in Light, Dark and Contrast, six named Inter styles and exact
+Lucide vector masters. The supplied logo remains unboxed vector artwork.
+Linked [control](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=97-1650)
+and [three-mode](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=97-2096)
+reviews were inspected. These native controls do not establish parity with the
+host's current CSS or complete responsive accessibility coverage.
+
 Native Play exercised these fixed-state paths:
 
 - Explicit sample-room start → connected Things → ellipsis menu → Inspect →
@@ -320,11 +340,19 @@ Native Play exercised these fixed-state paths:
 - [Ask → admitted result → Pin](https://www.figma.com/proto/SudxgeebiNEu33PPIHO229?node-id=64-5510&starting-point-node-id=64%3A5510&scaling=scale-down-width&content-scaling=fixed)
   reached the pinned chart with the same host-instance query identity, range,
   units and missing-data gap.
+- Documentation search with Enter → matching results → selected guide, using
+  both the first result's click target and Enter. The guide's global search
+  opens the search state; Escape returns to the originating guide. Header
+  Return to workbench from the guide and search reaches the same selected
+  Thermostat and pinned chart. Ten native reactions cover the ordinary path,
+  search dismissal and header returns; remaining documentation destinations
+  still require their own states and connections.
 
-The experiment and documentation states remain storyboards. General text input,
-Build query, right-click/keyboard entry, menu dismissal, drag/resize, layout
-persistence, run/approval/cancellation and documentation navigation have not
-been qualified in the new prototype. No room, metric query, provider request,
+The experiment states remain storyboards. General text input, Build query,
+Thing right-click/keyboard entry, menu dismissal, drag/resize, layout persistence
+and run/approval/cancellation have not been qualified in the new prototype.
+Documentation uses a fixed search fixture rather than an executed search index.
+No room, metric query, provider request,
 run, Action or report export executed during Play. Adjacent journey notes are
 ordinary Design content; native Specs were not updated in this edition because
 the managed connector required reauthentication. Themes, responsive/recovery
