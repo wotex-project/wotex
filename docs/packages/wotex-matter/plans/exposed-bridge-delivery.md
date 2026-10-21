@@ -856,6 +856,9 @@ ready, input/output loss, malformed/partial/generation input and probe replay.
 The native builder compiles this production target separately and records its
 binary/fixture digests and case receipts. These process cases establish no live
 authenticated request, independent report flow or actual clock-rate qualification.
+The [production executable record](../provenance/bridge-host-2026-10.md) binds
+these 52 ordinary/sanitizer case-family executions and exact source/artifact
+identities.
 
 ## 4. Isolation and recovery
 

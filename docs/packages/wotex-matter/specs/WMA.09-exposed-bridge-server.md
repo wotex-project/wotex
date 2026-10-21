@@ -691,6 +691,10 @@ SDK retirement. An executable pipe test establishes process assembly; live
 authenticated SDK admission, process/probe trust, actual clock-rate qualification
 and independent controller/reporting workflows remain separate obligations.
 
+The [production executable record](../provenance/bridge-host-2026-10.md) binds
+the committed entry, 52 ordinary/sanitizer case-family executions, exact
+source/binary/archive identities and qualification limits.
+
 
 ### Native callback custody
 
