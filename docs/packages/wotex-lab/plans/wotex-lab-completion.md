@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.7.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.8.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
@@ -42,6 +42,12 @@ Version 1.7 restores the product boundary for C13 and C14. Wotex Lab owns its
 tokens, components, island protocol, fixtures and Storybook; Phoenix Assets
 remains the generic asset and DocShell-renderer substrate.
 
+Version 1.8 adds the missing WoTEx brand identity and Lab page/flow design
+deliverables, C15 and C16. The [design contract](brand-and-lab-design.md)
+defines their Figma files, source owners and acceptance. Initial editable drafts
+are available; they do not change package APIs or satisfy complete native design,
+prototype, final identity or recovery acceptance.
+
 ## Work packages
 
 | ID | Prerequisites | Required deliverable | Acceptance |
@@ -60,10 +66,12 @@ remains the generic asset and DocShell-renderer substrate.
 | WLB-C12 | WLB-C07; WLB.10 | PromEx metrics/panels, bounded ETS history, GreptimeDB bridge/query port and BeamLens skill | Protocol/store equality, retention, cardinality, loss/reset/clock cases, isolation, secret/prompt injection, cancellation and evidence-grounded AI queries |
 | WLB-C13 | WLB-C03; WLB-C07; WLB-C12; WLB.11 | Neutral base theme and explicit Phoenix LiveView workbench with bounded Svelte islands | Lab-owned tokens/components, typed island transport, HEEx fallbacks, bounded enhanced charts, static Storybook, real LiveView catalogue, dashboard exports, no-LLM flow, lifecycle/keyboard/theme/reconnect/security browser suite and clone-free host artifact |
 | WLB-C14 | WLB-C08; WLB-C10; WLB-C13; WLB.12; DSH.01; PHA.01 | Unified built-in and static ecosystem documentation | All allowlisted packages and documentation sources emit isolated corpora; routes/links/search resolve; LiveView/static semantics and Lab design-system digests match; docs and static Storybook compose collision-free; offline archive, browser/accessibility and fail-closed workflow-source vectors pass |
+| WLB-C15 | WLB-C13; WLB.11 | Separate editable WoTEx brand identity file and asset handoff | Selected default/inverse artwork, approved rules, colours/type/voice/layout, destination artwork and exports, source/rights mapping, visual review and independent native archive restore; design contract complete |
+| WLB-C16 | WLB-C13; WLB-C14; WLB-C15; WLB.11 | Editable Lab foundations, pages/states and goal-based Figma flows | All six page families and required task-container/theme states; source-aligned native components, adjacent briefs, real prototype connections, executed Play including back/cancel/approval/expiry/reconnect, source comparison and independent native restore; design contract complete |
 
 WLB-C01, descriptor/Nx example source and C13's base tokens form the foundation deliverable.
 The catalogue records their status; prose or a source-only test cannot imply
-C02–C14 completion. No placeholder module may claim to implement these items.
+C02–C16 completion. No placeholder module may claim to implement these items.
 
 ## Upstream closure map
 

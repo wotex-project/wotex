@@ -1,7 +1,13 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.14.0. Contract: accepted. Implementation status:
-implemented. Evidence status: partial. Adoption status: reference_available.
+Specification version: 0.15.0. Contract: accepted. Implementation status:
+partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.15 adds editable brand identity and Lab page/flow deliverables under
+the [design contract](../plans/brand-and-lab-design.md). The initial native
+files are drafts. Their remaining design acceptance makes this expanded
+specification partial without retracting the implemented host described below.
+Existing package APIs, tokens, routes and effect boundaries do not change.
 
 ## Implemented source and evidence boundary
 
@@ -247,6 +253,29 @@ Model-output source references still are not converted into caller-selected
 links. Disconnect, explicit cancel and deadline terminate the worker and clear
 context.
 
+## Editable identity, pages and flows
+
+Deliver a separate WoTEx brand identity file and a Lab Workbench file in Figma.
+The [design contract](../plans/brand-and-lab-design.md) owns their inventory,
+native links, source authority and acceptance. Brand guidelines include selected
+artwork, colours, typography, voice, layout, applications and an asset handoff.
+Proposed artwork and rules remain distinguishable from approved identity.
+
+The Workbench file contains shared native foundations/components, canonical
+designs for Experiments, Run workspace, Things, Metrics, Evidence and
+Documentation, and goal-based task flows with adjacent briefs. Maintain actual
+prototype connections for ordinary continuation, back, cancel, explicit Action
+approval, failure, expiry and reconnect recovery. Cover all three task-container
+profiles and source theme roles. Numerical results remain inert and transport
+completion does not prove a physical effect.
+
+Keep source identities and hashes outside visible product flows. Preserve
+native IDs and designer-owned proposals during reconciliation. Inspect editable
+layers, variables, component links and representative renders; execute the
+named journeys in native Play. Retain native archives and independently verify
+restoration before claiming recoverable handoff. Static presence, source tests
+and a wired reaction graph do not establish native interaction acceptance.
+
 ## Component and chart contract
 
 Required shared primitives: shell/sidebar, context header, button/icon button,
@@ -476,6 +505,8 @@ complete real-browser acceptance suite.
 | WLB-S11-12 | Keep Phoenix Assets UI-free and keep Wotex component behavior, domain policy and composition in Lab, with executable boundary checks in both repositories. |
 | WLB-S11-13 | Select a task archetype and content-container profile without creating device-specific state, routes or command behavior. |
 | WLB-S11-14 | Preserve the authoritative subject, revision, local input, focus, command identity and recovery across composition changes while retaining required evidence and Action scope in compact composition. |
+| WLB-S11-15 | Deliver the separate editable WoTEx brand identity and approved asset handoff defined by WLB-C15, preserving the distinction between source values, proposals and accepted identity. |
+| WLB-S11-16 | Deliver the editable Lab page/state/profile inventory and connected task flows defined by WLB-C16, with source-aligned components, adjacent briefs and explicit approval/recovery boundaries. |
 
 ## Executable vectors
 
@@ -495,6 +526,8 @@ complete real-browser acceptance suite.
 | WLB-V11-12 | The clone-free Workbench artifact runs the three experiments, metrics, evidence, documentation entry and no-LLM flow with islands enabled and with their client chunks deliberately unavailable. |
 | WLB-V11-13 | HEEx, Svelte and Storybook render the same task fixture at 599/600-pixel and 839/840-pixel task-container boundary pairs without changing its closed snapshot or emitting a command. |
 | WLB-V11-14 | Keyboard-only, screen-reader, reduced-motion and coarse-pointer journeys preserve selection, focus, drafts, evidence identity, pending-command state and reconnect recovery in every profile. |
+| WLB-V11-15 | Inspect the native brand file, source-exact assets/tokens, default/inverse instances and destination exports; verify accepted rules and independently restore the archived native artwork and dependencies. |
+| WLB-V11-16 | Inspect native Lab components and all required page/state/profile mappings, execute named Play journeys including back/cancel/expiry/reconnect, compare with the pinned source and independently restore the native prototype and component links. |
 
 ## Completion boundary
 
@@ -509,3 +542,9 @@ adoption remain separate qualification work under the
 WLB-S11-13, WLB-S11-14, WLB-V11-13 and WLB-V11-14 are accepted obligations
 without recorded executable evidence. They keep WLB.11 evidence partial until the
 container-profile implementation and boundary-pair cohorts pass.
+
+WLB-S11-15, WLB-S11-16, WLB-V11-15 and WLB-V11-16 add design acceptance.
+The initial editable files and representative render inspection are recorded
+in the design contract. Complete native coverage, Play, accepted identity and
+archive/restore evidence remain open. These obligations keep implementation
+and evidence partial; historical host evidence is not promoted to cover them.

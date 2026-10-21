@@ -10,6 +10,11 @@ name into a claim of complete protocol support, interoperability or
 certification. Each protocol section states its current boundary and links to
 the package specification and completion plan.
 
+The [brand and Lab design contract](packages/wotex-lab/plans/brand-and-lab-design.md) adds separate
+editable Figma files for WoTEx identity and Lab pages/flows. It links the initial
+drafts and distinguishes them from final identity, complete native coverage,
+prototype acceptance and recovery evidence.
+
 ## Optional implementation delivery
 
 The [optional routines contracts](packages/wotex-routines/specs/WRO.01-capability-behaviour.md)

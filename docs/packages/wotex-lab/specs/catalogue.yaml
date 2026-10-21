@@ -551,9 +551,9 @@ specifications:
       the pinned Grafana and GreptimeDB cohort. No mandatory observability,
       database or model dependency enters the base library.
   - id: WLB.11
-    version: "0.14.0"
+    version: "0.15.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
-    implementation_status: implemented
+    implementation_status: partial
     evidence_status: partial
     adoption_status: reference_available
     evidence_manifest: priv/provenance/WLB.11-evidence.json
@@ -571,6 +571,8 @@ specifications:
       - "WLB.10"
     completion_items:
       - "WLB-C13"
+      - "WLB-C15"
+      - "WLB-C16"
     implementation_modules:
       - "Wotex.Lab.DesignSystem"
       - "Wotex.Lab.Island.Component"
@@ -621,7 +623,7 @@ specifications:
       - "hosts/workbench/bin/check_islands_browser.mjs"
       - "hosts/workbench/bin/check_assets.mjs"
       - "hosts/storybook/test/wotex_lab_storybook_web/storybook_test.exs"
-    compatibility_classification: Version 0.14.0 adds accepted task-archetype, content-container and state-continuity obligations without changing the existing pre-1.0 public API. Phoenix Assets remains a generic asset substrate. LiveView stays authoritative for sessions, state, evidence, authorization and commands, and the SVG/table path remains the semantic fallback. Existing local browser and candidate-artifact cohorts cover version 0.13.0; the 599/600-pixel and 839/840-pixel boundary-pair cohorts are not yet recorded, so evidence is partial.
+    compatibility_classification: Version 0.15.0 adds separate editable WoTEx brand identity and Lab page/state/profile/flow deliverables under WLB-C15 and WLB-C16. Initial native drafts exist; complete component/state coverage, native Play, accepted identity and archive/restore evidence remain open, so implementation is partial. Existing pre-1.0 APIs and host ownership do not change. Version 0.14.0 container-profile obligations retain their unrecorded 599/600-pixel and 839/840-pixel boundary-pair cohorts; historical host evidence does not cover the new design edition.
   - id: WLB.12
     version: "0.3.2"
     path: docs/specs/WLB.12-unified-documentation.md
