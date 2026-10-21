@@ -48,10 +48,11 @@ defmodule Wotex.Routines.Test.DecisionBoundReference do
     nested = Enum.map(values, &tree(&1, depth + 1))
     strings = if is_binary(data), do: [data | keys], else: keys
     string_size = Enum.max([0 | Enum.map(strings, &byte_size/1)])
+    container_depth = if is_map(data) or is_list(data), do: depth + 1, else: depth
 
     %{
       "max_nodes" => 1 + Enum.sum(Enum.map(nested, & &1["max_nodes"])),
-      "max_depth" => Enum.max([depth | Enum.map(nested, & &1["max_depth"])]),
+      "max_depth" => Enum.max([container_depth | Enum.map(nested, & &1["max_depth"])]),
       "max_string_bytes" => Enum.max([string_size | Enum.map(nested, & &1["max_string_bytes"])]),
       "max_collection_size" => Enum.max([size | Enum.map(nested, & &1["max_collection_size"])])
     }

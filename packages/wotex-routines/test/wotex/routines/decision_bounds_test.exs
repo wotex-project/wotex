@@ -20,6 +20,11 @@ defmodule Wotex.Routines.DecisionBoundsTest do
   for metric <- @metrics do
     @metric metric
     test "exact and one-under #{metric} selections cover all public verification envelopes" do
+      if @metric == "max_depth" do
+        assert Size.measure(%{})["max_depth"] == 1
+        assert Size.measure(%{"empty" => []})["max_depth"] == 2
+      end
+
       for {grammar, mode} <- @clock_cells do
         original = fixture(@metric, grammar, mode)
         for operation <- @operations, do: boundary(original, operation, @metric)
@@ -122,8 +127,9 @@ defmodule Wotex.Routines.DecisionBoundsTest do
   end
 
   # Rebind only explicit selected Limits, then refresh their enclosing hashes.
-  # Source/IR, point transitions, time cells and proposal identities do not
-  # change. Exact success independently checks that this remains correspondence;
+  # Source/IR, Run/Edge state, time cells and proposal identities do not change;
+  # explicit Limits in retained program/basis copies are rebound. Exact success
+  # independently checks that this remains correspondence;
   # no production constructor must accept an undersized value to prepare it.
   defp select(original, metric, amount) do
     {:ok, limits} = Limits.new(%{original.c.limits.data | metric => amount})

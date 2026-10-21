@@ -6,8 +6,8 @@ defmodule Wotex.JSON do
   materialization: byte size and UTF-8 validity are checked first, nesting depth
   and string size are bounded by a lexical scan before allocation-heavy
   decoding, decoded strings are copied away from the source binary, and the
-  decoded value is then checked for duplicate object members, collection size,
-  node count, and depth.
+  decoded value is then checked for duplicate object members, collection size
+  and node count.
 
   String size is measured on source bytes during the scan, so the decoded
   string is never larger than the limit. `validate/2` applies the same
@@ -15,6 +15,10 @@ defmodule Wotex.JSON do
   elsewhere; there `:max_bytes` bounds the total string and key payload. `encode/2` produces the package
   canonical form with recursively sorted object keys. It is deterministic
   within Wotex and is not an RFC 8785 claim.
+
+  `:max_depth` counts nested object and array containers, including empty ones.
+  A root container counts as one; scalars add no container level. Native-value
+  validation and source decoding enforce the same container-depth boundary.
   """
 
   alias Wotex.Error
@@ -236,8 +240,9 @@ defmodule Wotex.JSON do
     {:error, node_limit(path, max_nodes)}
   end
 
-  defp walk(_, %{depth: depth, limits: %{max_depth: max_depth}, path: path})
-       when depth > max_depth do
+  defp walk(value, %{depth: depth, limits: %{max_depth: max_depth}, path: path})
+       when depth >= max_depth and
+              (is_list(value) or (is_map(value) and not is_struct(value))) do
     {:error, depth_limit(path, max_depth)}
   end
 

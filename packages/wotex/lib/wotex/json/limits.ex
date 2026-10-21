@@ -11,7 +11,7 @@ defmodule Wotex.JSON.Limits do
   | Option | Default | Bounds |
   | --- | --- | --- |
   | `:max_bytes` | 1 MiB | encoded source bytes, or string payload bytes of a native map |
-  | `:max_depth` | 64 | nested containers |
+  | `:max_depth` | 64 | nested object/array containers, including empty ones; a root container counts as one |
   | `:max_nodes` | 100,000 | JSON values including containers |
   | `:max_string_bytes` | 256 KiB | one string value or object key |
   | `:max_collection_size` | 10,000 | members of one object or array |

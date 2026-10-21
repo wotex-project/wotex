@@ -313,14 +313,14 @@ defmodule Wotex.AdmissionSafetyTest do
   defp metrics(value), do: metrics(value, 0)
 
   defp metrics(value, depth) when is_map(value) do
-    Enum.reduce(value, {1, 0, depth}, fn {key, child}, {nodes, bytes, max_depth} ->
+    Enum.reduce(value, {1, 0, depth + 1}, fn {key, child}, {nodes, bytes, max_depth} ->
       {child_nodes, child_bytes, child_depth} = metrics(child, depth + 1)
       {nodes + child_nodes, bytes + byte_size(key) + child_bytes, max(max_depth, child_depth)}
     end)
   end
 
   defp metrics(values, depth) when is_list(values) do
-    Enum.reduce(values, {1, 0, depth}, fn child, {nodes, bytes, max_depth} ->
+    Enum.reduce(values, {1, 0, depth + 1}, fn child, {nodes, bytes, max_depth} ->
       {child_nodes, child_bytes, child_depth} = metrics(child, depth + 1)
       {nodes + child_nodes, bytes + child_bytes, max(max_depth, child_depth)}
     end)
