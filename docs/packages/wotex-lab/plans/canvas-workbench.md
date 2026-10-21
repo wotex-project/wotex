@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.6.0. Status: proposed for design review. Implementation: not
+Plan version: 0.7.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -315,8 +315,8 @@ The 2026-10-21 review uses these pages in the existing editable Design file:
 | Page | Authored journey states |
 | --- | --- |
 | [Canvas journeys — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-2) | Start a sample room, connected Things, Thing context menu, Thing inspector; Ask, admitted metric result, pinned chart, pin/layout actions; experiment configuration and result/Action review |
-| [Find answers — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-212) | Documentation search, results, article reading and return to the same workbench context |
-| [Compact system](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52) | Fifteen reusable control/container families, semantic colour modes, named text styles and linked instance reviews |
+| [Find answers — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-212) | Guides, API, packages, search/scopes, empty/error/missing states, responsive representatives and theme specimens |
+| [Compact system](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52) | Seventeen core control/container families, semantic colour modes, eight text styles and linked instance reviews |
 
 The initial edition contains fourteen expanded 1440 × 900 compositions with
 illustrative data, editable text/vector layers and existing Button/Field
@@ -378,15 +378,17 @@ metrics state inventory:
 | B5–B8 | [Build query](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-5011), query/source detail, unavailable Ask provider and absent measurements |
 | B9–B12 | Save layout, saved entry, [restored cached board](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-6203) and paused pin; B4 retains pin actions |
 
-The proposal has thirty full snapshots: twenty-six canvas and four
-documentation. The two experiment snapshots now use the same compact topology
+The proposal now has twenty-six canvas snapshots and twenty-nine documentation
+fixtures: twenty-six content/layout compositions, two theme specimens and a
+returned-board fixture. The two experiment snapshots use the same compact topology
 and inspectors as the connection and metrics journeys. Source comparison for
 this edition used repository commit `8445530535732324d28f935abac530e97c3aab2f`
 and package path `packages/wotex-lab`; later source changes require comparison.
 
-There are sixty-two current standalone menu, inspector and dialog targets,
-without copied canvas underlays. Fifty-five are structurally reachable from
-A1's explicit sample-room start. Seven alternatives remain separate review
+There are seventy-seven current standalone targets, including fifteen
+full-viewport documentation overlays. Before the documentation addition,
+fifty-five of sixty-two menu, inspector and dialog targets were structurally
+reachable from A1's explicit sample-room start. Seven alternatives remain separate review
 fixtures: invalid Thing Description, unavailable Ask, no measurements, cached
 refresh, unavailable experiment, expired decision and denied Action. Five
 replaced helpers are hidden archives. Reachability does not establish that
@@ -418,6 +420,26 @@ The latest native edition adds:
   that hug their visible contents. Hidden validation text no longer reserves
   blank space. Smart-room configuration has no inner form card. Buttons and
   single-line fields retain the shared 28-pixel height and 4-pixel corners.
+- Documentation content and shell families add nineteen variants. Fifteen
+  content states cover guides, API overview, `read_property/3`,
+  `observation_child_spec/4`, the twenty-package index, package detail, search,
+  scoped results, empty results, search failure and missing documents. The
+  search shell uses the full content column, without a modal or nested card.
+  Elixir examples follow the public runtime source; JetBrains Mono 12/18 joins
+  seven Inter text roles. Menu, copy and external-link icons use the same pinned
+  Lucide revision as the existing artwork.
+- Expanded, 839-pixel and 599-pixel representatives plus 375/600/840-pixel guide
+  fixtures share the same documentation components. Narrow navigation uses a
+  drawer, and on-page contents uses an inline disclosure. Light, Dark and
+  Contrast guide specimens were visually reviewed with native text, vectors
+  and linked instances; no complete-screen raster is present. The original
+  logo is unchanged; derived dark-surface and monochrome treatments are
+  proposals for review.
+- Twenty existing storyboards now embed the current compact task panels,
+  menus and dialogs instead of older copies. Root frame identities remain;
+  replaced bodies and obsolete hotspots are hidden. Embedded task actions
+  enter the canonical A2 overlay flow. The valid import preview now shows
+  parseable Thing Description JSON with the actual simulated Property Form.
 
 Native Play exercised these fixed-state paths:
 
@@ -434,10 +456,18 @@ Native Play exercised these fixed-state paths:
   These are fixed prototype transitions, not observations from a device.
 - New run → anomaly configuration → invalid count 513 → Reset count → result
   exercised validation and recovery while retaining the other five fields.
-- Documentation search/Enter → result → selected guide; global search/Escape
-  returned to the originating guide, and header Return reached the board
-  fixture. Those earlier ten reactions remain. The documentation return is a
-  fixed review composition, not qualified restoration of an arbitrary board.
+- The refreshed C1 storyboard's Run entered the canonical A2 result overlay
+  and updated the process label to Pending review. Use A1 as the ordinary
+  prototype start; direct storyboard entries use fixed presentation defaults.
+- Board menu → Documentation → search → Enter results → Down/Enter opened
+  `read_property/3`. Packages → `wotex_nx` showed its own summary and hid
+  runtime-specific links. Ask → result → Pin → Documentation → Return retained
+  the metric pin on the actual A2 board. Documentation now opens as a
+  full-viewport overlay; navigation swaps within it and Return closes it.
+  The separate page-06 returned-board frame remains a review fixture.
+- The 375-pixel guide's navigation drawer opened and Escape closed it; the
+  on-page contents disclosure expanded in place. Complete narrow detail flows
+  and keyboard/focus equivalence remain separate checks.
 
 The final compact workbench/result, anomaly form, Ask, import and query builder
 renders were visually reviewed. The native
@@ -459,8 +489,10 @@ General text input, right-click/keyboard equivalence, drag/resize, durable
 layout restoration, all seven alternatives, expiry/denial semantics, real
 reconnect, full result visualizations and report downloads remain unqualified.
 No room, metric query, provider request, experiment, Action or report export
-executed during Play. Documentation still uses a fixed search fixture.
-Documentation alternatives, responsive/theme journeys, complete component
+executed during Play. Documentation still uses a fixed search fixture;
+general typing, live indexing, clipboard copy and contents scrolling are not
+exercised browser features. Empty/error/missing states are authored review
+fixtures. Complete responsive/detail and theme journeys, component
 bindings, brand asset handoff, native archives and independent restores remain
 acceptance work. Application UI implementation has not started; source
 contracts remain authoritative until the proposal is reviewed and promoted.
