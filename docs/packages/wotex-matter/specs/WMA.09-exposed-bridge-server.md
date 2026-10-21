@@ -808,6 +808,10 @@ Normal shutdown and endpoint removal MUST cancel owned cluster/scene timers and
 detach handlers before releasing their borrowed state. StartUpOnOff configuration
 MUST retain persist-before-publication behavior and strict restart validation.
 
+The [command rendering record](../provenance/bridge-command-rendering-2026-10.md)
+binds its direct SDK/pipe corpus and qualification limits. It MUST NOT establish
+authenticated network execution, physical effects or complete server qualification.
+
 The installed SDK data-model provider MUST preserve generated metadata and
 Root Node/Aggregator operations while routing live child reads, writes,
 commands and list-write lifecycle notifications to an explicit native

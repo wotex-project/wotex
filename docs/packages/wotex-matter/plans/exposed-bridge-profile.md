@@ -37,6 +37,8 @@ writes are volatile protocol bookkeeping and are never persisted. Approved chang
 advance the registered cluster version and invalidate stale scene validity.
 StartUpOnOff remains durable configuration. Consumer execution owns physical and
 delayed effects. Native timers establish no installed clock-rate or physical result.
+The [command rendering record](../provenance/bridge-command-rendering-2026-10.md)
+binds actual SDK command/response, timer/retirement and fresh-process results.
 
 ## Source and generated data
 

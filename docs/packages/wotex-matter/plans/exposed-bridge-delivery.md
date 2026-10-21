@@ -830,6 +830,9 @@ distinct scene snapshots. They require unchanged canonical OnOff until an explic
 observation and absence of persisted inferred OnOff values. These direct synthetic
 principal cases supply no authenticated network or independent-controller result.
 Production executable assembly and peer qualification remain open.
+The [command rendering record](../provenance/bridge-command-rendering-2026-10.md)
+binds the committed adapters, eleven ordinary/sanitizer command families,
+188 total native case-family executions, exact archive and qualification limits.
 
 ## 4. Isolation and recovery
 
