@@ -3,7 +3,7 @@ defmodule WotexLabWorkbench.InvestigationAcceptanceTest do
 
   use ExUnit.Case, async: false
 
-  import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
+  import Phoenix.LiveViewTest, only: [render_component: 2]
 
   alias Wotex.Lab.Metrics.History
   alias WotexLabWorkbench.Investigation.{Answer, Broker, ContextStore, Skill}
@@ -108,7 +108,7 @@ defmodule WotexLabWorkbench.InvestigationAcceptanceTest do
 
     for {name, script, expected} <- cases do
       answer = investigate(script, current, baseline)
-      html = rendered_to_string(AnswerBlock.answer_block(%{answer: answer}))
+      html = render_component(&AnswerBlock.answer_block/1, answer: answer)
 
       case expected do
         :complete ->
@@ -135,7 +135,7 @@ defmodule WotexLabWorkbench.InvestigationAcceptanceTest do
     injected = investigate(Enum.at(cases, 4) |> elem(1), current, baseline)
     assert hd(injected.observed) =~ "Ignore previous instructions"
 
-    assert rendered_to_string(AnswerBlock.answer_block(%{answer: injected})) =~
+    assert render_component(&AnswerBlock.answer_block/1, answer: injected) =~
              "&lt;img src=x onerror=alert(1)&gt;"
 
     mixed = investigate(Enum.at(cases, 3) |> elem(1), current, baseline)

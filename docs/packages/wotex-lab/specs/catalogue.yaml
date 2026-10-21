@@ -358,7 +358,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.31.0"
+    version: "0.32.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: implemented
     evidence_status: partial
@@ -442,6 +442,7 @@ specifications:
       - "WotexLabWorkbench.Investigation.Ollama"
       - "WotexLabWorkbench.Investigation.Config"
       - "WotexLabWorkbench.Investigation.ContextStore"
+      - "WotexLabWorkbench.Investigation.MetricQuery"
       - "WotexLabWorkbench.Investigation.Skill"
       - "WotexLabWorkbench.Investigation.BeamlensSupervisor"
       - "WotexLabWorkbench.Investigation.OperatorRunner"
@@ -503,12 +504,19 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_acceptance_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_disclosure_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/investigation_metrics_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/hosted_access_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/hosted_listener_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/hosted_investigation_test.exs"
       - "test/wotex/lab/hosted_artifact_test.exs"
       - "priv/conformance/native/tests/hosted_investigation_runner.rs"
     compatibility_classification: >-
+      Version 0.32.0 binds browser metric callbacks to the admitted room and
+      retains their exact executed charts behind bounded measured summaries.
+      Completion transfers at most eight results / 64 KiB to the verified owner;
+      Pin revalidates session and room and uses an owned result index without
+      another query. Missing or expired room context never falls back to host
+      inspection. Trusted-operator and hosted query profiles are unchanged.
       Version 0.31.0 connects the previously catalogue-only cleanup,
       subscription-drop, batch mask/quality, direct-inference queue-depth and
       isolated-investigation measurements to their bounded source owners. The
@@ -551,7 +559,7 @@ specifications:
       the pinned Grafana and GreptimeDB cohort. No mandatory observability,
       database or model dependency enters the base library.
   - id: WLB.11
-    version: "0.17.0"
+    version: "0.18.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial
@@ -615,6 +623,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/metrics_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/sessions_room_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/metrics_ask_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/experiment_forms_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/dashboard_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/history_panels_test.exs"
@@ -625,7 +634,7 @@ specifications:
       - "hosts/workbench/bin/check_islands_browser.mjs"
       - "hosts/workbench/bin/check_assets.mjs"
       - "hosts/storybook/test/wotex_lab_storybook_web/storybook_test.exs"
-    compatibility_classification: Version 0.17.0 additively extends the canvas descriptor with bounded metric pins, saved viewport and layout revision plus closed presentation/read events. Session-owned room-history query results can be pinned, refreshed, paused, renamed and removed; saved geometry and cached pins restore paused without another query. Missing samples remain null and failed refresh retains timestamped cached data. BeamLens answer-to-pin, unsaved documentation restoration and complete browser qualification remain partial. Existing graph records and Action authority are unchanged. Version 0.16.0 adds the closed bounded canvas island, nested graph admission and inert session-scoped inspection/open events, and adopts the grayscale DesignSystem 0.5 edition. Existing island identifiers, envelopes and Action authority are unchanged. Root opens a full-viewport graph; experiments, runs, metrics and selected-run evidence patch contextual panels in the same LiveView. Experiment drafts, explicit readings, node positions and viewport survive those transitions. Pins, reload/documentation restoration, subscriptions and complete browser qualification remain partial. Supplied identity applications and all color, grayscale, flat and construction studies extend the native brand handoff. Version 0.15.2 renders tensor dimensions and integer-array previews as numeric lists, preserving preview limits, numerical values, masks and quality codes. Version 0.15.1 retains bounded per-view experiment drafts across validation and UI patches, uses native numeric constraints, renders field-specific errors and routes form recovery through an inert change event. Malformed browser form snapshots and invalid parameters are refused before room allocation; unknown select values do not fall back. Public library and control-API parameter admission is unchanged. Version 0.15.0 adds separate editable WoTEx brand identity and Lab page/state/profile/flow deliverables under WLB-C15 and WLB-C16. Initial native drafts exist; complete component/state coverage, native Play, accepted identity and archive/restore evidence remain open, so implementation is partial. Existing pre-1.0 APIs and host ownership do not change. Version 0.14.0 container-profile obligations retain their unrecorded 599/600-pixel and 839/840-pixel boundary-pair cohorts; historical host evidence does not cover the new design edition.
+    compatibility_classification: Version 0.18.0 adds room-scoped Ask results with recorded charts and Pin controls, bounded draft retention across tool patches and failures, and an editable no-provider fallback to Build query. Duplicate submission preserves the running request; navigation cancels it. Live provider qualification, unsaved documentation restoration and complete browser qualification remain open. Version 0.17.0 additively extends the canvas descriptor with bounded metric pins, saved viewport and layout revision plus closed presentation/read events. Session-owned room-history query results can be pinned, refreshed, paused, renamed and removed; saved geometry and cached pins restore paused without another query. Missing samples remain null and failed refresh retains timestamped cached data. Unsaved documentation restoration and complete browser qualification remain partial. Existing graph records and Action authority are unchanged. Version 0.16.0 adds the closed bounded canvas island, nested graph admission and inert session-scoped inspection/open events, and adopts the grayscale DesignSystem 0.5 edition. Existing island identifiers, envelopes and Action authority are unchanged. Root opens a full-viewport graph; experiments, runs, metrics and selected-run evidence patch contextual panels in the same LiveView. Experiment drafts, explicit readings, node positions and viewport survive those transitions. Pins, reload/documentation restoration, subscriptions and complete browser qualification remain partial. Supplied identity applications and all color, grayscale, flat and construction studies extend the native brand handoff. Version 0.15.2 renders tensor dimensions and integer-array previews as numeric lists, preserving preview limits, numerical values, masks and quality codes. Version 0.15.1 retains bounded per-view experiment drafts across validation and UI patches, uses native numeric constraints, renders field-specific errors and routes form recovery through an inert change event. Malformed browser form snapshots and invalid parameters are refused before room allocation; unknown select values do not fall back. Public library and control-API parameter admission is unchanged. Version 0.15.0 adds separate editable WoTEx brand identity and Lab page/state/profile/flow deliverables under WLB-C15 and WLB-C16. Initial native drafts exist; complete component/state coverage, native Play, accepted identity and archive/restore evidence remain open, so implementation is partial. Existing pre-1.0 APIs and host ownership do not change. Version 0.14.0 container-profile obligations retain their unrecorded 599/600-pixel and 839/840-pixel boundary-pair cohorts; historical host evidence does not cover the new design edition.
   - id: WLB.12
     version: "0.3.2"
     path: docs/specs/WLB.12-unified-documentation.md

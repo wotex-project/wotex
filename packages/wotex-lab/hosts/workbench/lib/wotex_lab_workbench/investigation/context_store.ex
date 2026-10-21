@@ -13,9 +13,12 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
 
   use GenServer
 
+  alias WotexLabWorkbench.{Board, Runs}
+
   @max_bytes 8 * 1_024
   @tool_output_bytes 16 * 1_024
   @max_evidence 64
+  @max_metric_bytes 64 * 1_024
   @digest ~r/\Asha256:[0-9a-f]{64}\z/
 
   @doc false
@@ -23,8 +26,22 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
   @doc "Admits JSON-safe current/baseline summaries for one investigation."
-  @spec put(term(), term()) :: :ok | {:error, :context_too_large | :invalid_context}
-  def put(current, baseline), do: GenServer.call(__MODULE__, {:put, current, baseline})
+  @spec put(term(), term(), pid() | nil) :: :ok | {:error, :context_too_large | :invalid_context}
+  def put(current, baseline, room \\ nil),
+    do: GenServer.call(__MODULE__, {:put, current, baseline, room})
+
+  @doc "Returns the server-bound metric source; a cleared context admits no query."
+  @spec metric_source() :: :unavailable | :host | {:room, pid(), reference()}
+  def metric_source, do: GenServer.call(__MODULE__, :metric_source)
+
+  @doc "Charges a room summary and retains its bounded executed chart atomically."
+  @spec charge_metric({pid(), reference()}, term(), map()) :: term()
+  def charge_metric(binding, summary, history),
+    do: GenServer.call(__MODULE__, {:charge_metric, binding, summary, history})
+
+  @doc "Returns at most eight recorded metric results for the active owner."
+  @spec metric_results() :: [map()]
+  def metric_results, do: GenServer.call(__MODULE__, :metric_results)
 
   @doc "Returns one server-selected summary; the only selectors are current and baseline."
   @spec get(String.t()) :: map()
@@ -58,10 +75,17 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
   def init(_), do: {:ok, empty()}
 
   @impl GenServer
-  def handle_call({:put, current, baseline}, _, _) do
+  def handle_call({:put, current, baseline, room}, _, _) do
     case admit(current, baseline) do
-      {:ok, admitted} -> {:reply, :ok, admitted}
-      {:error, reason} -> {:reply, {:error, reason}, empty()}
+      {:ok, admitted} when is_nil(room) or is_pid(room) ->
+        source = if room, do: {:room, room, make_ref()}, else: :host
+        {:reply, :ok, Map.put(admitted, :metric_source, source)}
+
+      {:ok, _} ->
+        {:reply, {:error, :invalid_context}, empty()}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, empty()}
     end
   end
 
@@ -101,6 +125,52 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
   end
 
   def handle_call({:charge, value}, _, state) do
+    {reply, state} = charge(value, state)
+    {:reply, reply, state}
+  end
+
+  def handle_call(:metric_source, _, state), do: {:reply, state.metric_source, state}
+
+  def handle_call(:metric_results, _, state),
+    do: {:reply, Enum.reverse(state.metric_results), state}
+
+  def handle_call(
+        {:charge_metric, {room, nonce}, summary, history},
+        _,
+        %{metric_source: {:room, room, nonce}} = state
+      ) do
+    with {:ok, _} <- Board.change(Board.empty(), {:pin, history}),
+         {:ok, bytes} <- Jason.encode(Runs.plain(history)),
+         true <-
+           length(state.metric_results) < 8 and byte_size(bytes) <= state.metric_bytes_remaining do
+      {reply, charged} = charge(summary, state)
+
+      state =
+        if reply == summary,
+          do: %{
+            charged
+            | metric_results: [history | charged.metric_results],
+              metric_bytes_remaining: charged.metric_bytes_remaining - byte_size(bytes)
+          },
+          else: charged
+
+      {:reply, reply, state}
+    else
+      _ ->
+        {reply, state} = charge(%{available: false, error: "metric_result_unavailable"}, state)
+        {:reply, reply, state}
+    end
+  end
+
+  def handle_call({:charge_metric, _, _, _}, _, state),
+    do: {:reply, %{available: false, error: "context_unavailable"}, state}
+
+  def handle_call(:evidence, _, state),
+    do: {:reply, Enum.sort(MapSet.to_list(state.evidence)), state}
+
+  def handle_call(:clear, _, _), do: {:reply, :ok, empty()}
+
+  defp charge(value, state) do
     state = %{state | tool_calls: state.tool_calls + 1}
 
     with {:ok, encoded} <- Jason.encode(value),
@@ -112,17 +182,12 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
           evidence: record(state.evidence, digests(value))
       }
 
-      {:reply, value, state}
+      {value, state}
     else
       _ ->
-        {:reply, %{available: false, error: "callback_output_budget_exhausted"}, state}
+        {%{available: false, error: "callback_output_budget_exhausted"}, state}
     end
   end
-
-  def handle_call(:evidence, _, state),
-    do: {:reply, Enum.sort(MapSet.to_list(state.evidence)), state}
-
-  def handle_call(:clear, _, _), do: {:reply, :ok, empty()}
 
   defp admit(current, baseline) do
     with {:ok, current, current_json} <- canonical(current),
@@ -138,6 +203,9 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
            context_bytes(current, current_json) + context_bytes(baseline, baseline_json),
          tool_calls: 0,
          callback_bytes_remaining: @tool_output_bytes,
+         metric_source: :unavailable,
+         metric_results: [],
+         metric_bytes_remaining: @max_metric_bytes,
          evidence:
            record(
              MapSet.new(),
@@ -186,6 +254,9 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
       context_bytes: 0,
       tool_calls: 0,
       callback_bytes_remaining: @tool_output_bytes,
+      metric_source: :unavailable,
+      metric_results: [],
+      metric_bytes_remaining: @max_metric_bytes,
       evidence: MapSet.new()
     }
   end

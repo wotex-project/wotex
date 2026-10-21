@@ -7,7 +7,7 @@ defmodule WotexLabWorkbench.Investigation.Skill do
   @behaviour Beamlens.Skill
 
   alias Wotex.Lab.Metrics.{Catalogue, Gateway, Query}
-  alias WotexLabWorkbench.Investigation.ContextStore
+  alias WotexLabWorkbench.Investigation.{ContextStore, MetricQuery}
   alias WotexLabWorkbench.Observability.Inspection
 
   @query_limits %{
@@ -82,6 +82,10 @@ defmodule WotexLabWorkbench.Investigation.Skill do
     Queries the server-bound workbench history for the preceding five minutes.
     Metric and aggregation must be exact closed catalogue values. The service
     fixes scope, time range, step and all limits.
+    For a browser room use rate for counters, last for gauges, and
+    histogram_quantile for histograms (fixed p95). The response summarizes
+    actual measured values, missing counts and recorded query digests. Its
+    exact chart can be pinned by the user; the model cannot write chart data.
 
     ### lab_run_summary(which)
     Returns the server-admitted `current` or `baseline` run summary and digest,
@@ -118,6 +122,29 @@ defmodule WotexLabWorkbench.Investigation.Skill do
   end
 
   defp metric_query(metric, aggregation) do
+    case ContextStore.metric_source() do
+      {:room, room, nonce} -> room_query(room, nonce, metric, aggregation)
+      :host -> host_query(metric, aggregation)
+      _ -> failure(:context_unavailable)
+    end
+  catch
+    :exit, _ -> failure(:context_store_unavailable)
+  end
+
+  defp room_query(room, nonce, metric, aggregation) do
+    case MetricQuery.load(room, normalize_string(metric, ""), normalize_string(aggregation, "")) do
+      {:ok, %{available: true} = summary, history} ->
+        ContextStore.charge_metric({room, nonce}, summary, history)
+
+      {:ok, summary, _} ->
+        bounded_output(summary)
+
+      {:error, reason} ->
+        bounded_output(failure(reason))
+    end
+  end
+
+  defp host_query(metric, aggregation) do
     now = DateTime.utc_now()
 
     request = %{

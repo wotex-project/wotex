@@ -1118,3 +1118,9 @@ body {
 .wl-metric-source dt { color: var(--wl-color-muted); font-size: 11px; }
 .wl-metric-source dd { margin: 0; overflow-wrap: anywhere; }
 .wl-workbench-panel .wl-disclosure code { overflow-wrap: anywhere; }
+.wl-prompt-compact textarea { min-height: 72px; height: 72px; }
+.wl-prompt-compact .wl-help { margin: 0; font-size: 11px; }
+.wl-workbench-panel .wl-answer { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.wl-investigation-metric { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--wl-border-subtle); }
+.wl-workbench-panel .wl-answer { overflow-wrap: anywhere; }
+.wl-answer-facts { padding-left: 16px; }

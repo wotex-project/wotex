@@ -96,7 +96,12 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   def handle_call({:ask, prompt, opts}, {owner, _}, state) do
     with :ok <- validate_prompt(prompt),
          :ok <- validate_options(opts),
-         :ok <- ContextStore.put(Keyword.get(opts, :run), Keyword.get(opts, :baseline)),
+         :ok <-
+           ContextStore.put(
+             Keyword.get(opts, :run),
+             Keyword.get(opts, :baseline),
+             Keyword.get(opts, :room)
+           ),
          {:ok, operator} <- operator(),
          {:ok, room_monitor} <- monitor_room(Keyword.get(opts, :room)) do
       request = make_ref()
@@ -237,7 +242,12 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   end
 
   defp with_evidence({:ok, %{notifications: _} = completed}),
-    do: {:ok, Map.put(completed, :evidence, ContextStore.evidence())}
+    do:
+      {:ok,
+       Map.merge(completed, %{
+         evidence: ContextStore.evidence(),
+         metric_results: ContextStore.metric_results()
+       })}
 
   defp with_evidence(result), do: result
 

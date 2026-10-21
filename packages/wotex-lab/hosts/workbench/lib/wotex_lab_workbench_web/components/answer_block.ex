@@ -12,37 +12,82 @@ defmodule WotexLabWorkbenchWeb.Components.AnswerBlock do
   use Phoenix.Component
 
   attr :answer, :map, required: true
+  attr :compact, :boolean, default: false
 
   @doc "Renders escaped facts, hypotheses, missing evidence and the next safe check."
   @spec answer_block(map()) :: Phoenix.LiveView.Rendered.t()
   def answer_block(assigns) do
+    sources = Map.get(assigns.answer, :sources, [])
+
+    assigns =
+      assign(assigns,
+        answer_sources: sources,
+        compact_facts: Enum.map(assigns.answer.observed, &compact_fact(&1, sources))
+      )
+
     ~H"""
     <section class="wl-answer" aria-live="polite" aria-atomic="true">
       <header><strong>Investigation</strong> · {@answer.status}</header>
-      <p class="wl-muted">Provider: {@answer.provider} · model: {@answer.model}</p>
-      <h3>Observed facts</h3>
-      <ul>
-        <li :for={item <- @answer.observed}>{item}</li>
-      </ul>
-      <h3>Hypotheses</h3>
-      <p :if={@answer.hypotheses == []} class="wl-muted">None reported.</p>
-      <ul :if={@answer.hypotheses != []}>
-        <li :for={item <- @answer.hypotheses}>{item}</li>
-      </ul>
-      <h3>Missing evidence</h3>
-      <p :if={@answer.missing == []} class="wl-muted">None reported.</p>
-      <ul :if={@answer.missing != []}>
-        <li :for={item <- @answer.missing}>{item}</li>
-      </ul>
-      <h3>Next safe read-only check</h3>
-      <p>{@answer.next_check}</p>
-      <ul :if={Map.get(@answer, :sources, []) != []}>
-        <li :for={source <- Map.get(@answer, :sources, [])}>
-          <a :if={source.href} href={source.href}>{source.label}</a>
-          <code :if={is_nil(source.href)} class="wl-query-code">{source.label}</code>
-        </li>
-      </ul>
+      <%= if @compact do %>
+        <h3>Observed facts</h3>
+        <ul class="wl-answer-facts">
+          <li :for={item <- @compact_facts}>{item}</li>
+        </ul>
+        <details class="wl-disclosure">
+          <summary>Sources and details</summary>
+          <p class="wl-muted">{@answer.provider} · {@answer.model}</p>
+          <h3 :if={@answer.hypotheses != []}>Hypotheses</h3>
+          <ul :if={@answer.hypotheses != []}>
+            <li :for={item <- @answer.hypotheses}>{item}</li>
+          </ul>
+          <h3 :if={@answer.missing != []}>Missing evidence</h3>
+          <ul :if={@answer.missing != []}>
+            <li :for={item <- @answer.missing}>{item}</li>
+          </ul>
+          <p>{@answer.next_check}</p>
+          <ul>
+            <li :for={source <- @answer_sources}>
+              <a :if={source.href} href={source.href}>{source.label}</a>
+              <code :if={is_nil(source.href)}>{source.label}</code>
+            </li>
+          </ul>
+        </details>
+      <% else %>
+        <p class="wl-muted">Provider: {@answer.provider} · model: {@answer.model}</p>
+        <h3>Observed facts</h3>
+        <ul>
+          <li :for={item <- @answer.observed}>{item}</li>
+        </ul>
+        <h3>Hypotheses</h3>
+        <p :if={@answer.hypotheses == []} class="wl-muted">None reported.</p>
+        <ul :if={@answer.hypotheses != []}>
+          <li :for={item <- @answer.hypotheses}>{item}</li>
+        </ul>
+        <h3>Missing evidence</h3>
+        <p :if={@answer.missing == []} class="wl-muted">None reported.</p>
+        <ul :if={@answer.missing != []}>
+          <li :for={item <- @answer.missing}>{item}</li>
+        </ul>
+        <h3>Next safe read-only check</h3>
+        <p>{@answer.next_check}</p>
+        <ul :if={Map.get(@answer, :sources, []) != []}>
+          <li :for={source <- Map.get(@answer, :sources, [])}>
+            <a :if={source.href} href={source.href}>{source.label}</a>
+            <code :if={is_nil(source.href)} class="wl-query-code">{source.label}</code>
+          </li>
+        </ul>
+      <% end %>
     </section>
     """
+  end
+
+  defp compact_fact(text, sources) do
+    sources
+    |> Enum.filter(&String.starts_with?(&1.label, "Recorded evidence sha256:"))
+    |> Enum.with_index(1)
+    |> Enum.reduce(text, fn {source, index}, value ->
+      digest = String.replace_prefix(source.label, "Recorded evidence ", "")
+      String.replace(value, digest, "[#{index}]")
+    end)
   end
 end

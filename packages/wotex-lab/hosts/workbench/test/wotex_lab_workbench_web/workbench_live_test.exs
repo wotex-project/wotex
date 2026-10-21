@@ -378,8 +378,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
 
     assert :ok = Sessions.revoke(token)
-    html = render_until(run_view, "session expired or was revoked")
-    assert html =~ "cancelled"
+    html = render_until(run_view, "Session denied")
+    assert html =~ "Session denied"
+    refute has_element?(run_view, "[data-wotex-island='canvas']")
     refute Process.alive?(worker)
   end
 

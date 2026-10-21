@@ -81,6 +81,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:island_revision, 0)
       |> assign(:island_commands, [])
       |> assign(:investigation, investigation_state())
+      |> assign(:investigation_room, nil)
+      |> assign(:investigation_results, [])
       |> assign(:disclosure, Disclosure.current())
       |> refresh()
 
@@ -386,9 +388,17 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end)
   end
 
+  def handle_event("ask", _, %{assigns: %{investigation: %{state: :running}}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("ask", %{"prompt" => prompt}, socket) do
-    with {:ok, scope} <- Scope.admit(socket, :ask),
+    socket = if valid_prompt?(prompt), do: put_prompt(socket, prompt), else: socket
+
+    with :ok <- admit_prompt(prompt),
+         {:ok, scope} <- Scope.verify(socket),
          true <- is_pid(scope.room) and Process.alive?(scope.room),
+         :ok <- investigation_available(),
+         {:ok, scope} <- Scope.admit(socket, :ask),
          {:ok, current, baseline} <- investigation_context(socket, scope),
          {:ok, request} <-
            Broker.ask(prompt, run: current, baseline: baseline, room: scope.room) do
@@ -398,13 +408,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
        socket
        |> assign(:scope, scope)
        |> assign(:answer, nil)
+       |> assign(:investigation_room, scope.room)
+       |> assign(:investigation_results, [])
        |> assign(:investigation, investigation)}
     else
       false ->
         {:noreply, error_flash(socket, Error.new(:no_room, :session, "room is unavailable"))}
 
       {:error, %Error{} = error} ->
-        {:noreply, error_flash(socket, error)}
+        reject_event(socket, error)
 
       {:error, reason} ->
         {:noreply, investigation_failure(socket, reason)}
@@ -414,6 +426,58 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   def handle_event("ask", _, socket) do
     {:noreply, investigation_failure(socket, :invalid_prompt)}
   end
+
+  def handle_event("edit_prompt", %{"prompt" => prompt}, socket) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- valid_prompt?(prompt) and socket.assigns.investigation.state != :running do
+      state = investigation_state()
+
+      {:noreply,
+       socket
+       |> assign(:scope, scope)
+       |> assign(:investigation, %{state | prompt: prompt})}
+    else
+      {:error, error} -> reject_event(socket, error)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("edit_prompt", _, socket), do: {:noreply, socket}
+
+  def handle_event("pin_investigation_metric", %{"index" => index}, socket) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- scope.room != nil and scope.room == socket.assigns.investigation_room,
+         true <- is_binary(index) and index in ~w(0 1 2 3 4 5 6 7),
+         history when is_map(history) <-
+           Enum.at(socket.assigns.investigation_results, String.to_integer(index)),
+         {:ok, board} <- Sessions.change_board(scope.token, scope.room, {:pin, history}) do
+      [panel] = history.panels
+      id = "pin-#{panel.id}-#{history.range}"
+
+      {:noreply,
+       socket
+       |> assign(scope: scope, board: board)
+       |> update(:active_pins, &MapSet.put(&1, id))
+       |> revise_islands()
+       |> push_patch(to: "/")}
+    else
+      {:error, error} ->
+        reject_event(socket, error)
+
+      _ ->
+        reject_event(
+          socket,
+          Error.new(:unknown_pin_result, :metrics, "Choose a recorded result from this room")
+        )
+    end
+  end
+
+  def handle_event("pin_investigation_metric", _, socket),
+    do:
+      reject_event(
+        socket,
+        Error.new(:unknown_pin_result, :metrics, "Choose a recorded result from this room")
+      )
 
   def handle_event("cancel_investigation", _, socket) do
     with {:ok, scope} <- Scope.admit(socket, :ask),
@@ -447,9 +511,28 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         {:investigation, request, result},
         %{assigns: %{investigation: %{state: :running, request: request}}} = socket
       ) do
-    answer = Answer.from_result(result, provider_status())
-    investigation = %{state: :idle, request: nil, prompt: ""}
-    {:noreply, assign(socket, answer: answer, investigation: investigation)}
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- scope.room == socket.assigns.investigation_room do
+      results = investigation_results(result)
+
+      answer =
+        result
+        |> Answer.from_result(provider_status())
+        |> link_metric_sources(results)
+
+      investigation = %{state: :idle, request: nil, prompt: socket.assigns.investigation.prompt}
+
+      {:noreply,
+       assign(socket,
+         scope: scope,
+         answer: answer,
+         investigation: investigation,
+         investigation_results: results
+       )}
+    else
+      {:error, error} -> reject_event(socket, error)
+      _ -> {:noreply, cancel_investigation_on_navigation(socket)}
+    end
   end
 
   def handle_info(:refresh_pins, socket) do
@@ -563,6 +646,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                   session_id={@scope.session_id}
                   island_revision={@island_revision}
                 />
+                <.investigation_metrics results={@investigation_results} />
               </.tool_panel>
             <% :things -> %>
               <.things_view
@@ -574,7 +658,40 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               />
             <% :metrics -> %>
               <.tool_panel id="wl-metrics-panel" title="Metrics" menu_open={@sidebar_open}>
+                <div :if={is_nil(@selected_pin)} class="wl-stack">
+                  <.prompt_composer
+                    title="Ask"
+                    compact
+                    allow_draft
+                    change_event="edit_prompt"
+                    value={@investigation.prompt}
+                    running={@investigation.state == :running}
+                    disabled={@investigation.state != :idle or is_nil(@scope.room)}
+                    reason={metrics_prompt_reason(@investigation, @scope.room)}
+                    disclosure={@disclosure}
+                  />
+                  <.answer_block :if={@answer} answer={@answer} compact />
+                  <.investigation_metrics results={@investigation_results} />
+                </div>
+                <details
+                  :if={is_nil(@selected_pin)}
+                  id="metric-query-builder"
+                  class="wl-disclosure"
+                  open={
+                    @investigation.state == :disabled or @metric_result != nil or is_nil(@scope.room)
+                  }
+                >
+                  <summary>Build query</summary>
+                  <.metric_composer
+                    room={@scope.room}
+                    draft={@metric_draft}
+                    result={@metric_result}
+                    pin={nil}
+                    selected_pin={nil}
+                  />
+                </details>
                 <.metric_composer
+                  :if={@selected_pin}
                   room={@scope.room}
                   draft={@metric_draft}
                   result={@metric_result}
@@ -611,6 +728,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                   subject={@run}
                   selected={@evidence_selected}
                 />
+                <.investigation_metrics results={@investigation_results} />
               </.tool_panel>
             <% _ -> %>
           <% end %>
@@ -1603,8 +1721,6 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp revise_islands(socket), do: update(socket, :island_revision, &(&1 + 1))
 
-  defp selected_pin(_, nil), do: nil
-
   defp selected_pin(board, id) do
     case Board.fetch(board, id) do
       {:ok, pin} -> pin
@@ -1768,6 +1884,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> assign(:canvas_readings, %{})
     |> assign(:metric_result, nil)
     |> assign(:metric_room, nil)
+    |> assign(:investigation_results, [])
+    |> assign(:investigation_room, nil)
+    |> assign(:answer, nil)
     |> assign(:active_pins, MapSet.new())
     |> update(:board, &Board.clear_results/1)
   end
@@ -1947,14 +2066,21 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp investigation_context(socket, scope) do
     runs = safe(fn -> Room.runs(scope.room) end, [])
     selected_id = if(socket.assigns.live_action in [:run, :evidence], do: socket.assigns[:run_id])
-    RunContext.select(runs, selected_id)
+
+    case RunContext.select(runs, selected_id) do
+      {:error, :no_run} when socket.assigns.live_action == :metrics -> {:ok, nil, nil}
+      other -> other
+    end
   end
 
   defp cancel_investigation_on_navigation(
          %{assigns: %{investigation: %{state: :running, request: request}}} = socket
        ) do
     _ = Broker.cancel(request)
+
     socket
+    |> assign(:investigation, %{investigation_state() | prompt: socket.assigns.investigation.prompt})
+    |> assign(answer: nil, investigation_results: [], investigation_room: nil)
   end
 
   defp cancel_investigation_on_navigation(socket), do: socket
@@ -1984,8 +2110,65 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp investigation_failure(socket, reason) do
     answer = Answer.from_result({:error, reason}, provider_status())
-    investigation = investigation_state()
-    assign(socket, answer: answer, investigation: investigation)
+    investigation = %{investigation_state() | prompt: socket.assigns.investigation.prompt}
+    assign(socket, answer: answer, investigation: investigation, investigation_results: [])
+  end
+
+  defp valid_prompt?(prompt),
+    do:
+      is_binary(prompt) and String.valid?(prompt) and byte_size(prompt) <= 4_096 and
+        String.length(prompt) <= 512
+
+  defp put_prompt(socket, prompt),
+    do: assign(socket, :investigation, %{socket.assigns.investigation | prompt: prompt})
+
+  defp admit_prompt(prompt),
+    do:
+      if(valid_prompt?(prompt) and String.trim(prompt) != "",
+        do: :ok,
+        else: {:error, :invalid_prompt}
+      )
+
+  defp investigation_available do
+    case Broker.status() do
+      %{running: false} -> :ok
+      %{running: true} -> {:error, :investigation_busy}
+      _ -> {:error, :investigation_disabled}
+    end
+  end
+
+  defp metrics_prompt_reason(%{state: :idle}, nil), do: "Start a room to ask about its metrics."
+  defp metrics_prompt_reason(%{state: :idle}, _), do: "Room history · last 5 min"
+  defp metrics_prompt_reason(%{state: :running}, _), do: "Investigating…"
+
+  defp metrics_prompt_reason(%{state: :busy}, _),
+    do: "Investigation busy. Edit the question to retry."
+
+  defp metrics_prompt_reason(_, _), do: "Provider unavailable. Use Build query."
+
+  defp investigation_results({:ok, %{metric_results: results}}) when is_list(results),
+    do: Enum.take(results, 8)
+
+  defp investigation_results(_), do: []
+
+  defp link_metric_sources(answer, results) do
+    destinations =
+      for {history, index} <- Enum.with_index(results),
+          panel <- history.panels,
+          digest <- panel.digests,
+          into: %{},
+          do: {"Recorded evidence " <> digest, "#investigation-metric-#{index}"}
+
+    %{
+      answer
+      | sources:
+          Enum.map(answer.sources, fn source ->
+            case Map.fetch(destinations, source.label) do
+              {:ok, href} -> %{source | href: href}
+              :error -> source
+            end
+          end)
+    }
   end
 
   defp provider_status do

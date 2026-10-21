@@ -150,4 +150,56 @@ defmodule WotexLabWorkbenchWeb.Components.MetricComposer do
     |> DateTime.from_unix!(:millisecond)
     |> DateTime.to_iso8601()
   end
+
+  attr :results, :list, required: true
+
+  @doc "Renders recorded investigation charts with server-indexed Pin controls."
+  @spec investigation_metrics(map()) :: Phoenix.LiveView.Rendered.t()
+  def investigation_metrics(assigns) do
+    ~H"""
+    <section
+      :for={{history, index} <- Enum.with_index(@results)}
+      id={"investigation-metric-#{index}"}
+      class="wl-stack wl-investigation-metric"
+    >
+      <div :for={panel <- history.panels} class="wl-stack">
+        <.chart :if={panel.chart} id={"investigation-chart-#{index}"} chart={panel.chart} compact />
+        <p class="wl-muted">Room history · {history.range} · {time(history.end_ms)}</p>
+        <button
+          class="wl-button wl-button-primary"
+          type="button"
+          phx-click="pin_investigation_metric"
+          phx-value-index={index}
+          disabled={!Board.measured?(panel)}
+        >Pin to workbench</button>
+        <details class="wl-disclosure">
+          <summary>View query / sources</summary>
+          <dl class="wl-metric-source">
+            <div>
+              <dt>Metric</dt><dd><code>{panel.id}</code></dd>
+            </div>
+            <div>
+              <dt>Aggregation</dt><dd>{panel.aggregation}</dd>
+            </div>
+            <div>
+              <dt>Unit</dt><dd>{panel.display_unit}</dd>
+            </div>
+            <div>
+              <dt>Window</dt><dd>{time(history.start_ms)} – {time(history.end_ms)}</dd>
+            </div>
+            <div>
+              <dt>Step</dt><dd>{history.step_ms / 1000} s</dd>
+            </div>
+            <div>
+              <dt>Series</dt><dd>{panel.series_shown} / {panel.series_total} label sets</dd>
+            </div>
+          </dl>
+          <ul>
+            <li :for={digest <- panel.digests}><code>{digest}</code></li>
+          </ul>
+        </details>
+      </div>
+    </section>
+    """
+  end
 end

@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.31.0. Contract: accepted. Source status: implemented.
+Specification version: 0.32.0. Contract: accepted. Source status: implemented.
 
 The base library owns the metric catalogue, bounded collection and ETS history,
 read-only query contract, immutable dataset export, Prometheus exposition,
@@ -822,14 +822,39 @@ The custom skill exposes bounded `lab_metric_catalogue`, `lab_metric_query`,
 scope expires with the investigation. A model-supplied instance ID, Lua global,
 prompt or prior conversation cannot substitute for that scope. No shell,
 arbitrary Elixir, raw SQL, raw credentials, external URL or Action callback is
-provided by the custom skill. Each metric call creates a server-bound one-call
-gateway with a 2.5-second TTL, five-minute range, 61-point, 2 KiB and 1.5-second
+provided by the custom skill. Each trusted-operator metric call creates a
+server-bound one-call gateway with a 2.5-second TTL, five-minute range, 61-point, 2 KiB and 1.5-second
 query ceilings, then revokes it. Current/baseline summaries are supplied by the
 trusted server, canonicalized as JSON, content-addressed and limited to 8 KiB
 combined; the model can select only `current` or `baseline`. A 16 KiB cumulative
 callback-output budget makes repeated calls fail closed. Dependency base
 callbacks and node metadata remain outside the custom callback claim; their
 trusted-local and disposable-worker disclosures are stated above.
+
+Browser investigations bind the already-admitted room to the context store;
+its absence, death or invalidation never falls back to host-wide inspection.
+Their metric callback accepts only the catalogue metric and its type-appropriate
+aggregation: `rate` for counters, `last` for gauges or `histogram_quantile` for
+histograms (fixed p95). It uses the existing room `HistoryPanels` contract with
+a fixed five-minute range, five-second steps and at most eight label sets.
+Each label set has at most 61 points and the inherited reduced query limits;
+the shared query-start budget is 1.5 seconds. The model receives source, unit,
+window, freshness, loss markers, query digests and per-series measured counts,
+missing counts, extrema and the last measured point, within the existing 8 KiB
+per-result / 16 KiB cumulative callback-output budget. Empty data is unavailable.
+
+The server separately retains the exact executed chart behind each accepted
+summary, at most eight results and 64 KiB of JSON-compatible presentation data
+per investigation. It retains a result only when the summary fits its budget
+and the measured chart passes the board's admission. A private per-investigation
+reference prevents a late callback from entering a later context, including
+another request for the same room. The reference and room PID never reach the
+model. Completion transfers these results to the verified LiveView owner before
+clearing the context; cancellation, failure and revocation transfer none. Pin
+selects only a retained result index and revalidates session/room identity.
+Neither model prose nor browser chart values are pin inputs, and Pin performs
+no replacement query. This is browser-room presentation; hosted tenant workers
+and trusted-operator query behavior retain their separate profiles.
 
 The prompt entry point is on-demand. The implemented trusted-local budget is
 one investigation for the entire host, 30 seconds, 8 model turns/tool actions,

@@ -24,8 +24,13 @@ and missing samples. Their context menu offers Rename / sources, Refresh,
 Pause / Resume and Remove. Save layout retains positions, pin sizes and viewport
 for reloads and documentation returns within the signed session. Restored pins
 stay paused until Resume; a failed refresh retains the previous timestamped data.
-Unsaved arrangement and experiment drafts across documentation navigation,
-BeamLens answer-to-pin composition and live Property observation remain unbuilt.
+Unsaved arrangement and experiment drafts across documentation navigation
+and live Property observation remain unbuilt. With a configured trusted-local
+provider, Metrics also offers Ask: it queries only the admitted room and returns
+recorded charts with Pin controls. Pin retains those executed results, without
+parsing model text or re-querying. Unavailable providers leave the question
+editable and expose Build query. Questions survive panel changes and failures;
+navigation cancels running investigations.
 
 ## Development
 

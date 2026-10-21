@@ -1,14 +1,18 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.17.0. Contract: accepted. Implementation status:
+Specification version: 0.18.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
-Version 0.17 adds session-owned room-history pins and saved canvas geometry.
+Version 0.18 binds Ask to admitted room history and returns recorded charts
+that can be pinned without re-querying or parsing model text. Draft questions
+survive panel changes, completion and failure; no provider is needed for the
+manual builder. Version 0.17 adds session-owned room-history pins and saved
+canvas geometry.
 The query builder uses the closed metric catalogue and existing history ranges.
 Only an executed result with measured values can be pinned. Reload restores
 the cached pin definitions and saved geometry, paused until explicit Resume.
-BeamLens answer-to-pin composition, unsaved documentation round trips and the
-complete application qualification remain incomplete.
+Unsaved documentation round trips and complete application qualification
+remain incomplete.
 
 Version 0.16 adopts the grayscale canvas direction and adds the registered
 `canvas` island. The initial source slice replaces the Thing card list with a
@@ -272,8 +276,8 @@ Evidence belongs to the selected subject rather than a persistent primary
 navigation item. Documentation opens the inert WLB.12 route without allocating
 a room. The source shell has the board menu and one Select/Pan/Add/Metrics/
 Experiments/Fit rail. Experiment selection, results and reports use contextual
-panels; metrics has a room query builder and pins while its BeamLens answer-to-pin
-composition remains incomplete. Below 600 pixels the inspector clears the board control
+panels; Metrics offers room-scoped Ask results, the query builder and metric
+pins. Below 600 pixels the inspector clears the board control
 with a 76-pixel top inset; its other canvas-edge insets remain 20 pixels.
 
 | View | Main content | Primary action |
@@ -429,6 +433,26 @@ queries metric history or runs an experiment. Inspecting the admitted smart-room
 process opens its configuration. The canvas mount identity remains stable across
 Workbench patches. Invalid/stale events cannot change the selected subject;
 revoked sessions remove the canvas. Documentation belongs to a separate LiveView.
+
+### Ask and recorded metric results
+
+Metrics leads with one bounded question and an explicit Ask action. Build query
+is the alternate path, open when a provider is unavailable or no room exists.
+An unavailable provider disables Ask while keeping the draft editable. Editing
+or reopening a tool starts no room, model request or query. The server retains
+valid UTF-8 questions of at most 512 characters / 4 KiB across panel patches,
+completion and failure. Duplicate submission during a running request leaves
+that request intact; navigation cancels it and ignores a late completion.
+
+The already-admitted room supplies metric scope to the broker (WLB.10).
+Metrics can ask without a prior run; run/evidence tools still require their
+selected run. Completed answers show the exact server-retained charts received
+through the room metric callback, with compact plots, source/window/unit/query
+disclosures and Pin to workbench. Recorded evidence links resolve only to the
+corresponding same-page chart. Pin supplies a closed 0–7 result index, verifies
+session and room again and retains that result without re-querying or parsing
+model text. A revoked session immediately shows the denied shell and drops its
+private presentation. The no-provider manual builder remains fully usable.
 
 ### Metric pins and layout
 

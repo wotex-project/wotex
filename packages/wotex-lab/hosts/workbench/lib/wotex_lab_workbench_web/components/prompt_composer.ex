@@ -19,32 +19,47 @@ defmodule WotexLabWorkbenchWeb.Components.PromptComposer do
   attr :running, :boolean, default: false
   attr :reason, :string, default: "No investigation provider is configured."
   attr :disclosure, :map, default: nil
+  attr :title, :string, default: "Ask about this run"
+  attr :change_event, :string, default: nil
+  attr :allow_draft, :boolean, default: false
+  attr :compact, :boolean, default: false
 
   @doc "Renders the optional ask form and states why it is unavailable."
   @spec prompt_composer(map()) :: Phoenix.LiveView.Rendered.t()
   def prompt_composer(assigns) do
     ~H"""
-    <section class="wl-panel" aria-labelledby="ask-title">
+    <section class={["wl-panel", @compact && "wl-prompt-compact"]} aria-labelledby="ask-title">
       <header class="wl-panel-header">
-        <h2 id="ask-title">Ask about this run</h2>
+        <h2 id="ask-title">{@title}</h2>
       </header>
-      <form id="investigation" phx-submit="ask" class="wl-stack">
+      <form id="investigation" phx-submit="ask" phx-change={@change_event} class="wl-stack">
         <label for="investigation-prompt">Question</label>
-        <textarea id="investigation-prompt" name="prompt" maxlength="512" rows="3" disabled={@disabled}>{@value}</textarea>
+        <textarea
+          id="investigation-prompt"
+          name="prompt"
+          maxlength="512"
+          rows="3"
+          disabled={@running or (@disabled and not @allow_draft)}
+        >{@value}</textarea>
         <p class="wl-help">{@reason}</p>
-        <div :if={@disclosure && @disclosure.available} id="investigation-disclosure" class="wl-stack">
-          <p>
+        <details
+          :if={@disclosure && @disclosure.available}
+          id="investigation-disclosure"
+          class="wl-stack"
+          open={!@compact}
+        >
+          <summary>
             <strong>{if @disclosure.leaves_host,
               do: "Data leaves this host",
               else: "Data stays on this host"}</strong>
-          </p>
+          </summary>
           <p>Destination: {Enum.join(@disclosure.destinations, "; ")}.</p>
           <p>Each request can include:</p>
           <ul>
             <li :for={item <- @disclosure.sent}>{item}</li>
           </ul>
           <p class="wl-help">{@disclosure.withheld}</p>
-        </div>
+        </details>
         <div class="wl-actions">
           <button class="wl-button wl-button-secondary" type="submit" disabled={@disabled}>Ask</button>
           <button
