@@ -6,6 +6,13 @@ The [design contract](../plans/brand-and-lab-design.md) owns acceptance.
 This handoff records exported artwork; it does not select the final identity,
 change the Lab UI or establish completion of WLB-C15.
 
+Subsequent selection: on 2026-10-21 the maintainer supplied and selected a
+different folded-W mark. Its exact [source](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/brand/wotex-logo-light.svg)
+has SHA-256 `db6988632bafbc369ccf12cbb939a0b097886b424d8135d7e6a5cd4fbc19bc9c`;
+the [native master](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=13-15)
+is on the selected-mark page. The exports and checks below record the prior
+drafts only. Their identities and hashes are preserved as history.
+
 ## Native sources and treatments
 
 The editable source is
@@ -109,7 +116,7 @@ software, imported photograph or third-party brand artwork was bundled.
 | [wotex-w-tile-paper-512-draft.png](https://github.com/wotex-project/wotex/blob/42f3fc5a48a5ad56760abb3c689c5c488375dd35/docs/assets/brand/draft/wotex-w-tile-paper-512-draft.png) | `5:46` | 512 × 512 | `d2b3ed6d43027b7d33973cf21262084258aa2311a9735d40fff12c45a3d3a851` |
 | [wotex-w-tile-paper-draft.svg](https://github.com/wotex-project/wotex/blob/42f3fc5a48a5ad56760abb3c689c5c488375dd35/docs/assets/brand/draft/wotex-w-tile-paper-draft.svg) | `5:46` | 128 × 128 | `66190bde0647440cf374f710ba95f5826b62ebf995b2d97d6815be77cba03f61` |
 
-Final mark selection, approved spacing and minimum sizes, recognition,
+Approved spacing and minimum sizes, recognition,
 co-branding, print preparation, destination adoption, and native archive/restore
 acceptance remain open. The existing brand and Lab completion obligations
 remain in force.

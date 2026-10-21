@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.1.0. Status: proposed for design review. Implementation: not
+Plan version: 0.2.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -27,20 +27,46 @@ thin feature pages.
 | Surface | Role in a journey |
 | --- | --- |
 | Spatial canvas | Persistent topology, selected subjects, pinned charts and results; pan, zoom, fit and arrange locally |
-| Floating board control | Small draft mark, workbench name, room/source status, saved-layout state and board menu |
-| Floating icon palette | Select/pan, add or connect a Thing, find a Thing, metrics/Ask, experiments, activity and documentation; tooltips and accessible names expose meaning |
+| Floating board control | Supplied unboxed logo and compact board dropdown; room/source status, counts and saved-layout state live in its menu |
+| Floating icon palette | One narrow tool rail; select/pan and grouped tools expose search, connect, metrics/Ask, experiments, activity, documentation and viewport controls through submenus |
 | Context menu | Operations for the selected Thing, connection, metric pin or run; opened by right-click, ellipsis or keyboard |
 | Right inspector | Properties, metrics, configuration, run detail or query result for the selected subject; close restores its canvas context |
 | Bounded dialog | Import/connection setup, naming, export options or review of an exact proposed Action |
 | Documentation | Searchable article layout with its own navigation and a return to the workbench |
 
-The dot grid provides orientation. It has no decorative animation. The canvas
-is the visual foundation; floating controls occupy a small part of the viewport.
-Start with 12–14-pixel interface text, 16–20-pixel inspector headings, compact
-rows, and 36-pixel desktop icon targets. Touch targets and zoomed layouts need
-their own composition. These dimensions are design proposals, not current CSS
-or accessibility qualification. Use the existing Inter draft family and semantic
-Light/Dark/Contrast roles while evaluating the compact hierarchy.
+The canvas has at most two persistent compact menu surfaces: board control and
+tool rail. Search/status and zoom do not occupy separate floating bars. Use
+16-pixel tool icons, 14-pixel menu/node icons, 28-pixel desktop targets and menu
+rows, 12-pixel labels and 14-pixel inspector titles. The rail is 36 pixels wide;
+context menus start at 200 pixels. Touch and zoomed layouts need their own
+composition. These are design proposals, not current CSS or accessibility
+qualification.
+
+The workbench background follows the supplied graph-paper reference: a fine
+6.5-pixel mesh, secondary lines every 26 pixels and crosshairs every 104 pixels.
+The [repeating SVG tile](https://github.com/wotex-project/wotex/blob/4ca9541c864f31b0739d08b0bcb3ad893897f61d/docs/assets/lab/workbench-grid.svg)
+is 650 bytes, with no raster, font, script or external resource. It replaces the
+earlier dot grid. Keep its origin consistent with canvas pan/zoom during
+implementation; opaque data surfaces sit above it.
+
+Icon artwork comes from Lucide revision
+`20aef31db93fe4d9f398dbb15b120d99c48eef95`. The source SVGs and upstream
+[license](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/icons/lucide/LICENSE) are retained with their
+[notice](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/icons/lucide/NOTICE). This supplies design artwork;
+it does not add a frontend dependency or change the implemented Icon component.
+
+Use Inter and the supplied logo's cool grays: `#181D27`, `#303644`, `#818A9D`,
+`#9097A5` and `#D6DBE3`, with white and pale surface tints. Selected controls,
+edges, charts and states use this family; text and line styles retain meaning
+without a colored status dot. Preserve the supplied logo's vector geometry and
+gradients, with no tile, border or added caption. Earlier blue/beige treatments
+are historical studies. Dark/Contrast variants remain to be designed.
+
+Keep room identity and optional counts in the board menu, and selection on the
+node. Remove floating page summaries, tutorial legends, pin hints and generic
+authority footers. Units, age, missingness, source scope and exact Action review
+remain visible where they support the current task. Detailed research and
+implementation notes stay outside product screens.
 
 A Thing node shows its name/type, connection status and a small number of
 selected observations with units and age. Selection reveals its full details.
@@ -165,11 +191,16 @@ continue locally while server-backed operations wait for resynchronization.
 
 ## Journey 4: find documentation and return to work
 
-Open documentation into a conventional document layout: compact branded header,
+Open documentation into a conventional document layout: 48-pixel branded header,
 persistent global search, hierarchical left navigation, readable article column,
 right table of contents when space allows, code/table overflow and previous/next
 links. Search opens by keyboard or header control, covers the ecosystem corpus,
 shows useful snippets and filters, and has clear empty/error states.
+The header search is a compact 320 × 28 control. Navigation uses 28-pixel rows
+within a roughly 216-pixel sidebar. Search results integrate into the article
+column with hairline separators, concise snippets and a pale selected row.
+Use flat surfaces without drop shadows, an outer modal card or nested result
+cards. Product footers do not name DocShell, Pagefind or draft status.
 
 Reading uses no workbench palette or room allocation. Return to workbench keeps
 the owned board and selected subject; the implementation must define the safe
@@ -216,8 +247,10 @@ capabilities and any new observation subscription require their owning contracts
 Keep the existing [Lab file](https://www.figma.com/design/SudxgeebiNEu33PPIHO229)
 and separate [brand file](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0).
 Preserve prior draft identities and mark their visual direction superseded for
-the current review. The draft W tile can occupy the small brand slot; it is not
-an approved logo. Review its small-size recognition and full lockup separately.
+the current review. The maintainer-supplied
+[logo source](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/brand/wotex-logo-light.svg) now owns the mark;
+the earlier W tile and typographic treatments remain historical studies.
+Review small-size recognition and any future lockup separately.
 
 1. Create a new canvas-journey proposal page with ten expanded states: four
    connect/inspect, four ask/compose and two configure/result. Use one stable
@@ -258,14 +291,26 @@ These are fourteen expanded 1440 × 900 compositions with illustrative data,
 editable text/vector layers and existing Button/Field instances. Compact
 floating controls, typed topology edges, a contextual inspector and a metric
 pin establish the proposed workspace. Shared-control studies are present but
-have not been qualified as complete native component families. The draft W
-tile remains a placeholder pending identity review.
+have not been qualified as complete native component families. The initial
+edition used a draft W tile; the subsequent visual revision uses the supplied
+mark and compact grayscale direction above.
 
 Manual review brought the context menu above the graph, removed unrelated
 Actuator details and explanatory boilerplate from the Thermostat inspector,
 shortened the Ask task, and corrected the metric's scope to the workbench
 instance. The result and pin preserve the missing sample as a gap and show
 units, range and observation time. This does not qualify real telemetry.
+
+The compact grayscale revision retains all fourteen root frame identities.
+Eleven canvas compositions now use the graph-paper pattern, represented in
+Figma by three combined editable vector paths per background. The supplied
+unboxed mark, two compact menu surfaces, 14/16-pixel Lucide icons, left-aligned
+menu rows and shortened task labels replace the earlier treatment. D1–D3 use
+the flat 48-pixel documentation header and integrated content; implementation
+footers and shadowed search cards are removed. Existing restricted Button/Field
+instance internals were retained. Representative A2/A3/B3 and D2 renders were
+reviewed; the connect/inspect and Ask/result/pin paths were exercised again in
+Play. Submenu, responsive and recovery qualification remains separate work.
 
 Native Play exercised these fixed-state paths:
 

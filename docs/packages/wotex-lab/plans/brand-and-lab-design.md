@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.1.0. Contract: accepted. Design status: under revision.
+Plan version: 1.2.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -19,7 +19,9 @@ owns the proposed journeys: connect and inspect a system, ask and pin useful
 measurements, run and explain an experiment, and read documentation with global
 search. A full-page spatial canvas, floating icon tools and contextual
 inspectors replace the previous page-led composition in this design review.
-Documentation retains a separate reading layout.
+Documentation retains a separate, flat reading layout with a 48-pixel header.
+The latest visual direction uses the supplied logo's cool grays, 14/16-pixel
+icons, compact rows and at most two persistent workbench menu surfaces.
 
 The proposal is a review deliverable. Current source contracts, package APIs
 and completion obligations remain unchanged until its behavior is reviewed and
@@ -27,13 +29,13 @@ promoted into their owning versions. The earlier editions below record bounded
 historical authoring and prototype checks; they do not validate the rejected
 product structure or qualify the new journeys. Preserve those frames as prior
 drafts alongside the new proposal on separate journey pages. The identity
-file and its artwork remain draft proposals too.
+file retains those historical studies alongside the selected supplied mark.
 
 ## Design files and source authority
 
 | File | Purpose | Current draft |
 | --- | --- | --- |
-| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Four pages; eight review/guideline boards, three component families and the original editable signature study |
+| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected supplied-logo master plus four historical study pages. Earlier boards and treatment families remain draft history. |
 | [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Seven pages; sixty prior screen/state references and fourteen new proposal states. The prior component families, three native Specs and prototype starts remain historical; new control studies and partial Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
@@ -78,10 +80,15 @@ WLB-C15 requires the following delivered and reviewed contents:
   destination and approved treatment; a saved native archive and an independent
   restore check covering artwork, type, variables and component links.
 
-The current identity file is a draft. The implemented warm-light and rich-navy
-palette is retained. The editable typographic signature, communication copy and
-application layouts are proposals. Final mark selection, spacing/size rules,
-channel exports, final voice and recovery acceptance remain required work.
+The maintainer selected the supplied folded-W mark on 2026-10-21. Its exact
+[SVG source](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/brand/wotex-logo-light.svg) is retained with its
+[asset notice](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/brand/NOTICE); the native
+[selected master](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=13-15)
+preserves editable vectors and gradients. Use it without a surrounding tile or
+box. The new Lab proposal takes its grayscale family from this artwork.
+Earlier signatures, W tiles and blue/beige applications are historical studies.
+Spacing/minimum sizes, lockups, channel exports, voice and recovery acceptance
+remain required work.
 
 ## Lab pages, states and flows
 
@@ -317,9 +324,10 @@ integrity/dimensions/transparency, solid colour contrast and repository-preview
 size. The two 1280 × 640 PNG previews are below 1 MB. No destination setting
 was changed; the draft exports live under `docs/assets/brand/draft/`.
 
-These additions make the identity proposal concrete for review. Final mark
-selection, approved usage rules, recognition, co-branding, print preparation,
-destination adoption and native archive/restore acceptance remain required.
+These additions made the earlier identity proposal concrete for review. The
+supplied mark selected above supersedes its mark studies. Approved usage rules,
+recognition, co-branding, print preparation, destination adoption and native
+archive/restore acceptance remain required.
 
 The full component catalogue, all page/state/profile combinations, remaining
 native Play journeys, final brand acceptance, channel artwork, native archives
