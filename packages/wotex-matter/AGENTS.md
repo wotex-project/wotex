@@ -245,6 +245,16 @@ Repository-wide rules are in the root `AGENTS.md`.
   WMA.09 target; `catalogue.yaml` owns status). Plans and evidence:
   `docs/packages/wotex-matter/plans/` and `provenance/`.
 - Fixtures: `priv/fixtures/` (contract, native-port and integration corpora).
+- `test/interop/exposed_bridge_test.exs` and
+  `test/support/software/exposed_bridge.exs`: four explicit live production-host
+  families joining public BEAM policy/ExposedThing dispatch to actual PASE/CASE,
+  approved observations, subscription reports, current consumer/SDK denial,
+  expiry, killed mutations, persistent restart and a separately built SDK
+  `chip-tool` exercising all four writes. The guarded SDK bootstrap fixture
+  exports explicit private development material and removes a controller signing
+  key only for its refusal probe. The cohort checks/samples the Linux OS
+  `CLOCK_MONOTONIC` value directly; it supplies no default library clock or policy.
+  Root software receipts include the production/material binaries and SDK peer.
 - Test support: `test/support/` (scripted clients, Runtime credentials and
   result transport); `test/support/software/` (build, run, scenarios, peers,
   manifests and the required-case inventory `acceptance.json`).

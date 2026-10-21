@@ -543,6 +543,17 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     File.write!(contract, "fixture contract")
     File.write!(contract <> "-sanitized", "fixture sanitized contract")
 
+    bridge_artifacts =
+      for graph <- ["build-bridge", "build-bridge-sanitized"],
+          binary <- ["wotex-matter-bridge-host", "wotex-matter-sdk-bridge-bootstrap-test"],
+          do: graph <> "/obj/examples/wotex-matter-host/bin/" <> binary
+
+    for name <- bridge_artifacts do
+      path = Path.join(workspace, name)
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "fixture SDK executable")
+    end
+
     receipt = %{
       "schema" => "wotex.matter.software-workspace@1",
       "status" => "ready",
@@ -557,6 +568,17 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
     assert SoftwareManifest.verify_local(source, workspace, receipt, :native) == receipt
 
+    for name <- bridge_artifacts do
+      path = Path.join(workspace, name)
+      File.write!(path, "altered SDK executable")
+
+      assert_raise Mix.Error, "artifact_hash_mismatch", fn ->
+        SoftwareManifest.verify_local(source, workspace, receipt, :native)
+      end
+
+      File.write!(path, "fixture SDK executable")
+    end
+
     assert_raise Mix.Error, "software_fixture_required", fn ->
       SoftwareManifest.verify_local(source, workspace, receipt, :software)
     end
@@ -566,7 +588,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
           suffix <- ["", "-sanitized"],
           do: "bin/wotex-matter-" <> name <> suffix
 
-    peers = ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app)
+    peers = ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app bin/chip-tool)
 
     roots =
       ~w(paa/Chip-Test-PAA-FFF1-Cert.der paa/Chip-Test-PAA-NoVID-Cert.der paa/Chip-Test-PAA-NoVID-ToResignPAIs-Cert.der)

@@ -3,9 +3,9 @@ spec:
   id: WMA.08
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.10
+  version: 1.0.11
   owner: wotex-matter
-  updated: 2026-10-13
+  updated: 2026-10-21
 ---
 
 # WMA.08 Native backend, build and IPC contract
@@ -356,7 +356,12 @@ vendor and controller node. `create_new` requires `authority: :generate_root`;
 `open_existing` requires `authority: :stored`. These are the complete admitted
 authority modes. Root and operational keys are generated with the SDK crypto
 provider only after explicit creation authorization and stored durably before
-commissioning. Existing authority/key/certificate mismatch is fatal. No external
+commissioning. Controller creation MUST allocate its operational key through the
+SDK FabricTable/operational-keystore CSR path, so commissioner setup commits
+that key with its NOC. It MUST NOT rely on a provided in-memory keypair for
+restart. Reopen MUST require a usable stored operational key before advertising
+readiness; it MUST NOT generate a replacement for an absent key. Existing
+authority/key/certificate mismatch is fatal. No external
 factory, test issuer credentials, unknown authority mode or default fabric is
 accepted. External PKI import is outside this profile.
 

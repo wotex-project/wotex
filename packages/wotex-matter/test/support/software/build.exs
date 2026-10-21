@@ -36,6 +36,8 @@ defmodule Wotex.Matter.SoftwareBuild do
   chip_enable_pw_rpc = false
   chip_build_libshell = false
   chip_examples_enable_imgui_ui = false
+  config_use_interactive_mode = false
+  matter_commandline_enable_perfetto_tracing = false
   treat_warnings_as_errors = false
   target_defines = [ "CHIP_CONFIG_SECURE_SESSION_POOL_SIZE=2048" ]
   """
@@ -53,6 +55,7 @@ defmodule Wotex.Matter.SoftwareBuild do
         "//examples/lighting-app/linux:chip-lighting-app",
         "//examples/all-clusters-app/linux:chip-all-clusters-app",
         "//examples/bridge-app/linux:chip-bridge-app",
+        "//examples/chip-tool:chip-tool",
       ]
     }
   }
@@ -410,7 +413,7 @@ defmodule Wotex.Matter.SoftwareBuild do
   end
 
   defp build_peers(context) do
-    Mix.shell().info("Building the pinned lighting, all-clusters and bridge peers")
+    Mix.shell().info("Building the pinned lighting, all-clusters, bridge and controller peers")
     extensions = SoftwarePeerExtension.apply!(context.root, Path.join(context.workspace, "sdk"))
     File.mkdir!(Path.join(context.workspace, "build-peers"))
     File.write!(Path.join(context.workspace, "build-peers/args.gn"), @peer_arguments)
@@ -432,7 +435,7 @@ defmodule Wotex.Matter.SoftwareBuild do
       "wotex-software-peers"
     ])
 
-    for name <- ~w(chip-lighting-app chip-all-clusters-app chip-bridge-app) do
+    for name <- ~w(chip-lighting-app chip-all-clusters-app chip-bridge-app chip-tool) do
       File.cp!(
         Path.join(context.workspace, "build-peers/" <> name),
         Path.join(context.workspace, "bin/" <> name)

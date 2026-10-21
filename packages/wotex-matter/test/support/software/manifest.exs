@@ -173,6 +173,10 @@ defmodule Wotex.Matter.SoftwareManifest do
       "bin/wotex-matter-host-sanitized",
       "bin/wotex-matter-contract-driver",
       "bin/wotex-matter-contract-driver-sanitized",
+      "build-bridge/obj/examples/wotex-matter-host/bin/wotex-matter-bridge-host",
+      "build-bridge-sanitized/obj/examples/wotex-matter-host/bin/wotex-matter-bridge-host",
+      "build-bridge/obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test",
+      "build-bridge-sanitized/obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test",
       "native-manifest.json"
     ]
 
@@ -189,6 +193,7 @@ defmodule Wotex.Matter.SoftwareManifest do
           "bin/chip-lighting-app",
           "bin/chip-all-clusters-app",
           "bin/chip-bridge-app",
+          "bin/chip-tool",
           "paa/Chip-Test-PAA-FFF1-Cert.der",
           "paa/Chip-Test-PAA-NoVID-Cert.der",
           "paa/Chip-Test-PAA-NoVID-ToResignPAIs-Cert.der"

@@ -216,6 +216,30 @@
       "module": "Elixir.Wotex.Matter.NativeContractTest",
       "name": "test WMA-B-F13 suspends the actual receiver across native callbacks",
       "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/exposed_bridge_test.exs",
+      "module": "Elixir.Wotex.Matter.ExposedBridgeInteropTest",
+      "name": "test authenticated SDK requests traverse policy, public dispatch and approved reporting",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/exposed_bridge_test.exs",
+      "module": "Elixir.Wotex.Matter.ExposedBridgeInteropTest",
+      "name": "test reopened native and controller stores retain the authenticated fabric and endpoint identity",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/exposed_bridge_test.exs",
+      "module": "Elixir.Wotex.Matter.ExposedBridgeInteropTest",
+      "name": "test independently built SDK controller writes all four finite child attributes",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/exposed_bridge_test.exs",
+      "module": "Elixir.Wotex.Matter.ExposedBridgeInteropTest",
+      "name": "test native process loss retires an authenticated mutation without claiming its physical effect",
+      "evidence": "shared-sdk"
     }
   ],
   "environment": {
@@ -245,6 +269,7 @@
     "WOTEX_MATTER_NATIVE_THERMOSTAT_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_TIMEOUT_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_WINDOW_FIXTURE": "fixture",
-    "WOTEX_MATTER_PROCESS_FLOW_FIXTURE": "fixture"
+    "WOTEX_MATTER_PROCESS_FLOW_FIXTURE": "fixture",
+    "WOTEX_MATTER_EXPOSED_BRIDGE_FIXTURE": "fixture"
   }
 }

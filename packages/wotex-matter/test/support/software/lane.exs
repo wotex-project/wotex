@@ -1,9 +1,10 @@
 Code.require_file("scenarios.exs", __DIR__)
+Code.require_file("exposed_bridge.exs", __DIR__)
 
 defmodule Wotex.Matter.SoftwareLane do
   @moduledoc false
 
-  alias Wotex.Matter.{SoftwareCommand, SoftwareScenarios}
+  alias Wotex.Matter.{SoftwareCommand, SoftwareExposedBridge, SoftwareScenarios}
 
   @spec main() :: :ok
   def main do
@@ -31,6 +32,13 @@ defmodule Wotex.Matter.SoftwareLane do
 
     artifacts = %{
       host: "/artifacts/bin/wotex-matter-host" <> suffix,
+      peer: "/artifacts/bin/chip-tool",
+      bridge_host:
+        "/artifacts/build-bridge" <>
+          suffix <> "/obj/examples/wotex-matter-host/bin/wotex-matter-bridge-host",
+      bridge_material:
+        "/artifacts/build-bridge" <>
+          suffix <> "/obj/examples/wotex-matter-host/bin/wotex-matter-sdk-bridge-bootstrap-test",
       flow_host: "/artifacts/bin/wotex-matter-flow-host" <> suffix,
       resource_host: "/artifacts/bin/wotex-matter-resource-host" <> suffix,
       contract_driver: "/artifacts/bin/wotex-matter-contract-driver" <> suffix,
@@ -42,10 +50,13 @@ defmodule Wotex.Matter.SoftwareLane do
       untrusted_paa: "/run/untrusted-paa"
     }
 
+    exposed = SoftwareExposedBridge.fixture!(artifacts, "/run/exposed-bridge")
+
     SoftwareScenarios.with_fixtures(artifacts, "/run/fixtures", fn fixtures ->
       environment =
         Map.merge(fixtures, %{
           "WOTEX_REQUIRE_SOFTWARE" => "1",
+          "WOTEX_MATTER_EXPOSED_BRIDGE_FIXTURE" => exposed,
           "WOTEX_SOFTWARE_RESULT_PATH" => "/run/fixtures/acceptance.json",
           "ERL_FLAGS" => System.fetch_env!("ERL_FLAGS"),
           "MIX_HOME" => System.fetch_env!("MIX_HOME"),

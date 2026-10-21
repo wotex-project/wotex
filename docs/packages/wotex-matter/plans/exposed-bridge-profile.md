@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.32.0. Finite WMA.09 implementation target. The
+Version: 1.33.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -16,7 +16,8 @@ native command renderer. An explicitly attached finite SDK renderer is implement
 it is never selected implicitly. An explicit production entry composes that
 renderer, guarded receiver and configured driver with private configuration,
 checked monotonic time, fixed diagnostics and signal cancellation. Live BEAM/SDK
-admission and authenticated request qualification remain open.
+admission and selected authenticated requests are exercised by the live software
+cohort; wider qualification remains open.
 
 The installed invoke guard validates command fields after bounded copying and
 before request/handler admission. All 22 selected commands require their declared
@@ -204,8 +205,8 @@ its mutex before closing custody or calling the required notification sink.
 The sink runs once after custody closes and never performs SDK cleanup.
 Callers arrange SIGPIPE behavior, join every user and then close the descriptor
 or retire output. Destruction with queued bytes or an active writer exits with
-70. A separate request codec supplies the wire representation; process bootstrap
-and authenticated execution integration remain open.
+70. A separate request codec supplies the wire representation; the production
+entry and live cohort separately qualify selected bootstrap and authenticated execution.
 
 The paired codec uses exact version-1 `matter-bridge/request` objects with
 fifteen fields and LF, within the 262144-byte output limit. Native encoding and
@@ -347,8 +348,9 @@ one correlated pending sample and one exact receipt per canceled observation
 without executing them. Failed close forces child cleanup. Temporary supervision
 never restarts a generation. Real-pipe scripted-host tests establish BEAM process
 ownership and observation delivery. The explicit SDK host is separately
-assembled; live BEAM/SDK admission, authenticated dispatch, actual clock
-qualification and independent reporting peers remain open.
+assembled. The live cohort qualifies selected authenticated BEAM/SDK dispatch,
+its OS-clock source and SDK reporting. Other clock/deployment cohorts and
+independent ecosystems remain open.
 
 The internal write admission copies IdentifyTime (`0x0003/0x0000`), OnTime
 (`0x0006/0x4001`) and OffWaitTime (`0x0006/0x4002`) as unsigned 16-bit scalars.
@@ -419,8 +421,8 @@ window expiry and fixed diagnostics. Advertising cleanup establishes no
 commissioning or authenticated peer result. Fatal cases
 establish no successful cleanup or
 leak finalization. The separate production executable owns Port startup;
-authenticated execution, actual clock-rate qualification and independent-peer
-support remain open.
+the live cohort separately qualifies selected authenticated execution, its
+OS-clock source and SDK peers. Wider qualification remains open.
 The model fixture includes no attestation private-key bytes
 or production credential claim. The selected peer is the pinned SDK's
 `examples/chip-tool:chip-tool`, independently built from the server.
@@ -505,8 +507,8 @@ StartUpOnOff configuration persistence. Native rendering releases custody lockin
 while retaining SDK serialization; completion work joins before final cleanup.
 Synthetic callback principals supply no authenticated transport result.
 The production entry separately assembles the completed finite renderer and
-guarded receiver. Authenticated transport and independent peer qualification
-remain open.
+guarded receiver. The live cohort separately qualifies selected authenticated
+transport and SDK peer workflows; independent ecosystems remain open.
 The [guarded receiver record](../provenance/bridge-sdk-receiver-2026-10.md)
 binds those cases, affected regressions, source/artifact identities and limits.
 BEAM projection and consumer tests exercise conservative modeled expiry with

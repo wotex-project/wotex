@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.36.0-target.
+Version: 0.37.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -695,6 +695,30 @@ The [production executable record](../provenance/bridge-host-2026-10.md) binds
 the committed entry, 52 ordinary/sanitizer case-family executions, exact
 source/binary/archive identities and qualification limits.
 
+
+### Live software cohort
+
+Live acceptance MUST use the selected production bridge process and public
+BEAM connection, policy and ExposedThing dispatch, with SDK-authenticated CASE
+principals rather than injected callback metadata. It MUST exercise approved
+observation receipts before completed reads/commands, actual subscription
+reports, consumer denial, SDK ACL refusal before consumer delivery, original
+expiry, native process loss and stored fabric/endpoint reuse. A separately built
+SDK controller MUST exercise the four finite writable child attributes and
+preserved native state after consumer denial. This is shared-SDK software
+qualification, not independent-stack, ecosystem, physical or certification proof.
+
+The explicit Linux software cohort MAY sample the documented
+`erlang:system_info(os_monotonic_time_source)` OS-time value and convert its
+`native` unit to whole milliseconds. Each sample MUST require `clock_gettime`,
+`CLOCK_MONOTONIC`, an unextended nonnegative time value and a used resolution
+of 1000000000. The caller MUST establish that this sample and the selected
+native executable's checked `CLOCK_MONOTONIC` call use the same kernel/time
+namespace; then the elapsed-rate ratio is exactly one, with the existing
+millisecond quantization allowances. This does not substitute ERTS's corrected
+monotonic clock, infer a bound from shared units/one exchange, or qualify another
+runtime, clock source, namespace or deployment. The library MUST select none of
+these conditions implicitly.
 
 ### Native callback custody
 

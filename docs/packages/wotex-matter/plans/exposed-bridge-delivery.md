@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.35.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.36.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -11,7 +11,8 @@ store persists SDK values and endpoint custody together with a separate
 immutable bridge/model identity. An internal SDK server binding owns startup
 and shutdown resources. Bounded BEAM consumer execution and explicit BEAM
 process coordination and the production SDK process host are implemented;
-authenticated request integration and independent controller peers remain open.
+the live software cohort below joins authenticated requests to consumer execution.
+Wider independent-controller and installed-host qualification remain open.
 The internal native process coordinator joins bounded open/ready controls,
 separate result/clock input, reserved output, original startup time and one
 cleanup deadline through an explicit SDK composition port. Its real-pipe
@@ -29,7 +30,7 @@ ready/probe/close, pending and resolved custody, missing private input, interfac
 and attachment refusal, cancellation, pipe loss, stale generation and fatal
 cleanup refusal. The lifecycle receiver fixture refuses child operations and supplies no
 authenticated consumer execution. The separate production entry below assembles
-the guarded receiver and renderer; authenticated request integration remains open.
+the guarded receiver and renderer; the live cohort qualifies selected authenticated requests.
 The internal SDK driver separately owns approved-observation
 input and application, with sixty-four receipt reservations retained through
 complete output transmission. A joined worker acquires SDK custody outside the
@@ -46,7 +47,7 @@ mandatory light/sensor clusters, generated model artifacts, build options,
 handoff limits, test-attestation inputs and independent controller peer source.
 Reproducible model generation and native store custody are implemented.
 The native build exercises the server and dynamic endpoint bindings separately
-from the controller. Native-to-consumer handoff and peer receipts remain open.
+from the controller. The live cohort separately exercises native-to-consumer handoff and peer receipts.
 
 ## Scope
 
@@ -132,8 +133,8 @@ public key with an unrelated private key, commissioning bounds, immutable
 getters/setters, derived verifier/signature checks, owned input copies and
 retired-provider refusal with unchanged outputs. SDK server lifecycle cases
 install this owner explicitly instead of installing the example provider.
-The production process bootstrap, private configuration loader and
-authenticated consumer request integration remain open.
+The production bootstrap and private loader are separately assembled; the live
+cohort qualifies selected authenticated consumer requests.
 
 The internal
 [`BridgePrivateFile`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_private_file.hpp)
@@ -157,7 +158,7 @@ buffer clearing. Production code exposes no fault hook.
 [`bridge_commissioning_input_test.cpp`](../../../../packages/wotex-matter/test/native/bridge_commissioning_input_test.cpp)
 covers the exact byte layout, truncation/excess, boundary values, independent
 copies, structural-only PIN handling and cleared retirement. The owning CMake
-native lane includes these tests; complete SDK process bootstrap remains open.
+native lane includes these tests; the production entry separately owns SDK bootstrap.
 
 The internal
 [`BridgeConfiguration`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_configuration.hpp)
@@ -448,8 +449,8 @@ policy-before-handler ordering, deadline consumption, backpressure, one-time
 retirement, invalid clocks/protocols and cleanup including trapped exits.
 They do not qualify real host clocks or authenticate Matter peers. The native
 Port owner must preserve admission order, qualify/authenticate probe exchange,
-monitor execution custody and close native custody on loss. That integration,
-live authenticated SDK checks remain open.
+monitor execution custody and close native custody on loss. The live cohort
+qualifies selected authenticated SDK execution and its explicit OS-clock source.
 
 [`ClockProbe`](../../../../packages/wotex-matter/lib/wotex/matter/bridge/clock_probe.ex)
 supplies exact bounded probe/sample controls for an expected generation and
@@ -518,9 +519,9 @@ non-reused and exhausted IDs, clock failure, original deadline preservation,
 replay, explicit close, owner/native loss and result ordering through public
 Runtime dispatch. These tests establish the BEAM coordinator against scripted
 hosts. The separate production SDK executable owns bootstrap, closed custody
-and approved-state application. Live BEAM/SDK admission, authenticated SDK
-dispatch, host-clock qualification and independent peer receipts remain open;
-scripted ready/principal fixtures supply none of that evidence.
+and approved-state application. The live cohort qualifies selected authenticated
+BEAM/SDK dispatch, its OS-clock source and SDK peer receipts; scripted
+ready/principal fixtures supply none of that evidence.
 
 The internal
 [`SdkBridgeInvokeContexts`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_requests.hpp)
@@ -545,8 +546,8 @@ payload copies, reader-position preservation, stale tickets, clock regression,
 delayed expiry, explicit reply rendering, encoding failure and valid/invalidated
 handle cleanup. Omitting shutdown terminates with 70. Normal and ASan/UBSan
 builds run these cases through the native builder. This is internal context
-ownership: authenticated SDK admission, native Port delivery and integration
-with BEAM consumer execution remain open.
+ownership; the live cohort separately qualifies selected authenticated SDK
+admission, native Port delivery and BEAM execution.
 
 The required
 [`SdkBridgeInvokeGuard`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_guard.hpp)
@@ -567,8 +568,8 @@ revocation, metadata failures, timed-command requirements, credential update
 and rollback, same-realm index reuse, endpoint retirement and missing detach.
 The native builder runs its normal and ASan/UBSan cases. Ownership-only tests
 use an explicit test-build guard fixture; no permissive production default is
-provided. Authenticated transport admission, consumer policy/dispatch and
-independent-peer workflows remain open.
+provided. The live cohort separately qualifies selected authenticated admission,
+consumer policy/dispatch and SDK peer workflows.
 
 The internal
 [`SdkBridgeAttributeGuard`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_guard.hpp)
@@ -605,8 +606,8 @@ owned metadata/scalars after callback storage changes, exact nullable/range/type
 errors, refusal before decoding, sixteen-slot admission, staged-result credit,
 deadline and clock refusal, expiry, closure and non-reused identities. Normal
 and ASan/UBSan server builds run this case. It establishes internal write
-admission; authenticated SDK request admission and native-to-consumer execution
-integration remain open.
+admission; the live cohort separately qualifies selected authenticated SDK
+requests and native-to-consumer execution.
 
 The internal
 [`SdkBridgeCommandReply`](../../../../packages/wotex-matter/native/include/wotex_matter/bridge_replies.hpp)
@@ -652,7 +653,7 @@ Tests verify installed-provider identity, root delegation, copied metadata,
 notification forwarding, metadata-allocation errors, closed-provider refusal
 and all three fatal lifecycle paths in normal and ASan/UBSan builds. Synthetic
 principal inputs do not establish SDK fabric/ACL admission or consumer policy;
-the consumer-facing native Port and integration with BEAM execution remain open.
+the live cohort separately exercises the production Port and BEAM execution.
 
 Return only the result the selected Matter command semantics can support. A long or uncertain physical effect must not be reported as completed merely because it was queued. Attribute reports originate in consumer-approved observations. Bound report credit and per-fabric subscriptions; reconnect must refresh state rather than hide continuity loss.
 
@@ -703,8 +704,8 @@ refusal, duplicate/generation/framing rejection and queued close/cancellation.
 The portable input/output fixtures cover exact 1024/512-byte limits, allocation
 refusal, separate ID namespaces, receipt reservations, stale tickets, isolated
 control/request capacity and active-receipt framing on a full real pipe.
-Authenticated consumer requests, independent reporting peers and production
-executable assembly remain open.
+The production entry and live cohort separately qualify selected authenticated
+consumer requests and report flow. Wider independent reporting remains open.
 The [SDK observation record](../provenance/bridge-sdk-observations-2026-10.md)
 binds the committed source, 54 process-case executions, affected SDK regressions,
 portable normal/sanitizer builds, package/archive checks and qualification limits.
@@ -829,8 +830,9 @@ state, timer expiry, active endpoint removal and two simultaneous lights with
 distinct scene snapshots. They require unchanged canonical OnOff until an explicit
 observation and absence of persisted inferred OnOff values. These direct synthetic
 principal cases supply no authenticated network or independent-controller result.
-Authenticated process/probe admission, live BEAM/SDK integration, actual clock-rate
-qualification and independent controller/reporting peers remain open.
+The live cohort separately qualifies selected process/probe and authenticated
+BEAM/SDK integration, its OS-clock source and SDK controller/report flow. Other
+clock/deployment cohorts and independent ecosystems remain open.
 The [command rendering record](../provenance/bridge-command-rendering-2026-10.md)
 binds the committed adapters, eleven ordinary/sanitizer command families,
 188 total native case-family executions, exact archive and qualification limits.
@@ -859,6 +861,32 @@ authenticated request, independent report flow or actual clock-rate qualificatio
 The [production executable record](../provenance/bridge-host-2026-10.md) binds
 these 52 ordinary/sanitizer case-family executions and exact source/artifact
 identities.
+
+### Authenticated consumer cohort
+
+The explicit software lane uses the production host and public BEAM connection
+with a consumer-owned GenServer, required CASE policy and public ExposedThing
+handlers. Four case families cover actual commissioning, light/sensor reads,
+On/Off commands, observation receipts before completion, subscription changes,
+consumer denial, SDK ACL refusal before consumer delivery, expiry, killed native
+mutation and stored fabric/endpoint reuse. A separately compiled pinned
+`chip-tool`, with interactive and Perfetto diagnostics disabled, exercises all
+four admitted child writes and preserved StartUpOnOff after denial. Both roles
+use the same SDK revision; this establishes no independent-stack claim.
+
+The controller's own operational key is generated through the SDK keystore CSR
+path and committed with its NOC. A fresh controller process establishes CASE
+against a fresh bridge process using stored authority and stable endpoints;
+removing the controller key causes startup refusal without regeneration.
+
+The cohort's explicit clock samples the documented ERTS OS monotonic-time value,
+checks its function, clock ID, range and resolution, and converts native units
+to milliseconds. The selected child uses the same Linux `CLOCK_MONOTONIC` in the
+same time namespace, so the relative rate is one. ERTS's frequency-corrected
+clock is not substituted. This qualification applies only to the selected
+runtime/kernel/source cohort; other deployments require their own evidence.
+The software inventory has forty cases including these four. Focused execution
+of the new cohort does not renew the complete historical software-lane receipt.
 
 ## 4. Isolation and recovery
 

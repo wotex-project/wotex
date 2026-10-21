@@ -2361,23 +2361,33 @@ class SdkControllerBackend::Impl final
     setup.removeFromFabricTableOnShutdown = false;
     setup.deleteFromFabricTableOnShutdown = false;
 
+    auto *system_state = chip::Controller::DeviceControllerFactory::GetInstance().GetSystemState();
+    VerifyOrReturnError(system_state != nullptr, CHIP_ERROR_INCORRECT_STATE);
+    auto *fabrics = system_state->Fabrics();
+    VerifyOrReturnError(fabrics != nullptr, CHIP_ERROR_INCORRECT_STATE);
     if (options_.storage_mode == "create_new") {
-      ReturnErrorOnFailure(controller_key_.Initialize(
-          chip::Crypto::ECPKeyTarget::ECDSA));
-      ReturnErrorOnFailure(authority_.GenerateControllerChain(
-          controller_key_.Pubkey(), controller_noc_, controller_rcac_));
-      setup.operationalKeypair = &controller_key_;
+      // Provided keypairs remain in FabricInfo memory only. Generate through
+      // the operational keystore so SetupCommissioner commits the signing key
+      // with the NOC and a fresh process can establish CASE without resumption.
+      std::uint8_t csr_bytes[chip::Crypto::kMIN_CSR_Buffer_Size];
+      chip::MutableByteSpan csr(csr_bytes);
+      chip::Crypto::P256PublicKey public_key;
+      CHIP_ERROR error = fabrics->AllocatePendingOperationalKey(chip::NullOptional, csr);
+      if (error == CHIP_NO_ERROR)
+        error = chip::Crypto::VerifyCertificateSigningRequest(csr.data(), csr.size(), public_key);
+      if (error == CHIP_NO_ERROR)
+        error = authority_.GenerateControllerChain(public_key, controller_noc_, controller_rcac_);
+      if (error != CHIP_NO_ERROR) {
+        fabrics->RevertPendingFabricData();
+        return error;
+      }
       setup.controllerNOC =
           chip::ByteSpan(controller_noc_.data(), controller_noc_.size());
       setup.controllerRCAC =
           chip::ByteSpan(controller_rcac_.data(), controller_rcac_.size());
     } else {
-      auto *system_state =
-          chip::Controller::DeviceControllerFactory::GetInstance()
-              .GetSystemState();
-      VerifyOrReturnError(system_state != nullptr, CHIP_ERROR_INCORRECT_STATE);
       chip::FabricIndex match = chip::kUndefinedFabricIndex;
-      for (const auto &fabric : *system_state->Fabrics()) {
+      for (const auto &fabric : *fabrics) {
         chip::Crypto::P256PublicKey root_public_key;
         if (fabric.GetFabricId() == identity_.fabric_id &&
             fabric.GetNodeId() == identity_.controller_node_id &&
@@ -2392,12 +2402,16 @@ class SdkControllerBackend::Impl final
       }
       VerifyOrReturnError(match != chip::kUndefinedFabricIndex,
                           CHIP_ERROR_KEY_NOT_FOUND);
+      VerifyOrReturnError(fabrics->HasOperationalKeyForFabric(match), CHIP_ERROR_KEY_NOT_FOUND);
       setup.fabricIndex.SetValue(match);
     }
 
-    ReturnErrorOnFailure(
-        chip::Controller::DeviceControllerFactory::GetInstance()
-            .SetupCommissioner(setup, commissioner_));
+    const auto setup_error = chip::Controller::DeviceControllerFactory::GetInstance()
+                                 .SetupCommissioner(setup, commissioner_);
+    if (setup_error != CHIP_NO_ERROR) {
+      fabrics->RevertPendingFabricData();
+      return setup_error;
+    }
     commissioner_initialized_ = true;
 
     VerifyOrReturnError(commissioner_.GetFabricId() == identity_.fabric_id &&
@@ -2492,7 +2506,6 @@ class SdkControllerBackend::Impl final
   std::unique_ptr<chip::Credentials::DefaultDACVerifier>
       attestation_verifier_;
   chip::Controller::DeviceCommissioner commissioner_;
-  chip::Crypto::P256Keypair controller_key_;
   std::vector<std::uint8_t> controller_noc_;
   std::vector<std::uint8_t> controller_rcac_;
   std::mutex work_mutex_;

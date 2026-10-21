@@ -7,6 +7,7 @@
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <credentials/examples/ExampleDACs.h>
 #include <lib/support/CHIPMem.h>
+#include <lib/support/DefaultStorageKeyAllocator.h>
 #include <platform/logging/LogV.h>
 #include <nlohmann/json.hpp>
 #include <cassert>
@@ -128,9 +129,29 @@ int main(int argc, char **argv) {
   LogPayload("caller-path-and-secret-canary: %s%n", "caller-payload-canary", &formatted);
   assert(formatted == 77);
   LogPayload(nullptr);
+  if (mode == "remove-controller-key") {
+    assert(argc == 3);
+    std::unique_ptr<DurableStorage> store;
+    assert(DurableStorage::Open(argv[2], StorageMode::OpenExisting, AuthorityMode::Stored,
+                                ControllerIdentity{55, 770001, 0xFFF1}, store) == CHIP_NO_ERROR);
+    assert(store->SyncDeleteKeyValue(DefaultStorageKeyAllocator::FabricOpKey(1).KeyName()) ==
+           CHIP_NO_ERROR);
+    store.reset();
+    Platform::MemoryShutdown();
+    std::cout << "controller operational key removed for refusal probe\n";
+    return 0;
+  }
   char path[] = "/tmp/wotex-bootstrap-private-XXXXXX";
-  assert(mkdtemp(path));
-  const auto root = std::filesystem::canonical(path).string();
+  std::string root;
+  if (mode == "material") {
+    assert(argc == 3 && argv[2][0] == '/' && std::strlen(argv[2]) <= 4096);
+    assert(mkdir(argv[2], 0700) == 0);
+    root = std::filesystem::canonical(argv[2]).string();
+    assert(root == argv[2]);
+  } else {
+    assert(mkdtemp(path));
+    root = std::filesystem::canonical(path).string();
+  }
   std::array<std::uint8_t, 600> dac{}, pai{};
   std::array<std::uint8_t, 4096> cd{};
   MutableByteSpan dac_span(dac), pai_span(pai), cd_span(cd);
@@ -190,6 +211,11 @@ int main(int argc, char **argv) {
                                {"maximum_temperature", 4000}}})}};
   const auto encoded = configuration.dump();
   Write(root + "/configuration", encoded.data(), encoded.size());
+  if (mode == "material") {
+    Platform::MemoryShutdown();
+    std::cout << "private bridge fixture material written\n";
+    return 0;
+  }
   if (mode.substr(0, 5) == "host-") {
     assert(argc == 3);
     Platform::MemoryShutdown();

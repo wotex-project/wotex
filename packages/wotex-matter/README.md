@@ -433,8 +433,8 @@ public Runtime dispatch, every stage shares the original deadline, and sixteen
 slots include results until receiver collection. Receiver/owner/supervisor loss
 and expiry reap owned tasks without retry. The future native Port owner must
 preserve request order, monitor this execution owner and close native custody
-on its loss. Port bootstrap, authenticated admission and approved-observation
-delivery remain open.
+on its loss. The production entry and live cohort separately qualify the selected
+bootstrap, authenticated admission and approved-observation paths.
 `Wotex.Matter.Bridge.ClockProbe` supplies bounded, generation/ID-correlated
 clock controls. Native input samples the same serialized clock and writes
 through reserved control capacity without consuming request credit or acquiring
@@ -450,8 +450,9 @@ consumer execution, collects each result once and closes on pipe pressure,
 protocol failure or owner/native/consumer loss. Owner-only close joins worker
 cleanup, the correlated receipt, zero native exit and Port release. Real-pipe
 tests exercise this coordinator with scripted hosts. The separate production
-SDK executable owns native startup and approved-observation application; live
-BEAM/SDK admission, authenticated requests and host-clock qualification remain open.
+SDK executable owns native startup and approved-observation application. The
+live cohort qualifies selected authenticated BEAM/SDK requests and its OS-clock
+source; other workflows and clock/deployment cohorts remain open.
 Internal write admission owns the four finite writable attribute values and
 their callback metadata, preserving SDK type/range errors and shared request
 credit through expiry or closure. SDK decoder tests cover this admission in
@@ -460,8 +461,9 @@ Retained invokes require a guard for the current fabric realm, live command
 metadata and SDK ACL before admission and completed rendering. Direct SDK tests
 cover revocation, credential update/rollback, fabric-index reuse and endpoint
 retirement; supplied callback principals remain synthetic test fixtures.
-Commissioning, authenticated consumer command/write dispatch, subscription
-report flow and independent server peer workflows remain open.
+The live cohort below exercises commissioning, selected authenticated dispatch,
+subscription reports and a separately built SDK controller. Wider workflows and
+independent ecosystems remain open.
 
 The explicit native build also produces `wotex-matter-bridge-host` in each
 bridge build's `obj/examples/wotex-matter-host/bin/` directory. Its manifest's
@@ -477,7 +479,17 @@ SIGINT/SIGTERM cancel the generation. Diagnostics contain only fixed failure
 lines. The executable joins the configured driver, guarded consumer receiver
 and finite native renderer; it grants no consumer policy. Its black-box tests
 execute the actual binary with explicit development material and real pipes.
-Authenticated controller traffic and real reporting/clock qualification remain open.
+The software lane joins the public BEAM connection to actual commissioning,
+CASE requests, consumer policy/ExposedThing dispatch, approved observations and
+subscription reports. An independently built pinned SDK `chip-tool` exercises
+the four writable child attributes. Four live families include denial, SDK ACL
+refusal before consumer delivery, original expiry, process loss and stored
+fabric/endpoint reuse. Controller signing keys persist in the SDK operational
+keystore; an absent stored key refuses startup. The explicit Linux cohort checks
+and samples the OS `CLOCK_MONOTONIC` value directly in both domains with a rate
+ratio of one. This qualifies only that runtime/kernel/source cohort. Wider
+command/fabric/report workflows, independent ecosystems and installed platforms
+remain open.
 
 The per-packet native checks create their own temporary work directory, run in
 Docker and resolve sources from `packages/wotex-matter`:
