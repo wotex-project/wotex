@@ -39,6 +39,22 @@ defmodule Wotex.Routines.DecisionCorpus do
       {"cut < minimum or cut > maximum -> axis",
        "cut < minimum or cut > maximum -> nearest(axis, max(minimum, min(maximum, cut)))"}
   }
+  @bound_mutations %{
+    "argument_envelope" =>
+      {"decision",
+       "Map.merge(body, %{\"profile\" => profile.data, \"json_limits\" => limits.data})",
+       "Map.take(Map.merge(body, %{\"profile\" => profile.data, \"json_limits\" => limits.data}), [\"profile\", \"json_limits\"])"},
+    "certificate_output" =>
+      {"decision", ":ok <- Validation.bounded(data, limits)",
+       ":ok <- Validation.bounded(Map.take(data, [\"format\"]), limits)"},
+    "encoded_bytes" =>
+      {"validation", "true <- byte_size(bytes) <= limits[\"max_bytes\"]",
+       "true <- 0 * byte_size(bytes) <= limits[\"max_bytes\"]"},
+    "depth_selection" => {"validation", :max_depth, 64},
+    "node_selection" => {"validation", :max_nodes, 2_000_000},
+    "string_selection" => {"validation", :max_string_bytes, 65_536},
+    "collection_selection" => {"validation", :max_collection_size, 8192}
+  }
 
   # Opt-in fresh VM only. Every rewritten module is compiled in memory; no
   # source, BEAM, archive, dependency, temporary build or Docker object is written.
@@ -66,10 +82,10 @@ defmodule Wotex.Routines.DecisionCorpus do
 
     success =
       try do
-        if options[:time_only] || options[:time_mutant] do
-          time_matrix(options[:time_mutant])
-        else
-          complete_corpus()
+        cond do
+          options[:time_only] || options[:time_mutant] -> time_matrix(options[:time_mutant])
+          options[:bounds_only] || options[:bounds_mutant] -> bounds_matrix(options[:bounds_mutant])
+          true -> complete_corpus()
         end
       after
         :ets.delete(@table)
@@ -80,12 +96,26 @@ defmodule Wotex.Routines.DecisionCorpus do
 
   defp options! do
     {options, rest, invalid} =
-      OptionParser.parse(System.argv(), strict: [time_only: :boolean, time_mutant: :string])
+      OptionParser.parse(System.argv(),
+        strict: [
+          time_only: :boolean,
+          time_mutant: :string,
+          bounds_only: :boolean,
+          bounds_mutant: :string
+        ]
+      )
 
     if rest != [] or invalid != [], do: raise("unsupported decision corpus arguments")
 
     if options[:time_mutant] && not Map.has_key?(@time_mutations, options[:time_mutant]),
       do: raise("unknown decision time mutant")
+
+    if options[:bounds_mutant] && not Map.has_key?(@bound_mutations, options[:bounds_mutant]),
+      do: raise("unknown decision bounds mutant")
+
+    if (options[:time_only] || options[:time_mutant]) &&
+         (options[:bounds_only] || options[:bounds_mutant]),
+       do: raise("select one decision corpus mode")
 
     options
   end
@@ -95,6 +125,7 @@ defmodule Wotex.Routines.DecisionCorpus do
     first = suite("public Decision cases", 15)
     schemas!()
     time_matrix = time_matrix(nil)
+    bounds_matrix = bounds_matrix(nil)
 
     # Prepare through the forward API, then check every successful v2 relation
     # with all guards active, including nested Collection regeneration.
@@ -109,7 +140,8 @@ defmodule Wotex.Routines.DecisionCorpus do
       label: "Complete decision relations with forward calls disabled during proof"
     )
 
-    first and time_matrix and second and Map.new(counts) == %{collection: 70, arbitration: 7}
+    first and time_matrix and bounds_matrix and second and
+      Map.new(counts) == %{collection: 70, arbitration: 7}
   end
 
   defp time_matrix(mutant) do
@@ -124,6 +156,31 @@ defmodule Wotex.Routines.DecisionCorpus do
     Code.require_file("test/wotex/routines/decision_time_matrix_test.exs")
     label = "independent public Decision time matrix" <> if(mutant, do: " / " <> mutant, else: "")
     suite(label, 9, mutant != nil)
+  end
+
+  defp bounds_matrix(mutant) do
+    if mutant do
+      {file, from, to} = bound_replacement(mutant)
+      path = "lib/wotex/routines/" <> file <> ".ex"
+      source = File.read!(path)
+      if length(String.split(source, from)) != 2, do: raise("bounds mutation target drift")
+      Code.compile_string(String.replace(source, from, to, global: false), path)
+    end
+
+    Code.require_file("test/wotex/routines/decision_bounds_test.exs")
+    label = "independent public verification bounds" <> if(mutant, do: " / " <> mutant, else: "")
+    suite(label, 8, mutant != nil)
+  end
+
+  defp bound_replacement(mutant) do
+    case Map.fetch!(@bound_mutations, mutant) do
+      {file, option, ceiling} when is_atom(option) ->
+        {file, "{key, limits[Atom.to_string(key)]}",
+         "{key, if(key == #{inspect(option)}, do: #{ceiling}, else: limits[Atom.to_string(key)])}"}
+
+      replacement ->
+        replacement
+    end
   end
 
   defp suite(label, expected, mutant? \\ false) do
