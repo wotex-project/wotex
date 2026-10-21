@@ -1,7 +1,7 @@
 # WTX.03: Errors, extension preservation, and compatibility
 
 **Status**: Implemented development contract  
-**Specification version**: 1.3.0
+**Specification version**: 1.3.1
 
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.02
@@ -51,7 +51,7 @@ their documented typed inputs and keyword options.
 `Wotex.JSON.decode/2` is the bounded admission pipeline for source bytes:
 byte size and UTF-8 validity first, then a lexical depth and string-size scan
 before allocation, then decoding with copied strings, then duplicate-member,
-collection-size, node-count, and depth checks on the decoded value. Typed
+collection-size and node-count checks on the decoded value. Typed
 codes are `byte_limit_exceeded`, `depth_limit_exceeded`,
 `string_limit_exceeded`, `collection_limit_exceeded`, `node_limit_exceeded`,
 `duplicate_member`, `invalid_string`, `invalid_json`, and `invalid_limit`.
@@ -59,6 +59,12 @@ codes are `byte_limit_exceeded`, `depth_limit_exceeded`,
 Duplicate object members can be detected only in source JSON. Native maps have
 already collapsed or refused duplicates before Wotex receives them and cannot
 provide duplicate-member evidence.
+
+`:max_depth` counts object and array containers, including empty ones. A root
+container has depth one; scalar values add no level. Source decoding and native
+validation MUST enforce the same boundary. Native admission fails with
+`depth_limit_exceeded` in the `value` phase at the overflowing container's own
+escaped path; lexical source refusal uses the `parse` phase at `/`.
 
 `undefined_security_reference` is a semantic error. Its path identifies the
 offending Thing-level, Form-level, or `ComboSecurityScheme` member, and its
@@ -94,10 +100,15 @@ do not perform admission again.
 
 - Development versions make no stable API promise. Replacing silent limit
   defaults with `invalid_limit`, returning `invalid_options` for malformed
-  option containers, enforcing context order, and rejecting duplicate members
+  option containers, enforcing context order, rejecting duplicate members and
+  counting a final empty container in the selected depth bound
   are admission corrections made before any release. The malformed-option
   correction changes only a previously excluded input surface from a runtime
   exception to a tagged error.
+  The depth correction refuses previously admitted native values whose final
+  empty container exceeds the selected limit and points at the overflowing
+  container rather than its first child. Function signatures, result/error
+  shapes and canonical bytes for values admitted by both versions are unchanged.
 - A stable patch release may fix validation defects without removing accepted
   TD 1.1 values.
 - A stable minor release may add functions, value modules, or optional fields.
@@ -119,6 +130,11 @@ through function arguments.
 
 Tests prove typed codes, stable paths, extension preservation, source-byte
 invalidation after mutation, malformed-option and non-JSON struct refusal,
-bounded diagnostic representations, configured resource-limit refusal, and
+bounded diagnostic representations, configured resource-limit refusal,
+native/source depth parity through empty and scalar leaves, and
 absence of an application callback. Archive inspection and the public-source
 scan are release gates.
+
+The [native/source depth evidence](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex/provenance/json-depth-parity-2026-10.md)
+records the source-bound correction, counterfactual failures and focused
+consumer checks. It does not replace package or release gates.

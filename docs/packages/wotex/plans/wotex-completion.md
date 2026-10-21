@@ -1,6 +1,6 @@
 # Wotex completion contract
 
-Plan version: 1.3.0. Package baseline: 0.1.0. Normative owners:
+Plan version: 1.3.1. Package baseline: 0.1.0. Normative owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not a progress log.
@@ -22,6 +22,12 @@ correction to a previously excluded input surface. It does not make typed
 accessors total, admit manually forged structs, establish latency or peak-memory
 guarantees, or discharge independent-consumer work. WTX-C01 evidence remains
 limited to consumer-visible behavior and does not assert an exhaustive API.
+
+Revision 1.3.1 clarifies the existing container-depth bound. Empty objects and
+arrays each count, the root container counts as one, and scalars add no level.
+Native admission now refuses a final empty container beyond the selected bound
+and reports the overflowing container's path. This pre-release correction
+changes no function signature, result shape or admitted canonical bytes.
 
 ## Package boundary
 
@@ -57,7 +63,9 @@ to advertise a second independently stable public API.
 map admission enforces native JSON values, depth and node limits. Defaults are
 1,048,576 source bytes, 64 nested containers, 100,000 nodes, 262,144 bytes per
 string/key and 10,000 members per collection. Positive keyword limit values
-override defaults; invalid values return `invalid_limit` in the `value` phase,
+override defaults. Depth includes empty containers, with a root container at
+one and scalar values adding no level. Invalid limit values return
+`invalid_limit` in the `value` phase,
 never silently fall back. Non-list, improper-list, and non-keyword option
 containers return `invalid_options`. Non-fallible typed accessors still require
 their documented inputs. `validate: false` skips aggregate schema/semantic
@@ -85,7 +93,8 @@ redactor. Error details may include bounded representations of malformed input
 and are not universally safe to log. Byte bounds do not constitute a CPU or
 peak-memory benchmark:
 lexical depth and string-size checks precede decoding, while duplicate-member,
-collection-size and structural depth/node checks inspect the decoded value.
+collection-size and node checks inspect the decoded value. Native-value
+admission checks container depth at container entry, including empty containers.
 Bounded source can still amplify memory; the lexical preflight is not an
 independent hostile-process containment boundary.
 
@@ -117,7 +126,7 @@ Test additions belong beside the listed package tests, not in coordination hooks
 | ID | Prerequisites | Deliverable | Acceptance |
 | --- | --- | --- | --- |
 | WTX-C01 | WTX.01–WTX.04 | Review the documented public operations, errors, ownership boundaries, and standards scope against focused behavioral evidence | Every advertised behavior has representative valid, invalid, and boundary evidence where applicable; tests do not assert a complete module or export inventory, incidental struct layout, or documentation formatting. |
-| WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Characterize duplicate JSON keys, non-JSON structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
+| WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Depth evidence includes empty/scalar leaves, native/source parity and the overflowing container's path. Characterize duplicate JSON keys, non-JSON structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
 | WTX-C03 | WTX-C01 | Archive consumer evidence and package-content inspection | Unpacked package builds without source checkout dependencies; contains both pinned schemas and notices and no Markdown documentation, governance or agent files (specifications are published through HexDocs); runs TD/TM parse, wrapper and typed-error examples in an independent minimal Mix consumer. Local trackers and generated audit artifacts are absent. |
 | WTX-C04 | WTX-C02, WTX-C03 | Consumer-neutral reference examples and independent standards corpus | Known valid/invalid TD and TM documents exchange with a named, revision-pinned independent implementation or published test corpus. Record exact operations and counterexamples; no transport or profile claims follow from value exchange. |
 | WTX-C05 | WTX-C02–WTX-C04 | Versioned compatibility and release dossier | Confirm minimum/current toolchains, exact locked and permitted dependency cohorts, schema/vector/archive digests, licenses, security review and API evolution decisions. Maintainer reviews a candidate; automated work never publishes it. |

@@ -6,6 +6,13 @@ Package path: `packages/wotex-routines`. Scope: native JSON-bound evidence
 toward VD-01/08 and VD-T10 in the
 [verified-decision contract](../specs/verified-decision-v1.md).
 
+Historical scope: a later core admission and reference-oracle correction for
+empty-container depth is recorded in the
+[native/source depth evidence](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex/provenance/json-depth-parity-2026-10.md).
+This receipt's original source identities and results remain unchanged. Its
+oracle was incomplete for empty containers; the later receipt renews the
+eight-case bounds slice and seven faults, not this full historical corpus.
+
 Tests and the opt-in corpus runner change. Library behavior, public schemas,
 Profile/Limits, dependency pins and archive consumers do not change. No
 production defect was found in these executed cases. The full combined verifier

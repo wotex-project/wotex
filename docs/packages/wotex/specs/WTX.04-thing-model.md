@@ -1,7 +1,7 @@
 # WTX.04: Thing Model 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
-**Specification version**: 1.1.1
+**Specification version**: 1.1.2
 
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.03  
@@ -78,6 +78,11 @@ consumer may lower or explicitly raise them. Validation error ordering is
 deterministic for the same JSON value; errors expose stable codes, phases, and
 JSON Pointer-like paths.
 
+Depth counts object and array containers, including empty ones: a root
+container counts as one and scalar values add no level. Source parsing,
+native map admission and mutation use the same selected bound, including when
+schema/semantic validation is explicitly skipped.
+
 ## Compatibility and failure behavior
 
 Thing Models are not accepted by `Wotex.ThingDescription`, which reports
@@ -99,7 +104,8 @@ shared `Wotex.Error` contract.
   values without a fragment;
 - context position rules;
 - invalid type, context, JSON, root value, and resource limits fail safely;
-- exact byte, depth, and node thresholds and malformed option containers;
+- exact byte, depth, and node thresholds (including empty containers) and
+  malformed option containers;
 - mutation invalidates source-byte encoding; and
 - schema provenance exposes immutable upstream and bundled digests.
 

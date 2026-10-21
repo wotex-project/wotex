@@ -1,7 +1,7 @@
 # WTX.02: DataSchema, Form, affordance, and security values
 
 **Status**: Implemented development contract  
-**Specification version**: 1.1.0
+**Specification version**: 1.1.1
 
 **Owner**: `wotex`  
 **Requires**: WTX.01
@@ -56,6 +56,11 @@ protocol, accept a Property observation, or prove an Action effect.
 | `Wotex.EventAffordance` | Event Affordance value |
 | `Wotex.SecurityScheme` | named security-scheme definition value |
 
+All constructors apply the shared JSON limits before schema validation,
+including with `validate: false`. Object and array containers, including empty
+ones, each add one nesting level; a root container counts as one and scalar
+values add no level. Extensions obey the same bounds as standard members.
+
 ## Evidence
 
 Constructor tests cover required members, invalid JSON keys and values,
@@ -64,5 +69,6 @@ operations, default operations per context and `readOnly`/`writeOnly`,
 affordance Form extraction with failing-index paths, affordance requirements,
 security-scheme variants, and extension schemes. Cross-wrapper tests cover
 Unicode extensions, escaped invalid-string paths, exact byte/depth/node
-thresholds, malformed options, and non-JSON struct refusal. Thing Description
+thresholds (including empty containers), malformed options, and non-JSON struct
+refusal. Thing Description
 fixtures cover their aggregate relationship and default operations end to end.

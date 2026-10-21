@@ -1,7 +1,7 @@
 # WTX.01: Thing Description 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
-**Specification version**: 1.1.0
+**Specification version**: 1.1.1
 
 **Owner**: `wotex`  
 **Standard baseline**: W3C WoT Thing Description 1.1, Recommendation
@@ -74,6 +74,10 @@ native map, `:max_bytes` bounds the total string and key payload. Errors
 identify the phase, stable code, JSON path, and bounded diagnostic details.
 Details are untrusted and require review before logging.
 
+Nesting depth counts object and array containers, including empty ones. A root
+container counts as one; scalar values add no level. Source parsing and native
+map admission MUST enforce the same depth boundary, including extension values.
+
 The documented `validate: false` staged-ingestion option bypasses the aggregate
 schema and semantic pass, not JSON-value or resource-limit admission. Such a
 value MUST NOT be presented as successfully validated against TD 1.1 until
@@ -92,7 +96,8 @@ the package completion contract,
   duplicate members, non-object roots, excessive bytes, depth, nodes, strings,
   and collections, and invalid limit options fail with typed codes;
 - hostile nesting is rejected before decoding with bounded work;
-- exact byte, depth, and node thresholds pass for both aggregate boundaries;
+- exact byte, depth, and node thresholds pass for both aggregate boundaries,
+  including a final empty container at the depth limit;
 - malformed option containers return `invalid_options` rather than raising;
 - a mutation invalidates source-byte encoding; and
 - bundled schema bytes match the recorded SHA-256 digest.
