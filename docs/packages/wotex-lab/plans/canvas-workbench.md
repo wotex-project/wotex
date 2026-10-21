@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.14.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.15.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -15,8 +15,9 @@ This direction replaces the previous sidebar-led Figma drafts. WLB.11 version
 source now opens a full-viewport Svelte Flow canvas at `/`. Experiments, runs,
 metrics and selected-run evidence patch the same LiveView and open contextual
 panels. Thing inspection/import, experiment drafts, explicit readings, node
-positions and viewport survive those panel transitions. Reload/documentation
-restoration for unsaved state and live Thing subscriptions remain incomplete.
+positions and viewport survive those panel transitions. A bounded documentation
+round trip now retains unsaved presentation and drafts. The built reader
+alignment, general recovery and live Thing subscriptions remain incomplete.
 Room-scoped Ask → recorded chart → pin and manual Query → result → pin retain
 source/query identity and missingness. Saved pin geometry and viewport restore
 within the signed session; restored pins pause until Resume.

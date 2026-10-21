@@ -133,6 +133,11 @@ defmodule WotexLabWorkbench.Board do
     Map.merge(props, %{
       "nodes" => nodes,
       "pins" => pins,
+      "selection" =>
+        if(props["selection"] in Enum.map(nodes ++ pins, & &1["id"]),
+          do: props["selection"],
+          else: ""
+        ),
       "view" => if(board.layout, do: [board.layout["viewport"]], else: []),
       "layout_revision" => Integer.to_string(board.revision)
     })

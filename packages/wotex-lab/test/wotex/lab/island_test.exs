@@ -42,6 +42,34 @@ defmodule Wotex.Lab.IslandTest do
     assert :error = Component.fetch("unknown")
   end
 
+  test "canvas restoration selection must name a current graph subject" do
+    node = %{
+      "id" => "thing-one",
+      "kind" => "thing",
+      "title" => "Thing",
+      "identity" => "urn:test:one",
+      "value" => "—",
+      "unit" => "",
+      "status" => "Not read",
+      "detail" => "",
+      "x" => 0,
+      "y" => 0
+    }
+
+    props = %{"label" => "Things", "nodes" => [node], "edges" => [], "selection" => "thing-one"}
+    assert {:ok, ^props} = Encoder.encode("canvas", props)
+
+    assert {:error, :invalid_island_prop} =
+             Encoder.encode("canvas", %{props | "selection" => "foreign"})
+
+    assert {:ok, snapshot} =
+             Snapshot.new("canvas", "session-one--canvas", props,
+               capabilities: ["open_documentation"]
+             )
+
+    assert "open_documentation" in snapshot.capabilities
+  end
+
   test "snapshots are canonical, bounded and reject secret-bearing or unknown props" do
     props = %{
       "label" => "Thing details",

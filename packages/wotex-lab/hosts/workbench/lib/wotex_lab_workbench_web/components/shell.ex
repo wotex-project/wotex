@@ -98,7 +98,13 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
                 />
                 <span>{label}</span>
               </.link>
-              <.link :if={id == :docs} navigate={path} class="wl-nav-link">
+              <.link
+                :if={id == :docs}
+                href={path}
+                id="wl-documentation-link"
+                phx-hook="WotexDocumentationLink"
+                class="wl-nav-link"
+              >
                 <img class="wl-menu-icon" src="/icons/book-open.svg" alt="" width="16" height="16" />
                 <span>{label}</span>
               </.link>

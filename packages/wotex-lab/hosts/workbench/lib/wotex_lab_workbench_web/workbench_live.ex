@@ -7,8 +7,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   closed admission list. Running an experiment, approving an Action, exporting
   a dataset and asking for formal evidence are separate server commands.
 
-  Experiment drafts are bounded, local to this view and retained across
-  patches and validation errors. Change and form-recovery events validate
+  Experiment drafts are bounded and retained across patches, validation errors
+  and an admitted documentation round trip. Change and form-recovery events validate
   without allocating a room or running an experiment.
   """
 
@@ -67,6 +67,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:canvas_selection, nil)
       |> assign(:board, Board.empty())
       |> assign(:board_room, nil)
+      |> assign(:presentation_layout, nil)
+      |> assign(:presentation_revision, nil)
+      |> assign(:presentation_path, "/")
       |> assign(:active_pins, MapSet.new())
       |> assign(:pin_refresh_running, false)
       |> assign(:pin_refresh_room, nil)
@@ -85,6 +88,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:investigation_results, [])
       |> assign(:disclosure, Disclosure.current())
       |> refresh()
+      |> restore_presentation()
 
     if connected?(socket), do: Process.send_after(self(), :refresh_pins, 5_000)
     {:ok, socket}
@@ -93,12 +97,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   @impl Phoenix.LiveView
   def handle_params(_, _, %{assigns: %{scope: nil}} = socket), do: {:noreply, socket}
 
-  def handle_params(params, _, socket) do
+  def handle_params(params, url, socket) do
     case Scope.verify(socket) do
       {:ok, scope} ->
         socket =
           socket
-          |> assign(scope: scope, sidebar_open: false)
+          |> assign(scope: scope, sidebar_open: false, presentation_path: workbench_path(url))
           |> cancel_investigation_on_navigation()
           |> load_action(socket.assigns.live_action, params)
           |> revise_islands()
@@ -121,6 +125,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
       {:error, error} ->
         {:noreply, deny(socket, error)}
+    end
+  end
+
+  def handle_event("open_documentation", _, socket) do
+    case retain_presentation(socket, socket.assigns.board.layout, socket.assigns.canvas_selection) do
+      {:ok, socket} -> {:noreply, push_navigate(socket, to: "/docs/start/")}
+      {:error, error} -> reject_event(socket, error)
     end
   end
 
@@ -609,6 +620,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             things={@things}
             runs={@runs}
             readings={@canvas_readings}
+            selection={@canvas_selection}
             board={@board}
             active_pins={@active_pins}
             session_id={@scope.session_id}
@@ -755,6 +767,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:things, :list, required: true)
   attr(:runs, :list, required: true)
   attr(:readings, :map, required: true)
+  attr(:selection, :string, default: nil)
   attr(:session_id, :string, required: true)
   attr(:island_revision, :integer, required: true)
   attr(:empty, :boolean, required: true)
@@ -763,7 +776,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp canvas_view(assigns) do
     props =
-      Canvas.props(assigns.things, assigns.runs, assigns.readings)
+      Canvas.props(assigns.things, assigns.runs, assigns.readings, assigns.selection)
       |> Board.decorate(assigns.board, assigns.active_pins)
 
     assigns = assign(assigns, :props, props)
@@ -1512,6 +1525,27 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   defp acknowledge_island_event(socket, "canvas", %{
+         "event" => "open_documentation",
+         "payload" => %{"view" => %{"layout" => layout, "selection" => selected} = view}
+       })
+       when map_size(view) == 2 do
+    ids = canvas_ids(socket)
+
+    with true <- selected == "" or selected in ids,
+         {:ok, _} <- Board.change(socket.assigns.board, {:layout, layout, ids}),
+         {:ok, socket} <-
+           retain_presentation(socket, layout, if(selected == "", do: nil, else: selected)) do
+      {:reply, %{"status" => "accepted"}, socket}
+    else
+      {:error, error} -> rejected_island(socket, error)
+      _ -> {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
+  defp acknowledge_island_event(socket, "canvas", %{"event" => "open_documentation"}),
+    do: {:reply, %{"status" => "rejected"}, socket}
+
+  defp acknowledge_island_event(socket, "canvas", %{
          "event" => "save_layout",
          "payload" => %{"layout" => layout}
        }) do
@@ -1572,7 +1606,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       component: "canvas",
       id: Islands.id(session_id, "connected-things"),
       props:
-        Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)
+        Canvas.props(
+          socket.assigns.things,
+          socket.assigns.runs,
+          socket.assigns.canvas_readings,
+          socket.assigns.canvas_selection
+        )
         |> Board.decorate(socket.assigns.board, socket.assigns.active_pins)
     }
 
@@ -1755,6 +1794,14 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp load_board(%{assigns: %{scope: %{token: token, room: room}}} = socket) do
     case Sessions.board(token) do
       {:ok, board} ->
+        board =
+          if socket.assigns.presentation_layout != nil and
+               socket.assigns.presentation_revision == board.revision do
+            %{board | layout: socket.assigns.presentation_layout}
+          else
+            board
+          end
+
         active =
           if socket.assigns.board_room == room, do: socket.assigns.active_pins, else: MapSet.new()
 
@@ -2061,6 +2108,78 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         {:error, _} -> []
       end
     end)
+  end
+
+  defp canvas_ids(socket) do
+    props = Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)
+    Enum.map(props["nodes"], & &1["id"]) ++ Enum.map(socket.assigns.board.pins, & &1.id)
+  end
+
+  defp retain_presentation(socket, layout, selection) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- scope.room == socket.assigns.board_room do
+      assigns = socket.assigns
+
+      value = %{
+        path: assigns.presentation_path,
+        layout: layout,
+        experiment_forms: assigns.experiment_forms,
+        selected_experiment: assigns.selected_experiment,
+        canvas_readings: assigns.canvas_readings,
+        canvas_selection: selection,
+        metric_draft: assigns.metric_draft,
+        prompt: assigns.investigation.prompt,
+        metric_result: assigns.metric_result,
+        answer: assigns.answer,
+        investigation_results: assigns.investigation_results
+      }
+
+      with :ok <- Sessions.put_presentation(scope.token, scope.room, value),
+           do: {:ok, finish_presentation(socket, scope)}
+    else
+      false -> {:error, Error.new(:room_changed, :session, "Room changed; reopen documentation")}
+      error -> error
+    end
+  end
+
+  defp finish_presentation(socket, scope) do
+    socket
+    |> assign(:scope, scope)
+    |> cancel_investigation_on_navigation()
+  end
+
+  defp restore_presentation(%{assigns: %{scope: %{token: token, room: room}}} = socket) do
+    mode = if connected?(socket), do: :take, else: :read
+
+    case Sessions.presentation(token, mode) do
+      {:ok, value} when is_map(value) ->
+        socket
+        |> assign(
+          Map.take(
+            value,
+            ~w(experiment_forms selected_experiment canvas_readings canvas_selection metric_draft metric_result answer investigation_results)a
+          )
+        )
+        |> assign(
+          presentation_layout: value.layout,
+          presentation_revision: socket.assigns.board.revision,
+          board: %{socket.assigns.board | layout: value.layout || socket.assigns.board.layout},
+          investigation: %{investigation_state() | prompt: value.prompt},
+          investigation_room: room,
+          metric_room: room
+        )
+
+      _ ->
+        socket
+    end
+  end
+
+  defp restore_presentation(socket), do: socket
+
+  defp workbench_path(url) do
+    uri = URI.parse(url)
+    path = uri.path <> if(uri.query, do: "?" <> uri.query, else: "")
+    if WotexLabWorkbench.Presentation.path?(path), do: path, else: "/"
   end
 
   defp investigation_context(socket, scope) do

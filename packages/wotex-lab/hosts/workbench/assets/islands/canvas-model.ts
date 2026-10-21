@@ -86,6 +86,8 @@ export function validateCanvas(payload: Record<string, JsonValue>): void {
     }
     ids.add(pin.id)
   }
+  if (payload.selection !== undefined && payload.selection !== "" && (typeof payload.selection!=="string" || !ids.has(payload.selection)))
+    throw new Error("invalid canvas selection")
   const view = payload.view ?? []
   if (!Array.isArray(view) || view.length > 1 || !view.every(v => record(v) && exact(v,["x","y","zoom"]) &&
     between(v.x,-100000,100000) && between(v.y,-100000,100000) && between(v.zoom,0.25,2))) throw new Error("invalid canvas viewport")

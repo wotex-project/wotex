@@ -1,4 +1,5 @@
 import "./islands/design-system.css"
+import { WotexDocumentationLink } from "./documentation-link.js"
 import { WotexLabSvelteIsland } from "./islands/hook.js"
 import {
   observeLayoutProfileWithin,
@@ -47,7 +48,7 @@ if (document.body) {
 
 if (window.Phoenix && window.LiveView && csrf) {
   const liveSocket = new window.LiveView.LiveSocket("/live", window.Phoenix.Socket, {
-    hooks: { WotexLabSvelteIsland },
+    hooks: { WotexLabSvelteIsland, WotexDocumentationLink },
     params: { _csrf_token: csrf },
   })
 

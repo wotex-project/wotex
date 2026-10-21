@@ -36,8 +36,14 @@ defmodule WotexLabWorkbenchWeb.MetricsAskTest do
     assert has_element?(view, "a[href='#investigation-metric-0']")
     assert has_element?(view, "#investigation-prompt", "Show batch rows")
     assert ContextStore.metric_results() == []
-    render_click(element(view, "button[phx-click='pin_investigation_metric']"))
-    assert_patch(view, "/")
+    render_hook(view, "open_documentation", %{})
+    assert_redirect(view, "/docs/start/")
+    {:ok, returned, _} = live(recycle(conn), "/metrics")
+    assert has_element?(returned, "#investigation-prompt", "Show batch rows")
+    assert has_element?(returned, "#investigation-metric-0")
+    assert has_element?(returned, "a[href='#investigation-metric-0']")
+    render_click(element(returned, "button[phx-click='pin_investigation_metric']"))
+    assert_patch(returned, "/")
     assert {:ok, %{pins: [pin]}} = Sessions.board(token)
     assert pin.result.chart == hd(history.panels).chart
     assert pin.window == Map.take(history, [:start_ms, :end_ms, :step_ms])
@@ -78,11 +84,12 @@ defmodule WotexLabWorkbenchWeb.MetricsAskTest do
     assert has_element?(view, "#investigation-prompt", "Inspect this room")
     refute_receive {:fake_investigation_started, _, "Replacement"}
     monitor = Process.monitor(worker)
-    render_patch(view, "/")
+    render_hook(view, "open_documentation", %{})
+    assert_redirect(view, "/docs/start/")
     assert_receive {:DOWN, ^monitor, :process, ^worker, _}, 1_000
-    render_patch(view, "/metrics")
-    assert has_element?(view, "#investigation-prompt", "Inspect this room")
-    refute has_element?(view, "#investigation-metric-0")
+    {:ok, returned, _} = live(recycle(conn), "/metrics")
+    assert has_element?(returned, "#investigation-prompt", "Inspect this room")
+    refute has_element?(returned, "#investigation-metric-0")
     assert {:ok, scope} = Sessions.verify(token)
     assert Room.runs(scope.room) == []
   end

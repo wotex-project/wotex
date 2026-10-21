@@ -28,6 +28,8 @@ test("metric pins retain missing and negative data while refusing forged geometr
 
 test("admitted Thing graphs include baseline unit text and typed connections", () => {
   assert.doesNotThrow(() => validateCanvas(valid()))
+  assert.doesNotThrow(() => validateCanvas({...valid(),selection:"thermostat"}))
+  assert.throws(() => validateCanvas({...valid(),selection:"other-session"}))
   assert.doesNotThrow(() => validateCanvas({ label: "Empty", nodes: [], edges: [] }))
 })
 

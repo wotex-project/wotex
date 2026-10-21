@@ -13,8 +13,8 @@ defmodule WotexLabWorkbench.Canvas do
   @units %{"thermostat" => "°C", "meter" => "W", "actuator" => "°C target"}
 
   @doc "Builds a finite graph from already admitted session state without performing a read."
-  @spec props([map()], [map()], %{optional(String.t()) => map()}) :: map()
-  def props(things, runs, readings) do
+  @spec props([map()], [map()], %{optional(String.t()) => map()}, String.t() | nil) :: map()
+  def props(things, runs, readings, selection \\ nil) do
     things =
       things
       |> Enum.sort_by(& &1.id)
@@ -34,6 +34,13 @@ defmodule WotexLabWorkbench.Canvas do
       "nodes" => nodes,
       "edges" => Enum.filter(edges(), &(&1["source"] in ids and &1["target"] in ids))
     }
+    |> selected(selection, ids)
+  end
+
+  defp selected(props, selection, ids) do
+    if selection in ids or (is_binary(selection) and String.starts_with?(selection, "pin-")),
+      do: Map.put(props, "selection", selection),
+      else: props
   end
 
   @doc "Returns the stable presentation identity for one admitted Thing or inert entry."

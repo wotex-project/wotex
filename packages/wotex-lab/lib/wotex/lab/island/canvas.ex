@@ -24,7 +24,8 @@ defmodule Wotex.Lab.Island.Canvas do
     if unique?(ids) and unique?(edge_ids) and Enum.all?(nodes, &node?/1) and
          Enum.all?(edges, &edge?(&1, ids)) and unique?(ids ++ pin_ids) and
          Enum.all?(pins, &pin?/1) and Enum.all?(Map.get(props, "view", []), &view?/1) and
-         Regex.match?(~r/\A(?:0|[1-9][0-9]*)\z/, Map.get(props, "layout_revision", "0")),
+         Regex.match?(~r/\A(?:0|[1-9][0-9]*)\z/, Map.get(props, "layout_revision", "0")) and
+         Map.get(props, "selection", "") in ["" | ids ++ pin_ids],
        do: :ok,
        else: {:error, :invalid_island_prop}
   end

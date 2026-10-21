@@ -1,7 +1,13 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.18.0. Contract: accepted. Implementation status:
+Specification version: 0.19.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.19 retains the current Workbench presentation for a documentation
+round trip. The canvas supplies only admitted geometry and selection; the
+server retains its own drafts, explicit readings and completed results. Return
+restores presentation without executing another operation. The built reader's
+visual alignment and complete application qualification remain incomplete.
 
 Version 0.18 binds Ask to admitted room history and returns recorded charts
 that can be pinned without re-querying or parsing model text. Draft questions
@@ -11,8 +17,7 @@ canvas geometry.
 The query builder uses the closed metric catalogue and existing history ranges.
 Only an executed result with measured values can be pinned. Reload restores
 the cached pin definitions and saved geometry, paused until explicit Resume.
-Unsaved documentation round trips and complete application qualification
-remain incomplete.
+The complete application qualification remains incomplete.
 
 Version 0.16 adopts the grayscale canvas direction and adds the registered
 `canvas` island. The initial source slice replaces the Thing card list with a
@@ -423,8 +428,8 @@ geometry. Explicit Property reads alone populate values; simulator state is not
 an observation. The timestamp is the host read receipt, not a device event time.
 Registered Directory entries stay inert and use stable identities. The graph
 describes admitted experiment wiring rather than claiming a live subscription.
-Automatic Thing observation and unsaved presentation restoration through
-documentation remain unbuilt.
+Automatic Thing observation remains unbuilt. Documentation return retains a
+bounded server snapshot as described below.
 
 Canvas `open` also carries only `id`. The host admits exactly `add`, `metrics`
 or `experiments` after verifying the signed session, instance and revision. It
@@ -499,8 +504,37 @@ cached observations; expiry/revocation discards the session board.
 Saved geometry and canonical pin definitions belong to the bounded signed
 session. Save retains node/pin positions, pin sizes and viewport for later
 mounts in that session; it is not a frozen dataset or an authorization grant.
-It does not yet preserve unsaved presentation or experiment drafts through the
-separate documentation LiveView.
+The separate documentation LiveView remains public and inert. Opening Docs
+from the board first retains one presentation snapshot in the existing signed
+session, without extending its TTL or changing Save layout. The canvas event
+`open_documentation` carries exactly `view`, containing `layout` and `selection`.
+Layout obeys the same current-identity and geometry bounds as `save_layout`;
+selection is empty or one current node/pin ID. Optional canvas `selection`
+presentation names only a current graph subject. The server validates the
+current session, room and island revision before retaining anything.
+
+The server supplies the originating Workbench route, bounded experiment forms,
+explicit readings, metric draft, question and completed answer/chart results.
+The snapshot admits only its closed fields, at most three experiment forms,
+31 readings and eight investigation charts, with a 256 KiB term/JSON budget
+and depth 24. Opaque process, function, port and reference values are refused.
+The snapshot contains no worker, command, approval or active refresh owner.
+Running investigations are cancelled only after retention succeeds. A failed
+capture keeps the workbench open; it never silently navigates away.
+
+Public documentation verifies an existing token only to choose the local
+Return destination; it allocates no session or room. The unavailable state
+uses that target; the built reader host controls and visual composition still
+need their source-alignment pass. A Workbench HTTP mount
+reads the snapshot, and its connected mount consumes it once. It restores
+unsaved geometry separately from the saved layout, including viewport, pin
+sizes and selected subject. Explicit readings and invalid experiment values
+retain their original meaning. Completed results remain cached and pins stay
+paused. No restoration reads a Property, queries history, reruns an experiment,
+asks a provider or sends an Action. Room death discards the retained snapshot;
+expiry/revocation discards the entire session. Without the canvas enhancement,
+the ordinary LiveView Docs action retains server presentation and its last
+available geometry. Modified-click links retain ordinary browser behavior.
 
 The Workbench uses one LiveView lifecycle with bounded Svelte islands, not a
 LiveView page beside a Svelte single-page application. LiveView owns routes,

@@ -7,11 +7,13 @@ export const componentDescriptors = {
       pins: { type: "item_list", max_items: 16 },
       view: { type: "item_list", max_items: 1 },
       layout_revision: { type: "string", max_bytes: 32 },
+      selection: { type: "string", max_bytes: 128 },
     },
     events: {
       inspect: { payload: "id", effectful: false },
       open: { payload: "id", effectful: false },
       save_layout: { payload: "layout", effectful: false },
+      open_documentation: { payload: "view", effectful: false },
       pin_refresh: { payload: "id", effectful: false },
       pin_pause: { payload: "id", effectful: false },
       pin_resume: { payload: "id", effectful: false },

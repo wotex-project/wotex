@@ -1,6 +1,6 @@
 <script lang="ts">
 import { SvelteFlow, MarkerType, useSvelteFlow, type Node, type Edge } from "@xyflow/svelte"
-import { tick, untrack } from "svelte"
+import { onMount, tick, untrack } from "svelte"
 import CanvasThing from "./canvas-node.svelte"
 import CanvasMetric from "./canvas-metric.svelte"
 import type { CanvasNode, CanvasEdge, CanvasPin, CanvasViewport } from "./canvas-model.js"
@@ -30,6 +30,8 @@ let width = $state(0)
 let height = $state(0)
 let layoutRevision = ""
 let saving = $state(false)
+let openingDocumentation = false
+let lastSelection = ""
 let saved = $state(false)
 const menuNode = $derived(nodes.find(n=>n.id===menu?.id))
 const pinMenu = $derived(menuNode?.type==="metric")
@@ -50,16 +52,20 @@ $effect(() => {
   const pins = (payload.pins ?? []) as unknown as CanvasPin[]
   const revision = String(payload.layout_revision ?? "0")
   const restore = layoutRevision !== "" && layoutRevision !== revision
+  const selection = String(payload.selection ?? "")
+  const select = selection !== "" && lastSelection !== selection
+  lastSelection = selection
   const previous = new Map(untrack(() => nodes).map((node) => [node.id, node]))
   nodes = [...incoming.map((node) => ({
     ...previous.get(node.id),
     id: node.id, type: "thing", position: restore ? {x:node.x,y:node.y} : previous.get(node.id)?.position ?? { x: node.x, y: node.y },
-    selected: previous.get(node.id)?.selected ?? false,
+    selected: select ? node.id===selection : previous.get(node.id)?.selected ?? node.id===selection,
     ariaLabel: `${node.title}, ${node.value} ${node.unit}, ${node.status}`,
     data: { ...node, open },
   })), ...pins.map(pin=>({
     ...previous.get(pin.id), id:pin.id,type:"metric",
     position:restore?{x:pin.x,y:pin.y}:previous.get(pin.id)?.position ?? {x:pin.x,y:pin.y},
+    selected:select?pin.id===selection:previous.get(pin.id)?.selected ?? pin.id===selection,
     width:restore?pin.width:previous.get(pin.id)?.width ?? pin.width,
     height:restore?pin.height:previous.get(pin.id)?.height ?? pin.height,
     ariaLabel:`${pin.title}, ${pin.source}, ${pin.state}`,
@@ -96,12 +102,38 @@ async function send(event: "inspect" | "open" | "pin_refresh" | "pin_pause" | "p
   } catch { error = "Reconnect to continue." }
 }
 
+function currentLayout() {
+  return {
+    positions:nodes.map(n=>({id:n.id,...n.position,...(n.type==="metric"?{width:n.width??360,height:n.height??280}:{})})),
+    viewport:{x:viewport.x,y:viewport.y,zoom:viewport.zoom},
+  }
+}
+
+onMount(()=>{
+  const openDocumentation = (event: Event) => {
+    event.preventDefault()
+    if(openingDocumentation)return
+    if(!connected){error="Reconnect to open documentation without losing this view.";return}
+    openingDocumentation=true
+    error=""
+    void transport.push("open_documentation",{view:{layout:currentLayout(),selection:nodes.find(n=>n.selected)?.id??""}})
+      .then(reply=>{
+        if(reply && !Array.isArray(reply) && typeof reply==="object" && reply.status==="accepted")
+          transport.navigate("navigate","/docs/start/")
+        else error="View changed. Open documentation again."
+      })
+      .catch(()=>{error="Reconnect to open documentation without losing this view."})
+      .finally(()=>{openingDocumentation=false})
+  }
+  window.addEventListener("wotex:open-documentation",openDocumentation)
+  return ()=>window.removeEventListener("wotex:open-documentation",openDocumentation)
+})
+
 async function saveLayout(){
   if(!connected||saving)return
   saving=true;error="";saved=false
   try {
-    const positions=nodes.map(n=>({id:n.id,...n.position,...(n.type==="metric"?{width:n.width??360,height:n.height??280}:{})}))
-    const reply=await transport.push("save_layout",{layout:{positions,viewport:{x:viewport.x,y:viewport.y,zoom:viewport.zoom}}})
+    const reply=await transport.push("save_layout",{layout:currentLayout()})
     if(reply && !Array.isArray(reply) && typeof reply==="object" && reply.status==="accepted") saved=true
     else error="Layout was not saved. Reconnect and try again."
   } catch { error="Reconnect to save this layout." }

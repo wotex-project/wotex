@@ -15,7 +15,7 @@ defmodule WotexLabWorkbench.Sessions do
   use GenServer
 
   alias Wotex.Lab.Error
-  alias WotexLabWorkbench.{Board, Observability.Panels, Room}
+  alias WotexLabWorkbench.{Board, Observability.Panels, Presentation, Room}
 
   @commands ~w(start_room run cancel approve read register query export verify ask)a
   @themes ~w(system light dark contrast)
@@ -30,6 +30,7 @@ defmodule WotexLabWorkbench.Sessions do
           theme: String.t(),
           dashboard_panels: [String.t()],
           board: map(),
+          presentation: map() | nil,
           room: pid() | nil
         }
 
@@ -83,6 +84,18 @@ defmodule WotexLabWorkbench.Sessions do
   def change_board(server \\ __MODULE__, token, room, operation),
     do: GenServer.call(server, {:board, token, room, operation})
 
+  @doc "Retains inert state for a documentation return without renewing the session."
+  @spec put_presentation(GenServer.server(), term(), pid() | nil, map()) ::
+          :ok | {:error, Error.t()}
+  def put_presentation(server \\ __MODULE__, token, room, value),
+    do: GenServer.call(server, {:presentation, token, room, value})
+
+  @doc "Reads or consumes the retained presentation without allocating a room."
+  @spec presentation(GenServer.server(), term(), :read | :take) ::
+          {:ok, map() | nil} | {:error, Error.t()}
+  def presentation(server \\ __MODULE__, token, mode),
+    do: GenServer.call(server, {:presentation, token, mode})
+
   @doc "Revokes a session and stops its room, discarding pending work."
   @spec revoke(GenServer.server(), term()) :: :ok | {:error, Error.t()}
   def revoke(server \\ __MODULE__, token), do: GenServer.call(server, {:revoke, token})
@@ -123,6 +136,7 @@ defmodule WotexLabWorkbench.Sessions do
         theme: "system",
         dashboard_panels: Panels.defaults(),
         board: Board.empty(),
+        presentation: nil,
         room: nil
       }
 
@@ -162,6 +176,41 @@ defmodule WotexLabWorkbench.Sessions do
         {:reply, {:error, error}, state}
     end
   end
+
+  def handle_call({:presentation, token, room, value}, _, state) do
+    with {:ok, session, state} <- live(state, token),
+         true <- session.room == room,
+         {:ok, value} <- Presentation.admit(value) do
+      {:reply, :ok, put_in(state, [:sessions, token, :presentation], value)}
+    else
+      false ->
+        {:reply, {:error, Error.new(:room_changed, :session, "room identity changed")}, state}
+
+      {:error, %Error{} = error} ->
+        {:reply, {:error, error}, state}
+
+      {:error, error, state} ->
+        {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:presentation, token, mode}, _, state) when mode in [:read, :take] do
+    case live(state, token) do
+      {:ok, session, state} ->
+        next =
+          if mode == :take, do: put_in(state, [:sessions, token, :presentation], nil), else: state
+
+        {:reply, {:ok, session.presentation}, next}
+
+      {:error, error, state} ->
+        {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:presentation, _, _}, _, state),
+    do:
+      {:reply, {:error, Error.new(:invalid_presentation, :workbench, "Unknown restore mode")},
+       state}
 
   def handle_call({:admit, token, command}, _, state) when command in @commands do
     with {:ok, session, state} <- live(state, token),
@@ -237,7 +286,8 @@ defmodule WotexLabWorkbench.Sessions do
               Map.put(state.sessions, token, %{
                 session
                 | room: nil,
-                  board: Board.clear_results(session.board)
+                  board: Board.clear_results(session.board),
+                  presentation: nil
               })
 
             :error ->

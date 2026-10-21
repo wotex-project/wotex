@@ -3,11 +3,13 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
 
   use WotexLabWorkbenchWeb, :live_view
 
-  alias WotexLabWorkbench.Documentation
+  alias WotexLabWorkbench.{Documentation, Sessions}
+  alias WotexLabWorkbenchWeb.Plugs.SessionToken
 
   @impl Phoenix.LiveView
-  def mount(params, _, socket) do
+  def mount(params, session, socket) do
     route = route(params)
+    socket = assign(socket, :return_path, return_path(session))
 
     case Documentation.fetch_route(route) do
       {:ok, site, page, context} ->
@@ -65,10 +67,17 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
         <p>WoTEx documentation</p>
         <h1 id="docs-unavailable-title">Documentation unavailable</h1>
         <p>The built-in documentation artifact is not available in this release.</p>
-        <a class="pa-button" href="/">Return to the Lab workbench</a>
+        <a class="pa-button" href={@return_path}>Return to workbench</a>
       </section>
     </main>
     """
+  end
+
+  defp return_path(session) do
+    case Sessions.presentation(Map.get(session, SessionToken.key()), :read) do
+      {:ok, %{path: path}} -> path
+      _ -> "/"
+    end
   end
 
   defp route(%{"path" => segments}) when is_list(segments) do
