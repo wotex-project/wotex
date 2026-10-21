@@ -87,7 +87,7 @@ defmodule WotexLabWorkbench.Preview do
   def format(value) when is_integer(value), do: Integer.to_string(value)
   def format(value) when is_binary(value), do: value
   def format(value) when is_atom(value), do: Atom.to_string(value)
-  def format(value), do: inspect(value, limit: 8, printable_limit: 64)
+  def format(value), do: inspect(value, charlists: :as_lists, limit: 8, printable_limit: 64)
 
   @doc """
   Downsamples points to at most `max` by min-max bucketing; returns the

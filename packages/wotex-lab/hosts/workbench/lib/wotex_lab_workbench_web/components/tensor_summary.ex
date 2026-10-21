@@ -35,7 +35,7 @@ defmodule WotexLabWorkbenchWeb.Components.TensorSummary do
           <dt>Quality dtype</dt><dd>{@summary.quality.dtype}</dd>
         </div>
         <div>
-          <dt>Quality shape</dt><dd>{inspect(@summary.quality.shape)}</dd>
+          <dt>Quality shape</dt><dd>{inspect(@summary.quality.shape, charlists: :as_lists)}</dd>
         </div>
       </dl>
       <p>
@@ -56,7 +56,9 @@ defmodule WotexLabWorkbenchWeb.Components.TensorSummary do
           <tbody>
             <tr :for={feature <- @summary.features}>
               <th scope="row">{feature.name}</th>
-              <td>{feature.dtype}</td><td>{inspect(feature.shape)}</td><td>{feature.unit}</td>
+              <td>{feature.dtype}</td><td>{inspect(feature.shape, charlists: :as_lists)}</td><td>
+                {feature.unit}
+              </td>
               <td>{feature.observed}</td><td>{feature.filled}</td>
             </tr>
           </tbody>

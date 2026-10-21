@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.15.1. Contract: accepted. Implementation status:
+Specification version: 0.15.2. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 Version 0.15 adds editable brand identity and Lab page/flow deliverables under
@@ -8,6 +8,11 @@ the [design contract](../plans/brand-and-lab-design.md). The initial native
 files are drafts. Their remaining design acceptance makes this expanded
 specification partial without retracting the implemented host described below.
 Existing package APIs, tokens, routes and effect boundaries do not change.
+
+Version 0.15.2 renders tensor dimensions and integer-array previews as numeric
+lists, including nested arrays whose integers happen to be printable character
+codes. Existing preview limits, values, masks, quality codes and backend
+ownership are unchanged.
 
 Version 0.15.1 repairs experiment-form retention and numeric controls. Each
 LiveView owns drafts for only the admitted experiments and parameters, with
@@ -352,7 +357,10 @@ The tensor preview splits the lazy `Nx.Batch` before stacking, builds only the
 selected features through public `Nx.LazyContainer` traversal, and slices
 vector cells and the quality matrix before host-list conversion. It discloses
 row/feature truncation, caps each vector cell at 32 elements and labels mask
-counts as preview-element counts. `tensor_window_test.exs` traces every
+counts as preview-element counts. Shapes and integer-array cells render as
+numeric lists rather than inferred character strings. `tensor_window_test.exs`
+checks a twelve-row, nine-feature integer batch through encoded values, masks,
+quality and rendered metadata. It also traces every
 `Nx.to_list/1` call over a 250-row, 40-feature, 64-element fixture and requires
 only 100×32 tensors to cross that boundary. Min/max downsampling uses gap
 sentinels before/between/after retained extrema, preserves input order and

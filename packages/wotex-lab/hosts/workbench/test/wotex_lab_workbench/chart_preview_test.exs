@@ -90,6 +90,22 @@ defmodule WotexLabWorkbench.ChartPreviewTest do
     assert Preview.format(%{caller: String.duplicate("x", 100)}) =~ "%{caller:"
   end
 
+  test "numeric collections stay numerical within the existing display limits" do
+    for {value, expected} <- [
+          {[], "[]"},
+          {[12], "[12]"},
+          {[65, 66], "[65, 66]"},
+          {[[65, 66], [67, 68]], "[[65, 66], [67, 68]]"},
+          {%{value: [65, 66]}, "%{value: [65, 66]}"},
+          {["AB", 65], ~s(["AB", 65])}
+        ] do
+      assert Preview.format(value) == expected
+    end
+
+    assert Preview.format(Enum.to_list(65..96)) ==
+             "[65, 66, 67, 68, 69, 70, 71, 72, ...]"
+  end
+
   test "chart and preview edge cases remain bounded and return structured refusals" do
     assert {:ok, empty} = Chart.new(mark: "point", series: [])
     assert %{series: [], x_ticks: x_ticks, y_ticks: y_ticks} = Chart.geometry(empty)

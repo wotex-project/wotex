@@ -3,10 +3,95 @@ defmodule WotexLabWorkbench.TensorWindowTest do
 
   use ExUnit.Case, async: false
 
+  import Phoenix.LiveViewTest, only: [render_component: 2]
+
   alias Wotex.DataSchema
   alias Wotex.Lab.Error
-  alias Wotex.Nx.{Encoder, Feature, Row, Schema}
+  alias Wotex.Nx.{Encoder, Feature, Observation, Row, Schema}
   alias WotexLabWorkbench.{Preview, Runs}
+  alias WotexLabWorkbenchWeb.Components.TensorSummary
+
+  test "encoded integer vectors and printable shapes render as numbers with aligned masks" do
+    {:ok, scalar} = DataSchema.new(%{"type" => "integer"})
+
+    {:ok, vector} =
+      DataSchema.new(%{
+        "type" => "array",
+        "items" => %{"type" => "integer"},
+        "minItems" => 2,
+        "maxItems" => 2
+      })
+
+    features =
+      for index <- 1..9 do
+        {:ok, feature} =
+          Feature.new(
+            name: "feature-#{index}",
+            thing_id: "urn:test:preview",
+            affordance_type: :property,
+            affordance_name: "values-#{index}",
+            data_schema: if(index == 1, do: vector, else: scalar),
+            missing: {:fill, 65}
+          )
+
+        feature
+      end
+
+    {:ok, schema} = Schema.new(features: features)
+
+    rows =
+      for timestamp <- 1..12 do
+        {:ok, observation} =
+          Observation.new(
+            id: "sample-#{timestamp}",
+            thing_id: "urn:test:preview",
+            affordance_type: :property,
+            affordance_name: "values-1",
+            observed_at: timestamp,
+            value: [65, 66],
+            quality: :uncertain
+          )
+
+        {:ok, row} = Row.new(timestamp, %{"feature-1" => observation})
+        row
+      end
+
+    {:ok, encoded} =
+      Nx.with_default_backend(Nx.BinaryBackend, fn -> Encoder.encode(rows, schema) end)
+
+    summary = Preview.tensor_summary(encoded, Nx.BinaryBackend)
+    assert summary.quality == %{dtype: "u8", shape: [12, 9], codes: Wotex.Nx.quality_codes()}
+    assert hd(summary.features).shape == [12, 2]
+    assert Enum.all?(tl(summary.features), &(&1.shape == [12] and &1.filled == 12))
+
+    for row <- summary.preview do
+      assert hd(row.cells) == %{value: [65, 66], text: "[65, 66]", mask: [1, 1], quality: 1}
+
+      assert Enum.all?(tl(row.cells), fn cell ->
+               cell == %{value: 65, text: "65 (filled, mask 0)", mask: 0, quality: 3}
+             end)
+    end
+
+    html = render_component(&TensorSummary.tensor_summary/1, summary: summary)
+    document = LazyHTML.from_fragment(html)
+
+    facts =
+      document
+      |> LazyHTML.query(".wl-facts dd")
+      |> Enum.map(&LazyHTML.text/1)
+
+    assert List.last(facts) == "[12, 9]"
+
+    shapes =
+      document
+      |> LazyHTML.query("table")
+      |> Enum.at(0)
+      |> LazyHTML.query("tbody tr td:nth-child(3)")
+      |> Enum.map(&LazyHTML.text/1)
+
+    assert shapes == ["[12, 2]" | List.duplicate("[12]", 8)]
+    assert html =~ "[65, 66]"
+  end
 
   test "wide, long batches are split and sliced before every host-list conversion" do
     {:ok, schema} =
