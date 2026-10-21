@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.0.3. Contract: accepted. Design status: partial.
+Plan version: 1.0.4. Contract: accepted. Design status: partial.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -249,8 +249,35 @@ not navigate, and explicit correction returned to the ready catalogue without
 starting a run. The compact thermal journey reached cleanup, selected evidence
 and report export, then returned through the same compact task. No real room,
 numerical run, Action, provider call or file download occurred in these checks.
-Medium native Play and backend/session/room-failure recovery remain unexecuted
-for this edition; structural wiring does not qualify them.
+The review below covers the medium result and backend, session and room-start
+recovery paths. Their connected graph alone did not qualify them.
+
+## Medium task and recovery review
+
+The 2026-10-21 review at repository commit
+`222ffc08124b472e613a139a023b667d1726d9be`, package `packages/wotex-lab`,
+exercised these existing references in native Play:
+
+| Start | Executed journey and observed outcome |
+| --- | --- |
+| [Medium thermal result](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=39-376) | The 720-pixel result opened its selected evidence and explicit report checkpoint, then returned through the evidence to the result. Each retained `thermal-design-01`; dtype, dimensions, Cel units, values, masks, quality and the inert proposal remained visible. |
+| [Unavailable backend](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=39-457) | The refusal named the selected binary backend and prohibited implicit fallback. Back returned to the ready catalogue without entering a running or result state. |
+| [Denied session](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=39-518) | New session returned to the no-room catalogue, with explicit startup and no previous room or run. |
+| [Failed room startup](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=39-537) | Explicit retry reached the ready catalogue; Return to catalogue reached the no-room state. Neither entered an experiment. |
+
+The denied-session and failed-start navigation instances now say
+“Session unavailable / No room access” and “No ready room / Startup failed”,
+respectively. This corrects the generic “Session-owned room” footer that
+contradicted both recovery states. The existing components, semantic colour
+bindings and frame identities are retained; the medium named start is available
+in Play. The two corrected screens were visually inspected after their edits.
+
+These checks exercise fixed prototype states and navigation. They executed no
+room startup, numerical runner, backend fallback, Action, provider request or
+report download. The single medium journey does not qualify all component,
+theme and container combinations. Reconnect/unknown-outcome, revoked/stale/
+expired approval journeys, native archives and independent restores remain
+acceptance work.
 
 ## Brand artwork and channel edition
 
