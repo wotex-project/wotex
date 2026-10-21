@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.0.2. Contract: accepted. Design status: partial.
+Plan version: 1.0.3. Contract: accepted. Design status: partial.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -15,7 +15,7 @@ own their acceptance. No package API or frontend framework changes here.
 
 | File | Purpose | Current draft |
 | --- | --- | --- |
-| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Four pages; five guideline boards and one editable signature component |
+| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Four pages; eight review/guideline boards, three component families and the original editable signature study |
 | [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, canonical page references and connected task flows | Five pages; sixty screen/state references, four component families, four additional components, three native flow Specs and twenty named prototype starts |
 
 The initial edition was authored from repository commit
@@ -251,6 +251,28 @@ and report export, then returned through the same compact task. No real room,
 numerical run, Action, provider call or file download occurred in these checks.
 Medium native Play and backend/session/room-failure recovery remain unexecuted
 for this edition; structural wiring does not qualify them.
+
+## Brand artwork and channel edition
+
+The brand continuation retains the existing typographic direction and adds
+three reusable draft families: nine Name/Descriptor/Lab treatments, three
+Letter W tile studies and two repository preview compositions. Three native
+review boards show the treatments, proposed spacing/minimum widths, actual-size
+small icons and channel layouts. Fixed artwork roles alias the existing palette
+independently of Lab UI modes; the brand file now has fifty-two variables and
+eight text styles. No implemented CSS projection or Workbench asset changes.
+
+The [draft artwork handoff](../provenance/brand-artwork-2026-10.md) records the
+source baseline, native IDs, proposed treatments, attribution and SHA-256 of
+twelve SVG and eleven PNG exports. Native rendering and local artifact checks
+cover editable layers, selected Inter fonts, bounds, outlined SVG paths, PNG
+integrity/dimensions/transparency, solid colour contrast and repository-preview
+size. The two 1280 × 640 PNG previews are below 1 MB. No destination setting
+was changed; the draft exports live under `docs/assets/brand/draft/`.
+
+These additions make the identity proposal concrete for review. Final mark
+selection, approved usage rules, recognition, co-branding, print preparation,
+destination adoption and native archive/restore acceptance remain required.
 
 The full component catalogue, all page/state/profile combinations, remaining
 native Play journeys, final brand acceptance, channel artwork, native archives

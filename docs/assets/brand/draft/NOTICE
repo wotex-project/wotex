@@ -1,0 +1,14 @@
+Draft WoTEx artwork
+
+These unapproved artwork studies follow the repository's Apache-2.0 licence
+(LICENSE at the repository root). They have not been adopted as the final
+identity or installed in the Lab.
+
+Letterforms use Inter. Copyright (c) 2016 The Inter Project Authors
+(https://github.com/rsms/inter). Inter is distributed under the SIL Open Font
+License 1.1: https://raw.githubusercontent.com/rsms/inter/v4.1/LICENSE.txt
+The exact Inter build exposed by Figma was unavailable. No font software is
+included in this directory; the SVG exports contain vector paths.
+
+The artwork handoff records native sources, treatments, checks and asset hashes:
+docs/packages/wotex-lab/provenance/brand-artwork-2026-10.md
