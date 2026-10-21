@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.8.0. Contract: accepted. Design status: under revision.
+Plan version: 1.9.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -39,7 +39,7 @@ file retains those historical studies alongside the selected supplied mark.
 | File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected identity, native usage Spec, three linked mark treatments, grayscale/type/size specimens and eleven export frames. Four earlier study pages are marked Archive. |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, twenty-six canvas snapshots, twenty-nine documentation fixtures, seventy-seven current standalone targets, a compact component library and a current journey Spec on Start. Superseded page families are marked Archive. Current component and Play coverage are described in the canvas proposal. |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, twenty-six canvas snapshots plus two theme reviews, twenty-nine documentation fixtures, seventy-seven current standalone targets, a compact component library and a current journey Spec on Start. Superseded page families are marked Archive. Current component and Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.

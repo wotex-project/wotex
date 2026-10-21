@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.9.0. Status: proposed for design review. Implementation: not
+Plan version: 0.10.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -81,9 +81,14 @@ Use Inter and the supplied logo's cool grays: `#181D27`, `#303644`, `#818A9D`,
 edges, charts and states use this family; text and line styles retain meaning
 without a colored status dot. Preserve the supplied logo's vector geometry and
 gradients, with no tile, border or added caption. Earlier blue/beige treatments
-are historical studies. The compact control library now has Light, Dark and
-Contrast modes; complete journey compositions in those modes remain to be
-designed and reviewed.
+are historical studies. Light, Dark and Contrast now share semantic bindings
+for the board control, surfaces, text, selected tools and borders. The grid
+changes its foreground roles while retaining its spacing and opacity. Linked
+[Dark workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=269-6775)
+and [Contrast experiment](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=269-6992)
+compositions cover topology, a pin and contextual inspectors. Representative
+theme journeys passed native Play; failure-state and responsive qualification
+remains.
 
 The separate [identity Spec](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=20-219)
 documents the selected mark and derived dark/monochrome treatments. The
@@ -481,6 +486,25 @@ Native Play exercised these fixed-state paths:
 - The 375-pixel guide's navigation drawer opened and Escape closed it; the
   on-page contents disclosure expanded in place. Complete narrow detail flows
   and keyboard/focus equivalence remain separate checks.
+- Dark mode persisted through Thing menu → inspector → Property read;
+  Ask → result → Sources → Pin; documentation search → keyboard selection →
+  API → Return; and Smart room Run → review → unknown command outcome →
+  accepted. Switching to Contrast retained the pin and accepted command
+  identity without another Run. After reload, corrected Dark hints and straight
+  search-row dividers were visually checked.
+- Presentation entries now read Connect and inspect, Ask and pin, Run and
+  review, and Find answers. Run and review starts at C1 configuration. The
+  reader distinguishes board entry from direct entry: board Return closes to
+  its origin, while direct-entry Return navigates to the A2 review fixture.
+  Native Play returned to the exact C1 URL with its Dark configuration panel
+  still open, and separately exercised direct-entry Return. This is prototype
+  context, not application session restoration.
+
+A structural theme audit covered 105 current journey/review roots and 2,308
+visible text nodes, finding no primitive-bound or unbound solid text fills.
+This checks color bindings, not interaction completeness or accessibility
+certification. Search-result dividers are straight; controls and floating
+shells retain the shared 4-pixel radius.
 
 The final compact workbench/result, anomaly form, Ask, import and query builder
 renders were visually reviewed. The native
@@ -505,9 +529,9 @@ No room, metric query, provider request, experiment, Action or report export
 executed during Play. Documentation still uses a fixed search fixture;
 general typing, live indexing, clipboard copy and contents scrolling are not
 exercised browser features. Empty/error/missing states are authored review
-fixtures. Complete responsive/detail and theme journeys, component
-bindings, native archive recovery and final brand review remain
-acceptance work. Application UI implementation has not started; source
+fixtures. Complete responsive/detail flows, failure-state theme review,
+remaining component bindings, native archive recovery and final brand review
+remain acceptance work. Application UI implementation has not started; source
 contracts remain authoritative until the proposal is reviewed and promoted.
 
 ## Research basis
