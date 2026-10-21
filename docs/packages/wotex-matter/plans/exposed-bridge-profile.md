@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.30.0. Finite WMA.09 implementation target. The
+Version: 1.31.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -12,7 +12,8 @@ and correlated receipts through a joined worker and sixty-four pre-reserved
 output slots. An internal guarded consumer receiver joins current SDK
 fabric/ACL/metadata checks, opaque Thing resolution, synchronous read/write
 progress and retained invokes to the existing pipes. It requires an explicit
-native command renderer. Production executable assembly and authenticated request admission
+native command renderer. An explicitly attached finite SDK renderer is implemented;
+it is never selected implicitly. Production executable assembly and authenticated request admission
 remain open.
 
 The installed invoke guard validates command fields after bounded copying and
@@ -25,6 +26,17 @@ stateful command semantics and responses belong to the native renderer after
 consumer completion.
 The [command field record](../provenance/bridge-command-fields-2026-10.md)
 binds the literal corpus, native pipe checks and exact source/artifact identities.
+
+The finite renderer admits one command-specific response ID, retains captured
+principal/timed context and dispatches the native delegate after completed consumer
+outcome and current scope validation. Each child owns logical IdentifyType None,
+with TriggerEffect only on lights. Groups has explicit Identify/Scenes joins.
+Each light owns SDK lighting controls/timers and a distinct scene handler. Public
+OnOff and scene snapshots read only approved observations; command/timer OnOff
+writes are volatile protocol bookkeeping and are never persisted. Approved changes
+advance the registered cluster version and invalidate stale scene validity.
+StartUpOnOff remains durable configuration. Consumer execution owns physical and
+delayed effects. Native timers establish no installed clock-rate or physical result.
 
 ## Source and generated data
 

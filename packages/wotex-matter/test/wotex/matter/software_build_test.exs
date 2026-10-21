@@ -157,6 +157,26 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  test "native command receipts require their own successful exit and exact marker" do
+    healthy =
+      "guarded SDK command rendering and canonical observations passed\n\nbridge SDK commands exit: 0\n"
+
+    assert :ok = SoftwareBridgeBuild.verify_commands!(healthy)
+
+    for invalid <- [
+          "",
+          String.trim_trailing(healthy),
+          healthy <> healthy,
+          String.replace(healthy, "exit: 0", "exit: 70"),
+          "AddressSanitizer\n" <> healthy,
+          "guarded SDK receiver and consumer pipes passed\n\nbridge SDK commands exit: 0\n"
+        ] do
+      assert_raise Mix.Error, "bridge_sdk_commands_test_failed", fn ->
+        SoftwareBridgeBuild.verify_commands!(invalid)
+      end
+    end
+  end
+
   test "bootstrap loading receipt accepts only the exact fixed success output" do
     marker = "owned SDK bootstrap credential loading passed\n"
     assert :ok = SoftwareBridgeBuild.verify_bootstrap!(marker)

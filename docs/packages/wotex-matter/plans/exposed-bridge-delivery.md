@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.33.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.34.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -793,11 +793,43 @@ shows that the pinned SDK decoder alone accepts an empty OnWithTimedOff payload
 as zero defaults. Four additional installed-provider/pipe families check missing
 fields, lazy-list type errors, duplicates and successful admission after refusal.
 The latter requires request ID 1 and exact retained unknown-field bytes.
-Complete command rendering, stateful scene/group availability and authenticated
-transport qualification remain separate obligations.
+Stateful native rendering is supplied by the finite renderer below;
+authenticated transport qualification remains a separate obligation.
 The [command field record](../provenance/bridge-command-fields-2026-10.md)
 binds the committed source, command corpus, 166 native case executions, exact
 archive and qualification limits.
+
+### Finite native command rendering
+
+The explicitly attached `SdkBridgeCommandRenderer` renders completed, currently
+guarded invocations through the native delegate with the captured principal and
+timed context. It admits only the selected commands and their individual response
+IDs. It never reenters the installed consumer provider; native data/status failures
+and missing replies remain errors. Construction starts no SDK or thread work,
+and borrowed endpoint attachment retires after receiver completion work drains.
+
+Each child owns Identify with logical IdentifyType None; only lights expose
+TriggerEffect. Groups is explicitly joined to that child's Identify and Scenes
+owners. Each light registers the SDK lighting state machine and a separate scene
+handler. Lighting controls, effects and timers update protocol bookkeeping while
+OnOff reads and scene snapshots use only approved observations. Command/timer
+OnOff persistence is filtered out. An actual approved change synchronizes native
+bookkeeping, advances the registered cluster's data version and invalidates stale
+scene validity. StartUpOnOff writes retain persist-before-publication behavior.
+Consumer execution owns physical effects and delayed behavior; native bookkeeping
+establishes no physical state or timing result.
+
+The guarded command fixture drives all 22 light command paths plus sensor Identify
+through the installed provider, real consumer pipes and actual native responses.
+Literal response fields require group/scene storage, copy/removal, conditional
+group addition, approved scene snapshots, Identify values and lighting control
+state. Eleven ordinary/sanitizer families include denial, timeout, ACL revocation,
+encoding failure after mutation, fresh-process store reopen, missing approved
+state, timer expiry, active endpoint removal and two simultaneous lights with
+distinct scene snapshots. They require unchanged canonical OnOff until an explicit
+observation and absence of persisted inferred OnOff values. These direct synthetic
+principal cases supply no authenticated network or independent-controller result.
+Production executable assembly and peer qualification remain open.
 
 ## 4. Isolation and recovery
 

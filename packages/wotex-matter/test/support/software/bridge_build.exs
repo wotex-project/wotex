@@ -67,6 +67,14 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   printf '\\nbridge SDK receiver exit: %s\\n' "$actual"
   test "$actual" -eq 0
   """
+  @command_cases ~w(all denied timeout encoding reopen timers remove observations revoked unavailable multi)
+  @command_exit_check """
+  receipts=$(timeout 20 "$@")
+  actual=$?
+  if [ -n "$receipts" ]; then printf '%s\\n' "$receipts"; fi
+  printf '\\nbridge SDK commands exit: %s\\n' "$actual"
+  test "$actual" -eq 0
+  """
   @environment [
     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
     {"UBSAN_OPTIONS", "halt_on_error=1"}
@@ -328,6 +336,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
 
         process = run_process_cases(workspace, directory, inside)
         receiver = run_receiver_cases(workspace, directory, inside)
+        commands = run_command_cases(workspace, directory, inside)
 
         compiled_model =
           for {path, expected} <- SoftwareBridgeModel.profile()["generated_sha256"], into: %{} do
@@ -425,6 +434,7 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
            },
            "process" => process,
            "receiver" => receiver,
+           "commands" => commands,
            "configuration" => %{
              "exit_status" => 0,
              "binary_sha256" =>
@@ -727,6 +737,40 @@ defmodule Wotex.Matter.SoftwareBridgeBuild do
   def verify_configuration!(output) do
     unless output == "bounded bridge bootstrap configuration passed\n",
       do: Mix.raise("bridge_configuration_test_failed")
+
+    :ok
+  end
+
+  defp run_command_cases(workspace, directory, inside) do
+    cases =
+      for mode <- @command_cases do
+        arguments = ["/work/" <> directory <> "/" <> @lifecycle, "commands-" <> mode]
+
+        output =
+          inside.(directory <> "-commands-" <> mode, command_command(arguments), @environment)
+
+        verify_commands!(output)
+        %{"mode" => mode, "exit_status" => 0}
+      end
+
+    %{
+      "binary_sha256" => SoftwareManifest.digest(Path.join([workspace, directory, @lifecycle])),
+      "cases" => cases
+    }
+  end
+
+  @spec command_cases() :: [String.t()]
+  def command_cases, do: @command_cases
+
+  @spec command_command([String.t()]) :: [String.t()]
+  def command_command(arguments),
+    do: ["/bin/sh", "-c", @command_exit_check, "bridge-sdk-commands"] ++ arguments
+
+  @spec verify_commands!(binary()) :: :ok
+  def verify_commands!(output) do
+    unless output ==
+             "guarded SDK command rendering and canonical observations passed\n\nbridge SDK commands exit: 0\n",
+           do: Mix.raise("bridge_sdk_commands_test_failed")
 
     :ok
   end

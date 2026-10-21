@@ -1,5 +1,6 @@
 #include "wotex_matter/bridge_endpoints.hpp"
 #include "wotex_matter/bridge_endpoint_model.hpp"
+#include "wotex_matter/bridge_light.hpp"
 
 #include <app/AttributeValueEncoder.h>
 #include <app/SafeAttributePersistenceProvider.h>
@@ -7,6 +8,10 @@
 #include <app/clusters/bridged-device-basic-information-server/BridgedDeviceBasicInformationCluster.h>
 #include <app/clusters/bridged-device-basic-information-server/BridgedDeviceBasicInformationDelegate.h>
 #include <app/clusters/temperature-measurement-server/TemperatureMeasurementCluster.h>
+#include <app/clusters/identify-server/IdentifyCluster.h>
+#include <app/clusters/groups-server/GroupsCluster.h>
+#include <app/clusters/scenes-server/CodegenIntegration.h>
+#include <app/clusters/on-off-server/codegen/scenes-integration.h>
 #include <app/reporting/reporting.h>
 #include <app/server-cluster/ServerClusterExtension.h>
 #include <app/util/attribute-storage.h>
@@ -110,7 +115,7 @@ class TemperatureProfile final : public chip::app::ServerClusterExtension {
   }
 };
 
-struct Child final {
+struct Child final : Clusters::IdentifyDelegate {
   Child(BridgeDeviceConfiguration value, BridgeEndpoint record, std::string unique,
         Clusters::BridgedDeviceBasicInformationDelegate &delegate,
         chip::app::DefaultTimerDelegate &timer)
@@ -118,18 +123,28 @@ struct Child final {
         information(record.endpoint, {.reachable = false, .nodeLabel = configuration.node_label},
                     {.uniqueId = std::move(unique)},
                     {.delegate = delegate, .timerDelegate = timer}),
-        registration(information) {}
+        registration(information),
+        identify(Clusters::IdentifyCluster::Config(record.endpoint, timer).WithDelegate(this)),
+        identify_registration(identify) {}
 
   bool IsLight() const { return endpoint.device_type == BridgedDeviceType::OnOffLight; }
+  void OnIdentifyStart(Clusters::IdentifyCluster &) override {}
+  void OnIdentifyStop(Clusters::IdentifyCluster &) override {}
+  void OnTriggerEffect(Clusters::IdentifyCluster &) override {}
+  bool IsTriggerEffectEnabled() const override { return IsLight(); }
 
   BridgeDeviceConfiguration configuration;
   BridgeEndpoint endpoint;
   std::array<chip::DataVersion, 5> versions{};
   std::optional<bool> on_off;
-  std::uint16_t identify_time{0}, on_time{0}, off_wait_time{0};
   std::uint8_t startup_on_off{0xFF};
   Clusters::BridgedDeviceBasicInformationCluster information;
   ServerClusterRegistration registration;
+  Clusters::IdentifyCluster identify;
+  ServerClusterRegistration identify_registration;
+  std::unique_ptr<RegisteredServerCluster<SdkBridgeLightCluster>> lighting;
+  std::unique_ptr<RegisteredServerCluster<Clusters::GroupsCluster>> groups;
+  std::unique_ptr<ServerClusterRegistration> restored_groups;
   std::unique_ptr<ServerClusterRegistration> restored_temperature;
   std::unique_ptr<RegisteredServerCluster<TemperatureProfile>> temperature;
 };
@@ -266,7 +281,7 @@ class SdkBridgeEndpointBinding::Impl final {
       if (observation.temperature) return CHIP_ERROR_INVALID_ARGUMENT;
       if (child.on_off != observation.on_off) {
         child.on_off = observation.on_off;
-        emberAfAttributeChanged(endpoint, 0x0006, 0);
+        child.lighting->Cluster().Observed();
       }
     } else {
       if (observation.on_off || (observation.temperature && *observation.temperature < -27315)) {
@@ -352,14 +367,23 @@ class SdkBridgeEndpointBinding::Impl final {
                            : Status::Failure;
     }
     if (cluster == 0x0006 && attribute.attributeId == 0x4000) {
+      if (child->lighting) {
+        // The registered lighting cluster owns this control value; external
+        // access is only needed during legacy generated endpoint startup.
+        return Status::UnsupportedAttribute;
+      }
       return Encode<std::uint8_t>(1, buffer, capacity);
     }
     if (cluster == 0x0003 && attribute.attributeId == 0)
-      return Encode(child->identify_time, buffer, capacity);
+      return Encode(child->identify.GetIdentifyTime(), buffer, capacity);
+    if (cluster == 0x0003 && attribute.attributeId == 1)
+      return Encode(static_cast<std::uint8_t>(child->identify.GetIdentifyType()), buffer, capacity);
     if (cluster == 0x0006 && attribute.attributeId == 0x4001)
-      return Encode(child->on_time, buffer, capacity);
+      return Encode<std::uint16_t>(child->lighting ? child->lighting->Cluster().GetOnTime() : 0,
+                                   buffer, capacity);
     if (cluster == 0x0006 && attribute.attributeId == 0x4002)
-      return Encode(child->off_wait_time, buffer, capacity);
+      return Encode<std::uint16_t>(
+          child->lighting ? child->lighting->Cluster().GetOffWaitTime() : 0, buffer, capacity);
     if (cluster == 0x0006 && attribute.attributeId == 0x4003) {
       return Encode(child->startup_on_off, buffer, capacity);
     }
@@ -374,17 +398,13 @@ class SdkBridgeEndpointBinding::Impl final {
     for (auto &value : children_)
       if (value && value->endpoint.endpoint == endpoint) child = value.get();
     if (!child) return Status::UnsupportedEndpoint;
-    if (cluster == 3 && attribute.attributeId == 0 && attribute.size == 2 &&
-        attribute.attributeType == ZAP_TYPE(INT16U)) {
-      std::memcpy(&child->identify_time, buffer, 2);
-      return Status::Success;
-    }
     if (!child->IsLight() || cluster != 6) return Status::UnsupportedWrite;
+    // Registered clusters own all normal read/write/command paths. Legacy
+    // external writes cannot bypass the explicit consumer receiver.
+    if (child->lighting) return Status::UnsupportedWrite;
     if ((attribute.attributeId == 0x4001 || attribute.attributeId == 0x4002) &&
         attribute.size == 2 && attribute.attributeType == ZAP_TYPE(INT16U)) {
-      auto &value = attribute.attributeId == 0x4001 ? child->on_time : child->off_wait_time;
-      std::memcpy(&value, buffer, 2);
-      return Status::Success;
+      return Status::UnsupportedWrite;
     }
     if (attribute.attributeId == 0x4003 && attribute.size == 1 &&
         attribute.attributeType == ZAP_TYPE(ENUM8)) {
@@ -432,7 +452,29 @@ class SdkBridgeEndpointBinding::Impl final {
     }
     auto &registry = CodegenDataModelProvider::Instance().Registry();
     if (registry.Register(child.registration) != CHIP_NO_ERROR) Failed();
-    if (!child.IsLight()) {
+    if (registry.Register(child.identify_registration) != CHIP_NO_ERROR) Failed();
+    if (child.IsLight()) {
+      auto *scenes = Clusters::ScenesManagement::FindClusterOnEndpoint(child.endpoint.endpoint);
+      auto *provider = chip::Credentials::GetGroupDataProvider();
+      if (!scenes || !provider) Failed();
+      auto &scene_server = Clusters::ScenesManagement::ScenesServer::Instance();
+      scene_server.UnregisterSceneHandler(child.endpoint.endpoint,
+                                          Clusters::OnOff::Internal::Scenes::GlobalHandler());
+      child.lighting = std::make_unique<RegisteredServerCluster<SdkBridgeLightCluster>>(
+          child.endpoint.endpoint, timer_, *scenes, storage_, child.on_off, child.startup_on_off);
+      if (registry.Register(child.lighting->Registration()) != CHIP_NO_ERROR) Failed();
+      scene_server.RegisterSceneHandler(child.endpoint.endpoint, &child.lighting->Cluster());
+      const ConcreteClusterPath path(child.endpoint.endpoint, 4);
+      auto *underlying = registry.Get(path);
+      if (!underlying || registry.Unregister(underlying) != CHIP_NO_ERROR) Failed();
+      child.restored_groups = std::make_unique<ServerClusterRegistration>(*underlying);
+      child.groups = std::make_unique<RegisteredServerCluster<Clusters::GroupsCluster>>(
+          child.endpoint.endpoint,
+          Clusters::GroupsCluster::Context{.groupDataProvider = *provider,
+                                           .scenesIntegration = scenes,
+                                           .identifyIntegration = &child.identify});
+      if (registry.Register(child.groups->Registration()) != CHIP_NO_ERROR) Failed();
+    } else {
       const ConcreteClusterPath path(child.endpoint.endpoint, 0x0402);
       auto *underlying = registry.Get(path);
       if (underlying == nullptr || registry.Unregister(underlying) != CHIP_NO_ERROR) Failed();
@@ -450,7 +492,21 @@ class SdkBridgeEndpointBinding::Impl final {
     const auto cluster_shutdown = shutdown == MatterClusterShutdownType::kPermanentRemove
         ? ClusterShutdownType::kPermanentRemove
         : ClusterShutdownType::kClusterShutdown;
+    child.identify.StopIdentifying();
+    timer_.CancelTimer(&child.identify);
     if (registry.Unregister(&child.information, cluster_shutdown) != CHIP_NO_ERROR) Failed();
+    if (child.groups) {
+      if (registry.Unregister(&child.groups->Cluster(), cluster_shutdown) != CHIP_NO_ERROR ||
+          registry.Register(*child.restored_groups) != CHIP_NO_ERROR)
+        Failed();
+    }
+    if (child.lighting) {
+      Clusters::ScenesManagement::ScenesServer::Instance().UnregisterSceneHandler(
+          child.endpoint.endpoint, &child.lighting->Cluster());
+      if (registry.Unregister(&child.lighting->Cluster(), cluster_shutdown) != CHIP_NO_ERROR)
+        Failed();
+    }
+    if (registry.Unregister(&child.identify, cluster_shutdown) != CHIP_NO_ERROR) Failed();
     if (child.temperature) {
       if (registry.Unregister(&child.temperature->Cluster(), cluster_shutdown) != CHIP_NO_ERROR ||
           registry.Register(*child.restored_temperature) != CHIP_NO_ERROR) {

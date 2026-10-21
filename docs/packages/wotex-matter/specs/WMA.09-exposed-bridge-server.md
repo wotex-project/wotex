@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.34.0-target.
+Version: 0.35.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -786,6 +786,27 @@ MUST remain observable even if the SDK-defined Failure-status fallback is
 written. A renderer that produces no reply MUST NOT establish completion.
 Retaining an SDK handle from the scoped adapter MUST terminate the process
 before a borrowed adapter can escape its renderer-call lifetime.
+
+The finite native renderer MUST require explicit endpoint-owner attachment and
+MUST execute only after completed consumer outcome and current guard validation.
+It MUST dispatch only the selected Identify, Groups, On/Off and Scenes Management
+commands, use the captured timed/principal context, and permit only the response
+ID belonging to that command. SDK status/data errors MUST remain observable;
+no reply or a failed encoding MUST NOT become success. It MUST call the native
+delegate rather than reentering the installed consumer provider.
+
+Each live child MUST own a registered Identify lifetime and its selected command
+metadata. Each light MUST own the selected SDK lighting state machine and a
+distinct scene handler. Native lighting commands, effects and timers MUST NOT
+publish or persist an inferred canonical OnOff value. OnOff reads and scene
+snapshots MUST use only approved observations; a missing observation MUST remain
+unavailable. Approved changes MUST advance the current registered cluster's data
+version and retire stale scene validity. Lighting timers and control attributes
+describe native protocol bookkeeping, not physical-effect evidence. Consumer
+execution owns physical effects, including delayed effects and scene transitions.
+Normal shutdown and endpoint removal MUST cancel owned cluster/scene timers and
+detach handlers before releasing their borrowed state. StartUpOnOff configuration
+MUST retain persist-before-publication behavior and strict restart validation.
 
 The installed SDK data-model provider MUST preserve generated metadata and
 Root Node/Aggregator operations while routing live child reads, writes,

@@ -206,6 +206,17 @@ Repository-wide rules are in the root `AGENTS.md`.
   with copied principal/path/response-ID custody;
   `native/testing/sdk_bridge_replies_test.*` executes SDK Groups/Scenes with
   synthetic principal/key fixtures. Consumer policy remains separately owned.
+- `native/{include/wotex_matter,src}/bridge_command_renderer.*`: explicitly
+  attached finite native renderer after consumer completion/current guard checks,
+  with command-specific response IDs and captured principal/timed metadata.
+  `bridge_light.*` adapts SDK lighting controls/timers while public OnOff and
+  scene snapshots use only approved observations. Command-generated OnOff is
+  never persisted. The endpoint owner registers Identify and per-child lighting/
+  scene handlers, joins Groups to Identify/Scenes and cancels timers on retirement.
+  `native/testing/sdk_bridge_commands_test.*` drives eleven guarded SDK/pipe
+  families, including every selected command, fresh-process persistence,
+  callback retirement and independent light snapshots. It establishes no network
+  authentication, physical effect or complete production executable.
 - `native/{include/wotex_matter,src}/bridge_writes.*`: internal owned finite
   attribute values admitted to shared request custody;
   `native/testing/sdk_bridge_writes_test.*` tests SDK decoding and admission
