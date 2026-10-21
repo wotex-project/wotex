@@ -47,7 +47,7 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
     result = command(script, log: log, timeout: 60_000)
     assert {:ok, output} = result, File.read!(log)
     assert Jason.decode!(String.trim(output)) == Enum.map(expected, &Tuple.to_list/1)
-    assert length(expected) == 40
+    assert length(expected) == 42
   end
 
   test "WMA-B01 required software rejects missing unsafe or invalid fixtures before creating results",

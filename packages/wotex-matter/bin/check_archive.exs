@@ -119,6 +119,7 @@ defmodule Wotex.Matter.Check.Archive do
     "priv/fixtures/wotex-integration-v1.json",
     "test/native/interaction_test.cpp",
     "test/interop/exposed_bridge_test.exs",
+    "test/interop/exposed_bridge_commands_test.exs",
     "test/native/bridge_storage_test.cpp",
     "test/support/software/build.exs",
     "test/support/software/bridge_model.exs",

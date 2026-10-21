@@ -240,6 +240,18 @@
       "module": "Elixir.Wotex.Matter.ExposedBridgeInteropTest",
       "name": "test native process loss retires an authenticated mutation without claiming its physical effect",
       "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/exposed_bridge_commands_test.exs",
+      "module": "Elixir.Wotex.Matter.ExposedBridgeCommandsInteropTest",
+      "name": "test authenticated SDK command families preserve native responses and approved snapshots",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/exposed_bridge_commands_test.exs",
+      "module": "Elixir.Wotex.Matter.ExposedBridgeCommandsInteropTest",
+      "name": "test two authenticated fabrics isolate Groups, Scenes and consumer authorization",
+      "evidence": "shared-sdk"
     }
   ],
   "environment": {

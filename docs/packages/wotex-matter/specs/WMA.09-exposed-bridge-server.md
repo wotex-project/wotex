@@ -2,7 +2,7 @@
 
 ## Status
 
-Version: 0.37.0-target.
+Version: 0.38.0-target.
 
 Target contract. The package catalogue records implementation status separately.
 Existing WMA.01-WMA.08 remain controller-side and MUST NOT be cited as
@@ -707,6 +707,21 @@ expiry, native process loss and stored fabric/endpoint reuse. A separately built
 SDK controller MUST exercise the four finite writable child attributes and
 preserved native state after consumer denial. This is shared-SDK software
 qualification, not independent-stack, ecosystem, physical or certification proof.
+
+The separately built SDK controller MUST exercise all twenty-two selected child
+command paths through captured CASE principal/path metadata, required consumer
+policy and public ExposedThing dispatch. It MUST check native response status
+and selected response fields, group membership, scene copy/removal and approved
+OnOff snapshots. A missing group key mapping MUST retain the SDK's refusal;
+explicit root Group Key Management operations MUST provision the test mapping.
+An acknowledged protocol-bookkeeping Action MUST publish no physical observation.
+Two independently stored controller fabrics MUST use an enhanced commissioning
+window and retain distinct fabric indices, roots and NOC digests. The same
+group/scene identifiers MUST remain fabric-scoped, including removal of one
+fabric's groups and scenes. Consumer policy denial MUST prevent that fabric's
+handler without blocking the other. Removing a fabric through the authenticated
+root operation MUST prevent its later consumer delivery while preserving the
+surviving fabric's authenticated operation.
 
 The explicit Linux software cohort MAY sample the documented
 `erlang:system_info(os_monotonic_time_source)` OS-time value and convert its

@@ -106,8 +106,9 @@ Repository-wide rules are in the root `AGENTS.md`.
   controls. `native/testing/bridge_host_test.*` executes the actual binary for
   twenty-six argument/private-input, lifecycle, observation, signal and pipe-loss
   families. The guarded bootstrap fixture supplies explicit development material;
-  the production target has no fixture hooks. Live authenticated SDK admission,
-  BEAM/SDK integration and independent controller/reporting qualification remain open.
+  the production target has no fixture hooks. The explicit live software cohort
+  covers selected authenticated BEAM/SDK paths; wider independent controller,
+  reporting and installed-host qualification remain open.
 - `native/include/wotex_matter/bridge_sdk_process.hpp` and
   `native/src/bridge_sdk_process.cpp`: internal SDK implementation of the process
   driver port, owning explicit private loading, receiver attachment, event-loop
@@ -255,6 +256,12 @@ Repository-wide rules are in the root `AGENTS.md`.
   signing key only for its refusal probes. The cohort checks/samples the Linux OS
   `CLOCK_MONOTONIC` value directly; it supplies no default library clock or policy.
   Root software receipts include the production/material binaries and SDK peer.
+- `test/interop/exposed_bridge_commands_test.exs`: two additional shared-SDK
+  live families exercise all twenty-two selected native command paths, response
+  fields and approved scene snapshots; independent controller stores establish
+  two fabrics and check group/scene isolation, consumer denial and root fabric
+  removal. The explicit protocol Action performs only native bookkeeping and
+  publishes no physical observation. Root key-set/map provisioning stays explicit.
 - Test support: `test/support/` (scripted clients, Runtime credentials and
   result transport); `test/support/software/` (build, run, scenarios, peers,
   manifests and the required-case inventory `acceptance.json`).

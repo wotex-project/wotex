@@ -60,10 +60,12 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
     root
   end
 
-  @spec peer(map(), String.t(), [String.t()]) :: {String.t(), non_neg_integer()}
-  def peer(fixture, root, arguments) do
+  @spec peer(map(), String.t(), [String.t()], keyword()) :: {String.t(), non_neg_integer()}
+  def peer(fixture, root, arguments, options \\ []) do
     true = digest(fixture["peer"]) == fixture["peer_sha256"]
-    directory = Path.join(root, "peer")
+    fabric = Keyword.get(options, :fabric, 55)
+    subject = Keyword.get(options, :subject, 770_001)
+    directory = Path.join(root, "peer-#{fabric}")
     File.mkdir_p!(directory)
     File.chmod!(directory, 0o700)
 
@@ -73,9 +75,9 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
       "--paa-trust-store-path",
       fixture["paa"],
       "--commissioner-name",
-      "55",
+      Integer.to_string(fabric),
       "--commissioner-nodeid",
-      "770001"
+      Integer.to_string(subject)
     ]
 
     ProcessCommand.run("/usr/bin/timeout", ["20", fixture["peer"] | arguments ++ common],
@@ -151,6 +153,10 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
           "set" => %{
             "input" => %{"type" => "boolean"},
             "forms" => [%{"href" => "https://example.test/set"}]
+          },
+          "protocol" => %{
+            "input" => %{"type" => "string", "maxLength" => 131_072},
+            "forms" => [%{"href" => "https://example.test/protocol"}]
           }
         }
       })
@@ -167,7 +173,8 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
             {:writeproperty, "wait"},
             {:readproperty, "startup"},
             {:writeproperty, "startup"},
-            {:invokeaction, "set"}
+            {:invokeaction, "set"},
+            {:invokeaction, "protocol"}
           ],
           into: %{} do
         {{operation, name},
@@ -219,6 +226,33 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
          }}
       end
 
+    # Explicit protocol-bookkeeping Action. It publishes no physical observation.
+    protocol_paths =
+      for {cluster, members} <- [
+            {3, [0, 64]},
+            {4, 0..5},
+            {6, [0, 1, 2, 64, 65, 66]},
+            {98, [0, 1, 2, 3, 4, 5, 6, 64]}
+          ],
+          member <- members,
+          do: {<<0, 1>>, 3, cluster, member, :invoke}
+
+    protocol_paths = [{<<0, 2>>, 4, 3, 0, :invoke} | protocol_paths]
+
+    protocol =
+      Map.new(protocol_paths, fn key ->
+        {key,
+         %{
+           exposed: exposed,
+           operation: :invokeaction,
+           name: "protocol",
+           input: fn {:tlv, bytes}, _ -> {:ok, Base.encode16(bytes, case: :lower)} end,
+           result: fn {:ok, nil}, _ -> :completed end
+         }}
+      end)
+
+    routes = Map.merge(protocol, routes)
+
     configuration = [
       owner: owner,
       executable: options[:fixture]["bridge"],
@@ -241,6 +275,8 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
            temperature: 2100,
            controls: %{},
            allowed: true,
+           principals: Keyword.get(options, :principals, [{55, 770_001, 780_001}]),
+           denied_fabrics: MapSet.new(),
            delay: 0
          }}
 
@@ -254,9 +290,12 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
     send(state.parent, {:bridge_policy, request, context})
 
     valid =
-      request.principal.auth_mode == :case and request.principal.subject == 770_001 and
-        not request.principal.is_commissioning and request.fabric_scope.fabric_id == 55 and
-        request.fabric_scope.bridge_node == 780_001 and context.deadline > now()
+      request.principal.auth_mode == :case and not request.principal.is_commissioning and
+        Enum.any?(state.principals, fn {fabric, subject, bridge} ->
+          request.principal.subject == subject and request.fabric_scope.fabric_id == fabric and
+            request.fabric_scope.bridge_node == bridge
+        end) and not MapSet.member?(state.denied_fabrics, request.fabric_scope.fabric_id) and
+        context.deadline > now()
 
     {:reply, if(valid and state.allowed, do: :allow, else: :deny), state}
   end
@@ -271,6 +310,7 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
         {:readproperty, name} -> {Map.get(state.controls, name, 0), state}
         {:writeproperty, name} -> {nil, %{state | controls: Map.put(state.controls, name, input)}}
         {:invokeaction, "set"} -> {input, %{state | value: input}}
+        {:invokeaction, "protocol"} -> {nil, state}
       end
 
     {:reply, {value, state.delay}, state}
@@ -300,6 +340,13 @@ defmodule Wotex.Matter.SoftwareExposedBridge do
   end
 
   def handle_call({:allowed, allowed}, _, state), do: {:reply, :ok, %{state | allowed: allowed}}
+
+  def handle_call({:deny_fabric, fabric}, _, state),
+    do: {:reply, :ok, %{state | denied_fabrics: MapSet.put(state.denied_fabrics, fabric)}}
+
+  def handle_call({:allow_fabric, fabric}, _, state),
+    do: {:reply, :ok, %{state | denied_fabrics: MapSet.delete(state.denied_fabrics, fabric)}}
+
   def handle_call({:delay, delay}, _, state), do: {:reply, :ok, %{state | delay: delay}}
   def handle_call(:connection, _, state), do: {:reply, state.connection, state}
   def handle_call(:status, _, state), do: {:reply, Connection.status(state.connection), state}

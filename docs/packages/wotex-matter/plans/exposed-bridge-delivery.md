@@ -1,6 +1,6 @@
 # Exposed bridge delivery plan
 
-Version: 1.36.0. Delivery plan for the existing WMA.09 target; not a replacement
+Version: 1.37.0. Delivery plan for the existing WMA.09 target; not a replacement
 for the controller contract. The catalogue records execution status.
 
 The pure endpoint registry now allocates monotonically, tombstones removed
@@ -887,10 +887,28 @@ to milliseconds. The selected child uses the same Linux `CLOCK_MONOTONIC` in the
 same time namespace, so the relative rate is one. ERTS's frequency-corrected
 clock is not substituted. This qualification applies only to the selected
 runtime/kernel/source cohort; other deployments require their own evidence.
-The software inventory has forty cases including these four. Focused execution
+The software inventory has forty-two cases, including these four and the two
+command/fabric families below. Focused execution
 of the new cohort does not renew the complete historical software-lane receipt.
 The [authenticated consumer record](../provenance/bridge-consumer-2026-10.md)
 binds these eight live executions, signing-key refusals and exact cohort/artifacts.
+
+### Authenticated command and fabric cohort
+
+The separate command interop file drives all twenty-two selected native command
+paths through the public connection, CASE policy and ExposedThing handlers. It
+checks command-specific status/data, group membership, scene copy/removal and
+StoreScene snapshots of approved state. The explicit protocol-bookkeeping
+Action publishes no physical observation. Root Group Key Management provisions
+keys/mappings through the controller; missing mappings retain SDK refusal.
+
+Two independent controller stores commission distinct fabrics through an
+enhanced window. Captured fabric indices, roots and NOC digests differ. Overlapping
+group/scene IDs retain separate entries; removal and consumer denial in one
+fabric preserve the other. Authenticated root fabric removal prevents subsequent
+consumer delivery from the removed controller, while the survivor still works.
+This shared-SDK cohort does not establish independent-stack or installed-host
+qualification, and does not renew the complete historical software-lane receipt.
 
 ## 4. Isolation and recovery
 

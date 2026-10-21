@@ -1,6 +1,6 @@
 # Exposed bridge software profile
 
-Version: 1.33.0. Finite WMA.09 implementation target. The
+Version: 1.34.0. Finite WMA.09 implementation target. The
 [catalogue](../specs/catalogue.yaml) records implementation separately.
 Model generation, native storage, internal SDK server lifecycle and dynamic
 endpoint bindings, bounded BEAM consumer execution and explicit BEAM process
@@ -17,7 +17,10 @@ it is never selected implicitly. An explicit production entry composes that
 renderer, guarded receiver and configured driver with private configuration,
 checked monotonic time, fixed diagnostics and signal cancellation. Live BEAM/SDK
 admission and selected authenticated requests are exercised by the live software
-cohort; wider qualification remains open.
+cohort. A separate shared-SDK cohort exercises all twenty-two selected commands,
+response/state checks, two independently commissioned fabrics, scoped group/scene
+custody, consumer denial and root fabric removal. Wider independent-stack,
+report-flow and installed-host qualification remains open.
 
 The installed invoke guard validates command fields after bounded copying and
 before request/handler admission. All 22 selected commands require their declared
