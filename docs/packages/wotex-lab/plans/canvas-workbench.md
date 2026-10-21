@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.3.0. Status: proposed for design review. Implementation: not
+Plan version: 0.5.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -42,12 +42,26 @@ context menus start at 200 pixels. Touch and zoomed layouts need their own
 composition. These are design proposals, not current CSS or accessibility
 qualification.
 
+The 28-pixel field height applies to single-line controls. Questions and Thing
+Description JSON use bounded multiline inputs that show their content without
+repeating it in a separate preview paragraph.
+
+Use one 4-pixel base radius for sections, nodes, menus, shells and controls.
+The selected tool is a 28-pixel square with the same corners, inset 4 pixels
+within the rail. Buttons take their width from their content. Put form groups
+directly in the inspector body, with labels above fields, instead of nesting
+another rounded card. Floating nodes, pins, menus and shells use a thin border
+and shared subtle elevation: charcoal shadows at 0/2/8 pixels with 10% opacity
+and 0/1/2 pixels with 4% opacity. Inner groups and integrated documentation stay
+flat. This supersedes the earlier shadow-free canvas treatment.
+
 The workbench background follows the supplied graph-paper reference: a fine
 6.5-pixel mesh, secondary lines every 26 pixels and crosshairs every 104 pixels.
-The [repeating SVG tile](https://github.com/wotex-project/wotex/blob/4ca9541c864f31b0739d08b0bcb3ad893897f61d/docs/assets/lab/workbench-grid.svg)
-is 650 bytes, with no raster, font, script or external resource. It replaces the
-earlier dot grid. Keep its origin consistent with canvas pan/zoom during
-implementation; opaque data surfaces sit above it.
+The softened [repeating SVG tile](https://github.com/wotex-project/wotex/blob/3de193854d03d4149376f8aae744bff443f37741/docs/assets/lab/workbench-grid.svg)
+is 673 bytes, with no raster, font, script or external resource. Fine and
+secondary strokes use 6.5% and 7.8% opacity; crosshairs use 65%. This reduces
+contrast by 35% from the first graph-paper edition. Keep its origin consistent
+with canvas pan/zoom during implementation; opaque data surfaces sit above it.
 
 Icon artwork comes from Lucide revision
 `20aef31db93fe4d9f398dbb15b120d99c48eef95`. The source SVGs and upstream
@@ -143,6 +157,12 @@ as right-click. A searchable list provides a non-spatial access path to Things.
    definitions. Freeze snapshot is a separate operation with a fixed time range.
 6. Return later to the owned layout. Cached data remains visibly timestamped;
    a failed refresh does not present old values as live.
+
+Across an unavailable chart interval, a light gray dotted bridge joins the
+known endpoints and is identified as “Dotted · no samples”. It signals absent
+observations, not measured interpolation. Do not add points or turn missing
+samples into zero. Sources retains the exact unavailable interval; measured
+segments remain solid charcoal.
 
 The structured handoff is proposed work. An AI answer may suggest only a closed
 metric/query and supported visualization descriptor. The server admits the
@@ -264,7 +284,8 @@ Review small-size recognition and any future lockup separately.
 1. Create a new canvas-journey proposal page with ten expanded states: four
    connect/inspect, four ask/compose and two configure/result. Use one stable
    illustrative system and shared compact controls. Give each journey its actor,
-   goal, entry, outcome and recovery in an adjacent native Spec when supported.
+   goal, entry, outcome and recovery in a native Figma Spec. Do not render
+   descriptions or implementation notes as text boards in the product canvas.
 2. Create a separate documentation journey page for search, results, article
    reading and return to workbench. Preserve the separate reading shell.
 3. Connect the ordinary, close/back and cancellation paths in native Prototype
@@ -289,20 +310,21 @@ design pass.
 
 ## Authored proposal and bounded review
 
-The 2026-10-21 edition adds two pages to the existing editable Design file:
+The 2026-10-21 review uses these pages in the existing editable Design file:
 
 | Page | Authored journey states |
 | --- | --- |
 | [Canvas journeys — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-2) | Start a sample room, connected Things, Thing context menu, Thing inspector; Ask, admitted metric result, pinned chart, pin/layout actions; experiment configuration and result/Action review |
 | [Find answers — proposal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=61-212) | Documentation search, results, article reading and return to the same workbench context |
-| [Compact system](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52) | Nine reusable core control families, semantic colour modes, named text styles and linked instance reviews |
+| [Compact system](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52) | Fifteen reusable control/container families, semantic colour modes, named text styles and linked instance reviews |
 
-These are fourteen expanded 1440 × 900 compositions with illustrative data,
-editable text/vector layers and existing Button/Field instances. Compact
+The initial edition contains fourteen expanded 1440 × 900 compositions with
+illustrative data, editable text/vector layers and existing Button/Field
+instances. Compact
 floating controls, typed topology edges, a contextual inspector and a metric
 pin establish the proposed workspace. The separate compact library now supplies
-core control families; the loose container studies are not complete component
-coverage. The initial
+core control families; the subsequent container and journey edition is described
+below. The initial
 edition used a draft W tile; the subsequent visual revision uses the supplied
 mark and compact grayscale direction above.
 
@@ -332,6 +354,51 @@ and [three-mode](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=97-
 reviews were inspected. These native controls do not establish parity with the
 host's current CSS or complete responsive accessibility coverage.
 
+The next edition adds Thing node, Process node, Metric pin, Inspector shell,
+Dialog shell and Field group families. Together with the core controls, these
+provide fifteen families and sixty-five variants. A linked
+[container review](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=106-1424)
+was inspected. State-specific properties retain stale timestamps, paused or
+missing metric data and invalid-field errors; a shared default must not relabel
+those variants as current. The gapped chart remains editable vector artwork.
+
+Eight existing A/B roots now use the compact components, retaining their root
+identities and eleven existing prototype reactions. Five legacy control
+instances retained their identities through component swaps. Five older click
+targets remain aligned, nearly transparent prototype overlays; they preserve
+historical links and are not a proposed runtime DOM pattern.
+
+Sixteen additional expanded storyboards complete the first connection and
+metrics state inventory:
+
+| States | Additional task coverage |
+| --- | --- |
+| A5–A8 | Board menu, Add submenu, [Thing Description import](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-3866) and retained invalid input |
+| A9–A12 | Searchable Thing list, stale observation, unavailable per-Thing measurements and read-only Thermostat configuration |
+| B5–B8 | [Build query](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-5011), query/source detail, unavailable Ask provider and absent measurements |
+| B9–B12 | Save layout, saved entry, [restored cached board](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-6203) and paused pin; B4 retains pin actions |
+
+The proposal now has twenty-six canvas snapshots, including the two original
+experiment storyboards, and four documentation snapshots. The twenty-four A/B
+frames retain the three-path grid, explicit source scope and missing-data gaps.
+The initial structural checks reported no containment findings or image-based
+UI. A3, import, query builder and cached-board renders were checked during
+authoring. These sixteen additions are not connected flows yet. Twenty-three
+standalone menu, inspector and dialog overlay targets now contain only their
+task composition, with no copied canvas background. A2's board control opens
+its real menu overlay at (20,48), without a backdrop; clicking outside closes it
+and preserves the originating board. That path was exercised in Play. The
+remaining overlay actions still need wiring and Play checks.
+
+The following consistency pass applies the shared 4-pixel corners, matching
+single-line control heights, quieter grid and floating-surface shadows to the
+current proposal. Smart-room configuration sits directly in the inspector;
+Ask uses one multiline question and result details avoid duplicated metadata.
+The metric gap now has a separate dotted bridge with no fabricated samples.
+A fresh pinned-workbench export and the flattened configuration were visually
+inspected; the board overlay was opened and dismissed again in Play. This is
+Figma review evidence, not a browser implementation or telemetry test.
+
 Native Play exercised these fixed-state paths:
 
 - Explicit sample-room start → connected Things → ellipsis menu → Inspect →
@@ -348,15 +415,25 @@ Native Play exercised these fixed-state paths:
   search dismissal and header returns; remaining documentation destinations
   still require their own states and connections.
 
+After the compact container swaps, Play again exercised sample-room start →
+connected Things → ellipsis menu → Read temperature → inspector → Close, and
+Ask → admitted result → Pin. These checks reached the preserved root IDs with
+the new controls; they do not qualify the unwired alternatives or real device,
+provider, query, layout-storage or Action behavior.
+
 The experiment states remain storyboards. General text input, Build query,
-Thing right-click/keyboard entry, menu dismissal, drag/resize, layout persistence
-and run/approval/cancellation have not been qualified in the new prototype.
+Thing right-click/keyboard entry, other menu dismissal, drag/resize, layout
+persistence and run/approval/cancellation have not been qualified in the new prototype.
 Documentation uses a fixed search fixture rather than an executed search index.
 No room, metric query, provider request,
-run, Action or report export executed during Play. Adjacent journey notes are
-ordinary Design content; native Specs were not updated in this edition because
-the managed connector required reauthentication. Themes, responsive/recovery
-coverage, full component bindings, native archives and independent restores
+run, Action or report export executed during Play. The current
+[journey Spec](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=119-4210)
+on Start now holds workspace rules, journeys, source boundaries, alternatives,
+accessibility and the actual authoring/Play limits. It was authored in the
+native Spec editor and its structured content was read back after reopening;
+the managed Spec API remains unavailable pending connector reauthentication.
+The superseded journey and layout prose boards are hidden. Themes,
+responsive/recovery coverage, full component bindings, native archives and independent restores
 remain design acceptance work. Review this spatial direction before extending
 those combinations or promoting implementation obligations.
 

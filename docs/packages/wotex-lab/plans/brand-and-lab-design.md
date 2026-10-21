@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.3.0. Contract: accepted. Design status: under revision.
+Plan version: 1.5.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -21,7 +21,10 @@ search. A full-page spatial canvas, floating icon tools and contextual
 inspectors replace the previous page-led composition in this design review.
 Documentation retains a separate, flat reading layout with a 48-pixel header.
 The latest visual direction uses the supplied logo's cool grays, 14/16-pixel
-icons, compact rows and at most two persistent workbench menu surfaces.
+icons, compact rows and at most two persistent workbench menu surfaces. Sections
+and controls share 4-pixel corners; single-line buttons and fields are 28 pixels
+high. Subtle shadows separate floating canvas elements, while documentation
+stays flat. The graph-paper background has reduced contrast.
 
 The proposal is a review deliverable. Current source contracts, package APIs
 and completion obligations remain unchanged until its behavior is reviewed and
@@ -36,7 +39,7 @@ file retains those historical studies alongside the selected supplied mark.
 | File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected supplied-logo master plus four historical study pages. Earlier boards and treatment families remain draft history. |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, fourteen new proposal states and a compact component library. The prior component families, three native Specs and prototype starts remain historical; current component and Play coverage are described in the canvas proposal. |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, thirty current proposal snapshots, twenty-three standalone overlay targets, a compact component library and a current journey Spec on Start. The prior component families, three older native Specs and prototype starts remain historical; current component and Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.
@@ -93,13 +96,22 @@ remain required work.
 ## Lab pages, states and flows
 
 The current [compact library](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52)
-adds nine native core control families with fifty variants, Light/Dark/Contrast
-semantic modes, six Inter text styles and linked instance reviews. The new
-documentation proposal now connects search, results, guide reading and return
+adds fifteen native control/container families with sixty-five variants,
+Light/Dark/Contrast semantic modes, six Inter text styles and linked instance
+reviews. Sixteen new connection and metrics storyboards extend the initial
+fourteen proposal snapshots. Standalone overlay targets now preserve the
+originating canvas; the board-menu open/outside-close path was exercised.
+Remaining overlay and recovery paths still require native prototype wiring.
+The new documentation proposal now connects search, results, guide reading and return
 to the same board; its ordinary, Enter and Escape paths were exercised in Play.
-Container components, remaining journeys and recovery/responsive coverage are
-still required. These checks describe native design fixtures, not implemented
-host behavior.
+The remaining experiment, documentation-alternative and recovery/responsive
+coverage is still required. These checks describe native design fixtures, not
+implemented host behavior.
+
+Descriptions and interaction rules now live in the native
+[Canvas workbench journeys Spec](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=119-4210).
+Its editor content was read back after reopening. The previous journey and
+layout prose boards are hidden; product frames retain task facts and controls.
 
 The existing source exposes the six functional families below. WLB-C16 retains
 their behavior and state coverage; the new proposal examines how those tasks
