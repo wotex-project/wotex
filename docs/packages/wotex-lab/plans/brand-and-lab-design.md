@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.5.0. Contract: accepted. Design status: under revision.
+Plan version: 1.6.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -39,7 +39,7 @@ file retains those historical studies alongside the selected supplied mark.
 | File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected supplied-logo master plus four historical study pages. Earlier boards and treatment families remain draft history. |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, thirty current proposal snapshots, twenty-three standalone overlay targets, a compact component library and a current journey Spec on Start. The prior component families, three older native Specs and prototype starts remain historical; current component and Play coverage are described in the canvas proposal. |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, thirty current proposal snapshots, sixty-two current standalone overlay targets, a compact component library and a current journey Spec on Start. Superseded page families are marked Archive. Current component and Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.
@@ -98,20 +98,26 @@ remain required work.
 The current [compact library](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=96-52)
 adds fifteen native control/container families with sixty-five variants,
 Light/Dark/Contrast semantic modes, six Inter text styles and linked instance
-reviews. Sixteen new connection and metrics storyboards extend the initial
-fourteen proposal snapshots. Standalone overlay targets now preserve the
-originating canvas; the board-menu open/outside-close path was exercised.
-Remaining overlay and recovery paths still require native prototype wiring.
+reviews. Sixteen connection and metrics storyboards extend the initial fourteen
+proposal snapshots. Sixty-two current standalone overlay targets now support
+Thing-specific inspection, Ask/query/pin, three experiments, Action review,
+command status and contextual reports. Fifty-five are structurally reachable
+from the explicit sample-room start; seven failure/expiry/denial alternatives
+remain separate review fixtures. Five replaced helpers are hidden archives.
+Native Play exercised pin pause/resume/removal and Smart room stage retention
+through close/reopen, alongside the earlier inspection and metrics paths.
 The new documentation proposal now connects search, results, guide reading and return
 to the same board; its ordinary, Enter and Escape paths were exercised in Play.
-The remaining experiment, documentation-alternative and recovery/responsive
-coverage is still required. These checks describe native design fixtures, not
+Source-accurate experiment result visualizations, documentation alternatives,
+full lifecycle/recovery and responsive/theme coverage are still required.
+These checks describe native design fixtures, not
 implemented host behavior.
 
 Descriptions and interaction rules now live in the native
 [Canvas workbench journeys Spec](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=119-4210).
-Its editor content was read back after reopening. The previous journey and
-layout prose boards are hidden; product frames retain task facts and controls.
+Its content was read through the managed Spec API, edited surgically and read
+back after verification. The previous journey, layout and Start prose boards
+are hidden; product frames retain task facts and controls.
 
 The existing source exposes the six functional families below. WLB-C16 retains
 their behavior and state coverage; the new proposal examines how those tasks

@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.5.0. Status: proposed for design review. Implementation: not
+Plan version: 0.6.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -378,64 +378,92 @@ metrics state inventory:
 | B5–B8 | [Build query](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-5011), query/source detail, unavailable Ask provider and absent measurements |
 | B9–B12 | Save layout, saved entry, [restored cached board](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=111-6203) and paused pin; B4 retains pin actions |
 
-The proposal now has twenty-six canvas snapshots, including the two original
-experiment storyboards, and four documentation snapshots. The twenty-four A/B
-frames retain the three-path grid, explicit source scope and missing-data gaps.
-The initial structural checks reported no containment findings or image-based
-UI. A3, import, query builder and cached-board renders were checked during
-authoring. These sixteen additions are not connected flows yet. Twenty-three
-standalone menu, inspector and dialog overlay targets now contain only their
-task composition, with no copied canvas background. A2's board control opens
-its real menu overlay at (20,48), without a backdrop; clicking outside closes it
-and preserves the originating board. That path was exercised in Play. The
-remaining overlay actions still need wiring and Play checks.
+The proposal has thirty full snapshots: twenty-six canvas and four
+documentation. The two experiment snapshots now use the same compact topology
+and inspectors as the connection and metrics journeys. Source comparison for
+this edition used repository commit `8445530535732324d28f935abac530e97c3aab2f`
+and package path `packages/wotex-lab`; later source changes require comparison.
 
-The following consistency pass applies the shared 4-pixel corners, matching
-single-line control heights, quieter grid and floating-surface shadows to the
-current proposal. Smart-room configuration sits directly in the inspector;
-Ask uses one multiline question and result details avoid duplicated metadata.
-The metric gap now has a separate dotted bridge with no fabricated samples.
-A fresh pinned-workbench export and the flattened configuration were visually
-inspected; the board overlay was opened and dismissed again in Play. This is
-Figma review evidence, not a browser implementation or telemetry test.
+There are sixty-two current standalone menu, inspector and dialog targets,
+without copied canvas underlays. Fifty-five are structurally reachable from
+A1's explicit sample-room start. Seven alternatives remain separate review
+fixtures: invalid Thing Description, unavailable Ask, no measurements, cached
+refresh, unavailable experiment, expired decision and denied Action. Five
+replaced helpers are hidden archives. Reachability does not establish that
+every control, state transition or backend contract was exercised.
+
+The latest native edition adds:
+
+- Distinct Thermostat, Energy meter and Actuator menus, inspectors, Property
+  results, history limits, configuration limits and Sources. Actual Thing IDs,
+  Forms and capabilities replace the earlier Thermostat placeholder identity.
+- Board-preserving pin, pause, resume, remove, rename and Sources actions.
+  Hidden prototype variables retain pin title/visibility, paused state and layout
+  status. Saving changes the illustrative layout status; durable storage,
+  arbitrary text editing and arrangement are not implemented by this prototype.
+- Separate [Thermal](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=199-5139),
+  [Window anomaly](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=199-5253)
+  and [Smart room](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=199-5026)
+  tasks, with result, Sources, Run details and report compositions. Count 513
+  shows the anomaly error while retaining its other five fields and disabling
+  Run. Its result now shows the executed sample's score, observed temperature
+  window and persistence prediction. Broader numerical/state validation remains
+  required.
+- Exact Action review, unknown command outcome, accepted transport and explicit
+  target Property read states. Hidden stage variables resume the current
+  proposal or command after closing the drawer. The proposal can be cancelled
+  explicitly. An accepted command has a separate New run entry. This models
+  presentation behavior, not policy decisions, command execution or effect.
+- Compact action rows, growing multiline import text and shared field groups
+  that hug their visible contents. Hidden validation text no longer reserves
+  blank space. Smart-room configuration has no inner form card. Buttons and
+  single-line fields retain the shared 28-pixel height and 4-pixel corners.
 
 Native Play exercised these fixed-state paths:
 
-- Explicit sample-room start → connected Things → ellipsis menu → Inspect →
-  Thing inspector → Close; selecting the Thing and returning with Back also
-  preserved the connected-system composition.
-- [Ask → admitted result → Pin](https://www.figma.com/proto/SudxgeebiNEu33PPIHO229?node-id=64-5510&starting-point-node-id=64%3A5510&scaling=scale-down-width&content-scaling=fixed)
-  reached the pinned chart with the same host-instance query identity, range,
-  units and missing-data gap.
-- Documentation search with Enter → matching results → selected guide, using
-  both the first result's click target and Enter. The guide's global search
-  opens the search state; Escape returns to the originating guide. Header
-  Return to workbench from the guide and search reaches the same selected
-  Thermostat and pinned chart. Ten native reactions cover the ordinary path,
-  search dismissal and header returns; remaining documentation destinations
-  still require their own states and connections.
+- Explicit start → connected Things; board Search → Find → Thermostat → Close.
+  Energy meter opened its own right-aligned inspector. Context menus retained
+  their anchors, and closing an inspector retained the board.
+- Metrics → Ask → result → Sources / Build query → result → Pin on the same A2
+  canvas. Pin Pause → paused menu → Resume → Remove retained the Things,
+  connections, query identity and last sample time without navigating to a
+  copied board. Ask was exercised again after removing its duplicate heading.
+- Smart room Run → result → Action review → unknown command outcome → Check
+  status → accepted. Closing and reopening Experiments resumed the pending
+  proposal, unknown command and accepted status without another Run or approval.
+  These are fixed prototype transitions, not observations from a device.
+- New run → anomaly configuration → invalid count 513 → Reset count → result
+  exercised validation and recovery while retaining the other five fields.
+- Documentation search/Enter → result → selected guide; global search/Escape
+  returned to the originating guide, and header Return reached the board
+  fixture. Those earlier ten reactions remain. The documentation return is a
+  fixed review composition, not qualified restoration of an arbitrary board.
 
-After the compact container swaps, Play again exercised sample-room start →
-connected Things → ellipsis menu → Read temperature → inspector → Close, and
-Ask → admitted result → Pin. These checks reached the preserved root IDs with
-the new controls; they do not qualify the unwired alternatives or real device,
-provider, query, layout-storage or Action behavior.
-
-The experiment states remain storyboards. General text input, Build query,
-Thing right-click/keyboard entry, other menu dismissal, drag/resize, layout
-persistence and run/approval/cancellation have not been qualified in the new prototype.
-Documentation uses a fixed search fixture rather than an executed search index.
-No room, metric query, provider request,
-run, Action or report export executed during Play. The current
+The final compact workbench/result, anomaly form, Ask, import and query builder
+renders were visually reviewed. The native
 [journey Spec](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=119-4210)
-on Start now holds workspace rules, journeys, source boundaries, alternatives,
-accessibility and the actual authoring/Play limits. It was authored in the
-native Spec editor and its structured content was read back after reopening;
-the managed Spec API remains unavailable pending connector reauthentication.
-The superseded journey and layout prose boards are hidden. Themes,
-responsive/recovery coverage, full component bindings, native archives and independent restores
-remain design acceptance work. Review this spatial direction before extending
-those combinations or promoting implementation obligations.
+is now the Start-page entry. Managed access was restored, its content was read,
+updated with surgical edits and read back. Superseded page families are marked
+Archive, and the old Start, journey and layout prose boards are hidden.
+
+Separately from Play, the pure `Wotex.Lab.Examples.WindowAnomaly.run/1` example
+was executed with seed 1, count 32, window count 8, threshold 1.5, fill 18.0 and
+`Nx.BinaryBackend`. The encoded window had shape `{8}`, dtype `f32`, eight
+observed masks and eight good-quality codes. The scalar score was
+`0.03721809387207031`, below threshold; the persistence prediction was
+`18.14862823486328` Cel at 32 seconds. These source-derived values now populate
+the fixed anomaly preview. This validates that sample, not general numerical
+acceptance, backend equivalence or runtime execution from the Figma control.
+
+General text input, right-click/keyboard equivalence, drag/resize, durable
+layout restoration, all seven alternatives, expiry/denial semantics, real
+reconnect, full result visualizations and report downloads remain unqualified.
+No room, metric query, provider request, experiment, Action or report export
+executed during Play. Documentation still uses a fixed search fixture.
+Documentation alternatives, responsive/theme journeys, complete component
+bindings, brand asset handoff, native archives and independent restores remain
+acceptance work. Application UI implementation has not started; source
+contracts remain authoritative until the proposal is reviewed and promoted.
 
 ## Research basis
 
