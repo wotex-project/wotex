@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.0.0. Contract: accepted. Design status: partial.
+Plan version: 1.0.1. Contract: accepted. Design status: partial.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -13,10 +13,10 @@ own their acceptance. No package API or frontend framework changes here.
 
 ## Design files and source authority
 
-| File | Purpose | Initial edition |
+| File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Four pages; five guideline boards and one editable signature component |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, canonical page references and connected task flows | Five pages; seventeen screen/state references, three component families and three named prototype starts |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, canonical page references and connected task flows | Five pages; thirty-six screen/state references, three component families, three additional components, three native flow Specs and eleven named prototype starts |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.
@@ -127,9 +127,65 @@ Screenshots were inspected for the brand boards, system controls, approval,
 compact result and documentation. A palette-row overlap and compact navigation
 wrapping were corrected during that review.
 
-The full component catalogue, all page/state/profile combinations, adjacent
-native Specs, native Play journeys, final brand acceptance, channel artwork,
-native archives and independent restores are still acceptance obligations.
+## Inspection and documentation journey edition
+
+The continuation is source-bound to repository commit
+`446007062681c56bbe3b30f5ae073994dfc20303`, with editable additions in the
+existing Workbench file. It adds nineteen expanded screen/state references,
+bringing the file to thirty-six. Panel, Primary navigation and Documentation
+header are reusable native components; existing Button, Field and StatusBadge
+families and the forty-one variables/six text styles are retained.
+
+The [inspection journey](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=6-2)
+connects an explicit Property read, bounded room telemetry, saved panel
+definitions, a separate dataset-freeze action, dashboard export and the signed
+session report. Unavailable-read, absent-measurement and denied-session paths
+have recovery connections. Things no longer implies an Action at its Property
+read boundary, and Metrics distinguishes session measurements from portable
+instance-level panel definitions. A denied session returns to the empty-room
+boundary rather than another room's evidence. The ordinary journey uses one
+theme; the Panel review retains Light, Dark and Contrast specimens.
+
+The [documentation journey](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=6-132)
+connects a fixed search fixture, results and article reading. Its optional
+owned-run branch shows the selected provider destination and bounded
+sent/withheld content before Ask, then cancellation or illustrative findings
+with cited evidence. Empty search, missing document and unavailable-provider
+states preserve ordinary reading. No provider was contacted and no real export
+was downloaded during prototype checks. Export checkpoints and the timed
+answer are design fixtures, not new browser routes or executed host results.
+
+Native Specs sit beside the
+[run/approval/recovery](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=21-32),
+[inspection](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=16-7)
+and [documentation](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=22-251)
+flows. Their content was read back through the native Spec API. Each names the
+actor, goal, entry conditions, ordinary journey, alternatives, recovery,
+acceptance and source permalinks. They preserve the remaining coverage and
+authority limits rather than treating a connected graph as runtime evidence.
+
+Structural inspection found fifty-four inspection and thirty-four documentation
+frame-target reactions, all targeting frames on their own page, plus one
+history-based return from cited evidence. That return preserves its originating
+task rather than showing an answer after cancellation or without a provider.
+Their UI layers
+are native text, frames and component instances, with no image fills, no text
+outside the frame bounds and the selected Inter draft font. Representative
+full-view renders were reviewed. A hidden Panel surface fill was corrected
+after it made Dark/Contrast text unreadable; the three-theme review then passed.
+
+Native Play exercised the inspection journey through read, metrics, arrangement
+save, dashboard export and report export, plus return navigation and dataset
+freeze. It also exercised documentation search, article reading, selected-run
+disclosure, investigation cancellation, timed illustrative findings and their
+run/query citation. The unavailable-provider branch also opens ordinary evidence
+and returns to its disabled composer without showing an unrequested answer.
+These are native prototype checks,
+not Workbench browser, provider, export-content or authority qualification.
+
+The full component catalogue, all page/state/profile combinations, remaining
+native Play journeys, final brand acceptance, channel artwork, native archives
+and independent restores are still acceptance obligations.
 The current files have not been published as libraries, and folder placement
 or collaborator access has not been qualified. Design completion and browser
 implementation evidence must be recorded separately. Historical WLB.11 evidence
