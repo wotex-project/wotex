@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.7.0. Contract: accepted. Design status: under revision.
+Plan version: 1.8.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -38,7 +38,7 @@ file retains those historical studies alongside the selected supplied mark.
 
 | File | Purpose | Current draft |
 | --- | --- | --- |
-| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected supplied-logo master plus four historical study pages. Earlier boards and treatment families remain draft history. |
+| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected identity, native usage Spec, three linked mark treatments, grayscale/type/size specimens and eleven export frames. Four earlier study pages are marked Archive. |
 | [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, twenty-six canvas snapshots, twenty-nine documentation fixtures, seventy-seven current standalone targets, a compact component library and a current journey Spec on Start. Superseded page families are marked Archive. Current component and Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
@@ -90,15 +90,23 @@ The maintainer selected the supplied folded-W mark on 2026-10-21. Its exact
 preserves editable vectors and gradients. Use it without a surrounding tile or
 box. The new Lab proposal takes its grayscale family from this artwork.
 Earlier signatures, W tiles and blue/beige applications are historical studies.
-Spacing/minimum sizes, lockups, channel exports, voice and recovery acceptance
-remain required work.
+The native [identity Spec](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=20-219)
+now defines casing, permitted backgrounds, proposed sizes and clear space,
+typography, voice, imagery and misuse. Product chrome uses the standalone mark;
+no additional wordmark lockup is selected. The original mark remains unchanged.
 
 The Lab library now includes theme-aware instances of that exact default mark,
 a derived treatment for dark surfaces and a solid monochrome treatment. The
 derived artwork preserves the geometry; the dark treatment changes only its
 two darkest gradient stops. These treatments are design proposals, not approval
-of a replacement identity. The brand file and asset handoff still need their
-corresponding treatment and usage guidance.
+of a replacement identity. The brand file now has matching native treatments
+and a linked review sheet. The [asset handoff](https://github.com/wotex-project/wotex/blob/main/docs/assets/brand/exports/README.md)
+contains three transparent SVGs, light/dark favicon and application PNG pairs,
+and two social cards, with native source frames, hashes and destination sizes.
+SVG path/viewBox checks and PNG integrity, transparency and crop checks passed;
+light/dark icon pairs have identical alpha geometry. Native archive recovery
+still requires independent restore evidence. These artwork checks do not
+qualify browser installation or change application CSS.
 
 ## Lab pages, states and flows
 

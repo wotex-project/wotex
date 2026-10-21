@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.7.0. Status: proposed for design review. Implementation: not
+Plan version: 0.9.0. Status: proposed for design review. Implementation: not
 started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
@@ -55,6 +55,13 @@ and shared subtle elevation: charcoal shadows at 0/2/8 pixels with 10% opacity
 and 0/1/2 pixels with 4% opacity. Inner groups and integrated documentation stay
 flat. This supersedes the earlier shadow-free canvas treatment.
 
+Keep floating inspectors 20 pixels inside the top, right and bottom canvas
+edges, matching the board control's edge inset. Use one visible shell with
+12-pixel content padding for inspectors and dialogs. Menus inset their rows
+4 pixels, with 8-pixel row padding; labels therefore share the same 12-pixel
+content inset. Rows must not paint over the continuous outer border. Numeric
+readings and their units share a text baseline, including `°C target`.
+
 The workbench background follows the supplied graph-paper reference: a fine
 6.5-pixel mesh, secondary lines every 26 pixels and crosshairs every 104 pixels.
 The softened [repeating SVG tile](https://github.com/wotex-project/wotex/blob/3de193854d03d4149376f8aae744bff443f37741/docs/assets/lab/workbench-grid.svg)
@@ -77,6 +84,12 @@ gradients, with no tile, border or added caption. Earlier blue/beige treatments
 are historical studies. The compact control library now has Light, Dark and
 Contrast modes; complete journey compositions in those modes remain to be
 designed and reviewed.
+
+The separate [identity Spec](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=20-219)
+documents the selected mark and derived dark/monochrome treatments. The
+[export handoff](https://github.com/wotex-project/wotex/blob/main/docs/assets/brand/exports/README.md) includes native-source
+SVG, favicon, application and social artwork with dimensions and hashes.
+These design assets do not change the current browser implementation.
 
 Keep room identity and optional counts in the board menu, and selection on the
 node. Remove floating page summaries, tutorial legends, pin hints and generic
@@ -493,7 +506,7 @@ executed during Play. Documentation still uses a fixed search fixture;
 general typing, live indexing, clipboard copy and contents scrolling are not
 exercised browser features. Empty/error/missing states are authored review
 fixtures. Complete responsive/detail and theme journeys, component
-bindings, brand asset handoff, native archives and independent restores remain
+bindings, native archive recovery and final brand review remain
 acceptance work. Application UI implementation has not started; source
 contracts remain authoritative until the proposal is reviewed and promoted.
 
