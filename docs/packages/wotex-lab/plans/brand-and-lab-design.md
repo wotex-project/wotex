@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.0.1. Contract: accepted. Design status: partial.
+Plan version: 1.0.2. Contract: accepted. Design status: partial.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -16,7 +16,7 @@ own their acceptance. No package API or frontend framework changes here.
 | File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Four pages; five guideline boards and one editable signature component |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, canonical page references and connected task flows | Five pages; thirty-six screen/state references, three component families, three additional components, three native flow Specs and eleven named prototype starts |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, canonical page references and connected task flows | Five pages; sixty screen/state references, four component families, four additional components, three native flow Specs and twenty named prototype starts |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.
@@ -182,6 +182,75 @@ run/query citation. The unavailable-provider branch also opens ordinary evidence
 and returns to its disabled composer without showing an unrequested answer.
 These are native prototype checks,
 not Workbench browser, provider, export-content or authority qualification.
+
+## Admitted experiments and numerical result edition
+
+This continuation is source-bound to repository commit
+`aef8906422d59e5ed4f4a697ec790c6a137209f5`. It adds twenty-four editable
+screen/state references and extends the existing experiment page, bringing the
+Workbench file to sixty. The new ExperimentCard family has the three admitted
+experiment variants; ParameterField composes the existing Field with its label
+and type/bounds help. No variables, text styles, package APIs, routes or backend
+selections change.
+
+The [experiment entry](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=39-32)
+shows all three admitted forms before any numerical result: one thermal,
+six window-anomaly and four smart-room controls, with their source defaults and
+bounds. Browsing starts no room. An explicit room-start action starts no
+experiment; an explicit Run may also allocate its room, as the host permits.
+Long forms use native vertical scrolling rather than dropping controls.
+The catalogue continues into the existing smart-room proposal/approval flow
+and new thermal/anomaly pending, result and selected-evidence references.
+
+The [thermal result](https://www.figma.com/design/SudxgeebiNEu33PPIHO229?node-id=39-350)
+puts backend, shape/dtype, units, masks and quality before the encoded values.
+The two Kelvin observations, Celsius values and inert 22.0 Cel target follow
+the checked-in source example. The anomaly window and score are hand-authored
+design fixtures, explicitly not a realized output of simulator seed 1.
+No numerical runner or model was executed to author this edition. Both result
+views retain assertions, cleanup, inert-output scope and illustrative run
+identity; they do not substitute invented runtime digests for evidence.
+
+The same thermal result, selected evidence and report-return path has expanded
+(1280), medium (720) and compact (390) references. Native structural comparison
+confirmed identical thermal subject, result and support-panel content across
+the three widths. Compact content scrolls in semantic order. This is native
+design comparison, not the executable 599/600 or 839/840 browser boundary gate.
+
+Refusal references cover Samples 513 at `/count`, an unavailable selected
+backend without fallback, numerical failure, guest policy refusal, session
+denial and failed room startup. Parameter refusal retains all six anomaly
+controls and disables the rejected Run hotspot. Failed and denied runs have
+their own evidence identities and outcomes. Evidence and shared report returns
+use actual navigation history so a failure or refused proposal cannot return
+as a successful granted run. The native experiment Spec was updated and its
+content read back without replacing the document.
+
+Structural inspection found sixty-seven frame-target navigation reactions and
+ten history returns on the experiment page, with no missing, cross-page or
+self-target destinations. Its UI uses native text, frames and component
+instances, no image fills and no horizontal text overflow. The three-card
+specimen and representative expanded/compact/result/refusal viewport renders
+were visually inspected. Vertical clipping is intentional only at the declared
+scroll viewport; full controls and supporting evidence remain in its content.
+
+Native Play exercised room startup, thermal and anomaly submission through
+their illustrative results, and selected evidence/report/history returns for
+all three experiments. It also exercised smart-room approval return, explicit
+prototype dispatch and pending-run cancellation. A selected-run identity
+mismatch was corrected between the smart-room proposal and evidence; the
+corrected identity was verified in Play. Its illustrative pending timer was
+lengthened to keep cancellation usable; this is no runtime latency claim.
+
+The failed-run and guest-refusal starts each reached their own evidence,
+export checkpoint and original outcome through history returns. The rejected
+anomaly form retained all six controls while scrolling, its disabled Run did
+not navigate, and explicit correction returned to the ready catalogue without
+starting a run. The compact thermal journey reached cleanup, selected evidence
+and report export, then returned through the same compact task. No real room,
+numerical run, Action, provider call or file download occurred in these checks.
+Medium native Play and backend/session/room-failure recovery remain unexecuted
+for this edition; structural wiring does not qualify them.
 
 The full component catalogue, all page/state/profile combinations, remaining
 native Play journeys, final brand acceptance, channel artwork, native archives
