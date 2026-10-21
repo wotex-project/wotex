@@ -7,8 +7,9 @@
     "noEmit": true,
     "skipLibCheck": true,
     "strict": true,
+    "verbatimModuleSyntax": true,
     "target": "ES2024",
     "types": ["node", "vite/client"]
   },
-  "include": [".storybook/**/*.ts", "assets/**/*.ts", "vite.config.ts"]
+  "include": [".storybook/**/*.ts", "assets/**/*.ts", "assets/**/*.svelte", "vite.config.ts"]
 }

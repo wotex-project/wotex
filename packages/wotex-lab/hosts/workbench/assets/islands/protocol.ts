@@ -1,5 +1,6 @@
 import { assertJsonValue, decodedBytes, digestPayload } from "./canonical.js"
 import { componentDescriptor } from "./descriptors.js"
+import { validateCanvas } from "./canvas-model.js"
 import type {
   FullSnapshot,
   IslandEvent,
@@ -72,6 +73,7 @@ export const validatePayload = (component: string, payload: Record<string, JsonV
   for (const [key, schema] of Object.entries(schemas)) {
     if (schema.required === true && !(key in payload)) throw new Error(`missing island field ${key}`)
   }
+  if (component === "canvas") validateCanvas(payload)
 }
 
 export const validateFullSnapshot = async (value: unknown): Promise<FullSnapshot> => {

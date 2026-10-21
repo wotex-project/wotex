@@ -1,6 +1,6 @@
 defmodule WotexLabWorkbenchWeb.Router do
   @moduledoc """
-  Routes: one LiveView with five live actions, the generated token
+  Routes: one persistent Workbench LiveView, the generated token
   stylesheet, session reset and the bounded evidence report.
   """
 
@@ -64,7 +64,8 @@ defmodule WotexLabWorkbenchWeb.Router do
     get("/metrics/dashboard.json", DashboardController, :show)
 
     live_session :workbench, on_mount: [WotexLabWorkbenchWeb.Scope] do
-      live("/", WorkbenchLive, :experiments)
+      live("/", WorkbenchLive, :workbench)
+      live("/experiments", WorkbenchLive, :experiments)
       live("/runs/:id", WorkbenchLive, :run)
       live("/things", WorkbenchLive, :things)
       live("/metrics", WorkbenchLive, :metrics)

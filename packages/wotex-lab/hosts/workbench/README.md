@@ -12,6 +12,15 @@ decision and dispatches only after the separate exact approval form passes the
 policy and freshness checks again. Mounting or reconnecting starts no room or
 experiment.
 
+The entry at `/` is a spatial workbench. Things, connections, selection and
+viewport remain on the same canvas while `/experiments`, `/runs/:id`, `/metrics`
+and `/evidence` open contextual panels. Closing a panel returns to the board.
+The experiment drawer retains bounded drafts across these transitions. A run's
+evidence link selects that exact session-owned run; the separate session report
+export includes the session's records. Documentation keeps its own reading
+layout. Canvas arrangement across a full reload or documentation navigation,
+metric pinning and live Property observation are not yet implemented.
+
 ## Development
 
 From this directory:
@@ -22,8 +31,11 @@ WOTEX_PATH_DEPS=1 mix phx.server
 ```
 
 `WOTEX_PATH_DEPS=1` is the sole workspace switch. With it unset, dependencies
-are resolved as versioned artifacts. Charts are rendered server-side as native
-HEEx/SVG; the application neither downloads nor ships a browser chart runtime.
+are resolved as versioned artifacts. LiveView owns session state, admission and
+commands. Svelte 5 enhances closed chart, table, tab and Svelte Flow canvas
+projections; semantic HEEx/SVG fallbacks remain available if an island fails.
+Assets are built locally with the pinned pnpm/Vite toolchain. The running
+Elixir release starts no Node process and loads no remote browser runtime.
 
 The local completion gate is:
 
@@ -35,13 +47,14 @@ It fetches the locked dependencies first, then compiles with warnings as
 errors and runs formatting, strict Credo (the Lab's `.credo.exs` plus this
 host's), unused-dependency and advisory audits, Dialyzer, Doctor, docs, the
 tests with the 90% coverage floor of `coveralls.json` and the boundary scan.
+It also installs the locked frontend dependencies and runs Svelte/TypeScript
+diagnostics, layout/graph tests, Vite and production asset-budget checks.
 The Lab's full gate (`mix pkg wotex-lab check --no-retry`) runs it as its
 `workbench` tool. The host uses a small native check runner because its
 accepted location is two levels below another Mix project, a shape that
 ex_check interprets as a possible umbrella child. `.check.exs` remains the
-declarative list of the same checks. The gate needs no Node: the static
-assets in `priv/static` are checked in, and Node is needed only for the
-optional Playwright browser cohort, not by the running Elixir host. The exact Decimal 3.1.1 parser regression and removal of
+declarative list of the same checks. Node and pnpm are build and verification
+tools; generated Vite assets are not checked in. The exact Decimal 3.1.1 parser regression and removal of
 the now-unmatched advisory waiver are documented in the Lab's
 [dependency review](../../../../docs/packages/wotex-lab/provenance/standards-and-dependencies.md) and
 protected by the host's own locked-version and bounded-parser regression.
@@ -57,12 +70,12 @@ tables show at most 100 rows and both source and query digests. Empty ranges
 are not measured zeros. Reload does not replay the query. No `kino_explorer`
 dependency, arbitrary SQL/expression or browser-selected instance is admitted.
 
-The sole renderer is server-owned HEEx/SVG; it accepts no URL, expression,
-signal or arbitrary Vega grammar. LiveView replaces the SVG after admitted
-analysis changes. The accessible chart and maximum 100-row table support all
-three admitted marks and preserve missing-value gaps. Pan/zoom is not an
-implemented feature. Explorer remains the dynamic analysis engine, not the
-renderer.
+The server owns chart data and accepts no URL, expression, signal or arbitrary
+Vega grammar. LiveView supplies each admitted analysis result to the Svelte
+chart and its native SVG/table fallback. Both retain source units and missing
+steps; the table shows at most 100 rows. Spatial canvas pan/zoom moves the board,
+not the query window or chart's numerical domain. Explorer remains the dynamic
+analysis engine.
 
 Tensor previews split the lazy batch before stacking and slice before copying
 to host lists. Their observed/filled counts describe only the shown elements,

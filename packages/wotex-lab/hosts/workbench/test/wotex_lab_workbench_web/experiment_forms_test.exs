@@ -23,7 +23,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
   end
 
   test "numerical parameters use native number controls and their admitted bounds", %{conn: conn} do
-    {:ok, view, _} = live(conn, "/")
+    {:ok, view, _} = live(conn, "/experiments")
 
     for {id, min, max, step} <- [
           {"window_anomaly-seed", "1", "1000000", "1"},
@@ -55,7 +55,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
   } do
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
 
     html = submit(view, @draft)
     assert html =~ "invalid_parameter"
@@ -84,7 +84,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
        } do
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     markers = Map.new(Map.keys(@draft), &{"_unused_" <> &1, ""})
     submit(view, Map.merge(@draft, markers))
     corrected = Map.put(@draft, "count", "64")
@@ -96,8 +96,9 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
     refute has_element?(view, "#run-window_anomaly button[disabled]")
     assert {:ok, %{room: nil}} = Sessions.verify(token)
 
-    redirect = submit(view, Map.merge(corrected, markers))
-    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    html = submit(view, Map.merge(corrected, markers))
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     assert html =~ "Tensor summary"
     refute has_element?(run_view, "form[phx-submit='approve']")
     assert {:ok, %{room: room}} = Sessions.verify(token)
@@ -117,7 +118,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
   test "draft change and recovery replay are local to the view and start no command", %{conn: conn} do
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     draft = Map.put(@draft, "count", "64")
     edit(view, draft)
 
@@ -135,7 +136,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
     assert has_element?(view, "#parameter-smart_room-meter option[value='off'][selected]")
     assert has_element?(view, "#parameter-smart_room-principal option[value='guest'][selected]")
 
-    {:ok, fresh_view, _} = live(recycle(conn), "/")
+    {:ok, fresh_view, _} = live(recycle(conn), "/experiments")
     assert has_element?(fresh_view, "#parameter-window_anomaly-seed[value='1']")
     edit(fresh_view, draft)
     edit(fresh_view, draft)
@@ -146,7 +147,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
     other_conn = get(build_conn(), "/")
     other_token = get_session(other_conn, SessionToken.key())
     on_exit(fn -> Sessions.revoke(other_token) end)
-    {:ok, other_session, _} = live(recycle(other_conn), "/")
+    {:ok, other_session, _} = live(recycle(other_conn), "/experiments")
     assert has_element?(other_session, "#parameter-window_anomaly-seed[value='1']")
   end
 
@@ -156,7 +157,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
        } do
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     draft = Map.put(@draft, "count", "64")
     edit(view, draft)
 
@@ -187,7 +188,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
   test "an unsupported select stays visibly refused and never falls back to binary", %{conn: conn} do
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     unsupported = %{"backend" => "other-backend"}
 
     edit(view, unsupported)
@@ -211,7 +212,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
   test "draft edits revalidate a revoked session before retaining input", %{conn: conn} do
     conn = get(conn, "/")
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     :ok = Sessions.revoke(token)
 
     assert edit(view, @draft) =~ "Session denied"

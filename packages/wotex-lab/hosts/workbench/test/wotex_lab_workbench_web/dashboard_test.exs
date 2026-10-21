@@ -10,7 +10,7 @@ defmodule WotexLabWorkbenchWeb.DashboardTest do
   alias WotexLabWorkbenchWeb.Plugs.SessionToken
 
   test "catalogue UI and selected JSON export are inert, scoped and closed", %{conn: conn} do
-    conn = get(conn, "/metrics")
+    conn = get(conn, "/metrics") |> track_session()
     html = html_response(conn, 200)
     assert html =~ "Portable metric panels"
     assert html =~ "These are catalogue definitions"
@@ -47,7 +47,7 @@ defmodule WotexLabWorkbenchWeb.DashboardTest do
   end
 
   test "dashboard arrangements persist per session and exact links remain closed", %{conn: conn} do
-    conn = get(conn, "/metrics")
+    conn = get(conn, "/metrics") |> track_session()
     token = get_session(conn, SessionToken.key())
     {:ok, view, _} = live(recycle(conn), "/metrics")
 
@@ -101,17 +101,16 @@ defmodule WotexLabWorkbenchWeb.DashboardTest do
   end
 
   test "saved panels query only their own room history on explicit request", %{conn: conn} do
-    conn = get(conn, "/")
-    {:ok, view, _} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
-      render_submit(element(view, "#run-thermal"), %{
-        "experiment_id" => "thermal",
-        "params" => %{"backend" => "binary"}
-      })
+    render_submit(element(view, "#run-thermal"), %{
+      "experiment_id" => "thermal",
+      "params" => %{"backend" => "binary"}
+    })
 
-    {:ok, _, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
 
     {:ok, metrics, html} = live(recycle(conn), "/metrics")
     assert html =~ "Session history panels"

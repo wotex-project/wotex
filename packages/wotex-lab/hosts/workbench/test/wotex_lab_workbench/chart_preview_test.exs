@@ -76,7 +76,9 @@ defmodule WotexLabWorkbench.ChartPreviewTest do
     refute app_js =~ "WotexChart"
     assert app_js =~ "LiveSocket"
 
-    assert WotexLabWorkbenchWeb.static_paths() == ~w(assets css js favicon.ico robots.txt)
+    assert WotexLabWorkbenchWeb.static_paths() ==
+             ~w(assets brand css icons js favicon.ico robots.txt)
+
     assert WotexLabWorkbenchWeb.ErrorHTML.render("404.html", %{}) == "Not Found"
   end
 

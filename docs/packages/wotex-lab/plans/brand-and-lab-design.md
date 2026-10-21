@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.9.0. Contract: accepted. Design status: under revision.
+Plan version: 1.10.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -24,7 +24,10 @@ The latest visual direction uses the supplied logo's cool grays, 14/16-pixel
 icons, compact rows and at most two persistent workbench menu surfaces. Sections
 and controls share 4-pixel corners; single-line buttons and fields are 28 pixels
 high. Subtle shadows separate floating canvas elements, while documentation
-stays flat. The graph-paper background has reduced contrast.
+stays flat. The board switcher is 38 pixels high with content-sized width and
+four pixels after its arrow. The graph-paper background has reduced contrast.
+Dark surfaces use a subdued `#444B5A` decorative border; focus and selection
+retain their separate, stronger role.
 
 The proposal is a review deliverable. Current source contracts, package APIs
 and completion obligations remain unchanged until its behavior is reviewed and
@@ -38,7 +41,7 @@ file retains those historical studies alongside the selected supplied mark.
 
 | File | Purpose | Current draft |
 | --- | --- | --- |
-| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Five pages; selected identity, native usage Spec, three linked mark treatments, grayscale/type/size specimens and eleven export frames. Four earlier study pages are marked Archive. |
+| [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Eight pages: Identity, Applications, Supplied studies, Artwork library and four preserved Archive pages. Includes the native usage Spec, eight-colour overview, twenty-one supplied application plates, thirty supplied study plates and thirty-two shared vector artwork masters. |
 | [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Eight pages; sixty prior screen/state references, twenty-six canvas snapshots plus two theme reviews, twenty-nine documentation fixtures, seventy-seven current standalone targets, a compact component library and a current journey Spec on Start. Superseded page families are marked Archive. Current component and Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
@@ -95,7 +98,7 @@ now defines casing, permitted backgrounds, proposed sizes and clear space,
 typography, voice, imagery and misuse. Product chrome uses the standalone mark;
 no additional wordmark lockup is selected. The original mark remains unchanged.
 
-The Lab library now includes theme-aware instances of that exact default mark,
+The earlier Lab library edition added theme-aware instances of that default mark,
 a derived treatment for dark surfaces and a solid monochrome treatment. The
 derived artwork preserves the geometry; the dark treatment changes only its
 two darkest gradient stops. These treatments are design proposals, not approval
@@ -106,7 +109,46 @@ and two social cards, with native source frames, hashes and destination sizes.
 SVG path/viewBox checks and PNG integrity, transparency and crop checks passed;
 light/dark icon pairs have identical alpha geometry. Native archive recovery
 still requires independent restore evidence. These artwork checks do not
-qualify browser installation or change application CSS.
+qualify browser installation or change application CSS. The supplied delivery
+below is now authoritative for its default Light/Dark artwork; the earlier
+derived dark treatment remains a proposal.
+
+## Supplied identity programme
+
+The maintainer's complete supplied delivery extends the selected folded-W
+identity with eight colour, eight grayscale, eight flat, five construction and
+one solid-ink study. The delivery selects Carbon Fold as its default and supplies
+identical default artwork for Light and Dark surfaces. Both supplied default
+SVGs have SHA-256
+`d54dc6c57ffe432439763545ce970205e3f4145df3ceac12e74561bc6c7a996f`.
+The earlier selected master is preserved; no inferred dark recolouring replaces
+the supplied default.
+
+The [Identity overview](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=43-252)
+shows Carbon, Electric, Violet, Scarlet, Lagoon, Arctic, Solar and Spectrum,
+each on Light and Dark surfaces. Sixteen instances reuse eight colour masters.
+Product chrome continues to use the selected grayscale direction; having a
+communication palette does not turn those colours into UI accents.
+
+The [Applications page](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=34-252)
+contains twenty-one supplied guideline plates. The
+[Supplied studies page](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=34-253)
+contains all thirty paired studies. They retain editable Inter text and native
+vectors. Sixty artwork examples link to the
+[Artwork library](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0?node-id=37-252),
+whose five component sets contain thirty-two unique masters. Byte-identical
+Light/Dark sources share a master; different flat-carbon and solid-ink
+treatments retain separate surface variants. Source-relative names and hashes
+are recorded in component descriptions and the native identity Spec.
+
+Native inspection confirmed thirty study sections, sixty linked examples and
+no raster artwork. The eight-colour overview, palette plate and Electric Fold
+pair were visually reviewed. These are supplied brand examples, not duplicated
+Dark versions of entire product flows. Lab journeys continue to use shared
+Light/Dark/Contrast variables, with two representative theme review frames.
+A fresh native archive of the expanded brand file was saved and its ZIP
+integrity checked. Independent restoration of its artwork, variables, type and
+component links remains unverified.
 
 ## Lab pages, states and flows
 

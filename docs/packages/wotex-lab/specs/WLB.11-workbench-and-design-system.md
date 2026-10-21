@@ -1,7 +1,21 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.15.2. Contract: accepted. Implementation status:
+Specification version: 0.16.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.16 adopts the grayscale canvas direction and adds the registered
+`canvas` island. The initial source slice replaces the Thing card list with a
+bounded Svelte Flow graph and contextual panels. A 38-pixel floating board menu
+replaces the sidebar. `/` opens the canvas; `/experiments`, `/runs/:id`,
+`/metrics` and `/evidence` patch the same LiveView and keep that canvas mounted.
+Experiment drafts, explicit Thing readings and local canvas geometry survive
+panel transitions. Run evidence binds its selected session-owned run and returns
+to it. Metric pinning, full-reload/documentation restoration, live observation
+subscriptions and complete browser journeys remain incomplete. No historical
+evidence qualifies those additions.
+DesignSystem 0.5 uses the supplied identity's grayscale roles, 4-pixel radii,
+28-pixel controls and 12-pixel panel padding. Dark decorative borders use
+`#444B5A`; focus and control-boundary roles remain distinct from them.
 
 Version 0.15 adds editable brand identity and Lab page/flow deliverables under
 the [design contract](../plans/brand-and-lab-design.md). The initial native
@@ -27,7 +41,7 @@ admission keeps the bounded inputs,
 links the offending field to its error and disables Run until corrected.
 Unknown select values remain visibly unsupported, with no backend fallback.
 Number controls expose the admitted bounds and integer/float steps. Theme and
-sidebar updates preserve drafts; LiveView form recovery sends the inert change
+board-menu updates preserve drafts; LiveView form recovery sends the inert change
 event rather than Run. A fresh view starts with defaults until its browser
 recovers the form. Only an explicitly submitted, re-admitted valid form can
 allocate its room and run. The focused `experiment_forms_test.exs` host suite
@@ -59,15 +73,16 @@ loopback probe.
 The reference host now owns its Wotex tokens, CSS, HEEx components, Svelte
 components, island transport and static Storybook. Phoenix Assets remains the
 generic asset-build substrate and supplies no Lab product semantics. The
-Workbench composition adds the complete responsive shell, editorial experiment
-cards, mobile dock, structured empty and error states, and warm-light/rich-navy themes. The public
+previous Workbench composition supplied a responsive sidebar shell, editorial
+experiment cards, mobile dock and structured empty and error states. The
+grayscale canvas edition below supersedes that visual direction. The public
 documentation route adds a host-owned responsive reading composition around
 the shared inert document renderer, including navigation, search, contents,
 reading flow, code, tables and print behavior. Storybook adds a qualification
 canvas that presents the same tokens and semantic fallbacks instead of relying
 on the manager's default surface. Its single Vite graph
 produces bounded, content-hashed Workbench and Storybook entries. The chart,
-data-grid and tabs islands retain semantic HEEx fallbacks and use closed,
+data-grid, tabs and canvas islands retain semantic HEEx fallbacks and use closed,
 revisioned snapshots and events. A separate Phoenix Storybook host exercises
 the real LiveView transport against the same registered components and fixture
 identities. Focused browser cohorts cover lifecycle, malformed and stale
@@ -195,15 +210,14 @@ changing a scenario, query or WoT contract.
 
 ## Interaction and visual language
 
-Use the modern simplicity of a conversational workspace, not another brand's
-identity or assets. The light theme uses a warm canvas, paper-like surfaces,
-deep ink and one restrained navy accent. The dark theme uses layered navy
-surfaces and pale blue-white text rather than grayscale black panels. Both use
-system fonts, comfortable reading widths, modest radii, fine borders and quiet
-status badges. No decorative gradients, glass panels, neon charts, animated
-backgrounds or mandatory icon/font CDN. Large editorial headings and cards
-must retain compact data density, responsive reflow and clear hierarchy rather
-than becoming ornamental. Empty screens explain one clear next action.
+Use the supplied unboxed mark and its grayscale palette. The light canvas is
+`#F4F5F7`, with white surfaces and `#181D27` text. Dark uses `#181D27` canvas,
+`#232936` surfaces, `#D6DBE3` text and subdued `#444B5A` decorative borders.
+Contrast uses white surfaces and charcoal text and boundaries. Status always
+has a text label. Use compact type, consistent 4-pixel corners, 28-pixel
+single-line controls and subtle shared shadows on floating surfaces. Numeric
+values and units, including `°C target`, align on a text baseline. Documentation
+remains flat. Use local icons and the optimized repeating SVG graph-paper tile.
 
 Workbench product surfaces begin with the current task and its authoritative
 subject. They use these task archetypes before selecting a component or page
@@ -242,18 +256,22 @@ nonfinite values, freshness, authorization, Action approval scope, command outco
 errors or reconnect recovery. Expanded composition may expose relevant context but
 cannot add unrelated panels or change the authoritative subject.
 
-The shell has a collapsible left sidebar, a compact top context line and a
-single main workspace. At narrow widths it becomes a compact header and fixed
-bottom navigation without hiding the primary routes. The sidebar contains
-Experiments, Things, Metrics, Evidence and Documentation, with settings at the
-bottom. Documentation opens
-the public inert WLB.12 route and does not allocate a room. A run context
-includes its identity, source mode, backend and state. Conversation history is
-subordinate to the selected experiment, not a new global navigation system.
+The target shell is a persistent spatial workbench with at most two floating
+menu surfaces: a 38-pixel board dropdown with a 4-pixel chevron inset, and a
+36-pixel icon rail. Search, viewport controls and documentation live in
+submenus. Inspectors, configuration and results open in context with 20-pixel
+canvas-edge insets. Closing them preserves geometry, selection and viewport.
+Evidence belongs to the selected subject rather than a persistent primary
+navigation item. Documentation opens the inert WLB.12 route without allocating
+a room. The source shell has the board menu and one Select/Pan/Add/Metrics/
+Experiments/Fit rail. Experiment selection, results and reports use contextual
+panels; metrics still needs the Ask/query/pin composition. Below 600 pixels the inspector clears the board control
+with a 76-pixel top inset; its other canvas-edge insets remain 20 pixels.
 
 | View | Main content | Primary action |
 | --- | --- | --- |
-| Experiments | Nx cookbook/run list, parameters, dataset/TD/model provenance, values/masks/quality preview | Run an admitted experiment |
+| Workbench (`/`) | Owned Things and typed topology, current readings and process state | Start a room or select a subject |
+| Experiments (`/experiments`) | Selected admitted experiment, retained parameters and source disclosure | Run an admitted experiment |
 | Run workspace | Summary, tensor shape/dtype/backend, timeseries, assertions, cleanup and inert proposal | Compare or inspect public calls |
 | Things | Disposable TDs, affordances, transport and explicit ownership seam | Read a simulated Property |
 | Metrics | Small saved panels, range/filter controls, freshness/loss markers | Ask about the visible measurements |
@@ -304,7 +322,7 @@ and a wired reaction graph do not establish native interaction acceptance.
 
 ## Component and chart contract
 
-Required shared primitives: shell/sidebar, context header, button/icon button,
+Required shared primitives: shell/board menu, context header, button/icon button,
 field/select, tabs, status badge, empty/error/loading state, accessible table
 and data grid, panel, chart with table alternative, tooltip, dialog, menu and
 progress. Required Wotex compositions: metric panel, tensor summary,
@@ -370,6 +388,38 @@ five is refused when truncation is needed, rather than dropping an extremum
 or gap to claim success. The fixed normal budget remains 2,000.
 
 ## LiveView and Svelte ownership
+
+The `canvas` public props are `label` (UTF-8, at most 256 bytes), `nodes` (at
+most 32) and `edges` (at most 64). Each node has exactly `id`, `kind`, `title`,
+`identity`, `value`, `unit`, `status`, `detail`, `x` and `y`. IDs are unique
+1–128-byte ASCII identifiers using letters, digits, `.`, `_`, `:` and `-`,
+starting with a letter or digit. Kinds are `thing`, `process` or `entry`.
+Title, value and detail allow 128 UTF-8 bytes; identity allows 256, unit and
+status 32. Coordinates are finite and within ±20,000. Each edge has exactly
+`id`, `source`, `target`, `label`, `kind` and `target_handle`: unique identifier,
+existing node endpoints, a 128-byte label, `input` or `proposal`, and
+`temperature`, `power` or `input`, respectively. Both encoders validate the
+nested records, identities, bounds and references before rendering.
+
+Canvas `inspect` carries only `id` and is inert. The host revalidates the signed
+session, island instance, exact revision and membership in the current graph.
+Right-click and ellipsis open the same menu; the HEEx fallback offers labelled
+inspection buttons. Local node movement, pan, zoom, selection and fit cannot
+change wiring, select a Form, allocate a room or authorize an Action. Reconnect
+requires a current full snapshot before inspection is enabled and retains local
+geometry. Explicit Property reads alone populate values; simulator state is not
+an observation. The timestamp is the host read receipt, not a device event time.
+Registered Directory entries stay inert and use stable identities. The graph
+describes admitted experiment wiring rather than claiming a live subscription.
+Automatic Thing observation and persisted layout restoration remain unbuilt.
+
+Canvas `open` also carries only `id`. The host admits exactly `add`, `metrics`
+or `experiments` after verifying the signed session, instance and revision. It
+only patches to a contextual panel; it never allocates a room, reads a Property,
+queries metric history or runs an experiment. Inspecting the admitted smart-room
+process opens its configuration. The canvas mount identity remains stable across
+Workbench patches. Invalid/stale events cannot change the selected subject;
+revoked sessions remove the canvas. Documentation belongs to a separate LiveView.
 
 The Workbench uses one LiveView lifecycle with bounded Svelte islands, not a
 LiveView page beside a Svelte single-page application. LiveView owns routes,

@@ -1,0 +1,70 @@
+.wl-connected-canvas {
+  --wl-canvas-surface: var(--wotex-semantic-color-surface);
+  --wl-canvas-text: var(--wotex-semantic-color-text);
+  --wl-canvas-muted: var(--wotex-semantic-color-muted);
+  --wl-canvas-border: var(--wotex-semantic-color-border);
+  position: relative;
+  height: 100dvh;
+  min-width: 0;
+  color: var(--wl-canvas-text);
+  background: url("./canvas-assets/workbench-grid.svg") repeat;
+  font: 12px/16px Inter, system-ui, sans-serif;
+}
+.wl-connected-canvas .svelte-flow {
+  --xy-edge-label-background-color: var(--wl-canvas-surface);
+  --xy-edge-label-color: var(--wl-canvas-muted);
+  background: transparent;
+}
+.wl-connected-canvas .svelte-flow__node { border-radius: 4px; }
+.wl-canvas-node, .wl-canvas-tools, .wl-canvas-context {
+  border: 1px solid var(--wl-canvas-border);
+  border-radius: 4px;
+  color: var(--wl-canvas-text);
+  background: var(--wl-canvas-surface);
+  box-shadow: 0 2px 8px #181d271a, 0 1px 2px #181d270a;
+}
+.wl-canvas-node { width: 220px; min-height: 148px; padding: 12px; }
+.wl-canvas-node-selected { border-color: var(--wotex-semantic-color-focus); }
+.wl-canvas-process { width: 240px; border-style: dashed; }
+.wl-canvas-node header { display: flex; align-items: center; gap: 8px; height: 28px; }
+.wl-canvas-node strong { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; }
+.wl-canvas-node p { margin: 8px 0 0; font-size: 11px; line-height: 16px; }
+.wl-canvas-identity { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--wl-canvas-muted); }
+.wl-canvas-reading { display: flex; align-items: baseline; gap: 6px; min-height: 28px; margin-top: 8px; }
+.wl-canvas-value { font-size: 24px; line-height: 28px; font-variant-numeric: tabular-nums; }
+.wl-canvas-unit { font-size: 12px; line-height: 16px; white-space: nowrap; vertical-align: baseline; }
+.wl-canvas-status { margin-left: auto; color: var(--wl-canvas-muted); font-size: 11px; }
+.wl-canvas-detail { color: var(--wl-canvas-muted); overflow-wrap: anywhere; }
+.wl-connected-canvas button { font: inherit; cursor: pointer; }
+.wl-canvas-icon, .wl-canvas-tools button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; }
+.wl-canvas-node .svelte-flow__handle { width: 4px; height: 4px; border: 0; background: var(--wl-canvas-muted); }
+.wl-canvas-tools { position: absolute; z-index: 3; top: 50%; left: 20px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 2px; padding: 3px; }
+.wl-canvas-tools img { width: 16px; height: 16px; }
+.wl-canvas-tools button:disabled { opacity: 0.5; cursor: default; }
+.wl-canvas-tools button[aria-pressed="true"] { background: var(--wotex-semantic-color-accent); }
+.wl-canvas-tools button[aria-pressed="true"] img { filter: invert(1); }
+.wl-canvas-context { position: absolute; z-index: 10; width: 160px; padding: 4px; }
+.wl-canvas-context button { display: block; width: 100%; height: 28px; padding: 0 8px; border: 0; border-radius: 4px; color: inherit; background: transparent; text-align: left; }
+.wl-canvas-context button:hover, .wl-canvas-context button:focus-visible { background: var(--wotex-semantic-color-canvas); }
+.wl-canvas-context button:disabled { cursor: default; opacity: 0.5; }
+.wl-canvas-notice { position: absolute; right: 20px; bottom: 20px; color: var(--wl-canvas-text); background: var(--wl-canvas-surface); }
+.wl-connected-canvas .svelte-flow__edge-path { stroke: var(--wl-canvas-muted); stroke-width: 1; }
+.wl-connected-canvas .wl-canvas-proposal .svelte-flow__edge-path { stroke-dasharray: 4 4; }
+.wl-connected-canvas .svelte-flow__edge-text { fill: var(--wl-canvas-muted); font-size: 11px; }
+.wl-connected-canvas .svelte-flow__edge-textbg { fill: var(--wl-canvas-surface); }
+
+[data-wotex-theme="dark"] .wl-connected-canvas {
+  background-image: url("./canvas-assets/workbench-grid-dark.svg");
+}
+[data-wotex-theme="dark"] .wl-canvas-node img,
+[data-wotex-theme="dark"] .wl-canvas-tools img { filter: invert(1); }
+[data-wotex-theme="contrast"] .wl-connected-canvas {
+  background-image: url("./canvas-assets/workbench-grid-contrast.svg");
+}
+@media (prefers-color-scheme: dark) {
+  .wotex-lab:not([data-wotex-theme]) .wl-connected-canvas {
+    background-image: url("./canvas-assets/workbench-grid-dark.svg");
+  }
+  .wotex-lab:not([data-wotex-theme]) .wl-canvas-node img,
+  .wotex-lab:not([data-wotex-theme]) .wl-canvas-tools img { filter: invert(1); }
+}

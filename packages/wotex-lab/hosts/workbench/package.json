@@ -11,19 +11,21 @@
     "check:browser:documentation": "node bin/check_documentation_browser.mjs",
     "check:browser:islands": "node bin/check_islands_browser.mjs",
     "check": "pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
-    "test:layout": "node --experimental-strip-types --test assets/layout-profile.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test:layout": "node --experimental-strip-types --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
   },
   "dependencies": {
+    "@xyflow/svelte": "1.7.0",
     "svelte": "5.57.1"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@storybook/addon-a11y": "10.6.0",
     "@storybook/svelte-vite": "10.6.0",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/node": "26.6.3",
     "playwright": "1.63.0",
     "storybook": "10.6.0",
+    "svelte-check": "4.7.7",
     "typescript": "6.0.3",
     "vite": "8.3.1"
   },

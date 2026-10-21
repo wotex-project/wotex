@@ -1,12 +1,27 @@
 defmodule Wotex.Lab.Island.Component do
   @moduledoc """
-  Closed browser contracts for the Lab's chart, data-grid and tabs islands.
+  Closed browser contracts for the Lab's chart, data-grid, tabs and canvas islands.
 
   The descriptors name only public presentation props and admitted events.
   They contain no host module, route, credential or dynamic import path.
   """
 
   @components [
+    %{
+      "id" => "canvas",
+      "story_id" => "connected-things",
+      "states" => ~w(default empty selected disconnected),
+      "fallback" => "labelled Thing list and explicit Property read forms",
+      "props" => %{
+        "label" => %{"type" => "string", "required" => true, "max_bytes" => 256},
+        "nodes" => %{"type" => "item_list", "required" => true, "max_items" => 32},
+        "edges" => %{"type" => "item_list", "required" => true, "max_items" => 64}
+      },
+      "events" => %{
+        "inspect" => %{"payload" => "id", "effectful" => false},
+        "open" => %{"payload" => "id", "effectful" => false}
+      }
+    },
     %{
       "id" => "chart",
       "story_id" => "reporting-chart",

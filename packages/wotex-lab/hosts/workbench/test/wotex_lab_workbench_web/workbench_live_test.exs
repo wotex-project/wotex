@@ -26,11 +26,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     conn: conn
   } do
     before = Sessions.count()
-    conn = get(conn, "/")
+    conn = get(conn, "/") |> track_session()
     html = html_response(conn, 200)
 
-    assert html =~ "Numerical workbench"
-    assert html =~ "mounting this page" or html =~ "Start disposable room"
+    assert html =~ "Lab room"
+    assert html =~ ~s(data-wotex-island="canvas")
+    refute html =~ ~s(id="run-thermal")
+    assert html =~ "Start room"
     assert html =~ ~r/data-wotex-token-digest="sha256:[0-9a-f]{64}"/
     assert html =~ ~r/data-wotex-component-digest="sha256:[0-9a-f]{64}"/
     assert html =~ ~r/data-wotex-fixture-digest="sha256:[0-9a-f]{64}"/
@@ -47,22 +49,23 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   end
 
   test "a browser flow runs an experiment and preserves Action separation", %{conn: conn} do
-    conn = get(conn, "/")
-    {:ok, view, html} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, html} = live(recycle(conn), "/experiments")
     assert html =~ "Start disposable room"
     assert html =~ ~s(phx-disable-with="Running…")
 
     html = render_click(element(view, "button[phx-click='start_room']"))
-    assert html =~ "Recent runs"
+    assert html =~ "Thermostat"
     refute html =~ "Start disposable room"
 
-    redirect =
+    html =
       render_submit(element(view, "#run-thermal"), %{
         "experiment_id" => "thermal",
         "params" => %{"backend" => "binary"}
       })
 
-    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     assert html =~ "Tensor summary"
     assert html =~ "setTarget 22.000 Cel (inert)"
     assert html =~ "Run assertions"
@@ -72,11 +75,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   end
 
   test "a smart-room run needs the separate exact approval form", %{conn: conn} do
-    conn = get(conn, "/")
-    {:ok, view, _} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
+    html =
       render_submit(element(view, "#run-smart_room"), %{
         "experiment_id" => "smart_room",
         "params" => %{
@@ -87,7 +90,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         }
       })
 
-    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     assert html =~ "Approve simulated Action"
     assert html =~ "Running the experiment did not dispatch it"
     assert html =~ "Proposal digest"
@@ -100,18 +104,18 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   end
 
   test "analysis is explicit, scope-owned and cannot mutate or replay its run", %{conn: conn} do
-    conn = get(conn, "/")
-    {:ok, view, _} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
     assert render_hook(view, "inspect_run", %{}) =~ "unknown_run"
 
-    redirect =
-      render_submit(element(view, "#run-window_anomaly"), %{
-        "experiment_id" => "window_anomaly",
-        "params" => %{"backend" => "binary"}
-      })
+    render_submit(element(view, "#run-window_anomaly"), %{
+      "experiment_id" => "window_anomaly",
+      "params" => %{"backend" => "binary"}
+    })
 
-    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     refute has_element?(run_view, "#run-insights")
     before = Map.fetch!(evidence_report(conn), "runs")
 
@@ -157,13 +161,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert after_runs == before
     {:ok, reloaded, _} = live(recycle(conn), "/runs/run-1")
     refute has_element?(reloaded, "#run-insights")
-    {:ok, other, _} = live(build_conn(), "/runs/run-1")
+
+    other_conn =
+      build_conn()
+      |> get("/")
+      |> track_session()
+
+    {:ok, other, _} = live(recycle(other_conn), "/runs/run-1")
     refute has_element?(other, "#run-analysis")
     refute render_hook(other, "inspect_run", %{}) =~ "Explorer.PolarsBackend"
   end
 
   test "Things escape untrusted TD text and reports stay in the caller session", %{conn: conn} do
-    conn = get(conn, "/things")
+    conn = get(conn, "/things") |> track_session()
     {:ok, view, _} = live(recycle(conn), "/things")
     render_click(element(view, "button[phx-click='start_room']"))
 
@@ -176,6 +186,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}}
       })
 
+    render_click(element(view, "button[phx-click='import_thing']"))
+
     html =
       render_submit(element(view, "form[phx-submit='register_td']"), %{
         "thing_description" => source
@@ -184,6 +196,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert html =~ "&lt;script&gt;alert"
     refute html =~ "<script>alert('x')</script>"
 
+    render_click(element(view, "[phx-click='inspect_thing'][phx-value-id='thing-thermostat']"))
     html = render_submit(element(view, "#read-thermostat-temperature"))
     assert html =~ "Latest reading"
     assert html =~ "21.5"
@@ -193,6 +206,54 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert get_resp_header(report, "content-disposition") ==
              [~s(attachment; filename="wotex-lab-evidence.json")]
+  end
+
+  test "canvas inspection opens the scoped drawer and rejects stale or forged selections", %{
+    conn: conn
+  } do
+    conn = get(conn, "/things") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/things")
+    render_click(element(view, "button[phx-click='start_room']"))
+    envelope = canvas_event(view, "thing-thermostat")
+    event = "wotex:island:#{envelope["instance_id"]}:event"
+
+    refute has_element?(view, "aside[aria-label='Thing inspector']")
+    render_hook(view, event, envelope)
+    assert has_element?(view, "#read-thermostat-temperature")
+    refute has_element?(view, "#read-meter-power")
+    render_click(element(view, "button[aria-label='Close inspector']"))
+
+    render_hook(view, event, envelope)
+    refute has_element?(view, "aside[aria-label='Thing inspector']")
+
+    current = canvas_event(view, "thing-meter")
+
+    for invalid <- [
+          put_in(current, ["payload", "id"], "other-session"),
+          put_in(current, ["payload", "id"], %{"untrusted" => true}),
+          put_in(current, ["payload", "extra"], true),
+          Map.put(current, "component", "tabs"),
+          Map.put(current, "instance_id", "other-session--connected-things")
+        ] do
+      render_hook(view, event, invalid)
+      refute has_element?(view, "aside[aria-label='Thing inspector']")
+    end
+
+    other_conn =
+      build_conn()
+      |> get("/")
+      |> track_session()
+
+    {:ok, other, _} = live(recycle(other_conn), "/things")
+    render_click(element(other, "button[phx-click='start_room']"))
+    render_hook(other, event, current)
+    refute has_element?(other, "aside[aria-label='Thing inspector']")
+
+    render_hook(view, event, current)
+    assert has_element?(view, "#read-meter-power")
+    refute has_element?(view, "#read-thermostat-temperature")
+    render_submit(element(view, "#read-meter-power"))
+    assert has_element?(view, "aside strong", "2500.0")
   end
 
   test "generated tokens, host CSS and optional investigation state are explicit", %{conn: conn} do
@@ -212,7 +273,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert host_css =~ ~r/\.wl-stack > \* \{\s*min-width: 0;/
     refute host_css =~ "gradient"
 
-    {:ok, view, _} = live(conn, "/evidence")
+    conn = get(conn, "/evidence") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/evidence")
     render_click(element(view, "button[phx-click='start_room']"))
     html = render(view)
     assert html =~ "No investigation provider is configured"
@@ -241,17 +303,18 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     Application.put_env(:wotex_lab_workbench, :beamlens_provider, :codex_then_ollama)
     on_exit(fn -> Application.put_env(:wotex_lab_workbench, :beamlens_provider, provider) end)
 
-    conn = get(conn, "/")
-    {:ok, view, _} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
+    html =
       render_submit(element(view, "#run-thermal"), %{
         "experiment_id" => "thermal",
         "params" => %{"backend" => "binary"}
       })
 
-    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     assert html =~ "Trusted-local only"
     assert html =~ "Data leaves this host"
     assert has_element?(run_view, "#investigation-disclosure li", "node name, operating system")
@@ -275,17 +338,17 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   test "browser cancellation terminates the worker and clears its prompt context", %{conn: conn} do
     start_beamlens_tree(:block)
-    conn = get(conn, "/")
-    {:ok, view, _} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
-      render_submit(element(view, "#run-thermal"), %{
-        "experiment_id" => "thermal",
-        "params" => %{"backend" => "binary"}
-      })
+    render_submit(element(view, "#run-thermal"), %{
+      "experiment_id" => "thermal",
+      "params" => %{"backend" => "binary"}
+    })
 
-    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
     assert html =~ "Cancel investigation"
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
@@ -299,18 +362,18 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   test "session revocation terminates an active investigation", %{conn: conn} do
     start_beamlens_tree(:block)
-    conn = get(conn, "/")
+    conn = get(conn, "/") |> track_session()
     token = get_session(conn, SessionToken.key())
-    {:ok, view, _} = live(recycle(conn), "/")
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
-      render_submit(element(view, "#run-thermal"), %{
-        "experiment_id" => "thermal",
-        "params" => %{"backend" => "binary"}
-      })
+    render_submit(element(view, "#run-thermal"), %{
+      "experiment_id" => "thermal",
+      "params" => %{"backend" => "binary"}
+    })
 
-    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     _ = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
 
@@ -391,7 +454,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   test "unknown and stale browser sessions render denial rather than replacement", %{conn: conn} do
     conn = init_test_session(conn, %{SessionToken.key() => "forged"})
-    {:ok, _, html} = live(conn, "/")
+    {:ok, _, html} = live(conn, "/experiments")
     assert html =~ "Session denied"
     assert html =~ "unknown_session"
     assert html =~ "New session"
@@ -400,12 +463,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   test "window, metric, dataset and investigation controls remain separate and bounded", %{
     conn: conn
   } do
-    conn = get(conn, "/")
+    conn = get(conn, "/") |> track_session()
     browser = recycle(conn)
-    {:ok, view, _} = live(browser, "/")
+    {:ok, view, _} = live(browser, "/experiments")
 
-    html = render_click(element(view, "button[phx-click='toggle_sidebar']"))
-    assert html =~ ~s(id="wl-sidebar") and html =~ ~s(hidden)
+    assert has_element?(view, "#wl-sidebar[hidden]")
+    render_click(element(view, "button[phx-click='toggle_sidebar']"))
+    refute has_element?(view, "#wl-sidebar[hidden]")
+    render_hook(view, "close_board_menu", %{})
+    assert has_element?(view, "#wl-sidebar[hidden]")
 
     html = render_change(element(view, "#theme-settings"), %{"theme" => "dark"})
     assert html =~ ~s(data-theme="dark")
@@ -416,7 +482,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
+    html =
       render_submit(element(view, "#run-window_anomaly"), %{
         "experiment_id" => "window_anomaly",
         "params" => %{
@@ -429,7 +495,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
         }
       })
 
-    {:ok, _, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
     assert html =~ "window_anomaly"
     assert html =~ "simulated temperature (Cel)"
     assert html =~ "Persistence prediction"
@@ -457,7 +523,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     render_click(element(metrics, "button[phx-click='export_dataset']"))
 
     {:ok, evidence, html} = live(recycle(conn), "/evidence")
-    assert html =~ "Bounded session report"
+    assert html =~ "Session report"
 
     {property, _} = Enum.at(WotexLabWorkbench.Formal.properties(), 0)
 
@@ -477,25 +543,48 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert rows > 0 and Map.fetch!(hd(report["runs"]), "experiment") == "window_anomaly"
   end
 
+  defp canvas_event(view, id) do
+    [encoded] =
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("[data-wotex-island-component='canvas']")
+      |> LazyHTML.attribute("data-wotex-island-snapshot")
+
+    snapshot =
+      encoded
+      |> Base.url_decode64!(padding: false)
+      |> Jason.decode!()
+
+    %{
+      "schema" => "wotex-lab-island-event/v1",
+      "component" => "canvas",
+      "instance_id" => snapshot["instance_id"],
+      "client_revision" => snapshot["revision"],
+      "event" => "inspect",
+      "payload" => %{"id" => id}
+    }
+  end
+
   test "cancel, session reset, token overrides and hostile Host text have explicit outcomes", %{
     conn: conn
   } do
-    conn = get(conn, "/")
-    {:ok, view, _} = live(recycle(conn), "/")
+    conn = get(conn, "/") |> track_session()
+    {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    redirect =
-      render_submit(element(view, "#run-smart_room"), %{
-        "experiment_id" => "smart_room",
-        "params" => %{}
-      })
+    render_submit(element(view, "#run-smart_room"), %{
+      "experiment_id" => "smart_room",
+      "params" => %{}
+    })
 
-    {:ok, run_view, _} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert_patch(view, "/runs/run-1")
+    run_view = view
     html = render_click(element(run_view, "button[phx-click='cancel']"))
     assert html =~ "cancelled"
     refute html =~ "Approve this simulated Action"
 
-    reset = get(recycle(conn), "/session/new")
+    reset = get(recycle(conn), "/session/new") |> track_session()
     assert redirected_to(reset) == "/"
 
     previous = Application.get_env(:wotex_lab_workbench, :token_overrides)
@@ -533,10 +622,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert length(Components.modules()) == 15
 
     assert Enum.map(Shell.items(), &elem(&1, 0)) == [
+             :workbench,
              :experiments,
-             :things,
              :metrics,
-             :evidence,
              :docs
            ]
 

@@ -35,8 +35,8 @@ defmodule Wotex.Lab.IslandTest do
     assert {:error, {:island_limit, :depth, 17, 16}} = CanonicalJSON.encode(too_deep)
   end
 
-  test "the registry admits only the three Lab components" do
-    assert Enum.map(Component.all(), & &1["id"]) == ["chart", "data-grid", "tabs"]
+  test "the registry admits only the four Lab components" do
+    assert Enum.map(Component.all(), & &1["id"]) == ["canvas", "chart", "data-grid", "tabs"]
     assert Component.digest() =~ ~r/\Asha256:[0-9a-f]{64}\z/
     assert {:ok, %{"story_id" => "reporting-chart"}} = Component.fetch("chart")
     assert :error = Component.fetch("unknown")

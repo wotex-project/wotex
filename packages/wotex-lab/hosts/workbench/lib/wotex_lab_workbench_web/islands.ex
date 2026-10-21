@@ -17,6 +17,28 @@ defmodule WotexLabWorkbenchWeb.Islands do
   @type descriptor :: %{component: String.t(), id: String.t(), props: map()}
 
   attr(:id, :string, required: true)
+  attr(:props, :map, required: true)
+  attr(:revision, :integer, required: true)
+  slot(:fallback, required: true)
+
+  @doc "Enhances a bounded Thing graph while retaining its semantic inspection fallback."
+  @spec canvas_island(map()) :: Phoenix.LiveView.Rendered.t()
+  def canvas_island(assigns) do
+    ~H"""
+    <.island_boundary
+      id={@id}
+      component="canvas"
+      props={@props}
+      generation="0"
+      revision={to_string(@revision)}
+      capabilities={["inspect", "open"]}
+    >
+      <:fallback>{render_slot(@fallback)}</:fallback>
+    </.island_boundary>
+    """
+  end
+
+  attr(:id, :string, required: true)
   attr(:chart, :any, required: true)
   attr(:revision, :integer, required: true)
   slot(:fallback, required: true)
@@ -108,7 +130,11 @@ defmodule WotexLabWorkbenchWeb.Islands do
         capabilities: assigns.capabilities
       )
 
-    {:ok, encoded} = Snapshot.encode_inline(snapshot)
+    encoded =
+      case Snapshot.encode_inline(snapshot) do
+        {:ok, encoded} -> encoded
+        {:error, {:island_limit, :inline_snapshot_bytes, _, _}} -> nil
+      end
 
     assigns =
       assigns

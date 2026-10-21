@@ -2,7 +2,7 @@ defmodule Wotex.Lab.DesignSystem do
   @moduledoc """
   Owns the visual contract used by the Wotex Lab reference hosts.
 
-  The contract contains Wotex semantic tokens, the three admitted Svelte
+  The contract contains Wotex semantic tokens, the four admitted Svelte
   island descriptors, deterministic fixture identities and scoped CSS. It has
   no Phoenix or browser dependency, reads no files, starts no process and
   performs no network operation.
@@ -10,55 +10,58 @@ defmodule Wotex.Lab.DesignSystem do
 
   alias Wotex.Lab.Island.Component
 
-  @version "0.4.0"
+  @version "0.5.0"
   @shared %{
-    "semantic.space.controlX" => "0.75rem",
-    "semantic.space.controlY" => "0.5rem",
-    "semantic.space.panel" => "1rem",
-    "semantic.space.section" => "2rem",
-    "semantic.radius.control" => "0.625rem",
-    "semantic.radius.panel" => "0.875rem",
+    "semantic.space.controlX" => "0.5rem",
+    "semantic.space.controlY" => "0.25rem",
+    "semantic.space.panel" => "0.75rem",
+    "semantic.space.section" => "1.5rem",
+    "semantic.radius.control" => "0.25rem",
+    "semantic.radius.panel" => "0.25rem",
     "semantic.motion.interaction" => "120ms",
     "semantic.motion.panel" => "180ms"
   }
   @light %{
-    "semantic.color.canvas" => "#f4f2ee",
-    "semantic.color.surface" => "#fbfaf7",
-    "semantic.color.text" => "#263044",
-    "semantic.color.muted" => "#5c6370",
-    "semantic.color.border" => "#737984",
-    "semantic.color.accent" => "#294f77",
+    "semantic.color.canvas" => "#f4f5f7",
+    "semantic.color.surface" => "#ffffff",
+    "semantic.color.text" => "#181d27",
+    "semantic.color.muted" => "#606775",
+    "semantic.color.border" => "#d6dbe3",
+    "semantic.color.controlBorder" => "#818a9d",
+    "semantic.color.accent" => "#181d27",
     "semantic.color.accentText" => "#ffffff",
-    "semantic.color.focus" => "#1d4f91",
-    "semantic.color.danger" => "#b42318",
-    "semantic.color.warning" => "#815000",
-    "semantic.color.success" => "#17633b"
+    "semantic.color.focus" => "#181d27",
+    "semantic.color.danger" => "#181d27",
+    "semantic.color.warning" => "#181d27",
+    "semantic.color.success" => "#181d27"
   }
   @dark %{
-    "semantic.color.canvas" => "#142b50",
-    "semantic.color.surface" => "#1b3864",
-    "semantic.color.text" => "#e0f4ff",
-    "semantic.color.muted" => "#acc8da",
-    "semantic.color.border" => "#879db5",
-    "semantic.color.accent" => "#e0f4ff",
-    "semantic.color.accentText" => "#142b50",
-    "semantic.color.focus" => "#a8d8ff",
-    "semantic.color.danger" => "#ffb4aa",
-    "semantic.color.warning" => "#f4ca82",
-    "semantic.color.success" => "#8cd7ab"
+    "semantic.color.canvas" => "#181d27",
+    "semantic.color.surface" => "#232936",
+    "semantic.color.text" => "#d6dbe3",
+    "semantic.color.muted" => "#9097a5",
+    "semantic.color.border" => "#444b5a",
+    "semantic.color.controlBorder" => "#818a9d",
+    "semantic.color.accent" => "#303644",
+    "semantic.color.accentText" => "#ffffff",
+    "semantic.color.focus" => "#818a9d",
+    "semantic.color.danger" => "#d6dbe3",
+    "semantic.color.warning" => "#d6dbe3",
+    "semantic.color.success" => "#d6dbe3"
   }
   @contrast %{
-    "semantic.color.canvas" => "#000000",
-    "semantic.color.surface" => "#000000",
-    "semantic.color.text" => "#ffffff",
-    "semantic.color.muted" => "#ffffff",
-    "semantic.color.border" => "#ffffff",
-    "semantic.color.accent" => "#ffff00",
-    "semantic.color.accentText" => "#000000",
-    "semantic.color.focus" => "#ffff00",
-    "semantic.color.danger" => "#ff6060",
-    "semantic.color.warning" => "#ffff00",
-    "semantic.color.success" => "#00ff90"
+    "semantic.color.canvas" => "#ffffff",
+    "semantic.color.surface" => "#ffffff",
+    "semantic.color.text" => "#181d27",
+    "semantic.color.muted" => "#303644",
+    "semantic.color.border" => "#181d27",
+    "semantic.color.controlBorder" => "#181d27",
+    "semantic.color.accent" => "#181d27",
+    "semantic.color.accentText" => "#ffffff",
+    "semantic.color.focus" => "#181d27",
+    "semantic.color.danger" => "#181d27",
+    "semantic.color.warning" => "#181d27",
+    "semantic.color.success" => "#181d27"
   }
   @tokens %{
     "system" => Map.merge(@shared, @light),
@@ -134,10 +137,10 @@ defmodule Wotex.Lab.DesignSystem do
     #{aliases()}
       --wl-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --wl-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
-      --wl-text-sm: 0.875rem;
-      --wl-text-base: 1rem;
-      --wl-text-title: 1.75rem;
-      --wl-line-height: 1.5;
+      --wl-text-sm: 0.6875rem;
+      --wl-text-base: 0.75rem;
+      --wl-text-title: 0.875rem;
+      --wl-line-height: 1.333333;
       --wl-space-1: 0.25rem;
       --wl-space-2: 0.5rem;
       --wl-space-3: 0.75rem;
@@ -146,7 +149,7 @@ defmodule Wotex.Lab.DesignSystem do
       --wl-space-8: 2rem;
       --wl-sidebar-width: 14.5rem;
       --wl-reading-width: 48rem;
-      --wl-control-height: 2.75rem;
+      --wl-control-height: 1.75rem;
       color-scheme: light;
       color: var(--wotex-semantic-color-text);
       background: var(--wotex-semantic-color-canvas);
@@ -167,7 +170,7 @@ defmodule Wotex.Lab.DesignSystem do
     .wotex-lab[data-wotex-design-system][data-wotex-theme="contrast"],
     .wotex-lab[data-wotex-design-system][data-wotex-theme="contrast"] [data-wotex-design-system] {
     #{declarations(@tokens["contrast"])}
-      color-scheme: dark;
+      color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
       .wotex-lab[data-wotex-design-system]:not([data-wotex-theme="light"]):not([data-wotex-theme="dark"]):not([data-wotex-theme="contrast"]),

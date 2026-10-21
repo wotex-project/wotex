@@ -1,4 +1,15 @@
 export const componentDescriptors = {
+  canvas: {
+    props: {
+      label: { type: "string", required: true, max_bytes: 256 },
+      nodes: { type: "item_list", required: true, max_items: 32 },
+      edges: { type: "item_list", required: true, max_items: 64 },
+    },
+    events: {
+      inspect: { payload: "id", effectful: false },
+      open: { payload: "id", effectful: false },
+    },
+  },
   chart: {
     props: {
       title: { type: "string", required: true, max_bytes: 256 },

@@ -1,7 +1,8 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.10.0. Status: proposed for design review. Implementation: not
-started. Owners: WLB.11 and WLB.12. Package: `packages/wotex-lab`.
+Plan version: 0.12.0. Status: iterative design review. Implementation: persistent
+canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
+WLB.12. Package: `packages/wotex-lab`.
 
 The Lab becomes a persistent spatial workbench for understanding a connected
 system, investigating measurements and running experiments. A full-page canvas
@@ -9,10 +10,14 @@ holds Things, their typed connections and user-pinned results. Compact floating
 tools and contextual inspectors support the current journey. Documentation has
 its own conventional reading layout and global search.
 
-This proposal replaces the visual direction of the previous sidebar-led Figma
-drafts. It does not claim that the new canvas, live Thing subscriptions or
-prompt-to-pin protocol exist. Existing package contracts remain authoritative
-until the reviewed proposal is promoted into their versioned obligations.
+This direction replaces the previous sidebar-led Figma drafts. WLB.11 version
+0.16 accepts the grayscale geometry and bounded Thing-graph contract. Its first
+source now opens a full-viewport Svelte Flow canvas at `/`. Experiments, runs,
+metrics and selected-run evidence patch the same LiveView and open contextual
+panels. Thing inspection/import, experiment drafts, explicit readings, node
+positions and viewport survive those panel transitions. Reload/documentation
+restoration, live Thing subscriptions and the prompt-to-pin protocol remain
+incomplete.
 The [design contract](brand-and-lab-design.md) retains identity and native-file
 acceptance; [WLB.11](../specs/WLB.11-workbench-and-design-system.md) owns frontend
 behavior and [WLB.12](../specs/WLB.12-unified-documentation.md) owns documentation.
@@ -38,9 +43,11 @@ The canvas has at most two persistent compact menu surfaces: board control and
 tool rail. Search/status and zoom do not occupy separate floating bars. Use
 16-pixel tool icons, 14-pixel menu/node icons, 28-pixel desktop targets and menu
 rows, 12-pixel labels and 14-pixel inspector titles. The rail is 36 pixels wide;
-context menus start at 200 pixels. Touch and zoomed layouts need their own
-composition. These are design proposals, not current CSS or accessibility
-qualification.
+context menus start at 200 pixels. The board dropdown is 38 pixels high, hugs
+its contents and leaves 4 pixels after the chevron. Touch and zoomed layouts need their own
+composition. The source implements the board control and Select/Pan/Add Thing/
+Metrics/Experiments/Fit rail. Opening these tools performs no read, history query
+or run. Broader accessibility qualification remains open.
 
 The 28-pixel field height applies to single-line controls. Questions and Thing
 Description JSON use bounded multiline inputs that show their content without
@@ -55,12 +62,18 @@ and shared subtle elevation: charcoal shadows at 0/2/8 pixels with 10% opacity
 and 0/1/2 pixels with 4% opacity. Inner groups and integrated documentation stay
 flat. This supersedes the earlier shadow-free canvas treatment.
 
+Dark decorative borders use `#444B5A` rather than the bright mid-gray outline.
+The selected/focus outline uses `#818A9D`. Light and contrast treatments retain
+their separate roles; they do not inherit the dark-mode adjustment.
+
 Keep floating inspectors 20 pixels inside the top, right and bottom canvas
 edges, matching the board control's edge inset. Use one visible shell with
 12-pixel content padding for inspectors and dialogs. Menus inset their rows
 4 pixels, with 8-pixel row padding; labels therefore share the same 12-pixel
 content inset. Rows must not paint over the continuous outer border. Numeric
 readings and their units share a text baseline, including `°C target`.
+Below 600 pixels the inspector starts at 76 pixels to clear the board control;
+its left, right and bottom canvas insets remain 20 pixels.
 
 The workbench background follows the supplied graph-paper reference: a fine
 6.5-pixel mesh, secondary lines every 26 pixels and crosshairs every 104 pixels.
@@ -74,7 +87,7 @@ Icon artwork comes from Lucide revision
 `20aef31db93fe4d9f398dbb15b120d99c48eef95`. The source SVGs and upstream
 [license](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/icons/lucide/LICENSE) are retained with their
 [notice](https://github.com/wotex-project/wotex/blob/e7fdfa4a078f28908f2394120a5c2b8701c9013d/docs/assets/icons/lucide/NOTICE). This supplies design artwork;
-it does not add a frontend dependency or change the implemented Icon component.
+the source shell and Thing graph reuse the selected SVGs with their notices.
 
 Use Inter and the supplied logo's cool grays: `#181D27`, `#303644`, `#818A9D`,
 `#9097A5` and `#D6DBE3`, with white and pale surface tints. Selected controls,

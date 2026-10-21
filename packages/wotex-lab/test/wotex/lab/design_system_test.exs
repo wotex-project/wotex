@@ -6,7 +6,7 @@ defmodule Wotex.Lab.DesignSystemTest do
   alias Wotex.Lab.DesignSystem
 
   test "tokens are versioned JSON-compatible data and every theme has the same roles" do
-    assert DesignSystem.version() == "0.4.0"
+    assert DesignSystem.version() == "0.5.0"
     tokens = DesignSystem.tokens()
     assert Enum.sort(Map.keys(tokens)) == ["contrast", "dark", "light", "system"]
 
@@ -65,7 +65,7 @@ defmodule Wotex.Lab.DesignSystemTest do
       end
 
       assert contrast(tokens["semantic.color.focus"], tokens[surface]) >= 3.0
-      assert contrast(tokens["semantic.color.border"], tokens[surface]) >= 3.0
+      assert contrast(tokens["semantic.color.controlBorder"], tokens[surface]) >= 3.0
 
       assert contrast(tokens["semantic.color.accentText"], tokens["semantic.color.accent"]) >=
                4.5

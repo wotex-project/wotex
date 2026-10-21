@@ -16,6 +16,7 @@ defmodule Wotex.Lab.Island.Encoder do
          :ok <- closed_props(props, descriptor["props"]),
          :ok <- required_props(props, descriptor["props"]),
          :ok <- validate_props(props, descriptor["props"]),
+         :ok <- validate_component(component, props),
          {:ok, _} <- CanonicalJSON.encode(props) do
       {:ok, props}
     end
@@ -68,5 +69,7 @@ defmodule Wotex.Lab.Island.Encoder do
     do: is_list(value) and length(value) <= (schema["max_items"] || 2_000)
 
   defp valid_value?(_, _), do: false
+  defp validate_component("canvas", props), do: Wotex.Lab.Island.Canvas.validate(props)
+  defp validate_component(_, _), do: :ok
   defp invalid(component), do: {:error, {:invalid_island_props, component}}
 end

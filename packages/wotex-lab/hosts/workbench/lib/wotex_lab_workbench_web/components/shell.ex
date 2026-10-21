@@ -1,40 +1,38 @@
 defmodule WotexLabWorkbenchWeb.Components.Shell do
   @moduledoc """
-  The workbench shell: skip link, collapsible sidebar navigation, compact
-  context line and one main workspace, themed through the Wotex Lab
-  semantic-token contract.
+  A floating board menu and one main workspace, themed through the Wotex Lab
+  semantic-token contract. Session details and appearance stay inside the menu.
   """
 
   use Phoenix.Component
 
-  import WotexLabWorkbenchWeb.Components.Button
+  alias Phoenix.LiveView.JS
 
   @items [
-    {:experiments, "Experiments", "/"},
-    {:things, "Things", "/things"},
+    {:workbench, "Workbench", "/"},
+    {:experiments, "Experiments", "/experiments"},
     {:metrics, "Metrics", "/metrics"},
-    {:evidence, "Evidence", "/evidence"},
     {:docs, "Docs", "/docs/start/"}
   ]
   @icons %{
-    experiments: "M9 3v5l-4.5 8a3 3 0 0 0 2.6 4.5h9.8a3 3 0 0 0 2.6-4.5L15 8V3M8 12h8",
-    things: "m4 7 8-4 8 4-8 4-8-4Zm0 0v10l8 4 8-4V7M12 11v10",
-    metrics: "M4 19V9m5 10V5m5 14v-7m5 7V3",
-    evidence: "M6 3h9l3 3v15H6V3Zm8 0v4h4M9 12l2 2 4-5",
-    docs:
-      "M4 5.5A2.5 2.5 0 0 1 6.5 3H12v17H6.5A2.5 2.5 0 0 0 4 22V5.5Zm16 0A2.5 2.5 0 0 0 17.5 3H12v17h5.5A2.5 2.5 0 0 1 20 22V5.5Z"
+    experiments: "flask-conical",
+    workbench: "waypoints",
+    metrics: "chart-no-axes-combined",
+    docs: "book-open"
   }
 
-  @doc "Sidebar items as `{id, label, path}`."
+  @doc "Board menu destinations as `{id, label, path}`."
   @spec items() :: [{atom(), String.t(), String.t()}]
   def items, do: @items
 
   attr(:theme, :string, default: "system", doc: "system, light, dark or contrast")
-  attr(:sidebar_open, :boolean, default: true)
-  attr(:current, :atom, default: :experiments, doc: "the active sidebar item")
+  attr(:sidebar_open, :boolean, default: false, doc: "whether the board menu is expanded")
+  attr(:current, :atom, default: :experiments, doc: "the active destination")
+  attr(:canvas, :boolean, default: false, doc: "whether the main workspace fills the viewport")
   attr(:title, :string, default: "WoTEx Lab workbench")
-  slot(:context, doc: "the compact context line")
-  slot(:settings, doc: "replaces the default theme settings at the sidebar bottom")
+  slot(:context, doc: "session details inside the board menu")
+  slot(:actions, doc: "contextual board actions")
+  slot(:settings, doc: "replaces the default appearance settings")
   slot(:inner_block, required: true)
 
   @doc "Renders the shell around the main workspace."
@@ -48,7 +46,7 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
 
     ~H"""
     <div
-      class={["wotex-lab", "wl-shell", @sidebar_open && "wl-shell-open"]}
+      class={["wotex-lab", "wl-shell", @canvas && "wl-shell-canvas"]}
       data-wotex-design-system
       data-wotex-theme={theme(@theme)}
       data-theme={theme(@theme)}
@@ -58,55 +56,80 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
       data-wotex-stylesheet-digest={@design_contract["stylesheet_digest"]}
     >
       <a class="wl-skip" href="#main">Skip to main content</a>
-      <header class="wl-topbar">
-        <.icon_button
-          label={if @sidebar_open, do: "Collapse sidebar", else: "Expand sidebar"}
-          icon={:menu}
+      <header class="wl-board-chrome" aria-label={@title}>
+        <button
+          id="wl-board-toggle"
+          type="button"
+          class="wl-board-toggle"
+          aria-label="Board menu"
           phx-click="toggle_sidebar"
           aria-expanded={to_string(@sidebar_open)}
           aria-controls="wl-sidebar"
-        />
-        <span class="wl-brand" aria-label={@title}>
-          <span class="wl-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M3 4.5 7.5 20 12 9.5 16.5 20 21 4.5" />
-            </svg>
-          </span>
-          <span class="wl-brand-copy"><strong>WoTEx</strong><small>Lab workbench</small></span>
-        </span>
-        <div class="wl-context-slot">{render_slot(@context)}</div>
+        >
+          <img class="wl-board-logo" src="/brand/wotex.svg" alt="WoTEx" width="28" height="20" />
+          <span>Lab room</span>
+          <img class="wl-menu-icon" src="/icons/chevron-down.svg" alt="" width="14" height="14" />
+        </button>
+        <nav
+          id="wl-sidebar"
+          class="wl-board-menu"
+          aria-label="Workbench"
+          hidden={!@sidebar_open}
+          phx-click-away={@sidebar_open && "close_board_menu"}
+          phx-window-keydown={
+            if @sidebar_open, do: JS.push("close_board_menu") |> JS.focus(to: "#wl-board-toggle")
+          }
+          phx-key="Escape"
+        >
+          <ul class="wl-nav">
+            <li :for={{id, label, path} <- @items}>
+              <.link
+                :if={id != :docs}
+                patch={path}
+                class="wl-nav-link"
+                aria-current={if id == @current, do: "page"}
+              >
+                <img
+                  class="wl-menu-icon"
+                  src={"/icons/#{Map.fetch!(@icons, id)}.svg"}
+                  alt=""
+                  width="16"
+                  height="16"
+                />
+                <span>{label}</span>
+              </.link>
+              <.link :if={id == :docs} navigate={path} class="wl-nav-link">
+                <img class="wl-menu-icon" src="/icons/book-open.svg" alt="" width="16" height="16" />
+                <span>{label}</span>
+              </.link>
+            </li>
+          </ul>
+          <div :if={@actions != []} class="wl-board-actions">{render_slot(@actions)}</div>
+          <div class="wl-board-settings">
+            <%= if @settings == [] do %>
+              <form id="theme-settings" phx-change="set_theme" class="wl-settings">
+                <label for="wl-theme">Appearance</label>
+                <select id="wl-theme" name="theme">
+                  <option
+                    :for={value <- ~w(system light dark contrast)}
+                    value={value}
+                    selected={value == @theme}
+                  >
+                    {value}
+                  </option>
+                </select>
+              </form>
+              <a class="wl-nav-link wl-nav-muted" href="/session/new">New session</a>
+            <% else %>
+              {render_slot(@settings)}
+            <% end %>
+          </div>
+          <details :if={@context != []} class="wl-board-context">
+            <summary>Session</summary>
+            {render_slot(@context)}
+          </details>
+        </nav>
       </header>
-      <nav id="wl-sidebar" class="wl-sidebar" aria-label="Workbench" hidden={!@sidebar_open}>
-        <ul class="wl-nav">
-          <li :for={{id, label, path} <- @items}>
-            <.link navigate={path} class="wl-nav-link" aria-current={if id == @current, do: "page"}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d={Map.fetch!(@icons, id)} />
-              </svg>
-              <span>{label}</span>
-            </.link>
-          </li>
-        </ul>
-        <div class="wl-sidebar-footer">
-          <%= if @settings == [] do %>
-            <form id="theme-settings" phx-change="set_theme" class="wl-settings">
-              <label for="wl-theme">Appearance</label>
-              <select id="wl-theme" name="theme">
-                <option
-                  :for={value <- ~w(system light dark contrast)}
-                  value={value}
-                  selected={value == @theme}
-                >
-                  {value}
-                </option>
-              </select>
-            </form>
-            <a class="wl-nav-link wl-nav-muted" href="/session/new">New session</a>
-          <% else %>
-            {render_slot(@settings)}
-          <% end %>
-        </div>
-      </nav>
       <main id="main" class="wl-main" tabindex="-1">
         {render_slot(@inner_block)}
       </main>

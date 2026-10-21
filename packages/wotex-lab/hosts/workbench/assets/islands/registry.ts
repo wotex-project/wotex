@@ -1,6 +1,7 @@
 import type { IslandLoader } from "./types.js"
 
 export const islandRegistry = {
+  canvas: () => import("./canvas.svelte"),
   tabs: () => import("./tabs.svelte"),
   "data-grid": () => import("./data-grid.svelte"),
   chart: () => import("./chart.svelte"),

@@ -26,6 +26,18 @@ defmodule WotexLabWorkbenchWeb.IslandsTest do
       </.chart_island>
       """
     end
+
+    @doc false
+    @spec canvas(map()) :: Phoenix.LiveView.Rendered.t()
+    def canvas(assigns) do
+      ~H"""
+      <.canvas_island id="session-fixture--canvas" props={@props} revision={7}>
+        <:fallback>
+          <p id="canvas-fallback">Inspect connected Things.</p>
+        </:fallback>
+      </.canvas_island>
+      """
+    end
   end
 
   test "chart projections retain labels, gaps and only the public descriptor" do
@@ -104,6 +116,51 @@ defmodule WotexLabWorkbenchWeb.IslandsTest do
                "session-fixture--tabs",
                Map.put(envelope, "caller", true)
              )
+  end
+
+  test "a large admitted canvas keeps its fallback and requests a connected bootstrap" do
+    nodes =
+      for index <- 1..32 do
+        %{
+          "id" => "thing-#{index}",
+          "kind" => "thing",
+          "title" => String.duplicate("t", 128),
+          "identity" => String.duplicate("i", 256),
+          "value" => String.duplicate("v", 128),
+          "unit" => String.duplicate("u", 32),
+          "status" => String.duplicate("s", 32),
+          "detail" => String.duplicate("d", 128),
+          "x" => index * 10,
+          "y" => 0
+        }
+      end
+
+    edges =
+      for index <- 1..64 do
+        %{
+          "id" => "edge-#{index}",
+          "source" => "thing-1",
+          "target" => "thing-2",
+          "label" => String.duplicate("l", 128),
+          "kind" => "input",
+          "target_handle" => "input"
+        }
+      end
+
+    props = %{"label" => "Connected Things", "nodes" => nodes, "edges" => edges}
+
+    assert {:ok, snapshot} =
+             Wotex.Lab.Island.Snapshot.new("canvas", "session-fixture--canvas", props,
+               revision: "7"
+             )
+
+    assert {:error, {:island_limit, :inline_snapshot_bytes, :exceeded, _}} =
+             Wotex.Lab.Island.Snapshot.encode_inline(snapshot)
+
+    html = render_component(&Harness.canvas/1, props: props)
+    assert html =~ ~s(id="canvas-fallback")
+    assert html =~ ~s(data-wotex-island-component="canvas")
+    refute html =~ "data-wotex-island-snapshot="
   end
 
   test "identities and public row projections stay finite and session scoped" do
