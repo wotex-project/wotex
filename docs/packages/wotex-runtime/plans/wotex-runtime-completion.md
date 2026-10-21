@@ -81,7 +81,9 @@ while startup is stalled, gates actual decoder entry with current admission and
 the original clock/budget, and confirms startup/worker termination within the
 admitted cleanup limit. An unresolved queued start returns cleanup_unconfirmed;
 remote supervisors are refused. This is local trusted-task custody, without
-native process enforcement or VM isolation.
+native process enforcement or VM isolation. The
+[task custody record](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-runtime/provenance/codec-task-custody-2026-10.md) binds executed
+regressions, selected caller/archive checks and exact source/artifact identities.
 
 The [generic exact JSON decoder](../specs/WRT.06-json-values-v1.md) is an owned
 WRT-C09 addition. It is a pure fixed-format implementation of the existing codec

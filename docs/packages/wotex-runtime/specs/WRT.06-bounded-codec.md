@@ -151,7 +151,9 @@ No VM or descendant isolation is claimed for trusted BEAM code. Tasks catch deco
 they can become raw task crash diagnostics. Decoder failures use the four
 deterministic refusal codes; malformed returns are `protocol_fault`. No retry
 or fallback follows worker loss. Loading Beam starts neither supervisor nor
-worker; decode is the explicit start boundary.
+worker; decode is the explicit start boundary. The
+[task custody record](https://github.com/wotex-project/wotex/blob/main/docs/packages/wotex-runtime/provenance/codec-task-custody-2026-10.md) binds the local
+startup/deadline/cleanup evidence and remaining qualification limits.
 
 ## C02 — Values and determinism
 
