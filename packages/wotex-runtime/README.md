@@ -58,11 +58,13 @@ and exact implementation, configuration, generation and request identities.
 floating conversion. Result inspection omits decoded values.
 
 `Wotex.Runtime.Codec.Beam` runs a registered trusted decoder under a separate
-consumer-owned Task.Supervisor with `max_children: 1` per instance. Supply
+local consumer-owned Task.Supervisor with `max_children: 1` per instance. Supply
 the decoder module, exact contract reference, supervisor pid, current-input
-callback and matching clock callback. The executor checks admission before
-work and reply acceptance, kills timed-out workers and reaps them on owner
-death. Trusted BEAM code has no VM or descendant isolation. Process executors
+callback and matching clock callback. One timer covers supervised startup,
+decoding and output admission. The executor checks admission before decoder
+entry and reply acceptance, kills timed-out workers and reaps them on owner
+death. A stalled startup remains bounded; unresolved cleanup returns
+`cleanup_unconfirmed` rather than claiming that resources were released. Trusted BEAM code has no VM or descendant isolation. Process executors
 and native qualification remain under development.
 
 `Wotex.Runtime.Codec.Wire` validates and canonically encodes the process-codec

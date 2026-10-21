@@ -47,7 +47,7 @@ acquire an SDK dependency or native process manager.
 
 ## Optional implementation delivery
 
-WRT.04–05 at 1.1.1 and WRT.06 at 1.4.0 are optional contracts with specified APIs and receipt
+WRT.04–05 at 1.1.1 and WRT.06 at 1.4.1 are optional contracts with specified APIs and receipt
 formats. WRT.04 admission, WRT.05 lifecycle values and WRT.06's trusted BEAM
 codec seam are implemented; their native and independent-consumer qualification
 remain open in the package
@@ -74,6 +74,14 @@ the specification/catalogue first. Planned vectors and schemas are not executed
 evidence. Promote each specification only after its own complete obligation
 set and real integration pass; leave unavailable platform, independent
 adoption and physical evidence explicitly unproven.
+
+The trusted BEAM executor charges one VM timer from before supervised startup
+through output admission. A separate custodian handles owner loss and expiry
+while startup is stalled, gates actual decoder entry with current admission and
+the original clock/budget, and confirms startup/worker termination within the
+admitted cleanup limit. An unresolved queued start returns cleanup_unconfirmed;
+remote supervisors are refused. This is local trusted-task custody, without
+native process enforcement or VM isolation.
 
 The [generic exact JSON decoder](../specs/WRT.06-json-values-v1.md) is an owned
 WRT-C09 addition. It is a pure fixed-format implementation of the existing codec

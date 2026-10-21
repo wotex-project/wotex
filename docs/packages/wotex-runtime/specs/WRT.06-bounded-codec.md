@@ -1,6 +1,6 @@
 # WRT.06: Bounded, inert codec profile
 
-Specification `WRT.06@1.4.0`. Package owner: `wotex_runtime`.
+Specification `WRT.06@1.4.1`. Package owner: `wotex_runtime`.
 Contract: accepted optional specification; implementation status: `partial`.
 This optional profile defines deterministic decoding of explicit bytes and
 metadata into inert typed values. It is not a transport, device enrollment,
@@ -114,7 +114,9 @@ codec-contract reference. The consumer qualifies that module against that
 immutable contract. Runtime does not load code from descriptor text or prove
 module bytes from a reference. A mismatch is `schema_mismatch`.
 
-Task_supervisor is an already running, consumer-owned Task.Supervisor pid.
+Task_supervisor is an already running, local consumer-owned Task.Supervisor pid.
+A remote supervisor is refused before worker startup; distribution loss cannot
+prove remote task termination.
 The consumer provisions one per instance with `max_children: 1`; this gives
 atomic one-active/zero-queued admission. A second call returns `overloaded`.
 Decoder tasks are temporary. The supervisor is never shared between instance keys.
@@ -131,10 +133,21 @@ The executor starts one temporary task under that explicitly supplied
 supervisor, passing only decoder module, bytes, metadata and admitted
 configuration to the decoder. An ephemeral custodian monitors the caller before
 task creation, attaches before decoding and kills the worker on owner loss.
-Worker termination also closes that custodian. Owner death or timeout kills
-the task; the executor confirms
-worker termination before returning. No VM or descendant isolation is claimed
-for trusted BEAM code. Tasks catch decoder exceptions, exits and throws before
+Worker termination also closes that custodian. One VM timer MUST start before
+submitting supervised startup and remain charged through output admission;
+startup MUST NOT renew the decode wait. Supervised startup MUST run outside the
+waiting caller/custodian so a stalled Task.Supervisor cannot block their deadline
+or owner-loss handling. The worker MUST attach before decoding and revalidate
+current admission and the original clock/budget immediately before decoder entry.
+Owner death or timeout kills the task. The custodian MUST confirm termination of
+both the startup actor and known worker before reporting confirmed cleanup.
+A pending supervisor start is not proof that no child can be created. If it
+cannot settle within the effective cleanup budget, cleanup is unconfirmed;
+the startup actor is terminated and a subsequently created task MUST NOT enter
+the decoder. Cleanup uses the minimum of 1,000 milliseconds and the admitted
+`shutdown_ms`, including zero, without renewal. Only confirmed cleanup permits a
+normal deadline/owner-loss failure; otherwise return `cleanup_unconfirmed`.
+No VM or descendant isolation is claimed for trusted BEAM code. Tasks catch decoder exceptions, exits and throws before
 they can become raw task crash diagnostics. Decoder failures use the four
 deterministic refusal codes; malformed returns are `protocol_fault`. No retry
 or fallback follows worker loss. Loading Beam starts neither supervisor nor

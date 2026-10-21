@@ -34,6 +34,7 @@ defmodule Wotex.Runtime.CodecBeamTest do
           %{c | current_inputs: fn -> %{inputs | policy: policy} end},
           %{c | now: fn -> :foreign end},
           %{c | decoder: "foreign"},
+          %{c | task_supervisor: remote_supervisor()},
           Map.put(c, :extra, "secret-canary")
         ] do
       assert {:error, %Error{} = error} = decode(plan, "value", %{}, changed)
@@ -92,6 +93,150 @@ defmodule Wotex.Runtime.CodecBeamTest do
     assert {:ok, _} = decode(plan, "value", %{}, c)
   end
 
+  test "stalled supervisor startup reaches bounded unconfirmed cleanup without decoder entry" do
+    plan = bounded_plan(20)
+    c = config(plan)
+    parent = self()
+    input = "notify:" <> List.to_string(:erlang.pid_to_list(parent))
+    :ok = :sys.suspend(c.task_supervisor)
+    caller = spawn(fn -> send(parent, {:stalled, decode(plan, input, %{}, c)}) end)
+
+    try do
+      await_start(c.task_supervisor)
+      assert_receive {:stalled, {:error, %Error{code: :cleanup_unconfirmed}}}, 2000
+      refute_receive {:codec_entered, _}, 0
+    after
+      :ok = :sys.resume(c.task_supervisor)
+      Process.exit(caller, :kill)
+    end
+
+    await_empty(c.task_supervisor)
+    refute_receive {:codec_entered, _}, 0
+    assert {:ok, _} = decode(plan, "value", %{}, c)
+  end
+
+  test "startup consumes the original deadline and checks policy before decoder entry" do
+    for disposition <- [:expired, :revoked] do
+      plan = bounded_plan(500)
+      c = config(plan)
+      clock = :atomics.new(1, [])
+      :atomics.put(clock, 1, 100)
+      {:ok, inputs} = Agent.start_link(fn -> F.inputs(plan.admission.descriptor) end)
+      on_exit(fn -> if Process.alive?(inputs), do: Agent.stop(inputs) end)
+
+      c = %{
+        c
+        | now: fn -> :atomics.get(clock, 1) end,
+          current_inputs: fn -> Agent.get(inputs, & &1) end
+      }
+
+      parent = self()
+      input = "notify:" <> List.to_string(:erlang.pid_to_list(parent))
+      :ok = :sys.suspend(c.task_supervisor)
+      caller = spawn(fn -> send(parent, {:gated, decode(plan, input, %{}, c)}) end)
+
+      try do
+        await_start(c.task_supervisor)
+
+        if disposition == :expired do
+          :atomics.put(clock, 1, 600)
+        else
+          Agent.update(inputs, fn current ->
+            {:ok, policy} = Policy.new(Map.put(current.policy.value, "revision", "policy.2"))
+            %{current | policy: policy}
+          end)
+        end
+
+        :ok = :sys.resume(c.task_supervisor)
+        expected = if disposition == :expired, do: :deadline_exceeded, else: :stale_admission
+        assert_receive {:gated, {:error, %Error{code: ^expected}}}, 1000
+        refute_receive {:codec_entered, _}, 0
+        assert Task.Supervisor.children(c.task_supervisor) == []
+      after
+        :ok = :sys.resume(c.task_supervisor)
+        Process.exit(caller, :kill)
+      end
+    end
+  end
+
+  test "owner loss during supervisor startup prevents later decoder entry" do
+    plan = F.plan()
+    c = config(plan)
+    parent = self()
+    input = "notify:" <> List.to_string(:erlang.pid_to_list(parent))
+    :ok = :sys.suspend(c.task_supervisor)
+    caller = spawn(fn -> decode(plan, input, %{}, c) end)
+
+    try do
+      await_start(c.task_supervisor)
+      monitor = Process.monitor(caller)
+      Process.exit(caller, :kill)
+      assert_receive {:DOWN, ^monitor, :process, ^caller, _}, 1000
+      :ok = :sys.resume(c.task_supervisor)
+      await_empty(c.task_supervisor)
+      refute_receive {:codec_entered, _}, 0
+    after
+      :ok = :sys.resume(c.task_supervisor)
+      Process.exit(caller, :kill)
+    end
+  end
+
+  test "expired startup can confirm cleanup when its supervisor resumes within the cleanup budget" do
+    plan = bounded_plan(20)
+    c = config(plan)
+    parent = self()
+    input = "notify:" <> List.to_string(:erlang.pid_to_list(parent))
+    :ok = :sys.suspend(c.task_supervisor)
+    caller = spawn(fn -> send(parent, {:resumed, decode(plan, input, %{}, c)}) end)
+
+    try do
+      await_start(c.task_supervisor)
+      Process.sleep(50)
+      :ok = :sys.resume(c.task_supervisor)
+      assert_receive {:resumed, {:error, %Error{code: :deadline_exceeded}}}, 1000
+      assert Task.Supervisor.children(c.task_supervisor) == []
+      refute_receive {:codec_entered, _}, 0
+    after
+      :ok = :sys.resume(c.task_supervisor)
+      Process.exit(caller, :kill)
+    end
+  end
+
+  test "cleanup respects the admitted lower ceiling including zero" do
+    for cleanup <- [0, 30] do
+      plan = bounded_plan(20, cleanup)
+      c = config(plan)
+      expected = if cleanup == 0, do: :cleanup_unconfirmed, else: :deadline_exceeded
+      assert {:error, %Error{code: ^expected}} = decode(plan, "hang", %{}, c)
+      await_empty(c.task_supervisor)
+    end
+  end
+
+  test "the VM budget also covers output admission when the supplied clock has not advanced" do
+    plan = bounded_plan(200)
+    c = config(plan)
+    counter = :atomics.new(1, [])
+    parent = self()
+
+    c = %{
+      c
+      | now: fn -> 100 end,
+        current_inputs: fn ->
+          if :atomics.add_get(counter, 1, 1) == 3 do
+            send(parent, :checking_output)
+            Process.sleep(250)
+          end
+
+          F.inputs(plan.admission.descriptor)
+        end
+    }
+
+    assert {:error, %Error{code: :deadline_exceeded}} = decode(plan, "value", %{}, c)
+    assert_receive :checking_output, 0
+    assert Task.Supervisor.children(c.task_supervisor) == []
+    refute_receive {_, :expired}, 0
+  end
+
   test "current policy is checked again at reply admission and decoder failures redact diagnostics" do
     plan = F.plan()
     c = config(plan)
@@ -144,6 +289,24 @@ defmodule Wotex.Runtime.CodecBeamTest do
     Process.exit(caller, :kill)
   end
 
+  test "deadline relay loss cancels and reaps the worker instead of waiting indefinitely" do
+    plan = F.plan()
+    c = config(plan)
+    parent = self()
+    caller = spawn(fn -> send(parent, {:relay_lost, decode(plan, "hang", %{}, c)}) end)
+    worker = await_worker(c.task_supervisor)
+    monitor = Process.monitor(worker)
+    {:links, links} = Process.info(worker, :links)
+    [custodian] = Enum.reject(links, &(&1 == c.task_supervisor))
+    {:monitors, monitors} = Process.info(caller, :monitors)
+    [relay] = for {:process, pid} <- monitors, pid != custodian, do: pid
+    Process.exit(relay, :kill)
+    assert_receive {:relay_lost, {:error, %Error{code: :enforcement_unavailable}}}, 1000
+    assert_receive {:DOWN, ^monitor, :process, ^worker, _}, 1000
+    assert Task.Supervisor.children(c.task_supervisor) == []
+    assert {:ok, _} = decode(plan, "value", %{}, c)
+  end
+
   defp config(plan) do
     sup = start_supervised!({Task.Supervisor, max_children: 1}, id: make_ref())
 
@@ -170,8 +333,14 @@ defmodule Wotex.Runtime.CodecBeamTest do
     next
   end
 
-  defp bounded_plan(milliseconds) do
-    d = F.descriptor(put_in(F.descriptor_map(), ["limits", "request_ms"], milliseconds))
+  defp bounded_plan(milliseconds, cleanup \\ 1000) do
+    d =
+      F.descriptor(
+        F.descriptor_map()
+        |> put_in(["limits", "request_ms"], milliseconds)
+        |> put_in(["limits", "shutdown_ms"], cleanup)
+      )
+
     {:ok, admission} = Admission.new(d, F.inputs(d))
     {:ok, plan} = Plan.new(admission, %{}, F.key(), fn _, _ -> :ok end)
     plan
@@ -189,5 +358,39 @@ defmodule Wotex.Runtime.CodecBeamTest do
         Process.sleep(5)
         await_worker(sup, attempts - 1)
     end
+  end
+
+  defp await_start(sup, attempts \\ 100)
+  defp await_start(_, 0), do: flunk("supervised startup was not submitted")
+
+  defp await_start(sup, attempts) do
+    if Process.info(sup, :message_queue_len) == {:message_queue_len, 0} do
+      Process.sleep(5)
+      await_start(sup, attempts - 1)
+    else
+      :ok
+    end
+  end
+
+  defp await_empty(sup, attempts \\ 100)
+  defp await_empty(_, 0), do: flunk("supervised startup did not retire")
+
+  defp await_empty(sup, attempts) do
+    case Task.Supervisor.children(sup) do
+      [] ->
+        :ok
+
+      _ ->
+        Process.sleep(5)
+        await_empty(sup, attempts - 1)
+    end
+  end
+
+  defp remote_supervisor do
+    name = Atom.to_string(:codec_supervisor@unavailable)
+    # A literal NEW_PID_EXT with an already compiled node atom; no node is started.
+    :erlang.binary_to_term(<<131, 88, 119, byte_size(name), name::binary, 1::32, 0::32, 0::32>>, [
+      :safe
+    ])
   end
 end

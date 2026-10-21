@@ -46,6 +46,13 @@ in the root `AGENTS.md`.
 - `lib/wotex/runtime/{context,request,result,error,limits}.ex`: request and
   result values, the stable error and fixed admission limits;
   `retry.ex`: pure retry classification; `telemetry.ex`: event names.
+- `lib/wotex/runtime/codec/beam.ex` and `codec/beam/execution.ex`: explicit
+  trusted decoder execution under a separate local consumer-owned Task.Supervisor.
+  One VM timer covers startup through output admission. A custodian owns startup
+  and task retirement; pending supervisor starts retain unconfirmed cleanup.
+  The codec Beam tests cover stalled startup, late policy/clock changes, owner
+  loss, lower cleanup ceilings and output admission. Native custody stays with
+  protocol bindings; this is no generic native process manager.
 - `bin/check_package.exs`: archive and minimal-consumer check;
   `bin/check_reference_consumer.exs`: the WRT-C04 reference consumer;
   `bin/check_boundary.exs`: the consumer-neutral source scan.

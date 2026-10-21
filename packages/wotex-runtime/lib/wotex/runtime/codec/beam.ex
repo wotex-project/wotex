@@ -2,11 +2,15 @@ defmodule Wotex.Runtime.Codec.Beam do
   @moduledoc """
   Trusted decoder tasks under an explicit consumer-owned Task.Supervisor.
 
-  Supply a separate supervisor with `max_children: 1` for each instance,
+  Supply a separate local supervisor with `max_children: 1` for each instance,
   the installed decoder and exact contract, and current-input/clock callbacks.
-  Loading starts nothing. This executor claims no VM or descendant isolation.
+  One budget includes supervised startup, decoding and output admission.
+  Stalled startup and owner loss retain bounded custody; unresolved cleanup is
+  reported explicitly. Loading starts nothing. No VM or descendant isolation
+  is claimed for trusted code.
   """
   @behaviour Wotex.Runtime.Codec.Executor
+  alias Wotex.Runtime.Codec.Beam.Execution
   alias Wotex.Runtime.Codec.{Call, Grammar, Result}
   alias Wotex.Runtime.Context
   alias Wotex.Runtime.Implementation.{Admission, Error}
@@ -34,13 +38,24 @@ defmodule Wotex.Runtime.Codec.Beam do
          true <- is_binary(input) and byte_size(input) <= 65_536,
          true <- Grammar.flat?(metadata),
          :ok <- Admission.revalidate(call.plan.admission, config.current_inputs.()),
-         {:ok, start, budget} <- budget(call, config.now.()),
-         {:ok, task} <- start_task(config, input, metadata, call.plan.configuration),
-         {:ok, returned} <- await(task, budget),
-         result = output(returned, call),
-         :ok <- Admission.revalidate(call.plan.admission, config.current_inputs.()),
-         :ok <- timely(call, start, budget, config.now.()) do
-      result
+         {:ok, start, budget} <- budget(call, config.now.()) do
+      work = fn ->
+        with :ok <- Admission.revalidate(call.plan.admission, config.current_inputs.()),
+             :ok <- timely(call, start, budget, config.now.()) do
+          invoke(config.decoder, input, metadata, call.plan.configuration)
+        end
+      end
+
+      cleanup_ms = min(1000, call.plan.admission.value["limits"]["shutdown_ms"])
+
+      Execution.run(config.task_supervisor, budget, cleanup_ms, work, fn returned ->
+        result = output(returned, call)
+
+        with :ok <- Admission.revalidate(call.plan.admission, config.current_inputs.()),
+             :ok <- timely(call, start, budget, config.now.()) do
+          result
+        end
+      end)
     else
       {:error, %Error{}} = error -> error
       _ -> failure(:invalid_input)
@@ -59,6 +74,7 @@ defmodule Wotex.Runtime.Codec.Beam do
         failure(:schema_mismatch)
 
       not is_atom(config.decoder) or not is_pid(config.task_supervisor) or
+        node(config.task_supervisor) != node() or
         not is_function(config.current_inputs, 0) or not is_function(config.now, 0) ->
         failure(:invalid_configuration)
 
@@ -114,73 +130,6 @@ defmodule Wotex.Runtime.Codec.Beam do
 
   defp clock?(value), do: is_integer(value)
 
-  defp start_task(config, input, metadata, configuration) do
-    decoder = config.decoder
-    owner = self()
-    custodian = spawn(fn -> custody(owner) end)
-
-    try do
-      {:ok,
-       Task.Supervisor.async_nolink(config.task_supervisor, fn ->
-         with :ok <- attach(custodian) do
-           invoke(decoder, input, metadata, configuration)
-         end
-       end)}
-    rescue
-      RuntimeError ->
-        Process.exit(custodian, :kill)
-        failure(:overloaded)
-    end
-  end
-
-  defp custody(owner) do
-    Process.flag(:trap_exit, true)
-    owner_ref = Process.monitor(owner)
-
-    receive do
-      {:attach, worker, tag} ->
-        worker_ref = Process.monitor(worker)
-        send(worker, {tag, :attached})
-        hold(owner_ref, worker_ref, worker)
-
-      {:DOWN, ^owner_ref, :process, _, _} ->
-        :ok
-    after
-      1000 -> :ok
-    end
-  end
-
-  defp hold(owner_ref, worker_ref, worker) do
-    receive do
-      {:DOWN, ^owner_ref, :process, _, _} ->
-        Process.exit(worker, :kill)
-        reap(worker_ref)
-
-      {:DOWN, ^worker_ref, :process, _, _} ->
-        :ok
-
-      {:EXIT, _, _} ->
-        hold(owner_ref, worker_ref, worker)
-    end
-  end
-
-  defp attach(custodian) do
-    ref = Process.monitor(custodian)
-    Process.link(custodian)
-    send(custodian, {:attach, self(), ref})
-
-    receive do
-      {^ref, :attached} ->
-        Process.demonitor(ref, [:flush])
-        :ok
-
-      {:DOWN, ^ref, :process, _, _} ->
-        failure(:codec_unavailable)
-    after
-      1000 -> failure(:codec_unavailable)
-    end
-  end
-
   defp invoke(decoder, input, metadata, configuration) do
     try do
       case decoder.decode(input, metadata, configuration) do
@@ -192,38 +141,6 @@ defmodule Wotex.Runtime.Codec.Beam do
       _ -> failure(:codec_unavailable)
     catch
       _, _ -> failure(:codec_unavailable)
-    end
-  end
-
-  defp await(task, budget) do
-    ref = Process.monitor(task.pid)
-
-    result =
-      case Task.yield(task, budget) do
-        {:ok, result} ->
-          {:ok, result}
-
-        {:exit, _} ->
-          failure(:codec_unavailable)
-
-        nil ->
-          Task.shutdown(task, :brutal_kill)
-          failure(:deadline_exceeded)
-      end
-
-    case reap(ref) do
-      :ok -> result
-      _ -> failure(:cleanup_unconfirmed)
-    end
-  end
-
-  defp reap(ref) do
-    receive do
-      {:DOWN, ^ref, :process, _, _} -> :ok
-    after
-      1000 ->
-        Process.demonitor(ref, [:flush])
-        :unconfirmed
     end
   end
 

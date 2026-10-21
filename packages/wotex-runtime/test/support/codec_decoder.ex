@@ -6,6 +6,10 @@ defmodule Wotex.Runtime.TestSupport.CodecDecoder do
   @spec decode(binary(), map(), map()) :: term()
   def decode(input, metadata, configuration) do
     case input do
+      "notify:" <> owner ->
+        send(:erlang.list_to_pid(String.to_charlist(owner)), {:codec_entered, self()})
+        {:ok, %{"type" => "null"}}
+
       "hang" ->
         Process.sleep(:infinity)
 
