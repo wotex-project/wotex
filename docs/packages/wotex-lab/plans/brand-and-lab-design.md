@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.0.4. Contract: accepted. Design status: partial.
+Plan version: 1.1.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -11,12 +11,30 @@ WLB-C15 and WLB-C16 in the
 [Lab completion contract](wotex-lab-completion.md)
 own their acceptance. No package API or frontend framework changes here.
 
+## Current review direction
+
+The 2026-10-21 product review rejects the sidebar-led visual direction of the
+existing Lab drafts. The [Canvas Workbench proposal](canvas-workbench.md) now
+owns the proposed journeys: connect and inspect a system, ask and pin useful
+measurements, run and explain an experiment, and read documentation with global
+search. A full-page spatial canvas, floating icon tools and contextual
+inspectors replace the previous page-led composition in this design review.
+Documentation retains a separate reading layout.
+
+The proposal is a review deliverable. Current source contracts, package APIs
+and completion obligations remain unchanged until its behavior is reviewed and
+promoted into their owning versions. The earlier editions below record bounded
+historical authoring and prototype checks; they do not validate the rejected
+product structure or qualify the new journeys. Preserve those frames as prior
+drafts alongside the new proposal on separate journey pages. The identity
+file and its artwork remain draft proposals too.
+
 ## Design files and source authority
 
 | File | Purpose | Current draft |
 | --- | --- | --- |
 | [WoTEx — Brand Identity](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0) | Family identity, guidelines and communication assets | Four pages; eight review/guideline boards, three component families and the original editable signature study |
-| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, canonical page references and connected task flows | Five pages; sixty screen/state references, four component families, four additional components, three native flow Specs and twenty named prototype starts |
+| [WoTEx Lab — Workbench](https://www.figma.com/design/SudxgeebiNEu33PPIHO229) | Lab system, prior references and proposed canvas journeys | Seven pages; sixty prior screen/state references and fourteen new proposal states. The prior component families, three native Specs and prototype starts remain historical; new control studies and partial Play coverage are described in the canvas proposal. |
 
 The initial edition was authored from repository commit
 `b99ebe4bd121a2d071ab427502a247e3d8d3c8ad` and the source owners below.
@@ -67,8 +85,10 @@ channel exports, final voice and recovery acceptance remain required work.
 
 ## Lab pages, states and flows
 
-WLB-C16 requires canonical editable designs for all six page families, aligned
-with current routes rather than a new route catalogue:
+The existing source exposes the six functional families below. WLB-C16 retains
+their behavior and state coverage; the new proposal examines how those tasks
+compose within a persistent workbench instead of giving each a thin page.
+These route entries describe the current source, not the proposed navigation:
 
 | Page family | Current entry | Required task and state coverage |
 | --- | --- | --- |
