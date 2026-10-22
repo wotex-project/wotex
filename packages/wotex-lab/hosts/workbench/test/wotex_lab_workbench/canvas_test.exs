@@ -4,7 +4,30 @@ defmodule WotexLabWorkbench.CanvasTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Lab.Island.Encoder
-  alias WotexLabWorkbench.Canvas
+  alias WotexLabWorkbench.{Canvas, ThingReadings}
+
+  test "freshness changes preserve the receipt and pause without fabricating a sample" do
+    reading = %{
+      thing: "thermostat",
+      property: "temperature",
+      value: -4.5,
+      state: :live,
+      received_ms: 1000,
+      read_at: "2026-10-22T00:00:00Z"
+    }
+
+    readings = ThingReadings.put(%{}, reading)
+
+    assert ThingReadings.get(ThingReadings.expire(readings, 16_000), "thermostat", "temperature").state ==
+             :live
+
+    stale = ThingReadings.get(ThingReadings.expire(readings, 16_001), "thermostat", "temperature")
+    assert stale.state == :stale and stale.value == -4.5
+    paused = ThingReadings.get(ThingReadings.pause(readings), "thermostat", "temperature")
+    assert paused.state == :paused and paused.read_at == reading.read_at
+    assert ThingReadings.get(readings, "thermostat", "other") == nil
+    assert ThingReadings.get(%{"thermostat" => reading}, "thermostat", "temperature") == reading
+  end
 
   test "only explicit reads populate a matching Property, never simulator state" do
     things = [thing("thermostat"), thing("meter"), thing("actuator")]
@@ -25,7 +48,7 @@ defmodule WotexLabWorkbench.CanvasTest do
     assert node["value"] == "21.5"
     assert node["unit"] == "°C"
     assert node["status"] == "Read"
-    assert node["detail"] =~ reading.read_at
+    assert node["detail"] == "19:00:00"
     refute inspect(updated) =~ "999"
 
     readings = %{
@@ -62,6 +85,8 @@ defmodule WotexLabWorkbench.CanvasTest do
           put_in(props, ["nodes", Access.at(0), "kind"], "command"),
           put_in(props, ["nodes", Access.at(0), "title"], String.duplicate("a", 129)),
           put_in(props, ["nodes", Access.at(0), "private"], "not admitted"),
+          put_in(props, ["nodes", Access.at(0), "operations"], ["dispatch"]),
+          put_in(props, ["nodes", Access.at(0), "operations"], ["read", "read"]),
           put_in(props, ["edges", Access.at(0), "target"], "other-session-node")
         ] do
       assert {:error, :invalid_island_prop} = Encoder.encode("canvas", bad)

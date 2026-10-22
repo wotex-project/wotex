@@ -77,7 +77,7 @@ defmodule WotexLabWorkbenchWeb.PresentationRoundTripTest do
     assert {:ok, %{layout: ^current, canvas_readings: readings}} =
              Sessions.presentation(token, :read)
 
-    assert readings["thermostat"].value == 21.5
+    assert readings["thermostat/temperature"].value == 21.5
     assert {:ok, %{layout: ^saved}} = Sessions.board(token)
     assert Room.runs(room) == []
     GenServer.stop(view.pid)

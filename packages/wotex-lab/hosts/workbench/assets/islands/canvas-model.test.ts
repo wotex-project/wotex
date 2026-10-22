@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { validateCanvas } from "./canvas-model.ts"
 import type {JsonValue} from "./types.js"
+import type { FullSnapshot } from "./types.js"
+import { createServer } from "vite"
 
 const valid = () => ({
   label: "Connected Things",
@@ -10,6 +12,21 @@ const valid = () => ({
     { id: "process", kind: "process", title: "Smart room", identity: "smart_room", value: "", unit: "", status: "Idle", detail: "", x: 300, y: 100 },
   ],
   edges: [{ id: "temperature", source: "thermostat", target: "process", kind: "input", label: "temperature · °C", target_handle: "temperature" }],
+})
+
+test("the real client event builder admits Property controls and rejects extra authority", async () => {
+  const server = await createServer({configFile:false,server:{middlewareMode:true,watch:null}})
+  try {
+    const {buildEvent} = await server.ssrLoadModule(new URL("./protocol.ts",import.meta.url).pathname)
+    const snapshot: FullSnapshot = {schema:"wotex-lab-island/v1",component:"canvas",instance_id:"room--canvas",generation:"1",revision:"7",payload_digest:"sha256:"+"a".repeat(64),capabilities:["read","observe","pause","statistics","sources"],payload:valid()}
+    for(const event of ["read","observe","pause","statistics","sources"]) {
+      assert.deepEqual(buildEvent(snapshot,event,{id:"thermostat"}),{
+        schema:"wotex-lab-island-event/v1",component:"canvas",instance_id:"room--canvas",client_revision:"7",event,payload:{id:"thermostat"},
+      })
+      assert.throws(()=>buildEvent(snapshot,event,{id:"thermostat",operation:"invokeaction"}))
+    }
+    assert.throws(()=>buildEvent(snapshot,"dispatch",{id:"thermostat"}))
+  } finally { await server.close() }
 })
 
 test("metric pins retain missing and negative data while refusing forged geometry or identities", () => {
@@ -31,6 +48,19 @@ test("admitted Thing graphs include baseline unit text and typed connections", (
   assert.doesNotThrow(() => validateCanvas({...valid(),selection:"thermostat"}))
   assert.throws(() => validateCanvas({...valid(),selection:"other-session"}))
   assert.doesNotThrow(() => validateCanvas({ label: "Empty", nodes: [], edges: [] }))
+})
+
+test("node operations admit only distinct closed capabilities and keep legacy nodes valid", () => {
+  for(const operations of [[],["read","observe"],["read","pause"]]) {
+    const payload = valid()
+    Object.assign(payload.nodes[0],{operations})
+    assert.doesNotThrow(()=>validateCanvas(payload))
+  }
+  for(const operations of ["read",["read","read"],["dispatch"],[["read"]],[{},"observe"]]) {
+    const payload = valid()
+    Object.assign(payload.nodes[0],{operations})
+    assert.throws(()=>validateCanvas(payload))
+  }
 })
 
 test("rejects malformed graph identities, payloads and coordinates before mounting", () => {

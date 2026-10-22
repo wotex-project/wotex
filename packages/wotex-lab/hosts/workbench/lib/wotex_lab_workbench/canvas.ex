@@ -2,10 +2,12 @@ defmodule WotexLabWorkbench.Canvas do
   @moduledoc """
   Bounded presentation of a session's Things and smart-room wiring.
 
-  Only explicit Property read results supply values. Simulator state is not
+  Only explicit Property read or observation receipts supply values. Simulator state is not
   presented as an observation. Edges describe the admitted experiment wiring;
   moving or selecting them never changes a Form, a query or Action authority.
   """
+
+  alias WotexLabWorkbench.{ThingProperties, ThingReadings}
 
   @positions %{"thermostat" => {160, 235}, "meter" => {160, 490}, "actuator" => {800, 490}}
   @titles %{"thermostat" => "Thermostat", "meter" => "Energy meter", "actuator" => "Actuator"}
@@ -23,7 +25,9 @@ defmodule WotexLabWorkbench.Canvas do
     nodes =
       things
       |> Enum.with_index()
-      |> Enum.map(fn {thing, index} -> node(thing, index, Map.get(readings, thing.key)) end)
+      |> Enum.map(fn {thing, index} ->
+        node(thing, index, ThingReadings.get(readings, thing.key, @properties[thing.key]))
+      end)
 
     process? = Enum.any?(things, &(&1.key in Map.keys(@positions)))
     nodes = if process?, do: [process(runs) | nodes], else: nodes
@@ -48,6 +52,10 @@ defmodule WotexLabWorkbench.Canvas do
   def id(%{key: key}) when key in ~w(thermostat meter actuator), do: "thing-" <> key
   def id(%{id: id}), do: "entry-" <> Base.encode16(:crypto.hash(:sha256, id), case: :lower)
 
+  @doc "Returns the same bounded room label for a Thing's node and inspector."
+  @spec title(map()) :: String.t()
+  def title(thing), do: bounded(Map.get(@titles, thing.key, thing.title), 128)
+
   defp node(thing, index, reading) do
     {x, y} = Map.get(@positions, thing.key, {1080 + div(index, 5) * 260, 180 + rem(index, 5) * 180})
     read? = reading && reading.thing == thing.key && reading.property == @properties[thing.key]
@@ -55,24 +63,42 @@ defmodule WotexLabWorkbench.Canvas do
     %{
       "id" => id(thing),
       "kind" => if(thing.consumable, do: "thing", else: "entry"),
-      "title" => bounded(Map.get(@titles, thing.key, thing.title), 128),
-      "identity" => bounded(thing.id, 256),
+      "title" => title(thing),
+      "identity" =>
+        Map.get(
+          %{
+            "thermostat" => "thermostat-01",
+            "meter" => "energy-meter-01",
+            "actuator" => "actuator-01"
+          },
+          thing.key,
+          bounded(thing.id, 256)
+        ),
+      "operations" => node_operations(thing, reading),
       "value" => if(read?, do: bounded(inspect(reading.value), 128), else: "—"),
       "unit" => Map.get(@units, thing.key, ""),
       "status" =>
         cond do
           not thing.consumable -> "Inert"
-          read? -> "Read"
+          read? -> ThingReadings.status(reading)
           true -> "Not read"
         end,
       "detail" =>
         if(read?,
-          do: "Explicit read · #{Map.get(reading, :read_at, "receipt time unavailable")}",
+          do: ThingReadings.time(reading),
           else: ""
         ),
       "x" => x,
       "y" => y
     }
+  end
+
+  defp node_operations(thing, reading) do
+    ThingProperties.operations_for_node(thing)
+    |> Enum.map(fn operation ->
+      if (operation == "observe" and reading) &&
+           Map.get(reading, :state) in [:waiting, :live, :stale], do: "pause", else: operation
+    end)
   end
 
   defp process(runs) do
@@ -86,7 +112,7 @@ defmodule WotexLabWorkbench.Canvas do
       "value" => "",
       "unit" => "",
       "status" => if(run, do: to_string(run.status), else: "Idle"),
-      "detail" => if(run, do: run.id, else: "Observe and propose"),
+      "detail" => if(run, do: run.id, else: ""),
       "x" => 520,
       "y" => 365
     }

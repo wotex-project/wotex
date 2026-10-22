@@ -1095,7 +1095,8 @@ body {
   box-shadow: 0 2px 8px #181d271a, 0 1px 2px #181d270a;
 }
 .wl-thing-inspector header { display: flex; align-items: center; gap: 8px; }
-.wl-thing-inspector h2 { flex: 1; margin: 0; font-size: 14px; }
+.wl-thing-inspector h2 { flex: 1; margin: 0; font-size: 14px; font-weight: 500; }
+.wl-thing-inspector .wl-disclosure { border: 0; margin: 0; padding: 0; }
 .wl-thing-inspector dl { margin-block: 12px; }
 .wl-thing-inspector dt { margin-block-start: 12px; color: var(--wl-color-muted); font-size: 11px; }
 .wl-thing-inspector dd { margin: 4px 0 0; overflow-wrap: anywhere; }
@@ -1105,6 +1106,14 @@ body {
 .wl-inspector-reading { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
 .wl-inspector-reading strong { font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .wl-inspector-reading span { font-size: 12px; }
+.wl-thing-property { padding-block: 12px; border-bottom: 1px solid var(--wl-color-border); }
+.wl-thing-property > header { display: flex; align-items: baseline; justify-content: space-between; }
+.wl-thing-property h3 { margin: 0 0 8px; font-size: 12px; font-weight: 500; }
+.wl-thing-property .wl-actions { margin-top: 12px; gap: 4px; }
+.wl-thing-property .wl-actions form { margin: 0; }
+.wl-thing-property .wl-receipt-time { margin: 0; font-size: 11px; }
+.wl-thing-stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
+.wl-thing-inspector .wl-thing-stats :is(dt, dd) { margin: 0; font-size: 12px; }
 .wl-thing-source { max-width: 100%; overflow: auto; padding: 8px; border-radius: 4px; background: var(--wl-color-bg); font-size: 11px; line-height: 16px; }
 @container workbench-shell (width < 600px) {
   .wl-thing-inspector, .wl-workbench-panel { top: 76px; }

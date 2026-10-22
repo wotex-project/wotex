@@ -1,7 +1,22 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.19.0. Contract: accepted. Implementation status:
+Specification version: 0.20.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.20 adds explicit Property observation to existing reference rooms.
+Observe and Pause are available only for declared capabilities. The room owns
+an eight-child observation supervisor; each temporary runtime child monitors
+its view receiver and bounds its delivery queue at 128 messages with stop on
+overflow. Opening menus, mounting, reconnecting and returning from documentation
+start no observation. Observe seeds a readable Property through an explicit
+runtime read, then presents Waiting until a real subscription sample arrives.
+Receipts become Stale after 15 seconds without a new sample; Pause and transport
+loss retain the last value with their explicit state. A documentation snapshot
+retains paused receipts and closes the view's observers. No worker or stream
+reference enters that snapshot. The inspector puts Property values and controls
+first, with Statistics and full identifiers/Forms in disclosures. Canvas nodes
+use compact room labels and receipt times; Sources retains exact Thing IDs and
+timestamps. Device event time and physical effects are not inferred.
 
 Version 0.19 retains the current Workbench presentation for a documentation
 round trip. The canvas supplies only admitted geometry and selection; the
@@ -407,8 +422,10 @@ or gap to claim success. The fixed normal budget remains 2,000.
 ## LiveView and Svelte ownership
 
 The `canvas` public props are `label` (UTF-8, at most 256 bytes), `nodes` (at
-most 32) and `edges` (at most 64). Each node has exactly `id`, `kind`, `title`,
-`identity`, `value`, `unit`, `status`, `detail`, `x` and `y`. IDs are unique
+most 32) and `edges` (at most 64). Each node requires exactly `id`, `kind`, `title`,
+`identity`, `value`, `unit`, `status`, `detail`, `x` and `y`, with an optional
+`operations` list. That list contains at most three unique `read`, `observe` or
+`pause` entries and defaults to empty; other node fields remain closed. IDs are unique
 1–128-byte ASCII identifiers using letters, digits, `.`, `_`, `:` and `-`,
 starting with a letter or digit. Kinds are `thing`, `process` or `entry`.
 Title, value and detail allow 128 UTF-8 bytes; identity allows 256, unit and
@@ -424,12 +441,23 @@ Right-click and ellipsis open the same menu; the HEEx fallback offers labelled
 inspection buttons. Local node movement, pan, zoom, selection and fit cannot
 change wiring, select a Form, allocate a room or authorize an Action. Reconnect
 requires a current full snapshot before inspection is enabled and retains local
-geometry. Explicit Property reads alone populate values; simulator state is not
-an observation. The timestamp is the host read receipt, not a device event time.
-Registered Directory entries stay inert and use stable identities. The graph
-describes admitted experiment wiring rather than claiming a live subscription.
-Automatic Thing observation remains unbuilt. Documentation return retains a
-bounded server snapshot as described below.
+geometry. Only explicit Property read or observation receipts populate values;
+simulator state is not an observation. The timestamp is the host receipt time,
+not a device event time. Registered Directory entries stay inert and use stable
+identities. The graph describes admitted experiment wiring.
+
+Canvas `read`, `observe` and `pause` carry only the current node `id`; the server
+resolves its represented Property and revalidates the session, room, revision,
+node membership and declared capability. A temporary observer is owned by the
+room's bounded supervisor and its current view receiver. Pause requests exact
+runtime unsubscription; receiver or room death stops it. Stream loss, invalid
+samples and queue overflow preserve the last receipt with an unavailable state
+and require explicit Observe to restart. Numeric reference samples are bounded
+to ±1e100 before they enter view state. Multiple Properties retain separate
+receipts; reading one cannot replace a different Property on the canvas.
+Canvas `statistics` and `sources` carry only `id`, open the same inspector at
+its corresponding disclosure and execute no Property or Action operation.
+Documentation retains paused receipts without replaying or restarting a stream.
 
 Canvas `open` also carries only `id`. The host admits exactly `add`, `metrics`
 or `experiments` after verifying the signed session, instance and revision. It

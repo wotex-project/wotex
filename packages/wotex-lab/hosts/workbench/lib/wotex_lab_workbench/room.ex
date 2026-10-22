@@ -38,7 +38,18 @@ defmodule WotexLabWorkbench.Room do
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing}
   alias WotexLabWorkbench.Control.Ledger
-  alias WotexLabWorkbench.{Evidence, Experiments, Formal, Metrics, Provenance, Run, Runs}
+
+  alias WotexLabWorkbench.{
+    Evidence,
+    Experiments,
+    Formal,
+    Metrics,
+    Provenance,
+    Run,
+    Runs,
+    ThingProperties
+  }
+
   alias WotexLabWorkbench.Runs.{SmartRoom, Thermal, WindowAnomaly}
 
   @max_runs 16
@@ -141,6 +152,11 @@ defmodule WotexLabWorkbench.Room do
   @spec read_property(pid(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
   def read_property(room, key, name), do: GenServer.call(room, {:read, key, name})
 
+  @doc "Starts one temporary Property observation under the room's bounded supervisor."
+  @spec observe_property(pid(), term(), term(), pid()) :: {:ok, map()} | {:error, Error.t()}
+  def observe_property(room, key, name, receiver),
+    do: GenServer.call(room, {:observe, key, name, receiver})
+
   @doc "Registers a pasted TD in the session Directory as an inert, non-consumable entry."
   @spec register_td(pid(), term()) :: {:ok, map()} | {:error, Error.t()}
   def register_td(room, json), do: GenServer.call(room, {:register, json})
@@ -207,6 +223,8 @@ defmodule WotexLabWorkbench.Room do
                limits: %{"setTarget" => %{min: 5, max: 35}}
              )
            ),
+         {:ok, observations} <-
+           local(DynamicSupervisor.start_link(strategy: :one_for_one, max_children: 8)),
          {:ok, collector} <- local(Collector.start_link(attribute_to: self())),
          {:ok, history} <-
            local(
@@ -229,6 +247,7 @@ defmodule WotexLabWorkbench.Room do
          service: service,
          context: context,
          consumed: consumed,
+         observations: observations,
          ids: Map.new(@things, fn spec -> {spec.role, things[spec.key].id} end),
          channel: channel,
          host: host,
@@ -449,6 +468,57 @@ defmodule WotexLabWorkbench.Room do
     do:
       {:reply, {:error, Error.new(:invalid_read, :things, "thing and property must be strings")},
        state}
+
+  def handle_call({:observe, key, name, receiver}, _, state)
+      when is_binary(key) and is_binary(name) and is_pid(receiver) do
+    reply =
+      with {:ok, thing} <-
+             Map.fetch(state.things, key) |> known(:unknown_thing, "Thing is not in this room"),
+           true <-
+             Enum.any?(
+               ThingProperties.rows(%{document: thing.document, consumable: true}),
+               &(&1.name == name and &1.observable)
+             ) ||
+               {:error,
+                Error.new(:not_observable, :things, "Property does not support observation")},
+           id <- make_ref(),
+           now <- System.monotonic_time(:millisecond),
+           {:ok, spec} <-
+             ConsumedThing.observation_child_spec(
+               state.consumed[thing.id],
+               name,
+               Wotex.Runtime.Context.new!(
+                 request_id: "observe:#{key}:#{name}:#{now}",
+                 deadline: now + 5_000
+               ),
+               id: id,
+               receiver: receiver,
+               restart: :temporary,
+               max_queue_length: 128,
+               overflow: :stop
+             ),
+           {:ok, pid} <- DynamicSupervisor.start_child(state.observations, spec) do
+        {:ok, %{id: id, pid: pid, thing: key, property: name}}
+      else
+        {:error, %Error{} = error} ->
+          {:error, error}
+
+        {:error, _} ->
+          {:error, Error.new(:observation_unavailable, :things, "Observation could not start")}
+      end
+
+    {:reply, reply, state}
+  end
+
+  def handle_call({:observe, _, _, _}, _, state),
+    do:
+      {:reply,
+       {:error,
+        Error.new(
+          :invalid_observation,
+          :things,
+          "Observation requires an existing Thing, Property and receiver"
+        )}, state}
 
   def handle_call({:register, json}, _, state)
       when is_binary(json) and byte_size(json) <= @max_td_bytes do
@@ -807,8 +877,12 @@ defmodule WotexLabWorkbench.Room do
           "type" => "number",
           "unit" => "Cel",
           "readOnly" => true,
+          "observable" => true,
           "forms" => [
-            %{"href" => "sim-thermostat://thermostat/temperature", "op" => "readproperty"}
+            %{
+              "href" => "sim-thermostat://thermostat/temperature",
+              "op" => ["readproperty", "observeproperty", "unobserveproperty"]
+            }
           ]
         }
       }
@@ -827,7 +901,13 @@ defmodule WotexLabWorkbench.Room do
           "type" => "number",
           "unit" => "W",
           "readOnly" => true,
-          "forms" => [%{"href" => "sim-meter://meter/power", "op" => "readproperty"}]
+          "observable" => true,
+          "forms" => [
+            %{
+              "href" => "sim-meter://meter/power",
+              "op" => ["readproperty", "observeproperty", "unobserveproperty"]
+            }
+          ]
         }
       }
     })

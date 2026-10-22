@@ -35,13 +35,21 @@ defmodule Wotex.Lab.Island.Canvas do
   defp unique?(ids), do: length(ids) == MapSet.size(MapSet.new(ids))
 
   defp node?(node) when is_map(node) do
-    exact?(node, @node_fields) and
+    exact?(Map.delete(node, "operations"), @node_fields) and
+      operations?(Map.get(node, "operations", [])) and
       Enum.all?(@limits, fn {key, limit} -> text?(node[key], limit) end) and
       identifier?(node["id"]) and node["kind"] in ~w(thing process entry) and
       coordinate?(node["x"]) and coordinate?(node["y"])
   end
 
   defp node?(_), do: false
+
+  defp operations?(operations) when is_list(operations),
+    do:
+      length(operations) <= 3 and unique?(operations) and
+        Enum.all?(operations, &(&1 in ~w(read observe pause)))
+
+  defp operations?(_), do: false
 
   defp edge?(edge, ids) when is_map(edge) do
     exact?(edge, @edge_fields) and identifier?(edge["id"]) and

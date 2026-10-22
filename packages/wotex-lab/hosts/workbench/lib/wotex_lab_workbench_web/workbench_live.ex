@@ -35,7 +35,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Provenance,
     Room,
     Run,
-    Sessions
+    Sessions,
+    ThingProperties,
+    ThingReadings
   }
 
   alias WotexLabWorkbench.Investigation.{Answer, Broker, Disclosure, Provider, RunContext}
@@ -64,6 +66,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:charts, [])
       |> assign(:insights, nil)
       |> assign(:canvas_readings, %{})
+      |> assign(:observations, %{})
+      |> assign(:thing_panel, :properties)
       |> assign(:canvas_selection, nil)
       |> assign(:board, Board.empty())
       |> assign(:board_room, nil)
@@ -228,17 +232,27 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   def handle_event("read", %{"thing" => thing, "property" => property}, socket) do
-    command(socket, :read, fn scope ->
-      with {:ok, result} <- Room.read_property(scope.room, thing, property) do
-        result = Map.put(result, :read_at, DateTime.utc_now() |> DateTime.to_iso8601())
-        {:ok, scope, {:reading, result}}
-      end
-    end)
+    handle_thing_operation(socket, "read", thing, property)
+  end
+
+  def handle_event("observe", %{"thing" => thing, "property" => property}, socket) do
+    handle_thing_operation(socket, "observe", thing, property)
+  end
+
+  def handle_event("pause_observation", %{"thing" => thing, "property" => property}, socket) do
+    handle_thing_operation(socket, "pause", thing, property)
+  end
+
+  def handle_event(event, _, socket) when event in ~w(read observe pause_observation) do
+    reject_event(
+      socket,
+      Error.new(:invalid_property_operation, :things, "Property controls changed; reopen the Thing")
+    )
   end
 
   def handle_event("inspect_thing", %{"id" => id}, socket) do
     case select_canvas_node(socket, id) do
-      {:ok, socket} -> {:noreply, socket}
+      {:ok, socket} -> {:noreply, assign(socket, :thing_panel, :properties)}
       {:error, error} -> reject_event(socket, error)
       :error -> {:noreply, socket}
     end
@@ -518,6 +532,23 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   @impl Phoenix.LiveView
+  def handle_info({:wotex_runtime, id, event}, socket) do
+    case Enum.find(socket.assigns.observations, fn {_, watch} -> watch.id == id end) do
+      {key, watch} -> receive_observation(socket, key, watch, event)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_info({:DOWN, monitor, :process, _, _}, socket) do
+    case Enum.find(socket.assigns.observations, fn {_, watch} -> watch.monitor == monitor end) do
+      {key, watch} ->
+        receive_observation(socket, key, watch, {:status, :transport_down})
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_info(
         {:investigation, request, result},
         %{assigns: %{investigation: %{state: :running, request: request}}} = socket
@@ -551,13 +582,22 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
     case Scope.verify(socket) do
       {:ok, scope} ->
-        before = {socket.assigns.board, socket.assigns.active_pins}
-        socket = load_board(assign(socket, :scope, scope))
+        before = {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings}
 
         socket =
-          if before == {socket.assigns.board, socket.assigns.active_pins},
-            do: socket,
-            else: revise_islands(socket)
+          socket
+          |> assign(:scope, scope)
+          |> load_board()
+          |> update(
+            :canvas_readings,
+            &ThingReadings.expire(&1, System.monotonic_time(:millisecond))
+          )
+
+        socket =
+          if before ==
+               {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings},
+             do: socket,
+             else: revise_islands(socket)
 
         pins =
           Enum.filter(socket.assigns.board.pins, &MapSet.member?(socket.assigns.active_pins, &1.id))
@@ -666,6 +706,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                 room={@scope.room}
                 readings={@canvas_readings}
                 selection={@canvas_selection}
+                observations={@observations}
+                panel={@thing_panel}
                 menu_open={@sidebar_open}
               />
             <% :metrics -> %>
@@ -1105,6 +1147,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   attr(:selection, :any, default: nil)
   attr(:menu_open, :boolean, default: false)
+  attr(:observations, :map, required: true)
+  attr(:panel, :atom, required: true)
 
   defp things_view(assigns) do
     selected = Enum.find(assigns.things, &(Canvas.id(&1) == assigns.selection))
@@ -1112,7 +1156,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     assigns =
       assigns
       |> assign(:selected, selected)
-      |> assign(:read_result, selected && Map.get(assigns.readings, selected.key))
+      |> assign(:properties, if(selected, do: ThingProperties.rows(selected), else: []))
+      |> assign(
+        :receipts,
+        if(selected, do: property_receipts(selected, assigns.readings), else: [])
+      )
 
     ~H"""
     <aside
@@ -1138,7 +1186,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       <header>
         <h2>
           {cond do
-            @selected -> @selected.title
+            @selected -> Canvas.title(@selected)
             @selection == "import" -> "Add Thing"
             true -> "Smart room"
           end}
@@ -1185,40 +1233,69 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             >Register TD</button>
           </form>
         <% @selected -> %>
-          <dl>
-            <dt>Thing ID</dt><dd>{@selected.id}</dd><dt>Transport</dt><dd>{@selected.transport}</dd>
-          </dl>
-          <details class="wl-disclosure">
+          <section :for={property <- @properties} class="wl-thing-property" aria-label={property.name}>
+            <% reading = ThingReadings.get(@readings, @selected.key, property.name) %>
+            <% watching = Map.has_key?(@observations, @selected.key <> "/" <> property.name) %>
+            <header>
+              <h3>{property.name}</h3><span class="wl-muted">{if reading,
+                do: ThingReadings.status(reading),
+                else: "Not read"}</span>
+            </header>
+            <div class="wl-inspector-reading">
+              <strong>{if reading, do: inspect(reading.value), else: "—"}</strong><span>{property.unit}</span>
+            </div>
+            <p :if={reading} class="wl-muted wl-receipt-time">
+              <time datetime={reading.read_at} title={reading.read_at}>{ThingReadings.time(reading)}</time>
+            </p>
+            <div class="wl-actions">
+              <form
+                :if={property.readable}
+                id={"read-#{@selected.key}-#{property.name}"}
+                phx-submit="read"
+              >
+                <input type="hidden" name="thing" value={@selected.key} /><input
+                  type="hidden"
+                  name="property"
+                  value={property.name}
+                />
+                <button
+                  class="wl-button wl-button-secondary"
+                  type="submit"
+                  phx-disable-with="Reading…"
+                >Read {property.name}</button>
+              </form>
+              <button
+                :if={property.observable}
+                class="wl-button wl-button-secondary"
+                type="button"
+                phx-click={if watching, do: "pause_observation", else: "observe"}
+                phx-value-thing={@selected.key}
+                phx-value-property={property.name}
+              >
+                {if watching, do: "Pause", else: "Observe"}
+              </button>
+            </div>
+          </section>
+          <details class="wl-disclosure" open={@panel == :statistics}>
+            <summary>Statistics</summary>
+            <dl class="wl-thing-stats">
+              <dt>Requests</dt><dd>{@selected.stats.handler_calls}</dd>
+              <dt>Rejected</dt><dd>{@selected.stats.rejected}</dd>
+              <dt>Observers</dt><dd>{@selected.stats.subscriptions}</dd>
+            </dl>
+          </details>
+          <details class="wl-disclosure" open={@panel == :sources}>
             <summary>Sources</summary>
+            <dl>
+              <dt>Thing ID</dt><dd>{@selected.id}</dd><dt>Transport</dt><dd>{@selected.transport}</dd>
+            </dl>
+            <dl :for={{property, reading} <- @receipts}>
+              <dt>{property} receipt</dt><dd>
+                <time datetime={reading.read_at}>{reading.read_at}</time>
+              </dd>
+            </dl>
             <pre class="wl-thing-source"><code>{Jason.encode!(@selected.document, pretty: true)}</code></pre>
           </details>
-          <form
-            :for={property <- Map.keys(@selected.document["properties"] || %{})}
-            :if={@selected.consumable}
-            id={"read-#{@selected.key}-#{property}"}
-            phx-submit="read"
-            class="wl-actions"
-          >
-            <input type="hidden" name="thing" value={@selected.key} /><input
-              type="hidden"
-              name="property"
-              value={property}
-            />
-            <button class="wl-button wl-button-secondary" type="submit" phx-disable-with="Reading…">
-              Read {property}
-            </button>
-          </form>
-          <section :if={@read_result && @read_result.thing == @selected.key} aria-live="polite">
-            <h3>Latest reading</h3>
-            <div class="wl-inspector-reading">
-              <strong>{inspect(@read_result.value)}</strong><span>{property_unit(
-                @selected,
-                @read_result.property
-              )}</span>
-            </div>
-            <p class="wl-muted">{@read_result.property} · {@read_result.status}</p>
-            <p class="wl-muted">Read at {@read_result.read_at}</p>
-          </section>
         <% true -> %>
           <p>Observe and propose</p><.link patch="/experiments?experiment=smart_room">Configure experiment</.link>
       <% end %>
@@ -1226,12 +1303,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  defp property_unit(thing, property) do
-    case get_in(thing.document, ["properties", property, "unit"]) do
-      "Cel" -> "°C"
-      unit when is_binary(unit) -> unit
-      _ -> ""
-    end
+  defp property_receipts(thing, readings) do
+    for property <- ThingProperties.rows(thing),
+        reading <- [ThingReadings.get(readings, thing.key, property.name)],
+        not is_nil(reading),
+        do: {property.name, reading}
   end
 
   attr(:metrics, :any, required: true)
@@ -1444,9 +1520,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
          true <- is_pid(scope.room) and Process.alive?(scope.room),
          {:ok, scope, effect} <- fun.(scope) do
       socket =
-        if socket.assigns.scope.room == scope.room,
-          do: socket,
-          else: assign(socket, canvas_readings: %{}, insights: nil)
+        if socket.assigns.scope.room == scope.room do
+          socket
+        else
+          socket
+          |> stop_observations()
+          |> assign(canvas_readings: %{}, insights: nil)
+        end
 
       socket =
         socket
@@ -1462,11 +1542,174 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
+  defp handle_thing_operation(socket, operation, thing, property) do
+    case thing_operation(socket, operation, thing, property) do
+      {:ok, socket} -> {:noreply, revise_islands(socket)}
+      {:error, error} -> reject_event(socket, error)
+    end
+  end
+
+  defp thing_operation(socket, operation, key, name) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- is_pid(scope.room) and Process.alive?(scope.room),
+         %{} = thing <- Enum.find(socket.assigns.things, &(&1.key == key)),
+         %{} = property <- Enum.find(ThingProperties.rows(thing), &(&1.name == name)),
+         true <-
+           (operation == "read" and property.readable) or
+             (operation in ~w(observe pause) and property.observable) do
+      perform_thing_operation(assign(socket, :scope, scope), operation, key, name)
+    else
+      {:error, error} ->
+        {:error, error}
+
+      _ ->
+        {:error,
+         Error.new(:unsupported_property_operation, :things, "Property operation is unavailable")}
+    end
+  end
+
+  defp perform_thing_operation(socket, "read", key, name) do
+    with {:ok, scope} <- Scope.admit(socket, :read),
+         {:ok, result} <- Room.read_property(scope.room, key, name),
+         {:ok, result} <- admit_reading(result) do
+      state =
+        if Map.has_key?(socket.assigns.observations, key <> "/" <> name), do: :waiting, else: :read
+
+      {:ok,
+       socket
+       |> refresh()
+       |> update(:canvas_readings, &ThingReadings.put(&1, receipt(result, state)))}
+    end
+  end
+
+  defp perform_thing_operation(socket, "observe", key, name) do
+    identity = key <> "/" <> name
+
+    if Map.has_key?(socket.assigns.observations, identity) do
+      {:ok, socket}
+    else
+      with {:ok, scope} <- Scope.admit(socket, :observe),
+           {:ok, watch} <- Room.observe_property(scope.room, key, name, self()) do
+        with {:ok, result} <- Room.read_property(scope.room, key, name),
+             {:ok, result} <- admit_reading(result) do
+          watch = Map.merge(watch, %{monitor: Process.monitor(watch.pid), room: scope.room})
+
+          {:ok,
+           socket
+           |> refresh()
+           |> update(:observations, &Map.put(&1, identity, watch))
+           |> update(:canvas_readings, &ThingReadings.put(&1, receipt(result, :waiting)))}
+        else
+          {:error, error} ->
+            Wotex.Runtime.Subscription.stop(watch.pid)
+            {:error, error}
+        end
+      end
+    end
+  end
+
+  defp perform_thing_operation(socket, "pause", key, name),
+    do: {:ok, finish_observation(socket, key <> "/" <> name, :paused)}
+
+  defp admit_reading(%{value: value} = result)
+       when is_number(value) and value >= -1.0e100 and value <= 1.0e100, do: {:ok, result}
+
+  defp admit_reading(_),
+    do:
+      {:error,
+       Error.new(
+         :invalid_property_reading,
+         :things,
+         "Reference Property requires a bounded numeric value"
+       )}
+
+  defp receipt(result, state) do
+    Map.merge(result, %{
+      state: state,
+      read_at: DateTime.utc_now() |> DateTime.to_iso8601(),
+      received_ms: System.monotonic_time(:millisecond)
+    })
+  end
+
+  defp receive_observation(socket, key, watch, event) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- scope.room == watch.room do
+      socket = assign(socket, :scope, scope)
+
+      socket =
+        case event do
+          {:ok, value, _} when is_number(value) and value >= -1.0e100 and value <= 1.0e100 ->
+            reading =
+              receipt(
+                %{
+                  thing: watch.thing,
+                  property: watch.property,
+                  value: value,
+                  status: :ok,
+                  source: :observation
+                },
+                :live
+              )
+
+            update(socket, :canvas_readings, &ThingReadings.put(&1, reading))
+
+          {:status, :reconnected} ->
+            socket
+
+          {:status, _} ->
+            finish_observation(socket, key, :disconnected)
+
+          _ ->
+            finish_observation(socket, key, :error)
+        end
+
+      socket = refresh_thing_stats(socket, watch.room)
+      {:noreply, revise_islands(socket)}
+    else
+      {:error, error} ->
+        {:noreply, deny(socket, error)}
+
+      _ ->
+        socket =
+          socket
+          |> stop_observations()
+          |> refresh()
+
+        {:noreply, revise_islands(socket)}
+    end
+  end
+
+  defp finish_observation(socket, key, state) do
+    {watch, observations} = Map.pop(socket.assigns.observations, key)
+
+    if watch do
+      Process.demonitor(watch.monitor, [:flush])
+      Wotex.Runtime.Subscription.stop(watch.pid)
+    end
+
+    socket = if watch, do: refresh_thing_stats(socket, watch.room), else: socket
+
+    socket
+    |> assign(:observations, observations)
+    |> update(:canvas_readings, fn readings ->
+      if Map.has_key?(readings, key), do: put_in(readings, [key, :state], state), else: readings
+    end)
+  end
+
+  defp stop_observations(socket) do
+    Enum.reduce(Map.keys(socket.assigns.observations), socket, &finish_observation(&2, &1, :paused))
+  end
+
+  defp refresh_thing_stats(%{assigns: %{scope: %{room: room}}} = socket, room) when is_pid(room) do
+    if Process.alive?(room),
+      do: assign(socket, :things, safe(fn -> Room.things(room) end, socket.assigns.things)),
+      else: socket
+  end
+
+  defp refresh_thing_stats(socket, _), do: socket
+
   defp apply_effect(socket, nil), do: socket
   defp apply_effect(socket, {:assign, key, value}), do: assign(socket, key, value)
-
-  defp apply_effect(socket, {:reading, result}),
-    do: update(socket, :canvas_readings, &Map.put(&1, result.thing, result))
 
   defp apply_effect(socket, {:navigate, path}), do: push_patch(socket, to: path)
 
@@ -1521,6 +1764,45 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, socket} -> {:reply, %{"status" => "accepted"}, socket}
       {:error, error} -> {:reply, %{"status" => "rejected"}, deny(socket, error)}
       :error -> {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
+  defp acknowledge_island_event(socket, "canvas", %{"event" => event, "payload" => %{"id" => id}})
+       when event in ~w(read observe pause statistics sources) do
+    case Enum.find(socket.assigns.things, &(Canvas.id(&1) == id)) do
+      nil ->
+        {:reply, %{"status" => "rejected"}, socket}
+
+      thing ->
+        result =
+          if event in ~w(statistics sources) do
+            case select_canvas_node(socket, id) do
+              {:ok, socket} ->
+                {:ok,
+                 assign(
+                   socket,
+                   :thing_panel,
+                   if(event == "statistics", do: :statistics, else: :sources)
+                 )}
+
+              error ->
+                error
+            end
+          else
+            thing_operation(socket, event, thing.key, ThingProperties.primary(thing))
+          end
+
+        case result do
+          {:ok, socket} ->
+            socket = assign(socket, :canvas_selection, id)
+            {:reply, %{"status" => "accepted"}, revise_islands(socket)}
+
+          {:error, error} ->
+            {:reply, %{"status" => "rejected"}, error_flash(socket, error)}
+
+          _ ->
+            {:reply, %{"status" => "rejected"}, socket}
+        end
     end
   end
 
@@ -1920,6 +2202,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp empty_room(socket) do
     socket
+    |> stop_observations()
     |> assign(:runs, [])
     |> assign(:things, [])
     |> assign(:snapshot, nil)
@@ -2125,7 +2408,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         layout: layout,
         experiment_forms: assigns.experiment_forms,
         selected_experiment: assigns.selected_experiment,
-        canvas_readings: assigns.canvas_readings,
+        canvas_readings: ThingReadings.pause(assigns.canvas_readings),
         canvas_selection: selection,
         metric_draft: assigns.metric_draft,
         prompt: assigns.investigation.prompt,
@@ -2144,6 +2427,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp finish_presentation(socket, scope) do
     socket
+    |> stop_observations()
     |> assign(:scope, scope)
     |> cancel_investigation_on_navigation()
   end
@@ -2351,7 +2635,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp nav_item(action), do: action
 
   defp deny(socket, %Error{code: code}) do
-    assign(socket, scope: nil, denied: Atom.to_string(code))
+    socket
+    |> stop_observations()
+    |> assign(scope: nil, denied: Atom.to_string(code))
   end
 
   defp error_flash(socket, %Error{} = error),

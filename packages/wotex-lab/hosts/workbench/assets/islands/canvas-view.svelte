@@ -35,12 +35,13 @@ let lastSelection = ""
 let saved = $state(false)
 const menuNode = $derived(nodes.find(n=>n.id===menu?.id))
 const pinMenu = $derived(menuNode?.type==="metric")
+const menuOperations = $derived(menuNode?.type==="thing" ? (menuNode.data as CanvasNode).operations ?? [] : [])
 
 async function open(id: string, event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
   const bounds = root.getBoundingClientRect()
-  menu = { id, x: Math.max(8, Math.min(event.clientX - bounds.left, bounds.width - 208)), y: Math.max(8, Math.min(event.clientY - bounds.top, bounds.height - 184)) }
+  menu = { id, x: Math.max(8, Math.min(event.clientX - bounds.left, bounds.width - 208)), y: Math.max(8, Math.min(event.clientY - bounds.top, bounds.height - 244)) }
   nodes = nodes.map((node) => ({ ...node, selected: node.id === id }))
   await tick()
   firstAction?.focus()
@@ -60,7 +61,7 @@ $effect(() => {
     ...previous.get(node.id),
     id: node.id, type: "thing", position: restore ? {x:node.x,y:node.y} : previous.get(node.id)?.position ?? { x: node.x, y: node.y },
     selected: select ? node.id===selection : previous.get(node.id)?.selected ?? node.id===selection,
-    ariaLabel: `${node.title}, ${node.value} ${node.unit}, ${node.status}`,
+    ariaLabel: [node.title,`${node.value} ${node.unit}`.trim(),node.status].filter(Boolean).join(", "),
     data: { ...node, open },
   })), ...pins.map(pin=>({
     ...previous.get(pin.id), id:pin.id,type:"metric",
@@ -91,9 +92,9 @@ async function inspect() {
   await send("inspect", id)
 }
 
-async function send(event: "inspect" | "open" | "pin_refresh" | "pin_pause" | "pin_resume" | "pin_remove", id: string) {
+async function send(event: "inspect" | "open" | "read" | "observe" | "pause" | "statistics" | "sources" | "pin_refresh" | "pin_pause" | "pin_resume" | "pin_remove", id: string) {
   if (!connected) return
-  if (event === "open") menu = null
+  menu = null
   error = ""
   try {
     const reply = await transport.push(event, { id })
@@ -187,7 +188,16 @@ function closeMenu() {
         <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send("pin_refresh",menu.id);menu=null}}>Refresh</button>
         <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send(menuNode?.data.auto_refresh?"pin_pause":"pin_resume",menu.id);menu=null}}>{menuNode?.data.auto_refresh?"Pause":"Resume"}</button>
         <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send("pin_remove",menu.id);menu=null}}>Remove</button>
-      {:else}<button type="button" role="menuitem" disabled={!connected} onclick={() => { void send("open", "metrics") }}>Room metrics</button>{/if}
+      {:else}
+        {#each menuOperations as operation}
+          <button type="button" role="menuitem" disabled={!connected} onclick={() => { if(menu) void send(operation,menu.id) }}>{operation==="read"?"Read Property":operation==="observe"?"Observe updates":"Pause updates"}</button>
+        {/each}
+        {#if menuNode?.data.kind !== "process"}
+          <button type="button" role="menuitem" disabled={!connected} onclick={() => { if(menu) void send("statistics", menu.id) }}>Statistics</button>
+          <button type="button" role="menuitem" disabled={!connected} onclick={() => { if(menu) void send("sources", menu.id) }}>Sources</button>
+        {/if}
+        <button type="button" role="menuitem" disabled={!connected} onclick={() => { void send("open", "metrics") }}>Room metrics</button>
+      {/if}
     </div>
   {/if}
   {#if !connected}<span class="wl-canvas-notice" role="status">Disconnected</span>{/if}

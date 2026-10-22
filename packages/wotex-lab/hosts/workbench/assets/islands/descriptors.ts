@@ -12,6 +12,11 @@ export const componentDescriptors = {
     events: {
       inspect: { payload: "id", effectful: false },
       open: { payload: "id", effectful: false },
+      read: { payload: "id", effectful: false },
+      observe: { payload: "id", effectful: false },
+      pause: { payload: "id", effectful: false },
+      statistics: { payload: "id", effectful: false },
+      sources: { payload: "id", effectful: false },
       save_layout: { payload: "layout", effectful: false },
       open_documentation: { payload: "view", effectful: false },
       pin_refresh: { payload: "id", effectful: false },

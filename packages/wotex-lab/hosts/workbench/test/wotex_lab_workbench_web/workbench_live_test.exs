@@ -198,7 +198,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     render_click(element(view, "[phx-click='inspect_thing'][phx-value-id='thing-thermostat']"))
     html = render_submit(element(view, "#read-thermostat-temperature"))
-    assert html =~ "Latest reading"
+
+    assert has_element?(
+             view,
+             ".wl-thing-property[aria-label='temperature'] .wl-inspector-reading",
+             "21.5"
+           )
+
     assert html =~ "21.5"
 
     report = get(recycle(conn), "/evidence/report.json")

@@ -9,6 +9,7 @@ export interface CanvasNode extends Record<string, unknown> {
   unit: string
   status: string
   detail: string
+  operations?: ("read" | "observe" | "pause")[]
   x: number
   y: number
 }
@@ -50,7 +51,8 @@ export function validateCanvas(payload: Record<string, JsonValue>): void {
     throw new Error("invalid canvas limits")
   const ids = new Set<string>()
   for (const node of nodes) {
-    if (!record(node) || !exact(node, nodeFields) || !identifier(node.id) || ids.has(node.id) ||
+    if (!record(node) || !exact(Object.fromEntries(Object.entries(node).filter(([key])=>key!=="operations")), nodeFields) || !identifier(node.id) || ids.has(node.id) ||
+      (node.operations !== undefined && (!Array.isArray(node.operations) || node.operations.length > 3 || new Set(node.operations).size !== node.operations.length || !node.operations.every(op=>typeof op === "string" && ["read","observe","pause"].includes(op)))) ||
       !["thing", "process", "entry"].includes(String(node.kind)) ||
       !Object.entries(textLimits).every(([key, limit]) => text(node[key], limit)) ||
       !coordinate(node.x) || !coordinate(node.y)) throw new Error("invalid canvas node")
