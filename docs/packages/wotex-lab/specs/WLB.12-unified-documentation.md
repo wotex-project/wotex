@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.4.0. Contract: accepted. Implementation status:
+Specification version: 0.5.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
@@ -25,11 +25,33 @@ metadata from one index generation with files from another.
 The built reader and its not-found state preserve the host's workbench return
 route; static pages use the host root as their return destination.
 
+The build assembly also projects documented module members from the admitted
+collection metadata into individual API pages. Module indexes link to those
+pages by member kind, name and arity. Each page retains the extracted signatures,
+Markdown, `since` and deprecation text, source path and collection revision.
+The shared parser, anchor/link resolver, search index and renderer process these
+pages just like other admitted documents. The global navigation remains at the
+module level; search includes the member pages. This is a Lab-owned content
+projection before site construction, not another API renderer.
+
+The projection admits functions, macros, callbacks, macro callbacks, types and
+opaque types. Hidden modules and members with hidden, absent or blank public
+prose do not produce member pages. Older collection schemas do not distinguish
+hidden from absent member prose; both are excluded rather than inferred. Site
+metadata records included and excluded member counts. Original collection
+digests stay unchanged; generated pages have their own content digests.
+There is no runtime source scan, module loading or documentation build.
+The shared search records also retain each member's bare name alongside its
+name/arity title as source-derived query terms. Both readers and
+`search-records.json` consume that same corpus; punctuation in a signature must
+not prevent a query for its bare name from finding the member page.
+
 This composition requires DocShell's 0.5 presentation API and the Phoenix
 Assets PHA.01 0.3 inline-search seam. The historical 0.3.2 evidence below does
 not qualify the changed reader, assets or scope tags. Fresh reader browser,
 publication and archive checks remain required before the 0.4.0 evidence can
-be declared complete.
+be declared complete. Member projection has separate source and browser checks;
+it does not renew the historical archive or accessibility evidence.
 
 Lab now owns the validated source catalogue, isolated checkout and staging
 rules, release and rolling cohort resolution, collection admission and the
@@ -236,6 +258,7 @@ Canonical route families are:
 /docs/conformance/<page>/
 /docs/lab/<page>/
 /docs/api/<package>/<module>/
+/docs/api/<package>/<module>/<member-kind>/<member-name>-<arity>/
 /docs/specifications/<package>/<spec>/
 /docs/evidence/<package>/<record>/
 /docs/project/<page>/
@@ -247,6 +270,19 @@ resolved to canonical aggregate routes when their target belongs to the
 cohort. Unknown local targets, anchors, and assets fail the build. External
 standards links remain external and identify their source revision where the
 owning specification requires it.
+
+Member names retain ASCII letters, digits, underscores and periods. Other UTF-8
+bytes use a reversible `-hh-` hexadecimal escape, including the hyphen itself.
+Kind and arity therefore distinguish overloads and names such as `read` and
+`read?` without relying on a lossy title slug. Member pages link back to their
+own module. Relative links are resolved against the original module source;
+derived member pages cannot replace a source document in that lookup.
+
+Assembly admits at most 2,048 members per module, 32 signatures per member,
+262,144 bytes of member prose and signatures, and 4,194,304 such bytes per
+module. Names are valid UTF-8 of 1–255 bytes; arity is an integer from 0 to 255.
+Malformed metadata, duplicate public kind/name/arity identities and oversized
+input fail the build before publication. Content is never silently truncated.
 
 Legacy package documentation URLs may redirect to canonical aggregate routes
 only through an explicit, tested redirect map. HexDocs remains each package's

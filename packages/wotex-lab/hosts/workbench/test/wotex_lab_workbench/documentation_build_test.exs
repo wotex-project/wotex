@@ -76,6 +76,25 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
         assert length(decoded_records) == length(built.site.search)
         assert Enum.any?(decoded_records, &(&1["collection"] == "wotex_ble"))
 
+        member_route = base_path <> "api/wotex/wotex-thing-description/function/decode-1/"
+        member_file = Path.join(destination, String.trim_leading(member_route, "/") <> "index.html")
+        member_html = File.read!(member_file)
+        assert member_html =~ "decode(document)"
+        assert member_html =~ "Decode one Thing Description."
+        assert member_html =~ ~s(href="#{base_path}api/wotex/wotex-thing-description/")
+        assert member_html =~ ~s(href="#{base_path}runtime/overview/")
+
+        assert Enum.any?(
+                 decoded_records,
+                 &(&1["route"] == member_route and &1["kind"] == "function")
+               )
+
+        member_record = Enum.find(decoded_records, &(&1["route"] == member_route))
+
+        assert String.ends_with?(member_record["text"], "\ndecode")
+
+        refute member_html =~ "hidden_member"
+
         hosted = :erlang.binary_to_term(File.read!(built.hosted_artifact), [:safe])
         hosted_path = hosted.metadata["search_contract"]["path"]
         assert hosted_path =~ ~r"\A/docs-search/[0-9a-f]{64}/pagefind/pagefind\.js\z"
@@ -93,6 +112,9 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
         assert hosted.cohort_digest == built.site.cohort_digest
         assert hosted.routes == built.site.routes
         assert hosted.search == built.site.search
+        assert built.site.metadata["api_members"]["included"] == 1
+        assert built.site.metadata["api_members"]["excluded_not_publicly_documented"] == 1
+        assert Enum.any?(Map.values(hosted.pages), &(&1.route == member_route))
         assert built.site.redirects[base_path] == base_path <> "start/"
         assert built.manifest["base_path"] == base_path
         assert {:ok, contract} = DesignContract.current()
@@ -191,7 +213,27 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
       "kind" => "module",
       "title" => "Wotex.ThingDescription",
       "ast" => content,
-      "meta" => %{}
+      "meta" => %{
+        "moduledoc" => "present",
+        "members" => [
+          %{
+            "kind" => "function",
+            "name" => "decode",
+            "arity" => 1,
+            "signatures" => ["decode(document)"],
+            "doc" => "Decode one Thing Description. See [Runtime](doc:wotex_runtime:overview).",
+            "metadata" => %{}
+          },
+          %{
+            "kind" => "function",
+            "name" => "hidden_member",
+            "arity" => 0,
+            "signatures" => [],
+            "doc" => "",
+            "metadata" => %{}
+          }
+        ]
+      }
     }
   end
 

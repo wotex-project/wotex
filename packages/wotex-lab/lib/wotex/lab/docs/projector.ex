@@ -132,10 +132,22 @@ defmodule Wotex.Lab.Docs.Projector do
   defp valid_page_document?(document, collection_id) when is_map(document) do
     String.starts_with?(document["id"] || "", collection_id <> ":") and
       document["collection_id"] == collection_id and nonempty?(document["document_id"]) and
-      nonempty?(document["kind"]) and nonempty?(document["title"])
+      nonempty?(document["kind"]) and nonempty?(document["title"]) and valid_api_member?(document)
   end
 
   defp valid_page_document?(_, _), do: false
+
+  defp valid_api_member?(%{"meta" => %{"api_member" => member}, "kind" => kind})
+       when is_map(member) do
+    Enum.sort(Map.keys(member)) == ~w(arity kind module name) and member["kind"] == kind and
+      kind in ~w(function macro callback macrocallback type opaque) and
+      nonempty?(member["module"]) and nonempty?(member["name"]) and
+      byte_size(member["name"]) <= 255 and is_integer(member["arity"]) and
+      member["arity"] in 0..255
+  end
+
+  defp valid_api_member?(%{"meta" => %{"api_member" => _}}), do: false
+  defp valid_api_member?(_), do: true
 
   defp empty_openapi_document?(document, collection_id) when is_map(document) do
     info = document["info"]
@@ -199,11 +211,16 @@ defmodule Wotex.Lab.Docs.Projector do
         "id" => document["id"],
         "route" => route,
         "tags" => tags(section, collection_id, document),
-        "metadata" => %{
-          "source" => source_id(collection_id),
-          "section" => section,
-          "document_kind" => document["kind"]
-        }
+        "navigation" => not api_member?(document),
+        "metadata" =>
+          Map.merge(
+            %{
+              "source" => source_id(collection_id),
+              "section" => section,
+              "document_kind" => document["kind"]
+            },
+            member_metadata(document)
+          )
       }
     }
   end
@@ -219,7 +236,18 @@ defmodule Wotex.Lab.Docs.Projector do
     end
   end
 
-  defp section(_, %{"kind" => kind}) when kind in ["module", "openapi"], do: "api"
+  defp section(_, %{"kind" => kind})
+       when kind in [
+              "module",
+              "openapi",
+              "function",
+              "macro",
+              "callback",
+              "macrocallback",
+              "type",
+              "opaque"
+            ],
+       do: "api"
 
   defp section(collection_id, document) do
     provenance_section(document) || collection_section(collection_id, document)
@@ -266,6 +294,12 @@ defmodule Wotex.Lab.Docs.Projector do
        when path in ["README.md", "docs/README.md"],
        do: "/start/"
 
+  defp route("api", collection_id, %{"meta" => %{"api_member" => member}}) do
+    name = for <<byte <- member["name"]>>, into: "", do: member_byte(byte)
+
+    "/api/#{source_id(collection_id)}/#{slug(member["module"])}/#{member["kind"]}/#{name}-#{member["arity"]}/"
+  end
+
   defp route("api", collection_id, document) do
     "/api/#{source_id(collection_id)}/#{slug(document["document_id"])}/"
   end
@@ -295,6 +329,7 @@ defmodule Wotex.Lab.Docs.Projector do
   defp route(section, _, document), do: "/#{section}/#{slug(document["document_id"])}/"
 
   defp navigation(pages) do
+    pages = Enum.filter(pages, & &1.declaration["navigation"])
     grouped = Enum.group_by(pages, & &1.section)
 
     items =
@@ -353,7 +388,18 @@ defmodule Wotex.Lab.Docs.Projector do
     |> Enum.uniq()
   end
 
-  defp search_scope(_, %{"kind" => kind}) when kind in ["module", "openapi"], do: "scope:api"
+  defp search_scope(_, %{"kind" => kind})
+       when kind in [
+              "module",
+              "openapi",
+              "function",
+              "macro",
+              "callback",
+              "macrocallback",
+              "type",
+              "opaque"
+            ],
+       do: "scope:api"
 
   defp search_scope(collection_id, document) do
     path = get_in(document, ["meta", "source_path"])
@@ -363,6 +409,17 @@ defmodule Wotex.Lab.Docs.Projector do
        do: "scope:package",
        else: "scope:guide"
   end
+
+  defp api_member?(document), do: is_map(get_in(document, ["meta", "api_member"]))
+
+  defp member_metadata(%{"meta" => %{"api_member" => member}}), do: %{"api_member" => member}
+  defp member_metadata(_), do: %{}
+
+  defp member_byte(byte)
+       when byte in ?a..?z or byte in ?A..?Z or byte in ?0..?9 or byte in [?_, ?.],
+       do: <<byte>>
+
+  defp member_byte(byte), do: "-" <> Base.encode16(<<byte>>, case: :lower) <> "-"
 
   defp evidence?(document) do
     path = get_in(document, ["meta", "source_path"]) || ""

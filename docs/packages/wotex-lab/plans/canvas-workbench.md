@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.18.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.19.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -285,6 +285,12 @@ persistent global search, hierarchical left navigation, readable article column,
 right table of contents when space allows, code/table overflow and previous/next
 links. Search opens by keyboard or header control, covers the ecosystem corpus,
 shows useful snippets and filters, and has clear empty/error states.
+API search opens a member's own page, with its extracted signature and source
+documentation. A compact module index groups links to documented functions,
+macros, callbacks and types; it does not repeat their full prose or add every
+member to the global sidebar. Member pages link back to the module and retain
+the workbench return destination. Hosted and static readers use the same pages
+and search records.
 The header search is a compact 320 × 28 control. Navigation uses 28-pixel rows
 within a roughly 216-pixel sidebar. Search results integrate into the article
 column with hairline separators, concise snippets and a pale selected row.

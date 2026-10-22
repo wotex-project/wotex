@@ -122,6 +122,52 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
              Projector.project([%{first | documents: [invalid | documents]} | rest], [])
   end
 
+  test "API members have distinct routes without filling the global navigation" do
+    [first | rest] = collections()
+    module = hd(first.documents)
+
+    members =
+      for {name, kind} <- [
+            {"read_property", "function"},
+            {"read_property?", "function"},
+            {"read_property", "type"}
+          ] do
+        metadata = %{
+          "module" => module["document_id"],
+          "kind" => kind,
+          "name" => name,
+          "arity" => 3
+        }
+
+        module
+        |> Map.merge(%{"id" => module["id"] <> ":" <> kind <> ":" <> name, "kind" => kind})
+        |> put_in(["meta", "api_member"], metadata)
+      end
+
+    assert {:ok, declaration} =
+             Projector.project([%{first | documents: first.documents ++ members} | rest], [])
+
+    routes = for page <- declaration["pages"], page["navigation"] == false, do: page["route"]
+
+    assert Enum.sort(routes) ==
+             Enum.sort([
+               "/api/wotex/wotex-thing-description/function/read_property-3/",
+               "/api/wotex/wotex-thing-description/function/read_property-3f--3/",
+               "/api/wotex/wotex-thing-description/type/read_property-3/"
+             ])
+
+    assert Enum.all?(
+             Enum.filter(declaration["pages"], &(&1["route"] in routes)),
+             &("scope:api" in &1["tags"])
+           )
+
+    [member | _] = members
+    invalid = put_in(member, ["meta", "api_member"], %{"module" => nil})
+
+    assert {:error, :invalid_documentation_collection} =
+             Projector.project([%{first | documents: [invalid | first.documents]} | rest], [])
+  end
+
   defp collections do
     for id <- Catalogue.source_ids(), do: collection(String.replace(id, "-", "_"))
   end

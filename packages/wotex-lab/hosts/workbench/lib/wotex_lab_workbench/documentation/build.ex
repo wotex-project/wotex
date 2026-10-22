@@ -10,6 +10,7 @@ defmodule WotexLabWorkbench.Documentation.Build do
   alias Wotex.Lab.Docs.Projector
 
   alias WotexLabWorkbench.Documentation.{
+    ApiMembers,
     CommandEnvironment,
     DesignContract,
     SearchAdapter,
@@ -90,7 +91,8 @@ defmodule WotexLabWorkbench.Documentation.Build do
     module = DocShell.Presentation.SiteProjector
 
     if Code.ensure_loaded?(module) and function_exported?(module, :project, 1) do
-      with {:ok, collections} <- resolve_cross_collection_links(collections),
+      with {:ok, collections, api_members} <- ApiMembers.project(collections),
+           {:ok, collections} <- resolve_cross_collection_links(collections),
            {:ok, design_system} <- DesignContract.current() do
         source_options = [
           base_path: Keyword.get(opts, :base_path, "/docs/"),
@@ -98,7 +100,12 @@ defmodule WotexLabWorkbench.Documentation.Build do
             "catalogue_schema" => catalogue["schema_version"],
             "canonical_origin" => Keyword.get(opts, :canonical_origin),
             "tree_digest_algorithm" => catalogue["tree_digest_algorithm"],
-            "design_system" => design_system
+            "design_system" => design_system,
+            "api_members" => %{
+              "schema" => "wotex-api-members/v1",
+              "included" => api_members.included,
+              "excluded_not_publicly_documented" => api_members.excluded
+            }
           }
         ]
 
@@ -111,7 +118,8 @@ defmodule WotexLabWorkbench.Documentation.Build do
           canonical_origin: Keyword.get(opts, :canonical_origin)
         ]
 
-        :erlang.apply(module, :project, [arguments])
+        with {:ok, site} <- :erlang.apply(module, :project, [arguments]),
+             do: {:ok, ApiMembers.index(site)}
       end
     else
       {:error, :doc_shell_site_candidate_required}
@@ -122,7 +130,9 @@ defmodule WotexLabWorkbench.Documentation.Build do
     source_index =
       collections
       |> Enum.flat_map(fn collection ->
-        Enum.flat_map(collection.documents, fn document ->
+        collection.documents
+        |> Enum.reject(&get_in(&1, ["meta", "api_member"]))
+        |> Enum.flat_map(fn document ->
           case get_in(document, ["meta", "source_path"]) do
             path when is_binary(path) ->
               [
@@ -224,9 +234,6 @@ defmodule WotexLabWorkbench.Documentation.Build do
         |> String.trim_leading("/")
 
       case Map.get(source_index, {descriptor.source_url, target_path}, []) do
-        [{collection_id, _}] when collection_id == descriptor.id ->
-          {:ok, node}
-
         [{_, target_id}] ->
           {:ok, put_in(node, ["attrs", "href"], "doc:" <> target_id <> anchor_suffix(anchor))}
 
