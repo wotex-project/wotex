@@ -27,6 +27,21 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
 
     assert declaration["redirects"]["/docs/"] == "family_docs:readme"
     assert Enum.map(declaration["navigation"], & &1["title"]) == expected_sections()
+
+    for page <- declaration["pages"] do
+      kind = page["metadata"]["document_kind"]
+
+      expected =
+        cond do
+          String.ends_with?(page["id"], ":overview") -> "scope:package"
+          kind in ["module", "openapi"] -> "scope:api"
+          true -> "scope:guide"
+        end
+
+      assert expected in page["tags"]
+      assert Enum.count(page["tags"], &String.starts_with?(&1, "scope:")) == 1
+      assert length(page["tags"]) == length(Enum.uniq(page["tags"]))
+    end
   end
 
   if Code.ensure_loaded?(DocShell.Presentation.SiteProjector) do

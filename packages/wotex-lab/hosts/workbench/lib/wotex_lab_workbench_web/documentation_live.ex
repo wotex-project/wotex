@@ -4,7 +4,7 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
   use WotexLabWorkbenchWeb, :live_view
 
   alias WotexLabWorkbench.{Documentation, Sessions}
-  alias WotexLabWorkbenchWeb.Plugs.SessionToken
+  alias WotexLabWorkbenchWeb.{DocumentationComponents, Plugs.SessionToken}
 
   @impl Phoenix.LiveView
   def mount(params, session, socket) do
@@ -31,45 +31,27 @@ defmodule WotexLabWorkbenchWeb.DocumentationLive do
 
   @impl Phoenix.LiveView
   def render(%{missing: false} = assigns) do
-    module = PhoenixAssets.DocShell.Components
-
-    if Code.ensure_loaded?(module) and function_exported?(module, :page, 1) do
-      :erlang.apply(module, :page, [
-        %{
-          page: assigns.page,
-          context: assigns.context,
-          brand: [],
-          footer: [],
-          __changed__: nil
-        }
-      ])
-    else
-      unavailable(assigns)
-    end
+    ~H"""
+    <DocumentationComponents.reader
+      site={@site}
+      page={@page}
+      context={@context}
+      return_path={@return_path}
+    />
+    """
   end
 
   def render(%{site: site} = assigns) when site != nil do
-    module = PhoenixAssets.DocShell.Components
-
-    if Code.ensure_loaded?(module) and function_exported?(module, :not_found, 1) do
-      :erlang.apply(module, :not_found, [%{site: site, __changed__: nil}])
-    else
-      unavailable(assigns)
-    end
+    ~H"""
+    <DocumentationComponents.reader site={@site} return_path={@return_path} />
+    """
   end
 
   def render(assigns), do: unavailable(assigns)
 
   defp unavailable(assigns) do
     ~H"""
-    <main id="doc-main" class="doc-shell pa-doc-shell" data-pa-doc-shell>
-      <section class="pa-state" data-pa-state="empty" aria-labelledby="docs-unavailable-title">
-        <p>WoTEx documentation</p>
-        <h1 id="docs-unavailable-title">Documentation unavailable</h1>
-        <p>The built-in documentation artifact is not available in this release.</p>
-        <a class="pa-button" href={@return_path}>Return to workbench</a>
-      </section>
-    </main>
+    <DocumentationComponents.reader return_path={@return_path} />
     """
   end
 

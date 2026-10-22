@@ -48,7 +48,16 @@ defmodule WotexLabWorkbenchWeb.Layouts do
   @doc "The isolated root document for public documentation LiveViews."
   @spec documentation_root(map()) :: Phoenix.LiveView.Rendered.t()
   def documentation_root(assigns) do
-    assigns = assign(assigns, :nonce, assigns.conn.assigns[:csp_nonce])
+    assigns =
+      assigns
+      |> assign(:nonce, assigns.conn.assigns[:csp_nonce])
+      |> assign(:token_version, Wotex.Lab.DesignSystem.version())
+      |> assign(
+        :documentation_assets,
+        Map.new(~w(doc-shell.css documentation.css doc-shell-browser.js), fn name ->
+          {name, documentation_asset(name)}
+        end)
+      )
 
     ~H"""
     <!DOCTYPE html>
@@ -58,14 +67,16 @@ defmodule WotexLabWorkbenchWeb.Layouts do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <title>WoTEx documentation</title>
-        <link rel="stylesheet" href="/docs-assets/doc-shell.css" />
-        <link rel="stylesheet" href="/css/documentation.css?v=5" />
+        <link rel="stylesheet" href={"/css/tokens.css?v=#{@token_version}"} />
+        <link rel="stylesheet" href={@documentation_assets["doc-shell.css"]} />
+        <link rel="stylesheet" href={@documentation_assets["documentation.css"]} />
         <script nonce={@nonce} src="/js/phoenix/phoenix.min.js">
         </script>
         <script nonce={@nonce} src="/js/live_view/phoenix_live_view.min.js">
         </script>
-        <script nonce={@nonce} type="module" src="/docs-assets/doc-shell-browser.js">
+        <script nonce={@nonce} type="module" src={@documentation_assets["doc-shell-browser.js"]}>
         </script>
+        <.vite_assets entry="assets/documentation.ts" nonce={@nonce} />
       </head>
       <body>
         {@inner_content}
@@ -82,5 +93,14 @@ defmodule WotexLabWorkbenchWeb.Layouts do
     ~H"""
     {@inner_content}
     """
+  end
+
+  defp documentation_asset(name) do
+    path = "/docs-assets/" <> name
+
+    case WotexLabWorkbench.Documentation.asset(name) do
+      {:ok, _, _, "sha256:" <> digest} -> path <> "?v=" <> digest
+      {:error, _} -> path
+    end
   end
 end

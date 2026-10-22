@@ -348,9 +348,20 @@ defmodule Wotex.Lab.Docs.Projector do
   end
 
   defp tags(section, collection_id, document) do
-    [section, source_id(collection_id), document["kind"]]
+    [section, source_id(collection_id), document["kind"], search_scope(collection_id, document)]
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
+  end
+
+  defp search_scope(_, %{"kind" => kind}) when kind in ["module", "openapi"], do: "scope:api"
+
+  defp search_scope(collection_id, document) do
+    path = get_in(document, ["meta", "source_path"])
+
+    if collection_id not in ~w(family_docs wotex_dot) and
+         path in ["README.md", "packages/#{source_id(collection_id)}/README.md"],
+       do: "scope:package",
+       else: "scope:guide"
   end
 
   defp evidence?(document) do

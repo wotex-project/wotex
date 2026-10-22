@@ -77,13 +77,18 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
         assert Enum.any?(decoded_records, &(&1["collection"] == "wotex_ble"))
 
         hosted = :erlang.binary_to_term(File.read!(built.hosted_artifact), [:safe])
-        hosted_pagefind = Path.join(destination, ".wotex/search/pagefind/pagefind.js")
+        hosted_path = hosted.metadata["search_contract"]["path"]
+        assert hosted_path =~ ~r"\A/docs-search/[0-9a-f]{64}/pagefind/pagefind\.js\z"
+        relative = String.trim_leading(hosted_path, "/docs-search/")
+        hosted_pagefind = Path.join([destination, ".wotex", "search", relative])
         assert File.regular?(hosted_pagefind)
         assert built.manifest["search"]["algorithm"] == "pagefind/v1"
         assert built.manifest["search"]["path"] == base_path <> "pagefind/pagefind.js"
 
-        assert hosted.metadata["search_contract"]["path"] ==
-                 "/docs-search/pagefind/pagefind.js"
+        assert File.read!(hosted_pagefind) ==
+                 File.read!(
+                   Path.join([destination, String.trim(base_path, "/"), "pagefind/pagefind.js"])
+                 )
 
         assert hosted.cohort_digest == built.site.cohort_digest
         assert hosted.routes == built.site.routes

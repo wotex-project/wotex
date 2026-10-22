@@ -8,10 +8,14 @@ const manifest = JSON.parse(await readFile(new URL(".vite/manifest.json", root),
 const files = await readdir(new URL("assets/", root))
 const entry = manifest["assets/app.ts"]
 const storybookEntry = manifest["assets/storybook.ts"]
+const documentationEntry = manifest["assets/documentation.ts"]
 
 assert.ok(entry?.isEntry, "assets/app.ts must be a production entry")
 assert.ok(storybookEntry?.isEntry, "assets/storybook.ts must be the qualification entry")
-assert.equal(Object.values(manifest).filter((item) => item.isEntry).length, 2)
+assert.ok(documentationEntry?.isEntry, "documentation must have its own inert entry")
+assert.equal(Object.values(manifest).filter((item) => item.isEntry).length, 3)
+assert.deepEqual(documentationEntry.imports ?? [], [], "documentation must not load the island runtime")
+assert.deepEqual(documentationEntry.dynamicImports ?? [], [], "documentation must remain standalone")
 assert.deepEqual(entry.imports, storybookEntry.imports, "both hosts must share the real island hook")
 const hook = manifest[entry.imports[0]]
 assert.ok((hook?.dynamicImports ?? []).length >= 3, "registered islands must remain split")
@@ -33,4 +37,4 @@ for (const file of files) {
   }
 }
 
-console.log(`assets: ${files.length} local content-hashed files, two isolated entries, budgets satisfied`)
+console.log(`assets: ${files.length} local content-hashed files, three isolated entries, budgets satisfied`)

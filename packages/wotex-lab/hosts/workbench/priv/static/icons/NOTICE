@@ -3,3 +3,8 @@ Source: https://github.com/lucide-icons/lucide
 Revision: 20aef31db93fe4d9f398dbb15b120d99c48eef95
 Unmodified SVG source files for the Lab design proposal.
 See LICENSE for Lucide and Feather notices.
+
+search.svg (16px), arrow-up-right.svg (14px) and copy.svg (16px) are
+exports of Lucide icons from the revision above.
+Original export geometry is preserved.
+menu.svg and x.svg retain the original SVG source from the same revision.

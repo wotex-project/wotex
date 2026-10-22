@@ -638,10 +638,10 @@ specifications:
       - "hosts/storybook/test/wotex_lab_storybook_web/storybook_test.exs"
     compatibility_classification: Version 0.19.0 additively exposes the inert open_documentation canvas event and current-subject selection. A bounded room/session-owned snapshot retains unsaved geometry, drafts, readings and completed results for one documentation return without replacing Save layout, renewing the session or replaying commands. The built reader alignment and complete application qualification remain open. Version 0.18.0 adds room-scoped Ask results with recorded charts and Pin controls, bounded draft retention across tool patches and failures, and an editable no-provider fallback to Build query. Duplicate submission preserves the running request; navigation cancels it. Live provider qualification and complete browser qualification remain open. Version 0.17.0 additively extends the canvas descriptor with bounded metric pins, saved viewport and layout revision plus closed presentation/read events. Session-owned room-history query results can be pinned, refreshed, paused, renamed and removed; saved geometry and cached pins restore paused without another query. Missing samples remain null and failed refresh retains timestamped cached data. Unsaved documentation restoration and complete browser qualification remain partial. Existing graph records and Action authority are unchanged. Version 0.16.0 adds the closed bounded canvas island, nested graph admission and inert session-scoped inspection/open events, and adopts the grayscale DesignSystem 0.5 edition. Existing island identifiers, envelopes and Action authority are unchanged. Root opens a full-viewport graph; experiments, runs, metrics and selected-run evidence patch contextual panels in the same LiveView. Experiment drafts, explicit readings, node positions and viewport survive those transitions. Pins, reload/documentation restoration, subscriptions and complete browser qualification remain partial. Supplied identity applications and all color, grayscale, flat and construction studies extend the native brand handoff. Version 0.15.2 renders tensor dimensions and integer-array previews as numeric lists, preserving preview limits, numerical values, masks and quality codes. Version 0.15.1 retains bounded per-view experiment drafts across validation and UI patches, uses native numeric constraints, renders field-specific errors and routes form recovery through an inert change event. Malformed browser form snapshots and invalid parameters are refused before room allocation; unknown select values do not fall back. Public library and control-API parameter admission is unchanged. Version 0.15.0 adds separate editable WoTEx brand identity and Lab page/state/profile/flow deliverables under WLB-C15 and WLB-C16. Initial native drafts exist; complete component/state coverage, native Play, accepted identity and archive/restore evidence remain open, so implementation is partial. Existing pre-1.0 APIs and host ownership do not change. Version 0.14.0 container-profile obligations retain their unrecorded 599/600-pixel and 839/840-pixel boundary-pair cohorts; historical host evidence does not cover the new design edition.
   - id: WLB.12
-    version: "0.3.2"
+    version: "0.4.0"
     path: docs/specs/WLB.12-unified-documentation.md
-    implementation_status: implemented
-    evidence_status: complete
+    implementation_status: partial
+    evidence_status: partial
     adoption_status: reference_available
     evidence_manifest: priv/provenance/WLB.12-evidence.json
     standards:
@@ -649,8 +649,8 @@ specifications:
         revision: "DSH.01 0.3.0"
         claim: Implemented consumer of renderer-neutral collection, site, search and static-export contracts through a pinned candidate-artifact cohort.
       - name: Phoenix Assets DocShell renderer contract
-        revision: "PHA.01 0.2.0"
-        claim: Implemented consumer of optional LiveView and static HEEx renderers with one shared page model and Pagefind tree.
+        revision: "PHA.01 0.3.1"
+        claim: Source consumer of optional HEEx components and shared inline search, with one Lab-owned hosted/static reader; changed reader qualification remains in progress.
       - name: WCAG
         revision: "2.2 AA"
         claim: Documentation accessibility target; automated checks are not whole-site certification.
@@ -672,9 +672,12 @@ specifications:
       - "Wotex.Lab.Docs.SourceTree"
       - "Wotex.Lab.Docs.Staging"
       - "WotexLabWorkbench.Documentation"
+      - "WotexLabWorkbench.Documentation.Assets"
       - "WotexLabWorkbench.Documentation.Build"
       - "WotexLabWorkbench.Documentation.Publication"
+      - "WotexLabWorkbench.Documentation.StaticRenderer"
       - "WotexLabWorkbench.Documentation.StorybookBuilder"
+      - "WotexLabWorkbenchWeb.DocumentationComponents"
       - "WotexLabWorkbenchWeb.DocumentationLive"
     executable_evidence:
       - "test/wotex/lab/docs/catalogue_test.exs"
@@ -690,4 +693,4 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/documentation_live_test.exs"
       - "hosts/workbench/bin/check_documentation_browser.mjs"
       - "bin/check_workbench_archive.exs"
-    compatibility_classification: Version 0.3.2 keeps routes and documentation artifacts stable while making the static Storybook and design identities Lab-owned. DocShell and the Phoenix Assets renderer remain independently versioned candidates in the clone-free release cohort; the Lab component catalogue is built from the Workbench source or adopted as an exact artifact. The base library API and existing Workbench operations remain unchanged. Hosted publication and WCAG certification remain separate adoption claims.
+    compatibility_classification: Version 0.4.0 adds a shared compact hosted/static reader, inline global search, namespaced search scopes, API and package catalogues, and content-addressed hosted search assets. Source heading anchors and locked collection content digests remain intact. The reader consumes the independently versioned Phoenix Assets inline-search candidate; normal pinned dependencies do not yet provide that seam. The changed reader still requires archive adoption and complete accessibility qualification. Version 0.3.2 makes the static Storybook and design identities Lab-owned. The base library API and existing Workbench operations remain unchanged. Hosted publication and WCAG certification remain separate adoption claims.

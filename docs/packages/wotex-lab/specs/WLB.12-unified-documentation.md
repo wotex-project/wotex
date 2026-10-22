@@ -1,9 +1,35 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.3.2. Contract: accepted. Implementation status:
-implemented. Evidence status: complete. Adoption status: reference_available.
+Specification version: 0.4.0. Contract: accepted. Implementation status:
+partial. Evidence status: partial. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
+
+The compact reader composes public Phoenix Assets components within one
+Lab-owned shell for hosted and static output. It uses Lab semantic theme
+tokens, a 48-pixel header, the supplied unboxed logo, 28-pixel controls, quiet
+four-pixel corners and a flat inline search surface. Guides, API and package
+search scopes use the existing tag facet; each projected document receives
+exactly one namespaced `scope:` tag. Each of the seven supported search facets remains
+available when the admitted corpus supplies values. Surrounding
+navigation stays usable while search is open. Static output hashes the same
+reader CSS, tokens, browser adapter and icon assets used by hosted pages.
+API and package catalogues are derived from admitted search records and use
+flat, filterable lists. Source titles appear once and retain their original
+heading anchors. Pagefind-backed hosted and static pages keep the search
+corpus in the generated index instead of embedding it into every page.
+Hosted search files use a namespace derived from the complete index digest
+map. Changed indexes therefore get distinct URLs; stable renderer and reader
+asset URLs require revalidation. This prevents a reader from mixing cached
+metadata from one index generation with files from another.
+The built reader and its not-found state preserve the host's workbench return
+route; static pages use the host root as their return destination.
+
+This composition requires DocShell's 0.5 presentation API and the Phoenix
+Assets PHA.01 0.3 inline-search seam. The historical 0.3.2 evidence below does
+not qualify the changed reader, assets or scope tags. Fresh reader browser,
+publication and archive checks remain required before the 0.4.0 evidence can
+be declared complete.
 
 Lab now owns the validated source catalogue, isolated checkout and staging
 rules, release and rolling cohort resolution, collection admission and the
@@ -16,7 +42,7 @@ The release task accepts an explicit local source for every admitted repository;
 its offline mode refuses an incomplete set before checkout, so a distribution
 build cannot silently replace a missing input with network access.
 
-Focused unit, LiveView, publication, archive and real-Chromium cohorts cover
+The historical 0.3.2 unit, LiveView, publication, archive and real-Chromium cohorts covered
 the declared source types, exact digests, route projection, all Pagefind
 filters, live/static parity, keyboard use, 320-pixel reflow, 400% zoom, themes,
 high contrast, reduced motion, left-to-right and right-to-left locales,
@@ -26,7 +52,7 @@ resolves them through a local Hex registry, embeds the generated site and
 search tree, removes Git from the release environment and reads both from the
 release.
 
-This is complete local source and candidate-artifact evidence. It is not a
+That evidence was complete for its local source and candidate-artifact cohort. It is not a
 successful GitHub Pages deployment, a public-site availability claim or a WCAG
 certification. Those adoption checks remain in the qualification runbook and
 never authorize a repository visibility change.

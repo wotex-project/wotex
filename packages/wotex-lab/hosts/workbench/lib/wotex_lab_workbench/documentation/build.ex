@@ -326,15 +326,19 @@ defmodule WotexLabWorkbench.Documentation.Build do
        when is_binary(base_path) and is_list(files) and is_map(contract) do
     with "pagefind/v1" <- contract["algorithm"],
          digests when is_map(digests) and map_size(digests) > 0 <- contract["digests"],
+         {:ok, identity} <- canonical(digests),
+         "sha256:" <> namespace <- digest(identity),
          {:ok, entry} <- search_entry(contract["path"], base_path, digests),
-         :ok <- copy_search_files(digests, files, base_path, destination, directory) do
+         :ok <- copy_search_files(digests, files, base_path, destination, directory, namespace) do
       {:ok,
        contract
-       |> Map.put("path", hosted_search_path(entry))
-       |> Map.update("records_path", nil, &hosted_records_path/1)
+       |> Map.put("path", hosted_search_path(entry, namespace))
+       |> Map.update("records_path", nil, &hosted_records_path(&1, namespace))
        |> Map.put(
          "digests",
-         Map.new(digests, fn {relative, digest} -> {hosted_search_path(relative), digest} end)
+         Map.new(digests, fn {relative, digest} ->
+           {hosted_search_path(relative, namespace), digest}
+         end)
        )}
     else
       nil -> {:error, :invalid_documentation_search_contract}
@@ -359,7 +363,7 @@ defmodule WotexLabWorkbench.Documentation.Build do
 
   defp search_entry(_, _, _), do: {:error, :invalid_documentation_search_entry}
 
-  defp copy_search_files(digests, files, base_path, destination, directory) do
+  defp copy_search_files(digests, files, base_path, destination, directory, namespace) do
     entries = Map.new(files, &{&1["path"], &1})
     prefix = String.trim(base_path, "/")
 
@@ -368,7 +372,7 @@ defmodule WotexLabWorkbench.Documentation.Build do
     |> Enum.reduce_while(:ok, fn {relative, expected}, :ok ->
       static = Path.join(prefix, relative)
       source = Path.join(destination, static)
-      target = Path.join([directory, "search", relative])
+      target = Path.join([directory, "search", namespace, relative])
 
       with true <- safe_relative?(relative) and digest?(expected),
            %{"digest" => ^expected, "size" => size} when is_integer(size) and size > 0 <-
@@ -383,12 +387,12 @@ defmodule WotexLabWorkbench.Documentation.Build do
     end)
   end
 
-  defp hosted_records_path(path) when is_binary(path) do
-    if safe_relative?(path), do: hosted_search_path(path), else: nil
+  defp hosted_records_path(path, namespace) when is_binary(path) do
+    if safe_relative?(path), do: hosted_search_path(path, namespace), else: nil
   end
 
-  defp hosted_records_path(_), do: nil
-  defp hosted_search_path(relative), do: "/docs-search/" <> relative
+  defp hosted_records_path(_, _), do: nil
+  defp hosted_search_path(relative, namespace), do: "/docs-search/" <> namespace <> "/" <> relative
 
   defp safe_relative?(path) when is_binary(path) do
     path != "" and Path.type(path) == :relative and ".." not in Path.split(path) and

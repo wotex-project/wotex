@@ -32,7 +32,7 @@ defmodule WotexLabWorkbenchWeb.AssetController do
       {:ok, media_type, bytes, digest} ->
         conn
         |> put_resp_content_type(media_type)
-        |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+        |> put_resp_header("cache-control", "public, max-age=0, must-revalidate")
         |> put_resp_header("etag", ~s("#{digest}"))
         |> send_resp(200, bytes)
 
@@ -48,13 +48,19 @@ defmodule WotexLabWorkbenchWeb.AssetController do
       {:ok, media_type, bytes, digest} ->
         conn
         |> put_resp_content_type(media_type)
-        |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+        |> put_resp_header("cache-control", search_cache_control(path))
         |> put_resp_header("etag", ~s("#{digest}"))
         |> send_resp(200, bytes)
 
       {:error, _} ->
         send_resp(conn, 404, "not found")
     end
+  end
+
+  defp search_cache_control([namespace | _]) do
+    if Regex.match?(~r/\A[0-9a-f]{64}\z/, namespace),
+      do: "public, max-age=31536000, immutable",
+      else: "public, max-age=0, must-revalidate"
   end
 
   @doc "Renders admitted overrides as a scoped CSS block; unknown names and unsafe values are dropped."

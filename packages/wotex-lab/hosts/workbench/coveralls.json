@@ -5,7 +5,7 @@
     "lib/wotex_lab_workbench/documentation(?:\\.ex|/.*)",
     "lib/wotex_lab_workbench/investigation/(?:codex_runner|hosted_.*)\\.ex",
     "lib/wotex_lab_workbench_web/controllers/(?:asset|hosted_investigation_query)_controller\\.ex",
-    "lib/wotex_lab_workbench_web/documentation_live\\.ex"
+    "lib/wotex_lab_workbench_web/documentation_(?:live|components)\\.ex"
   ],
   "coverage_options": {
     "minimum_coverage": 90,

@@ -64,6 +64,14 @@ defmodule WotexLabWorkbench.Documentation do
 
   @doc "Returns one local Phoenix Assets documentation asset."
   @spec asset(String.t()) :: {:ok, String.t(), binary(), String.t()} | {:error, term()}
+  def asset("documentation.css") do
+    path = Application.app_dir(:wotex_lab_workbench, "priv/static/css/documentation.css")
+
+    with {:ok, bytes} <- File.read(path) do
+      {:ok, "text/css", bytes, digest(bytes)}
+    end
+  end
+
   def asset(name) when is_map_key(@asset_paths, name) do
     module = PhoenixAssets.DocShell.Assets
 

@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         app: resolve(import.meta.dirname, "assets/app.ts"),
         storybook: resolve(import.meta.dirname, "assets/storybook.ts"),
+        documentation: resolve(import.meta.dirname, "assets/documentation.ts"),
       },
       output: {
         chunkFileNames: "assets/island-[name]-[hash].js",
