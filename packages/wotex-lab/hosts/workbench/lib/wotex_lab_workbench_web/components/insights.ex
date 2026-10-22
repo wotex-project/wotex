@@ -30,11 +30,7 @@ defmodule WotexLabWorkbenchWeb.Components.Insights do
 
     ~H"""
     <section class="wl-section" aria-labelledby="analysis-heading">
-      <h2 id="analysis-heading">Explore this run</h2>
-      <p>
-        Filter and compare the bounded run preview with Explorer. This does not re-run the experiment,
-        change its evidence, or create training data. Units stay separate; missing values never become zero.
-      </p>
+      <h2 id="analysis-heading" class="wl-sr-only">Analysis controls</h2>
       <form id="run-analysis" phx-submit="inspect_run" class="wl-filter-bar">
         <div>
           <label for="analysis-series">Series</label>
@@ -69,24 +65,26 @@ defmodule WotexLabWorkbenchWeb.Components.Insights do
             </option>
           </select>
         </div>
-        <button type="submit" phx-disable-with="Inspecting…">Apply analysis</button>
+        <button class="wl-button wl-button-primary" type="submit" phx-disable-with="Inspecting…">Apply analysis</button>
       </form>
       <div :if={@insights} id="run-insights">
         <p role="status">
           {@insights.total_rows} matching points; {length(@insights.preview)} preview rows. {if @insights.truncated,
             do: "Preview truncated."}
         </p>
-        <dl class="wl-provenance">
-          <div>
-            <dt>Source preview digest</dt><dd><code>{@insights.source_digest}</code></dd>
-          </div>
-          <div>
-            <dt>Analysis query digest</dt><dd><code>{@insights.query_digest}</code></dd>
-          </div>
-          <div>
-            <dt>Backend</dt><dd>{@insights.backend}</dd>
-          </div>
-        </dl>
+        <details class="wl-disclosure">
+          <summary>Analysis sources</summary><dl class="wl-provenance">
+            <div>
+              <dt>Source preview digest</dt><dd><code>{@insights.source_digest}</code></dd>
+            </div>
+            <div>
+              <dt>Analysis query digest</dt><dd><code>{@insights.query_digest}</code></dd>
+            </div>
+            <div>
+              <dt>Backend</dt><dd>{@insights.backend}</dd>
+            </div>
+          </dl>
+        </details>
         <a id="analysis-deep-link" class="wl-button wl-button-secondary" href={@deep_link}>
           Exact analysis link
         </a>

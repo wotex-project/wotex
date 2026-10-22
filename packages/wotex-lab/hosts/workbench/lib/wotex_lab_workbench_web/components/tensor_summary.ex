@@ -38,12 +38,12 @@ defmodule WotexLabWorkbenchWeb.Components.TensorSummary do
           <dt>Quality shape</dt><dd>{inspect(@summary.quality.shape, charlists: :as_lists)}</dd>
         </div>
       </dl>
-      <p>
-        Preview: {@summary.preview_bounds.rows} of {@summary.rows} rows, {@summary.preview_bounds.features} of {@summary.preview_bounds.total_features} features;
-        at most {@summary.preview_bounds.elements_per_feature} elements per feature cell. {if @summary.preview_bounds.truncated,
-          do: "Preview truncated."} Observed/filled counts describe preview elements, not the full batch.
+      <p class="wl-preview-bounds">
+        Preview {@summary.preview_bounds.rows}/{@summary.rows} rows · {@summary.preview_bounds.features}/{@summary.preview_bounds.total_features} features · ≤ {@summary.preview_bounds.elements_per_feature} values/cell{if @summary.preview_bounds.truncated,
+          do: " · Truncated"}
       </p>
-      <div class="wl-table-wrap">
+      <p class="wl-sr-only">Observed/filled counts describe preview elements, not the full batch.</p>
+      <div class="wl-table-wrap" role="region" aria-label="Feature metadata" tabindex="0">
         <table>
           <caption>Feature metadata</caption>
           <thead>
@@ -64,9 +64,9 @@ defmodule WotexLabWorkbenchWeb.Components.TensorSummary do
           </tbody>
         </table>
       </div>
-      <div class="wl-table-wrap">
-        <table>
-          <caption>Bounded value preview; masked values remain labelled</caption>
+      <div class="wl-table-wrap" role="region" aria-label="Bounded value preview" tabindex="0">
+        <table aria-label="Bounded value preview; masked values remain labelled">
+          <caption>Value preview</caption>
           <thead>
             <tr>
               <th scope="col">Time</th><th :for={name <- @summary.feature_order} scope="col">{name}</th>

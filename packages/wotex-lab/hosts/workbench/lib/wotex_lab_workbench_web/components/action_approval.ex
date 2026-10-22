@@ -12,19 +12,25 @@ defmodule WotexLabWorkbenchWeb.Components.ActionApproval do
   use Phoenix.Component
 
   attr :run, :any, required: true
+  attr :remaining_ms, :integer, default: nil
 
   @doc "Names the exact operation, input, digest, revision and expiry before approval."
   @spec action_approval(map()) :: Phoenix.LiveView.Rendered.t()
   def action_approval(assigns) do
     decision = assigns.run.decision
-    assigns = assign(assigns, :decision, decision)
+
+    assigns =
+      assign(assigns,
+        decision: decision,
+        expired: is_integer(assigns.remaining_ms) and assigns.remaining_ms <= 0
+      )
 
     ~H"""
     <section class="wl-panel wl-approval" aria-labelledby="approval-title">
       <header class="wl-panel-header">
         <h2 id="approval-title">Approve simulated Action</h2>
       </header>
-      <p>This is a separate command. Running the experiment did not dispatch it.</p>
+      <p>One simulated Action. Running the experiment did not dispatch it.</p>
       <dl class="wl-facts">
         <div>
           <dt>Thing</dt><dd>{@decision["thing_id"]}</dd>
@@ -42,7 +48,7 @@ defmodule WotexLabWorkbenchWeb.Components.ActionApproval do
           <dt>State revision</dt><dd>{@decision["state_revision"]}</dd>
         </div>
         <div>
-          <dt>Expires at</dt><dd>{@decision["expires_at"]}</dd>
+          <dt>Expiry</dt><dd>{expiry(@remaining_ms, @decision)}</dd>
         </div>
       </dl>
       <form id={"approve-#{@run.id}"} phx-submit="approve" class="wl-actions">
@@ -54,8 +60,9 @@ defmodule WotexLabWorkbenchWeb.Components.ActionApproval do
         <button
           class="wl-button wl-button-primary"
           type="submit"
+          disabled={@expired}
           phx-disable-with="Approving…"
-        >Approve this simulated Action</button>
+        >Approve Action</button>
         <button
           class="wl-button wl-button-secondary"
           type="button"
@@ -63,7 +70,17 @@ defmodule WotexLabWorkbenchWeb.Components.ActionApproval do
           phx-value-id={@run.id}
         >Cancel run</button>
       </form>
+      <details class="wl-disclosure">
+        <summary>Decision clock</summary>
+        <dl class="wl-meta-list">
+          <dt>Expires at (monotonic ms)</dt><dd>{@decision["expires_at"]}</dd>
+        </dl>
+      </details>
     </section>
     """
   end
+
+  defp expiry(nil, decision), do: to_string(decision["expires_at"])
+  defp expiry(remaining, _) when remaining <= 0, do: "Expired · cancel this run"
+  defp expiry(remaining, _), do: "#{div(remaining + 999, 1_000)} s remaining"
 end

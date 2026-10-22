@@ -1,7 +1,39 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.21.0. Contract: accepted. Implementation status:
+Specification version: 0.22.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.22 separates Run results from their contextual Data, Analysis, Run
+details, Action review and Ask views. The closed optional `view` query accepts
+`result`, `data`, `analysis`, `details`, `review` or `ask`; an absent value opens
+the result, or Analysis for an existing exact-analysis link. A view change
+performs no read, Run, export or approval. An explicit `analysis` query retains
+its existing bounded analysis semantics. Unknown views and extra query fields
+are refused without substituting another run. Sources remains scoped to the
+selected run through the existing evidence route.
+
+Results show the decoded outcome, compact facts and native SVG charts for
+multi-point series, with their bounded table alternatives. Additional result
+charts open in disclosures; single observations stay in the facts and Data.
+The displayed time axis is elapsed seconds
+from the earliest event in the original run; Data and Analysis preserve exact
+event timestamps, values, masks, quality, dtype, shape and units. Missing values
+remain gaps. Presentation transforms never replace recorded observations.
+Review exposes the exact existing decision before its separate approval form;
+opening it grants no authority. Back returns to the same result and canvas.
+The existing five-second view refresh reads current owned Run status and
+updates review expiry without replaying a command. Expired approval is
+disabled in the presentation; the server still checks exact scope and expiry
+at dispatch. Exact monotonic expiry remains available in decision details.
+
+The existing JSON report endpoint additionally accepts the single `run` query
+field. It selects only that run from the current verified session, includes
+its record, proposal, decision and dispatch, and labels the report with a run
+scope. Unrelated runs, session datasets, formal results and policy records are
+excluded from this projection. The existing one-mebibyte ceiling applies.
+Unknown runs receive 404, malformed query shapes receive 400, and session
+refusals receive 403. The query-free session report retains its existing shape.
+Export remains an explicit download and executes no experiment or Action.
 
 Version 0.21 adds room-owned typed connection configuration for the reference
 smart-room process. A canvas gesture prepares a draft; only explicit Apply or

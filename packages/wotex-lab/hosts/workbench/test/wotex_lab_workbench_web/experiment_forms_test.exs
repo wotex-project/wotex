@@ -99,7 +99,8 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
     html = submit(view, Map.merge(corrected, markers))
     assert_patch(view, "/runs/run-1")
     run_view = view
-    assert html =~ "Tensor summary"
+    assert html =~ "Anomaly score"
+    assert has_element?(run_view, "a[href='/runs/run-1?view=data']", "Data")
     refute has_element?(run_view, "form[phx-submit='approve']")
     assert {:ok, %{room: room}} = Sessions.verify(token)
     assert [run] = Room.runs(room)
@@ -236,7 +237,7 @@ defmodule WotexLabWorkbenchWeb.ExperimentFormsTest do
   defp assert_draft(view, draft) do
     for {name, value} <- draft do
       selector =
-        if name == "backend",
+        if name == "backend" and value != "binary",
           do: "select#parameter-window_anomaly-#{name} option[value='#{value}'][selected]",
           else: "#parameter-window_anomaly-#{name}[value='#{value}']"
 

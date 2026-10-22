@@ -744,7 +744,7 @@ body {
 .wl-chart-axis text,
 .wl-chart-axis-title { fill: var(--wl-color-text); font-size: 10px; }
 .wl-chart-legend { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0; list-style: none; }
-.wl-chart { --wl-series-color: var(--wl-color-accent); }
+.wl-chart { --wl-series-color: var(--wl-color-text); }
 .wl-chart-swatch { display: inline-block; width: 1rem; height: 0.25rem; margin-right: 0.5rem; border-radius: 999px; background: var(--wl-series-color); }
 .wl-chart-series circle { fill: var(--wl-series-color); }
 .wl-chart-series polygon { fill: var(--wl-series-color); fill-opacity: 0.2; stroke: var(--wl-series-color); }
@@ -752,9 +752,12 @@ body {
 .wl-chart-series .wl-chart-gap { stroke-dasharray: 2 4; stroke-width: 1; opacity: 0.4; }
 .wl-chart-compact { margin: 8px 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .wl-chart-compact figcaption { margin: 0 0 8px; font-size: 12px; line-height: 16px; font-weight: 500; }
+.wl-chart-compact .wl-chart-link { top: -6px; right: 0; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 4px; }
+.wl-chart-compact .wl-chart-link:hover { background: var(--wl-color-bg); }
 .wl-chart-compact .wl-chart-plot { fill: transparent; stroke: none; }
 .wl-chart-compact .wl-chart-legend { display: grid; gap: 8px; overflow-wrap: anywhere; }
 .wl-chart-compact .wl-chart-series-details, .wl-chart-compact .wl-chart-table { margin-top: 8px; font-size: 11px; }
+.wl-chart-compact :is(.wl-chart-series-details, .wl-chart-table) > summary { min-height: 28px; padding-block: 4px; font-size: 11px; font-weight: 400; line-height: 16px; }
 
 .wl-series-1 { --wl-series-color: var(--wl-color-success); }
 .wl-series-2 { --wl-series-color: var(--wl-color-warning); }
@@ -1144,6 +1147,41 @@ body {
 .wl-workbench-panel .wl-disclosure code { overflow-wrap: anywhere; }
 .wl-prompt-compact textarea { min-height: 72px; height: 72px; }
 .wl-prompt-compact .wl-help { margin: 0; font-size: 11px; }
+.wl-run-state { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
+.wl-run-outcome p { margin: 0; font-size: 12px; line-height: 16px; }
+.wl-run-value { display: flex; align-items: baseline; gap: 4px; margin-block: 4px; }
+.wl-run-value strong { font-size: 24px; line-height: 32px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.wl-run-value span { font-size: 12px; }
+.wl-run-facts { display: grid; gap: 8px; margin: 0; }
+.wl-run-facts > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }
+.wl-run-facts dt { color: var(--wl-color-muted); }
+.wl-run-facts dd { margin: 0; overflow-wrap: anywhere; }
+.wl-run-facts :is(dt, dd) { font-size: 12px; line-height: 16px; }
+.wl-run-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; border-top: 1px solid var(--wl-color-border); padding-top: 8px; }
+.wl-run-tools a { display: flex; align-items: center; min-height: 28px; padding-inline: 4px; color: var(--wl-color-text); font-size: 12px; text-decoration: none; border-radius: 4px; }
+.wl-run-tools a:hover { background: var(--wl-color-bg); }
+.wl-run-context .wl-chart { margin: 8px 0 16px; }
+.wl-run-context :is(.wl-section, .wl-panel) { margin-top: 0; }
+.wl-run-context .wl-chart-link { font-size: 11px; }
+.wl-run-context .wl-prompt-compact .wl-panel-header { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.wl-run-context .wl-filter-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wl-run-context .wl-filter-bar :is(input, select) { width: 100%; }
+.wl-run-context .wl-filter-bar label { display: block; margin-bottom: 4px; font-size: 12px; }
+.wl-run-context .wl-filter-bar button { justify-self: start; }
+.wl-run-context .wl-facts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.wl-run-context .wl-facts > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; }
+.wl-run-context .wl-facts dd { font-size: 12px; line-height: 16px; overflow-wrap: anywhere; }
+.wl-run-context .wl-preview-bounds { font-size: 11px; color: var(--wl-color-muted); }
+.wl-run-context table :is(th, td) { font-size: 11px; line-height: 16px; letter-spacing: 0; text-transform: none; }
+.wl-run-context .wl-table-wrap { margin-block: 8px 12px; border: 0; border-radius: 0; background: transparent; }
+.wl-run-context table caption { padding: 8px 0; font-size: 12px; font-weight: 500; }
+.wl-run-context table :is(th, td) { padding: 6px 8px; overflow-wrap: anywhere; }
+.wl-run-context table :is(th, td):first-child { padding-left: 0; }
+.wl-run-context table :is(th, td):last-child { padding-right: 0; }
+.wl-source-inputs { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; overflow-wrap: anywhere; font-size: 11px; }
+.wl-source-inputs code { white-space: normal; }
+.wl-config-fixed { display: flex; align-items: center; gap: 8px; min-height: 28px; font-size: 12px; }
+.wl-experiment-form .wl-help { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .wl-workbench-panel .wl-answer { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .wl-investigation-metric { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--wl-border-subtle); }
 .wl-workbench-panel .wl-answer { overflow-wrap: anywhere; }

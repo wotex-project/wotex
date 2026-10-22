@@ -40,7 +40,23 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
     ~H"""
     <figure id={@id} class={["wl-chart", @compact && "wl-chart-compact"]}>
       <figcaption id={"#{@id}-caption"}>{@chart.title}</figcaption>
-      <a :if={@permalink} class="wl-chart-link" href={@permalink}>Exact chart link</a>
+      <a
+        :if={@permalink}
+        class="wl-chart-link"
+        href={@permalink}
+        aria-label="Exact chart link"
+        title="Exact chart link"
+      >
+        <img
+          :if={@compact}
+          class="wl-menu-icon"
+          src="/icons/arrow-up-right.svg"
+          width="14"
+          height="14"
+          alt=""
+        />
+        <span class={@compact && "wl-sr-only"}>Exact chart link</span>
+      </a>
       <p id={"#{@id}-description"} class={@compact && "wl-sr-only"}>
         {@chart.mark} chart. Horizontal axis: {@chart.x.title}; vertical axis: {@chart.y.title}.
         Missing values are gaps. The table below previews at most 100 points.
@@ -123,7 +139,11 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
         </ul>
       </details>
       <details class="wl-chart-table">
-        <summary>Data table alternative ({length(@rows)} of {@total} points)</summary>
+        <summary aria-label={"Data table alternative (#{length(@rows)} of #{@total} points)"}>
+          {if @compact,
+            do: "Data · #{length(@rows)} / #{@total} points",
+            else: "Data table alternative (#{length(@rows)} of #{@total} points)"}
+        </summary>
         <p :if={@total > length(@rows)}>Preview truncated; the chart retains the admitted points.</p>
         <div class="wl-table-wrap">
           <table>

@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.16.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.17.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -248,15 +248,20 @@ the useful comparison.
    show errors beside fields. Run is an explicit submission.
 3. Follow a step timeline and current state while the canvas remains visible.
    An activity badge lets the user close the drawer and return to that run.
-4. Inspect the result: observations and numerical output, assertions, failures,
-   cleanup and any inert Action proposal. Pin a supported result or comparison
+4. Inspect the outcome and compact charts first. Data, Analysis, Run details,
+   Sources and Ask open separate contextual views of the same owned Run.
+   Display charts use elapsed seconds; Data retains exact timestamps, dtype,
+   shape, values, masks and quality. Assertions, parameters and cleanup belong
+   in Run details. Pin a supported result or comparison
    without turning the whole run into a new application page.
 5. For an effectful proposal, open an exact-scope review: Thing, operation,
    input, freshness and expiry. Approve and Cancel are distinct actions. An
    expired outstanding decision requires explicit cancellation before a fresh
    smart-room run under the current host behavior.
 6. Open Sources or Run details when explanation is needed; export a report
-   explicitly. Back/close restores the selected run and previous canvas state.
+   explicitly. The Run export contains only the selected record, proposal,
+   decision and dispatch, with an explicit Run scope. Back/close restores the
+   selected result and previous canvas state.
 
 The product does not need a permanent Evidence destination. Evidence is the
 supporting record of what was observed, queried, configured and executed, with

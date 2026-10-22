@@ -19,7 +19,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     HistoryPanels,
     Insights,
     MetricCatalogue,
-    MetricComposer
+    MetricComposer,
+    RunResult
   }
 
   alias Phoenix.LiveView.JS
@@ -41,6 +42,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Provenance,
     Room,
     Run,
+    RunPresentation,
     Sessions,
     ThingProperties,
     ThingReadings
@@ -75,6 +77,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:history_range, HistoryPanels.default_range())
       |> assign(:dashboard_panels, socket.assigns.scope && socket.assigns.scope.dashboard_panels)
       |> assign(:run, nil)
+      |> assign(:run_view, :result)
+      |> assign(:run_clock, System.monotonic_time(:millisecond))
       |> assign(:charts, [])
       |> assign(:insights, nil)
       |> assign(:canvas_readings, %{})
@@ -667,22 +671,28 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, scope} ->
         before =
           {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings,
-           socket.assigns.connection_state}
+           socket.assigns.connection_state, socket.assigns.runs}
 
         socket =
           socket
           |> assign(:scope, scope)
           |> load_board()
           |> load_connections()
+          |> refresh_run_state()
           |> update(
             :canvas_readings,
             &ThingReadings.expire(&1, System.monotonic_time(:millisecond))
           )
 
         socket =
+          if socket.assigns.live_action == :run and socket.assigns.run_view == :review,
+            do: assign(socket, :run_clock, System.monotonic_time(:millisecond)),
+            else: socket
+
+        socket =
           if before ==
                {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings,
-                socket.assigns.connection_state},
+                socket.assigns.connection_state, socket.assigns.runs},
              do: socket,
              else: revise_islands(socket)
 
@@ -773,12 +783,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             <% :run -> %>
               <.tool_panel
                 id={if @run, do: "wl-run-panel-#{@run.id}", else: "wl-run-panel"}
-                title={if @run, do: "Run #{@run.id}", else: "Run unavailable"}
+                title={RunPresentation.title(@run, @run_view)}
                 menu_open={@sidebar_open}
-                return_path={experiment_path(@run)}
+                return_path={
+                  if @run && @run_view != :result,
+                    do: RunPresentation.path(@run, :result),
+                    else: experiment_path(@run)
+                }
+                return_label={if @run_view == :result, do: "Back to experiment", else: "Back to result"}
               >
                 <.run_view
                   run={@run}
+                  view={@run_view}
+                  now={@run_clock}
                   charts={@charts}
                   insights={@insights}
                   investigation={@investigation}
@@ -881,7 +898,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             <% :evidence -> %>
               <.tool_panel
                 id="wl-evidence-panel"
-                title={if @evidence_selected, do: "Run evidence", else: "Session report"}
+                title={if @evidence_selected, do: "Sources", else: "Session report"}
                 menu_open={@sidebar_open}
                 return_path={if @run, do: "/runs/#{@run.id}", else: "/"}
                 return_label="Back to run"
@@ -1072,6 +1089,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         <ul>
           <li :for={call <- experiment.public_calls}><code>{call}</code></li>
         </ul>
+        <dl class="wl-meta-list">
+          <%= for parameter <- experiment.parameters do %>
+            <dt>{parameter.label}</dt><dd>{parameter.help}</dd>
+          <% end %>
+        </dl>
       </details>
     </section>
     <section :if={@runs != []} class="wl-section">
@@ -1118,12 +1140,23 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         if(parameter.type == :select, do: "select", else: "number")
       )
       |> assign(:options, options)
+      |> assign(:fixed, parameter.type == :select and length(options) == 1)
       |> assign(:value, value)
       |> assign(:error, parameter_error(assigns.state.error, parameter))
       |> assign(:step, parameter_step(parameter.type))
 
     ~H"""
+    <div :if={@fixed} class="wl-config-fixed">
+      <span class="wl-muted">{@parameter.label}</span><span>{@value}</span>
+      <input
+        type="hidden"
+        id={"parameter-#{@experiment}-#{@parameter.name}"}
+        name={"params[#{@parameter.name}]"}
+        value={@value}
+      />
+    </div>
     <.field
+      :if={!@fixed}
       id={"parameter-#{@experiment}-#{@parameter.name}"}
       name={"params[#{@parameter.name}]"}
       label={@parameter.label}
@@ -1188,6 +1221,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp parameter_error(_, _), do: nil
 
   attr(:run, :any, required: true)
+  attr(:view, :atom, required: true)
+  attr(:now, :integer, required: true)
   attr(:charts, :list, required: true)
   attr(:insights, :any, required: true)
   attr(:investigation, :map, required: true)
@@ -1197,6 +1232,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:island_revision, :integer, required: true)
 
   defp run_view(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :chart_links,
+        Enum.with_index(assigns.charts, fn _, index ->
+          chart_path(assigns.run, assigns.insights, index)
+        end)
+      )
+
     ~H"""
     <.error_state
       :if={is_nil(@run)}
@@ -1204,44 +1248,85 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       code="unknown_run"
       message="This run is not in the current session."
     />
-    <div :if={@run}>
-      <header class="wl-page-header">
-        <div>
-          <p class="wl-eyebrow">Run {@run.id}</p><h1>{@run.experiment}</h1>
-        </div>
-        <.status_badge status={Run.state_text(@run)} kind={StatusBadge.kind_for(@run.status)} />
-      </header>
-      <.error_state
-        :if={@run.error}
-        title="Run failed"
-        code={@run.error.code}
-        message={@run.error.message}
-      />
-      <dl class="wl-summary">
-        <div :for={{label, value} <- @run.summary}>
-          <dt>{label}</dt><dd>{value}</dd>
-        </div>
+    <div :if={@run} class="wl-run-context">
+      <%= case @view do %>
+        <% :result -> %>
+          <.run_result
+            run={@run}
+            charts={@charts}
+            chart_links={@chart_links}
+            analysed={@insights != nil}
+          />
+        <% :data -> %>
+          <.tensor_summary :if={@run.tensor} summary={@run.tensor} />
+          <p :if={is_nil(@run.tensor)} class="wl-muted">No tensor was produced.</p>
+        <% :analysis -> %>
+          <.insights :if={@run.timeseries != []} run={@run} insights={@insights} />
+          <p :if={@run.timeseries == []} class="wl-muted">No series to analyse.</p>
+          <.chart
+            :for={{chart, index} <- Enum.with_index(@charts)}
+            id={"run-chart-#{index}"}
+            chart={RunPresentation.display_chart(@run, chart)}
+            permalink={Enum.at(@chart_links, index)}
+            compact
+          />
+        <% :details -> %>
+          <.run_details run={@run} />
+        <% :review -> %>
+          <.action_approval
+            :if={@run.status == :awaiting_approval}
+            run={@run}
+            remaining_ms={@run.decision["expires_at"] - @now}
+          />
+          <div :if={@run.status != :awaiting_approval} class="wl-stack">
+            <.status_badge status={Run.state_text(@run)} kind={StatusBadge.kind_for(@run.status)} />
+            <p>No pending Action.</p>
+            <.link patch={RunPresentation.path(@run, :result)} class="wl-button wl-button-secondary">Return to result</.link>
+          </div>
+        <% :ask -> %>
+          <.prompt_composer
+            disabled={@investigation.state != :idle}
+            running={@investigation.state == :running}
+            reason={prompt_reason(@investigation, true)}
+            value={@investigation.prompt}
+            disclosure={@disclosure}
+            compact
+          />
+          <.answer_block :if={@answer} answer={@answer} compact />
+      <% end %>
+    </div>
+    """
+  end
+
+  attr(:run, :any, required: true)
+
+  defp run_details(assigns) do
+    ~H"""
+    <div class="wl-stack">
+      <dl class="wl-meta-list">
+        <dt>Run</dt><dd>{@run.id}</dd>
+        <dt>State</dt><dd>{Run.state_text(@run)}</dd>
+        <dt>Started</dt><dd>
+          <time datetime={DateTime.to_iso8601(@run.started_at)}>{DateTime.to_iso8601(@run.started_at)}</time>
+        </dd>
+        <dt>Duration</dt><dd>{@run.duration_ms} ms</dd>
+        <dt>Backend</dt><dd>{@run.backend}</dd>
+        <dt>Source mode</dt><dd>{@run.source_mode}</dd>
+        <dt>Cleanup</dt><dd>{@run.cleanup.status}</dd>
       </dl>
-      <.action_approval :if={@run.status == :awaiting_approval} run={@run} />
-      <.tensor_summary :if={@run.tensor} summary={@run.tensor} />
-      <.insights :if={@run.timeseries != []} run={@run} insights={@insights} />
-      <section :if={@charts != []} class="wl-section">
-        <h2>Timeseries</h2>
-        <.chart_island
-          :for={{chart, index} <- Enum.with_index(@charts)}
-          id={Islands.id(@session_id, "run-chart-#{index}")}
-          chart={chart}
-          revision={@island_revision}
-        >
-          <:fallback>
-            <.chart
-              id={"run-chart-#{index}"}
-              chart={chart}
-              permalink={chart_path(@run, @insights, index)}
-            />
-          </:fallback>
-        </.chart_island>
-      </section>
+      <dl :if={@run.summary != []} class="wl-meta-list">
+        <%= for {label, value} <- @run.summary do %>
+          <dt>{label}</dt><dd>{value}</dd>
+        <% end %>
+      </dl>
+      <details class="wl-disclosure">
+        <summary>Parameters</summary>
+        <dl class="wl-meta-list">
+          <%= for {key, value} <- @run.params do %>
+            <dt>{key}</dt><dd>{inspect(value)}</dd>
+          <% end %>
+        </dl>
+      </details>
       <.data_table id="run-assertions" caption="Run assertions" rows={@run.assertions}>
         <:col :let={row} label="Assertion">{row.id}</:col>
         <:col :let={row} label="Status">
@@ -1249,24 +1334,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         </:col>
         <:col :let={row} label="Note">{row.note}</:col>
       </.data_table>
-      <section class="wl-panel">
-        <h2>Cleanup</h2><p>{@run.cleanup.status}: disposable room-owned resources</p>
-      </section>
-      <.link
-        :if={@run.record_digest}
-        patch={"/evidence?" <> Query.encode(%{"run" => @run.id})}
-        class="wl-evidence-link"
-      >
-        <span>Inspect run evidence</span><code>{@run.record_digest}</code>
-      </.link>
-      <.prompt_composer
-        disabled={@investigation.state != :idle}
-        running={@investigation.state == :running}
-        reason={prompt_reason(@investigation, true)}
-        value={@investigation.prompt}
-        disclosure={@disclosure}
-      />
-      <.answer_block :if={@answer} answer={@answer} />
+      <div class="wl-actions">
+        <.link
+          patch={"/evidence?" <> Query.encode(%{"run" => @run.id})}
+          class="wl-button wl-button-secondary"
+        >Sources</.link>
+        <a href={RunPresentation.report_path(@run)} download class="wl-button wl-button-secondary">Export report</a>
+      </div>
     </div>
     """
   end
@@ -1585,7 +1659,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       title="No evidence yet"
       description="Start a room; the report remains scoped to this signed session."
     />
-    <div :if={@snapshot} class="wl-stack">
+    <.run_sources :if={@selected && @subject} run={@subject} />
+    <div :if={@snapshot && !@selected} class="wl-stack">
       <h3 :if={@subject}>{experiment_label(@subject.experiment)} · {@subject.id}</h3>
       <div class="wl-actions">
         <.evidence_link href="/evidence/report.json" label="Export session report" download={true} />
@@ -1599,7 +1674,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         </:col><:col :let={run} label="Digest"><code>{run.record_digest || "missing"}</code></:col>
       </.data_table>
       <.tensor_summary :if={@subject && @subject.tensor} summary={@subject.tensor} />
-      <section :if={!@selected} class="wl-panel">
+      <section class="wl-panel">
         <h2>Formal model evidence</h2><p>
           Results apply only to the pinned finite model and never authorize an Action.
         </p><form id="formal-verify" phx-submit="verify" class="wl-filter-bar">
@@ -2555,20 +2630,26 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp load_action(socket, :run, %{"id" => id} = params) do
     socket =
+      if socket.assigns[:run_id] != id,
+        do: assign(socket, answer: nil, investigation_results: []),
+        else: socket
+
+    socket =
       socket
       |> assign(:run_id, id)
       |> refresh()
       |> reload_run()
 
-    case params do
-      %{} when map_size(params) == 1 ->
-        socket
+    case RunPresentation.view(params) do
+      {:ok, view} ->
+        socket = assign(socket, run_view: view, run_clock: System.monotonic_time(:millisecond))
 
-      %{"id" => ^id, "analysis" => analysis} when map_size(params) == 2 ->
-        load_analysis(socket, analysis)
+        if Map.has_key?(params, "analysis"),
+          do: load_analysis(socket, params["analysis"]),
+          else: socket
 
-      _ ->
-        error_flash(socket, Error.new(:invalid_analysis_query, :analytics, "run link is malformed"))
+      {:error, error} ->
+        error_flash(assign(socket, :run_view, :result), error)
     end
   end
 
@@ -2698,6 +2779,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp chart_path(_, insights, index),
     do: Insights.path(insights) <> "#run-chart-#{index}"
+
+  defp refresh_run_state(%{assigns: %{live_action: action, scope: %{room: room}}} = socket)
+       when action in [:run, :evidence] and is_pid(room) do
+    socket
+    |> assign(:runs, safe(fn -> Room.runs(room) end, []))
+    |> reload_run()
+  end
+
+  defp refresh_run_state(%{assigns: %{live_action: action, scope: %{room: nil}}} = socket)
+       when action in [:run, :evidence],
+       do: empty_room(socket)
+
+  defp refresh_run_state(socket), do: socket
 
   defp reload_run(%{assigns: %{run_id: id, scope: %{room: room}}} = socket)
        when is_binary(id) and is_pid(room) do

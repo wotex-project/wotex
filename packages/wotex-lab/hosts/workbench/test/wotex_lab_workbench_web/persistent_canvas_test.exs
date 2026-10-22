@@ -72,7 +72,7 @@ defmodule WotexLabWorkbenchWeb.PersistentCanvasTest do
 
     render_click(element(view, "a[href='/evidence?run=run-1']"))
     assert_patch(view, "/evidence?run=run-1")
-    assert has_element?(view, "#wl-evidence-panel", "Run evidence")
+    assert has_element?(view, "#wl-evidence-panel", "Sources")
     refute has_element?(view, "#formal-verify")
     render_click(element(view, "a[aria-label='Back to run']"))
     assert_patch(view, "/runs/run-1")
@@ -150,7 +150,7 @@ defmodule WotexLabWorkbenchWeb.PersistentCanvasTest do
 
     table =
       view
-      |> element("#evidence-runs")
+      |> element("#wl-run-sources")
       |> render()
 
     assert table =~ "run-1"

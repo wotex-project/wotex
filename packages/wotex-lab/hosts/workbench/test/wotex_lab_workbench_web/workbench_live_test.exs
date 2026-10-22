@@ -66,12 +66,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert_patch(view, "/runs/run-1")
     run_view = view
-    assert html =~ "Tensor summary"
-    assert html =~ "setTarget 22.000 Cel (inert)"
-    assert html =~ "Run assertions"
+    assert has_element?(run_view, "#wl-run-result", "22.000")
+    refute html =~ "Tensor summary"
+    assert has_element?(run_view, "a[href='/runs/run-1?view=data']", "Data")
+    assert has_element?(run_view, "a[href='/runs/run-1?view=details']", "Run details")
     refute html =~ "Approve simulated Action"
 
-    assert render(run_view) =~ "Ask about this run"
+    assert has_element?(run_view, "a[href='/runs/run-1?view=ask']", "Ask")
   end
 
   test "a smart-room run needs the separate exact approval form", %{conn: conn} do
@@ -92,15 +93,18 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert_patch(view, "/runs/run-1")
     run_view = view
+    assert html =~ "Review Action"
+    html = render_click(element(run_view, "a[href='/runs/run-1?view=review']"))
     assert html =~ "Approve simulated Action"
     assert html =~ "Running the experiment did not dispatch it"
     assert html =~ "Proposal digest"
 
     html = render_submit(element(run_view, "form[phx-submit='approve']"))
     assert html =~ "dispatched"
-    assert html =~ "target read back"
-
     refute has_element?(run_view, "form[phx-submit='approve']")
+    render_click(element(run_view, "a", "Return to result"))
+    html = render_click(element(run_view, "a[href='/runs/run-1?view=details']"))
+    assert html =~ "target read back"
   end
 
   test "analysis is explicit, scope-owned and cannot mutate or replay its run", %{conn: conn} do
@@ -116,6 +120,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert_patch(view, "/runs/run-1")
     run_view = view
+    render_click(element(run_view, "a[href='/runs/run-1?view=analysis']"))
     refute has_element?(run_view, "#run-insights")
     before = Map.fetch!(evidence_report(conn), "runs")
 
@@ -313,7 +318,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     {:ok, view, _} = live(recycle(conn), "/experiments")
     render_click(element(view, "button[phx-click='start_room']"))
 
-    html =
+    _ =
       render_submit(element(view, "#run-thermal"), %{
         "experiment_id" => "thermal",
         "params" => %{"backend" => "binary"}
@@ -321,6 +326,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert_patch(view, "/runs/run-1")
     run_view = view
+    html = render_click(element(run_view, "a[href='/runs/run-1?view=ask']"))
     assert html =~ "Trusted-local only"
     assert html =~ "Data leaves this host"
     assert has_element?(run_view, "#investigation-disclosure li", "node name, operating system")
@@ -329,7 +335,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     _ = render_submit(element(run_view, "#investigation"), %{"prompt" => "Explain this run"})
     html = render_until(run_view, "Observed facts")
     assert html =~ "Observed facts"
-    assert html =~ "Metric nx_duration_seconds increased (run summary sha256:"
+    assert html =~ ~r/Metric nx_duration_seconds increased \(run summary \[\d+\]\)/
     assert html =~ "Backend contention might explain the increase."
     assert html =~ "BeamLens snapshot snapshot-1"
     assert html =~ "Recorded evidence sha256:"
@@ -355,6 +361,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert_patch(view, "/runs/run-1")
     run_view = view
+    render_click(element(run_view, "a[href='/runs/run-1?view=ask']"))
     html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
     assert html =~ "Cancel investigation"
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
@@ -380,6 +387,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
     assert_patch(view, "/runs/run-1")
     run_view = view
+    render_click(element(run_view, "a[href='/runs/run-1?view=ask']"))
     _ = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
     assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
 
@@ -505,7 +513,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert_patch(view, "/runs/run-1")
     assert html =~ "window_anomaly"
     assert html =~ "simulated temperature (Cel)"
-    assert html =~ "Persistence prediction"
+    assert html =~ "Prediction"
     assert html =~ "Data table alternative"
 
     {:ok, metrics, html} = live(recycle(conn), "/metrics")
