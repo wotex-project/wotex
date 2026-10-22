@@ -18,8 +18,8 @@ test("the real client event builder admits Property controls and rejects extra a
   const server = await createServer({configFile:false,server:{middlewareMode:true,watch:null}})
   try {
     const {buildEvent} = await server.ssrLoadModule(new URL("./protocol.ts",import.meta.url).pathname)
-    const snapshot: FullSnapshot = {schema:"wotex-lab-island/v1",component:"canvas",instance_id:"room--canvas",generation:"1",revision:"7",payload_digest:"sha256:"+"a".repeat(64),capabilities:["read","observe","pause","statistics","sources","inspect_connection"],payload:valid()}
-    for(const event of ["read","observe","pause","statistics","sources","inspect_connection"]) {
+    const snapshot: FullSnapshot = {schema:"wotex-lab-island/v1",component:"canvas",instance_id:"room--canvas",generation:"1",revision:"7",payload_digest:"sha256:"+"a".repeat(64),capabilities:["read","observe","pause","statistics","sources","inspect_connection","pin_open_run"],payload:valid()}
+    for(const event of ["read","observe","pause","statistics","sources","inspect_connection","pin_open_run"]) {
       assert.deepEqual(buildEvent(snapshot,event,{id:"thermostat"}),{
         schema:"wotex-lab-island-event/v1",component:"canvas",instance_id:"room--canvas",client_revision:"7",event,payload:{id:"thermostat"},
       })
@@ -53,6 +53,17 @@ test("admitted Thing graphs include baseline unit text and typed connections", (
   assert.doesNotThrow(() => validateCanvas({...valid(),selection:"thermostat"}))
   assert.throws(() => validateCanvas({...valid(),selection:"other-session"}))
   assert.doesNotThrow(() => validateCanvas({ label: "Empty", nodes: [], edges: [] }))
+})
+
+test("Run captures retain their mark, outcome and exact bounded series as a separate pin kind",()=>{
+  const payload=():Record<string,JsonValue>=>({...valid(),pins:[{kind:"run",id:"pin-run-a",title:"Captured result",run_id:"run-1",record_digest:"sha256:"+"a".repeat(64),chart_index:0,source_mode:"fixture",state:"Captured · completed",started_at:"2026-10-22T00:00:00.123456Z",unit:"°C",mark:"area",outcome:{label:"Proposed target",value:"22.000",unit:"°C",note:"Inert proposal"},series:[{name:"temperature",points:[[0,-4],[1,null],[2,8]]}],x:0,y:0,width:360,height:340}]})
+  assert.doesNotThrow(()=>validateCanvas(payload()))
+  for(const [field,value] of [["chart_index",8],["chart_index",1.5],["started_at","2026-02-31T00:00:00Z"],["started_at","2026-10-22T00:00:00+01:00"],["mark","script"],["record_digest","other"],["outcome",{value:2}],["metric","nx_batch_rows"],["series",[{name:"temperature",points:Array.from({length:513},(_,i)=>[i,i])}]]] as [string,JsonValue][]){
+    const p=payload();(p.pins as Record<string,JsonValue>[])[0][field]=value
+    assert.throws(()=>validateCanvas(p))
+  }
+  const full=payload();(full.pins as Record<string,JsonValue>[])[0].series=[{name:"temperature",points:Array.from({length:512},(_,i)=>[i,-i])}]
+  assert.doesNotThrow(()=>validateCanvas(full))
 })
 
 test("node operations admit only distinct closed capabilities and keep legacy nodes valid", () => {

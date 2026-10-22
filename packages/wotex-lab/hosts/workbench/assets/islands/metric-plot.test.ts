@@ -26,3 +26,15 @@ test("all-missing data stays unavailable and leading/trailing gaps invent no end
   assert.deepEqual(one.series[0].bridges,[])
   assert.ok(one.yTicks.every(t=>Number.isFinite(t.y)))
 })
+
+test("captured area marks use a zero baseline while preserving negative values and gaps",()=>{
+  const series=[{name:"comparison",points:[[1,-4],[2,null],[3,-2]] as [number,number|null][]}]
+  const before=JSON.stringify(series)
+  const area=metricGeometry(series,"area")
+  assert.equal(area.yTicks[0].value,-4)
+  assert.equal(area.yTicks[2].value,0)
+  assert.equal(area.series[0].areas.length,2)
+  assert.equal(area.series[0].dots.length,2)
+  assert.equal(JSON.stringify(series),before)
+  assert.equal(metricGeometry([{name:"empty",points:[[0,null]]}],"area").available,false)
+})

@@ -4,13 +4,14 @@ defmodule WotexLabWorkbenchWeb.Components.RunResult do
   use WotexLabWorkbenchWeb, :html
 
   alias Wotex.Lab.Evidence.Record
-  alias WotexLabWorkbench.{Run, RunPresentation}
+  alias WotexLabWorkbench.{Run, RunPin, RunPresentation}
   alias WotexLabWorkbenchWeb.Components.StatusBadge
 
   attr(:run, :any, required: true)
   attr(:charts, :list, required: true)
   attr(:chart_links, :list, required: true)
   attr(:analysed, :boolean, default: false)
+  attr(:query, :map, default: nil)
 
   @doc "Renders the outcome first; opening a contextual view executes no operation."
   @spec run_result(map()) :: Phoenix.LiveView.Rendered.t()
@@ -44,6 +45,13 @@ defmodule WotexLabWorkbenchWeb.Components.RunResult do
           <dt>{label}</dt><dd>{value || "—"}</dd>
         </div>
       </dl>
+      <.run_pin_control
+        :if={@result_charts == [] and @charts != []}
+        run={@run}
+        chart={hd(@charts)}
+        index={0}
+        query={@query}
+      />
       <div :if={@run.status == :awaiting_approval} class="wl-actions">
         <.link patch={RunPresentation.path(@run, :review)} class="wl-button wl-button-primary">Review Action</.link>
         <button
@@ -63,6 +71,7 @@ defmodule WotexLabWorkbenchWeb.Components.RunResult do
             permalink={Enum.at(@chart_links, index)}
             compact
           />
+          <.run_pin_control :if={position == 0} run={@run} chart={chart} index={index} query={@query} />
           <details :if={position > 0} class="wl-disclosure">
             <summary>
               {if @run.experiment == "window_anomaly", do: "Window chart", else: chart.title}
@@ -73,6 +82,7 @@ defmodule WotexLabWorkbenchWeb.Components.RunResult do
               permalink={Enum.at(@chart_links, index)}
               compact
             />
+            <.run_pin_control run={@run} chart={chart} index={index} query={@query} />
           </details>
         <% end %>
       </div>
@@ -84,6 +94,30 @@ defmodule WotexLabWorkbenchWeb.Components.RunResult do
         <.link patch={RunPresentation.path(@run, :ask)}>Ask</.link>
         <a href={RunPresentation.report_path(@run)} download>Export report</a>
       </nav>
+    </div>
+    """
+  end
+
+  attr(:run, :any, required: true)
+  attr(:chart, :any, required: true)
+  attr(:index, :integer, required: true)
+  attr(:query, :map, default: nil)
+
+  @doc "Offers a closed pin request for an immutable chart and its recorded basis."
+  @spec run_pin_control(map()) :: Phoenix.LiveView.Rendered.t()
+  def run_pin_control(assigns) do
+    ~H"""
+    <div class="wl-actions">
+      <button
+        type="button"
+        class="wl-button wl-button-secondary"
+        phx-click="pin_run_chart"
+        phx-value-run_id={@run.id}
+        phx-value-index={@index}
+        phx-value-record_digest={@run.record_digest}
+        phx-value-query={Jason.encode!(@query)}
+        disabled={!RunPin.available?(@run, @chart)}
+      >Pin result</button>
     </div>
     """
   end

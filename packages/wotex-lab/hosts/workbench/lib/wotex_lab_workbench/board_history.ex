@@ -1,6 +1,6 @@
 defmodule WotexLabWorkbench.BoardHistory do
   @moduledoc """
-  Refreshes at most sixteen existing pin definitions within a shared 1.5-second
+  Refreshes at most sixteen existing metric pins within a shared 1.5-second
   budget. Each group retains the room binding and closed history ranges. The
   caller owns task startup, cancellation and session revalidation before use.
   """
@@ -12,6 +12,7 @@ defmodule WotexLabWorkbench.BoardHistory do
   def load(binding, pins, rotation \\ 0) do
     groups =
       pins
+      |> Enum.reject(&(Map.get(&1, :kind) == :run))
       |> Enum.take(16)
       |> Enum.group_by(& &1.range)
       |> Enum.sort()

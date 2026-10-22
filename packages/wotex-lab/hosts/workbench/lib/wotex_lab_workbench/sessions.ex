@@ -162,7 +162,7 @@ defmodule WotexLabWorkbench.Sessions do
     with {:ok, session, state} <- live(state, token),
          true <- session.room == room,
          :ok <- board_room(session, operation),
-         {:ok, board} <- Board.change(session.board, operation) do
+         {:ok, board} <- change_board_value(session, operation) do
       session = %{session | board: board}
       {:reply, {:ok, board}, put_in(state, [:sessions, token], session)}
     else
@@ -315,7 +315,33 @@ defmodule WotexLabWorkbench.Sessions do
   defp live(state, _),
     do: {:error, Error.new(:invalid_token, :session, "session token is malformed"), state}
 
-  defp board_room(%{room: room}, {operation, _}) when operation in [:pin, :refresh] do
+  defp change_board_value(session, {:pin_run, id, digest, index, query})
+       when is_binary(id) and is_binary(digest) and is_pid(session.room) do
+    with {:ok, run} <- fetch_pin_run(session.room, id),
+         true <- run.record_digest == digest do
+      Board.change(session.board, {:pin_run, run, index, query})
+    else
+      _ ->
+        {:error,
+         Error.new(:stale_run_pin, :session, "Run result changed; reopen it before pinning")}
+    end
+  end
+
+  defp change_board_value(_, operation)
+       when is_tuple(operation) and tuple_size(operation) > 0 and elem(operation, 0) == :pin_run,
+       do: {:error, Error.new(:invalid_board_operation, :session, "Run pin request is malformed")}
+
+  defp change_board_value(session, operation), do: Board.change(session.board, operation)
+
+  defp fetch_pin_run(room, id) do
+    Room.fetch_run(room, id)
+  catch
+    :exit, _ -> {:error, :unavailable}
+  end
+
+  defp board_room(%{room: room}, operation)
+       when is_tuple(operation) and tuple_size(operation) > 0 and
+              elem(operation, 0) in [:pin, :refresh, :pin_run] do
     if is_pid(room) and Process.alive?(room),
       do: :ok,
       else: {:error, Error.new(:no_room, :session, "Room is unavailable")}

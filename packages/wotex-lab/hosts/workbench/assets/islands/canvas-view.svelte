@@ -3,6 +3,7 @@ import { SvelteFlow, MarkerType, useSvelteFlow, type Node, type Edge, type Conne
 import { onMount, tick, untrack } from "svelte"
 import CanvasThing from "./canvas-node.svelte"
 import CanvasMetric from "./canvas-metric.svelte"
+import CanvasRun from "./canvas-run.svelte"
 import type { CanvasNode, CanvasEdge, CanvasPin, CanvasViewport } from "./canvas-model.js"
 import type { IslandTransport, JsonValue } from "./types.js"
 import pointer from "./canvas-assets/mouse-pointer-2.svg"
@@ -16,7 +17,7 @@ import connectionsIcon from "./canvas-assets/waypoints.svg"
 
 let { payload, transport, connected }: { payload: Record<string, JsonValue>; transport: IslandTransport; connected: boolean } = $props()
 const flow = useSvelteFlow()
-const nodeTypes = { thing: CanvasThing, metric: CanvasMetric }
+const nodeTypes = { thing: CanvasThing, metric: CanvasMetric, run_result: CanvasRun }
 let root: HTMLDivElement
 let firstAction = $state<HTMLButtonElement>()
 let nodes = $state.raw<Node[]>([])
@@ -36,6 +37,7 @@ let lastSelection = ""
 let saved = $state(false)
 const menuNode = $derived(nodes.find(n=>n.id===menu?.id))
 const pinMenu = $derived(menuNode?.type==="metric")
+const runPinMenu = $derived(menuNode?.type==="run_result")
 const menuOperations = $derived(menuNode?.type==="thing" ? (menuNode.data as CanvasNode).operations ?? [] : [])
 
 async function openMenu(kind: "node" | "edge", id: string, event: MouseEvent | KeyboardEvent) {
@@ -94,12 +96,12 @@ $effect(() => {
     ariaLabel: [node.title,`${node.value} ${node.unit}`.trim(),node.status].filter(Boolean).join(", "),
     data: { ...node, open, connectable: connected && node.kind !== "entry" },
   })), ...pins.map(pin=>({
-    ...previous.get(pin.id), id:pin.id,type:"metric",
+    ...previous.get(pin.id), id:pin.id,type:pin.kind==="run"?"run_result":"metric",
     position:restore?{x:pin.x,y:pin.y}:previous.get(pin.id)?.position ?? {x:pin.x,y:pin.y},
     selected:select?pin.id===selection:previous.get(pin.id)?.selected ?? pin.id===selection,
     width:restore?pin.width:previous.get(pin.id)?.width ?? pin.width,
     height:restore?pin.height:previous.get(pin.id)?.height ?? pin.height,
-    ariaLabel:`${pin.title}, ${pin.source}, ${pin.state}`,
+    ariaLabel:`${pin.title}, ${pin.kind==="run"?pin.run_id:pin.source}, ${pin.state}`,
     data:{...pin,open,changed:()=>{saved=false}},
   }))]
   if(restore && Array.isArray(payload.view) && payload.view[0]) viewport=payload.view[0] as unknown as CanvasViewport
@@ -129,20 +131,20 @@ async function inspect() {
   await send(kind === "edge" ? "inspect_connection" : "inspect", id)
 }
 
-async function send(event: "inspect" | "inspect_connection" | "open" | "read" | "observe" | "pause" | "statistics" | "sources" | "pin_refresh" | "pin_pause" | "pin_resume" | "pin_remove", id: string) {
+async function send(event: "inspect" | "inspect_connection" | "open" | "read" | "observe" | "pause" | "statistics" | "sources" | "pin_refresh" | "pin_pause" | "pin_resume" | "pin_remove" | "pin_open_run", id: string) {
   if (!connected) return
   menu = null
   error = ""
   try {
     const reply = await transport.push(event, { id })
     if (!reply || Array.isArray(reply) || typeof reply !== "object" || reply.status !== "accepted")
-      error = "Selection changed. Open the Thing again."
+      error = "Selection changed. Reopen it."
   } catch { error = "Reconnect to continue." }
 }
 
 function currentLayout() {
   return {
-    positions:nodes.map(n=>({id:n.id,...n.position,...(n.type==="metric"?{width:n.width??360,height:n.height??280}:{})})),
+    positions:nodes.map(n=>({id:n.id,...n.position,...(["metric","run_result"].includes(n.type??"")?{width:n.width??360,height:n.height??280}:{})})),
     viewport:{x:viewport.x,y:viewport.y,zoom:viewport.zoom},
   }
 }
@@ -212,7 +214,7 @@ function closeMenu() {
     <button type="button" aria-label="Fit connected Things" onclick={() => { void flow.fitView({ padding: 0.2, maxZoom: 1 }) }}><img src={fit} alt="" /></button>
   </nav>
   {#if menu}
-    <div class="wl-canvas-context" role="menu" tabindex="-1" aria-label={menu.kind === "edge" ? "Connection actions" : "Thing actions"} style:left={`${menu.x}px`} style:top={`${menu.y}px`}
+    <div class="wl-canvas-context" role="menu" tabindex="-1" aria-label={menu.kind === "edge" ? "Connection actions" : runPinMenu ? "Run result actions" : pinMenu ? "Metric actions" : "Thing actions"} style:left={`${menu.x}px`} style:top={`${menu.y}px`}
       onkeydown={(event) => {
         if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeMenu(); return }
         if (event.key === "Tab") { menu = null; return }
@@ -224,8 +226,11 @@ function closeMenu() {
           items[next]?.focus()
         }
       }}>
-      <button bind:this={firstAction} type="button" role="menuitem" disabled={!connected} onclick={() => { void inspect() }}>{menu.kind === "edge" ? "Configure connection" : pinMenu ? "Rename / sources" : menu.id === "process-smart-room" ? "Configure" : "Inspect"}</button>
-      {#if pinMenu}
+      <button bind:this={firstAction} type="button" role="menuitem" disabled={!connected} onclick={() => { void inspect() }}>{menu.kind === "edge" ? "Configure connection" : pinMenu || runPinMenu ? "Rename / sources" : menu.id === "process-smart-room" ? "Configure" : "Inspect"}</button>
+      {#if runPinMenu}
+        <button type="button" role="menuitem" disabled={!connected || menuNode?.data.outcome === null} onclick={()=>{if(menu)void send("pin_open_run",menu.id);menu=null}}>Open run</button>
+        <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send("pin_remove",menu.id);menu=null}}>Remove</button>
+      {:else if pinMenu}
         <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send("pin_refresh",menu.id);menu=null}}>Refresh</button>
         <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send(menuNode?.data.auto_refresh?"pin_pause":"pin_resume",menu.id);menu=null}}>{menuNode?.data.auto_refresh?"Pause":"Resume"}</button>
         <button type="button" role="menuitem" disabled={!connected} onclick={()=>{if(menu)void send("pin_remove",menu.id);menu=null}}>Remove</button>

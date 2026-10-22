@@ -32,7 +32,7 @@ defmodule WotexLabWorkbenchWeb.Islands do
       generation="0"
       revision={to_string(@revision)}
       capabilities={
-        ~w(inspect inspect_connection propose_connection open read observe pause statistics sources save_layout open_documentation pin_refresh pin_pause pin_resume pin_remove)
+        ~w(inspect inspect_connection propose_connection open read observe pause statistics sources save_layout open_documentation pin_refresh pin_pause pin_resume pin_remove pin_open_run)
       }
     >
       <:fallback>{render_slot(@fallback)}</:fallback>

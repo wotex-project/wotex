@@ -20,6 +20,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Insights,
     MetricCatalogue,
     MetricComposer,
+    RunPin,
     RunResult
   }
 
@@ -31,7 +32,6 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Board,
     BoardHistory,
     Canvas,
-    Chart,
     Connections,
     Experiments,
     Formal,
@@ -42,6 +42,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Provenance,
     Room,
     Run,
+    RunPin,
     RunPresentation,
     Sessions,
     ThingProperties,
@@ -421,6 +422,59 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         reject_event(socket, error)
     end
   end
+
+  def handle_event("pin_run_chart", %{"value" => ""} = params, socket) when map_size(params) == 5,
+    do: handle_event("pin_run_chart", Map.delete(params, "value"), socket)
+
+  def handle_event(
+        "pin_run_chart",
+        %{"run_id" => id, "index" => index, "record_digest" => digest, "query" => encoded} = params,
+        socket
+      )
+      when map_size(params) == 4 and is_binary(index) and is_binary(encoded) and
+             byte_size(encoded) <= 1024 do
+    with true <- socket.assigns.run_id == id and Regex.match?(~r/\A[0-7]\z/, index),
+         {:ok, query} <- Jason.decode(encoded),
+         {:ok, socket} <-
+           change_board(socket, {:pin_run, id, digest, String.to_integer(index), query}) do
+      socket =
+        socket
+        |> clear_flash(:error)
+        |> assign(:canvas_selection, nil)
+        |> push_patch(to: "/")
+
+      {:noreply, socket}
+    else
+      {:error, %Error{} = error} ->
+        reject_event(socket, error)
+
+      _ ->
+        reject_event(
+          socket,
+          Error.new(:unavailable_run_pin, :workbench, "Reopen the Run chart before pinning")
+        )
+    end
+  end
+
+  def handle_event("pin_run_chart", _, socket),
+    do:
+      reject_event(
+        socket,
+        Error.new(:unavailable_run_pin, :workbench, "Run pin request is malformed")
+      )
+
+  def handle_event("remove_pin", %{"value" => ""} = params, socket) when map_size(params) == 2,
+    do: handle_event("remove_pin", Map.delete(params, "value"), socket)
+
+  def handle_event("remove_pin", %{"pin_id" => id} = params, socket) when map_size(params) == 1 do
+    case pin_action(socket, "pin_remove", id) do
+      {:ok, socket} -> {:noreply, socket}
+      {:error, error} -> reject_event(socket, error)
+    end
+  end
+
+  def handle_event("remove_pin", _, socket),
+    do: reject_event(socket, Error.new(:invalid_pin, :workbench, "Pin request is malformed"))
 
   def handle_event("rename_pin", %{"pin_id" => id, "title" => title}, socket) do
     case change_board(socket, {:rename, id, title}) do
@@ -841,7 +895,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                 />
               <% end %>
             <% :metrics -> %>
-              <.tool_panel id="wl-metrics-panel" title="Metrics" menu_open={@sidebar_open}>
+              <.tool_panel
+                id="wl-metrics-panel"
+                title={if run_pin?(@board, @selected_pin), do: "Pinned result", else: "Metrics"}
+                menu_open={@sidebar_open}
+              >
                 <div :if={is_nil(@selected_pin)} class="wl-stack">
                   <.prompt_composer
                     title="Ask"
@@ -875,12 +933,16 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                   />
                 </details>
                 <.metric_composer
-                  :if={@selected_pin}
+                  :if={@selected_pin && !run_pin?(@board, @selected_pin)}
                   room={@scope.room}
                   draft={@metric_draft}
                   result={@metric_result}
                   pin={selected_pin(@board, @selected_pin)}
                   selected_pin={@selected_pin}
+                />
+                <.run_pin
+                  :if={run_pin?(@board, @selected_pin)}
+                  pin={selected_pin(@board, @selected_pin)}
                 />
                 <details :if={is_nil(@selected_pin)} class="wl-disclosure">
                   <summary>Session measurements</summary>
@@ -971,6 +1033,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <li :for={node <- @props["nodes"]}>
             <button type="button" phx-click="inspect_thing" phx-value-id={node["id"]}>{node["title"]}</button>
             <span>{node["value"]} {node["unit"]} · {node["status"]}</span>
+          </li>
+        </ul>
+        <ul :if={@props["pins"] != []} aria-label="Workbench pins">
+          <li :for={pin <- @props["pins"]}>
+            <button type="button" phx-click="inspect_thing" phx-value-id={pin["id"]}>{pin["title"]}</button>
+            <span>{pin["state"]}</span>
           </li>
         </ul>
       </:fallback>
@@ -1256,6 +1324,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             charts={@charts}
             chart_links={@chart_links}
             analysed={@insights != nil}
+            query={RunPin.query(@insights)}
           />
         <% :data -> %>
           <.tensor_summary :if={@run.tensor} summary={@run.tensor} />
@@ -1263,13 +1332,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         <% :analysis -> %>
           <.insights :if={@run.timeseries != []} run={@run} insights={@insights} />
           <p :if={@run.timeseries == []} class="wl-muted">No series to analyse.</p>
-          <.chart
-            :for={{chart, index} <- Enum.with_index(@charts)}
-            id={"run-chart-#{index}"}
-            chart={RunPresentation.display_chart(@run, chart)}
-            permalink={Enum.at(@chart_links, index)}
-            compact
-          />
+          <div :for={{chart, index} <- Enum.with_index(@charts)} class="wl-stack">
+            <.chart
+              id={"run-chart-#{index}"}
+              chart={RunPresentation.display_chart(@run, chart)}
+              permalink={Enum.at(@chart_links, index)}
+              compact
+            />
+            <.run_pin_control run={@run} chart={chart} index={index} query={RunPin.query(@insights)} />
+          </div>
         <% :details -> %>
           <.run_details run={@run} />
         <% :review -> %>
@@ -2236,7 +2307,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   defp acknowledge_island_event(socket, "canvas", %{"event" => event, "payload" => %{"id" => id}})
-       when event in ~w(pin_refresh pin_pause pin_resume pin_remove) do
+       when event in ~w(pin_refresh pin_pause pin_resume pin_remove pin_open_run) do
     case pin_action(socket, event, id) do
       {:ok, socket} -> {:reply, %{"status" => "accepted"}, socket}
       {:error, error} -> rejected_island(socket, error)
@@ -2454,6 +2525,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
+  defp run_pin?(board, id), do: match?(%{kind: :run}, selected_pin(board, id))
+
   defp metric_draft(params) when is_map(params) do
     keys = Map.keys(params) -- ~w(_target _unused_metric _unused_range)
     target? = not Map.has_key?(params, "_target") or params["_target"] in [["metric"], ["range"]]
@@ -2526,33 +2599,50 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     with {:ok, scope} <- Scope.verify(socket),
          {:ok, board} <- Sessions.board(scope.token),
          {:ok, pin} <- Board.fetch(board, id) do
-      socket = assign(socket, scope: scope, board: board)
+      socket
+      |> assign(scope: scope, board: board)
+      |> apply_pin_action(pin, event)
+    end
+  end
 
-      case event do
-        "pin_remove" ->
-          with {:ok, socket} <- change_board(socket, {:remove, id}) do
-            socket = update(socket, :active_pins, &MapSet.delete(&1, id))
+  defp apply_pin_action(socket, %{kind: :run, error: nil} = pin, "pin_open_run"),
+    do: {:ok, push_patch(socket, to: pin.path)}
 
-            {:ok,
-             if(socket.assigns.selected_pin == id, do: push_patch(socket, to: "/"), else: socket)}
-          end
+  defp apply_pin_action(_, %{kind: :run}, event) when event != "pin_remove",
+    do:
+      {:error,
+       Error.new(:invalid_board_operation, :workbench, "Captured Run pins cannot refresh or resume")}
 
-        "pin_pause" ->
-          with {:ok, socket} <- change_board(socket, {:pause, id, true}) do
-            {:ok, update(socket, :active_pins, &MapSet.delete(&1, id))}
-          end
+  defp apply_pin_action(_, _, "pin_open_run"),
+    do: {:error, Error.new(:invalid_board_operation, :workbench, "Choose a captured Run pin")}
 
-        "pin_resume" ->
-          with {:ok, scope} <- Scope.admit(socket, :query),
-               {:ok, socket} <- change_board(assign(socket, :scope, scope), {:pause, id, false}) do
-            socket = update(socket, :active_pins, &MapSet.put(&1, id))
-            {:ok, start_pin_refresh(socket, [pin])}
-          end
+  defp apply_pin_action(socket, pin, event) do
+    id = pin.id
 
-        "pin_refresh" ->
-          with {:ok, scope} <- Scope.admit(socket, :query),
-               do: {:ok, start_pin_refresh(assign(socket, :scope, scope), [pin])}
-      end
+    case event do
+      "pin_remove" ->
+        with {:ok, socket} <- change_board(socket, {:remove, id}) do
+          socket = update(socket, :active_pins, &MapSet.delete(&1, id))
+
+          {:ok,
+           if(socket.assigns.selected_pin == id, do: push_patch(socket, to: "/"), else: socket)}
+        end
+
+      "pin_pause" ->
+        with {:ok, socket} <- change_board(socket, {:pause, id, true}) do
+          {:ok, update(socket, :active_pins, &MapSet.delete(&1, id))}
+        end
+
+      "pin_resume" ->
+        with {:ok, scope} <- Scope.admit(socket, :query),
+             {:ok, socket} <- change_board(assign(socket, :scope, scope), {:pause, id, false}) do
+          socket = update(socket, :active_pins, &MapSet.put(&1, id))
+          {:ok, start_pin_refresh(socket, [pin])}
+        end
+
+      "pin_refresh" ->
+        with {:ok, scope} <- Scope.admit(socket, :query),
+             do: {:ok, start_pin_refresh(assign(socket, :scope, scope), [pin])}
     end
   end
 
@@ -2802,7 +2892,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             assign(socket, run: run, charts: insights.charts)
 
           _ ->
-            assign(socket, run: run, charts: charts(run), insights: nil)
+            assign(socket, run: run, charts: RunPresentation.charts(run), insights: nil)
         end
 
       {:error, _} ->
@@ -2811,20 +2901,6 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   defp reload_run(socket), do: assign(socket, run: nil, charts: [])
-
-  defp charts(%Run{} = run) do
-    Enum.flat_map(run.timeseries, fn series ->
-      case Chart.new(
-             title: series.name,
-             x: %{field: "time", title: "event time"},
-             y: %{field: "value", title: series.unit},
-             series: [%{name: series.name, points: series.points}]
-           ) do
-        {:ok, chart} -> [chart]
-        {:error, _} -> []
-      end
-    end)
-  end
 
   defp canvas_ids(socket) do
     props =

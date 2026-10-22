@@ -1,7 +1,42 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.22.0. Contract: accepted. Implementation status:
+Specification version: 0.23.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.23 adds captured Run result pins alongside the existing room-history
+pins. Explicit Pin supplies the owned Run ID, exact record digest, chart index
+0–7 and an optional closed Analysis query. The session resolves the current
+Run and refuses stale digests, malformed queries and unavailable charts. The
+capture retains the decoded outcome, original record, normalized query and
+chart mark. Charts keep their admitted values and null gaps; only displayed
+time uses the original Run's elapsed-seconds origin. Pinning recomputes bounded
+presentation from the recorded Run and starts no Run, transport operation,
+history query or provider request.
+
+Run pins share the sixteen-slot board ceiling with history pins. Each capture
+is at most 64 KiB and contains at most eight uniquely named series and 512
+points in total; larger charts are refused without truncation. Identical Run,
+record, index, normalized query and chart captures reuse one pin and retain
+its renamed title and saved geometry. A changed capture has a distinct ID.
+Run pins are immutable: Refresh, Pause and Resume are refused. Open run only
+opens the stored contextual path. Removing or arranging a capture grants no
+Action authority. Reload and documentation return restore the capture without
+execution. Room death clears chart, outcome and record data; session expiry
+or revocation discards the board.
+
+Canvas `pins` is an additive union. Legacy metric records retain their exact
+shape. A Run pin has exactly `kind` (`run`), `id`, `title`, `run_id`,
+`record_digest`, `chart_index`, `source_mode`, `state`, `started_at`, `unit`,
+`mark`, `outcome`, `series`, `x`, `y`, `width` and `height`. IDs use the node
+identifier grammar; digest is `sha256:` plus 64 lowercase hexadecimal digits.
+Title allows 128 UTF-8 bytes, source mode/state 64 and unit 32. Started time
+is a UTC ISO 8601 string ending in `Z`, of at most 32 bytes. Mark is line, point or area.
+Outcome is null after room death, or exactly label/value/unit/note (128 bytes
+each except unit, 32). Series and geometry inherit the metric pin bounds,
+except for the 512-point total ceiling. Both nested encoders admit this union.
+The inert `pin_open_run` canvas event carries only an owned Run pin ID.
+Captured Sources exposes the captured record and query; opening the current
+Run does not replace that capture or claim that its state is still current.
 
 Version 0.22 separates Run results from their contextual Data, Analysis, Run
 details, Action review and Ask views. The closed optional `view` query accepts
@@ -572,7 +607,7 @@ private presentation. The no-provider manual builder remains fully usable.
 ### Metric pins and layout
 
 Canvas additionally accepts optional `pins` (at most 16), `view` (zero or one
-viewport) and decimal-string `layout_revision` (at most 32 bytes). A pin has
+viewport) and decimal-string `layout_revision` (at most 32 bytes). A metric pin has
 exactly `id`, `title`, `metric`, `source`, `range`, `unit`, `aggregation`, `state`, `auto_refresh`,
 `end_ms`, `series`, `x`, `y`, `width` and `height`. ID and metric use the node
 identifier grammar; title allows 128 UTF-8 bytes, source/aggregation/state 64,

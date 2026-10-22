@@ -24,6 +24,7 @@ export const componentDescriptors = {
       pin_refresh: { payload: "id", effectful: false },
       pin_pause: { payload: "id", effectful: false },
       pin_resume: { payload: "id", effectful: false },
+      pin_open_run: { payload: "id", effectful: false },
       pin_remove: { payload: "id", effectful: false },
     },
   },

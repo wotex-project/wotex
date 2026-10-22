@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.17.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.18.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -252,8 +252,10 @@ the useful comparison.
    Sources and Ask open separate contextual views of the same owned Run.
    Display charts use elapsed seconds; Data retains exact timestamps, dtype,
    shape, values, masks and quality. Assertions, parameters and cleanup belong
-   in Run details. Pin a supported result or comparison
-   without turning the whole run into a new application page.
+   in Run details. Pin a supported result or comparison as an immutable capture
+   with its outcome, chart, exact record and query. Rename, arrange, inspect its
+   captured Sources or reopen the source Run from the canvas. Pinning and
+   restoration execute no experiment or query; Run pins have no refresh loop.
 5. For an effectful proposal, open an exact-scope review: Thing, operation,
    input, freshness and expiry. Approve and Cancel are distinct actions. An
    expired outstanding decision requires explicit cancellation before a fresh

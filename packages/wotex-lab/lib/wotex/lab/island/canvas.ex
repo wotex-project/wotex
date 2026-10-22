@@ -60,6 +60,15 @@ defmodule Wotex.Lab.Island.Canvas do
 
   defp edge?(_, _), do: false
 
+  defp pin?(%{"kind" => "run"} = pin) do
+    exact?(
+      pin,
+      ~w(kind id title run_id record_digest chart_index source_mode state started_at unit mark outcome series x y width height)
+    ) and
+      run_identity?(pin) and run_metadata?(pin) and outcome?(pin["outcome"]) and
+      pin_geometry?(pin) and run_series?(pin["series"])
+  end
+
   defp pin?(pin) when is_map(pin) do
     exact?(
       pin,
@@ -70,6 +79,22 @@ defmodule Wotex.Lab.Island.Canvas do
   end
 
   defp pin?(_), do: false
+
+  defp run_identity?(pin) do
+    identifier?(pin["id"]) and identifier?(pin["run_id"]) and
+      text?(pin["record_digest"], 71) and
+      Regex.match?(~r/\Asha256:[0-9a-f]{64}\z/, pin["record_digest"]) and
+      is_integer(pin["chart_index"]) and pin["chart_index"] in 0..7
+  end
+
+  defp run_metadata?(pin) do
+    text?(pin["title"], 128) and text?(pin["source_mode"], 64) and
+      text?(pin["state"], 64) and text?(pin["unit"], 32) and
+      pin["mark"] in ~w(line point area) and timestamp?(pin["started_at"])
+  end
+
+  defp run_series?(series),
+    do: pin_series?(series, 512) and Enum.sum(Enum.map(series, &length(&1["points"]))) <= 512
 
   defp pin_identity?(pin) do
     identifier?(pin["id"]) and identifier?(pin["metric"]) and
@@ -87,19 +112,37 @@ defmodule Wotex.Lab.Island.Canvas do
       coordinate?(pin["x"]) and coordinate?(pin["y"]) and
         number_between?(pin["width"], 300, 800) and number_between?(pin["height"], 200, 600)
 
-  defp pin_series?(series) when is_list(series),
+  defp pin_series?(series, limit \\ 61)
+
+  defp pin_series?(series, limit) when is_list(series),
     do:
       length(series) <= 8 and unique?(Enum.map(series, &field(&1, "name"))) and
-        Enum.all?(series, &series?/1)
+        Enum.all?(series, &series?(&1, limit))
 
-  defp pin_series?(_), do: false
+  defp pin_series?(_, _), do: false
 
-  defp series?(%{"name" => name, "points" => points} = value) when is_list(points),
+  defp series?(%{"name" => name, "points" => points} = value, limit) when is_list(points),
     do:
-      map_size(value) == 2 and text?(name, 128) and length(points) <= 61 and
+      map_size(value) == 2 and text?(name, 128) and length(points) <= limit and
         Enum.all?(points, &point?/1)
 
-  defp series?(_), do: false
+  defp series?(_, _), do: false
+
+  defp outcome?(nil), do: true
+
+  defp outcome?(value) when is_map(value),
+    do:
+      exact?(value, ~w(label value unit note)) and
+        Enum.all?(~w(label value note), &text?(value[&1], 128)) and text?(value["unit"], 32)
+
+  defp outcome?(_), do: false
+
+  defp timestamp?(value) when is_binary(value) and byte_size(value) <= 32,
+    do:
+      Regex.match?(~r/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z\z/, value) and
+        match?({:ok, _, 0}, DateTime.from_iso8601(value))
+
+  defp timestamp?(_), do: false
 
   defp point?([x, y]),
     do:

@@ -1,15 +1,15 @@
 defmodule WotexLabWorkbench.Board do
   @moduledoc """
-  Bounded session-owned metric pins and saved canvas geometry.
+  Bounded session-owned metric and Run pins with saved canvas geometry.
 
-  Pin definitions come from the fixed metric catalogue and executed room-history
-  results. Browser layout input supplies geometry only, never chart values,
+  History pins come from the fixed metric catalogue and executed room history;
+  Run pins capture an already-owned result and record. Browser layout input supplies geometry only, never chart values,
   query expressions, source scope or command authority. Restoring a board reads
   its cached results without executing another query.
   """
 
   alias Wotex.Lab.Error
-  alias WotexLabWorkbench.Chart
+  alias WotexLabWorkbench.{Chart, RunPin}
   alias WotexLabWorkbench.Observability.Panels
 
   @max_pins 16
@@ -45,6 +45,17 @@ defmodule WotexLabWorkbench.Board do
     end
   end
 
+  def change(board, {:pin_run, run, index, query}) do
+    with {:ok, pin} <- RunPin.new(run, index, query),
+         previous = Enum.find(board.pins, &(&1.id == pin.id)),
+         true <- previous != nil or length(board.pins) < @max_pins do
+      pin = if previous, do: %{pin | title: previous.title}, else: pin
+      {:ok, %{board | pins: if(previous, do: replace(board.pins, pin), else: [pin | board.pins])}}
+    else
+      _ -> invalid(:unavailable_run_pin, "Choose a recorded Run chart and an available pin slot")
+    end
+  end
+
   def change(board, {:refresh, histories}) when is_list(histories) and length(histories) <= 3 do
     Enum.reduce_while(histories, {:ok, board}, fn history, {:ok, current} ->
       case refresh(current, history) do
@@ -61,8 +72,11 @@ defmodule WotexLabWorkbench.Board do
   end
 
   def change(board, {:pause, id, paused}) when is_boolean(paused) do
-    with {:ok, pin} <- fetch(board, id),
-         do: {:ok, %{board | pins: replace(board.pins, %{pin | paused: paused})}}
+    with {:ok, pin} <- fetch(board, id) do
+      if Map.get(pin, :kind) == :run,
+        do: invalid(:invalid_board_operation, "A captured Run pin has no refresh lifecycle"),
+        else: {:ok, %{board | pins: replace(board.pins, %{pin | paused: paused})}}
+    end
   end
 
   def change(board, {:rename, id, title})
@@ -111,10 +125,16 @@ defmodule WotexLabWorkbench.Board do
   @doc "Discards cached observations after the owning room dies."
   @spec clear_results(map()) :: map()
   def clear_results(board) do
-    %{board | pins: Enum.map(board.pins, &%{&1 | result: nil, paused: true, error: "Room ended"})}
+    pins =
+      Enum.map(board.pins, fn pin ->
+        cleared = %{pin | result: nil, paused: true, error: "Room ended"}
+        if Map.get(pin, :kind) == :run, do: %{cleared | record: nil, outcome: nil}, else: cleared
+      end)
+
+    %{board | pins: pins}
   end
 
-  @doc "Adds bounded metric presentations and saved geometry to a Thing graph."
+  @doc "Adds bounded metric and Run presentations with saved geometry to a Thing graph."
   @spec decorate(map(), map(), MapSet.t()) :: map()
   def decorate(props, board, active \\ MapSet.new()) do
     positions = Map.new((board.layout && board.layout["positions"]) || [], &{&1["id"], &1})
@@ -128,7 +148,12 @@ defmodule WotexLabWorkbench.Board do
       board.pins
       |> Enum.reverse()
       |> Enum.with_index()
-      |> Enum.map(fn {pin, index} -> pin_payload(pin, index, positions, active) end)
+      |> Enum.map_reduce(80, fn {pin, index}, top ->
+        height = if Map.get(pin, :kind) == :run, do: 340, else: 280
+        defaults = Map.put_new(positions, pin.id, %{"y" => top})
+        {pin_payload(pin, index, defaults, active), top + height + 20}
+      end)
+      |> elem(0)
 
     Map.merge(props, %{
       "nodes" => nodes,
@@ -141,6 +166,11 @@ defmodule WotexLabWorkbench.Board do
       "view" => if(board.layout, do: [board.layout["viewport"]], else: []),
       "layout_revision" => Integer.to_string(board.revision)
     })
+  end
+
+  defp pin_payload(%{kind: :run} = pin, index, positions, _) do
+    position = Map.get(positions, pin.id, %{})
+    RunPin.payload(pin, index, position)
   end
 
   defp pin_payload(pin, index, positions, active) do
@@ -181,10 +211,10 @@ defmodule WotexLabWorkbench.Board do
              Enum.all?(results, &match?({:ok, _, _}, one_result(%{history | panels: [&1]}))) do
       pins =
         Enum.map(board.pins, fn pin ->
-          result = Enum.find(results, &(&1.id == pin.metric))
+          result = if Map.get(pin, :kind) != :run, do: Enum.find(results, &(&1.id == pin.metric))
 
           cond do
-            pin.range != range or result == nil ->
+            Map.get(pin, :kind) == :run or pin.range != range or result == nil ->
               pin
 
             measured?(result) ->
@@ -215,7 +245,7 @@ defmodule WotexLabWorkbench.Board do
        when is_list(ids) and length(ids) <= 16 and is_integer(checked_at) do
     pins =
       Enum.map(board.pins, fn pin ->
-        if pin.id in ids,
+        if Map.get(pin, :kind) != :run and pin.id in ids,
           do: %{pin | checked_at: checked_at, error: "Refresh unavailable"},
           else: pin
       end)

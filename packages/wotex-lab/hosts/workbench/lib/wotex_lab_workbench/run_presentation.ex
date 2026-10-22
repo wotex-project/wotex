@@ -95,6 +95,22 @@ defmodule WotexLabWorkbench.RunPresentation do
 
   def result(_), do: %{label: "Result", value: "—", unit: "", note: "Unavailable", facts: []}
 
+  @doc "Builds the default chart sequence from the original Run series."
+  @spec charts(Run.t()) :: [Chart.t()]
+  def charts(%Run{} = run) do
+    Enum.flat_map(run.timeseries, fn series ->
+      case Chart.new(
+             title: series.name,
+             x: %{field: "time", title: "event time"},
+             y: %{field: "value", title: series.unit},
+             series: [%{name: series.name, points: series.points}]
+           ) do
+        {:ok, chart} -> [chart]
+        {:error, _} -> []
+      end
+    end)
+  end
+
   @doc "Projects chart time for display while retaining every admitted y value and gap."
   @spec display_chart(Run.t(), Chart.t()) :: Chart.t()
   def display_chart(run, chart) do

@@ -5,6 +5,58 @@ defmodule Wotex.Lab.CanvasIslandTest do
 
   alias Wotex.Lab.Island.Encoder
 
+  test "Run captures are a distinct closed pin kind with bounded original values" do
+    pin = %{
+      "kind" => "run",
+      "id" => "pin-run-a",
+      "title" => "Run capture",
+      "run_id" => "run-1",
+      "record_digest" => "sha256:" <> String.duplicate("a", 64),
+      "chart_index" => 0,
+      "source_mode" => "fixture",
+      "state" => "Captured · completed",
+      "started_at" => "2026-10-22T00:00:00.123456Z",
+      "unit" => "°C",
+      "mark" => "area",
+      "outcome" => %{
+        "label" => "Proposed target",
+        "value" => "22.000",
+        "unit" => "°C",
+        "note" => "Inert proposal"
+      },
+      "series" => [%{"name" => "temperature", "points" => [[0, -4], [1, nil], [2, 8]]}],
+      "x" => 0,
+      "y" => 0,
+      "width" => 360,
+      "height" => 340
+    }
+
+    payload = Map.put(props(), "pins", [pin])
+    assert {:ok, ^payload} = Encoder.encode("canvas", payload)
+
+    full =
+      put_in(payload, ["pins", Access.at(0), "series"], [
+        %{"name" => "temperature", "points" => for(n <- 1..512, do: [n, -n])}
+      ])
+
+    assert {:ok, ^full} = Encoder.encode("canvas", full)
+
+    for {field, value} <- [
+          {"chart_index", 8},
+          {"chart_index", 1.0},
+          {"started_at", "2026-02-31T00:00:00Z"},
+          {"started_at", "2026-10-22T00:00:00+01:00"},
+          {"mark", "script"},
+          {"record_digest", "other"},
+          {"outcome", %{"value" => 2}},
+          {"metric", "nx_batch_rows"},
+          {"series", [%{"name" => "temperature", "points" => for(n <- 1..513, do: [n, n])}]}
+        ] do
+      bad = update_in(payload, ["pins", Access.at(0)], &Map.put(&1, field, value))
+      assert {:error, _} = Encoder.encode("canvas", bad)
+    end
+  end
+
   test "canvas payloads retain missing samples and bounded saved presentation" do
     props = props()
     assert {:ok, ^props} = Encoder.encode("canvas", props)

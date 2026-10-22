@@ -1,9 +1,9 @@
 <script lang="ts">
 import {NodeResizer,type Node,type NodeProps} from "@xyflow/svelte"
-import type {CanvasPin} from "./canvas-model.js"
+import type {CanvasMetricPin} from "./canvas-model.js"
 import MetricPlot from "./metric-plot.svelte"
 import more from "./canvas-assets/ellipsis.svg"
-type Data=CanvasPin & {open:(id:string,event:MouseEvent)=>void;changed:()=>void}
+type Data=CanvasMetricPin & {open:(id:string,event:MouseEvent)=>void;changed:()=>void}
 let {data,selected}:NodeProps<Node<Data>>=$props()
 const time=$derived(new Date(data.end_ms).toISOString().slice(11,19))
 </script>

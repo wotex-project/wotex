@@ -67,6 +67,11 @@
 .wl-plot-series { color: var(--wl-canvas-text); }
 .wl-plot-series polyline { fill: none; stroke: currentColor; stroke-width: 1.5; }
 .wl-plot-series circle { fill: currentColor; }
+.wl-plot-series .wl-plot-area { fill: currentColor; opacity: 0.12; stroke: none; }
+.wl-run-pin-value { display: flex; align-items: baseline; gap: 4px; }
+.wl-run-pin-value strong { flex: none; font-size: 24px; line-height: 28px; font-weight: 500; }
+.wl-run-pin-value span, .wl-run-pin-value small { font-size: 12px; }
+.wl-run-pin-value small { margin-left: 4px; color: var(--wl-canvas-muted); }
 .wl-plot-series .wl-plot-gap { stroke-dasharray: 2 4; opacity: 0.4; stroke-width: 1; }
 .wl-metric-plot figcaption { color: var(--wl-canvas-muted); font-size: 11px; }
 .wl-plot-empty { display: grid; place-items: center; min-height: 100px; color: var(--wl-canvas-muted); }
