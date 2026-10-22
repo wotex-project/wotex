@@ -35,5 +35,6 @@ config :phoenix_test,
   playwright: [
     assets_dir: ".",
     timeout: 5_000,
+    screenshot_dir: "_build/test/e2e",
     browser_context_opts: [viewport: %{width: 1280, height: 900}]
   ]

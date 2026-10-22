@@ -54,6 +54,7 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
       data-wotex-component-digest={@design_contract["component_registry_digest"]}
       data-wotex-fixture-digest={@design_contract["story_fixture_digest"]}
       data-wotex-stylesheet-digest={@design_contract["stylesheet_digest"]}
+      phx-mounted={JS.ignore_attributes(["data-layout-profile"])}
     >
       <a class="wl-skip" href="#main">Skip to main content</a>
       <header class="wl-board-chrome" aria-label={@title}>
@@ -136,7 +137,12 @@ defmodule WotexLabWorkbenchWeb.Components.Shell do
           </details>
         </nav>
       </header>
-      <main id="main" class="wl-main" tabindex="-1">
+      <main
+        id="main"
+        class="wl-main"
+        tabindex="-1"
+        phx-mounted={JS.ignore_attributes(["data-layout-profile"])}
+      >
         {render_slot(@inner_block)}
       </main>
     </div>

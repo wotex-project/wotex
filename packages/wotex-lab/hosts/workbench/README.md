@@ -12,7 +12,9 @@ decision and dispatches only after the separate exact approval form passes the
 policy and freshness checks again. Mounting or reconnecting starts no room or
 experiment.
 
-The entry at `/` is a spatial workbench. Things, connections, selection and
+The entry at `/` is a spatial workbench. Search board in its menu or Command/Control K
+finds current Things, processes, Directory entries and owned pins. Filtering and
+opening a result perform no operation. Back restores the search and selected row. Things, connections, selection and
 viewport remain on the same canvas while `/experiments`, `/runs/:id`, `/metrics`
 and `/evidence` open contextual panels. Closing a panel returns to the board.
 The experiment drawer retains bounded drafts across these transitions. A run's

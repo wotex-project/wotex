@@ -31,7 +31,9 @@ export function observeLayoutProfileWithin(root: ParentNode): () => void {
 
   const bindCurrentContent = () => {
     const nextContent = root.querySelector<HTMLElement>(".wotex-lab .wl-main")
-    if (nextContent === content) return
+    const profile = nextContent?.dataset.layoutProfile
+    const shellProfile = nextContent?.closest<HTMLElement>(".wotex-lab")?.dataset.layoutProfile
+    if (nextContent === content && (!nextContent || (profile && profile === shellProfile))) return
 
     stopObservingContent()
     content = nextContent
@@ -43,7 +45,12 @@ export function observeLayoutProfileWithin(root: ParentNode): () => void {
   }
 
   const observer = new MutationObserver(bindCurrentContent)
-  observer.observe(root, { childList: true, subtree: true })
+  observer.observe(root, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-layout-profile"],
+  })
   bindCurrentContent()
 
   return () => {

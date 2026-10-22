@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.19.1. Status: iterative design review. Implementation: persistent
+Plan version: 0.20.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -169,7 +169,12 @@ draft and require explicit Apply. Opening an inspector performs no write.
 
 **Design check:** the user can identify the system's state and inspect a Thing
 without a page transition. Ellipsis and keyboard access expose the same actions
-as right-click. A searchable list provides a non-spatial access path to Things.
+as right-click. Search board in the board menu, or Command/Control K, opens
+one contextual list of Things, processes, Directory entries and owned pins.
+Filter by title or identity, use arrows/Home/End and open the current result
+with Enter. Back restores the query and result focus. Empty/no-match states
+have a clear reset; lookup and inspection run no operations. Closing preserves
+the canvas viewport and returns to the board control.
 
 ### Configure a typed connection
 

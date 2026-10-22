@@ -1,7 +1,32 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.23.1. Contract: accepted. Implementation status:
+Specification version: 0.24.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.24 adds Search board to the board menu and Command/Control K.
+The contextual drawer lists only the current bounded canvas projection and
+session-owned pins: at most 32 subjects and sixteen pins. Case-insensitive
+whitespace-separated terms must all match the subject title, identity or kind,
+or a retained pin title, metric/source or Run identity. Queries are valid UTF-8
+and at most 128 bytes; invalid queries retain the last accepted matches and show
+an inline error. Results sort by lowercased title then stable identity.
+
+Opening, filtering and selecting perform no Property read, history query,
+provider request, Run or mutation. Selection revalidates ownership and opens
+the existing Thing, process or pin inspector. Back restores the query and
+matching result focus. Closing returns to the board control without moving
+the canvas. Input ArrowDown/Up enters the results; result arrows wrap, Home/End
+select their bounds and Enter opens the current subject. Search applies its
+automatic focus once per mount, so delayed focus retries cannot take focus
+back from a result during fast keyboard navigation. If a focused result is
+removed by an authoritative update, focus returns to the search field. An empty board,
+no matches and a disappeared result have distinct states. The ordinary input
+remains available without the Svelte canvas; the keyboard shortcut is scoped
+to the Workbench and leaves documentation search alone. This adds no island
+wire fields or operations. Client-owned layout-profile markers survive the initial
+LiveView mount and later patches without requiring another viewport resize.
+Complete accessibility and native Figma alignment
+remain separate acceptance work.
 
 Version 0.23 adds captured Run result pins alongside the existing room-history
 pins. Explicit Pin supplies the owned Run ID, exact record digest, chart index

@@ -15,6 +15,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   use WotexLabWorkbenchWeb, :live_view
 
   import WotexLabWorkbenchWeb.Components.{
+    BoardSearch,
     Connections,
     HistoryPanels,
     Insights,
@@ -73,6 +74,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:connection_error, nil)
       |> assign(:connection_focus, nil)
       |> assign(:connections_open, false)
+      |> assign(:board_search_open, false)
+      |> assign(:board_search_query, "")
+      |> assign(:board_search_error, nil)
+      |> assign(:board_search_focus, nil)
+      |> assign(:board_search_result, nil)
       |> assign(:snapshot, nil)
       |> assign(:metrics, nil)
       |> assign(:history, nil)
@@ -128,6 +134,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             scope: scope,
             sidebar_open: false,
             connections_open: false,
+            board_search_open: false,
             presentation_path: workbench_path(url)
           )
           |> cancel_investigation_on_navigation()
@@ -161,6 +168,69 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:error, error} -> reject_event(socket, error)
     end
   end
+
+  def handle_event(event, _, socket) when event in ~w(open_board_search back_to_board_search) do
+    case Scope.verify(socket) do
+      {:ok, scope} ->
+        {:noreply,
+         socket
+         |> assign(
+           scope: scope,
+           board_search_focus:
+             if(event == "back_to_board_search", do: socket.assigns.board_search_result),
+           board_search_error: nil
+         )
+         |> push_patch(to: "/things?panel=search")}
+
+      {:error, error} ->
+        {:noreply, deny(socket, error)}
+    end
+  end
+
+  def handle_event(event, params, socket) when event in ~w(search_board clear_board_search) do
+    case Scope.verify(socket) do
+      {:ok, scope} ->
+        query = if event == "clear_board_search", do: "", else: params["query"]
+
+        if is_binary(query) and byte_size(query) <= 128 and String.valid?(query) do
+          {:noreply,
+           assign(socket, scope: scope, board_search_query: query, board_search_error: nil)}
+        else
+          {:noreply,
+           assign(socket, scope: scope, board_search_error: "Search is too long or invalid")}
+        end
+
+      {:error, error} ->
+        {:noreply, deny(socket, error)}
+    end
+  end
+
+  def handle_event("inspect_board_result", %{"id" => id}, socket) do
+    with {:ok, _} <- Scope.verify(socket),
+         {:ok, socket} <- select_canvas_node(socket, id) do
+      panel =
+        case Enum.find(socket.assigns.things, &(Canvas.id(&1) == id)) do
+          %{consumable: false} -> :sources
+          _ -> :properties
+        end
+
+      {:noreply,
+       assign(socket,
+         canvas_selection: id,
+         board_search_result: id,
+         thing_panel: panel
+       )}
+    else
+      {:error, error} ->
+        reject_event(socket, error)
+
+      :error ->
+        {:noreply, assign(socket, :board_search_error, "This result is no longer on your board")}
+    end
+  end
+
+  def handle_event("inspect_board_result", _, socket),
+    do: handle_event("inspect_board_result", %{"id" => nil}, socket)
 
   def handle_event("close_board_menu", _, socket) do
     case Scope.verify(socket) do
@@ -355,7 +425,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   def handle_event("inspect_thing", %{"id" => id}, socket) do
-    case select_canvas_node(socket, id) do
+    case select_canvas_node(assign(socket, :board_search_result, nil), id) do
       {:ok, socket} -> {:noreply, assign(socket, :thing_panel, :properties)}
       {:error, error} -> reject_event(socket, error)
       :error -> {:noreply, socket}
@@ -367,7 +437,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, scope} ->
         {:noreply,
          socket
-         |> assign(scope: scope, canvas_selection: nil)
+         |> assign(scope: scope, canvas_selection: nil, board_search_result: nil)
          |> push_patch(to: "/")}
 
       {:error, error} ->
@@ -812,6 +882,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       >
         <:context><.context_header items={context(@scope, @run)} /></:context>
         <:actions>
+          <button id="wl-board-search" type="button" phx-click="open_board_search">
+            <img class="wl-menu-icon" src="/icons/search.svg" alt="" width="16" height="16" />
+            <span>Search board</span><kbd>⌘ / Ctrl K</kbd>
+          </button>
           <button type="button" phx-click="open_connections">Connections</button>
           <button type="button" phx-click="import_thing">Add Thing Description</button>
           <.link :if={@scope.room} patch="/evidence" class="wl-nav-link">Session report</.link>
@@ -836,12 +910,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             island_revision={@island_revision}
             empty={
               is_nil(@scope.room) && @live_action in [:workbench, :things] &&
-                @canvas_selection != "import" && !@connections_open
+                @canvas_selection != "import" && !@connections_open && !@board_search_open
             }
           />
           <%= case @live_action do %>
             <% :experiments -> %>
-              <.tool_panel id="wl-experiments-panel" title="Experiments" menu_open={@sidebar_open}>
+              <.tool_panel
+                id="wl-experiments-panel"
+                title="Experiments"
+                menu_open={@sidebar_open}
+                back_event={if @board_search_result == "process-smart-room", do: "back_to_board_search"}
+                return_label="Back to search"
+                restore_canvas_focus={@board_search_result != "process-smart-room"}
+              >
                 <.experiments_view
                   experiments={@experiments}
                   selected={@selected_experiment}
@@ -877,45 +958,73 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                 <.investigation_metrics results={@investigation_results} />
               </.tool_panel>
             <% :things -> %>
-              <%= if @connections_open do %>
-                <.tool_panel
-                  id="wl-connections-panel"
-                  title={
-                    if @connection_editing && @connection_draft,
-                      do: Connections.title(@connection_draft["port"]),
-                      else: "Connections"
-                  }
-                  menu_open={@sidebar_open}
-                  back_event={if @connection_editing, do: "connection_list"}
-                  return_label="Back to connections"
-                >
-                  <.connections_view
-                    room={@scope.room}
-                    model={@connection_state}
+              <%= cond do %>
+                <% @board_search_open -> %>
+                  <.tool_panel
+                    id="wl-board-search-panel"
+                    title="Search board"
+                    menu_open={@sidebar_open}
+                    restore_canvas_focus={false}
+                    autofocus={false}
+                  >
+                    <.board_search
+                      things={@things}
+                      runs={@runs}
+                      readings={@canvas_readings}
+                      connections={@connection_state}
+                      board={@board}
+                      query={@board_search_query}
+                      error={@board_search_error}
+                      focus_id={@board_search_focus}
+                    />
+                  </.tool_panel>
+                <% @connections_open -> %>
+                  <.tool_panel
+                    id="wl-connections-panel"
+                    title={
+                      if @connection_editing && @connection_draft,
+                        do: Connections.title(@connection_draft["port"]),
+                        else: "Connections"
+                    }
+                    menu_open={@sidebar_open}
+                    back_event={if @connection_editing, do: "connection_list"}
+                    return_label="Back to connections"
+                  >
+                    <.connections_view
+                      room={@scope.room}
+                      model={@connection_state}
+                      things={@things}
+                      readings={@canvas_readings}
+                      observations={@observations}
+                      draft={if @connection_editing, do: @connection_draft}
+                      error={@connection_error}
+                      focus_port={@connection_focus}
+                    />
+                  </.tool_panel>
+                <% true -> %>
+                  <.things_view
                     things={@things}
+                    room={@scope.room}
                     readings={@canvas_readings}
+                    selection={@canvas_selection}
                     observations={@observations}
-                    draft={if @connection_editing, do: @connection_draft}
-                    error={@connection_error}
-                    focus_port={@connection_focus}
+                    panel={@thing_panel}
+                    menu_open={@sidebar_open}
+                    search_return={
+                      not is_nil(@board_search_result) && @board_search_result == @canvas_selection
+                    }
                   />
-                </.tool_panel>
-              <% else %>
-                <.things_view
-                  things={@things}
-                  room={@scope.room}
-                  readings={@canvas_readings}
-                  selection={@canvas_selection}
-                  observations={@observations}
-                  panel={@thing_panel}
-                  menu_open={@sidebar_open}
-                />
               <% end %>
             <% :metrics -> %>
               <.tool_panel
                 id="wl-metrics-panel"
                 title={if run_pin?(@board, @selected_pin), do: "Pinned result", else: "Metrics"}
                 menu_open={@sidebar_open}
+                back_event={
+                  if @selected_pin && @selected_pin == @board_search_result, do: "back_to_board_search"
+                }
+                return_label="Back to search"
+                restore_canvas_focus={is_nil(@selected_pin) || @selected_pin != @board_search_result}
               >
                 <div :if={is_nil(@selected_pin)} class="wl-stack">
                   <.prompt_composer
@@ -1073,6 +1182,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:return_path, :string, default: "/")
   attr(:return_label, :string, default: "Back to experiment")
   attr(:back_event, :string, default: nil)
+  attr(:restore_canvas_focus, :boolean, default: true)
+  attr(:autofocus, :boolean, default: true)
   slot(:inner_block, required: true)
 
   defp tool_panel(assigns) do
@@ -1081,13 +1192,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       id={@id}
       class="wl-workbench-panel"
       aria-labelledby={@id <> "-title"}
-      phx-mounted={JS.focus_first(to: "##{@id}")}
+      phx-mounted={if @autofocus, do: JS.focus_first(to: "##{@id}")}
       phx-window-keydown={
         if !@menu_open,
           do:
             JS.patch("/")
             |> JS.focus(to: "#wl-board-toggle")
-            |> JS.dispatch("wotex:restore-canvas-focus")
+            |> restore_canvas_focus(@restore_canvas_focus)
       }
       phx-key="Escape"
     >
@@ -1114,13 +1225,16 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           patch="/"
           class="wl-panel-close"
           aria-label="Close panel"
-          phx-click={JS.focus(to: "#wl-board-toggle") |> JS.dispatch("wotex:restore-canvas-focus")}
+          phx-click={JS.focus(to: "#wl-board-toggle") |> restore_canvas_focus(@restore_canvas_focus)}
         >×</.link>
       </header>
       <div class="wl-workbench-panel-body">{render_slot(@inner_block)}</div>
     </aside>
     """
   end
+
+  defp restore_canvas_focus(js, true), do: JS.dispatch(js, "wotex:restore-canvas-focus")
+  defp restore_canvas_focus(js, false), do: js
 
   attr(:experiments, :list, required: true)
   attr(:selected, :string, required: true)
@@ -1447,6 +1561,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:menu_open, :boolean, default: false)
   attr(:observations, :map, required: true)
   attr(:panel, :atom, required: true)
+  attr(:search_return, :boolean, default: false)
 
   defp things_view(assigns) do
     selected = Enum.find(assigns.things, &(Canvas.id(&1) == assigns.selection))
@@ -1473,7 +1588,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             JS.push("close_thing")
             |> JS.focus(
               to:
-                if(@selection == "import",
+                if(@selection == "import" || @search_return,
                   do: "#wl-board-toggle",
                   else: ".svelte-flow__node[data-id='#{@selection}']"
                 )
@@ -1482,6 +1597,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       phx-key="Escape"
     >
       <header>
+        <button
+          :if={@search_return}
+          type="button"
+          class="wl-panel-close"
+          phx-click="back_to_board_search"
+          aria-label="Back to search"
+        ><img src="/icons/chevron-left.svg" alt="" width="14" height="14" /></button>
         <h2>
           {cond do
             @selected -> Canvas.title(@selected)
@@ -1496,7 +1618,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             JS.push("close_thing")
             |> JS.focus(
               to:
-                if(@selection == "import",
+                if(@selection == "import" || @search_return,
                   do: "#wl-board-toggle",
                   else: ".svelte-flow__node[data-id='#{@selection}']"
                 )
@@ -1531,6 +1653,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             >Register TD</button>
           </form>
         <% @selected -> %>
+          <p :if={!@selected.consumable} class="wl-muted">Directory entry · not connected</p>
           <section :for={property <- @properties} class="wl-thing-property" aria-label={property.name}>
             <% reading = ThingReadings.get(@readings, @selected.key, property.name) %>
             <% watching = Map.has_key?(@observations, @selected.key <> "/" <> property.name) %>
@@ -2400,7 +2523,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
          {:ok, _} <- Board.fetch(board, id) do
       {:ok,
        socket
-       |> assign(scope: scope, board: board, selected_pin: id)
+       |> assign(scope: scope, board: board, selected_pin: id, board_search_result: nil)
        |> push_patch(to: "/metrics?" <> Query.encode(%{"pin" => id}))}
     else
       {:error, %Error{code: :unknown_pin}} -> :error
@@ -2414,6 +2537,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         socket =
           socket
           |> assign(:scope, scope)
+          |> assign(:board_search_result, nil)
           |> refresh()
 
         props =
@@ -2436,7 +2560,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               id == "process-smart-room" ->
                 push_patch(socket, to: "/experiments?experiment=smart_room")
 
-              socket.assigns.live_action == :things and not socket.assigns.connections_open ->
+              socket.assigns.live_action == :things and not socket.assigns.connections_open and
+                  not socket.assigns.board_search_open ->
                 socket
 
               true ->
@@ -2479,7 +2604,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
            scope: scope,
            sidebar_open: false,
            connection_editing: false,
-           connections_open: tool == "connections"
+           connections_open: tool == "connections",
+           board_search_result: nil
          )
          |> push_patch(to: path)}
 
@@ -2801,6 +2927,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> refresh()
   end
 
+  defp load_action(socket, :things, %{"panel" => "search"} = params)
+       when map_size(params) == 1 do
+    socket
+    |> assign(run_id: nil, board_search_open: true)
+    |> refresh()
+  end
+
   defp load_action(socket, :things, %{"panel" => "import"} = params) when map_size(params) == 1 do
     socket
     |> assign(run_id: nil, canvas_selection: "import")
@@ -2876,6 +3009,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         |> error_flash(Error.new(:invalid_parameters, :admission, "evidence link is malformed"))
     end
   end
+
+  defp load_action(socket, :workbench, _),
+    do: refresh(assign(socket, run_id: nil, board_search_result: nil))
 
   defp load_action(socket, _, _), do: refresh(assign(socket, :run_id, nil))
 

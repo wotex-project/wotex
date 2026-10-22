@@ -1116,6 +1116,25 @@ body {
 .wl-thing-property .wl-actions form { margin: 0; }
 .wl-thing-property .wl-receipt-time { margin: 0; font-size: 11px; }
 .wl-connection-row { padding-block: 12px; border-bottom: 1px solid var(--wl-color-border); }
+.wl-board-actions button { gap: 8px; }
+.wl-board-actions kbd { margin-left: auto; color: var(--wl-color-muted); font: inherit; font-size: 10px; white-space: nowrap; }
+.wl-board-search-results { list-style: none; padding: 0; margin: 0; }
+.wl-board-search-results li { border-bottom: 1px solid var(--wl-color-border); }
+.wl-board-search-results button {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px;
+  padding: 8px; border: 0; border-radius: 4px; background: transparent;
+  color: var(--wl-color-text); font: inherit; text-align: left; cursor: pointer;
+}
+.wl-board-search-results button:hover, .wl-board-search-results button:focus-visible { background: var(--wl-color-bg); }
+.wl-board-search-results button > span { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.wl-board-search-results strong { font-size: 12px; font-weight: 500; }
+.wl-board-search-results small { color: var(--wl-color-muted); font-size: 11px; }
+.wl-board-search-results button > small { max-width: 80px; text-align: right; }
+.wl-board-search-results span > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-board-search-results img { flex: none; }
+#wl-board-search-form { display: flex; align-items: center; gap: 4px; }
+#wl-board-search-query { flex: 1; min-width: 0; }
+#wl-board-search-query::-webkit-search-cancel-button { -webkit-appearance: none; }
 .wl-connection-row > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .wl-connection-row h3 { margin: 0; font-size: 12px; font-weight: 500; }
 .wl-connection-endpoints { margin: 8px 0 0; font-size: 11px; color: var(--wl-color-muted); overflow-wrap: anywhere; }
