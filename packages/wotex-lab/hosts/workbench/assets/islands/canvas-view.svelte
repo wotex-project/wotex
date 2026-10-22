@@ -35,6 +35,7 @@ let saving = $state(false)
 let openingDocumentation = false
 let lastSelection = ""
 let saved = $state(false)
+let focusOrigin: { element: HTMLElement | SVGElement; id: string | null; edge: boolean; label: string | null } | null = null
 const menuNode = $derived(nodes.find(n=>n.id===menu?.id))
 const pinMenu = $derived(menuNode?.type==="metric")
 const runPinMenu = $derived(menuNode?.type==="run_result")
@@ -44,12 +45,16 @@ async function openMenu(kind: "node" | "edge", id: string, event: MouseEvent | K
   event.preventDefault()
   event.stopPropagation()
   const bounds = root.getBoundingClientRect()
-  const target = event.currentTarget instanceof Element ? event.currentTarget.getBoundingClientRect() : bounds
+  rememberFocus(event.target)
+  const anchor = event.target instanceof Element ? event.target.closest("button,[data-id]") ?? event.target : root
+  const target = anchor.getBoundingClientRect()
   const x = "clientX" in event && event.clientX ? event.clientX : target.x + target.width / 2
   const y = "clientY" in event && event.clientY ? event.clientY : target.y + target.height / 2
   menu = { kind, id, x: Math.max(8, Math.min(x - bounds.left, bounds.width - 208)), y: Math.max(8, Math.min(y - bounds.top, bounds.height - 244)) }
-  if(kind === "node") nodes = nodes.map((node) => ({ ...node, selected: node.id === id }))
-  else edges = edges.map(edge=>({...edge,selected:edge.id===id}))
+  if(kind === "node") {
+    nodes = nodes.map((node) => ({ ...node, selected: node.id === id }))
+    edges = edges.map(edge=>({...edge,selected:false}))
+  } else selectEdge(id)
   await tick()
   firstAction?.focus()
 }
@@ -133,6 +138,7 @@ async function inspect() {
 
 async function send(event: "inspect" | "inspect_connection" | "open" | "read" | "observe" | "pause" | "statistics" | "sources" | "pin_refresh" | "pin_pause" | "pin_resume" | "pin_remove" | "pin_open_run", id: string) {
   if (!connected) return
+  if(event === "inspect_connection") selectEdge(id)
   menu = null
   error = ""
   try {
@@ -150,6 +156,20 @@ function currentLayout() {
 }
 
 onMount(()=>{
+  let restoreAfterPatch = false
+  const requestFocusRestore = () => { restoreAfterPatch = true }
+  const afterPatch = () => {
+    if(!restoreAfterPatch) return
+    restoreAfterPatch = false
+    void tick().then(restoreFocus)
+  }
+  const recordFocus = (event: FocusEvent) => rememberFocus(event.target)
+  const contextKey = (event: KeyboardEvent) => {
+    if(menu || !(event.target instanceof Element) || !(event.key==="ContextMenu" || (event.key==="F10" && event.shiftKey))) return
+    const node = event.target.closest<HTMLElement>(".svelte-flow__node")
+    const id = node?.dataset.id
+    if(id) void openMenu("node", id, event)
+  }
   const openDocumentation = (event: Event) => {
     event.preventDefault()
     if(openingDocumentation)return
@@ -166,7 +186,17 @@ onMount(()=>{
       .finally(()=>{openingDocumentation=false})
   }
   window.addEventListener("wotex:open-documentation",openDocumentation)
-  return ()=>window.removeEventListener("wotex:open-documentation",openDocumentation)
+  window.addEventListener("wotex:restore-canvas-focus",requestFocusRestore)
+  window.addEventListener("phx:page-loading-stop",afterPatch)
+  root.addEventListener("focusin",recordFocus)
+  root.addEventListener("keydown",contextKey)
+  return ()=>{
+    window.removeEventListener("wotex:open-documentation",openDocumentation)
+    window.removeEventListener("wotex:restore-canvas-focus",requestFocusRestore)
+    window.removeEventListener("phx:page-loading-stop",afterPatch)
+    root.removeEventListener("focusin",recordFocus)
+    root.removeEventListener("keydown",contextKey)
+  }
 })
 
 async function saveLayout(){
@@ -181,9 +211,39 @@ async function saveLayout(){
 }
 
 function closeMenu() {
-  const id = menu?.id
   menu = null
-  if (id) root.querySelector<HTMLElement>(`[data-id="${id}"]`)?.focus()
+  restoreFocus()
+}
+
+function selectEdge(id: string) {
+  edges = edges.map(edge=>({...edge,selected:edge.id===id}))
+  nodes = nodes.map(node=>({...node,selected:false}))
+}
+
+function rememberFocus(target: EventTarget | null) {
+  if(!(target instanceof Element) || target.closest('[role="menu"]')) return
+  const element = target.closest<HTMLElement | SVGElement>("button,[tabindex]")
+  if(!element || !root.contains(element)) return
+  const object = element.closest(".svelte-flow__node,.svelte-flow__edge")
+  focusOrigin = {element,id:object?.getAttribute("data-id") ?? null,edge:Boolean(object?.matches(".svelte-flow__edge")),label:element.getAttribute("aria-label")}
+}
+
+function restoreFocus() {
+  let target: HTMLElement | SVGElement | null = focusOrigin?.element ?? null
+  if(target && !target.isConnected) {
+    const object = focusOrigin?.id ? root.querySelector<HTMLElement | SVGElement>(`${focusOrigin.edge?".svelte-flow__edge":".svelte-flow__node"}[data-id="${CSS.escape(focusOrigin.id)}"]`) : null
+    target = (focusOrigin?.label ? (object ?? root).querySelector<HTMLElement | SVGElement>(`[aria-label="${CSS.escape(focusOrigin.label)}"]`) : null) ?? object
+  }
+  if(!target || target.matches(":disabled") || !target.isConnected || !visibleInCanvas(target))
+    target = focusOrigin ? root.querySelector<HTMLButtonElement>('.wl-canvas-tools [aria-label="Connections"]:not(:disabled)') : null
+  const destination = target ?? document.getElementById("wl-board-toggle")
+  destination?.focus({preventScroll:true})
+}
+
+function visibleInCanvas(target: Element) {
+  const rect = target.getBoundingClientRect()
+  const bounds = root.getBoundingClientRect()
+  return (rect.width > 0 || rect.height > 0) && rect.right > bounds.left && rect.left < bounds.right && rect.bottom >= bounds.top && rect.top <= bounds.bottom
 }
 </script>
 
@@ -217,7 +277,7 @@ function closeMenu() {
     <div class="wl-canvas-context" role="menu" tabindex="-1" aria-label={menu.kind === "edge" ? "Connection actions" : runPinMenu ? "Run result actions" : pinMenu ? "Metric actions" : "Thing actions"} style:left={`${menu.x}px`} style:top={`${menu.y}px`}
       onkeydown={(event) => {
         if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeMenu(); return }
-        if (event.key === "Tab") { menu = null; return }
+        if (event.key === "Tab") { closeMenu(); return }
         if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
           event.preventDefault()
           const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")]

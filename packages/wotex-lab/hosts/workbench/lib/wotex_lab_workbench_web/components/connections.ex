@@ -13,6 +13,7 @@ defmodule WotexLabWorkbenchWeb.Components.Connections do
   attr(:observations, :map, required: true)
   attr(:draft, :any, required: true)
   attr(:error, :any, required: true)
+  attr(:focus_port, :string, default: nil)
 
   @doc "Renders current bindings or one retained, uncommitted connection draft."
   @spec connections_view(map()) :: Phoenix.LiveView.Rendered.t()
@@ -48,16 +49,22 @@ defmodule WotexLabWorkbenchWeb.Components.Connections do
       :if={@room && is_nil(@draft)}
       id="wl-connections-list"
       class="wl-connections-list"
-      phx-mounted={JS.focus_first(to: "#wl-connections-list")}
+      phx-mounted={
+        if @focus_port in Connections.ports(),
+          do: JS.focus(to: "#wl-connection-#{@focus_port}"),
+          else: JS.focus_first(to: "#wl-connections-list")
+      }
     >
       <section :for={row <- @rows} class="wl-connection-row" aria-label={row.title}>
         <header>
           <h3>{row.title}</h3>
           <button
+            id={"wl-connection-#{row.port}"}
             class="wl-button wl-button-secondary"
             type="button"
             phx-click="edit_connection"
             phx-value-port={row.port}
+            aria-label={"#{if row.binding, do: "Change", else: "Connect"} #{row.title}"}
           >{if row.binding, do: "Change", else: "Connect"}</button>
         </header>
         <p class="wl-connection-endpoints">{row.label}</p>
@@ -132,7 +139,7 @@ defmodule WotexLabWorkbenchWeb.Components.Connections do
             :if={@error.code == :stale_connection}
             class="wl-button wl-button-secondary"
             type="button"
-            phx-click="reload_connection"
+            phx-click={JS.push("reload_connection") |> JS.focus(to: "#wl-connection-thing")}
             phx-value-port={@draft["port"]}
           >Reload draft</button>
         </div>

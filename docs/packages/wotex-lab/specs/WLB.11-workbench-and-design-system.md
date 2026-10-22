@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.23.0. Contract: accepted. Implementation status:
+Specification version: 0.23.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 Version 0.23 adds captured Run result pins alongside the existing room-history
@@ -786,6 +786,22 @@ screen-reader flooding. No hidden essential content on small screens.
 
 Island mount and update preserve focus by stable semantic key. If the focused
 control disappears, focus moves to the component's declared recovery target.
+The canvas retains the originating node control, edge or tool while a
+contextual inspector is open. Closing or escaping a tool returns focus there
+after the navigation patch and canvas update complete.
+If that object is removed or lies outside the visible canvas, focus returns to
+Connections; when that tool is unavailable, the board menu is the fallback.
+Deep links with no local origin also use the board menu. Recovery does not pan
+the board. Context menus support Shift+F10, arrows, Home/End and Escape; Tab
+closes the menu and continues from its originating control.
+Connection Back, Cancel, Apply and Remove return to the matching connection
+row. Reload draft returns to the source field. Back and Close retain an
+uncommitted draft; Cancel discards it. These local focus targets carry no
+configuration or operation authority. Complete screen-reader, reconnect and
+cross-profile qualification remains separate from this bounded source journey.
+The Remove button admits LiveView's empty transport `value` field only beside
+the exact port/revision pair. Nonempty values and additional operation fields
+remain invalid; room ownership and revision checks still apply.
 HEEx fallback and mounted Svelte content are never both exposed to assistive
 technology. A mount does not move focus, announce duplicate content or reset a
 user's unsubmitted local input. Interactive table semantics use the WAI-ARIA
@@ -825,6 +841,15 @@ island envelopes and CSS only. The separate host selects Phoenix Assets, Vite,
 Svelte and LiveView. Neither
 token tests, Storybook stories nor source-only component tests claim the
 complete real-browser acceptance suite.
+
+Workbench end-to-end journeys are Elixir ExUnit tests under
+`hosts/workbench/test/e2e/`, driven through a real browser by test-only
+PhoenixTest.Playwright. `WOTEX_LAB_E2E=1` explicitly enables the disposable
+loopback endpoint and browser supervisor. Ordinary host tests exclude this
+lane; frontend asset tests remain unit tests. Connection coverage includes
+origin and row focus, retained drafts, native Remove, concurrent revision
+conflicts, edge replacement and the 599/600, 839/840 and 320-pixel profiles.
+This bounded suite does not close the wider acceptance matrix above.
 
 ## Requirement catalogue
 

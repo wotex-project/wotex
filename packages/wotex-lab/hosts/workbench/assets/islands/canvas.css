@@ -49,6 +49,8 @@
 .wl-canvas-context button:disabled { cursor: default; opacity: 0.5; }
 .wl-canvas-notice { position: absolute; right: 20px; bottom: 20px; color: var(--wl-canvas-text); background: var(--wl-canvas-surface); }
 .wl-connected-canvas .svelte-flow__edge-path { stroke: var(--wl-canvas-muted); stroke-width: 1; }
+.wl-connected-canvas .svelte-flow__edge:focus-visible .svelte-flow__edge-path,
+.wl-connected-canvas .svelte-flow__edge.selected .svelte-flow__edge-path { stroke: var(--wotex-semantic-color-focus); stroke-width: 2; }
 .wl-connected-canvas .wl-canvas-proposal .svelte-flow__edge-path { stroke-dasharray: 4 4; }
 .wl-connected-canvas .svelte-flow__edge-text { fill: var(--wl-canvas-muted); font-size: 11px; }
 .wl-connected-canvas .svelte-flow__edge-textbg { fill: var(--wl-canvas-surface); }

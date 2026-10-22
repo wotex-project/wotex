@@ -154,11 +154,11 @@ defmodule WotexLabWorkbenchWeb.ConnectionsLiveTest do
     render_submit(form(first, "#wl-connection-form", %{"connection" => raw}))
     render_submit(form(second, "#wl-connection-form"))
     assert has_element?(second, "#wl-connection-editor [role='alert']", "Connections changed")
-    assert has_element?(second, "button[phx-click='reload_connection']")
+    assert has_element?(second, "button", "Reload draft")
     assert has_element?(second, "#wl-connection-thing option[value='thermostat'][selected]")
     assert Room.connections(room).revision == 1
 
-    render_click(element(second, "button[phx-click='reload_connection']"))
+    render_click(element(second, "button", "Reload draft"))
     assert has_element?(second, "input[name='connection[revision]'][value='1']")
     assert has_element?(second, "#wl-connection-affordance option[value='target'][selected]")
 
@@ -249,6 +249,70 @@ defmodule WotexLabWorkbenchWeb.ConnectionsLiveTest do
     render_click(element(view, "button[phx-click='cancel_connection']"))
     assert Room.connections(room).bindings["power"] == nil
     assert Room.runs(room) == []
+  end
+
+  test "Back, Cancel, Apply and Remove return to the edited connection without running it",
+       %{conn: conn, token: token} do
+    {:ok, view, _} = live(conn, "/")
+    room = start_room(view, token)
+    canvas_event(view, "inspect_connection", %{"id" => "power"})
+
+    render_click(element(view, "button[phx-click='connection_list']"))
+    assert list_focus(view) == "#wl-connection-power"
+
+    edit_power(view)
+    render_click(element(view, "button[phx-click='cancel_connection']"))
+    assert list_focus(view) == "#wl-connection-power"
+
+    edit_power(view)
+    render_submit(form(view, "#wl-connection-form"))
+    assert list_focus(view) == "#wl-connection-power"
+    assert Room.connections(room).revision == 0
+
+    edit_power(view)
+    render_click(element(view, "button[phx-click='remove_connection']"))
+    assert list_focus(view) == "#wl-connection-power"
+    assert has_element?(view, "#wl-connection-power[aria-label='Connect Power']")
+    assert Room.connections(room).bindings["power"] == nil
+    assert Room.connections(room).revision == 1
+    assert Room.runs(room) == []
+    assert Enum.all?(Room.things(room), &(&1.stats.handler_calls == 0))
+  end
+
+  test "Remove accepts only the native empty button value beside its exact operation fields",
+       %{conn: conn, token: token} do
+    {:ok, view, _} = live(conn, "/")
+    room = start_room(view, token)
+    canvas_event(view, "inspect_connection", %{"id" => "power"})
+    raw = %{"port" => "power", "revision" => "0", "value" => ""}
+
+    for invalid <- [Map.put(raw, "value", "unexpected"), Map.put(raw, "authority", "grant")] do
+      render_hook(view, "remove_connection", invalid)
+      assert Room.connections(room).revision == 0
+      assert has_element?(view, "#wl-connection-editor [role='alert']")
+    end
+
+    render_hook(view, "remove_connection", raw)
+    assert Room.connections(room).bindings["power"] == nil
+    assert Room.connections(room).revision == 1
+    assert list_focus(view) == "#wl-connection-power"
+    assert Room.runs(room) == []
+    assert Enum.all?(Room.things(room), &(&1.stats.handler_calls == 0))
+  end
+
+  defp edit_power(view),
+    do: render_click(element(view, "button[phx-click='edit_connection'][phx-value-port='power']"))
+
+  defp list_focus(view) do
+    [encoded] =
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#wl-connections-list")
+      |> LazyHTML.attribute("phx-mounted")
+
+    [["focus", options]] = Jason.decode!(encoded)
+    options["to"]
   end
 
   defp start_room(view, token) do

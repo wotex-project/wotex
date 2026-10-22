@@ -67,6 +67,18 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` (optionally with `x-greptime-db-name`), read-back and retention DDL through `/v1/sql`, `ADMIN flush_table`, OTLP trace and log ingestion through `/v1/otlp/v1/traces` and `/v1/otlp/v1/logs`, and PromQL range reads through `/v1/prometheus/api/v1/query_range` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 | [grafana/grafana:13.2.2](https://hub.docker.com/r/grafana/grafana) | Disposable server for the Workbench `:grafana` lane, pinned by manifest digest `sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0`; the lane pins the GreptimeDB image by the digest recorded below. Only the health, data source, folder, dashboard import/read and data source query APIs are exercised; no plugin installation, browser rendering or other Grafana revision is claimed |
 
+## Workbench Elixir browser-test cohort
+
+The Workbench selects test-only `phoenix_test_playwright` 0.18.0,
+`phoenix_test` 0.12.1 and `playwright_ex` 0.12.1 in its own lockfile.
+The explicit `playwright_ex` pin retains the client whose minimum supported
+Playwright version is 1.63.0, matching the host's existing frontend lock.
+These MIT-licensed packages are browser-test tooling, outside the production
+release closure. Their supervisor and loopback server start only for the
+explicit Elixir end-to-end lane; the tests add no provider or device service.
+See [PhoenixTest.Playwright](https://hexdocs.pm/phoenix_test_playwright/PhoenixTest.Playwright.html)
+and [PlaywrightEx 0.12.1](https://hex.pm/packages/playwright_ex/0.12.1).
+
 ## Native containment source cohort
 
 Observation date: 2026-09-08. The external Rust helper and its lifecycle probes

@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.19.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.19.1. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -187,6 +187,13 @@ explicit Run records and uses its selected endpoints. Missing required input
 fails before any Property read. The meter-off path preserves its existing
 missing-power fill and mask. Configuration starts no transport, observation,
 experiment or Action. Inert Directory entries remain unavailable as sources.
+
+Keyboard entry uses Enter/Space on an edge or the Connections tool. Shift+F10
+opens the subject menu. Closing the inspector returns to the originating edge
+or tool, with a visible-tool fallback when the subject has gone or is outside
+the current view. Back, Cancel, Apply and Remove focus the matching list row;
+Reload draft focuses the source field. These transitions preserve the canvas
+arrangement and keep Apply separate from transport or experiment execution.
 
 ## Journey 2: ask, inspect and compose a personal workbench
 

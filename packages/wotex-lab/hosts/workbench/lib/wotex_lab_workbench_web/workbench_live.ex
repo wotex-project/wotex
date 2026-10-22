@@ -71,6 +71,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:connection_room, nil)
       |> assign(:connection_editing, false)
       |> assign(:connection_error, nil)
+      |> assign(:connection_focus, nil)
       |> assign(:connections_open, false)
       |> assign(:snapshot, nil)
       |> assign(:metrics, nil)
@@ -191,12 +192,23 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   def handle_event("connection_list", _, socket),
-    do: {:noreply, assign(socket, connection_editing: false, connection_error: nil)}
+    do:
+      {:noreply,
+       assign(socket,
+         connection_editing: false,
+         connection_error: nil,
+         connection_focus: connection_focus(socket)
+       )}
 
   def handle_event("cancel_connection", _, socket),
     do:
       {:noreply,
-       assign(socket, connection_editing: false, connection_draft: nil, connection_error: nil)}
+       assign(socket,
+         connection_editing: false,
+         connection_draft: nil,
+         connection_error: nil,
+         connection_focus: connection_focus(socket)
+       )}
 
   def handle_event("change_connection", %{"connection" => raw} = params, socket) do
     raw = connection_form(raw)
@@ -225,6 +237,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   def handle_event("apply_connection", %{"connection" => raw}, socket),
     do: configure_connection(socket, :apply, connection_form(raw))
+
+  def handle_event("remove_connection", %{"value" => ""} = raw, socket)
+      when map_size(raw) == 3,
+      do: handle_event("remove_connection", Map.delete(raw, "value"), socket)
 
   def handle_event("remove_connection", %{"port" => port, "revision" => revision} = raw, socket)
       when map_size(raw) == 2,
@@ -881,6 +897,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                     observations={@observations}
                     draft={if @connection_editing, do: @connection_draft}
                     error={@connection_error}
+                    focus_port={@connection_focus}
                   />
                 </.tool_panel>
               <% else %>
@@ -1065,7 +1082,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       class="wl-workbench-panel"
       aria-labelledby={@id <> "-title"}
       phx-mounted={JS.focus_first(to: "##{@id}")}
-      phx-window-keydown={if !@menu_open, do: JS.patch("/") |> JS.focus(to: "#wl-board-toggle")}
+      phx-window-keydown={
+        if !@menu_open,
+          do:
+            JS.patch("/")
+            |> JS.focus(to: "#wl-board-toggle")
+            |> JS.dispatch("wotex:restore-canvas-focus")
+      }
       phx-key="Escape"
     >
       <header class="wl-workbench-panel-header">
@@ -1091,7 +1114,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           patch="/"
           class="wl-panel-close"
           aria-label="Close panel"
-          phx-click={JS.focus(to: "#wl-board-toggle")}
+          phx-click={JS.focus(to: "#wl-board-toggle") |> JS.dispatch("wotex:restore-canvas-focus")}
         >×</.link>
       </header>
       <div class="wl-workbench-panel-body">{render_slot(@inner_block)}</div>
@@ -1942,7 +1965,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
          scope: scope,
          connection_draft: nil,
          connection_editing: false,
-         connection_error: nil
+         connection_error: nil,
+         connection_focus: raw["port"]
        )
        |> refresh()
        |> revise_islands()
@@ -1977,6 +2001,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp connection_error,
     do: Error.new(:invalid_connection, :connections, "Connection parameters are malformed")
+
+  defp connection_focus(%{assigns: %{connection_draft: %{"port" => port}}}), do: port
+  defp connection_focus(_), do: nil
 
   defp perform_thing_operation(socket, "read", key, name) do
     with {:ok, scope} <- Scope.admit(socket, :read),

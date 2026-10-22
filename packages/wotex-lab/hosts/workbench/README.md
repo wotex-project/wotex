@@ -73,6 +73,21 @@ the now-unmatched advisory waiver are documented in the Lab's
 [dependency review](../../../../docs/packages/wotex-lab/provenance/standards-and-dependencies.md) and
 protected by the host's own locked-version and bounded-parser regression.
 
+End-to-end journeys live in `test/e2e/` as Elixir ExUnit tests using
+PhoenixTest.Playwright. From the repository root, run the connection journey:
+
+```sh
+WOTEX_LAB_E2E=1 mix pkg wotex-lab cmd --cd hosts/workbench mix test test/e2e/connections_test.exs
+```
+
+Build the assets first with `pnpm --dir packages/wotex-lab/hosts/workbench run build`.
+The suite requires the locked Playwright installation and its Chromium browser;
+it does not download either. It starts an ephemeral loopback endpoint and owns
+disposable sessions, rooms and browser contexts. Normal `mix test` excludes
+the `e2e` tag and starts no browser or HTTP listener. The connection suite checks
+keyboard focus, retained drafts, Apply/Remove, concurrent stale edits, replaced
+edges and layout boundaries. Asset tests cover frontend units separately.
+
 ## Interactive charts and browser evidence
 
 The host explicitly selects Explorer 0.12.0 and invokes the shared
