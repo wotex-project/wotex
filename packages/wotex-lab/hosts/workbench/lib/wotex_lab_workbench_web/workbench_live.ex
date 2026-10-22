@@ -14,8 +14,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   use WotexLabWorkbenchWeb, :live_view
 
-  import WotexLabWorkbenchWeb.Components.{HistoryPanels, Insights, MetricCatalogue}
-  import WotexLabWorkbenchWeb.Components.MetricComposer
+  import WotexLabWorkbenchWeb.Components.{
+    Connections,
+    HistoryPanels,
+    Insights,
+    MetricCatalogue,
+    MetricComposer
+  }
 
   alias Phoenix.LiveView.JS
   alias Plug.Conn.Query
@@ -26,6 +31,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     BoardHistory,
     Canvas,
     Chart,
+    Connections,
     Experiments,
     Formal,
     HistoryPanels,
@@ -57,6 +63,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:experiment_forms, experiment_forms())
       |> assign(:runs, [])
       |> assign(:things, [])
+      |> assign(:connection_state, Connections.new([]))
+      |> assign(:connection_draft, nil)
+      |> assign(:connection_room, nil)
+      |> assign(:connection_editing, false)
+      |> assign(:connection_error, nil)
+      |> assign(:connections_open, false)
       |> assign(:snapshot, nil)
       |> assign(:metrics, nil)
       |> assign(:history, nil)
@@ -106,7 +118,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, scope} ->
         socket =
           socket
-          |> assign(scope: scope, sidebar_open: false, presentation_path: workbench_path(url))
+          |> assign(
+            scope: scope,
+            sidebar_open: false,
+            connections_open: false,
+            presentation_path: workbench_path(url)
+          )
           |> cancel_investigation_on_navigation()
           |> load_action(socket.assigns.live_action, params)
           |> revise_islands()
@@ -145,6 +162,72 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:error, error} -> {:noreply, deny(socket, error)}
     end
   end
+
+  def handle_event("open_connections", _, socket) do
+    case open_canvas_tool(socket, "connections") do
+      {:ok, socket} -> {:noreply, socket}
+      {:error, error} -> reject_event(socket, error)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("edit_connection", %{"port" => port}, socket) do
+    case edit_connection(socket, port, :retain) do
+      {:ok, socket} -> {:noreply, socket}
+      {:error, error} -> connection_failure(socket, error)
+    end
+  end
+
+  def handle_event("reload_connection", %{"port" => port}, socket) do
+    case edit_connection(socket, port, :reload) do
+      {:ok, socket} -> {:noreply, socket}
+      {:error, error} -> connection_failure(socket, error)
+    end
+  end
+
+  def handle_event("connection_list", _, socket),
+    do: {:noreply, assign(socket, connection_editing: false, connection_error: nil)}
+
+  def handle_event("cancel_connection", _, socket),
+    do:
+      {:noreply,
+       assign(socket, connection_editing: false, connection_draft: nil, connection_error: nil)}
+
+  def handle_event("change_connection", %{"connection" => raw} = params, socket) do
+    raw = connection_form(raw)
+
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- Connections.draft?(raw) do
+      socket =
+        socket
+        |> assign(:scope, scope)
+        |> load_connections()
+
+      raw = connection_choice(raw, params["_target"], socket.assigns.things)
+
+      error =
+        case Connections.change(socket.assigns.connection_state, socket.assigns.things, raw) do
+          {:ok, _} -> nil
+          {:error, error} -> error
+        end
+
+      {:noreply, assign(socket, connection_draft: raw, connection_error: error)}
+    else
+      {:error, error} -> connection_failure(socket, error)
+      _ -> connection_failure(socket, connection_error())
+    end
+  end
+
+  def handle_event("apply_connection", %{"connection" => raw}, socket),
+    do: configure_connection(socket, :apply, connection_form(raw))
+
+  def handle_event("remove_connection", %{"port" => port, "revision" => revision} = raw, socket)
+      when map_size(raw) == 2,
+      do: configure_connection(socket, :remove, %{"port" => port, "revision" => revision})
+
+  def handle_event(event, _, socket)
+      when event in ~w(edit_connection reload_connection change_connection apply_connection remove_connection),
+      do: connection_failure(socket, connection_error())
 
   def handle_event("import_thing", _, socket) do
     case open_canvas_tool(socket, "add") do
@@ -582,12 +665,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
     case Scope.verify(socket) do
       {:ok, scope} ->
-        before = {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings}
+        before =
+          {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings,
+           socket.assigns.connection_state}
 
         socket =
           socket
           |> assign(:scope, scope)
           |> load_board()
+          |> load_connections()
           |> update(
             :canvas_readings,
             &ThingReadings.expire(&1, System.monotonic_time(:millisecond))
@@ -595,7 +681,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
         socket =
           if before ==
-               {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings},
+               {socket.assigns.board, socket.assigns.active_pins, socket.assigns.canvas_readings,
+                socket.assigns.connection_state},
              do: socket,
              else: revise_islands(socket)
 
@@ -645,6 +732,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       >
         <:context><.context_header items={context(@scope, @run)} /></:context>
         <:actions>
+          <button type="button" phx-click="open_connections">Connections</button>
           <button type="button" phx-click="import_thing">Add Thing Description</button>
           <.link :if={@scope.room} patch="/evidence" class="wl-nav-link">Session report</.link>
         </:actions>
@@ -661,13 +749,14 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             runs={@runs}
             readings={@canvas_readings}
             selection={@canvas_selection}
+            connections={@connection_state}
             board={@board}
             active_pins={@active_pins}
             session_id={@scope.session_id}
             island_revision={@island_revision}
             empty={
               is_nil(@scope.room) && @live_action in [:workbench, :things] &&
-                @canvas_selection != "import"
+                @canvas_selection != "import" && !@connections_open
             }
           />
           <%= case @live_action do %>
@@ -701,15 +790,39 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                 <.investigation_metrics results={@investigation_results} />
               </.tool_panel>
             <% :things -> %>
-              <.things_view
-                things={@things}
-                room={@scope.room}
-                readings={@canvas_readings}
-                selection={@canvas_selection}
-                observations={@observations}
-                panel={@thing_panel}
-                menu_open={@sidebar_open}
-              />
+              <%= if @connections_open do %>
+                <.tool_panel
+                  id="wl-connections-panel"
+                  title={
+                    if @connection_editing && @connection_draft,
+                      do: Connections.title(@connection_draft["port"]),
+                      else: "Connections"
+                  }
+                  menu_open={@sidebar_open}
+                  back_event={if @connection_editing, do: "connection_list"}
+                  return_label="Back to connections"
+                >
+                  <.connections_view
+                    room={@scope.room}
+                    model={@connection_state}
+                    things={@things}
+                    readings={@canvas_readings}
+                    observations={@observations}
+                    draft={if @connection_editing, do: @connection_draft}
+                    error={@connection_error}
+                  />
+                </.tool_panel>
+              <% else %>
+                <.things_view
+                  things={@things}
+                  room={@scope.room}
+                  readings={@canvas_readings}
+                  selection={@canvas_selection}
+                  observations={@observations}
+                  panel={@thing_panel}
+                  menu_open={@sidebar_open}
+                />
+              <% end %>
             <% :metrics -> %>
               <.tool_panel id="wl-metrics-panel" title="Metrics" menu_open={@sidebar_open}>
                 <div :if={is_nil(@selected_pin)} class="wl-stack">
@@ -810,6 +923,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:runs, :list, required: true)
   attr(:readings, :map, required: true)
   attr(:selection, :string, default: nil)
+  attr(:connections, :map, required: true)
   attr(:session_id, :string, required: true)
   attr(:island_revision, :integer, required: true)
   attr(:empty, :boolean, required: true)
@@ -818,7 +932,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp canvas_view(assigns) do
     props =
-      Canvas.props(assigns.things, assigns.runs, assigns.readings, assigns.selection)
+      Canvas.props(
+        assigns.things,
+        assigns.runs,
+        assigns.readings,
+        assigns.selection,
+        assigns.connections
+      )
       |> Board.decorate(assigns.board, assigns.active_pins)
 
     assigns = assign(assigns, :props, props)
@@ -850,6 +970,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:menu_open, :boolean, required: true)
   attr(:return_path, :string, default: "/")
   attr(:return_label, :string, default: "Back to experiment")
+  attr(:back_event, :string, default: nil)
   slot(:inner_block, required: true)
 
   defp tool_panel(assigns) do
@@ -863,8 +984,17 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       phx-key="Escape"
     >
       <header class="wl-workbench-panel-header">
+        <button
+          :if={@back_event}
+          type="button"
+          phx-click={@back_event}
+          class="wl-panel-close"
+          aria-label={@return_label}
+        >
+          <img class="wl-menu-icon" src="/icons/chevron-left.svg" alt="" width="14" height="14" />
+        </button>
         <.link
-          :if={@return_path != "/"}
+          :if={is_nil(@back_event) && @return_path != "/"}
           patch={@return_path}
           class="wl-panel-close"
           aria-label={@return_label}
@@ -1568,6 +1698,140 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
+  defp load_connections(%{assigns: %{scope: %{room: room}}} = socket) when is_pid(room) do
+    if Process.alive?(room) do
+      model = safe(fn -> Room.connections(room) end, socket.assigns.connection_state)
+      assign(socket, :connection_state, model)
+    else
+      assign(socket, :connection_state, Connections.new([]))
+    end
+  end
+
+  defp load_connections(socket), do: assign(socket, :connection_state, Connections.new([]))
+
+  defp edit_connection(socket, port, mode) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- is_pid(scope.room) and Process.alive?(scope.room) do
+      socket =
+        socket
+        |> assign(:scope, scope)
+        |> refresh()
+
+      existing = socket.assigns.connection_draft
+
+      retain? =
+        (mode == :retain and socket.assigns.connection_room == scope.room and existing) &&
+          existing["port"] == port
+
+      with {:ok, draft} <-
+             if(retain?,
+               do: {:ok, existing},
+               else: Connections.draft(socket.assigns.connection_state, socket.assigns.things, port)
+             ) do
+        error =
+          case Connections.change(socket.assigns.connection_state, socket.assigns.things, draft) do
+            {:ok, _} -> nil
+            {:error, error} -> error
+          end
+
+        {:ok,
+         socket
+         |> assign(
+           connection_draft: draft,
+           connection_room: scope.room,
+           connection_editing: true,
+           connection_error: error,
+           connections_open: true,
+           sidebar_open: false
+         )
+         |> push_patch(to: "/things?panel=connections")}
+      end
+    else
+      {:error, error} -> {:error, error}
+      _ -> {:error, Error.new(:no_room, :connections, "Start a room first")}
+    end
+  end
+
+  defp connection_form(raw) when is_map(raw) and not is_struct(raw) do
+    fields = Map.new(~w(affordance port revision thing), &{&1, true})
+
+    if map_size(raw) <= 8 and Enum.all?(raw, &draft_entry?(&1, fields, raw)),
+      do: Map.take(raw, Map.keys(fields)),
+      else: raw
+  end
+
+  defp connection_form(raw), do: raw
+
+  defp connection_choice(raw, ["connection", "thing"], things) do
+    options = Enum.filter(Connections.options(things, raw["port"]), &(&1.thing == raw["thing"]))
+
+    case Enum.find(options, &(&1.affordance == raw["affordance"])) || List.first(options) do
+      nil -> raw
+      option -> Map.put(raw, "affordance", option.affordance)
+    end
+  end
+
+  defp connection_choice(raw, _, _), do: raw
+
+  defp configure_connection(socket, operation, raw) do
+    socket =
+      if operation == :apply and Connections.draft?(raw),
+        do: assign(socket, :connection_draft, raw),
+        else: socket
+
+    initial =
+      case operation do
+        :apply -> Connections.change(socket.assigns.connection_state, socket.assigns.things, raw)
+        :remove -> Connections.remove(socket.assigns.connection_state, raw)
+      end
+
+    with {:ok, _} <- initial,
+         {:ok, scope} <- Scope.admit(socket, :configure),
+         true <- is_pid(scope.room) and Process.alive?(scope.room),
+         true <- scope.room == socket.assigns.connection_room,
+         {:ok, _} <- Room.configure_connection(scope.room, operation, raw) do
+      {:noreply,
+       socket
+       |> assign(
+         scope: scope,
+         connection_draft: nil,
+         connection_editing: false,
+         connection_error: nil
+       )
+       |> refresh()
+       |> revise_islands()
+       |> put_flash(
+         :info,
+         if(operation == :remove, do: "Connection removed", else: "Connection applied")
+       )}
+    else
+      {:error, error} ->
+        connection_failure(socket, error)
+
+      _ ->
+        connection_failure(
+          socket,
+          Error.new(:room_changed, :connections, "Room changed. Reopen the connection")
+        )
+    end
+  end
+
+  defp connection_failure(socket, error) do
+    case Scope.verify(socket) do
+      {:ok, scope} ->
+        {:noreply,
+         socket
+         |> assign(scope: scope, connection_error: error)
+         |> load_connections()}
+
+      {:error, denied} ->
+        {:noreply, deny(socket, denied)}
+    end
+  end
+
+  defp connection_error,
+    do: Error.new(:invalid_connection, :connections, "Connection parameters are malformed")
+
   defp perform_thing_operation(socket, "read", key, name) do
     with {:ok, scope} <- Scope.admit(socket, :read),
          {:ok, result} <- Room.read_property(scope.room, key, name),
@@ -1749,6 +2013,51 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   defp acknowledge_island_event(socket, "canvas", %{
+         "event" => "inspect_connection",
+         "payload" => %{"id" => id}
+       }) do
+    case edit_connection(socket, id, :retain) do
+      {:ok, socket} -> {:reply, %{"status" => "accepted"}, socket}
+      _ -> {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
+  defp acknowledge_island_event(socket, "canvas", %{
+         "event" => "propose_connection",
+         "payload" => %{"connection" => raw}
+       }) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- is_pid(scope.room) and Process.alive?(scope.room) do
+      socket =
+        socket
+        |> assign(:scope, scope)
+        |> refresh()
+
+      ids = canvas_ids(socket)
+
+      with true <- is_map(raw) and raw["source"] in ids and raw["target"] in ids,
+           {:ok, draft} <-
+             Connections.gesture(socket.assigns.connection_state, socket.assigns.things, raw) do
+        {:reply, %{"status" => "accepted"},
+         socket
+         |> assign(
+           connection_draft: draft,
+           connection_room: scope.room,
+           connection_editing: true,
+           connection_error: nil,
+           connections_open: true,
+           sidebar_open: false
+         )
+         |> push_patch(to: "/things?panel=connections")}
+      else
+        _ -> {:reply, %{"status" => "rejected"}, socket}
+      end
+    else
+      _ -> {:reply, %{"status" => "rejected"}, socket}
+    end
+  end
+
+  defp acknowledge_island_event(socket, "canvas", %{
          "event" => "inspect",
          "payload" => %{"id" => id}
        }) do
@@ -1833,7 +2142,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
        }) do
     ids =
       Enum.map(
-        Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)[
+        Canvas.props(
+          socket.assigns.things,
+          socket.assigns.runs,
+          socket.assigns.canvas_readings,
+          nil,
+          socket.assigns.connection_state
+        )[
           "nodes"
         ],
         & &1["id"]
@@ -1892,7 +2207,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           socket.assigns.things,
           socket.assigns.runs,
           socket.assigns.canvas_readings,
-          socket.assigns.canvas_selection
+          socket.assigns.canvas_selection,
+          socket.assigns.connection_state
         )
         |> Board.decorate(socket.assigns.board, socket.assigns.active_pins)
     }
@@ -1928,7 +2244,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           |> refresh()
 
         props =
-          Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)
+          Canvas.props(
+            socket.assigns.things,
+            socket.assigns.runs,
+            socket.assigns.canvas_readings,
+            nil,
+            socket.assigns.connection_state
+          )
 
         if Enum.any?(props["nodes"], &(&1["id"] == id)) do
           socket =
@@ -1941,7 +2263,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               id == "process-smart-room" ->
                 push_patch(socket, to: "/experiments?experiment=smart_room")
 
-              socket.assigns.live_action == :things ->
+              socket.assigns.live_action == :things and not socket.assigns.connections_open ->
                 socket
 
               true ->
@@ -1960,13 +2282,16 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp select_canvas_node(_, _), do: :error
 
-  defp open_canvas_tool(socket, tool) when tool in ~w(add experiments metrics) do
+  defp open_canvas_tool(socket, tool) when tool in ~w(add connections experiments metrics) do
     case Scope.verify(socket) do
       {:ok, scope} ->
         path =
           case tool do
             "add" ->
               "/things?panel=import"
+
+            "connections" ->
+              "/things?panel=connections"
 
             "experiments" ->
               "/experiments?" <> Query.encode(%{"experiment" => socket.assigns.selected_experiment})
@@ -1977,7 +2302,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
         {:ok,
          socket
-         |> assign(scope: scope, sidebar_open: false)
+         |> assign(
+           scope: scope,
+           sidebar_open: false,
+           connection_editing: false,
+           connections_open: tool == "connections"
+         )
          |> push_patch(to: path)}
 
       {:error, error} ->
@@ -2190,6 +2520,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       socket
       |> assign(:runs, runs)
       |> assign(:things, things)
+      |> load_connections()
       |> assign(:snapshot, snapshot)
       |> assign(:metrics, metrics)
       |> reload_run()
@@ -2205,6 +2536,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> stop_observations()
     |> assign(:runs, [])
     |> assign(:things, [])
+    |> assign(:connection_state, Connections.new([]))
     |> assign(:snapshot, nil)
     |> assign(:metrics, nil)
     |> assign(:history, nil)
@@ -2262,6 +2594,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:ok, id} -> assign(socket, :selected_experiment, id)
       {:error, error} -> error_flash(socket, error)
     end
+  end
+
+  defp load_action(socket, :things, %{"panel" => "connections"} = params)
+       when map_size(params) == 1 do
+    socket
+    |> assign(run_id: nil, connections_open: true)
+    |> refresh()
   end
 
   defp load_action(socket, :things, %{"panel" => "import"} = params) when map_size(params) == 1 do
@@ -2394,7 +2733,15 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   end
 
   defp canvas_ids(socket) do
-    props = Canvas.props(socket.assigns.things, socket.assigns.runs, socket.assigns.canvas_readings)
+    props =
+      Canvas.props(
+        socket.assigns.things,
+        socket.assigns.runs,
+        socket.assigns.canvas_readings,
+        nil,
+        socket.assigns.connection_state
+      )
+
     Enum.map(props["nodes"], & &1["id"]) ++ Enum.map(socket.assigns.board.pins, & &1.id)
   end
 
@@ -2414,7 +2761,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         prompt: assigns.investigation.prompt,
         metric_result: assigns.metric_result,
         answer: assigns.answer,
-        investigation_results: assigns.investigation_results
+        investigation_results: assigns.investigation_results,
+        connection_draft: assigns.connection_draft,
+        connection_editing: assigns.connection_editing
       }
 
       with :ok <- Sessions.put_presentation(scope.token, scope.room, value),
@@ -2441,7 +2790,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         |> assign(
           Map.take(
             value,
-            ~w(experiment_forms selected_experiment canvas_readings canvas_selection metric_draft metric_result answer investigation_results)a
+            ~w(experiment_forms selected_experiment canvas_readings canvas_selection metric_draft metric_result answer investigation_results connection_draft connection_editing)a
           )
         )
         |> assign(
@@ -2450,7 +2799,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           board: %{socket.assigns.board | layout: value.layout || socket.assigns.board.layout},
           investigation: %{investigation_state() | prompt: value.prompt},
           investigation_room: room,
-          metric_room: room
+          metric_room: room,
+          connection_room: room
         )
 
       _ ->

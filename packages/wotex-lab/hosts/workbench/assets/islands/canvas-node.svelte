@@ -7,7 +7,7 @@ import settings from "./canvas-assets/settings-2.svg"
 import flask from "./canvas-assets/flask-conical.svg"
 import more from "./canvas-assets/ellipsis.svg"
 
-type Data = CanvasNode & { open: (id: string, event: MouseEvent) => void }
+type Data = CanvasNode & { open: (id: string, event: MouseEvent) => void; connectable: boolean }
 let { data, selected }: NodeProps<Node<Data>> = $props()
 const icon = $derived(data.kind === "process" ? flask : data.id === "thing-thermostat" ? thermometer : data.id === "thing-meter" ? zap : settings)
 </script>
@@ -28,10 +28,12 @@ const icon = $derived(data.kind === "process" ? flask : data.id === "thing-therm
   </div>
   {#if data.detail}<p class="wl-canvas-detail">{data.detail}</p>{/if}
   {#if data.kind === "process"}
-    <Handle type="target" position={Position.Left} id="temperature" style="top: 31%" isConnectable={false} />
-    <Handle type="target" position={Position.Left} id="power" style="top: 62%" isConnectable={false} />
-  {:else}
-    <Handle type="target" position={Position.Left} id="input" isConnectable={false} />
+    <Handle type="target" position={Position.Left} id="temperature" style="top: 31%" isConnectable={data.connectable} aria-label="Temperature input" />
+    <Handle type="target" position={Position.Left} id="power" style="top: 62%" isConnectable={data.connectable} aria-label="Power input" />
+  {:else if data.id === "thing-actuator"}
+    <Handle type="target" position={Position.Left} id="input" isConnectable={data.connectable} aria-label="Proposed Action input" />
   {/if}
-  <Handle type="source" position={Position.Right} id="output" isConnectable={false} />
+  {#if data.kind !== "entry"}
+    <Handle type="source" position={Position.Right} id="output" isConnectable={data.connectable} aria-label={data.kind === "process" ? "Action proposal output" : `${data.title} output`} />
+  {/if}
 </article>

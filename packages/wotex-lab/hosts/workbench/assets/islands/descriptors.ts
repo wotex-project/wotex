@@ -11,6 +11,8 @@ export const componentDescriptors = {
     },
     events: {
       inspect: { payload: "id", effectful: false },
+      inspect_connection: { payload: "id", effectful: false },
+      propose_connection: { payload: "connection", effectful: false },
       open: { payload: "id", effectful: false },
       read: { payload: "id", effectful: false },
       observe: { payload: "id", effectful: false },

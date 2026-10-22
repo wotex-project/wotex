@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.15.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.16.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -16,8 +16,10 @@ source now opens a full-viewport Svelte Flow canvas at `/`. Experiments, runs,
 metrics and selected-run evidence patch the same LiveView and open contextual
 panels. Thing inspection/import, experiment drafts, explicit readings, node
 positions and viewport survive those panel transitions. A bounded documentation
-round trip now retains unsaved presentation and drafts. The built reader
-alignment, general recovery and live Thing subscriptions remain incomplete.
+round trip now retains unsaved presentation and drafts. The compact built reader
+is implemented on its explicit candidate dependency lane. Reference Thing
+observations now retain separate Property receipts with Live, Stale, Paused and
+unavailable states. General recovery and complete qualification remain open.
 Room-scoped Ask → recorded chart → pin and manual Query → result → pin retain
 source/query identity and missingness. Saved pin geometry and viewport restore
 within the signed session; restored pins pause until Resume.
@@ -134,8 +136,8 @@ Context menus reflect the selected source's capabilities. Unsupported
 configuration, streaming or connection operations show a reason instead of
 opening an empty task or implying that an adapter exists.
 
-The sample Thermostat declares only the read-only `temperature` Property.
-Its operations menu offers Read temperature. The sample Actuator owns
+The sample Thermostat declares a read-only, observable `temperature` Property.
+Its operations menu offers Read Property and explicit Observe/Pause. The sample Actuator owns
 `setTarget`; that Action belongs to its admitted proposal and explicit review
 journey. Registering a Thing Description creates a Directory entry; it does not
 establish a transport connection. These distinctions also govern the import,
@@ -168,6 +170,23 @@ draft and require explicit Apply. Opening an inspector performs no write.
 **Design check:** the user can identify the system's state and inspect a Thing
 without a page transition. Ellipsis and keyboard access expose the same actions
 as right-click. A searchable list provides a non-spatial access path to Things.
+
+### Configure a typed connection
+
+Open Connections from the compact rail, select a connection, or drag between
+declared handles. The same editor selects a current admitted Thing and
+compatible Property or proposal target. A gesture opens a draft and adds no
+edge. Sources discloses the exact Thing, affordance, schema unit and Forms.
+Read and Observe remain separate explicit operations on the selected source.
+
+Apply and Remove compare the room's connection revision. A stale draft remains
+editable until explicit reload or correction; a pending Action decision blocks
+configuration changes. Back and Close preserve an uncommitted draft; Cancel
+discards it. Applied wiring survives reload in the owning room, and the next
+explicit Run records and uses its selected endpoints. Missing required input
+fails before any Property read. The meter-off path preserves its existing
+missing-power fill and mask. Configuration starts no transport, observation,
+experiment or Action. Inert Directory entries remain unavailable as sources.
 
 ## Journey 2: ask, inspect and compose a personal workbench
 
@@ -288,17 +307,17 @@ Do not assemble the spatial surface from competing LiveView and Svelte owners.
 This develops [Decision 0010](../decisions/0010-liveview-svelte-islands.md);
 it adds no second browser router or Node runtime service. HEEx supplies the
 semantic initial/failure view and searchable Thing list. Shared Svelte components
-continue into Storybook. Svelte Flow is a proposed new dependency, not present
-in the lockfile; select and qualify its exact version before implementation.
+continue into Storybook. Svelte Flow is now pinned in the host lockfile and
+owns the implemented canvas island.
 
 Inspection baseline: repository commit
 `597598307b06407b0452491d269eda2487b828f9`, package `packages/wotex-lab`.
-The host pins Svelte 5.57.1 and BeamLens 0.3.1. Its registered islands currently
-cover tabs, data-grid and chart only; the primary Workbench is LiveView/HEEx.
-The existing BeamLens skill offers bounded metric queries and current/baseline
-run summaries. It has no structured prompt-to-widget protocol. Saved metric
-arrangements already exist, but arbitrary spatial placement, live Thing node
-subscriptions, connection authoring and the new composed island are unbuilt.
+At that baseline, the host pinned Svelte 5.57.1 and BeamLens 0.3.1. Its registered
+islands covered tabs, data-grid and chart; the primary Workbench was
+LiveView/HEEx. The current source adds the composed spatial canvas, saved node
+positions and metric pins, bounded metric composition, explicit reference
+Property observations and typed reference connection authoring. Source changes
+and their executed checks are recorded separately from archive adoption.
 
 Per-Thing telemetry also needs explicit source work: the host-wide telemetry
 ring deliberately excludes Thing IDs. A Thing context menu must not pretend

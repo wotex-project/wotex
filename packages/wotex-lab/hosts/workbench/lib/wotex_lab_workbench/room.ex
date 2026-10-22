@@ -40,6 +40,7 @@ defmodule WotexLabWorkbench.Room do
   alias WotexLabWorkbench.Control.Ledger
 
   alias WotexLabWorkbench.{
+    Connections,
     Evidence,
     Experiments,
     Formal,
@@ -157,6 +158,16 @@ defmodule WotexLabWorkbench.Room do
   def observe_property(room, key, name, receiver),
     do: GenServer.call(room, {:observe, key, name, receiver})
 
+  @doc "Returns the room's current process bindings without reading a Property."
+  @spec connections(pid()) :: Connections.t()
+  def connections(room), do: GenServer.call(room, :connections)
+
+  @doc "Applies or removes one revision-checked binding without executing it."
+  @spec configure_connection(pid(), :apply | :remove, term()) ::
+          {:ok, Connections.t()} | {:error, Error.t()}
+  def configure_connection(room, operation, value),
+    do: GenServer.call(room, {:configure_connection, operation, value})
+
   @doc "Registers a pasted TD in the session Directory as an inert, non-consumable entry."
   @spec register_td(pid(), term()) :: {:ok, map()} | {:error, Error.t()}
   def register_td(room, json), do: GenServer.call(room, {:register, json})
@@ -247,6 +258,7 @@ defmodule WotexLabWorkbench.Room do
          service: service,
          context: context,
          consumed: consumed,
+         connections: Connections.new(Map.values(things)),
          observations: observations,
          ids: Map.new(@things, fn spec -> {spec.role, things[spec.key].id} end),
          channel: channel,
@@ -434,6 +446,39 @@ defmodule WotexLabWorkbench.Room do
 
     {:reply, listed ++ extra, state}
   end
+
+  def handle_call(:connections, _, state), do: {:reply, state.connections, state}
+
+  def handle_call({:configure_connection, operation, raw}, _, state)
+      when operation in [:apply, :remove] do
+    outcome =
+      case operation do
+        :apply -> Connections.change(state.connections, Map.values(state.things), raw)
+        :remove -> Connections.remove(state.connections, raw)
+      end
+
+    with {:ok, connections} <- outcome,
+         changed? <- connections != state.connections,
+         :ok <- if(changed?, do: no_pending_decision(state, %{id: "smart_room"}), else: :ok) do
+      advance = if changed?, do: 1, else: 0
+
+      {:reply, {:ok, connections},
+       %{
+         state
+         | connections: connections,
+           state_revision: state.state_revision + advance,
+           watermark: state.watermark + advance
+       }}
+    else
+      {:error, error} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:configure_connection, _, _}, _, state),
+    do:
+      {:reply,
+       {:error, Error.new(:invalid_connection, :connections, "Unknown connection operation")},
+       state}
 
   def handle_call({:read, key, name}, _, state) when is_binary(key) and is_binary(name) do
     reply =
@@ -845,6 +890,8 @@ defmodule WotexLabWorkbench.Room do
            {:ok,
             Map.put(acc, spec.key, %{
               key: spec.key,
+              consumable: true,
+              title: document["title"],
               pid: pid,
               td: td,
               id: document["id"],

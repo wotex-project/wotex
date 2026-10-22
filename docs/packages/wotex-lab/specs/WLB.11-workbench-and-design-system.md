@@ -1,7 +1,13 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.20.0. Contract: accepted. Implementation status:
+Specification version: 0.21.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.21 adds room-owned typed connection configuration for the reference
+smart-room process. A canvas gesture prepares a draft; only explicit Apply or
+Remove commits an admitted binding against its exact room revision. The next
+explicit Run uses that binding. Neither configuration nor its projection opens
+a transport, reads a Property, starts a subscription or dispatches an Action.
 
 Version 0.20 adds explicit Property observation to existing reference rooms.
 Observe and Pause are available only for declared capabilities. The room owns
@@ -439,7 +445,8 @@ Canvas `inspect` carries only `id` and is inert. The host revalidates the signed
 session, island instance, exact revision and membership in the current graph.
 Right-click and ellipsis open the same menu; the HEEx fallback offers labelled
 inspection buttons. Local node movement, pan, zoom, selection and fit cannot
-change wiring, select a Form, allocate a room or authorize an Action. Reconnect
+change wiring, select a Form, allocate a room or authorize an Action. A handle
+gesture opens the connection draft described below without adding an edge. Reconnect
 requires a current full snapshot before inspection is enabled and retains local
 geometry. Only explicit Property read or observation receipts populate values;
 simulator state is not an observation. The timestamp is the host receipt time,
@@ -459,8 +466,51 @@ Canvas `statistics` and `sources` carry only `id`, open the same inspector at
 its corresponding disclosure and execute no Property or Action operation.
 Documentation retains paused receipts without replaying or restarting a stream.
 
-Canvas `open` also carries only `id`. The host admits exactly `add`, `metrics`
-or `experiments` after verifying the signed session, instance and revision. It
+### Typed reference connections
+
+The room owns three process ports: `temperature` accepts one readable scalar
+number or integer Property with exact unit `Cel`; `power` accepts the same
+with unit `W`; `proposal` targets only the room policy's admitted Actuator
+`setTarget` Action. Property eligibility requires an actual read Form. An inert
+Directory entry, unknown Thing, incompatible DataSchema or unit, unsupported
+Action and undeclared operation are refused. No implicit unit conversion or
+transport admission is performed. The initial bindings preserve the existing
+Thermostat temperature, Energy meter power and Actuator proposal path.
+
+Canvas `inspect_connection` carries only a known port `id`. Canvas
+`propose_connection` carries exactly `connection`, whose closed fields are
+`source`, `target` and `target_handle`: bounded current node identifiers and
+one declared process/Actuator handle. Both events revalidate session, island
+revision, room membership and endpoint direction and perform no mutation. The
+Connect tool and non-spatial connection list reach the same labelled editor.
+
+Apply submits exactly `port`, `thing`, `affordance` and a canonical decimal
+`revision`; Remove submits the port and revision. The room serializes changes,
+compares its own connection revision, revalidates the selected affordance and
+increments the revision only for a changed binding. Stale or malformed drafts
+and cross-room identities cannot overwrite current configuration. The draft
+and its error remain available for explicit reload or correction. A pending
+Action decision must be cancelled or resolved before a binding can change.
+Configuration advances the room's state revision without granting authority.
+
+The next explicit smart-room Run resolves all required bindings before any
+Property read. Temperature and proposal are required; power is required only
+when its existing meter option is enabled. Numerical feature order remains
+temperature then power, with exact selected Thing/affordance identity, units,
+and the existing missing-power fill/mask. The immutable run records the binding
+revision as a scalar outcome and exact endpoints as ordered `connection:` input
+references containing port, Thing ID, affordance kind/name and unit. The existing separate Action review, expiry,
+deduplication and policy dispatch remain authoritative.
+
+Applied connections survive tool patches, reload and documentation return in
+their owning room. An uncommitted bounded draft may survive documentation;
+restoration never applies it or restores authority. Empty-room authoring starts
+no room. Closing, cancelling, dragging, reconnecting and saved-layout restore
+perform no connection change. Edge labels may project an exact cached source
+Property receipt; unavailable data is never replaced with zero.
+
+Canvas `open` also carries only `id`. The host admits exactly `add`, `connections`,
+`metrics` or `experiments` after verifying the signed session, instance and revision. It
 only patches to a contextual panel; it never allocates a room, reads a Property,
 queries metric history or runs an experiment. Inspecting the admitted smart-room
 process opens its configuration. The canvas mount identity remains stable across

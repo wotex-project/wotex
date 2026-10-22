@@ -1059,7 +1059,7 @@ body {
 }
 .wl-workbench-panel-header { display: flex; align-items: center; gap: 8px; flex: none; min-height: 52px; padding: 12px; }
 .wl-workbench-panel-header h2 { flex: 1; min-width: 0; margin: 0; font-size: 14px; font-weight: 500; }
-.wotex-lab .wl-panel-close { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 4px; text-decoration: none; color: var(--wl-color-text); }
+.wotex-lab .wl-panel-close { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; font: inherit; cursor: pointer; text-decoration: none; color: var(--wl-color-text); }
 .wl-panel-close:hover { background: var(--wl-color-bg); }
 .wl-workbench-panel-body { min-height: 0; overflow: auto; padding: 0 12px 12px; }
 .wl-workbench-panel .wl-page-header { margin-top: 0; margin-bottom: 12px; gap: 8px; }
@@ -1112,6 +1112,21 @@ body {
 .wl-thing-property .wl-actions { margin-top: 12px; gap: 4px; }
 .wl-thing-property .wl-actions form { margin: 0; }
 .wl-thing-property .wl-receipt-time { margin: 0; font-size: 11px; }
+.wl-connection-row { padding-block: 12px; border-bottom: 1px solid var(--wl-color-border); }
+.wl-connection-row > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wl-connection-row h3 { margin: 0; font-size: 12px; font-weight: 500; }
+.wl-connection-endpoints { margin: 8px 0 0; font-size: 11px; color: var(--wl-color-muted); overflow-wrap: anywhere; }
+.wl-connection-reading { display: flex; align-items: baseline; gap: 4px; font-size: 12px; }
+.wl-connection-row .wl-connection-reading { margin-top: 8px; }
+.wl-connection-reading .wl-muted { margin-left: auto; }
+.wl-connection-receipt { border-top: 1px solid var(--wl-color-border); padding-top: 12px; }
+.wl-connection-receipt .wl-actions { margin-top: 12px; gap: 4px; }
+.wl-connection-receipt time { display: block; margin-top: 4px; }
+.wl-connection-error { font-size: 12px; }
+.wl-connection-error p { margin: 0 0 8px; }
+#wl-connection-editor .wl-disclosure { border: 0; margin: 0; padding: 0; }
+#wl-connection-form .wl-field { gap: 4px; }
+#wl-connection-form .wl-field > label { line-height: 16px; }
 .wl-thing-stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
 .wl-thing-inspector .wl-thing-stats :is(dt, dd) { margin: 0; font-size: 12px; }
 .wl-thing-source { max-width: 100%; overflow: auto; padding: 8px; border-radius: 4px; background: var(--wl-color-bg); font-size: 11px; line-height: 16px; }

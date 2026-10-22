@@ -8,15 +8,23 @@ defmodule WotexLabWorkbench.Presentation do
   """
 
   alias Wotex.Lab.Error
+  alias WotexLabWorkbench.Connections
 
   @keys ~w(path layout experiment_forms selected_experiment canvas_readings
            canvas_selection metric_draft prompt metric_result answer investigation_results)a
   @maximum_bytes 256 * 1_024
+  @optional_keys ~w(connection_draft connection_editing)a
 
   @doc "Admits only the closed presentation fields within a 256 KiB JSON budget."
   @spec admit(term()) :: {:ok, map()} | {:error, Error.t()}
   def admit(value) when is_map(value) and not is_struct(value) do
-    with true <- Enum.sort(Map.keys(value)) == Enum.sort(@keys),
+    with true <- Enum.all?(@keys, &Map.has_key?(value, &1)),
+         true <- Enum.all?(Map.keys(value), &(&1 in (@keys ++ @optional_keys))),
+         true <- is_nil(value[:connection_draft]) or Connections.draft?(value.connection_draft),
+         true <- is_boolean(Map.get(value, :connection_editing, false)),
+         true <-
+           not Map.get(value, :connection_editing, false) or
+             Connections.draft?(value[:connection_draft]),
          true <- path?(value.path),
          true <- is_map(value.experiment_forms) and map_size(value.experiment_forms) <= 3,
          true <- is_map(value.canvas_readings) and map_size(value.canvas_readings) <= 31,

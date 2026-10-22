@@ -7,7 +7,7 @@ defmodule WotexLabWorkbench.Canvas do
   moving or selecting them never changes a Form, a query or Action authority.
   """
 
-  alias WotexLabWorkbench.{ThingProperties, ThingReadings}
+  alias WotexLabWorkbench.{Connections, ThingProperties, ThingReadings}
 
   @positions %{"thermostat" => {160, 235}, "meter" => {160, 490}, "actuator" => {800, 490}}
   @titles %{"thermostat" => "Thermostat", "meter" => "Energy meter", "actuator" => "Actuator"}
@@ -15,8 +15,14 @@ defmodule WotexLabWorkbench.Canvas do
   @units %{"thermostat" => "°C", "meter" => "W", "actuator" => "°C target"}
 
   @doc "Builds a finite graph from already admitted session state without performing a read."
-  @spec props([map()], [map()], %{optional(String.t()) => map()}, String.t() | nil) :: map()
-  def props(things, runs, readings, selection \\ nil) do
+  @spec props(
+          [map()],
+          [map()],
+          %{optional(String.t()) => map()},
+          String.t() | nil,
+          Connections.t() | nil
+        ) :: map()
+  def props(things, runs, readings, selection \\ nil, connections \\ nil) do
     things =
       things
       |> Enum.sort_by(& &1.id)
@@ -36,7 +42,11 @@ defmodule WotexLabWorkbench.Canvas do
     %{
       "label" => "Connected Things",
       "nodes" => nodes,
-      "edges" => Enum.filter(edges(), &(&1["source"] in ids and &1["target"] in ids))
+      "edges" =>
+        Enum.filter(
+          if(connections, do: Connections.edges(connections, things, readings), else: edges()),
+          &(&1["source"] in ids and &1["target"] in ids)
+        )
     }
     |> selected(selection, ids)
   end

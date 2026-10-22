@@ -2,7 +2,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   @moduledoc """
   The smart-room cycle split at the authorization seam.
 
-  `run/2` observes the session's disposable thermostat and meter through the
+  `run/2` resolves the room's configured Property bindings, then reads them through the
   runtime, exchanges the observations over the continuum channel, encodes one
   Nx row, evaluates the public room rule `Wotex.Lab.SmartRoom.Scenario.target/2`,
   decodes an inert `setTarget` proposal and asks the room policy for a
@@ -19,24 +19,28 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
   alias Wotex.Nx.{ActionProposal, Decoder, Encoder, Feature, Observation, OutputSchema, Row, Schema}
   alias Wotex.Runtime.{ConsumedThing, Context}
-  alias WotexLabWorkbench.{Preview, Runs}
+  alias WotexLabWorkbench.{Canvas, Connections, Preview, Runs}
 
   @backend Nx.BinaryBackend
 
   @doc "Observes, exchanges, infers and decides; never dispatches."
   @spec run(keyword(), map()) :: {:ok, map()} | {:error, term()}
   def run(params, room) do
+    with {:ok, sources} <- sources(room, Keyword.fetch!(params, :meter)) do
+      run_cycle(params, room, sources)
+    end
+  end
+
+  defp run_cycle(params, room, sources) do
     now = System.monotonic_time(:millisecond)
     meter? = Keyword.fetch!(params, :meter)
 
     {outcome, elapsed} =
       Runs.measure(fn ->
-        with {:ok, thermostat} <- fetch(room, :thermostat),
-             {:ok, actuator} <- fetch(room, :actuator),
-             {:ok, temperature} <- observe(thermostat, "temperature", "Cel", now),
-             {:ok, power} <- meter(room, meter?, now),
+        with {:ok, temperature} <- observe(sources.temperature, "Cel", now),
+             {:ok, power} <- meter(sources.power, meter?, now),
              {:ok, deliveries} <- exchange(room, [temperature, power]),
-             {:ok, encoded, proposal} <- infer(actuator, temperature, power, params, now) do
+             {:ok, encoded, proposal} <- infer(sources, temperature, power, params, now) do
           {:ok,
            %{
              temperature: temperature,
@@ -61,15 +65,14 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
          backend: inspect(@backend),
          summary:
            [
-             {"Thermostat", "#{temperature.thing_id}: #{Preview.format(temperature.value)} Cel"},
+             {"Temperature", source_value(room, sources.temperature, temperature.value, "°C")},
              {"Meter",
               if(power,
-                do: "#{power.thing_id}: #{Preview.format(power.value)} W",
-                else: "off (power filled, mask 0)"
+                do: source_value(room, sources.power, power.value, "W"),
+                else: "Off"
               )},
              {"Power budget", Preview.format(params[:power_budget]) <> " W"},
-             {"Proposal",
-              "#{fields.action_name} #{Preview.format(fields.input)} Cel for #{fields.thing_id} (inert)"},
+             {"Proposal", "#{fields.action_name} · #{Preview.format(fields.input)} °C"},
              {"Exchanged", "#{length(cycle.deliveries)} observation proposal(s) edge to cloud"}
            ] ++ decision_summary(decision),
          tensor: tensor,
@@ -88,9 +91,15 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
          outcomes: %{
            proposal_input: fields.input,
            decision: decision_status(decision),
-           power_observed: not is_nil(power)
+           power_observed: not is_nil(power),
+           connection_revision: room.connections.revision
          },
-         inputs: ["fixture:loopback/thing-description.json", "room:" <> room.id],
+         inputs:
+           [
+             "fixture:loopback/thing-description.json",
+             "room:" <> room.id,
+             "connections:" <> Connections.digest(room.connections)
+           ] ++ Connections.inputs(room.connections, Map.values(room.things)),
          seed: 0,
          budgets: %{max_rows: 1, ttl_ms: params[:ttl_ms]}
        }}
@@ -103,7 +112,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     now = System.monotonic_time(:millisecond)
 
     with :ok <- match(decision, approval),
-         {:ok, actuator} <- fetch(room, :actuator),
+         {:ok, target} <- fetch(room, "proposal"),
          {:ok, outcome} <-
            Policy.dispatch(
              room.policy,
@@ -111,7 +120,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
              [now: now, watermark: room.watermark, state_revision: room.state_revision],
              fn ->
                ConsumedThing.invoke_action(
-                 actuator,
+                 target.consumed,
                  decision["action_name"],
                  decision["input"],
                  context("decision:" <> decision["id"], now)
@@ -127,7 +136,8 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
              DateTime.add(room.epoch, now, :millisecond)
            ),
          {:ok, _} <- Channel.send_value(room.channel, "edge", "cloud", result),
-         {:ok, effect} <- ConsumedThing.read_property(actuator, "target", context("effect", now)) do
+         {:ok, effect} <-
+           ConsumedThing.read_property(target.consumed, "target", context("effect", now)) do
       {:ok, %{dispatch: Runs.plain(outcome), effect: effect.payload}}
     else
       {:error, %Error{} = error} ->
@@ -160,23 +170,39 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     end
   end
 
-  defp fetch(room, role) do
-    id = Map.fetch!(room.ids, role)
-
-    case Map.fetch(room.consumed, id) do
-      {:ok, consumed} -> {:ok, consumed}
-      :error -> {:error, Error.new(:thing_not_discovered, :scenario, "Thing was not discovered")}
+  defp sources(room, meter?) do
+    with {:ok, temperature} <- fetch(room, "temperature"),
+         {:ok, proposal} <- fetch(room, "proposal"),
+         {:ok, power} <- power_source(room, meter?) do
+      {:ok, %{temperature: temperature, proposal: proposal, power: power}}
     end
   end
 
-  defp observe(thing, name, unit, now) do
+  defp power_source(_, false), do: {:ok, nil}
+  defp power_source(room, true), do: fetch(room, "power")
+
+  defp fetch(room, port) do
+    with {:ok, binding} <- Connections.fetch(room.connections, Map.values(room.things), port),
+         {:ok, consumed} <- Map.fetch(room.consumed, binding.thing_id) do
+      {:ok, Map.put(binding, :consumed, consumed)}
+    else
+      :error -> {:error, Error.new(:thing_not_discovered, :scenario, "Thing was not discovered")}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp observe(source, unit, now) do
     with {:ok, reading} <-
-           ConsumedThing.read_property(thing, name, context("observe:" <> name, now)) do
+           ConsumedThing.read_property(
+             source.consumed,
+             source.affordance,
+             context("observe:" <> source.affordance, now)
+           ) do
       Observation.new(
-        id: "room-#{name}-#{now}",
-        thing_id: ThingDescription.id(ConsumedThing.thing_description(thing)),
+        id: "room-#{source.affordance}-#{now}",
+        thing_id: source.thing_id,
         affordance_type: :property,
-        affordance_name: name,
+        affordance_name: source.affordance,
         observed_at: now,
         value: reading.payload,
         unit: unit,
@@ -186,9 +212,11 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   end
 
   defp meter(_, false, _), do: {:ok, nil}
+  defp meter(source, true, now), do: observe(source, "W", now)
 
-  defp meter(room, true, now) do
-    with {:ok, meter} <- fetch(room, :meter), do: observe(meter, "power", "W", now)
+  defp source_value(room, source, value, unit) do
+    title = Canvas.title(Map.fetch!(room.things, source.thing))
+    "#{title} · #{source.affordance}: #{Preview.format(value)} #{unit}"
   end
 
   defp exchange(room, observations) do
@@ -210,15 +238,22 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     with {:ok, reversed} <- delivered, do: {:ok, Enum.reverse(reversed)}
   end
 
-  defp infer(actuator, temperature, power, params, now) do
-    td = ConsumedThing.thing_description(actuator)
+  defp infer(sources, temperature, power, params, now) do
+    td = ConsumedThing.thing_description(sources.proposal.consumed)
     document = ThingDescription.to_map(td)
     fields = Observation.to_map(temperature)
     budget = Nx.tensor(params[:power_budget] * 1.0, type: :f32)
-    power_thing = if power, do: Observation.to_map(power).thing_id, else: fields.thing_id
 
-    with {:ok, temperature_feature} <- feature(fields.thing_id, "temperature", "Cel", :error),
-         {:ok, power_feature} <- feature(power_thing, "power", "W", {:fill, 0.0}),
+    power_fields =
+      if power,
+        do: Observation.to_map(power),
+        else: %{thing_id: fields.thing_id, affordance_name: "power"}
+
+    power_schema = if power, do: sources.power.schema, else: %{"type" => "number", "unit" => "W"}
+
+    with {:ok, temperature_feature} <-
+           feature("temperature", fields, sources.temperature.schema, :error),
+         {:ok, power_feature} <- feature("power", power_fields, power_schema, {:fill, 0.0}),
          {:ok, schema} <- Schema.new(features: [temperature_feature, power_feature], max_rows: 1),
          {:ok, row} <- Row.new(fields.observed_at, row_values(temperature, power)),
          {:ok, encoded} <- Encoder.encode([row], schema),
@@ -240,13 +275,13 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
     end
   end
 
-  defp feature(thing_id, name, unit, missing) do
-    with {:ok, schema} <- DataSchema.new(%{"type" => "number", "unit" => unit}) do
+  defp feature(name, fields, declaration, missing) do
+    with {:ok, schema} <- DataSchema.new(declaration) do
       Feature.new(
         name: name,
-        thing_id: thing_id,
+        thing_id: fields.thing_id,
         affordance_type: :property,
-        affordance_name: name,
+        affordance_name: fields.affordance_name,
         data_schema: schema,
         accepted_quality: [:good],
         missing: missing
