@@ -25,6 +25,10 @@ are in the root `AGENTS.md`.
   Backend and native language constraints do not restrict frontend source or
   build tooling. The base library keeps its first-tensor path independent of
   Phoenix and Node, and the reference release starts no Node runtime process.
+- Write browser end-to-end tests in Elixir under
+  `hosts/workbench/test/e2e/`, using `PhoenixTest.Playwright.Case`.
+  Keep `assets/` for frontend source, stories and unit tests; browser journey
+  suites do not belong there.
 - Workspace mode (`WOTEX_PATH_DEPS=1`) never proves artifact adoption. Release
   paths use Hex or verified archives.
 - Specs and completion contracts describe the entire accepted programme; do not
