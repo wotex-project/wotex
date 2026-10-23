@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.13.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.13.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -28,6 +28,10 @@ spacing around types/imports/lifecycle groups. Actual-binary Biome plugin tests
 and AST regressions run in the existing CI gate. The
 [frontend standard](../frontend-standard.md) owns the exact files and narrow
 constructor exemptions; UI behavior and the generated SDK API stay unchanged.
+
+Version 1.13.1 aligns WLB.11 with the accepted inline-handler rule:
+expression bodies are allowed; block bodies require named script handlers.
+The frontend standard and executable gate retain the same distinction.
 
 ## Delivery status
 
