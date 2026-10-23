@@ -30,7 +30,7 @@ defmodule WotexLabStorybook.MixProject do
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},
       {:phoenix_pubsub, "~> 2.1"},
-      {:phoenix_storybook, "== 1.3.0"},
+      {:phoenix_storybook, "== 1.5.0"},
       {:bandit, "~> 1.13.1"},
       {:jason, "~> 1.4"},
       {:lazy_html, "~> 0.1.13", only: :test},

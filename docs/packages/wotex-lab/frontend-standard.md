@@ -6,6 +6,12 @@ frontend build/check tools and the standalone Storybook host's lazy loader.
 The generated control SDK has a separate public constructor API under WLB.08;
 this UI refactor does not change that API or its generator.
 
+The `typescript` dependency aliases Microsoft's `@typescript/typescript6`
+compatibility package. Svelte checking and the syntax-aware gates require its
+JavaScript compiler API; TypeScript 7 currently ships no replacement API.
+The lock retains the underlying TypeScript 6 compiler. Revisit this alias when
+both Svelte tooling and the gate can use a supported replacement.
+
 ## Functions and state
 
 Use `const` arrow functions and arrow operation properties. Do not declare

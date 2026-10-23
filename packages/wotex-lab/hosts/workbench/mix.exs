@@ -70,8 +70,8 @@ defmodule WotexLabWorkbench.MixProject do
       {:jason, "~> 1.4"},
       {:req, "~> 0.5"},
       {:lazy_html, "~> 0.1.13", only: :test},
-      {:phoenix_test_playwright, "== 0.18.0", only: :test, runtime: false},
-      {:playwright_ex, "== 0.12.1", only: :test, runtime: false},
+      {:phoenix_test_playwright, "== 0.19.0", only: :test, runtime: false},
+      {:playwright_ex, "== 0.15.0", only: :test, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.23", only: [:dev, :test], runtime: false},
@@ -131,10 +131,10 @@ defmodule WotexLabWorkbench.MixProject do
         end
 
       {_, nil} ->
-        {:doc_shell, "== 0.4.0"}
+        {:doc_shell, "== 0.5.0"}
 
       {_, ""} ->
-        {:doc_shell, "== 0.4.0"}
+        {:doc_shell, "== 0.5.0"}
 
       _ ->
         raise "DOC_SHELL_CANDIDATE requires WOTEX_PATH_DEPS=1"

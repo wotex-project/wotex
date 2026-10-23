@@ -52,6 +52,6 @@ defmodule WotexLabStorybookWeb.StorybookTest do
   end
 
   test "locks the reviewed Phoenix Storybook line" do
-    assert Application.spec(:phoenix_storybook, :vsn) |> to_string() == "1.3.0"
+    assert Application.spec(:phoenix_storybook, :vsn) |> to_string() == "1.5.0"
   end
 end

@@ -69,15 +69,15 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 
 ## Workbench Elixir browser-test cohort
 
-The Workbench selects test-only `phoenix_test_playwright` 0.18.0,
-`phoenix_test` 0.12.1 and `playwright_ex` 0.12.1 in its own lockfile.
-The explicit `playwright_ex` pin retains the client whose minimum supported
-Playwright version is 1.63.0, matching the host's existing frontend lock.
+The 23 October refresh selects test-only `phoenix_test_playwright` 0.19.0,
+`phoenix_test` 0.12.1 and `playwright_ex` 0.15.0 in the Workbench lockfile.
+The explicit `playwright_ex` pin requires Playwright 1.64 or newer; the
+frontend lock selects 1.64.1 for that same protocol cohort.
 These MIT-licensed packages are browser-test tooling, outside the production
 release closure. Their supervisor and loopback server start only for the
 explicit Elixir end-to-end lane; the tests add no provider or device service.
 See [PhoenixTest.Playwright](https://hexdocs.pm/phoenix_test_playwright/PhoenixTest.Playwright.html)
-and [PlaywrightEx 0.12.1](https://hex.pm/packages/playwright_ex/0.12.1).
+and [PlaywrightEx 0.15.0](https://hex.pm/packages/playwright_ex/0.15.0).
 
 ## Native containment source cohort
 
@@ -529,6 +529,12 @@ fixes malicious indexed-source-map denial of service.
 of the frontend gate. A clean audit is dated dependency evidence, not a claim
 that future advisories cannot match. Component/browser behavior and production
 asset budgets are qualified separately against the replacement lock.
+
+A subsequent compatible patch refresh selects Storybook/framework/a11y 10.6.3,
+Vite 8.3.5 and Svelte 5.57.2. The complete lock audit remains clean at every
+severity. The [dated dependency review](https://github.com/wotex-project/wotex/blob/main/docs/plans/dependency-refresh-2026-10-23.md)
+records the compiler API compatibility alias, published-renderer limitation and
+version ranges retained for the numerical and native cohorts.
 
 ### Crypto argument-error redaction
 

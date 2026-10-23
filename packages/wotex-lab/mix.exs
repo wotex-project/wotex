@@ -32,7 +32,7 @@ defmodule WotexLab.MixProject do
       hex: [ignore_advisories: @acknowledged_advisories],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
-        plt_add_apps: [:mix, :ex_unit]
+        plt_add_apps: [:mix, :ex_unit, :doc_shell]
       ]
     ]
   end
@@ -98,10 +98,10 @@ defmodule WotexLab.MixProject do
         end
 
       {_, nil} ->
-        {:doc_shell, "== 0.4.0", only: [:dev, :test, :docs], runtime: false}
+        {:doc_shell, "== 0.5.0", only: [:dev, :test, :docs], runtime: false}
 
       {_, ""} ->
-        {:doc_shell, "== 0.4.0", only: [:dev, :test, :docs], runtime: false}
+        {:doc_shell, "== 0.5.0", only: [:dev, :test, :docs], runtime: false}
 
       _ ->
         raise "DOC_SHELL_CANDIDATE requires WOTEX_PATH_DEPS=1"
