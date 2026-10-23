@@ -61,7 +61,10 @@
     # toolchain.
     {:workbench, command: "mix check --no-retry", cd: "hosts/workbench"},
     {:storybook_host,
-     command: "mix do deps.get --check-locked + check --no-retry",
+     command:
+       "mix do deps.get --check-locked + " <>
+         "cmd --cd ../workbench mix seed --check --storybook-output ../storybook/priv/fixtures + " <>
+         "check --no-retry",
      cd: "hosts/storybook",
      deps: [:workbench]},
     {:nerves_host,

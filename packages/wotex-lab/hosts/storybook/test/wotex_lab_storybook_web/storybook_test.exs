@@ -20,6 +20,26 @@ defmodule WotexLabStorybookWeb.StorybookTest do
     assert html =~ ~s(data-semantic-fallback="data-grid")
     assert html =~ ~s(data-semantic-fallback="navigation-tabs")
 
+    for id <- ~w(reporting-chart data-grid navigation-tabs) do
+      {:ok, snapshot} = WotexLabStorybook.DesignContract.fixture(id)
+
+      assert has_element?(
+               view,
+               ~s([data-fixture-id="#{id}"][data-fixture-payload-digest="#{snapshot.payload_digest}"])
+             )
+    end
+
+    assert has_element?(view, ~s([data-semantic-fallback="reporting-chart"]), "20.4")
+    assert has_element?(view, ~s([data-semantic-fallback="reporting-chart"]), "Temperature °C")
+    assert has_element?(view, ~s([data-semantic-fallback="data-grid"]), "Protocol")
+    assert has_element?(view, ~s([data-semantic-fallback="data-grid"]), "Modbus")
+
+    assert has_element?(
+             view,
+             ~s([data-semantic-fallback="navigation-tabs"]),
+             "Causal operation spans"
+           )
+
     assert view
            |> element(~s([data-fixture-id="navigation-tabs"] button), "Advance server revision")
            |> render_click() =~ ~s(data-server-revision="2")
@@ -53,5 +73,17 @@ defmodule WotexLabStorybookWeb.StorybookTest do
 
   test "locks the reviewed Phoenix Storybook line" do
     assert Application.spec(:phoenix_storybook, :vsn) |> to_string() == "1.5.0"
+  end
+
+  test "an unavailable fixture renders no replacement island or sample" do
+    html =
+      render_component(WotexLabStorybookWeb.IslandLive,
+        id: "unavailable",
+        fixture_id: "unknown"
+      )
+
+    assert html =~ "Story fixture unavailable"
+    refute html =~ "data-semantic-fallback"
+    refute html =~ "data-wotex-island"
   end
 end

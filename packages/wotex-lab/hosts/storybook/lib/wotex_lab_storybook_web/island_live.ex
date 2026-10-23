@@ -18,7 +18,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
       end)
       |> assign_new(:commands, fn -> [] end)
       |> assign(:contract, DesignContract.current())
-      |> assign(:props, props(assigns.fixture_id))
+      |> assign_fixture(assigns.fixture_id)
 
     {:ok, socket}
   end
@@ -26,6 +26,10 @@ defmodule WotexLabStorybookWeb.IslandLive do
   @impl Phoenix.LiveComponent
   def handle_event("advance", _, socket) do
     {:noreply, update(socket, :revision, &(&1 + 1))}
+  end
+
+  def handle_event("wotex:island:" <> _, _, %{assigns: %{fixture_error: true}} = socket) do
+    {:reply, %{"status" => "rejected"}, socket}
   end
 
   def handle_event("wotex:island:" <> event, payload, socket) do
@@ -54,6 +58,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
       data-wotex-fixture-digest={@contract["story_fixture_digest"]}
       data-wotex-stylesheet-digest={@contract["stylesheet_digest"]}
       data-fixture-id={@fixture_id}
+      data-fixture-payload-digest={@fixture_digest}
       data-server-revision={@revision}
     >
       <header>
@@ -63,9 +68,14 @@ defmodule WotexLabStorybookWeb.IslandLive do
         </button>
       </header>
 
+      <p :if={@fixture_error} role="alert">
+        Story fixture unavailable. Regenerate the Mix seed output.
+      </p>
+
       <Island.island
+        :if={!@fixture_error}
         id={"storybook--#{@fixture_id}"}
-        component={component(@fixture_id)}
+        component={@component}
         props={@props}
         generation={@generation}
         revision={to_string(@revision)}
@@ -90,12 +100,13 @@ defmodule WotexLabStorybookWeb.IslandLive do
       <table>
         <thead>
           <tr>
-            <th>Time</th><th>Temperature</th>
+            <th>Time</th><th :for={series <- @props["series"]}>{series["label"]}</th>
           </tr>
         </thead>
         <tbody>
           <tr :for={point <- @props["points"]}>
-            <th>{point["label"]}</th><td>{point["values"]["temperature"]}</td>
+            <th>{point["label"]}</th>
+            <td :for={series <- @props["series"]}>{point["values"][series["id"]]}</td>
           </tr>
         </tbody>
       </table>
@@ -109,12 +120,12 @@ defmodule WotexLabStorybookWeb.IslandLive do
       <caption>{@props["label"]}</caption>
       <thead>
         <tr>
-          <th>Thing</th><th>Status</th>
+          <th :for={column <- @props["columns"]}>{column["label"]}</th>
         </tr>
       </thead>
       <tbody>
         <tr :for={row <- @props["rows"]}>
-          <th>{row["values"]["name"]}</th><td>{row["values"]["status"]}</td>
+          <td :for={column <- @props["columns"]}>{row["values"][column["key"]]}</td>
         </tr>
       </tbody>
     </table>
@@ -132,58 +143,29 @@ defmodule WotexLabStorybookWeb.IslandLive do
     """
   end
 
-  defp component("reporting-chart"), do: "chart"
-  defp component("data-grid"), do: "data-grid"
-  defp component("navigation-tabs"), do: "tabs"
-
   defp capabilities("reporting-chart"), do: ["inspect"]
   defp capabilities("data-grid"), do: ["select", "activate"]
   defp capabilities("navigation-tabs"), do: ["select"]
 
-  defp props("reporting-chart") do
-    %{
-      "title" => "Room temperature",
-      "series" => [%{"id" => "temperature", "label" => "Temperature"}],
-      "points" => [
-        %{"key" => "09:00", "label" => "09:00", "values" => %{"temperature" => 21.2}},
-        %{"key" => "10:00", "label" => "10:00", "values" => %{"temperature" => 21.6}},
-        %{"key" => "11:00", "label" => "11:00", "values" => %{"temperature" => 22.0}}
-      ]
-    }
-  end
+  defp assign_fixture(socket, id) do
+    case DesignContract.fixture(id) do
+      {:ok, snapshot} ->
+        assign(socket,
+          component: snapshot.component,
+          props: snapshot.payload,
+          fixture_digest: snapshot.payload_digest,
+          fixture_error: false
+        )
 
-  defp props("data-grid") do
-    %{
-      "label" => "Observed Things",
-      "columns" => [
-        %{"key" => "name", "label" => "Thing"},
-        %{"key" => "status", "label" => "Status"}
-      ],
-      "rows" => [
-        %{
-          "key" => "sensor-1",
-          "values" => %{"name" => "Meeting room", "status" => "Online"}
-        },
-        %{"key" => "sensor-2", "values" => %{"name" => "Workshop", "status" => "Offline"}}
-      ]
-    }
-  end
-
-  defp props("navigation-tabs") do
-    %{
-      "label" => "Thing details",
-      "selected" => "properties",
-      "tabs" => [
-        %{"id" => "properties", "label" => "Properties", "content" => "Three readable values"},
-        %{"id" => "actions", "label" => "Actions", "content" => "One safe action"}
-      ]
-    }
+      {:error, _} ->
+        assign(socket, component: nil, props: %{}, fixture_digest: nil, fixture_error: true)
+    end
   end
 
   defp resync(socket, instance_id) do
     result =
       Snapshot.new(
-        component(socket.assigns.fixture_id),
+        socket.assigns.component,
         instance_id,
         socket.assigns.props,
         generation: socket.assigns.generation,
@@ -208,7 +190,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
   defp admit_event(socket, instance_id, payload) do
     with true <- payload["client_revision"] == to_string(socket.assigns.revision),
          {:ok, event} <-
-           Event.validate(component(socket.assigns.fixture_id), instance_id, payload) do
+           Event.validate(socket.assigns.component, instance_id, payload) do
       acknowledge(socket, event["command_id"])
     else
       _ -> {:reply, %{"status" => "rejected"}, socket}

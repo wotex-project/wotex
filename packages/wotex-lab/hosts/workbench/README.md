@@ -97,8 +97,11 @@ examples. `mix seed` generates deterministic JSON; `mix seed --check` refuses
 missing or stale output without writing it. Neither command starts a room or
 performs an operation. The host gate checks these files. Room startup validates
 the generated seed before starting its Things; invalid or missing data refuses
-startup. Browser islands receive only server snapshots. Static Storybook alone
-imports the generated example payloads, and production bundles exclude them.
+startup. Browser islands receive only server snapshots. Static Storybook imports
+the generated examples; production bundles exclude them. To update the Phoenix
+Storybook copy, run `mix seed --storybook-output ../storybook/priv/fixtures`.
+The Lab gate checks both copies with `--check`; the live host reads only its
+own artifact and displays no substitute if it is unavailable.
 This host uses disposable room processes rather than Ash resources or a database.
 
 `WOTEX_PATH_DEPS=1` is the sole workspace switch. With it unset, dependencies
