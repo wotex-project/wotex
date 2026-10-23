@@ -1,7 +1,15 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.24.0. Contract: accepted. Implementation status:
+Specification version: 0.25.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.25 aligns compact reading typography and board spacing. The 38-pixel
+board control uses equal 12-pixel side padding. A numeric reading and its unit
+share one 24/28-pixel text group with the same size, weight and baseline. Thing
+cards put state and retained receipt time in a compact footer and derive their
+height from content. Property inspectors, Run results and Run pin values use
+the same typography. These presentation
+changes add no payload fields, observations, operations or authority.
 
 Version 0.24 adds Search board to the board menu and Command/Control K.
 The contextual drawer lists only the current bounded canvas projection and
@@ -386,7 +394,7 @@ errors or reconnect recovery. Expanded composition may expose relevant context b
 cannot add unrelated panels or change the authoritative subject.
 
 The target shell is a persistent spatial workbench with at most two floating
-menu surfaces: a 38-pixel board dropdown with a 4-pixel chevron inset, and a
+menu surfaces: a 38-pixel board dropdown with equal 12-pixel side padding, and a
 36-pixel icon rail. Search, viewport controls and documentation live in
 submenus. Inspectors, configuration and results open in context with 20-pixel
 canvas-edge insets. Closing them preserves geometry, selection and viewport.

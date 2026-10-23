@@ -12,7 +12,7 @@ let { data, selected }: NodeProps<Node<Data>> = $props()
 const icon = $derived(data.kind === "process" ? flask : data.id === "thing-thermostat" ? thermometer : data.id === "thing-meter" ? zap : settings)
 </script>
 
-<article class="wl-canvas-node" class:wl-canvas-node-selected={selected} class:wl-canvas-process={data.kind === "process"}>
+<article class="wl-canvas-node wl-canvas-subject" class:wl-canvas-node-selected={selected} class:wl-canvas-process={data.kind === "process"}>
   <header>
     <img src={icon} width="14" height="14" alt="" />
     <strong>{data.title}</strong>
@@ -22,11 +22,18 @@ const icon = $derived(data.kind === "process" ? flask : data.id === "thing-therm
   </header>
   <p class="wl-canvas-identity" title={data.identity}>{data.kind === "process" ? "Process" : data.identity}</p>
   <div class="wl-canvas-reading">
-    {#if data.value}<span class="wl-canvas-value">{data.value}</span>{/if}
-    {#if data.unit}<span class="wl-canvas-unit">{data.unit}</span>{/if}
-    <span class="wl-canvas-status">{data.status}</span>
+    {#if data.value}
+      <span class="wl-canvas-value">{data.value}{data.unit ? ` ${data.unit}` : ""}</span>
+    {:else}
+      <span class="wl-canvas-status">{data.status}</span>
+    {/if}
   </div>
-  {#if data.detail}<p class="wl-canvas-detail">{data.detail}</p>{/if}
+  {#if data.value || data.detail}
+    <footer class="wl-canvas-receipt">
+      {#if data.value}<span class="wl-canvas-status">{data.status}</span>{/if}
+      {#if data.detail}<span class="wl-canvas-detail">{data.detail}</span>{/if}
+    </footer>
+  {/if}
   {#if data.kind === "process"}
     <Handle type="target" position={Position.Left} id="temperature" style="top: 31%" isConnectable={data.connectable} aria-label="Temperature input" />
     <Handle type="target" position={Position.Left} id="power" style="top: 62%" isConnectable={data.connectable} aria-label="Power input" />

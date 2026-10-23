@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.20.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.21.0. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -49,8 +49,8 @@ tool rail. Search/status and zoom do not occupy separate floating bars. Use
 16-pixel tool icons, 14-pixel menu/node icons, 28-pixel desktop targets and menu
 rows, 12-pixel labels and 14-pixel inspector titles. The rail is 36 pixels wide;
 context menus start at 200 pixels. The board dropdown is 38 pixels high, hugs
-its contents and leaves 4 pixels after the chevron. Touch and zoomed layouts need their own
-composition. The source implements the board control and Select/Pan/Add Thing/
+its contents and uses equal 12-pixel left and right padding. Touch and zoomed
+layouts need their own composition. The source implements the board control and Select/Pan/Add Thing/
 Metrics/Experiments/Fit rail. Opening these tools performs no read, history query
 or run. Broader accessibility qualification remains open.
 
@@ -76,7 +76,11 @@ edges, matching the board control's edge inset. Use one visible shell with
 12-pixel content padding for inspectors and dialogs. Menus inset their rows
 4 pixels, with 8-pixel row padding; labels therefore share the same 12-pixel
 content inset. Rows must not paint over the continuous outer border. Numeric
-readings and their units share a text baseline, including `°C target`.
+readings and their units form one 24/28-pixel text group with the same size,
+weight and baseline, including `°C target`. Thing cards lead with that reading;
+state and receipt time share a compact footer. Their height follows their
+content rather than reserving an empty lower section. Run pin values use the
+same reading treatment.
 Below 600 pixels the inspector starts at 76 pixels to clear the board control;
 its left, right and bottom canvas insets remain 20 pixels.
 
@@ -591,8 +595,26 @@ general typing, live indexing, clipboard copy and contents scrolling are not
 exercised browser features. Empty/error/missing states are authored review
 fixtures. Complete responsive/detail flows, failure-state theme review,
 remaining component bindings, native archive recovery and final brand review
-remain acceptance work. Application UI implementation has not started; source
-contracts remain authoritative until the proposal is reviewed and promoted.
+remain acceptance work for that historical native review. Subsequent source
+implementation and qualification are recorded above; this fixed-state Play
+pass does not establish the complete application migration.
+
+The 2026-10-22 native alignment adds shared Board search rows with editable
+title, identity, kind and icon properties, conditional metric/Run pin entries
+and full-width geometry. Native Play verified Search → metric inspector →
+Rename → Sources → inspector → Search, retaining the renamed title in the
+board and result row, and Search → Thermostat. The metric fixture identifies
+`nx_duration_seconds` and Room history. General native filtering, empty/error
+alternatives, focus traversal and remaining result return paths are still
+unqualified. This fixture performs no runtime operation.
+
+The shared Observed Property component now applies the same 24/28-pixel medium
+style to value and unit in all seven observation states. Native Play after
+reload verified Read → Waiting → Live. The running source Property inspector
+was checked at 24 pixels, 28-pixel line height and weight 500 for both elements.
+The scoped Workbench gate passed all fourteen checks with 275 tests, fourteen
+excluded and 91.7% coverage. This source and native alignment does not close
+the remaining programme-wide qualification.
 
 ## Research basis
 

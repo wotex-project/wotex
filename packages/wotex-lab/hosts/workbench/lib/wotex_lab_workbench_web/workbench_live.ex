@@ -90,6 +90,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:charts, [])
       |> assign(:insights, nil)
       |> assign(:canvas_readings, %{})
+      |> assign(:property_errors, %{})
       |> assign(:observations, %{})
       |> assign(:thing_panel, :properties)
       |> assign(:canvas_selection, nil)
@@ -1006,6 +1007,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                     things={@things}
                     room={@scope.room}
                     readings={@canvas_readings}
+                    errors={@property_errors}
                     selection={@canvas_selection}
                     observations={@observations}
                     panel={@thing_panel}
@@ -1226,7 +1228,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           class="wl-panel-close"
           aria-label="Close panel"
           phx-click={JS.focus(to: "#wl-board-toggle") |> restore_canvas_focus(@restore_canvas_focus)}
-        >×</.link>
+        ><img class="wl-menu-icon" src="/icons/x.svg" alt="" width="14" height="14" /></.link>
       </header>
       <div class="wl-workbench-panel-body">{render_slot(@inner_block)}</div>
     </aside>
@@ -1560,6 +1562,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:selection, :any, default: nil)
   attr(:menu_open, :boolean, default: false)
   attr(:observations, :map, required: true)
+  attr(:errors, :map, required: true)
   attr(:panel, :atom, required: true)
   attr(:search_return, :boolean, default: false)
 
@@ -1573,6 +1576,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(
         :receipts,
         if(selected, do: property_receipts(selected, assigns.readings), else: [])
+      )
+      |> assign(
+        :failures,
+        if(selected, do: property_failures(selected, assigns.errors), else: [])
       )
 
     ~H"""
@@ -1603,7 +1610,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           class="wl-panel-close"
           phx-click="back_to_board_search"
           aria-label="Back to search"
-        ><img src="/icons/chevron-left.svg" alt="" width="14" height="14" /></button>
+        ><img class="wl-menu-icon" src="/icons/chevron-left.svg" alt="" width="14" height="14" /></button>
         <h2>
           {cond do
             @selected -> Canvas.title(@selected)
@@ -1613,7 +1620,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         </h2>
         <button
           type="button"
-          class="wl-button wl-button-secondary"
+          class="wl-panel-close"
           phx-click={
             JS.push("close_thing")
             |> JS.focus(
@@ -1625,7 +1632,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             )
           }
           aria-label="Close inspector"
-        >×</button>
+        ><img class="wl-menu-icon" src="/icons/x.svg" alt="" width="14" height="14" /></button>
       </header>
       <%= cond do %>
         <% @selection == "import" -> %>
@@ -1657,6 +1664,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <section :for={property <- @properties} class="wl-thing-property" aria-label={property.name}>
             <% reading = ThingReadings.get(@readings, @selected.key, property.name) %>
             <% watching = Map.has_key?(@observations, @selected.key <> "/" <> property.name) %>
+            <% error = Map.get(@errors, {@selected.key, property.name}) %>
+            <% error_id = "wl-property-error-#{@selected.key}-#{property.name}" %>
             <header>
               <h3>{property.name}</h3><span class="wl-muted">{if reading,
                 do: ThingReadings.status(reading),
@@ -1683,6 +1692,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                   class="wl-button wl-button-secondary"
                   type="submit"
                   phx-disable-with="Reading…"
+                  aria-describedby={if error, do: error_id}
                 >Read {property.name}</button>
               </form>
               <button
@@ -1692,12 +1702,21 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                 phx-click={if watching, do: "pause_observation", else: "observe"}
                 phx-value-thing={@selected.key}
                 phx-value-property={property.name}
+                aria-describedby={if error, do: error_id}
               >
                 {if watching, do: "Pause", else: "Observe"}
               </button>
             </div>
+            <p :if={error} id={error_id} class="wl-error wl-help wl-property-error" role="alert">
+              {property_error_text(error)}
+            </p>
           </section>
-          <details class="wl-disclosure" open={@panel == :statistics}>
+          <details
+            id={"wl-thing-#{@selection}-#{@panel}-statistics"}
+            class="wl-disclosure"
+            open={@panel == :statistics}
+            phx-mounted={JS.ignore_attributes("open")}
+          >
             <summary>Statistics</summary>
             <dl class="wl-thing-stats">
               <dt>Requests</dt><dd>{@selected.stats.handler_calls}</dd>
@@ -1705,7 +1724,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               <dt>Observers</dt><dd>{@selected.stats.subscriptions}</dd>
             </dl>
           </details>
-          <details class="wl-disclosure" open={@panel == :sources}>
+          <details
+            id={"wl-thing-#{@selection}-#{@panel}-sources"}
+            class="wl-disclosure"
+            open={@panel == :sources}
+            phx-mounted={JS.ignore_attributes("open")}
+          >
             <summary>Sources</summary>
             <dl>
               <dt>Thing ID</dt><dd>{@selected.id}</dd><dt>Transport</dt><dd>{@selected.transport}</dd>
@@ -1714,6 +1738,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
               <dt>{property} receipt</dt><dd>
                 <time datetime={reading.read_at}>{reading.read_at}</time>
               </dd>
+            </dl>
+            <dl :if={@failures != []} class="wl-property-errors">
+              <%= for {property, error} <- @failures do %>
+                <dt>{property} error</dt><dd><code>{error.code}</code></dd>
+              <% end %>
             </dl>
             <pre class="wl-thing-source"><code>{Jason.encode!(@selected.document, pretty: true)}</code></pre>
           </details>
@@ -1730,6 +1759,18 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         not is_nil(reading),
         do: {property.name, reading}
   end
+
+  defp property_failures(thing, errors) do
+    for property <- ThingProperties.rows(thing),
+        error <- [Map.get(errors, {thing.key, property.name})],
+        not is_nil(error),
+        do: {property.name, error}
+  end
+
+  defp property_error_text(%{code: :invalid_property_reading}), do: "Invalid numeric reading"
+  defp property_error_text(%{operation: "read"}), do: "Read unavailable"
+  defp property_error_text(%{operation: "observe"}), do: "Observation unavailable"
+  defp property_error_text(_), do: "Operation unavailable"
 
   attr(:metrics, :any, required: true)
   attr(:room, :any, required: true)
@@ -1947,7 +1988,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         else
           socket
           |> stop_observations()
-          |> assign(canvas_readings: %{}, insights: nil)
+          |> assign(canvas_readings: %{}, property_errors: %{}, insights: nil)
         end
 
       socket =
@@ -1967,7 +2008,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp handle_thing_operation(socket, operation, thing, property) do
     case thing_operation(socket, operation, thing, property) do
       {:ok, socket} -> {:noreply, revise_islands(socket)}
-      {:error, error} -> reject_event(socket, error)
+      {:error, error} -> {:noreply, property_failure(socket, operation, thing, property, error)}
     end
   end
 
@@ -1978,8 +2019,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
          %{} = property <- Enum.find(ThingProperties.rows(thing), &(&1.name == name)),
          true <-
            (operation == "read" and property.readable) or
-             (operation in ~w(observe pause) and property.observable) do
-      perform_thing_operation(assign(socket, :scope, scope), operation, key, name)
+             (operation in ~w(observe pause) and property.observable),
+         {:ok, socket} <-
+           perform_thing_operation(assign(socket, :scope, scope), operation, key, name) do
+      {:ok, update(socket, :property_errors, &Map.delete(&1, {key, name}))}
     else
       {:error, error} ->
         {:error, error}
@@ -1987,6 +2030,41 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       _ ->
         {:error,
          Error.new(:unsupported_property_operation, :things, "Property operation is unavailable")}
+    end
+  end
+
+  defp property_failure(socket, operation, key, name, %{code: code} = error)
+       when operation in ~w(read observe pause) and is_atom(code) do
+    with {:ok, scope} <- Scope.verify(socket),
+         true <- is_pid(scope.room) and scope.room == socket.assigns.board_room,
+         %{} = thing <- Enum.find(socket.assigns.things, &(&1.key == key)),
+         true <- Enum.any?(ThingProperties.rows(thing), &(&1.name == name)) do
+      socket =
+        socket
+        |> assign(:scope, scope)
+        |> refresh_thing_stats(scope.room)
+        |> update(:property_errors, &Map.put(&1, {key, name}, %{operation: operation, code: code}))
+
+      if socket.assigns.live_action == :things and
+           socket.assigns.canvas_selection == Canvas.id(thing) and
+           not socket.assigns.board_search_open and not socket.assigns.connections_open do
+        socket
+      else
+        case select_canvas_node(socket, Canvas.id(thing)) do
+          {:ok, socket} -> socket
+          _ -> error_flash(socket, error)
+        end
+      end
+    else
+      {:error, denied} -> deny(socket, denied)
+      _ -> error_flash(socket, error)
+    end
+  end
+
+  defp property_failure(socket, _, _, _, error) do
+    case Scope.verify(socket) do
+      {:ok, scope} -> error_flash(assign(socket, :scope, scope), error)
+      {:error, denied} -> deny(socket, denied)
     end
   end
 
@@ -2403,7 +2481,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             {:reply, %{"status" => "accepted"}, revise_islands(socket)}
 
           {:error, error} ->
-            {:reply, %{"status" => "rejected"}, error_flash(socket, error)}
+            {:reply, %{"status" => "rejected", "feedback" => "host"},
+             property_failure(socket, event, thing.key, ThingProperties.primary(thing), error)}
 
           _ ->
             {:reply, %{"status" => "rejected"}, socket}
@@ -2724,6 +2803,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           assign(socket,
             board: board,
             board_room: room,
+            property_errors:
+              if(socket.assigns.board_room == room, do: socket.assigns.property_errors, else: %{}),
             active_pins: MapSet.intersection(active, eligible)
           )
 
@@ -2862,6 +2943,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> assign(:charts, [])
     |> assign(:insights, nil)
     |> assign(:canvas_readings, %{})
+    |> assign(:property_errors, %{})
     |> assign(:metric_result, nil)
     |> assign(:metric_room, nil)
     |> assign(:investigation_results, [])

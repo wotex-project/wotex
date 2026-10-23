@@ -156,6 +156,53 @@ defmodule WotexLabWorkbenchWeb.ThingObservationsTest do
     assert Process.alive?(second.room)
   end
 
+  test "canvas failures open the affected Property; forged and revoked reads retain admission", %{
+    conn: conn,
+    token: token
+  } do
+    {:ok, view, _} = live(conn, "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+    {:ok, %{room: room}} = Sessions.verify(token)
+    host = host(room, "thermostat")
+    :ok = Thing.emit(host, "temperature", "invalid")
+
+    canvas_event(view, "read")
+    assert_patch(view, "/things")
+    assert has_element?(view, "#wl-thing-inspector-thing-thermostat")
+
+    assert has_element?(
+             view,
+             "#wl-property-error-thermostat-temperature",
+             "Invalid numeric reading"
+           )
+
+    refute has_element?(view, ".wl-flash-error")
+    assert canvas_node(view)["value"] == "—"
+    assert Thing.stats(host).handler_calls == 1
+
+    for key <- ["unknown", %{"unexpected" => "value"}] do
+      render_hook(view, "read", %{"thing" => key, "property" => "temperature"})
+      assert has_element?(view, ".wl-flash-error", "unsupported_property_operation")
+      assert has_element?(view, "#wl-property-error-thermostat-temperature")
+      assert Thing.stats(host).handler_calls == 1
+    end
+
+    :ok = Thing.emit(host, "temperature", 22.7)
+    canvas_event(view, "read")
+    refute has_element?(view, "#wl-property-error-thermostat-temperature")
+    assert canvas_node(view)["value"] == "22.7"
+    assert Thing.stats(host).handler_calls == 2
+    assert Thing.stats(host).subscriptions == 0
+    assert Room.runs(room) == []
+
+    :ok = Sessions.revoke(token)
+
+    assert render_hook(view, "read", %{"thing" => "thermostat", "property" => "temperature"}) =~
+             "unknown_session"
+
+    refute has_element?(view, "[aria-label='Thing inspector']")
+  end
+
   defp host(room, key), do: :sys.get_state(room).things[key].pid
 
   defp streams(room),

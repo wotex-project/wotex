@@ -143,8 +143,9 @@ async function send(event: "inspect" | "inspect_connection" | "open" | "read" | 
   error = ""
   try {
     const reply = await transport.push(event, { id })
-    if (!reply || Array.isArray(reply) || typeof reply !== "object" || reply.status !== "accepted")
-      error = "Selection changed. Reopen it."
+    if (reply && !Array.isArray(reply) && typeof reply === "object" &&
+        (reply.status === "accepted" || (reply.status === "rejected" && reply.feedback === "host"))) return
+    error = "Selection changed. Reopen it."
   } catch { error = "Reconnect to continue." }
 }
 

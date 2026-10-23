@@ -11,7 +11,7 @@ let {data,selected}:NodeProps<Node<Data>>=$props()
   <header><strong title={data.title}>{data.title}</strong><button type="button" class="nodrag nopan wl-canvas-icon" aria-label={`Actions for ${data.title}`} onclick={e=>data.open(data.id,e)}><img src={more} alt="" /></button></header>
   <p class="wl-canvas-identity">{data.run_id} · {data.state}</p>
   {#if data.outcome}
-    <div class="wl-run-pin-value"><strong>{data.outcome.value}</strong><span>{data.outcome.unit}</span><small>{data.outcome.label}</small></div>
+    <div class="wl-run-pin-value"><small>{data.outcome.label}</small><strong>{data.outcome.value}{data.outcome.unit ? ` ${data.outcome.unit}` : ""}</strong></div>
   {/if}
   <MetricPlot series={data.series} unit={data.unit} title={data.title} mark={data.mark}/>
   <footer><details class="nodrag nopan wl-pin-data"><summary>Data</summary>

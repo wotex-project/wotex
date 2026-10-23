@@ -24,17 +24,20 @@
   box-shadow: 0 2px 8px #181d271a, 0 1px 2px #181d270a;
 }
 .wl-canvas-node { width: 220px; min-height: 148px; padding: 12px; }
+.wl-canvas-subject { min-height: 0; }
 .wl-canvas-node-selected { border-color: var(--wotex-semantic-color-focus); }
 .wl-canvas-process { width: 240px; border-style: dashed; }
 .wl-canvas-node header { display: flex; align-items: center; gap: 8px; height: 28px; }
 .wl-canvas-node strong { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; }
 .wl-canvas-node p { margin: 8px 0 0; font-size: 11px; line-height: 16px; }
+.wl-canvas-subject .wl-canvas-identity { margin-top: 4px; }
 .wl-canvas-identity { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--wl-canvas-muted); }
-.wl-canvas-reading { display: flex; align-items: baseline; gap: 6px; min-height: 28px; margin-top: 8px; }
-.wl-canvas-value { font-size: 24px; line-height: 28px; font-variant-numeric: tabular-nums; }
-.wl-canvas-unit { font-size: 12px; line-height: 16px; white-space: nowrap; vertical-align: baseline; }
-.wl-canvas-status { margin-left: auto; color: var(--wl-canvas-muted); font-size: 11px; }
+.wl-canvas-reading { display: flex; align-items: baseline; min-height: 28px; margin-top: 4px; }
+.wl-canvas-value { font-size: 24px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wl-canvas-status { color: var(--wl-canvas-muted); font-size: 11px; }
 .wl-canvas-detail { color: var(--wl-canvas-muted); overflow-wrap: anywhere; }
+.wl-canvas-receipt { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; line-height: 16px; }
+.wl-canvas-receipt .wl-canvas-detail { min-width: 0; text-align: right; }
 .wl-connected-canvas button { font: inherit; cursor: pointer; }
 .wl-canvas-icon, .wl-canvas-tools button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; }
 .wl-canvas-node .svelte-flow__handle { width: 4px; height: 4px; border: 0; background: var(--wl-canvas-muted); }
@@ -64,23 +67,22 @@
 .wl-canvas-metric header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wl-metric-plot { display: flex; flex: 1; flex-direction: column; min-height: 60px; margin: 0; }
 .wl-metric-plot svg { display: block; flex: 1; width: 100%; height: 100%; min-height: 0; overflow: visible; }
-.wl-metric-plot text { fill: var(--wl-canvas-muted); font: 10px/14px Inter,system-ui,sans-serif; }
+.wl-metric-plot text { fill: var(--wl-canvas-muted); font: 11px/16px Inter,system-ui,sans-serif; }
 .wl-plot-grid { stroke: var(--wl-canvas-border); stroke-width: 0.5; opacity: 0.5; }
 .wl-plot-series { color: var(--wl-canvas-text); }
 .wl-plot-series polyline { fill: none; stroke: currentColor; stroke-width: 1.5; }
 .wl-plot-series circle { fill: currentColor; }
 .wl-plot-series .wl-plot-area { fill: currentColor; opacity: 0.12; stroke: none; }
-.wl-run-pin-value { display: flex; align-items: baseline; gap: 4px; }
-.wl-run-pin-value strong { flex: none; font-size: 24px; line-height: 28px; font-weight: 500; }
-.wl-run-pin-value span, .wl-run-pin-value small { font-size: 12px; }
-.wl-run-pin-value small { margin-left: 4px; color: var(--wl-canvas-muted); }
+.wl-run-pin-value { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.wl-run-pin-value strong { flex: none; font-size: 24px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.wl-run-pin-value small { color: var(--wl-canvas-muted); font-size: 11px; line-height: 16px; }
 .wl-plot-series .wl-plot-gap { stroke-dasharray: 2 4; opacity: 0.4; stroke-width: 1; }
 .wl-metric-plot figcaption { color: var(--wl-canvas-muted); font-size: 11px; }
 .wl-plot-empty { display: grid; place-items: center; min-height: 100px; color: var(--wl-canvas-muted); }
 .wl-canvas-metric footer { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .wl-canvas-metric footer:has(details[open]) { display: block; }
 .wl-pin-data { font-size: 11px; }
-.wl-pin-data summary { cursor: pointer; }
+.wl-pin-data summary { min-height: 28px; line-height: 28px; cursor: pointer; }
 .wl-pin-data-scroll { max-height: 160px; overflow: auto; }
 .wl-pin-data table { width: 100%; font-size: 11px; border-collapse: collapse; }
 .wl-pin-data th, .wl-pin-data td { padding: 4px; text-align: left; border-bottom: 1px solid var(--wl-canvas-border); }

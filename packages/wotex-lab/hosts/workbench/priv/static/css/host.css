@@ -131,7 +131,7 @@ body {
   align-items: center;
   gap: 8px;
   height: 38px;
-  padding: 4px 4px 4px 8px;
+  padding: 4px 12px;
   border: 1px solid var(--wl-color-border);
   border-radius: 4px;
   background: var(--wl-color-panel);
@@ -1107,14 +1107,14 @@ body {
 .wl-thing-inspector .wl-button { min-height: 28px; }
 .wl-thing-inspector .wl-stack { margin-top: 12px; }
 .wl-inspector-reading { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
-.wl-inspector-reading strong { font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.wl-inspector-reading span { font-size: 12px; }
+.wl-inspector-reading strong, .wl-inspector-reading span { font-size: 24px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .wl-thing-property { padding-block: 12px; border-bottom: 1px solid var(--wl-color-border); }
 .wl-thing-property > header { display: flex; align-items: baseline; justify-content: space-between; }
 .wl-thing-property h3 { margin: 0 0 8px; font-size: 12px; font-weight: 500; }
 .wl-thing-property .wl-actions { margin-top: 12px; gap: 4px; }
 .wl-thing-property .wl-actions form { margin: 0; }
 .wl-thing-property .wl-receipt-time { margin: 0; font-size: 11px; }
+.wl-thing-property .wl-property-error { margin-top: 8px; }
 .wl-connection-row { padding-block: 12px; border-bottom: 1px solid var(--wl-color-border); }
 .wl-board-actions button { gap: 8px; }
 .wl-board-actions kbd { margin-left: auto; color: var(--wl-color-muted); font: inherit; font-size: 10px; white-space: nowrap; }
@@ -1139,6 +1139,7 @@ body {
 .wl-connection-row h3 { margin: 0; font-size: 12px; font-weight: 500; }
 .wl-connection-endpoints { margin: 8px 0 0; font-size: 11px; color: var(--wl-color-muted); overflow-wrap: anywhere; }
 .wl-connection-reading { display: flex; align-items: baseline; gap: 4px; font-size: 12px; }
+.wl-connection-reading strong, .wl-connection-reading span:not(.wl-muted) { font-weight: 500; font-variant-numeric: tabular-nums; }
 .wl-connection-row .wl-connection-reading { margin-top: 8px; }
 .wl-connection-reading .wl-muted { margin-left: auto; }
 .wl-connection-receipt { border-top: 1px solid var(--wl-color-border); padding-top: 12px; }
@@ -1169,8 +1170,7 @@ body {
 .wl-run-state { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
 .wl-run-outcome p { margin: 0; font-size: 12px; line-height: 16px; }
 .wl-run-value { display: flex; align-items: baseline; gap: 4px; margin-block: 4px; }
-.wl-run-value strong { font-size: 24px; line-height: 32px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.wl-run-value span { font-size: 12px; }
+.wl-run-value strong, .wl-run-value span { font-size: 24px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .wl-run-facts { display: grid; gap: 8px; margin: 0; }
 .wl-run-facts > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }
 .wl-run-facts dt { color: var(--wl-color-muted); }
