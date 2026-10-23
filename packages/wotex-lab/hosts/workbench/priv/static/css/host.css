@@ -6,7 +6,6 @@ body {
 
 body {
   background: #f4f5f7;
-  container: workbench-shell / inline-size;
   overflow-x: clip;
 }
 
@@ -94,6 +93,7 @@ body {
   position: relative;
   min-height: 100dvh;
   background: var(--wl-color-bg);
+  container: workbench-shell / inline-size;
 }
 
 .wl-skip {

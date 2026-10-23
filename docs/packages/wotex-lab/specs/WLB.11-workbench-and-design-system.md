@@ -1,7 +1,18 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.33.0. Contract: accepted. Implementation status:
+Specification version: 0.33.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.33.1 makes the workbench shell, rather than `body`, the CSS
+container for its floating chrome and panels. A workbench embedded in a narrower
+parent now selects the compact inset independently of the browser viewport.
+Elixir browser regressions hold a 1440-pixel viewport while crossing both
+599/600 and 839/840 parent-width boundaries. They preserve the empty island
+without allocating a room, an uncommitted connection draft and focused editor,
+and the exact pending Action decision and focused approval control. Resizing
+changes no graph revision, handler count or dispatch. These bounded Workbench
+cases do not establish the complete Storybook, state or assistive-technology
+matrix required below.
 
 Version 0.33 removes independent sample values from the Phoenix Storybook host.
 Explicit `mix seed --storybook-output ../storybook/priv/fixtures` writes the
@@ -1158,9 +1169,12 @@ contract but do not claim WCAG certification. Publication and broader hosted
 adoption remain separate qualification work under the
 [qualification runbook](../plans/qualification.md).
 
-WLB-S11-13, WLB-S11-14, WLB-V11-13 and WLB-V11-14 are accepted obligations
-without recorded executable evidence. They keep WLB.11 evidence partial until the
-container-profile implementation and boundary-pair cohorts pass.
+WLB-S11-13, WLB-S11-14, WLB-V11-13 and WLB-V11-14 have bounded Workbench
+browser coverage in `hosts/workbench/test/e2e/layout_profiles_test.exs` for
+parent-width boundary pairs, empty state, connection drafts and pending approval.
+The existing connection suite also covers viewport boundary pairs and 320-pixel
+focus recovery. The complete shared task/state/Storybook and assistive-technology
+cohorts remain unrecorded, so implementation and evidence remain partial.
 
 WLB-S11-15, WLB-S11-16, WLB-V11-15 and WLB-V11-16 add design acceptance.
 The initial editable files and representative render inspection are recorded
